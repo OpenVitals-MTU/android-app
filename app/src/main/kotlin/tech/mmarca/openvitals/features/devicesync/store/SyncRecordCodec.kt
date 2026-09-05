@@ -84,42 +84,19 @@ import kotlinx.serialization.json.put
 
 /**
  * Serializes Health Connect [Record]s to and from the sync wire, and derives
- * each record's deterministic content fingerprint (the dedup key).
+ * each record's content fingerprint, the dedup key. Kotlin to Kotlin only.
  *
- * Ported from the Flutter `import_record_sync_codec.dart` — but implemented
- * DIRECTLY over the androidx `Record` subclasses; the Dart build needed an
- * `ImportRecord` intermediate that Kotlin does not. Kotlin↔Kotlin only: the
- * construction mirrors the Dart codec but is not byte-compatible with it (enum
- * fields ride as Health Connect int constants rather than Dart enum names).
- *
- * WHY A FINGERPRINT
- * -----------------
- * Records read natively from Health Connect carry an HC id that differs per
- * device and usually a null `clientRecordId`. So dedup must key on CONTENT,
- * not the HC id. The record's identifying fields are hashed into a
- * `sync_<hex>` id — the same construction the Apple Health importer uses for
- * its `apple_health_` ids. Both phones compute the SAME fingerprint for the
- * same logical record, so the bidirectional merge converges and a re-sync
- * writes nothing. When received records are written they carry this
- * `sync_<hex>` id as their `clientRecordId`, so Health Connect upserts on it.
- *
- * DELIBERATELY CONTENT-ONLY — the fingerprint does NOT include the source app
- * (`dataOrigin`). When phone B writes a record received from A, Health Connect
- * re-stamps the record's `dataOrigin` with B's own package, so an
- * origin-inclusive fingerprint would differ across the two phones and every
- * re-sync would accumulate duplicates. Content-only keeps the same logical
- * record mapping to the same fingerprint on both phones. The cost — two
- * genuinely distinct records with identical type+time+values from different
- * source apps collide into one — is rare and the lesser evil.
+ * Native records carry a per-device HC id and usually no clientRecordId, so
+ * dedup keys on content: the identifying fields hash into a `sync_<hex>` id
+ * that both phones compute alike. Received records are written under it.
+ * The fingerprint excludes `dataOrigin`, which Health Connect re-stamps on
+ * write; otherwise every re-sync would accumulate duplicates.
  */
 
 /** The prefix on every sync-assigned clientRecordId. */
 const val SYNC_CLIENT_RECORD_ID_PREFIX: String = "sync_"
 
-/**
- * Thrown when a record type has no codec entry (should never happen for a
- * negotiated type; a guard against a protocol/version mismatch).
- */
+/** Thrown when a record type has no codec entry: a protocol mismatch guard. */
 class UnsupportedSyncRecordType(val recordType: String) :
     Exception("UnsupportedSyncRecordType: $recordType")
 
@@ -174,10 +151,7 @@ private val SYNC_RECORD_CLASSES: Map<String, KClass<out Record>> = listOf(
     SexualActivityRecord::class,
 ).associateBy { it.simpleName.orEmpty() }
 
-/**
- * Computes the deterministic `sync_<hex>` fingerprint for [record] from its
- * content. Independent of the record's current clientRecordId and metadata.
- */
+/** The `sync_<hex>` fingerprint for [record], from its content only. */
 fun syncFingerprint(record: Record): String {
     val parts = fingerprintParts(record).joinToString("|") { fp(it) }
     val digest = MessageDigest.getInstance("SHA-256").digest(parts.toByteArray(Charsets.UTF_8))
@@ -192,17 +166,9 @@ fun syncFingerprint(record: Record): String {
 }
 
 /**
- * Encodes [record]'s times + values to wire bytes (JSON), plus the record's
- * recording [Device] (manufacturer/model/type) when it has one, so hardware
- * provenance survives in the receiver's Health Connect store itself — visible
- * to EVERY consumer, not just OpenVitals. The record type and clientRecordId
- * travel separately on the `SyncItem`, so they are not repeated here.
- *
- * The `device` key is optional in both directions (the codec's JSON parser
- * ignores unknown keys, so a build predating it skips it, and its absence
- * decodes to the phone-device default) and, like everything metadata, it is
- * NOT part of [fingerprintParts] — payload bytes may differ across versions,
- * but the dedup key never does.
+ * Encodes [record]'s times and values to JSON, plus its recording [Device]
+ * when it has one. Type and clientRecordId travel on the `SyncItem`. The
+ * `device` key is optional both ways and never part of the fingerprint.
  */
 fun encodeSyncRecordPayload(record: Record): ByteArray {
     val json = encode(record)
@@ -223,10 +189,7 @@ fun encodeSyncRecordPayload(record: Record): ByteArray {
     return withDevice.toString().toByteArray(Charsets.UTF_8)
 }
 
-/**
- * Reconstructs a [Record] of [recordType] carrying [clientRecordId] from a
- * [payload] produced by [encodeSyncRecordPayload].
- */
+/** Reconstructs a [Record] from a [payload] produced by [encodeSyncRecordPayload]. */
 fun decodeSyncRecord(recordType: String, clientRecordId: String, payload: ByteArray): Record {
     val json = CodecJson.parseToJsonElement(payload.toString(Charsets.UTF_8)).jsonObject
     return decode(recordType, syncMetadata(clientRecordId, decodeDevice(json["device"])), json)
@@ -237,8 +200,7 @@ private const val HEX_DIGITS = "0123456789abcdef"
 
 private fun syncMetadata(clientRecordId: String, device: Device?): Metadata =
     Metadata.manualEntry(
-        // The sender's original recording device when the wire carried one
-        // (older builds do not send it); the pre-field placeholder otherwise.
+        // The sender's device when the wire carried one; older builds do not send it.
         device = device ?: Device(type = Device.TYPE_PHONE),
         clientRecordId = clientRecordId,
     )
@@ -253,12 +215,7 @@ private fun decodeDevice(element: JsonElement?): Device? {
     )
 }
 
-/**
- * A peer's device type, or UNKNOWN if it is not one we recognise — the same
- * closed-set policy as [bloodPressureBodyPosition]: the wire carries a bare
- * int from another phone, and an unrecognised constant must not be handed to
- * the platform verbatim.
- */
+/** A peer's device type, or UNKNOWN. An unrecognised constant is never passed through. */
 private fun deviceType(raw: Int?): Int = when (raw) {
     Device.TYPE_WATCH,
     Device.TYPE_PHONE,
@@ -273,24 +230,20 @@ private fun deviceType(raw: Int?): Int = when (raw) {
 }
 
 /**
- * Renders a fingerprint part as a stable string. Doubles are quantized to 6
- * decimals so a value that came back from a Health Connect unit round-trip
- * (grams↔kilograms, watts↔kcal/day) with a bit or two of binary drift still
- * hashes identically — otherwise phone B, after writing A's record and reading
- * it back, computes a different fingerprint and a re-sync re-imports it as a
- * new record, accumulating duplicates. Ints/strings pass through.
+ * A fingerprint part as a stable string. Doubles are quantized to 6 decimals
+ * so a unit round-trip through Health Connect still hashes the same.
  */
 private fun fp(part: Any?): String =
     if (part is Double) String.format(Locale.US, "%.6f", part) else part.toString()
 
-// ── Time helpers ─────────────────────────────────────────────────────────────
+// Time helpers.
 
 private fun ms(time: Instant): Long = time.toEpochMilli()
 private fun inst(time: Instant): String = time.toString()
 private fun offSec(offset: ZoneOffset?): Int? = offset?.totalSeconds
 private fun sample(time: Instant, value: Any?): String = "${inst(time)}:${fp(value)}"
 
-// ── Fingerprint parts (identifying content per type) ─────────────────────────
+// Fingerprint parts: identifying content per type.
 
 private fun fingerprintParts(r: Record): List<Any?> {
     val type = syncRecordTypeName(r)
@@ -380,7 +333,7 @@ private fun fingerprintParts(r: Record): List<Any?> {
     }
 }
 
-// ── Encode (value fields to JSON) ────────────────────────────────────────────
+// Encode: value fields to JSON.
 
 private fun JsonObjectBuilderScope.interval(
     start: Instant,
@@ -667,7 +620,7 @@ private fun encode(r: Record): JsonObject = when (r) {
     else -> throw UnsupportedSyncRecordType(syncRecordTypeName(r))
 }
 
-// ── Decode (JSON to a typed record with the given metadata) ──────────────────
+// Decode: JSON to a typed record.
 
 private fun decode(type: String, metadata: Metadata, j: JsonObject): Record {
     fun s() = Instant.ofEpochMilli(j.getValue("s").jsonPrimitive.long)
@@ -932,10 +885,7 @@ private fun decode(type: String, metadata: Metadata, j: JsonObject): Record {
             metadata = metadata,
             systolic = Pressure.millimetersOfMercury(d("sys")),
             diastolic = Pressure.millimetersOfMercury(d("dia")),
-            // Both are encoded above; not reading them back silently erased
-            // the posture and cuff site from every reading that crossed the
-            // wire, which changes how the number should be interpreted and is
-            // read by other apps sharing the same Health Connect store.
+            // Not reading these back erased posture and cuff site from every synced reading.
             bodyPosition = bloodPressureBodyPosition(j.intOrNull("bodyPos")),
             measurementLocation = bloodPressureMeasurementLocation(j.intOrNull("measLoc")),
         )
@@ -963,14 +913,9 @@ private fun decode(type: String, metadata: Metadata, j: JsonObject): Record {
     }
 }
 
-// ── Planned-exercise completion goals ────────────────────────────────────────
+// Planned-exercise completion goals.
 
-/**
- * The wire shape of a planned-exercise step completion goal: a small closed set
- * (repetitions / duration / manual / unknown), mirroring the Dart codec's
- * `ck`/`cr`/`cs` fields. Goal kinds outside this set degrade to `unknown` —
- * same policy as the app's own planned-exercise write path.
- */
+/** The wire shape of a step completion goal. Unknown kinds degrade to `unknown`. */
 private data class CodecCompletionGoal(val kind: Int, val repetitions: Int?, val seconds: Long?) {
     fun toExerciseCompletionGoal(): ExerciseCompletionGoal = when (kind) {
         GOAL_REPETITIONS -> ExerciseCompletionGoal.RepetitionsGoal(repetitions ?: 1)
@@ -993,7 +938,7 @@ private fun ExerciseCompletionGoal.toCodecGoal(): CodecCompletionGoal = when (th
     else -> CodecCompletionGoal(GOAL_UNKNOWN, null, null)
 }
 
-// ── Nutrition helpers ────────────────────────────────────────────────────────
+// Nutrition helpers.
 
 /** The record's non-null nutrient masses as a name→grams map, for wire + fingerprint. */
 private fun NutritionRecord.nutrientGrams(): Map<String, Double> = buildMap {
@@ -1106,7 +1051,7 @@ private fun buildNutritionRecord(
     )
 }
 
-// ── JSON field helpers ───────────────────────────────────────────────────────
+// JSON field helpers.
 
 private fun JsonObject.intOrNull(key: String): Int? =
     this[key]?.takeIf { it !is JsonNull }?.jsonPrimitive?.int
@@ -1117,22 +1062,7 @@ private fun JsonObject.doubleOrNull(key: String): Double? =
 private fun JsonObject.strOrNull(key: String): String? =
     this[key]?.takeIf { it !is JsonNull }?.jsonPrimitive?.content
 
-/**
- * A peer's skin-temperature measurement location, or UNKNOWN if it is not one
- * we recognise.
- *
- * The wire carries a bare int from another phone, and Health Connect's
- * parameter is a closed set. Passing an unrecognised value straight through
- * hands a foreign, possibly newer or simply corrupt, constant to the platform.
- * Recording "unknown" is both true and safe: the reading itself still lands,
- * only the site of it is dropped.
- */
-/**
- * A peer's blood-pressure posture, or UNKNOWN if it is not one we recognise.
- *
- * Same reasoning as [skinTemperatureMeasurementLocation]: the wire carries a
- * bare int from another phone and the platform parameter is a closed set.
- */
+/** A peer's blood-pressure posture, or UNKNOWN. The platform parameter is a closed set. */
 private fun bloodPressureBodyPosition(raw: Int?): Int = when (raw) {
     BloodPressureRecord.BODY_POSITION_STANDING_UP,
     BloodPressureRecord.BODY_POSITION_SITTING_DOWN,

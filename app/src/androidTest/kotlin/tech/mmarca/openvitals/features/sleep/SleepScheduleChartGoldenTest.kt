@@ -19,18 +19,9 @@ import tech.mmarca.openvitals.testing.assertVisualRootMatchesGolden
 import tech.mmarca.openvitals.testing.goldenInstant
 
 /**
- * Port of Flutter's `test/goldens/charts/sleep_schedule_chart_golden_test.dart`.
- *
- * [SleepScheduleStageChart] — a week of nights on one clock. Its whole reason for
- * existing is the 18:00 anchor: a night that starts at 23:40 and ends at 07:10
- * crosses midnight, and on a plain 00:00-24:00 axis it would be drawn as two bars at
- * opposite ends of the chart. Anchored at six in the evening, it is one bar. Nothing
- * but a picture shows whether that still holds, and the fixture leans on it — every
- * night here straddles midnight, and one of them (Saturday) goes to bed AFTER it.
- *
- * This is also the one chart in the app whose label gutter is on the RIGHT, so its
- * x-axis row is padded on the right rather than inset on the left. The golden is the
- * only thing that would catch someone "fixing" that.
+ * [SleepScheduleStageChart]: a week of nights on one clock anchored at 18:00, so a night
+ * crossing midnight is one bar. Every night here straddles midnight and Saturday goes to bed after it.
+ * This is the one chart with its label gutter on the right.
  */
 class SleepScheduleChartGoldenTest {
 
@@ -50,11 +41,8 @@ class SleepScheduleChartGoldenTest {
 
     @Test
     fun aPartlyStagedNightReadsAtItsFullDuration() {
-        // A full night in bed (23:30-07:00) that the tracker staged only near the end —
-        // a tail-only reading. The bar draws the whole time in bed as a base block with
-        // stage colour overlaid on the staged tail, so it reads as its full duration:
-        // not a tiny fragment floating in an empty slot, and not a uniform solid block
-        // that hides the data. The middle night is fully staged.
+        // A full night the tracker staged only near the end. The bar draws the whole time in bed
+        // as a base block with the staged tail overlaid. The middle night is fully staged.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 400.dp) {
                 ScheduleChart(
@@ -74,9 +62,7 @@ class SleepScheduleChartGoldenTest {
 
     @Test
     fun aWeekWithTheAverageBedtimeAndWakeUpMarked() {
-        // Minutes of the day, not anchored minutes: 23:35 to bed, up at 07:20. The
-        // chart anchors them itself, which is the only reason a bedtime of 1415 and a
-        // wake-up of 440 can share one axis.
+        // Minutes of the day, not anchored minutes. The chart anchors them itself.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 400.dp) {
                 ScheduleChart(
@@ -119,8 +105,7 @@ class SleepScheduleChartGoldenTest {
     }
 
     private companion object {
-        // `date` is the night's DATE — the morning you woke up — which is why every
-        // in-bed window starts on the day before.
+        // `date` is the morning you woke up, so every in-bed window starts the day before.
         val MONDAY: LocalDate = LocalDate.of(2026, 6, 16)
         val WEEK = DatePeriod(MONDAY, LocalDate.of(2026, 6, 22))
 
@@ -153,8 +138,7 @@ class SleepScheduleChartGoldenTest {
             bedMinute: Int,
             minutes: Long,
         ): SleepScheduleDay {
-            // Bedtime belongs to the EVENING BEFORE the night's date, unless it is past
-            // midnight already — the Saturday lie-in below.
+            // Bedtime belongs to the evening before, unless it is past midnight already.
             val bedDate = if (bedHour >= 12) date.minusDays(1) else date
             val start = goldenInstant(
                 bedDate.year,
@@ -193,16 +177,14 @@ class SleepScheduleChartGoldenTest {
             night(MONDAY, bedHour = 23, bedMinute = 20, minutes = 460),
             night(MONDAY.plusDays(1), bedHour = 23, bedMinute = 5, minutes = 475),
             night(MONDAY.plusDays(2), bedHour = 0, bedMinute = 10, minutes = 410),
-            // Thursday: the tracker recorded a window but no stages at all. The chart
-            // draws a solid bar rather than an empty slot — "I know when, not what".
+            // Thursday: a window but no stages. The chart draws a solid bar.
             SleepScheduleDay(
                 date = MONDAY.plusDays(3),
                 inBedStart = goldenInstant(2026, 6, 18, 23, 45),
                 inBedEnd = goldenInstant(2026, 6, 19, 7, 0),
             ),
             night(MONDAY.plusDays(4), bedHour = 23, bedMinute = 55, minutes = 390),
-            // Saturday: a late night out, in bed at 01:05, up at 09:40. Past the 18:00
-            // anchor by more than a day's worth of minutes — this is the wrap case.
+            // Saturday: in bed at 01:05, up at 09:40. The wrap case.
             night(MONDAY.plusDays(5), bedHour = 1, bedMinute = 5, minutes = 515),
             // Sunday: no session at all. A missing night is a gap, not a zero.
             SleepScheduleDay(

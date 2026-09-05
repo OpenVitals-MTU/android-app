@@ -4,19 +4,9 @@ import java.time.Instant
 import java.time.ZoneId
 
 /**
- * The GFDI message vocabulary for the file-sync flow.
- *
- * A deliberately small slice of Gadgetbridge's ~30-message `GarminMessage`
- * enum: what a read-only FIT sync needs — request a download, receive its
- * chunks and acknowledge them, archive a finished file, and send system
- * events — plus the notification service (GNCS). Music, weather and uploads
- * remain out of scope.
- *
- * Not Gadgetbridge's reflection-dispatched class-per-message design: parsing
- * is one [decodeGarminMessage] `when` on the frame's type id, and each
- * outgoing message is a small builder. Everything here is pure — it turns
- * bytes into typed values and back, with no I/O — so the session logic above
- * it tests over an in-memory pipe.
+ * The GFDI messages a read-only FIT sync and the notification service need.
+ * Pure: bytes to typed values and back, no I/O. Parsing is one `when` in
+ * [decodeGarminMessage]; each outgoing message is a small builder.
  */
 object GarminMessageId {
     const val RESPONSE = 5000 // status/ack envelope
@@ -33,8 +23,7 @@ object GarminMessageId {
     const val SYSTEM_EVENT = 5030
     const val SUPPORTED_FILE_TYPES_REQUEST = 5031
 
-    // The notification service (GNCS). UPDATE announces, CONTROL is the watch
-    // asking, DATA carries the answer — see GarminNotificationMessages.kt.
+    // Notification service (GNCS). See GarminNotificationMessages.kt.
     const val NOTIFICATION_UPDATE = 5033
     const val NOTIFICATION_CONTROL = 5034
     const val NOTIFICATION_DATA = 5035
@@ -49,10 +38,7 @@ object GarminMessageId {
     const val AUTH_NEGOTIATION = 5101
 }
 
-/**
- * GFDI status codes (`GFDIMessage.Status`). Only ACK matters to the sync; any
- * other code means "did not proceed".
- */
+/** GFDI status codes. Only ACK means the request proceeded. */
 enum class GarminStatus(val code: Int) {
     ACK(0),
     NAK(1),
@@ -85,10 +71,7 @@ enum class GarminDownloadStatus {
     }
 }
 
-/**
- * System events the sync sends (`SystemEventMessage.GarminSystemEventType`).
- * Ordinal IS the wire value, so the order is load-bearing — do not reorder.
- */
+/** System events the sync sends. Ordinal is the wire value; do not reorder. */
 enum class GarminSystemEventType {
     SYNC_COMPLETE, // 0
     SYNC_FAIL,
@@ -109,26 +92,16 @@ enum class GarminSystemEventType {
     TIME_UPDATED,
 }
 
-/**
- * A parsed inbound GFDI message the sync acts on. Anything outside the sync
- * vocabulary decodes to [GarminUnhandledMessage] rather than throwing — the
- * watch chatters other messages a read-only sync simply ignores.
- */
+/** A parsed inbound message. Unknown types decode to [GarminUnhandledMessage]. */
 sealed class GarminInboundMessage
 
-/**
- * A status/ack envelope (type 5000) whose subject was not one the sync tracks
- * specially — a plain ACK/NAK for a message we sent.
- */
+/** A plain ACK/NAK envelope (type 5000) for a message we sent. */
 data class GarminGenericStatus(
     val originalMessageType: Int,
     val status: GarminStatus,
 ) : GarminInboundMessage()
 
-/**
- * The response to a download request. When [canProceed], [maxFileSize] is the
- * total byte length the watch will stream.
- */
+/** Response to a download request. [maxFileSize] is the total byte length. */
 data class GarminDownloadRequestStatus(
     val status: GarminStatus,
     val downloadStatus: GarminDownloadStatus,
@@ -138,24 +111,14 @@ data class GarminDownloadRequestStatus(
         get() = status == GarminStatus.ACK && downloadStatus == GarminDownloadStatus.OK
 }
 
-/**
- * One chunk of a downloading file (type 5004). [dataOffset] is where this
- * chunk sits in the file; [crc] is the running CRC of everything up to and
- * including it, which the session verifies before appending.
- */
+/** One chunk of a download (type 5004). [crc] is the running CRC up to this chunk. */
 class GarminFileTransferData(
     val dataOffset: Long,
     val crc: Int,
     val data: ByteArray,
 ) : GarminInboundMessage()
 
-/**
- * The watch introducing itself (type 5024). Sent unprompted on connect and
- * answered with [buildDeviceInformationResponse].
- *
- * [maxPacketSize] is the one field the transport needs: it caps how much of a
- * GFDI frame fits in a single write.
- */
+/** The watch introducing itself (type 5024). [maxPacketSize] caps a single write. */
 data class GarminDeviceInformation(
     val protocolVersion: Int,
     val productNumber: Int,
@@ -173,27 +136,18 @@ data class GarminDeviceInformation(
 }
 
 /**
- * The watch's authentication challenge (type 5101).
- *
- * GFDI has no real authentication: the answer is "yes, fine" with the flags
- * echoed back. The Bluetooth bond is the actual security boundary, which is
- * why onboarding refuses to register a watch that would not bond.
+ * The auth challenge (type 5101). GFDI has no real authentication; the
+ * Bluetooth bond is the security boundary.
  */
 data class GarminAuthNegotiation(
     val unknown: Int,
     val authFlags: Long,
 ) : GarminInboundMessage()
 
-/**
- * The watch's answer to [buildSupportedFileTypesRequest]: which
- * `(dataType, subType)` pairs it holds.
- */
+/** The `(dataType, subType)` pairs the watch holds. */
 data class GarminSupportedFileTypes(
     val status: GarminStatus,
-    /**
-     * Every advertised pair, including ones this app does not map — the raw
-     * list is what makes an empty-vs-unmapped diagnosis possible.
-     */
+    /** Every advertised pair, including unmapped ones, for diagnosis. */
     val types: List<GarminSupportedFileType>,
 ) : GarminInboundMessage()
 
@@ -204,12 +158,8 @@ data class GarminSupportedFileType(
 )
 
 /**
- * The watch announcing what it has to offer (type 5037), as a bitmask over
- * `SynchronizationMessage.FileType` ordinals.
- *
- * Gadgetbridge answers this with a [buildFilterMessage] and only then
- * downloads the directory — which is the exchange that appears to make the
- * watch populate its listing at all.
+ * The watch announcing what it holds (type 5037), as a bitmask. Answered with
+ * [buildFilterMessage] before the directory is fetched.
  */
 data class GarminSynchronization(
     val syncType: Int,
@@ -222,15 +172,12 @@ data class GarminSynchronization(
     val shouldProceed: Boolean
         get() = has(WORKOUTS) || has(ACTIVITIES) || has(ACTIVITY_SUMMARY) || has(SLEEP)
 
-    /** The set bits, for the log — the raw evidence of what the watch is holding. */
+    /** The set bits, for the log. */
     val setBits: List<Int>
         get() = (0 until 64).filter { has(it) }
 
     private companion object {
-        /**
-         * Ordinals of the categories worth acting on
-         * (`SynchronizationMessage.shouldProceed`).
-         */
+        /** Ordinals of the categories worth acting on. */
         const val WORKOUTS = 3
         const val ACTIVITIES = 5
         const val ACTIVITY_SUMMARY = 21
@@ -239,12 +186,8 @@ data class GarminSynchronization(
 }
 
 /**
- * The watch's capability bitmap (type 5050) — the capabilities exchange.
- *
- * This is not informational. The watch expects OUR capabilities back, and in
- * Gadgetbridge receiving it is what raises the event that completes
- * initialisation. Answering it with only a bare ACK left a real vívoactive 5
- * re-sending it and never populating its directory.
+ * The capabilities exchange (type 5050). The watch expects our capabilities
+ * back; a bare ACK left it re-sending and never listing files.
  */
 class GarminConfiguration(
     /** The raw bitmap, one bit per capability ordinal. */
@@ -252,11 +195,8 @@ class GarminConfiguration(
 ) : GarminInboundMessage()
 
 /**
- * The watch asking whether to route phone notifications (type 5036).
- *
- * Needs a purpose-built status reply, not the generic ACK: the watch expects
- * four payload bytes after the message id and retransmits about once a second
- * until it gets them.
+ * The watch asking whether to route notifications (type 5036). Needs the
+ * four-byte status reply, or it retransmits every second.
  */
 data class GarminNotificationSubscription(
     val enable: Boolean,
@@ -264,24 +204,14 @@ data class GarminNotificationSubscription(
 ) : GarminInboundMessage()
 
 /**
- * The watch asking something about a notification (type 5034).
- *
- * Which fields are populated depends on [command]:
- * * `GET_NOTIFICATION_ATTRIBUTES` — [notificationId] and [attributes], the
- *   fields it wants and the maximum length it will accept for each (0 = no
- *   limit).
- * * `GET_APP_ATTRIBUTES` — [appIdentifier] and [appAttributes].
- * * either `PERFORM_…_ACTION` — [notificationId], [actionCode] and, for a
- *   reply, [actionText].
+ * The watch asking about a notification (type 5034). Which fields are set
+ * depends on [command]: attributes for GET_*_ATTRIBUTES, action fields for
+ * PERFORM_*_ACTION.
  */
 data class GarminNotificationControl(
     val command: GarminNotificationCommand,
     val notificationId: Long = 0,
-    /**
-     * Requested attribute → maximum length, in the watch's own order. A
-     * `LinkedHashMap` by construction, because that order is reproduced in
-     * the answer.
-     */
+    /** Requested attribute to max length, in the watch's order. The answer keeps it. */
     val attributes: Map<GarminNotificationAttribute, Int> = emptyMap(),
     val appIdentifier: String? = null,
     val appAttributes: List<Int> = emptyList(),
@@ -289,13 +219,7 @@ data class GarminNotificationControl(
     val actionText: String? = null,
 ) : GarminInboundMessage()
 
-/**
- * The watch's verdict on one chunk of an attribute blob — a RESPONSE envelope
- * naming NOTIFICATION_DATA.
- *
- * [canProceed] is the flow control: the next chunk goes out only when the
- * watch has said it kept the last one.
- */
+/** The watch's verdict on one attribute chunk. [canProceed] gates the next chunk. */
 data class GarminNotificationDataStatus(
     val status: GarminStatus,
     val transferStatus: GarminNotificationTransferStatus,
@@ -305,21 +229,13 @@ data class GarminNotificationDataStatus(
             transferStatus == GarminNotificationTransferStatus.OK
 }
 
-/**
- * A message outside the sync vocabulary. Carries its payload so an unexpected
- * message can be identified from a device log rather than vanishing — the
- * blind spot that hid whether the watch was talking to us at all.
- */
-/** The watch asking the phone for the time (`CurrentTimeRequestMessage`). */
+/** The watch asking for the time. */
 data class GarminCurrentTimeRequest(
-    /** Echoed back verbatim in the response, pairing it to this ask. */
+    /** Echoed back in the response. */
     val referenceId: Long,
 ) : GarminInboundMessage()
 
-/**
- * The watch asking for weather (`WeatherMessage`) — sent when the glance
- * opens, and periodically while a link is held.
- */
+/** The watch asking for weather: when the glance opens, and periodically. */
 data class GarminWeatherRequest(
     val format: Int,
     val latitudeSemicircles: Long,
@@ -335,11 +251,7 @@ data class GarminFindMyPhoneRequest(
 /** The user ended the find on the watch. */
 class GarminFindMyPhoneCancel : GarminInboundMessage()
 
-/**
- * The watch announcing a file it has just finished writing, while a link is
- * already open (`FileAvailableMessage`) — how a save that happens mid-listen
- * reaches the phone without waiting for the next directory fetch.
- */
+/** The watch announcing a file it just wrote, while a link is open. */
 data class GarminFileAvailable(
     val entry: GarminDirectoryEntry,
 ) : GarminInboundMessage()
@@ -401,8 +313,7 @@ private fun decodeFileAvailable(payload: ByteArray): GarminInboundMessage {
     val fileFlags = reader.readByte()
     val fileSize = reader.readInt()
     val wireTimestamp = reader.readInt()
-    // A type this app has no name for gets the unhandled path — an ack and a
-    // log — the same treatment the directory parser gives such entries.
+    // Unknown types take the unhandled path: an ack and a log.
     val type = GarminFileType.fromCodes(dataType, subType)
         ?: return GarminUnhandledMessage(GarminMessageId.FILE_AVAILABLE, payload)
     return GarminFileAvailable(
@@ -476,10 +387,7 @@ private fun decodeNotificationControl(payload: ByteArray): GarminInboundMessage 
             val notificationId = reader.readInt()
             val attributes = LinkedHashMap<GarminNotificationAttribute, Int>()
             while (reader.remaining > 0) {
-                // An attribute this app does not know may or may not be
-                // followed by a length, so there is no safe way to find the
-                // next id. Stop and answer what was understood rather than
-                // mis-parsing the rest as attributes.
+                // An unknown attribute may or may not carry a length, so stop here.
                 val attribute = GarminNotificationAttribute.fromCode(reader.readByte())
                     ?: break
                 var maxLength = 0
@@ -518,8 +426,7 @@ private fun decodeNotificationControl(payload: ByteArray): GarminInboundMessage 
         -> {
             val notificationId = reader.readInt()
             val actionCode = if (reader.remaining > 0) reader.readByte() else null
-            // A non-reply action carries no text at all on recent firmware, so
-            // its absence is normal rather than a short frame.
+            // Non-reply actions carry no text on recent firmware.
             val actionText =
                 if (reader.remaining > 0) reader.readNullTerminatedString() else null
             GarminNotificationControl(
@@ -578,11 +485,8 @@ private fun decodeStatus(payload: ByteArray): GarminInboundMessage {
     }
     if (originalType == GarminMessageId.NOTIFICATION_DATA) {
         val status = GarminStatus.fromCode(reader.readByte())
-        // The watch names WHY it will not take the next chunk, and the upload
-        // acts on the difference — a RESEND is recoverable, a CRC mismatch is
-        // not. A status with no transfer byte is treated as OK: the only
-        // observed sender of that shape is our own final acknowledgement
-        // bouncing back.
+        // RESEND is recoverable, a CRC mismatch is not. No transfer byte means OK:
+        // only our own final ack bounces back in that shape.
         val transferStatus = if (reader.remaining > 0) {
             GarminNotificationTransferStatus.fromOrdinal(reader.readByte())
         } else {
@@ -611,16 +515,12 @@ private fun decodeFileTransferData(payload: ByteArray): GarminInboundMessage {
     return GarminFileTransferData(dataOffset = dataOffset, crc = crc, data = data)
 }
 
-// ── Outgoing message builders — each returns a ready-to-COBS GFDI frame ──────
+// Outgoing message builders. Each returns a GFDI frame ready to COBS.
 
 /** Whether a download starts fresh or continues (`REQUEST_TYPE` ordinal). */
 enum class GarminDownloadRequestType { CONTINUE_TRANSFER, FRESH }
 
-/**
- * Requests file [fileIndex]. For a fresh whole-file download the watch fills
- * in the size, so [dataOffset]/[dataSize]/[crcSeed] are 0 — the shape
- * `initiateDownload`/`downloadDirectoryEntry` use.
- */
+/** Requests file [fileIndex]. A fresh download leaves offset, size and CRC seed at 0. */
 fun buildDownloadRequest(
     fileIndex: Int,
     requestType: GarminDownloadRequestType = GarminDownloadRequestType.FRESH,
@@ -638,14 +538,8 @@ fun buildDownloadRequest(
 }
 
 /**
- * Acknowledges any inbound message: a `RESPONSE` envelope naming what is
- * being acknowledged, plus ACK (`GenericStatusMessage`).
- *
- * Gadgetbridge sends one of these for EVERY message it receives
- * (`GarminSupport.onMessage` → `sendAck`). Without them the watch treats its
- * message as lost and retransmits, and will not move on — which is exactly
- * what a real vívoactive 5 did, re-sending its CONFIGURATION message on a
- * timer while its directory stayed empty.
+ * Acknowledges an inbound message. Gadgetbridge acks every message; without
+ * it the watch retransmits and never moves on.
  */
 fun buildGenericAck(originalMessageType: Int): ByteArray {
     val writer = GarminByteWriter()
@@ -662,13 +556,8 @@ object GarminDeviceSetting {
 }
 
 /**
- * Configures the watch over `DEVICE_SETTINGS` (5026): `[u8 count]` then per
- * setting `[u8 ordinal][u8 length=1][u8 bool]`.
- *
- * Gadgetbridge sends this on EVERY connection, and it is not optional
- * housekeeping: `WEATHER_CONDITIONS_ENABLED` is the switch for the watch's
- * whole weather feature — without it the glance never fetches anything and
- * shows "reconnect to phone" forever, whatever the phone is ready to serve.
+ * Configures the watch over DEVICE_SETTINGS (5026). Sent every connection:
+ * WEATHER_CONDITIONS_ENABLED switches on the watch's whole weather feature.
  */
 fun buildDeviceSettings(settings: List<Pair<Int, Boolean>>): ByteArray {
     val writer = GarminByteWriter()
@@ -683,13 +572,8 @@ fun buildDeviceSettings(settings: List<Pair<Int, Boolean>>): ByteArray {
 }
 
 /**
- * Answers the watch's time request (`CurrentTimeRequestMessage`): the ack
- * envelope grown by the time itself, the zone's total UTC offset, and the next
- * two DST transitions so the watch can flip its clock on the right night
- * without asking again.
- *
- * Without this reply the watch has NO clock source when Garmin Connect is not
- * installed — it drifts, and never follows DST or travel.
+ * Answers the time request with the time, the UTC offset and the next two DST
+ * transitions. Without Garmin Connect this is the watch's only clock source.
  */
 fun buildCurrentTimeResponse(
     referenceId: Long,
@@ -719,25 +603,10 @@ fun buildCurrentTimeResponse(
 }
 
 /**
- * The acknowledgement a protobuf message needs — chunked or not.
- *
- * A generic ACK says the FRAME arrived; this says the protobuf message with
- * that request id was kept. Both are needed, and sending only the generic one
- * is why the watch retransmitted its own settings messages every five seconds
- * for as long as the link stayed open: at the protobuf layer they had never
- * been acknowledged at all. Gadgetbridge starts a complete message with a
- * generic status and then replaces it with this one the moment its handler
- * takes the message (`ProtocolBufferHandler.processIncoming`).
- *
- * For a chunk it also unblocks the next piece: without it the watch sends the
- * first 487 bytes of a 1013-byte screen and waits forever.
- *
- * Shape from Gadgetbridge's `ProtobufStatusMessage`: the usual response
- * envelope, then the request id, THE OFFSET THE MESSAGE DECLARED, and two
- * status bytes (kept = 0, no error = 0).
- *
- * [dataOffset] is the offset received, not the next one expected — echoing
- * the next left the watch resending chunk zero indefinitely.
+ * Acknowledges a protobuf message, chunked or not. A generic ACK covers the
+ * frame; without this one the watch retransmits every five seconds, and a
+ * chunked message never gets its next piece. [dataOffset] is the offset
+ * received, not the next expected.
  */
 fun buildProtobufAck(
     originalMessageType: Int,
@@ -755,42 +624,23 @@ fun buildProtobufAck(
 }
 
 /**
- * Message types this app answers with their OWN response envelope, which
- * already serves as the acknowledgement — sending a second, generic one would
- * be a duplicate reply to the same message.
- *
- * `RESPONSE` itself is here because an ack must never be acked
- * (Gadgetbridge's "don't ack the ack"), which would otherwise bounce forever.
+ * Types answered with their own response envelope, so a generic ACK would be
+ * a duplicate. RESPONSE is here because an ack must never be acked.
  */
 val garminSelfAcknowledgedTypes: Set<Int> = setOf(
     GarminMessageId.RESPONSE,
-    // Answered by a time-bearing response envelope; a bare ACK first would be
-    // a second reply to the same ask.
     GarminMessageId.CURRENT_TIME_REQUEST,
     GarminMessageId.DEVICE_INFORMATION,
     GarminMessageId.AUTH_NEGOTIATION,
     GarminMessageId.FILE_TRANSFER_DATA,
-    // Gets a purpose-built status carrying four extra payload bytes; a
-    // generic ACK is too short and the watch keeps asking.
     GarminMessageId.NOTIFICATION_SUBSCRIPTION,
-    // Likewise: a notification control request is answered by a three-byte
-    // control status. Sending a generic ACK as well would be a second reply
-    // to one question — the same double-reply that made the watch retransmit
-    // its protobuf messages below.
     GarminMessageId.NOTIFICATION_CONTROL,
-    // Acknowledged by the protobuf transport itself, which is the only thing
-    // that knows the request id and offset a protobuf status has to name —
-    // complete or chunked, both get one. Acking here as well sent TWO for
-    // every message, and the watch answered that by retransmitting.
+    // Acked by the protobuf transport, which knows the request id and offset.
     GarminMessageId.PROTOBUF_REQUEST,
     GarminMessageId.PROTOBUF_RESPONSE,
 )
 
-/**
- * Acknowledges a received file-transfer chunk: `RESPONSE` envelope naming
- * FILE_TRANSFER_DATA, ACK + OK, and the offset reached
- * (`FileTransferDataStatusMessage`).
- */
+/** Acknowledges a file-transfer chunk with the offset reached. */
 fun buildFileTransferDataAck(dataOffsetReached: Int): ByteArray {
     val writer = GarminByteWriter()
         .writeShort(GarminMessageId.FILE_TRANSFER_DATA)
@@ -800,20 +650,13 @@ fun buildFileTransferDataAck(dataOffsetReached: Int): ByteArray {
     return GarminGfdiFrame.build(GarminMessageId.RESPONSE, writer.toBytes())
 }
 
-/**
- * Bit for [GarminFileFlag.ARCHIVE]/`DELETE` — the value is `1 shl ordinal`
- * in Garmin's table, so ARCHIVE (ordinal 4) is 0x10, matching
- * `SetFileFlagsMessage.FileFlags`.
- */
+/** File flag bits: `1 shl ordinal` in Garmin's table, so ARCHIVE is 0x10. */
 enum class GarminFileFlag(val bit: Int) {
     ARCHIVE(0x10),
     DELETE(0x20),
 }
 
-/**
- * Marks a downloaded file archived, so the watch does not re-offer it next
- * sync (`SetFileFlagsMessage`).
- */
+/** Marks a downloaded file archived so the watch does not re-offer it. */
 fun buildSetFileFlags(fileIndex: Int, flag: GarminFileFlag): ByteArray {
     val writer = GarminByteWriter()
         .writeShort(fileIndex)
@@ -821,10 +664,7 @@ fun buildSetFileFlags(fileIndex: Int, flag: GarminFileFlag): ByteArray {
     return GarminGfdiFrame.build(GarminMessageId.SET_FILE_FLAGS, writer.toBytes())
 }
 
-/**
- * A system event carrying a single byte value (0 for the sync lifecycle
- * events like SYNC_READY / SYNC_COMPLETE).
- */
+/** A system event with a single byte value. */
 fun buildSystemEvent(event: GarminSystemEventType, value: Int = 0): ByteArray {
     val writer = GarminByteWriter()
         .writeByte(event.ordinal)
@@ -832,23 +672,13 @@ fun buildSystemEvent(event: GarminSystemEventType, value: Int = 0): ByteArray {
     return GarminGfdiFrame.build(GarminMessageId.SYSTEM_EVENT, writer.toBytes())
 }
 
-/**
- * Asks the watch for the file types it supports (`SupportedFileTypesMessage`
- * — no payload).
- */
+/** Asks the watch for the file types it supports. No payload. */
 fun buildSupportedFileTypesRequest(): ByteArray =
     GarminGfdiFrame.build(GarminMessageId.SUPPORTED_FILE_TYPES_REQUEST, ByteArray(0))
 
 /**
- * Our half of the device-information exchange: a RESPONSE envelope that both
- * ACKs the watch's message and describes this phone.
- *
- * The sentinel values are Gadgetbridge's, kept verbatim because they are what
- * a watch has been observed to accept: protocol 150, software 7791, and `-1`
- * (all-ones) for unit/product/max-packet, i.e. "unspecified".
- *
- * `protocolFlags` mirrors the watch's own protocol generation — 1 when it
- * reports a 1xx protocol, else 0.
+ * Our half of the device-information exchange: ACK plus a description of
+ * this phone. The sentinel values are Gadgetbridge's and known to be accepted.
  */
 fun buildDeviceInformationResponse(
     incoming: GarminDeviceInformation,
@@ -877,19 +707,9 @@ fun buildDeviceInformationResponse(
 }
 
 /**
- * This app's capability bitmap, the reply to a [GarminConfiguration].
- *
- * One bit per `GarminCapability` ordinal, 120 capabilities in 15 bytes —
- * exactly the length a real vívoactive 5 sends. The value is Gadgetbridge's
- * `OUR_CAPABILITIES`: everything set except `UNK_104..UNK_111` and
- * `UNK_114..UNK_119`, which its authors note have never been seen in a Garmin
- * Connect dump.
- *
- * Claiming capabilities this app does not implement (music, LiveTrack,
- * ConnectIQ) is deliberate and matches Gadgetbridge: the watch uses the
- * bitmap to decide what it may OFFER, and a narrower claim has been observed
- * to make devices withhold data. Nothing is obliged to act on an offer it
- * never accepts.
+ * This app's capability bitmap, Gadgetbridge's OUR_CAPABILITIES. Claiming
+ * unimplemented capabilities is deliberate: a narrower claim makes watches
+ * withhold data.
  */
 val garminOurCapabilities: ByteArray = byteArrayOf(
     0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(),
@@ -898,11 +718,7 @@ val garminOurCapabilities: ByteArray = byteArrayOf(
     0xFF.toByte(), 0x00, 0x03,
 )
 
-/**
- * Sends our capabilities back (`ConfigurationMessage`). Note this is a
- * CONFIGURATION message in its own right, not a RESPONSE envelope — the watch
- * gets both this and a plain ACK, as Gadgetbridge sends both.
- */
+/** Sends our capabilities back. A CONFIGURATION message, sent alongside the plain ACK. */
 fun buildConfigurationResponse(): ByteArray {
     val writer = GarminByteWriter()
         .writeByte(garminOurCapabilities.size)
@@ -911,17 +727,9 @@ fun buildConfigurationResponse(): ByteArray {
 }
 
 /**
- * Answers a notification-subscription request
- * (`NotificationSubscriptionStatusMessage`).
- *
- * [enabled] is what actually turns forwarding on: until the watch has been
- * told ENABLED it sends no control requests at all, so nothing else in the
- * notification path can happen. A session with no notifications handler
- * answers DISABLED, which is what every sync, find and settings session does
- * and did before this existed.
- *
- * The watch's own flag and unknown byte are echoed back, as Gadgetbridge
- * does.
+ * Answers a notification-subscription request. [enabled] turns forwarding on;
+ * until then the watch sends no control requests. The watch's flag and unknown
+ * byte are echoed back.
  */
 fun buildNotificationSubscriptionStatus(
     incoming: GarminNotificationSubscription,
@@ -940,14 +748,8 @@ fun buildNotificationSubscriptionStatus(
 }
 
 /**
- * Announces a notification to the watch (`NotificationUpdateMessage`, 5033).
- *
- * Carries NO text — only an id, a category and some counters. The watch
- * decides from this whether it wants the notification at all, and asks for
- * the words separately. See `GarminNotificationMessages.kt`.
- *
- * [count] is how many notifications of the same category are currently
- * outstanding, which is what a watch face's per-category badge shows.
+ * Announces a notification (5033): id, category and counters, no text. The
+ * watch asks for the words separately. [count] feeds the per-category badge.
  */
 fun buildNotificationUpdate(
     updateType: GarminNotificationUpdateType,
@@ -972,13 +774,7 @@ fun buildNotificationUpdate(
     return GarminGfdiFrame.build(GarminMessageId.NOTIFICATION_UPDATE, writer.toBytes())
 }
 
-/**
- * One chunk of an attribute blob (`NotificationDataMessage`, 5035).
- *
- * [runningCrc] is cumulative over everything sent so far, not over this chunk
- * alone — the same running-CRC scheme the download path verifies on the way
- * in, just run in the other direction.
- */
+/** One chunk of an attribute blob (5035). [runningCrc] covers everything sent so far. */
 fun buildNotificationData(
     chunk: ByteArray,
     totalSize: Int,
@@ -993,13 +789,7 @@ fun buildNotificationData(
     return GarminGfdiFrame.build(GarminMessageId.NOTIFICATION_DATA, writer.toBytes())
 }
 
-/**
- * Acknowledges a notification control request
- * (`NotificationControlStatusMessage`).
- *
- * Three payload bytes after the message id, not the one a generic ACK carries
- * — which is why 5034 is in [garminSelfAcknowledgedTypes].
- */
+/** Acknowledges a notification control request: three payload bytes, not one. */
 fun buildNotificationControlStatus(ok: Boolean = true): ByteArray {
     val chunkStatusOk = 0
     val chunkStatusError = 1
@@ -1013,13 +803,7 @@ fun buildNotificationControlStatus(ok: Boolean = true): ByteArray {
     return GarminGfdiFrame.build(GarminMessageId.RESPONSE, writer.toBytes())
 }
 
-/**
- * Tells the watch the attribute blob is fully sent — the phone's own
- * `NotificationDataStatusMessage`, ACK + OK.
- *
- * Sent once the last chunk has been acknowledged. Without it the watch keeps
- * the transfer open waiting for more.
- */
+/** Tells the watch the attribute blob is fully sent. Without it the transfer stays open. */
 fun buildNotificationDataFinalAck(): ByteArray {
     val transferStatusOk = 0
     val writer = GarminByteWriter()
@@ -1030,11 +814,8 @@ fun buildNotificationDataFinalAck(): ByteArray {
 }
 
 /**
- * Answers a [GarminSynchronization] announcement (`FilterMessage`).
- *
- * The single payload byte is `FilterType.UNK_3` — Gadgetbridge's name for it,
- * meaning nobody has worked out what the other values do. It is sent verbatim
- * because it is what a real watch is known to accept.
+ * Answers a [GarminSynchronization]. The byte is Gadgetbridge's
+ * FilterType.UNK_3, the value a real watch accepts.
  */
 fun buildFilterMessage(): ByteArray {
     val filterTypeUnk3 = 3
@@ -1042,10 +823,7 @@ fun buildFilterMessage(): ByteArray {
     return GarminGfdiFrame.build(GarminMessageId.FILTER, writer.toBytes())
 }
 
-/**
- * Answers the auth challenge with ACK + `GUESS_OK`, echoing the watch's own
- * unknown byte and flags back at it — the "no authentication" handshake.
- */
+/** Answers the auth challenge with ACK + GUESS_OK, echoing the watch's bytes. */
 fun buildAuthNegotiationResponse(incoming: GarminAuthNegotiation): ByteArray {
     val guessOk = 0
     val writer = GarminByteWriter()

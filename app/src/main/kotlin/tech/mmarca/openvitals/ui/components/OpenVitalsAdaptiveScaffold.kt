@@ -50,11 +50,7 @@ data class ChartSemanticsSummary(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-/**
- * 56dp, matching the shipped app: Flutter's AppBar keeps Material 2's toolbar
- * height even under M3, and Compose's 64dp default left every screen's content
- * sitting 8dp lower than the design it was drawn from.
- */
+/** 56dp, matching the shipped app; Compose's 64dp default sat content 8dp low. */
 private val TopBarHeight = 56.dp
 
 @Composable
@@ -78,35 +74,21 @@ fun OpenVitalsAdaptiveScaffold(
     val scaffoldContent: @Composable () -> Unit = {
         Scaffold(
             modifier = modifier.fillMaxSize(),
-            // The scaffold's own ground shows through the transparent top bar and in the
-            // navigation-bar inset below the content, so a screen painting a background of its
-            // own has to be able to say what surrounds it -- or it reads as a slab of one colour
-            // framed by bands of another.
+            // The scaffold's ground shows through the top bar and the bottom inset,
+            // so a screen with its own background must say what surrounds it.
             containerColor = containerColor ?: MaterialTheme.colorScheme.background,
-            // The navigation-bar inset and nothing else: the top bar carries
-            // its own status-bar inset, and screens with the app's bottom
-            // navigation are padded by the bar itself. What this fixes is
-            // every screen WITHOUT that bar - with 3-button navigation the
-            // system bar is opaque and sat on top of their last rows.
+            // The navigation-bar inset only: the top bar carries its own, and the
+            // bottom navigation pads itself. Fixes screens without that bar.
             contentWindowInsets = WindowInsets.navigationBars,
             topBar = {
                 if (showTopBar) {
                     TopAppBar(
-                        // 56dp, matching the shipped app: Flutter's AppBar
-                        // keeps Material 2's toolbar height even under M3, and
-                        // Compose's 64dp default left every screen's content
-                        // sitting 8dp lower than the design it was drawn from.
+                        // 56dp, matching the shipped app.
                         expandedHeight = TopBarHeight,
                         title = {
                             Text(
                                 text = title,
-                                // titleLarge everywhere, measured off the
-                                // shipping app: 22sp on the dashboard, same as
-                                // every other screen. This is a 64dp SMALL top
-                                // app bar and titleLarge is M3's size for one;
-                                // the dashboard's 32sp Bold was a special case
-                                // nothing asked for, and it overpowered the
-                                // screen it sat on.
+                                // titleLarge everywhere, as measured off the shipping app.
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
@@ -136,10 +118,7 @@ fun OpenVitalsAdaptiveScaffold(
             bottomBar = {
                 if (showNavigation) {
                     NavigationBar(
-                        // surfaceContainer is a near-black 0xFF080808 under the AMOLED scheme,
-                        // which is a lit pixel: the bar reads as a grey band along the bottom of a
-                        // screen whose whole point is that black is off. There it takes the same
-                        // pure black as the body it sits under.
+                        // surfaceContainer is a lit pixel under AMOLED; the bar takes pure black.
                         containerColor = if (isAmoledColorScheme()) {
                             MaterialTheme.colorScheme.surface
                         } else {

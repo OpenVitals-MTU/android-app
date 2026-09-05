@@ -60,18 +60,9 @@ fun AppLanguageDropdown(
 }
 
 /**
- * Every language reads in its own language — "Deutsch", never "German".
- *
- * The one entry that is translated is "System default", because that names the
- * device's setting rather than a language.
- *
- * The picker used to resolve each entry through a translatable
- * `settings_language_*` string, so a German UI listed "Estnisch" and an
- * Estonian UI listed "Saksa". That is backwards for the case a language picker
- * exists to serve: someone holding a phone in a language they cannot read,
- * looking for the one they can. They are looking for "Eesti". An autonym is the
- * same in every locale, which is why it is the accepted practice for a language
- * selector.
+ * Every language reads in its own language: someone holding a phone in a
+ * language they cannot read is looking for "Eesti", not "Estnisch". Only
+ * "System default" is translated.
  */
 @Composable
 private fun AppLanguage.label(): String =
@@ -82,9 +73,7 @@ private fun AppLanguage.label(): String =
 
 private fun autonym(languageTag: String): String {
     val locale = Locale.forLanguageTag(languageTag)
-    // Titlecased in the language's OWN locale: several languages write their
-    // name lower-case, and Turkish dotted/dotless I makes the display locale
-    // the wrong one to ask.
+    // Titlecased in the language's own locale: Turkish dotted I makes the display locale wrong.
     return locale
         .getDisplayLanguage(locale)
         .replaceFirstChar { char ->

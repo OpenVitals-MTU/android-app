@@ -15,10 +15,8 @@ enum class ActivityPlanGoalKind {
 }
 
 /**
- * One executable step of a plan run: the plan's blocks unrolled by round, with
- * each rest folded into the active step before it. [sensorTypeId] names the
- * entry type whose repetition recognizer counts this step; null means the
- * count is manual (a plank, a lunge — anything the phone cannot sense).
+ * One executable step of a plan run, rest folded in. [sensorTypeId] names
+ * the recognizer that counts it; null means manual.
  */
 @Immutable
 data class ActivityPlanRunStep(
@@ -49,15 +47,9 @@ fun ActivityPlanRunStep.spokenGoal(context: Context): String = when (goalKind) {
 }
 
 /**
- * The entry type whose recognizer can count a step, if any. Matched on the
- * segment type, and on the label for the segment types several exercises
- * share (push-ups and trampoline jumping are both "other workout").
- *
- * The label is whatever the step's author typed, so the match is loose: case,
- * spaces, hyphens and accents are ignored ("Pushups", "push ups" and
- * "Push-Ups" all count), and [localizedTitle] lets the caller offer the
- * exercise's name in the phone's language ("Liegestütze") next to the English
- * preset. A step nothing matches gets no sensor and is counted by hand.
+ * The entry type whose recognizer counts a step, if any. Matched on the
+ * segment type and loosely on the label; [localizedTitle] adds the phone's
+ * language. No match means counted by hand.
  */
 internal fun planStepSensorTypeId(
     segmentType: Int,

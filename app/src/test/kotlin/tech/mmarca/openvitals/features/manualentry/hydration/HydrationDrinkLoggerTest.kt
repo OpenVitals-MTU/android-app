@@ -15,12 +15,7 @@ import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
 
-/**
- * Dart counterpart: test/domain/usecase/save_hydration_entry_use_case_test.dart.
- *
- * Flutter's `SaveHydrationEntryUseCase` is [writeHydrationAndNutritionEntry]
- * here; the two-record rollback it guards is the same one.
- */
+/** The two-record rollback in [writeHydrationAndNutritionEntry]. */
 class HydrationDrinkLoggerTest {
 
     @Test
@@ -45,8 +40,7 @@ class HydrationDrinkLoggerTest {
         }.exceptionOrNull()
 
         assertEquals("nutrition write failed", thrown?.message)
-        // The just-written hydration record is deleted by its clientRecordId, so a
-        // retry cannot leave a duplicate hydration entry with no nutrition.
+        // The hydration record is deleted by clientRecordId, so a retry cannot leave a duplicate.
         coVerify(exactly = 1) { hydration.deleteHydrationEntryByClientRecordId("client-123") }
     }
 
@@ -71,8 +65,7 @@ class HydrationDrinkLoggerTest {
             canWriteNutrition = true,
         )
 
-        // The caffeine model spreads the dose across the record's interval, so the end
-        // time — not a separate field — is what carries "drank over two hours".
+        // The end time, not a separate field, carries "drank over two hours".
         assertEquals(startedAt, request.captured.time)
         assertEquals(startedAt.plus(Duration.ofHours(2)), request.captured.endTime)
     }

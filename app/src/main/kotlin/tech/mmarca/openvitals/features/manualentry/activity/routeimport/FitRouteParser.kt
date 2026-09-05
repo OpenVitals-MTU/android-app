@@ -12,22 +12,15 @@ import tech.mmarca.openvitals.domain.model.BleSpeedSample
 import tech.mmarca.openvitals.domain.model.BleStepsCadenceSample
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 
-/**
- * A nightly HRV figure decoded from a Garmin wellness FIT file.
- *
- * The watch's own aggregate (`hrv_status_summary.last_night_average`), not a
- * beat-to-beat computation — Garmin already did the averaging.
- */
+/** A nightly HRV figure from a Garmin wellness FIT file: the watch's own average. */
 internal data class FitHrvReading(
     val time: Instant,
     val rmssdMillis: Double,
 )
 
 /**
- * Decodes the **activity** data a FIT file carries (route points, session
- * summary, and the per-record HR/speed/cadence series). Built on the generic
- * [FitDecoder]; the Garmin-proprietary wellness interpretation lives in
- * `devices/garmin/wellness/GarminFitWellness.kt`, consuming the same reader.
+ * Decodes the activity data a FIT file carries: route, session summary and
+ * the per-record series. Wellness lives in `GarminFitWellness.kt`.
  */
 internal object FitRouteParser {
     fun parse(fitBytes: ByteArray, fileName: String? = null): RouteFileImport {
@@ -47,11 +40,7 @@ internal object FitRouteParser {
         }
     }
 
-    /**
-     * The nightly HRV readings a Garmin wellness FIT carries, if any. Empty for
-     * activity/course/workout files — the caller uses this as the fallback when
-     * a FIT file turns out not to be an activity at all.
-     */
+    /** The nightly HRV readings a wellness FIT carries. Empty for activity files. */
     fun parseWellnessHrv(fitBytes: ByteArray): List<FitHrvReading> =
         FitActivityDecoder(fitBytes).decode()
             .hrvReadings
@@ -192,12 +181,8 @@ private data class FitDecodeResult(
 )
 
 /**
- * The per-record series, before the sport is known.
- *
- * FIT field 4 is just "cadence" — it does not say whether those are pedal
- * strokes or footfalls, and Health Connect keeps the two in different record
- * types. Only the session's sport can decide, and the session is parsed after
- * the records, so the kind is resolved last.
+ * The per-record series before the sport is known. FIT field 4 is just
+ * "cadence"; only the sport decides pedal strokes or footfalls.
  */
 private data class FitSamples(
     val heartRate: List<BleHeartRateSample> = emptyList(),
@@ -224,9 +209,7 @@ private data class FitSamples(
                 emptyList()
             } else {
                 cadence.map { (time, rate) ->
-                    // FIT reports running cadence as STRIDES per minute — one
-                    // leg. Health Connect wants steps. A runner at 90 spm is
-                    // taking 180 steps.
+                    // FIT running cadence is strides per minute; Health Connect wants steps.
                     BleStepsCadenceSample(time = time, stepsPerMinute = rate.toLong() * 2)
                 }
             },
@@ -278,11 +261,8 @@ private data class FitActivitySummary(
 }
 
 /**
- * Walks a (possibly chained) FIT byte stream through the generic [FitDecoder]
- * and interprets each file's messages into the activity carriers. One
- * [FitActivityInterpreter] per file; the results merge across the stream so a
- * later file falls back to — rather than concatenates with — an earlier file's
- * one-per-file scalar fields.
+ * Walks a chained FIT stream through [FitDecoder], one interpreter per file.
+ * Later files fall back to, not concatenate with, earlier scalar fields.
  */
 private class FitActivityDecoder(
     private val fileBytes: ByteArray,
@@ -322,12 +302,7 @@ private class FitActivityDecoder(
     }
 }
 
-/**
- * Interprets one file's decoded [FitMessage]s into the activity raw structs.
- * Its switch cases are disjoint from the Garmin wellness interpreter's, so a
- * wellness file simply yields no points, an empty summary and no samples here
- * (bar the HRV summary, kept for [FitRouteParser.parseWellnessHrv]).
- */
+/** Interprets one file's [FitMessage]s. A wellness file yields nothing but the HRV summary. */
 private class FitActivityInterpreter {
     private val points = mutableListOf<ExerciseRoutePoint>()
     private val heartRateSamples = mutableListOf<BleHeartRateSample>()
@@ -335,13 +310,7 @@ private class FitActivityInterpreter {
     private val cadenceSamples = mutableListOf<Pair<Instant, Int>>()
     private var fileType: Int? = null
     private var metadataName: String? = null
-    /**
-     * The name carried by the `activity` message, when the watch wrote one.
-     * It is the title the wearer sees on the wrist and wins over the workout
-     * name: a scheduled "Tempo run" workout executed as "Evening Run" should
-     * import under the latter, which is the order Gadgetbridge settled on too
-     * (activity > workout > session > sport).
-     */
+    /** The `activity` message's name. Wins over the workout name, as in Gadgetbridge. */
     private var activityName: String? = null
     private var sport: Int? = null
     private var subSport: Int? = null
@@ -354,8 +323,7 @@ private class FitActivityInterpreter {
     private val hrvReadings = mutableListOf<FitHrvReading>()
 
     fun interpret(messages: List<FitMessage>): FitDecodeResult {
-        // Dispatched in file order, so cases that depend on an earlier message
-        // (file_id before record) still see it.
+        // File order matters: file_id must precede record.
         messages.forEach(::dispatch)
         return FitDecodeResult(
             points = points,
@@ -397,10 +365,8 @@ private class FitActivityInterpreter {
                 if (sport == null && sessionSport != null) {
                     sport = sessionSport
                 }
-                // Read HERE and not in toFitActivitySummary, which serves the
-                // lap message too — a lap's field 6 is end_position_long, and
-                // reading a longitude as a sub-sport would name the activity at
-                // random.
+                // Read here, not in toFitActivitySummary, which serves laps too:
+                // a lap's field 6 is a longitude.
                 val sessionSubSport = values[FitSessionSubSportFieldNumber]
                     ?.toInt()
                     ?.takeUnless { it == FitSportGeneric }
@@ -415,12 +381,7 @@ private class FitActivityInterpreter {
         fileType = values[FitFileIdTypeFieldNumber]?.toInt() ?: fileType
     }
 
-    /**
-     * Garmin's nightly HRV: `hrv_status_summary.last_night_average`, a uint16
-     * scaled by 128 into milliseconds of RMSSD, stamped by the message
-     * timestamp. The uint16 invalid sentinel never reaches here — the generic
-     * reader already drops it.
-     */
+    /** Garmin's nightly HRV: uint16 scaled by 128 into ms of RMSSD. */
     private fun addHrvSummary(values: Map<Int, Long>, timestampRaw: Long?) {
         val raw = values[FitHrvLastNightAverageFieldNumber] ?: return
         if (timestampRaw == null) return
@@ -512,13 +473,9 @@ private class FitActivityInterpreter {
     }
 
     /**
-     * Heart rate, cadence and speed, straight off the `record` message.
-     *
-     * FIT stores speed as an integer of millimetres per second (scale 1000),
-     * and `enhanced_speed` is the same thing with more headroom, so it wins
-     * when present. Heart rate and cadence are plain bytes. A zero cadence is a
-     * real reading — you stopped pedalling — but a zero heart rate is not, so
-     * only the latter is dropped.
+     * Heart rate, cadence and speed off the `record` message. Speed is mm/s;
+     * `enhanced_speed` wins when present. Zero cadence is real, zero heart
+     * rate is not.
      */
     private fun addSamples(values: Map<Int, Long>, timestamp: Instant) {
         val bpm = values[FitRecordHeartRateFieldNumber]
@@ -537,17 +494,14 @@ private class FitActivityInterpreter {
             speedSamples += BleSpeedSample(
                 time = timestamp,
                 metersPerSecond = speedRaw / FitSpeedScale,
-                // Set from the session's sport once it is known — see
-                // [FitSamples.resolve].
+                // Set from the session's sport once known; see [FitSamples.resolve].
                 isRunning = false,
             )
         }
     }
 
     private fun addRecordPoint(values: Map<Int, Long>, timestamp: Instant) {
-        // BEFORE the GPS guard, deliberately. A record without a position still
-        // carries a heart rate and a cadence — an indoor trainer session has
-        // nothing else — and an early return would throw all of it away.
+        // Before the GPS guard: an indoor session has samples but no position.
         addSamples(values, timestamp)
 
         val latitude = values[FitRecordPositionLatFieldNumber]
@@ -594,19 +548,9 @@ private fun Map<Int, Long>.toFitActivitySummary(timestampRaw: Long?): FitActivit
         durationSeconds = durationSeconds?.roundToLong(),
         distanceMeters = this[FitTotalDistanceFieldNumber]?.fitScaledDouble(FitDistanceScale),
         elevationGainedMeters = this[FitTotalAscentFieldNumber]?.toDouble(),
-        // FIT session field 11 is `total_calories`. It was being written into
-        // ACTIVE calories — the constant says TOTAL and the field it fed said
-        // ACTIVE, and nothing objected.
-        //
-        // The consequence was not just a mislabelled number. Nothing then filled
-        // `totalCalories`, so the form estimated one, and the estimate came out
-        // BELOW the total that was sitting in the active field — so importing a
-        // real ride produced "Total calories cannot be lower than active
-        // calories" and would not save.
-        //
-        // The FIT session message has no separate active-calorie field, so
-        // active is left unknown rather than invented. Null is honest; a number
-        // is not.
+        // Field 11 is total_calories. It was once written into active calories,
+        // which made real rides fail validation. FIT has no active-calorie
+        // field, so active stays null.
         totalCaloriesKcal = this[FitTotalCaloriesFieldNumber]?.toDouble(),
         sport = sport,
     )
@@ -653,23 +597,12 @@ private fun Long.fitAltitudeMeters(): Double =
 private fun Long.fitScaledDouble(scale: Double): Double =
     toDouble() / scale
 
-/**
- * FIT sport 2 and 21 are cycling; everything else is on foot or in the water.
- *
- * It decides which Health Connect record the cadence goes into: pedalling
- * cadence and step cadence are different record types, and FIT field 4 is just
- * "cadence".
- */
+/** FIT sport 2 and 21 are cycling. Decides which cadence record type is used. */
 private fun fitSportIsCycling(sport: Int?): Boolean = sport == 2 || sport == 21
 
 /**
- * What the file says this was, in the words the type inference reads.
- *
- * The SUB-sport wins when it names the activity outright: a treadmill run is
- * not a run that happens to be indoors, it is a different Health Connect
- * exercise type, and the same goes for a trainer ride and a strength session.
- * Sub-sports that merely qualify an outdoor sport ("street", "trail", "road")
- * name nothing and leave the sport to speak.
+ * What the file says this was. The sub-sport wins when it names the activity
+ * (treadmill, trainer, strength); qualifiers like "trail" leave the sport to speak.
  */
 private fun fitSportName(sport: Int?, subSport: Int? = null): String? =
     fitSubSportName(subSport) ?: sport?.fitPlainSportName()
@@ -678,7 +611,7 @@ private fun fitSportName(sport: Int?, subSport: Int? = null): String? =
 private fun fitSubSportName(value: Int?): String? =
     when (value) {
         1 -> "treadmill"
-        // 5 spin, 6 indoor_cycling — a trainer and a spin bike, both stationary.
+        // 5 spin, 6 indoor_cycling.
         5,
         6 -> "indoor cycling"
         14 -> "indoor rowing"
@@ -730,11 +663,7 @@ private const val FitWorkoutSportFieldNumber = 4
 private const val FitWorkoutNameFieldNumber = 8
 private const val FitWorkoutStepMessageNumber = 27
 
-/**
- * FIT `activity` message. Its `name` (field 8) is absent from Garmin's public
- * profile but present in `fit_profile.json` and written by watches that let
- * the wearer title an activity.
- */
+/** FIT `activity` message. Field 8 `name` is in `fit_profile.json`, not the public profile. */
 private const val FitActivityMessageNumber = 34
 private const val FitActivityNameFieldNumber = 8
 private const val FitWorkoutStepDurationTypeFieldNumber = 1
@@ -742,13 +671,7 @@ private const val FitWorkoutStepDurationValueFieldNumber = 2
 private const val FitStartTimeFieldNumber = 2
 private const val FitSessionSportFieldNumber = 5
 
-/**
- * FIT session field 6, `sub_sport`: the field that knows the session was run on
- * a TREADMILL rather than a street, and pedalled on a trainer rather than a
- * road. The sport alone cannot say — an indoor ride and an Alpine descent are
- * both sport 2 — and without it every indoor session imported as its outdoor
- * twin.
- */
+/** Session field 6, `sub_sport`: what tells a treadmill run from a street run. */
 private const val FitSessionSubSportFieldNumber = 6
 private const val FitTotalElapsedTimeFieldNumber = 7
 private const val FitTotalTimerTimeFieldNumber = 8
@@ -759,10 +682,7 @@ private const val FitRecordPositionLatFieldNumber = 0
 private const val FitRecordPositionLongFieldNumber = 1
 private const val FitRecordAltitudeFieldNumber = 2
 
-// The per-record series a FIT carries beside each position. Before these were
-// read, an import arrived with a route and nothing else: no heart rate, no
-// cadence, no speed, and therefore not a single graph on the activity. An
-// indoor ride — no positions at all — arrived with nothing whatsoever.
+// The per-record series beside each position.
 private const val FitRecordHeartRateFieldNumber = 3
 private const val FitRecordCadenceFieldNumber = 4
 private const val FitRecordSpeedFieldNumber = 6

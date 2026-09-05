@@ -11,18 +11,10 @@ import tech.mmarca.openvitals.domain.model.ReportPoint
 import tech.mmarca.openvitals.domain.model.ReportValueKind
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 
-/**
- * The pure calendar arithmetic between daily reads and report rows: bucket the
- * days, combine per [ReportValueKind], fold the extremes, and never invent a
- * bucket the data doesn't have.
- */
+/** Calendar arithmetic between daily reads and report rows. Never invents a bucket. */
 object ReportRollup {
 
-    /**
-     * The calendar bucket [date] belongs to. Weekly buckets follow the user's
-     * week preference: Monday-aligned calendar weeks, or rolling 7-day blocks
-     * anchored at [rangeStart] for LAST_7_DAYS.
-     */
+    /** The bucket [date] belongs to. Weekly buckets follow the user's week preference. */
     fun bucketStart(
         date: LocalDate,
         granularity: ReportGranularity,
@@ -49,11 +41,8 @@ object ReportRollup {
     }
 
     /**
-     * Daily values → one [ReportPoint] per calendar bucket that has data.
-     * SUM metrics add up; AVERAGE metrics mean out. Bucket min/max fold the
-     * daily extremes (a day's own min/max where the source has one, its value
-     * otherwise). Bucket edges are clamped to the range so edge buckets show
-     * the dates they truly cover. Gap buckets are omitted, never zero-filled.
+     * Daily values to one [ReportPoint] per bucket with data. SUM adds,
+     * AVERAGE means. Edges are clamped to the range; gaps are omitted.
      */
     fun rollup(
         daily: List<ReportDailyValue>,
@@ -83,10 +72,7 @@ object ReportRollup {
                 )
             }
 
-    /**
-     * The stats row, from DAILY values so bucketing never changes what the
-     * numbers mean. Null when the range has no data at all.
-     */
+    /** The stats row, from daily values. Null when the range has no data. */
     fun summarize(
         daily: List<ReportDailyValue>,
         valueKind: ReportValueKind,

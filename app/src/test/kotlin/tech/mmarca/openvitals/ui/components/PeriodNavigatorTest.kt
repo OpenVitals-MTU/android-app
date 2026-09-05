@@ -18,7 +18,7 @@ class PeriodNavigatorTest {
     private val firstOfMonth = LocalDate.of(2023, 1, 1)
     private val midYear = LocalDate.of(2023, 6, 15)
 
-    // ─── DAY ──────────────────────────────────────────────────────────────────
+    // DAY.
 
     @Test fun `periodFor DAY returns single-day period`() {
         val period = periodFor(TimeRange.DAY, wednesday)
@@ -26,7 +26,7 @@ class PeriodNavigatorTest {
         assertEquals(wednesday, period.end)
     }
 
-    // ─── WEEK ─────────────────────────────────────────────────────────────────
+    // WEEK.
 
     @Test fun `periodFor WEEK anchored on Monday spans Mon to Sun`() {
         val period = periodFor(TimeRange.WEEK, monday)
@@ -50,7 +50,7 @@ class PeriodNavigatorTest {
         assertEquals(DayOfWeek.SUNDAY, period.end.dayOfWeek)
     }
 
-    // ─── MONTH ────────────────────────────────────────────────────────────────
+    // MONTH.
 
     @Test fun `periodFor MONTH start is first day of month`() {
         val period = periodFor(TimeRange.MONTH, midYear)
@@ -86,7 +86,7 @@ class PeriodNavigatorTest {
         assertEquals(wednesday, period.end)
     }
 
-    // ─── YEAR ─────────────────────────────────────────────────────────────────
+    // YEAR.
 
     @Test fun `periodFor YEAR start is January 1`() {
         val period = periodFor(TimeRange.YEAR, midYear)
@@ -109,7 +109,7 @@ class PeriodNavigatorTest {
         assertEquals(midYear, period.end)
     }
 
-    // ─── coerceAtMost(today) guard ────────────────────────────────────────────
+    // coerceAtMost(today) guard.
 
     @Test fun `periodFor end is never after today`() {
         val today = LocalDate.now()
@@ -133,7 +133,7 @@ class PeriodNavigatorTest {
         }
     }
 
-    // ─── Ordering invariant ───────────────────────────────────────────────────
+    // Ordering invariant.
 
     @Test fun `periodFor start is never after end for past dates`() {
         val pastDates = listOf(wednesday, monday, firstOfMonth, midYear)

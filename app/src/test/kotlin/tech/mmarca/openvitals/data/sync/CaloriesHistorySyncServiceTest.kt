@@ -154,12 +154,7 @@ class CaloriesHistorySyncServiceTest {
         coVerify { dao.writeToken(VitalsCacheKeys.CALORIES_BURNED, "new-token") }
     }
 
-    /**
-     * The backfill window: a first full sync must cover the whole
-     * [HistoryLookbackDays] lookback — a shorter fill would make the Year range
-     * fall through to the live read forever — walked newest-first in chunks
-     * that tile the window exactly and never exceed a year per read.
-     */
+    /** A first full sync covers the whole [HistoryLookbackDays] lookback, newest-first, in chunks of at most a year. */
     @Test fun `full sync backfills the whole lookback window in bounded newest-first chunks`() = runTest {
         val hc = hc()
         val readRanges = mutableListOf<Pair<LocalDate, LocalDate>>()

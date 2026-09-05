@@ -8,18 +8,7 @@ import com.google.common.truth.Truth.assertThat
 import java.time.Instant
 import org.junit.Test
 
-/**
- * Fields the sync codec puts ON the wire but does not take back off it.
- *
- * The Dart counterparts are the `round-trip > … survives a round trip` cases of
- * test/data/source/health/import_record_mapper_test.dart, filed N/A-FRAMEWORK
- * as "pigeon mapper, Kotlin has no msg layer". The *serializer* is Dart-only;
- * the invariant it protects — a record that goes out comes back the same — is
- * not, and Kotlin's own encode/decode pair is where it lives.
- *
- * A field that is encoded and not decoded is unambiguous: the author meant to
- * carry it, the receiving phone writes the record without it.
- */
+/** Fields the sync codec puts on the wire but does not take back off it. */
 class SyncRecordCodecFieldLossTest {
 
     private val time: Instant = Instant.parse("2026-01-09T07:30:00Z")
@@ -53,11 +42,8 @@ class SyncRecordCodecFieldLossTest {
     }
 
     /**
-     * FAILS TODAY. `encode` writes `bodyPos` and `measLoc`; `decode` never reads
-     * them, so BloodPressureRecord's defaults (UNKNOWN) win. A reading taken
-     * sitting down on the left upper arm arrives on the peer phone with the
-     * posture and the cuff site erased — and those are exactly the fields that
-     * make two readings comparable.
+     * FAILS TODAY. `encode` writes `bodyPos` and `measLoc`; `decode` never reads them,
+     * so a blood pressure reading arrives with posture and cuff site erased.
      */
     @Test
     fun `a blood pressure reading keeps its body position and cuff site across the wire`() {

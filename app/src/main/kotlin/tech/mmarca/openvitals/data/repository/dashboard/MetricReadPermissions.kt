@@ -36,11 +36,8 @@ import androidx.health.connect.client.records.WheelchairPushesRecord
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 
 /**
- * The raw (unfiltered) Health Connect read permissions each metric's reads
- * require — the single mapping the dashboard, permission callouts and the
- * report exporter all consult. "Raw" means no provider filtering: callers that
- * care about what can actually be granted intersect the result with
- * `HealthConnectManager.managedPermissions`.
+ * The raw read permissions each metric needs, unfiltered. Callers intersect
+ * with `HealthConnectManager.managedPermissions`.
  */
 object MetricReadPermissions {
 
@@ -124,9 +121,7 @@ object MetricReadPermissions {
             DashboardMetric.RESPIRATORY_RATE -> setOf(readRespiratoryRatePermission)
             DashboardMetric.BODY_TEMPERATURE -> setOf(readBodyTemperaturePermission)
             DashboardMetric.BLOOD_GLUCOSE -> setOf(readBloodGlucosePermission)
-            // Raw permission even where the feature flag is off: the
-            // feature-availability subtraction lives in `managedPermissions`,
-            // which callers of this mapping intersect against.
+            // Raw even where the feature flag is off; `managedPermissions` subtracts.
             DashboardMetric.SKIN_TEMPERATURE -> setOf(readSkinTemperaturePermission)
             DashboardMetric.WEEKLY_CARDIO_LOAD -> setOf(readStepsPermission)
             DashboardMetric.INTENSITY_MINUTES -> setOf(

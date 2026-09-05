@@ -12,12 +12,7 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Port of Flutter's `test/ui/components/swipe_to_delete_entry_row_test.dart`.
- *
- * Deletion is one-directional on purpose: a row that deletes whichever way it
- * is pushed loses entries to the horizontal component of a vertical scroll.
- */
+/** Deletion is one-directional on purpose, or a vertical scroll's horizontal component loses entries. */
 class SwipeToDeleteEntryRowTest {
 
     @get:Rule

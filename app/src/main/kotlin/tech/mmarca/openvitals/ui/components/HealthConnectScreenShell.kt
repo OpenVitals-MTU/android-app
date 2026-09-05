@@ -101,9 +101,7 @@ fun HealthConnectScreenShell(
     val syncPausedDescription = stringResource(R.string.health_connect_sync_paused)
     val syncInProgressDescription = stringResource(R.string.health_connect_sync_in_progress)
 
-    // Published to everything the shell wraps so a nested surface — the error slot
-    // of a metric scaffold, say — can offer the very same grant request instead of
-    // dead-ending on a "permission denied" line of text.
+    // Published so a nested surface can offer the same grant request.
     val grantAccess = HealthConnectGrantAccess(
         permissions = uxState.missingReadPermissions.ifEmpty { uxState.requiredPermissions },
         onGrant = onGrantPermissions,

@@ -8,23 +8,8 @@ import org.w3c.dom.Element
 
 /**
  * First-party copy is sentence case; third-party product names are not.
- *
- * The design system's copy standard: sentence case everywhere — titles,
- * buttons, list items. The app's own feature names are subject to it, so
- * "Body Energy" became "Body energy", and consistently so: a title that reads
- * one way while the paragraph under it reads another is worse than either
- * choice made throughout.
- *
- * The exemption is narrow and load-bearing. Garmin's *Body Battery*, *Sleep
- * Coach*, *Training Readiness*, *Intensity Minutes* and *Stress Level* are that
- * company's product names appearing in our UI, and lowercasing someone else's
- * trademark is not a house-style decision we get to make. This test guards the
- * exemption in both directions: the first-party names must not creep back to
- * title case, and the third-party ones must not be "corrected" into sentence
- * case by a well-meaning sweep.
- *
- * English only. `values-XX/` is Weblate's, and each language's capitalisation
- * rules are its translators' business — German capitalises every noun.
+ * "Body energy" must not creep back to title case, and Garmin's *Body Battery* must not
+ * be "corrected" into sentence case. English only: `values-XX/` is Weblate's.
  */
 class SentenceCaseTest {
 
@@ -71,10 +56,7 @@ class SentenceCaseTest {
     }
 
     private companion object {
-        /**
-         * The exact title-case spellings that were corrected. Listed as the
-         * WRONG form so the test names what must not come back.
-         */
+        /** The title-case spellings that were corrected, listed as the wrong form. */
         val FirstPartyTitleCase = listOf(
             "Body Energy",
             "Daily Readiness",

@@ -12,11 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-/**
- * The single-process radio discipline: one exclusive, expiring, per-address
- * lease. Time is virtual — the monotonic clock is mocked so TTL, expiry and
- * the post-release settle window are exact.
- */
+/** The single-process radio discipline: one exclusive, expiring, per-address lease. The clock is mocked. */
 class RadioLeasesTest {
 
     private var nowMillis = 0L
@@ -75,8 +71,7 @@ class RadioLeasesTest {
         assertTrue(RadioLeases.acquire(ADDRESS, "forwarder", 1_000))
         assertTrue(RadioLeases.renew(ADDRESS, "forwarder", 1_000))
 
-        // A waiter makes the holder's next renew fail — that is how an
-        // indefinitely-held lease is given up.
+        // A waiter makes the holder's next renew fail: that is how an indefinite lease is given up.
         RadioLeases.request(ADDRESS, "sync")
         assertFalse(RadioLeases.renew(ADDRESS, "forwarder", 1_000))
     }
@@ -112,8 +107,7 @@ class RadioLeasesTest {
 
     @Test
     fun `release keeps the address unavailable for the settle window`() {
-        // Android closes a BluetoothGatt asynchronously; a new connect inside
-        // the teardown window is exactly the collision the lease prevents.
+        // Android closes a BluetoothGatt asynchronously; a connect inside that window is the collision the lease prevents.
         assertTrue(RadioLeases.acquire(ADDRESS, "sync", 10_000))
         RadioLeases.release(ADDRESS, "sync")
 

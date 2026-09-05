@@ -13,11 +13,8 @@ import tech.mmarca.openvitals.domain.model.GarminWellnessMetric
 import tech.mmarca.openvitals.domain.model.GarminWellnessSample
 
 /**
- * Port of the aggregation rules under the Flutter build's
- * `watch_metrics_view_model.dart` (asserted there through
- * `watch_data_screen_test.dart`): the latest reading per metric, today's
- * series over the local day, and the weekly intensity-minutes total — a sum
- * of each day's FINAL running total, vigorous counted double.
+ * The latest reading per metric, today's series over the local day, and the weekly
+ * intensity-minutes total: a sum of each day's final running total, vigorous counted double.
  */
 class WatchMetricsTest {
 
@@ -130,8 +127,7 @@ class WatchMetricsTest {
 
         val metrics = loadWatchMetrics(repo, clock)
 
-        // 40 (Monday's final) + 20 (today's final) — never 25 + 10, and never
-        // the bare latest reading alone.
+        // 40 (Monday's final) + 20 (today's final), never 25 + 10.
         assertEquals(60L, metrics.intensityMinutesWeek)
     }
 

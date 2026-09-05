@@ -84,10 +84,7 @@ class PeriodChartTest {
     }
 
     @Test fun `a short month drops the last label rather than colliding it`() {
-        // February's 28th sits two slots after its 26th. Told that a label needs
-        // three slots — which is what the axis measures a day number to need at
-        // phone width — the last one goes rather than printing over its
-        // neighbour.
+        // February's 28th sits two slots after its 26th. With three slots per label, the last one goes.
         val february = daysFrom(LocalDate.of(2026, 2, 1), 28)
 
         val roomy = periodChartLabelIndices(february, TimeRange.MONTH, minimumGap = 1)
@@ -99,8 +96,7 @@ class PeriodChartTest {
     }
 
     @Test fun `a label wider than the gap thins the whole row`() {
-        // What the axis does when twelve month names will not fit: every other
-        // one, rather than twelve overlapping.
+        // Twelve month names will not fit: every other one.
         val months = (0..11).map { LocalDate.of(2026, 1, 1).plusMonths(it.toLong()) }
 
         val thinned = periodChartLabelIndices(months, TimeRange.YEAR, minimumGap = 2)
@@ -115,8 +111,7 @@ class PeriodChartTest {
     }
 
     @Test fun `a year of days is labelled by month, not every thirtieth day`() {
-        // Every thirtieth DAY drifts off the calendar: it printed "May" twice
-        // and ran "Dec" into the year's last day.
+        // Every thirtieth day drifts off the calendar: it printed "May" twice.
         val days = daysFrom(LocalDate.of(2026, 1, 1), 365)
         val labelled = periodChartLabelIndices(days, TimeRange.YEAR)
 
@@ -133,8 +128,7 @@ class PeriodChartTest {
     }
 
     @Test fun `compact y axis values abbreviate large numbers`() {
-        // Small numbers pass straight through — an axis that said "0.0k" would be
-        // abbreviating nothing at the cost of reading it.
+        // Small numbers pass straight through; "0.0k" abbreviates nothing.
         assertEquals("0", formatCompactAxisValue(0.0))
         assertEquals("12", formatCompactAxisValue(12.0))
         assertEquals("1.5k", formatCompactAxisValue(1_500.0))
@@ -151,7 +145,7 @@ class PeriodChartTest {
         assertEquals(listOf("1", "0.5", "0"), labels)
     }
 
-    // ── Zoomed bar geometry ─────────────────────────────────────────────────
+    // Zoomed bar geometry.
 
     @Test fun `unzoomed bar geometry splits the plot evenly between buckets`() {
         val geometry = periodBarGeometry(
@@ -175,9 +169,7 @@ class PeriodChartTest {
             pxPerDp = 1f,
         )
 
-        // 28 buckets at quarter zoom is 7 slots ON SCREEN, so it gets the roomy
-        // 7-slot gap rather than the cramped 28-slot one: the gap follows how
-        // crowded the plot looks, not how long the period is.
+        // 28 buckets at quarter zoom is 7 slots on screen, so the gap follows how crowded the plot looks.
         assertEquals(7f, geometry.visibleSlots, 1e-4f)
         assertEquals(100f, geometry.slotWidth, 1e-4f)
         assertEquals(8f, geometry.gap, 1e-4f)
@@ -222,8 +214,7 @@ class PeriodChartTest {
     @Test fun `slot positions follow the viewport`() {
         val viewport = ChartViewport(start = 0.5f, end = 1f)
 
-        // The fourth of seven days sits at 3/7 of the DATA; with the back half of
-        // the week on show that is a seventh of the way across the PLOT.
+        // The fourth of seven days is 3/7 of the data; with the back half on show, a seventh of the plot.
         assertEquals(0f, periodSlotLeftFraction(0, 7, ChartViewport.Full), 1e-4f)
         assertEquals(3f / 7f, periodSlotLeftFraction(3, 7, ChartViewport.Full), 1e-4f)
         assertEquals(1f / 7f, periodSlotLeftFraction(4, 7, viewport), 1e-4f)
@@ -244,8 +235,7 @@ class PeriodChartTest {
         assertEquals(3, periodBarIndexAt(xFraction = 0.5f, bucketCount = 7, viewport = ChartViewport.Full))
         assertEquals(6, periodBarIndexAt(xFraction = 1f, bucketCount = 7, viewport = ChartViewport.Full))
 
-        // With the back half of the week on show, the left edge of the plot is the
-        // fourth day, not the first — tapping the first bar you can SEE must select it.
+        // With the back half on show, the plot's left edge is the fourth day; tapping the first visible bar selects it.
         val zoomed = ChartViewport(start = 0.5f, end = 1f)
         assertEquals(3, periodBarIndexAt(xFraction = 0f, bucketCount = 7, viewport = zoomed))
         assertEquals(6, periodBarIndexAt(xFraction = 1f, bucketCount = 7, viewport = zoomed))
@@ -255,7 +245,7 @@ class PeriodChartTest {
         assertEquals(0, periodBarIndexAt(xFraction = 0.5f, bucketCount = 0, viewport = ChartViewport.Full))
     }
 
-    // ── Zoomed axis label positioning ───────────────────────────────────────
+    // Zoomed axis label positioning.
 
     @Test fun `zoomed axis labels sit over their own bars`() {
         val viewport = ChartViewport(start = 0.5f, end = 1f)
@@ -263,8 +253,7 @@ class PeriodChartTest {
         val slotWidth = rowWidth / (7 * viewport.span)
 
         assertEquals(200f, slotWidth, 1e-4f)
-        // Day 4 (index 3) straddles the left edge — half a week is not a whole
-        // number of days — so it starts just outside the plot and is still drawn.
+        // Day 4 straddles the left edge, so it starts just outside the plot and is still drawn.
         assertEquals(-100f, periodSlotLeftFraction(3, 7, viewport) * rowWidth, 1e-3f)
         assertTrue(isPeriodSlotVisible(-100f, slotWidth, rowWidth))
         // Day 5 is exactly one slot along: the label row's slots step with the bars'.

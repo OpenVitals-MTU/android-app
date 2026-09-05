@@ -47,11 +47,7 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsCardStyle
 import tech.mmarca.openvitals.ui.components.ReferenceLinkButton
 import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 
-/**
- * The Body Energy day view, and — since the merge — the home of the day's
- * readiness verdict too. The two describe the same day from adjacent angles, and
- * readiness linked here for its detail anyway.
- */
+/** The Body Energy day view, and the home of the day's readiness verdict. */
 @Composable
 fun BodyEnergyDetailsScreen(
     viewModel: BodyEnergyViewModel,
@@ -127,9 +123,7 @@ private fun LazyListScope.bodyEnergyContent(
     onOpenTrainingReadinessDetails: (LocalDate) -> Unit,
     onOpenStressDetails: (LocalDate) -> Unit,
 ) {
-    // One card for the battery itself — the score and the day's curve are two
-    // views of the same number — then what moved it, then the readiness verdict
-    // those movements feed, then the method behind all of it.
+    // The battery, then what moved it, then the readiness verdict, then the method.
     item {
         BodyEnergyCard(
             display = display,
@@ -501,11 +495,7 @@ internal fun BodyEnergyCalculationCard(
     }
 }
 
-/**
- * The science behind the calculation, as tappable links: the activity-drain
- * component is heart-rate-zone training load, and a screen that estimates
- * something should say what it estimates it from.
- */
+/** The science behind the calculation, as links. */
 @Composable
 private fun BodyEnergySourcesCard(
     modifier: Modifier = Modifier,
@@ -675,11 +665,7 @@ private fun calibrationModeLabel(value: String?): String {
     )
 }
 
-/**
- * The confidence chip. Flutter renders these as English literals; Android has a
- * string catalog, so they go through it — a translated screen with one English
- * word in it reads as a bug, not as a term of art.
- */
+/** The confidence chip, through the string catalog. */
 @StringRes
 private fun confidenceLabelRes(confidence: BodyEnergyConfidence): Int =
     when (confidence) {
@@ -689,13 +675,7 @@ private fun confidenceLabelRes(confidence: BodyEnergyConfidence): Int =
         BodyEnergyConfidence.NO_DATA -> R.string.body_energy_confidence_no_data
     }
 
-/**
- * The confidence sentence, rendered from its code.
- *
- * A row stored before codes existed carries [BodyEnergyReasonCode.LEGACY] and
- * falls back to the English the store persisted — which is the honest reading:
- * we know what it said, not which sentence it was.
- */
+/** The confidence sentence from its code. LEGACY rows fall back to the stored English. */
 @Composable
 private fun localizedConfidenceReason(timeline: BodyEnergyTimeline): String =
     when (timeline.confidenceReasonCode) {

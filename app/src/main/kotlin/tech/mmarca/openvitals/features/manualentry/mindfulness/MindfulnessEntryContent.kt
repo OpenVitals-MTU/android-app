@@ -319,11 +319,8 @@ internal fun MindfulnessTimerDial(
         animationSpec = tween(durationMillis = animationDuration(Motion.standardMillis)),
         label = "MindfulnessTimerProgress",
     )
-    // The timer's breathing cue. It loops, which reduced motion has to stop —
-    // a repeating animation is the one kind that never settles, and this one
-    // runs for the length of a meditation. Pinned to a still frame rather than
-    // slowed: the durations below are a breathing rhythm, not chrome timing,
-    // so they are left alone rather than folded into the motion scale.
+    // The breathing cue loops, so reduced motion pins it to a still frame.
+    // The durations are a breathing rhythm and stay as they are.
     val pulseTransition = rememberInfiniteTransition(label = "MindfulnessTimerPulse")
     val runningPulse by pulseTransition.animateFloat(
         initialValue = 0f,
@@ -612,11 +609,8 @@ internal fun MindfulnessManualEntryCard(
 }
 
 /**
- * One notes field for every place a session is saved from — the timer's save
- * moment and the manual form. The supporting text is the privacy contract: notes
- * live in Health Connect, not in OpenVitals, so any app the user granted
- * mindfulness read access can see them, and the field says so where the note is
- * written rather than in a settings page nobody reads.
+ * One notes field for every place a session is saved from. The supporting
+ * text is the privacy contract: notes live in Health Connect.
  */
 @Composable
 private fun MindfulnessNotesField(
@@ -698,8 +692,7 @@ internal fun MindfulnessBackgroundPreviewEffect(
             }
         }
         try {
-            // The picker preview plays at full volume so the sound is judged
-            // on its own; only the in-session loop is attenuated.
+            // The preview plays at full volume; only the in-session loop is attenuated.
             player.setVolume(1.0f, 1.0f)
             runCatching { player.start() }
             delay(backgroundEvent.previewMillis)

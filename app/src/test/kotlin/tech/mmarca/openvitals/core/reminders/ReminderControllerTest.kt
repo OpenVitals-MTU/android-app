@@ -23,11 +23,7 @@ import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderCont
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderNotificationService
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
-/**
- * Ported from the Flutter `test/core/reminders/reminder_controller_test.dart`.
- * Kotlin has no shared reminder controller — the per-feature controllers carry
- * the same rules — so the hydration one stands in for the shared Dart type.
- */
+/** Kotlin has no shared reminder controller, so the hydration one stands in for the Dart type. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReminderControllerTest {
 
@@ -65,8 +61,7 @@ class ReminderControllerTest {
 
     @Test
     fun `apply - missing notification permission clears, even when enabled`() = runTest {
-        // POST_NOTIFICATIONS is refused: an enabled reminder is cleared rather
-        // than armed for a notification that could never be posted.
+        // POST_NOTIFICATIONS refused: an enabled reminder is cleared rather than armed.
         mockkObject(HydrationReminderController.Companion)
         every { HydrationReminderController.hasNotificationPermission(any()) } returns false
         coEvery { hydrationRepository.loadDailyHydration(any(), any()) } returns emptyList()

@@ -22,13 +22,8 @@ import tech.mmarca.openvitals.testing.assertVisualRootMatchesGolden
 import tech.mmarca.openvitals.testing.goldenInstantAt
 
 /**
- * Port of Flutter's `test/goldens/charts/caffeine_curve_golden_test.dart`.
- *
- * [CaffeineCurveCard] — the decay curve, on the shared line plot. Three things have
- * to survive any change to it: the SAWTOOTH (a dose lands instantly and then decays,
- * so the curve jumps and slides, it does not swell), the DASHED sleep threshold, and
- * the per-drink markers on the baseline. The fixture is built to make all three
- * unmissable.
+ * [CaffeineCurveCard]: the sawtooth decay curve, the dashed sleep threshold and the per-drink
+ * markers. The fixture makes all three unmissable.
  */
 class CaffeineCurveGoldenTest {
 
@@ -68,10 +63,7 @@ class CaffeineCurveGoldenTest {
 
     @Test
     fun aSingleDose_oneRiseOneLongDecay() {
-        // The shape a light day actually has, and the one where the curve never
-        // reaches the threshold: the dashed line sits ABOVE the whole trace, because
-        // `caffeineCurveMaxMg` takes the threshold rather than the peak. That branch
-        // has no other picture.
+        // A light day where the curve never reaches the threshold, so the dashed line sits above the trace.
         val at = goldenInstantAt(8)
         val curve = (0..24 * 4).map { quarter ->
             val time = goldenInstantAt(0).plusSeconds(quarter * 15L * 60L)
@@ -101,9 +93,7 @@ class CaffeineCurveGoldenTest {
 
     @Test
     fun aDayWithNothingInIt() {
-        // Fewer than two points and the card refuses to draw a line at all — one point
-        // is not a trend, and placing it would divide by a zero-wide time span. The
-        // empty state is what it shows instead.
+        // Fewer than two points and the card shows the empty state instead of a line.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 300.dp) {
                 CaffeineCurveCard(
@@ -120,12 +110,7 @@ class CaffeineCurveGoldenTest {
     }
 
     private companion object {
-        /**
-         * Tighter than the 0.5% default, which would let this pass without the
-         * sleep-threshold guide line at all: the dashed line is ~236 of 122,400
-         * pixels, well inside the default budget. A golden that tolerates more
-         * than the feature it exists to photograph is not a golden.
-         */
+        /** Tighter than the 0.5% default, which would pass without the ~236-pixel threshold line. */
         const val SmallFeatureTolerance = 0.0005
 
         val FORMATTER = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC })
@@ -136,17 +121,10 @@ class CaffeineCurveGoldenTest {
         /** Caffeine's half-life, which is what makes the curve a decay rather than a line. */
         const val HALF_LIFE_HOURS = 5.0
 
-        /**
-         * 50 mg is the default, and the day deliberately crosses it — a threshold line
-         * that nothing ever touches proves nothing about where it was drawn.
-         */
+        /** The default, and the day deliberately crosses it. */
         const val THRESHOLD_MG = 50
 
-        /**
-         * A day's drinking, on the golden clock. Four doses, spaced so their decays
-         * overlap — a curve of one dose is just an exponential, and would photograph
-         * none of the interesting behaviour.
-         */
+        /** Four doses spaced so their decays overlap. */
         val DOSES = listOf(
             goldenInstantAt(7, 30) to 95.0,
             goldenInstantAt(10, 15) to 65.0,

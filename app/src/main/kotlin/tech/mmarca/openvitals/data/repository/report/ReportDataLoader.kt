@@ -59,16 +59,10 @@ data class ReportProgress(
 )
 
 /**
- * The report's data pass: every selected metric read as a daily series, rolled
- * up to the requested granularity. Reads run in coalesced GROUPS — one
- * `loadDailySteps` serves the whole steps family, one `loadDailyMacros` serves
- * the nutrition metrics — and the groups run SEQUENTIALLY on purpose: Health
- * Connect answers each read in one Binder parcel from a shared 1 MB buffer,
- * and parallel year-long reads are exactly how that buffer overflows.
- *
- * Never throws for data reasons. A group that fails or blows its budget marks
- * only its own metrics FAILED; a cancelled build marks the rest SKIPPED; an
- * ungranted metric is MISSING_PERMISSION without a read ever going out.
+ * The report's data pass: every selected metric as a daily series, rolled
+ * up. Reads run in coalesced groups, sequentially: parallel year-long reads
+ * overflow the shared Binder buffer. Never throws for data reasons; a
+ * failed group marks only its own metrics.
  */
 @Singleton
 class ReportDataLoader @Inject constructor(
@@ -86,20 +80,13 @@ class ReportDataLoader @Inject constructor(
     companion object {
         private const val TAG = "ReportDataLoader"
 
-        /**
-         * Per-group budget. A dense year-long raw read (HRV, uncached vitals)
-         * can be slow; past this it costs its own section, not the report.
-         */
+        /** Per-group budget. Past this a group costs its own section, not the report. */
         private const val GroupBudgetMillis = 60_000L
 
         /** What the range shrinks to when the history permission is missing. */
         private const val HistoryClampDays = 30
 
-        /**
-         * Past this many raw glucose readings the range is CGM territory —
-         * a per-reading table would run to hundreds of pages, so the section
-         * falls back to the generic daily chart.
-         */
+        /** Past this many glucose readings the range is CGM territory; use the daily chart. */
         private const val MaxGlucoseDetailReadings = 500
 
         /** Same idea for body temperature: wearables stream it continuously. */
@@ -108,11 +95,7 @@ class ReportDataLoader @Inject constructor(
 
     private val readHealthDataHistoryPermission = HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY
 
-    /**
-     * The raw permissions [metric]'s report read needs. On top of the
-     * dashboard mapping, the steps-family metrics add the steps permission:
-     * their only range read is `loadDailySteps`, which hard-requires it.
-     */
+    /** The raw permissions [metric]'s read needs. The steps family adds the steps permission. */
     fun rawPermissionsFor(metric: ReportMetric): Set<String> {
         val base = MetricReadPermissions.forMetric(
             metric.dashboardMetric,
@@ -133,10 +116,7 @@ class ReportDataLoader @Inject constructor(
         metrics.flatMapTo(mutableSetOf()) { rawPermissionsFor(it) }
             .intersect(hc.managedPermissions)
 
-    /**
-     * The metrics the installed provider can serve at all — the picker hides
-     * the rest. Mirrors the dashboard's `supportedMetrics`.
-     */
+    /** The metrics the provider can serve. Mirrors the dashboard's `supportedMetrics`. */
     fun supportedReportMetrics(): Set<ReportMetric> {
         val managed = hc.managedPermissions
         return ReportMetric.entries.filterTo(mutableSetOf()) { metric ->
@@ -159,9 +139,7 @@ class ReportDataLoader @Inject constructor(
         val effectiveStart = if (truncated) clampStart else request.start
 
         val requested = request.metrics
-        // A metric is readable only when the provider manages every permission
-        // its read needs AND all of them are granted — a permission outside
-        // `managedPermissions` can never be granted, so the metric can never fill.
+        // Readable only when every needed permission is managed and granted.
         val missing = requested.filterTo(mutableSetOf()) { metric ->
             val permissions = rawPermissionsFor(metric)
             permissions.any { it !in hc.managedPermissions } || permissions.any { it !in granted }
@@ -248,10 +226,7 @@ class ReportDataLoader @Inject constructor(
         )
     }
 
-    /**
-     * One metric's read output: the daily series every metric has, plus the
-     * blood-pressure extras only BP carries.
-     */
+    /** One metric's read output: the daily series, plus the blood-pressure extras. */
     private class MetricSeries(
         val daily: List<ReportDailyValue>,
         val detail: ReportMetricDetail? = null,
@@ -325,8 +300,7 @@ class ReportDataLoader @Inject constructor(
         if (ReportMetric.WORKOUT in readable) {
             groups += ReadGroup(listOf(ReportMetric.WORKOUT)) {
                 val zone = ZoneId.systemDefault()
-                // The metrics variant adds per-session distance (with route
-                // backfill) — the same read the Activities screens use.
+                // The metrics variant adds per-session distance with route backfill.
                 val workouts = activityRepository.loadWorkoutsWithMetrics(start, end)
                     .filter {
                         val date = it.startTime.atZone(zone).toLocalDate()
@@ -423,9 +397,7 @@ class ReportDataLoader @Inject constructor(
             heartRepository.loadDailyHRV(start, end).map { ReportDailyValue(it.date, it.rmssdMs) }
         }
 
-        // Raw readings rather than the daily-average read: the section lists
-        // every measurement and averages by time-of-day slot, and the chart's
-        // daily min/max should be real extremes, not a mean repeated.
+        // Raw readings: the section lists every measurement, and min/max should be real.
         if (ReportMetric.BLOOD_PRESSURE in readable) {
             groups += ReadGroup(listOf(ReportMetric.BLOOD_PRESSURE)) {
                 val bpZone = ZoneId.systemDefault()

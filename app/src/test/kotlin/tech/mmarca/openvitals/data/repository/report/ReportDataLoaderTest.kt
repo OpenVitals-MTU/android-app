@@ -89,8 +89,7 @@ class ReportDataLoaderTest {
     }
 
     private fun metricPermissions(metric: ReportMetric): Set<String> {
-        // Mirrors rawPermissionsFor without a loader instance: the dashboard
-        // mapping plus the steps hard-requirement for the DailySteps family.
+        // Mirrors rawPermissionsFor without a loader instance.
         val loader = ReportDataLoader(
             hc = mockk(relaxed = true),
             activityRepository = mockk(relaxed = true),
@@ -337,8 +336,7 @@ class ReportDataLoaderTest {
                 diastolicMmHg = 84,
                 source = "test",
             ),
-            // An exact duplicate of the first record (same data written twice
-            // in Health Connect) must not skew the chart or double the list.
+            // An exact duplicate must not skew the chart or double the list.
             tech.mmarca.openvitals.domain.model.BloodPressureEntry(
                 time = day.atTime(8, 0).atZone(zone).toInstant(),
                 systolicMmHg = 110,

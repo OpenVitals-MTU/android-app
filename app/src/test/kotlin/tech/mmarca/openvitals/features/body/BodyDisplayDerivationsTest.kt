@@ -22,15 +22,7 @@ import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.query.BodyPeriodData
 
-/**
- * Port of test/features/body/body_display_test.dart.
- *
- * Flutter precomputes one `BodyDisplay` — `hasAnyBodyData`, the per-metric daily
- * series and intraday samples, and the merged reading list — in the view-model.
- * Kotlin keeps the summary on `BodyDisplayState` and derives the rest from
- * `BodyUiState` at render time; these are the same derivations, exercised
- * through the internal helpers the body screen calls.
- */
+/** The body screen's derivations, through the internal helpers it calls. */
 class BodyDisplayDerivationsTest {
 
     private val zone: ZoneId = ZoneId.systemDefault()
@@ -44,7 +36,7 @@ class BodyDisplayDerivationsTest {
         localeProvider = { Locale.US },
     )
 
-    // ─── an empty period ──────────────────────────────────────────────────────
+    // An empty period.
 
     @Test fun `an empty period has no data, no readings and no tracked metrics`() {
         val state = stateOf(BodyPeriodData())
@@ -57,7 +49,7 @@ class BodyDisplayDerivationsTest {
         assertEquals(9, bodyMetricData(state, state.summary, formatter).size)
     }
 
-    // ─── the summary ──────────────────────────────────────────────────────────
+    // The summary.
 
     @Test fun `the summary takes the latest reading, and the first weight`() {
         val state = stateOf(
@@ -80,7 +72,7 @@ class BodyDisplayDerivationsTest {
         assertEquals(17.28, summary.adjustedFfmi!!, 0.01)
     }
 
-    // ─── the daily series ─────────────────────────────────────────────────────
+    // The daily series.
 
     @Test fun `the daily series keeps one value per day, that day's latest`() {
         val state = stateOf(
@@ -112,7 +104,7 @@ class BodyDisplayDerivationsTest {
         )
     }
 
-    // ─── BMI's series ─────────────────────────────────────────────────────────
+    // BMI's series.
 
     @Test fun `BMI has a series only when a height is known`() {
         val withoutHeight = stateOf(BodyPeriodData(weightEntries = listOf(weight(monday, 72.0))))
@@ -132,7 +124,7 @@ class BodyDisplayDerivationsTest {
         assertTrue(metric(withHeight, R.string.metric_ffmi).values.isEmpty())
     }
 
-    // ─── the reading list ─────────────────────────────────────────────────────
+    // The reading list.
 
     @Test fun `readings are newest first, indexed by day, and only OpenVitals ones are editable`() {
         val state = stateOf(
@@ -172,7 +164,7 @@ class BodyDisplayDerivationsTest {
         assertEquals(2, all.onDate(tuesdayDate, zone).size)
     }
 
-    // ─── the latest-value fallback ────────────────────────────────────────────
+    // The latest-value fallback.
 
     @Test fun `a period with a latest value but no entries still has data`() {
         // The provider can report an aggregate with no readings in the window.
@@ -184,7 +176,7 @@ class BodyDisplayDerivationsTest {
         assertEquals(70.0, state.display.summary.latestWeightKg!!, 0.0001)
     }
 
-    // ─── helpers ──────────────────────────────────────────────────────────────
+    // Helpers.
 
     private fun at(date: LocalDate, hour: Int): Instant =
         date.atTime(hour, 0).atZone(zone).toInstant()

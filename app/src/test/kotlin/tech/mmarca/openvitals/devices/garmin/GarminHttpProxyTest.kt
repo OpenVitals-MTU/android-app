@@ -11,10 +11,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.devices.weather.WeatherSnapshot
 
-/**
- * The HTTP proxy and its interceptors, exercised with the protobuf messages a
- * vívoactive-era watch sends (`gdi_http_service` / `gdi_data_transfer`).
- */
+/** The HTTP proxy and its interceptors, with the protobuf messages a vívoactive-era watch sends. */
 class GarminHttpProxyTest {
 
     private val tallinn = WeatherSnapshot(
@@ -127,8 +124,7 @@ class GarminHttpProxyTest {
 
         val days = JSONArray(String(responseBody(reply)))
         assertEquals(3, days.length()) // today + two stored forecast days
-        // The fixture timestamp is 2026-08-13 in Tallinn — a Thursday; v2
-        // counts Monday as 1.
+        // 2026-08-13 in Tallinn is a Thursday; v2 counts Monday as 1.
         assertEquals(4, days.getJSONObject(0).getInt("dayOfWeek"))
         assertEquals(20, days.getJSONObject(0).getJSONObject("high").getInt("value"))
         // The stored forecast's sunrise makes it through.
@@ -218,8 +214,7 @@ class GarminHttpProxyTest {
     @Test
     fun `a chunked body counts as delivered only once the last chunk goes`() {
         val served = mutableListOf<GarminAgpsKind>()
-        // A real Sony CPE blob's header, since the interceptor checks the
-        // shape before it will serve anything.
+        // A real Sony CPE header, since the interceptor checks the shape.
         val ephemeris =
             byteArrayOf(0x2a, 0x12, 0xa0.toByte(), 0x02) + ByteArray(1_196) { (it % 251).toByte() }
         val responder = responder(
@@ -239,8 +234,7 @@ class GarminHttpProxyTest {
 
         var offset = 0
         while (offset < total) {
-            // Recorded as delivered before the watch has the bytes would be a
-            // lie the settings screen keeps repeating.
+            // Recording delivery before the watch has the bytes would be a lie the settings screen repeats.
             assertTrue(served.isEmpty())
             val smart = ProtobufWriter().nested(
                 GarminSmartService.DATA_TRANSFER,
@@ -269,7 +263,7 @@ class GarminHttpProxyTest {
         assertEquals(0L, protobufField(rawResponse(reply), 1)?.varint)
     }
 
-    // ── the credential exchange the connected tier waits behind ─────────────
+    // The credential exchange the connected tier waits behind.
 
     @Test
     fun `connectToIT is answered with fabricated bearer tokens`() {

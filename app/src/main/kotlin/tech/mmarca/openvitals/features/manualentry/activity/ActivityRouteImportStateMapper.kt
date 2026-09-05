@@ -38,20 +38,10 @@ internal fun ActivityEntryUiState.withRouteImport(
     val importedTotalCaloriesText = routeImport.totalCaloriesKcal
         ?.takeIf { it > 0.0 }
         ?.toInputText(maxFractionDigits = 1)
-    // The estimate fills in for a file that measured NO calories at all. It must
-    // never stand beside a number the file did measure.
-    //
-    // A FIT session records `total_calories` and has no active-calorie field, so
-    // the other calorie field came back null — and the estimate then filled it,
-    // from METs and distance, with a number that had nothing to do with the
-    // file's own measurement. An indoor run arrived with an invented calorie
-    // figure standing beside its measured one, and the write was refused ("total
-    // cannot be lower than active"): a real activity, a real measurement, and a
-    // guess that contradicted it. Every FIT file with no GPS failed this way,
-    // which is every treadmill run and every trainer ride.
-    //
-    // So: estimate both, or estimate neither. A measurement does not get a
-    // guess for a neighbour.
+    // The estimate fills in only for a file that measured no calories at all.
+    // A FIT session has total calories and no active field; estimating active
+    // beside the measured total failed validation on every indoor session.
+    // Estimate both, or neither.
     val fileMeasuredCalories =
         importedActiveCaloriesText != null || importedTotalCaloriesText != null
     val calorieEstimate = activityCalorieEstimate(

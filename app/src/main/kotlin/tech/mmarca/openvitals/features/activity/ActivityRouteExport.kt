@@ -54,13 +54,7 @@ internal fun Context.saveActivityRouteExport(
         } ?: error("Unable to open export destination.")
     }
 
-/**
- * Stage the route file into the app cache and hand it to the system share
- * sheet. Same staging (and the same 24 h sweep) as the "open in map" path —
- * the file only needs to outlive the receiving app's read.
- *
- * No success toast on purpose: the chooser appearing IS the feedback.
- */
+/** Stages the route file in the cache and opens the share sheet. No toast: the chooser is the feedback. */
 internal fun Context.shareActivityRoute(
     workout: ExerciseData,
     format: ActivityRouteExportFormat,
@@ -125,10 +119,7 @@ private fun writeActivityRouteExport(
     }
 }
 
-/**
- * [serializer] is a parameter only so a JVM unit test can supply one:
- * `android.util.Xml` is a throwing stub off-device. Production never passes it.
- */
+/** [serializer] is a parameter only so a JVM test can supply one. */
 internal fun writeActivityRouteGpx(
     workout: ExerciseData,
     routePoints: List<ExerciseRoutePoint>,

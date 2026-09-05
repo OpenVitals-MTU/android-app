@@ -100,9 +100,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 val unitSystem by preferencesRepository.unitSystemFlow.collectAsStateWithLifecycle()
                 val appLanguage by preferencesRepository.appLanguageFlow.collectAsStateWithLifecycle()
-                // The "Aggregate charts" setting rides a CompositionLocal to the
-                // intraday charts (dozens of call sites deep) instead of a
-                // parameter — the LocalMetricSectionEditMode precedent.
+                // The "Aggregate charts" setting rides a CompositionLocal to the intraday charts.
                 val chartAggregationMode by preferencesRepository.chartAggregationModeFlow
                     .collectAsStateWithLifecycle()
 
@@ -188,12 +186,8 @@ internal fun Intent.openVitalsRoute(): String? =
         ?.takeIf(::isSupportedOpenVitalsRoute)
 
 /**
- * The route a stored intent should actually open.
- *
- * The Daily Readiness screen merged into the Body Energy view, but a home-screen
- * widget placed before that still carries the old route — the intent extra is
- * persisted, so it outlives the screen it names. It lands on the merged screen,
- * for today.
+ * The route a stored intent should open. A widget placed before the
+ * readiness screen merged still carries the old route.
  */
 internal fun migratedOpenVitalsRoute(route: String): String =
     if (route == LegacyDailyReadinessRoute) {
@@ -214,10 +208,7 @@ internal fun isSupportedOpenVitalsRoute(route: String): Boolean {
     }
     val bodyEnergyPrefix = "daily_readiness/body_energy/"
     if (route.startsWith(bodyEnergyPrefix)) {
-        // `yyyy-MM-dd`, the form LocalDate.toString() writes into the route. It
-        // is parsed strictly rather than pattern-matched: a lenient parse rolls
-        // `2026-13-45` over into 2027, which would open a day the widget never
-        // meant.
+        // Parsed strictly: a lenient parse rolls `2026-13-45` into 2027.
         return runCatching {
             LocalDate.parse(Uri.decode(route.removePrefix(bodyEnergyPrefix)))
         }.isSuccess

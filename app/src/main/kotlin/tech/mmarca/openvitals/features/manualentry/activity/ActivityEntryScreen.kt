@@ -142,8 +142,7 @@ fun ActivityEntryScreen(
         viewModel.onBuilderNavigationHandled()
         onOpenWorkoutPlanBuilder(planId)
     }
-    // The builder saves by delete-then-insert, so the plan comes back under a
-    // new id; re-prefilling from it keeps the session linked to a live record.
+    // The builder saves by delete-then-insert, so the plan comes back under a new id.
     LaunchedEffect(savedWorkoutPlanId) {
         val planId = savedWorkoutPlanId ?: return@LaunchedEffect
         onSavedWorkoutPlanHandled()

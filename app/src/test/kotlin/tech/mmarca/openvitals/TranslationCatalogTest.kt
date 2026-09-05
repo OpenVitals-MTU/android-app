@@ -6,28 +6,15 @@ import java.io.File
 import org.junit.Test
 
 /**
- * The catalog-shaped half of the translation gate: what languages the picker may
- * offer, and what a plural has to look like before Android will resolve it.
- *
- * `scripts/verify-translations.py` covers stale keys, kind changes and plural
- * quantities that exist in English. What it cannot cover — because it only ever
- * reads `res/` — is the agreement between the resources and the picker that
- * shows them. `ShippedLanguagesTest` asserts that agreement, but it is an
- * instrumentation test: it needs a device, and `verifyCi` does not run one. The
- * checks below are the JVM half, so a language added without a translation (or
- * translated without being offered) fails a plain `:app:testCiUnitTest`.
+ * The catalog half of the translation gate: which languages the picker offers, and
+ * what a plural needs before Android resolves it. `ShippedLanguagesTest` needs a device;
+ * these checks run on a plain `:app:testCiUnitTest`.
  */
 class TranslationCatalogTest {
 
     private val base = TranslationResources.read(TranslationResources.baseDirectory)
 
-    /**
-     * Android resolves an unmatched quantity by falling back to `other`; a
-     * `<plurals>` without one throws `Resources.NotFoundException` for whatever
-     * count the device's rules land on. The Python script only notices this in a
-     * locale, and only because English happens to have `other` to compare
-     * against — a base plural that lost `other` would go unmentioned.
-     */
+    /** A `<plurals>` without `other` throws `Resources.NotFoundException`. The script only notices this in a locale. */
     @Test
     fun `every plurals resource offers an other branch in every locale`() {
         val problems = TranslationResources.localeDirectories().flatMap { dir ->
@@ -41,11 +28,7 @@ class TranslationCatalogTest {
         assertThat(problems).isEmpty()
     }
 
-    /**
-     * Port of Flutter's `check 10: picker <-> ARB agreement`: an `AppLanguage`
-     * constant with no catalog behind it is a picker entry that silently does
-     * nothing — the user chooses it and the UI stays English.
-     */
+    /** An `AppLanguage` constant with no catalog behind it is a picker entry that does nothing. */
     @Test
     fun `every AppLanguage constant has a translation directory`() {
         val shipped = shippedLanguageTags()
@@ -60,15 +43,8 @@ class TranslationCatalogTest {
     }
 
     /**
-     * Port of Flutter's `a SHIPPED locale below the floor still FAILS` and its
-     * twin `an in-progress locale that crosses the floor is reported, not
-     * failed`.
-     *
-     * SHIPPED = has an `AppLanguage` constant. IN PROGRESS = a `values-XX/` with
-     * no constant (Galician today) — Weblate fills those in one language at a
-     * time and gating them would red the build on a translator's first commit,
-     * so they are only reported. `generate-translation-coverage.py` keeps them
-     * out of the picker on the same threshold.
+     * SHIPPED = has an `AppLanguage` constant and must clear the floor.
+     * IN PROGRESS = a `values-XX/` with no constant; only reported, so Weblate's first commit does not red the build.
      */
     @Test
     fun `every shipped language clears the translation floor`() {
@@ -93,27 +69,10 @@ class TranslationCatalogTest {
     }
 
     /**
-     * Port of Flutter's `flags an AppLanguage constant with no autonym in the
-     * dropdown` — "an autonym is the same in every locale, which is the accepted
-     * i18n practice for a language selector so users can always recognise their
-     * language" (`lib/ui/components/app_language_dropdown.dart`).
-     *
-     * The picker used to resolve each entry through a translatable
-     * `settings_language_*` resource, so the labels were exonyms in whatever
-     * language the UI was already in: an Estonian speaker who picks up a German
-     * phone was offered "Estnisch", and a Spanish speaker on an Estonian phone
-     * was offered "Hispaania". The one user who needs the picker most is the
-     * one who cannot read it.
-     *
-     * It now derives every label from the language itself, so an autonym cannot
-     * drift per locale and a new language needs no strings at all. This asserts
-     * the mechanism rather than the output, because the output is the JDK's:
-     * checking that `getDisplayLanguage` returns "Deutsch" would be testing
-     * ICU. What is ours, and what regressed once, is WHICH locale the name is
-     * asked for — and that no translatable resource is back in the path.
-     *
-     * `settings_language_system` is deliberately not covered: it names the
-     * device's setting, not a language, and must stay translated.
+     * Every picker label is an autonym derived from the language itself. Translatable
+     * `settings_language_*` resources gave exonyms, so an Estonian speaker on a German phone
+     * saw "Estnisch". This asserts which locale the name is asked for, not the JDK's output.
+     * `settings_language_system` names the device setting and stays translated.
      */
     @Test
     fun `the language picker names every language in that language`() {
@@ -149,7 +108,7 @@ class TranslationCatalogTest {
             .isEmpty()
     }
 
-    /** `en`, `es`, `de`, `it`, `et` — read from the source, not restated here. */
+    /** Read from the source, not restated here. */
     private fun shippedLanguageTags(): Set<String> {
         val source = File("src/main/kotlin/tech/mmarca/openvitals/domain/preferences/AppLanguage.kt")
             .readText()
@@ -163,7 +122,7 @@ class TranslationCatalogTest {
     private companion object {
         const val MIN_COVERAGE = 0.70
 
-        /** `val ENGLISH = AppLanguage("en", "ENGLISH")` — the null-tag SYSTEM does not match. */
+        /** Matches `AppLanguage("en", ...)`; the null-tag SYSTEM does not match. */
         val APP_LANGUAGE_CONSTANT = Regex("""AppLanguage\("([a-zA-Z-]+)",""")
 
         val RETIRED_LANGUAGE_LABEL_KEYS = listOf(

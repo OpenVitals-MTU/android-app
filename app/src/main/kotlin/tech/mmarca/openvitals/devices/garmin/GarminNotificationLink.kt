@@ -14,63 +14,34 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
 /**
- * An OPEN conversation with the watch's notification service.
- *
- * Held open on purpose, and for a reason peculiar to GNCS: it is a **pull**
- * protocol. Announcing a notification sends no text — the watch asks for the
- * words afterwards, and "afterwards" can be several seconds later, when the
- * wearer raises their wrist. Closing the link as soon as the announcement was
- * acknowledged would deliver a card the watch then renders empty.
- *
- * An interface plus one BLE implementation, where the Dart original was a
- * single class: the forwarder's whole test suite drives the state machine
- * through fake links, and Kotlin cannot `implements` a concrete class.
- *
- * Port of the Flutter build's `garmin_notification_link.dart`. The Dart
- * version also exposed an `onActivity` stream feeding an idle timer; the
- * held-link redesign left it with no consumer, so it is not ported.
+ * An open conversation with the watch's notification service. Held open
+ * because GNCS is a pull protocol: the watch asks for the text seconds after
+ * the announcement. An interface, so the forwarder's tests use fake links.
  */
 interface GarminNotificationLink {
 
-    /**
-     * The queue and the chunked upload. Exposed because the forwarder
-     * announces through it, and takes back [GarminGncsHandler.held] when the
-     * link dies.
-     */
+    /** The queue and the chunked upload. The forwarder takes back [GarminGncsHandler.held] on death. */
     val handler: GarminGncsHandler
 
     /** Whether the link is still usable. A watch that walks away closes it. */
     val isOpen: Boolean
 
     /**
-     * Whether the watch has actually subscribed.
-     *
-     * False until it sends its subscription request, which it does about once
-     * a second — so this flips within a second of the handshake IF the wearer
-     * has notifications switched on. It staying false is the single most
-     * likely explanation for a silent watch, and it is not an error this end.
+     * Whether the watch has subscribed. It asks about once a second, so
+     * this flips soon after the handshake if notifications are on. False is
+     * the likeliest reason for a silent watch, and not an error here.
      */
     val subscribed: Boolean
 
-    /**
-     * Fires when the link goes away, so a caller waiting on the watch stops
-     * waiting instead of timing out.
-     */
+    /** Fires when the link goes away, so waiters stop instead of timing out. */
     val onGone: Flow<Unit>
 
-    /**
-     * Announces [notification] to the watch, or updates it.
-     *
-     * Silently held when the watch has not subscribed — see [subscribed].
-     */
+    /** Announces or updates [notification]. Held while the watch has not subscribed. */
     suspend fun push(notification: GarminNotification)
 
     suspend fun withdraw(notificationId: Long)
 
-    /**
-     * Tells the watch the phone's app came to (or left) the foreground — the
-     * signal Garmin watches use to decide the companion is paying attention.
-     */
+    /** Tells the watch whether the phone's app is in the foreground. */
     suspend fun setHostForeground(foreground: Boolean)
 
     /** Opens or closes a live-streaming service on this link. */
@@ -88,11 +59,7 @@ data class GarminNotificationLinkRequest(
     val model: String,
     /** Invoked when the wearer acts on a notification from the wrist. */
     val onAction: (suspend (GarminNotificationActionRequest) -> Unit)? = null,
-    /**
-     * The watch asking the phone to ring, and to stop. The held link is where
-     * these overwhelmingly arrive — it is the connection that exists while
-     * the watch sits on a wrist wondering where the phone went.
-     */
+    /** The watch asking the phone to ring, and to stop. Mostly arrives on the held link. */
     val onFindPhone: ((durationSeconds: Int) -> Unit)? = null,
     val onFindPhoneCancel: (() -> Unit)? = null,
     /** The weather to serve when the watch asks over the held link. */
@@ -107,11 +74,7 @@ data class GarminNotificationLinkRequest(
     val locationProvider: (() -> GarminPhoneLocation?)? = null,
     /** Whether the phone's app is in the foreground right now. */
     val hostForeground: (() -> Boolean)? = null,
-    /**
-     * Live-streaming services to open once the link is up, and where their
-     * readings go. Empty means the watch streams nothing, which is the
-     * default: every open service costs watch battery.
-     */
+    /** Live services to open once the link is up. Empty by default: each costs battery. */
     val realtimeServices: Set<GarminRealtimeService> = emptySet(),
     val onRealtimeReading: ((GarminRealtimeReading) -> Unit)? = null,
     /** The watch was just onboarded and needs the pair-flow completion. */
@@ -120,11 +83,8 @@ data class GarminNotificationLinkRequest(
 )
 
 /**
- * The real link: [GarminGattClient] below, [GarminSession] (with
- * `syncFiles = false` and a [GarminGncsHandler]) above.
- *
- * A twin of the settings link in shape: connect, finish the handshake, hold,
- * tear down once on every path out.
+ * The real link: [GarminGattClient] below, a [GarminSession] with
+ * `syncFiles = false` and a [GarminGncsHandler] above.
  */
 class GarminBleNotificationLink private constructor(
     private val gatt: GarminGattClient,
@@ -186,15 +146,9 @@ class GarminBleNotificationLink private constructor(
     companion object {
 
         /**
-         * Connects and completes the handshake.
-         *
-         * [scope] must dispatch sequentially (the forwarder's single-threaded
-         * scope): inbound frames are launched into it, and the session's own
-         * mutex only guarantees order if the launches arrive in order.
-         *
-         * Throws [GarminGattClientException] when the watch cannot be reached,
-         * and [TimeoutCancellationException] when it connects but never
-         * introduces itself.
+         * Connects and completes the handshake. [scope] must dispatch
+         * sequentially. Throws [GarminGattClientException] or
+         * [TimeoutCancellationException].
          */
         suspend fun open(
             context: Context,
@@ -205,9 +159,7 @@ class GarminBleNotificationLink private constructor(
             val gatt = GarminGattClient(context, request.address)
             val ready = CompletableDeferred<Unit>()
 
-            // The transport exists only after connect, but the handler and the
-            // session both need a send callback now — so it goes through a
-            // holder, exactly as the Dart link's `mlOrThrow` did.
+            // The transport exists only after connect; the send callback goes through a holder.
             var transport: GarminMlTransport? = null
             val sendFrame: suspend (ByteArray) -> Unit = { frame ->
                 (transport ?: throw GarminGattClientException("Transport is not open"))
@@ -224,11 +176,7 @@ class GarminBleNotificationLink private constructor(
                 bluetoothName = request.phoneName,
                 manufacturer = request.manufacturer,
                 model = request.model,
-                // Mandatory, not incidental: this link is held indefinitely,
-                // and a file transfer dragged along behind it would die
-                // mid-flight when the radio is yielded — which can lose a
-                // file, since the watch is told to archive only what was
-                // safely stored.
+                // Mandatory: a file transfer on a held link dies when the radio is yielded.
                 syncFiles = false,
                 notifications = handler,
                 onFindPhone = request.onFindPhone,
@@ -252,18 +200,14 @@ class GarminBleNotificationLink private constructor(
                     onRealtime = { _, reading -> request.onRealtimeReading?.invoke(reading) },
                 )
                 session.start()
-                // Anything sent before the watch has finished introducing
-                // itself is dropped on the floor.
+                // Anything sent before the handshake finishes is dropped.
                 withTimeout(handshakeTimeout) { ready.await() }
-                // Live services are opened AFTER the handshake: the watch
-                // ignores control traffic while it is still introducing
-                // itself, and a refused registration is silent.
+                // After the handshake: the watch ignores control traffic before it.
                 for (service in request.realtimeServices) {
                     transport.openService(service.code)
                 }
             } catch (error: Throwable) {
-                // Nothing is listening yet, so the transport is the only thing
-                // to undo.
+                // Nothing is listening yet; only the transport needs undoing.
                 session.abort("handshake failed")
                 gatt.close()
                 throw error

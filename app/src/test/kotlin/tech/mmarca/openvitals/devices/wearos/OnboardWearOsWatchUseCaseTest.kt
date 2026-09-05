@@ -17,10 +17,7 @@ import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
 
-/**
- * Records what the use case asked of the pairing layer, and lets a test force
- * a declined or throwing association.
- */
+/** Records what the use case asked of the pairing layer, and can force a declined or throwing association. */
 private class FakePairing : WatchPairingPort {
     var associateResult = true
     var associateError: Exception? = null

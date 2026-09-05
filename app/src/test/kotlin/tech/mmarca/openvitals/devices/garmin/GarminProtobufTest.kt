@@ -15,10 +15,7 @@ class GarminProtobufTest {
 
     private fun b(vararg xs: Int) = ByteArray(xs.size) { xs[it].toByte() }
 
-    /**
-     * Wraps [payload] the way the watch does, so the transport is exercised
-     * against the real envelope rather than a mock of itself.
-     */
+    /** Wraps [payload] the way the watch does, so the transport sees the real envelope. */
     private fun reply(
         requestId: Int,
         payload: ByteArray,
@@ -53,7 +50,7 @@ class GarminProtobufTest {
         )
     }
 
-    // ── protobuf encoding ────────────────────────────────────────────────────
+    // Protobuf encoding.
 
     @Test
     fun `a varint field encodes key then value`() {
@@ -67,8 +64,7 @@ class GarminProtobufTest {
 
     @Test
     fun `an empty nested message is not the same as an absent one`() {
-        // Garmin uses the empty message as the whole request for actions
-        // taking no arguments — cancelling a find is exactly that.
+        // Garmin uses the empty message as the whole request for actions taking no arguments.
         assertArrayEquals(b(0x1A, 0x00), ProtobufWriter().emptyMessage(3).toBytes())
         assertEquals(0, ProtobufWriter().toBytes().size)
     }
@@ -87,7 +83,7 @@ class GarminProtobufTest {
         assertTrue(readProtobuf(b(0x0A, 0x05, 0x01)).isEmpty())
     }
 
-    // ── find my watch ────────────────────────────────────────────────────────
+    // Find my watch.
 
     @Test
     fun `start carries a 60-second timeout under the find service`() {
@@ -118,8 +114,7 @@ class GarminProtobufTest {
 
     @Test
     fun `an EMPTY response is acceptance — the real watch sends no status`() {
-        // Captured from a vívoactive 5: `62 02 12 00` is find_response present
-        // with no status field, and the watch was ringing when it sent it.
+        // From a vívoactive 5: `62 02 12 00` is find_response with no status, and the watch was ringing.
         assertEquals(
             GarminFindOutcome.OK,
             GarminFindMyWatch.outcome(b(0x62, 0x02, 0x12, 0x00)),
@@ -133,9 +128,7 @@ class GarminProtobufTest {
 
     @Test
     fun `an unreadable reply is UNKNOWN never a refusal`() {
-        // The watch was seen ringing while its reply was being read as a
-        // refusal. Only an explicit ERROR means it declined; everything else
-        // has to leave the alert stoppable rather than abandoning it.
+        // Only an explicit ERROR means the watch declined; everything else leaves the alert stoppable.
         assertEquals(GarminFindOutcome.UNKNOWN, GarminFindMyWatch.outcome(null))
         assertEquals(GarminFindOutcome.UNKNOWN, GarminFindMyWatch.outcome(ByteArray(0)))
         // Service present, but no response field inside it.
@@ -147,7 +140,7 @@ class GarminProtobufTest {
         assertTrue(GarminFindOutcome.ERROR.declined)
     }
 
-    // ── protobuf transport ───────────────────────────────────────────────────
+    // Protobuf transport.
 
     @Test
     fun `matches a reply to its request by id`() = runTest {
@@ -155,9 +148,7 @@ class GarminProtobufTest {
         lateinit var transport: GarminProtobufTransport
         transport = GarminProtobufTransport(send = { frame ->
             val parsed = GarminGfdiFrame.parse(frame)
-            // Answer the REQUEST only. The transport sends its own
-            // acknowledgements through this hook, and replying to those
-            // recurses.
+            // Answer the request only; replying to the transport's own acknowledgements recurses.
             if (parsed.messageType != GarminMessageId.PROTOBUF_REQUEST) return@GarminProtobufTransport
             sent.add(parsed)
             val requestId = (parsed.payload[0].toInt() and 0xFF) or
@@ -190,11 +181,8 @@ class GarminProtobufTest {
 
     @Test
     fun `a COMPLETE message is acknowledged by request id not generically`() = runTest {
-        // A generic ack says the frame arrived. The watch also wants to hear
-        // that the protobuf message itself was kept, and without that it
-        // retransmitted every message it had ever sent, every five seconds,
-        // for as long as the link stayed open — which is how a stale reply
-        // came to be in flight while a different request was pending.
+        // The watch also wants to hear the protobuf message was kept. Without that it retransmitted
+        // every message every five seconds, so a stale reply was in flight during a different request.
         val acks = mutableListOf<GarminGfdiFrame>()
         val transport = GarminProtobufTransport(send = { frame ->
             val parsed = GarminGfdiFrame.parse(frame)
@@ -214,8 +202,7 @@ class GarminProtobufTest {
     @Test
     fun `a reply for an unknown id is consumed not mistaken for ours`() = runTest {
         val transport = GarminProtobufTransport(send = { })
-        // The watch starts conversations of its own; an unmatched id is one
-        // of those, and must not crash or resolve somebody else's request.
+        // The watch starts conversations of its own; an unmatched id must not resolve somebody else's request.
         assertTrue(transport.handleInbound(reply(999, b(0x01))))
     }
 
@@ -224,8 +211,7 @@ class GarminProtobufTest {
         lateinit var transport: GarminProtobufTransport
         transport = GarminProtobufTransport(send = { frame ->
             val parsed = GarminGfdiFrame.parse(frame)
-            // Answer the REQUEST only. Chunk acknowledgements go out through
-            // this same hook, and replying to those too would recurse forever.
+            // Answer the request only; replying to chunk acknowledgements recurses.
             if (parsed.messageType != GarminMessageId.PROTOBUF_REQUEST) return@GarminProtobufTransport
             val id = parsed.payload[0].toInt() and 0xFF
             transport.handleInbound(reply(id, b(1, 2, 3), offset = 0, total = 6))
@@ -266,13 +252,11 @@ class GarminProtobufTest {
         }
     }
 
-    // ── unsolicited chunking ─────────────────────────────────────────────────
+    // Unsolicited chunking.
 
     @Test
     fun `reassembles a message the watch sent under its OWN id`() = runTest {
-        // The watch answers a settings request with an id of its own rather
-        // than echoing ours, so accumulation cannot be keyed on "am I waiting
-        // for this" — doing that lost every screen after the first chunk.
+        // The watch answers a settings request with its own id, so accumulation cannot be keyed on waiting.
         val delivered = mutableListOf<ByteArray>()
         val acks = mutableListOf<GarminGfdiFrame>()
         val transport = GarminProtobufTransport(
@@ -289,9 +273,7 @@ class GarminProtobufTest {
 
     @Test
     fun `acknowledges a chunk with the offset IT declared`() = runTest {
-        // Not the next offset. Echoing `dataOffset + chunkLength` meant the
-        // watch never saw an acknowledgement for the chunk it had sent, so it
-        // resent chunk zero forever and the screen never completed.
+        // Not the next offset. Echoing `dataOffset + chunkLength` made the watch resend chunk zero forever.
         val acks = mutableListOf<GarminGfdiFrame>()
         val transport = GarminProtobufTransport(
             send = { frame -> acks.add(GarminGfdiFrame.parse(frame)) },

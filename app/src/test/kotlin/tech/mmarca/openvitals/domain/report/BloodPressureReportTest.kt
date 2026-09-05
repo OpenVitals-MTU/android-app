@@ -184,8 +184,7 @@ class BloodPressureReportTest {
     }
 
     @Test fun `slot assignment follows the given zone, not UTC`() {
-        // 23:30 UTC on the 1st is 01:30 on the 2nd in Madrid (summer) — an
-        // evening reading whose local DATE is already the next day.
+        // 23:30 UTC on the 1st is 01:30 on the 2nd in Madrid: an evening reading whose local date is the next day.
         val entry = BloodPressureEntry(
             time = Instant.parse("2026-06-01T23:30:00Z"),
             systolicMmHg = 115,

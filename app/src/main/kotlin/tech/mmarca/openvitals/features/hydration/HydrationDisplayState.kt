@@ -28,10 +28,7 @@ data class HydrationPeriodSummary(
     val totalLiters: Double = 0.0,
     val trackedDays: Int = 0,
     val loggedDays: Int = 0,
-    /**
-     * Days of the period that have actually happened — the whole period, or the part of it up
-     * to today. The denominator a person means when they ask "how did I do this week".
-     */
+    /** Days of the period that have happened: the denominator for "how did I do this week". */
     val elapsedDays: Int = 0,
     val averageLiters: Double = 0.0,
     val bestDayLiters: Double = 0.0,

@@ -252,8 +252,7 @@ class BodyRepositoryImpl @Inject constructor(
 
     override suspend fun resolveBodyProfile(declared: BodyProfile): BodyProfile {
         val granted = grantedPermissionsIfAvailable()
-        // A missing permission or a missing record leaves the declared value in
-        // place rather than blanking it — the fallback is the whole point.
+        // A missing permission or record leaves the declared value in place.
         val measuredWeight = loadLatestWeight(granted)
         val measuredHeight = loadLatestHeight(granted)
         return declared.copy(

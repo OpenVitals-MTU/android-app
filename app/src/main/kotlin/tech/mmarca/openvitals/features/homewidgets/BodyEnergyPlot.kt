@@ -9,18 +9,9 @@ import android.graphics.Shader
 import androidx.core.graphics.ColorUtils
 
 /**
- * Draws the Body Energy day curve into a bitmap.
- *
- * WHY A BITMAP: Glance has no canvas. Its composables are layout primitives —
- * boxes, rows, text — so a curve cannot be expressed in them at all. A row of
- * proportional boxes would draw a bar chart, but Body Energy is a LEVEL through
- * the day rather than a quantity per hour, and bars state the wrong thing about
- * it. So the curve is rasterised here and shown as an image.
- *
- * The widgets are deliberately un-themed ([WidgetBackground] and friends) — one
- * flat dark background, no light variant — which is what makes this practical:
- * the colours are known ahead of time, so a bitmap cannot end up drawn for the
- * wrong theme.
+ * Draws the Body Energy day curve into a bitmap. Glance has no canvas, and
+ * bars would state the wrong thing about a level. The widgets are un-themed,
+ * so the colours are known ahead of time.
  */
 internal object BodyEnergyPlot {
 
@@ -32,13 +23,8 @@ internal object BodyEnergyPlot {
     private const val CeilingScore = 100f
 
     /**
-     * Headroom kept above and below the day, as a share of its range.
-     *
-     * The scale follows the DAY rather than the full 0..100, unlike the chart
-     * inside the app. A real day moves through thirty-odd points, which pinned
-     * to 0..100 draws as a nearly flat line across the middle of a widget an
-     * inch tall — technically true and useless to glance at. Here the shape
-     * matters and the absolute height does not: the number is printed next to it.
+     * Headroom above and below the day, as a share of its range. The scale
+     * follows the day, not 0..100: the shape matters, the number is printed.
      */
     private const val RangePadding = 0.18f
 
@@ -47,24 +33,14 @@ internal object BodyEnergyPlot {
 
     private const val StrokeDp = 2f
 
-    /**
-     * The edge labels share the tile's muted foreground ([WidgetMutedText]) and
-     * sit close to the 11sp of the text rows beside the plot, so they read as
-     * annotation rather than as a second data series.
-     */
+    /** Edge labels use the muted foreground, close to the 11sp text beside the plot. */
     private const val LabelTextSizeDp = 10f
     private const val LabelGapDp = 3f
 
     /**
-     * Renders [series] as a smoothed line with a gradient beneath it, the first
-     * and last values printed beside their ends of the curve.
-     *
-     * [widthPx] and [heightPx] are the pixel size to draw at — the caller knows
-     * the widget's real size, so nothing is scaled after the fact and the line
-     * stays crisp at any of the sizes the widget can be resized to.
-     *
-     * Returns null when there is nothing to draw. Callers fall back to the text
-     * layout rather than showing an empty frame that looks like a failure.
+     * Renders [series] as a smoothed line with a gradient beneath it, first
+     * and last values printed beside the ends. Drawn at the widget's real
+     * size. Null when there is nothing to draw.
      */
     fun render(series: List<Int>, widthPx: Int, heightPx: Int, density: Float): Bitmap? {
         if (series.size < 2 || widthPx <= 0 || heightPx <= 0) return null
@@ -72,8 +48,7 @@ internal object BodyEnergyPlot {
         val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val stroke = StrokeDp * density
-        // Inset by half the stroke so the line's own width cannot be clipped at
-        // the top or bottom of the bitmap.
+        // Inset by half the stroke so the line is not clipped.
         val top = stroke / 2f
         val bottom = heightPx - stroke / 2f
         val usableHeight = bottom - top
@@ -92,8 +67,7 @@ internal object BodyEnergyPlot {
 
         val line = smoothPath(series, ::xAt, ::yAt)
 
-        // The fill is the same path closed down to the baseline. Drawn first so
-        // the line sits on top of its own gradient rather than under it.
+        // The fill is the same path closed to the baseline, drawn first.
         val fill = Path(line).apply {
             lineTo(xAt(series.size - 1), heightPx.toFloat())
             lineTo(xAt(0), heightPx.toFloat())
@@ -129,14 +103,9 @@ internal object BodyEnergyPlot {
     }
 
     /**
-     * Prints the curve's first and last value beside their ends of the line —
-     * the day's start on the left, the current score on the right.
-     *
-     * Each label sits above the stretch of curve it spans, flipping below it
-     * when the curve is already at the top, and is clamped inside the bitmap
-     * so nothing clips at the edges. On a plot too small to hold both without
-     * covering the line, neither is drawn ([bodyEnergyEdgeLabelsFit]) — the
-     * text rows beside the plot still carry the numbers.
+     * Prints the first and last value beside the ends of the line, above the
+     * curve or below it when there is no headroom, clamped inside the bitmap.
+     * Neither is drawn when they would cover the line ([bodyEnergyEdgeLabelsFit]).
      */
     private fun drawEdgeLabels(
         canvas: Canvas,
@@ -175,9 +144,7 @@ internal object BodyEnergyPlot {
                 plotWidth = widthPx.toFloat(),
                 alignEnd = alignEnd,
             )
-            // The curve's extremes across the label's horizontal span, so the
-            // label clears the whole stretch of line it sits over, not just the
-            // endpoint.
+            // The curve's extremes across the label's span, so the label clears it all.
             var curveTopY = Float.MAX_VALUE
             var curveBottomY = -Float.MAX_VALUE
             series.forEachIndexed { index, score ->
@@ -203,13 +170,7 @@ internal object BodyEnergyPlot {
         draw(endText, endWidth, alignEnd = true)
     }
 
-    /**
-     * The vertical range to draw [series] against: the day, plus headroom.
-     *
-     * Widened to at least [MinSpan] so a day that barely moved stays visibly
-     * flat instead of being stretched into peaks it never had — the failure
-     * mode in the other direction, and the more misleading of the two.
-     */
+    /** The vertical range for [series]: the day plus headroom, at least [MinSpan] wide. */
     private fun scaleFor(series: List<Int>): Pair<Float, Float> {
         val min = (series.minOrNull() ?: 0).toFloat()
         val max = (series.maxOrNull() ?: 100).toFloat()
@@ -224,20 +185,14 @@ internal object BodyEnergyPlot {
         // Never past the ends of the scale a score is defined on.
         lo = lo.coerceAtLeast(FloorScore)
         hi = hi.coerceAtMost(CeilingScore)
-        // Clamping both ends can collapse the span on a day spent near a limit.
+        // Clamping both ends can collapse the span.
         if (hi - lo < 1f) return FloorScore to CeilingScore
         return lo to hi
     }
 
     /**
-     * A curve through every point, as cubic segments.
-     *
-     * Control points come from the neighbours on each side (a Catmull-Rom spline
-     * written as beziers), which is what makes the line round through a sample
-     * instead of turning a corner at it. The tangents are deliberately damped to
-     * a sixth of the neighbour distance rather than the textbook half: at widget
-     * size a fuller curve overshoots a sharp drop and draws the score going
-     * somewhere it never went.
+     * A Catmull-Rom spline as cubic beziers. Tangents are damped to a sixth
+     * of the neighbour distance: the textbook half overshoots sharp drops.
      */
     private fun smoothPath(
         series: List<Int>,
@@ -270,13 +225,7 @@ internal object BodyEnergyPlot {
 /** [WidgetMutedText] as an ARGB int, for [Paint] rather than Compose. */
 private const val WidgetMutedTextArgb = 0xFFC9D7DD.toInt()
 
-/**
- * Whether the plot has room for both edge labels.
- *
- * Together they may take at most half the plot's width and a third of its
- * height; past that they stop annotating the curve and start covering it, and
- * the numbers are already printed in the text column anyway.
- */
+/** Whether the plot has room for both edge labels: half the width, a third of the height. */
 internal fun bodyEnergyEdgeLabelsFit(
     plotWidth: Float,
     plotHeight: Float,
@@ -290,11 +239,7 @@ internal fun bodyEnergyEdgeLabelsFit(
         startTextWidth + endTextWidth <= plotWidth * 0.5f &&
         textHeight <= plotHeight / 3f
 
-/**
- * The x of an edge label's left edge: flush with its end of the curve — the
- * first point sits at x 0, the last at the plot's right edge — and never past
- * the bitmap, so a label wider than the plot cannot clip.
- */
+/** The x of an edge label's left edge: flush with its end of the curve, never past the bitmap. */
 internal fun bodyEnergyEdgeLabelX(
     textWidth: Float,
     plotWidth: Float,
@@ -303,15 +248,9 @@ internal fun bodyEnergyEdgeLabelX(
     if (alignEnd) (plotWidth - textWidth).coerceAtLeast(0f) else 0f
 
 /**
- * The baseline y for an edge label spanning a stretch of curve whose highest
- * point is [curveTopY] and lowest is [curveBottomY] (canvas coordinates, so
- * "highest" is the SMALLER number).
- *
- * Preferred placement is above the curve, [gap] clear of it; when the curve is
- * too close to the top of the bitmap for the text to fit, the label flips to
- * below the curve instead. Either way the result is clamped so every pixel of
- * the text — [ascent] above the baseline (negative, as [Paint.FontMetrics]
- * reports it) to [descent] below — stays inside `0..plotHeight`.
+ * The baseline y for an edge label over a stretch of curve from [curveTopY]
+ * to [curveBottomY] (canvas coordinates). Above the curve by [gap], below it
+ * when the text would not fit, clamped inside `0..plotHeight`.
  */
 internal fun bodyEnergyEdgeLabelBaseline(
     curveTopY: Float,
@@ -321,10 +260,10 @@ internal fun bodyEnergyEdgeLabelBaseline(
     plotHeight: Float,
     gap: Float,
 ): Float {
-    // Above the curve: the text's descent must clear the curve's top by gap.
+    // Above the curve: the descent must clear the curve's top.
     var baseline = curveTopY - gap - descent
     if (baseline + ascent < 0f) {
-        // No headroom — below the curve: the text's ascent clears its bottom.
+        // No headroom: below the curve.
         baseline = curveBottomY + gap - ascent
     }
     return baseline.coerceIn(-ascent, (plotHeight - descent).coerceAtLeast(-ascent))

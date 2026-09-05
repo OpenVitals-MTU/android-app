@@ -25,14 +25,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Ports the `entry card` group (and the training-plan visibility case) of
- * Flutter's `test/features/manualentry/activity/activity_entry_screen_test.dart`.
- *
- * This card is where a workout is described before it is written to Health
- * Connect for good. A field that goes missing is data the user cannot enter and
- * cannot come back for; a unit label that stops following the unit system turns
- * a 5 mile run into a 5 km one silently; and a validation message that lands on
- * the card instead of the field leaves the user hunting for which box is wrong.
+ * The card where a workout is described before it is written. A missing field is data the
+ * user cannot enter; a unit label that ignores the unit system turns 5 miles into 5 km.
  */
 class ActivityEntryCardTest {
 
@@ -62,9 +56,7 @@ class ActivityEntryCardTest {
 
     @Test
     fun theFeelingChipsAreTheFourEmojiAndTapAgainClearsTheChoice() {
-        // The feeling is the one part of an entry that is not a number, and it
-        // is optional. A chip that cannot be un-picked would force a mood onto
-        // every workout a user ever logs.
+        // The feeling is optional. A chip that cannot be un-picked forces a mood onto every workout.
         val reported = mutableListOf<ActivityEntryFeeling?>()
         composeRule.setContent {
             OpenVitalsTheme {
@@ -85,9 +77,7 @@ class ActivityEntryCardTest {
             }
         }
 
-        // The chips draw outlined sentiment glyphs rather than emoji, so there is
-        // no text to find them by — the accessible name is the only handle, which
-        // is the right one to assert anyway: it is what a screen reader reads.
+        // The chips draw glyphs, not text, so the accessible name is the only handle.
         ActivityEntryFeeling.entries.forEach { feeling ->
             composeRule
                 .onNodeWithContentDescription(string(feeling.labelRes))
@@ -104,8 +94,7 @@ class ActivityEntryCardTest {
 
     @Test
     fun distanceAndElevationFollowTheUnitSystem() {
-        // A run entered as "5" means five miles to someone on imperial units. A
-        // label that stayed metric would have the app store 5 km and never say so.
+        // "5" means five miles on imperial units. A metric label would store 5 km silently.
         setContent {
             TestActivityEntryCard(
                 state = ActivityEntryUiState(canWrite = true, isCheckingPermission = false),
@@ -120,8 +109,7 @@ class ActivityEntryCardTest {
 
     @Test
     fun aValidationErrorLandsOnItsOwnFieldAsWellAsTheCard() {
-        // The card-level message says "fix the highlighted fields"; without the
-        // per-field message there is nothing highlighted to fix.
+        // Without the per-field message there is nothing highlighted to fix.
         setContent {
             TestActivityEntryCard(
                 state = ActivityEntryUiState(
@@ -140,8 +128,7 @@ class ActivityEntryCardTest {
 
     @Test
     fun saveAsPlanOnlyShowsForRepetitionCountedTypes() {
-        // A plan is a list of steps. Offering "Save as plan" on a run would save
-        // a plan with nothing in it for the user to ever start from.
+        // A plan is a list of steps. "Save as plan" on a run would save an empty plan.
         setContent {
             TestActivityEntryCard(
                 state = ActivityEntryUiState(

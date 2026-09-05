@@ -26,9 +26,7 @@ internal fun ExerciseData.withSampleBackfilledMetrics(
     cadenceSamples: List<ActivityCadenceSample>,
 ): ExerciseData =
     copy(
-        // A watch that records speed but writes no DistanceRecord leaves the session
-        // with no distance at all, even though its own samples imply one. Integrate
-        // them so the session reports the distance the device measured.
+        // A watch that records speed but no DistanceRecord still implies a distance.
         totalDistanceMeters = totalDistanceMeters.backfilledBy(
             distanceFromSpeedSamples(speedSamples),
         ),
@@ -80,10 +78,7 @@ private fun List<ExerciseRoutePoint>.routeBackfillMetrics(): RouteBackfillMetric
         }
     }
 
-    // Through the smoothing + hysteresis filter, exactly as a live recording
-    // and an imported route are. Summing raw per-point rises here would bank
-    // GPS vertical noise thousands of times over, so a backfilled session
-    // reported kilometres of climb the ride never had.
+    // Through the smoothing filter, as a live recording is; raw rises bank GPS noise.
     val elevationGainMeters = RouteElevation.routeElevationGain(ordered)
 
     return RouteBackfillMetrics(
@@ -96,11 +91,7 @@ private fun List<ExerciseRoutePoint>.routeBackfillMetrics(): RouteBackfillMetric
 private fun ExerciseRoutePoint.distanceMetersTo(other: ExerciseRoutePoint): Double =
     haversineMeters(latitude, longitude, other.latitude, other.longitude)
 
-/**
- * The total distance a run of speed samples implies, by trapezoidal integration
- * of v·dt. This is the treadmill/watch case: the device records speed but writes
- * no DistanceRecord. Null when the samples imply no distance at all.
- */
+/** The distance a run of speed samples implies, by trapezoidal integration. Null when none. */
 internal fun distanceFromSpeedSamples(samples: List<SpeedSample>): Double? {
     if (samples.size < 2) return null
     var cumulative = 0.0

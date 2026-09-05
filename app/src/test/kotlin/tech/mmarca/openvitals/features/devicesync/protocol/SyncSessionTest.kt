@@ -12,18 +12,10 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The full session state machine over an in-memory [SyncPipe] — no Bluetooth.
- * Port of the Dart `sync_session_test.dart` suite.
- */
+/** The full session state machine over an in-memory [SyncPipe], no Bluetooth. */
 class SyncSessionTest {
 
-    /**
-     * In-memory stand-in for Health Connect: a keyed set of records. The read
-     * flows snapshot current contents at collection (the session collects keys
-     * as its dedup baseline, then streams chunks to send); `writeItems`
-     * upserts.
-     */
+    /** In-memory stand-in for Health Connect: a keyed set of records. Reads snapshot at collection; `writeItems` upserts. */
     private class FakeRecordStore(initial: Iterable<SyncItem> = emptyList()) : SyncRecordStore {
         private val byKey = linkedMapOf<String, SyncItem>()
 
@@ -65,7 +57,7 @@ class SyncSessionTest {
             items.map { it.key }.toSet()
     }
 
-    /** A store that reads nothing and fails every write (returns no written keys). */
+    /** A store that reads nothing and fails every write. */
     private class WriteFailingStore : SyncRecordStore {
         override fun readKeys(types: Set<String>): Flow<String> = emptyFlow()
         override fun readItemChunks(types: Set<String>, chunkSize: Int): Flow<List<SyncItem>> =
@@ -114,10 +106,7 @@ class SyncSessionTest {
         return reports[0] to reports[1]
     }
 
-    /**
-     * Drives one real session against a manual endpoint that sends whatever
-     * raw frames [attack] dictates — for hostile/malformed-peer cases.
-     */
+    /** Drives one real session against a manual endpoint sending whatever raw frames [attack] dictates. */
     private suspend fun kotlinx.coroutines.CoroutineScope.runAgainstAttacker(
         attack: suspend (SyncByteTransport) -> Unit,
     ): SyncReport {
@@ -132,7 +121,7 @@ class SyncSessionTest {
         return report.await()
     }
 
-    // ── bidirectional merge ──────────────────────────────────────────────────
+    // Bidirectional merge.
 
     @Test
     fun `each side imports what it lacked and skips shared records`() = runTest {
@@ -178,7 +167,7 @@ class SyncSessionTest {
         assertEquals(1, heart.imported) // h2 new
     }
 
-    // ── idempotency ──────────────────────────────────────────────────────────
+    // Idempotency.
 
     @Test
     fun `a second sync writes nothing new`() = runTest {
@@ -197,12 +186,11 @@ class SyncSessionTest {
         assertEquals(setOf("a", "b", "c"), guestStore.keys)
     }
 
-    // ── within-session dedup ─────────────────────────────────────────────────
+    // Within-session dedup.
 
     @Test
     fun `a key sent twice in one direction is written once`() = runTest {
-        // The host reads a duplicate key 'x' (across two batches, batchSize 2:
-        // ['x','x'] then ['y']).
+        // The host reads a duplicate key 'x' across two batches: ['x','x'] then ['y'].
         val hostStore = DupReadingStore(listOf("x", "x", "y"))
         val guestStore = FakeRecordStore()
 
@@ -214,7 +202,7 @@ class SyncSessionTest {
         assertTrue(hostReport.completed)
     }
 
-    // ── authentication ───────────────────────────────────────────────────────
+    // Authentication.
 
     @Test
     fun `mismatched codes abort both sides before any data moves`() = runTest {
@@ -236,7 +224,7 @@ class SyncSessionTest {
         assertEquals(setOf("b"), guestStore.keys)
     }
 
-    // ── link failure ─────────────────────────────────────────────────────────
+    // Link failure.
 
     @Test
     fun `a dropped transport ends the session as an abort`() = runTest {
@@ -257,8 +245,7 @@ class SyncSessionTest {
 
         val hostRun = async { host.run() }
         val guestRun = async { guest.run() }
-        // Drop the link before the sessions get to run: both see their inbound
-        // close mid-handshake.
+        // Drop the link before the sessions run: both see their inbound close mid-handshake.
         guestPipe.close()
 
         val reports = awaitAll(hostRun, guestRun)
@@ -269,14 +256,12 @@ class SyncSessionTest {
         assertEquals(setOf("c"), guestStore.keys)
     }
 
-    // ── read failure mid-stream ──────────────────────────────────────────────
+    // Read failure mid-stream.
 
     @Test
     fun `a store read failure aborts both sides with the reason`() = runTest {
-        // The host's stream dies after one chunk — the store's mapping of a
-        // rate-limited Health Connect read. The session must abort with the
-        // reason (and tell the peer) rather than finish and claim a complete
-        // transfer.
+        // The host's stream dies after one chunk, as a rate-limited read would.
+        // The session must abort with the reason rather than claim a complete transfer.
         val hostStore = object : SyncRecordStore {
             override fun readKeys(types: Set<String>): Flow<String> = emptyFlow()
             override fun readItemChunks(types: Set<String>, chunkSize: Int): Flow<List<SyncItem>> =
@@ -297,7 +282,7 @@ class SyncSessionTest {
         assertTrue(guestReport.abortReason.orEmpty().contains("rate limited"))
     }
 
-    // ── type negotiation ─────────────────────────────────────────────────────
+    // Type negotiation.
 
     @Test
     fun `only the intersection of supported+selected types syncs`() = runTest {
@@ -306,8 +291,7 @@ class SyncSessionTest {
         )
         val guestStore = FakeRecordStore()
 
-        // Guest only selects StepsRecord: its own read/send set narrows to the
-        // selection, and the host still sends everything for negotiated types.
+        // The guest selects only StepsRecord; the host still sends everything for negotiated types.
         val (hostReport, _) = runPair(
             hostStore,
             guestStore,
@@ -318,7 +302,7 @@ class SyncSessionTest {
         assertTrue("s1" in guestStore.keys)
     }
 
-    // ── write accounting ─────────────────────────────────────────────────────
+    // Write accounting.
 
     @Test
     fun `a received record whose write fails is not counted as imported`() = runTest {
@@ -327,13 +311,12 @@ class SyncSessionTest {
 
         val (_, guestReport) = runPair(hostStore, guestStore)
 
-        // The guest received both records but wrote neither, so the report
-        // shows them received-but-not-imported instead of overcounting.
+        // Received but not written, so the report must not overcount.
         assertEquals(2, guestReport.itemsReceived)
         assertEquals(0, guestReport.imported)
     }
 
-    // ── hostile peer ─────────────────────────────────────────────────────────
+    // Hostile peer.
 
     @Test
     fun `a record frame before authentication aborts the session`() = runTest {

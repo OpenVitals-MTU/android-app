@@ -19,11 +19,7 @@ import tech.mmarca.openvitals.domain.model.DeviceIntegration
 
 class BleDeviceRepositoryTest {
 
-    /**
-     * One context whose [FakeSharedPreferences] instance survives across
-     * repository instances, so a second [newRepository] over it IS the storage
-     * round-trip: it re-reads the JSON the first one wrote.
-     */
+    /** One [FakeSharedPreferences] that survives across repository instances, so a second [newRepository] is the storage round-trip. */
     private val context: Context = mockk<Context>().also { context ->
         every { context.getSharedPreferences(any(), any()) } returns FakeSharedPreferences()
     }
@@ -97,8 +93,7 @@ class BleDeviceRepositoryTest {
 
         repo.updateBatteryLevel(device.id, 75)
 
-        // A repeated identical read is a no-op: nothing is written, nothing is
-        // published, and the stamp still says when the level last MOVED.
+        // A repeated identical read is a no-op, and the stamp still says when the level last moved.
         assertEquals(firstStamp, repo.devices.single().batteryUpdatedAt)
         assertSame(firstPublished, repo.devicesFlow.value)
     }
@@ -118,8 +113,7 @@ class BleDeviceRepositoryTest {
         val repo = newRepository()
         repo.addStrap()
 
-        // A sync can outlive the user forgetting the watch it ran against;
-        // that race must not throw the way updateDevice does.
+        // A sync can outlive the user forgetting the watch; that must not throw.
         repo.markSynced("does-not-exist", Instant.parse("2026-01-01T00:00:00Z"))
 
         assertNull(repo.devices.single().lastSyncedAt)
@@ -155,9 +149,7 @@ class BleDeviceRepositoryTest {
             displayName = "vívoactive 5",
             address = "E0:48:24:D5:F7:10",
             bluetoothName = "vívoactive 5",
-            // What the watch path registers: no capabilities, so nothing to
-            // hand the recording coordinator, which would otherwise connect
-            // and wait for notifications the watch never sends.
+            // The watch path registers no capabilities, so nothing is handed to the recording coordinator.
             capabilities = emptySet(),
             kind = BleDeviceKind.WATCH,
         )
@@ -179,8 +171,7 @@ class BleDeviceRepositoryTest {
             kind = BleDeviceKind.WATCH,
             integration = DeviceIntegration.GARMIN,
         )
-        // The Sensors path: capabilities, and no kind — it decides a device is
-        // a sensor, never that it stops being a watch.
+        // The Sensors path: capabilities and no kind. It never makes a watch stop being one.
         repo.addDevice(
             displayName = "vívoactive 5",
             address = "E0:48:24:D5:F7:10",
@@ -190,8 +181,7 @@ class BleDeviceRepositoryTest {
 
         val stored = repo.devices.single()
         assertEquals(watch.id, stored.id)
-        // Both roles on one entry: still a GFDI sync watch, now a live source
-        // too, the way an Edge already was.
+        // Both roles on one entry, the way an Edge already was.
         assertEquals(BleDeviceKind.WATCH, stored.kind)
         assertTrue(stored.isGarminGfdi)
         assertEquals(
@@ -209,8 +199,7 @@ class BleDeviceRepositoryTest {
             bluetoothName = "vívoactive 5",
             capabilities = setOf(BleSensorCapability.HEART_RATE),
         )
-        // The reverse order: onboarding as a watch registers no capabilities,
-        // which must not wipe the live role added first.
+        // The reverse order: onboarding as a watch must not wipe the live role.
         repo.addDevice(
             displayName = "vívoactive 5",
             address = "E0:48:24:D5:F7:10",
@@ -241,8 +230,7 @@ class BleDeviceRepositoryTest {
 
         val assignments = repo.resolveCapabilityAssignments()
 
-        // Unlike a watch, a bike computer broadcasting standard GATT is a live
-        // source the recording coordinator should connect to.
+        // A bike computer broadcasting standard GATT is a live source.
         assertEquals(edge.id, assignments[BleSensorCapability.CYCLING_POWER]?.id)
     }
 
@@ -277,8 +265,7 @@ class BleDeviceRepositoryTest {
         val syncedAt = Instant.parse("2026-07-21T09:30:00Z")
         repo.markSynced(watch.id, syncedAt)
 
-        // A second repository over the same prefs IS the round-trip: it
-        // re-reads the JSON the first one wrote.
+        // A second repository over the same prefs is the round-trip.
         val reloaded = newRepository().devices.single()
 
         assertEquals(BleDeviceKind.WATCH, reloaded.kind)
@@ -327,8 +314,7 @@ class BleDeviceRepositoryTest {
 
     @Test
     fun registryJson_oldJsonWithoutWatchFieldsRoundTripsAsSensor() {
-        // The exact shape the Kotlin build wrote before watches existed — no
-        // kind, integration or lastSyncedAt keys at all.
+        // The shape the Kotlin build wrote before watches existed: no kind, integration or lastSyncedAt keys.
         val oldJson = """
             [{"id":"hr","displayName":"HR Strap","address":"AA:BB:CC:DD:EE:01",
               "bluetoothName":"HRM","capabilities":["HEART_RATE"],"enabled":true,
@@ -345,15 +331,13 @@ class BleDeviceRepositoryTest {
         assertNull(device.lastSyncedAt)
         assertEquals(setOf(BleSensorCapability.HEART_RATE), device.capabilities)
 
-        // And it round-trips: re-encoding then re-decoding keeps the device
-        // meaning what it meant.
+        // And it round-trips.
         assertEquals(decoded, BleDeviceRegistryJson.decode(BleDeviceRegistryJson.encode(decoded)))
     }
 
     @Test
     fun registryJson_decodesFlutterEraWatchJson() {
-        // What the Flutter build's BleDeviceRepositoryImpl wrote for an
-        // onboarded Garmin watch: storageName strings for kind/integration.
+        // What the Flutter build wrote for an onboarded Garmin watch: storageName strings for kind/integration.
         val flutterJson = """
             [{"id":"ble-1753000000000000","displayName":"vívoactive 5",
               "address":"AA:BB:CC:DD:EE:05","bluetoothName":"vívoactive 5",

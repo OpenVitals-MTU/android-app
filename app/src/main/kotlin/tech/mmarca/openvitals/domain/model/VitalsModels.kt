@@ -18,10 +18,7 @@ data class BloodPressureEntry(
     val measurementLocation: Int = BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN,
 )
 
-/**
- * Health Connect's BloodPressureRecord position/location constants, mirrored
- * so the domain stays library-free — pinned against androidx by a test.
- */
+/** Health Connect's BloodPressureRecord constants, mirrored so the domain stays library-free. */
 object BpRecordValues {
     const val BODY_POSITION_UNKNOWN = 0
     const val BODY_POSITION_STANDING_UP = 1
@@ -125,11 +122,7 @@ data class VitalsMeasurementEntry(
     val bpMeasurementLocation: Int? = null,
 )
 
-/**
- * One vitals chart point per local day, aggregated natively so long ranges do
- * not hold a season of raw records in memory. [count] is the number of readings
- * the day's [value] averages, so period averages can stay count-weighted.
- */
+/** One chart point per local day. [count] keeps period averages count-weighted. */
 data class DailyVitalPoint(
     val date: LocalDate,
     val value: Double,

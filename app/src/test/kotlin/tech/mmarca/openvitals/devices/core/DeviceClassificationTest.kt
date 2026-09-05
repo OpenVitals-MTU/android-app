@@ -36,8 +36,7 @@ class DeviceClassificationTest {
 
     @Test
     fun `the member service alone does NOT make an unknown name a watch`() {
-        // 0xFE1F surfaces a device in the scan, but the NAME decides the kind —
-        // an unrecognised name stays a plain sensor rather than being swept up.
+        // 0xFE1F surfaces a device in the scan, but the name decides the kind.
         val verdict = classifyDevice(
             discovered(name = "anything", advertisesSyncService = true),
             classifiers,
@@ -48,8 +47,7 @@ class DeviceClassificationTest {
 
     @Test
     fun `a member-service-only advert (no distinguishing name) → sensor`() {
-        // Without a recognised name there is nothing to classify, so it falls
-        // through to a plain live sensor rather than being assumed a watch.
+        // Without a recognised name it falls through to a plain live sensor.
         val verdict = classifyDevice(discovered(advertisesSyncService = true), classifiers)
         assertNull(verdict.integration)
         assertEquals(BleDeviceKind.SENSOR, verdict.kind)
@@ -57,9 +55,7 @@ class DeviceClassificationTest {
 
     @Test
     fun `the NAME decides, so a WearOS name is WearOS even with 0xFE1F`() {
-        // Contrived: a device advertising the Garmin member service but named
-        // like a WearOS watch. Classification is name-based now, so it is
-        // WearOS — the member service does not override a recognised name.
+        // A device advertising the Garmin member service but named like a WearOS watch is WearOS.
         val verdict = classifyDevice(
             discovered(name = "Galaxy Watch", advertisesSyncService = true),
             classifiers,
@@ -95,9 +91,7 @@ class DeviceClassificationTest {
 
     @Test
     fun `order matters, Garmin's verdict beats the generic watch name match`() {
-        // "vívoactive" contains no generic smartwatch fragment, but a
-        // hypothetical "Garmin Venu Watch" style name could match both — the
-        // first classifier in the list wins.
+        // A name that could match both classifiers: the first in the list wins.
         val verdict = classifyDevice(discovered("Garmin Forerunner 265S"), classifiers)
         assertEquals(DeviceIntegration.GARMIN, verdict.integration)
     }

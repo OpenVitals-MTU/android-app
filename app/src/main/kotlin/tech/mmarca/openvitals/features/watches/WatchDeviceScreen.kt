@@ -69,27 +69,18 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.theme.Spacing
 import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 
-/**
- * The watch's on-device settings tree shipped with sub-milestone 7f
- * (`WatchSettingsScreen` behind the already-registered route), so the rows
- * that open it are live.
- */
+/** The watch's settings tree browser exists, so the rows that open it are live. */
 internal const val WatchSettingsTreeAvailable: Boolean = true
 
-/** The root of the watch's settings tree (7f); Flutter's `rootScreenId`. */
+/** The root of the watch's settings tree. */
 internal const val WatchSettingsRootScreenId: Int = GarminSettingsService.ROOT_SCREEN_ID
 
-/** The alarms screen's well-known id inside that tree (7f). */
+/** The alarms screen's well-known id. */
 internal const val WatchSettingsAlarmsScreenId: Int = GarminSettingsService.ALARMS_SCREEN_ID
 
 /**
- * One watch, and everything about it. Port of the Flutter build's
- * `watch_device_screen.dart`.
- *
- * The order is fixed and means something: **status** (what you came to
- * check), **actions** (verbs, as icons), **configuration** (least often
- * touched, so last, with removal at the bottom where a mis-tap cannot reach
- * it).
+ * One watch, and everything about it. Order: status, actions, configuration,
+ * with removal at the bottom where a mis-tap cannot reach it.
  */
 @Composable
 fun WatchDeviceScreen(
@@ -117,16 +108,13 @@ fun WatchDeviceScreen(
     val calendarPermission = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted ->
-        // The toggle is set either way; without the grant the row says what
-        // is missing rather than silently syncing nothing.
+        // The toggle is set either way; without the grant the row says what is missing.
         viewModel.setCalendarSync(true)
         if (!granted) viewModel.refreshCalendarPermission()
     }
 
-    // CoMaps' own runtime permission, named after the installed flavour and so
-    // resolved at tap time. Asked for here rather than borrowed from the
-    // recording screen: guidance on the wrist stands on its own, and a wearer
-    // who never records would otherwise have no way to grant it.
+    // CoMaps' own permission, named after the installed flavour. Asked here so a
+    // wearer who never records can still grant it.
     val coMapsPermission = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { viewModel.refreshCoMapsPermission() }
@@ -138,14 +126,9 @@ fun WatchDeviceScreen(
     var showRenameDialog by rememberSaveable { mutableStateOf(false) }
     var showRemoveDialog by rememberSaveable { mutableStateOf(false) }
 
-    // Only a Garmin GFDI device (watch or Edge bike computer) has GFDI
-    // sync/settings/find. A WearOS watch speaks none of it — its heart rate
-    // streams over BLE and its recorded data arrives via Health Connect — so
-    // those controls are hidden rather than shown dead.
+    // Only a Garmin GFDI device has sync, settings and find. WearOS speaks none of it.
     val isGarmin = device.isGarminGfdi
-    // A bike computer records rides, not wrist wellness — its "Data" view
-    // would always be empty, so it is hidden. Its rides import into the
-    // normal activity history.
+    // A bike computer records rides, not wrist wellness; its Data view is hidden.
     val isBikeComputer = device.isBikeComputer
 
     Column(
@@ -202,9 +185,7 @@ fun WatchDeviceScreen(
             }
         }
 
-        // Only for a Garmin watch that says it HAS a settings tree — and only
-        // once 7f's browser exists to open. A watch without REALTIME_SETTINGS
-        // (or any WearOS watch) has no such screen to browse.
+        // Only for a watch that has a settings tree.
         if (WatchSettingsTreeAvailable && isGarmin &&
             state.supports(GarminCapability.REALTIME_SETTINGS)
         ) {
@@ -214,18 +195,14 @@ fun WatchDeviceScreen(
             )
         }
 
-        // Only for a watch that says it speaks GNCS. `supports` treats an
-        // unknown capability as present, so a watch that has never synced
-        // still gets the row rather than having the feature hidden from it.
+        // `supports` treats an unknown capability as present, so an unsynced watch gets the row.
         if (isGarmin && state.supports(GarminCapability.GNCS)) {
             SectionHeader(stringResource(R.string.settings_watch_notifications_section))
             NotificationsRow(onOpen = { onOpenNotifications(device.id) })
         }
 
-        // A bike computer can broadcast standard-BLE sensors into a
-        // recording. The role is opt-in from here because broadcast mode is
-        // usually only on during a ride, so it must be detected while the
-        // device is live.
+        // A bike computer can broadcast BLE sensors. Opt-in here, since broadcast
+        // mode must be detected while the device is live.
         if (device.isLiveSensorCapable) {
             SectionHeader(stringResource(R.string.settings_bike_live_sensor_section))
             LiveSensorSection(
@@ -238,8 +215,7 @@ fun WatchDeviceScreen(
 
         SectionHeader(stringResource(R.string.settings_watch_section_device))
         if (isGarmin) {
-            // First in the section: the schedule is what decides whether the
-            // rest of this screen ever has to be visited again.
+            // First: the schedule decides whether this screen is ever visited again.
             AutoSyncCard(
                 selected = state.autoSync,
                 onSelect = viewModel::setAutoSync,
@@ -268,9 +244,7 @@ fun WatchDeviceScreen(
                     )
                 }
             }
-            // Only offered with the link held: a stream needs a connection to
-            // ride on, and a switch that silently does nothing is worse than
-            // one that is not there.
+            // Only with the link held: a stream needs a connection.
             if (state.stayConnected) {
                 OpenVitalsCard {
                     Column(
@@ -313,8 +287,7 @@ fun WatchDeviceScreen(
                 state = state,
                 onToggle = { enabled ->
                     viewModel.setNavigationOnWatch(enabled)
-                    // The toggle sticks either way; without the grant the card
-                    // says what is missing rather than showing nothing forever.
+                    // The toggle sticks either way; without the grant the card says what is missing.
                     if (enabled) viewModel.coMapsPermissionName()?.let(coMapsPermission::launch)
                 },
             )
@@ -342,8 +315,7 @@ fun WatchDeviceScreen(
                 )
             }
         }
-        // Last, and its own card: a destructive action wants distance from
-        // the switch above it, not adjacency.
+        // Last, and its own card: a destructive action wants distance.
         OpenVitalsCard {
             Text(
                 text = stringResource(R.string.settings_watch_remove),
@@ -388,8 +360,7 @@ private fun StatusCard(
     isBikeComputer: Boolean,
     onRename: () -> Unit,
 ) {
-    // A WearOS watch has no sync concept, so its status line names the device
-    // rather than a last-sync time it will never have.
+    // A WearOS watch has no sync, so the status line names the device.
     val statusLine = buildString {
         val syncedAt = device.lastSyncedAt
         if (!isGarmin) {
@@ -403,8 +374,7 @@ private fun StatusCard(
                     formatWatchSyncTime(syncedAt),
                 ),
             )
-            // Only after a sync THIS session — the count is not persisted,
-            // and an invented one would be worse than none.
+            // Only after a sync this session; the count is not persisted.
             val files = sync.lastFileCount
             if (files != null && files > 0) {
                 append(" · ")
@@ -478,8 +448,7 @@ internal fun ActionsRow(
     onToggleFind: () -> Unit,
 ) {
     val finding = state.find.isFindingDevice(device.id)
-    // One radio: syncing and finding cannot overlap, and neither can a find
-    // on a second watch. Stopping THIS find stays available throughout.
+    // One radio: syncing and finding cannot overlap. Stopping this find stays available.
     val busy = (state.sync.isSyncing || state.find.findingDeviceId != null) && !finding
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -499,13 +468,11 @@ internal fun ActionsRow(
             icon = Icons.Outlined.Sync,
             label = stringResource(R.string.settings_watch_action_sync),
             busy = state.sync.isSyncingDevice(device.id),
-            // One radio, one sync: disabled while ANY watch is syncing.
+            // One radio: disabled while any watch is syncing.
             enabled = !busy && !finding && !state.sync.isSyncing,
             onClick = onSync,
         )
-        // Alarms are not a feature of their own: they are a screen in the
-        // watch's settings tree, reached at a well-known id — so the action
-        // arrives with 7f's browser.
+        // Alarms are a screen in the settings tree at a well-known id.
         if (WatchSettingsTreeAvailable && state.supports(GarminCapability.REALTIME_SETTINGS)) {
             WatchAction(
                 icon = Icons.Outlined.Alarm,
@@ -515,9 +482,7 @@ internal fun ActionsRow(
             )
         }
         if (state.supports(GarminCapability.FIND_MY_WATCH)) {
-            // A toggle, not a one-shot: the watch alerts for a minute unless
-            // stopped, so the same control stops it — in place, because you
-            // are rummaging through a bag one-handed.
+            // A toggle: the watch alerts for a minute unless stopped, so the same control stops it.
             WatchAction(
                 icon = if (finding) Icons.Outlined.Stop else Icons.Outlined.WifiTethering,
                 label = if (finding) {
@@ -533,14 +498,9 @@ internal fun ActionsRow(
 }
 
 /**
- * How often the watch syncs on its own.
- *
- * A segmented row rather than a switch plus a dropdown: there are four
- * choices, off is one of them, and the whole point is seeing at a glance which
- * one is in force. The body says the two things a schedule cannot promise (the
- * watch has to be in range, and Android decides the exact moment), because a
- * user who expects a sync at 09:00 sharp would otherwise read a normal
- * fifteen-minute drift as the feature being broken.
+ * How often the watch syncs on its own. A segmented row, so the choice in
+ * force is visible at a glance. The body says the watch must be in range and
+ * Android picks the moment, or a fifteen-minute drift reads as broken.
  */
 @Composable
 private fun AutoSyncCard(
@@ -598,12 +558,7 @@ private fun AutoSyncCard(
     }
 }
 
-/**
- * The watch's calendar glance, fed from the phone's calendar. The single most
- * personal thing this app can hand a watch, so it is off by default, asks for
- * the OS permission the moment it is switched on, and says so plainly when
- * that grant has since been revoked.
- */
+/** The watch's calendar glance. Off by default; asks for the OS permission when switched on. */
 @Composable
 private fun CalendarSyncCard(
     state: WatchDeviceUiState,
@@ -643,11 +598,8 @@ private fun CalendarSyncCard(
 }
 
 /**
- * CoMaps guidance on the wrist. Garmin offers no turn-by-turn channel, so it
- * rides the notification link: one notification, updated in place as the
- * route unfolds, gone when it ends. Off by default, and complete in itself —
- * this switch asks for CoMaps' permission and needs nothing set elsewhere, no
- * recording started, no activity-recording integration on.
+ * CoMaps guidance on the wrist, over the notification link: one
+ * notification, updated in place. Off by default and complete in itself.
  */
 @Composable
 private fun NavigationOnWatchCard(
@@ -688,14 +640,9 @@ private fun NavigationOnWatchCard(
 }
 
 /**
- * GPS ephemeris: a few days of predicted satellite orbits, which is what turns
- * a two-minute cold fix into a two-second one.
- *
- * Garmin's own app downloads these silently; this app has no INTERNET
- * permission and will not grow one for it, so the file comes in by the user's
- * own hand and is handed over when the watch asks. The URL the watch asked for
- * is shown because it is the only way to know WHICH file this particular
- * chipset wants.
+ * GPS ephemeris, which turns a two-minute cold fix into seconds. This app has
+ * no INTERNET permission, so the user supplies the file. The URL the watch
+ * asked for says which file this chipset wants.
  */
 @Composable
 private fun EphemerisCard(
@@ -797,10 +744,7 @@ private fun ephemerisSummary(file: GarminAgpsFileState?): String {
     return "$kind · $detail"
 }
 
-/**
- * The way into the watch's OWN settings, at the root of its tree. Hidden
- * until 7f lands ([WatchSettingsTreeAvailable]).
- */
+/** The way into the watch's own settings tree. */
 @Composable
 internal fun OnDeviceSettingsRow(onOpen: () -> Unit) {
     OpenVitalsCard {
@@ -836,11 +780,7 @@ internal fun OnDeviceSettingsRow(onOpen: () -> Unit) {
     }
 }
 
-/**
- * Mirrors the phone's notifications to the watch. The master switch, its two
- * gates and the per-app blocklist all live on the notifications screen (7e
- * folded them into one), so this row only identifies and opens.
- */
+/** Mirrors phone notifications to the watch. The switches live on the notifications screen. */
 @Composable
 private fun NotificationsRow(onOpen: () -> Unit) {
     OpenVitalsCard {
@@ -876,11 +816,7 @@ private fun NotificationsRow(onOpen: () -> Unit) {
     }
 }
 
-/**
- * The live-sensor (BLE broadcast) controls for a bike computer: its currently
- * assigned capabilities, and a button to (re)detect what the device is
- * broadcasting right now.
- */
+/** The BLE broadcast controls for a bike computer: its capabilities, and a redetect button. */
 @Composable
 internal fun LiveSensorSection(
     device: BleSensorDevice,

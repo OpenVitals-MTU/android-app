@@ -33,19 +33,9 @@ import java.time.LocalDateTime
 import java.util.Locale
 import kotlin.math.roundToLong
 
-/**
- * One CSV row → the Health Connect records it represents.
- *
- * Pure and synchronous: no repository, no clock, no I/O. Everything the
- * conversion needs is the row, the mapping, and the catalog.
- */
+/** One CSV row to the Health Connect records it represents. Pure: no I/O, no clock. */
 
-/**
- * The namespace every CSV-imported record's `clientRecordId` carries.
- *
- * Distinct from the Apple importer's so the two can never collide on the same
- * id and silently overwrite each other's records.
- */
+/** The `clientRecordId` namespace for CSV imports. Distinct from the Apple importer's. */
 const val CSV_CLIENT_RECORD_ID_NAMESPACE = "csv"
 
 /** A record built from one CSV cell, with everything the import loop needs. */
@@ -69,14 +59,8 @@ data class CsvRowConversion(
 )
 
 /**
- * Converts [row] under [mapping].
- *
- * Failure granularity matches the Apple importer: a bad **timestamp** or a row
- * too short costs the whole row, because nothing in it can be placed in time; a
- * bad **value** costs only that metric, so one unparsable body-fat cell does
- * not throw away a perfectly good weight. A bad **end timestamp** sits in
- * between: it costs the interval metrics only, because the instant metrics
- * beside it are still perfectly placed in time by the start alone.
+ * Converts [row] under [mapping]. A bad timestamp costs the row, a bad value
+ * only that metric, a bad end timestamp only the interval metrics.
  */
 fun convertCsvRow(
     row: CsvRow,
@@ -87,11 +71,9 @@ fun convertCsvRow(
     val metricColumns = mapping.metricColumns
     if (metricColumns.isEmpty()) return CsvRowConversion()
 
-    // A row is "too short" only relative to what the mapping actually reads.
-    // Trailing empty columns are normal in exports and must not reject the row.
-    // The end-timestamp column is deliberately NOT counted: a row truncated
-    // before it reads as a blank end and falls back to the one-minute span,
-    // the same treatment a blank end cell gets — not a rejected row.
+    // "Too short" is relative to what the mapping reads: trailing empty columns
+    // are normal. The end column is not counted; a missing end falls back to
+    // the one-minute span.
     val endTimestampColumn = mapping.endTimestampColumn
     val highestIndex = (metricColumns.map { it.columnIndex } + timestampColumn.columnIndex).max()
     if (row.fields.size <= highestIndex) {
@@ -129,13 +111,10 @@ fun convertCsvRow(
             ),
         )
 
-    // Resolved once per row, before the loop, because any number of mass-share
-    // metrics can need it.
+    // Resolved once per row: several mass-share metrics may need it.
     val rowWeightKg = resolveRowWeightKg(row, mapping)
 
-    // The end timestamp too — but a bad end costs only the interval metrics,
-    // never the row: the instant metrics beside it are still perfectly placed
-    // in time by the start alone.
+    // A bad end costs only the interval metrics.
     val endText = endTimestampColumn?.let { row.cell(it.columnIndex) }
     val endInstant = endText?.let { resolveCsvInstant(it, mapping.dateTime) }
 
@@ -148,11 +127,8 @@ fun convertCsvRow(
         val interpretation = column.effectiveInterpretation
         if (spec == null || interpretation == null) continue
 
-        // A row that names no end — the column unmapped, or its cell blank —
-        // defaults to a one-minute span: the total stays pinned at its start
-        // without claiming a duration the file never stated. An end the file
-        // DOES state but that is garbage, or not after the start, still
-        // rejects: silently re-timing stated data is worse than skipping it.
+        // No end named: a one-minute span. An end that is stated but garbage,
+        // or not after the start, still rejects.
         var intervalEnd: CsvInstant? = null
         if (spec.isInterval) {
             val reason = when {
@@ -173,7 +149,7 @@ fun convertCsvRow(
             intervalEnd = endInstant ?: instant.plusDefaultIntervalSpan()
         }
 
-        // A blank cell is a gap in the data, not an error: scales skip metrics.
+        // A blank cell is a gap, not an error.
         val text = row.cell(column.columnIndex) ?: continue
 
         val raw = parseCsvNumber(text)
@@ -224,10 +200,7 @@ fun convertCsvRow(
     return CsvRowConversion(records = records, diagnostics = diagnostics)
 }
 
-/**
- * The row's body weight in kg, or null when the mapping has no weight column,
- * the cell is blank, or it does not parse.
- */
+/** The row's body weight in kg, or null. */
 private fun resolveRowWeightKg(row: CsvRow, mapping: CsvImportMapping): Double? {
     val column = mapping.weightColumn ?: return null
     val text = row.cell(column.columnIndex) ?: return null
@@ -238,9 +211,8 @@ private fun resolveRowWeightKg(row: CsvRow, mapping: CsvImportMapping): Double? 
 }
 
 /**
- * Builds the record for [metric] at [instant] from an already-canonical
- * [value]. An interval metric additionally needs [end], the caller-validated
- * end of its span; instant metrics ignore it.
+ * Builds the record for [metric] at [instant] from a canonical [value].
+ * An interval metric also needs [end], already validated by the caller.
  */
 fun buildCsvImportRecord(
     metric: CsvImportMetric,
@@ -272,10 +244,7 @@ fun buildCsvImportRecord(
             Power.kilocaloriesPerDay(value),
             metadata,
         )
-        // Health Connect models heart rate as a SERIES, not an instant. A CSV
-        // row is one spot reading, so it becomes a one-sample series whose
-        // window is the single instant — the same shape the Apple importer
-        // builds for a lone heart-rate sample.
+        // Health Connect models heart rate as a series: one sample, window of one instant.
         CsvImportMetric.HEART_RATE -> HeartRateRecord(
             startTime = time,
             startZoneOffset = offset,
@@ -332,8 +301,7 @@ fun buildCsvImportRecord(
             measurementMethod = Vo2MaxRecord.MEASUREMENT_METHOD_OTHER,
             metadata = metadata,
         )
-        // The one interval metric: the span is the row's own TimeFrom..TimeTo.
-        // convertCsvRow guarantees the end exists and lies after the start.
+        // The one interval metric. convertCsvRow guarantees end > start.
         CsvImportMetric.STEPS -> {
             val until = checkNotNull(end) { "STEPS needs an end instant." }
             StepsRecord(
@@ -359,10 +327,8 @@ fun buildCsvImportRecord(
 }
 
 /**
- * What an interval row spans when the file names no end. One minute, not zero
- * (Health Connect requires end > start) and not a day (that would claim a
- * duration the file never stated). Part of the Flutter-parity contract: both
- * apps must build the same record from the same file.
+ * The span of an interval row when the file names no end. One minute: not
+ * zero (Health Connect needs end > start), not a day. Flutter parity.
  */
 private val DefaultIntervalSpan = Duration.ofMinutes(1)
 
@@ -376,26 +342,12 @@ private fun csvMetadata(clientRecordId: String): Metadata =
     )
 
 /**
- * The identity of a CSV-imported record: **record type and instant, not value.**
+ * The identity of a CSV-imported record: type and instant, not value, so a
+ * corrected re-import replaces the old record. File name, header, unit and
+ * mapping are excluded too. For an interval metric the instant is the start.
  *
- * Health Connect upserts on `clientRecordId`, so leaving the value out is what
- * makes re-importing a corrected file REPLACE the old record instead of leaving
- * two weights at the same instant. The cost is that two genuinely different
- * measurements at the identical instant collapse to one — for a scale, the
- * right trade.
- *
- * Also deliberately excluded: the file name, the column header, the unit chosen
- * and the mapping. Re-exporting the same history with the columns reordered, or
- * in pounds instead of kilograms, resolves to the same records.
- *
- * For an interval metric the instant is the interval's START, and the end is
- * excluded exactly like the value: a re-export that corrects a bucket's end
- * time replaces the record rather than duplicating it.
- *
- * BYTE-COMPATIBLE with the Flutter build's `buildCsvClientRecordId`: users who
- * imported through that build must dedup against these exact ids, so the hash
- * input (`"<targetType>|<epochMillis>"`), the SHA-256 truncation to 16 bytes,
- * and the `csv_<slug>_<hex>` shape must not change.
+ * Byte-compatible with the Flutter build: hash input `"<targetType>|<epochMillis>"`,
+ * SHA-256 truncated to 16 bytes, shape `csv_<slug>_<hex>`. Do not change.
  */
 fun buildCsvClientRecordId(targetType: String, utc: Instant): String {
     val parts = "$targetType|${utc.toEpochMilli()}"
@@ -414,11 +366,7 @@ private const val HexDigits = "0123456789abcdef"
 
 private val StableIdSegmentRegex = Regex("[^a-z0-9]+")
 
-/**
- * Slugifies [value] for the middle id segment: lowercased, every run of
- * non-alphanumerics collapsed to `_`, no leading or trailing `_`. Matches the
- * Apple importer's `toStableIdSegment` and the Flutter build's slug.
- */
+/** Slugifies [value]: lowercase, non-alphanumeric runs to `_`, trimmed. Matches Flutter. */
 private fun toCsvStableIdSegment(value: String): String =
     value.lowercase(Locale.US)
         .replace(StableIdSegmentRegex, "_")
@@ -426,12 +374,8 @@ private fun toCsvStableIdSegment(value: String): String =
         .ifBlank { "record" }
 
 /**
- * The canonical values [metric] would take across [rows].
- *
- * Runs the REAL conversion, derivations and plausibility rejections included,
- * so the range the confirm step shows is the range that will actually be
- * written — which is the whole point of showing it. A fat-mass column divided
- * by the wrong weight column surfaces here as 3% or 150%.
+ * The canonical values [metric] would take across [rows], from the real
+ * conversion, so the preview shows what will be written.
  */
 fun previewCanonicalValues(
     rows: List<List<String>>,
@@ -455,17 +399,9 @@ fun previewCanonicalValues(
 }
 
 /**
- * The earliest and latest wall-clock times [rows] resolve to under [mapping],
- * or null when none of them parse.
- *
- * Wall clock, not the UTC instant: this is shown to the user to check against
- * the dates they can see in their own file, so it has to read the way the file
- * reads. The offset is added back for exactly that reason.
- *
- * Resolved through [resolveCsvInstant], the same path the import takes, so the
- * span cannot disagree with what gets written. It is the guard the single-row
- * echo cannot be: a day/month mix-up that happens to leave row 1 plausible
- * shows up here as a span running to the wrong month, or backwards.
+ * The earliest and latest wall-clock times [rows] resolve to, or null. Wall
+ * clock, so it reads the way the file reads. Resolved through the import
+ * path, so a day/month mix-up shows up as a backwards span.
  */
 fun previewInstantRange(
     rows: List<List<String>>,
@@ -491,18 +427,14 @@ fun previewInstantRange(
 private val NonNumericCharsRegex = Regex("""[^0-9,.\-+eE]""")
 
 /**
- * Parses a numeric cell, tolerating a comma decimal separator and thousands
- * separators.
- *
- * A semicolon-delimited European export writes `78,4`; reading that as 784 or
- * as null would both be wrong. Only unambiguous shapes are accepted — a value
- * containing both separators is read with the LAST one as the decimal point.
+ * Parses a numeric cell, tolerating a comma decimal and thousands separators.
+ * With both separators present, the last one is the decimal point.
  */
 fun parseCsvNumber(text: String): Double? {
     var value = text.trim()
     if (value.isEmpty()) return null
 
-    // Strip anything that is not part of a number (stray units, currency, spaces).
+    // Strip stray units, currency and spaces.
     value = value.replace(NonNumericCharsRegex, "")
     if (value.isEmpty()) return null
 
@@ -517,8 +449,7 @@ fun parseCsvNumber(text: String): Double? {
             value.replace(",", "")
         }
     } else if (lastComma >= 0) {
-        // Only commas. Treat a single one as the decimal point; several means
-        // thousands grouping.
+        // Only commas: a single one is the decimal point, several are grouping.
         value = if (value.indexOf(',') == lastComma) {
             value.replaceFirst(",", ".")
         } else {

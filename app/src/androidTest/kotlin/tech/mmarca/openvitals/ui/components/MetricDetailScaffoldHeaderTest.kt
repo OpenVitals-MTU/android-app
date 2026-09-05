@@ -14,15 +14,7 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * The parts of Flutter's `test/ui/components/metric_detail_scaffold_test.dart`
- * that `MetricDetailScaffoldTest` does not already cover: the header slot, the
- * range labels, and what the navigator is titled once a range is chosen.
- *
- * The scaffold is shared by every metric screen, so a header slot that silently
- * drops its content, or a navigator that keeps the old period's title after a
- * range change, is wrong on a dozen screens at once.
- */
+/** The header slot, the range labels, and the navigator's title once a range is chosen. Shared by every metric screen. */
 class MetricDetailScaffoldHeaderTest {
 
     @get:Rule
@@ -55,9 +47,7 @@ class MetricDetailScaffoldHeaderTest {
 
     @Test
     fun aDayRangeAnchoredOnTodayNamesItToday() {
-        // The navigator's title is derived from the range and the anchor, not
-        // stored — so a stale title is how a screen ends up claiming to show a
-        // day it is not showing.
+        // The navigator's title is derived from the range and the anchor, not stored.
         setScaffold(range = TimeRange.DAY, date = LocalDate.now())
 
         composeRule.onNodeWithText(string(R.string.period_today)).assertIsDisplayed()

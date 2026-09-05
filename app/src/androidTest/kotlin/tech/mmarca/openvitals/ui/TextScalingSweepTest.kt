@@ -68,23 +68,10 @@ import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 
 /**
- * Port of Flutter's `test/ui/text_scaling_sweep_test.dart`.
- *
- * Every top-level screen, on a phone-sized surface, with the system font scale
- * at the largest setting Android offers.
- *
- * A health app skews toward users who run large fonts, and a layout that breaks
- * at 2.0 is invisible at 1.0 — nothing else in the suite would ever catch it.
- * A screen failing here is a layout bug, not a test problem: the fix is
- * wrapping, ellipsis or scrolling, never shrinking the user's text.
- *
- * Where Flutter can assert "no RenderFlex overflowed", Compose has no such
- * exception — it squeezes and clips instead. So the assertion here is the one
- * that still means something: the screen composes, it renders content, and no
- * piece of that content is laid out past the side of the phone.
- *
- * Dates are anchored in the past so the screens render DATA rather than only
- * their empty states — a populated card is where text collides.
+ * Every top-level screen at Android's largest font scale. A layout that breaks at 2.0 is
+ * invisible at 1.0. Compose squeezes and clips instead of throwing, so the assertion is:
+ * the screen composes, renders content, and none of it is laid out past the side of the phone.
+ * Dates are anchored in the past so the screens render data, not empty states.
  */
 class TextScalingSweepTest {
 
@@ -130,8 +117,7 @@ class TextScalingSweepTest {
         }
 
         composeRule.assertScaledScreenFitsItsWidth()
-        // The tile the user opens the app for is still legible, not scaled out
-        // of its own card.
+        // The tile the user opens the app for is still legible.
         composeRule.onAllNodesWithText(string(R.string.metric_steps)).onFirst().assertIsDisplayed()
     }
 
@@ -179,8 +165,7 @@ class TextScalingSweepTest {
         }
 
         composeRule.assertScaledScreenFitsItsWidth()
-        // The range switcher is the one control on the screen; losing it to the
-        // scaled-up title strands the user in whichever period opened first.
+        // The range switcher is the one control on the screen.
         composeRule.onNodeWithText(string(R.string.range_week)).assertIsDisplayed()
     }
 
@@ -268,8 +253,7 @@ class TextScalingSweepTest {
         }
 
         composeRule.assertScaledScreenFitsItsWidth()
-        // The workout the user recorded is still named, not squeezed out by the
-        // metrics beside it.
+        // The workout is still named, not squeezed out by the metrics.
         composeRule.onNodeWithText(WORKOUT_TITLE).assertIsDisplayed()
     }
 
@@ -394,8 +378,7 @@ class TextScalingSweepTest {
         }
 
         composeRule.assertScaledScreenFitsItsWidth()
-        // Settings is a routing surface: a section title that runs off the side
-        // is a feature the user can no longer identify before tapping into it.
+        // Settings is a routing surface: a clipped title is a feature the user cannot identify.
         composeRule
             .onNodeWithText(string(SettingsSection.entries.first().titleRes))
             .assertIsDisplayed()

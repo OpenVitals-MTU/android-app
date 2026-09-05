@@ -30,13 +30,8 @@ import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 import tech.mmarca.openvitals.R
 
 /**
- * Ports of Flutter's `sleep_schedule_chart_test.dart` and the one case of
- * `sleep_stage_share_card_test.dart` that maps onto Kotlin's card.
- *
- * Kotlin's `SleepStageShareCard` is a vertical per-stage breakdown with no tap
- * target, so the share-card file's pixel-width and tap cases are a layout
- * difference rather than missing coverage; its lane-chart and tap cases belong to
- * the day card and live in `SleepSessionTimelineCardTest`.
+ * The schedule chart and the one share-card case that maps onto Kotlin's card.
+ * The lane-chart and tap cases live in `SleepSessionTimelineCardTest`.
  */
 class SleepChartsTest {
 
@@ -53,8 +48,7 @@ class SleepChartsTest {
 
     @Test
     fun theScheduleChartRendersNothingWhenNoNightHasABedtime() {
-        // Every night lacking a bedtime leaves no axis to draw against. Drawing
-        // an empty frame with a title would present "no data" as a measurement.
+        // No bedtime, no axis. An empty titled frame would present "no data" as a measurement.
         setSchedule(days = listOf(SleepScheduleDay(date = ANCHOR, inBedStart = null, inBedEnd = null)))
 
         composeRule.onNodeWithText(TITLE).assertDoesNotExist()
@@ -63,8 +57,7 @@ class SleepChartsTest {
 
     @Test
     fun anImpossibleNightStillRenders_itJustDoesNotScale() {
-        // A session that ends before it starts is a real thing to receive from
-        // another app. It must not take the chart down with it.
+        // A session that ends before it starts must not take the chart down.
         val start = ANCHOR.atStartOfDay(ZONE).plusHours(23).toInstant()
         setSchedule(
             days = listOf(
@@ -119,9 +112,7 @@ class SleepChartsTest {
 
     @Test
     fun tappingANightReportsThatNightAndNotItsNeighbour() {
-        // The bars are painted on a canvas, so the only thing standing between a
-        // tap and the right night is the slot arithmetic. Off by one slot and the
-        // day list below the chart shows the wrong night's sleep, convincingly.
+        // The bars are on a canvas, so only the slot arithmetic stands between a tap and the right night.
         val week = (0..6).map { ANCHOR.minusDays(6L - it) }
         var reported: LocalDate? = null
         composeRule.setContent {
@@ -149,11 +140,7 @@ class SleepChartsTest {
         composeRule.runOnIdle { assertEquals(week[5], reported) }
     }
 
-    /**
-     * The centre of day [index]'s slot, in the tapped card's own coordinates: the
-     * chart canvas is inset by the card padding and reserves a strip on its right
-     * for the clock-time labels.
-     */
+    /** The centre of day [index]'s slot in the card's coordinates: inset by padding, with a label strip on the right. */
     private fun TouchInjectionScope.clickSlot(index: Int, dayCount: Int) {
         val cardPadding = 16.dp.toPx()
         val barsWidth = width - 2 * cardPadding - 46.dp.toPx()

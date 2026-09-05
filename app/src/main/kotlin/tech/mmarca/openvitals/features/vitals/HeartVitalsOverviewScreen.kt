@@ -531,9 +531,7 @@ private fun RespiratoryOverviewChartsContent(
                 valueFormatter = { unitFormatter.temperature(it).text },
             )
         }
-        // Gate on the entries the chart actually plots, not on the raw list. A
-        // window whose readings all lack a delta passed the raw gate and then
-        // averaged an empty list, printing "NaN" where the summary should be.
+        // Gate on the entries the chart plots: an all-delta-less window printed NaN.
         val skinChartEntries = skinTemperatureChartEntries(state.skinTemperature)
         if (skinChartEntries.hasRenderableChartData(state.selectedRange) { it.time }) {
             val chartEntries = skinChartEntries
@@ -646,8 +644,7 @@ private fun respiratoryOverviewMetrics(
             value = state.respiratoryRateValue(period, unitFormatter),
             icon = Icons.Outlined.Air,
             color = respiratoryColor,
-            // The latest reading names the writer on every range: on non-day the
-            // entries are per-day aggregates whose sources are deliberately blank.
+            // The latest reading names the writer; non-day aggregates carry no source.
             source = state.latestRespiratoryRate?.source,
         ),
         OverviewMetricCardData(
@@ -668,20 +665,11 @@ private fun respiratoryOverviewMetrics(
         ),
     )
 
-/**
- * The delta the skin-temperature card prints: the newest entry that actually
- * CARRIES one — the same population the chart draws. The card used to read the
- * newest RAW entry, so a reading that arrived without a delta blanked it while
- * the chart underneath went on plotting the readings that had one.
- */
+/** The delta the skin-temperature card prints: the newest entry that carries one. */
 internal fun HeartUiState.skinTemperatureCardDeltaCelsius(): Double? =
     skinTemperatureChartEntries(skinTemperature).lastOrNull()?.averageDeltaCelsius
 
-/**
- * The reading that names the skin-temperature card. Within a day it is the one
- * whose delta the card prints; over a longer range the true latest reading names
- * it, because the day-aggregate entries the chart draws carry no source.
- */
+/** The reading that names the skin-temperature card. Over a range, the true latest. */
 internal fun HeartUiState.skinTemperatureCardSource(): String? =
     if (selectedRange == TimeRange.DAY) {
         (skinTemperatureChartEntries(skinTemperature).lastOrNull() ?: latestSkinTemperature)?.source
@@ -702,9 +690,7 @@ internal fun HeartUiState.averageHeartRateValue(unitFormatter: UnitFormatter): D
             ?.let(unitFormatter::heartRate)
     }
 
-// On DAY the card reads the samples first, falling back to the provider's own day
-// aggregate. Reading only the aggregate left the tile empty on days where samples
-// had landed but the aggregate had not — with the chart above already drawn.
+// On DAY the card reads the samples first, then the provider's aggregate.
 internal fun HeartUiState.restingHeartRateValue(unitFormatter: UnitFormatter): DisplayValue? =
     if (selectedRange == TimeRange.DAY) {
         (
@@ -756,8 +742,7 @@ internal fun List<HeartRateSample>.sourceForDay(selectedRange: TimeRange): Strin
 private fun <T> List<T>.singleSource(source: (T) -> String): String? =
     map(source).distinct().singleOrNull()
 
-// Within a day one distinct timestamp draws no chart, two do; longer ranges
-// chart anything non-empty.
+// Within a day two distinct timestamps draw a chart; longer ranges chart anything.
 internal fun <T> List<T>.hasRenderableChartData(
     selectedRange: TimeRange,
     time: (T) -> Instant,
@@ -797,11 +782,7 @@ private fun overviewMetricModifier(): Modifier =
         .fillMaxWidth()
         .padding(horizontal = 16.dp, vertical = 8.dp)
 
-/**
- * The chart slot for a metric whose daily read blew its per-metric budget: its
- * list is empty by design, so say why instead of silently rendering nothing.
- * The card above it still shows the window's latest reading.
- */
+/** The chart slot for a metric whose read blew its budget: say why instead of rendering nothing. */
 @Composable
 private fun TimedOutChartPlaceholder(
     metric: VitalsPeriodMetric,

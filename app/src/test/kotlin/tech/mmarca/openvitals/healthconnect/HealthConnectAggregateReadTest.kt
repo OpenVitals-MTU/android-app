@@ -37,19 +37,9 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * The aggregate reads: day totals, the daily-steps series and the intraday
- * progress line.
- *
- * Dart counterparts: the `reads`, `readRawActivityProgress` and
- * `elevation + wheelchair aggregates` groups of
- * test/data/source/health/health_connect_native_data_source_test.dart.
- *
- * Flutter's fake answers `aggregate`/`aggregateGroupByDuration` with canned
- * numbers, so its assertions are about the QUERY the data source issued (bucket
- * minutes, the metric wire names, the instant range). Kotlin issues those queries
- * itself with typed `AggregateMetric`s, so there is no wire name to get wrong;
- * what is worth pinning here is the ANSWER — which records land in which day, and
- * what a metric reads when the device recorded none.
+ * The aggregate reads: day totals, the daily-steps series and the intraday progress line.
+ * Kotlin issues typed queries, so what is pinned is the answer: which records land
+ * in which day, and what an unmeasured metric reads.
  */
 class HealthConnectAggregateReadTest {
 
@@ -69,7 +59,7 @@ class HealthConnectAggregateReadTest {
         HealthConnectRateLimitBackoff.resetForTest()
     }
 
-    // ── day totals ──────────────────────────────────────────────────────────
+    // Day totals.
 
     @Test
     fun `readSteps, readDistanceMeters and readFloorsClimbed use the aggregate API`() =
@@ -126,11 +116,8 @@ class HealthConnectAggregateReadTest {
         assertThat(reader.readWheelchairPushes(date)).isEqualTo(1_240L)
     }
 
-    // Dart asserts NULL here — "the metric screens show no data rather than a zero
-    // day". Kotlin DIVERGES: these day readers return a non-null 0.0/0L, so a day
-    // the device never measured is indistinguishable from a day it measured as
-    // zero. Pinned as it stands rather than silently left untested; changing it is
-    // a product decision, not a test fix.
+    // Dart returns null here. Kotlin returns 0, so an unmeasured day looks like a zero day.
+    // Pinned as it stands; changing it is a product decision.
     @Test
     fun `elevation and wheelchair read zero, not null, when the device records neither`() =
         runTest {
@@ -141,7 +128,7 @@ class HealthConnectAggregateReadTest {
             assertThat(reader.readFloorsClimbed(date)).isEqualTo(0)
         }
 
-    // ── the daily-steps series ──────────────────────────────────────────────
+    // The daily-steps series.
 
     @Test
     fun `readDailySteps slices a day bucket over the local instant range`() = runTest {
@@ -200,25 +187,19 @@ class HealthConnectAggregateReadTest {
             )
 
             assertThat(daily.single().floorsClimbed).isEqualTo(12)
-            // Not requested -> left null. This is the permission-granted-no-data vs
-            // permission-missing distinction the metric screens branch on.
+            // Not requested, so null. The metric screens branch on this.
             assertThat(daily.single().elevationGainedMeters).isNull()
             assertThat(daily.single().wheelchairPushes).isNull()
         }
 
-    // ── which day a drifted bucket belongs to ───────────────────────────────
-    //
-    // `Duration.ofDays(1)` slicing stays instant-aligned, so after a DST
-    // transition the absolute 24h buckets drift up to an hour off local midnight.
-    // Dating a bucket by its START then doubled the fall-back date and skipped the
-    // spring-forward one — the bright/dark blip pair on every year heatmap.
+    // Which day a drifted bucket belongs to. After DST the 24h buckets drift off local midnight.
+    // Dating by start doubled one date and skipped another.
 
     @Test
     fun `a drifted bucket is dated by its midpoint, not its start (the fall-back day)`() {
         val zone = ZoneOffset.UTC
 
-        // The full day, then a bucket that has slipped to a 23:00 start. Dating by
-        // start would put BOTH on Jan 2, doubling it and leaving Jan 3 empty.
+        // A bucket slipped to a 23:00 start. Dating by start would put both on Jan 2.
         val first = dayBucketDate(
             start = Instant.parse("2026-01-02T00:00:00Z"),
             end = Instant.parse("2026-01-02T23:00:00Z"),
@@ -237,8 +218,7 @@ class HealthConnectAggregateReadTest {
 
     @Test
     fun `the midpoint keeps the spring-forward day a start-dated bucket would skip`() {
-        // A drifted bucket running 23:00 Jan 1 -> 00:00 Jan 3 in local wall time.
-        // Dating by start left NO bucket on Jan 2 at all — a false empty day.
+        // A drifted bucket 23:00 Jan 1 -> 00:00 Jan 3. Dating by start left Jan 2 empty.
         val bucketDate = dayBucketDate(
             start = Instant.parse("2026-01-01T23:00:00Z"),
             end = Instant.parse("2026-01-03T00:00:00Z"),
@@ -249,7 +229,7 @@ class HealthConnectAggregateReadTest {
         assertThat(bucketDate).isEqualTo(LocalDate.of(2026, 1, 2))
     }
 
-    // ── the intraday progress line ──────────────────────────────────────────
+    // The intraday progress line.
 
     @Test
     fun `readRawActivityProgress accumulates each contribution into a running total`() =
@@ -273,10 +253,8 @@ class HealthConnectAggregateReadTest {
             assertThat(points.last().time).isEqualTo(at(11))
         }
 
-    // Dart: a metric the DEVICE never reports stays null rather than drawing a
-    // zero line. Kotlin DIVERGES on which half decides: nullness follows what was
-    // ASKED FOR (the granted permissions), not what came back — a requested metric
-    // the device never wrote reads a cumulative 0 from the very first point.
+    // Nullness follows what was asked for, not what came back:
+    // a requested metric the device never wrote reads 0.
     @Test
     fun `an unrequested metric stays null, while a requested one reads zero`() = onARealClock {
         val client = seeded(steps(1_000L, at(8), at(9)))
@@ -292,9 +270,7 @@ class HealthConnectAggregateReadTest {
         assertThat(point.totalDistanceMeters).isNull()
     }
 
-    // Dart: a metric stays non-null from the bucket it FIRST APPEARS in, and its
-    // running total carries forward through buckets that had none. Kotlin keeps
-    // the carry-forward half; the first half falls out of the divergence above.
+    // A running total carries forward through buckets that had none.
     @Test
     fun `a metric's running total carries forward through contributions that had none`() =
         onARealClock {
@@ -337,9 +313,7 @@ class HealthConnectAggregateReadTest {
         assertThat(points.map { it.totalSteps }).containsExactly(10L, 30L).inOrder()
     }
 
-    // Dart pins this on the query's end instant; Kotlin bounds the raw read the
-    // same way, so the observable half is that a record the device has not written
-    // yet cannot appear on today's line.
+    // A record the device has not written yet cannot appear on today's line.
     @Test
     fun `today stops at now rather than running on to midnight`() = onARealClock {
         val today = LocalDate.now()
@@ -347,8 +321,7 @@ class HealthConnectAggregateReadTest {
         val startOfToday = today.atStartOfDay(zone).toInstant()
         val client = seeded(
             steps(10L, startOfToday, startOfToday.plusSeconds(1)),
-            // A record stamped for later today: real on a device whose watch syncs
-            // ahead, and never part of the progress line as it stands now.
+            // A record stamped for later today, as a watch syncing ahead writes.
             steps(999L, Instant.now().plusSeconds(7_200), Instant.now().plusSeconds(10_800)),
         )
 
@@ -370,15 +343,11 @@ class HealthConnectAggregateReadTest {
         assertThat(progress(seeded())).isEmpty()
     }
 
-    // ── chunked long-range reads ────────────────────────────────────────────
+    // Chunked long-range reads.
 
     /**
-     * A long day-bucketed aggregate is ONE Binder parcel, and a year of buckets
-     * measured ~800KB against the shared 1MB buffer
-     * (`TransactionTooLargeException: data parcel size 811824 bytes`). So the
-     * nutrition series must never issue a request wider than
-     * [DailyAggregateMaxQueryDays] — and the chunks must stitch back into the
-     * one series the caller asked for.
+     * A year of day buckets was ~800KB against the 1MB Binder buffer.
+     * No request may be wider than [DailyAggregateMaxQueryDays], and the chunks must stitch back into one series.
      */
     @Test
     fun `readDailyNutrition chunks a long range and stitches the series back together`() = runTest {
@@ -408,11 +377,7 @@ class HealthConnectAggregateReadTest {
         assertThat(series.single { it.date == date }.caloriesBurnedKcal).isWithin(1e-6).of(2_200.0)
     }
 
-    /**
-     * Same parcel budget, heart-rate flavour: a year of daily BPM buckets with
-     * three metrics each is the widest day-bucketed read the app can issue, so
-     * it must go out tiled — and stitch back into one series.
-     */
+    /** Same budget for heart rate: a year of daily BPM buckets must go out tiled and stitch back. */
     @Test
     fun `readDailyHeartRateSummaries chunks a long range and stitches the series back together`() = runTest {
         val zone = ZoneId.systemDefault()
@@ -445,11 +410,8 @@ class HealthConnectAggregateReadTest {
     }
 
     /**
-     * The 79-vs-115 field report: Health Connect's BPM_AVG weights every
-     * sample equally, so a whole-day bucket let a 1 Hz workout outvote the
-     * per-minute background series. The summaries read now slices by hour and
-     * folds the hours duration-weighted, so the workout counts as the hour it
-     * was, not as the majority of the day's samples.
+     * BPM_AVG weights every sample equally, so a 1 Hz workout outvoted the per-minute series.
+     * Summaries now slice by hour and fold the hours duration-weighted.
      */
     @Test
     fun `readDailyHeartRateSummaries keeps a 1 Hz workout from becoming the day average`() = runTest {
@@ -471,8 +433,7 @@ class HealthConnectAggregateReadTest {
                 metadata = Metadata.autoRecorded(watch),
             )
         }
-        // A five-minute 1 Hz workout at 140 bpm inside hour 19: 300 samples
-        // against the day's other 23.
+        // Five minutes at 1 Hz and 140 bpm inside hour 19: 300 samples against 23.
         val workout = HeartRateRecord(
             startTime = dayStart.plusSeconds(19L * 3_600),
             startZoneOffset = null,
@@ -508,10 +469,7 @@ class HealthConnectAggregateReadTest {
             heartRateVariabilityMillis = ms,
             metadata = Metadata.autoRecorded(watch),
         )
-        // Two daytime spot checks and one minute of second-by-second overnight
-        // readings: three occupied minutes, (40 + 60 + 20) / 3 = 40. The
-        // per-sample mean said (40 + 60 + 60 × 20) / 62 ≈ 21, and disagreed
-        // with the day card, which was already bucketed.
+        // Three occupied minutes: (40 + 60 + 20) / 3 = 40. The per-sample mean said 21.
         val spots = listOf(
             hrv(dayStart.plusSeconds(9L * 3_600), 40.0),
             hrv(dayStart.plusSeconds(15L * 3_600), 60.0),
@@ -577,12 +535,8 @@ class HealthConnectAggregateReadTest {
                 date.plusDays(1).atStartOfDay(zone).toInstant(),
             )
 
-        // A grouped-duration response is one Binder parcel. This read used to
-        // ask for a whole local day of one-minute buckets in a single request —
-        // 1440 of them — which on a watch that records heart rate continuously
-        // came back as TransactionTooLargeException, and was degraded to an
-        // empty list. Weekly cardio load then fell back to step estimates on
-        // exactly the phones with the best data.
+        // A whole day of one-minute buckets in one request hit TransactionTooLargeException
+        // and degraded to empty, so cardio load fell back to step estimates.
         val budget = HeartRateInsightBucketDuration.multipliedBy(MaxInsightAggregateBuckets)
         assertThat(client.groupByDurationRequestRanges).isNotEmpty()
         client.groupByDurationRequestRanges.forEach { (start, end) ->
@@ -593,19 +547,11 @@ class HealthConnectAggregateReadTest {
         assertThat(samples.map { it.beatsPerMinute }).containsExactly(61L, 88L).inOrder()
     }
 
-    // ── harness ─────────────────────────────────────────────────────────────
+    // Harness.
 
     /**
-     * Runs a case against a REAL clock rather than [runTest]'s virtual one.
-     *
-     * `readRawActivityProgress` guards itself with a 12-second
-     * `withTimeoutOrNull` budget, and every read underneath it hops to
-     * `Dispatchers.IO`. The moment the body suspends on that real dispatcher,
-     * `runTest` judges its own scheduler idle and fast-forwards virtual time to
-     * the next scheduled event — the timeout — so the budget "expires" before the
-     * read has run at all and the reader returns its empty-list fallback. Every
-     * assertion below would then be made against a timeout, not against the
-     * records seeded for it.
+     * Runs on a real clock. Under [runTest] the reads hop to Dispatchers.IO, virtual time
+     * skips to the 12-second timeout, and every assertion would test a timeout.
      */
     private fun onARealClock(body: suspend CoroutineScope.() -> Unit) = runBlocking(block = body)
 

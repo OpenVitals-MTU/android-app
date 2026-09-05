@@ -28,11 +28,8 @@ import tech.mmarca.openvitals.domain.preferences.BodyProfile
 val TestZone: ZoneId = ZoneId.of("UTC")
 
 /**
- * Keeps the whole load on the test dispatcher.
- *
- * `runTest` advances virtual time whenever no test-dispatcher work is pending,
- * so a hop to `Dispatchers.Default` mid-load lets the chain fill's 12-second
- * budget expire instantly and every gap fill degrade to CHAIN_GAP.
+ * Keeps the whole load on the test dispatcher. A hop to `Dispatchers.Default` mid-load
+ * lets `runTest` expire the chain fill's 12-second budget instantly.
  */
 object TestDispatcherProvider : DispatcherProvider {
     override val main: CoroutineContext = Dispatchers.Unconfined
@@ -41,11 +38,8 @@ object TestDispatcherProvider : DispatcherProvider {
 }
 
 /**
- * A heart repository that reports a steady waking heart rate all day, so every
- * day drains a predictable amount and the chain is observable.
- *
- * [dayGraphCalls] is what tells a stored-chain read (no Health Connect work)
- * apart from a recompute.
+ * A heart repository reporting a steady waking heart rate all day, so the chain is observable.
+ * [dayGraphCalls] tells a stored-chain read apart from a recompute.
  */
 class FakeHeartRepository(
     private val wakingBpm: Long? = 70L,
@@ -108,11 +102,7 @@ fun grantedHealthRepository(
     coEvery { it.grantedPermissions() } returns granted
 }
 
-/**
- * A health repository whose permission read fails — Health Connect throttling a
- * background caller, or the provider mid-update. Data reads are not routed
- * through it, so a day can still compute while this read is down.
- */
+/** A health repository whose permission read fails. Data reads are not routed through it. */
 fun failingPermissionsHealthRepository(): HealthRepository = mockk<HealthRepository>().also {
     every { it.availability() } returns HealthConnectAvailability.AVAILABLE
     coEvery { it.grantedPermissions() } throws IllegalStateException("rate limited")
@@ -137,10 +127,7 @@ fun inMemoryBaselineStore(): BodyEnergyBaselineCacheStore = mockk<BodyEnergyBase
     every { store.purgeLegacyTimelineEntries() } just runs
 }
 
-/**
- * The handful of preferences the chain reads and writes, backed by local state
- * rather than SharedPreferences (there is no Android context in the unit suite).
- */
+/** The preferences the chain reads and writes, backed by local state. */
 fun inMemoryPreferences(
     calibration: BodyEnergyCalibration = BodyEnergyCalibration.Automatic,
     bodyProfile: BodyProfile = BodyProfile(),

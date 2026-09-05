@@ -90,11 +90,7 @@ enum class CycleEntryKind {
     BASAL_BODY_TEMPERATURE,
 }
 
-/**
- * One manual cycle observation to write. [kind] selects the Health Connect
- * record type; only that kind's payload fields are read — the writer validates
- * the pairing. SPOTTING carries no payload beyond [time].
- */
+/** One manual cycle observation. Only [kind]'s payload fields are read. */
 data class CycleEntryWriteRequest(
     val kind: CycleEntryKind,
     val time: Instant,
@@ -123,12 +119,7 @@ data class CycleEntry(
     val isOpenVitalsEntry: Boolean = false,
 )
 
-/**
- * Integer constants of the Health Connect cycle records, mirrored so domain
- * and presentation code can reference them without an androidx dependency.
- * Values match androidx.health.connect.client.records exactly and are pinned
- * by CycleWriteValidationTest against the library constants.
- */
+/** Integer constants of the cycle records, mirrored so the domain has no androidx dependency. */
 object CycleRecordValues {
     const val FLOW_UNKNOWN = 0
     const val FLOW_LIGHT = 1

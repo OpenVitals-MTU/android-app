@@ -8,16 +8,9 @@ import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderCont
 import tech.mmarca.openvitals.features.mindfulness.reminders.MindfulnessReminderController
 
 /**
- * Bringing the app to the foreground re-plans both reminder schedules.
- *
- * The failure this recovers from is a permanent silence the app inflicts on
- * itself: a reminder that fires without `POST_NOTIFICATIONS` cancels its own
- * alarm and returns before rescheduling, and since Android 12 that permission
- * is auto-revoked for unused apps by default. Re-granting notifications in
- * system settings arms nothing, and the toggle still reads "on".
- *
- * Both calls have to happen even when the first one throws — a hydration
- * controller failing must not be why mindfulness reminders stayed dead.
+ * Foregrounding re-plans both reminder schedules. A reminder firing without `POST_NOTIFICATIONS`
+ * cancels its own alarm and never reschedules, and Android auto-revokes that permission.
+ * Both calls must happen even when the first throws.
  */
 class ReminderRestoreBootstrapTest {
 
@@ -43,9 +36,7 @@ class ReminderRestoreBootstrapTest {
 
     @Test
     fun `every foreground restores again, because the alarm may have been lost since`() {
-        // A force-stop, an OEM battery killer or an auto-revoke can happen at
-        // any point between two foregrounds, so this is not a once-per-process
-        // bootstrap.
+        // A force-stop or auto-revoke can happen between any two foregrounds, so this is not once per process.
         val bootstrap = bootstrap()
         val owner = mockk<androidx.lifecycle.LifecycleOwner>(relaxed = true)
 

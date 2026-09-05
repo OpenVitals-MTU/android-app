@@ -158,16 +158,8 @@ class SleepRepositoryTest {
     }
 
     /**
-     * A merged night is reconstructed by reading each component record back by
-     * id (SleepHealthReader.readSleepSession). When Health Connect no longer
-     * holds them — the user deleted the night from another app while the detail
-     * screen was open — the lookup must answer not-found rather than a partial
-     * or crashed session.
-     *
-     * Dart counterpart: sleep_repository_impl_test.dart, "is not-found when
-     * every component record has since vanished". Flutter's repository does the
-     * reconstruction itself; here it lives one layer down, so the mocked manager
-     * delegates to the real reader over an empty Health Connect.
+     * A merged night is reconstructed by reading each component record back by id. When they
+     * have since vanished, the lookup must answer not-found rather than a partial session.
      */
     @Test fun `loadSleepSession is not-found when every component record has since vanished`() =
         runTest {

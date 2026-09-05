@@ -1,9 +1,6 @@
 package tech.mmarca.openvitals.domain.model
 
-/**
- * Health Connect recording-method values. Never compare to a literal — these
- * names are the contract.
- */
+/** Health Connect recording-method values. Never compare to a literal. */
 object RecordingMethod {
     const val UNKNOWN = 0
     const val ACTIVELY_RECORDED = 1

@@ -87,10 +87,8 @@ private fun List<SleepData>.toMergedSleepSession(maxGap: Duration): SleepData {
         id = mergedSleepSessionId(ordered.map { it.id }),
         startTime = startTime,
         endTime = endTime,
-        // From the RESOLVED stages, never a sum of the parts: a writer that stores one
-        // night as several overlapping same-source records (Mi Fitness does) would
-        // otherwise have the overlap counted twice — 8h23m of stages shown as 13h15m.
-        // Stage-less parts fall back to the union of their spans for the same reason.
+        // From the resolved stages, never a sum of the parts: overlapping same-source
+        // records would count the overlap twice.
         durationMs = sleepDurationMsFromStages(stages, fallbackDurationMs = sleepSessionsUnionMs(ordered)),
         source = distinctSources.singleOrNull() ?: first.source,
         title = ordered
@@ -138,11 +136,8 @@ private fun SleepData.isDuplicateSleepSession(other: SleepData): Boolean {
         maxOf(startTime.toEpochMilli(), other.startTime.toEpochMilli())
     if (overlapMs <= 0L) return false
 
-    // A high overlap of the SHORTER session is enough on its own: a phone
-    // session fully swallowed by a watch session is the same night twice, even
-    // when their boundaries disagree by more than any fixed tolerance. The old
-    // symmetric boundary check wrongly kept such pairs, and their durations
-    // were then summed.
+    // A high overlap of the shorter session is enough: a phone session swallowed
+    // by a watch session is the same night twice.
     return overlapMs / shorterDuration.toDouble() >= DUPLICATE_SLEEP_OVERLAP_RATIO
 }
 

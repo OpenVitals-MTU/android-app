@@ -22,8 +22,7 @@ class ActivitySplitDistanceTest {
 
     @Test
     fun `imperial presets are exact mile fractions, not rounded meters`() {
-        // A user who picks "1 mi" and later switches to metric sees 1.609 km
-        // worth of splits, not a silently rounded 1600 m.
+        // A user who picks "1 mi" and switches to metric sees 1.609 km of splits, not a rounded 1600 m.
         assertEquals(
             listOf(0.25 * 1609.344, 0.5 * 1609.344, 1609.344, 5 * 1609.344),
             ActivitySplitDistance.imperialPresetMeters,

@@ -25,21 +25,9 @@ import tech.mmarca.openvitals.testing.testUnitFormatter
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Ports `ActivityHeartRateRecoveryCard > an ordinary workout shows no card at
- * all` from Flutter's `test/features/activity/activity_heart_rate_recovery_test.dart`.
- *
- * `HeartRateRecoveryCardTest` covers what the card says once it is on screen.
- * This covers the decision one level up — whether it is on screen at all — and
- * that decision is the one with the sharper edge. A recovery figure carries an
- * implicit claim that a recovery was measured; printed over an ordinary ride
- * that never stopped for one, it is a number about the user's heart that came
- * from nowhere. The gate is `heartRateRecovery != null && peakBpm != null`, so
- * both halves are exercised here.
- *
- * The card lives in a `LazyColumn`, where a plain "does not exist" would pass
- * just as happily for a card that is merely below the fold. So absence is
- * asserted by scrolling for it and requiring the scroll to fail, against a
- * positive control that scrolls to it and finds it.
+ * Whether the recovery card is on screen at all. A recovery figure over an ordinary ride
+ * is a number from nowhere. The gate is `heartRateRecovery != null && peakBpm != null`.
+ * The card is in a `LazyColumn`, so absence is asserted by a failing scroll against a positive control.
  */
 class ActivityDetailRecoveryCardGateTest {
 
@@ -48,8 +36,7 @@ class ActivityDetailRecoveryCardGateTest {
 
     @Test
     fun aGuidedRecoveryTestGetsItsCard() {
-        // The control: the same screen, the same scroll, a reading with a
-        // measured peak — so a failure below means "no card", not "no scroll".
+        // The control: the same scroll finds the card with a measured peak.
         setDetail(
             HeartRateRecoveryReading(
                 recoveryStart = STOP,
@@ -82,9 +69,7 @@ class ActivityDetailRecoveryCardGateTest {
 
     @Test
     fun aRecoveryWindowWithNoMeasuredPeakShowsNoCardEither() {
-        // A window with nothing in it is not a recovery of zero. The card would
-        // open on a blank where the peak belongs, which reads as a bug rather
-        // than as "this was not measured".
+        // A window with nothing in it is not a recovery of zero.
         setDetail(HeartRateRecoveryReading.NoData)
 
         assertNoRecoveryCard()

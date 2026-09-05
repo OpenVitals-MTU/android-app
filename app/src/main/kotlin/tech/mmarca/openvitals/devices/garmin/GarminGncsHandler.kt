@@ -1,61 +1,30 @@
 package tech.mmarca.openvitals.devices.garmin
 
 /**
- * Holds the notifications the watch might ask about, announces new ones, and
- * serves the attribute blobs it requests.
- *
- * **Transport-free by construction**, exactly like [GarminSession]: it is
- * handed a `send` callback that takes a built GFDI frame, so the whole
- * announce → request → chunked answer conversation is exercised over an
- * in-memory pipe with no Bluetooth.
- *
- * The shape of this class is dictated by GNCS being a **pull** protocol.
- * [post] does not send a notification — it sends word that one exists. The
- * text leaves the phone only if and when the watch asks, which may be seconds
- * later (when the wearer raises their wrist), may happen twice (again with a
- * larger length limit when they scroll into the body), or may never happen at
- * all. That last case is not an error and nothing here treats it as one.
- *
- * The concrete implementation of the [GarminNotificationsHandler] seam the
- * session calls into — named for the protocol (GNCS, Garmin's rendering of
- * Apple's ANCS) to keep it distinct from that interface. Ported from the
- * Flutter build's `garmin_notifications_handler.dart`, itself ported from
- * Gadgetbridge's `NotificationsHandler` (AGPLv3), with two deliberate
- * deviations noted at [handleDataStatus].
+ * Holds the notifications the watch might ask about, announces new ones and
+ * serves the attribute blobs it requests. Transport-free, like
+ * [GarminSession]. GNCS is a pull protocol: [post] only announces; the text
+ * leaves the phone if and when the watch asks, which may be never.
+ * Ported from Gadgetbridge's `NotificationsHandler` (AGPLv3); deviations
+ * are noted at [handleDataStatus].
  */
 class GarminGncsHandler(
     /** Hands one built GFDI frame to the transport below. */
     private val send: suspend (ByteArray) -> Unit,
-    /**
-     * Invoked when the wearer acts on a notification.
-     *
-     * The handler deliberately does not perform anything itself: firing an
-     * action means talking to Android, and this class is transport-free and
-     * platform-free so the whole conversation stays testable over an
-     * in-memory pipe.
-     */
+    /** Invoked when the wearer acts on a notification. The handler stays platform-free. */
     private val onAction: (suspend (GarminNotificationActionRequest) -> Unit)? = null,
     /**
-     * How many notifications stay answerable.
-     *
-     * Gadgetbridge's number. The queue exists because the watch asks about a
-     * notification by id long after it was announced, so a notification that
-     * has fallen out simply cannot be answered — the watch renders it blank.
-     * Ten is what a wrist realistically has on screen; more would only hold
-     * text in memory that nobody will ask for.
+     * How many notifications stay answerable. Gadgetbridge's number: a wrist
+     * shows about ten, and the watch asks by id long after the announcement.
      */
     private val maxQueued: Int = 10,
 ) : GarminNotificationsHandler {
 
-    /**
-     * Whether the watch has subscribed. Until it has, everything here is a
-     * no-op: announcing to a watch that has not asked to be told is how a sync
-     * session ends up sending notification traffic it never meant to.
-     */
+    /** Whether the watch has subscribed. Until then everything here is a no-op. */
     var enabled: Boolean = false
         private set
 
-    /** Oldest first, so [evict] drops the one least likely to be asked about. */
+    /** Oldest first, so [evict] drops the least likely to be asked about. */
     private val queue = ArrayDeque<GarminNotification>()
 
     /** Announced the moment the watch subscribes. See [setEnabled]. */
@@ -67,23 +36,12 @@ class GarminGncsHandler(
     val queued: List<GarminNotification> get() = queue.toList()
 
     /**
-     * Announcements this handler accepted but never got to send, because the
-     * watch had not subscribed.
-     *
-     * A handler lives and dies with one link, so when the watch walks out of
-     * range these would vanish with it — losing exactly the notification the
-     * link was opened for. The forwarder takes them back and re-queues them
-     * for the next link.
+     * Announcements accepted but never sent because the watch had not
+     * subscribed. The forwarder re-queues them for the next link.
      */
     val held: List<GarminNotification> get() = awaitingSubscription.toList()
 
-    /**
-     * Records whether the watch is accepting notifications.
-     *
-     * Deliberately does NOT announce anything — see [flushHeld]. The caller
-     * has to answer the watch's subscription message before sending it
-     * anything else.
-     */
+    /** Records whether the watch accepts notifications. Announces nothing; see [flushHeld]. */
     override fun setEnabled(enabled: Boolean) {
         if (this.enabled == enabled) return
         this.enabled = enabled
@@ -92,49 +50,30 @@ class GarminGncsHandler(
     }
 
     /**
-     * Announces everything that arrived before the watch subscribed.
-     *
-     * Load-bearing, not a nicety. This app OPENS the link in order to announce
-     * something, so the announcement is always ready before the watch has got
-     * round to subscribing — the subscription lands a couple of hundred
-     * milliseconds after the handshake. Dropping what arrived in that window
-     * meant the very notification the link was opened for was the one lost.
-     *
-     * Called AFTER the subscription status has gone out, never before.
-     * Garmin's own ordering is status-for-the-inbound-message first and
-     * follow-up second, and announcing ahead of that status means announcing
-     * to a watch that has not yet been told its subscription was accepted.
+     * Announces everything that arrived before the watch subscribed. The
+     * link is opened to announce, so the announcement is always ready before
+     * the subscription lands. Called after the subscription status goes out.
      */
     override suspend fun flushHeld() {
         if (!enabled) return
         val waiting = awaitingSubscription.toList()
         awaitingSubscription.clear()
         for (notification in waiting) {
-            // Skip anything evicted from the answerable queue while it waited:
-            // the watch could ask about it and we would have nothing to answer
-            // with.
+            // Skip anything evicted while it waited; it could not be answered.
             if (find(notification.id) == null) continue
             announce(notification, isUpdate = false)
         }
     }
 
-    /**
-     * Announces [notification] to the watch.
-     *
-     * An id already in the queue is announced as MODIFY rather than ADD — the
-     * watch updates the one it is showing instead of buzzing a second time,
-     * which is what a progress notification or an edited message needs.
-     */
+    /** Announces [notification]. An id already queued goes out as MODIFY, not ADD. */
     suspend fun post(notification: GarminNotification) {
         val isUpdate = removeQueued(notification.id)
         queue.addLast(notification)
         evict()
 
         if (!enabled) {
-            // Held, not dropped — see [setEnabled]. Logged because "the watch
-            // has not subscribed" is the most likely reason nothing reaches the
-            // wrist, and it is not a fault at this end: notifications are
-            // switched off ON THE WATCH.
+            // Held, not dropped. Logged: notifications switched off on the watch
+            // is the most likely reason nothing reaches the wrist.
             awaitingSubscription.removeAll { it.id == notification.id }
             awaitingSubscription.add(notification)
             GarminLog.log(
@@ -147,10 +86,7 @@ class GarminGncsHandler(
     }
 
     private suspend fun announce(notification: GarminNotification, isUpdate: Boolean) {
-        // Logged because an announcement carries no text and produces no
-        // visible effect on its own: whether one went out, and whether the
-        // watch then asked about it, is the only way to tell "the watch never
-        // heard" from "the watch heard and did not care".
+        // Logged: an announcement has no visible effect on its own.
         GarminLog.log(
             "[GARMIN-NOTIFY] announcing ${notification.id} " +
                 "(${if (isUpdate) "modify" else "add"}, ${notification.category.name})",
@@ -165,28 +101,17 @@ class GarminGncsHandler(
                 category = notification.category,
                 count = countOf(notification.category),
                 notificationId = notification.id,
-                // Without this the watch draws no action controls at all,
-                // however many the ACTIONS attribute later offers — the
-                // announcement is where it decides whether to ask.
+                // Without this the watch draws no action controls at all.
                 hasActions = notification.hasActions,
             ),
         )
     }
 
-    /**
-     * Withdraws a notification the phone has dismissed.
-     *
-     * Silent for an id the queue no longer holds: that is the normal outcome
-     * for anything older than [maxQueued], and telling the watch to remove
-     * something it was never told about is noise.
-     */
+    /** Withdraws a dismissed notification. Silent for an id no longer queued. */
     suspend fun remove(id: Long) {
         if (!enabled) {
-            // Withdraw it from what is waiting to be announced, or the watch
-            // would be told about a notification the phone has already
-            // dismissed. Logged because a run of silent dismissals otherwise
-            // reads as a link that opened, did nothing and closed — which is
-            // what made one session here impossible to interpret.
+            // Withdraw it from the held list too. Logged, or a run of silent
+            // dismissals reads as a link that did nothing.
             val heldBefore = awaitingSubscription.size
             awaitingSubscription.removeAll { it.id == id }
             removeQueued(id)
@@ -207,12 +132,7 @@ class GarminGncsHandler(
         )
     }
 
-    /**
-     * Answers a control request from the watch.
-     *
-     * The caller is expected to have sent the control status already — see the
-     * [GarminNotificationControl] arm of [GarminSession].
-     */
+    /** Answers a control request. The caller has already sent the control status. */
     override suspend fun handleControl(message: GarminNotificationControl) {
         if (!enabled) return
 
@@ -225,8 +145,7 @@ class GarminGncsHandler(
                 return
             }
             GarminNotificationCommand.GET_APP_ATTRIBUTES -> {
-                // Gadgetbridge marks this "unknown/untested" and no watch here
-                // has sent one. Logged so that stops being true silently.
+                // Untested in Gadgetbridge; no watch here has sent one. Logged.
                 GarminLog.log(
                     "[GARMIN-NOTIFY] app attributes requested for " +
                         "${message.appIdentifier}; not implemented",
@@ -237,10 +156,8 @@ class GarminGncsHandler(
 
         val notification = find(message.notificationId)
         if (notification == null) {
-            // Nothing to send and nothing to report. The watch asked about
-            // something that has aged out of the queue; there is no protocol
-            // way to say so, and an error status would abort a transfer that
-            // never started.
+            // The notification aged out of the queue. There is no protocol way
+            // to say so, and an error status would abort a transfer never started.
             GarminLog.log(
                 "[GARMIN-NOTIFY] no notification ${message.notificationId} " +
                     "left to answer with",
@@ -293,13 +210,8 @@ class GarminGncsHandler(
     }
 
     /**
-     * Matches what the watch invoked to what was offered.
-     *
-     * A legacy action carries no code this app chose — it is the accept/refuse
-     * pair the watch draws from the ACTION_DECLINE category flag, whose
-     * ordinals are 0 and 1. Refuse means dismiss, which is what a wearer
-     * swiping a card away expects, so it maps onto whatever dismiss action was
-     * offered.
+     * Matches what the watch invoked to what was offered. A legacy action
+     * is the accept/refuse pair (ordinals 0 and 1); refuse maps to dismiss.
      */
     private fun resolveAction(
         notification: GarminNotification,
@@ -316,17 +228,9 @@ class GarminGncsHandler(
     }
 
     /**
-     * Drives the chunked upload from the watch's per-chunk verdict.
-     *
-     * Two deliberate deviations from Gadgetbridge:
-     *
-     * * **RESEND is honoured, once.** Gadgetbridge abandons the upload with a
-     *   `TODO`. Repeating the last chunk costs nothing — its offset and CRC
-     *   are already held — and the alternative is a notification that arrives
-     *   on the wrist with an empty body and no way to tell why.
-     * * **OFFSET_MISMATCH abandons rather than seeks.** The status carries no
-     *   offset, so there is nothing to recover to; guessing would corrupt the
-     *   blob more quietly than failing does.
+     * Drives the chunked upload from the watch's per-chunk verdict. Unlike
+     * Gadgetbridge, RESEND is honoured once, and OFFSET_MISMATCH abandons
+     * rather than guesses: the status carries no offset.
      */
     override suspend fun handleDataStatus(message: GarminNotificationDataStatus) {
         if (!enabled) return
@@ -361,10 +265,7 @@ class GarminGncsHandler(
         upload = null
     }
 
-    /**
-     * Forgets everything. Called when a link ends, so a new one does not
-     * answer with a transfer the previous watch conversation left half-sent.
-     */
+    /** Forgets everything. Called when a link ends. */
     fun reset() {
         upload = null
         queue.clear()
@@ -405,14 +306,7 @@ class GarminGncsHandler(
         return queue.size != before
     }
 
-    /**
-     * Drops the oldest until the queue fits.
-     *
-     * No REMOVE is sent for what falls out — Gadgetbridge notes the same gap.
-     * The watch keeps showing it and simply gets nothing back if it ever asks,
-     * which is the same outcome as a notification the phone dismissed while
-     * the link was down.
-     */
+    /** Drops the oldest until the queue fits. No REMOVE is sent, as in Gadgetbridge. */
     private fun evict() {
         while (queue.size > maxQueued) {
             queue.removeFirst()
@@ -423,28 +317,14 @@ class GarminGncsHandler(
         queue.count { it.category == category }
 }
 
-/**
- * One attribute blob being streamed out: the bytes, how far they have got, and
- * the running CRC the watch checks each chunk against.
- *
- * The mirror image of `ActiveDownload` in `GarminSession.kt`, which does the
- * same bookkeeping for a file arriving.
- */
+/** One attribute blob being streamed out. The mirror of `ActiveDownload` in GarminSession. */
 private class NotificationUpload(private val blob: ByteArray) {
 
     companion object {
-        /**
-         * The protocol's own ceiling, not the MTU's: the ML layer fragments a
-         * frame to fit whatever MTU was negotiated, so this stays 300
-         * regardless.
-         */
+        /** The protocol's ceiling, not the MTU's: the ML layer fragments frames. */
         const val MAX_CHUNK_SIZE = 300
 
-        /**
-         * How many times one chunk may be repeated before the upload is
-         * abandoned. One retry covers a dropped write; a watch asking twice is
-         * telling us something the retry will not fix.
-         */
+        /** Resends before the upload is abandoned. One covers a dropped write. */
         const val MAX_RESENDS = 1
     }
 
@@ -452,10 +332,7 @@ private class NotificationUpload(private val blob: ByteArray) {
     private var runningCrc = 0
     private var resends = 0
 
-    /**
-     * The chunk last handed to the transport, kept so a RESEND can repeat it
-     * byte-for-byte with the CRC the watch was already told to expect.
-     */
+    /** The last chunk sent, so a RESEND repeats it byte for byte. */
     var lastChunk: ByteArray = ByteArray(0)
         private set
     var lastOffset: Int = 0

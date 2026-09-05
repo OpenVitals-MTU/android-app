@@ -1,5 +1,4 @@
-// The chart composables live under ui/charts/ but declare ui.components; this
-// file mirrors that rather than adding an import that looks like a mistake.
+// The chart composables live under ui/charts/ but declare ui.components; this file mirrors that.
 package tech.mmarca.openvitals.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,12 +23,8 @@ import tech.mmarca.openvitals.testing.goldenDates
 import tech.mmarca.openvitals.ui.theme.SleepColor
 
 /**
- * Port of Flutter's `test/goldens/charts/period_chart_golden_test.dart`.
- *
- * [MetricBarChart] / [PeriodHistoryChart] — the only chart that draws three
- * genuinely different pictures from one call. WEEK is bars, MONTH is a calendar
- * heatmap, YEAR is a dot heatmap, and the screen just hands over the same list of
- * dated values and a range. So the range dispatch is what these shoot.
+ * [MetricBarChart] / [PeriodHistoryChart]: WEEK is bars, MONTH a calendar heatmap, YEAR a dot
+ * heatmap, from one call. The range dispatch is what these shoot.
  */
 class PeriodChartGoldenTest {
 
@@ -66,10 +61,7 @@ class PeriodChartGoldenTest {
 
     @Test
     fun month_theCalendarHeatmap() {
-        // The rolling 30-day window the period navigator actually hands over. Kotlin
-        // reads that off [LocalPeriodWeekMode] rather than a parameter: with the
-        // rolling mode the grid spans exactly `[start, end]` across two calendar
-        // months, which is the thing worth photographing.
+        // The rolling 30-day window the navigator hands over, read off [LocalPeriodWeekMode].
         val month = DatePeriod(LocalDate.of(2026, 5, 24), LocalDate.of(2026, 6, 22))
 
         composeRule.setContent {
@@ -85,9 +77,7 @@ class PeriodChartGoldenTest {
 
     @Test
     fun year_theDotHeatmap() {
-        // Kotlin's year heatmap always draws the CALENDAR year of `period.start` —
-        // there is no rolling variant — so a July-to-June window renders as 2025 with
-        // nothing before July. That divergence is exactly what the picture pins.
+        // The year heatmap always draws the calendar year of `period.start`; that divergence is pinned.
         val year = DatePeriod(LocalDate.of(2025, 7, 1), LocalDate.of(2026, 6, 22))
 
         composeRule.setContent {
@@ -119,8 +109,7 @@ class PeriodChartGoldenTest {
             selectedRange = range,
             period = period,
             accentColor = SleepColor,
-            // Sleep's own alpha, not the 0.85 default — the sleep screen is the
-            // caller that discovered this knob and the only one that moves it.
+            // Sleep's own alpha, not the 0.85 default.
             accentAlpha = 0.75f,
             summaryValue = summary,
             dateTimeFormatterProvider = DateTimeFormatterProvider(),
@@ -138,11 +127,7 @@ class PeriodChartGoldenTest {
         val FORMATTER = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC })
         val WEEK = DatePeriod(LocalDate.of(2026, 6, 16), LocalDate.of(2026, 6, 22))
 
-        /**
-         * Hours slept per night, deterministically shaped: a weekend lie-in, a short
-         * Wednesday, and the occasional night with no record at all (Health Connect
-         * gaps are the norm, not the exception).
-         */
+        /** Hours slept per night: a weekend lie-in, a short Wednesday, and nights with no record. */
         fun sleepHours(date: LocalDate): Double {
             if (date.dayOfMonth % 11 == 0) return 0.0
             val base = if (date.dayOfWeek.value >= 6) 8.4 else 7.0

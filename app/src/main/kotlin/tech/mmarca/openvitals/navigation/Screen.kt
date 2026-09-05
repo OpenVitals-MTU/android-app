@@ -6,21 +6,13 @@ import java.time.LocalDate
 
 const val ACTIVITY_DETAIL_ID_ARG = "activityId"
 
-/**
- * Optional query argument carrying the day a metric screen should open on —
- * a tile tapped on the dashboard's "yesterday" opens yesterday. It anchors the
- * DATE only: the screen's persisted range is untouched, so a screen left on
- * Week opens the week containing that day.
- */
+/** Optional query argument: the day a metric screen opens on. Anchors the date, not the range. */
 const val SELECTED_DAY_ARG = "day"
 
 /** The `?day={day}` suffix a metric route pattern declares to accept the argument. */
 const val SELECTED_DAY_QUERY_PATTERN = "?$SELECTED_DAY_ARG={$SELECTED_DAY_ARG}"
 
-/**
- * Appends the selected day to a navigation target. Today is deliberately
- * omitted so the ordinary location stays clean.
- */
+/** Appends the selected day. Today is omitted so the ordinary location stays clean. */
 fun String.withSelectedDay(day: LocalDate): String =
     if (day == LocalDate.now()) {
         this
@@ -60,14 +52,8 @@ const val TRAINING_READINESS_DATE_ARG = "trainingReadinessDate"
 
 sealed class Screen(val route: String) {
     /**
-     * The route without its optional query parameters.
-     *
-     * `AppNavigation` matches the live destination with `route.substringBefore('?')`, because a
-     * destination registered with optional arguments reports them as part of its pattern. Most
-     * routes carry their arguments in the path and are their own base path; [ActivityEntry] bakes
-     * `?mode=...&planId=...&activityTypeId=...` into its pattern, so comparing the stripped live
-     * route against the full [route] never matched and every app-bar decision keyed on that screen
-     * silently fell through. Match on this, not on [route].
+     * The route without its query parameters. `AppNavigation` matches the
+     * live destination against this, not [route].
      */
     val basePath: String get() = route.substringBefore('?')
 
@@ -98,11 +84,7 @@ sealed class Screen(val route: String) {
             "&$ACTIVITY_ENTRY_PLAN_ID_ARG={$ACTIVITY_ENTRY_PLAN_ID_ARG}" +
             "&$ACTIVITY_ENTRY_TYPE_ARG={$ACTIVITY_ENTRY_TYPE_ARG}",
     ) {
-        /**
-         * Builds a concrete navigation target for the activity entry screen, carrying the
-         * caller's intent as optional query arguments. With no arguments this resolves to the
-         * bare `manual_entry/activity` path, which still matches the route pattern above.
-         */
+        /** A concrete target for the activity entry screen, with the intent as query arguments. */
         fun createRoute(
             mode: String? = null,
             planId: String? = null,
@@ -214,11 +196,7 @@ sealed class Screen(val route: String) {
             "watch/${Uri.encode(watchDeviceId)}/notifications"
     }
 
-    /**
-     * The watch's own settings tree. The route pattern is registered ahead of
-     * sub-milestone 7f, which supplies the browser; until then it resolves to
-     * a placeholder and nothing links to it (see `WatchSettingsTreeAvailable`).
-     */
+    /** The watch's own settings tree. */
     data object WatchSettings :
         Screen("watch/{$WATCH_DEVICE_ID_ARG}/settings/{$WATCH_SETTINGS_SCREEN_ID_ARG}") {
         fun createRoute(watchDeviceId: String, screenId: Int): String =

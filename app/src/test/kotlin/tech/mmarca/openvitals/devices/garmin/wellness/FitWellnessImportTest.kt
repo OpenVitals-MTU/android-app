@@ -24,11 +24,8 @@ import org.junit.Test
 import tech.mmarca.openvitals.devices.garmin.FitCounterWatermark
 
 /**
- * Sleep, HRV, monitoring and the intraday counter walk, decoded from
- * hand-built Garmin FIT bytes. Port of the Flutter build's
- * `fit_wellness_import_test.dart` — the clientRecordId schemes asserted here
- * are the ones the Flutter build wrote, so the two builds dedup against each
- * other.
+ * Sleep, HRV, monitoring and the intraday counter walk, decoded from hand-built FIT bytes.
+ * The record ids match the Flutter build so the two builds dedup against each other.
  */
 class FitWellnessImportTest {
 
@@ -46,11 +43,8 @@ class FitWellnessImportTest {
     private val start = utc(2024, 1, 1, 23, 0, 0)
     private val stop = utc(2024, 1, 2, 6, 0, 0)
 
-    // (transition, sleep_level enum: 0 unmeasurable,1 awake,2 light,3 deep,4
-    // rem). Each timestamp is the UPPER BOUND of the stage it names: the stage
-    // runs from the previous transition (the session start for the first) up
-    // to here. The last transition is the session stop, as a real Garmin file
-    // writes it.
+    // (transition, sleep_level). Each timestamp is the end of the stage it names.
+    // The last transition is the session stop.
     private val levels = listOf(
         utc(2024, 1, 1, 23, 10) to 2, // light: 23:00 -> 23:10
         utc(2024, 1, 1, 23, 40) to 3, // deep:  23:10 -> 23:40
@@ -59,7 +53,7 @@ class FitWellnessImportTest {
         utc(2024, 1, 2, 6, 0) to 2, // light:  00:45 -> 06:00 (to stop)
     )
 
-    // ── parseGarminSleepSession ──────────────────────────────────────────────
+    // parseGarminSleepSession.
 
     @Test
     fun `reads the session bounds and a contiguous stage timeline`() {
@@ -95,7 +89,7 @@ class FitWellnessImportTest {
         assertNull(session)
     }
 
-    // ── fitSleepImportRecords ────────────────────────────────────────────────
+    // fitSleepImportRecords.
 
     @Test
     fun `maps to one SleepSessionRecord with a deterministic id`() {
@@ -142,7 +136,7 @@ class FitWellnessImportTest {
         )
     }
 
-    // ── HRV (type 68) ────────────────────────────────────────────────────────
+    // HRV (type 68).
 
     private val hrvTime = utc(2024, 1, 2, 6, 0, 0)
 
@@ -179,7 +173,7 @@ class FitWellnessImportTest {
         assertNull(wellness.hrv)
     }
 
-    // ── monitoring (type 32) summary ─────────────────────────────────────────
+    // Monitoring (type 32) summary.
 
     private val monitoringAt = utc(2024, 1, 18, 13, 42, 0)
 
@@ -214,7 +208,7 @@ class FitWellnessImportTest {
         assertEquals(58L, (records.single() as RestingHeartRateRecord).beatsPerMinute)
     }
 
-    // ── monitoring (type 32) high-frequency series ───────────────────────────
+    // Monitoring (type 32) high-frequency series.
 
     @Test
     fun `HR packs hourly, respiration averages hourly, steps span the file`() {
@@ -247,18 +241,14 @@ class FitWellnessImportTest {
         assertEquals(2, resp.size)
         assertEquals(14.0, resp.first().rate, 0.001) // avg(13,15)
 
-        // The counters are no longer part of this call — they are accumulated
-        // across a whole sync and mapped once (see the intraday tests below).
+        // Counters are accumulated across a sync and mapped once; see the intraday tests.
         assertTrue(records.filterIsInstance<StepsRecord>().isEmpty())
     }
 
     @Test
     fun `a typed message does not lend its type to the untyped one after it`() {
-        // FIT fields are fixed per definition message, so a counter record
-        // whose definition carries no activity_type is untyped by design — on
-        // the watch it restates the whole day. Inheriting the last declared
-        // type landed that total on one type's context, and the difference
-        // walked into Health Connect as fresh steps.
+        // A counter record with no activity_type restates the whole day.
+        // Inheriting the last declared type counted it as fresh steps.
         val data = FitW().fileId(32)
         data.def(4, 55, listOf(listOf(253, 4, 0x86), listOf(5, 1, 0x00), listOf(3, 4, 0x86)))
         data.u8(4)
@@ -275,13 +265,12 @@ class FitWellnessImportTest {
         assertEquals(6, m.stepPoints[0].activityType)
         assertEquals(UNKNOWN_FIT_ACTIVITY_TYPE, m.stepPoints[1].activityType)
 
-        // ...which lets the mapper's untyped rule drop the restatement instead
-        // of minting 620 - 500 = 120 steps that were never taken.
+        // The untyped rule drops the restatement instead of minting 120 steps.
         val import = fitMonitoringCounterRecords(fitMonitoringCounters(m), zone = zone)
         assertEquals(500, stepsTotal(import))
     }
 
-    // ── intraday counters ────────────────────────────────────────────────────
+    // Intraday counters.
 
     private val zone: ZoneId = ZoneId.of("Europe/Madrid")
 
@@ -295,11 +284,7 @@ class FitWellnessImportTest {
         .atZone(zone)
         .toInstant()
 
-    /**
-     * The counters a monitoring file carried, mapped as one sync would map
-     * them: accumulated across the run's files, then differenced against
-     * [previous].
-     */
+    /** Maps the counters as one sync would: accumulated across files, then differenced against [previous]. */
     private fun counterImport(
         stepsCumulative: List<Pair<Instant, Int>> = emptyList(),
         typedStepsCumulative: List<Triple<Instant, Int, Int>> = emptyList(),
@@ -323,13 +308,8 @@ class FitWellnessImportTest {
 
     @Test
     fun `a time zone change between syncs does not double steps`() {
-        // The phone flies Madrid -> Tokyo (+7h) overnight. The evening's last
-        // readings were imported under Madrid's day; after landing the next
-        // sync runs under Tokyo, where the same wall-clock instants fall on
-        // the FOLLOWING local day. Gadgetbridge hit a midnight over-count
-        // here because its day boundary follows the current zone. Here the
-        // watch's reset is read from the counter itself, so the day keys may
-        // move but the differences must not.
+        // Madrid -> Tokyo (+7h) overnight: the same instants fall on the next local day.
+        // The reset is read from the counter, so day keys may move but differences must not.
         val madrid = zone
         val tokyo = ZoneId.of("Asia/Tokyo")
         val evening = counterImport(
@@ -339,18 +319,15 @@ class FitWellnessImportTest {
             ),
             zone = madrid,
         )
-        // A first-ever sync has no yesterday to difference from, so the
-        // opening reading counts as the day's accrual so far.
+        // A first sync has no yesterday, so the opening reading is the day's accrual.
         assertEquals(6_000, stepsTotal(evening))
 
         val afterLanding = counterImport(
             stepsCumulative = listOf(
-                // The very reading the watermark was left at, delivered again
-                // — now on Tokyo's Jan 19, a day with no watermark of its own.
+                // The watermark reading again, now on Tokyo's Jan 19.
                 local(2024, 1, 18, 23, 30) to 6_000,
                 local(2024, 1, 18, 23, 45) to 6_100,
-                // The watch closes its monitoring day after its own midnight
-                // and the counter restarts.
+                // The watch closes its day after midnight and the counter restarts.
                 local(2024, 1, 19, 0, 30) to 50,
                 local(2024, 1, 19, 1, 0) to 250,
             ),
@@ -358,15 +335,10 @@ class FitWellnessImportTest {
             zone = tokyo,
         )
 
-        // 6000 -> 6100 is 100. The reset now falls INSIDE Tokyo's day, where
-        // a drop is a rollover and not a walk backwards, so the 50 steps taken
-        // between the reset and the first reading after it are not claimed
-        // (the watch closes its day overnight, so those are normally none);
-        // 50 -> 250 is 200. What must never happen is the 6000 being counted
-        // again.
+        // 6000 -> 6100 is 100. The reset is a rollover, so the 50 before the next reading are not claimed.
+        // 50 -> 250 is 200. The 6000 must not count twice.
         assertEquals(100 + 200, stepsTotal(afterLanding))
-        // And nothing written after landing begins before the evening's
-        // watermark, so Health Connect sees no overlapping span.
+        // Nothing after landing starts before the watermark, so no span overlaps.
         val watermarkAt = local(2024, 1, 18, 23, 30)
         steps(afterLanding).forEach { record ->
             assertTrue(record.clientRecordId, !record.startTime.isBefore(watermarkAt))
@@ -384,8 +356,7 @@ class FitWellnessImportTest {
 
     @Test
     fun `a day of counters becomes intraday records not one flat total`() {
-        // One record per day said how far you walked and never when, so
-        // Health Connect drew the day as a straight ramp from midnight to now.
+        // One record per day had no timing, so Health Connect drew a straight ramp from midnight.
         val import = counterImport(
             stepsCumulative = listOf(
                 local(2024, 1, 18, 9) to 0,
@@ -401,16 +372,14 @@ class FitWellnessImportTest {
         assertEquals(local(2024, 1, 18, 10), stepRecords[0].endTime)
         assertEquals(500L, stepRecords[0].count)
         assertEquals(700L, stepRecords[1].count)
-        // ...and they still add up to the day the wrist reported.
+        // And they still add up.
         assertEquals(1200, stepsTotal(import))
     }
 
     @Test
     fun `what came before the first reading is not lost`() {
-        // A watch synced at noon reports a counter already in the thousands.
-        // Those steps have no snapshot to be differenced against, so they are
-        // recorded against the stretch from midnight — the only claim the data
-        // supports.
+        // A first sync at noon: the counter has nothing to difference against,
+        // so the steps go on the stretch from midnight.
         val import = counterImport(
             stepsCumulative = listOf(local(2024, 1, 18, 12) to 8000),
         )
@@ -431,17 +400,15 @@ class FitWellnessImportTest {
             ),
         )
 
-        // One record for the 500 before 09:00, and nothing for the two hours
-        // that followed: a night of empty entries would bury the day.
+        // One record before 09:00 and nothing for the empty hours after it.
         assertEquals(1, steps(import).size)
         assertEquals(500, stepsTotal(import))
     }
 
     @Test
     fun `the next sync carries on from the watermark not from midnight`() {
-        // The seam this exists for: each file holds only the minutes since the
-        // last sync, so the steps between one sync's last reading and the next
-        // sync's first are in NEITHER file's own differences.
+        // Each file holds only the minutes since the last sync, so the steps across
+        // the seam are in neither file's own differences.
         val first = counterImport(
             stepsCumulative = listOf(
                 local(2024, 1, 18, 9) to 500,
@@ -459,20 +426,14 @@ class FitWellnessImportTest {
         // 900 -> 1500 across the seam, then 1500 -> 1700.
         assertEquals(local(2024, 1, 18, 10), steps(second).first().startTime)
         assertEquals(600L, steps(second).first().count)
-        // Every step the wrist counted, and each one only once.
+        // Every step once.
         assertEquals(1700, stepsTotal(first) + stepsTotal(second))
     }
 
     @Test
     fun `a sync resuming inside a bucket does not overlap the record before it`() {
-        // A real day read 889 steps in Health Connect while its own records
-        // summed to 1007: every consecutive pair overlapped, and Health Connect
-        // discards the shared span when it aggregates.
-        //
-        // The cause is here. A record's end follows the DATA — a quarter hour
-        // of counters with a gap in it ends where the gap ends, past later grid
-        // slots — but the next sync resumed at the grid slot CONTAINING that
-        // end, which begins before it.
+        // A real day read 889 in Health Connect and 1007 in its records: consecutive records overlapped.
+        // A record's end follows the data, but the next sync resumed at the grid slot containing that end.
         val first = counterImport(
             stepsCumulative = listOf(
                 local(2024, 1, 18, 9, 31) to 0,
@@ -484,12 +445,11 @@ class FitWellnessImportTest {
             previous = first.watermarks,
         )
 
-        // The gap is real: one record from the 09:30 slot to where the counters
-        // next spoke.
+        // One record from the 09:30 slot to where the counters next spoke.
         assertEquals(local(2024, 1, 18, 9, 30), steps(first).single().startTime)
         assertEquals(local(2024, 1, 18, 10, 59), steps(first).single().endTime)
 
-        // So the next one starts THERE, not at 10:45 where its slot begins.
+        // The next one starts there, not at its slot's 10:45.
         assertEquals(local(2024, 1, 18, 10, 59), steps(second).single().startTime)
         assertEquals(101L, steps(second).single().count)
         assertEquals(354, stepsTotal(first) + stepsTotal(second))
@@ -497,9 +457,8 @@ class FitWellnessImportTest {
 
     @Test
     fun `a re-opened bucket keeps the start it was first written with`() {
-        // The open bucket is re-written in full by the next sync under the same
-        // id. Re-deriving its start from the grid would widen it back over its
-        // predecessor — the same overlap, one sync later.
+        // The next sync rewrites the open bucket under the same id.
+        // Re-deriving its start from the grid would overlap the predecessor again.
         val first = counterImport(
             stepsCumulative = listOf(
                 local(2024, 1, 18, 9, 31) to 0,
@@ -515,8 +474,7 @@ class FitWellnessImportTest {
             previous = second.watermarks,
         )
 
-        // Second and third write the SAME record — the third recomputes the
-        // bucket in full, so its 67 steps replace the second's 47.
+        // Second and third write the same record; the third's 67 replaces the second's 47.
         assertEquals(steps(second).single().clientRecordId, steps(third).single().clientRecordId)
         assertEquals(47L, steps(second).single().count)
         assertEquals(67L, steps(third).single().count)
@@ -529,9 +487,8 @@ class FitWellnessImportTest {
 
     @Test
     fun `the day's last movement is written not left for a sync that never comes`() {
-        // The still-filling bucket used to be withheld for the next sync to
-        // finish — but for the FINAL bucket of a day the next sync's points
-        // belong to the next day, so its movement was never written at all.
+        // The final bucket of a day used to wait for a next sync that belongs to the next day,
+        // so it was never written.
         val import = counterImport(
             stepsCumulative = listOf(
                 local(2024, 1, 18, 9) to 100,
@@ -548,10 +505,7 @@ class FitWellnessImportTest {
 
     @Test
     fun `the open bucket is rewritten in full next sync under the same id`() {
-        // Writing a half-filled bucket is safe because its id is a pure
-        // function of the clock: the next sync recomputes the WHOLE bucket —
-        // the seed the watermark kept plus the new movement — and the upsert
-        // replaces the half with the whole.
+        // A half-filled bucket is safe: its id follows the clock, and the next sync rewrites the whole bucket.
         val first = counterImport(
             stepsCumulative = listOf(
                 local(2024, 1, 18, 9) to 100,
@@ -572,8 +526,7 @@ class FitWellnessImportTest {
 
         val rewritten = steps(second).single { it.clientRecordId == firstOpen.clientRecordId }
         assertEquals(150L, rewritten.count)
-        // What Health Connect holds after both upserts — the latest version of
-        // each id — is exactly the wrist's total.
+        // The latest version of each id is exactly the wrist's total.
         val latest = mutableMapOf<String, Long>()
         for (record in steps(first)) latest[record.clientRecordId] = record.count
         for (record in steps(second)) latest[record.clientRecordId] = record.count
@@ -582,10 +535,8 @@ class FitWellnessImportTest {
 
     @Test
     fun `re-importing a file already behind the watermark writes nothing`() {
-        // The bug this pins: 540 steps on the wrist became 1403 in Health
-        // Connect over thirteen syncs of one day. A watch re-offers a file
-        // whose archive flag did not stick, and a sync re-reads the file it
-        // was halfway through.
+        // 540 steps became 1403 over thirteen syncs: the watch re-offers files,
+        // and a sync re-reads a file it was halfway through.
         val cumulative = listOf(
             local(2024, 1, 18, 9) to 200,
             local(2024, 1, 18, 10) to 540,
@@ -599,9 +550,7 @@ class FitWellnessImportTest {
 
     @Test
     fun `a counter rollover is not a walk backwards and not a full stop`() {
-        // The counters restart from zero when the watch rolls its monitoring
-        // day over — which it does some time AFTER midnight, so the rollover
-        // lands inside the day it opens.
+        // The counters restart when the watch rolls its day over, some time after midnight.
         val import = counterImport(
             stepsCumulative = listOf(
                 local(2024, 1, 18, 9) to 900,
@@ -610,21 +559,18 @@ class FitWellnessImportTest {
             ),
         )
 
-        // The 900 stands and the rollover itself adds nothing. The 300 that
-        // followed are 300 steps actually taken.
+        // The 900 stands, the rollover adds nothing, and the 300 after it are real.
         assertEquals(1200, stepsTotal(import))
     }
 
     @Test
     fun `a morning sync does not carry yesterday onto today`() {
-        // The counters do not roll over at local midnight, so the
-        // post-midnight messages still carried yesterday's running totals, and
-        // differencing them against zero read the day as freshly walked.
+        // Counters do not roll over at local midnight, so post-midnight messages still carry yesterday's totals.
         val import = counterImport(
             stepsCumulative = listOf(
                 local(2026, 7, 27, 22) to 6100,
                 local(2026, 7, 27, 23, 30) to 6123,
-                // Past midnight, still counting from yesterday's midnight.
+                // Past midnight, still counting from yesterday.
                 local(2026, 7, 28, 0, 20) to 6123,
                 local(2026, 7, 28, 8, 40) to 6132,
             ),
@@ -639,10 +585,7 @@ class FitWellnessImportTest {
 
     @Test
     fun `yesterday carries over from its watermark not just from this run`() {
-        // The same seam, when the file holding yesterday's readings was
-        // archived two syncs ago and this run sees only the minutes after
-        // midnight. The watermark is then the only record of where the counter
-        // stood.
+        // Yesterday's file was archived two syncs ago; the watermark is the only record of the counter.
         val yesterday = counterImport(
             stepsCumulative = listOf(
                 local(2026, 7, 27, 22) to 6100,
@@ -662,10 +605,8 @@ class FitWellnessImportTest {
 
     @Test
     fun `a day still starts from zero once the counter has rolled over`() {
-        // Sync in the afternoon, the watch long since rolled over, and the
-        // day's first reading is below where yesterday ended. Those steps have
-        // nothing to be differenced against, so they are the day's own —
-        // carrying yesterday's total would have swallowed them.
+        // Afternoon sync after the rollover: the first reading is below yesterday's end,
+        // so those steps are the day's own.
         val yesterday = counterImport(
             stepsCumulative = listOf(local(2026, 7, 27, 23, 30) to 9000),
         )
@@ -679,8 +620,7 @@ class FitWellnessImportTest {
 
     @Test
     fun `a carry is not spent across a gap of days`() {
-        // A watch left in a drawer: the counter has certainly rolled over in
-        // between, so 26 Jul's total says nothing about 28 Jul's first reading.
+        // A watch left in a drawer: 26 Jul's total says nothing about 28 Jul.
         val earlier = counterImport(
             stepsCumulative = listOf(local(2026, 7, 26, 23) to 3000),
         )
@@ -694,8 +634,7 @@ class FitWellnessImportTest {
 
     @Test
     fun `activity-type counters are summed never subtracted`() {
-        // A walking counter at 540 beside a generic one still at 0 is not a
-        // 540-step change.
+        // A walking counter at 540 beside a generic one at 0 is not a 540-step change.
         assertEquals(
             540,
             stepsTotal(
@@ -711,10 +650,8 @@ class FitWellnessImportTest {
 
     @Test
     fun `a total moved between activity types is not counted twice`() {
-        // The bug this pins: 24,724 steps on the wrist reached Health Connect
-        // as 49,448 — exactly twice. The watch does not only accumulate per
-        // bucket, it MOVES a total from one to another and zeroes the one it
-        // left.
+        // 24,724 steps reached Health Connect as 49,448.
+        // The watch moves a total between buckets and zeroes the one it left.
         assertEquals(
             24724,
             stepsTotal(
@@ -722,9 +659,7 @@ class FitWellnessImportTest {
                     typedStepsCumulative = listOf(
                         Triple(local(2024, 1, 18, 9), 0, 24724),
                         Triple(local(2024, 1, 18, 9), 6, 0),
-                        // The gaining bucket is written FIRST on purpose: a sum
-                        // taken point by point rather than instant by instant
-                        // would see 24,724 in both.
+                        // The gaining bucket comes first on purpose: a point-by-point sum would see 24,724 twice.
                         Triple(local(2024, 1, 18, 10), 6, 24724),
                         Triple(local(2024, 1, 18, 10), 0, 0),
                     ),
@@ -735,9 +670,7 @@ class FitWellnessImportTest {
 
     @Test
     fun `types still add up when they hold different totals`() {
-        // Walking and running are genuinely separate counters, and the day is
-        // their sum — the real 25 Jul file read generic 0 + walking 24,724 +
-        // running 119.
+        // Walking and running are separate counters; the day is their sum.
         assertEquals(
             24843,
             stepsTotal(
@@ -754,8 +687,7 @@ class FitWellnessImportTest {
 
     @Test
     fun `a counter naming no activity is not a bucket of its own`() {
-        // An untyped counter beside typed ones is the same day's total under a
-        // name of its own, so adding it to them counts those steps twice.
+        // An untyped counter beside typed ones is the same total under another name.
         assertEquals(
             24724,
             stepsTotal(
@@ -769,11 +701,8 @@ class FitWellnessImportTest {
 
     @Test
     fun `a type absent from a sync's first readings is not the day again`() {
-        // The bug this pins: 6,323 steps on the wrist reached Health Connect
-        // as 19,906. The watch counts each activity type separately and a
-        // sync's files restate only the recently active types — so the sum
-        // rebuilt from one sync alone dipped below the watermark, read as a
-        // rollover, and the whole day re-entered as fresh movement.
+        // 6,323 steps reached Health Connect as 19,906. A sync restates only recently active types,
+        // so the summed reading dipped below the watermark and read as a rollover.
         val first = counterImport(
             typedStepsCumulative = listOf(
                 Triple(local(2026, 7, 30, 9), 0, 400),
@@ -795,10 +724,8 @@ class FitWellnessImportTest {
 
     @Test
     fun `yesterday's counter restated unchanged overnight writes nothing`() {
-        // The 05:01 sync's first reading restated ONE of yesterday's types,
-        // the sum fell short of yesterday's watermark, and the shortfall was
-        // read as a rollover — turning yesterday's steps into today's.
-        // Per-type, an unchanged reading is visibly a continuation.
+        // Restating one type made the sum fall short of the watermark and read as a rollover.
+        // Per type, an unchanged reading is a continuation.
         val yesterday = counterImport(
             typedStepsCumulative = listOf(
                 Triple(local(2026, 7, 29, 22), 0, 3506),
@@ -817,9 +744,7 @@ class FitWellnessImportTest {
 
     @Test
     fun `a genuinely reset type still counts from zero across midnight`() {
-        // The flip side of the test above, per type: walking restates BELOW
-        // where yesterday left it, so the watch closed its day and the 350 are
-        // today's own steps.
+        // Walking restates below yesterday's end, so the 350 are today's.
         val yesterday = counterImport(
             typedStepsCumulative = listOf(Triple(local(2026, 7, 29, 22), 6, 2817)),
         )
@@ -833,11 +758,8 @@ class FitWellnessImportTest {
 
     @Test
     fun `a watermark from before the per-type maps never re-counts the day`() {
-        // Upgrading mid-day: the stored watermark knows the summed reading but
-        // not the types behind it, so "already counted or not" is unknowable
-        // for any type this sync restates. They are adopted silently — at most
-        // the minutes since their last restatement are lost, once — and only
-        // growth from there counts.
+        // Upgrading mid-day: the summed watermark knows no types,
+        // so restated types are adopted silently and only growth counts.
         val legacy = mapOf(
             "2026-07-30" to FitCounterWatermark(
                 time = local(2026, 7, 30, 9),
@@ -857,8 +779,7 @@ class FitWellnessImportTest {
 
     @Test
     fun `an untyped counter still counts when it is all the file has`() {
-        // Dropping it outright would report zero steps for a file that names
-        // no activity type anywhere, which is all the counter it has.
+        // Dropping it would report zero steps for a file with no typed counter at all.
         assertEquals(
             1200,
             stepsTotal(
@@ -872,7 +793,7 @@ class FitWellnessImportTest {
         )
     }
 
-    // ── incremental files in the same hour ───────────────────────────────────
+    // Incremental files in the same hour.
 
     private fun monitoringWith(
         hr: List<Pair<Instant, Int>>,
@@ -884,8 +805,7 @@ class FitWellnessImportTest {
 
     @Test
     fun `two HR chunks in one hour produce two distinct records`() {
-        // Two consecutive sync windows, both inside the 10:00 hour. A shared
-        // id would make Health Connect upsert one over the other.
+        // Two sync windows in the same hour must not share an id.
         val first = fitMonitoringImportRecords(
             monitoringWith(
                 hr = listOf(
@@ -917,8 +837,7 @@ class FitWellnessImportTest {
         val b = fitMonitoringImportRecords(monitoringWith(hr = samples))
             .filterIsInstance<HeartRateRecord>().single()
 
-        // Same data must keep the same id, so a repeat sync overwrites itself
-        // rather than duplicating.
+        // Same data, same id, so a repeat sync overwrites itself.
         assertEquals(a.metadata.clientRecordId, b.metadata.clientRecordId)
     }
 
@@ -949,12 +868,9 @@ class FitWellnessImportTest {
         assertEquals(15.0, record.rate, 0.001)
     }
 
-    // ── counter record identity ──────────────────────────────────────────────
+    // Counter record identity.
 
-    /**
-     * What Health Connect actually stores: a later record with the same
-     * clientRecordId replaces the earlier one.
-     */
+    /** A later record with the same clientRecordId replaces the earlier one. */
     private fun upserted(imports: List<FitCounterImport>): Map<String, StepsRecord> {
         val byId = mutableMapOf<String, StepsRecord>()
         for (import in imports) {
@@ -967,17 +883,13 @@ class FitWellnessImportTest {
 
     @Test
     fun `a re-sync from a lost watermark replaces rather than accumulates`() {
-        // The regression that made a real device report 49,695 steps for a
-        // 24,844 step day: the id used to be derived from a walking CURSOR
-        // rather than from the clock, so a re-sync re-partitioned the day and
-        // every record after the first landed beside the previous run's.
+        // 49,695 steps for a 24,844 day: the id came from a walking cursor, so a re-sync re-partitioned the day.
         val first = counterImport(
             stepsCumulative = (0 until 180 step 5).map { minute ->
                 local(2024, 1, 18, 9).plusSeconds(minute * 60L) to minute * 10
             },
         )
-        // The watermark is gone — a reinstall, or prefs cleared — so the whole
-        // day is walked again, and this run sees a DIFFERENT set of instants.
+        // The watermark is gone, so the day is walked again with different instants.
         val relearned = counterImport(
             stepsCumulative = (0 until 180 step 7).map { minute ->
                 local(2024, 1, 18, 9).plusSeconds(minute * 60L) to minute * 10
@@ -1014,12 +926,8 @@ class FitWellnessImportTest {
 
     @Test
     fun `the day's first record keeps the legacy day-keyed id`() {
-        // Before the counters became intraday, one record per day was written
-        // as `garmin_fit_steps_<yyyy-mm-dd>`. Those are still in Health
-        // Connect holding a whole day's total each, and no cursor-derived id
-        // could ever collide with them — which is why the device showed the
-        // day twice. Reusing the id makes the first bucket overwrite the stale
-        // record.
+        // Daily records `garmin_fit_steps_<yyyy-mm-dd>` are still in Health Connect.
+        // Reusing the id makes the first bucket overwrite the stale one.
         val import = counterImport(
             stepsCumulative = listOf(
                 local(2024, 1, 18, 6) to 300,
@@ -1032,10 +940,7 @@ class FitWellnessImportTest {
 
     @Test
     fun `the legacy day key is handed out once not re-handed each sync`() {
-        // It is a one-shot: the record it supersedes is superseded the first
-        // time. Recomputing "the first bucket" every sync would move the id to
-        // a later bucket each run, and each move would overwrite the previous
-        // holder's minutes with a different bucket's — silently losing them.
+        // One-shot: recomputing the first bucket every sync would move the id and lose minutes.
         val first = counterImport(
             stepsCumulative = listOf(
                 local(2024, 1, 18, 6) to 300,
@@ -1062,11 +967,8 @@ class FitWellnessImportTest {
 
     @Test
     fun `a first sync that only touched the open bucket retires the legacy id later`() {
-        // Everything the first sync saw fell inside one still-filling bucket.
-        // That bucket goes out under its grid id — it will be rewritten in
-        // full next sync, and a day-keyed twin would stack beside the rewrite
-        // — so the legacy id waits for the first bucket that never wore a grid
-        // id.
+        // The first sync's only bucket is still filling and goes out under its grid id.
+        // The legacy id waits for a bucket that never wore one.
         val first = counterImport(
             stepsCumulative = listOf(local(2024, 1, 18, 0, 5) to 300),
         )
@@ -1094,8 +996,7 @@ class FitWellnessImportTest {
 
     @Test
     fun `calories ride the same grid as steps`() {
-        // The calorie counter path shares the id derivation with steps, so a
-        // bug in one reaches the other unseen.
+        // Calories share the id derivation with steps.
         val import = counterImport(
             stepsCumulative = listOf(
                 local(2024, 1, 18, 9) to 0,
@@ -1122,7 +1023,7 @@ class FitWellnessImportTest {
     }
 }
 
-// ── Hand-built FIT byte builders ─────────────────────────────────────────────
+// Hand-built FIT byte builders.
 
 private val tsField = listOf(253, 4, 0x86) // timestamp, uint32
 private val enumField0 = listOf(0, 1, 0x00) // field 0, enum/uint8
@@ -1137,7 +1038,7 @@ internal fun fitSleepBytes(
     // file_id (type = 49, sleep)
     data.fileId(FIT_FILE_TYPE_SLEEP)
 
-    // event (21): timestamp, event, event_type — the sleep start/stop pair.
+    // event (21): timestamp, event, event_type.
     data.def(1, 21, listOf(tsField, listOf(0, 1, 0x00), listOf(1, 1, 0x00)))
     data.u8(1)
         .u32(fitTimestamp(start))
@@ -1224,10 +1125,8 @@ internal fun fitMonitoringSeriesBytes(
             .u32(fitTimestamp(t))
             .u32(s.toLong())
     }
-    // monitoring steps carrying their activity_type (local 4, global 55), as a
-    // real watch writes them: one message per active type at each timestamp.
-    // The type is message-local — a message whose definition has no type field
-    // is untyped no matter what came before it.
+    // Steps with activity_type (local 4, global 55), one message per active type.
+    // The type is message-local.
     data.def(4, 55, listOf(tsField, listOf(5, 1, 0x00), listOf(3, 4, 0x86)))
     for ((t, activityType, s) in typedStepsCumulative) {
         data.u8(4)
@@ -1235,8 +1134,7 @@ internal fun fitMonitoringSeriesBytes(
             .u8(activityType)
             .u32(s.toLong())
     }
-    // monitoring active calories (local 5, global 55): timestamp + cumulative
-    // active_calories (field 19, uint16).
+    // Active calories (local 5, global 55): timestamp + cumulative kcal (field 19, uint16).
     data.def(5, 55, listOf(tsField, listOf(19, 2, 0x84)))
     for ((t, kcal) in caloriesCumulative) {
         data.u8(5)

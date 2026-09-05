@@ -1418,19 +1418,12 @@ class ActivityEntryViewModelTest {
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING, vm.uiState.value.selectedActivityType.exerciseType)
     }
 
-    // ── Command lifecycle ────────────────────────────────────────────────────
-    //
-    // Kotlin has no `CommandState` object: the save is a pair of flags
-    // (`isSavingEntry` in flight, `saveCompleted` as the one-shot success
-    // signal) plus `entryError`/`detailError` for the failure, and the route
-    // import is `isImportingRoute`. These tests assert that pair wherever the
-    // Flutter port asserts a command value.
+    // Command lifecycle. The save is `isSavingEntry` plus the one-shot `saveCompleted`,
+    // with `entryError`/`detailError` for failure; the route import is `isImportingRoute`.
 
     @Test fun `the save runs, succeeds, and is consumed exactly once`() = runTest {
         val repo = activityRepo(canWrite = true)
-        // The in-flight state is read from inside the repository write: the
-        // suite's unconfined dispatcher runs the whole save within `addEntry`,
-        // so the running state is never visible from the test body afterwards.
+        // The in-flight state is read from inside the repository write: the unconfined dispatcher runs the whole save there.
         var viewModel: ActivityEntryViewModel? = null
         var savingWhileWriting: Boolean? = null
         var completedWhileWriting: Boolean? = null
@@ -1670,14 +1663,7 @@ class ActivityEntryViewModelTest {
         assertFalse(vm.uiState.value.isSavingEntry)
     }
 
-    /**
-     * The three failable calls take an optional throwable so a test can make the
-     * probe, the write or the edit read fail without hand-rolling a second mock.
-     */
-    // ── Ported from mobile-app
-    // test/features/manualentry/activity/recording/activity_recording_view_model_test.dart.
-    // Kotlin folds the recording surface into ActivityEntryViewModel; the device-bound
-    // ActivityRecordingController is mocked here on purpose.
+    /** The three failable calls take an optional throwable. The device-bound ActivityRecordingController is mocked on purpose. */
 
     private fun recorderMock(
         startResult: Boolean = true,
@@ -1732,8 +1718,7 @@ class ActivityEntryViewModelTest {
         assertEquals(ActivityEntryMode.RECORDING, vm.uiState.value.mode)
         assertNull(vm.uiState.value.entryError)
         verify(exactly = 1) { recorder.startRecording(any(), any(), any(), any()) }
-        // The controller's session is what the screen shows - the view-model never
-        // invents one of its own.
+        // The controller's session is what the screen shows.
         assertEquals(ActivityRecordingStatus.RECORDING, recorder.state.value.status)
     }
 
@@ -1768,8 +1753,7 @@ class ActivityEntryViewModelTest {
     }
 
     @Test fun `stopping with nothing recording fails loudly, not silently`() = runTest {
-        // The snapshot is the ONLY copy of the workout: a stop that produces none
-        // must never look like it worked.
+        // The snapshot is the only copy of the workout: a stop that produces none must not look like it worked.
         val recorder = recorderMock(startResult = true)
         val vm = recordingViewModel(recorder)
         advanceUntilIdle()
@@ -1811,8 +1795,7 @@ class ActivityEntryViewModelTest {
     }
 
     @Test fun `focus mode needs a session that can actually use it`() {
-        // The flag alone is not enough: an idle recorder has nothing to focus on,
-        // and the host would otherwise drop its app bar over a dead screen.
+        // An idle recorder has nothing to focus on.
         assertFalse(ActivityRecordingState().canUseFocusMode)
 
         assertTrue(

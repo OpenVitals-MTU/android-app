@@ -88,9 +88,7 @@ class SleepScreenWeekTest {
         }
 
         composeRule.onNodeWithText("Week").assertExists()
-        // The sections render in a lazy list, so the chart is not composed until
-        // it is scrolled to — asserting it exists without that only ever passed
-        // on a screen tall enough to show everything above it at once.
+        // The chart is in a lazy list, so it is not composed until scrolled to.
         composeRule.onNode(hasScrollAction())
             .performScrollToNode(hasTestTag("sleep_week_period_content"))
         composeRule.onNodeWithTag("sleep_week_period_content").assertExists()

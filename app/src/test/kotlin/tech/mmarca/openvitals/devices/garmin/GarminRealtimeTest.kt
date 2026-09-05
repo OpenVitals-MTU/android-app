@@ -5,10 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/**
- * The live-streaming payloads. Fixed little formats from Gadgetbridge's
- * `CommunicatorV2` realtime callbacks, checked byte for byte.
- */
+/** The live-streaming payloads, checked byte for byte. */
 class GarminRealtimeTest {
 
     private fun b(vararg xs: Int) = ByteArray(xs.size) { xs[it].toByte() }
@@ -61,8 +58,7 @@ class GarminRealtimeTest {
 
     @Test
     fun `a truncated packet is dropped, never guessed at`() {
-        // These arrive unsolicited on a link held for hours; one odd packet
-        // must not take it down.
+        // These arrive unsolicited on a link held for hours; one odd packet must not take it down.
         assertNull(parse(GarminRealtimeService.HEART_RATE, 3))
         assertNull(parse(GarminRealtimeService.STEPS, 0x40, 0x1F))
         assertNull(GarminRealtimeParser.parse(GarminRealtimeService.SPO2, ByteArray(0)))
@@ -76,7 +72,7 @@ class GarminRealtimeTest {
         assertNull(GarminRealtimeParser.serviceFor(16))
     }
 
-    // ── the store ───────────────────────────────────────────────────────────
+    // The store.
 
     @Test
     fun `the store keeps the latest of each reading`() {
@@ -98,8 +94,7 @@ class GarminRealtimeTest {
         val at = Instant.parse("2026-08-12T10:00:00Z")
         store.record(GarminRealtimeReading.HeartRate(70, null), at)
 
-        // The watch pushes on change, so a quiet minute is normal; several
-        // minutes means it is no longer describing the wearer.
+        // A quiet minute is normal; several minutes means the reading is stale.
         assertEquals(70, store.readings.value.freshHeartRate(at.plusSeconds(60)))
         assertNull(store.readings.value.freshHeartRate(at.plusSeconds(600)))
     }
@@ -111,8 +106,7 @@ class GarminRealtimeTest {
 
         store.clear()
 
-        // A live value that outlives its link is a lie the UI would keep
-        // telling.
+        // A live value that outlives its link is a lie.
         assertNull(store.readings.value.heartRateBpm)
     }
 }

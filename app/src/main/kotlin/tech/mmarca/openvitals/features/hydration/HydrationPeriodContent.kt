@@ -78,9 +78,7 @@ internal fun LazyListScope.hydrationPeriodContent(
     }.orEmpty()
 
     if (!display.hasData && state.isLoading) {
-        // Nothing to show yet and still loading: one skeleton where the period chart
-        // will be, so the page does not jump when the data lands. A screen that
-        // already has content keeps it — a skeleton over drawn data would blink.
+        // Still loading: a skeleton where the chart will be. Existing content is kept.
         item {
             ChartSkeleton(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -319,10 +317,7 @@ private fun HydrationIntradayChartCard(
             Spacer(Modifier.height(16.dp))
 
             if (points.isNotEmpty()) {
-                // Built once here, not inside the zoom content: the plotted points do
-                // not depend on the viewport (the plot applies it), so recomputing
-                // them on every pinch frame would only churn a fresh list and defeat
-                // the plot's geometry cache.
+                // Built outside the zoom content, so the geometry cache holds.
                 val chartPoints = remember(points, selectedDate, isToday) {
                     cumulativeDayPlotPoints(
                         fractions = points.map { (time, value) ->
@@ -332,10 +327,7 @@ private fun HydrationIntradayChartCard(
                     )
                 }
 
-                // Pinch with two fingers to look closer at part of the day. The plot
-                // and its hour row are BOTH inside the zoom and share the one
-                // viewport — a chart whose hours disagreed with its line would be
-                // worse than one that did not zoom at all.
+                // Plot and hour row share the one viewport.
                 ChartZoom(selectedDate, points) { zoom ->
                     Column {
                         MetricLinePlot(
@@ -348,9 +340,7 @@ private fun HydrationIntradayChartCard(
                             lineStrokeWidth = 3.dp,
                             viewport = zoom.viewport,
                             multiTouch = zoom.multiTouch,
-                            // Drag along the chart and it tells you the total and the
-                            // hour it stood at that. The number was always in the data
-                            // and never on the screen.
+                            // Drag to read the total and the hour it stood at.
                             scrubLabel = { point ->
                                 val at = dayStart.plusMillis(
                                     (point.xFraction.coerceIn(0f, 1f) * dayMillis).roundToLong(),
@@ -388,12 +378,8 @@ private fun HydrationIntradayChartCard(
 }
 
 /**
- * `(time, running total)` for each drink, in the order they were drunk.
- *
- * Stamped at [HydrationEntry.startTime], not the end: a drink counts from the moment you
- * picked it up, and a bottle sipped over an hour would otherwise plant its whole volume an
- * hour late. Zero-volume entries are skipped — a nutrition-only record carries no water, and
- * a flat step on the cumulative line says nothing.
+ * `(time, running total)` per drink, stamped at the start time. Zero-volume
+ * entries are skipped.
  */
 internal fun List<HydrationEntry>.cumulativeHydrationPoints(): List<Pair<Instant, Double>> {
     var cumulativeLiters = 0.0

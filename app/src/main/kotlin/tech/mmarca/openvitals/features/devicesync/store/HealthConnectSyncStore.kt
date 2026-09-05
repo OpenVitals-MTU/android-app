@@ -16,43 +16,29 @@ import tech.mmarca.openvitals.features.imports.applehealth.isDuplicateClientReco
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 /**
- * The Health Connect implementation of [SyncRecordStore], bridging the sync
- * protocol to real record reads, dedup, and writes.
+ * The Health Connect implementation of [SyncRecordStore]. Reads become
+ * [SyncItem]s keyed by [syncFingerprint]; writes insert typed records under
+ * that fingerprint as clientRecordId, so re-syncs converge.
  *
- * Reads become [SyncItem]s keyed by content fingerprint ([syncFingerprint]);
- * dedup happens in the session, which seeds its baseline from these same keys.
- * Writes reconstruct typed records (carrying the fingerprint as their
- * clientRecordId) and insert them via
- * [AppleHealthImportRepository.insertImportedRecords]. Because both phones
- * compute the same fingerprint and write it as the clientRecordId, re-syncs
- * converge and Health Connect upserts rather than duplicating.
- *
- * ORIGINAL SOURCE PRESERVATION — Health Connect re-stamps every record this
- * phone writes with OpenVitals' own package, so each outgoing [SyncItem] also
- * carries the ORIGINAL source app ([resolveOriginalSource]: the local
- * `dataOrigin`, or the preserved origin when the record itself arrived by
- * sync, so chains pass the original through). Each incoming foreign origin is
- * persisted per fingerprint through [SyncedRecordOriginRepository] and only
- * ever used for display — it never enters the fingerprint or the payload, so
- * convergence with builds that predate the field is untouched.
+ * Health Connect re-stamps written records with this app's package, so each
+ * outgoing item also carries the original source app. Incoming origins are
+ * persisted per fingerprint for display only.
  */
 class HealthConnectSyncStore(
     private val healthConnectManager: HealthConnectManager,
     private val importRepository: AppleHealthImportRepository,
     private val originRepository: SyncedRecordOriginRepository,
-    /** This phone's own package — origins matching it are not worth a row. */
+    /** This phone's package; origins matching it are not stored. */
     private val localPackageName: String,
     /** The inclusive sync window the user chose ("how far back"). */
     private val windowStart: Instant,
     private val windowEnd: Instant,
-    /** Overridable so a test can exercise the byte cap without megabyte fixtures. */
+    /** Overridable so a test can hit the byte cap without megabyte fixtures. */
     private val chunkPayloadByteCap: Int = ChunkPayloadByteCap,
 ) : SyncRecordStore {
 
     override fun readKeys(types: Set<String>): Flow<String> = flow {
-        // Keys only, no payload encode and no origin lookup: this pass exists
-        // so the session can hold a complete dedup baseline WITHOUT holding
-        // the records, so it must itself stay record-light.
+        // Keys only: the baseline must stay record-light.
         for (type in types) {
             val recordClass = syncRecordClassFor(type) ?: continue
             forEachRecordPageOrAbort(recordClass, type) { page ->
@@ -65,11 +51,8 @@ class HealthConnectSyncStore(
     }
 
     /**
-     * Streams pages for [recordClass], turning a Health Connect read failure
-     * into a clean session abort with a reason. A rate-limited stream that
-     * quietly ENDED instead let the session finish and report "completed" for
-     * a transfer that wasn't. Aborts raised by the downstream collector (the
-     * sender's ack timeout arriving through `emit`) pass through untouched.
+     * Streams pages for [recordClass], turning a read failure into a clean
+     * abort. A stream that quietly ended once reported "completed".
      */
     private suspend fun forEachRecordPageOrAbort(
         recordClass: KClass<out Record>,
@@ -95,9 +78,7 @@ class HealthConnectSyncStore(
             val recordClass = syncRecordClassFor(type) ?: continue
             forEachRecordPageOrAbort(recordClass, type) { page ->
                 for (record in page) {
-                    // A record the codec cannot express (future provider
-                    // fields, an unexpected shape) is skipped rather than
-                    // sinking the read.
+                    // A record the codec cannot express is skipped, not fatal.
                     val item = runCatching {
                         SyncItem(
                             key = syncFingerprint(record),
@@ -112,11 +93,8 @@ class HealthConnectSyncStore(
                     }.getOrNull() ?: continue
                     chunk += item
                     chunkPayloadBytes += item.payload.size
-                    // Capped by BYTES as well as count: a chunk is one wire
-                    // batch, acked only once it has fully crossed the link.
-                    // 500 series records (a heart-rate record carries every
-                    // sample) made multi-megabyte batches whose RFCOMM
-                    // transfer alone outlived the peer's ack timeout.
+                    // Capped by bytes too: 500 series records made multi-megabyte
+                    // batches that outlived the peer's ack timeout.
                     if (chunk.size >= chunkSize || chunkPayloadBytes >= chunkPayloadByteCap) {
                         emit(chunk.toList())
                         chunk.clear()
@@ -129,11 +107,7 @@ class HealthConnectSyncStore(
     }
 
     override suspend fun writeItems(items: List<SyncItem>): Set<String> {
-        // Group by record type and insert each group separately. A Health
-        // Connect batch insert is atomic, so mixing types means one
-        // unsupported/rejected type sinks the whole batch; isolating types
-        // keeps the rest landing. A per-type failure is logged and swallowed so
-        // the sync continues with the types that do write.
+        // Insert per type: a batch is atomic, so one rejected type must not sink the rest.
         val recordsByType = mutableMapOf<String, MutableList<Record>>()
         val keysByType = mutableMapOf<String, MutableList<String>>()
         val originsByKey = mutableMapOf<String, String>()
@@ -143,15 +117,11 @@ class HealthConnectSyncStore(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // One malformed item from a buggy/hostile peer must not kill
-                // the whole receive loop (which would stop acking and stall the
-                // peer). Skip it — and, since it never lands, it is not among
-                // the returned written keys.
+                // One malformed item must not stall the receive loop. Skipped, so not written.
                 Log.w(TAG, "skipping undecodable ${item.recordType}: ${e.message}")
                 continue
             }
-            // Keyed on the RECOMPUTED fingerprint (what actually gets written
-            // as the clientRecordId), not the peer-claimed item.key.
+            // Keyed on the recomputed fingerprint, not the peer-claimed key.
             val key = record.metadata.clientRecordId ?: item.key
             recordsByType.getOrPut(item.recordType) { mutableListOf() } += record
             keysByType.getOrPut(item.recordType) { mutableListOf() } += key
@@ -170,23 +140,17 @@ class HealthConnectSyncStore(
                 throw e
             } catch (e: Exception) {
                 if (e.isDuplicateClientRecordFailure()) {
-                    // The batch tripped on an already-present clientRecordId.
-                    // Retry record-by-record so the fresh ones still land; a
-                    // per-record duplicate means Health Connect already holds
-                    // that exact fingerprint — converged, so count it written.
+                    // A duplicate clientRecordId tripped the batch. Retry one by one;
+                    // a per-record duplicate is already converged, so count it written.
                     written += insertIndividually(type, records, keys)
                 } else {
-                    // Type batch rejected — its keys are NOT reported as
-                    // written, so the session won't count them as imported.
+                    // Rejected: its keys are not reported as written.
                     Log.w(TAG, "WRITE FAILED for ${records.size} $type: ${e.message}")
                 }
             }
         }
-        // Remember each landed record's original source app so the UI can keep
-        // attributing it to Gadgetbridge (etc.) instead of OpenVitals.
-        // Duplicate-converged keys are included on purpose: the mapping is an
-        // upsert, and Health Connect already holds that exact fingerprint.
-        // Best-effort — a failure here loses display attribution, not records.
+        // Remember each landed record's original source app, for display.
+        // Converged duplicates included: the mapping is an upsert. Best-effort.
         val landedOrigins = originsByKey.filterKeys { it in written }
         if (landedOrigins.isNotEmpty()) {
             try {
@@ -224,13 +188,8 @@ class HealthConnectSyncStore(
     }
 
     /**
-     * Decodes [item] and re-derives its clientRecordId from the decoded
-     * *content* rather than trusting the peer-supplied [SyncItem.key].
-     * Otherwise a hostile or buggy peer could set the key to an existing id
-     * (e.g. an `apple_health_<hex>` we hold) and have Health Connect upsert
-     * over — corrupt — an unrelated record. A content fingerprint can only
-     * ever address the record the peer actually sent. In the honest case the
-     * recomputed key equals the sent one, so the extra decode is skipped.
+     * Decodes [item] and re-derives its clientRecordId from the content, so
+     * a hostile peer cannot address an unrelated record through the key.
      */
     private fun ownedRecord(item: SyncItem): Record {
         val decoded = decodeSyncRecord(
@@ -253,13 +212,8 @@ class HealthConnectSyncStore(
 }
 
 /**
- * The ORIGINAL source app to announce for an outgoing record.
- *
- * A record this phone itself received by sync carries a preserved origin under
- * its `sync_<hex>` clientRecordId — that wins, so an A→B→C chain forwards A's
- * Gadgetbridge, not B's re-stamped OpenVitals. Anything else (a native record,
- * or one synced before origins were carried) announces its local Health
- * Connect `dataOrigin`.
+ * The original source app for an outgoing record: the preserved origin when
+ * the record itself arrived by sync, else its local `dataOrigin`.
  */
 internal fun resolveOriginalSource(
     clientRecordId: String?,
@@ -267,20 +221,9 @@ internal fun resolveOriginalSource(
     preservedOrigins: Map<String, String>,
 ): String = clientRecordId?.let(preservedOrigins::get) ?: dataOriginPackage
 
-/**
- * The origin worth persisting for an incoming record, or null.
- *
- * Null (an old-version peer that does not carry origins), blank, and
- * [localPackageName] (a record genuinely authored in OpenVitals — the
- * receiver's default attribution is already right) all map to null.
- */
+/** The origin worth persisting, or null for absent, blank, or [localPackageName]. */
 internal fun persistableOrigin(originPackage: String?, localPackageName: String): String? =
     originPackage?.takeIf { it.isNotBlank() && it != localPackageName }
 
-/**
- * The payload-byte ceiling for one outgoing chunk (one wire batch). Sized so a
- * batch crosses even a slow RFCOMM link in seconds — comfortably inside the
- * ack timeout — where a count-only cap let 500 series records form a
- * multi-megabyte batch whose transfer alone outlived it.
- */
+/** Payload-byte ceiling per chunk, so a batch crosses a slow RFCOMM link inside the ack timeout. */
 private const val ChunkPayloadByteCap = 256 * 1024

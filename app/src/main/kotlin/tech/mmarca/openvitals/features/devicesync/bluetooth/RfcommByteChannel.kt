@@ -7,13 +7,9 @@ import java.io.OutputStream
 import kotlin.concurrent.thread
 
 /**
- * Wraps ONE open RFCOMM [BluetoothSocket]. A dedicated reader thread pumps
- * inbound bytes to [onBytes]; [write] sends outbound bytes on the caller's
- * thread and blocks until flushed (the source of the transfer's backpressure).
- *
- * Closing is idempotent and unblocks the reader (closing the socket makes the
- * blocking `read()` throw). [onClosed] fires exactly once when the socket ends
- * on its own (peer disconnect / link drop) — not on an explicit [close].
+ * Wraps one open RFCOMM socket: a reader thread pumps bytes to [onBytes],
+ * [write] blocks until flushed. [onClosed] fires once when the socket ends
+ * on its own, not on [close].
  */
 internal class RfcommByteChannel(
     private val socket: BluetoothSocket,
@@ -37,7 +33,7 @@ internal class RfcommByteChannel(
                     if (n > 0) onBytes(buffer.copyOf(n))
                 }
             } catch (_: IOException) {
-                // Socket closed or link dropped; fall through to notify.
+                // Socket closed or link dropped.
             } finally {
                 closeInternal(notify = true)
             }
@@ -63,7 +59,7 @@ internal class RfcommByteChannel(
         try {
             socket.close()
         } catch (_: IOException) {
-            // best effort
+            // Best effort.
         }
         if (notify) onClosed()
     }

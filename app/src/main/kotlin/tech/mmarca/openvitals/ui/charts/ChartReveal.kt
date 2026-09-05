@@ -10,30 +10,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import tech.mmarca.openvitals.ui.theme.Motion
 
-/**
- * The ease-out cubic the charts arrive with (the same curve as Flutter's
- * `Curves.easeOutCubic`).
- */
+/** The ease-out cubic the charts arrive with, matching Flutter's `easeOutCubic`. */
 val ChartRevealEasing: Easing = CubicBezierEasing(0.215f, 0.61f, 0.355f, 1f)
 
 /**
- * Draws a chart in, once, when it first appears.
- *
- * A line draws itself from left to right; bars grow up out of the axis; the ring sweeps
- * round. It is not decoration — it is the chart telling you which way to read it, and it
- * is the difference between a picture that was already there when you arrived and one
- * that was drawn for you.
- *
- * Runs exactly once per composition of this node (plain [remember], deliberately not
- * saved state): new data flowing into an already-mounted chart must NOT replay the
- * entrance.
- *
- * ## It honours reduce-motion, and that is not a nicety
- *
- * The system animator switch is the accessibility contract: a user who has asked their
- * phone to stop moving things has asked THIS to stop moving too, and vestibular
- * disorders are the reason that switch exists. With animations disabled the content gets
- * `progress = 1f` on the first frame.
+ * Draws a chart in once, when it first appears. Runs once per composition
+ * (plain [remember]): new data must not replay the entrance. Under reduced
+ * motion the content gets `progress = 1f` on the first frame.
  */
 @Composable
 fun ChartReveal(

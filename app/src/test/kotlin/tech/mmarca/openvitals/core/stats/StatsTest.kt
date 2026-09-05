@@ -44,8 +44,7 @@ class StatsTest {
 
     @Test
     fun `rounding an empty average throws, so it must never reach the formatter`() {
-        // Kotlin's roundToInt rejects NaN outright rather than quietly yielding 0,
-        // so an unguarded average of no readings takes the whole section down.
+        // roundToInt rejects NaN, so an unguarded average of no readings takes the section down.
         assertThrows(IllegalArgumentException::class.java) {
             emptyList<Int>().average().roundToInt()
         }

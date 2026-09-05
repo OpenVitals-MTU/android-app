@@ -13,19 +13,9 @@ import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 /**
- * Keeps the daily calories-burned cache current, same shape as
- * [VitalsHistorySyncService] but for one metric with two quirks:
- *
- *  - The full-history read is CHUNKED (365 days at a time, newest first): a
- *    single multi-year TotalCaloriesBurned aggregate can throw or take minutes.
- *    The newest chunk atomically replaces the metric; older chunks upsert onto it.
- *  - Only recorded totals are cached (`includeEstimatedCalories = false`), and
- *    only positive-burn days get rows — consumers zero-fill missing days, and
- *    the synthesized-basal filter in the reader keeps never-tracked days out.
- *
- * The app never writes TotalCaloriesBurned itself, but a workout changes what
- * Health Connect derives for the day — the activity write-through patches those
- * days, and this service reconciles everything else.
+ * Keeps the daily calories-burned cache current, like
+ * [VitalsHistorySyncService] for one metric. The full read is chunked a
+ * year at a time, newest first. Only recorded, positive-burn days get rows.
  */
 @Singleton
 class CaloriesHistorySyncService @Inject constructor(
@@ -104,11 +94,7 @@ class CaloriesHistorySyncService @Inject constructor(
         }
     }
 
-    /**
-     * Write-through hook: a workout write changes what Health Connect derives
-     * for its day. No-op without a cursor; failures swallowed — the write must
-     * not fail, and the next drain reconciles. Token untouched.
-     */
+    /** Write-through hook: a workout changes what Health Connect derives for its day. */
     suspend fun patchDays(days: Set<LocalDate>) {
         try {
             dao.cursor(VitalsCacheKeys.CALORIES_BURNED) ?: return
@@ -128,10 +114,7 @@ class CaloriesHistorySyncService @Inject constructor(
         }
     }
 
-    /**
-     * Only positive-burn days become rows, summed by epoch day so a DST-clipped
-     * tail bucket sharing a date cannot violate the primary key.
-     */
+    /** Positive-burn days only, summed by epoch day so a DST-clipped bucket cannot break the key. */
     private suspend fun readDays(start: LocalDate, end: LocalDate): List<VitalsDailyAggregateEntity> =
         hc.readDailyNutrition(
             startDate = start,

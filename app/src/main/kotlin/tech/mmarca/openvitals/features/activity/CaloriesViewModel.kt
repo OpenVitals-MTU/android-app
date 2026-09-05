@@ -48,8 +48,7 @@ data class CaloriesUiState(
     val previousNutrition: List<DailyNutrition> = emptyList(),
     val baselineNutrition: List<DailyNutrition> = emptyList(),
     val bmrEntries: List<BmrEntry> = emptyList(),
-    // Derived once where bmrEntries is set, not in the class body: an initializer
-    // there re-runs on every copy(), so toggling isLoading rescanned the entries.
+    // Derived where bmrEntries is set, not in the class body, which re-runs on every copy().
     val latestBmrEntry: BmrEntry? = null,
     val latestBmrKcal: Double? = null,
     val activityProgress: List<ActivityProgressPoint> = emptyList(),
@@ -189,15 +188,9 @@ class CaloriesViewModel(
                                 query = query,
                                 includeSteps = true,
                                 includeNutrition = true,
-                                // Unlike the Dart app's calories overview, this screen
-                                // does draw the intraday cumulative cards on the Day
-                                // range, so it keeps the hourly aggregate. The read's
-                                // own timeout is what stops it hanging the Day view.
+                                // This screen draws the intraday cards on Day, so it keeps the hourly aggregate.
                                 includeActivityProgress = true,
-                                // This screen renders the current window alone — no
-                                // previous/baseline comparison — so it skips the four
-                                // extra window reads. On the Year range that is the
-                                // difference between two long aggregates and six.
+                                // No comparison windows: this screen shows the current window alone.
                                 includeComparisonWindows = false,
                             )
                         } else {
@@ -205,15 +198,9 @@ class CaloriesViewModel(
                                 query = query,
                                 includeSteps = true,
                                 includeNutrition = true,
-                                // Unlike the Dart app's calories overview, this screen
-                                // does draw the intraday cumulative cards on the Day
-                                // range, so it keeps the hourly aggregate. The read's
-                                // own timeout is what stops it hanging the Day view.
+                                // This screen draws the intraday cards on Day, so it keeps the hourly aggregate.
                                 includeActivityProgress = true,
-                                // This screen renders the current window alone — no
-                                // previous/baseline comparison — so it skips the four
-                                // extra window reads. On the Year range that is the
-                                // difference between two long aggregates and six.
+                                // No comparison windows: this screen shows the current window alone.
                                 includeComparisonWindows = false,
                                 refreshMode = refreshMode,
                             )
@@ -256,14 +243,8 @@ class CaloriesViewModel(
     }
 
     /**
-     * Kicks the calories history sync once per screen open, AFTER the first
-     * load settles (Health Connect serializes reads, so a full-history sync
-     * beside the screen's own read makes both slower). The first sync pays for
-     * the chunked history rebuild that every later open serves from SQLite —
-     * this screen is what needs the cache, so this screen owns starting it,
-     * exactly like the Dart app's calories screen did; the app-open drain is
-     * incremental-only and never starts it. One reload when it completes
-     * re-derives the period from the now-populated cache.
+     * Kicks the calories history sync once per open, after the first load
+     * settles. The first sync builds the cache every later open serves from.
      */
     private fun kickCaloriesHistorySyncOnce() {
         val sync = caloriesSync ?: return

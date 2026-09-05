@@ -17,11 +17,7 @@ import tech.mmarca.openvitals.devices.garmin.GarminGattProbe
 import tech.mmarca.openvitals.devices.garmin.GarminTransportProbe
 import tech.mmarca.openvitals.devices.garmin.GarminWatchSyncService
 
-/**
- * Wiring for the `devices/` layer: the watch pairing/sync ports and the
- * Garmin-specific stores. Kept apart from [AppModule] so the shared module
- * carries no watch knowledge.
- */
+/** Wiring for the `devices/` layer, kept apart so [AppModule] carries no watch knowledge. */
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class DevicesModule {

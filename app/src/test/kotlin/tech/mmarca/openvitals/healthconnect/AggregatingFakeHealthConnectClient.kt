@@ -37,47 +37,14 @@ import java.time.ZoneOffset
 import kotlin.reflect.KClass
 
 /**
- * Google's fake, plus the methods it refuses to implement or gets wrong.
+ * Google's fake plus the aggregation it refuses to implement. Everything else delegates to it.
  *
- *     "To use the aggregate method you must provide a fake response via
- *      overrides.aggregate."   -> IllegalStateException
+ * Series records aggregate over the samples inside the window. Interval records are
+ * pro-rated by how much of the record overlaps the window.
  *
- * Fine for an app that aggregates rarely. This one aggregates *everywhere*: the
- * sibling-record session metrics (the entire walking-activity fix, and the power
- * read), the calorie fallback chain, daily steps, daily heart-rate summaries,
- * resting heart rate, hydration, nutrition. Hand-stubbing those responses would mean
- * the tests assert numbers WE made up — and would not have caught the bug where a
- * watch's steps and distance, written as separate records beside the session, were
- * never reattached to it at all.
- *
- * So everything delegates to Google's fake, and only the aggregation (and the
- * by-id read it mis-keys) is ours. ONE thing in the suite can be wrong, rather than
- * all of Health Connect.
- *
- * ## The two rules
- *
- * **Series records** (heart rate, speed, power) aggregate over the SAMPLES whose time
- * falls in the window — never over the record's own boundary. Well-founded, and the
- * entire reason aggregation is immune to the bug that hides a workout inside a
- * 17-hour record: `aggregate` slices by TIME, `readRecords` slices by RECORD.
- *
- * **Interval records** (steps, distance, calories, elevation) are PRO-RATED by how
- * much of the record overlaps the window: 600 steps over an hour, half inside the
- * window, contributes 300.
- *
- * ## What is NOT verified — read this before trusting a number
- *
- * The pro-rating rule is **UNCALIBRATED**. Health Connect's real behaviour for an
- * interval record straddling a window edge is undocumented and unmeasured. It is the
- * single largest unknown in this suite.
- *
- * The plan was to settle it with a probe against a real Health Connect. **That probe
- * cannot run in CI — the infrastructure has no emulator.** So it must be run ONCE, by
- * hand, on a device, and its answers frozen as fixed expectations in a JVM test, so
- * the calibration lives in CI even though the probe does not.
- *
- * Until then: an aggregate assertion here is NOT proof of what a device would say. It
- * is proof that our own arithmetic has not changed.
+ * The pro-rating rule is uncalibrated: real Health Connect behaviour at a window edge is
+ * unmeasured. An aggregate assertion here proves our arithmetic has not changed, not what
+ * a device would say.
  */
 class AggregatingFakeHealthConnectClient(
     private val inner: FakeHealthConnectClient,
@@ -88,7 +55,7 @@ class AggregatingFakeHealthConnectClient(
         return compute(request.internalMetrics(), start, end)
     }
 
-    /** Every aggregateGroupByDuration request's bounds, in call order — so a test can assert HOW a reader asked, not just what it got. */
+    /** Bounds of every aggregateGroupByDuration request, in call order. */
     val groupByDurationRequestRanges = mutableListOf<Pair<Instant, Instant>>()
 
     override suspend fun aggregateGroupByDuration(
@@ -99,10 +66,8 @@ class AggregatingFakeHealthConnectClient(
         val slice = request.internalSlicer()
         groupByDurationRequestRanges += start to end
 
-        // One store read per record type per REQUEST, not per bucket. An
-        // hour-sliced multi-week request is hundreds of buckets, and paging the
-        // whole store back out for each one made the fixture-corpus tests crawl
-        // past their timeout.
+        // One store read per record type per request, not per bucket.
+        // Per-bucket reads made the corpus tests time out.
         val recordsByType = mutableMapOf<KClass<out Record>, List<Record>>()
         val recordsOf: suspend (KClass<out Record>) -> List<Record> = { type ->
             recordsByType.getOrPut(type) { readAll(type) }
@@ -113,9 +78,7 @@ class AggregatingFakeHealthConnectClient(
         while (bucketStart.isBefore(end)) {
             val bucketEnd = minOf(bucketStart.plus(slice), end)
             val result = compute(metrics, bucketStart, bucketEnd, recordsOf)
-            // Health Connect OMITS an empty bucket rather than returning a zero one, and
-            // the app depends on it: "no data" and "zero" are different answers, and
-            // several screens branch on exactly that difference.
+            // Health Connect omits an empty bucket rather than returning zero, and screens branch on that.
             if (metrics.any { result.contains(it.erased()) }) {
                 out.add(
                     AggregationResultGroupedByDuration(
@@ -132,18 +95,8 @@ class AggregatingFakeHealthConnectClient(
     }
 
     /**
-     * Read one record back by the id the fake ASSIGNED it.
-     *
-     * Google's fake keys `idsToRecords` by the id the record carried *before*
-     * insertion — which for a freshly built record is `Metadata.EMPTY_ID` — while
-     * the record it stores, and the id it hands back from `insertRecords`, is a
-     * generated `testHCidN`. So `readRecord(type, insertedId)` throws an NPE for
-     * every record ever inserted, and any reader that resolves a detail screen by
-     * id is untestable against it.
-     *
-     * A real Health Connect answers `readRecord` with the record whose assigned
-     * id you ask for, so that is what this does: the lookup goes through
-     * `readRecords`, which the fake keys correctly.
+     * Read a record by the id the fake assigned it.
+     * Google's fake keys `idsToRecords` by the pre-insert id, so `readRecord` by inserted id throws.
      */
     override suspend fun <T : Record> readRecord(
         recordType: KClass<T>,
@@ -160,16 +113,14 @@ class AggregatingFakeHealthConnectClient(
     override suspend fun aggregateGroupByPeriod(
         request: AggregateGroupByPeriodRequest,
     ): List<AggregationResultGroupedByPeriod> =
-        // Deliberately not emulated. Period bucketing resolves its edges against each
-        // RECORD's own zone offset — behaviour we have not measured and will not guess
-        // at. A loud failure beats a confident wrong number. (The app moved its daily
-        // steps read to aggregateGroupByDuration for related reasons.)
+        // Not emulated: period bucketing uses each record's zone offset, which we have not measured.
+        // A loud failure beats a wrong number.
         throw NotImplementedError(
             "aggregateGroupByPeriod is not emulated: its bucket edges resolve against each " +
                 "record's own zone offset, which is unmeasured. See the class doc.",
         )
 
-    // ── the arithmetic ──────────────────────────────────────────────────────────
+    // The arithmetic.
 
     private suspend fun compute(
         metrics: Set<AggregateMetric<*>>,
@@ -195,14 +146,7 @@ class AggregatingFakeHealthConnectClient(
         return AggregationResult(dataOrigins = origins, metrics = values)
     }
 
-    /**
-     * Every record of a type, regardless of window.
-     *
-     * Unbounded on purpose. Aggregation must NOT be limited by record boundaries —
-     * that is the whole difference between it and `readRecords`, and the reason it can
-     * see inside a 17-hour record that a windowed read cannot. Overlap is decided
-     * below, on sample and interval TIMES.
-     */
+    /** Every record of a type, unbounded on purpose. Overlap is decided on sample and interval times. */
     private suspend fun <T : Record> readAll(type: KClass<T>): List<T> =
         inner.readRecords(
             ReadRecordsRequest(
@@ -214,17 +158,9 @@ class AggregatingFakeHealthConnectClient(
     private fun bounds(filter: TimeRangeFilter): Pair<Instant, Instant> =
         (filter.startTime ?: Instant.EPOCH) to (filter.endTime ?: Instant.now())
 
-    // ── reaching into the request ───────────────────────────────────────────────
-    //
-    // AggregateRequest.metrics and .timeRangeFilter are `internal` to connect-client,
-    // so a fake outside the library cannot read the request it is being asked to
-    // answer. Kotlin's `internal` survives into the bytecode as a mangled public
-    // getter (`getMetrics$connect_client`), which reflection can reach.
-    //
-    // This IS reaching into library internals, and it will break if androidx renames
-    // them. That is why it throws with the name it looked for rather than returning
-    // something plausible: a fake that silently aggregated the WRONG metrics would be
-    // far worse than one that does not compile.
+    // AggregateRequest.metrics and .timeRangeFilter are `internal`, reachable only through the
+    // mangled getter (`getMetrics$connect_client`). This throws with the name it looked for
+    // if androidx renames them.
 
     @Suppress("UNCHECKED_CAST")
     private fun Any.internalMetrics(): Set<AggregateMetric<*>> =
@@ -251,7 +187,7 @@ class AggregatingFakeHealthConnectClient(
     private fun AggregateMetric<*>.erased(): AggregateMetric<Any> =
         this as AggregateMetric<Any>
 
-    // ── the metric table ────────────────────────────────────────────────────────
+    // The metric table.
 
     private class Spec(
         val recordType: KClass<out Record>,
@@ -260,12 +196,7 @@ class AggregatingFakeHealthConnectClient(
 
     private companion object {
 
-        /**
-         * How much of an interval record's own span lies inside the window.
-         *
-         * `IntervalRecord` is internal to connect-client, so this takes the two instants
-         * rather than the record — which is no loss: every caller knows its concrete type.
-         */
+        /** How much of an interval record lies inside the window. Takes instants because `IntervalRecord` is internal. */
         fun fraction(rStart: Instant, rEnd: Instant, start: Instant, end: Instant): Double {
             val span = rEnd.toEpochMilli() - rStart.toEpochMilli()
             if (span <= 0L) return 0.0
@@ -349,15 +280,8 @@ class AggregatingFakeHealthConnectClient(
                     ?.let { Volume.liters(it) }
             },
 
-            // Series: over the SAMPLES, never the record boundary.
-            //
-            // Speed hands back a RAW Double rather than a typed unit.
-            // connect-testing's AggregationResult() builder converts Long, Double,
-            // Duration, Energy, Length, Mass, Power, Volume and Pressure — and
-            // SILENTLY DROPS anything else, Velocity included. A dropped metric
-            // reads back as null, which is indistinguishable from "the device
-            // recorded none", so the average speed simply vanished. The stored
-            // form of a double-valued metric is its raw double either way.
+            // Series: over the samples. Speed hands back a raw Double because
+            // connect-testing's AggregationResult() builder silently drops Velocity.
             SpeedRecord.SPEED_AVG to Spec(SpeedRecord::class) { rs, s, e ->
                 samplesIn<SpeedRecord, SpeedRecord.Sample>(rs, s, e, { it.samples }, { it.time })
                     .map { it.speed.inMetersPerSecond }

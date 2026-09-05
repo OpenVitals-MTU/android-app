@@ -10,19 +10,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The bug this exists to prevent: summing raw per-point rises turned a real
- * 750 m climb into ~15 km on the review screen. GPS vertical noise is larger
- * than any sane per-step threshold, so it was banked thousands of times over
- * a long ride.
- */
+/** Summing raw per-point rises turned a 750 m climb into ~15 km: GPS vertical noise was banked thousands of times. */
 class RouteElevationTest {
 
-    /**
-     * A climb of [trueGain] metres spread evenly over [samples], with Gaussian
-     * vertical error of [sigma] applied to every sample. Sigma 3 m is
-     * representative of real GPS vertical accuracy.
-     */
+    /** A climb of [trueGain] metres over [samples], with Gaussian vertical error of [sigma]. Sigma 3 m is realistic. */
     private fun noisyClimb(
         trueGain: Double,
         samples: Int,
@@ -60,8 +51,7 @@ class RouteElevationTest {
 
     @Test
     fun `accuracy does not decay with route length`() {
-        // The old accumulator's error grew with sample count, which is why a
-        // longer ride was proportionally more wrong. Same climb, 4x samples.
+        // The old accumulator's error grew with sample count. Same climb, 4x samples.
         val short = RouteElevation.elevationGainFromAltitudes(
             noisyClimb(trueGain = 200.0, samples = 900),
         )
@@ -73,8 +63,7 @@ class RouteElevationTest {
 
     @Test
     fun `a clean staircase is measured and descent is not counted as gain`() {
-        // 30 m up, 30 m down, 30 m up; each level held so the smoothing can
-        // follow the step.
+        // 30 m up, down, up; each level held so the smoothing can follow.
         val altitudes = listOf(0.0, 30.0, 0.0, 30.0).flatMap { level ->
             List<Double?>(40) { level }
         }
@@ -84,33 +73,28 @@ class RouteElevationTest {
 
     @Test
     fun `a sparse imported route is not under-reported`() {
-        // A GPX with one point every ~100 m: few samples, so a heavily lagging
-        // filter would swallow much of the climb. Regression guard for the
-        // smoothing constant.
+        // One point every ~100 m: a heavily lagging filter would swallow much of the climb.
         val sparse = List<Double?>(50) { i -> 750.0 * (i / 49.0) }
         assertTrue(RouteElevation.elevationGainFromAltitudes(sparse) > 680.0)
     }
 
     @Test
     fun `a two point climb is not swallowed by the smoothing lag`() {
-        // With only two points the smoothing lag IS the whole route; the
-        // residual settle against the last raw altitude recovers it.
+        // With two points the lag is the whole route; the residual settle recovers it.
         assertEquals(80.0, RouteElevation.elevationGainFromAltitudes(listOf(10.0, 90.0)), 2.0)
         assertEquals(80.0, RouteElevation.elevationLossFromAltitudes(listOf(90.0, 10.0)), 2.0)
     }
 
     @Test
     fun `movement below the step threshold never accumulates`() {
-        // Jitter of plus-minus 2 m, five hundred times. Every sample is under
-        // the 5 m step, so the reference must not move and nothing is banked.
+        // Jitter of plus-minus 2 m, under the 5 m step, so nothing is banked.
         val jitter = List<Double?>(500) { i -> if (i % 2 == 0) 2.0 else -2.0 }
         assertEquals(0.0, RouteElevation.elevationGainFromAltitudes(jitter), 0.0)
     }
 
     @Test
     fun `null and non-finite altitudes are skipped not treated as zero`() {
-        // Treating a null as 0 m would invent a fall to sea level and a climb
-        // back out.
+        // A null as 0 m would invent a fall to sea level.
         val withHoles = listOf(100.0, null, 103.0, Double.NaN, 106.0, null, 109.0)
         assertTrue(RouteElevation.elevationGainFromAltitudes(withHoles) < 14.0)
         assertEquals(0.0, RouteElevation.elevationGainFromAltitudes(emptyList()), 0.0)

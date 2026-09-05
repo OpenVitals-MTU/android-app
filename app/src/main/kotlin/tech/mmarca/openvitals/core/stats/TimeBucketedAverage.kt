@@ -4,25 +4,9 @@ import java.time.Duration
 import java.time.Instant
 
 /**
- * Mean of per-minute bucket means: the time-weighted average for sampled
- * series, stated once instead of re-derived per metric.
- *
- * A plain per-sample mean weights a reading by how often the device wrote,
- * not by how long the value held. Gadgetbridge-style sources record background
- * heart rate about once a minute but workouts at ~1 Hz, so a 50-minute run
- * (~3000 samples) outweighs the other 23 hours (~1440 samples) and a day that
- * averaged 79 bpm prints as 115. Averaging each occupied bucket first and then
- * averaging the buckets gives every recorded minute the same weight, which is
- * also what Gadgetbridge and Google Fit report.
- *
- * Empty buckets are skipped rather than interpolated: minutes with no reading
- * say nothing, and a sparse metric (a lone SpO2 spot check) still counts as
- * one bucket instead of being swallowed by a denser stretch elsewhere.
- *
- * Uniformly sampled series (at most one sample per bucket) reduce to the plain
- * mean, so callers with well-behaved sources see no change.
- *
- * Returns null on no samples, for the same reason [averageOrNull] does.
+ * Mean of per-minute bucket means: the time-weighted average. A per-sample
+ * mean weights by how often the device wrote, so a 1 Hz workout printed a
+ * 79 bpm day as 115. Empty buckets are skipped. Null on no samples.
  */
 fun <T> Iterable<T>.timeBucketedAverageOrNull(
     time: (T) -> Instant,

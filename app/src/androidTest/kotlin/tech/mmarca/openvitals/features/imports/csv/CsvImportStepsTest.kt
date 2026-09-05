@@ -12,14 +12,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * The steps of Flutter's `test/features/imports/csv/csv_import_screen_test.dart`
- * that Kotlin exposes without a view model.
- *
- * The mapping, confirm and done steps take `CsvImportViewModel` directly, and
- * it needs a `Context`, the import service, the health repository and the
- * Health Connect manager — so those cases stay unported until those steps take
- * state and callbacks instead. That is a refactor with its own merits rather
- * than something to smuggle in behind a test, and the matrix says so.
+ * The steps Kotlin exposes without a view model. The mapping, confirm and done steps take
+ * `CsvImportViewModel` directly and stay unported until they take state and callbacks.
  */
 class CsvImportStepsTest {
 
@@ -28,8 +22,7 @@ class CsvImportStepsTest {
 
     @Test
     fun theImporterOpensOnThePickStepWithItsExplainer() {
-        // The explainer carries the one promise that matters before a file
-        // picker opens: nothing is written until you confirm.
+        // The one promise that matters before a picker opens: nothing is written until you confirm.
         setPickStep(CsvImportState())
 
         composeRule
@@ -63,8 +56,7 @@ class CsvImportStepsTest {
 
     @Test
     fun aFileWithOnlyAHeaderRowShowsTheEmptyFileMessage() {
-        // A header with no rows under it is a readable file with nothing to
-        // import — distinct from an unreadable one, and it offers the way back.
+        // A header with no rows is readable but empty, distinct from unreadable, and offers the way back.
         var back = 0
         composeRule.setContent {
             OpenVitalsTheme { CsvEmptyFileBody(onBack = { back++ }) }

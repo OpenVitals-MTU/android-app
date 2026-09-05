@@ -27,11 +27,8 @@ import kotlin.math.max
 import tech.mmarca.openvitals.devices.garmin.FitCounterWatermark
 
 /**
- * Maps decoded Garmin wellness FIT data onto Health Connect [Record]s — the
- * same write pipeline (`AppleHealthImportRepository.insertImportedRecords`)
- * the Apple Health importer uses. Port of the Flutter build's
- * `fit_wellness_import.dart`; every `clientRecordId` scheme is byte-identical
- * so records synced by the Flutter build dedup against these.
+ * Maps decoded Garmin wellness FIT data onto Health Connect [Record]s. Every
+ * `clientRecordId` scheme matches the Flutter build, so old records dedup.
  */
 
 /** Health Connect file type for a Garmin sleep FIT file (`file_id.type`). */
@@ -44,12 +41,9 @@ private fun importMetadata(clientRecordId: String): Metadata =
     )
 
 /**
- * Turns a decoded [FitSleepSession] into a `SleepSessionRecord` import, or an
- * empty list if no stage mapped to a Health Connect stage.
- *
- * The `clientRecordId` is derived from the session start so a re-import of the
- * same export dedupes instead of duplicating the night (Health Connect keys
- * upserts on `clientRecordId`).
+ * Turns a [FitSleepSession] into a `SleepSessionRecord` import, or an empty
+ * list if no stage mapped. The `clientRecordId` comes from the start, so a
+ * re-import dedupes.
  */
 fun fitSleepImportRecords(session: FitSleepSession): List<Record> {
     val stages = session.stages.mapNotNull { stage ->
@@ -75,10 +69,7 @@ fun fitSleepImportRecords(session: FitSleepSession): List<Record> {
     )
 }
 
-/**
- * Turns a decoded [FitHrvReading] into a `HeartRateVariabilityRmssdRecord`
- * import. Deterministic `clientRecordId` so a re-import dedupes.
- */
+/** Turns a [FitHrvReading] into an RMSSD record. Deterministic id, so re-imports dedupe. */
 fun fitHrvImportRecords(reading: FitHrvReading): List<Record> = listOf(
     HeartRateVariabilityRmssdRecord(
         time = reading.time,
@@ -88,12 +79,7 @@ fun fitHrvImportRecords(reading: FitHrvReading): List<Record> = listOf(
     ),
 )
 
-/**
- * Turns the metrics file's VO2 max into a `Vo2MaxRecord` import.
- *
- * Only VO2 max: recovery time, training readiness and training load have no
- * Health Connect type and go to the app's own table instead.
- */
+/** Turns the metrics file's VO2 max into a record. The rest has no Health Connect type. */
 fun fitMetricsImportRecords(metrics: FitMetricsSummary): List<Record> {
     val time = metrics.time ?: return emptyList()
     val vo2Max = metrics.vo2Max ?: return emptyList()
@@ -109,14 +95,8 @@ fun fitMetricsImportRecords(metrics: FitMetricsSummary): List<Record> {
 }
 
 /**
- * Turns a Health Snapshot's SpO2 and respiration samples into Health Connect
- * records. Its stress and Body Battery have no Health Connect type and go to
- * the app's own table instead.
- *
- * The `clientRecordId`s are keyed on the sample instant, so a re-import of the
- * same recording overwrites rather than duplicating — and they are namespaced
- * apart from the all-day series, which is a genuinely different measurement of
- * the same quantity and must not overwrite it.
+ * Turns a Health Snapshot's SpO2 and respiration into records. Ids are keyed
+ * on the sample instant and namespaced apart from the all-day series.
  */
 fun fitHealthSnapshotImportRecords(snapshot: FitHealthSnapshot): List<Record> = buildList {
     for ((at, percent) in snapshot.spo2) {
@@ -142,14 +122,8 @@ fun fitHealthSnapshotImportRecords(snapshot: FitHealthSnapshot): List<Record> = 
 }
 
 /**
- * Turns daytime naps into `SleepSessionRecord` imports.
- *
- * The nap message (412) only bounds the sleep — start and end, no `sleep_level`
- * breakdown — so the whole span is recorded as ONE light-sleep stage, the same
- * call Gadgetbridge makes ("overlap nap samples as light sleep"). A stage-less
- * session read as "in bed, nothing recorded" on the timeline and contributed
- * nothing to the stage shares; light is the honest floor for a nap the watch
- * did classify as sleep.
+ * Turns naps into `SleepSessionRecord` imports. A nap has no stages, so the
+ * whole span is one light-sleep stage, as Gadgetbridge does.
  */
 fun fitNapImportRecords(naps: List<FitNap>): List<Record> = buildList {
     for (nap in naps) {
@@ -175,14 +149,13 @@ fun fitNapImportRecords(naps: List<FitNap>): List<Record> = buildList {
     }
 }
 
-/** FIT `monitoring.distance` is in centimetres-of-a-metre (raw ÷ 100 = metres). */
+/** FIT `monitoring.distance` is raw / 100 metres. */
 private const val FitMonitoringDistanceScale = 100.0
 
 /**
- * Turns a monitoring file (type 32) into its Health Connect records: the
- * one-per-file summaries (resting HR, BMR), the HR and respiration series
- * aggregated to **hourly**, and NOT the cumulative counters — see
- * [fitMonitoringCounterRecords], which cannot read them a file at a time.
+ * Turns a monitoring file (type 32) into records: the per-file summaries and
+ * the hourly HR and respiration series. Counters go through
+ * [fitMonitoringCounterRecords], which needs every file of a sync.
  */
 fun fitMonitoringImportRecords(m: FitMonitoringSummary): List<Record> = buildList {
     val rhrTime = m.restingHeartRateTime
@@ -210,16 +183,8 @@ fun fitMonitoringImportRecords(m: FitMonitoringSummary): List<Record> = buildLis
         )
     }
 
-    // HR — one series record per hour, samples packed in.
-    //
-    // Keyed on the bucket's FIRST SAMPLE, not on the hour. Keying on the hour
-    // assumed one file per day, so no two files could ever touch the same
-    // hour. A watch sync breaks that: it delivers a fresh file every few
-    // minutes, so several files land in one hour and, sharing a
-    // clientRecordId, each REPLACED the last — an hour of heart rate
-    // collapsing to whichever sliver synced most recently. First-sample keying
-    // stays idempotent for a re-imported file (same samples, same key) while
-    // letting successive files coexist.
+    // One HR series record per hour, keyed on the bucket's first sample.
+    // Keying on the hour let files synced minutes apart replace each other.
     for (bucket in bucketByHour(m.heartRateSamples) { it.first }.values) {
         val samples = bucket.sortedBy { it.first }
         val start = samples.first().first
@@ -239,10 +204,7 @@ fun fitMonitoringImportRecords(m: FitMonitoringSummary): List<Record> = buildLis
         )
     }
 
-    // Respiration — one averaged reading per hour bucket, keyed and timed on
-    // its first sample for the same reason as HR above. Stamping it at the top
-    // of the hour additionally made every file in that hour claim the same
-    // instant.
+    // Respiration: one averaged reading per hour, keyed on its first sample.
     for (bucket in bucketByHour(m.respiration) { it.first }.values) {
         val readings = bucket.sortedBy { it.first }
         val avg = readings.sumOf { it.second } / readings.size
@@ -259,15 +221,9 @@ fun fitMonitoringImportRecords(m: FitMonitoringSummary): List<Record> = buildLis
 }
 
 /**
- * The cumulative step / distance / active-calorie counters a monitoring file
- * carried, kept apart from the rest so a caller can accumulate them across
- * every file of a sync before mapping.
- *
- * Everything else in a monitoring file reads a file at a time: a heart-rate
- * bucket is complete in the file that holds it. These are not — they are
- * day-cumulative, and what happened between the last snapshot of one file and
- * the first of the next lives in NEITHER file's own numbers, only in the
- * difference between them.
+ * The cumulative counters a monitoring file carried, kept apart so a caller
+ * can accumulate them across every file of a sync. Movement between two files
+ * lives only in the difference between them.
  */
 class FitMonitoringCounters(
     val steps: List<FitMonitoringPoint> = emptyList(),
@@ -296,41 +252,19 @@ fun fitMonitoringCounters(m: FitMonitoringSummary): FitMonitoringCounters =
 /** The counter records, and the watermarks the caller must persist. */
 class FitCounterImport(
     val records: List<Record>,
-    /** By `yyyy-mm-dd` local day, for the caller to store and hand back next time. */
+    /** By local `yyyy-mm-dd`, for the caller to store and hand back. */
     val watermarks: Map<String, FitCounterWatermark>,
 )
 
 /**
- * Turns the day-cumulative counters into INTRADAY Health Connect records: one
- * per step the counter actually took, spanning the minutes between the two
- * snapshots that bracket it.
+ * Turns the day-cumulative counters into intraday records, one per step the
+ * counter took, spanning the snapshots that bracket it.
  *
- * A single record per day is what a cumulative counter most obviously maps
- * to, and it is what this wrote first — but it says only how far you walked,
- * never when, so Health Connect drew a day's steps as one straight ramp from
- * midnight to now. The watch samples the counters about once a minute, so the
- * shape is there to be read; it just has to be read as differences.
- *
- * The rules that keep the total honest:
- *
- *  * The snapshots are the per-instant sums across activity types, so a total
- *    moved between buckets never shows up as a step taken.
- *  * Only forward differences are recorded. The counters roll over, and a
- *    rollover is not a walk backwards.
- *  * A day differences from where the day before it ended, NOT from zero —
- *    see [carryInto]. The watch does not roll its counters over at local
- *    midnight.
- *  * Nothing is written for a snapshot at or before the previous watermark:
- *    those minutes are already in Health Connect.
- *  * Records never OVERLAP, across syncs as well as within one. Health Connect
- *    discards the overlapping span when it aggregates, so two records that
- *    share a minute report less between them than either claims — a day read
- *    889 while its own records summed to 1007. A record's end follows the data
- *    and can run past later grid slots, so a run that resumes inside one of
- *    those slots starts its first record at the resume point rather than at the
- *    slot's edge.
- *  * A zero difference writes no record. Standing still is not an event, and
- *    a night of them would bury the day in empty entries.
+ * Rules that keep the total honest: snapshots are summed across types; only
+ * forward differences count; a day differences from where the day before
+ * ended ([carryInto]); nothing is written at or before the watermark; records
+ * never overlap, because Health Connect drops overlaps when it aggregates; a
+ * zero difference writes nothing.
  */
 fun fitMonitoringCounterRecords(
     counters: FitMonitoringCounters,
@@ -340,9 +274,7 @@ fun fitMonitoringCounterRecords(
     val records = mutableListOf<Record>()
     val watermarks = mutableMapOf<String, FitCounterWatermark>()
 
-    // Where the walk left the counters on the day just mapped, so the next one
-    // can carry across midnight. Days come out of [counterDays] in order,
-    // which is what makes this the day before the one being mapped.
+    // Where the previous day left the counters, to carry across midnight.
     var carry = CounterCarry()
 
     for (day in counterDays(counters, zone)) {
@@ -352,7 +284,7 @@ fun fitMonitoringCounterRecords(
         val calories = dayTypedPoints(counters.calories, day, zone)
         val carried = carryInto(day, carry, previous)
 
-        // The instants any counter reported, so the three stay on one timeline.
+        // Every instant any counter reported, so the three share a timeline.
         val instants = buildSet {
             steps.forEach { add(it.time) }
             distance.forEach { add(it.time) }
@@ -360,14 +292,8 @@ fun fitMonitoringCounterRecords(
         }.sorted()
         if (instants.isEmpty()) continue
 
-        // The walk's memory of each counter, by activity type. A restated
-        // type's delta is its value against what the map holds; a type the map
-        // has never seen is ADOPTED — with its full value where nothing was
-        // ever counted before it (a fresh day, a lost watermark), and silently
-        // where a watermark from before the maps existed makes "already
-        // counted or not" unknowable. Silent adoption loses at most the
-        // minutes since that type's last restatement, once; counting it could
-        // re-write the whole day.
+        // Per-type memory of the walk. A type never seen is adopted: with its
+        // full value on a fresh day, silently under a pre-map watermark.
         val start: Instant
         val adoptSilently: Boolean
         val stepsContext: MutableMap<Int, Int>
@@ -391,26 +317,19 @@ fun fitMonitoringCounterRecords(
         val distanceAt = byInstant(distance)
         val caloriesAt = byInstant(calories)
 
-        // Deltas folded onto a fixed grid anchored at local midnight, so a
-        // record's identity is a pure function of its wall clock.
+        // Deltas on a fixed grid from local midnight, so ids depend only on the clock.
         val buckets = mutableMapOf<Long, CounterDeltas>()
         var from = start
 
-        // The bucket the previous sync stopped inside was written half-filled
-        // (see [FitCounterWatermark.openBucketSteps]). Seed it with what is
-        // already in Health Connect, so the deltas this run folds in produce
-        // the WHOLE bucket and the upsert replaces the half rather than losing
-        // it.
+        // The bucket the previous sync stopped in was written half-filled.
+        // Seed it from Health Connect so the upsert replaces the whole bucket.
         var seededBucket: Long? = null
         if (mark != null &&
             (mark.openBucketSteps > 0 || mark.openBucketDistance > 0 || mark.openBucketCalories > 0)
         ) {
             val seed = counterBucketStart(mark.time, day.start)
             seededBucket = seed
-            // Re-opened at the instant the record already in Health Connect
-            // claims, not at the grid position: that record may itself have
-            // begun mid-bucket, and re-writing it from the grid would widen it
-            // back over its predecessor.
+            // Re-opened at the instant the stored record claims, not the grid position.
             buckets[seed] = CounterDeltas(
                 mark.openBucketStart ?: Instant.ofEpochMilli(seed),
             ).apply {
@@ -422,22 +341,13 @@ fun fitMonitoringCounterRecords(
         }
 
         for (at in instants) {
-            // Already imported. Not an error — every sync re-reads the file it
-            // was halfway through, and the watch re-offers a file whose
-            // archive flag did not stick.
+            // Already imported. Every sync re-reads the file it was halfway through.
             if (!at.isAfter(from)) continue
 
-            // The movement accrued over [from, at), so it belongs to the
-            // bucket the interval STARTED in — not the one it ended in, which
-            // would push a walk forward by up to a bucket every time.
+            // Movement over [from, at) belongs to the bucket the interval started in.
             val bucket = counterBucketStart(from, day.start)
-            // The grid fixes the record's ID; its START is the later of the
-            // grid position and where this run resumed. Only the first bucket
-            // of a run can differ, and it is exactly the one that must: the
-            // previous sync's last record ran to [start], so beginning this one
-            // at the grid slot CONTAINING [start] would overlap it — and Health
-            // Connect drops the overlap when it aggregates, silently shortening
-            // the day by up to a bucket per sync.
+            // The grid fixes the id; the start is the later of the grid position and
+            // where this run resumed, so it cannot overlap the previous sync's record.
             buckets.getOrPut(bucket) {
                 CounterDeltas(maxOf(Instant.ofEpochMilli(bucket), start))
             }.add(
@@ -450,30 +360,18 @@ fun fitMonitoringCounterRecords(
             from = at
         }
 
-        // An interval that starts in one bucket can end in the next, so a
-        // bucket's data-driven end can run past its successor's start. Clamp
-        // each to the next OCCUPIED bucket: that keeps records non-overlapping
-        // without shortening the sparse case, where the gap to the next bucket
-        // is real.
+        // Clamp each bucket's end to the next occupied bucket so records never overlap.
         val ordered = buckets.keys.sorted()
         for (i in 0 until ordered.size - 1) {
             buckets.getValue(ordered[i]).clampEndTo(Instant.ofEpochMilli(ordered[i + 1]))
         }
 
-        // The bucket the walk stopped inside stays open: the next sync
-        // recomputes it in full from the watermark's seed. Every bucket is
-        // emitted, the open one included — that is what saves the final bucket
-        // of a day, which no later sync would ever come back to close.
+        // The open bucket is emitted too; the next sync recomputes it from the seed.
         val openBucket = counterBucketStart(from, day.start)
 
-        // One bucket per day is written under the legacy day-keyed id, so that
-        // it OVERWRITES the pre-intraday whole-day record instead of stacking
-        // beside it. Only a bucket never yet written under its grid id can
-        // retire it: the open bucket goes out under a grid id this run, and
-        // the seeded one did last run, so day-keying either would leave the
-        // grid-id record standing beside the day-keyed one — the double count
-        // this exists to prevent. The id is handed out once, latched — see
-        // [FitCounterWatermark.legacyRetired].
+        // One bucket per day goes out under the legacy day-keyed id, overwriting the
+        // old whole-day record. Only a bucket never written under a grid id may.
+        // See [FitCounterWatermark.legacyRetired].
         val emitted = buckets.keys.sorted()
         var legacyRetired = mark?.legacyRetired ?: false
         val closed = emitted.filter { it != openBucket && it != seededBucket }
@@ -501,7 +399,7 @@ fun fitMonitoringCounterRecords(
             legacyRetired = legacyRetired,
         )
 
-        // A counter this day never reported keeps whatever was carried into it.
+        // A counter this day never reported keeps its carried value.
         carry = CounterCarry(
             day = day.localDate,
             stepsByType = if (steps.isEmpty()) carried.stepsByType else stepsContext.toMap(),
@@ -514,13 +412,8 @@ fun fitMonitoringCounterRecords(
 }
 
 /**
- * One counter's net movement at one instant, against [context].
- *
- * Netted across every type restated at the instant, THEN clamped: the watch
- * moves a total from one type to another and zeroes the one it left, and only
- * same-instant netting keeps a transfer from counting twice. A negative net —
- * the day-close rollover — clamps to nothing, and the context still adopts the
- * new lows so what follows counts from there.
+ * One counter's net movement at one instant. Netted across types first, then
+ * clamped, so a total moved between types does not count twice.
  */
 private fun instantDelta(
     restated: List<FitMonitoringPoint>?,
@@ -542,16 +435,9 @@ private fun instantDelta(
 }
 
 /**
- * What a day with no watermark of its own starts from, per type.
- *
- * The watch resets its counters when it closes the monitoring day, some time
- * after local midnight — not at it. So a type whose first restatement of the
- * day is BELOW where yesterday left it has been reset, and its readings are
- * the day's own accrual; a type merely absent from the first readings has
- * said nothing yet, and yesterday's value stands (delta-neutral until it
- * speaks). This per-type distinction is what tells a real rollover from a
- * partial first reading — comparing summed totals could not, and turned
- * yesterday's steps into today's.
+ * What a day with no watermark starts from, per type. The watch resets after
+ * local midnight, not at it: a type that starts below yesterday has reset, a
+ * type absent from the first readings has not spoken yet.
  */
 private fun dayStartContext(
     carried: Map<Int, Int>?,
@@ -574,17 +460,11 @@ private fun byInstant(points: List<FitMonitoringPoint>): Map<Instant, List<FitMo
     points.groupBy { it.time }
 
 /**
- * What the counters read at the end of the day before the one being mapped.
- *
- * Null maps mean there is nothing typed to carry: either no history at all
- * (the first day of a run — the first reading IS the day's accrual), or a
- * watermark from before the per-type maps existed (see the adopt rule).
+ * The counters at the end of the previous day. Null maps mean nothing typed
+ * to carry: no history, or a pre-map watermark.
  */
 private class CounterCarry(
-    /**
-     * The local day these came off, so a carry can only be spent on the day
-     * that actually follows it.
-     */
+    /** The local day these came off. A carry is only spent on the day that follows. */
     val day: LocalDate? = null,
     val stepsByType: Map<Int, Int>? = null,
     val distanceByType: Map<Int, Int>? = null,
@@ -596,15 +476,9 @@ private class CounterCarry(
 }
 
 /**
- * What [day] should difference its first readings against.
- *
- * The counters do NOT roll over at local midnight — the watch closes its
- * monitoring day after it has finalised the night — so a morning sync carries
- * messages timestamped today whose counters are still yesterday's running
- * totals. A day therefore starts from where the day before it ended: this
- * run's own walk when it mapped that day, and otherwise the watermark that
- * day was left at. Only the immediately preceding day counts — across a gap
- * the counter has certainly rolled over.
+ * What [day] differences its first readings against: the day before it, from
+ * this run's walk or its watermark. The watch does not roll over at local
+ * midnight. Only the immediately preceding day counts.
  */
 private fun carryInto(
     day: MonitoringDay,
@@ -623,19 +497,9 @@ private fun carryInto(
 }
 
 /**
- * The grid one counter record covers.
- *
- * Records are written on a fixed grid from local midnight rather than on the
- * intervals a particular sync happened to see. The interval boundaries depend
- * on which files the watch offered and where the last sync stopped, so an id
- * derived from them changes between runs: a re-sync re-partitions the day and
- * every record after the first lands BESIDE the previous run's rather than
- * replacing it. A grid position is a property of the clock, so the same
- * minutes always produce the same id and Health Connect upserts.
- *
- * Fifteen minutes: the watch reports about once a minute, so per-instant
- * records would be ~1440 a day per counter, while an hour is coarse enough to
- * smear a walk across a lunch break.
+ * The grid one counter record covers. A fixed grid from local midnight keeps
+ * ids stable across syncs, so Health Connect upserts. Fifteen minutes: per
+ * instant is ~1440 records a day, an hour smears a walk.
  */
 private val CounterBucket = Duration.ofMinutes(15)
 
@@ -647,14 +511,9 @@ private fun counterBucketStart(at: Instant, dayStart: Instant): Long {
 }
 
 /**
- * One grid bucket's accumulated counter movement.
- *
- * The grid fixes the record's IDENTITY and its start; the span still follows
- * the data, running to the end of the last interval folded in. Pinning the
- * end to the grid too would claim a first-sync-of-the-day reading of 8,000
- * steps happened in the first quarter hour after midnight. Intervals are
- * contiguous and each lands wholly in the bucket it started in, so
- * consecutive buckets still cannot overlap.
+ * One grid bucket's movement. The grid fixes the id and start; the end
+ * follows the data. Intervals land wholly in their starting bucket, so
+ * consecutive buckets cannot overlap.
  */
 private class CounterDeltas(val start: Instant) {
     var end: Instant = start
@@ -669,19 +528,12 @@ private class CounterDeltas(val start: Instant) {
         if (until.isAfter(end)) end = until
     }
 
-    /**
-     * Pulls the end back to [limit] when the last interval folded in ran past
-     * the next occupied bucket. Never pushes it forward, and never before the
-     * start.
-     */
+    /** Pulls the end back to [limit]. Never forward, never before the start. */
     fun clampEndTo(limit: Instant) {
         if (end.isAfter(limit)) end = if (limit.isAfter(start)) limit else start
     }
 
-    /**
-     * Extends the end to [until] without adding movement — for re-seeding a
-     * half-written bucket with the span its record already claims.
-     */
+    /** Extends the end to [until] without adding movement, for re-seeding. */
     fun stretchTo(until: Instant) {
         if (until.isAfter(end)) end = until
     }
@@ -728,20 +580,13 @@ private class CounterDeltas(val start: Instant) {
 
 /** One local day a monitoring file touched, and the span to record it over. */
 private class MonitoringDay(
-    /**
-     * Stable `yyyy-mm-dd`, so every sync of the same day writes the same
-     * `clientRecordId` and Health Connect upserts instead of accumulating.
-     */
+    /** Stable `yyyy-mm-dd`, so every sync of the day writes the same id. */
     val key: String,
     /** The local calendar day. */
     val localDate: LocalDate,
-    /**
-     * Local midnight. The counter is the whole day's running total, so the
-     * record has to span the whole day or Health Connect would attribute the
-     * day's steps to whatever few minutes the file happened to cover.
-     */
+    /** Local midnight. The record must span the whole day. */
     val start: Instant,
-    /** The last sample seen for the day — the total is only known up to here. */
+    /** The last sample seen for the day. */
     val end: Instant,
 )
 
@@ -762,27 +607,20 @@ private fun daysOf(series: List<List<FitMonitoringPoint>>, zone: ZoneId): List<M
     return lastByDay.entries
         .map { (day, last) ->
             val start = day.atStartOfDay(zone).toInstant()
-            // An interval record must not be empty: a file whose only sample
-            // sits at local midnight would otherwise produce start == end.
+            // An interval record must not be empty.
             val end = if (last.isAfter(start)) last else start.plus(1, ChronoUnit.MINUTES)
             MonitoringDay(key = dayKey(day), localDate = day, start = start, end = end)
         }
         .sortedBy { it.key }
 }
 
-/**
- * A local day as `yyyy-mm-dd` — the watermark key, and what a day's records
- * are identified by.
- */
+/** A local day as `yyyy-mm-dd`: the watermark key. */
 private fun dayKey(day: LocalDate): String =
     "%04d-%02d-%02d".format(day.year, day.monthValue, day.dayOfMonth)
 
 /**
- * One counter's points of [day], in time order, with the untyped rule applied:
- * a counter naming no activity beside typed ones is the same day's total under
- * a name of its own — counting it beside them counts those steps twice — but
- * when the file declared no type anywhere, the untyped counter IS the total
- * and stays.
+ * One counter's points of [day], in time order. An untyped counter beside
+ * typed ones is the day's total and is dropped; alone, it is the total and stays.
  */
 private fun dayTypedPoints(
     points: List<FitMonitoringPoint>,
@@ -805,11 +643,7 @@ private fun dayTypedPoints(
 private fun <T> bucketByHour(items: List<T>, timeOf: (T) -> Instant): Map<Long, List<T>> =
     items.groupBy { timeOf(it).truncatedTo(ChronoUnit.HOURS).toEpochMilli() }
 
-/**
- * Garmin `sleep_level` → Health Connect `SleepSessionRecord.Stage`.
- * `unmeasurable` has no Health Connect stage, so it is dropped (the gap
- * between stages simply carries no classification).
- */
+/** Garmin `sleep_level` to Health Connect stage. `unmeasurable` is dropped. */
 private fun sleepStageFor(level: FitSleepLevel): Int? = when (level) {
     FitSleepLevel.AWAKE -> SleepSessionRecord.STAGE_TYPE_AWAKE
     FitSleepLevel.LIGHT -> SleepSessionRecord.STAGE_TYPE_LIGHT

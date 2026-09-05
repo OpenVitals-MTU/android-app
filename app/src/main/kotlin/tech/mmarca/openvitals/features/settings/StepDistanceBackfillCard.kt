@@ -30,11 +30,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsTonalButton
 
-/**
- * Opt-in "distance from steps" backfill: a toggle plus the user's stride
- * length. Stored in meters; shown in cm (metric) or inches (imperial), with
- * the conversion done at the field boundary like the body profile card.
- */
+/** The "distance from steps" toggle and stride length. Stored in meters, shown in cm or inches. */
 @Composable
 internal fun StepDistanceBackfillCard(
     enabled: Boolean,

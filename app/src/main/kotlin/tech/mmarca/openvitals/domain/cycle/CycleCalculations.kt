@@ -6,12 +6,8 @@ import kotlin.math.roundToLong
 import kotlin.math.sqrt
 
 /**
- * Cross-cycle statistics derived from bleeding days.
- *
- * All fields degrade gracefully with sparse data: [currentCycleDay] is null
- * without a recent cycle start, the length statistics and [predictedWindows]
- * are empty until [CycleCalculations.MinCompletedCyclesForPrediction] cycles
- * have completed.
+ * Cross-cycle statistics from bleeding days. Everything degrades with
+ * sparse data: predictions need [CycleCalculations.MinCompletedCyclesForPrediction] cycles.
  */
 data class CycleStatistics(
     val cycleStarts: List<LocalDate> = emptyList(),
@@ -22,18 +18,10 @@ data class CycleStatistics(
 )
 
 /**
- * Pure cycle arithmetic on local calendar days.
- *
- * The rules reimplement the statistical method popularised by drip
- * (bloodyhealth/drip): a cycle starts on a bleeding day preceded by more than
- * [MaxBreakInBleedingDays] bleeding-free days, predictions need
- * [MinCompletedCyclesForPrediction] completed cycles and use the mean cycle
- * length with a spread chosen by the standard deviation. No fertility or
- * ovulation inference is performed here.
- *
- * Callers map instants to [LocalDate] in the current system zone; a timezone
- * change can therefore shift a bleeding day by one, which can move a cycle
- * start accordingly. This matches how the rest of the app buckets days.
+ * Pure cycle arithmetic on local days, after drip's method: a cycle starts
+ * on a bleeding day preceded by more than [MaxBreakInBleedingDays] free
+ * days; predictions use the mean length with a spread from the standard
+ * deviation. No fertility inference. A timezone change can shift a day.
  */
 object CycleCalculations {
 
@@ -43,12 +31,7 @@ object CycleCalculations {
     const val MaxDisplayableCycleDay = 99
     const val NarrowWindowStdDevThreshold = 1.5
 
-    /**
-     * Groups bleeding days into contiguous segments, tolerating gaps of at
-     * most [maxBreakDays] bleeding-free days inside one segment. Each
-     * segment's start is a cycle start; the segments are also the desired
-     * menstruation period spans.
-     */
+    /** Groups bleeding days into segments tolerating gaps of [maxBreakDays]. Each start is a cycle start. */
     fun bleedingSegments(
         bleedingDays: Collection<LocalDate>,
         maxBreakDays: Int = MaxBreakInBleedingDays,
@@ -90,8 +73,7 @@ object CycleCalculations {
         val periodDistance = mean.roundToLong()
         val variation = if (stdDev < NarrowWindowStdDevThreshold) 1L else 2L
 
-        // Overlapping windows carry no information; suppress prediction when
-        // the cycle length varies too much relative to its own spread.
+        // Overlapping windows carry no information; suppress when the length varies too much.
         val windows = if (periodDistance - 5 < variation) {
             emptyList()
         } else {

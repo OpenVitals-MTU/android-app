@@ -12,11 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
-/**
- * Pins the per-kind payload rules of the cycle write path, and pins the
- * domain-mirrored constants against the Health Connect library constants —
- * a drifted constant would silently write wrong enum values into records.
- */
+/** The per-kind payload rules of the cycle write path, and the mirrored constants against the library's. */
 class CycleWriteValidationTest {
 
     private val now: Instant = Instant.parse("2026-08-05T10:00:00Z")

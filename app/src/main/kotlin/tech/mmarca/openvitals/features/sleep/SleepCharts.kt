@@ -55,12 +55,8 @@ private val SleepOverviewChartWidth = 168.dp
 private val SleepOverviewChartHeight = 48.dp
 
 /**
- * The overview's top cards always render; the key-metrics list below them is period-only.
- *
- * On the day view every one of those four cards repeats something the day already shows better:
- * the schedule is the timeline chart's own axis, REM and deep sleep are measured bars in the
- * share-of-time-in-bed card, and sleep efficiency has been superseded by the sleep score that
- * drives the recharge battery. A sparkline over a single night says nothing either.
+ * The overview's top cards always render; the key-metrics list is period
+ * only. On the day view each card repeats what the day shows better.
  */
 @Composable
 internal fun SleepOverviewSectionContent(

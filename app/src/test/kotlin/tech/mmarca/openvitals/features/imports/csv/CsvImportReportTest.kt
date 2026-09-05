@@ -141,8 +141,7 @@ class CsvImportReportTest {
 
     @Test
     fun `a derived body fat says what it was derived from, not just its unit`() {
-        // "kilograms" alone on a body-fat column would misdescribe what was
-        // written, which is the thing a troubleshooting report must not do.
+        // "kilograms" alone on a body-fat column would misdescribe what was written.
         assertThat(report()).contains(
             "[2] Fat mass (kg) -> bodyFat (kilograms as a share of the weight column)",
         )

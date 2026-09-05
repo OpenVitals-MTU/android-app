@@ -124,14 +124,8 @@ internal fun ExerciseRoutePoint.elevationLossMetersTo(other: ExerciseRoutePoint)
 }
 
 /**
- * The live GPS accumulator: every number the recording screen shows while you
- * are moving — distance, elevation, speed, the route and its breaks, and the
- * auto-idle clock — is folded here, one accepted fix at a time.
- *
- * Pure, and deliberately so: the controller owns the Geolocation plumbing and
- * the persistence, this owns the arithmetic. The route grew by a point exactly
- * when the returned state has more points than the receiver — which is what
- * the caller uses to decide whether it has a point to append to the store.
+ * The live GPS accumulator, one accepted fix at a time. Pure: the
+ * controller owns the plumbing. The route grew when the result has more points.
  */
 internal fun ActivityRecordingState.withAcceptedLocation(
     point: ExerciseRoutePoint,

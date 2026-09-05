@@ -88,12 +88,7 @@ internal class SleepHealthReader(
         )
     }
 
-    /**
-     * The daily aggregate durations alone — [readSleepData] without the
-     * session fetch, for range consumers (the health report) that only need
-     * one number per day. Chunked so a year-long range never rides in a
-     * single Binder parcel.
-     */
+    /** The daily aggregate durations alone, chunked so a year never rides in one parcel. */
     suspend fun readDailySleepDurations(
         startDate: LocalDate,
         endDate: LocalDate,

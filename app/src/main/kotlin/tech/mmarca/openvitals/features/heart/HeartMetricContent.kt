@@ -64,9 +64,7 @@ internal fun LazyListScope.averageHeartRateContent(
     onDecreaseLowHeartRateThreshold: () -> Unit,
     onIncreaseLowHeartRateThreshold: () -> Unit,
 ) {
-    // This screen is shared by every heart AND vitals metric, so the way through to
-    // heart-rate recovery belongs on the heart-rate one alone — it has nothing to do
-    // with blood pressure or blood oxygen.
+    // Shared by every heart and vitals metric; recovery belongs on heart rate alone.
     if (onOpenHeartRateRecovery != null) {
         item {
             HeartRateRecoveryEntryCard(
@@ -432,11 +430,7 @@ internal fun LazyListScope.restingHeartRateContent(
     when {
         display.hasDayRestingRate -> {
             val dayRestingSamples = state.dayRestingSamples.sortedBy { it.time }
-            // The average comes from the SAME samples as the low and the high. It
-            // used to come from the provider's day aggregate while the range came
-            // from the samples we read — two populations printed as one row, so the
-            // average could sit outside the range printed next to it. The aggregate
-            // is still what we show when there are no samples to average.
+            // The average comes from the same samples as the low and the high.
             val restingValues = dayRestingSamples.map { it.beatsPerMinute }
             val restingBpm = dayRestingSamples
                 .timeBucketedAverageOrNull(time = { it.time }, value = { it.beatsPerMinute.toDouble() })
@@ -626,7 +620,7 @@ internal fun LazyListScope.hrvContent(
     when {
         display.hasDayHrv -> {
             val dayHrvSamples = state.dayHrvSamples.sortedBy { it.time }
-            // Same population for the average as for the range — see restingHeartRateContent.
+            // Same population for the average as for the range.
             val hrvValues = dayHrvSamples.map { it.rmssdMs }
             val hrvMs = dayHrvSamples.timeBucketedAverageOrNull(time = { it.time }, value = { it.rmssdMs })
                 ?: state.dayHrvMs

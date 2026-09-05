@@ -15,25 +15,12 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 /**
- * Port of the Flutter build's `garmin_session_test.dart` — the sync happy
- * path and resilience suites, exercised against a fake watch that speaks the
- * real wire format (every frame through [GarminGfdiFrame.build]/`parse`).
- *
- * The Dart file's notification-conversation tests need the concrete
- * notifications handler, which is sub-milestone 7e; they move there with it.
- * The no-handler subscription behaviour (every current session) is covered
- * here.
+ * Sync happy path and resilience, against a fake watch that speaks the real wire format.
+ * Notification-conversation tests live with the notifications handler.
  */
 class GarminSessionTest {
 
-    /**
-     * A fake vívoactive 5 on the other end of the pipe.
-     *
-     * Speaks the real wire format — every frame it emits goes through
-     * [GarminGfdiFrame.build] and everything it receives through `.parse` —
-     * so the session is exercised against bytes, not against a mock of
-     * itself.
-     */
+    /** A fake vívoactive 5. Every frame goes through [GarminGfdiFrame.build] and `parse`. */
     private open class FakeWatch(
         /** fileIndex -> contents the watch will serve. */
         val files: Map<Int, ByteArray>,
@@ -46,10 +33,7 @@ class GarminSessionTest {
         /** Frames to hand back to the session, in order. */
         val outbox = mutableListOf<ByteArray>()
 
-        /**
-         * Chunk size the watch streams at — small on purpose, so multi-chunk
-         * reassembly is exercised.
-         */
+        /** Small on purpose, so multi-chunk reassembly is exercised. */
         var chunkSize = 8
 
         fun onFrame(frame: GarminGfdiFrame) {
@@ -161,10 +145,7 @@ class GarminSessionTest {
         }
     }
 
-    /**
-     * A watch that serves an EMPTY listing first, then announces it holds
-     * sleep data — the shape observed on a real vívoactive 5.
-     */
+    /** Serves an empty listing first, then announces sleep data, as a real vívoactive 5 does. */
     private class AnnouncingWatch(
         files: Map<Int, ByteArray>,
         /** Bit 26 is SLEEP in SynchronizationMessage.FileType. */
@@ -193,12 +174,7 @@ class GarminSessionTest {
         }
     }
 
-    /**
-     * A watch that also emits the chatter a real vívoactive 5 sends during
-     * the handshake — configuration, protobuf requests, notification
-     * subscription — none of which this app answers with a response of its
-     * own.
-     */
+    /** Also sends the handshake chatter of a real watch: configuration, protobuf requests, notification subscription. */
     private class ChattyWatch(files: Map<Int, ByteArray>) : FakeWatch(files) {
 
         private var chattered = false
@@ -206,9 +182,7 @@ class GarminSessionTest {
         override fun startServing(index: Int) {
             if (index == 0 && !chattered) {
                 chattered = true
-                // Queued BEFORE the listing, as observed on the device.
-                // CONFIGURATION: [length][15 capability bytes], as the real
-                // watch sends.
+                // Queued before the listing, as observed. CONFIGURATION: [length][15 capability bytes].
                 outbox.add(
                     GarminGfdiFrame.build(
                         GarminMessageId.CONFIGURATION,
@@ -335,7 +309,7 @@ class GarminSessionTest {
         )
     }
 
-    // ── happy path ───────────────────────────────────────────────────────────
+    // Happy path.
 
     @Test
     fun `downloads every wanted file byte-exact across chunks`() = runTest {
@@ -420,7 +394,7 @@ class GarminSessionTest {
         assertEquals(2, progress.last().filesDone)
     }
 
-    // ── resilience ───────────────────────────────────────────────────────────
+    // Resilience.
 
     @Test
     fun `skips a file the watch refuses and still gets the others`() = runTest {
@@ -465,9 +439,7 @@ class GarminSessionTest {
             ),
         )
 
-        // Even with a key that WOULD match if one existed, an unkeyed file
-        // must still be fetched — the alternative is losing every future
-        // sleep file.
+        // An unkeyed file must be fetched even when a key would match.
         val files = runSync(watch, alreadySynced = setOf(key(128, 49, 65535)))
 
         assertEquals(1, files.size)
@@ -508,10 +480,8 @@ class GarminSessionTest {
 
         runSync(watch, alreadySynced = setOf(key(128, 49, 1)))
 
-        // "Held" is a key in a list, not a copy on disk — and a key collision
-        // once turned this into telling the watch to drop a day and a half of
-        // monitoring nobody had downloaded. The archive flag follows a
-        // download in this session or it is not sent.
+        // A key collision once told the watch to drop undownloaded monitoring.
+        // Archive only what this session downloaded.
         val archived = watch.received
             .filter { it.messageType == GarminMessageId.SET_FILE_FLAGS }
             .map { payloadShort(it) }
@@ -549,8 +519,7 @@ class GarminSessionTest {
         )
         pump(watch, session)
 
-        // Exactly one reply: the response envelope carrying the time. A bare
-        // ACK as well would be a second answer to the same ask.
+        // One reply: the response carrying the time. A bare ACK too would be a second answer.
         val replies = watch.received.filter {
             it.messageType == GarminMessageId.RESPONSE &&
                 payloadShort(it) == GarminMessageId.CURRENT_TIME_REQUEST
@@ -575,8 +544,7 @@ class GarminSessionTest {
         val session = session(this, watch, emptyGrace = 10.seconds)
         pump(watch, session)
 
-        // The empty directory leaves the session in its grace wait — exactly
-        // where an announcement arrives after a save on the wrist.
+        // The empty directory leaves the session in its grace wait, where an announcement arrives.
         watch.outbox.add(
             GarminGfdiFrame.build(
                 GarminMessageId.FILE_AVAILABLE,
@@ -711,8 +679,7 @@ class GarminSessionTest {
         assertEquals(1, settings.size)
         val payload = settings.single().payload
         assertEquals(3, payload[0].toInt()) // three settings
-        // [ordinal, len=1, value] triplets: auto-upload on, weather
-        // conditions ON (the switch for the whole glance), alerts off.
+        // [ordinal, len, value] triplets: auto-upload on, weather on, alerts off.
         assertEquals(listOf(6, 1, 1), payload.slice(1..3).map { it.toInt() })
         assertEquals(listOf(7, 1, 1), payload.slice(4..6).map { it.toInt() })
         assertEquals(listOf(8, 1, 0), payload.slice(7..9).map { it.toInt() })
@@ -750,9 +717,7 @@ class GarminSessionTest {
         ).also { it.start() }
         pump(watch, session)
 
-        // The watch announces its capabilities — every bit set includes the
-        // weather glance — and the push follows with NO 5014 ask: the watch
-        // only asks while connected, and this link will be gone in seconds.
+        // Every capability bit set, and the push follows with no 5014 ask: the link will be gone in seconds.
         watch.outbox.add(
             GarminGfdiFrame.build(
                 GarminMessageId.CONFIGURATION,
@@ -852,9 +817,7 @@ class GarminSessionTest {
         )
         drain(watch, session)
 
-        // The owner was told (it starts a proper background sync); the held
-        // link itself downloaded nothing — a transfer dragged behind it would
-        // die when the link yields the radio.
+        // The owner was told; the held link downloaded nothing.
         assertEquals(1, announced)
         val requested = watch.received
             .filter { it.messageType == GarminMessageId.DOWNLOAD_REQUEST }
@@ -895,8 +858,7 @@ class GarminSessionTest {
 
         runSync(watch)
 
-        // Not just an ACK: the watch waits for a CONFIGURATION of our own,
-        // and without it a real device re-sent its own and listed nothing.
+        // The watch waits for our CONFIGURATION; without it a real device listed nothing.
         val config = watch.received
             .filter { it.messageType == GarminMessageId.CONFIGURATION }
         assertEquals(1, config.size)
@@ -913,8 +875,7 @@ class GarminSessionTest {
 
         val replies = responsesAbout(watch, GarminMessageId.NOTIFICATION_SUBSCRIPTION)
         assertEquals(1, replies.size)
-        // [short type][status][notificationStatus][enable][unk] — the short
-        // form is what made the watch ask again every second.
+        // [short type][status][notificationStatus][enable][unk]. The short form made the watch ask every second.
         assertEquals(6, replies.single().payload.size)
         // DISABLED — we forward none.
         assertEquals(1, replies.single().payload[3].toInt())
@@ -922,9 +883,7 @@ class GarminSessionTest {
 
     @Test
     fun `every unanswered inbound message gets a generic ACK`() = runTest {
-        // The watch retransmits anything it thinks was lost and will not move
-        // on, which is exactly how a real vívoactive 5 stalled with an empty
-        // directory while re-sending its CONFIGURATION message.
+        // The watch retransmits what it thinks was lost; a real one stalled re-sending CONFIGURATION.
         val watch = ChattyWatch(files = mapOf(0 to directory()))
 
         runSync(watch)
@@ -955,8 +914,7 @@ class GarminSessionTest {
 
         runSync(watch)
 
-        // Device information and auth each get exactly one reply — the
-        // response that carries our details IS the acknowledgement.
+        // Device information and auth get one reply each: the response is the acknowledgement.
         for (type in listOf(
             GarminMessageId.DEVICE_INFORMATION,
             GarminMessageId.AUTH_NEGOTIATION,
@@ -975,8 +933,7 @@ class GarminSessionTest {
         val filterAt = order.indexOf(GarminMessageId.FILTER)
         val directoryAt = order.indexOf(GarminMessageId.DOWNLOAD_REQUEST)
         assertTrue("the filter must be sent", filterAt >= 0)
-        // The watch processes writes in order, so the filter has to land
-        // before the listing is asked for.
+        // Writes are processed in order, so the filter must land before the listing request.
         assertTrue(filterAt < directoryAt)
     }
 
@@ -1018,10 +975,8 @@ class GarminSessionTest {
 
     @Test
     fun `a link that dies during the empty grace still settles the sync`() = runTest {
-        // The grace window waits out a watch that announces late — and it is
-        // exactly when a watch walks out of range. The send inside the timer
-        // throws then, and an unhandled failure there would leave `done`
-        // pending forever.
+        // The grace timer fires as the watch walks out of range.
+        // A send failure there must not leave `done` pending.
         val watch = FakeWatch(files = mapOf(0 to directory()))
         var connected = true
         val session = session(
@@ -1035,8 +990,7 @@ class GarminSessionTest {
         )
 
         pump(watch, session)
-        // The listing came back empty, so the grace timer is now armed. Take
-        // the link away before it fires.
+        // The grace timer is armed; take the link away before it fires.
         connected = false
 
         assertTrue(session.done.await().isEmpty())
@@ -1088,8 +1042,7 @@ class GarminSessionTest {
         pump(watch, session)
         val files = session.done.await()
 
-        // The file is still returned for import, but the watch keeps offering
-        // it — better a redundant download than data we can never fetch again.
+        // Still returned for import, but the watch keeps offering it.
         assertEquals(1, files.size)
         assertTrue(
             watch.received.none { it.messageType == GarminMessageId.SET_FILE_FLAGS },
@@ -1133,14 +1086,12 @@ class GarminSessionTest {
         val before = watch.received.size
         session.handleFrame(GarminGfdiFrame.parse(watch.authNegotiation()))
 
-        // The point of the diagnostic window: a frame arriving after the sync
-        // is still answered. Silence here would make the watch retransmit on
-        // a timer and eventually drop the link the pass depends on.
+        // A frame after the sync is still answered, or the watch retransmits and drops the link.
         assertTrue(watch.received.size > before)
         assertTrue(session.done.await().isEmpty())
     }
 
-    // ── notification subscription without a handler (7e ports the rest) ──────
+    // Notification subscription without a handler.
 
     @Test
     fun `a session with NO handler still replies DISABLED so sync find and settings sessions are unchanged`() =

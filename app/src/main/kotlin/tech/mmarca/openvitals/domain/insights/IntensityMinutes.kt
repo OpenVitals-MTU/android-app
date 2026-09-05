@@ -270,10 +270,7 @@ private fun maxHeartRateContext(
         ObservedMaxHeartRateMinimumBpm,
         restingHeartRate + ObservedMaxHeartRateRestingDeltaBpm,
     )
-    // Same reasoning as cardio load's estimate: without a trustworthy
-    // observed maximum, the age-based (Tanaka) figure beats guessing from a
-    // quiet fortnight's ceiling, which made walking pace count as moderate
-    // intensity all week.
+    // As in cardio load: Tanaka beats a quiet fortnight's ceiling.
     val estimatedMax = maxOf(
         ageYears?.let { tanakaMaxHeartRate(it) } ?: 0L,
         observedMax + 10L,

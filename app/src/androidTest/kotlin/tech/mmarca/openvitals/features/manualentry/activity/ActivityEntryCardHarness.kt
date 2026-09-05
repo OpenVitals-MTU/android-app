@@ -5,13 +5,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.testing.testUnitFormatter
 
-/**
- * `ActivityEntryCard` with every callback defaulted away.
- *
- * The card takes twenty-odd lambdas because the screen above it owns all of the
- * state; a test that only cares about one of them should not have to spell out
- * the other twenty.
- */
+/** `ActivityEntryCard` with every callback defaulted away. */
 @Composable
 internal fun TestActivityEntryCard(
     state: ActivityEntryUiState,

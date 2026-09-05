@@ -27,12 +27,8 @@ val ChartYAxisWidth = 56.dp
 val ChartAxisGap = 8.dp
 
 /**
- * The y bounds of a plot.
- *
- * Not just a pair: the *rule* for choosing bounds kept being written per chart — pad by
- * some percent of the span — and every copy is this idea. A flat series has no span to
- * take a percentage of, so it falls back to the magnitude of the value itself, and a
- * series that never goes negative keeps its floor at zero rather than dipping below it.
+ * The y bounds of a plot, and the one rule for padding them. A flat series
+ * pads against the value's magnitude; a non-negative series keeps a zero floor.
  */
 data class ChartRange(val min: Double, val max: Double) {
     companion object {
@@ -53,8 +49,7 @@ data class ChartRange(val min: Double, val max: Double) {
             if (isEmpty) return ChartRange(0.0, 1.0)
 
             val span = max - min
-            // A flat line has no span; pad against how big the value is instead, so a
-            // steady 70 kg does not get a hairline axis around it.
+            // A flat line has no span; pad against the value's magnitude.
             val basis = if (span > 0) span else if (abs(max) < 1) 1.0 else abs(max)
             val padding = basis * fraction
             val low = min - padding
@@ -108,12 +103,7 @@ fun YAxisChart(
     }
 }
 
-/**
- * [YAxisChart]'s sibling for plots that are more than one draw call: the same
- * label column and gutter, but the plot area is a composable slot, so a chart can
- * layer gesture surfaces ([ChartScrubber], [ChartReveal]) over its canvas while
- * staying aligned with every other chart's axis.
- */
+/** [YAxisChart] with a composable plot slot, so gesture surfaces can layer over the canvas. */
 @Composable
 fun YAxisChartSlot(
     labels: List<String>,

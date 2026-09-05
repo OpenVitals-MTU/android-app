@@ -50,68 +50,35 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
             }
         }
 
-        /**
-         * The Body Energy chain moves off SharedPreferences into Room.
-         *
-         * Creation only, no data copy: the retired prefs store encoded a whole
-         * day as one delimited string keyed by `date|signatureHash`, and every
-         * such row is invalid under the v11 algorithm anyway. The chain rebuilds
-         * itself from Health Connect on the next load, and the warm pass purges
-         * the abandoned prefs keys.
-         */
+        /** The Body Energy chain moves into Room. Creation only; the chain rebuilds itself. */
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 createBodyEnergyChainTables(db)
             }
         }
 
-        /**
-         * Garmin watch-only wellness samples (stress, Body Battery, sleep
-         * score, …) get their system of record.
-         *
-         * Creation only, no data copy: the table is column-identical to the
-         * Flutter build's drift `garmin_wellness_samples`, and phase 5's
-         * migrator imports the preserved drift rows 1:1 after this table
-         * exists.
-         */
+        /** Garmin watch-only wellness samples. Creation only; the migrator imports the drift rows. */
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 createGarminWellnessTable(db)
             }
         }
 
-        /**
-         * Original source apps of records received through phone-to-phone
-         * sync. Creation only, no data copy: records synced before this
-         * version landed without their origin on the wire, so there is
-         * nothing to backfill — they keep displaying the receiver's own
-         * attribution until a peer on a carrying version re-syncs them.
-         */
+        /** Original source apps of synced records. Creation only; nothing to backfill. */
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 createSyncedRecordOriginsTable(db)
             }
         }
 
-        /**
-         * Historical: the watch integration was retired and the wellness table
-         * dropped. Kept so upgrades that already reached version 8 still have a
-         * contiguous path; [MIGRATION_8_9] brings the table back for the restored
-         * Garmin sync.
-         */
+        /** Historical: the wellness table was dropped. Kept for a contiguous path; 8 to 9 restores it. */
         val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("DROP TABLE IF EXISTS `garmin_wellness_samples`")
             }
         }
 
-        /**
-         * Restore Garmin watch wellness samples (stress, Body Battery, sleep
-         * score, …) after the direct sync integration returned.
-         *
-         * Creation only: devices that already dropped the table in 7→8 get an
-         * empty table and re-fill it on the next watch sync.
-         */
+        /** Restores the wellness table. Creation only; it refills on the next sync. */
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 createGarminWellnessTable(db)

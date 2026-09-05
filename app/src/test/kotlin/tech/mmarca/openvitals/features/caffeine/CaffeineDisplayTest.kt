@@ -14,11 +14,7 @@ import tech.mmarca.openvitals.domain.model.CaffeinePoint
 import tech.mmarca.openvitals.domain.model.CaffeineTimeBucket
 import tech.mmarca.openvitals.domain.model.CaffeineTimeOfDayBucket
 
-/**
- * The derivations the caffeine cards do in their build paths — the sleep-impact
- * verdict, the bedtime card's colour test, the top six slices and their shared
- * scale, the curve's axis maximum — as pure functions.
- */
+/** The caffeine cards' derivations as pure functions: the sleep verdict, the top six slices, the curve's axis maximum. */
 class CaffeineDisplayTest {
 
     private val morning: Instant =
@@ -31,11 +27,7 @@ class CaffeineDisplayTest {
 
         assertEquals(CaffeineSleepImpactStatus.UNLIKELY, caffeineSleepImpactStatus(home))
         assertTrue(home.entryInsights.isEmpty())
-        // The threshold line and the curve both have to fit in something: with no
-        // threshold and a flat curve the scale still floors at 1 mg. (Kotlin's chart
-        // never asks for a maximum on a truly empty curve — it short-circuits to its
-        // empty state below two points — so the floor is probed with the smallest
-        // curve it will actually draw.)
+        // With no threshold and a flat curve the scale floors at 1 mg, probed with the smallest curve the chart draws.
         assertEquals(
             1.0,
             caffeineCurveMaxMg(

@@ -31,12 +31,7 @@ import tech.mmarca.openvitals.ui.theme.NutritionColor
 import java.time.ZoneId
 import kotlin.math.roundToInt
 
-/**
- * A logged meal — name/meal-type, timestamp, macro line, energy and source.
- *
- * An OpenVitals-authored meal swipes to delete; nutrition entries are never edited (the
- * screens offered no edit). Foreign records stay read-only, so [onDelete] is null for them.
- */
+/** A logged meal. An OpenVitals meal swipes to delete; foreign records are read-only. */
 @Composable
 internal fun NutritionEntryRow(
     entry: NutritionEntry,

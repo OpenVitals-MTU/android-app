@@ -37,16 +37,8 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.model.ActivityCadenceKind
 
 /**
- * Record -> domain mapping, through the REAL readers.
- *
- * Dart counterpart: the `reads` and `writes` groups of
- * test/data/source/health/health_connect_native_data_source_test.dart.
- *
- * Flutter's fake sits at the Pigeon boundary and hands back typed messages, so
- * those tests assert that a `*Msg` becomes a domain object. There is no Msg layer
- * here: the readers map a Health Connect `Record` straight to the domain model, so
- * the equivalent assertion seeds a real record into Google's fake client and reads
- * it back through the reader the app ships.
+ * Record to domain mapping, through the real readers. Each case seeds a record into
+ * Google's fake client and reads it back through the reader the app ships.
  */
 class HealthConnectReadMappingTest {
 
@@ -66,7 +58,7 @@ class HealthConnectReadMappingTest {
         HealthConnectRateLimitBackoff.resetForTest()
     }
 
-    // ── exercise sessions with aggregate metrics ────────────────────────────
+    // Exercise sessions with aggregate metrics.
 
     @Test
     fun `readExerciseSessionsWithMetrics maps aggregate distance and speed through`() =
@@ -109,9 +101,7 @@ class HealthConnectReadMappingTest {
     @Test
     fun `readExerciseSessionsWithMetrics degrades to null metrics without the permissions`() =
         runTest {
-            // Health Connect reads are permission-gated: an ungranted
-            // distance/speed must degrade to null metrics, never throw or drop
-            // the session.
+            // An ungranted distance/speed must degrade to null metrics, never throw or drop the session.
             val client = seeded(
                 session(),
                 DistanceRecord(
@@ -137,13 +127,7 @@ class HealthConnectReadMappingTest {
             assertThat(sessions.single().averageSpeedMetersPerSecond).isNull()
         }
 
-    // Power was the last metric nobody wired up, and the app had every OTHER
-    // piece of it: it asks Health Connect for READ_POWER, tells you so during
-    // onboarding, writes PowerRecord from BLE sensors, and has an "Average power"
-    // row. It just never READ power back — and because that row only earns its
-    // place by HAVING a value, it never appeared at all. Not "Not available":
-    // absent. (Dart also pins the wire NAME the metric is asked for; that half is
-    // Pigeon-specific — Kotlin asks with the typed AggregateMetric itself.)
+    // Power was never read back, so the "Average power" row never appeared.
     @Test
     fun `session metrics carry average power`() = runTest {
         val client = FakeHealthConnectClient()
@@ -185,7 +169,7 @@ class HealthConnectReadMappingTest {
         assertThat(read.averageSpeedMetersPerSecond).isNull()
     }
 
-    // ── vitals ──────────────────────────────────────────────────────────────
+    // Vitals.
 
     @Test
     fun `BloodPressure entries map systolic, diastolic and ownership`() = runTest {
@@ -229,7 +213,7 @@ class HealthConnectReadMappingTest {
         assertThat(entries.last().source).isEqualTo(OTHER_PACKAGE)
     }
 
-    // ── body ────────────────────────────────────────────────────────────────
+    // Body.
 
     @Test
     fun `Weight entries map from records and preserve ownership`() = runTest {
@@ -267,7 +251,7 @@ class HealthConnectReadMappingTest {
         assertThat(entries.last().isOpenVitalsEntry).isTrue()
     }
 
-    // ── sleep ───────────────────────────────────────────────────────────────
+    // Sleep.
 
     @Test
     fun `a single Sleep session maps its stages`() = runTest {
@@ -307,10 +291,8 @@ class HealthConnectReadMappingTest {
         assertThat(session.stages.last().stageType).isEqualTo(SleepSessionRecord.STAGE_TYPE_DEEP)
     }
 
-    // Start zone, End zone, Recording, Last modified and Client version all read
-    // "Not available" on the sleep detail screen, for every session ever
-    // recorded. The domain model had the fields and the screen rendered them —
-    // the message they crossed on simply never carried them.
+    // Zones, recording method, last modified and client version all read "Not available"
+    // on the sleep detail screen because the message never carried them.
     @Test
     fun `a Sleep session carries the record provenance the detail screen shows`() =
         runTest {
@@ -320,7 +302,7 @@ class HealthConnectReadMappingTest {
                 listOf(
                     SleepSessionRecord(
                         startTime = nightStart,
-                        // The zone the WRITER recorded the night in, not ours.
+                        // The zone the writer recorded the night in.
                         startZoneOffset = ZoneOffset.ofHours(2),
                         endTime = nightEnd,
                         endZoneOffset = ZoneOffset.ofHours(2),
@@ -342,8 +324,7 @@ class HealthConnectReadMappingTest {
             assertThat(session.source).isEqualTo(GADGETBRIDGE_PACKAGE)
         }
 
-    // Null means "the writer recorded no offset"; zero means UTC. Collapsing the
-    // two would print "UTC" for a record that never claimed one.
+        // Null means the writer recorded no offset; zero means UTC.
     @Test
     fun `a session with no zone offsets keeps them null, not zero`() = runTest {
         val client = FakeHealthConnectClient()
@@ -365,13 +346,11 @@ class HealthConnectReadMappingTest {
 
         assertThat(session.startZoneOffset).isNull()
         assertThat(session.endZoneOffset).isNull()
-        // Dart also asserts a null lastModifiedTime here. Health Connect's Kotlin
-        // Metadata carries a NON-null lastModifiedTime that the provider stamps,
-        // so there is no "absent" to assert — only the zone offsets are optional.
+        // Health Connect's Metadata carries a non-null lastModifiedTime, so only the zone offsets are optional.
         assertThat(session.clientRecordId).isNull()
     }
 
-    // ── cadence ─────────────────────────────────────────────────────────────
+    // Cadence.
 
     @Test
     fun `readActivityCadenceSamples maps cycling and steps samples to their own kinds`() =
@@ -430,11 +409,10 @@ class HealthConnectReadMappingTest {
             assertThat(samples).isEmpty()
         }
 
-    // ── deletes ─────────────────────────────────────────────────────────────
+    // Deletes.
 
-    // The bug this pins on the Dart side: swallowing the failure turned a refused
-    // delete into the same null the "no clientRecordId" SUCCESS returns, so the
-    // use case never rolled back and the user lost the paired record instead.
+    // Swallowing the failure turned a refused delete into the same null a success returns,
+    // so the use case never rolled back.
     @Test
     fun `deleteHydrationEntry propagates provider failures rather than swallowing them`() =
         runTest {
@@ -480,8 +458,7 @@ class HealthConnectReadMappingTest {
             val paired = HydrationHealthReader(support(AggregatingFakeHealthConnectClient(client)), APP_PACKAGE)
                 .deleteHydrationEntry(id)
 
-            // Null here is a SUCCESS with nothing to pair-delete, which is exactly
-            // why a swallowed failure returning null was so dangerous.
+            // Null is a success with nothing to pair-delete.
             assertThat(paired).isNull()
         }
 
@@ -508,7 +485,7 @@ class HealthConnectReadMappingTest {
             assertThat(failure).isInstanceOf(IllegalArgumentException::class.java)
         }
 
-    // ── harness ─────────────────────────────────────────────────────────────
+    // Harness.
 
     private val sessionStart: Instant = Instant.parse("2026-01-02T08:00:00Z")
     private val sessionEnd: Instant = Instant.parse("2026-01-02T09:00:00Z")

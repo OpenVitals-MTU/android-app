@@ -7,9 +7,8 @@ import kotlin.math.ceil
 import kotlin.math.floor
 
 /**
- * Pure clock-axis math for the week/month sleep schedule chart. Times are expressed in "anchored
- * minutes": minutes elapsed since the sleep-window start hour, so a normal night stays contiguous
- * on the axis even though it crosses midnight.
+ * Clock-axis math for the sleep schedule chart, in minutes since the
+ * window start hour, so a night stays contiguous across midnight.
  */
 internal object SleepScheduleAxis {
 
@@ -28,10 +27,7 @@ internal object SleepScheduleAxis {
         return ((minuteOfDay - anchorMinute) + MINUTES_PER_DAY) % MINUTES_PER_DAY
     }
 
-    /**
-     * Anchored minutes for [value] measured from this night's [start], so end/stage times that
-     * wrap past the anchor stay monotonically after bedtime.
-     */
+    /** Anchored minutes for [value] from this night's [start], so wrapped times stay after bedtime. */
     fun normalizedEndMinutes(start: Instant, value: Instant, zone: ZoneId, anchorMinute: Int): Double {
         val startMinute = anchoredMinutes(start, zone, anchorMinute)
         val valueMinute = anchoredMinutes(value, zone, anchorMinute)
@@ -49,11 +45,7 @@ internal object SleepScheduleAxis {
         return LocalTime.of(minuteOfDay / 60, minuteOfDay % 60)
     }
 
-    /**
-     * Axis range over the plausible nights, padded out to whole hours. Nights spanning 16 h or
-     * more are skipped from the range computation only (they are still drawn, clipped). Null when
-     * no plausible night remains, in which case callers fall back to the plain bar chart.
-     */
+    /** Axis range over plausible nights, padded to whole hours. Null when none remain. */
     fun range(days: List<SleepScheduleDay>, zone: ZoneId, anchorMinute: Int): Range? {
         var min = Double.MAX_VALUE
         var max = -Double.MAX_VALUE

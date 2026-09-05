@@ -47,11 +47,7 @@ data class DashboardData(
     val carbsGrams: Double? = null,
     val fatGrams: Double? = null,
     val caffeineGrams: Double? = null,
-    /**
-     * Pharmacologically ACTIVE caffeine right now — decays across midnight,
-     * so a late espresso still shows the next morning. Only computed for
-     * today; a past day keeps intake semantics.
-     */
+    /** Active caffeine right now. Decays across midnight. Today only. */
     val activeCaffeineMg: Double? = null,
     val latestSystolicMmHg: Int? = null,
     val latestDiastolicMmHg: Int? = null,
@@ -73,22 +69,12 @@ data class DashboardData(
     val bodyEnergyTimeline: BodyEnergyTimeline? = null,
     val missingPermissions: Set<String> = emptySet(),
     val loadedMetrics: Set<DashboardMetric> = emptySet(),
-    /**
-     * Metrics with records in their recent lookback even when the selected day
-     * is empty. Feeds tile demotion: an empty-today tile whose metric appears
-     * here holds its saved position instead of sinking.
-     */
+    /** Metrics with recent history even when the day is empty. An empty tile with history holds its place. */
     val recentHistoryMetrics: Set<DashboardMetric> = emptySet(),
     /**
-     * The metrics the installed Health Connect provider can serve AT ALL — every
-     * permission the metric reads is one the provider defines. A metric outside
-     * this set can never be granted, so the dashboard drops its tile entirely
-     * rather than showing one that can never fill.
-     *
-     * Null means "not established yet" (a fixture, or a day published before the
-     * first load answered): everything is treated as supported, which is what the
-     * dashboard did before device-support gating existed. An EMPTY set is the
-     * real answer "this device serves nothing" and produces no tiles at all.
+     * The metrics the provider can serve at all; the rest have no tile.
+     * Null means not established yet, and everything is treated as
+     * supported. An empty set means the device serves nothing.
      */
     val supportedMetrics: Set<DashboardMetric>? = null,
     val metricSourcePackages: Map<DashboardMetric, String> = emptyMap(),
@@ -279,17 +265,11 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
             latestBasalBodyTemperatureCelsius
         },
         bodyEnergyTimeline = other.bodyEnergyTimeline ?: bodyEnergyTimeline,
-        // Answered by whoever loaded the metric, like every value above it. It
-        // used to be left on the base entirely, so only the FIRST pass of a
-        // load could mark a metric as having recent history — every later pass
-        // silently dropped its answer, and the tiles it covered demoted as
-        // though the user had never recorded one.
+        // Answered by whoever loaded the metric, like every value above.
         recentHistoryMetrics = (recentHistoryMetrics - other.loadedMetrics) + other.recentHistoryMetrics,
         missingPermissions = missingPermissions + other.missingPermissions,
         loadedMetrics = loadedMetrics + other.loadedMetrics,
-        // Device support is a property of the provider, not of the pass: the
-        // fresher answer wins, and a pass that never established one (null)
-        // leaves the known set alone.
+        // Device support is a property of the provider: the fresher answer wins.
         supportedMetrics = other.supportedMetrics ?: supportedMetrics,
         metricSourcePackages = metricSourcePackages + other.metricSourcePackages,
     )

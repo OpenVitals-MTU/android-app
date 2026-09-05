@@ -1,28 +1,12 @@
 package tech.mmarca.openvitals.features.devicesync.protocol
 
 /**
- * Framing for the phone-to-phone sync wire protocol.
- *
- * RFCOMM is a raw byte stream: a peer's `write()` of N bytes does NOT arrive as
- * one read of N bytes — it may be split or coalesced arbitrarily. So every
- * logical message is wrapped in a length-prefixed frame and [SyncFrameReader]
- * reassembles frames from whatever chunk boundaries arrive.
- *
- * Wire format per frame (big-endian):
- *
- * ```
- *   ┌──────────────┬────────┬─────────────────────┐
- *   │ payloadLen   │ type   │ payload             │
- *   │ uint32 (4B)  │ u8 (1B)│ payloadLen bytes    │
- *   └──────────────┴────────┴─────────────────────┘
- * ```
- *
- * The type byte is [SyncFrameType.ordinal]; the enum is append-only so the byte
- * stays stable across versions.
+ * Framing for the sync wire protocol. RFCOMM is a byte stream, so every
+ * message is a length-prefixed frame: `uint32 payloadLen, u8 type, payload`,
+ * big-endian. The type byte is [SyncFrameType.ordinal].
  */
 
-/** The kind of a framed message. APPEND-ONLY — the ordinal is the wire type
- * byte, so never reorder or remove a value. */
+/** The kind of a framed message. Append-only: the ordinal is the wire byte. */
 enum class SyncFrameType {
     /** Capability + nonce exchange that opens a session. */
     HELLO,
@@ -43,17 +27,10 @@ enum class SyncFrameType {
     ABORT,
 }
 
-/**
- * The largest payload a single frame may carry, a guard against a corrupt or
- * hostile length prefix allocating unbounded memory. Batches are chunked well
- * under this (~64 KB); 16 MiB is generous headroom.
- */
+/** The largest payload one frame may carry, against a hostile length prefix. */
 const val MAX_SYNC_FRAME_PAYLOAD: Int = 16 * 1024 * 1024
 
-/**
- * Thrown when the byte stream violates the frame format (bad type byte or an
- * oversized length prefix). Fatal to the session.
- */
+/** Thrown when the stream violates the frame format. Fatal to the session. */
 class SyncFrameFormatException(message: String) : Exception(message)
 
 /** A single framed message: its [type] and raw [payload] bytes. */
@@ -77,11 +54,7 @@ class SyncFrame(val type: SyncFrameType, val payload: ByteArray) {
     }
 }
 
-/**
- * Reassembles [SyncFrame]s from a stream of arbitrary byte chunks. Feed each
- * inbound chunk to [addChunk]; it returns the frames that completed, buffering
- * any partial trailing frame for the next call.
- */
+/** Reassembles [SyncFrame]s from arbitrary chunks, buffering a partial trailing frame. */
 class SyncFrameReader {
     private var buffer: ByteArray = EMPTY
 

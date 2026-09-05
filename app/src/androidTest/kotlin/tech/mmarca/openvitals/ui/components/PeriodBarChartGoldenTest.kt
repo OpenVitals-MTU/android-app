@@ -1,5 +1,4 @@
-// The chart composables live under ui/charts/ but declare ui.components; this
-// file mirrors that rather than adding an import that looks like a mistake.
+// The chart composables live under ui/charts/ but declare ui.components; this file mirrors that.
 package tech.mmarca.openvitals.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,12 +19,8 @@ import tech.mmarca.openvitals.testing.assertVisualRootMatchesGolden
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 
 /**
- * Port of Flutter's `test/goldens/charts/period_bar_chart_golden_test.dart`.
- *
- * [PeriodBarChart] — the bars, and the value labels ON the bars. The labels are the
- * interesting part: `measureBarLabelLines` measures the number against the BAR and
- * drops it whole when it will not fit, and the bar reserves height for the label it
- * is going to carry. None of that has a picture anywhere else.
+ * [PeriodBarChart]: the bars and the value labels on them. `measureBarLabelLines` drops a
+ * label whole when it will not fit, and the bar reserves height for it.
  */
 class PeriodBarChartGoldenTest {
 
@@ -45,8 +40,7 @@ class PeriodBarChartGoldenTest {
 
     @Test
     fun week_withADaySelected() {
-        // The selection highlight is only drawn when the chart can be tapped — a
-        // `selectedDate` with no `onDateSelected` paints nothing.
+        // The selection highlight is only drawn when the chart can be tapped.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 300.dp) {
                 MindfulnessWeekBars(
@@ -61,8 +55,7 @@ class PeriodBarChartGoldenTest {
 
     @Test
     fun month_thirtySlotsTooNarrowForALabelToSurvive() {
-        // A deterministic sawtooth rather than a random walk: a golden that reshuffles
-        // its own data every run is not a regression test.
+        // A deterministic sawtooth, not a random walk.
         val month = DatePeriod(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30))
         val values = (1..30).map { day ->
             PeriodChartValue(
@@ -117,13 +110,10 @@ class PeriodBarChartGoldenTest {
     private companion object {
         val FORMATTER = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC })
 
-        // The week ending on the golden day. A meditation week: minutes, because
-        // "20 min" is exactly the two-token string `splitBarValueLabel` exists to
-        // break over two lines.
+        // A meditation week in minutes: "20 min" is the two-token string `splitBarValueLabel` breaks over two lines.
         val WEEK = DatePeriod(LocalDate.of(2026, 6, 16), LocalDate.of(2026, 6, 22))
 
-        // Wednesday was missed. A zero-value bucket is drawn as nothing at all, not
-        // as a stub — the gap in the week is the point.
+        // Wednesday was missed. A zero bucket is drawn as nothing, not a stub.
         val WEEK_MINUTES = listOf(
             PeriodChartValue(LocalDate.of(2026, 6, 16), 20.0),
             PeriodChartValue(LocalDate.of(2026, 6, 17), 35.0),

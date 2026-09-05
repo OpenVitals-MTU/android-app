@@ -144,11 +144,7 @@ class WorkoutPlanListViewModel(
 
     fun onExported() = _uiState.update { it.copy(message = WorkoutPlanListMessage.EXPORTED) }
 
-    /**
-     * Today's copy keeps the plan's clock time unless that has already gone by,
-     * in which case it is scheduled for now — a plan copied to "earlier today"
-     * would sit in the past before it was ever started.
-     */
+    /** Today's copy keeps the clock time unless it has passed, then now. */
     private fun PlannedExerciseData.copyForToday(): PlannedExerciseWriteRequest {
         val today = LocalDate.now(clock)
         val now = LocalTime.now(clock).withSecond(0).withNano(0)

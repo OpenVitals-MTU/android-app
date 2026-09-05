@@ -90,8 +90,7 @@ class CoMapsRouteSimplifyTest {
             }
             assertTrue("kept point $kept not found in order", found)
         }
-        // Every original point sits within tolerance of the simplified line
-        // (checked against the nearest kept segment, generously in degrees).
+        // Every original point sits within tolerance of the simplified line.
         val toleranceDegrees = CoMapsRouteToleranceMeters * latMeter * 1.5
         for (point in 0 until points.size / 2) {
             val lat = points[point * 2]

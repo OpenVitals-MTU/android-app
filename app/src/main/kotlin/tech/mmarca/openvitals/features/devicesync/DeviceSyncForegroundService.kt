@@ -14,21 +14,10 @@ import androidx.core.app.ServiceCompat
 import tech.mmarca.openvitals.R
 
 /**
- * Inert keep-alive foreground service for a phone-to-phone sync transfer.
- *
- * The transfer itself runs in-process in the wizard's ViewModel — the RFCOMM
- * byte pumps live there, so this service does no work of its own. It exists
- * solely to promote the process to the foreground for the duration of a
- * transfer so the OS does not kill the app if the user glances away mid-sync.
- *
- * Foreground-slot policy (ported from the Flutter `device_sync_foreground.dart`):
- * the app treats the foreground slot as effectively single — recording, the
- * Apple Health import, and phone sync contend for it. So:
- *  - [start] is best-effort and starts nothing while an activity recording is
- *    live (the wizard refuses to sync then anyway); any start failure means
- *    the transfer simply proceeds in-process without a service.
- *  - [stop] only ever stops THIS service class, so a sync that ran without the
- *    slot can never tear down an unrelated foreground service on teardown.
+ * Inert keep-alive foreground service for a phone-to-phone transfer. The
+ * transfer runs in the ViewModel; this only keeps the process foregrounded.
+ * [start] is best-effort and never during a recording; [stop] only stops
+ * this class.
  */
 class DeviceSyncForegroundService : Service() {
 
@@ -79,11 +68,7 @@ class DeviceSyncForegroundService : Service() {
         private const val CHANNEL_ID = "openvitals_device_sync"
         private const val NOTIFICATION_ID = 2041
 
-        /**
-         * Starts the keep-alive service. Returns false (and starts nothing) on
-         * any failure — the caller then runs the transfer in-process. Callers
-         * must have already ensured no activity recording is live.
-         */
+        /** Starts the service. False on any failure; the transfer then runs without it. */
         fun start(context: Context): Boolean = runCatching {
             context.startForegroundService(Intent(context, DeviceSyncForegroundService::class.java))
             true

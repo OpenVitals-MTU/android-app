@@ -46,11 +46,8 @@ fun DashboardScreen(
     onOpenDeviceStatus: () -> Unit,
     onSensorStatusVisibilityChanged: (Boolean) -> Unit = {},
 ) {
-    // One collection, seeded from the flow's CURRENT value: coming back from a
-    // detail screen must render the dashboard on its first frame. Mapped flows
-    // with placeholder initial values put a loading screen there instead, and
-    // that single frame threw away every saveable below it — the carousel page
-    // and the scroll position both snapped back to the top.
+    // Seeded from the flow's current value: a placeholder frame on return would
+    // reset the carousel page and scroll position.
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val isLoading = state.isLoading
     val error = state.error
@@ -82,18 +79,13 @@ fun DashboardScreen(
     val context = LocalContext.current
     val errorMessage = error?.resolve()
     androidx.compose.runtime.LaunchedEffect(errorMessage) {
-        // Refresh failures (e.g. Health Connect rate limiting) are shown as a transient
-        // toast rather than the full-screen ErrorMessage, since the dashboard already
-        // has data to display and shouldn't be replaced by an error state.
+        // A refresh failure with data on screen is a toast, not the error state.
         if (errorMessage != null && loadedData != null) {
             Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
             viewModel.clearError()
         }
     }
-    // Health Connect refusing reads is not "no data", and a read no longer sits
-    // on the backoff waiting for it to lift — so the tiles that gave up need
-    // something to say. Keyed on the minute count so one throttled load speaks
-    // once, not once per tile that lands after it.
+    // Rate-limited is not "no data". Keyed on the minute count so it speaks once.
     val rateLimitedMessage = state.rateLimitedRetryAfterMinutes?.let { minutes ->
         stringResource(R.string.message_health_connect_rate_limited, minutes)
     }
@@ -113,14 +105,10 @@ fun DashboardScreen(
         feature = HealthConnectFeature.DASHBOARD,
         isLoading = isLoading && loadedData != null,
         refreshKey = refreshRequest to permissionReloadKey,
-        // The dashboard body renders the sync banner itself, inside its list —
-        // the shell rendering a second one on top is how the screen ended up
-        // with two "Syncing…" banners for a single load.
+        // The body renders the sync banner itself; the shell must not add a second.
         showInlineSyncBanner = false,
     ) { hcUx ->
-        // One reload, one indicator: the spinner answers the pull gesture,
-        // and every refresh the user did not pull for speaks through the
-        // banner inside the list instead.
+        // One reload, one indicator: the spinner answers the pull only.
         var pullRefreshRequested by remember { mutableStateOf(false) }
         androidx.compose.runtime.LaunchedEffect(state.isRefreshing) {
             if (!state.isRefreshing) pullRefreshRequested = false

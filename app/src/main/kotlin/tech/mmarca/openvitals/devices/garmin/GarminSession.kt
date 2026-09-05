@@ -30,167 +30,72 @@ data class GarminSyncProgress(
 enum class GarminSyncPhase { HANDSHAKE, LISTING, DOWNLOADING, COMPLETE, FAILED }
 
 /**
- * Drives one GFDI sync: handshake, list the directory, download each wanted
- * file, archive it, finish.
- *
- * **Transport-free by construction.** It consumes decoded GFDI frames and
- * emits frames to send, so it is exercised end to end over an in-memory pipe
- * with no Bluetooth. The ML/BLE layer below it only moves bytes.
- *
- * Ported from Gadgetbridge's `GarminSupport` + `FileTransferHandler`
- * (AGPLv3), via the Flutter build's `garmin_session.dart`, narrowed to a
- * read-only sync: no uploads, no realtime. Dart streams and timers became
- * coroutines: frame handling is serialised by a [Mutex] instead of a future
- * chain, the grace timer is a [Job] on the injected [scope], and [done] is a
- * [Deferred].
+ * Drives one GFDI sync: handshake, directory listing, downloads, archive.
+ * Transport-free: it takes decoded frames and emits frames to send.
+ * Ported from Gadgetbridge (AGPLv3) via the Flutter build, read-only.
  */
 class GarminSession(
-    /**
-     * Owns the empty-sync grace timer. Inject the caller's scope (a test's
-     * `TestScope`) so delayed work stays cancellable and virtual-time
-     * testable.
-     */
+    /** Owns the grace timer. Inject a test scope for virtual time. */
     private val scope: CoroutineScope,
-    /**
-     * Hands one built GFDI frame to the transport below. The session never
-     * sees COBS, handles or characteristics — that is the ML/BLE layer's job.
-     */
+    /** Sends one GFDI frame to the transport. */
     private val send: suspend (ByteArray) -> Unit,
     private val bluetoothName: String,
     private val manufacturer: String,
     private val model: String,
-    /**
-     * Dedup keys ([GarminDirectoryEntry.dedupKey]) already imported by a
-     * previous sync. Purely a bandwidth optimisation — Health Connect's
-     * `clientRecordId` already makes a re-import idempotent — so a stale set
-     * costs airtime, never correctness.
-     */
+    /** Dedup keys already imported. A stale set only costs airtime. */
     private val alreadySynced: Set<String> = emptySet(),
     private val onProgress: ((GarminSyncProgress) -> Unit)? = null,
     /**
-     * Called with each completed file BEFORE it is archived on the watch.
-     *
-     * Archiving is destructive: once flagged, the watch never offers that
-     * file again. So if this throws, the file is deliberately NOT archived —
-     * better to re-download it next sync than to lose it because the copy
-     * that was supposed to outlive the download never landed.
+     * Called with each file before it is archived on the watch.
+     * If this throws the file is not archived, so the next sync retries it.
      */
     private val onFileDownloaded: (suspend (GarminDownloadedFile) -> Unit)? = null,
-    /**
-     * How long to keep a fruitless sync open before giving up.
-     *
-     * The watch may announce what it holds (SYNCHRONIZATION) a moment after
-     * the listing is served. Finishing the instant an empty directory arrives
-     * races that announcement and throws it away, which looks identical to
-     * "the watch has nothing". Injectable so tests need not wait it out.
-     */
+    /** How long an empty sync waits for a late SYNCHRONIZATION announcement. */
     private val emptyGrace: Duration = 6.seconds,
-    /**
-     * Diagnostic only: keep decoding and acknowledging what the watch sends
-     * after the sync has finished, instead of ignoring it.
-     *
-     * A sync lasts about a second, so anything the watch volunteers on its
-     * own schedule — or in response to being touched — lands long after the
-     * session is done and is normally dropped on the floor by
-     * [handleFrameSerially]. Acknowledging still matters while listening: an
-     * unanswered message is retransmitted on a timer and eventually takes the
-     * link down with it.
-     */
+    /** Diagnostic: keep decoding and acking frames after the sync ends. */
     private val keepAnsweringAfterSync: Boolean = false,
-    /**
-     * Called once the capabilities exchange is answered — the first moment
-     * the watch will accept anything this app initiates.
-     *
-     * Earlier than that it is still introducing itself and drops what it is
-     * sent; later would mean waiting for a whole file sync to finish.
-     */
+    /** Called after the capabilities exchange, when the watch accepts requests. */
     private val onHandshakeReady: (() -> Unit)? = null,
     /**
-     * The watch was just onboarded and still needs the pair-flow completion
-     * trio. OR'd with the REQUEST_PAIR_FLOW capability, because the watch
-     * only advertises that flag for its first minutes on the wizard screen —
-     * a session arriving later would miss it.
+     * The watch still needs the pair-flow trio. OR'd with the capability flag,
+     * which the watch advertises only briefly.
      */
     private val setupWizardPending: Boolean = false,
     /** The trio went out; the owner clears its pending flag. */
     private val onSetupWizardCompleted: (() -> Unit)? = null,
     /** Whether the phone's app is in the foreground, read at handshake time. */
     private val hostForeground: (() -> Boolean)? = null,
-    /**
-     * The watch asked the phone to ring ([GarminFindMyPhoneRequest]), and to
-     * stop. Callbacks rather than behaviour: ringing is an app concern, and a
-     * session without them (settings, a plain sync) still acks the request.
-     */
+    /** The watch asked the phone to ring, or to stop. Ringing is the owner's job. */
     private val onFindPhone: ((durationSeconds: Int) -> Unit)? = null,
     private val onFindPhoneCancel: (() -> Unit)? = null,
-    /**
-     * The watch announced a freshly written file to a session that cannot
-     * download it (a held link, or a sync already sealed). The owner decides
-     * — the companion bridge starts a background sync, which takes the radio
-     * over the normal lease handoff.
-     */
+    /** The watch announced a file this session cannot download. The owner decides. */
     private val onFileAnnounced: ((GarminDirectoryEntry) -> Unit)? = null,
-    /**
-     * The weather to serve when the watch asks ([GarminWeatherRequest]), or
-     * null when there is none fresh enough — the ask is then acked and left
-     * unanswered, exactly as a phone with no weather app would.
-     */
+    /** Weather for the watch's ask, or null to ack it and leave it unanswered. */
     private val weatherProvider: (() -> tech.mmarca.openvitals.devices.weather.WeatherSnapshot?)? = null,
-    /**
-     * The phone's last-known position, for the watch's `CoreService` location
-     * asks. The prerequisite for weather: with no answer the glance never
-     * even attempts its fetch.
-     */
+    /** Last-known phone position. Without it the watch never fetches weather. */
     private val locationProvider: (() -> GarminPhoneLocation?)? = null,
-    /**
-     * GPS ephemeris to hand the watch when it asks. Null leaves the ask
-     * refused, which is what a phone with no ephemeris file has to say.
-     */
+    /** GPS ephemeris for the watch. Null refuses the ask. */
     private val agpsSource: GarminAgpsSource? = null,
     /**
-     * The calendar events overlapping the watch's asked window, or null when
-     * calendar sync is off for this watch. Off still ANSWERS — an OK with no
-     * events — because the watch re-asks an unanswered request forever.
+     * Calendar events in the asked window, or null when sync is off.
+     * Off still answers with no events, or the watch re-asks forever.
      */
     private val calendarProvider: ((beginEpochSeconds: Long, endEpochSeconds: Long) -> List<GarminCalendarEvent>?)? = null,
-    /**
-     * Whether to pull files at all.
-     *
-     * False for a session opened to DO something rather than to collect
-     * something — finding the watch, say. Without this the find session
-     * dragged a full sync along behind it and then failed mid-transfer when
-     * the link closed under it, which is noise at best and a lost file at
-     * worst.
-     */
+    /** False for sessions that act rather than collect, such as find-my-watch. */
     private val syncFiles: Boolean = true,
     /**
-     * Forwards phone notifications to the watch, or null for a session that
-     * forwards nothing.
-     *
-     * Null is the default and keeps the subscription reply DISABLED, which is
-     * exactly what every session did before this existed — so the sync, find
-     * and settings paths are unchanged by construction rather than by
-     * inspection.
-     *
-     * A session that carries one should also pass `syncFiles = false`, for
-     * the reason on that field: a notification link is held open for tens of
-     * seconds and then closed, and a file transfer dragged along behind it
-     * dies mid-flight.
+     * Forwards phone notifications, or null. Null keeps the subscription reply
+     * DISABLED. Pass syncFiles = false with it: a file transfer dies when the
+     * notification link closes.
      */
     private val notifications: GarminNotificationsHandler? = null,
 ) {
 
-    /**
-     * What the watch said it can do, once the handshake has reached
-     * CONFIGURATION. Empty before that.
-     */
+    /** What the watch can do. Empty until the handshake reaches CONFIGURATION. */
     var capabilities: Set<GarminCapability> = emptySet()
         private set
 
-    /**
-     * Protobuf exchanges ride the same link. Constructed lazily so a session
-     * that never sends one costs nothing.
-     */
+    /** Protobuf exchanges on the same link. Lazy, so unused sessions pay nothing. */
     val protobuf: GarminProtobufTransport by lazy { GarminProtobufTransport(send = send) }
 
     private val doneDeferred = CompletableDeferred<List<GarminDownloadedFile>>()
@@ -212,16 +117,13 @@ class GarminSession(
     /** The transfer in flight, or null between files. */
     private var active: ActiveDownload? = null
 
-    /** Set once the directory has been fetched, so its own transfer is recognised. */
+    /** True once the directory is fetched. */
     private var directoryFetched = false
 
     private var finished = false
     private var filesTotal = 0
 
-    /**
-     * Resolves with everything downloaded once the sync completes, or rejects
-     * on an unrecoverable protocol error.
-     */
+    /** Everything downloaded, or the protocol error that ended the sync. */
     val done: Deferred<List<GarminDownloadedFile>> get() = doneDeferred
 
     private fun report(phase: GarminSyncPhase, file: String? = null) {
@@ -236,14 +138,8 @@ class GarminSession(
     }
 
     /**
-     * Starts the sync. The watch speaks first (device information), so this
-     * only arms the state machine; everything else is driven by [handleFrame].
-     */
-    /**
-     * Answers the watch's own HTTP-proxy fetches. Modern watches ask for
-     * weather and ephemeris this way rather than over FIT, treating the phone
-     * as their internet — see [GarminHttpProxy]. Order matters only in that
-     * the first interceptor claiming a URL wins, and none of these overlap.
+     * Answers the watch's HTTP-proxy fetches (weather, ephemeris).
+     * The first interceptor to claim a URL wins.
      */
     private val http: GarminHttpProxy? by lazy {
         val interceptors = buildList {
@@ -290,21 +186,10 @@ class GarminSession(
         report(GarminSyncPhase.HANDSHAKE)
     }
 
-    /**
-     * Serialises frame handling. Frames arrive from the transport as they
-     * land, but the dispatch suspends on its sends — so without this a second
-     * notification could enter the state machine while the first is still
-     * mid-flight and mutate [active] underneath it, appending chunks out of
-     * order. The mutex is FIFO, so frames are processed strictly in arrival
-     * order, however fast they arrive.
-     */
+    /** Serialises frame handling. Dispatch suspends on sends, so frames must not interleave. */
     private val mutex = Mutex()
 
-    /**
-     * Feeds one decoded GFDI frame in. Safe to call after completion — late
-     * frames from a watch that is still talking are ignored rather than
-     * throwing.
-     */
+    /** Feeds one decoded frame in. Late frames after completion are ignored. */
     suspend fun handleFrame(frame: GarminGfdiFrame) {
         mutex.withLock { handleFrameSerially(frame) }
     }
@@ -312,10 +197,8 @@ class GarminSession(
     private suspend fun handleFrameSerially(frame: GarminGfdiFrame) {
         if (finished && !keepAnsweringAfterSync) return
         try {
-            // Acknowledge FIRST, as Gadgetbridge does: an unacknowledged
-            // message is treated as lost, and the watch retransmits it on a
-            // timer instead of moving on. Types that get their own response
-            // envelope are excluded — that response IS their acknowledgement.
+            // Ack first, as Gadgetbridge does, or the watch retransmits.
+            // Self-acknowledged types get their own response instead.
             if (frame.messageType !in garminSelfAcknowledgedTypes) {
                 send(buildGenericAck(frame.messageType))
             }
@@ -325,10 +208,7 @@ class GarminSession(
             throw error
         } catch (error: Exception) {
             if (finished) {
-                // Past the sync, so there is no result left to fail — but
-                // fail() would return silently here and a listening pass whose
-                // whole purpose is to see what the watch sends must not
-                // swallow the one frame it choked on.
+                // Past the sync there is no result to fail, but a listening pass must log this.
                 GarminLog.log("[GARMIN-LISTEN] frame ${frame.messageType} threw: $error")
                 return
             }
@@ -353,24 +233,15 @@ class GarminSession(
                         model = model,
                     ),
                 )
-                // The watch will not serve files until it knows what we
-                // support, so the request goes out as soon as the
-                // introduction is answered.
+                // The watch serves no files until it knows what we support.
                 send(buildSupportedFileTypesRequest())
             }
 
             is GarminAuthNegotiation -> send(buildAuthNegotiationResponse(message))
 
             is GarminConfiguration -> {
-                // The capabilities exchange. The watch has told us what it can
-                // do and is waiting to hear what WE can do; a bare ACK left it
-                // re-sending this and never listing any files.
-                //
-                // Decoded, not just counted: this bitmap is the only thing
-                // that says whether a watch has FIND_MY_WATCH or
-                // REALTIME_SETTINGS, and the latter decides whether alarms
-                // live in the watch's settings tree or in an uploaded FIT file
-                // — two completely different implementations.
+                // Answer the capabilities exchange; a bare ACK stalls the watch.
+                // The bitmap decides whether settings live on the watch or in a FIT file.
                 capabilities = GarminCapability.decode(message.capabilityBits)
                 GarminLog.log(
                     "[GARMIN-SYNC] configuration: " +
@@ -381,9 +252,7 @@ class GarminSession(
                     "[GARMIN-CAPS] ${capabilities.joinToString(", ") { it.wireName }}",
                 )
                 send(buildConfigurationResponse())
-                // Upstream sends these on every connection. The weather flag
-                // is the load-bearing one: it is the switch for the watch's
-                // whole weather feature — see buildDeviceSettings.
+                // Sent on every connection. The weather flag enables the watch's weather feature.
                 send(
                     buildDeviceSettings(
                         listOf(
@@ -394,11 +263,7 @@ class GarminSession(
                     ),
                 )
                 if (setupWizardPending || GarminCapability.REQUEST_PAIR_FLOW in capabilities) {
-                    // A factory-fresh watch: its screen is sitting on the
-                    // "connect to the app" wizard, waiting for the phone to
-                    // declare the pairing done. Gadgetbridge sends exactly
-                    // this trio on first connect; without it the watch shows
-                    // "connecting" forever.
+                    // Fresh watch on the pairing wizard. Gadgetbridge sends this trio on first connect.
                     GarminLog.log("[GARMIN-SYNC] fresh watch asked for the pair flow; completing setup")
                     send(buildSystemEvent(GarminSystemEventType.PAIR_COMPLETE))
                     send(buildSystemEvent(GarminSystemEventType.SYNC_COMPLETE))
@@ -412,36 +277,16 @@ class GarminSession(
                     notifyHostForeground(true)
                 }
                 onHandshakeReady?.invoke()
-                // Weather is PUSHED here rather than only served on request:
-                // the watch asks (5014) only while connected, and this app's
-                // links live seconds — the glance's ask almost always came
-                // while there was nobody to hear it, leaving the wrist showing
-                // "reconnect to phone". Pushed weather is cached on the watch,
-                // so the glance works offline until the next connection.
+                // Push weather now: the watch only asks while connected, and links are short.
+                // The watch caches what is pushed.
                 maybePushWeather()
             }
 
             is GarminNotificationSubscription -> {
-                // Always answered, whatever the answer — the watch asks
-                // roughly once a second until it gets a properly shaped
-                // status.
-                //
-                // The two flags here mean different things and must NOT be
-                // conflated:
-                //
-                // * `message.enable` is the WATCH's current state — whether it
-                //   is presently accepting notifications. It drives the
-                //   handler.
-                // * the reply is the PHONE's willingness — whether this
-                //   session is prepared to forward at all. It is ours alone to
-                //   decide.
-                //
-                // Answering the conjunction is self-defeating, and was: a
-                // watch that has never been told a phone would forward sends
-                // `enable=false`, so replying DISABLED confirms it and the
-                // watch never flips. Announcing willingness is precisely how
-                // it is told otherwise. Gadgetbridge separates them the same
-                // way.
+                // Always answered; the watch re-asks until it gets a status.
+                // message.enable is the watch's state and drives the handler.
+                // The reply is the phone's willingness and must not echo it:
+                // a watch never told a phone would forward sends enable=false.
                 val handler = notifications
                 handler?.setEnabled(enabled = message.enable)
                 val willing = handler != null
@@ -451,22 +296,12 @@ class GarminSession(
                         if (willing) "enabled" else "disabled",
                 )
                 send(buildNotificationSubscriptionStatus(message, enabled = willing))
-                // Held announcements go out AFTER the status, never before.
-                // Garmin's own ordering is status-for-the-inbound-message
-                // first, follow-up second — and a watch that has just asked to
-                // subscribe has not yet been told the subscription was
-                // accepted, so anything sent ahead of that status is addressed
-                // to a watch that is not listening for it.
+                // Held announcements go out after the status, so the watch is listening for them.
                 handler?.flushHeld()
             }
 
             is GarminNotificationControl -> {
-                // The status goes out BEFORE the answer, unlike Gadgetbridge,
-                // which computes its follow-up first so a handler can
-                // downgrade the status after inspecting the payload. Safe only
-                // because nothing here can fail a control request: an unknown
-                // notification id produces no data, not an error. That stops
-                // being true the day a validating handler is added.
+                // Status before answer. Safe only while no control request can fail.
                 send(buildNotificationControlStatus())
                 notifications?.handleControl(message)
             }
@@ -475,8 +310,7 @@ class GarminSession(
 
             is GarminSupportedFileTypes -> {
                 supportedTypes = message.types
-                // The raw pairs, not just a count: they are the ground truth
-                // for which GarminFileType codes a real watch actually offers.
+                // The raw pairs are the ground truth for which file type codes a watch offers.
                 GarminLog.log(
                     "[GARMIN-SYNC] watch supports ${message.types.size} types: " +
                         message.types.joinToString(", ") {
@@ -484,12 +318,8 @@ class GarminSession(
                         },
                 )
                 send(buildSystemEvent(GarminSystemEventType.SYNC_READY))
-                // FILTER before the listing. Gadgetbridge only ever sends this
-                // in reply to a SYNCHRONIZATION announcement, but an
-                // unfiltered listing came back empty from a watch that
-                // demonstrably held a night of sleep — and the watch processes
-                // our writes in order, so by the time it answers the directory
-                // request it has already seen the filter.
+                // Filter before listing: an unfiltered listing came back empty on a watch
+                // that held sleep data.
                 if (!syncFiles) return
                 send(buildFilterMessage())
                 report(GarminSyncPhase.LISTING)
@@ -501,19 +331,13 @@ class GarminSession(
             is GarminFileTransferData -> onFileChunk(message)
 
             is GarminSynchronization -> {
-                // The watch announcing what it holds. Gadgetbridge answers
-                // this with a FILTER and only then lists files — and an
-                // unfiltered listing came back empty on a watch that
-                // demonstrably had a night of sleep on it, so this exchange
-                // looks like what actually populates the directory.
+                // The watch announcing what it holds. Filter, then list, as Gadgetbridge does.
                 GarminLog.log(
                     "[GARMIN-SYNC] synchronization type=${message.syncType} " +
                         "bits=${message.setBits} proceed=${message.shouldProceed}",
                 )
                 if (message.shouldProceed) {
-                    // Cancel any pending give-up: the watch has just told us
-                    // it holds something, so re-read the listing rather than
-                    // finishing empty.
+                    // The watch holds something: cancel the give-up and re-read the listing.
                     if (!syncFiles) return
                     graceJob?.cancel()
                     graceJob = null
@@ -524,8 +348,7 @@ class GarminSession(
             }
 
             is GarminGenericStatus -> {
-                // ACKs for our own sends. A NAK is logged because it is the
-                // only visible sign the watch rejected something we asked for.
+                // A NAK is the only visible sign the watch rejected a request.
                 if (message.status != GarminStatus.ACK) {
                     GarminLog.log(
                         "[GARMIN-SYNC] NAK ${message.status.name} for " +
@@ -545,10 +368,7 @@ class GarminSession(
             }
 
             is GarminCurrentTimeRequest -> {
-                // Without Garmin Connect this app is the watch's only clock
-                // source — the reply carries the time, the zone offset and the
-                // next DST transitions, so the wrist clock follows travel and
-                // DST instead of drifting.
+                // This app is the watch's only clock source: reply with time, zone and DST.
                 GarminLog.log("[GARMIN-SYNC] watch asked for the time")
                 send(buildCurrentTimeResponse(referenceId = message.referenceId))
             }
@@ -589,15 +409,8 @@ class GarminSession(
             is GarminFileAvailable -> onFileAvailable(message.entry)
 
             is GarminUnhandledMessage -> {
-                // Logged, not silent: a read-only sync ignores music and
-                // notification chatter, but "the watch said something we did
-                // not expect" is exactly the evidence a stalled sync needs,
-                // and swallowing it hid whether the watch was talking to us at
-                // all.
-                // Truncated normally, whole while listening: 32 bytes is
-                // enough to tell a stalled sync what the watch is repeating,
-                // but a diagnostic pass is trying to decode the thing and half
-                // a protobuf decodes to nothing.
+                // Log unexpected chatter: it is the evidence a stalled sync needs.
+                // Whole while listening, truncated otherwise.
                 GarminLog.logLazy {
                     "[GARMIN-SYNC] unhandled message " +
                         "${message.messageType} (${message.payload.size}B) " +
@@ -623,22 +436,20 @@ class GarminSession(
     }
 
     private suspend fun onDownloadStatus(status: GarminDownloadRequestStatus) {
-        val current = active ?: return // Status for a transfer we already abandoned.
+        val current = active ?: return // Transfer already abandoned.
 
         if (!status.canProceed) {
             GarminLog.log(
                 "[GARMIN-SYNC] download refused for index " +
                     "${current.entry.fileIndex}: ${status.downloadStatus.name}",
             )
-            // One unreadable file must not end the sync — skip to the next,
-            // exactly as the bulk importer tolerates one bad file in a batch.
+            // One unreadable file must not end the sync.
             active = null
             next()
             return
         }
         current.begin(status.maxFileSize)
-        // A zero-length file is complete the moment its size is known — no
-        // chunk will ever arrive to trigger the completion path below.
+        // A zero-length file completes as soon as its size is known.
         if (current.isComplete) {
             active = null
             onFileComplete(current)
@@ -650,9 +461,7 @@ class GarminSession(
 
         val appended = current.append(chunk)
         if (!appended) {
-            // A CRC or offset mismatch means the stream desynchronised.
-            // Abandoning this file (rather than the sync) keeps the rest of
-            // the night's data.
+            // CRC or offset mismatch: abandon this file, keep the sync.
             GarminLog.log(
                 "[GARMIN-SYNC] chunk rejected for index " +
                     "${current.entry.fileIndex}; skipping file",
@@ -675,18 +484,9 @@ class GarminSession(
         if (finishedDownload.entry.type == GarminFileType.DIRECTORY) {
             directoryFetched = true
             val listing = GarminDirectory.parseWithDiagnostics(bytes)
-            // Skip what a previous sync already imported — bandwidth only.
-            // A null dedup key means the file cannot be identified across
-            // syncs, so it is always fetched rather than guessed at — see
-            // [GarminDirectoryEntry.dedupKey].
-            //
-            // Skipped is ALL a held file gets. This used to also re-send the
-            // archive flag for it, on the theory that a watch still offering
-            // a held file had missed the flag the first time. But "held" only
-            // means its key is in a list; the copy is long pruned, and a key
-            // collision — which the old key had — turned that into telling
-            // the watch to drop a file nobody had downloaded. The archive
-            // flag follows a download in THIS session or it is not sent.
+            // Skip what a previous sync imported. A null dedup key is always fetched.
+            // Never re-send the archive flag for a held file: the key may collide
+            // and drop a file nobody downloaded.
             val fresh = listing.entries.filter { entry ->
                 val key = entry.dedupKey
                 key == null || key !in alreadySynced
@@ -694,18 +494,13 @@ class GarminSession(
             queue.clear()
             queue.addAll(fresh)
             filesTotal = fresh.size
-            // Full diagnostics: "0 files" has several very different causes
-            // and only the raw record counts and rejected type codes tell them
-            // apart.
+            // Raw counts and rejected type codes tell the causes of "0 files" apart.
             GarminLog.log(
                 "[GARMIN-SYNC] directory ${bytes.size}B " +
                     "${listing.describe()} new=${fresh.size}",
             )
             if (listing.entries.isEmpty() && bytes.isNotEmpty()) {
-                // Nothing usable came back. The raw listing is small (16 bytes
-                // a record) and is the only thing that separates "the watch
-                // has nothing" from "the watch answers somewhere else" — dump
-                // it rather than guess.
+                // The raw listing separates "nothing" from "answers elsewhere".
                 GarminLog.logLazy { "[GARMIN-SYNC] raw directory: ${hex(bytes)}" }
             }
             report(GarminSyncPhase.DOWNLOADING)
@@ -720,9 +515,7 @@ class GarminSession(
                 "index=${finishedDownload.entry.fileIndex} bytes=${bytes.size}",
         )
 
-        // Persist first, archive second. Archiving is irreversible from our
-        // side, so a file we could not keep must stay on offer rather than
-        // vanish.
+        // Persist first, archive second. Archiving is irreversible.
         var safeToArchive = true
         val keep = onFileDownloaded
         if (keep != null) {
@@ -745,12 +538,8 @@ class GarminSession(
     }
 
     /**
-     * Tells the watch whether the phone's app is in the foreground.
-     *
-     * Gadgetbridge broadcasts this on every app foreground/background change,
-     * and it is the nearest thing to a "the companion is paying attention
-     * now" signal — Garmin watches defer online-flavoured errands (the
-     * weather fetch among them) until they believe someone is listening.
+     * Tells the watch whether the app is in the foreground. The watch defers
+     * online errands, weather included, until it believes someone is listening.
      */
     suspend fun notifyHostForeground(foreground: Boolean) {
         send(
@@ -765,14 +554,11 @@ class GarminSession(
     }
 
     /**
-     * Pushes fresh weather to a watch that can render it. Called once per
-     * session after the capabilities exchange; the watch answers the
-     * definitions with a status, which is what releases the records
-     * ([pendingWeatherData]).
+     * Pushes weather after the capabilities exchange. The records wait for
+     * the watch's status on the definitions.
      */
     private suspend fun maybePushWeather() {
-        // The capability bitmap is the only sign this watch HAS a weather
-        // glance; pushing at one that does not just earns a NAK.
+        // Only watches with the capability have a weather glance; others NAK.
         if (GarminCapability.WEATHER_CONDITIONS !in capabilities) return
         val weather = weatherProvider?.invoke() ?: return
         GarminLog.log(
@@ -789,10 +575,8 @@ class GarminSession(
     }
 
     /**
-     * A file the watch announced on an already-open link — a save that
-     * happened mid-session. Pulled immediately while the sync is live; once
-     * the sync has completed its result is sealed, so it is only noted and
-     * the next sync picks it up from the directory.
+     * A file announced mid-session. Pulled now while the sync is live,
+     * otherwise left for the next sync.
      */
     private suspend fun onFileAvailable(entry: GarminDirectoryEntry) {
         if (finished || !syncFiles) {
@@ -820,9 +604,7 @@ class GarminSession(
         )
         queue.add(entry)
         filesTotal += 1
-        // An empty sync may be inside its grace wait — this announcement is
-        // exactly what the wait was for, and the timer firing mid-download
-        // would seal the result under it.
+        // This is what the grace wait was for; the timer must not seal the result mid-download.
         graceJob?.cancel()
         graceJob = null
         if (directoryFetched && active == null) {
@@ -844,10 +626,8 @@ class GarminSession(
     }
 
     /**
-     * The FIT weather data waiting for the watch to accept its definitions.
-     * FIT is schema-then-records: the definitions (5011) go first, and the
-     * records (5012) only after the watch has answered — sending them
-     * back-to-back raced the watch's schema apply and dropped the records.
+     * Weather records waiting for the watch to accept the definitions.
+     * Sent back-to-back, the watch dropped them.
      */
     private var pendingWeatherData: ByteArray? = null
 
@@ -862,11 +642,7 @@ class GarminSession(
                 "[GARMIN-SYNC] nothing listed; waiting " +
                     "${emptyGrace.inWholeSeconds}s in case the watch announces",
             )
-            // Total by construction: finish() sends a frame, and the link can
-            // drop during the seconds this waits — which is exactly when a
-            // watch walks out of range. A failure inside the launched job
-            // would be an unhandled error that leaves [done] pending forever,
-            // so the result is settled here either way.
+            // Settle the result here either way, or a failure would leave [done] pending.
             graceJob = scope.launch {
                 delay(emptyGrace)
                 graceJob = null // Fired: finish() must not cancel this job under itself.
@@ -911,12 +687,7 @@ class GarminSession(
         doneDeferred.completeExceptionally(error)
     }
 
-    /**
-     * Ends the sync early (link dropped, user cancelled). Whatever was
-     * already downloaded is still returned — a night of sleep already on the
-     * phone should not be thrown away because the walk home ended the
-     * connection.
-     */
+    /** Ends the sync early. What was already downloaded is still returned. */
     fun abort(reason: Any? = null) {
         protobuf.abort()
         if (finished) return
@@ -929,10 +700,7 @@ class GarminSession(
     }
 
     private companion object {
-        /**
-         * Renders bytes as space-separated hex, capped so a stray large
-         * buffer cannot flood the log.
-         */
+        /** Bytes as hex, capped to keep logs short. */
         fun hex(bytes: ByteArray, max: Int = 256): String {
             val shown = if (bytes.size > max) bytes.copyOf(max) else bytes
             val text = shown.joinToString(" ") {
@@ -943,21 +711,13 @@ class GarminSession(
     }
 }
 
-/**
- * One file being received: the expected size, the bytes so far, and the
- * running CRC the watch checks each chunk against.
- */
+/** One file being received: expected size, bytes so far, running CRC. */
 private class ActiveDownload(val entry: GarminDirectoryEntry) {
 
     private var size = 0L
     private var runningCrc = 0
 
-    /**
-     * Whether the watch has reported the size yet. Tracked separately from
-     * [size] because a size of ZERO is legitimate — a watch with nothing new
-     * serves an empty directory — and keying completion off `size > 0` left
-     * that sync waiting forever for a chunk that was never coming.
-     */
+    /** Whether the size is known. Zero is a valid size, so [size] alone cannot tell. */
     private var begun = false
 
     private val data = ByteArrayOutputStream()
@@ -966,20 +726,13 @@ private class ActiveDownload(val entry: GarminDirectoryEntry) {
     val isComplete: Boolean get() = begun && received >= size
     val bytes: ByteArray get() = data.toByteArray()
 
-    /**
-     * The watch reports the real size in the download status; the directory's
-     * size field is not authoritative.
-     */
+    /** The download status carries the real size; the directory's is not authoritative. */
     fun begin(newSize: Long) {
         begun = true
         size = newSize
     }
 
-    /**
-     * Appends a chunk after verifying its offset and running CRC. Returns
-     * false when either check fails, which the caller treats as "skip this
-     * file".
-     */
+    /** Appends a chunk after checking offset and CRC. False means skip this file. */
     fun append(chunk: GarminFileTransferData): Boolean {
         if (chunk.dataOffset != received.toLong()) return false
         val crc = GarminCrc.compute(chunk.data, initialCrc = runningCrc)

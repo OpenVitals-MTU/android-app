@@ -30,11 +30,7 @@ interface BodyRepository {
 
     suspend fun loadLatestHeight(): Double?
 
-    /**
-     * The declared profile with weight/height replaced by the latest measured
-     * Health Connect records when readable. A missing permission or record
-     * leaves the declared value in place — the fallback is the whole point.
-     */
+    /** The declared profile with measured weight and height when readable. Fallback is the point. */
     suspend fun resolveBodyProfile(declared: BodyProfile): BodyProfile
 
     suspend fun loadHeightEntries(start: LocalDate, end: LocalDate): List<HeightEntry>

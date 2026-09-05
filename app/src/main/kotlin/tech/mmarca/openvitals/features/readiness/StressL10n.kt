@@ -17,14 +17,9 @@ import tech.mmarca.openvitals.domain.insights.StressItemTemplate
 import tech.mmarca.openvitals.domain.insights.StressListItem
 
 /**
- * Renders the stress estimate's lists and detail through the string catalog.
- *
- * The estimate's English sentences stay canonical — they are what the domain
- * computes and what a cached estimate persists — and the UI renders the
- * structured [StressListItem]s instead, falling back to the stored English when
- * an estimate predates the templates. That fallback is the reason the domain
- * still carries both: a user who upgrades mid-day should see a slightly
- * old-fashioned English line, not an empty card.
+ * Renders the stress estimate through the string catalog. The English
+ * sentences stay canonical and persisted; the UI renders the structured
+ * items, falling back to the stored English for older estimates.
  */
 
 /** The level's explanatory paragraph. */
@@ -55,13 +50,7 @@ fun stressConfidenceLabelRes(confidence: PhysiologicalStressConfidence): Int = w
     PhysiologicalStressConfidence.NO_DATA -> R.string.stress_confidence_none
 }
 
-/**
- * The confidence-reason token the domain stores, as a string resource.
- *
- * The tokens are a closed set the domain writes; anything unrecognised — an
- * estimate from a future version, or `no_stress_signals` — lands on "needs more
- * local data", which is true of every case that gets here.
- */
+/** The stored confidence-reason token as a resource. Unrecognised lands on "needs more data". */
 @StringRes
 fun stressConfidenceReasonRes(reason: String): Int = when (reason) {
     "hrv_resting_hr_average_hr" -> R.string.stress_reason_all_signals
@@ -100,10 +89,7 @@ private fun PhysiologicalStressEstimate.lines(
 ): List<String> =
     if (items.isEmpty() && english.isNotEmpty()) english else items.map { stressListItemLine(it) }
 
-/**
- * The sentence a template renders as. Pure, so the mapping can be checked for
- * being total and collision-free without a resource table.
- */
+/** The sentence a template renders as. Pure, so the mapping can be checked for totality. */
 @StringRes
 fun stressTemplateRes(template: StressItemTemplate): Int = when (template) {
     StressItemTemplate.HRV_BELOW_BASELINE -> R.string.stress_factor_hrv_below
@@ -127,8 +113,7 @@ fun stressTemplateRes(template: StressItemTemplate): Int = when (template) {
     StressItemTemplate.TEMPERATURE_NOT_ELEVATED -> R.string.stress_factor_temp_not
     StressItemTemplate.LOAD_HIGH_PERCENT -> R.string.stress_factor_load_high
     StressItemTemplate.LOAD_NEAR_TARGET -> R.string.stress_factor_load_near
-    // Reuses the readiness catalog's own sentence: it is the same claim about
-    // the same minutes, and two translations of it would drift.
+    // The readiness catalog's own sentence: two translations would drift.
     StressItemTemplate.MINDFULNESS_LOGGED -> R.string.readiness_factor_mindfulness_detail
     StressItemTemplate.COVERAGE_HR_SAMPLES -> R.string.stress_coverage_hr_samples
     StressItemTemplate.COVERAGE_HR_AVERAGE_ONLY -> R.string.stress_coverage_hr_avg_only
@@ -181,11 +166,7 @@ fun stressListItemLine(item: StressListItem): String {
     }
 }
 
-/**
- * The temperature clause: body reading, skin delta, or both, whichever the
- * estimate actually had. An absent one is dropped rather than printed as a zero
- * — "skin temperature 0.0 C" is a measurement, and there wasn't one.
- */
+/** The temperature clause: body, skin delta, or both. An absent one is dropped, never zero. */
 @Composable
 private fun temperatureValues(args: List<Double>): String {
     val temperature = stressTemperature(args)
@@ -222,11 +203,7 @@ sealed interface StressWindow {
     data class Range(val startEpochMillis: Long, val endEpochMillis: Long) : StressWindow
 }
 
-/**
- * The coverage window carried in `args[1..2]` as epoch milliseconds, with NaN
- * marking "no window". Pure, so the NaN handling can be tested without a
- * resource table.
- */
+/** The coverage window in `args[1..2]` as epoch millis; NaN means no window. */
 fun stressWindow(args: List<Double>): StressWindow {
     val start = args.arg(1)
     val end = args.arg(2)
@@ -261,10 +238,6 @@ private fun clock(epochMillis: Long): String =
         .toLocalTime()
         .format(ShortTimeFormatter)
 
-/**
- * The device's own 12/24-hour convention, rather than Flutter's hard-coded
- * `HH:mm`: a coverage window is a time the user reads, and on Android that is a
- * setting they have already made.
- */
+/** The device's own 12/24-hour convention, not a hard-coded `HH:mm`. */
 private val ShortTimeFormatter: DateTimeFormatter =
     DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)

@@ -79,10 +79,7 @@ class HealthConnectFeatureTest {
         assertEquals(setOf(sleepPermission), state.contextualPromptPermissions)
     }
 
-    // Dart: 'shows the child when available and permitted'
-    // (test/ui/components/health_connect_gate_test.dart). Fully permitted and
-    // available means pass-through: no gate mode (HealthConnectAccessGate renders
-    // its content when mode == null), no contextual prompt, nothing missing.
+    // Fully permitted and available means pass-through: no gate mode, no prompt, nothing missing.
     @Test
     fun `shows the child when available and permitted`() {
         val state = buildHealthConnectScreenUxState(
@@ -100,12 +97,8 @@ class HealthConnectFeatureTest {
         assertFalse(state.syncPaused)
     }
 
-    // Dart: 'shows the access gate when Health Connect is unavailable'. Kotlin
-    // DIVERGES deliberately: resolveHealthConnectAccessGateMode() returns null for
-    // any non-AVAILABLE availability, so no blocking access gate exists at this
-    // seam. Unavailability is carried on state.availability and routed out of band
-    // (the onboarding screen gates on it, and the dashboard surfaces the Health
-    // Connect promo). This test pins that routing.
+    // Kotlin diverges: resolveHealthConnectAccessGateMode() returns null for any non-AVAILABLE
+    // availability. Unavailability is carried on state.availability and routed out of band.
     @Test
     fun `unavailable Health Connect bypasses the access gate and surfaces availability on the state`() {
         val state = buildHealthConnectScreenUxState(
@@ -116,8 +109,7 @@ class HealthConnectFeatureTest {
             grantedPermissions = emptySet(),
             showDoubleCancelRecovery = false,
         )
-        // No blocking gate mode - the gate is not this state's channel for
-        // unavailability, unlike the Dart HealthConnectGate.
+        // No blocking gate mode.
         assertNull(state.accessGateMode)
         // The availability is surfaced verbatim for the screens that do gate on it.
         assertEquals(HealthConnectAvailability.NOT_SUPPORTED, state.availability)
@@ -133,11 +125,7 @@ class HealthConnectFeatureTest {
         )
     }
 
-    // Dart: 'shows the permission gate when a required permission is missing'
-    // hides the child behind a blocking 'Permissions needed' gate. Kotlin DIVERGES
-    // deliberately: a missing feature permission raises a contextual prompt while
-    // the child stays visible (accessGateMode == null means HealthConnectAccessGate
-    // renders its content). These assertions pin that divergence.
+    // Kotlin diverges: a missing feature permission raises a contextual prompt while the child stays visible.
     @Test
     fun `a missing required permission raises the contextual prompt over a still-visible child`() {
         val state = buildHealthConnectScreenUxState(
@@ -156,9 +144,7 @@ class HealthConnectFeatureTest {
         assertEquals(setOf(sleepPermission), state.missingReadPermissions)
     }
 
-    // The log grid no longer gates on the write set: each tile asks for its
-    // own writes on tap, so the feature declares no required permissions even
-    // when the manager has plenty of requestable writes.
+    // The log grid no longer gates on the write set: each tile asks for its own writes on tap.
     @Test
     fun `manual entry requires no permissions to open`() {
         val manager = manager().also {
@@ -198,8 +184,7 @@ class HealthConnectFeatureTest {
         assertEquals(HealthConnectAccessGateMode.SYNC_PAUSED, state.accessGateMode)
     }
 
-    // The importer keeps its all-or-nothing gate: which writes it needs is
-    // known up front, unlike the log grid.
+    // The importer keeps its all-or-nothing gate: its writes are known up front.
     @Test
     fun `data import still gates on its write set`() {
         val manager = manager().also {

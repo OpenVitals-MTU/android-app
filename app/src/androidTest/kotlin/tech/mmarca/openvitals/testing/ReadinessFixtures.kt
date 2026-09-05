@@ -17,17 +17,8 @@ import tech.mmarca.openvitals.domain.insights.ReadinessRecommendationType
 import tech.mmarca.openvitals.domain.insights.ReadinessState
 
 /**
- * A whole, plausible readiness insight, so a test can name the one field it
- * cares about.
- *
- * `DailyReadinessInsight` has twenty-two fields and three nested insights, all
- * required, and the production builder needs a day of health data to produce
- * one. Constructing it inline made every readiness rendering case cost more to
- * set up than to assert, which is why those cases went unported for so long.
- *
- * The defaults are a deliberately unremarkable day — moderate readiness,
- * balanced HRV, complete data — so that whatever a test overrides is visibly
- * the thing under test and nothing else is quietly at an edge.
+ * A whole, plausible readiness insight, so a test can name the one field it cares about.
+ * The defaults are an unremarkable day: moderate readiness, balanced HRV, complete data.
  */
 fun readinessInsight(
     state: ReadinessState = ReadinessState.MODERATE,

@@ -3,16 +3,10 @@ package tech.mmarca.openvitals.devices.core.sync
 import kotlin.time.Duration
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 
-/**
- * How far a device sync has got, reported as it runs. Device-agnostic — the
- * integration maps its own protocol phases onto these.
- */
+/** How far a sync has got. Device-agnostic. */
 enum class DeviceSyncPhase { HANDSHAKE, LISTING, DOWNLOADING, COMPLETE, FAILED }
 
-/**
- * A progress tick from an in-flight sync: the [phase] and, while downloading,
- * how many of [filesTotal] files are [filesDone].
- */
+/** A progress tick: the [phase] and, while downloading, [filesDone] of [filesTotal]. */
 data class DeviceSyncProgress(
     val phase: DeviceSyncPhase,
     val filesTotal: Int = 0,
@@ -22,28 +16,17 @@ data class DeviceSyncProgress(
 /** The outcome of a whole sync-and-persist run. */
 sealed class DeviceSyncResult {
 
-    /**
-     * The sync finished; [fileCount] files were downloaded and handed on (0 is
-     * a success — the watch simply had nothing new).
-     */
+    /** The sync finished with [fileCount] files. 0 is a success. */
     data class Succeeded(val fileCount: Int) : DeviceSyncResult()
 
-    /**
-     * The sync failed. [message] is already a rendered, integration-agnostic
-     * string — the seam never leaks the integration's exception type.
-     */
+    /** The sync failed. [message] is already rendered and integration-agnostic. */
     data class Failed(val message: String) : DeviceSyncResult()
 }
 
 /**
- * The seam between the app's generic sync orchestration and one integration's
- * sync implementation. Owns the WHOLE operation for a device — pull, import,
- * persist, stamp — reporting progress as it goes, so a second integration
- * (WearOS, …) plugs in without the caller naming any protocol.
- *
- * A **port**, like [tech.mmarca.openvitals.devices.garmin.GarminTransportProbe]:
- * features depend on this type, and only DI knows which integration satisfies
- * it.
+ * The seam between generic sync orchestration and one integration. Owns
+ * the whole operation: pull, import, persist, stamp. A port: only DI knows
+ * which integration satisfies it.
  */
 interface DeviceSyncPort {
 
@@ -51,12 +34,8 @@ interface DeviceSyncPort {
     fun canSync(device: BleSensorDevice): Boolean
 
     /**
-     * Runs the whole pull → import → store → stamp sequence for [device],
-     * reporting progress via [onProgress]. Never throws — a failed sync comes
-     * back as [DeviceSyncResult.Failed].
-     *
-     * [listenAfter] is a diagnostic: hold the link open that long after the
-     * sync to see what the watch sends unprompted.
+     * Runs the whole sequence for [device]. Never throws. [listenAfter] is
+     * a diagnostic window held open after the sync.
      */
     suspend fun sync(
         device: BleSensorDevice,

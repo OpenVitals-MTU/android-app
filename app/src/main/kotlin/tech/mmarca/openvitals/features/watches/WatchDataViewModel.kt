@@ -26,14 +26,9 @@ data class WatchMetricReading(
 )
 
 /**
- * Everything the app holds that Health Connect cannot: the latest value of
- * each watch-only metric, plus the day series for the two that have one.
- * Port of the Flutter build's `watch_metrics_view_model.dart`.
- *
- * Read-only and derived — nothing here decides what to store, only what the
- * watch-data screen can show. A metric the watch has never sent is simply
- * absent, which is what lets the screen omit it rather than render a
- * permanent blank row.
+ * What the app holds that Health Connect cannot: the latest value of each
+ * watch-only metric, plus the day series for the dense ones. A metric the
+ * watch never sent is absent, so the screen omits it.
  */
 @Immutable
 data class WatchMetrics(
@@ -42,13 +37,8 @@ data class WatchMetrics(
     val stressToday: List<WatchMetricReading> = emptyList(),
     val bodyEnergyToday: List<WatchMetricReading> = emptyList(),
     /**
-     * Intensity minutes accumulated across the current week
-     * (Monday-anchored), vigorous counted double as Garmin counts them
-     * towards the weekly goal. Null when the watch has sent no intensity
-     * minutes at all. This is a week-long sum of daily finals, not the single
-     * latest reading: the watch stores a *running daily total* that resets
-     * each midnight, so the latest value is only today's — using it for the
-     * weekly goal understates the week.
+     * Intensity minutes this week, vigorous counted double as Garmin does.
+     * A sum of daily finals: the watch's running total resets nightly.
      */
     val intensityMinutesWeek: Long? = null,
 ) {
@@ -58,22 +48,14 @@ data class WatchMetrics(
 
     fun valueOf(metric: GarminWellnessMetric): Long? = latest[metric]?.value
 
-    /**
-     * The metrics this watch has never sent, in declaration order — what the
-     * UI names once at the foot of the screen instead of showing empty rows.
-     */
+    /** The metrics this watch never sent, named once at the foot of the screen. */
     fun missingFrom(expected: List<GarminWellnessMetric>): List<GarminWellnessMetric> =
         expected.filterNot { it in latest }
 }
 
 /**
- * Loads [WatchMetrics] from [repository], the aggregation windows exactly as
- * the Flutter provider computed them: today's series over the local calendar
- * day, and the weekly total over the Monday-anchored local week, summing the
- * FINAL reading of each day (the watch's running total resets nightly).
- *
- * Top-level and clock-driven so the windowing is testable without a
- * view-model.
+ * Loads [WatchMetrics]: today's series over the local day, and the weekly
+ * total over the Monday-anchored week from each day's final reading.
  */
 internal suspend fun loadWatchMetrics(
     repository: GarminWellnessRepository,
@@ -96,10 +78,8 @@ internal suspend fun loadWatchMetrics(
         repository.samplesBetween(metric, dayStart, dayEnd)
             .map { WatchMetricReading(value = it.value, time = it.time) }
 
-    // The weekly intensity-minutes total. Rows arrive oldest-first, so the
-    // last value seen for a day is its final running total. Key by local
-    // calendar day so a UTC-stored instant lands on the day it was actually
-    // measured.
+    // Rows arrive oldest first, so the last value of a day is its final total.
+    // Keyed by local day.
     val weekStart = today.with(DayOfWeek.MONDAY)
     suspend fun dailyFinalsSum(metric: GarminWellnessMetric): Long {
         val rows = repository.samplesBetween(
@@ -118,8 +98,7 @@ internal suspend fun loadWatchMetrics(
         GarminWellnessMetric.MODERATE_MINUTES in latest ||
         GarminWellnessMetric.VIGOROUS_MINUTES in latest
     ) {
-        // Garmin's own convention: vigorous minutes count double towards the
-        // weekly goal, which is why a bare sum would understate the week.
+        // Garmin's convention: vigorous minutes count double.
         dailyFinalsSum(GarminWellnessMetric.MODERATE_MINUTES) +
             2 * dailyFinalsSum(GarminWellnessMetric.VIGOROUS_MINUTES)
     } else {
@@ -159,8 +138,7 @@ class WatchDataViewModel @Inject constructor(
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
-                // The screen's empty state covers a failed read: "nothing
-                // yet" is also what an unreadable table amounts to.
+                // The empty state covers a failed read.
                 WatchMetrics()
             }
             _uiState.value = WatchDataUiState(isLoading = false, metrics = metrics)

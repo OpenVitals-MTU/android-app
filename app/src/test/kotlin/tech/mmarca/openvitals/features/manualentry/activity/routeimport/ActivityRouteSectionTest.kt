@@ -23,11 +23,7 @@ import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 
-/**
- * The two numbers the route section derives on its own: the moving time left
- * once the pauses are taken out, and the averages computed over that time
- * rather than over the wall clock.
- */
+/** The moving time once pauses are taken out, and the averages computed over it. */
 class ActivityRouteSectionTest {
 
     @Test fun `routeMovingDurationMs is the full span when nothing was paused`() {

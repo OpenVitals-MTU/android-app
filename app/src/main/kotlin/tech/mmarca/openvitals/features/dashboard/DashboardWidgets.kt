@@ -152,11 +152,7 @@ private const val DashboardDragLongPressMillis = 500L
 private const val DashboardEditWiggleDegrees = 0.45f
 private val DashboardCompactWidgetHeight = 82.dp
 
-/**
- * Tile height follows the system text scale so large fonts do not clip,
- * clamped to [1.0, 1.6]: nothing shrinks below the design height, and past
- * 1.6 the grid geometry would drift instead of helping readability.
- */
+/** Tile height follows the text scale, clamped to [1.0, 1.6]. */
 @Composable
 internal fun dashboardWidgetRowHeight(): androidx.compose.ui.unit.Dp =
     DashboardCompactWidgetHeight * androidx.compose.ui.platform.LocalDensity.current.fontScale.coerceIn(1f, 1.6f)
@@ -214,13 +210,7 @@ internal fun DashboardWidgetGrid(
     modifier: Modifier = Modifier,
     topPadding: Dp = DashboardWidgetSectionPadding,
     bottomPadding: Dp = DashboardWidgetSectionPadding,
-    /**
-     * Sizes the section so a widget spanning every row is SQUARE — the hero
-     * rings. The shipped design draws them at `aspectRatio: 1` (each fills
-     * half the width, so ~184dp on a 411dp phone) rather than at stacked tile
-     * rows (82+12+82 = 176dp), and the 8dp difference is visible on the two
-     * largest cards on the screen.
-     */
+    /** Sizes the section so a full-span widget is square, as the shipped design draws the hero rings. */
     squareRowSpan: Boolean = false,
 ) {
     val visibleSpecs = remember(ids, specsById) { ids.mapNotNull { specsById[it] } }
@@ -236,10 +226,8 @@ internal fun DashboardWidgetGrid(
     }
     val configuration = LocalConfiguration.current
     val rowHeight = if (squareRowSpan) {
-        // Half the content width, minus the row gap's share: two of these rows
-        // plus the gap between them equal one column width, which is what makes
-        // a full-span widget square. Derived from the screen rather than
-        // measured constraints so the grid's height is stable before layout.
+        // Half the content width minus the gap's share, so a full-span widget is
+        // square. Derived from the screen so the height is stable before layout.
         val contentWidth = configuration.screenWidthDp.dp.coerceAtMost(1080.dp) -
             DashboardWidgetHorizontalPadding * 2
         val columnWidth = (contentWidth - DashboardWidgetGridSpacing) / DashboardWidgetGridColumns
@@ -284,8 +272,7 @@ internal fun DashboardWidgetGrid(
                 state = reorderableState,
                 key = spec.id,
                 enabled = isEditingDashboard,
-                // Animate demotion/promotion reshuffles outside edit mode; the
-                // reorderable library owns item movement while editing.
+                // Animate reshuffles outside edit mode; the reorderable library owns editing.
                 modifier = if (isEditingDashboard) Modifier else Modifier.animateItem(),
             ) { isDragging ->
                 Box(
@@ -547,9 +534,7 @@ internal fun DashboardPillWidget(
     trailing: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
-    // The stat-tile look: 28dp accent chip, value with its unit inline, the
-    // no-data message styled as a muted value, and a thin goal underline. An
-    // empty tile deliberately drops its underline and subtitle.
+    // The stat-tile look. An empty tile drops its underline and subtitle.
     MetricStatCard(
         title = title,
         value = value,

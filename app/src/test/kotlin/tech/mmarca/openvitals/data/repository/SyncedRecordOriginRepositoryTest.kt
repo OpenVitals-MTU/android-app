@@ -9,10 +9,7 @@ import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginDao
 import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginEntity
 import tech.mmarca.openvitals.healthconnect.SyncedSourceOverlay
 
-/**
- * The receiver-side origin mapping: persisting fingerprint→origin rows and
- * keeping the display overlay in step with them.
- */
+/** Persisting fingerprint-to-origin rows and keeping the display overlay in step. */
 class SyncedRecordOriginRepositoryTest {
 
     private class FakeDao : SyncedRecordOriginDao {

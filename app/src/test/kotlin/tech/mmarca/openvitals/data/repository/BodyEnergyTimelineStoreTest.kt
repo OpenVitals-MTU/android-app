@@ -202,8 +202,7 @@ class BodyEnergyTimelineStoreTest {
 
     @Test
     fun `invalidateForward is a no-op when the range is empty`() = runTest {
-        // The forward ripple passes (date + 1, today); recomputing today makes
-        // end < start, and that must not wipe the chain.
+        // Recomputing today makes end < start, and that must not wipe the chain.
         val (dao, store) = store()
         store.save(timeline(date = date))
 

@@ -30,21 +30,9 @@ import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the rendering cases of Flutter's
- * `test/features/mindfulness/mindfulness_screen_test.dart`.
- *
- * The totals and the empty-state decision are already covered on the JVM by
- * `MindfulnessPresentationMapperTest`. What is only answerable here is whether
- * the content actually draws what the display state decided — the gap between
- * "the mapper says there is no data" and "the user is told there is no data" is
- * a blank screen with no explanation.
- *
- * The access-gate case from that file is not repeated here: Kotlin routes every
- * screen's gate through `HealthConnectScreenShell`, and it is pinned once in
- * `HealthConnectAccessGateTest`.
- *
- * The session-order case from `mindfulness_display_test.dart` lives here as
- * well: Kotlin sorts inside the content, so there is no display field to read.
+ * Whether the content draws what the display state decided. The totals are covered by
+ * `MindfulnessPresentationMapperTest`; the access gate by `HealthConnectAccessGateTest`.
+ * Session order is tested here because Kotlin sorts inside the content.
  */
 class MindfulnessPeriodContentTest {
 
@@ -56,17 +44,14 @@ class MindfulnessPeriodContentTest {
         setContent(state(sessions = listOf(session()), hasData = true))
 
         composeRule.onNodeWithText(string(R.string.metric_mindfulness)).assertIsDisplayed()
-        // The session itself, not just the section heading — a heading over an
-        // empty list is the failure this is meant to catch.
+        // The session itself, not only the heading.
         composeRule.onNode(hasScrollAction()).performScrollToNode(hasText(SESSION_TITLE))
         composeRule.onNodeWithText(SESSION_TITLE).assertIsDisplayed()
     }
 
     @Test
     fun showsTheEmptyPlaceholderWithNoSessions() {
-        // Not the loading state and not a zeroed chart: an explicit "nothing
-        // recorded", because a period with no sessions and a period that failed
-        // to load look identical otherwise.
+        // An explicit "nothing recorded", because an empty period and a failed load look identical otherwise.
         setContent(state(sessions = emptyList(), hasData = false, isLoading = false))
 
         composeRule.onNodeWithText(string(R.string.message_no_mindfulness_period)).assertIsDisplayed()
@@ -74,8 +59,7 @@ class MindfulnessPeriodContentTest {
 
     @Test
     fun aLoadingPeriodDoesNotClaimThereIsNothingToShow() {
-        // The same empty display, mid-load. Announcing "no sessions" before the
-        // read returns tells the user something false about their own history.
+        // Announcing "no sessions" before the read returns tells the user something false.
         setContent(state(sessions = emptyList(), hasData = false, isLoading = true))
 
         composeRule.onNodeWithText(string(R.string.message_no_mindfulness_period)).assertDoesNotExist()
@@ -83,13 +67,10 @@ class MindfulnessPeriodContentTest {
 
     @Test
     fun sessionsAreListedNewestFirst() {
-        // The list is a history, and the session someone just finished is the one
-        // they look for. Sorted the other way it lands at the bottom, under every
-        // sit from the start of the week.
+        // The session someone just finished is the one they look for.
         val older = session(dayOffset = 2, title = OLDER_SESSION_TITLE)
         val newer = session(dayOffset = 0, title = SESSION_TITLE)
-        // Handed over oldest-first, so a content that renders its input order
-        // fails here rather than passing by luck.
+        // Handed over oldest-first, so rendering the input order fails here.
         setContent(state(sessions = listOf(older, newer), hasData = true))
 
         composeRule.onNode(hasScrollAction()).performScrollToNode(hasText(OLDER_SESSION_TITLE))
@@ -102,14 +83,8 @@ class MindfulnessPeriodContentTest {
 
     @Test
     fun calendarWeekModeNamesEveryPeriodTitleTheSameWay() {
-        // Three surfaces name the window the user is looking at: the navigator at
-        // the top, the total card's subtitle and the chart's summary line. They
-        // have to agree — a screen that calls the same month two different things
-        // reads as two different periods stacked on one page.
-        //
-        // Anchored on today rather than a fixed past date on purpose: "This month"
-        // is only the name of a month that contains today, which is the naming
-        // branch this pins.
+        // The navigator, the total card and the chart summary all name the window and must agree.
+        // Anchored on today because "This month" only names a month containing today.
         val today = LocalDate.now()
         val state = MindfulnessUiState(
             isLoading = false,
@@ -161,8 +136,7 @@ class MindfulnessPeriodContentTest {
             }
         }
 
-        // Unmerged, so this counts the three labels themselves rather than
-        // however many groups the semantics merger happened to fold them into.
+        // Unmerged, so this counts the three labels themselves.
         composeRule
             .onAllNodesWithText(
                 string(R.string.period_this_month),

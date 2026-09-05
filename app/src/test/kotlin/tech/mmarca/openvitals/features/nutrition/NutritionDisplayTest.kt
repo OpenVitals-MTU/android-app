@@ -15,13 +15,7 @@ import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionNutrientGroup
 
-/**
- * Ported from mobile-app test/features/nutrition/nutrition_display_test.dart.
- *
- * Kotlin keeps every nutrient series on [NutritionDisplayState.overviewNutrients] and
- * splits primary from additional at the render site, so the split is asserted over
- * [primaryNutritionOverviewNutrients] and [NutritionNutrient.group].
- */
+/** The primary/additional nutrient split, asserted over [primaryNutritionOverviewNutrients] and [NutritionNutrient.group]. */
 class NutritionDisplayTest {
 
     private val monday: LocalDate = LocalDate.of(2026, 3, 2)

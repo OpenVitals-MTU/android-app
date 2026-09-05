@@ -28,12 +28,7 @@ import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
-/**
- * Port of test/features/bodyenergy/body_energy_view_model_test.dart: the
- * repository returns whatever it is told to, so the view-model's own behaviour
- * — the display precompute, the failure mapping, the staleness guard — is what
- * is under test.
- */
+/** The view model's own behaviour: the display precompute, the failure mapping, the staleness guard. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class BodyEnergyViewModelTest {
 

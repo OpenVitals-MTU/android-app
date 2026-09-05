@@ -26,15 +26,13 @@ class ActivityBackfillTest {
         val result = workout.withRouteBackfilledMetrics()
 
         assertEquals(3_335.85, result.totalDistanceMeters ?: 0.0, 0.1)
-        // 10 -> 40 -> 35 -> 80. The dip is real and larger than the noise
-        // floor, so only the two ascents count.
+        // 10 -> 40 -> 35 -> 80. The dip is larger than the noise floor, so only the two ascents count.
         assertEquals(70.0, result.elevationGainedMeters ?: 0.0, 0.001)
     }
 
     @Test
     fun `route backfill rejects altitude wander below the noise floor`() {
-        // A 4.5 m total rise across a 3-minute route is GPS vertical noise, not
-        // a climb: summing the raw per-point rises banked it as 5.5 m of ascent.
+        // A 4.5 m total rise over 3 minutes is GPS noise; summing raw rises banked 5.5 m of ascent.
         val workout = workout(
             totalDistanceMeters = null,
             elevationGainedMeters = null,
@@ -54,9 +52,7 @@ class ActivityBackfillTest {
         assertNull(result.elevationGainedMeters)
     }
 
-    // The treadmill/watch case: speed is recorded but no DistanceRecord is ever
-    // written, so the session has no distance at all — while the splits card,
-    // integrating these very samples, cheerfully reports "every 1 km".
+    // The treadmill case: speed is recorded but no DistanceRecord, so the session has no distance.
     @Test
     fun `sample backfill integrates a distance from speed when none was written`() {
         val workout = workout()

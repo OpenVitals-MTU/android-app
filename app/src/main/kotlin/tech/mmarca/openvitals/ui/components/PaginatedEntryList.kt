@@ -18,20 +18,9 @@ import tech.mmarca.openvitals.R
 private const val EntryPageSize = 10
 
 /**
- * A list that starts at one page and grows as the reader asks for more.
- *
- * **How far it has been expanded survives the list changing underneath it.**
- * The expansion is the reader's answer to "how much of this do I want to see",
- * not a property of the current contents, and it used to be keyed on the
- * entries themselves: deleting one row from a list expanded to fifty snapped it
- * back to ten, which threw everything below up the screen and left the reader
- * looking at a part of the page they had not scrolled to. Deleting a row is the
- * moment they are most obviously still reading the list.
- *
- * The count is only ever clamped to what exists ([boundedVisibleCount]), never
- * reset, so it also carries across a change of period. That is deliberate:
- * having asked for a longer list once, being given a longer list again is the
- * lesser surprise.
+ * A list that starts at one page and grows on request. The expansion
+ * survives the list changing: deleting a row must not snap it back. Only
+ * ever clamped to what exists, never reset.
  */
 @Composable
 fun <T> PaginatedEntryList(

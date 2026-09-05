@@ -19,19 +19,9 @@ import tech.mmarca.openvitals.testing.assertVisualRootMatchesGolden
 import tech.mmarca.openvitals.testing.goldenInstantAt
 
 /**
- * Port of Flutter's `test/goldens/charts/activity_splits_golden_test.dart`.
- *
- * [ActivitySplitsCard] — the pace bars. The bar is deliberately NOT zero-based, and
- * that is the whole point of photographing it: the interesting range of a run is the
- * thirty seconds between its fastest and its slowest kilometre, and a zero-based bar
- * squashes that into a row of identical stripes. The slowest split fills the track,
- * the fastest sits at the 25% floor so it still reads as a bar rather than as
- * nothing. A "fix" that re-based the scale at zero would leave every existing test
- * green.
- *
- * The estimated source has no bar at all, and that is not an oversight either: every
- * estimated split has the same pace by construction, so a bar chart of it would be a
- * flat line pretending to be a measurement.
+ * [ActivitySplitsCard]: the pace bars. The bar is not zero-based on purpose: the slowest
+ * split fills the track and the fastest sits at the 25% floor. The estimated source has no bar,
+ * because every estimated split has the same pace by construction.
  */
 class ActivitySplitsGoldenTest {
 
@@ -58,8 +48,7 @@ class ActivitySplitsGoldenTest {
 
     @Test
     fun lapsTheDeviceRecordedItself() {
-        // A lap is whatever the watch called a lap — never re-cut, never marked
-        // partial, so the distances are uneven and none of them is an apology.
+        // A lap is whatever the watch called a lap: never re-cut, never marked partial.
         val start = goldenInstantAt(7, 30)
         val laps = listOf(
             split(1, 400.0, 298.0, start),
@@ -86,8 +75,7 @@ class ActivitySplitsGoldenTest {
 
     @Test
     fun estimatedSplits_theNumbersAndNoBar() {
-        // Distance and duration only: the pace is the activity average, evenly
-        // divided. The card says so in words and withholds the bar.
+        // Distance and duration only, so the pace is the evenly divided average. The card withholds the bar.
         val start = goldenInstantAt(7, 30)
         val estimated = (0 until 4).map { index ->
             split(index + 1, 1_000.0, AVERAGE_PACE, start.plusSeconds(322L * index))
@@ -115,22 +103,16 @@ class ActivitySplitsGoldenTest {
             .fillMaxWidth()
             .padding(16.dp)
 
-        /**
-         * Seconds per kilometre for each split of a real-feeling 5.42 km run: a steady
-         * opening, a slow fourth (the hill), and a fast finish.
-         */
+        /** Seconds per kilometre for a 5.42 km run: steady opening, a slow fourth, a fast finish. */
         val PACE_SECONDS = listOf(320.0, 312.0, 330.0, 345.0, 305.0)
         const val PARTIAL_PACE = 315.0
         const val PARTIAL_METERS = 420.0
 
-        // Folded by the display layer, not rescanned by the card — a ratio between
-        // splits, so metric seconds-per-km is the right scale even for a user reading
-        // min/mi.
+        // Folded by the display layer. A ratio between splits, so seconds per km is right even for min/mi.
         const val SLOWEST = 345.0
         const val FASTEST = 305.0
 
-        // The activity's own average pace, which is what each split's delta is measured
-        // against: total time over total distance, NOT the mean of the split paces.
+        // The activity's own average pace: total time over total distance, not the mean of the split paces.
         const val AVERAGE_PACE = 321.8
 
         fun split(index: Int, meters: Double, pace: Double, from: Instant): ActivitySplit {
@@ -157,8 +139,7 @@ class ActivitySplitsGoldenTest {
                 splits += next
                 cursor = next.endTime
             }
-            // The trailing remainder. It keeps its real (short) distance and says so —
-            // a partial split is short ON PURPOSE, and unlabelled it reads as a bug.
+            // The trailing remainder keeps its real short distance and says so.
             splits += split(PACE_SECONDS.size + 1, PARTIAL_METERS, PARTIAL_PACE, cursor)
             return splits
         }

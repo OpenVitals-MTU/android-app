@@ -16,14 +16,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Ports the `phase banner` group of Flutter's
- * `test/features/manualentry/activity/recording/heart_rate_recovery_phase_test.dart`.
- *
- * During a recovery test the banner is the only thing on the screen that
- * matters: the rider is at their limit with the phone on a bar mount. Losing
- * the End effort button strands anyone whose legs give out before the target
- * heart rate does — and showing it again during the recovery is worse, because
- * pressing it would move the instant the whole measurement is taken from.
+ * During a recovery test the banner is what matters. Losing End effort strands a rider whose
+ * legs give out first; showing it during recovery would move the measurement instant.
  */
 class HeartRateRecoveryPhaseBannerTest {
 
@@ -32,9 +26,7 @@ class HeartRateRecoveryPhaseBannerTest {
 
     @Test
     fun theEffortCanAlwaysBeEndedByHand() {
-        // The target heart rate is a convenience. On a day when the legs are
-        // not there the rider still has to be able to stop, and the measurement
-        // is just as good — it only asks that the stop be abrupt.
+        // The target heart rate is a convenience. The rider must still be able to stop abruptly.
         var ended = 0
         setBanner(
             state = state(phase = ActivityRecordingHrrPhase.EFFORT, heartRateBpm = 176L),

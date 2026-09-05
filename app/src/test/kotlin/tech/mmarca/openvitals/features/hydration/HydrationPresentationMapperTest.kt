@@ -80,8 +80,7 @@ class HydrationPresentationMapperTest {
             crossWeightEntries = emptyList(),
         )
 
-        // A day with nothing logged is not a tracked day, and the average is
-        // over the tracked ones.
+        // A day with nothing logged is not a tracked day.
         assertEquals(5, display.summary.loggedDays)
         assertEquals(3, display.summary.trackedDays)
         assertEquals(4.5, display.summary.totalLiters, 0.01)
@@ -192,8 +191,7 @@ class HydrationPresentationMapperTest {
             today = anchorDate,
         )
 
-        // One tracked day, hit. Dividing by tracked days filled the bar completely, which
-        // rewarded you for logging less; dividing by the seven days of the week does not.
+        // Dividing by tracked days rewarded logging less; dividing by the week's seven days does not.
         assertEquals(1, display.summary.trackedDays)
         assertEquals(1.0 / 7.0, display.goalProgress, 0.001)
         // The tracked-day figures are deliberately unchanged.
@@ -254,8 +252,7 @@ class HydrationPresentationMapperTest {
             today = anchorDate,
         )
 
-        // Without the guard the streak collapsed to 0 at midnight and stayed there until
-        // today's goal was met.
+        // Without the guard the streak collapsed to 0 at midnight.
         assertEquals(2, display.summary.currentGoalStreakDays)
     }
 

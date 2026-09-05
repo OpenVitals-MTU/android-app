@@ -3,15 +3,9 @@ package tech.mmarca.openvitals.devices.garmin
 import org.json.JSONObject
 
 /**
- * Answers the watch's OAuth exchanges with fabricated tokens.
- *
- * This is the gate the whole connected-features tier waits behind: a watch
- * whose `connectToIT` exchange fails considers itself signed out and never
- * even attempts weather or ephemeris. The tokens are never presented to any
- * real service — every request made with them terminates in this app, which
- * has no INTERNET permission to present them with.
- *
- * Mirrors Gadgetbridge's `OauthInterceptor`.
+ * Answers the watch's OAuth exchanges with fabricated tokens. A watch whose
+ * exchange fails considers itself signed out and never fetches weather.
+ * The tokens only ever reach this app. Mirrors Gadgetbridge.
  */
 class GarminOauthInterceptor : GarminHttpInterceptor {
 
@@ -28,11 +22,7 @@ class GarminOauthInterceptor : GarminHttpInterceptor {
         )
     }
 
-    /**
-     * The scopes upstream fabricates — assembled from real-device dumps
-     * (their comments name a Swim 2 and a Venu 3). The watch checks it was
-     * granted what it wanted; an empty scope reads as a broken account.
-     */
+    /** The scopes upstream fabricates from real-device dumps. An empty scope reads as broken. */
     private val oauthScopes = listOf(
         "GCS_EPHEMERIS_SONY_READ",
         "GCS_CIQ_APPSTORE_MOBILE_READ",
@@ -67,8 +57,7 @@ class GarminOauthInterceptor : GarminHttpInterceptor {
             }
             "/api/oauth/token", "/oauth/refresh_token/token" -> {
                 GarminLog.log("[GARMIN-HTTP] refreshing fake OAuth tokens ($path)")
-                // Keep the watch's refresh token when it sent one
-                // (grant_type=refresh_token&refresh_token=...&client_id=...).
+                // Keep the watch's refresh token when it sent one.
                 val refreshToken = rawBody
                     ?.toString(Charsets.UTF_8)
                     ?.split("&")

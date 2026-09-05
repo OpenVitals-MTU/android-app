@@ -148,8 +148,7 @@ class NutritionPresentationMapperTest {
     }
 
     @Test fun `the every-day basis spreads the same food over the days that have passed`() {
-        // The week runs Mon 4th to Sun 10th; the anchor is the 10th, so all
-        // seven days have happened and two of them carried food.
+        // The week runs Mon 4th to Sun 10th; the anchor is the 10th, so all seven days have happened.
         val dailyMacros = listOf(
             DailyMacros(date = anchorDate.minusDays(1), energyKcal = 1_800.0),
             DailyMacros(date = anchorDate, energyKcal = 2_200.0),
@@ -174,8 +173,7 @@ class NutritionPresentationMapperTest {
     }
 
     @Test fun `a single day averages to the day itself`() {
-        // Not zero: the baseline insight compares against this, and the screens
-        // decide separately whether a one-day average is worth SHOWING.
+        // Not zero: the baseline insight compares against this.
         val dayQuery = PeriodLoadQuery(
             range = TimeRange.DAY,
             anchorDate = anchorDate,

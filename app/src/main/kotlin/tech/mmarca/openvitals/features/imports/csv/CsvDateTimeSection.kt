@@ -165,8 +165,7 @@ internal fun CsvDateTimeSection(
                 )
             }
 
-            // The live echo. A dd/MM vs MM/dd mistake is invisible in the raw
-            // text and obvious here, BEFORE anything is written.
+            // The live echo: a dd/MM mistake is obvious here, before anything is written.
             if (resolved != null) {
                 Spacer(Modifier.height(12.dp))
                 val locale = LocalLocale.current.platformLocale

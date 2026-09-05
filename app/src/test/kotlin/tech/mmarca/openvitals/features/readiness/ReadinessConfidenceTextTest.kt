@@ -5,14 +5,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.insights.ReadinessConfidence
 
-/**
- * The readiness confidence line.
- *
- * Dart counterpart: the `daily readiness panel` and `training readiness detail`
- * confidence cases of test/features/readiness/. Those were unportable while
- * the mapping lived as a private `@Composable` inside each screen — twice, and
- * built from English literals rather than resources.
- */
+/** The readiness confidence line, hoisted out of two private composables built from English literals. */
 class ReadinessConfidenceTextTest {
 
     @Test
@@ -42,9 +35,7 @@ class ReadinessConfidenceTextTest {
 
     @Test
     fun `an unrecognised confidence reason falls back to partial data`() {
-        // The reason is a raw key from the insight, so a new one on the domain
-        // side — or one read back from an older stored insight — must still
-        // render a whole line rather than half of one.
+        // The reason is a raw key from the insight, so an unknown one must still render a whole line.
         listOf("", "something_new", "MISSING_SLEEP_DATA", "missing_stress_data").forEach { reason ->
             assertThat(ReadinessConfidenceText.reasonRes(reason))
                 .isEqualTo(R.string.readiness_confidence_reason_partial)

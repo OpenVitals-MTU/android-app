@@ -7,9 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import tech.mmarca.openvitals.domain.model.MindfulnessSession
 
-/**
- * Ported from mobile-app test/features/mindfulness/mindfulness_intraday_chart_test.dart.
- */
+/** The mindfulness intraday chart points. */
 class MindfulnessIntradayChartTest {
 
     private val dayStart: Instant = Instant.parse("2026-03-04T00:00:00Z")
@@ -24,8 +22,7 @@ class MindfulnessIntradayChartTest {
     )
 
     @Test fun `cumulativeMindfulness banks the minutes when a session ENDS`() {
-        // Not when it starts: a session you are still sitting is not minutes you have
-        // done. A 30-minute sit begun at 06:00 lands on the chart at 06:30.
+        // A session lands on the chart when it ends: a 30-minute sit begun at 06:00 lands at 06:30.
         val points = listOf(
             session(dayStart.plus(Duration.ofHours(6)), Duration.ofMinutes(30)),
             session(dayStart.plus(Duration.ofHours(18)), Duration.ofMinutes(10)),

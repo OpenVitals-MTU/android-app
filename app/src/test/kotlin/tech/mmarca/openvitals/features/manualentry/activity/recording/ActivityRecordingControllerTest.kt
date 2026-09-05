@@ -35,16 +35,9 @@ import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 /**
- * Ported from mobile-app
- * test/features/manualentry/activity/recording/activity_recording_service_test.dart.
- *
- * Flutter's `ActivityRecordingService` is Kotlin's [ActivityRecordingController]: the
- * notification buttons land on [ActivityRecordingController.pauseRecording] /
- * `resumeRecording` / `discardRecording` (relayed by ActivityRecordingService's
- * `onStartCommand`), and the same restore-from-store path runs at construction.
- *
- * Timed recordings throughout - they exercise the full lifecycle without a single
- * satellite.
+ * The notification buttons land on [ActivityRecordingController.pauseRecording],
+ * `resumeRecording` and `discardRecording`, and the restore-from-store path runs at construction.
+ * Timed recordings throughout, so no satellite is needed.
  */
 class ActivityRecordingControllerTest {
 
@@ -141,9 +134,7 @@ class ActivityRecordingControllerTest {
     }
 
     @Test fun `a denied notification permission refuses to start and says why`() {
-        // The recording lives in a foreground service, which cannot post its
-        // notification without the permission - starting anyway would record with
-        // no ongoing notification and die with the activity.
+        // A foreground service cannot post its notification without the permission; starting anyway would die with the activity.
         mockkObject(ActivityRecordingController.Companion)
         every { ActivityRecordingController.hasNotificationPermission(any()) } returns false
         val recorder = controller()
@@ -166,13 +157,7 @@ class ActivityRecordingControllerTest {
         verify { ble.stopRecording() }
     }
 
-    /**
-     * The restore half of the Flutter case "a recording restored after process death
-     * re-enters instead of going numb". Kotlin's controller re-subscribes to the BLE
-     * metrics flow on construction but never calls `startRecording()` on the
-     * coordinator again, so the Flutter assertion about re-attaching the BLE
-     * collection has no Kotlin counterpart and is deliberately not asserted here.
-     */
+    /** The restore half. The controller re-subscribes to BLE metrics on construction but never calls `startRecording()` again. */
     @Test fun `a recording restored after process death comes up already recording`() {
         val first = controller()
         first.startRecording(stationaryBike, null)

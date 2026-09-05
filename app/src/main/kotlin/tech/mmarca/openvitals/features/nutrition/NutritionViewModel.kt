@@ -120,11 +120,7 @@ class NutritionViewModel(
         load()
     }
 
-    /**
-     * The averaging basis only changes what the loaded days are DIVIDED by, so
-     * a change re-maps what is already in hand rather than re-reading Health
-     * Connect.
-     */
+    /** The basis only changes the divisor, so a change re-maps without re-reading. */
     private fun observeAverageBasis() {
         viewModelScope.launch {
             averageBasisChanges.drop(1).collect { basis ->
@@ -197,20 +193,14 @@ class NutritionViewModel(
         _uiState.value = _uiState.value.copy(dailyGoal = normalized).withDisplay()
     }
 
-    /**
-     * Removes an OpenVitals-authored meal optimistically so the row leaves the list at once,
-     * deletes it through the repository, then force-reloads the period; restores the previous
-     * state (with the error) on failure. Nutrition entries are delete-only — the screens never
-     * offered an edit.
-     */
+    /** Removes a meal optimistically, deletes it, then force-reloads; restores on failure. */
     fun deleteNutritionEntry(entryId: String) {
         if (entryId.isBlank()) return
         val entry = _uiState.value.entries.firstOrNull { it.id == entryId } ?: return
         if (!entry.isOpenVitalsEntry) return
         viewModelScope.launch {
             val previous = _uiState.value
-            // Rebuilt synchronously off the trimmed list: the swipe row needs the item gone
-            // before the next frame, long before the forced reload can land.
+            // Rebuilt synchronously: the swipe row needs the item gone before the next frame.
             _uiState.value = previous.withDeletedEntry(entryId)
             runCatching {
                 repository.deleteNutritionEntry(entryId)

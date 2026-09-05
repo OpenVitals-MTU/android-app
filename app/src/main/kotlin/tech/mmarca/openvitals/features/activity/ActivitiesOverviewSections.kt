@@ -723,12 +723,7 @@ internal fun activityOverviewMetricSeries(
     )
 }
 
-/**
- * The day strip above the workout list — one cell per day, and only on a week.
- *
- * A month or a year would draw 28 or 365 cells, or (worse) chunk several days
- * into one and mark it for a workout that happened on any of them.
- */
+/** The day strip above the workout list, one cell per day, only on a week. */
 internal fun activityOverviewStripBuckets(
     days: List<ActivityOverviewDay>,
     selectedRange: TimeRange,
@@ -1057,13 +1052,7 @@ internal fun LazyListScope.workoutStatistics(
     }
 }
 
-/**
- * The workout statistics fold — period total, count, average, longest, and the
- * previous period's total for the comparison stat.
- *
- * Negative durations are clamped: a record with an end before its start is a
- * bad write, not a negative workout.
- */
+/** The workout statistics fold. Negative durations are clamped: a bad write, not a negative workout. */
 internal data class ActivityWorkoutStatistics(
     val workoutCount: Int,
     val totalDurationMs: Long,

@@ -17,12 +17,7 @@ import tech.mmarca.openvitals.features.devicesync.protocol.SyncTypeSummary
 import tech.mmarca.openvitals.features.devicesync.protocol.buildSyncReportText
 import tech.mmarca.openvitals.features.devicesync.store.DeviceSyncReportStore
 
-/**
- * Port of the Flutter `device_sync_report_store_test.dart` suite. The Dart
- * store takes a directory resolver; the Kotlin one derives its directory from
- * `Context.filesDir`, so the temp directory is injected through a mocked
- * context instead.
- */
+/** The store derives its directory from `Context.filesDir`, so the temp directory comes through a mocked context. */
 class DeviceSyncReportStoreTest {
 
     @get:Rule

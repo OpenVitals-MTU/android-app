@@ -8,7 +8,7 @@ import org.junit.Test
 
 class HealthDataTest {
 
-    // ─── ExerciseData.durationMinutes ─────────────────────────────────────────
+    // ExerciseData.durationMinutes.
 
     @Test fun `durationMinutes truncates sub-minute remainder`() {
         assertEquals(1L, exercise(durationMs = 90_000L).durationMinutes)
@@ -22,7 +22,7 @@ class HealthDataTest {
         assertEquals(60L, exercise(durationMs = 3_600_000L).durationMinutes)
     }
 
-    // ─── SleepData.durationHours ──────────────────────────────────────────────
+    // SleepData.durationHours.
 
     @Test fun `durationHours returns fractional hours`() {
         assertEquals(7.5, sleep(durationMs = 27_000_000L).durationHours, 0.001)
@@ -32,7 +32,7 @@ class HealthDataTest {
         assertEquals(0.0, sleep(durationMs = 0L).durationHours, 0.0)
     }
 
-    // ─── SleepStage.durationMs ────────────────────────────────────────────────
+    // SleepStage.durationMs.
 
     @Test fun `SleepStage durationMs equals end minus start epoch millis`() {
         val stage = SleepStage(
@@ -43,7 +43,7 @@ class HealthDataTest {
         assertEquals(1_500_000L, stage.durationMs)
     }
 
-    // ─── DailySteps optional A3 fields ───────────────────────────────────────
+    // DailySteps optional A3 fields.
 
     @Test fun `DailySteps defaults all optional fields to null`() {
         val day = DailySteps(date = LocalDate.of(2026, 1, 1), steps = 1_000L, distanceMeters = 800.0)
@@ -66,7 +66,7 @@ class HealthDataTest {
         assertEquals(65.0, day.elevationGainedMeters!!, 0.01)
     }
 
-    // ─── ActivityProgressPoint optional fields ───────────────────────────────
+    // ActivityProgressPoint optional fields.
 
     @Test fun `ActivityProgressPoint defaults detailed optional fields to null`() {
         val point = ActivityProgressPoint(
@@ -97,7 +97,7 @@ class HealthDataTest {
         assertEquals(20.0, point.totalElevationGainedMeters!!, 0.01)
     }
 
-    // ─── DashboardData floorsClimbed + elevationGainedMeters ────────────────────
+    // DashboardData floorsClimbed and elevationGainedMeters.
 
     @Test fun `DashboardData defaults weight to null`() {
         val data = DashboardData(date = LocalDate.of(2026, 1, 1))
@@ -150,7 +150,7 @@ class HealthDataTest {
         assertEquals(0.0, day.elevationGainedMeters!!, 0.0)
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────────────────
+    // Helpers.
 
     private fun exercise(durationMs: Long) = ExerciseData(
         id = "1",

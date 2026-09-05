@@ -80,10 +80,7 @@ val DefaultActivityEntryTypes: List<ActivityEntryType> = listOf(
         labelRes = R.string.exercise_type_biking,
         supportsElevation = true,
     ),
-    // A trainer ride is not a ride that happens to be indoors: it has a distance
-    // and no route, and importing it as outdoor cycling would hang a 27 km ride
-    // on a map it never touched. FIT names it (`sub_sport` 5/6) and the app had
-    // nowhere to put it.
+    // A trainer ride has a distance and no route; FIT names it (`sub_sport` 5/6).
     ActivityEntryType(
         exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY,
         id = "stationary_bike",
@@ -159,9 +156,7 @@ val DefaultActivityEntryTypes: List<ActivityEntryType> = listOf(
         supportsDistance = false,
         recordingSensor = ActivityRecordingSensor.BLE,
     ),
-    // Generic set-based sessions for a plan that mixes exercises (push-ups, then
-    // planks). They have no rep sensor, so they are manual-entry and plan only;
-    // each set carries its own segment type instead of the type's.
+    // Generic set sessions for plans that mix exercises. Manual-entry and plan only.
     ActivityEntryType(
         exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING,
         id = "strength_sets",
@@ -203,9 +198,7 @@ val DefaultActivityEntryTypes: List<ActivityEntryType> = listOf(
         defaultTitle = "Push-ups",
         repetitionUnit = ActivityRepetitionUnit.REPETITIONS,
     ),
-    // Squats have their own segment, so a plan step needs no label to find
-    // this. Same recognizer as push-ups: the phone on the floor, a rep each
-    // time you come down to it.
+    // Squats have their own segment. Same recognizer as push-ups.
     ActivityEntryType(
         exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
         id = "squats",
@@ -256,10 +249,8 @@ val DefaultActivityEntryTypes: List<ActivityEntryType> = listOf(
 )
 
 /**
- * The entry type a plan opens as. A plan that mixes exercises is a generic set
- * session whose rows each carry their own exercise; a single-exercise plan
- * resolves to that exercise's own type (push-ups, pull-ups), with the generic
- * types only matching when no specific type claims the segment.
+ * The entry type a plan opens as: a generic set session for mixed plans, or
+ * the exercise's own type when one claims the segment.
  */
 fun PlannedExerciseData.toActivityEntryType(): ActivityEntryType? {
     val activeSteps = activeSteps()

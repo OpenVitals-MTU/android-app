@@ -84,9 +84,7 @@ class ActivityDetailViewModelTest {
     }
 
     @Test fun `derives a distance from speed when no distance was written`() = runTest {
-        // A watch that records speed but writes no DistanceRecord leaves the
-        // session with no distance at all, even though its own samples imply
-        // one: 60 s at a mean 3 m/s is 180 m.
+        // A watch that records speed but no DistanceRecord: 60 s at 3 m/s implies 180 m.
         val workout = workout(id = "activity-1", totalDistanceMeters = null)
         val repo = mockk<ActivityRepository>()
         coEvery { repo.loadWorkout("activity-1") } returns workout
@@ -178,8 +176,7 @@ class ActivityDetailViewModelTest {
 
         vm.deleteActivity { deleted = true }
 
-        // The activity is still on screen — a failed delete must not look like a
-        // successful one — and the caller is never told to pop.
+        // A failed delete must not look like a successful one.
         assertFalse(vm.uiState.value.isDeleting)
         assertEquals(workout, vm.uiState.value.workout)
         assertEquals(false, deleted)
@@ -215,8 +212,7 @@ class ActivityDetailViewModelTest {
         assertEquals(SplitSource.ESTIMATED, state.splits.source)
         assertEquals(3, state.splits.splits.size)
         assertEquals(1_000.0, state.splitDistanceMeters, 0.001)
-        // The estimated source spreads the average pace over every split, so
-        // the scale collapses to one value at both ends…
+        // The estimated source spreads the average over every split, so the scale collapses.
         assertEquals(state.slowestSplitPaceSeconds, state.fastestSplitPaceSeconds)
         // …and the split-speed trace must refuse to draw the flat line.
         assertNull(state.splitSpeedTrace)
@@ -306,9 +302,7 @@ class ActivityDetailViewModelTest {
     }
 
     @Test fun `a failing marker read costs the marks, not the screen`() = runTest {
-        // Flutter's equivalent read is the separate session-metrics one; Kotlin
-        // folds those into loadWorkout, so the marker read is the degrading read
-        // that stands in its place.
+        // Kotlin folds the session metrics into loadWorkout, so the marker read is the degrading read.
         val workout = workout(id = "activity-1")
         val repo = mockk<ActivityRepository>()
         val markerRepo = mockk<ActivityMarkerRepository>()

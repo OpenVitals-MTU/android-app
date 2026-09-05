@@ -16,43 +16,23 @@ import tech.mmarca.openvitals.domain.model.isDistanceBasedExercise
 import tech.mmarca.openvitals.domain.model.movingDurationMs
 
 /**
- * Per-segment splits ("laps") for a distance-based activity.
- *
- * Pure arithmetic: no I/O, no Android framework beyond the Health Connect
- * constants. The activity detail screen feeds this whatever it managed to load
- * (route points, speed samples, heart rate samples) and renders
- * [ActivitySplits.splits] with the provenance in [ActivitySplits.source]
- * spelled out in the header — a split derived from a GPS route and a split
- * guessed from the session average are NOT the same claim, and the UI must not
- * present them as if they were.
+ * Per-segment splits ("laps") for a distance-based activity. Pure arithmetic.
+ * The UI must show [ActivitySplits.source]: a split cut from GPS and one
+ * guessed from the average are different claims.
  */
 
-/**
- * Where the splits came from, in descending order of trustworthiness. Lives on
- * the result rather than on each row: one computation yields one provenance.
- */
+/** Where the splits came from, most trustworthy first. One computation, one provenance. */
 internal enum class SplitSource {
-    /**
-     * The recording device/app wrote lap records. Shown as recorded — never
-     * re-cut to the split distance, because a lap is whatever the device called
-     * a lap (a track session's 400 m, a button press, an uneven interval).
-     */
+    /** The device wrote lap records. Shown as recorded, never re-cut. */
     DEVICE_LAPS,
 
     /** Cut from the GPS route by accumulating haversine distance between fixes. */
     ROUTE,
 
-    /**
-     * Cut by integrating SpeedRecord samples over time — the treadmill case,
-     * where there is no route but the belt reports speed.
-     */
+    /** Cut by integrating SpeedRecord samples: the treadmill case. */
     SPEED_SAMPLES,
 
-    /**
-     * Nothing per-time exists: total distance divided evenly over the duration.
-     * Every split necessarily shows the activity's average pace. Honest, but the
-     * UI MUST label it, or a flat line reads as a real (and eerily even) run.
-     */
+    /** Total distance spread evenly over the duration. The UI must label it. */
     ESTIMATED,
 }
 
@@ -61,55 +41,30 @@ internal data class ActivitySplit(
     /** 1-based, as displayed. */
     val index: Int,
 
-    /**
-     * The split's own distance. The final split is usually a partial and keeps
-     * its real (short) distance — see [isPartial].
-     */
+    /** The split's own distance. The final split is usually shorter; see [isPartial]. */
     val distanceMeters: Double,
 
     /**
-     * MOVING time: the split's window less any of it the recording was paused
-     * for. Everything derived from a split — its pace, the speed trace rebuilt
-     * from it, the pace delta — divides by this.
-     *
-     * Wall-clock would count a pause as riding. A real 21-minute bike ride with a
-     * 10½-minute pause in it reported 4.9 km/h average and a 4.1 km/h first
-     * kilometre, because the pause sat inside that kilometre's window and nothing
-     * took it out again. It was 12 km/h. [startTime] and [endTime] stay
-     * wall-clock — they say WHEN, and the heart-rate mean and the chart's x axis
-     * need that.
+     * Moving time: the window less any pause inside it. Pace and the speed
+     * trace divide by this. [startTime] and [endTime] stay wall-clock.
      */
     val elapsedMs: Long,
     val startTime: Instant,
     val endTime: Instant,
 
-    /**
-     * True when this split is shorter than the requested split distance (the
-     * trailing remainder). Device laps are never marked partial: an uneven lap
-     * is not an incomplete one.
-     */
+    /** Shorter than the requested distance (the trailing remainder). Never true for device laps. */
     val isPartial: Boolean,
 
-    /**
-     * Mean of the heart-rate samples inside `[startTime, endTime)`, rounded to
-     * whole beats. Null when no sample falls in the window — never 0.
-     */
+    /** Mean heart rate inside `[startTime, endTime)`, or null when no sample falls there. */
     val averageHeartRateBpm: Double? = null,
 
-    /**
-     * Cumulative ascent/descent across the split, from the route's altitudes.
-     * Null (NOT 0) when the split has no altitude data — a treadmill run did not
-     * climb zero meters, it climbed an unknown number of them.
-     */
+    /** Ascent/descent from the route's altitudes. Null, not 0, without altitude data. */
     val elevationGainMeters: Double? = null,
     val elevationLossMeters: Double? = null,
 
     /**
-     * This split's pace minus the whole activity's average pace, in seconds per
-     * kilometer (storage is metric; [paceDeltaSecondsPerUnit] converts at the
-     * display boundary). Negative = faster than the activity average.
-     *
-     * Null when either pace is undefined (zero distance or zero elapsed).
+     * This split's pace minus the activity's average pace, in s/km. Negative
+     * is faster. Null when either pace is undefined.
      */
     val paceDeltaSecondsPerKilometer: Double? = null,
 ) {
@@ -157,26 +112,16 @@ internal data class ActivitySplits(
 /** The default split distance: one kilometer. Storage is always metric. */
 internal const val DefaultSplitDistanceMeters = 1000.0
 
-/**
- * A trailing remainder shorter than this is dropped rather than shown as a
- * "0 m" split — a GPS route that overshoots 5 km by 40 cm did not run a sixth
- * split.
- */
+/** A trailing remainder shorter than this is dropped rather than shown as "0 m". */
 private const val MinPartialMeters = 1.0
 
-/**
- * Guards a pathological (or hostile) preference: a 1 cm split distance over a
- * marathon would otherwise try to build 4.2 million rows.
- */
+/** Guards a pathological split distance: 1 cm over a marathon is 4.2 million rows. */
 private const val MaxSplits = 500
 
 /**
- * Splits for [workout], cut every [splitDistanceMeters] — unless the workout
- * already carries device laps, which win outright.
- *
- * Source priority: device laps > GPS route > speed samples > estimated. See
- * [SplitSource]. Returns an empty result for an activity that does not travel,
- * and for one that travelled no measurable distance.
+ * Splits for [workout], cut every [splitDistanceMeters]. Device laps win
+ * outright, then route, speed samples, estimate. Empty for an activity that
+ * does not travel.
  */
 internal fun buildActivitySplits(
     workout: ExerciseData,
@@ -185,12 +130,8 @@ internal fun buildActivitySplits(
     heartRateSamples: List<HeartRateSample>,
     splitDistanceMeters: Double,
 ): ActivitySplits {
-    // Whether an activity HAS splits is a question about its kind, not its data.
-    // The old gate only asked "is there any distance?", and a strength session
-    // answers yes: a phone left on the bench picks up a couple of hundred metres of
-    // GPS drift, Health Connect records it faithfully, and a lifting session was
-    // duly cut into "1.0 km" and "181 m" splits at a 30:29 min/km pace. The distance
-    // was real; the splits were nonsense.
+    // Whether an activity has splits depends on its kind, not its data: GPS drift
+    // on a bench gave a strength session "1.0 km" splits at 30 min/km.
     if (!isDistanceBasedExercise(workout.exerciseType)) {
         return ActivitySplits.none()
     }
@@ -201,9 +142,7 @@ internal fun buildActivitySplits(
         DefaultSplitDistanceMeters
     }
 
-    // Defensive: nothing guarantees the caller's samples are time-ordered (a
-    // Health Connect read merges several source apps), and every walk below
-    // assumes they are.
+    // A Health Connect read merges sources, so samples may not be time-ordered.
     val heartRates = heartRateSamples.sortedBy { it.time }
     val speeds = speedSamples.sortedBy { it.time }
     val sortedRoutePoints = routePoints.sortedBy { it.time }
@@ -237,16 +176,12 @@ internal fun buildActivitySplits(
     }
     if (raw.isEmpty()) return ActivitySplits.none()
 
-    // The yardstick for paceDelta is the WHOLE activity's average pace, not the
-    // mean of the split paces: a 200 m partial should not drag the baseline.
+    // The yardstick is the whole activity's average pace, not the mean of split paces.
     val activityPaceSecondsPerMeter = activityPaceSecondsPerMeter(workout, raw)
 
     val splits = raw.mapIndexed { i, entry ->
-        // Estimated splits are exempt: their windows are a fiction (total distance
-        // spread evenly over the session), already laid out over moving time, so
-        // taking a pause out of one of them again would both double-count it and
-        // hand a single split a pace the others do not share — the one property
-        // that source has.
+        // Estimated splits are already laid out over moving time; taking a pause
+        // out again would double-count it.
         val windowMs = Duration.between(entry.startTime, entry.endTime).toMillis()
         val pausedMs = if (source == SplitSource.ESTIMATED) {
             0L
@@ -284,14 +219,7 @@ internal fun buildActivitySplits(
 
 private fun isPositive(value: Double): Boolean = value.isFinite() && value > 0
 
-/**
- * How much of `[start, end)` the recording was paused for, in milliseconds.
- *
- * Pauses reach Health Connect as `EXERCISE_SEGMENT_TYPE_PAUSE` segments (see
- * the recording writer), so a session read back knows where they were — this is
- * the same fact `ActivityMetrics.pausedDurationMs` totals for the whole
- * workout, measured against one split's window.
- */
+/** How much of `[start, end)` was paused, from the PAUSE segments. */
 private fun pausedMillisBetween(workout: ExerciseData, start: Instant, end: Instant): Long {
     val from = start.toEpochMilli()
     val to = end.toEpochMilli()
@@ -303,31 +231,23 @@ private fun pausedMillisBetween(workout: ExerciseData, start: Instant, end: Inst
         val overlapEnd = min(to, segment.endTime.toEpochMilli())
         if (overlapEnd > overlapStart) paused += overlapEnd - overlapStart
     }
-    // A split cannot be more than entirely paused, whatever overlapping segments
-    // a source app wrote.
+    // A split cannot be more than entirely paused.
     return min(paused, to - from)
 }
 
-/**
- * Laps with a sane time window, oldest first. A lap that ends before it starts
- * is a source-app bug, not a lap.
- */
+/** Laps with a sane time window, oldest first. */
 private fun usableLaps(workout: ExerciseData): List<ExerciseLapData> =
     workout.laps
         .filter { !it.endTime.isBefore(it.startTime) }
         .sortedBy { it.startTime }
 
 /**
- * The whole activity's average pace in seconds per meter — the baseline every
- * split's [ActivitySplit.paceDeltaSecondsPerKilometer] is measured against.
- *
- * Prefers the recorded session totals; falls back to the sum of the splits
- * when the session has no distance/duration of its own (laps-only imports).
+ * The activity's average pace in s/m, the baseline for pace deltas. Recorded
+ * totals first, the sum of the splits for laps-only imports.
  */
 private fun activityPaceSecondsPerMeter(workout: ExerciseData, raw: List<RawSplit>): Double? {
     val recordedDistance = workout.totalDistanceMeters ?: 0.0
-    // Moving, not wall-clock, so the baseline every split is compared against is
-    // measured the same way the splits are.
+    // Moving time, measured the same way the splits are.
     val recordedSeconds = workout.movingDurationMs() / 1000.0
     if (isPositive(recordedDistance) && recordedSeconds > 0) {
         return recordedSeconds / recordedDistance
@@ -348,8 +268,7 @@ private fun averageHeartRate(
     var sum = 0L
     var count = 0
     for (sample in samples) {
-        // Half-open [start, end): a sample on a boundary belongs to exactly one
-        // split, never to both.
+        // Half-open [start, end): a boundary sample belongs to one split only.
         if (sample.time.isBefore(start)) continue
         if (!sample.time.isBefore(end)) break
         sum += sample.beatsPerMinute
@@ -369,21 +288,14 @@ private data class RawSplit(
     val elevationLossMeters: Double? = null,
 )
 
-/**
- * A point on a monotone distance-over-time curve, whatever produced it: a GPS
- * fix, a speed sample, or an interpolated split boundary. Sharing one node
- * type is what lets the route and speed-sample cutters be the same code.
- */
+/** A point on a distance-over-time curve: a GPS fix, a speed sample or an interpolated boundary. */
 private data class Node(
     val time: Instant,
     val cumulativeMeters: Double,
     val altitudeMeters: Double? = null,
 )
 
-/**
- * GPS fixes → cumulative haversine distance. Non-finite or backwards segments
- * contribute 0 rather than corrupting the curve.
- */
+/** GPS fixes to cumulative haversine distance. Bad segments contribute 0. */
 private fun routeNodes(points: List<ExerciseRoutePoint>): List<Node> {
     if (points.isEmpty()) return emptyList()
     val nodes = mutableListOf(
@@ -416,11 +328,8 @@ private fun routeNodes(points: List<ExerciseRoutePoint>): List<Node> {
 }
 
 /**
- * Speed samples → cumulative distance by trapezoidal integration of v·dt.
- * No altitude: a SpeedRecord says nothing about the ground going up.
- *
- * The same integration `distanceFromSpeedSamples` (ActivityBackfill.kt) totals
- * for the whole session, kept per-node here so the curve can be cut.
+ * Speed samples to cumulative distance by trapezoidal integration. No
+ * altitude. Same integration as `distanceFromSpeedSamples`, kept per node.
  */
 private fun speedNodes(samples: List<SpeedSample>): List<Node> {
     if (samples.isEmpty()) return emptyList()
@@ -443,11 +352,8 @@ private fun speedNodes(samples: List<SpeedSample>): List<Node> {
 }
 
 /**
- * Cut a distance-over-time curve every [unit] meters.
- *
- * The crossing is INTERPOLATED between the two bracketing nodes, not snapped
- * to the next one: at a 5 s GPS cadence, snapping quantises every split's
- * elapsed time to ±5 s, which on a 1 km split is a visible ~8 s/km pace error.
+ * Cut a distance-over-time curve every [unit] meters. The crossing is
+ * interpolated: snapping to a 5 s GPS node gives ~8 s/km pace error.
  */
 private fun cutNodes(nodes: List<Node>, unit: Double): List<RawSplit> {
     val total = nodes.last().cumulativeMeters
@@ -480,15 +386,14 @@ private fun cutNodes(nodes: List<Node>, unit: Double): List<RawSplit> {
                 ),
             )
             splitStart = crossing
-            // The crossing sits between nodes[i-1] and nodes[i]. `splitStartIndex` is
-            // by convention the index of the node at-or-before the split start, so
-            // the next split's interior nodes begin at i (and nodes[i] is NOT lost).
+            // `splitStartIndex` is the node at or before the split start, so the
+            // next split's interior nodes begin at i.
             splitStartIndex = i - 1
             boundary += unit
         }
     }
 
-    // The trailing remainder: a real, shorter split, kept and flagged.
+    // The trailing remainder: a real, shorter split, flagged.
     val last = nodes.last()
     val remainder = last.cumulativeMeters - splitStart.cumulativeMeters
     if (remainder >= MinPartialMeters && splits.size < MaxSplits) {
@@ -529,10 +434,8 @@ private fun interpolate(from: Node, to: Node, fraction: Double, targetDistance: 
 private data class Elevation(val gain: Double, val loss: Double)
 
 /**
- * Cumulative ascent/descent from [start] through the nodes strictly inside
- * `(startIndex, endIndex]`… and on to [end]. Null when no two consecutive
- * points in the window both carry an altitude — a split with no altitude data
- * gained an UNKNOWN amount of elevation, not zero.
+ * Ascent/descent from [start] through the nodes in `(startIndex, endIndex]`
+ * to [end]. Null when no two consecutive points carry an altitude.
  */
 private fun elevationBetween(
     nodes: List<Node>,
@@ -565,11 +468,7 @@ private fun elevationBetween(
     return Elevation(gain, loss)
 }
 
-/**
- * Device laps, shown as recorded. A lap's length is what the device wrote; if
- * it wrote none, the route (if any) supplies it, and failing that the lap has
- * no distance to show.
- */
+/** Device laps as recorded. A lap with no distance takes it from the route, if any. */
 private fun lapSplits(laps: List<ExerciseLapData>, routeNodes: List<Node>): List<RawSplit> =
     laps.map { lap ->
         val recorded = lap.lengthMeters
@@ -583,8 +482,7 @@ private fun lapSplits(laps: List<ExerciseLapData>, routeNodes: List<Node>): List
             startTime = lap.startTime,
             endTime = lap.endTime,
             distanceMeters = distance,
-            // A device lap is never "partial": an uneven lap is not a truncated
-            // one, it is simply the lap the device recorded.
+            // An uneven device lap is not a truncated one.
             isPartial = false,
             elevationGainMeters = fromRoute?.elevation?.gain,
             elevationLossMeters = fromRoute?.elevation?.loss,
@@ -593,10 +491,7 @@ private fun lapSplits(laps: List<ExerciseLapData>, routeNodes: List<Node>): List
 
 private data class RouteSpan(val distanceMeters: Double, val elevation: Elevation?)
 
-/**
- * Route distance + elevation between two times, for a lap that spans part of
- * a recorded route.
- */
+/** Route distance and elevation between two times, for a lap spanning part of a route. */
 private fun routeSpan(nodes: List<Node>, start: Instant, end: Instant): RouteSpan? {
     if (nodes.size < 2 || !end.isAfter(start)) return null
     val inside = nodes.filter { !it.time.isBefore(start) && !it.time.isAfter(end) }
@@ -624,13 +519,8 @@ private fun routeSpan(nodes: List<Node>, start: Instant, end: Instant): RouteSpa
 }
 
 /**
- * The last resort: total distance spread evenly over the duration. Every split
- * gets the same pace by construction — which is exactly why the UI labels this
- * source as estimated instead of drawing a suspiciously flat bar chart and
- * letting the user believe it.
- *
- * Spread over MOVING duration: the one number these splits do claim is a pace,
- * and a pace measured against a clock that ran through a pause is not one.
+ * The last resort: total distance spread evenly over moving time. Every
+ * split has the same pace, so the UI labels the source as estimated.
  */
 private fun estimatedSplits(workout: ExerciseData, unit: Double): List<RawSplit> {
     val total = workout.totalDistanceMeters ?: 0.0
@@ -643,7 +533,7 @@ private fun estimatedSplits(workout: ExerciseData, unit: Double): List<RawSplit>
     var index = 0
     while (covered < total && index < MaxSplits) {
         val distance = min(unit, total - covered)
-        // Below the partial floor the remainder is noise, not a split.
+        // Below the partial floor the remainder is noise.
         if (distance < MinPartialMeters && index > 0) break
         val startFraction = covered / total
         val endFraction = (covered + distance) / total
@@ -653,7 +543,7 @@ private fun estimatedSplits(workout: ExerciseData, unit: Double): List<RawSplit>
                 endTime = workout.startTime.plusNanos((durationNanos * endFraction).roundToLong()),
                 distanceMeters = distance,
                 isPartial = distance < unit,
-                // No route: elevation is unknown, and unknown is not zero.
+                // No route: elevation is unknown, not zero.
             ),
         )
         covered += distance

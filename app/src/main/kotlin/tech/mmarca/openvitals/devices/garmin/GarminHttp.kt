@@ -4,13 +4,9 @@ import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPOutputStream
 
 /**
- * One request the watch made of the phone through Garmin's HTTP-proxy service.
- *
- * Modern watches (vívoactive 5 era) treat the paired phone as their internet:
- * weather, ephemeris and Connect IQ traffic all arrive as
- * `GdiHttpService.RawRequest` messages expecting a plausible HTTP answer back.
- * Nothing here reaches a network — the app declares no INTERNET permission at
- * all — so every request either terminates in an interceptor or is refused.
+ * One request the watch made through Garmin's HTTP-proxy service. Modern
+ * watches treat the phone as their internet. Nothing here reaches a
+ * network: every request is answered by an interceptor or refused.
  */
 data class GarminHttpRequest(
     val url: String,
@@ -26,11 +22,7 @@ data class GarminHttpRequest(
     val useDataTransfer: Boolean,
 )
 
-/**
- * What to answer with. [onSent] fires once the watch actually has the bytes —
- * for a chunked body that is the last chunk, not the first reply — which is
- * the only honest moment to record "the watch has this now".
- */
+/** What to answer with. [onSent] fires once the watch has the bytes, the last chunk included. */
 data class GarminHttpResponse(
     val status: Int = 200,
     val body: ByteArray = ByteArray(0),
@@ -38,26 +30,19 @@ data class GarminHttpResponse(
     val onSent: (() -> Unit)? = null,
 )
 
-/**
- * Answers one family of watch requests. Mirrors upstream Gadgetbridge's
- * `HttpInterceptor`: [supports] claims the request by URL alone, [handle] then
- * either answers it or returns null to refuse.
- */
+/** Answers one family of requests: [supports] claims by URL, [handle] answers or returns null. */
 interface GarminHttpInterceptor {
     fun supports(request: GarminHttpRequest): Boolean
     fun handle(request: GarminHttpRequest): GarminHttpResponse?
 }
 
 /**
- * The HTTP-proxy plumbing: unwraps the watch's protobuf, runs the interceptor
- * chain, and frames whatever comes back — inline, gzipped, or handed to the
- * data-transfer service for bodies the watch would rather pull in chunks.
- *
- * Mirrors Gadgetbridge's `HttpHandler` + `DataTransferHandler`.
+ * The HTTP-proxy plumbing: unwrap the protobuf, run the interceptors, frame
+ * the reply inline, gzipped, or via the data-transfer service.
  */
 class GarminHttpProxy(private val interceptors: List<GarminHttpInterceptor>) {
 
-    // ── protobuf field numbers (gdi_http_service / gdi_data_transfer) ───────
+    // Protobuf field numbers (gdi_http_service / gdi_data_transfer).
     private companion object {
         const val RAW_REQUEST = 5
         const val RAW_RESPONSE = 6
@@ -101,11 +86,7 @@ class GarminHttpProxy(private val interceptors: List<GarminHttpInterceptor>) {
     private val transfers = mutableMapOf<Int, PendingTransfer>()
     private var nextTransferId = 1
 
-    /**
-     * Handles one watch-initiated `Smart` message. Returns the reply to send
-     * under the same request id, or null when the message is not one this
-     * responder speaks (someone else's conversation).
-     */
+    /** Handles one watch-initiated `Smart` message, or returns null when it is not ours. */
     fun handle(payload: ByteArray): ByteArray? {
         val fields = readProtobuf(payload)
         protobufField(fields, GarminSmartService.HTTP)?.bytes?.let { return handleHttp(it) }
@@ -114,13 +95,11 @@ class GarminHttpProxy(private val interceptors: List<GarminHttpInterceptor>) {
         return null
     }
 
-    // ── the HTTP service ────────────────────────────────────────────────────
+    // The HTTP service.
 
     private fun handleHttp(service: ByteArray): ByteArray? {
         val raw = protobufField(readProtobuf(service), RAW_REQUEST)?.bytes
-        // WebRequest (the pre-2020 shape) is not spoken here; unanswered is
-        // wrong for a service we claim, so anything else gets an explicit
-        // UNKNOWN back — upstream's no-interceptor answer.
+        // WebRequest is not spoken; anything else gets an explicit UNKNOWN.
         if (raw == null) {
             GarminLog.log("[GARMIN-HTTP] unsupported http request shape")
             return rawResponseError()
@@ -200,8 +179,7 @@ class GarminHttpProxy(private val interceptors: List<GarminHttpInterceptor>) {
                 ProtobufWriter().string(HEADER_KEY, key).string(HEADER_VALUE, value).toBytes(),
             )
         }
-        // An inline body is on its way out with this very reply; a chunked one
-        // is not delivered until its last chunk, so it reports itself later.
+        // An inline body leaves with this reply; a chunked one reports on its last chunk.
         if (!request.useDataTransfer) response.onSent?.invoke()
         return writer.toBytes()
     }
@@ -218,7 +196,7 @@ class GarminHttpProxy(private val interceptors: List<GarminHttpInterceptor>) {
     private fun smartHttp(service: ByteArray): ByteArray =
         ProtobufWriter().nested(GarminSmartService.HTTP, service).toBytes()
 
-    // ── the data-transfer service (chunked response bodies) ─────────────────
+    // The data-transfer service (chunked response bodies).
 
     private fun handleDataTransfer(service: ByteArray): ByteArray? {
         val request = protobufField(readProtobuf(service), DOWNLOAD_REQUEST)?.bytes ?: return null
@@ -245,8 +223,7 @@ class GarminHttpProxy(private val interceptors: List<GarminHttpInterceptor>) {
             val chunk = data.copyOfRange(offset, end)
             GarminLog.log("[GARMIN-HTTP] transfer $id: $offset..$end of ${data.size}")
             if (end == data.size) {
-                // Served in full; the id is never valid again, and only now is
-                // it true that the watch has the whole body.
+                // Served in full; only now does the watch have the whole body.
                 transfers.remove(id)
                 transfer.onSent?.invoke()
             }

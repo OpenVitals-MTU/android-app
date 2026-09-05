@@ -31,25 +31,13 @@ import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelineAlgorithmVersion
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
 
-/**
- * How many days back the warm window reaches. Matches the repository's chain
- * lookback, so any day inside the window finds a stored anchor.
- */
+/** How many days back the warm window reaches. Matches the repository's chain lookback. */
 const val BodyEnergyChainWarmDays = 14L
 
 /**
- * Keeps a rolling window of recent Body Energy days computed and stored, so the
- * chain the detail screen walks is almost never cold.
- *
- * Body Energy carries across midnight: each day opens where the previous one
- * closed. Without a warm window, a user who last opened the app a week ago would
- * find no stored predecessor and the day would have to restart at the neutral
- * score — the foreground gap fill is deliberately bounded to two days because
- * each day costs ~8 Health Connect reads, and closing a week of them while
- * someone waits on a screen is not acceptable. That work belongs here.
- *
- * Best-effort throughout, like [CaloriesHistorySyncService]: every failure is
- * swallowed and retried on the next pass, never surfaced.
+ * Keeps a rolling window of Body Energy days computed and stored, so the
+ * chain is almost never cold. The foreground fill is bounded to two days;
+ * closing a week belongs here. Best-effort: failures are retried next pass.
  */
 @Singleton
 class BodyEnergyChainSyncService(
@@ -84,12 +72,8 @@ class BodyEnergyChainSyncService(
     private var inFlight: Deferred<Unit>? = null
 
     /**
-     * Warm the chain. Concurrent calls share one run.
-     *
-     * Pass [force] to bypass the throttle — for a caller that has just made the
-     * stored chain wrong (a watch sync back-filling days) rather than one merely
-     * opening a screen. A forced call still joins an in-flight run: whatever is
-     * already walking will pick up the holes.
+     * Warms the chain. Concurrent calls share one run. [force] bypasses the
+     * throttle for a caller that just made the stored chain wrong.
      */
     suspend fun syncAll(force: Boolean = false) {
         val deferred = lock.withLock {
@@ -112,18 +96,14 @@ class BodyEnergyChainSyncService(
 
     private suspend fun sync(force: Boolean) {
         try {
-            // One-shot cleanup of the retired SharedPreferences timelines. This
-            // is the natural home for it: already best-effort, and it runs
-            // before any chain work needs the prefs.
+            // One-shot cleanup of the retired SharedPreferences timelines.
             baselineStore.purgeLegacyTimelineEntries()
 
             if (healthRepository.availability() != HealthConnectAvailability.AVAILABLE) return
             val granted = healthRepository.grantedPermissions()
             if (ReadHeartRatePermission !in granted) return
 
-            // Rows computed under a retired calibration are wrong, not merely
-            // stale, so a signature change purges rather than letting them age
-            // out.
+            // Rows under a retired calibration are wrong, not stale: purge them.
             val signature = globalSignature(granted)
             if (store.storedGlobalSignature() != signature) {
                 store.purgeAll()
@@ -137,15 +117,9 @@ class BodyEnergyChainSyncService(
             val today = now.atZone(zone).toLocalDate()
             store.applyRetention(today)
 
-            // Days the repository would serve from storage cost nothing to keep.
-            // Skipping them here rather than letting its cache check do it saves
-            // a permission round-trip and a store read per day — on the common
-            // warm pass that is the difference between a dozen calls and none.
-            //
-            // The rule must match the repository's, or this would keep
-            // recomputing settled days it would happily have served: a day is
-            // worth revisiting only while it can still gain late-arriving data,
-            // or while today's copy of it has aged past a day.
+            // Skip days the repository would serve from storage. The rule must
+            // match the repository's: a day is worth revisiting only while it can
+            // still gain late data, or once today's copy has aged past a day.
             val window = store.storedDaysBetween(
                 today.minusDays(windowDays - 1),
                 today.minusDays(1),
@@ -155,8 +129,7 @@ class BodyEnergyChainSyncService(
                     Duration.between(day.generatedAt, now) < DayFreshness
             }.mapTo(mutableSetOf()) { it.date.toEpochDay() }
 
-            // Oldest first, and that order is load-bearing: each day's seed must
-            // already be stored by the time its successor is computed.
+            // Oldest first: each day's seed must be stored before its successor.
             val startedAt = elapsedMillis()
             var completed = true
             for (back in (windowDays - 1) downTo 1L) {
@@ -164,8 +137,7 @@ class BodyEnergyChainSyncService(
                     completed = false
                     break
                 }
-                // Today is skipped: the foreground load owns it, and recomputing
-                // it here would fight its 15-minute freshness window.
+                // Today is skipped: the foreground load owns it.
                 val date = today.minusDays(back)
                 if (date.toEpochDay() in freshEpochDays) continue
                 repository.loadTimeline(
@@ -177,8 +149,7 @@ class BodyEnergyChainSyncService(
                 )
             }
 
-            // Only a completed pass resets the throttle; a budget-truncated one
-            // lets the next open pick up the remaining days immediately.
+            // Only a completed pass resets the throttle.
             if (completed) store.writeLastPassAt(now)
         } catch (cancellation: CancellationException) {
             throw cancellation
@@ -188,20 +159,9 @@ class BodyEnergyChainSyncService(
     }
 
     /**
-     * The chain-wide validity stamp: algorithm version plus the configured and
-     * permission inputs every day shares. The per-day signature additionally
-     * folds in the body profile, whose value varies by date — that belongs on
-     * the row, not here.
-     *
-     * The learned gains are deliberately NOT in it, because a mismatch here
-     * purges every stored day and every stored bucket. The watch fit nudges a
-     * gain by a fraction of a percent whenever it absorbs an observation, so
-     * including them would delete up to `BodyEnergyBucketRetentionDays` of
-     * history on essentially every watch sync, which is no way to build the
-     * weekly view those buckets exist for. A gain change does not make a stored
-     * row wrong enough to destroy it: the per-day signature still refuses to
-     * SERVE one, so it is recomputed on demand, and the seed lookup can still
-     * anchor on it in the meantime.
+     * The chain-wide validity stamp: algorithm version plus the shared
+     * inputs. The learned gains are left out: a mismatch purges every stored
+     * day, and the watch fit nudges gains on every sync.
      */
     private fun globalSignature(granted: Set<String>): String {
         val permissions = granted.sorted().joinToString(",")
@@ -212,25 +172,13 @@ class BodyEnergyChainSyncService(
     private companion object {
         private const val TAG = "BodyEnergyChainSync"
 
-        /**
-         * A cold install has to walk the whole window at ~8 Health Connect reads
-         * a day. That is fine in the background but must not run away, so a pass
-         * stops when the budget is spent and resumes where it left off — the
-         * days it already wrote are skipped as fresh next time.
-         */
+        /** A cold install walks the whole window at ~8 reads a day. A pass stops at the budget and resumes. */
         const val PassBudgetMillis = 90_000L
 
-        /**
-         * Every screen open calls `syncAll`; without this, opening Body Energy
-         * five times in a minute would re-walk the window five times.
-         */
+        /** Every screen open calls `syncAll`; this keeps five opens from five walks. */
         val Throttle: Duration = Duration.ofMinutes(30)
 
-        /**
-         * How long a stored past day counts as fresh, matching the repository's
-         * own past-day staleness rule. Only used to skip work the repository
-         * would otherwise skip anyway; the repository stays the authority.
-         */
+        /** How long a stored past day counts as fresh, matching the repository. */
         val DayFreshness: Duration = Duration.ofHours(24)
 
         val ReadHeartRatePermission: String =

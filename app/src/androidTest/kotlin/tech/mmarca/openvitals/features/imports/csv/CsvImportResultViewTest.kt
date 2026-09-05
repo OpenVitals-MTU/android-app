@@ -12,14 +12,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * The finished-run cases of Flutter's
- * `test/features/imports/csv/csv_import_screen_test.dart`.
- *
- * An import is a tally, not a success or a failure: rows written, rows already
- * there, rows refused. The counts themselves are pinned by
- * `CsvImportServiceTest`; what these cover is the screen the user is left
- * looking at, where a run that wrote nothing has to say so out loud rather than
- * leaving three zeroes to be read as "done".
+ * The screen the user is left looking at after an import. A run that wrote nothing has to
+ * say so rather than leave three zeroes to be read as "done".
  */
 class CsvImportResultViewTest {
 
@@ -49,9 +43,7 @@ class CsvImportResultViewTest {
 
     @Test
     fun anImportThatRejectsEveryRowSaysNothingWasImportedAndWhy() {
-        // "Written 0" on its own reads like a file that was already imported.
-        // The sentence and the reason are what separate that from a file whose
-        // dates were never understood.
+        // "Written 0" alone reads like a file already imported. The reason separates that from unparsed dates.
         setResult(
             CsvImportResult(
                 outcome = CsvImportOutcome.COMPLETED,
@@ -79,8 +71,7 @@ class CsvImportResultViewTest {
 
     @Test
     fun theFinishedImportOffersToTakeTheReportAway() {
-        // The report is what a user sends a maintainer when an import went
-        // wrong, so both ways out of the app have to be on this screen.
+        // The report is what a user sends a maintainer, so both ways out must be here.
         var copied = 0
         var saved = 0
         setResult(

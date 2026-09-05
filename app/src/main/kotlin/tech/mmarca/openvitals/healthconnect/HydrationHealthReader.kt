@@ -157,11 +157,7 @@ internal class HydrationHealthReader(
         clientRecordId
     }
 
-    /**
-     * Deletes by clientRecordId, for rolling back a just-written record whose
-     * paired nutrition write failed. clientRecordId is scoped to this app's data
-     * origin, so no origin check is needed.
-     */
+    /** Deletes by clientRecordId, to roll back a record whose paired nutrition write failed. */
     suspend fun deleteHydrationEntryByClientRecordId(clientRecordId: String) = withContext(Dispatchers.IO) {
         Log.d(TAG, "Deleting hydration record by clientRecordId ${support.diagnosticsSummary()}")
         support.client().deleteRecords(

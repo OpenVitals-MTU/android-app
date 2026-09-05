@@ -13,14 +13,8 @@ import org.junit.Test
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * How far the list has been expanded is the reader's, and it has to survive the
- * list changing under them.
- *
- * The reported flow: open the yearly weight view, scroll to the entries, tap
- * "Load 10 more" until the list is long, then swipe an entry away. The row went,
- * and so did the expansion — the list snapped back to its first page, which
- * pulled everything below it up the screen and left the reader looking at a
- * section they had never scrolled to.
+ * How far the list has been expanded is the reader's, and it has to survive the list changing.
+ * Swiping an entry away used to snap the list back to its first page.
  */
 class PaginatedEntryListTest {
 
@@ -53,9 +47,7 @@ class PaginatedEntryListTest {
         entries.removeAt(0)
         composeRule.waitForIdle()
 
-        // Still twenty deep, not back to ten. "Reading 21" is the twentieth row
-        // now that the first is gone — if the expansion had been lost it would
-        // be nowhere on screen.
+        // Still twenty deep, not back to ten.
         composeRule.onNodeWithText("Reading 21").assertExists()
         composeRule.onNodeWithText("Reading 11").assertExists()
     }
@@ -78,8 +70,7 @@ class PaginatedEntryListTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Reading 12").assertExists()
 
-        // Down to eleven: the count is clamped to what exists, and the button
-        // that has nothing left to load goes away.
+        // The count is clamped to what exists, and the exhausted button goes away.
         entries.removeAt(11)
         composeRule.waitForIdle()
 
@@ -89,8 +80,7 @@ class PaginatedEntryListTest {
 
     @Test
     fun anEntryArrivingDoesNotExpandTheListOnItsOwn() {
-        // The clamp only ever shortens. A list left at one page must not grow
-        // just because the period gained an entry.
+        // The clamp only ever shortens.
         var entries by mutableStateOf(List(10) { "Reading ${it + 1}" })
 
         composeRule.setContent {

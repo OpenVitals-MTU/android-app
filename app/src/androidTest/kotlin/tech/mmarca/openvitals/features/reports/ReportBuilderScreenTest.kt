@@ -16,11 +16,7 @@ import tech.mmarca.openvitals.domain.model.ReportMetric
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * The configure step's contract: selection drives the build button, the
- * custom-range controls only exist while Custom is chosen, and every control
- * reports through its callback rather than mutating anything itself.
- */
+/** Selection drives the build button, the custom-range controls exist only while Custom is chosen, and every control reports through its callback. */
 class ReportBuilderScreenTest {
 
     @get:Rule

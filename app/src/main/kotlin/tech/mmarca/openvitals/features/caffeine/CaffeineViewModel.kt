@@ -59,9 +59,7 @@ class CaffeineViewModel(
     private val repository: CaffeineRepository,
     private val preferencesRepository: PreferencesRepository,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    // A caffeine entry IS a nutrition record — Health Connect has no caffeine record — so the
-    // caffeine repository stays read-only and deletion goes through the nutrition one, the
-    // same arrangement HydrationViewModel uses for its nutrition-only drinks.
+    // A caffeine entry is a nutrition record, so deletion goes through the nutrition repository.
     private val nutritionRepository: NutritionRepository? = null,
     initialAnalyticsRange: CaffeineAnalyticsRange = CaffeineAnalyticsRange.LAST_30_DAYS,
     private val preferenceChanges: Flow<CaffeinePreferences> = emptyFlow(),
@@ -166,13 +164,7 @@ class CaffeineViewModel(
         )
     }
 
-    /**
-     * Removes an OpenVitals-authored drink optimistically so the row leaves the list at once,
-     * deletes it, then force-reloads; restores the previous state (with the error) on failure.
-     *
-     * A caffeine entry IS a nutrition record — Health Connect has no caffeine record — so
-     * deleting the backing nutrition record removes the drink. Delete-only, like nutrition.
-     */
+    /** Removes a drink optimistically, deletes its nutrition record, then force-reloads. */
     fun deleteCaffeineEntry(entryId: String) {
         if (entryId.isBlank()) return
         val entry = _uiState.value.entries.firstOrNull { it.id == entryId } ?: return

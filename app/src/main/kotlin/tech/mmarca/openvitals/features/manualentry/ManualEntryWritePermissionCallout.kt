@@ -6,16 +6,7 @@ import androidx.compose.ui.res.stringResource
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 
-/**
- * The one way an entry form asks for its Health Connect write access: the same
- * lock-icon callout the rest of the app shows for missing permissions, headed
- * "Some permissions are missing" with the entry's own explanation as the body
- * and a single "Grant permission" action.
- *
- * The forms used to swap their subtitle for that explanation and tuck an
- * outlined "Grant" beside the title, which read as a second, weaker style next
- * to the callout the workout plans and settings screens already use.
- */
+/** The one way an entry form asks for write access: the same callout the rest of the app uses. */
 @Composable
 internal fun ManualEntryWritePermissionCallout(
     body: String,

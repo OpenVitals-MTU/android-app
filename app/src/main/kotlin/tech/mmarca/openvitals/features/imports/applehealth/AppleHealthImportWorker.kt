@@ -178,8 +178,7 @@ class AppleHealthImportWorker(
             log("Stage started: Building downloadable report")
             log("Stage finished: Building downloadable report")
             log("Stage started: Writing downloadable report file")
-            // The store path is deterministic, so the completion log can be added to the worker
-            // logs before the (potentially multi-MB) report is rendered and written exactly once.
+            // The store path is deterministic, so the log can name it before the report is written.
             val reportPath = AppleHealthImportReportStore.reportPath(appContext)
             log("Stage finished: Writing downloadable report file path=$reportPath")
             val finalReportText = result.shareableReportText.withWorkerLogs(workerLogs)
@@ -197,9 +196,7 @@ class AppleHealthImportWorker(
             if (!stagedExportDeleted) {
                 Log.w(LogTag, "Unable to delete every staged Apple Health export file after successful import")
             }
-            // The tiles read stored data, so an import that just landed months
-            // of history must not leave the home screen on its pre-import
-            // numbers until the system's next periodic tick.
+            // An import that just landed months of history must not leave the widgets stale.
             runCatching { refreshPlacedHomeWidgets(appContext) }
             Result.success(finalResult.toOutputData(reportPath, expectedSelectedRecords, expectedParsedElements))
         }.getOrElse { error ->

@@ -38,9 +38,7 @@ class HealthConnectSourceResolver @Inject constructor(
         }
 
     private fun fallbackLabel(packageName: String): String = when {
-        // Phone-to-phone sync preserves the ORIGINAL source app's package, so
-        // a source may name an app that is not installed on this phone;
-        // Gadgetbridge is the canonical such source.
+        // Sync preserves the original app, which may not be installed here.
         packageName.contains("gadgetbridge") -> "Gadgetbridge"
         packageName.contains("samsung") -> "Samsung Health"
         packageName.contains("fitbit") -> "Fitbit"

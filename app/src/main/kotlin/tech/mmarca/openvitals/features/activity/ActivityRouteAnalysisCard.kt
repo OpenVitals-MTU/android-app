@@ -302,12 +302,7 @@ private fun SavedDetailRow(label: String, value: String) {
     }
 }
 
-/**
- * The intervals and by-distance tabs are gone on purpose: the dedicated splits
- * card renders per-distance segments (and device laps) with provenance, pace
- * bars and per-split heart rate, so two more tables saying the same thing
- * with fewer facts were just competition.
- */
+/** The intervals and by-distance tabs are gone: the splits card covers them with more facts. */
 private enum class SavedActivityAnalysisTab {
     STATS,
     BY_TIME,

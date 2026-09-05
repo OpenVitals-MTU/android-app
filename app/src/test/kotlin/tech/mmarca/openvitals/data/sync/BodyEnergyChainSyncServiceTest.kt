@@ -47,10 +47,7 @@ import tech.mmarca.openvitals.domain.insights.bodyEnergySeedScore
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 
-/**
- * Records which days it was asked for, and persists each one so the service's
- * "already stored and fresh" skip is exercised for real.
- */
+/** Records which days it was asked for, and persists each one so the "already stored" skip is real. */
 private class RecordingRepository(
     private val store: BodyEnergyTimelineStore,
     private val now: () -> Instant,
@@ -63,8 +60,7 @@ private class RecordingRepository(
         val date = query.period.start
         requested += date
 
-        // Chain the stored predecessor, exactly as the real repository does, so
-        // a test can assert the walk really produced a connected chain.
+        // Chain the stored predecessor, as the real repository does.
         val previous = store.storedDaysBetween(date.minusDays(1), date.minusDays(1))
         val seed = previous.firstOrNull()?.endScore
         val start = bodyEnergySeedScore(seed)
@@ -88,8 +84,7 @@ private class RecordingRepository(
 
 class BodyEnergyChainSyncServiceTest {
 
-    // Mid-morning, so the cases that advance the clock by a couple of hours stay
-    // on the same calendar day and the warm window does not shift under them.
+    // Mid-morning, so advancing the clock by hours stays on the same day.
     private var now = Instant.parse("2026-06-01T10:00:00Z")
     private val today: LocalDate = Instant.parse("2026-06-01T10:00:00Z").atZone(TestZone).toLocalDate()
 
@@ -133,8 +128,7 @@ class BodyEnergyChainSyncServiceTest {
     fun `a cold window is walked oldest first, and today is left alone`() = runTest {
         service().syncAll()
 
-        // Order is load-bearing: a day's seed must already be stored when its
-        // successor is computed.
+        // Order is load-bearing: a day's seed must be stored before its successor is computed.
         assertEquals(
             listOf(
                 today.minusDays(4),
@@ -194,8 +188,7 @@ class BodyEnergyChainSyncServiceTest {
         service.syncAll()
         assertEquals(4, dao.countDays())
 
-        // Rows computed under retired ZONES are wrong, not merely stale: the
-        // zones decide what every bucket meant.
+        // Rows computed under retired zones are wrong, not stale.
         prefs.setBodyEnergyCalibration(
             BodyEnergyCalibration(
                 useManualZones = true,
@@ -211,9 +204,7 @@ class BodyEnergyChainSyncServiceTest {
 
     @Test
     fun `a gain the watch learner nudged does not purge the stored history`() = runTest {
-        // The global signature gates a purgeAll() of every day AND every bucket.
-        // With the learned gains folded into it, each observation the watch fit
-        // absorbed wiped up to the whole retention window of history.
+        // The global signature gates a purgeAll(). With the gains folded in, each fit wiped the retention window.
         service().syncAll()
         val storedBefore = store.storedDaysBetween(today.minusDays(BodyEnergyBucketRetentionDays), today)
         assertTrue(storedBefore.isNotEmpty())
@@ -278,8 +269,7 @@ class BodyEnergyChainSyncServiceTest {
     @Test
     fun `retention drops old buckets but keeps their day summaries`() = runTest {
         val service = service()
-        // Establish the global signature first: the very first pass has no
-        // stored signature and so purges, which would take the fixture with it.
+        // Establish the global signature first: the first pass has none and purges.
         service.syncAll()
 
         val ancient = today.minusDays(BodyEnergyBucketRetentionDays + 10)
@@ -325,9 +315,7 @@ class BodyEnergyChainSyncServiceTest {
         assertEquals(11, repository.requested.size)
         repository.requested.clear()
 
-        // A day later every stored day is over 24h old, which before the
-        // settling window meant the whole walk ran again — ~88 Health Connect
-        // reads for days that cannot have gained anything.
+        // A day later every stored day is over 24h old; before the settling window the whole walk ran again.
         now = now.plusSeconds(25 * 3600)
         val shiftedToday = now.atZone(TestZone).toLocalDate()
         service.syncAll()
@@ -350,8 +338,7 @@ class BodyEnergyChainSyncServiceTest {
     fun `a forced pass bypasses the throttle, so a watch sync is acted on at once`() = runTest {
         val service = service()
         service.syncAll()
-        // The state a watch sync leaves behind: the days it back-filled dropped
-        // from the chain, so there is real work for the next pass to find.
+        // The state a watch sync leaves: back-filled days dropped from the chain.
         store.invalidateForward(today.minusDays(2), today)
         repository.requested.clear()
 
@@ -382,8 +369,7 @@ class BodyEnergyChainSyncServiceTest {
 
     @Test
     fun `force does not override the freshness skip`() = runTest {
-        // Force is about the throttle only. A day already stored and fresh is
-        // still skipped, or every sync would re-read the whole window.
+        // Force is about the throttle only. A stored, fresh day is still skipped.
         val service = service()
         service.syncAll()
         repository.requested.clear()

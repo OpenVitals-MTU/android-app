@@ -22,9 +22,7 @@ class WearOsDeviceNamesTest {
 
     @Test
     fun `a name that merely says watch is not an onboardable watch`() {
-        // This list is the Watches screen's allow-list, so a generic fragment
-        // would offer any oddly-named device as a watch to onboard. Adding one
-        // as a SENSOR is the Sensors path's job and consults no name.
+        // This list is the Watches screen's allow-list; a generic fragment would offer any device as a watch.
         assertFalse(isSmartwatchName("My Wear OS device"))
         assertFalse(isSmartwatchName("Watch Charger"))
         assertFalse(isSmartwatchName("Fancy Watch"))

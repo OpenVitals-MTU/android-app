@@ -1,20 +1,10 @@
 package tech.mmarca.openvitals.devices.garmin
 
 /**
- * A decoded GFDI frame: a message type and its raw payload.
- *
- * The frame is what COBS wraps. Layout (little-endian), from Gadgetbridge's
- * `GFDIMessage`:
- *
- *   `[u16 length][u16 messageType][payload…][u16 crc]`
- *
- * where `length` is the WHOLE frame (its own 2 bytes, the type, the payload
- * and the CRC), and `crc` covers everything before it.
- *
- * The `messageType` high-bit convention is handled here so the message layer
- * sees a single flat id: an incoming type with `0x8000` set is a status/ack
- * response, remapped to `(type and 0xff) + 5000` exactly as
- * `GFDIMessage.parseIncoming` does.
+ * A decoded GFDI frame: `[u16 length][u16 messageType][payload][u16 crc]`,
+ * little-endian; `length` covers the whole frame, `crc` everything before
+ * it. An incoming type with `0x8000` set is a status and is remapped to
+ * `(type and 0xff) + 5000`, as Gadgetbridge does.
  */
 class GarminGfdiFrame(val messageType: Int, val payload: ByteArray) {
 
@@ -22,11 +12,7 @@ class GarminGfdiFrame(val messageType: Int, val payload: ByteArray) {
         private const val STATUS_FLAG = 0x8000
         private const val STATUS_BASE = 5000
 
-        /**
-         * Parses one COBS-decoded frame. Throws [GarminGfdiFrameException] on
-         * a length or CRC mismatch — a corrupt frame must not be mistaken for
-         * a short one and silently mis-dispatched.
-         */
+        /** Parses one COBS-decoded frame. Throws [GarminGfdiFrameException] on a length or CRC mismatch. */
         fun parse(bytes: ByteArray): GarminGfdiFrame {
             if (bytes.size < 6) {
                 throw GarminGfdiFrameException("Frame too short: ${bytes.size} bytes")
@@ -56,11 +42,7 @@ class GarminGfdiFrame(val messageType: Int, val payload: ByteArray) {
             return GarminGfdiFrame(messageType, payload)
         }
 
-        /**
-         * Builds a wire frame for [messageType] carrying [payload]: writes a
-         * placeholder length, the type, the payload, backfills the real
-         * length, then appends the CRC over everything so far.
-         */
+        /** Builds a wire frame: placeholder length, type, payload, real length, then the CRC. */
         fun build(messageType: Int, payload: ByteArray): ByteArray {
             val writer = GarminByteWriter(payload.size + 8)
                 .writeShort(0) // Length placeholder, patched below.

@@ -60,8 +60,7 @@ class BodyEnergyRepositoryTest {
         repo().loadTimeline(query)
 
         coVerify(exactly = 1) { heart.repository.loadRawHeartRateSamplesForDayGraph(today) }
-        // The only baseline-window instant read is the observed-max scan, which
-        // covers the 28 days BEFORE today.
+        // The only baseline-window instant read is the observed-max scan over the 28 days before today.
         coVerify(exactly = 1) {
             heart.repository.loadHeartRateSamples(any<Instant>(), any<Instant>())
         }
@@ -94,9 +93,7 @@ class BodyEnergyRepositoryTest {
         assertEquals(1, heart.dayGraphCalls)
         assertEquals(1, heart.dailyRestingCalls)
 
-        // 20 minutes later: today's timeline is stale (>=15 min) so it
-        // recomputes, but the baseline is still fresh (<24 h) and must be
-        // reused.
+        // 20 minutes later: today's timeline is stale, but the baseline is still fresh and must be reused.
         clock = clock.plusSeconds(20 * 60)
         r.loadTimeline(query)
 

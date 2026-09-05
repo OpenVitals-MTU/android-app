@@ -8,18 +8,9 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.sp
 
 /**
- * Every style claims its full line-height box, exactly as the shipped app did.
- *
- * Flutter's `Text` reserves the style's whole line height even for a single
- * line — a 16sp title with a 24sp line height is 24sp tall. Compose trims a
- * lone line to its glyph metrics, so the same title measured ~19sp and every
- * stacked-text card in the app came out ~9dp shorter than the design it was
- * ported from. This was measured, not guessed: the settings category cards
- * were 69dp here against 78dp shipped, and the whole difference was the two
- * text boxes.
- *
- * `Trim.None` restores the Flutter behaviour; centring keeps a single line
- * optically where it was. Applied through one helper so no style can forget.
+ * Every style claims its full line-height box, as Flutter's `Text` does.
+ * Compose trims a lone line to its glyphs, which made every stacked-text
+ * card ~9dp shorter than the design. Applied through one helper.
  */
 private val FullLineHeight = LineHeightStyle(
     alignment = LineHeightStyle.Alignment.Center,

@@ -102,9 +102,7 @@ fun OnboardingScreen(
         }
     }
 
-    // A request that achieved nothing — a refusal, or Health Connect silently
-    // refusing to ask again after two cancels — falls through to the settings
-    // page, where the toggle still works.
+    // A request that achieved nothing falls through to the settings page.
     LaunchedEffect(state.openSettingsEvent) {
         if (state.openSettingsEvent > 0L) {
             openHealthConnectSettings()
@@ -178,7 +176,7 @@ fun OnboardingScreen(
     }
 }
 
-// ── Step one: header, feature cards, category rows ──────────────────────────
+// Step one: header, feature cards, category rows.
 
 @Composable
 private fun CategoriesStep(
@@ -220,8 +218,7 @@ private fun CategoriesStep(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 
-    // One dialog for every outstanding category, above the per-row buttons that
-    // stay for granting them one at a time.
+    // One dialog for every outstanding category, above the per-row buttons.
     if (state.categoriesMissingPermissions.isNotEmpty()) {
         Spacer(Modifier.height(Spacing.lg))
         OpenVitalsFilledButton(
@@ -233,9 +230,7 @@ private fun CategoriesStep(
     }
 
     Spacer(Modifier.height(Spacing.lg))
-    // Outstanding rows first, ordered ONCE when the step opens rather than on
-    // every grant: a list that re-sorts live moves the next row out from under
-    // the finger that just tapped one.
+    // Ordered once when the step opens, so rows do not move under the finger.
     val rowOrder = remember { mutableStateOf<List<OnboardingCategoryId>>(emptyList()) }
     if (rowOrder.value.isEmpty() && state.categoryRows.isNotEmpty()) {
         rowOrder.value = state.categoryRows
@@ -264,7 +259,7 @@ private fun CategoriesStep(
     }
 }
 
-// ── Step two: mindfulness opt-in ────────────────────────────────────────────
+// Step two: mindfulness opt-in.
 
 @Composable
 private fun MindfulnessStep(
@@ -308,7 +303,7 @@ private fun MindfulnessStep(
     }
 }
 
-// ── Step three: cycle tracking ──────────────────────────────────────────────
+// Step three: cycle tracking.
 
 @Composable
 private fun CycleStep(
@@ -327,7 +322,7 @@ private fun CycleStep(
     }
 }
 
-// ── Step four: additional access + routes walkthrough ───────────────────────
+// Step four: additional access and routes walkthrough.
 
 @Composable
 private fun AdditionalAccessStep(
@@ -378,7 +373,7 @@ private fun AdditionalAccessStep(
     }
 }
 
-// ── Shared pieces ───────────────────────────────────────────────────────────
+// Shared pieces.
 
 @Composable
 internal fun OnboardingHeader(
@@ -546,7 +541,7 @@ private fun OnboardingRow.descriptionRes(): Int = when (id) {
     OnboardingCategoryId.ADDITIONAL_ACCESS -> R.string.onboarding_hc_category_additional_desc
 }
 
-// ── Health Connect unavailable ──────────────────────────────────────────────
+// Health Connect unavailable.
 
 @Composable
 internal fun UnavailableContent(

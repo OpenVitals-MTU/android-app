@@ -25,16 +25,9 @@ import tech.mmarca.openvitals.domain.model.GarminWellnessMetric
 import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
- * Everything the watch measures that Health Connect has no type for. Port of
- * the Flutter build's `watch_data_screen.dart`.
- *
- * Grouped by WHEN the measurement happened, not by which file carried it —
- * the sleep score and Sleep Coach arrive in the metrics file rather than the
- * sleep one, and nobody using the app should ever have to know that.
- *
- * A metric the watch has never sent is absent rather than blank. Permanent
- * em-dash rows teach people to stop reading a screen, so what is missing is
- * named once at the foot instead.
+ * Everything the watch measures that Health Connect has no type for.
+ * Grouped by when the measurement happened, not which file carried it.
+ * A metric never sent is absent; what is missing is named once at the foot.
  */
 @Composable
 fun WatchDataScreen(viewModel: WatchDataViewModel) {
@@ -66,10 +59,7 @@ fun WatchDataScreen(viewModel: WatchDataViewModel) {
     }
 }
 
-/**
- * What this screen would show if the watch sent everything — the list the
- * footer diffs against to say what is missing.
- */
+/** What this screen shows if the watch sends everything; the footer diffs against it. */
 private val ExpectedMetrics = listOf(
     GarminWellnessMetric.STRESS,
     GarminWellnessMetric.BODY_ENERGY,
@@ -137,12 +127,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.todayItems(metrics: W
     }
     if (moderate != null || vigorous != null) {
         item(key = "intensity") {
-            // Garmin's own convention: vigorous minutes count double towards
-            // the weekly goal, which is why a bare sum would understate it.
+            // Garmin's convention: vigorous minutes count double.
             val today = (moderate ?: 0) + 2 * (vigorous ?: 0)
-            // The goal is weekly, so its progress must be the week's total,
-            // not today's — the watch stores a running daily total that
-            // resets nightly.
+            // The goal is weekly; the watch's running total resets nightly.
             val week = metrics.intensityMinutesWeek ?: today
             WatchValueRow(
                 label = stringResource(R.string.settings_watch_metric_intensity_minutes),
@@ -219,11 +206,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.lastNightItems(metric
     }
 }
 
-/**
- * How tonight's sleep need compares to the usual one. A comparison, not a
- * number: "8h 40m needed" alone says nothing, but against the usual 7h 50m it
- * says what the day's strain cost.
- */
+/** How tonight's sleep need compares to the usual one. A comparison, not a number. */
 internal sealed interface SleepCoachComparison {
     /** The watch never sent a usual need, so there is nothing to compare to. */
     data object Unknown : SleepCoachComparison
@@ -239,11 +222,7 @@ internal data class SleepCoachReading(
     val comparison: SleepCoachComparison,
 )
 
-/**
- * Derives the Sleep Coach row from the two metrics that feed it. Extracted
- * from the composable so the comparison — the whole point of the row — is
- * testable without a screen.
- */
+/** Derives the Sleep Coach row. Extracted so the comparison is testable. */
 internal fun sleepCoachReading(neededMinutes: Long, usualMinutes: Long?): SleepCoachReading =
     SleepCoachReading(
         neededText = formatWatchDuration(Duration.ofMinutes(neededMinutes)),
@@ -330,8 +309,7 @@ private fun labelFor(metric: GarminWellnessMetric): Int = when (metric) {
     GarminWellnessMetric.TRAINING_LOAD_CHRONIC,
     -> R.string.settings_watch_metric_training_load
 
-    // Deliberately unshown: its scale is undocumented — no units, no range,
-    // no direction — so the number would be decoration.
+    // Unshown: its scale is undocumented.
     GarminWellnessMetric.SLEEP_PRESSURE -> R.string.settings_watch_data_title
 }
 

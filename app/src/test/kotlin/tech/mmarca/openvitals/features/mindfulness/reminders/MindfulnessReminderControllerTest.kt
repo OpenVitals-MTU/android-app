@@ -96,12 +96,8 @@ class MindfulnessReminderControllerTest {
     }
 
     @Test fun `concurrent applies serialize instead of interleaving`() = runTest {
-        // The hydration twin already holds a mutex across "read today's progress"
-        // and "arm the alarm" for exactly this reason. Both applies suspend on
-        // the same repository read between choosing a config and arming, so
-        // interleaved they race: whichever arms last owns the single
-        // ReminderRequestCode PendingIntent, and that is as likely to be the
-        // time the user just moved away from as the one they settled on.
+        // Both applies suspend on the same read between choosing a config and arming.
+        // Interleaved, whichever arms last owns the single PendingIntent.
         every { preferencesRepository.dailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES) } returns 10.0
 
         var inFlight = 0
@@ -109,8 +105,7 @@ class MindfulnessReminderControllerTest {
         coEvery { mindfulnessRepository.loadMindfulnessSessions(any(), any()) } coAnswers {
             inFlight++
             if (inFlight > 1) overlapped = true
-            // A real suspension: `yield()` is a no-op on an unconfined
-            // dispatcher with an empty queue, so it would never expose the race.
+            // A real suspension: `yield()` is a no-op on an empty unconfined queue.
             delay(10)
             inFlight--
             listOf(mindfulnessSession(durationMinutes = 5))

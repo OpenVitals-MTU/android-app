@@ -13,12 +13,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The runtime expansion of the bundled single-source Protomaps style onto one
- * source per imported pack.
- *
- * Ported from test/features/activity/maps/offline_map_style_test.dart.
- */
+/** The runtime expansion of the bundled single-source style onto one source per imported pack. */
 class OfflineMapStyleTest {
 
     private fun baseStyle(): JsonObject = Json.parseToJsonElement(
@@ -83,14 +78,12 @@ class OfflineMapStyleTest {
         layers.forEach { element ->
             val layer = element.jsonObject
             val source = layer.string("source")
-            // Every layer is either source-less (background) or templated: the
-            // runtime expansion in expandPmtilesStyle rebinds all of them.
+            // Every layer is source-less or templated: the expansion rebinds all of them.
             assertTrue(
                 "layer ${layer.string("id")} references unexpected source $source",
                 source == null || source == TemplatePmtilesSourceIdForTests,
             )
-            // The style must stay glyph/sprite-free: text/symbol layers would
-            // need font assets the app does not bundle.
+            // The style must stay glyph/sprite-free; the app bundles no fonts.
             assertFalse(
                 "layer ${layer.string("id")} needs glyphs",
                 layer.string("type") == "symbol",

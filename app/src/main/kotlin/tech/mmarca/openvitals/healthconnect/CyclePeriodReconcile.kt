@@ -17,14 +17,8 @@ internal data class PeriodReconcileActions(
 }
 
 /**
- * Diffs the period spans implied by the current flow days against the period
- * records OpenVitals wrote earlier, so the derived records track the source
- * data instead of accumulating.
- *
- * A desired span that overlaps a foreign-origin period record is dropped: the
- * other app is treated as authoritative for that stretch, which keeps a single
- * period from being represented twice (and double-counted by every consumer
- * that sums period days).
+ * Diffs the period spans implied by the flow days against the records we
+ * wrote earlier. A span overlapping a foreign period record is dropped.
  */
 internal fun periodReconcileActions(
     desiredSpans: List<ClosedRange<LocalDate>>,

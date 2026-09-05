@@ -32,12 +32,8 @@ interface VitalsRepository {
     ): VitalsPeriodData
 
     /**
-     * One aggregated point per local day for a single vitals metric — the
-     * overview's per-metric read, exposed for range consumers such as the
-     * health report. Served from the daily cache when the sync cursor covers
-     * the range, from a live read otherwise. [metric] must name a concrete
-     * vitals metric: ALL and BLOOD_PRESSURE (whose daily shape carries two
-     * values, see [loadDailyBloodPressure]) are rejected.
+     * One point per local day for one vitals metric, cache-first. [metric]
+     * must be concrete: ALL and BLOOD_PRESSURE are rejected.
      */
     suspend fun loadDailyVitals(
         metric: VitalsPeriodMetric,

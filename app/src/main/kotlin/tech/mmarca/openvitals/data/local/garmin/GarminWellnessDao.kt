@@ -8,10 +8,7 @@ import androidx.room.Query
 @Dao
 interface GarminWellnessDao {
 
-    /**
-     * Upserts a batch. Re-syncing an overlapping window rewrites the same rows
-     * rather than duplicating them.
-     */
+    /** Upserts a batch; an overlapping window rewrites the same rows. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertSamples(samples: List<GarminWellnessSampleEntity>)
 

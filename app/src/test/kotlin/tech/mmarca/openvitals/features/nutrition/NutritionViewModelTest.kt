@@ -147,8 +147,7 @@ class NutritionViewModelTest {
         // calories-in is an at-MOST goal: 1800 kcal is under 2000.
         assertEquals(1, vm.uiState.value.display.metric.goalProgress?.goalMetDays)
 
-        // Step the goal down under the logged day (5 x 50 kcal -> 1750). No reload:
-        // the same loaded days, a new line to count them against.
+        // Step the goal down under the logged day (5 x 50 kcal -> 1750). No reload.
         repeat(5) { vm.decreaseDailyGoal() }
 
         assertEquals(1_750.0, vm.uiState.value.dailyGoal, 0.01)

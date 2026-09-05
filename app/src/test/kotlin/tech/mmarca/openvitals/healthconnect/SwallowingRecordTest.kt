@@ -18,28 +18,10 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * The bug that started all of this, run through the REAL reader.
- *
- * Health Connect filters a series record by the boundary of the RECORD, never by
- * the times of the samples nested inside it. A writer may group a whole day of
- * beats into one HeartRateRecord — and one on the reporter's phone genuinely did,
- * for 17.48 hours, holding 891 samples. Ask for a 36-minute workout that sits
- * inside it and Health Connect looks at the record, decides it is not in the
- * window, and hands back nothing. Successfully. The activity had a heart rate the
- * entire time and the screen said "Not available".
- *
- * The numbers here are the real ones, from the reporter's Health Connect export:
- *
- *     record  2026-06-22 00:34 → 18:03 UTC   (17.48 h, 891 samples)
- *     workout 2026-06-22 06:05 → 06:41 UTC   (09:05–09:41 in Estonia, UTC+3)
- *
- *     records OVERLAPPING the workout window: 1
- *     records STARTING inside it:             0     ← which is why the read was empty
- *
- * This test exists because no Dart-side test can see this. A fake at the Pigeon
- * boundary returns *samples*, not records — it sits ABOVE the Kotlin that has the
- * problem, so it cannot reproduce it and cannot prove the fix. Only the real
- * reader, against a real Health Connect client, can.
+ * Health Connect filters a series record by the record's bounds, not its samples.
+ * A 17.48-hour HeartRateRecord with 891 samples swallowed a 36-minute workout,
+ * and the windowed read came back empty. The numbers here are the real export's.
+ * Only the real reader against a real client can reproduce this.
  */
 class SwallowingRecordTest {
 
@@ -110,9 +92,7 @@ class SwallowingRecordTest {
 
     @Test
     fun `and every sample it returns is actually inside the workout`() = runTest {
-        // The mirror-image half of the same bug. Once a record like this IS returned,
-        // a naive `flatMap { it.samples }` takes all 891 of them — seventeen hours of
-        // heart rate on a thirty-six minute chart.
+        // The mirror half: once the record is returned, a naive flatMap takes all 891 samples.
         val client = FakeHealthConnectClient()
         client.insertRecords(listOf(swallowingRecord()))
 
@@ -127,17 +107,8 @@ class SwallowingRecordTest {
         assertThat(samples).hasSize(36)
     }
 
-    // ── The other half of the same problem: a record that straddles only the START ──
-    //
-    // The tests above are about a record that swallows the WHOLE window, which leaves
-    // the windowed read empty — and "empty" was the signal to go looking again. A
-    // record that overlaps only the start of the window does not leave it empty: the
-    // rest of the workout is covered by records that begin inside it, so the read comes
-    // back full of samples and looks perfectly healthy. It is simply missing the front.
-    //
-    // Reported from a long hike: the workout begins at 11:50, Gadgetbridge's heart-rate
-    // record runs 11:48-12:44, and the chart began at 12:44. Fifty-three minutes of a
-    // six-hour hike, gone, with a gapless-looking trace either side of the hole.
+    // A record that straddles only the start. The read comes back full and looks healthy,
+    // but the front is missing. From a hike: workout at 11:50, record 11:48-12:44, chart began at 12:44.
 
     private val hikeStart: Instant = Instant.parse("2026-07-12T11:50:00Z")
     private val hikeEnd: Instant = Instant.parse("2026-07-12T18:00:00Z")
@@ -180,18 +151,14 @@ class SwallowingRecordTest {
 
         val samples = reader(client).readRawHeartRateSamples(hikeStart, hikeEnd)
 
-        // The workout starts at 11:50 and had a heart rate from the first minute. The
-        // straddling record's samples from 11:50 onwards belong to it.
+        // The straddling record's samples from 11:50 onwards belong to the workout.
         assertThat(samples).isNotEmpty()
         assertThat(samples.first().time.toEpochMilli()).isEqualTo(hikeStart.toEpochMilli())
     }
 
     @Test
     fun `the trace has no hole in it`() = runTest {
-        // The hole was 53 minutes wide and the trace either side of it looked perfectly
-        // healthy, so "the chart has samples" proves nothing at all. The records cover
-        // every minute between them, so the samples must too: no gap wider than the one
-        // minute between beats.
+        // The records cover every minute, so the samples must too: no gap wider than one minute.
         val client = FakeHealthConnectClient()
         client.insertRecords(listOf(straddlingRecord()) + recordsInsideTheHike())
 
@@ -210,15 +177,8 @@ class SwallowingRecordTest {
 
     @Test
     fun `the windowed read really does hide the straddling record`() = runTest {
-        // Characterisation, not regression: it proves the SETUP reproduces the bug, so
-        // that the tests above are testing the fix rather than testing nothing.
-        //
-        // The read comes back NON-EMPTY — which is the whole difficulty. The records that
-        // sit inside the hike are returned and look like a healthy trace; the one that
-        // merely runs INTO the hike is dropped, and nothing about the result says so.
-        // (This client drops it for starting too early. A real one has been observed to
-        // key on the record's start instead. Either way it is dropped, and either way the
-        // widened read below catches it.)
+        // Characterisation: the setup reproduces the bug. The read is non-empty,
+        // and the record that runs into the hike is dropped without a trace.
         val client = FakeHealthConnectClient()
         client.insertRecords(listOf(straddlingRecord()) + recordsInsideTheHike())
 
@@ -236,11 +196,8 @@ class SwallowingRecordTest {
 
     @Test
     fun `the fixture really does have the swallowing shape`() = runTest {
-        // Characterisation, not regression. It proves the SETUP reproduces the bug —
-        // that Health Connect really does hide this record from a windowed read — so
-        // that the two tests above are testing the fix rather than testing nothing.
-        // If this ever starts returning the record, the tests above become vacuous and
-        // we need to know.
+        // Characterisation: Health Connect really hides this record from a windowed read.
+        // If this starts returning it, the tests above are vacuous.
         val client = FakeHealthConnectClient()
         client.insertRecords(listOf(swallowingRecord()))
 

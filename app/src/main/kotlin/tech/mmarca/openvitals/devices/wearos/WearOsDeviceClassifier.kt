@@ -7,15 +7,8 @@ import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
 
 /**
- * Claims a scanned device for the WearOS integration when its Bluetooth name
- * looks like a wrist smartwatch (Galaxy Watch, Pixel Watch, Wear OS, …; see
- * [WearOsDeviceNames.isSmartwatchName]).
- *
- * A WearOS watch shares no protocol with Garmin — no GFDI/FIT sync. It is a
- * BLE-discoverable live heart-rate source whose recorded data arrives through
- * Health Connect. Classifying it as `(WEAROS, WATCH)` keeps it off the Garmin
- * sync path (see `BleSensorDevice.isGarminWatch`) while still presenting it
- * as a watch.
+ * Claims a device for WearOS when its name looks like a wrist smartwatch.
+ * Classified as `(WEAROS, WATCH)`, off the Garmin sync path.
  */
 class WearOsDeviceClassifier : DeviceClassifier {
 

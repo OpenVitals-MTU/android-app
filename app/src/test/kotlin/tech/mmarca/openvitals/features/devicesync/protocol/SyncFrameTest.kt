@@ -14,7 +14,7 @@ class SyncFrameTest {
             ((bytes[offset + 2].toLong() and 0xFF) shl 8) or
             (bytes[offset + 3].toLong() and 0xFF)
 
-    // ── SyncFrame.encode ─────────────────────────────────────────────────────
+    // SyncFrame.encode.
 
     @Test
     fun `encode lays out big-endian length, type byte, then payload`() {
@@ -36,7 +36,7 @@ class SyncFrameTest {
         assertEquals(0L, uint32(bytes, 0))
     }
 
-    // ── SyncFrameReader ──────────────────────────────────────────────────────
+    // SyncFrameReader.
 
     @Test
     fun `round-trips a single frame`() {

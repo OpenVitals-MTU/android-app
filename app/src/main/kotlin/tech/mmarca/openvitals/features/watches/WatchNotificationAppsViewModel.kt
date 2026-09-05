@@ -25,34 +25,18 @@ data class WatchNotificationApp(
 )
 
 /**
- * Whether phone notifications are mirrored to the watch, and whether Android
- * will let them be.
- *
- * Two separate gates, deliberately surfaced separately: the user can want the
- * feature ([enabled]) while Android has not been told to allow it
- * ([accessGranted]). Collapsing them into one switch would make a flip that
- * does nothing look like a bug.
+ * Whether notifications are mirrored, and whether Android allows it. Two
+ * gates shown separately, or a flip that does nothing looks like a bug.
  */
 @Immutable
 data class WatchNotificationsUiState(
     /** Whether the user has switched forwarding on. */
     val enabled: Boolean = false,
-    /**
-     * Whether Android has granted notification access. There is no runtime
-     * prompt for it — the only way to grant it is the system settings screen,
-     * so this is polled on refresh rather than awaited.
-     */
+    /** Whether Android granted notification access. Only the settings screen can, so it is polled. */
     val accessGranted: Boolean = false,
-    /**
-     * Whether the user has seen and accepted what the feature reads. Required
-     * before access is requested; remembered, so toggling does not re-prompt.
-     */
+    /** Whether the user accepted the disclosure. Required before access is requested. */
     val disclosureAccepted: Boolean = false,
-    /**
-     * Whether the prominent disclosure dialog is on screen right now. Owned by
-     * the ViewModel (the Flutter build used a callback into the view) so the
-     * "consent before permission" ordering lives in one testable place.
-     */
+    /** Whether the disclosure dialog is on screen. Owned here so the ordering is testable. */
     val showDisclosure: Boolean = false,
     /** Every launchable app, blocked flag included. Empty until loaded. */
     val apps: List<WatchNotificationApp> = emptyList(),
@@ -66,13 +50,8 @@ data class WatchNotificationsUiState(
 }
 
 /**
- * Port of the Flutter build's `watch_notifications_view_model.dart`.
- *
- * The enable flow enforces two things the switch itself cannot supply, in this
- * order: the user's informed consent (the prominent disclosure, which Google
- * Play requires BEFORE notification access is requested — and the order a
- * reasonable person expects anyway: say what will be read, then ask for it),
- * and a permission only Android's own settings screen can grant.
+ * The enable flow enforces, in order, the prominent disclosure (required
+ * before notification access is requested) and the settings-screen grant.
  */
 @HiltViewModel
 class WatchNotificationAppsViewModel @Inject constructor(
@@ -90,11 +69,7 @@ class WatchNotificationAppsViewModel @Inject constructor(
         refresh()
     }
 
-    /**
-     * Re-reads the permission, which can only have changed while the app was
-     * away at the system settings screen — Android gives no callback when
-     * access is granted, so the screen calls this again on every resume.
-     */
+    /** Re-reads the permission. Android gives no callback, so the screen calls this on resume. */
     fun refresh() {
         viewModelScope.launch {
             val granted = readAccess()
@@ -106,21 +81,13 @@ class WatchNotificationAppsViewModel @Inject constructor(
                     loading = false,
                 )
             }
-            // The listener's filter keeps its own copy of the configuration so
-            // it can run before any UI exists. Pushed on every refresh rather
-            // than only on change, because the paired watch can change without
-            // this switch moving.
+            // The listener keeps its own copy of the configuration. Pushed on every
+            // refresh: the paired watch can change without this switch moving.
             pushConfig()
         }
     }
 
-    /**
-     * Flips forwarding on or off.
-     *
-     * Turning it on runs the gates: disclosure first (via [uiState]'s
-     * `showDisclosure` and [acceptDisclosure]/[declineDisclosure]), then
-     * notification access, then the preference itself.
-     */
+    /** Flips forwarding. Turning on runs the gates: disclosure, then access, then the preference. */
     fun setEnabled(enabled: Boolean) {
         viewModelScope.launch {
             if (!enabled) {
@@ -130,7 +97,7 @@ class WatchNotificationAppsViewModel @Inject constructor(
                 return@launch
             }
 
-            // Consent BEFORE the permission is requested — see the class doc.
+            // Consent before the permission is requested.
             if (!store.disclosureAccepted) {
                 state.update { it.copy(showDisclosure = true) }
                 return@launch
@@ -154,11 +121,7 @@ class WatchNotificationAppsViewModel @Inject constructor(
     }
 
     private suspend fun proceedWithEnable() {
-        // Re-read rather than trust the cached state: Android gives no
-        // callback when access is granted — the user leaves for a system
-        // screen and comes back — so anything cached before that is stale.
-        // Trusting the cache is what made the switch refuse to move after
-        // access had already been granted.
+        // Re-read rather than trust the cache: Android gives no callback when access is granted.
         var granted = state.value.accessGranted
         if (!granted) {
             granted = readAccess()

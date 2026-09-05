@@ -68,8 +68,7 @@ internal fun DashboardSummaryCard(
                 modifier = Modifier.size(ringSize),
                 contentAlignment = Alignment.Center,
             ) {
-                // The arc sweeps round to its value instead of being there already. On a
-                // goal ring that is the whole point: you watch how far round it goes.
+                // The arc sweeps round to its value: on a goal ring that is the point.
                 ChartReveal { revealProgress ->
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         val strokePx = strokeWidth.toPx()

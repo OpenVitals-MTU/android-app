@@ -35,21 +35,12 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.SyncedSourceOverlay
 
 /**
- * Port of the Flutter `health_connect_sync_store_test.dart` suite.
- *
- * The Dart tests drive a fake `HealthDataSource`; the Kotlin store reads
- * through [HealthConnectManager] and writes through
- * [AppleHealthImportRepository], so [FakeHealthConnect] models the same
- * in-memory Health Connect import surface behind those two collaborators:
- * records live keyed by clientRecordId, reads return them, writes upsert.
+ * [FakeHealthConnect] models the import surface behind [HealthConnectManager] and
+ * [AppleHealthImportRepository]: records keyed by clientRecordId, reads return them, writes upsert.
  */
 class HealthConnectSyncStoreTest {
 
-    /**
-     * The old materializing read, rebuilt over the streaming contract: these
-     * tests assert on read CONTENT (keys, payloads, origins), which the chunked
-     * flow delivers identically.
-     */
+    /** The old materializing read over the streaming contract; these tests assert on content. */
     private suspend fun HealthConnectSyncStore.readItems(types: Set<String>): List<SyncItem> =
         readItemChunks(types, chunkSize = 500).toList().flatten()
 
@@ -63,8 +54,7 @@ class HealthConnectSyncStoreTest {
         val count: Int get() = byClientId.size
 
         fun seed(record: Record) {
-            // Emulate Health Connect assigning the sync fingerprint as
-            // clientRecordId, as the write path does.
+            // Health Connect assigns the sync fingerprint as clientRecordId, as the write path does.
             byClientId[syncFingerprint(record)] = record
         }
 
@@ -169,8 +159,7 @@ class HealthConnectSyncStoreTest {
         hc.seed(weight(2, 71.0))
         hc.seed(weight(3, 72.0))
 
-        // A 1-byte cap forces a flush after every item even though the count
-        // cap (500) is never near.
+        // A 1-byte cap forces a flush after every item.
         val chunks = storeOver(hc, chunkPayloadByteCap = 1)
             .readItemChunks(setOf("WeightRecord"), chunkSize = 500)
             .toList()
@@ -201,10 +190,7 @@ class HealthConnectSyncStoreTest {
         store.writeItems(items)
         assertEquals(1, hc.count)
 
-        // The written record is typed and re-fingerprints to the same key, so
-        // it reappears from readItems under that key — the session's dedup
-        // baseline (seeded from readItems) then recognises a re-sync as a
-        // duplicate.
+        // The written record re-fingerprints to the same key, so a re-sync reads as a duplicate.
         val written = store.readItems(setOf("WeightRecord"))
         assertEquals(items.single().key, written.single().key)
     }
@@ -220,8 +206,7 @@ class HealthConnectSyncStoreTest {
         store.writeItems(items)
         assertEquals(2, hc.count)
 
-        // Writing them again keys on the same fingerprint clientRecordIds, so
-        // Health Connect upserts and the count stays put.
+        // The same fingerprint ids, so Health Connect upserts and the count stays put.
         store.writeItems(items)
         assertEquals(2, hc.count)
         val after = store.readItems(setOf("WeightRecord"))
@@ -232,9 +217,7 @@ class HealthConnectSyncStoreTest {
     fun `writeItems ignores a peer-chosen key and writes under the content fingerprint`() = runTest {
         val record = weight(6, 65.0)
         val honestKey = syncFingerprint(record)
-        // A hostile peer sets the SyncItem key to an existing id it wants to
-        // clobber (e.g. an apple_health_* record we hold). The store must NOT
-        // trust it.
+        // A hostile peer sets the key to an existing id it wants to clobber. The store must not trust it.
         val hostile = SyncItem(
             key = "apple_health_deadbeef",
             recordType = "WeightRecord",
@@ -244,8 +227,7 @@ class HealthConnectSyncStoreTest {
         store.writeItems(listOf(hostile))
 
         val written = store.readItems(setOf("WeightRecord"))
-        // Written under the recomputed content fingerprint, never the peer's
-        // key — so the peer can only ever address the record it actually sent.
+        // Written under the recomputed fingerprint, never the peer's key.
         assertEquals(honestKey, written.single().key)
         assertNotEquals("apple_health_deadbeef", written.single().key)
     }
@@ -262,10 +244,8 @@ class HealthConnectSyncStoreTest {
 
     @Test
     fun `readItems passes a preserved origin through instead of the local attribution`() = runTest {
-        // Phone B: the record arrived by sync from A (Gadgetbridge) and was
-        // therefore written carrying its fingerprint as clientRecordId, with
-        // B's origin table mapping that fingerprint. When B re-sends toward C,
-        // the item must announce Gadgetbridge, not B's own re-stamped package.
+        // Phone B holds the record from A (Gadgetbridge) under its fingerprint.
+        // When B re-sends toward C, the item must announce Gadgetbridge, not B.
         val fingerprint = syncFingerprint(weight(10, 74.0))
         hc.seed(weight(10, 74.0, clientRecordId = fingerprint))
         val dao = FakeOriginDao().apply {
@@ -335,8 +315,7 @@ class HealthConnectSyncStoreTest {
 
         val written = store.writeItems(items)
 
-        // The batch was rejected, so its key is NOT reported as written — the
-        // session therefore won't count it as imported.
+        // The batch was rejected, so its key is not reported as written.
         assertEquals(emptySet<String>(), written)
         assertEquals(0, hc.count)
     }

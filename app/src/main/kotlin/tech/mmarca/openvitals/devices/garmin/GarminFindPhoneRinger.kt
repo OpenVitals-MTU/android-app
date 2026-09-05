@@ -23,16 +23,9 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
 
 /**
- * Rings the phone when the watch asks (GFDI find-my-phone, 5039/5040) — the
- * other half of the find pairing whose watch-ward direction already exists in
- * [GarminFindMyWatch].
- *
- * Plays the default alarm sound on the ALARM stream, looping, with a
- * high-priority notification carrying the stop action. Stops on: the watch's
- * cancel, the notification's stop button, or the watch-supplied duration
- * running out — whichever comes first. The alarm stream is deliberate: a phone
- * being looked for is face-down on silent, and the media stream would be
- * muted with it.
+ * Rings the phone when the watch asks. The default alarm sound on the
+ * alarm stream, looping, with a stop notification. Stops on the watch's
+ * cancel, the button, or the duration running out.
  */
 @Singleton
 class GarminFindPhoneRinger @Inject constructor(
@@ -109,8 +102,7 @@ class GarminFindPhoneRinger @Inject constructor(
                 context.getString(R.string.garmin_find_phone_channel),
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
-                // The MediaPlayer is the sound; a channel sound on top would
-                // double up.
+                // The MediaPlayer is the sound; a channel sound would double up.
                 setSound(null, null)
             },
         )
@@ -129,8 +121,7 @@ class GarminFindPhoneRinger @Inject constructor(
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setOngoing(true)
             .addAction(0, context.getString(R.string.garmin_find_phone_stop), stopIntent)
-            // Tapping anywhere on it stops the noise — nobody hunting for a
-            // ringing phone wants to aim for a small button.
+                // Tapping anywhere stops the noise.
             .setContentIntent(stopIntent)
             .build()
         manager.notify(NOTIFICATION_ID, notification)

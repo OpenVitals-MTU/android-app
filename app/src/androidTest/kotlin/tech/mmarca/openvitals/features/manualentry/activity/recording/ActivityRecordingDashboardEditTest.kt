@@ -23,16 +23,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of Flutter's
- * `test/features/manualentry/activity/recording/activity_recording_dashboard_edit_test.dart`.
- *
- * The dashboard is what the rider looks at while moving, and its layout is
- * theirs to arrange. Two things have to hold. While the dashboard is simply
- * being read, a tile must not be removable or movable — losing the distance
- * readout mid-ride because a pocket brushed the screen is not something you
- * recover from without stopping. And the add tray has to offer exactly the
- * fields that are off the grid, because a field that is available but
- * unreachable is a metric the user simply cannot get back.
+ * While the dashboard is being read, a tile must not be removable or movable. The add tray
+ * must offer exactly the fields that are off the grid.
  */
 @OptIn(ExperimentalTestApi::class)
 class ActivityRecordingDashboardEditTest {
@@ -44,8 +36,7 @@ class ActivityRecordingDashboardEditTest {
     fun outsideEditModeTilesCarryNoEditControls() {
         setGrid(isEditing = false)
 
-        // In edit mode each tile announces itself by name and carries the
-        // remove/move/resize actions; at rest it is a readout and nothing more.
+        // In edit mode each tile carries the remove/move/resize actions; at rest it is a readout.
         DEFAULT_FIELDS.forEach { field ->
             composeRule.onNodeWithContentDescription(label(field)).assertDoesNotExist()
         }
@@ -76,8 +67,7 @@ class ActivityRecordingDashboardEditTest {
 
     @Test
     fun movingATileLandsItOnTheTargetRatherThanTheGapBeforeIt() {
-        // Drop-on-target, not insert-between: the tile the user aimed at is the
-        // slot they get, and everything in between shuffles up by one.
+        // Drop-on-target: the tile the user aimed at is the slot they get.
         var updated: ActivityRecordingDashboardLayout? = null
         setGrid(isEditing = true, onUpdateLayout = { updated = it })
 

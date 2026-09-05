@@ -40,12 +40,7 @@ data class CaffeineDailyStat(
     val totalMg: Double,
     val bedtimeMg: Double,
     val safeForSleep: Boolean,
-    /**
-     * Whether this day's bedtime has already passed. For today (and, right after midnight
-     * with an after-midnight bedtime, even yesterday) the [bedtimeMg]/[safeForSleep] figures
-     * are a PROJECTION of a night that has not happened — such rows must not count as lived
-     * nights in safe-night totals or streaks.
-     */
+    /** Whether this day's bedtime has passed. A projected night must not count in totals or streaks. */
     val nightCompleted: Boolean = true,
 )
 

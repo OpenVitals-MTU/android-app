@@ -18,25 +18,14 @@ import tech.mmarca.openvitals.domain.model.OsPermissionId
 import tech.mmarca.openvitals.domain.model.OsPermissionRow
 
 /**
- * Builds the OS-permission catalog for THIS device and opens the settings
- * screens the runtime dialog cannot cover.
- *
- * Every row is filtered by what the OS version actually has, so the list never
- * shows a permission that cannot be granted here — an ungrantable row would
- * leave it permanently incomplete with no way to finish it.
+ * Builds the OS-permission catalog for this device, filtered by what the
+ * OS version has, so no row is ungrantable.
  */
 @Singleton
 class OsPermissionsService @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
-    /**
-     * What pairing and running a watch needs, asked at the point the user adds
-     * one rather than during first-run onboarding: at that moment the reason
-     * for each is on screen, and a user who never pairs a watch is never asked.
-     *
-     * Scoped to watches on purpose. Physical activity and (on modern Android)
-     * location belong to workout recording, and are asked for there.
-     */
+    /** What a watch needs, asked when one is added. Recording permissions are asked elsewhere. */
     fun watchSetupCatalog(): OsPermissionCatalog = OsPermissionCatalog(
         rows = buildList {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -48,16 +37,13 @@ class OsPermissionsService @Inject constructor(
                     ),
                 )
             } else {
-                // Below API 31 there is no runtime Bluetooth permission at
-                // all: a BLE scan is gated on location instead.
+                // Below API 31 a BLE scan is gated on location.
                 add(row(OsPermissionId.LOCATION, Manifest.permission.ACCESS_FINE_LOCATION))
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 add(row(OsPermissionId.NOTIFICATIONS, Manifest.permission.POST_NOTIFICATIONS))
             }
-            // A companion association already carries the right to run in the
-            // background, so asking for a doze exemption on top buys nothing
-            // and is exactly the kind of request app stores push back on.
+            // A companion association already runs in the background; a doze exemption buys nothing.
             if (!hasCompanionAssociation()) {
                 add(special(OsPermissionId.BATTERY_OPTIMIZATION, isIgnoringBatteryOptimizations()))
             }
@@ -68,15 +54,10 @@ class OsPermissionsService @Inject constructor(
     fun isGranted(permission: String): Boolean =
         ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
 
-    /**
-     * Opens the settings screen for a special row. False when the device has
-     * no such screen, so the caller can say so instead of failing silently.
-     */
+    /** Opens the settings screen for a special row. False when the device has none. */
     fun openSettingsFor(id: OsPermissionId): Boolean {
         val intent = when (id) {
-            // ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS would put the direct
-            // dialog one tap away, but it needs a store-restricted permission.
-            // The settings list costs one extra tap and no declaration.
+            // The direct dialog needs a store-restricted permission; the list costs one tap.
             OsPermissionId.BATTERY_OPTIMIZATION ->
                 Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
 

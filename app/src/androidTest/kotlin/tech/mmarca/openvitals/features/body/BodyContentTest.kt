@@ -23,14 +23,8 @@ import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the rendering cases of Flutter's
- * `test/features/body/body_screen_test.dart`.
- *
- * The body overview differs from the other metric screens in one way worth
- * pinning: it has no single `hasData` flag. Emptiness is decided by
- * `hasAnyBodyData` across every tracked measurement, so a screen with only a
- * height on file and nothing else must still count as having data — otherwise
- * the placeholder covers a reading the user did record.
+ * The body overview has no single `hasData` flag: emptiness is decided across every tracked
+ * measurement, so a single weight must count as data.
  */
 class BodyContentTest {
 
@@ -46,9 +40,7 @@ class BodyContentTest {
 
     @Test
     fun oneTrackedMeasurementIsEnoughToCountAsData() {
-        // Not every body metric is recorded by everyone. A single weight has to
-        // be enough, or the screen tells someone who weighed themselves this
-        // morning that they have no readings.
+        // A single weight has to be enough.
         setContent(state(weights = listOf(weight())))
 
         composeRule.onNodeWithText(string(R.string.message_no_readings_period)).assertDoesNotExist()

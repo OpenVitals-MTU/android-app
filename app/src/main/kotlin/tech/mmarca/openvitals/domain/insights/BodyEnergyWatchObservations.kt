@@ -11,45 +11,18 @@ data class WatchBodyEnergySample(
     val score: Int,
 )
 
-/**
- * How much time one calibration observation stands for.
- *
- * Shared so the downsampler here and the caller's "which buckets have already
- * been fitted" bookkeeping cannot drift apart — if they disagree, a bucket is
- * either fitted twice or never.
- */
+/** How much time one observation stands for. Shared so the downsampler and the bookkeeping agree. */
 val WatchObservationBucket: Duration = Duration.ofHours(1)
 
-/**
- * The bucket [time] falls in, as an index. Callers persist the last fitted index
- * so a bucket contributes exactly one observation no matter how many syncs
- * happen to touch it.
- */
+/** The bucket [time] falls in. Callers persist the last fitted index. */
 fun watchObservationBucketIndex(time: Instant): Long =
     Math.floorDiv(time.toEpochMilli(), WatchObservationBucket.toMillis())
 
 /**
- * Turns raw watch samples into calibration observations against a computed
- * timeline.
- *
- * Two jobs, both pure:
- *
- *  * **Downsample.** The watch emits a sample a minute. Feeding every one in
- *    would let a single day outvote months of evidence, so at most one per
- *    [bucket] is kept. Combined with the small watch learning rate, a day
- *    contributes a nudge rather than a shove.
- *  * **Pair.** Each kept sample is matched to the nearest timeline point, which
- *    already carries both what this app predicted at that moment and the
- *    influence that was driving it — the gain a mismatch is attributed to.
- *    Reusing the timeline's own `primaryInfluence` rather than re-deriving one
- *    keeps a watch correction pointed at exactly the gain the moment would have
- *    moved, with the zone and workout context a reconstruction from the point's
- *    components alone would lose.
- *
- * Samples with no point within [maxPairingGap] are dropped: attributing an error
- * to a gain the model was not exercising at that time would teach it the wrong
- * lesson. Points the model itself could not measure are skipped for the same
- * reason.
+ * Turns raw watch samples into observations against a timeline: at most
+ * one per [bucket], each paired to the nearest point, which carries the
+ * prediction and the driving influence. Samples with no point within
+ * [maxPairingGap], and unmeasured points, are dropped.
  */
 fun buildWatchObservations(
     samples: List<WatchBodyEnergySample>,
@@ -61,8 +34,7 @@ fun buildWatchObservations(
 
     val sorted = samples.sortedBy { it.time }
 
-    // One sample per bucket — the first in each, so the choice is deterministic
-    // and does not drift with how often the user happens to sync.
+    // The first sample per bucket, so the choice does not drift with sync frequency.
     val kept = mutableListOf<WatchBodyEnergySample>()
     var currentBucket: Long? = null
     for (sample in sorted) {

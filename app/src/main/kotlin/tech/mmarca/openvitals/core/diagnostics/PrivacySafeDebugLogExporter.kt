@@ -18,13 +18,7 @@ private data class DebugLogExportPayload(
     val result: DebugLogExportResult,
 )
 
-/**
- * Exports this process's logcat for diagnostics builds.
- *
- * The export is intentionally raw: no tag allow-list, keyword drops, or
- * redaction. Diagnostics builds are opt-in troubleshooting artifacts, and
- * Health Connect / activity troubleshooting needs the unfiltered trail.
- */
+/** Exports this process's logcat for diagnostics builds. Raw: troubleshooting needs the unfiltered trail. */
 object PrivacySafeDebugLogExporter {
     /** Keep the most recent lines so a long session still fits a share intent. */
     internal const val MaxLines = 20_000
@@ -76,10 +70,7 @@ object PrivacySafeDebugLogExporter {
         )
     }
 
-    /**
-     * Keeps raw log lines as-is, truncated to [MaxLines] most recent entries.
-     * [droppedLines] counts only lines trimmed by that cap (never redacted).
-     */
+    /** Keeps raw lines, truncated to the [MaxLines] most recent. [droppedLines] counts the trimmed ones. */
     internal fun exportLogcat(lines: List<String>): ExportedLogcat {
         if (lines.size <= MaxLines) {
             return ExportedLogcat(

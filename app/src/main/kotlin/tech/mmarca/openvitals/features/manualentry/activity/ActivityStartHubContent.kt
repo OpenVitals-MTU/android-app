@@ -32,10 +32,7 @@ import tech.mmarca.openvitals.ui.theme.Spacing
 import java.time.LocalDate
 import java.time.ZoneId
 
-/**
- * Where a new activity starts: the plans due today and later, each one tap from
- * a prefilled form, then the two ways to make a session from nothing.
- */
+/** Where a new activity starts: today's plans, then the two ways to start from nothing. */
 @Composable
 internal fun ActivityStartHub(
     state: ActivityEntryUiState,

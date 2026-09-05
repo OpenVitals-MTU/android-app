@@ -46,12 +46,7 @@ data class DailyReadinessUiState(
 class DailyReadinessViewModel @Inject constructor(
     private val loadDashboardDayUseCase: LoadDashboardDayUseCase,
     private val prefs: PreferencesRepository,
-    // Loaded beside the dashboard day rather than through it: `DashboardMetric`
-    // has no body-energy member, and the timeline is a chained per-day
-    // computation with its own repository, cache and refresh mode. Readiness
-    // needs the MEASURED battery — without it the insight falls back to the
-    // estimate the deltas assemble, which is exactly the mismatch this phase
-    // exists to remove.
+    // Loaded beside the dashboard day: readiness needs the measured battery.
     private val bodyEnergyRepository: BodyEnergyRepository,
 ) : ViewModel() {
 
@@ -101,9 +96,7 @@ class DailyReadinessViewModel @Inject constructor(
 
     fun resumeCurrentDay() {
         refreshPreferences()
-        // Reload whenever the user returns to "today" (e.g. from a detail screen), not only
-        // on a day rollover: this ViewModel outlives detail screens on the back stack, so
-        // ON_RESUME is the only signal that Health Connect data may have changed.
+        // Reload on return to today: ON_RESUME is the only signal data may have changed.
         if (!userPinnedPastDay) {
             load(LocalDate.now())
         }
@@ -178,14 +171,7 @@ class DailyReadinessViewModel @Inject constructor(
         }
     }
 
-    /**
-     * The measured battery for [date], or null when there is none to have.
-     *
-     * Best-effort on purpose: a body-energy failure must not take the readiness
-     * verdict down with it. Skipped entirely before setup completes, since an
-     * un-calibrated timeline would seed the verdict with a score the user has
-     * never agreed to.
-     */
+    /** The measured battery for [date], or null. Best-effort, and skipped before setup completes. */
     private suspend fun loadBodyEnergyTimeline(
         date: LocalDate,
         refreshMode: RefreshMode,

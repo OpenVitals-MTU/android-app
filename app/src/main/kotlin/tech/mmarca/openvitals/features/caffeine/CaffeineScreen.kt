@@ -181,9 +181,7 @@ internal fun LazyListScope.caffeineHomeAndAnalyticsContent(
     }
 
     if (state.isLoading && state.homeDisplay.curvePoints.isEmpty()) {
-        // Nothing to show yet and still loading: the shape of the curve that is
-        // coming, so the page does not jump when the data lands. Once there are
-        // points the real chart stays put through every refresh.
+        // Still loading: the shape of the coming curve, so the page does not jump.
         item {
             ChartSkeleton(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -246,8 +244,7 @@ internal fun LazyListScope.caffeineHomeAndAnalyticsContent(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onClick = { onOpenDrink(insight.entry.id) },
-                // Only a record this app wrote can be deleted from here, and only when
-                // Health Connect gave it an id to delete by.
+                // Only a record this app wrote, with an id, can be deleted here.
                 onDelete = if (insight.entry.isOpenVitalsEntry && insight.entry.id.isNotBlank()) {
                     { onDeleteEntry(insight.entry.id) }
                 } else {
@@ -700,23 +697,13 @@ internal fun CaffeineCurveCard(
     }
 }
 
-/**
- * The curve's y-axis maximum: the tallest of the plotted points and the sleep
- * threshold, floored at 1 mg so an empty-ish day still divides by something.
- *
- * Only ever called with a non-empty [points] — the chart short-circuits to its
- * empty state below two points.
- */
+/** The curve's y maximum: the tallest point or the threshold, floored at 1 mg. */
 internal fun caffeineCurveMaxMg(points: List<CaffeinePoint>, thresholdMg: Double): Double =
     maxOf(points.maxOf { it.valueMg }, thresholdMg, 1.0)
 
 /**
- * The caffeine decay curve on the shared line-plot: sleep-threshold guide,
- * per-drink markers on the baseline, pinch to zoom, drag to read a value.
- *
- * Scrubbing replaced the old tap-to-nearest-point prototype for READING the
- * curve; a tap still opens the drink nearest the tapped moment — the scrubber
- * only claims horizontal drags, so the two coexist.
+ * The caffeine decay curve on the shared plot: threshold guide, drink
+ * markers, pinch to zoom, drag to read. A tap still opens the nearest drink.
  */
 @Composable
 private fun CaffeineLineChart(
@@ -750,8 +737,7 @@ private fun CaffeineLineChart(
     val spanMillis = (end.toEpochMilli() - start.toEpochMilli()).coerceAtLeast(1L)
     val maxValue = caffeineCurveMaxMg(points, thresholdMg)
 
-    // Built once, identity-stable across pinch frames, so the plot's geometry
-    // cache holds.
+    // Built once, identity-stable, so the geometry cache holds.
     val chartPoints = remember(points) {
         points.map { point ->
             MetricLinePlotPoint(
@@ -760,16 +746,13 @@ private fun CaffeineLineChart(
             )
         }
     }
-    // The threshold is data the curve is read AGAINST, not data itself: dashed,
-    // and skipped entirely when there is no threshold to speak of (the
-    // per-entry contribution curve passes 0).
+    // The threshold is a guide, dashed; skipped when there is none.
     val guides = if (thresholdMg > 0.0) {
         listOf(ChartGuideLine(value = thresholdMg, color = thresholdColor.copy(alpha = 0.45f)))
     } else {
         emptyList()
     }
-    // Each drink, on the baseline, so the sawtooth in the curve can be read
-    // against the act that caused it.
+    // Each drink on the baseline, so the sawtooth reads against its cause.
     val markers = entryInsights.mapNotNull { insight ->
         val fraction = (insight.entry.startTime.toEpochMilli() - start.toEpochMilli()).toFloat() / spanMillis
         if (fraction in 0f..1f) ChartMarker(xFraction = fraction, color = markerColor) else null
@@ -801,8 +784,7 @@ private fun CaffeineLineChart(
                 } else {
                     Modifier.pointerInput(points, entryInsights) {
                         detectTapGestures { offset ->
-                            // Map the tap back through the viewport so a zoomed
-                            // chart opens the drink actually under the finger.
+                            // Map the tap through the viewport.
                             val visible = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
                             val tappedTime = start.toEpochMilli() +
                                 (currentViewport.dataFraction(visible) * spanMillis).toLong()
@@ -818,10 +800,7 @@ private fun CaffeineLineChart(
                 },
             )
             Spacer(Modifier.height(8.dp))
-            // Clock times for the visible slice — at full zoom, exactly the
-            // start/end the card always drew — with the threshold summary (when
-            // there is one) sitting between them. Inset past the y-axis gutter so
-            // the row describes the plot, not the card.
+            // Clock times for the visible slice, inset past the y-axis gutter.
             ChartXAxisWithYAxis {
                 val edges = timeAxisInstantsFor(start, end, zoom.viewport)
                 Row(
@@ -914,10 +893,7 @@ private fun CaffeineSleepImpactCard(
     }
 }
 
-/**
- * Whether the bedtime projection is at or under the sleep threshold — the
- * bedtime card colours on this. Exactly at the threshold counts as safe.
- */
+/** Whether the bedtime projection is at or under the threshold. Exactly at counts as safe. */
 internal fun caffeineBedtimeIsSafe(insights: CaffeineInsights): Boolean =
     insights.bedtimeMg <= insights.sleepThresholdMg
 
@@ -1114,10 +1090,7 @@ internal data class CaffeineTimeBucketBar(
     val fraction: Double,
 )
 
-/**
- * The six slices a distribution card has room for, each as a share of the
- * tallest slice in the list (the scale starts at 1 mg).
- */
+/** The six slices a distribution card has room for, as shares of the tallest. */
 internal fun caffeineDistributionBars(
     slices: List<CaffeineDistributionSlice>,
 ): List<CaffeineDistributionBar> {
@@ -1278,10 +1251,7 @@ private fun DistributionRow(
     }
 }
 
-/**
- * One logged drink. Tapping it opens what that drink alone is doing to you; an
- * OpenVitals-authored one swipes away. Foreign records stay read-only.
- */
+/** One logged drink. Tap opens its profile; an OpenVitals one swipes away. */
 @Composable
 private fun CaffeineEntryRow(
     insight: CaffeineEntryInsight,

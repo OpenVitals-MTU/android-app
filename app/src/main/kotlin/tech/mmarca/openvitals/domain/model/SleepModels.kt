@@ -48,11 +48,7 @@ data class SleepStage(
     }
 }
 
-/**
- * Time actually ASLEEP: stage durations with the awake epochs excluded. A
- * night with 8h in bed and 40 minutes awake reads 7h20m. Sessions whose
- * writer recorded no stages keep the plain session duration.
- */
+/** Time asleep: stage durations minus awake epochs. Unstaged sessions keep the session duration. */
 fun SleepData.asleepDurationMs(): Long = sleepDurationMsFromStages(stages, durationMs)
 
 data class DailySleepDuration(
@@ -67,10 +63,7 @@ data class SleepReadData(
     val dailyAggregateDurations: List<DailySleepDuration> = emptyList(),
 )
 
-/**
- * The union of slept intervals in milliseconds — a sweep-merge, so overlapping
- * cross-source survivors can never sum past real time.
- */
+/** The union of slept intervals in ms, so overlapping survivors cannot sum past real time. */
 fun sleepSessionsUnionMs(sessions: Iterable<SleepData>): Long {
     val intervals = sessions
         .filter { it.endTime.isAfter(it.startTime) }
@@ -93,10 +86,8 @@ fun sleepSessionsUnionMs(sessions: Iterable<SleepData>): Long {
 }
 
 /**
- * Concatenates the stages of [orderedSessions], deduplicating identical
- * (start, end, type) triples, then fills each inter-segment gap no wider than
- * [maxGap] with an explicit Awake stage — a wake-split night keeps continuous
- * stage coverage and its schedule bar has no hole.
+ * Concatenates the stages of [orderedSessions], dedups identical triples,
+ * and fills each gap up to [maxGap] with an explicit stage.
  */
 fun combineNightStages(
     orderedSessions: List<SleepData>,
@@ -110,12 +101,9 @@ fun combineNightStages(
         }
     }
     if (stages.isEmpty()) return emptyList()
-    // A gap between two sessions is time OUT of bed, not time awake in it. Typing it
-    // STAGE_AWAKE made a 90-minute get-up read as wake-after-sleep-onset: it inflated the
-    // Awake row, and through it sleep efficiency and the score's WASO term. STAGE_OUT_OF_BED
-    // is excluded from AwakeStageTypes and from SleepScore.isAwakeStage, so the gap still
-    // shows on the timeline without being counted as restless time in bed. Its overlap rank
-    // is the lowest of any real stage, so a recorded stage always wins the disputed region.
+    // A gap between sessions is time out of bed, not awake in it. STAGE_OUT_OF_BED
+    // is excluded from the awake types, so it shows on the timeline without
+    // inflating WASO. Its overlap rank is the lowest, so recorded stages win.
     val gapStages = orderedSessions.zipWithNext().mapNotNull { (previous, next) ->
         val gap = java.time.Duration.between(previous.endTime, next.startTime)
         if (!gap.isNegative && gap > java.time.Duration.ZERO && gap <= maxGap) {
@@ -138,10 +126,7 @@ fun List<SleepStage>.totalStageMs(): Long = sumOf { it.durationMs.coerceAtLeast(
 /** A fully-staged night is ~1.0; below this the hypnogram would mostly be a guess. */
 const val MinSleepStageCoverage = 0.5
 
-/**
- * Whether the session's stages cover enough of its span to draw a truthful
- * hypnogram. Coverage = summed stage time over the full session span.
- */
+/** Whether the stages cover enough of the span to draw a truthful hypnogram. */
 fun sleepSessionHasReliableStages(
     session: SleepData,
     minCoverage: Double = MinSleepStageCoverage,
@@ -168,8 +153,7 @@ internal fun sleepDurationMsFromStages(
 ): Long {
     if (stages.isEmpty()) return fallbackDurationMs.coerceAtLeast(0L)
 
-    // Union, not a sum: a writer recording the same stretch under two stages
-    // must never make asleep time exceed time in bed.
+    // Union, not a sum: asleep time must never exceed time in bed.
     val sleepStageDurationMs = stages
         .filter { it.stageType.isSleepDurationStage() }
         .unionDurationMs()
@@ -185,12 +169,7 @@ private fun Int.isSleepDurationStage(): Boolean = when (this) {
     else -> false
 }
 
-/**
- * When a writer records overlapping stage intervals for one session — the
- * bug shape: one stretch stored as BOTH light and deep — every instant must
- * belong to exactly one stage. This resolves the overlaps the way Google Fit
- * renders the same data: the deeper stage wins the disputed region.
- */
+/** Overlap resolution for a writer that stores one stretch under two stages: the deeper wins. */
 private fun sleepStageOverlapRank(stageType: Int): Int = when (stageType) {
     SleepStage.STAGE_DEEP -> 7
     SleepStage.STAGE_REM -> 6
@@ -203,12 +182,8 @@ private fun sleepStageOverlapRank(stageType: Int): Int = when (stageType) {
 }
 
 /**
- * The canonical stage timeline for a session: stages clipped to
- * [sessionStart, sessionEnd], overlaps resolved by [sleepStageOverlapRank],
- * adjacent fragments of one winner merged. All stored [SleepData.stages] pass
- * through here, so every duration, percentage, and hypnogram downstream
- * describes the same non-overlapping intervals. An already-clean list is
- * returned as-is.
+ * The canonical stage timeline: clipped to the session, overlaps resolved,
+ * adjacent fragments merged. Every stored stage list passes through here.
  */
 fun resolveSleepStages(
     stages: List<SleepStage>,

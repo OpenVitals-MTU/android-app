@@ -161,11 +161,8 @@ internal class VitalsHealthReader(
             latestRecord(Vo2MaxRecord::class, start, end)?.toEntry()
         }
 
-    // ── Daily aggregates for long-range charts ─────────────────────────────────
-    // Health Connect exposes no AVG aggregate metric for these record types, so —
-    // like HeartHealthReader.readDailyHRV — the raw records are read once and
-    // bucketed by local date here, producing one point per day (plus its reading
-    // count) instead of a season of raw entries held in memory per metric.
+    // Daily aggregates for long-range charts. Health Connect has no AVG metric
+    // for these types, so raw records are bucketed by local date here.
 
     suspend fun readDailyBloodPressure(start: Instant, end: Instant): List<DailyBloodPressurePoint> =
         support.withLogging("readDailyBloodPressure[$start..$end]", emptyList()) {
@@ -240,8 +237,7 @@ internal class VitalsHealthReader(
 
     suspend fun readDailySkinTemperature(start: Instant, end: Instant): List<DailyVitalPoint> =
         support.withLogging("readDailySkinTemperature[$start..$end]", emptyList()) {
-            // Match the chart, which plots (and the card reads) the per-record average
-            // delta — records with no deltas carry no value and drop out of the day.
+            // Match the chart: records with no deltas drop out of the day.
             support.client().readRecordsPaged(
                 recordType = SkinTemperatureRecord::class,
                 timeRangeFilter = TimeRangeFilter.between(start, end),
@@ -263,12 +259,7 @@ internal class VitalsHealthReader(
             maxRecords = 1,
         ).firstOrNull()
 
-    /**
-     * Bucket raw records into one [DailyVitalPoint] per local date. The day's
-     * value is the minute-bucketed mean, so continuous monitoring (overnight
-     * SpO2, workout-dense series) does not outvote sparse spot checks; `count`
-     * stays the raw reading count the screens print.
-     */
+    /** One [DailyVitalPoint] per local date, minute-bucketed so dense series do not outvote spot checks. */
     private fun <T> List<T>.dailyPoints(
         time: (T) -> Instant,
         value: (T) -> Double?,
@@ -451,14 +442,9 @@ internal class VitalsHealthReader(
             val time = request.time
             val zone = ZoneId.systemDefault()
 
-            // Blood pressure carries its meal context in the clientRecordId
-            // (the record has no field for it), and the uid-based Metadata
-            // factory cannot also carry a client id. So a BP edit goes through
-            // the client-id UPSERT instead: same id replaces in place (higher
-            // clientRecordVersion is what makes the provider take the new
-            // copy); a changed context is a new id, so the new record is
-            // inserted FIRST and the old one deleted after — never the
-            // reverse, a failure between the two must not lose the reading.
+            // Blood pressure carries its meal context in the clientRecordId, so an
+            // edit is an upsert: same id replaces, a new id inserts first and
+            // deletes the old after, so a failure never loses the reading.
             val existingClientRecordId = existing.metadata.clientRecordId
             if (request.type == VitalsMeasurementType.BLOOD_PRESSURE && existingClientRecordId != null) {
                 val newClientRecordId = existingClientRecordId.withBpMealContext(request.bpMealContext)
@@ -683,12 +669,7 @@ private const val MaxBodyTemperatureCelsius = 100.0
 private const val MinHrvMillis = 1.0
 private const val MaxHrvMillis = 200.0
 
-/**
- * Page size for the daily aggregate readers only. The platform maximum: the
- * default 1000 costs ~175 round-trips over a dense year of continuous SpO2 or
- * skin temperature; 5000 cuts that fivefold. Raw list readers keep their small
- * pages — they feed bounded windows.
- */
+/** Page size for the daily readers: the platform maximum, cutting round trips fivefold. */
 private const val DailyReadPageSize = 5000
 
 private fun List<Double>.averageOrNull(): Double? =

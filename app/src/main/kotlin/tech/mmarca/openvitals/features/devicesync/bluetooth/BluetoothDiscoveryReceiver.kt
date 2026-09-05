@@ -7,11 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 
-/**
- * Bridges `ACTION_FOUND` / `ACTION_DISCOVERY_FINISHED` system broadcasts to
- * callbacks. Registered while a discovery is running and unregistered when it
- * ends (or the manager tears down).
- */
+/** Bridges the discovery broadcasts to callbacks. Registered only while a discovery runs. */
 internal class BluetoothDiscoveryReceiver(
     private val onFound: (BluetoothDevice) -> Unit,
     private val onFinished: () -> Unit,

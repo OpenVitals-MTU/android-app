@@ -33,8 +33,7 @@ class PermissionCalloutTest {
 
         composeRule.onNodeWithText("Steps access").assertIsDisplayed()
         composeRule.onNodeWithText("Grant access to read your steps.").assertIsDisplayed()
-        // Without an onDismiss there is no way to decline, so offering one
-        // would be a button that does nothing.
+        // Without an onDismiss there is no way to decline, so no button.
         composeRule.onNodeWithText(string(R.string.action_not_now)).assertDoesNotExist()
 
         composeRule.onNodeWithText(string(R.string.action_grant_permission)).performClick()

@@ -10,12 +10,8 @@ import javax.inject.Singleton
 import org.json.JSONObject
 
 /**
- * The last weather report a companion app broadcast, and when it arrived.
- *
- * One snapshot, no history: the watch only ever wants "the weather now", and
- * a companion app re-broadcasts on its own refresh schedule. [freshSnapshot]
- * is what the Garmin link serves — stale weather is worse than none, because
- * the watch renders it with full confidence and no timestamp.
+ * The last weather report broadcast, and when. One snapshot: the watch
+ * wants the weather now, and stale weather is worse than none.
  */
 @Singleton
 class WeatherStore @Inject constructor(
@@ -50,10 +46,7 @@ class WeatherStore @Inject constructor(
         const val KEY_SNAPSHOT = "snapshot"
         const val KEY_RECEIVED_AT = "received_at"
 
-        /**
-         * Companion apps refresh every 30m-2h; anything older than this is a
-         * report the app itself would no longer show.
-         */
+        /** Companion apps refresh every 30m-2h; older than this they would not show it either. */
         val MAX_AGE: Duration = Duration.ofHours(6)
     }
 }

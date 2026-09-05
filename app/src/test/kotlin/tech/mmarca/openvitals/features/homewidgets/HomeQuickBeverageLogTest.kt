@@ -18,18 +18,8 @@ import tech.mmarca.openvitals.features.manualentry.hydration.HydrationEntryError
 import tech.mmarca.openvitals.features.manualentry.hydration.logCustomHydrationDrinkEntry
 
 /**
- * Dart counterpart: test/features/homewidgets/home_widget_beverage_log_test.dart.
- *
- * What a quick-beverage widget tap actually writes. The Glance action itself
- * needs a device, but everything the tap decides — which records land, which
- * permission refuses the whole drink, what the tile is told afterwards — is
- * [logCustomHydrationDrinkEntry] over two repository interfaces, which is
- * plain JVM code. The parity sheet marks these rows "instrumentation-only, no
- * JVM seam"; this file is the seam.
- *
- * An espresso is the drink that catches a naive log path: it hydrates at half
- * strength AND carries caffeine, so a path that writes only the hydration
- * record silently drops the caffeine.
+ * What a quick-beverage widget tap writes: [logCustomHydrationDrinkEntry] over two repositories.
+ * An espresso hydrates at half strength and carries caffeine, so a hydration-only path drops the caffeine.
  */
 class HomeQuickBeverageLogTest {
     private val espresso = CustomHydrationDrink(
@@ -60,11 +50,10 @@ class HomeQuickBeverageLogTest {
         assertThat(outcome).isInstanceOf(HydrationDrinkLogOutcome.Success::class.java)
         coVerify(exactly = 1) { hydration.writeHydrationEntry(capture(hydrationRequest)) }
         coVerify(exactly = 1) { nutrition.writeNutritionEntry(capture(nutritionRequest)) }
-        // volumeLiters * hydrationMultiplier — 30ml of espresso at 50% impact.
+        // volumeLiters * hydrationMultiplier: 30 ml at 50%.
         assertThat(hydrationRequest.captured.volumeLiters).isWithin(1e-9).of(0.015)
         assertThat(hydrationRequest.captured.drinkId).isEqualTo("espresso")
-        // The bug a hydration-only path would cause: the caffeine is dropped. It
-        // must ride along, paired to the hydration record it belongs to.
+        // The caffeine must ride along, paired to the hydration record.
         assertThat(nutritionRequest.captured.nutrientValues)
             .containsExactly(NutritionNutrient.CAFFEINE, 63.0)
         assertThat(nutritionRequest.captured.name).isEqualTo("Espresso")
@@ -74,9 +63,8 @@ class HomeQuickBeverageLogTest {
 
     @Test
     fun `a nutrition-only drink writes no hydration record`() = runTest {
-        // A zero-multiplier drink records the caffeine and nothing else, and says
-        // so — that is what puts "Saved as nutrition" on the tile rather than the
-        // plain "Saved", and what leaves the hydration reminder alone.
+        // A zero-multiplier drink records the caffeine only, puts "Saved as nutrition" on the tile,
+        // and leaves the hydration reminder alone.
         val hydration = mockk<HydrationRepository>(relaxed = true)
         val nutrition = mockk<NutritionRepository>(relaxed = true)
 
@@ -117,8 +105,7 @@ class HomeQuickBeverageLogTest {
 
     @Test
     fun `a missing nutrition permission blocks the whole drink`() = runTest {
-        // Rejecting the entry beats logging the water and losing the caffeine:
-        // a half-written drink cannot be told apart from a whole one later.
+        // Rejecting beats a half-written drink that cannot be told apart from a whole one.
         val hydration = mockk<HydrationRepository>(relaxed = true)
         val nutrition = mockk<NutritionRepository>(relaxed = true)
 
@@ -138,9 +125,7 @@ class HomeQuickBeverageLogTest {
 
     @Test
     fun `a drink that is no longer valid is refused before any write`() = runTest {
-        // The stored selection outlives the drink: delete the beverage in the app
-        // and the widget still carries its id. The tap must refuse rather than
-        // write a nameless record.
+        // The widget still carries a deleted beverage's id. The tap must refuse rather than write a nameless record.
         val hydration = mockk<HydrationRepository>(relaxed = true)
         val nutrition = mockk<NutritionRepository>(relaxed = true)
 
@@ -160,9 +145,7 @@ class HomeQuickBeverageLogTest {
 
     @Test
     fun `a failed write surfaces as a throw the tile can report`() = runTest {
-        // HomeQuickBeverageLogAction wraps the call in runCatching and puts
-        // "Unable to update" on the tile; the contract it relies on is that a
-        // failed write propagates rather than being swallowed as a success.
+        // A failed write must propagate, so HomeQuickBeverageLogAction can show "Unable to update".
         val hydration = mockk<HydrationRepository>(relaxed = true)
         coEvery { hydration.writeHydrationEntry(any()) } throws
             IllegalStateException("Health Connect is unavailable")

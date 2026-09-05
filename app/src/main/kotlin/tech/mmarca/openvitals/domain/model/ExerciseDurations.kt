@@ -2,13 +2,7 @@ package tech.mmarca.openvitals.domain.model
 
 import androidx.health.connect.client.records.ExerciseSegment
 
-/**
- * Paused/moving time of a session, from its pause segments.
- *
- * Lives in the DOMAIN, not with the activity screen's formatting helpers,
- * because the splits engine divides by moving time too — and domain code
- * importing a `features/` file is the dependency arrow pointing backwards.
- */
+/** Paused and moving time from the pause segments. In the domain because the splits engine needs it. */
 
 internal fun ExerciseData.pausedDurationMs(): Long =
     segments

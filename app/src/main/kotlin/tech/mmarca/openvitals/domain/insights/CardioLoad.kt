@@ -229,8 +229,7 @@ private fun maxHeartRateContext(
     ageYears: Int?,
     explicitMaxHeartRate: Long? = null,
 ): MaxHeartRateContext? {
-    // A maximum the user stated in their body profile outranks everything,
-    // as it does in heart-rate recovery: they know it, we do not guess it.
+    // A stated maximum outranks everything.
     if (explicitMaxHeartRate != null && explicitMaxHeartRate > restingHeartRate) {
         return MaxHeartRateContext(bpm = explicitMaxHeartRate, isObservedAvailable = true)
     }
@@ -240,12 +239,7 @@ private fun maxHeartRateContext(
         ObservedMaxHeartRateMinimumBpm,
         restingHeartRate + ObservedMaxHeartRateRestingDeltaBpm,
     )
-    // When nothing trustworthy was observed, prefer the same age-based
-    // estimate the rest of the app uses (Tanaka, as in heart-rate recovery
-    // and Body Energy). The old observed+10 floor made a quiet fortnight's
-    // ceiling stand in for a person's actual maximum, which understated it
-    // by 30-40 bpm and turned everyday heart rate into "training": every
-    // TRIMP reserve was computed against a maximum the wearer never had.
+    // Prefer Tanaka over an observed+10 floor, which understated the maximum by 30-40 bpm.
     val estimatedMax = maxOf(
         ageYears?.let { tanakaMaxHeartRate(it) } ?: 0L,
         observedMax + 10L,

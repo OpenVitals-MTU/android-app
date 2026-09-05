@@ -3,14 +3,7 @@ package tech.mmarca.openvitals.features.manualentry.activity.routeimport
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/**
- * Which of a FIT file's several names becomes the imported activity's title.
- *
- * A watch can write a name on the `workout` message (the plan that was
- * followed) and another on the `activity` message (what the wearer called
- * the result). The second is the one the wrist shows, so it wins; the
- * workout name is the fallback when the activity message carries none.
- */
+/** The `activity` message name is what the wrist shows, so it wins; the `workout` name is the fallback. */
 class FitActivityNameTest {
 
     private fun fitFile(vararg dataRecords: ByteArray): ByteArray {

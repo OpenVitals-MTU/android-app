@@ -5,11 +5,7 @@ import tech.mmarca.openvitals.domain.model.ReportWorkoutSession
 import tech.mmarca.openvitals.domain.model.ReportWorkoutTypeTotal
 import tech.mmarca.openvitals.domain.model.ReportWorkoutsDetail
 
-/**
- * The workout section's arithmetic: the session list (what was actually done)
- * and totals per activity type, biggest time investment first. Null when the
- * range holds no workouts.
- */
+/** The workout section: the session list and totals per type. Null with no workouts. */
 fun workoutsDetail(workouts: List<ExerciseData>): ReportWorkoutsDetail? {
     if (workouts.isEmpty()) return null
 

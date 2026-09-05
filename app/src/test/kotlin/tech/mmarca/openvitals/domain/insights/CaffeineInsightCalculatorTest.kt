@@ -51,8 +51,7 @@ class CaffeineInsightCalculatorTest {
 
     @Test
     fun `a drink sipped over two hours peaks later and lower than one taken at once`() {
-        // The same 160 mg Monster, downed at once vs nursed over two hours: the record's
-        // interval is what spreads the dose, so the slow one must not spike at the first sip.
+        // The same 160 mg downed at once or nursed over two hours: the interval spreads the dose.
         val atOnce = entry.copy(
             caffeineMg = 160.0,
             endTime = entry.startTime.plusSeconds(60),
@@ -106,8 +105,7 @@ class CaffeineInsightCalculatorTest {
         assertEquals(100.0, insights.periodTotalMg, 0.001)
         assertEquals(100.0 / 3.0, insights.periodAverageMg, 0.001)
         assertEquals(1, insights.loggedDays)
-        // Midday on the first day: none of the three 22:30 bedtimes has been lived yet, so
-        // there is no night to call safe or unsafe.
+        // Midday on the first day: no 22:30 bedtime has been lived yet.
         assertEquals(0, insights.totalNights)
         assertEquals("test.source", insights.sourceTotals.single().label)
         assertEquals("Coffee", insights.categoryTotals.single().label)
@@ -159,9 +157,7 @@ class CaffeineInsightCalculatorTest {
             zone = ZoneOffset.UTC,
         )
 
-        // July 1's 06:30 bedtime is the morning of July 2, twenty-two hours AFTER the 08:00
-        // coffee. Anchored to July 1 itself it sat an hour and a half before the coffee was
-        // drunk and reported a flat zero.
+        // July 1's 06:30 bedtime is the morning of July 2. Anchored to July 1 it sat before the coffee.
         val expected = CaffeineInsightCalculator.activeCaffeineMg(
             entries = listOf(entry),
             at = Instant.parse("2026-07-02T06:30:00Z"),
@@ -222,8 +218,7 @@ class CaffeineInsightCalculatorTest {
             zone = ZoneOffset.UTC,
         )
 
-        // Tonight is projected unsafe, but it has not happened: the streak keeps counting
-        // from the last night actually lived.
+        // Tonight is projected unsafe but has not happened: the streak counts from the last night lived.
         assertEquals(false, insights.dailyStats.last().safeForSleep)
         assertEquals(false, insights.dailyStats.last().nightCompleted)
         assertEquals(1, insights.safeSleepStreak)

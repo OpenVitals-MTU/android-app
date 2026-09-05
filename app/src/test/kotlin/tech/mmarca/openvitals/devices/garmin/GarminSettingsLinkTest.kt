@@ -11,18 +11,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Port of the Flutter build's `garmin_settings_link_test.dart`.
- *
- * Regression for "stop waiting on a link that has gone" (7b7858978).
- *
- * Tapping an alarm hung on "Reading from the watch": the STATE request got no
- * reply, the link dropped ten seconds later, and the pending request sat out
- * its full thirty-second timeout waiting for an answer that could no longer
- * come. A dropped or closed link must resolve everything in flight at once.
- *
- * Where the Dart test bounded the wait with a two-second real-time timeout,
- * virtual time would satisfy that even on regression — so these assert the
- * read completes WITHOUT advancing the clock at all.
+ * Regression for "stop waiting on a link that has gone" (7b7858978): a dropped link must
+ * resolve everything in flight at once. These assert the read completes without advancing the clock.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class GarminSettingsLinkTest {
@@ -32,8 +22,7 @@ class GarminSettingsLinkTest {
             scope,
             GarminSession(
                 scope = scope,
-                // The watch never answers — every request would wait out its
-                // timeout.
+                // The watch never answers.
                 send = {},
                 bluetoothName = "Pixel 6 Pro",
                 manufacturer = "Google",
@@ -52,8 +41,7 @@ class GarminSettingsLinkTest {
         l.close()
         runCurrent()
 
-        // Resolved with NO time advanced: on regression this stays pending
-        // until the 30-second reply timeout is played out.
+        // Resolved with no time advanced. On regression this waits out the 30-second timeout.
         assertTrue(pending.isCompleted)
         assertNull(pending.await())
     }

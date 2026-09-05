@@ -1,9 +1,6 @@
 package tech.mmarca.openvitals.devices.core.pairing
 
-/**
- * Where an onboarding attempt got to. Ordered by progress, so a UI can render
- * it as a checklist.
- */
+/** Where an onboarding attempt got to, ordered by progress. */
 enum class WatchBondResult {
     /** The device was already bonded; no dialog was shown. */
     ALREADY_BONDED,
@@ -19,43 +16,21 @@ enum class WatchBondResult {
 }
 
 /**
- * The two platform steps that turn a scanned watch into one this app is
- * allowed to talk to: an OS-level Bluetooth **bond**, and an optional
- * **companion association**.
- *
- * A **port**, for the same reason as `GarminTransportProbe`: the onboarding
- * use case is a sequence of decisions (bond, then try to associate, then
- * register), and that sequence is domain logic worth testing without a radio.
- * Behind it sit two platform layers — `BluetoothDevice.createBond` and
- * [CompanionDevicePairing] — which the domain has no business knowing apart.
+ * The two platform steps that make a scanned watch usable: an OS bond, and
+ * an optional companion association. A port, so onboarding is testable
+ * without a radio.
  */
 interface WatchPairingPort {
 
-    /**
-     * Creates an OS Bluetooth bond with [address], showing the system
-     * pairing-code dialog if one is needed.
-     *
-     * Returns [WatchBondResult.ALREADY_BONDED] without prompting when a bond
-     * exists — re-onboarding a watch the user already paired must not make
-     * them confirm a pairing code again.
-     */
+    /** Creates an OS bond, showing the pairing dialog if needed. ALREADY_BONDED without prompting. */
     suspend fun bond(address: String): WatchBondResult
 
-    /**
-     * Removes the OS bond for [address]. Best-effort: a bond that is already
-     * gone is not an error.
-     */
+    /** Removes the OS bond. Best-effort. */
     suspend fun removeBond(address: String)
 
     /**
-     * Asks the OS to associate [address] as a companion device, showing the
-     * `Allow <app> to access <device>?` dialog.
-     *
-     * Returns whether the association exists afterwards. **False is not a
-     * failure**: the user may decline, and the platform API needs an Activity
-     * and an API level that may not be there. The watch is fully usable either
-     * way — the association only buys background process priority — so the
-     * caller carries on regardless.
+     * Asks the OS to associate [address] as a companion. False is not a
+     * failure: the watch is fully usable without it.
      */
     suspend fun associateCompanion(address: String, displayName: String?): Boolean
 

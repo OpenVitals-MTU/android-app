@@ -10,13 +10,7 @@ import tech.mmarca.openvitals.domain.model.DashboardWeeklyCardioLoad
 @Immutable
 data class DashboardDisplayState(
     val widgets: Map<DashboardWidgetId, DashboardWidgetDisplayModel> = emptyMap(),
-    /**
-     * The ids that only exist because `includeUnsupported` materialised them —
-     * metrics the installed provider cannot serve. Empty outside edit mode,
-     * where an unsupported metric simply has no widget at all. The carousel
-     * keeps them out; the edit-mode add tray is where they belong, so a metric
-     * the device cannot serve can still be placed rather than vanishing.
-     */
+    /** Ids materialised only by `includeUnsupported`. Kept out of the carousel; the add tray shows them. */
     val unsupportedIds: Set<DashboardWidgetId> = emptySet(),
 )
 
@@ -64,11 +58,7 @@ enum class SleepScoreRating {
     POOR,
 }
 
-/**
- * A paired watch on the dashboard: what it is, how full it is, and when it last
- * handed anything over. Device state rather than a metric, so it carries no
- * [DashboardMetric] and is never gated on what Health Connect can serve.
- */
+/** A paired watch on the dashboard. Device state, not a metric, so never gated. */
 @Immutable
 data class WatchWidgetDisplay(
     /** Which watch the tile's sync button drives. */
@@ -80,11 +70,7 @@ data class WatchWidgetDisplay(
     val additionalCount: Int = 0,
     /** A sync is running against THIS watch — not merely against some watch. */
     val isSyncing: Boolean = false,
-    /**
-     * Beats per minute streaming off the wrist right now, over a held link.
-     * Null whenever that is not true — no link, live readings off, or the last
-     * push is old enough to have stopped describing the wearer.
-     */
+    /** Live beats per minute over a held link, or null when nothing fresh is streaming. */
     val liveHeartRateBpm: Int? = null,
     /** Today's step count as the watch counts it, live over the same link. */
     val liveSteps: Int? = null,
@@ -118,10 +104,8 @@ internal fun goalProgressModel(
 }
 
 /**
- * Whether this tile renders its no-data message instead of a value. Outside
- * edit mode such tiles sink below tiles with data — display-time only, the
- * saved order is untouched. A tile still loading holds its place: it is about
- * to become either.
+ * Whether this tile renders its no-data message. Outside edit mode such
+ * tiles sink below tiles with data. A loading tile holds its place.
  */
 data class BodyEnergyTileSubtitle(
     val startScore: Int,
@@ -130,21 +114,9 @@ data class BodyEnergyTileSubtitle(
 )
 
 /**
- * Whether this tile may be sorted to the back of the carousel.
- *
- * Only a tile whose metric shows nothing today AND has nothing in its recent
- * lookback is worth demoting: the feature exists to sink metrics the user does
- * not use at all, not ones that simply have not happened yet today. A sleep
- * tile that is empty every morning until the night syncs must hold the spot
- * the user gave it (see [DashboardWidgetDisplayModel.hasRecentHistory]);
- * demoting it made every pencil toggle look like the arrangement was ignored.
- *
- * A tile that says "not set up" is the opposite. It is the invitation to turn a
- * feature on, and the dashboard tile is the only place in the app that offers
- * it — so demoting it hides the entry point behind every populated tile, on the
- * exact grounds that the user has not used the feature yet. Body Energy sat
- * eleventh in the default order and rendered on the last page of the carousel
- * for anyone who had not already set it up, which is everyone who needs to.
+ * Whether this tile may be sorted to the back. Only a tile empty today and
+ * with nothing in its recent lookback: a sleep tile empty every morning must
+ * hold its spot. A "not set up" tile is the entry point and is never demoted.
  */
 internal fun DashboardWidgetDisplayModel.isDemotableEmptyTile(): Boolean =
     showsNoDataMessage() && !isNotSetUp && !hasRecentHistory

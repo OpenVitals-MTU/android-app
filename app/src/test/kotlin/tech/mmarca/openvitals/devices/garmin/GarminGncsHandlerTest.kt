@@ -7,18 +7,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Port of the Flutter build's `garmin_notifications_handler_test.dart`: the
- * subscription hold/flush behaviour, announcements, the chunked attribute
- * upload with its flow control, and acting from the wrist.
- */
+/** Subscription hold/flush, announcements, the chunked attribute upload, and acting from the wrist. */
 class GarminGncsHandlerTest {
 
-    /**
-     * Collects what the handler put on the wire, decoded back into frames — so
-     * the assertions are about bytes a watch would receive, not about calls
-     * made.
-     */
+    /** What the handler put on the wire, decoded back into frames. */
     private class Wire {
         val frames = mutableListOf<GarminGfdiFrame>()
 
@@ -98,7 +90,7 @@ class GarminGncsHandlerTest {
         return handler to wire
     }
 
-    // ── before the watch has subscribed ─────────────────────────────────────
+    // Before the watch has subscribed.
 
     @Test
     fun `nothing is announced, so a sync session sends no notification traffic`() = runTest {
@@ -115,10 +107,7 @@ class GarminGncsHandlerTest {
     @Test
     fun `a notification that arrives before the subscription is announced as soon as it lands`() =
         runTest {
-            // The race that cost the very notification the link was opened
-            // for: this app opens the link to say something, so it is always
-            // ready a couple of hundred milliseconds before the watch
-            // subscribes.
+            // This app opens the link to say something, so it is ready before the watch subscribes.
             val wire = Wire()
             val handler = GarminGncsHandler(send = wire::send)
             handler.post(notification(7))
@@ -163,8 +152,7 @@ class GarminGncsHandlerTest {
 
     @Test
     fun `a held notification that aged out of the queue is not announced`() = runTest {
-        // Announcing it would invite an attribute request there is nothing to
-        // answer with, and the watch would render a blank card.
+        // Announcing it would invite an attribute request with nothing to answer.
         val wire = Wire()
         val handler = GarminGncsHandler(send = wire::send, maxQueued = 1)
         handler.post(notification(1))
@@ -177,7 +165,7 @@ class GarminGncsHandlerTest {
         assertEquals(listOf(2), ids)
     }
 
-    // ── announcing ──────────────────────────────────────────────────────────
+    // Announcing.
 
     @Test
     fun `a new notification is announced as ADD`() = runTest {
@@ -247,7 +235,7 @@ class GarminGncsHandlerTest {
         )
     }
 
-    // ── answering an attribute request ──────────────────────────────────────
+    // Answering an attribute request.
 
     @Test
     fun `an id that has aged out of the queue sends nothing at all`() = runTest {
@@ -325,8 +313,7 @@ class GarminGncsHandlerTest {
     @Test
     fun `a second request for the same notification restarts the transfer from offset zero`() =
         runTest {
-            // The watch asks again — typically with a larger limit — when the
-            // wearer scrolls into the body.
+            // The watch asks again with a larger limit when the wearer scrolls into the body.
             val (handler, wire) = enabledHandler()
             handler.post(notification(7, body = "hey"))
             handler.handleControl(attributeRequest(7))
@@ -357,7 +344,7 @@ class GarminGncsHandlerTest {
         assertTrue(wire.frames.isEmpty())
     }
 
-    // ── transfer flow control ───────────────────────────────────────────────
+    // Transfer flow control.
 
     private suspend fun midTransfer(): Pair<GarminGncsHandler, Wire> {
         val (handler, wire) = enabledHandler()
@@ -451,7 +438,7 @@ class GarminGncsHandlerTest {
         assertTrue(wire.frames.isEmpty())
     }
 
-    // ── actions ─────────────────────────────────────────────────────────────
+    // Actions.
 
     /** Actions the handler resolved and handed up. */
     private class ActionSink {
@@ -522,9 +509,7 @@ class GarminGncsHandlerTest {
 
     @Test
     fun `a notification with actions sets the NEW_ACTIONS phone flag`() = runTest {
-        // Without it the watch draws no controls at all, however many the
-        // ACTIONS attribute later offers — the announcement is where it
-        // decides.
+        // Without it the watch draws no controls; the announcement is where it decides.
         val (handler, wire, _) = actionHandler()
         handler.post(actionable())
 
@@ -596,9 +581,7 @@ class GarminGncsHandlerTest {
 
     @Test
     fun `the legacy refuse control maps onto dismiss`() = runTest {
-        // This is the button the watch draws from the ACTION_DECLINE category
-        // flag, and the one a wearer presses expecting the card to go away. It
-        // was dead until now.
+        // The button the watch draws from ACTION_DECLINE, which a wearer presses to dismiss. It was dead.
         val (handler, _, sink) = actionHandler()
         handler.post(actionable())
 

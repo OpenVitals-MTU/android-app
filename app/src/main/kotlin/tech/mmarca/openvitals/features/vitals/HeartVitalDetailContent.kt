@@ -70,8 +70,7 @@ internal fun LazyListScope.spO2Content(
                     period = period,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     accentColor = oxygenColor,
-                    // The same minute-bucketed mean as the statistics card below,
-                    // so the chart caption and the card agree on the average.
+                    // The same minute-bucketed mean as the statistics card.
                     summaryText = spO2Stats(state.spO2)?.let { stats ->
                         "${localizedPeriodTitle(state.selectedRange, period)} · ${
                             stringResource(R.string.summary_value_avg, unitFormatter.percent(stats.average).text)
@@ -308,8 +307,7 @@ internal fun LazyListScope.respiratoryRateContent(
                 )
             },
             contextInsight = {
-                // ONE average per screen: the per-day mean the chart and the
-                // statistics card use, not the flat mean of every raw reading.
+                // One average per screen: the per-day mean the chart uses.
                 RespiratoryRateContextCardContent(
                     respiratoryRateAverage(respiratoryRateBuckets(state.respiratoryRate, state.selectedRange, period)),
                 )
@@ -560,10 +558,7 @@ internal fun LazyListScope.bloodGlucoseContent(
     }
 }
 
-/**
- * The chart plots only the raw entries that carry a delta, oldest first — a
- * delta-less reading still counts on the card but draws nothing.
- */
+/** Only the entries that carry a delta, oldest first. */
 internal fun skinTemperatureChartEntries(
     entries: List<SkinTemperatureEntry>,
 ): List<SkinTemperatureEntry> =

@@ -343,13 +343,8 @@ internal fun vitalContextStatusText(status: VitalContextStatus): String =
     }
 
 /**
- * Day-view heart rate statistics, hoisted out of the composable so the
- * minute-bucketed mean is testable on the JVM.
- *
- * The mean is bucketed, not per-sample, for the same reason as
- * [heartRateTimelineStats]: a workout recorded at 1 Hz must not outvote the
- * per-minute background series. A per-sample mean here printed 116 bpm for a
- * day the dashboard and Health Connect both put at 82.
+ * Day-view heart rate statistics, hoisted for JVM tests. The mean is
+ * minute-bucketed, so a 1 Hz workout does not outvote the background series.
  */
 internal data class HeartRateSampleStats(
     val average: Double,
@@ -495,10 +490,7 @@ internal fun HrvStatisticsContent(
     )
 }
 
-/**
- * Blood-pressure statistics, hoisted out of the composable so the latest/highest
- * picks and the systolic/diastolic means are testable on the JVM.
- */
+/** Blood-pressure statistics, hoisted for JVM tests. */
 internal data class BloodPressureStats(
     val latest: BloodPressureEntry,
     val highest: BloodPressureEntry,
@@ -508,9 +500,7 @@ internal data class BloodPressureStats(
 )
 
 internal fun bloodPressureStats(entries: List<BloodPressureEntry>): BloodPressureStats? {
-    // Without these guards an empty list averages to NaN, and roundToInt() throws
-    // IllegalArgumentException on NaN — a period with no readings took the whole
-    // statistics section down rather than simply not drawing it.
+    // An empty list averages to NaN, and roundToInt() throws on it.
     val averageSystolic = entries.map { it.systolicMmHg }.averageOrNull() ?: return null
     val averageDiastolic = entries.map { it.diastolicMmHg }.averageOrNull() ?: return null
     val highestEntry = entries
@@ -526,11 +516,7 @@ internal fun bloodPressureStats(entries: List<BloodPressureEntry>): BloodPressur
     )
 }
 
-/**
- * Average/low/high over a metric's readings; `readings` counts every entry the
- * caller passed, even ones the values themselves exclude (skin-temperature
- * entries without a delta).
- */
+/** Average/low/high over a metric's readings; `readings` counts every entry passed. */
 internal data class VitalReadingStats(
     val average: Double,
     val low: Double,
@@ -553,14 +539,12 @@ internal fun spO2Stats(entries: List<SpO2Entry>): VitalReadingStats? =
     vitalReadingStats(
         values = entries.map { it.percent },
         readings = entries.size,
-        // Minute-bucketed: continuous overnight monitoring must not drown the
-        // day's spot checks the way a per-reading mean lets it.
+        // Minute-bucketed, so overnight monitoring does not drown spot checks.
         average = entries.timeBucketedAverageOrNull(time = { it.time }, value = { it.percent }),
     )
 
 internal fun skinTemperatureStats(entries: List<SkinTemperatureEntry>): VitalReadingStats? =
-    // readings counts every entry, including the delta-less ones the chart drops;
-    // an all-delta-less list has no statistics at all.
+    // readings counts every entry, including the delta-less ones the chart drops.
     vitalReadingStats(entries.mapNotNull { it.averageDeltaCelsius }, entries.size)
 
 @Composable
@@ -717,10 +701,7 @@ internal fun RespiratoryRateStatisticsContent(
     val values = entries.map { it.breathsPerMinute }
     val low = values.minOrNull() ?: return
     val high = values.maxOrNull() ?: return
-    // ONE average per screen. The chart plots a point per day and summarises the
-    // mean of those days; this grid used the flat mean of every raw reading, so a
-    // day with ten readings outvoted a day with one and the screen showed two
-    // different "average respiratory rate" numbers, neither saying which it was.
+    // One average per screen: the mean of the daily points, as the chart summarises.
     val average = respiratoryRateAverage(respiratoryRateBuckets(entries, selectedRange, period))
         .takeIf { it > 0.0 } ?: return
     val previousAverage = respiratoryRateAverage(

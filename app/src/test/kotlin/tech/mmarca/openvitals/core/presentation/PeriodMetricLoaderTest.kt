@@ -7,13 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 
-/**
- * Ported from the Flutter `test/core/presentation/period_metric_loader_test.dart`.
- *
- * Kotlin has no shared period-load mixin: every period screen's ViewModel runs
- * its load through [LoadCoordinator], which is where a burst of navigations is
- * coalesced into a single fetch for the newest selection.
- */
+/** Every period screen runs its load through [LoadCoordinator], which coalesces a burst of navigations into one fetch. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeriodMetricLoaderTest {
 
@@ -23,9 +17,7 @@ class PeriodMetricLoaderTest {
         val fetched = mutableListOf<String>()
         val displayed = mutableListOf<String>()
 
-        // Three navigations fired before the first fetch reaches the wire: only
-        // the newest is dispatched. A Health Connect read cannot be cancelled,
-        // so every skipped fetch here is a slow read that never hits the queue.
+        // Three navigations before the first fetch reaches the wire: only the newest is dispatched.
         listOf("week", "month", "year").forEach { selection ->
             coordinator.launch(this) {
                 fetched += selection

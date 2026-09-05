@@ -60,10 +60,7 @@ fun MetricSparklineChart(
                 cap = StrokeCap.Round,
             )
         } else {
-            // One smoothed path, not a chain of straight segments. A sparkline is read
-            // as a SHAPE — the trend, at a glance — and the same monotone curve every
-            // other line chart in the app uses is what makes it read like one of them.
-            // Monotone, so the curve never overshoots a value that was never measured.
+            // The same monotone curve every line chart uses, so it never overshoots.
             drawPath(
                 path = smoothPath(points),
                 color = accentColor,

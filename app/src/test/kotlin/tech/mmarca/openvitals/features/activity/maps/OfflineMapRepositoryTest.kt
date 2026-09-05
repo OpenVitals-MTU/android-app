@@ -20,12 +20,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 
-/**
- * The import/delete half of the offline-map library.
- *
- * Ported from test/features/activity/maps/offline_map_import_controller_test.dart
- * (the cases that do not depend on Flutter's file-picker plumbing).
- */
+/** The import/delete half of the offline-map library. */
 class OfflineMapRepositoryTest {
 
     @get:Rule
@@ -33,8 +28,7 @@ class OfflineMapRepositoryTest {
 
     @Test
     fun `rejects a mapsforge pack that is not a valid map file`() = runTest {
-        // Validation opens the file with `MapFile(...)`; garbage bytes must fail
-        // the import and leave nothing behind.
+        // Validation opens the file with `MapFile(...)`; garbage bytes must fail and leave nothing behind.
         val filesDir = temporaryFolder.newFolder("files")
         val repository = repository(filesDir, "broken.map", ByteArray(4096) { 0xAB.toByte() })
 

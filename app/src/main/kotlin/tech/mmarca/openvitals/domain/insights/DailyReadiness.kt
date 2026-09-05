@@ -114,15 +114,7 @@ data class DailyReadinessFactor(
     val label: String,
     val detail: String,
     val impact: ReadinessFactorImpact,
-    /**
-     * The numbers [detail]'s sentence embeds, for a UI that renders the factor
-     * through its own string catalog instead of the English above.
-     *
-     * Only the body-energy factors carry them today: they are the ones this
-     * phase added, so they are the ones with localized copy to fill. Every other
-     * kind still renders the English the domain wrote, which is why [detail]
-     * stays canonical rather than becoming a format string.
-     */
+    /** The numbers [detail]'s sentence embeds. Only the body-energy factors carry them. */
     val args: List<Int> = emptyList(),
 )
 
@@ -733,11 +725,7 @@ fun calculateDailyReadiness(
         )
     }
 
-    // The MEASURED battery, when the body-energy engine has one, replaces the
-    // estimate the deltas above assembled — it is the engine's own answer to the
-    // question they approximate. And it feeds the verdict: arriving at the day
-    // already drained is exactly what should hold training back, however decent
-    // the night looked on its own.
+    // The measured battery replaces the estimate the deltas assembled, and feeds the verdict.
     val bodyEnergy = data.bodyEnergyTimeline
     if (bodyEnergy != null) {
         availableSignals += 1
@@ -745,9 +733,7 @@ fun calculateDailyReadiness(
         val detail = "Body energy is at ${bodyEnergy.currentScore} after starting the day " +
             "at ${bodyEnergy.startScore}."
         if (bodyEnergy.currentScore <= 25) {
-            // Strong enough to pull an otherwise perfect day out of "ready": the
-            // measured battery is the aggregate the other signals approximate,
-            // and an empty one is not a day for hard training whatever they say.
+            // Strong enough to pull a perfect day out of "ready".
             score -= 20
             trainingReadinessScore -= 20
             elevatedBodySignals += 1

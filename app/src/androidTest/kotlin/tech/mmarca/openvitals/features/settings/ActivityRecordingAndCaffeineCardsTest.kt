@@ -23,13 +23,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Ports of the rendering cases of Flutter's
- * `activity_settings_cards_test.dart` and `caffeine_preferences_card_test.dart`.
- *
- * Both cards are long stacks of controls with no navigation of their own: a
- * control that silently stops rendering is a setting the user can no longer
- * reach, and a control that stays live when its parent switch is off is a
- * setting that appears to do nothing.
+ * Both cards are long stacks of controls: a control that stops rendering is a setting the
+ * user cannot reach, and one that stays live under an off switch appears to do nothing.
  */
 class ActivityRecordingAndCaffeineCardsTest {
 
@@ -72,9 +67,7 @@ class ActivityRecordingAndCaffeineCardsTest {
 
     @Test
     fun activityRecordingCard_idleTimeoutIsDeadWhileAutoIdleIsOff() {
-        // With auto-idle off there is no idle to time out, so the choice must
-        // read as unavailable rather than accept a value that will never be
-        // used — and tapping it must not quietly rewrite the stored timeout.
+        // With auto-idle off the timeout must read as unavailable, and tapping it must not rewrite the stored value.
         var changed: ActivityRecordingPreferences? = null
         setCard {
             ActivityRecordingPreferencesCard(
@@ -94,9 +87,7 @@ class ActivityRecordingAndCaffeineCardsTest {
 
     @Test
     fun caffeineCard_seedsItsFieldsFromTheStoredPreferences() {
-        // The card edits a draft of what is already stored. Seeding it with
-        // defaults instead would silently discard a half-life the user tuned
-        // the moment they pressed Save on anything else.
+        // The card edits a draft of what is stored, or a tuned half-life is discarded on Save.
         var saved: CaffeinePreferences? = null
         val stored = CaffeinePreferences(halfLifeMinutes = 420)
         setCard {

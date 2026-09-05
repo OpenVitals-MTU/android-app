@@ -33,11 +33,8 @@ internal class HeartHealthReader(
     }
 
     /**
-     * Hour-bucketed, not the whole-day BPM_AVG aggregate: Health Connect's
-     * average weights every sample equally, so a 1 Hz workout series outvotes
-     * the per-minute background series and prints a day that averaged 79 bpm
-     * as 115. Averaging hour buckets duration-weighted bounds that skew to an
-     * hour's share of the day. Same arithmetic as [readDailyHeartRateSummaries].
+     * Hour-bucketed, not the whole-day BPM_AVG: that is sample-weighted, so a
+     * 1 Hz workout series printed a 79 bpm day as 115.
      */
     suspend fun readAvgHeartRate(date: LocalDate): Long? =
         readDailyHeartRateSummaries(date, date).firstOrNull { it.date == date }?.avgBpm
@@ -55,14 +52,9 @@ internal class HeartHealthReader(
         }
 
     /**
-     * Heart-rate series dense enough for TRIMP / intensity-minute coverage math.
-     *
-     * Multi-day chart reads use 15-minute buckets and are incompatible with the
-     * five-minute max gap those calculators enforce. Insights slice at
-     * [HeartRateInsightBucketDuration] instead, one local day at a time and at
-     * most [MaxInsightAggregateBuckets] buckets per request, so consecutive
-     * samples stay usable for coverage while every Binder parcel stays inside
-     * the budget one response may occupy.
+     * Heart-rate series dense enough for TRIMP and intensity-minute coverage.
+     * Sliced at [HeartRateInsightBucketDuration], at most
+     * [MaxInsightAggregateBuckets] per request, one local day at a time.
      */
     suspend fun readHeartRateSamplesForInsights(start: Instant, end: Instant): List<HeartRateSample> {
         if (!end.isAfter(start)) return emptyList()
@@ -103,16 +95,9 @@ internal class HeartHealthReader(
     }
 
     /**
-     * Splits one day into requests of at most [MaxInsightAggregateBuckets]
-     * buckets, on bucket boundaries so the slicing is identical to what a
-     * single request over the whole day would have produced.
-     *
-     * The split is also what makes the rate-limit retry affordable. The whole
-     * fourteen-day walk used to sit inside ONE [HealthConnectReaderSupport.withLogging],
-     * so a throttle on the last day waited out the backoff and then re-issued
-     * every request that had already succeeded — spending more quota on a retry
-     * than the first attempt cost, which is how a throttled dashboard stayed
-     * throttled. A retry now replays half of one day.
+     * Splits one day into requests of at most [MaxInsightAggregateBuckets],
+     * on bucket boundaries. A rate-limit retry then replays half a day, not
+     * the whole walk.
      */
     private fun insightAggregateWindows(start: Instant, end: Instant): List<Pair<Instant, Instant>> {
         val span = HeartRateInsightBucketDuration.multipliedBy(MaxInsightAggregateBuckets)
@@ -127,14 +112,8 @@ internal class HeartHealthReader(
     }
 
     /**
-     * Every heart-rate sample in `[start, end)`, however the writer grouped it.
-     *
-     * [readSeriesSamples] handles the record-boundary problem (see its docs). What
-     * is left here is the last resort for the case it cannot reach: a record so
-     * long that even the widened read misses it. Aggregation slices by TIME rather
-     * than by record, so it cannot be hidden the same way — it costs a resolution
-     * of one bucket instead of one beat, which is still a heart-rate trace where
-     * the alternative is a blank chart.
+     * Every sample in `[start, end)`, however grouped. Aggregation is the
+     * last resort for a record so long the widened read misses it.
      */
     suspend fun readRawHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> =
         support.withLogging("readRawHeartRateSamples[$start..$end]", emptyList()) {
@@ -160,10 +139,7 @@ internal class HeartHealthReader(
         return readAggregatedHeartRateSamples(start, end, aggregateBucket(start, end))
     }
 
-    /**
-     * Uses Health Connect duration aggregation so high-frequency days (for example Fitbit) are not
-     * truncated by [readRecordsPaged] page limits.
-     */
+    /** Duration aggregation, so high-frequency days are not truncated by page limits. */
     private suspend fun readAggregatedHeartRateSamples(
         start: Instant,
         end: Instant,
@@ -183,10 +159,7 @@ internal class HeartHealthReader(
             )
         }
 
-    /**
-     * A bucket fine enough to read as a trace rather than a flat line, without
-     * asking Health Connect for thousands of slices on a long window.
-     */
+    /** A bucket fine enough to read as a trace without thousands of slices. */
     private fun aggregateBucket(start: Instant, end: Instant): Duration {
         val even = Duration.between(start, end).dividedBy(MaxAggregateBuckets)
         return if (even > MinAggregateBucket) even else MinAggregateBucket
@@ -197,13 +170,8 @@ internal class HeartHealthReader(
         endDate: LocalDate,
     ): List<HeartRateSummary> {
         val zone = ZoneId.systemDefault()
-        // Hour buckets, folded per day by weightedAverage: a whole-day BPM_AVG
-        // bucket is sample-weighted, so a 1 Hz workout series drags the day's
-        // average toward workout heart rate (79 bpm days printing as 115).
-        // Hour buckets bound that skew to the workout hour's share of the day.
-        // Chunked smaller than the day-bucketed aggregates because each request
-        // now returns 24x the buckets against the same shared 1 MB Binder
-        // buffer (see HourlyAggregateMaxQueryDays).
+        // Hour buckets folded per day: a whole-day BPM_AVG is sample-weighted.
+        // Chunked smaller because each request returns 24x the buckets.
         return dailyAggregateDateChunks(
             startDate,
             endDate,
@@ -290,8 +258,7 @@ internal class HeartHealthReader(
     suspend fun readHrvRmssd(date: LocalDate): Double? {
         val (start, end) = support.dayRange(date)
         return support.withNullableLogging("readHrvRmssd[$date][$start..$end]") {
-            // Minute-bucketed like every other intraday mean: continuous
-            // overnight readings must not outvote the day's spot checks.
+            // Minute-bucketed like every other intraday mean.
             readHrvSamples(start, end)
                 .timeBucketedAverageOrNull(time = { it.time }, value = { it.rmssdMs })
         }
@@ -330,10 +297,7 @@ internal class HeartHealthReader(
             )
                 .groupBy { it.time.atZone(zone).toLocalDate() }
                 .mapNotNull { (date, records) ->
-                    // Minute-bucketed per day, the same mean the day view and
-                    // the dashboard show, so a week chart's point agrees with
-                    // the day card for that date. groupBy never yields an empty
-                    // group, so the null branch is only the type saying so.
+                    // Minute-bucketed per day, so a week point agrees with the day card.
                     val rmssdMs = records.timeBucketedAverageOrNull(
                         time = { it.time },
                         value = { it.heartRateVariabilityMillis },

@@ -5,17 +5,9 @@ import androidx.compose.ui.graphics.Path
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-/**
- * One drawing command of a monotone cubic curve, in the coordinate space of the points
- * that produced it. Kept as plain data (rather than built straight into a [Path]) so the
- * Hermite math stays a pure function the JVM test suite can pin down — the Android
- * [Path] cannot be exercised in a plain unit test.
- */
+/** One drawing command of a monotone cubic curve. Plain data, so the maths is JVM-testable. */
 sealed interface CurveSegment {
-    /**
-     * A vertical riser: two readings at the same instant. There is no curve through it,
-     * and pretending otherwise would loop the path back on itself.
-     */
+    /** A vertical riser: two readings at the same instant. */
     data class Line(val end: Offset) : CurveSegment
 
     /** Hermite tangents expressed as cubic Bézier control points. */
@@ -27,24 +19,10 @@ sealed interface CurveSegment {
 }
 
 /**
- * The segments of a smooth line through [points], for every chart in the app.
- *
- * **Monotone cubic** (Fritsch–Carlson), not a plain spline, and the difference is not
- * cosmetic.
- *
- * An ordinary Catmull-Rom or natural cubic overshoots: to stay smooth through a sharp
- * corner it swings past the points on either side. On a cumulative chart that overshoot
- * is a lie you can read off the axis — the running total visibly DIPS between two
- * drinks, drawing a line that says you un-drank water. Same for steps, calories and
- * distance. It would also swing a heart rate below the lowest sample actually recorded.
- *
- * Monotone cubic is smooth but structurally cannot do that: where the data rises, the
- * curve rises; where the data is flat, the curve is flat. It never introduces a peak, a
- * trough or a reversal that is not in the samples. The curve is decoration; the data
- * still has to be true.
- *
- * [points] must be sorted by x. The curve starts at `points.first()`; fewer than two
- * points yield no segments.
+ * A smooth line through [points], for every chart. Monotone cubic
+ * (Fritsch-Carlson): a plain spline overshoots and draws a running total
+ * dipping between two drinks. This one never adds a peak, trough or
+ * reversal not in the data. [points] must be sorted by x.
  */
 fun monotoneCubicSegments(points: List<Offset>): List<CurveSegment> {
     val n = points.size
@@ -65,9 +43,7 @@ fun monotoneCubicSegments(points: List<Offset>): List<CurveSegment> {
     }
     tangents[n - 1] = slopes.last()
 
-    // Fritsch–Carlson: clamp the tangents so no segment can overshoot. A flat segment
-    // forces both its tangents to zero — that is what keeps "you drank nothing between
-    // nine and six" flat instead of bulging upward.
+    // Fritsch-Carlson: clamp the tangents so no segment overshoots.
     for (i in 0 until n - 1) {
         val slope = slopes[i]
         if (abs(slope) < Epsilon) {
@@ -131,17 +107,9 @@ fun smoothPath(points: List<Offset>): Path {
 }
 
 /**
- * Damps a quantized staircase before it is splined.
- *
- * The body-energy score is an integer 0–100 sampled per bucket, so the raw series is a
- * flight of stairs, and a curve through it traces the steps and reads as jagged. A small
- * centred moving average — window widening with the point count — turns the staircase
- * back into the smooth thing it is a measurement of.
- *
- * A DATA decision, not a curve one, which is why it is its own function and not folded
- * into [smoothPath]. Smoothing the geometry is a lie about how the line gets from A to
- * B; smoothing the SAMPLES is a claim about the signal underneath them, and the two want
- * to be argued about separately.
+ * Damps a quantized staircase before it is splined: a small centred moving
+ * average, window widening with the point count. A data decision, kept
+ * apart from [smoothPath].
  */
 fun movingAverageY(points: List<Offset>): List<Offset> {
     if (points.size < 3) return points

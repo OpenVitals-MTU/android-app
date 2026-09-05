@@ -38,9 +38,7 @@ class HeartRepositoryImpl @Inject constructor(
     companion object {
         private const val TAG = "HeartRepository"
 
-        // Health Connect filters series records by their record boundary, not each nested sample.
-        // Gadgetbridge can group roughly an hour of samples into one HeartRateRecord, so a record
-        // that starts before a workout can still contain samples from the start of that workout.
+        // Health Connect filters series records by record boundary; Gadgetbridge groups an hour per record.
         private val HeartRateSeriesLookback = Duration.ofHours(1)
     }
 

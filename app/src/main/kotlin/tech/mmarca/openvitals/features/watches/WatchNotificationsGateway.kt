@@ -25,43 +25,21 @@ data class InstalledApp(
 )
 
 /**
- * The Android-touching edge of the watch-notifications feature, behind an
- * interface so [WatchNotificationAppsViewModel]'s gate logic — the part that
- * decides when the disclosure shows and when the system screen opens — is
- * testable on the JVM.
- *
- * In the Flutter build these were the Pigeon host-API calls
- * (`isNotificationAccessGranted`, `openNotificationAccessSettings`,
- * `listLaunchableApps`, `setForwardingConfig`); here they are ordinary
- * platform calls.
+ * The Android-touching edge of watch notifications, behind an interface so
+ * the view-model's gate logic is JVM-testable.
  */
 interface WatchNotificationsGateway {
 
-    /**
-     * Whether Android has granted notification access. There is no runtime
-     * prompt for it — the only way to grant it is the system settings screen,
-     * so this is polled rather than awaited.
-     */
+    /** Whether Android granted notification access. Only the settings screen can, so it is polled. */
     fun isNotificationAccessGranted(): Boolean
 
     /** Opens Android's own notification-access settings screen. */
     fun openNotificationAccessSettings()
 
-    /**
-     * Every app with a launcher entry, resolved through the `<queries>`
-     * MAIN/LAUNCHER declaration — never QUERY_ALL_PACKAGES, which is a
-     * Play-restricted permission whose mere presence blocks upload.
-     */
+    /** Every launchable app, via the manifest `<queries>`, never QUERY_ALL_PACKAGES. */
     fun listLaunchableApps(): List<InstalledApp>
 
-    /**
-     * Mirrors the configuration to the listener's filter.
-     *
-     * The ONE place this happens, because it is the one place the two copies
-     * can drift — and if they do, the filter drops everything before the
-     * forwarder is ever poked and the watch stays silent with no error
-     * anywhere.
-     */
+    /** Mirrors the configuration to the listener's filter. The one place the two copies can drift. */
     fun pushConfiguration()
 }
 
@@ -103,9 +81,7 @@ class AndroidWatchNotificationsGateway @Inject constructor(
     }
 
     override fun pushConfiguration() {
-        // No watch means nowhere to send anything, and the filter treats that
-        // as "capture nothing" rather than buffering for a watch that may
-        // never be paired.
+        // No watch means capture nothing.
         val watch = deviceRepository.devices.firstOrNull { it.isGarminGfdi }
         NotificationStore.writeConfig(
             context,

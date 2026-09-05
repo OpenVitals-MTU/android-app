@@ -2,14 +2,7 @@ package tech.mmarca.openvitals.data.local.bodyenergy
 
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
 
-/**
- * In-memory stand-in for [BodyEnergyTimelineDao].
- *
- * The unit suite runs without Robolectric, so there is no SQLite to open — the
- * fake keeps the same two maps the tables are, and the `@Transaction` default
- * methods on the interface run for real against it, so the store and repository
- * exercise the actual delete-then-insert ordering.
- */
+/** In-memory stand-in for [BodyEnergyTimelineDao]; the `@Transaction` default methods run for real against it. */
 class FakeBodyEnergyTimelineDao : BodyEnergyTimelineDao {
     private val days = linkedMapOf<Long, BodyEnergyDayEntity>()
     private val buckets = linkedMapOf<Pair<Long, Long>, BodyEnergyBucketEntity>()

@@ -5,7 +5,7 @@ import org.junit.Test
 
 class FlutterPrefsKeyTableTest {
 
-    // region Enum transcoding (Dart lowerCamel -> Kotlin SCREAMING)
+    // region Enum transcoding (Dart lowerCamel to Kotlin SCREAMING)
 
     @Test
     fun `unit system transcodes`() {
@@ -59,8 +59,7 @@ class FlutterPrefsKeyTableTest {
 
     @Test
     fun `stale kotlin era enum values still resolve`() {
-        // The forward migration copied Kotlin values verbatim for keys Dart
-        // never re-wrote; SCREAMING names must fold-match themselves.
+        // The forward migration copied Kotlin values verbatim; SCREAMING names must fold-match themselves.
         assertThat(mappedMainValue("unit_system", "METRIC"))
             .isEqualTo(TargetValue.StringValue("METRIC"))
         assertThat(mappedMainValue("caffeine_hormonal_status", "ORAL_CONTRACEPTIVE"))
@@ -215,8 +214,7 @@ class FlutterPrefsKeyTableTest {
 
     @Test
     fun `body energy setup epoch is honored as a typed copy`() {
-        // The Flutter-era body-energy preferences are honored wholesale; the
-        // epoch has no Kotlin reader yet but rides along for the chain to use.
+        // The Flutter-era body-energy preferences are honored wholesale.
         val mapping = FlutterPrefsKeyTable.map("body_energy_setup_epoch", 1721000000L)
         assertThat(mapping).isInstanceOf(KeyMapping.Write::class.java)
         val write = (mapping as KeyMapping.Write).writes.single()

@@ -12,11 +12,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardItem
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardItemSize
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
 
-/**
- * Unit coverage for the pure half of [ActivityRecordingDashboard.kt] — the
- * elapsed formatter, the drag arithmetic, the item-size ladder, the lazy-grid
- * row count and the layout operations.
- */
+/** The pure half of [ActivityRecordingDashboard.kt]: the elapsed formatter, drag arithmetic, size ladder, row count and layout operations. */
 class ActivityRecordingDashboardTest {
 
     private val heartRate = ActivityRecordingDashboardField.HEART_RATE
@@ -40,7 +36,7 @@ class ActivityRecordingDashboardTest {
         rows: Int,
     ) = ActivityRecordingDashboardItem(field = field, size = size(columns, rows))
 
-    // ---------------------------------------------------------------- format
+    // Format.
 
     @Test fun `formatRecordingElapsed drops the hour segment under an hour`() {
         assertEquals("0:00", formatRecordingElapsed(Duration.ZERO))
@@ -63,7 +59,7 @@ class ActivityRecordingDashboardTest {
         assertEquals("0:00", formatRecordingElapsed(Duration.ofSeconds(-5)))
     }
 
-    // ------------------------------------------------------------- dragSteps
+    // dragSteps.
 
     @Test fun `dragSteps is zero inside the dead zone, in both directions`() {
         assertEquals(0, 43f.dragSteps(44f))
@@ -82,7 +78,7 @@ class ActivityRecordingDashboardTest {
         assertEquals(0, 100f.dragSteps(0f))
     }
 
-    // ------------------------------------------------------------- item size
+    // Item size.
 
     @Test fun `item size grows across before it grows down, and stops at the template`() {
         // largeTop is 4 columns x 6 rows.
@@ -133,7 +129,7 @@ class ActivityRecordingDashboardTest {
         )
     }
 
-    // -------------------------------------------- recordingDashboardLazyGridRows
+    // recordingDashboardLazyGridRows.
 
     @Test fun `recordingDashboardLazyGridRows a full row of single cells is one row`() {
         assertEquals(
@@ -174,7 +170,7 @@ class ActivityRecordingDashboardTest {
         assertEquals(1, recordingDashboardLazyGridRows(items = emptyList(), columns = 4))
     }
 
-    // ------------------------------------------------------ layout operations
+    // Layout operations.
 
     @Test fun `layout operations withRemovedField refuses to empty the dashboard`() {
         val single = layoutOf(listOf(heartRate))
@@ -228,7 +224,7 @@ class ActivityRecordingDashboardTest {
         assertEquals(listOf(power), narrowed.fields)
     }
 
-    // ------------------------------------ availableRecordingDashboardFields
+    // availableRecordingDashboardFields.
 
     @Test fun `availableRecordingDashboardFields a timed activity has no distance or speed`() {
         val state = ActivityRecordingState(recordingKind = ActivityRecordingKind.TIMED)

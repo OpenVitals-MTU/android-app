@@ -14,19 +14,10 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Redrawing the home screen after data lands from outside the app.
- *
- * A widget's own tick is `updatePeriodMillis`, which the system honours at its
- * convenience and not at all in Doze — so a Garmin sync at 08:05 left the
- * morning's tiles on their pre-sync numbers for half an hour or more, while the
- * user was looking at the screen having just watched the sync succeed.
- *
- * Only the two JVM-reachable halves are here. `ComponentName` and `Intent` are
- * throwing stubs in the unit-test android.jar, so the shape of the broadcast
- * itself — action, component, id array — cannot be asserted without
- * instrumentation, and a test that mocked its way around them would be
- * asserting the mocks. What IS checked is the guard that decides whether any
- * work happens at all, and that no widget is left out of the list.
+ * Redrawing the home screen after data lands from outside the app. `updatePeriodMillis`
+ * is honoured at the system's convenience, so a sync left the tiles stale for half an hour.
+ * `ComponentName` and `Intent` are stubs in the unit-test android.jar, so only the guard
+ * and the widget list are checked here.
  */
 class HomeWidgetRefreshTriggerTest {
 
@@ -50,10 +41,7 @@ class HomeWidgetRefreshTriggerTest {
 
     @Test
     fun `a launcher with no OpenVitals widget costs nothing`() {
-        // This runs after every watch sync, phone sync and import. A refresh
-        // costs several forced dashboard loads and a Body Energy timeline per
-        // placed tile, so the common case — no widget on the home screen — has
-        // to be an id enumeration and nothing more.
+        // This runs after every sync and import, so the no-widget case must be an id enumeration and nothing more.
         refreshPlacedHomeWidgets(context)
 
         verify(exactly = 0) { context.sendBroadcast(any()) }
@@ -61,10 +49,7 @@ class HomeWidgetRefreshTriggerTest {
 
     @Test
     fun `every widget the manifest declares is one this refreshes`() {
-        // The list is written out by hand so that adding a widget without
-        // adding it here is visible. This is what makes that true: a new
-        // receiver in the manifest and not in the list fails here rather than
-        // shipping as a tile that silently stops updating after a sync.
+        // Written out by hand, so a new receiver in the manifest and not in the list fails here.
         val declared = MANIFEST_WIDGET_RECEIVER
             .findAll(File("src/main/AndroidManifest.xml").readText())
             .filter { "APPWIDGET_UPDATE" in it.groupValues[2] }

@@ -35,8 +35,7 @@ class BleDeviceKindTest {
         assertFalse(device.isWatch)
         assertFalse(device.isGarminGfdi)
         assertTrue(device.isLiveSensorCapable)
-        // A sensor is neither kind of watch, nor a bike computer, whatever
-        // integration it is stamped with.
+        // A sensor is neither kind of watch nor a bike computer, whatever its integration.
         assertFalse(device.isGarminWatch)
         assertFalse(device.isWearosWatch)
         assertFalse(device.isBikeComputer)
@@ -58,8 +57,7 @@ class BleDeviceKindTest {
 
     @Test
     fun `a null-integration watch is legacy Garmin`() {
-        // A Garmin watch stored before the integration field existed — it must
-        // keep reading as Garmin, the only watch integration that existed then.
+        // A Garmin watch stored before the integration field existed must keep reading as Garmin.
         val watch = device(kind = BleDeviceKind.WATCH)
         assertTrue(watch.isWatch)
         assertTrue(watch.isGarminWatch)

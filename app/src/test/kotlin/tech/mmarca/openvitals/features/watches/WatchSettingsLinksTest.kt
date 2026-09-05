@@ -20,13 +20,8 @@ import tech.mmarca.openvitals.devices.garmin.GarminSession
 import tech.mmarca.openvitals.devices.garmin.GarminSettingsLink
 
 /**
- * The held-link registry: one link per watch, shared by every screen browsing
- * it, surviving the last screen by a grace window.
- *
- * No Dart counterpart — the Flutter build expressed this as Riverpod
- * `keepAlive` plumbing, which its tests never covered directly. The grace and
- * refcount rules here are what keeps walking Alarms → one alarm on a single
- * handshake while still giving the radio back after backing out.
+ * The held-link registry: one link per watch, shared by every screen browsing it, surviving
+ * the last screen by a grace window.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class WatchSettingsLinksTest {
@@ -40,9 +35,7 @@ class WatchSettingsLinksTest {
         opens: Opens,
         failFirst: Boolean = false,
     ): WatchSettingsLinks = WatchSettingsLinks(
-        // Its own supervisor scope on the test clock, as in production — the
-        // test's backgroundScope would re-report a failed open attempt as a
-        // test error even after the caller caught it from `await`.
+        // Its own supervisor scope on the test clock, as in production.
         scope = CoroutineScope(SupervisorJob() + StandardTestDispatcher(testScheduler)),
         grace = 20.seconds,
         opener = { scope, _ ->
@@ -134,8 +127,7 @@ class WatchSettingsLinksTest {
             // Expected: the watch was out of range.
         }
 
-        // "Try again" is just asking again — the registry replaces the failed
-        // attempt rather than serving the stale failure forever.
+        // "Try again" is asking again: the registry replaces the failed attempt.
         val link = links.link("watch-1")
         assertTrue(link.isOpen)
         assertEquals(2, opens.count)
@@ -143,8 +135,7 @@ class WatchSettingsLinksTest {
 
     @Test
     fun `releaseNow closes the held link at once`() = runTest {
-        // The Flutter build's `WatchSettingsLinks.release` semantics: a
-        // caller that wants the radio takes the link down and WAITS for it.
+        // A caller that wants the radio takes the link down and waits for it.
         val opens = Opens()
         val links = registry(opens)
 

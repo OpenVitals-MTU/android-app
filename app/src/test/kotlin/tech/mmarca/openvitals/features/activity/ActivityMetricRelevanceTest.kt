@@ -21,11 +21,8 @@ class ActivityMetricRelevanceTest {
     }
 
     @Test fun `an unknown exercise type reports the universal absences and nothing invented`() {
-        // A Health Connect constant this table has never seen — a new type, or
-        // an activity imported from another app. It needs no special case: it
-        // reports what every session has, shows anything it did record, and
-        // invents nothing. The card can never be empty, because a session always
-        // has a duration.
+        // A constant this table has never seen needs no special case: it reports what every
+        // session has and invents nothing.
         val unknown = 9_999
         listOf(
             ActivityDetailMetric.DURATION,
@@ -75,8 +72,7 @@ class ActivityMetricRelevanceTest {
     }
 
     @Test fun `indoor activities do not report missing elevation`() {
-        // The ground never rises on a treadmill, so "Elevation gained: Not
-        // available" is noise; outdoors it is a real statement about the GPS.
+        // The ground never rises on a treadmill, so "Elevation gained: Not available" is noise.
         val treadmill = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL
         assertTrue(isMetricRelevant(ActivityDetailMetric.DISTANCE, treadmill))
         listOf(
@@ -99,11 +95,7 @@ class ActivityMetricRelevanceTest {
     }
 
     @Test fun `hardware bound metrics are never relevant when absent`() {
-        // A power meter, a footpod, a bike computer's own speed average:
-        // hardware most people do not own. "Average power: Not available" on
-        // every ride is the same noise the fix exists to remove, so these are
-        // value-only for EVERY type — the screen still shows them the moment
-        // they carry a figure.
+        // Hardware most people do not own. Value-only for every type, so "Not available" never shows.
         listOf(
             ActivityDetailMetric.AVERAGE_POWER,
             ActivityDetailMetric.STEPS_CADENCE,
@@ -159,9 +151,7 @@ class ActivityMetricRelevanceTest {
     }
 
     @Test fun `a recorded value is shown even when the type says it is irrelevant`() {
-        // The relevance table decides which ABSENCES are informative. It never
-        // suppresses a figure: a bike that somehow reported steps still shows
-        // them, and a strength session that recorded a distance still shows it.
+        // The table decides which absences are informative. It never suppresses a figure.
         val biking = ExerciseSessionRecord.EXERCISE_TYPE_BIKING
         assertFalse(isMetricRelevant(ActivityDetailMetric.STEPS, biking))
         assertTrue(showsMetricRow(hasValue = true, metric = ActivityDetailMetric.STEPS, exerciseType = biking))

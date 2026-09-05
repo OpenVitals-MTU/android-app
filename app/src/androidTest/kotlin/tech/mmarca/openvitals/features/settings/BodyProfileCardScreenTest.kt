@@ -22,17 +22,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the `BodyProfileCard` cases of Flutter's
- * `test/features/settings/body_settings_cards_test.dart`.
- *
- * The card holds a draft and only commits it on Save, so what is worth pinning
- * is the seam between the stored profile and that draft: what the fields start
- * at, what the labels say about where a value came from, and what Save emits.
- *
- * The Flutter file's heart-zone cases are not here. Kotlin keeps zones in
- * `BodyEnergyCalibrationCard` rather than inside this card, so they are a
- * layout difference rather than an unported case, and the matrix records them
- * as such.
+ * The card holds a draft and commits on Save: what the fields start at, what the labels say
+ * about where a value came from, and what Save emits. Heart zones live in `BodyEnergyCalibrationCard`.
  */
 class BodyProfileCardScreenTest {
 
@@ -52,9 +43,7 @@ class BodyProfileCardScreenTest {
 
     @Test
     fun showsWhereAMeasuredValueCameFrom() {
-        // A weight Health Connect actually recorded is labelled differently
-        // from one the user typed, so an unedited profile is not mistaken for
-        // a measurement.
+        // A measured weight is labelled differently from a typed one.
         setCard(STORED, weightMeasured = true)
 
         composeRule
@@ -77,17 +66,14 @@ class BodyProfileCardScreenTest {
         composeRule.waitForIdle()
 
         assertEquals(80.0, saved?.weightKg)
-        // The rest of the profile rides along untouched rather than being
-        // reset to whatever the edited field's siblings happened to render as.
+        // The rest of the profile rides along untouched.
         assertEquals(1990, saved?.birthYear)
         assertEquals(52, saved?.restingHeartRateBpm)
     }
 
     @Test
     fun theBirthYearIsNotAskedForTwice() {
-        // Both this card and the calibration card once carried a birth year,
-        // which left the Body profile screen asking for the same fact twice
-        // and disagreeing about it.
+        // Both cards once carried a birth year and disagreed about it.
         setCard(STORED)
 
         composeRule
@@ -97,8 +83,7 @@ class BodyProfileCardScreenTest {
 
     @Test
     fun standaloneItStillCarriesABirthYearAndASave() {
-        // Whatever else the Body profile screen shows around it, this card on
-        // its own has to be enough to complete a profile.
+        // This card on its own has to be enough to complete a profile.
         setCard(BodyProfile())
 
         composeRule.onNodeWithText(string(R.string.body_energy_calibration_birth_year)).assertIsDisplayed()

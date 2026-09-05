@@ -9,31 +9,15 @@ import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 
 /*
- * Heart-rate recovery: how far the heart rate falls in the minutes after hard
- * effort stops. A fitter heart falls faster.
- *
- * It is only meaningful when the heart rate was driven near its maximum and effort
- * then stopped ABRUPTLY. Ease off gradually — slow down but keep moving — and the
- * number is a lie. So HRR is measured only for the app's guided recovery test, which
- * marks the instant of cessation with a trailing rest segment; an ordinary workout,
- * which carries no such mark, is not measured at all (see [heartRateRecoveryWindowFor]).
- *
- * Health Connect has no record type for it, and the app stores no health data of its
- * own, so nothing here is persisted: HRR is DERIVED, on read, from the heart-rate
- * samples Health Connect already holds — the same standing as cardio load or stress.
- * A mark for which no sample exists is reported as absent: it is never interpolated,
- * and the drop is never guessed from an average. A number that was not measured is
- * worse than a blank.
+ * Heart-rate recovery: how far the heart rate falls after hard effort stops.
+ * Only meaningful after an abrupt stop, so it is measured only for the guided
+ * recovery test, which marks the stop with a trailing rest segment. Derived
+ * on read from Health Connect samples; nothing is persisted or interpolated.
  */
 
 /**
- * The marks, in the order they are always returned.
- *
- * No 10-second mark: optical sensors smooth over several seconds and even an
- * arm/chest strap is borderline that early, so a ten-second figure is unreliable
- * across the monitors people actually wear. The one-minute drop leads (it is the
- * mark with a body of normative literature behind it) and is fine for every
- * monitor type.
+ * The marks, in return order. No 10-second mark: optical sensors smooth over
+ * several seconds. The one-minute drop has the normative literature.
  */
 val heartRateRecoveryOffsets: List<Duration> = listOf(
     Duration.ofSeconds(30),
@@ -44,19 +28,12 @@ val heartRateRecoveryOffsets: List<Duration> = listOf(
     Duration.ofMinutes(5),
 )
 
-/**
- * The headline mark — the one-minute drop, the only mark with a body of normative
- * literature behind it.
- */
+/** The headline mark: the one-minute drop. */
 val heartRateRecoveryHeadlineOffset: Duration = Duration.ofMinutes(1)
 
 /**
- * How far from a mark a sample may sit and still be taken as that mark.
- *
- * Kept tight: heart rate falls fast right after cessation (roughly 0.5-1.0 bpm/s
- * in the first half minute), so a loose window at 30s could cost several bpm — a
- * large fraction of the number reported. Monitors sample often enough while and
- * just after hard effort that a small window still finds a sample.
+ * How far from a mark a sample may sit. Tight, because heart rate falls
+ * 0.5-1.0 bpm/s right after the stop.
  */
 val heartRateRecoveryTolerances: Map<Duration, Duration> = mapOf(
     Duration.ofSeconds(30) to Duration.ofSeconds(3),
@@ -67,25 +44,15 @@ val heartRateRecoveryTolerances: Map<Duration, Duration> = mapOf(
     Duration.ofMinutes(5) to Duration.ofSeconds(5),
 )
 
-/**
- * The peak heart rate must come from a HARD window of the last ten seconds before
- * the stop. A wider window would let an effort that eased off earlier read a peak
- * from when it was still going, inflating the recovery. Monitors sample fast during
- * hard effort, so a sample is there.
- */
+/** The peak must come from the last ten seconds, or an early ease-off inflates the recovery. */
 private val peakWindow: Duration = Duration.ofSeconds(10)
 
-/**
- * How far either side of the recovery start a sample may sit and still count as "the
- * heart rate when they stopped", for the cool-down check.
- */
+/** Tolerance for the sample taken as "the heart rate when they stopped". */
 private val recoveryStartTolerance: Duration = Duration.ofSeconds(15)
 
 /**
- * A fall of more than this between the last real high point and the stop means the
- * heart rate was ALREADY coming down before the "stop" — they eased off before they
- * pressed the button, which invalidates the recovery. Beat-to-beat noise is 3-4 bpm,
- * so 4 sits just above it: a genuine pre-stop cool-down of even a few beats matters.
+ * A larger fall between the last high point and the stop means they eased
+ * off first. Beat-to-beat noise is 3-4 bpm, so 4 sits just above it.
  */
 private const val cooldownBeforeStopDropBpm = 4
 
@@ -93,25 +60,17 @@ private const val cooldownBeforeStopDropBpm = 4
 private val cooldownLookback: Duration = Duration.ofSeconds(60)
 
 /**
- * How far below the maximum the peak may sit and the effort still count as
- * near-maximal (so the recovery is comparable with another). A fixed BAND, not a
- * fraction: HR-max estimates carry a roughly constant absolute uncertainty, so a
- * percentage floor is too low for the young and too high for the old.
- *
- * [estimatedMaxNearBandBpm] is the ~95% confidence interval of the age formula
- * (208 - 0.7*age): a peak within ~22 bpm of the estimate is consistent with a
- * near-maximal effort. When the maximum is KNOWN (the user stated it, or we have a
- * trustworthy observed max) there is no such uncertainty, so the band is tighter.
+ * How far below the maximum a peak may sit and still count as near-maximal.
+ * A fixed band, not a fraction: max estimates carry a constant absolute
+ * uncertainty. 22 bpm is the ~95% interval of the age formula; a known
+ * maximum gets a tighter band.
  */
 private const val estimatedMaxNearBandBpm = 22
 private const val knownMaxNearBandBpm = 10
 
 /**
- * A trailing rest segment shorter than this is an inter-set breather, not a recovery.
- *
- * This matters concretely: the app already writes a rest segment after EVERY set of a
- * strength session, including the last. Without a floor, every set-based workout ever
- * recorded would be read as an HRR test whose "recovery" was a one-minute rest.
+ * A shorter trailing rest segment is an inter-set breather. The app writes a
+ * rest segment after every strength set, the last one included.
  */
 private val minimumRecoverySegmentDuration: Duration = Duration.ofSeconds(90)
 
@@ -126,10 +85,7 @@ private val readHeadPadding: Duration = Duration.ofSeconds(60)
 
 /** One verdict on a reading, for the UI to lead with. */
 enum class HeartRateRecoveryQuality {
-    /**
-     * Near-maximal effort, a peak taken close to the stop, and at least the one-minute
-     * mark present.
-     */
+    /** Near-maximal effort, a peak near the stop, and the one-minute mark present. */
     CLEAN,
 
     /** Usable, but something was estimated or coarse. See the issues. */
@@ -146,19 +102,13 @@ enum class HeartRateRecoveryQuality {
 }
 
 enum class HeartRateRecoveryIssue {
-    /**
-     * No samples at all in the five minutes after the stop. Typically a watch that
-     * stopped recording heart rate when the workout ended.
-     */
+    /** No samples in the five minutes after the stop. Usually a watch that stopped recording. */
     NO_RECOVERY_SAMPLES,
 
     /** Exactly one sample stood behind the peak; a single spurious reading would be it. */
     PEAK_FROM_SINGLE_SAMPLE,
 
-    /**
-     * The heart rate was already falling before the stop — they eased off first, so the
-     * "drop" measures the cool-down and flatters them.
-     */
+    /** The heart rate was already falling before the stop. The drop flatters them. */
     COOLDOWN_BEFORE_STOP,
 
     /** Hard, but not near-maximal. The drop is real; it is not comparable. */
@@ -167,25 +117,18 @@ enum class HeartRateRecoveryIssue {
     /** No maximum heart rate could be resolved, so effort could not be judged. */
     UNKNOWN_MAX_HEART_RATE,
 
-    /**
-     * The heart rate did not fall after the "stop" — it was the same or higher at one of
-     * the marks. Whatever ended, the effort did not: the recording stopped before the
-     * person did. There is no recovery here, only a session boundary.
-     */
+    /** The heart rate did not fall after the stop. The recording ended, the effort did not. */
     HEART_RATE_DID_NOT_FALL,
 }
 
-/**
- * One mark. [heartRateBpm] is null when no sample fell within tolerance — the mark
- * did not happen, and is never invented.
- */
+/** One mark. [heartRateBpm] is null when no sample fell within tolerance. */
 data class HeartRateRecoveryMark(
     val offset: Duration,
     val heartRateBpm: Long?,
     val dropBpm: Long?,
     val sampleTime: Instant?,
 
-    /** How far the sample actually sat from the mark. Lets the UI be honest: "+58s". */
+    /** How far the sample sat from the mark, for the UI. */
     val sampleSkew: Duration?,
 )
 
@@ -207,10 +150,7 @@ data class HeartRateRecoveryReading(
         val NoData = HeartRateRecoveryReading(recoveryStart = null)
     }
 
-    /**
-     * The drop one minute after the stop — the figure to lead with, null when that mark
-     * was not measured.
-     */
+    /** The one-minute drop, or null when that mark was not measured. */
     val headlineDropBpm: Long? get() = markAt(heartRateRecoveryHeadlineOffset)?.dropBpm
 
     fun markAt(offset: Duration): HeartRateRecoveryMark? {
@@ -221,12 +161,8 @@ data class HeartRateRecoveryReading(
     }
 
     /**
-     * Whether this reading may be charted as a point in a trend.
-     *
-     * Being merely "not invalid" is not enough. The trend is of the one-minute fall, so a
-     * reading that never measured it has nothing to contribute — and on watch data, which
-     * commonly samples once a minute, that is most of them. Charting them would be
-     * charting the gaps.
+     * Whether this reading may be charted. The trend is of the one-minute
+     * fall, so a reading without that mark has nothing to contribute.
      */
     val isComparable: Boolean
         get() = (quality == HeartRateRecoveryQuality.CLEAN ||
@@ -242,23 +178,13 @@ data class HeartRateRecoveryWindow(
 )
 
 /**
- * The instant effort stopped, for [session], and the window of heart-rate samples that
- * has to be read to measure the recovery from it — or null when the session carries no
- * mark of a deliberate stop.
+ * The instant effort stopped for [session] and the sample window to read, or
+ * null when the session carries no mark of a deliberate stop.
  *
- * Heart-rate recovery is only meaningful when the person drove their heart rate near
- * its maximum and then ABRUPTLY stopped and rested. An ordinary recorded session gives
- * no such guarantee — you slow down but keep moving — so the session's end cannot be
- * taken as the moment effort stopped. The recovery therefore begins only at a
- * qualifying trailing rest segment, which the app's guided test writes at the true
- * instant of cessation (a watch that genuinely recorded a trailing rest qualifies too).
- * No segment, no reading.
- *
- * "Qualifying" is doing real work. The app writes a rest segment after every set of a
- * strength session, the last one included, so a bare "ends with a rest segment" test
- * would read every set-based workout as an HRR test with a one-minute recovery. A
- * segment therefore qualifies only if it is at least [minimumRecoverySegmentDuration]
- * long AND ends within [trailingSegmentSlack] of the session end.
+ * The recovery begins at a qualifying trailing rest segment: at least
+ * [minimumRecoverySegmentDuration] long and ending within
+ * [trailingSegmentSlack] of the session end. Strength sessions end with a
+ * short rest segment too, hence the length floor.
  */
 fun heartRateRecoveryWindowFor(session: ExerciseData): HeartRateRecoveryWindow? {
     val sessionEnd = session.endTime
@@ -275,8 +201,7 @@ fun heartRateRecoveryWindowFor(session: ExerciseData): HeartRateRecoveryWindow? 
         if (Duration.between(segment.endTime, sessionEnd).abs() > trailingSegmentSlack) {
             continue
         }
-        // The last qualifying one wins, so a session that somehow carries two takes the
-        // one nearest the end.
+        // The last qualifying segment wins.
         val current = recoveryStart
         if (current == null || segment.startTime.isAfter(current)) {
             recoveryStart = segment.startTime
@@ -295,11 +220,8 @@ fun heartRateRecoveryWindowFor(session: ExerciseData): HeartRateRecoveryWindow? 
 }
 
 /**
- * Measures the recovery from [recoveryStart] out of [samples].
- *
- * [samples] should span the window [heartRateRecoveryWindowFor] asked for; anything
- * outside it is ignored. Nothing is invented: a mark with no sample within tolerance
- * comes back null.
+ * Measures the recovery from [recoveryStart] out of [samples]. Samples outside
+ * the requested window are ignored. A mark with no sample comes back null.
  */
 fun calculateHeartRateRecovery(
     recoveryStart: Instant,
@@ -319,10 +241,7 @@ fun calculateHeartRateRecovery(
         issues.add(HeartRateRecoveryIssue.PEAK_FROM_SINGLE_SAMPLE)
     }
 
-    // Strictly AFTER the stop. A sample landing exactly on it is the reading at cessation
-    // — the thing we measure the fall FROM — not part of the fall. Counting it would let a
-    // watch that quits the moment the workout ends look as though it had recorded a
-    // recovery, when it recorded nothing at all.
+    // Strictly after the stop: a sample exactly on it is the reading at cessation.
     val recoveryEnd = recoveryStart.plus(heartRateRecoveryOffsets.last())
     val recoverySamples = ordered.filter { sample ->
         sample.time.isAfter(recoveryStart) && !sample.time.isAfter(recoveryEnd)
@@ -363,11 +282,8 @@ fun calculateHeartRateRecovery(
         issues.add(HeartRateRecoveryIssue.UNKNOWN_MAX_HEART_RATE)
     }
 
-    // Near-maximal effort, judged as an absolute distance below the maximum, not a
-    // fraction of it — a fixed band, wider when the maximum was estimated from age
-    // (which carries that much uncertainty) than when it is known. A peak more than the
-    // band below the maximum is a real recovery from a submaximal effort: shown, but not
-    // comparable across days.
+    // Near-maximal effort as an absolute band below the maximum, wider when the
+    // maximum was estimated. A lower peak is a real but not comparable recovery.
     val peakFraction = if (maxContext == null) null else peak.bpm.toDouble() / maxContext.bpm
     if (maxContext != null) {
         val band = if (maxContext.estimated) estimatedMaxNearBandBpm else knownMaxNearBandBpm
@@ -376,13 +292,8 @@ fun calculateHeartRateRecovery(
         }
     }
 
-    // Was the heart rate already coming down before they "stopped"?
-    //
-    // Compare against the highest reading of the last MINUTE, not against [peak]. When the
-    // peak window is the default ten seconds, peak is drawn from those ten seconds alone —
-    // and someone who eased off forty seconds before pressing stop has nothing but decayed
-    // values in there, so peak would sit just above the reading at the stop and the check
-    // could never fire. It is the fall from the last real high point that gives them away.
+    // Was the heart rate already falling before the stop? Compare against the
+    // highest reading of the last minute, not [peak], which only covers ten seconds.
     val atStop = nearest(ordered, recoveryStart, recoveryStartTolerance)
     val recentHigh = maxBpmWithin(ordered, recoveryStart, cooldownLookback)
     if (atStop != null &&
@@ -392,11 +303,8 @@ fun calculateHeartRateRecovery(
         issues.add(HeartRateRecoveryIssue.COOLDOWN_BEFORE_STOP)
     }
 
-    // Did the heart rate fall at all? If it was as high or higher at any mark than it was
-    // at the peak, then whatever the session end was, it was not the end of the effort —
-    // the recording stopped while the rider kept riding. A "recovery" of MINUS four beats
-    // is not a small recovery, it is not a recovery, and reporting it as one would be the
-    // worst thing this code could do.
+    // If the heart rate was as high at any mark as at the peak, the recording
+    // stopped but the effort did not. That is not a recovery.
     if (marks.any { mark -> mark.dropBpm != null && mark.dropBpm <= 0 }) {
         issues.add(HeartRateRecoveryIssue.HEART_RATE_DID_NOT_FALL)
     }
@@ -426,8 +334,7 @@ private fun quality(
     ) {
         return HeartRateRecoveryQuality.INVALID
     }
-    // Samples after the stop, but none of them near enough to any mark to be one. Nothing
-    // was measured, so the verdict is nothing measured — not "approximate".
+    // Samples after the stop, but none near a mark: nothing measured.
     if (marks.all { mark -> mark.heartRateBpm == null }) {
         return HeartRateRecoveryQuality.NO_DATA
     }
@@ -435,8 +342,7 @@ private fun quality(
         return HeartRateRecoveryQuality.NOT_COMPARABLE
     }
     val headline = marks.firstOrNull { mark -> mark.offset == heartRateRecoveryHeadlineOffset }
-    // Without the one-minute mark there is no anchor for a trend, so the reading must not
-    // be dressed up as authoritative however good the rest of it looks.
+    // Without the one-minute mark there is no anchor for a trend.
     val headlineMissing = headline?.heartRateBpm == null
     if (headlineMissing ||
         HeartRateRecoveryIssue.PEAK_FROM_SINGLE_SAMPLE in issues ||
@@ -448,13 +354,8 @@ private fun quality(
 }
 
 /**
- * Samples in time order, at most one per instant.
- *
- * Two sources (a strap and a watch, both recording) can land a sample on the same
- * instant. Keeping the higher of the two is the conservative choice in both directions:
- * a higher peak is harder to clear the vigour gate with, and a higher recovery reading
- * means a SMALLER reported drop. It also keeps the median gap honest — left in, the
- * duplicates read as zero-second gaps and would mask coarse sampling.
+ * Samples in time order, at most one per instant. Two sources can share an
+ * instant; the higher reading is the conservative choice both ways.
  */
 private fun ordered(samples: List<HeartRateSample>): List<HeartRateSample> {
     val byInstant = mutableMapOf<Long, HeartRateSample>()
@@ -475,15 +376,7 @@ private class Peak(
     val sampleCount: Int,
 )
 
-/**
- * The highest heart rate in the hard [peakWindow] before the stop, or null if nothing
- * sits there.
- *
- * A hard ten-second window on purpose: a wider one would let an effort that eased off
- * earlier draw its "peak" from when it was still going, inflating the recovery. The
- * guided test is the only thing that reaches this code now, and monitors sample fast
- * during hard effort, so a sample is there.
- */
+/** The highest heart rate in the [peakWindow] before the stop, or null. */
 private fun peak(ordered: List<HeartRateSample>, recoveryStart: Instant): Peak? {
     val start = recoveryStart.minus(peakWindow)
     val inWindow = ordered.filter { sample ->
@@ -502,10 +395,7 @@ private fun peak(ordered: List<HeartRateSample>, recoveryStart: Instant): Peak? 
     )
 }
 
-/**
- * The highest reading in the [lookback] before [recoveryStart], or null if there is
- * nothing there.
- */
+/** The highest reading in the [lookback] before [recoveryStart], or null. */
 private fun maxBpmWithin(
     ordered: List<HeartRateSample>,
     recoveryStart: Instant,
@@ -551,10 +441,8 @@ private fun markAt(
 }
 
 /**
- * The sample nearest [target], or null if the nearest is further than [tolerance].
- *
- * A tie goes to the EARLIER sample: deterministic, and the conservative call, since the
- * earlier sample of a falling curve is the higher one and so reports the smaller drop.
+ * The sample nearest [target], or null beyond [tolerance]. A tie goes to the
+ * earlier sample, which reports the smaller drop.
  */
 private fun nearest(
     ordered: List<HeartRateSample>,
@@ -580,20 +468,9 @@ private class MaxHeartRate(
 )
 
 /**
- * What to measure the effort against.
- *
- * In order: what the user told us; then the highest we have actually seen, but only if
- * it clears the bar for being a real maximum rather than the ceiling of an easy week
- * ([isObservedMaxHeartRateTrustworthy]); then the age formula; then nothing.
- *
- * Nothing is a legitimate outcome, and it must not blank the screen: a user who never
- * filled in a birth year still gets every mark, and only loses the judgement of whether
- * the effort was hard enough to compare.
- *
- * Kotlin adaptation: unlike the Dart source, this app kept the manual max-heart-rate
- * field on BodyProfile, so an explicit user-stated maximum resolves first. It is taken
- * as KNOWN (non-estimated) without the trustworthy check — the user stated it, it is
- * not the ceiling of an easy week.
+ * What to measure the effort against, in order: the user's stated maximum,
+ * a trustworthy observed maximum, the age formula, nothing. Nothing still
+ * yields every mark; only the effort judgement is lost.
  */
 private fun resolveMaxHeartRate(
     explicitMaxHeartRateBpm: Int?,
@@ -617,7 +494,7 @@ private fun resolveMaxHeartRate(
 
     val age = ageYears
     if (age != null) {
-        // Tanaka (208 - 0.7*age): more accurate across ages than the old 220 - age.
+        // Tanaka (208 - 0.7*age).
         return MaxHeartRate(max(1, (208 - 0.7 * age).roundToInt()), true)
     }
 

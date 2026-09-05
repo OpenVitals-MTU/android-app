@@ -153,8 +153,7 @@ object HomeMetricWidgetState {
     val subtitleKey = stringPreferencesKey("subtitle")
     val routeKey = stringPreferencesKey("route")
     val rowCountKey = intPreferencesKey("row_count")
-    // One comma-joined string rather than a key per point: the state is a flat
-    // preferences map, and forty-eight keys per refresh would dwarf the rest.
+    // One comma-joined string: forty-eight keys per refresh would dwarf the rest.
     val seriesKey = stringPreferencesKey("series")
     val definition = androidx.glance.state.PreferencesGlanceStateDefinition
 }
@@ -271,11 +270,8 @@ suspend fun refreshHomeMetricWidget(
         return
     }
 
-    // A read that did not happen leaves the tile showing its last good
-    // snapshot rather than replacing real numbers with "--" — see the same
-    // reasoning on refreshDailyReadinessWidget. A Body Energy read that DID
-    // happen but opened the day on a defaulted seed is held to the same
-    // standard by [bodyEnergySnapshotToWrite].
+    // A failed read leaves the last good snapshot; see refreshDailyReadinessWidget.
+    // A defaulted-seed read is held to the same standard by [bodyEnergySnapshotToWrite].
     loadSnapshot(context, resolvedMetricId)?.let { load ->
         val previous = getAppWidgetState(context, HomeMetricWidgetState.definition, glanceId)
             .toWidgetSnapshot(context)
@@ -303,13 +299,7 @@ internal suspend fun writeHomeWidgetSnapshot(
     }
 }
 
-/**
- * Writes [snapshot] into the widget's Glance state.
- *
- * Split out of [writeHomeWidgetSnapshot] so the key layout — and the
- * [MaxHomeWidgetRows] cap the widget cannot draw past — can be pinned without
- * an app widget behind it.
- */
+/** Writes [snapshot] into Glance state. Split out so the key layout can be pinned in tests. */
 internal fun MutablePreferences.putHomeWidgetSnapshot(
     metricId: String?,
     snapshot: HomeMetricWidgetSnapshot,
@@ -367,13 +357,7 @@ internal fun Preferences.toWidgetSnapshot(context: Context): HomeMetricWidgetSna
     )
 }
 
-/**
- * The stored comma-joined plot values, parsed back.
- *
- * Anything unparseable is DROPPED rather than defaulted to zero: a zero is a
- * legitimate score, so substituting one would draw a cliff to the floor that
- * the day never had.
- */
+/** The stored plot values, parsed back. Unparseable values are dropped, not zeroed. */
 private fun parseHomeWidgetSeries(raw: String?): List<Int> {
     if (raw.isNullOrBlank()) return emptyList()
     return raw.split(',').mapNotNull { it.trim().toIntOrNull() }
@@ -455,22 +439,15 @@ internal fun HomeMetricWidgetContent(snapshot: HomeMetricWidgetSnapshot) {
     }
 }
 
-/**
- * What a metric tile refresh produced: the snapshot, plus — for the Body
- * Energy tile only — the timeline it was built from, so the writer can tell a
- * chained day from one that opened on a defaulted seed.
- */
+/** A tile refresh's output: the snapshot, plus the timeline for the Body Energy tile. */
 internal class HomeMetricWidgetLoad(
     val snapshot: HomeMetricWidgetSnapshot,
     val bodyEnergyTimeline: BodyEnergyTimeline? = null,
 )
 
 /**
- * The tile's contents, or null when the read did not happen.
- *
- * A failed or timed-out read must not be written over a tile that is showing
- * real numbers — see [refreshHomeMetricWidget]. Null is the failure; a metric
- * with genuinely nothing recorded today still returns a snapshot.
+ * The tile's contents, or null when the read did not happen. A metric with
+ * nothing recorded still returns a snapshot.
  */
 internal suspend fun loadSnapshot(
     context: Context,
@@ -524,12 +501,7 @@ internal suspend fun loadSnapshot(
     }.getOrNull()
 }
 
-/**
- * Where a metric tile lands when it is tapped.
- *
- * Body Energy has its own dated screen and caffeine has no detail screen at
- * all, so neither takes the generic `metric/<id>` route.
- */
+/** Where a metric tile lands when tapped. Body Energy and caffeine take their own routes. */
 internal fun homeMetricWidgetRoute(metricId: DashboardWidgetId, date: LocalDate): String =
     when (metricId) {
         DashboardWidgetId.BODY_ENERGY -> Screen.BodyEnergyDetails.createRoute(date.toString())
@@ -537,12 +509,7 @@ internal fun homeMetricWidgetRoute(metricId: DashboardWidgetId, date: LocalDate)
         else -> Screen.Metric.createRoute(metricId.name)
     }
 
-/**
- * A metric tile's snapshot, from already-loaded dashboard data.
- *
- * A missing permission wins over whatever the reading happens to say: the
- * number would be a lie, so the tile asks for the grant instead.
- */
+/** A metric tile's snapshot. A missing permission wins over the reading. */
 internal fun buildMetricWidgetSnapshot(
     context: Context,
     metricId: DashboardWidgetId,
@@ -576,8 +543,7 @@ private suspend fun loadBodyEnergyMetricSnapshot(
     route: String,
     date: LocalDate,
 ): HomeMetricWidgetLoad? {
-    // The timeout wraps the LOAD, not the day it produced: a day with nothing
-    // on it is a legitimate result and still gets drawn.
+    // The timeout wraps the load, not the day it produced.
     val result = withTimeoutOrNull(WidgetLoadTimeoutMillis) {
         repository.loadTimeline(
             BodyEnergyTimelineQuery(
@@ -728,8 +694,7 @@ internal fun DashboardData.toSnapshot(
                 ?: latestBasalBodyTemperatureCelsius?.let(unitFormatter::temperature)
             snapshot(displayValue)
         }
-        // Device state, not a day's reading: the home-screen widgets render a
-        // metric for a date, which a paired watch has nothing to say about.
+        // Device state, not a day's reading.
         DashboardWidgetId.WATCH -> snapshot(null)
     }
 }

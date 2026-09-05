@@ -27,12 +27,8 @@ import tech.mmarca.openvitals.ui.theme.Emphasis
 import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
- * Every way a workout leaves the app, in one place. The route formats (GPX,
- * KMZ) appear only when a route exists; the metric formats (TCX, CSV, FIT)
- * are on every workout, because a treadmill session has data worth getting
- * out too, and a session with a route may be shared with someone who should
- * not get the location half of it. The description names which formats carry
- * the route, so the privacy choice is made with open eyes.
+ * Every way a workout leaves the app. Route formats only with a route;
+ * metric formats on every workout. The description says which carry the route.
  */
 @Composable
 internal fun WorkoutExportCard(
@@ -111,11 +107,7 @@ private fun ExportRowDivider() {
     )
 }
 
-/**
- * One format per row, save on the left and share on the right — the columns
- * are the actions, so a reader scans down for their format and across for
- * what to do with it.
- */
+/** One format per row, save on the left and share on the right. */
 @Composable
 private fun WorkoutFormatRow(
     saveLabel: String,

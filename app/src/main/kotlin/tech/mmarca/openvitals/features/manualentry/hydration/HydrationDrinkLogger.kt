@@ -64,10 +64,7 @@ internal suspend fun writeHydrationAndNutritionEntry(
     nutrientValues: Map<NutritionNutrient, Double>,
     requestedEntryTime: Instant? = null,
     fallbackEntryTime: Instant? = null,
-    /**
-     * How long the drink took to finish, or null for "at once". Only the nutrition half
-     * carries it: the caffeine model reads the record's interval to spread the dose.
-     */
+    /** How long the drink took, or null for at once. The caffeine model reads it. */
     consumptionDurationMinutes: Int? = null,
     editRecordId: String? = null,
     canWriteHydration: Boolean? = null,
@@ -128,10 +125,8 @@ internal suspend fun writeHydrationAndNutritionEntry(
                     )
                 )
             } catch (error: Throwable) {
-                // A drink is two records that must land together. The hydration half
-                // already committed, so roll it back — otherwise the natural retry
-                // writes a *second* hydration record with no nutrition. Best-effort:
-                // if the rollback itself fails, the original write error still wins.
+                // Two records must land together. Roll back the hydration half, or a
+                // retry writes a second one. Best-effort.
                 if (hydrationClientRecordId != null) {
                     runCatching {
                         repository.deleteHydrationEntryByClientRecordId(hydrationClientRecordId)

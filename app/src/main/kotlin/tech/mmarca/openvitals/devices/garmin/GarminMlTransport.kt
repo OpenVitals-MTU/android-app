@@ -4,27 +4,11 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 
 /**
- * Garmin's multi-link (ML) transport — the V2 layer that carries GFDI.
+ * Garmin's multi-link (ML) transport, the V2 layer that carries GFDI. Port of
+ * Gadgetbridge's `CommunicatorV2` (AGPLv3). V1 is not implemented.
  *
- * Port of Gadgetbridge's `CommunicatorV2` (AGPLv3), narrowed to the one
- * channel a read-only sync needs. **This is the layer a vívoactive 5
- * requires**: the on-device GATT probe found the multi-link service
- * `6a4e2800` with handle pairs `0x2810/0x2820`…, and no V1 service. V1
- * watches would need `CommunicatorV1` instead (a single characteristic pair,
- * no handles) — not implemented, because the device we can test says V2.
- *
- * The protocol multiplexes several logical services over one characteristic
- * pair. Every packet's first byte is a handle:
- *   * handle 0 is the control channel (open/close services),
- *   * any other handle belongs to a service opened earlier.
- *
- * So the flow is: close everything stale, ask for a handle for the GFDI
- * service, then prefix every GFDI write with the handle we were given and
- * route inbound packets by their leading handle byte.
- *
- * Transport-agnostic by construction: it is handed a [write] callback and fed
- * bytes through [handleInbound], so the whole handshake is testable with no
- * Bluetooth.
+ * Every packet's first byte is a handle: 0 is the control channel, others belong to a
+ * service opened earlier. Fed a [write] callback and bytes through [handleInbound].
  */
 class GarminMlTransport(
     /** Writes one packet to the send characteristic. */
@@ -32,18 +16,11 @@ class GarminMlTransport(
     /** Called with each fully-reassembled GFDI frame. */
     private val onFrame: (GarminGfdiFrame) -> Unit,
     /**
-     * Called when the WATCH closes the GFDI handle mid-session — seen in the
-     * wild on long-held links (Gadgetbridge's `CommunicatorV2` re-registers on
-     * it). The handle is already cleared; the owner decides whether to
-     * [reopenGfdi]. Without that, a held link goes silently deaf: outbound
-     * writes target a dead handle and inbound drops as unknown-handle.
+     * Called when the watch closes the GFDI handle mid-session. The owner
+     * decides whether to [reopenGfdi]; otherwise a held link goes deaf.
      */
     private val onGfdiClosed: (() -> Unit)? = null,
-    /**
-     * A packet on a NON-GFDI service, by service code — how the watch streams
-     * live readings (heart rate, steps, …) once such a service is opened.
-     * Raw and unframed: these carry fixed little payloads, not COBS/GFDI.
-     */
+    /** A packet on a non-GFDI service, by service code: live readings. Raw, unframed. */
     private val onServiceData: ((serviceCode: Int, payload: ByteArray) -> Unit)? = null,
     private val onLog: ((String) -> Unit)? = null,
 ) {
@@ -56,17 +33,9 @@ class GarminMlTransport(
         const val CONTROL_HANDLE = 0
 
         /**
-         * Identifies this client to the watch, which echoes it back on every
-         * control response so several apps can multiplex without confusing
-         * each other.
-         *
-         * Deliberately Gadgetbridge's value: it is the one empirically known
-         * to be accepted by a real watch, and an ID the firmware rejects
-         * would fail the registration outright. The cost is that OpenVitals
-         * and Gadgetbridge cannot hold ML sessions with the same watch
-         * simultaneously — they would each act on the other's control
-         * responses. Two apps syncing one watch at once is already broken
-         * territory, so proven beats theoretically-tidy here.
+         * Identifies this client; echoed on every control response.
+         * Gadgetbridge's value, the one known to be accepted. The two apps
+         * cannot hold ML sessions with one watch at once.
          */
         const val CLIENT_ID = 2L
 
@@ -77,27 +46,17 @@ class GarminMlTransport(
         const val CLOSE_HANDLE_RESP = 3
         const val CLOSE_ALL_REQ = 5
 
-        /**
-         * Marks an inbound packet as belonging to the reliable (MLR)
-         * sub-protocol. This transport registers non-reliable, so these are
-         * not expected.
-         */
+        /** Marks a reliable (MLR) packet. This transport registers non-reliable. */
         const val MLR_FLAG_MASK = 0x80
     }
 
-    /**
-     * Conservative default: the BLE minimum MTU of 23 minus 3 bytes of ATT
-     * overhead. Raised by [onMtuChanged] once the real MTU is negotiated.
-     */
+    /** BLE minimum MTU of 23 minus 3 bytes ATT overhead. Raised by [onMtuChanged]. */
     private var maxWriteSize = 20
 
     /** The handle the watch assigned to GFDI, or null before registration. */
     private var gfdiHandle: Int? = null
 
-    /**
-     * Handles for the other services this transport has opened, both ways:
-     * the watch addresses packets by handle, and closing one needs its code.
-     */
+    /** Handles for the other open services, both ways. */
     private val handleByService = mutableMapOf<Int, Int>()
     private val serviceByHandle = mutableMapOf<Int, Int>()
 
@@ -109,11 +68,7 @@ class GarminMlTransport(
 
     val isReady: Boolean get() = gfdiHandle != null
 
-    /**
-     * Applies a negotiated MTU. Same formula as Gadgetbridge's
-     * `calcMaxWriteChunk`: clamp to the spec's 23-byte floor and 512-byte
-     * ceiling, minus the 3-byte ATT write header.
-     */
+    /** Applies a negotiated MTU: clamp to 23..512, minus the 3-byte ATT header. */
     fun onMtuChanged(mtu: Int) {
         val safeMtu = if (mtu < 23) 23 else mtu
         val chunk = safeMtu - 3
@@ -121,14 +76,9 @@ class GarminMlTransport(
         onLog?.invoke("[GARMIN-ML] mtu=$mtu maxWrite=$maxWriteSize")
     }
 
-    /**
-     * Opens the GFDI channel: clear any handles left by a previous session,
-     * then request one for GFDI. Completes [ready] when the watch answers.
-     */
+    /** Opens the GFDI channel: clear stale handles, request one. Completes [ready]. */
     suspend fun open() {
-        // A watch that was mid-session (app killed, link dropped) still holds
-        // the old handles; registering on top of them fails until they are
-        // released.
+        // A watch mid-session still holds old handles; registering on top fails.
         write(controlPacket(CLOSE_ALL_REQ, serviceCode = 0))
         write(
             controlPacket(
@@ -142,11 +92,7 @@ class GarminMlTransport(
     /** Whether [serviceCode] currently has a handle. */
     fun isServiceOpen(serviceCode: Int): Boolean = handleByService.containsKey(serviceCode)
 
-    /**
-     * Opens a non-GFDI service, so the watch starts streaming it. Idempotent:
-     * a second request for an open service would earn a second handle and
-     * double every reading.
-     */
+    /** Opens a non-GFDI service. Idempotent: a second handle would double every reading. */
     suspend fun openService(serviceCode: Int) {
         if (handleByService.containsKey(serviceCode)) return
         write(controlPacket(REGISTER_ML_REQ, serviceCode = serviceCode, trailing = 0))
@@ -162,17 +108,12 @@ class GarminMlTransport(
                 trailing = handle,
             ),
         )
-        // Dropped locally at once rather than on the response: the watch stops
-        // either way, and a reading that races the close must not be routed to
-        // a service the app already considers shut.
+        // Dropped locally at once, so a reading racing the close is not routed.
         handleByService.remove(serviceCode)
         serviceByHandle.remove(handle)
     }
 
-    /**
-     * A 13-byte control packet on handle 0:
-     * `[handle 0][request][u64 clientId][u16 serviceCode][trailing]`.
-     */
+    /** A 13-byte control packet: `[handle 0][request][u64 clientId][u16 serviceCode][trailing]`. */
     private fun controlPacket(
         request: Int,
         serviceCode: Int,
@@ -185,15 +126,12 @@ class GarminMlTransport(
         .writeByte(trailing)
         .toBytes()
 
-    /**
-     * Sends one GFDI frame: COBS-wrap it, then split into handle-prefixed
-     * writes that each fit a single characteristic write.
-     */
+    /** Sends one GFDI frame: COBS-wrap, then split into handle-prefixed writes. */
     suspend fun sendFrame(frame: ByteArray) {
         val handle = gfdiHandle
             ?: throw IllegalStateException("GFDI channel not open — call open() and await ready")
         val payload = GarminCobs.encode(frame)
-        // One byte of every write is the handle, so the usable payload is one less.
+        // One byte of every write is the handle.
         val chunkSize = maxWriteSize - 1
         var offset = 0
         while (offset < payload.size) {
@@ -213,10 +151,8 @@ class GarminMlTransport(
         val leadingByte = packet[0].toInt() and 0xFF
 
         if ((leadingByte and MLR_FLAG_MASK) != 0) {
-            // Reliable-mode traffic. We never registered for it, and the
-            // leading byte of a non-MLR handle can legitimately have the high
-            // bit set, so fall through rather than dropping — matching
-            // Gadgetbridge (see its #5476).
+            // Reliable-mode traffic we never registered for. Fall through rather
+            // than drop, as Gadgetbridge does (#5476).
             onLog?.invoke(
                 "[GARMIN-ML] MLR-flagged packet, handle byte 0x${leadingByte.toString(16)}",
             )
@@ -244,8 +180,7 @@ class GarminMlTransport(
             try {
                 onFrame(GarminGfdiFrame.parse(raw))
             } catch (error: GarminGfdiFrameException) {
-                // A corrupt frame is survivable: drop it and keep the stream
-                // running, rather than tearing down a sync over one bad packet.
+                // A corrupt frame is survivable: drop it, keep the stream.
                 onLog?.invoke("[GARMIN-ML] dropped bad frame: ${error.message}")
             }
             raw = decoder.pull()
@@ -299,9 +234,8 @@ class GarminMlTransport(
     }
 
     /**
-     * A close-handle response — which the watch also sends UNREQUESTED when it
-     * decides to shut a service down. Field order differs from registration:
-     * `[u16 serviceCode][handle][status]`.
+     * A close-handle response, also sent unrequested when the watch shuts a
+     * service. Field order: `[u16 serviceCode][handle][status]`.
      */
     private fun handleCloseResponse(reader: GarminByteReader) {
         if (reader.remaining < 4) return
@@ -313,8 +247,7 @@ class GarminMlTransport(
             serviceByHandle.remove(handle)
             return
         }
-        // Not the open channel: a stale handle from a previous session being
-        // torn down (our own CLOSE_ALL on open provokes exactly these).
+        // A stale handle from a previous session; our own CLOSE_ALL provokes these.
         if (handle != gfdiHandle) return
 
         onLog?.invoke("[GARMIN-ML] watch closed GFDI handle $handle (status=$status)")
@@ -322,11 +255,7 @@ class GarminMlTransport(
         onGfdiClosed?.invoke()
     }
 
-    /**
-     * Requests a fresh GFDI handle after the watch closed ours. Registration
-     * only — no CLOSE_ALL first, which would tear down whatever else the
-     * watch is running and is only right on a cold open.
-     */
+    /** Requests a fresh GFDI handle after the watch closed ours. No CLOSE_ALL first. */
     suspend fun reopenGfdi() {
         write(
             controlPacket(
@@ -337,10 +266,7 @@ class GarminMlTransport(
         )
     }
 
-    /**
-     * Drops the channel. The watch releases the handle itself when the link
-     * goes, so this only clears local state.
-     */
+    /** Clears local state. The watch releases the handle when the link goes. */
     fun close() {
         gfdiHandle = null
         handleByService.clear()

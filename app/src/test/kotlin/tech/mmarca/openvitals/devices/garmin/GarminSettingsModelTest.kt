@@ -8,11 +8,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Port of the Flutter build's `garmin_settings_model_test.dart` — fixtures
- * identical: every reply is rebuilt in the wire shape the watch sends, so the
- * parser is exercised against real bytes rather than a convenient shape.
- */
+/** Every reply is rebuilt in the wire shape the watch sends, so the parser sees real bytes. */
 class GarminSettingsModelTest {
 
     private fun definitionReply(
@@ -73,30 +69,18 @@ class GarminSettingsModelTest {
         .nested(3, ProtobufWriter().varint(1, if (on) 1 else 0).toBytes())
         .toBytes()
 
-    /**
-     * A row the watch marked as removable: field 9, present and EMPTY. That
-     * mark is the only thing separating an alarm's "Delete" from the
-     * untargeted rows at the root of the tree.
-     */
+    /** A removable row: field 9 present and empty. That mark separates an alarm's "Delete" from untargeted root rows. */
     private fun removableState(id: Int): ByteArray = ProtobufWriter()
         .varint(1, id)
         .nested(9, ByteArray(0))
         .toBytes()
 
-    /**
-     * A row the watch mentioned and said nothing about — how the root's own
-     * rows arrive.
-     */
+    /** A row the watch mentioned and said nothing about, as the root's rows arrive. */
     private fun bareState(id: Int): ByteArray = ProtobufWriter().varint(1, id).toBytes()
 
-    // ------------------------------------------------------------------
     // An alarm's own screen, as a vívoactive 5 sends it.
-    // ------------------------------------------------------------------
 
-    /**
-     * Screen 64, titled "Customize", captured from a real watch: a switch
-     * with no target, a time, and two option lists the WATCH supplied.
-     */
+    /** Screen 64, "Customize", from a real watch: an untargeted switch, a time, and two option lists. */
     private fun alarmScreen(): ByteArray = definitionReply(
         screenId = 64,
         title = "Customize",
@@ -143,9 +127,7 @@ class GarminSettingsModelTest {
 
     @Test
     fun `the options come from the WATCH never from this app`() {
-        // Repeat is Once/Daily/Weekday/Weekend on this firmware. Hard-coding
-        // that list would be wrong on the next model, and wrong in every
-        // language.
+        // Repeat is Once/Daily/Weekday/Weekend on this firmware. A hard-coded list would be wrong elsewhere.
         val repeat = parseGarminSettingsScreen(alarmScreen())!!.entries[2]
         assertEquals(
             listOf("Once", "Daily", "Weekday", "Weekend"),
@@ -172,11 +154,8 @@ class GarminSettingsModelTest {
 
     @Test
     fun `without a state a switch is neither a toggle NOR a button`() {
-        // Its value lives only in the state, so a toggle drawn without one
-        // would show every alarm as OFF. And a target-less row cannot be told
-        // apart from an action button without the state either — treating it
-        // as one would offer "Status" the action reserved for "Delete", which
-        // is how a dropped reply becomes a deleted alarm.
+        // Its value lives only in the state. Without it every alarm would show OFF,
+        // and "Status" would be offered the action reserved for "Delete".
         val screen = parseGarminSettingsScreen(alarmScreen())!!
         assertEquals(GarminEntryKind.INERT, screen.entries.first().kind)
         assertNull(screen.entries.first().switchedOn)
@@ -184,8 +163,7 @@ class GarminSettingsModelTest {
 
     @Test
     fun `a button is the row the WATCH marked not one we inferred`() {
-        // "Delete" on a real alarm screen carries field 9 in its state.
-        // Nothing else on the screen does.
+        // "Delete" on a real alarm screen carries field 9 in its state. Nothing else does.
         val screen = parseGarminSettingsScreen(
             definitionReply(
                 screenId = 65600,
@@ -208,11 +186,8 @@ class GarminSettingsModelTest {
 
     @Test
     fun `an untargeted row the watch did NOT mark is never a button`() {
-        // The root of the tree, as a vívoactive 5 sends it: Finish Setup,
-        // Help & Info, Software Update and Find My Device all arrive with no
-        // target and a bare state. Read as buttons, they offered a DELETE —
-        // and tapping Find My Device sent the watch one. It refused, by its
-        // own choice.
+        // The root of the tree: Finish Setup, Help & Info, Software Update and Find My Device
+        // arrive with no target and a bare state. Read as buttons, they offered a DELETE.
         val screen = parseGarminSettingsScreen(
             definitionReply(
                 screenId = 36352,
@@ -230,14 +205,11 @@ class GarminSettingsModelTest {
         assertTrue(screen.entries.all { it.kind == GarminEntryKind.INERT })
     }
 
-    // ------------------------------------------------------------------
     // Rows a phone cannot act on.
-    // ------------------------------------------------------------------
 
     @Test
     fun `an unused slot is blank and blank rows are droppable`() {
-        // A real alarm list came back as twenty rows with no title at all
-        // plus one "Add Alarm" — drawn literally, that is twenty empty cards.
+        // A real alarm list came back as twenty untitled rows plus "Add Alarm".
         val screen = parseGarminSettingsScreen(
             definitionReply(
                 screenId = 68,
@@ -253,9 +225,7 @@ class GarminSettingsModelTest {
 
     @Test
     fun `an unhandled target keeps the type it declared`() {
-        // "Delete" on an alarm's screen came out inert, which is
-        // indistinguishable from a hidden row without the number that says
-        // what control it really is.
+        // "Delete" came out inert, which looks like a hidden row without the control number.
         val screen = parseGarminSettingsScreen(
             definitionReply(
                 screenId = 65600,
@@ -269,8 +239,7 @@ class GarminSettingsModelTest {
 
     @Test
     fun `an empty alarm slot leads nowhere`() {
-        // The Alarms list reserves a row per slot and points unused ones at
-        // screen zero.
+        // The Alarms list points unused slots at screen zero.
         val screen = parseGarminSettingsScreen(
             definitionReply(
                 screenId = 68,
@@ -300,9 +269,7 @@ class GarminSettingsModelTest {
 
     @Test
     fun `an unknown target type is inert rather than a guessed widget`() {
-        // Garmin's schema is older than the firmware. Rendering an
-        // unrecognised control as the nearest familiar one would put the
-        // wrong widget in front of a real setting.
+        // Garmin's schema is older than the firmware. An unrecognised control must not be rendered as a familiar one.
         val screen = parseGarminSettingsScreen(
             definitionReply(
                 screenId = 1,
@@ -313,14 +280,11 @@ class GarminSettingsModelTest {
         assertEquals("Something new", screen.entries.single().title)
     }
 
-    // ------------------------------------------------------------------
     // The Clocks screen.
-    // ------------------------------------------------------------------
 
     @Test
     fun `a populated alarm is a subscreen whichever target type it uses`() {
-        // Type 9 is "subscreen with options" and is what a real alarm uses;
-        // type 0 is the plain form. Both walk into another screen.
+        // Type 9 is "subscreen with options"; type 0 is the plain form. Both walk into another screen.
         val screen = parseGarminSettingsScreen(
             definitionReply(
                 screenId = 204,
@@ -339,9 +303,7 @@ class GarminSettingsModelTest {
         assertEquals(listOf(64, 738), screen.entries.map { it.subscreenId })
     }
 
-    // ------------------------------------------------------------------
     // Telling one screen's reply from another.
-    // ------------------------------------------------------------------
 
     @Test
     fun `a definition names the screen it describes`() {
@@ -367,9 +329,7 @@ class GarminSettingsModelTest {
 
     @Test
     fun `a change response names it from a field of its own`() {
-        // Captured from a vívoactive 5 answering a delete: the change
-        // response nests its screen at field 3, not field 2 like the other
-        // two.
+        // A delete response nests its screen at field 3, not field 2.
         val reply = byteArrayOf(
             0xd2.toByte(), 0x02, 0x19, 0x32, 0x17, 0x08, 0x00, 0x1a, 0x11,
             0x08, 0xc0.toByte(), 0x80.toByte(), 0x8c.toByte(), 0x08, 0x10, 0x00,
@@ -387,10 +347,8 @@ class GarminSettingsModelTest {
 
     @Test
     fun `a reply about another screen is not this screen's answer`() {
-        // The watch retransmits anything it thinks went unacknowledged, so
-        // the alarm LIST's definition arrived while one alarm's screen was
-        // pending and was taken as the answer — pairing one screen's rows
-        // with another's values.
+        // The watch retransmits, so the alarm list's definition arrived while one alarm's screen
+        // was pending and was taken as the answer.
         val list = GarminSettingsService.screenIdOf(
             definitionReply(screenId = 68),
             GarminSettingsService.DEFINITION_RESPONSE_FIELD,
@@ -398,15 +356,9 @@ class GarminSettingsModelTest {
         assertTrue(list != 65600)
     }
 
-    // ------------------------------------------------------------------
     // The value behind a row, as the watch reports it.
-    // ------------------------------------------------------------------
 
-    /**
-     * The state a vívoactive 5 sent for an alarm's Repeat and Time rows,
-     * rebuilt field for field: a chosen option is a POSITION, and a time is
-     * seconds since midnight.
-     */
+    /** The state for an alarm's Repeat and Time rows: a chosen option is a position, a time is seconds since midnight. */
     private fun valueState(): ByteArray = stateReply(
         screenId = 65600,
         states = listOf(
@@ -448,9 +400,7 @@ class GarminSettingsModelTest {
 
     @Test
     fun `a chosen option is a position not the summary text`() {
-        // Matching the summary against the option titles held up until a
-        // screen arrived whose summary was EMPTY — and then nothing looked
-        // selected.
+        // Matching the summary against option titles failed once a summary came back empty.
         val repeat = parseGarminSettingsScreen(valueDefinition(), stateReply = valueState())!!
             .entries
             .first { it.id == 2 }
@@ -460,24 +410,18 @@ class GarminSettingsModelTest {
 
     @Test
     fun `a time comes back as the time not just its rendering`() {
-        // 40200 seconds is 11:10 — the same instant the watch spelled out
-        // beside it. The picker opens here; starting from "now" reset any
-        // alarm it was used on.
+        // 40200 seconds is 11:10. Starting the picker from "now" reset the alarm.
         val time = parseGarminSettingsScreen(valueDefinition(), stateReply = valueState())!!
             .entries
             .first { it.id == 1 }
         assertEquals(11.hours + 10.minutes, time.time)
     }
 
-    // ------------------------------------------------------------------
     // Degenerate replies.
-    // ------------------------------------------------------------------
 
     @Test
     fun `a nameless row is hidden even when it carries a value`() {
-        // After a delete the freed slots came back with a leftover summary
-        // and no title at all, which drew two empty grey cards under the real
-        // alarms.
+        // After a delete the freed slots came back with a leftover summary and no title.
         val screen = parseGarminSettingsScreen(
             definitionReply(screenId = 68, entries = listOf(entry(id = 2))),
         )!!

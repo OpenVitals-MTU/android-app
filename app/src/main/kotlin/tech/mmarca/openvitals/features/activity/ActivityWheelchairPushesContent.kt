@@ -127,8 +127,7 @@ internal fun LazyListScope.wheelchairPushesContent(
             WheelchairPushesColor,
         )
     } else {
-        // Nothing to show yet and still loading: the shape of the chart that is
-        // coming, so the page does not jump when the data lands.
+        // Still loading: the shape of the coming chart.
         metricChartSkeleton()
     }
 }

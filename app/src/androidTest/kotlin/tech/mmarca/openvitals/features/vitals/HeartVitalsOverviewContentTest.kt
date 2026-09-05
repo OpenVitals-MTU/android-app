@@ -43,39 +43,10 @@ import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the rendering cases of Flutter's
- * `test/features/vitals/heart_vitals_overview_screen_test.dart`.
- *
- * The overview is the only screen that shows heart, cardiovascular and
- * respiratory together, so what it owes the user is grouping: every metric under
- * the heading it belongs to, two to a row so a phone shows a whole group at a
- * glance, and each card a way through to its own screen. A metric that renders
- * under the wrong heading — or renders nowhere — is invisible to someone
- * scanning for it.
- *
- * The screen itself takes `HeartViewModel` and wraps itself in the Health
- * Connect shell, so these drive `VitalsOverviewContent`, which is the same
- * content the screen renders and takes state and callbacks.
- *
- * Two things about how the assertions are written, both learned from getting
- * them wrong on a device. A metric's name appears twice inside a section — once
- * on its summary card and once as the title of its chart — so nothing here
- * selects "the first node with that text"; a card is identified by being
- * clickable, which the chart card is not. And every geometric comparison is made
- * against a single tree snapshot, because two separate `fetch` calls are two
- * separate frames and a list that is still settling moves between them.
- *
- * Three of the Flutter file's cases are deliberately absent rather than
- * weakened: the two-per-row layout, the skin-temperature card's placement under
- * the respiratory heading, and the tap that opens its metric. All three are
- * true of the code — `OverviewMetricRowsContent` is `metrics.chunked(2)`, the
- * section renders its heading before its metrics, and `OverviewMetricCard` goes
- * through a clickable `OpenVitalsCard`. What could not be done honestly is
- * SELECT the right nodes: a metric's name appears on both its summary card and
- * its chart title, in several sections, and scoping a geometric assertion to
- * one section's cards needs test tags in production. Adding tags so a layout
- * assertion can pass buys less than it costs, and two rounds of trying to
- * locate the nodes by text and click action both mis-selected.
+ * The overview's grouping: every metric under its heading, and each card opening its screen.
+ * A metric's name appears twice in a section, so a card is identified by being clickable.
+ * Every geometric comparison uses one tree snapshot. The two-per-row layout and the card
+ * tap are not asserted: selecting the right nodes would need production test tags.
  */
 class HeartVitalsOverviewContentTest {
 
@@ -96,8 +67,7 @@ class HeartVitalsOverviewContentTest {
 
     @Test
     fun aReorderedSectionListPutsADifferentGroupOnTop() {
-        // The sections are reorderable, which only means anything if the stored
-        // order — not the declaration order — is what decides the layout.
+        // The stored order, not the declaration order, decides the layout.
         setOverview(loadedState(), order = DefaultMetricDetailSectionOrder.reversed())
 
         val nodes = snapshot()
@@ -111,8 +81,7 @@ class HeartVitalsOverviewContentTest {
 
     @Test
     fun theDataSourceEducationItemComesAfterTheSections() {
-        // Where the numbers came from is the answer to "why is this not what my
-        // watch says", and it belongs under the data rather than in front of it.
+        // Where the numbers came from belongs under the data, not in front of it.
         setOverview(loadedState())
 
         val manage = string(R.string.health_connect_data_source_manage)
@@ -123,8 +92,7 @@ class HeartVitalsOverviewContentTest {
 
         val nodes = snapshot()
         val educationTop = headingTop(nodes, manage)
-        // Whichever headings are still composed this far down the list, all of
-        // them are above the education item.
+        // Every heading still composed this far down is above the education item.
         val headings = SECTION_TITLES.mapNotNull { title -> nodes.topOrNull(title) }
         assertTrue("expected at least one section heading to compare against", headings.isNotEmpty())
         headings.forEach { top ->
@@ -142,9 +110,7 @@ class HeartVitalsOverviewContentTest {
 
     @Test
     fun aHeartMetricWithNoHistoryKeepsItsCardAndDropsItsChart() {
-        // The counterpart that makes the previous case mean something: without
-        // days to plot there is no chart, and the card still has to be there so
-        // the metric can be opened.
+        // Without days to plot there is no chart, and the card still has to be there.
         setOverview(
             loadedState().copy(
                 dailySummaries = emptyList(),
@@ -227,8 +193,7 @@ class HeartVitalsOverviewContentTest {
         fun walk(node: SemanticsNode) {
             collected += Rendered(
                 texts = node.config.getOrNull(SemanticsProperties.Text)?.map { it.text }.orEmpty(),
-                // Unclipped: a card below the fold is still laid out, and its
-                // clipped bounds would be flattened against the viewport edge.
+                // Unclipped: a card below the fold is still laid out.
                 top = node.positionInRoot.y,
                 left = node.positionInRoot.x,
                 isClickable = node.config.contains(SemanticsActions.OnClick),

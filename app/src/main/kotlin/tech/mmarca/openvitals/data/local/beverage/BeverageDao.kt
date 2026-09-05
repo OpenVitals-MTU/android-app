@@ -46,10 +46,7 @@ interface BeverageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(beverages: List<BeverageEntity>)
 
-    /**
-     * Wholesale catalog replacement, used only by the one-time Flutter data
-     * migration (the imported drift catalog is strictly newer).
-     */
+    /** Wholesale catalog replacement, for the one-time Flutter migration only. */
     @Transaction
     suspend fun replaceAll(beverages: List<BeverageEntity>) {
         deleteAll()

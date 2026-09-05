@@ -36,17 +36,9 @@ import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.theme.Spacing
 
-/**
- * The pieces the device view and the watch-data screen both use, so the two
- * cannot drift into looking like different features. Port of the Flutter
- * build's `watch_common.dart`.
- */
+/** Pieces the device view and the watch-data screen share. */
 
-/**
- * The round glyph used wherever a watch is identified. [icon] overrides the
- * watch face for a non-watch GFDI device — a cycling glyph for an Edge bike
- * computer.
- */
+/** The round glyph for a watch. [icon] overrides the face for a bike computer. */
 @Composable
 internal fun WatchAvatar(
     size: Int = 40,
@@ -70,12 +62,7 @@ internal fun WatchAvatar(
     }
 }
 
-/**
- * One icon action in the device view's action band.
- *
- * Actions are icons because they are verbs — things asked of the watch now.
- * Anything that changes what happens NEXT time is a row further down instead.
- */
+/** One icon action in the action band. Actions are verbs; settings are rows further down. */
 @Composable
 internal fun WatchAction(
     icon: ImageVector,
@@ -93,9 +80,7 @@ internal fun WatchAction(
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             } else {
-                // Named, not decorative: the label below is a sibling text node,
-                // so without this the button carries no accessible name and a
-                // screen reader announces four identical unlabelled buttons.
+                // Named, or a screen reader announces four identical buttons.
                 Icon(imageVector = icon, contentDescription = label)
             }
         }
@@ -147,13 +132,7 @@ internal fun WatchValueRow(
     }
 }
 
-/**
- * `7h 50m`, `17 min`, `45s` — the coarsest unit that still says something.
- *
- * Durations here span three orders of magnitude (time awake in minutes, sleep
- * need in hours), so a single format would either bury the hours or pad the
- * minutes with a pointless `0h`.
- */
+/** `7h 50m`, `17 min`, `45s`: the coarsest unit that still says something. */
 internal fun formatWatchDuration(duration: Duration): String {
     val minutes = duration.toMinutes()
     if (minutes >= 60) {
@@ -165,10 +144,7 @@ internal fun formatWatchDuration(duration: Duration): String {
     return "${duration.seconds}s"
 }
 
-/**
- * A sync timestamp as the device view shows it: the time for today, the date
- * once it is older, because "11:35" on its own is a lie after midnight.
- */
+/** A sync timestamp: the time for today, the date once older. */
 internal fun formatWatchSyncTime(
     at: Instant,
     zone: ZoneId = ZoneId.systemDefault(),
@@ -203,13 +179,7 @@ internal fun capabilityLabel(
         stringResource(R.string.settings_sensors_capability_running_speed_cadence)
 }
 
-/**
- * Confirms removing a paired watch.
- *
- * It asks because removal loses what re-pairing cannot restore: the Bluetooth
- * bond, the companion association and the record of which files were already
- * copied.
- */
+/** Confirms removing a watch: the bond, the association and the synced-file record are lost. */
 @Composable
 internal fun ConfirmRemoveWatchDialog(
     deviceName: String,

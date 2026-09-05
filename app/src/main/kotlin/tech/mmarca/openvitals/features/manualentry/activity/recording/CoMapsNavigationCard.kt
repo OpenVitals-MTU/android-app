@@ -42,24 +42,13 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.theme.Emphasis
 
-/**
- * CoMaps plans and navigates; OpenVitals records. Everything here READS what
- * CoMaps is already doing — and every state it can be in, including the four
- * that say "no guidance", is an ordinary one: the recording never depends on
- * any of them, so none of them shouts.
- */
+/** CoMaps navigates; OpenVitals records. Every state here is ordinary; none shouts. */
 
-/**
- * CoMaps' own guidance green, which the overlay borrows so a turn instruction
- * reads as CoMaps' voice rather than as one of the app's own metrics.
- */
+/** CoMaps' own guidance green, so a turn reads as CoMaps' voice. */
 private val CoMapsGuidanceGreen = Color(0xFF4F7F50)
 private val CoMapsGuidanceGreenDark = Color(0xFF3E6A43)
 
-/**
- * How far to rotate the forward arrow for each turn. The icon points right at
- * 0 degrees, so straight ahead is a quarter turn back.
- */
+/** Rotation of the forward arrow per turn. The icon points right at 0 degrees. */
 internal fun coMapsTurnRotationDegrees(kind: CoMapsTurnKind): Float = when (kind) {
     CoMapsTurnKind.STRAIGHT -> -90f
     CoMapsTurnKind.RIGHT -> 0f
@@ -75,12 +64,8 @@ internal fun coMapsTurnRotationDegrees(kind: CoMapsTurnKind): Float = when (kind
 }
 
 /**
- * One live reading turned into the strings the overlay prints — every
- * fallback chosen, every list joined, here rather than in a layout.
- *
- * A snapshot is mostly holes: CoMaps sends what it has, and what it has
- * depends on the route, the mode and the moment. Deciding *which* hole a
- * field falls back into is the whole job.
+ * One reading turned into the strings the overlay prints. A snapshot is
+ * mostly holes; deciding which fallback each field takes is the whole job.
  */
 internal data class CoMapsGuidanceDisplay(
     val turnKind: CoMapsTurnKind,
@@ -95,9 +80,7 @@ internal fun buildCoMapsGuidanceDisplay(snapshot: CoMapsNavigationSnapshot): CoM
     val direction = coMapsNavigationDirection(snapshot)
     val readableDirection = coMapsReadableDirection(direction)
 
-    // The one distance the overlay shows, in the order the runner cares
-    // about it: the turn ahead first, then the destination, then whatever
-    // stop is next.
+    // The one distance shown: the turn ahead, then the destination, then the next stop.
     val overlayDistance = firstNonEmpty(
         snapshot.distanceToTurn,
         snapshot.distanceToTarget,
@@ -109,8 +92,7 @@ internal fun buildCoMapsGuidanceDisplay(snapshot: CoMapsNavigationSnapshot): CoM
         snapshot.sessionState,
     )
 
-    // The percentage is CoMaps' own progress along its own route, and it
-    // arrives as a fraction of a percent. Nobody reads decimals mid-run.
+    // Nobody reads decimals mid-run.
     val completion = snapshot.completionPercent?.let { percent ->
         stringResource(R.string.recording_comaps_completion, percent.toInt())
     }.orEmpty()
@@ -127,8 +109,7 @@ internal fun buildCoMapsGuidanceDisplay(snapshot: CoMapsNavigationSnapshot): CoM
         primaryStreet = primaryStreet,
         overlaySecondary = joinPresent(
             readableDirection,
-            // The current street is only worth a second line when it is not
-            // already the headline.
+            // The current street only earns a second line when it is not the headline.
             snapshot.currentStreet.takeIf { it != primaryStreet }.orEmpty(),
             snapshot.distanceToTarget
                 .takeIf { it.isNotEmpty() && it != overlayDistance }
@@ -156,12 +137,8 @@ private fun joinPresent(vararg parts: String): String =
     parts.filter { it.isNotEmpty() }.joinToString(" - ")
 
 /**
- * The whole live-guidance surface of the recording screen, dispatching on
- * what CoMaps can currently tell us.
- *
- * [CoMapsNavigationState.Disabled] renders NOTHING — the user never asked for
- * this, and a panel explaining that a feature they did not switch on is off
- * would be the loudest thing on the screen.
+ * The live-guidance surface of the recording screen. Disabled renders
+ * nothing: the user never asked for this.
  */
 @Composable
 internal fun CoMapsGuidancePanel(
@@ -175,9 +152,7 @@ internal fun CoMapsGuidancePanel(
     when (state) {
         CoMapsNavigationState.Disabled -> Unit
         is CoMapsNavigationState.Active ->
-            // The compact turn strip, not a full breakdown: mid-run the only
-            // question is "which way do I turn?". The rest is kept with the
-            // activity and read afterwards.
+            // The compact strip: mid-run the only question is which way to turn.
             CoMapsMapGuidanceOverlay(
                 snapshot = state.snapshot,
                 onDismiss = onDismiss,
@@ -194,10 +169,7 @@ internal fun CoMapsGuidancePanel(
     }
 }
 
-/**
- * The titled card that carries the "no guidance right now" answers. Each one
- * says, in its own words, that the recording carries on — because it does.
- */
+/** The card for the "no guidance right now" answers. Each says the recording carries on. */
 @Composable
 private fun CoMapsNavigationContextCard(
     state: CoMapsNavigationState,
@@ -207,11 +179,8 @@ private fun CoMapsNavigationContextCard(
     startGateHint: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    // Two of these the user can act on, and each gets its own button: the
-    // permission, and "CoMaps is here but guiding nobody" — which is not a
-    // fact about their phone, it is an invitation to go set a route. The
-    // remaining states (no app, no provider, a failed query) are facts, and
-    // get none.
+    // Two states get a button: the permission, and "guiding nobody", which
+    // is an invitation to set a route. The rest are facts.
     val message = when (state) {
         CoMapsNavigationState.PermissionMissing ->
             stringResource(R.string.recording_comaps_permission_missing)
@@ -225,8 +194,7 @@ private fun CoMapsNavigationContextCard(
             stringResource(R.string.recording_comaps_error)
         else -> ""
     }
-    // Offered only for "here but guiding nobody" — the state the button
-    // answers. There is nothing to plan in an app that is not installed.
+    // Only for "guiding nobody".
     val planAction = onPlanInCoMaps.takeIf { state == CoMapsNavigationState.NotNavigating }
 
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
@@ -268,9 +236,7 @@ private fun CoMapsNavigationContextCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            // Start is gated on this card being answered: the hint says what
-            // Start is waiting for, where the user would otherwise wonder why
-            // nothing happened.
+            // Start is gated on this card; the hint says what it waits for.
             if (startGateHint) {
                 Text(
                     text = stringResource(R.string.recording_comaps_start_gate_hint),
@@ -286,8 +252,7 @@ private fun CoMapsNavigationContextCard(
                     Text(stringResource(R.string.recording_comaps_permission_action))
                 }
             }
-            // Reachable mid-recording on purpose. Deciding to follow a route
-            // is not something a user only does before pressing Start.
+            // Reachable mid-recording on purpose.
             if (planAction != null) {
                 OpenVitalsOutlinedButton(
                     onClick = planAction,
@@ -397,10 +362,7 @@ internal fun CoMapsMapGuidanceOverlay(
     }
 }
 
-/**
- * One arrow, rotated to the turn it stands for — except the last "turn" of a
- * route, which is not a turn at all but an arrival, and gets a flag.
- */
+/** One arrow rotated to its turn. The last "turn" is an arrival and gets a flag. */
 @Composable
 private fun CoMapsTurnArrow(kind: CoMapsTurnKind) {
     if (kind == CoMapsTurnKind.FINISH) {

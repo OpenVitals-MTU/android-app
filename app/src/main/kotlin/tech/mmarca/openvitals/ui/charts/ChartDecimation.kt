@@ -5,22 +5,10 @@ import kotlin.math.abs
 import kotlin.math.floor
 
 /**
- * Shape-preserving downsampling for dense chart polylines.
- *
- * This reduces the number of *vertices* used to draw an already-known curve while
- * keeping its visual shape — including peaks — intact. It is a rendering optimisation,
- * not a claim about the data: nothing is hidden, because the chart culls to the visible
- * window first and zooming in shrinks that window until every raw point is on screen and
- * this becomes a no-op.
- *
- * The algorithm is Largest-Triangle-Three-Buckets (LTTB), the standard for time-series
- * line downsampling: it keeps the first and last point and, per bucket, the point
- * forming the largest triangle with the previous kept point and the next bucket's
- * average — which is what preserves the extremes a plain stride or bucket-mean would
- * flatten.
- *
- * [offsets] must be sorted ascending by x. Returns [offsets] unchanged when it already
- * has at most [target] points (no allocation for the sparse case).
+ * Shape-preserving downsampling for dense polylines: Largest-Triangle-
+ * Three-Buckets, which keeps the extremes a stride would flatten. A
+ * rendering optimisation only; zooming in makes it a no-op. [offsets] must
+ * be sorted by x; returned unchanged when already at most [target] points.
  */
 fun decimateOffsets(offsets: List<Offset>, target: Int): List<Offset> {
     val n = offsets.size
@@ -49,8 +37,7 @@ fun decimateOffsets(offsets: List<Offset>, target: Int): List<Offset> {
         avgX /= avgCount
         avgY /= avgCount
 
-        // Point of the current bucket that forms the largest triangle with `a` and the
-        // next bucket's average.
+        // The point forming the largest triangle with `a` and the next bucket's average.
         val rangeStart = floor(i * every).toInt() + 1
         val rangeEnd = floor((i + 1) * every).toInt() + 1
         val pointA = offsets[a]

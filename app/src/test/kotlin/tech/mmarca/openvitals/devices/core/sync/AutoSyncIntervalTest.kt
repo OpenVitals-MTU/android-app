@@ -24,9 +24,7 @@ class AutoSyncIntervalTest {
 
     @Test
     fun `an interval this build does not offer reads as off`() {
-        // A schedule the app cannot honour must read as off rather than as a
-        // silently different one: 10 minutes is below Android's floor for
-        // periodic work, and 45 was never offered.
+        // A schedule the app cannot honour reads as off: 10 minutes is below Android's floor, and 45 was never offered.
         assertEquals(AutoSyncInterval.OFF, AutoSyncInterval.fromMinutes(10))
         assertEquals(AutoSyncInterval.OFF, AutoSyncInterval.fromMinutes(45))
         assertEquals(AutoSyncInterval.OFF, AutoSyncInterval.fromMinutes(-30))

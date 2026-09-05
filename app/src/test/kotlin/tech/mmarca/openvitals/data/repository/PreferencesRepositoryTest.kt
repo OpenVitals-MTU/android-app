@@ -40,12 +40,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 
-/**
- * Port of the Flutter `preferences_repository_test.dart` suite. The Kotlin
- * repository is SharedPreferences-backed, so the "fresh instance" round-trips
- * construct a second repository over the same [FakeSharedPreferences] — the
- * exact analog of the Dart suite reloading from `SharedPreferences.getInstance()`.
- */
+/** The "fresh instance" round-trips construct a second repository over the same [FakeSharedPreferences]. */
 class PreferencesRepositoryTest {
 
     private fun contextFor(prefs: SharedPreferences): Context = mockk {
@@ -253,8 +248,7 @@ class PreferencesRepositoryTest {
     }
 
     @Test fun `a stored choice wins over the locale`() {
-        // The locale only ever seeds a user who has never picked. Someone in
-        // the US who chose metric must stay metric.
+        // The locale only seeds a user who has never picked.
         withDefaultLocale(Locale("en", "US")) {
             val (repo, _) = newRepo(mapOf("unit_system" to "METRIC"))
             assertEquals(UnitSystem.METRIC, repo.unitSystem)
@@ -342,8 +336,7 @@ class PreferencesRepositoryTest {
 
     @Test fun `unitSystemPreference set and read notifies both flows`() {
         val (repo, _) = newRepo()
-        // Toggle to whichever value differs from the host-derived default so
-        // the emission is guaranteed to be a change.
+        // Toggle to whichever value differs from the default, so the emission is a change.
         val target = if (repo.unitSystem == UnitSystem.METRIC) {
             UnitSystemPreference.IMPERIAL
         } else {

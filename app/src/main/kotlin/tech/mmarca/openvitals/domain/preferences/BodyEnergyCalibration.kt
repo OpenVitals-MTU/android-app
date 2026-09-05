@@ -44,17 +44,12 @@ data class BodyEnergyCalibration(
     val manualZoneThresholdsBpm: HeartZoneThresholds? = null,
     val useManualZones: Boolean = false,
     val setupCompleted: Boolean = false,
-    // Personal gains: each scales one drain/charge component of the objective
-    // model. 1.0 is the neutral default; the watch fit nudges them within
-    // [MinGain, MaxGain] so every adjustment stays one legible number.
+    // Personal gains, one per component. 1.0 is neutral; the watch fit nudges within bounds.
     val sleepChargeGain: Double = 1.0,
     val activityDrainGain: Double = 1.0,
     val basalDrainGain: Double = 1.0,
     val stressDrainGain: Double = 1.0,
-    // How many watch readings (Garmin Body Battery) have informed the gains, for
-    // display ("learned from N watch readings"). The only evidence there is: the
-    // manual "How's your energy" check-in was removed, so nothing else
-    // contributes.
+    // How many watch readings have informed the gains, for display.
     val watchObservationCount: Int = 0,
 ) {
     private val clampedSleepChargeGain: Double get() = sleepChargeGain.coerceIn(MinGain, MaxGain)
@@ -87,14 +82,8 @@ data class BodyEnergyCalibration(
             clampedStressDrainGain != 1.0
 
     /**
-     * The half a user sets: whether zones are manual, and what they are.
-     *
-     * Split from [gainSignature] because the two change on completely different
-     * timescales. This one moves when someone edits a setting; the gains move on
-     * their own every time the watch teaches the model something. A cache keyed
-     * on both together is invalidated by the learner doing its job, so anything
-     * that only needs to know "is this still the same person's configuration"
-     * wants this half alone.
+     * The half a user sets. Split from [gainSignature]: the gains move on
+     * their own every sync, and would invalidate a cache keyed on both.
      */
     fun zoneSignature(): String {
         val normalized = normalized()
@@ -115,10 +104,7 @@ data class BodyEnergyCalibration(
         ).joinToString("|")
     }
 
-    /**
-     * Both halves, unchanged: a timeline really was computed with these gains, so
-     * serving a cached one still requires all of it to match.
-     */
+    /** Both halves: serving a cached timeline requires all of it to match. */
     fun signature(): String = "${zoneSignature()}|${gainSignature()}"
 
     companion object {
@@ -133,15 +119,7 @@ data class BodyEnergyCalibration(
 }
 
 /**
- * The generation of the Body Energy SETUP requirements.
- *
- * Bumped when setup starts demanding something it did not before, so installs
- * that completed setup under the old rules are asked once for the missing piece
- * instead of running on a value the model can no longer derive.
- *
- * 1 — automatic zones need a birth year. The manual maximum heart rate was
- * removed, leaving Tanaka from age as the only estimate; without it the model
- * falls back to resting + 70, which for a resting 60 claims a maximum of 130 and
- * reads ordinary effort as zone 5.
+ * The generation of the setup requirements. Bump when setup demands
+ * something new. 1: automatic zones need a birth year.
  */
 const val BodyEnergySetupEpoch = 1

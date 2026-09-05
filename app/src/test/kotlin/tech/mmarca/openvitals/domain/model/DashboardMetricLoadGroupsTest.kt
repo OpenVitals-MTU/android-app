@@ -28,8 +28,7 @@ class DashboardMetricLoadGroupsTest {
             listOf(DashboardMetric.HYDRATION, DashboardMetric.STEPS),
         )
 
-        // Dispatch order is the dashboard's only priority signal, so it has to
-        // survive grouping: the first tile asked for is the first tile filled.
+        // Dispatch order is the dashboard's only priority signal, so it has to survive grouping.
         assertEquals(setOf(DashboardMetric.HYDRATION), groups.first())
     }
 
@@ -44,8 +43,7 @@ class DashboardMetricLoadGroupsTest {
             ),
         )
 
-        // Split apart, weight and height would be read once per tile and BMI
-        // would have nothing to divide.
+        // Split apart, weight and height would be read once per tile.
         assertEquals(
             listOf(
                 setOf(DashboardMetric.WEIGHT, DashboardMetric.HEIGHT, DashboardMetric.BMI),
@@ -59,8 +57,7 @@ class DashboardMetricLoadGroupsTest {
     fun `a coupled group is narrowed to the metrics actually asked for`() {
         val groups = dashboardMetricLoadGroups(listOf(DashboardMetric.PROTEIN, DashboardMetric.FAT))
 
-        // The loader already reads what a derived tile needs, so pulling in
-        // carbs and caffeine here would only load tiles nobody is showing.
+        // Pulling in carbs and caffeine here would only load tiles nobody is showing.
         assertEquals(listOf(setOf(DashboardMetric.PROTEIN, DashboardMetric.FAT)), groups)
     }
 

@@ -2,13 +2,7 @@ package tech.mmarca.openvitals.devices
 
 import android.content.SharedPreferences
 
-/**
- * An in-memory [SharedPreferences] for JVM unit tests (there is no Android
- * context in the unit suite). Only what the devices stores use is exercised,
- * but the whole interface is implemented so it behaves like the real thing —
- * including a second store over the same instance being the "restart"
- * round-trip the store tests rely on.
- */
+/** An in-memory [SharedPreferences] for JVM tests. A second store over the same instance is the restart round-trip. */
 class FakeSharedPreferences : SharedPreferences {
 
     private val values = mutableMapOf<String, Any?>()

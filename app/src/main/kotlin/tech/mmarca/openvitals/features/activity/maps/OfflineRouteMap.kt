@@ -148,10 +148,7 @@ private fun MapLibreRouteMap(
     plannedRoute: CoMapsRoutePolyline?,
     modifier: Modifier = Modifier,
 ) {
-    // The polyline-to-geojson conversion walks six figures of points for a
-    // cross-country route. Done here, once per route revision on a worker
-    // dispatcher, the style callback only ever hands the map finished
-    // objects — the UI thread never carries the route, however long it is.
+    // The conversion walks six figures of points. Once per revision, off the UI thread.
     val plannedRouteDisplay by produceState(
         initialValue = PlannedRouteDisplay.Empty,
         plannedRoute,
@@ -182,15 +179,12 @@ private fun MapLibreRouteMap(
             disallowAncestorInterceptDuringTouch()
             onCreate(Bundle())
             getMapAsync { map ->
-                // The compass doubles as the rotation reset: it appears once the
-                // map is turned off north and a tap turns it back.
+                // The compass doubles as the rotation reset.
                 map.uiSettings.isCompassEnabled = true
                 map.uiSettings.isRotateGesturesEnabled = true
                 map.uiSettings.isLogoEnabled = false
                 map.uiSettings.isAttributionEnabled = true
-                // A pan is the user taking the wheel: the camera stops chasing
-                // the fix until the recenter button hands it back. Zoom and
-                // rotate gestures are not moves, so they leave following alone.
+                // A pan stops the camera chasing the fix until recenter. Zoom and rotate are not moves.
                 map.addOnMoveListener(object : MapLibreMap.OnMoveListener {
                     override fun onMoveBegin(detector: MoveGestureDetector) = renderState.onUserPan()
                     override fun onMove(detector: MoveGestureDetector) = Unit
@@ -277,8 +271,7 @@ private fun MapLibreRouteMap(
 
 private fun initializeOfflineMapLibre(applicationContext: Context) {
     MapLibre.getInstance(applicationContext)
-    // The app intentionally removes ACCESS_NETWORK_STATE. Pinning MapLibre to
-    // offline mode keeps its connectivity receiver from calling ConnectivityManager.
+    // The app removes ACCESS_NETWORK_STATE, so MapLibre is pinned offline.
     MapLibre.setConnected(false)
 }
 
@@ -309,20 +302,13 @@ private class OfflineRouteMapRenderState {
     private var didFitInitialCamera = false
 
     /**
-     * Whether the camera tracks the live fix. On from the first frame — a map
-     * with a current point is a recording in progress, and a recording map's
-     * job is to keep the user in the middle of it — and off the moment the
-     * user pans away, until the recenter button re-engages it. Maps without a
-     * live fix (a recorded activity's route) never enter the follow path.
+     * Whether the camera tracks the live fix. On from the first frame, off
+     * when the user pans, until the recenter button re-engages it.
      */
     private var followCurrentPoint = true
     private var followedPoint: LatLng? = null
 
-    /**
-     * The planned-route display last written into the style, compared by
-     * identity: the producer emits one new object per route revision, and
-     * updateStyle runs on every recomposition tick.
-     */
+    /** The planned-route display last written into the style, compared by identity. */
     private var writtenPlannedRouteDisplay: PlannedRouteDisplay? = null
 
     fun render(
@@ -403,8 +389,7 @@ private class OfflineRouteMapRenderState {
             ?.setGeoJson(pointFeatureCollection(points.lastOrNull()))
         style.getSourceAs<GeoJsonSource>(CurrentLocationSourceId)
             ?.setGeoJson(pointFeatureCollection(currentPoint))
-        // The dot knows where you are; the arrow also knows which way you
-        // face. Only one speaks at a time.
+        // The dot knows where you are; the arrow also knows which way. Only one speaks.
         val headingVisible = currentPoint != null && headingDegrees != null
         style.getSourceAs<GeoJsonSource>(HeadingSourceId)
             ?.setGeoJson(headingFeatureCollection(currentPoint, headingDegrees))
@@ -429,10 +414,7 @@ private class OfflineRouteMapRenderState {
         }
     }
 
-    /**
-     * Keeps the live fix in the middle of the viewport. Only the target moves:
-     * the zoom and bearing the user chose ride along untouched.
-     */
+    /** Keeps the live fix centred. Zoom and bearing stay as the user chose. */
     private fun followCamera(map: MapLibreMap, livePoint: ExerciseRoutePoint) {
         val target = LatLng(livePoint.latitude, livePoint.longitude)
         if (target == followedPoint) return
@@ -512,9 +494,7 @@ private fun ensureRouteLayers(style: Style) {
             ),
         )
     }
-    // Under the recorded track: the plan is context, what was actually ridden
-    // is the record. Drawn the way CoMaps draws its own route — a wide fill
-    // in a darker casing, with white arrows pointing out of every bend.
+    // Under the recorded track. Drawn CoMaps' way: a wide fill in a casing, arrows at bends.
     if (style.getLayer(PlannedCasingLayerId) == null) {
         style.addLayerBelow(
             LineLayer(PlannedCasingLayerId, PlannedRouteSourceId).withProperties(
@@ -539,9 +519,7 @@ private fun ensureRouteLayers(style: Style) {
             RouteLayerId,
         )
     }
-    // The manoeuvre arrows, CoMaps-style: a white shaft bent along the route
-    // through the bend, ending in a head that points the way on. City zooms
-    // only — below that a bend is a pixel.
+    // The bend arrows, CoMaps-style. City zooms only.
     if (style.getLayer(PlannedArrowShaftsLayerId) == null) {
         style.addLayerBelow(
             LineLayer(PlannedArrowShaftsLayerId, PlannedArrowShaftsSourceId).withProperties(
@@ -767,12 +745,7 @@ private fun Context.offlineMapStyleJson(mapPacks: List<OfflineMapPack>): String 
     ).toString()
 }
 
-/**
- * The bundled single-source style, rebound onto one source per imported pack.
- *
- * Pure so it can be exercised without an asset manager or an Android `Uri`:
- * [packFileUrls] are the `file://` URLs of the packs, in display order.
- */
+/** The bundled single-source style, rebound onto one source per pack. Pure, for tests. */
 internal fun expandPmtilesStyle(root: JsonObject, packFileUrls: List<String>): JsonObject {
     val sourceIds = packFileUrls.mapIndexed { index, _ -> "$PmtilesSourceIdPrefix$index" }
     return buildJsonObject {
@@ -866,9 +839,7 @@ private const val StartLayerId = "openvitals-route-start"
 private const val EndLayerId = "openvitals-route-end"
 private const val CurrentLocationLayerId = "openvitals-current-location"
 private const val RouteLineColor = "#D9462F"
-// Route blue, not guidance green: the green vanished into park and
-// land-use fills. Blue is the one family both base styles reserve for
-// water and little else along a street.
+// Route blue, not guidance green: green vanished into park fills.
 private const val PlannedRouteColor = "#1E88E5"
 private const val PlannedRouteCasingColor = "#1256A0"
 private const val DestinationFlagColor = "#D32F2F"

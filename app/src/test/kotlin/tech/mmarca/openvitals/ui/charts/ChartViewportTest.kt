@@ -14,9 +14,7 @@ class ChartViewportTest {
     }
 
     @Test fun `zooming keeps the point between the fingers under the fingers`() {
-        // Pinch out by 2x around a point a quarter of the way across the plot. Whatever
-        // datum was under that point must still be under it — that is what makes the
-        // chart feel like it is being stretched rather than replaced.
+        // Pinch out 2x around a quarter of the way across: the datum under that point stays under it.
         val before = ChartViewport.Full
         val anchorData = before.dataFraction(0.25f)
 
@@ -29,8 +27,7 @@ class ChartViewportTest {
     @Test fun `a point outside the window is NOT clamped into it`() {
         val view = ChartViewport.Full.zoomed(2f, 0.5f)
 
-        // A line leaving the left edge has to carry on to where it really is. Clamping
-        // it would bend it up into the corner and draw a value nobody recorded.
+        // A line leaving the left edge carries on to where it is; clamping would draw a value nobody recorded.
         assertTrue(view.visibleFraction(0f) < 0f)
         assertTrue(view.visibleFraction(1f) > 1f)
     }
@@ -39,8 +36,7 @@ class ChartViewportTest {
         val view = ChartViewport.Full.zoomed(4f, 0.5f) // span 0.25
         val datum = view.dataFraction(0.5f)
 
-        // Drag a tenth of the plot to the left and the datum comes WITH the finger: it
-        // was halfway across the plot, and it is now a tenth further left.
+        // Drag a tenth of the plot left and the datum comes with the finger.
         val panned = view.panned(-0.1f)
 
         assertEquals(0.4f, panned.visibleFraction(datum), 1e-6f)

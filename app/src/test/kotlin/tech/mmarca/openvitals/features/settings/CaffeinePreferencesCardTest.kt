@@ -5,17 +5,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 
-/**
- * The two model rules the Flutter build's `caffeine_preferences_card_test.dart`
- * asserts through the card: what an out-of-range half-life is normalized to on
- * save, and the bedtime the card seeds itself from.
- */
+/** What an out-of-range half-life is normalized to on save, and the bedtime the card seeds from. */
 class CaffeinePreferencesCardTest {
 
     @Test
     fun `an out-of-range half-life is clamped on save`() {
-        // The card lets a number be typed; the model is what refuses to store
-        // a caffeine half-life of six days.
+        // The model is what refuses to store a half-life of six days.
         val typed = CaffeinePreferences(halfLifeMinutes = 9000)
 
         assertEquals(

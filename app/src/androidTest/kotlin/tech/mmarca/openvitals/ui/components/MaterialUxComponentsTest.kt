@@ -96,8 +96,7 @@ class MaterialUxComponentsTest {
             }
         }
 
-        // Every range is reachable, not only the one that gets tapped: the
-        // selector is the sole way to change range on most screens.
+        // Every range is reachable: the selector is the sole way to change range on most screens.
         listOf(
             R.string.range_day,
             R.string.range_week,

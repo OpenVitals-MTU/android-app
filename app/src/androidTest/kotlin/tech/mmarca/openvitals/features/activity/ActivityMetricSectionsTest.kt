@@ -31,15 +31,7 @@ import tech.mmarca.openvitals.ui.components.ChartDaySelection
 import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Port of the rendering cases of Flutter's
- * `test/features/activity/activity_screens_test.dart`.
- *
- * Seven movement metrics share one ordered-section layout, so a break in it is
- * a break in all seven at once. What a user loses is not a chart but the
- * answers around it: how the week compares to the goal, how confident the app
- * is in the numbers, and which day each number came from.
- */
+/** Seven movement metrics share one ordered-section layout, so a break in it is a break in all seven. */
 class ActivityMetricSectionsTest {
 
     @get:Rule
@@ -65,9 +57,7 @@ class ActivityMetricSectionsTest {
 
     @Test
     fun stepsWithNoDataSaysSoInsteadOfDrawingAnEmptyChart() {
-        // An axis with no bars reads as "zero steps", which is a claim about
-        // the user's week. The placeholder says the app has nothing, which is
-        // the truth when the permission is there but the provider is silent.
+        // An axis with no bars reads as "zero steps". The placeholder says the app has nothing.
         setContent(ActivityMetric.STEPS, rows = emptyList(), nutritionRows = emptyList()) {
                 state, sectionContext ->
             stepsContent(
@@ -194,11 +184,7 @@ class ActivityMetricSectionsTest {
         assertSharedSectionsRender(R.string.metric_wheelchair_pushes)
     }
 
-    /**
-     * The five sections every movement metric owes its period view: the chart
-     * titled with the metric, the goal card, the goal and period statistics,
-     * the confidence note and the per-day entries.
-     */
+    /** The five sections every movement metric owes: chart, goal card, statistics, confidence note, entries. */
     private fun assertSharedSectionsRender(titleRes: Int) {
         scrollTo(titleRes)
         composeRule.onAllNodesWithText(string(titleRes)).onFirst().assertIsDisplayed()

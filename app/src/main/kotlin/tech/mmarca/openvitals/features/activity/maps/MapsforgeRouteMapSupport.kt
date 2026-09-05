@@ -8,29 +8,16 @@ import org.mapsforge.core.util.LatLongUtils
 import org.mapsforge.map.android.graphics.AndroidGraphicFactory
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 
-/**
- * The pure and process-wide parts of the Mapsforge map, kept out of the
- * composable so they can be reasoned about — and in two cases tested — without
- * a `MapView` behind them.
- */
+/** The pure and process-wide parts of the Mapsforge map, testable without a `MapView`. */
 
 @Volatile
 private var graphicsFactoryInstalled = false
 private val graphicsFactoryLock = Any()
 
 /**
- * Installs Mapsforge's graphics factory once per process.
- *
- * `AndroidGraphicFactory.createInstance` writes a public static `INSTANCE`
- * unconditionally: no null check, no synchronization, and the field is not
- * volatile. It is also read from the `MapWorkerPool` render threads. Calling it
- * a second time therefore swaps the factory out from under whatever is drawing.
- *
- * The call used to sit inside the composable's `remember(context, mapPacksKey)`,
- * so importing or deleting a map pack re-ran it — while a live map was using
- * the old instance. Mapsforge's own contract is one call, in
- * `Application.onCreate`; this is that, deferred until the first map is
- * actually built so an install that never opens a map pays nothing.
+ * Installs Mapsforge's graphics factory once per process. A second call
+ * swaps the factory out from under whatever is drawing. Deferred until the
+ * first map is built.
  */
 internal fun ensureMapsforgeGraphicsFactory(application: Application) {
     if (graphicsFactoryInstalled) return
@@ -42,21 +29,9 @@ internal fun ensureMapsforgeGraphicsFactory(application: Application) {
 }
 
 /**
- * The on-disk tile-cache directory name for a set of packs.
- *
- * Two properties matter, and the previous `"openvitals-" + ids.hashCode()` had
- * neither. It keyed on pack **ids** only, while the composable rebuilds the
- * `MapView` on ids **and paths** — so re-importing a pack under the same id at
- * a new path produced a new `MapView` with the same cache name, and
- * `AndroidUtil.createTileCache` is called with `persistent = false`, meaning
- * the outgoing map's `destroyAll()` deletes the directory the incoming one just
- * opened. And `String.hashCode` is 32-bit and trivially collidable, so two
- * genuinely different pack sets could share a cache and serve each other's
- * tiles.
- *
- * A digest of the same string the `MapView` is keyed on fixes both: it varies
- * with anything the map varies with, and collisions are not a practical
- * concern.
+ * The tile-cache directory name for a set of packs: a digest of the same
+ * string the `MapView` is keyed on. Keying on ids alone let a re-imported
+ * pack's new map share, and lose, the outgoing map's cache.
  */
 internal fun mapsforgeTileCacheName(mapPacks: List<OfflineMapPack>): String =
     "openvitals-" + sha256Hex(mapsforgeMapPacksKey(mapPacks)).take(TileCacheNameHexLength)
@@ -80,14 +55,7 @@ internal data class MapsforgeZoomRange(val min: Byte, val max: Byte) {
     }
 }
 
-/**
- * The smallest box containing every finite point.
- *
- * Null when nothing is plottable — an indoor activity, or a route whose
- * coordinates are all NaN. Callers must not fall back to a default box for
- * that: centring the map on 0,0 is worse than leaving it where the pack's own
- * start position put it.
- */
+/** The smallest box containing every finite point, or null. Never fall back to 0,0. */
 internal fun routeBoundingBox(
     points: List<ExerciseRoutePoint>,
     currentPoint: ExerciseRoutePoint?,
@@ -110,28 +78,9 @@ internal fun routeBoundingBox(
 }
 
 /**
- * The zoom that fits [boundingBox] into a [viewport] of [tileSize] tiles.
- *
- * Delegated to `LatLongUtils.zoomForBounds`, which does the Web Mercator maths
- * the hand-rolled ladder this replaces did not. That one took the larger
- * lat/lon span in DEGREES and compared it against fixed thresholds, which is
- * wrong twice over:
- *
- *  - It ignored the viewport. The same route fitted identically on a 540px
- *    preview and a 2160px tablet, when those are three zoom levels apart.
- *  - It ignored latitude. Longitude maps to x independently of latitude, but
- *    Mercator stretches latitude into y by roughly `1 / cos(latitude)` — so the
- *    same 0.2° box is 583px tall at the equator, 1169px at 60°N and 2266px at
- *    75°N. The ladder returned one zoom for all three. At 60°N it picked one
- *    level too close and at 75°N two, and a route zoomed past its own bounds is
- *    a route with its ends off screen.
- *
- * It was also clamped to a fixed 7..16 regardless of what the packs hold, so a
- * city extract could not reach the detail it was imported for.
- *
- * A zero-area box — a single point, or a route that never moved — has no zoom
- * that "fits" it, so it takes the pack's maximum: the closest look the data
- * supports.
+ * The zoom that fits [boundingBox] into [viewport], via
+ * `LatLongUtils.zoomForBounds`, which accounts for the viewport and for
+ * Mercator's latitude stretch. A zero-area box takes the pack's maximum.
  */
 internal fun mapsforgeZoomForBounds(
     boundingBox: BoundingBox,

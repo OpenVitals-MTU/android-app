@@ -14,11 +14,8 @@ import tech.mmarca.openvitals.features.manualentry.activity.routeimport.FitRoute
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.TcxRouteParser
 
 /**
- * The workout export's one promise is the inverse of the route export's:
- * everything about the session, NOTHING about where it happened. The TCX
- * side is verified by round-tripping through the app's own [TcxRouteParser],
- * which reads a positionless TCX as "the indoor case" — so an export the
- * app itself can re-import is one Strava and Garmin accept too.
+ * The workout export carries everything about the session and nothing about where it happened.
+ * The TCX side round-trips through the app's own [TcxRouteParser].
  */
 class ActivityWorkoutExportTest {
 
@@ -199,8 +196,7 @@ class ActivityWorkoutExportTest {
             output = output,
         )
 
-        // The app's own decoder never verifies CRCs, but Garmin-class
-        // importers do — the framing has to hold up outside this codebase.
+        // The app's decoder never verifies CRCs, but Garmin-class importers do.
         val bytes = output.toByteArray()
         assertEquals(14, bytes[0].toInt())
         assertEquals(".FIT", String(bytes, 8, 4, Charsets.US_ASCII))

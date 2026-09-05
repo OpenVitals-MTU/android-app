@@ -725,8 +725,7 @@ class HydrationEntryViewModelTest {
         assertNull(vm.uiState.value.entryError)
         assertNull(vm.uiState.value.writeError)
 
-        // ...and still at rest once the permission probe, today's total and the
-        // drink catalog have all loaded off build().
+        // And still at rest once the probe, today's total and the catalog have loaded.
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.isSavingEntry)
@@ -898,8 +897,7 @@ class HydrationEntryViewModelTest {
         advanceUntilIdle()
 
         coVerify { repo.writeHydrationEntry(any()) }
-        // The save re-anchors and reschedules; with the reminder disabled here
-        // that re-plan clears the batch — an alarm cancel.
+        // The save re-anchors and reschedules; with the reminder disabled that is an alarm cancel.
         verify(exactly = 1) { reminders.alarmManager.cancel() }
     }
 
@@ -963,11 +961,7 @@ class HydrationEntryViewModelTest {
         val notificationService: HydrationReminderNotificationService,
     )
 
-    /**
-     * A real reminder controller over recording collaborators, standing in for
-     * the Flutter suite's `RecordingReminderScheduler`. The reminder is
-     * disabled, so a re-plan resolves to a "clear" — an alarm cancel.
-     */
+    /** A real reminder controller over recording collaborators. The reminder is disabled, so a re-plan is an alarm cancel. */
     private fun reminderHarness(repository: HydrationRepository): ReminderHarness {
         val alarmManager = mockk<HydrationReminderAlarmManager>(relaxed = true)
         val notificationService = mockk<HydrationReminderNotificationService>(relaxed = true)

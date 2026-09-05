@@ -6,12 +6,7 @@ import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
-/**
- * One-tap water logging from the hydration reminder notification's action
- * buttons. Logs the carried volume silently, without opening the app; a failed
- * tap simply logs nothing — the action already dismissed its notification, so
- * there is no UI to report a refusal to.
- */
+/** One-tap water logging from the reminder's actions. A failed tap logs nothing. */
 @AndroidEntryPoint
 class HydrationQuickAddReceiver : BroadcastReceiver() {
 

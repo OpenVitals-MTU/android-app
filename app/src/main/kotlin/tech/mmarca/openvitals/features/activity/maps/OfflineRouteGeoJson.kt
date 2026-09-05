@@ -33,13 +33,7 @@ internal fun pointFeatureCollection(point: ExerciseRoutePoint?): FeatureCollecti
         ),
     )
 
-/**
- * Every point CoMaps served, none invented and none dropped — the drawn line
- * is the same route data CoMaps itself draws. Decimating this once cut a
- * cross-country route to a vertex every few kilometres, which at city zoom
- * was a straight line through buildings. The conversion is paid once per
- * route revision, not per frame; the render states see to that.
- */
+/** Every point CoMaps served: decimating once drew a straight line through buildings. Paid once per revision. */
 internal fun plannedRouteFeatureCollection(polyline: CoMapsRoutePolyline?): FeatureCollection =
     FeatureCollection.fromFeatures(
         listOfNotNull(

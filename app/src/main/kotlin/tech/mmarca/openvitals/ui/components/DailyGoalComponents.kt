@@ -54,11 +54,7 @@ data class DailyGoalBalanceDisplay(
     val remainingDays: Int,
 )
 
-/**
- * Formats a domain balance with the metric's own [formatter] — the same one the
- * goal and the average gap go through, so steps stay steps and distance keeps
- * the unit preference.
- */
+/** Formats a balance with the metric's own [formatter], so units stay consistent. */
 @Composable
 fun dailyGoalBalanceDisplay(
     balance: DailyGoalBalance?,
@@ -195,11 +191,7 @@ fun DailyGoalCard(
     }
 }
 
-/**
- * @param averageGap the mean distance from the goal over the period, or null to leave the stat
- *   out. A period one day long has no mean to take — the gap IS the day — so a day view passes
- *   null rather than labelling one night's shortfall an average.
- */
+/** [averageGap] is null on a day view: one day has no mean to take. */
 @Composable
 fun DailyGoalStatistics(
     progress: DailyGoalProgress,

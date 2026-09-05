@@ -25,8 +25,7 @@ class PeriodMonthHeatmapCellsTest {
 
     @Test
     fun `a rolling window spans the month boundary instead of one calendar month`() {
-        // "Last 30 days" ending 20 Jun starts 22 May. Drawing only May left the
-        // June half of the window invisible and ~20 May days blank.
+        // "Last 30 days" ending 20 Jun starts 22 May. Drawing only May left the June half invisible.
         val period = DatePeriod(LocalDate.of(2026, 5, 22), LocalDate.of(2026, 6, 20))
 
         val dates = cellsFor(period, rolling = true).mapNotNull { it.date }
@@ -39,8 +38,7 @@ class PeriodMonthHeatmapCellsTest {
 
     @Test
     fun `a rolling window keeps the values on both sides of the month boundary`() {
-        // "Last 30 days": 21 Jun – 20 Jul, crossing the month boundary. The July
-        // value used to be dropped when only June was drawn.
+        // 21 Jun to 20 Jul crosses the month boundary; the July value used to be dropped.
         val period = DatePeriod(LocalDate.of(2026, 6, 21), LocalDate.of(2026, 7, 20))
 
         val cells = periodMonthHeatmapCells(

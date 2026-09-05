@@ -18,11 +18,8 @@ import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardTempl
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 
 /**
- * Port of the Flutter `preferences_repository_codec_test.dart` suite:
- * characterization tests for the two hand-rolled string codecs inside
- * [PreferencesRepository]. They are written against the public API
- * (set -> reload from a fresh repository -> get), so the assertion goes
- * through the encoder AND the decoder, not an in-memory cache.
+ * Characterization tests for the two string codecs inside [PreferencesRepository],
+ * written against the public API: set, reload from a fresh repository, get.
  */
 class PreferencesRepositoryCodecTest {
 
@@ -40,10 +37,7 @@ class PreferencesRepositoryCodecTest {
         return PreferencesRepository(contextFor(prefs)) to prefs
     }
 
-    /**
-     * Writes through one repository, then reads through a fresh one — the
-     * analog of the Dart `_roundTrip` helper.
-     */
+    /** Writes through one repository, then reads through a fresh one. */
     private fun <T> roundTrip(
         write: (PreferencesRepository) -> Unit,
         read: (PreferencesRepository) -> T,
@@ -56,11 +50,8 @@ class PreferencesRepositoryCodecTest {
     // region activity recording dashboard layout codec
 
     @Test fun `every template normalizes to LARGE_TOP - the others are storage-only`() {
-        // Pinning what the code ACTUALLY does: `normalized()` resolves the grid
-        // through the hardcoded LARGE_TOP recording template rather than the
-        // instance's own `template` field, so a stored TWO_BY_FOUR comes back
-        // as LARGE_TOP. Written down here so nobody "fixes" the round-trip into
-        // a feature that does not exist.
+        // `normalized()` resolves the grid through the hardcoded LARGE_TOP template, so a stored
+        // TWO_BY_FOUR comes back as LARGE_TOP. Pinned so nobody "fixes" it into a feature.
         ActivityRecordingDashboardTemplate.entries.forEach { template ->
             val result = roundTrip(
                 write = { repo ->
@@ -99,7 +90,7 @@ class PreferencesRepositoryCodecTest {
             read = { repo -> repo.activityRecordingDashboardLayout("running") },
         )
 
-        // Order is the whole point of the layout — it is what the user dragged.
+        // Order is what the user dragged.
         assertEquals(fields, result.fields.take(fields.size))
     }
 
@@ -166,9 +157,7 @@ class PreferencesRepositoryCodecTest {
     }
 
     @Test fun `a corrupt stored string degrades to the default, never throws`() {
-        // The decoder parses a bespoke separator format. Garbage in the store —
-        // a downgrade, a half-written value, a future format — must not take
-        // the recording screen down with it.
+        // Garbage in the store must not take the recording screen down.
         listOf(
             "",
             "NOT_A_TEMPLATE",
@@ -185,8 +174,7 @@ class PreferencesRepositoryCodecTest {
     }
 
     @Test fun `an unknown field in a stored layout is dropped, not fatal`() {
-        // Forward compatibility: a layout written by a NEWER build may name a
-        // field this build has never heard of.
+        // A layout written by a newer build may name a field this build has never heard of.
         val (repo, _) = newRepo(
             mapOf(
                 "activity_recording_dashboard_layout_running" to
@@ -200,11 +188,9 @@ class PreferencesRepositoryCodecTest {
 
     // endregion
 
-    // region activity recording preferences — the null sentinels
+    // region activity recording preferences: the null sentinels
 
-    // These are stored as 0 meaning "off"/"null". Losing the distinction turns
-    // "no route-gap limit" into "a route-gap limit of zero metres", which would
-    // break the drawn line on every single fix.
+    // Stored as 0 meaning "off". Losing the distinction turns "no route-gap limit" into a limit of zero metres.
 
     @Test fun `null route gap survives a round-trip as null, not zero`() {
         val result = roundTrip(

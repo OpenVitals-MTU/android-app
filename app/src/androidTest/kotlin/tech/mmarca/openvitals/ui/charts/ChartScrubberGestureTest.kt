@@ -25,13 +25,8 @@ import org.junit.Test
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of Flutter's `test/ui/charts/chart_scrubber_test.dart`.
- *
- * Which target a fraction lands on is pure and covered on the JVM by
- * `ChartScrubberTest`. What needs a device is the arbitration: a chart sits in
- * a scrolling page and has to tell a read from a scroll using nothing but the
- * first few pixels of a drag, and it has to get out of the way when a second
- * finger turns the gesture into a pinch.
+ * The arbitration: a chart in a scrolling page has to tell a read from a scroll from the
+ * first pixels of a drag, and get out of the way when a second finger makes it a pinch.
  */
 class ChartScrubberGestureTest {
 
@@ -40,8 +35,7 @@ class ChartScrubberGestureTest {
 
     @Test
     fun aVerticalDragStartingOnTheChart_stillScrollsThePage() {
-        // Claiming every drag that begins on a chart would trap the page: a
-        // thumb that happens to land on a chart could not scroll past it.
+        // Claiming every drag that begins on a chart would trap the page.
         val scrollState = ScrollState(0)
         var scrubbed: Int? = null
         setScrubber(scrollState = scrollState) { scrubbed = it }
@@ -90,9 +84,7 @@ class ChartScrubberGestureTest {
 
     @Test
     fun itStandsDownWhileAPinchIsInProgress() {
-        // The pointer that began a one-finger scrub is already routed here and
-        // cannot be taken back, so the scrubber has to withdraw itself once a
-        // second finger makes the gesture a pinch.
+        // The pointer that began a scrub cannot be taken back, so the scrubber withdraws itself on a second finger.
         var scrubbed: Int? = null
         setScrubber(multiTouch = true) { scrubbed = it }
 

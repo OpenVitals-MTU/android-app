@@ -55,11 +55,7 @@ internal object HealthConnectRateLimitBackoff {
                 }
         }
 
-    /**
-     * androidx rewraps the platform quota error as a bare IllegalStateException
-     * whose message is not guaranteed to carry the markers above, so on API 34+
-     * the cause chain is also checked for the typed platform error code.
-     */
+    /** androidx rewraps the quota error as a bare IllegalStateException, so the cause chain is checked too. */
     private fun Throwable.isPlatformRateLimitException(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
         return this is android.health.connect.HealthConnectException &&
@@ -70,13 +66,7 @@ internal object HealthConnectRateLimitBackoff {
         retryAfterEpochMillis = 0L
     }
 
-    /**
-     * How much longer the backoff has to run, or 0 when it is not active.
-     *
-     * Public because the wait is no longer something a read can simply sit out
-     * (see [HealthConnectReaderSupport]): callers decide whether to wait, and
-     * the dashboard tells the user how long is left rather than spinning for it.
-     */
+    /** How much longer the backoff runs, or 0. Callers decide whether to wait. */
     fun remainingMillis(nowMillis: Long = System.currentTimeMillis()): Long =
         (retryAfterEpochMillis - nowMillis).coerceAtLeast(0L)
 }

@@ -11,44 +11,12 @@ import java.io.File
 import tech.mmarca.openvitals.data.local.OpenVitalsDatabase
 
 /**
- * One-time import of the Flutter era's app-local data into the Kotlin stores.
+ * One-time import of the Flutter era's app-local data into the Kotlin stores, on a
+ * guarded first run. Never throws, sets the one-shot flag regardless of per-step
+ * failures, and never deletes a Flutter file.
  *
- * The Kotlin build installs OVER the Flutter build (same `applicationId`,
- * same certificate), so `/data/data/tech.mmarca.openvitals/` survives — but
- * the Kotlin-era files it also still contains are ~1 month stale: the Flutter
- * app's own forward migration (`kotlin_data_migration.dart`) copied them and
- * never deleted them. Unlike that forward migration, this one therefore
- * OVERWRITES the Kotlin files with the Flutter values on its guarded first
- * run; without that, the app would boot on the stale Kotlin-era preferences.
- *
- * ## Guarantees (mirroring the forward migration)
- *
- * * Never throws: every step is guarded on its own, and the one-shot flag
- *   ([FlutterPrefsKeyTable.MIGRATED_FLAG_KEY]) is set at the end REGARDLESS of
- *   per-step failures — a migration that keeps failing must not retry on every
- *   launch.
- * * NEVER deletes a Flutter file. In particular, `app_flutter/openvitals.db`
- *   is the phase-7 (Garmin watches) import source for its
- *   `garmin_wellness_samples` table — see [FlutterDatabaseImporter] — and
- *   `FlutterSharedPreferences.xml` stays as the fallback source of truth for
- *   any copied-for-future key. Deleting the Flutter files is scheduled for a
- *   release after phase 7 ships.
- * * Fresh installs no-op on a single file stat (no Flutter prefs file on disk).
- *
- * ## Why two phases (see `OpenVitalsApp.onCreate`)
- *
- * `@HiltAndroidApp` member-injects the Application during `super.onCreate()`,
- * and `PreferencesRepository` eagerly snapshots its preferences into
- * StateFlows at construction — so all preference writes must land BEFORE
- * `super.onCreate()`. That is [migrateIfNeeded]. The beverage import instead
- * needs the Hilt-provided Room database, which cannot exist before the Hilt
- * component does; Room singletons are created lazily on first request, so
- * resolving [OpenVitalsDatabase] through an [EntryPoint] right AFTER
- * `super.onCreate()` (and before any Activity) is both possible and safe.
- * That is [importDatabaseAndFinish].
- *
- * Writes go through raw [SharedPreferences] + `commit()` — never through the
- * repositories, which may not exist yet and whose StateFlows would go stale.
+ * Two phases: preference writes land before `super.onCreate()` ([migrateIfNeeded]);
+ * the beverage import needs the Hilt Room database ([importDatabaseAndFinish]).
  */
 class FlutterDataMigrator(
     private val context: Context,
@@ -57,10 +25,8 @@ class FlutterDataMigrator(
 ) {
 
     /**
-     * Phase 1 — all preference/file migration. MUST run before
-     * `super.onCreate()`. Returns whether a migration is in progress, in which
-     * case the caller must invoke [importDatabaseAndFinish] after
-     * `super.onCreate()`.
+     * Phase 1: preference and file migration. Must run before
+     * `super.onCreate()`. True means call [importDatabaseAndFinish] after it.
      */
     fun migrateIfNeeded(): Boolean {
         val shouldMigrate = try {
@@ -79,11 +45,7 @@ class FlutterDataMigrator(
         return true
     }
 
-    /**
-     * Phase 2 — beverage catalog import plus the completion flag. Call after
-     * `super.onCreate()` whenever [migrateIfNeeded] returned true. The flag is
-     * written even when the import fails (never-retry).
-     */
+    /** Phase 2: beverage catalog import plus the completion flag, written even on failure. */
     fun importDatabaseAndFinish(database: OpenVitalsDatabase) {
         step("beverage database") { databaseImporter.importBeverages(database.beverageDao()) }
         step("garmin wellness samples") {
@@ -97,11 +59,7 @@ class FlutterDataMigrator(
         Log.i(TAG, "Flutter data migration finished.")
     }
 
-    /**
-     * Both conditions must hold: the one-shot flag is absent, and the Flutter
-     * preferences file exists on disk (a fresh install fails this single stat
-     * and never pays more than it).
-     */
+    /** The flag is absent and the Flutter preferences file exists. A fresh install fails the stat. */
     private fun shouldMigrate(): Boolean {
         val main = targetPrefs(TargetPrefsFile.MAIN)
         if (main.getBoolean(FlutterPrefsKeyTable.MIGRATED_FLAG_KEY, false)) return false
@@ -118,11 +76,7 @@ class FlutterDataMigrator(
 
     // region Preferences
 
-    /**
-     * Maps every decoded Flutter entry through [FlutterPrefsKeyTable] and
-     * commits the writes grouped per target file. Overwrites stale Kotlin-era
-     * values by design (see the class KDoc).
-     */
+    /** Maps every Flutter entry through [FlutterPrefsKeyTable] and commits per target file. */
     @SuppressLint("ApplySharedPref")
     private fun migratePreferences(decodedPrefs: Map<String, Any>) {
         val editors = mutableMapOf<TargetPrefsFile, SharedPreferences.Editor>()
@@ -161,20 +115,9 @@ class FlutterDataMigrator(
 
     /**
      * Re-points the placed home-screen widgets at what they were showing.
-     *
-     * The widget instances survive the reinstall (the Kotlin receivers carry
-     * the same class names, so the launcher keeps the `appWidgetId`s); only
-     * each instance's selection moves. The Flutter `home_widget` plugin kept
-     * every selection in one `HomeWidgetPreferences` file (plain keys, no
-     * `flutter.` prefix) under `metric.<appWidgetId>.selection_id` /
-     * `beverage.<appWidgetId>.selection_id`; Kotlin keeps them in one file per
-     * widget type (`home_metric_widgets` / `home_quick_beverage_widgets`,
-     * matching `HomeMetricWidgetSelection` / `HomeQuickBeverageWidgetSelection`).
-     *
-     * Metric ids are validated against the real [tech.mmarca.openvitals.features.dashboard.DashboardWidgetId]
-     * (with Dart-only INTENSITY_MINUTES mapped back to CARDIO_LOAD); drink ids
-     * are opaque `beverages.id` strings that stay resolvable because the drift
-     * catalog is imported verbatim.
+     * The widget ids survive the reinstall; only each selection moves from
+     * the Flutter `HomeWidgetPreferences` file to the per-type Kotlin files.
+     * Metric ids are validated against [tech.mmarca.openvitals.features.dashboard.DashboardWidgetId].
      */
     @SuppressLint("ApplySharedPref")
     private fun migrateHomeWidgets() {
@@ -215,16 +158,8 @@ class FlutterDataMigrator(
     // region Offline maps
 
     /**
-     * Moves the map packs back (`app_flutter/offline_maps` ->
-     * `files/offline_maps`, a same-filesystem rename — packs run to hundreds
-     * of megabytes) and re-homes their metadata: the Flutter build kept the
-     * library JSON in the `offline_maps_metadata` preference, while Kotlin's
-     * `OfflineMapMetadataStore` reads `offline_maps/metadata.json`. The JSON
-     * shape is identical on both sides (the Dart store was written to
-     * round-trip Kotlin payloads), so the string is written verbatim —
-     * overwriting the stale Kotlin-era `metadata.json` that travelled along
-     * inside the moved directory. Pack paths survive because both sides
-     * reconstruct them as `<mapsDir>/<id><extension>`.
+     * Moves the map packs back by rename and writes their metadata JSON,
+     * which has the same shape on both sides, to `offline_maps/metadata.json`.
      */
     private fun migrateOfflineMaps(metadataJson: String?) {
         val source = File(FlutterDatabaseImporter.flutterDocumentsDir(context), OFFLINE_MAPS_DIR)
@@ -270,11 +205,7 @@ class FlutterDataMigrator(
     }
 }
 
-/**
- * Resolves the Room database for [FlutterDataMigrator.importDatabaseAndFinish]
- * after `super.onCreate()` — the migrator itself cannot be Hilt-injected
- * because it must run before the Hilt component exists.
- */
+/** Resolves the Room database after `super.onCreate()`; the migrator predates the Hilt component. */
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface FlutterMigrationEntryPoint {

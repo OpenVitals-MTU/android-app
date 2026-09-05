@@ -11,14 +11,8 @@ import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
 
 /**
- * What a night's QUALITY does to the Body Energy it charges.
- *
- * Reported from a real pair of nights: one slept well and scored 92, one slept
- * badly and scored 66, and they charged +47 and +44. Three points, for two days
- * that felt nothing alike. The charge counted the minutes and read overnight
- * HRV, and never once asked how those minutes went — so an unbroken night with
- * a full deep and REM share was worth almost exactly the same as a shallow,
- * repeatedly interrupted one of the same length.
+ * What a night's quality does to the Body Energy it charges. Two real nights scored 92 and 66
+ * and charged +47 and +44, because the charge counted minutes and never asked how they went.
  */
 class BodyEnergySleepQualityTest {
 
@@ -32,8 +26,7 @@ class BodyEnergySleepQualityTest {
         assertTrue("a good night must charge above neutral, was $good", good > 1.0)
         assertTrue("a broken night must charge below neutral, was $poor", poor < 1.0)
 
-        // The eight hours behind these factors charge 0.10 * 480 = 48 points
-        // before quality; the spread between them is what the report was about.
+        // Eight hours charge 0.10 * 480 = 48 points before quality.
         val spread = (good - poor) * SleepPointsPerMinuteForTest * EightHoursOfMinutes
         assertTrue(
             "a good and a poor night should land well over ten points apart " +
@@ -43,11 +36,8 @@ class BodyEnergySleepQualityTest {
     }
 
     @Test fun `a flawless night reads above a merely good one`() {
-        // The scored sleep pillar stops distinguishing nights once they clear
-        // its clinical thresholds — efficiency at 85%, twenty minutes awake —
-        // so a perfect night and a good one both earned full marks and charged
-        // identically. Recovery does not work that way, and the charge reads a
-        // continuous quality instead.
+        // The sleep pillar stops distinguishing nights past its clinical thresholds, so a perfect night
+        // and a good one charged identically. The charge reads a continuous quality instead.
         val flawless = sleepChargeQualityFactor(goodNight())
         val merelyGood = sleepChargeQualityFactor(decentNight())
 
@@ -58,22 +48,19 @@ class BodyEnergySleepQualityTest {
         val gap = (flawless - merelyGood) * SleepPointsPerMinuteForTest * EightHoursOfMinutes
         assertTrue("the gap should be visible but modest, was $gap", gap > 1.5 && gap < 6.0)
 
-        // And both still sit above an ordinary night, rather than the pair of
-        // them being dragged apart around it.
+        // And both still sit above an ordinary night.
         assertTrue("a good night still charges above neutral", merelyGood > 1.0)
     }
 
     @Test fun `an ordinary night charges what it always did`() {
-        // The factor has to be neutral on the ordinary night or it inflates
-        // every night instead of telling them apart — see the constant's note.
+        // Neutral on the ordinary night, or it inflates every night.
         val ordinary = sleepChargeQualityFactor(fairNight())
 
         assertEquals(1.0, ordinary, 0.05)
     }
 
     @Test fun `the factor is bounded either side of neutral`() {
-        // A single night of broken staging must not undo eight hours actually
-        // slept, and a perfect one must not mint a day's worth of charge.
+        // A broken night must not undo eight hours slept, and a perfect one must not mint a day's charge.
         val perfect = sleepChargeQualityFactor(goodNight())
         val dreadful = sleepChargeQualityFactor(worstNight())
 
@@ -82,10 +69,8 @@ class BodyEnergySleepQualityTest {
     }
 
     @Test fun `a night with no staging charges exactly what it always did`() {
-        // A source that writes only a start and an end has its sleep duration
-        // EQUAL its time in bed, so efficiency reads 100% and wake time zero.
-        // Read literally that is a flawless night, and it would be handed the
-        // full bonus for recording nothing at all.
+        // A source that writes only start and end reads as 100% efficient with zero wake time,
+        // and would be handed the full bonus for recording nothing.
         val start = night.plus(Duration.ofHours(23))
         val boundsOnly = SleepData(
             id = "bounds",

@@ -5,12 +5,7 @@ import io.mockk.mockk
 import java.io.OutputStream
 import org.xmlpull.v1.XmlSerializer
 
-/**
- * A minimal XML writer standing in for `android.util.Xml.newSerializer()`,
- * which is a throwing stub in a JVM unit test. It only implements the calls
- * the exporters make; the assertions are about the document that comes out,
- * so the structure under test is the exporter's, not this.
- */
+/** A minimal XML writer standing in for `android.util.Xml.newSerializer()`, a throwing stub on the JVM. */
 internal fun recordingXmlSerializer(): XmlSerializer {
     val serializer = mockk<XmlSerializer>(relaxed = true)
     var destination: OutputStream? = null

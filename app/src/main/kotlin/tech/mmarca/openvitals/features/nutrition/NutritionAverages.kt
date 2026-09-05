@@ -6,17 +6,8 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
 
 /**
- * The daily average of [values] over [period] on the given [basis].
- *
- * [values] is one figure per day the period carried data for, and it is SPARSE
- * — Health Connect returns no bucket for a day with no records — so the divisor
- * for [NutritionAverageBasis.EVERY_DAY] comes from the period, never from the
- * list's size.
- *
- * A period still running counts only the days that have happened: dividing this
- * month's food by 31 on the 13th would report a third of what the eater ate.
- * [today] is the boundary, and a period entirely in the future has no average
- * to give.
+ * The daily average of [values] over [period] on [basis]. [values] is
+ * sparse, so EVERY_DAY divides by the period's elapsed days, up to [today].
  */
 fun nutritionDailyAverage(
     values: List<Double>,
@@ -33,12 +24,7 @@ fun nutritionDailyAverage(
     return if (divisor > 0) total / divisor else 0.0
 }
 
-/**
- * How many of this period's days have happened, as of [today].
- *
- * Capped at the period's own end so a past period counts all of itself, and
- * floored at nothing for a period that has not started.
- */
+/** How many of this period's days have happened as of [today]. */
 internal fun DatePeriod.elapsedDays(today: LocalDate): Int {
     if (start.isAfter(today)) return 0
     val last = if (end.isAfter(today)) today else end

@@ -26,12 +26,8 @@ import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
 
 /**
- * Port of the Flutter build's `device_sync_view_model_test.dart`, narrowed to
- * what lives at this layer in Kotlin: the pull → import → stamp sequence moved
- * into `GarminWatchSyncService` (behind [DeviceSyncPort]), so these tests
- * cover the row-state discipline — one sync at a time, progress scoped to the
- * syncing device, failures surfacing as a banner, and non-claimable devices
- * being a no-op.
+ * Row-state discipline: one sync at a time, progress scoped to the syncing device,
+ * failures as a banner, non-claimable devices a no-op. The pull, import and stamp are in `GarminWatchSyncService`.
  */
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class DeviceSyncControllerTest {
@@ -233,9 +229,7 @@ class DeviceSyncControllerTest {
 
         controller.syncDevice(watch.id)!!.join()
 
-        // The contract says a sync never throws. If one does, the radio must
-        // not read busy for the rest of the process's life, silently refusing
-        // every later sync.
+        // A sync never throws. If one does, the radio must not read busy forever.
         assertFalse(controller.state.value.isSyncing)
         assertEquals("the port broke its contract", controller.state.value.errorMessage)
         assertNotNull(controller.syncDevice(watch.id))
@@ -247,8 +241,7 @@ class DeviceSyncControllerTest {
         port.result = DeviceSyncResult.Failed("Could not connect: timeout")
         val controller = controller()
 
-        // The scheduled sync nobody asked for: a watch out of range at 3am
-        // must not leave a red message on a screen the user opens later.
+        // A scheduled sync out of range at 3am must not leave a red message for later.
         controller.syncDevice(watch.id, silent = true)!!.join()
 
         assertFalse(controller.state.value.isSyncing)
@@ -272,8 +265,7 @@ class DeviceSyncControllerTest {
         port.result = DeviceSyncResult.Failed("The watch is busy (notifications)")
         val controller = controller()
 
-        // What the scheduled run reads to decide between a retry and waiting
-        // for its next period.
+        // What the scheduled run reads to decide between a retry and waiting.
         val result = controller.syncDevice(watch.id, silent = true)!!.await()
 
         assertEquals(DeviceSyncResult.Failed("The watch is busy (notifications)"), result)

@@ -211,8 +211,7 @@ internal fun DeviceSyncProgressStep(state: DeviceSyncState, onCancel: () -> Unit
 @Composable
 internal fun DeviceSyncReportStep(state: DeviceSyncState, onDone: () -> Unit) {
     val report = state.report
-    // A failed (report == null) or aborted (present but not completed) session
-    // must NOT render the success checkmark + "merged N" — show the failure.
+    // A failed or aborted session must not show the success checkmark.
     if (report == null || !report.completed) {
         LazyColumn {
             item {
@@ -239,9 +238,7 @@ internal fun DeviceSyncReportStep(state: DeviceSyncState, onDone: () -> Unit) {
                             ?: stringResource(R.string.device_sync_aborted),
                         textAlign = TextAlign.Center,
                     )
-                    // The abort reason is a technical artifact (English by
-                    // design, like the report file) but it is the ONE line that
-                    // tells a bug report apart from a shrug — show it.
+                    // The abort reason is the one line that tells a bug report apart from a shrug.
                     report?.abortReason?.let { reason ->
                         Spacer(modifier = Modifier.height(Spacing.sm))
                         Text(
@@ -253,8 +250,7 @@ internal fun DeviceSyncReportStep(state: DeviceSyncState, onDone: () -> Unit) {
                     }
                 }
             }
-            // Partial progress: how far it got before dying is itself
-            // diagnostic ("12,000 records then stopped" vs "nothing at all").
+            // Partial progress is itself diagnostic.
             if (report != null) {
                 item {
                     DeviceSyncStatRow(stringResource(R.string.device_sync_sent), report.itemsSent)
@@ -344,11 +340,7 @@ internal fun DeviceSyncReportStep(state: DeviceSyncState, onDone: () -> Unit) {
     }
 }
 
-/**
- * Copy/Share for a sync report's text. Shared by the success report, the
- * failure screen (a partial report is exactly what a bug report needs), and
- * the role step's "last sync report" affordance.
- */
+/** Copy/Share for a report's text, shared by success, failure and the last-report affordance. */
 @Composable
 internal fun DeviceSyncReportActions(reportText: String) {
     val context = LocalContext.current
@@ -377,9 +369,7 @@ internal fun DeviceSyncReportActions(reportText: String) {
             Text(stringResource(R.string.device_sync_copy_report))
         }
         Spacer(modifier = Modifier.width(10.dp))
-        // Resolved in composition, not in the click: reading a
-        // resource off the Context inside the lambda misses a
-        // locale change until the screen is rebuilt.
+        // Resolved in composition: a resource read inside the lambda misses a locale change.
         val chooserTitle = stringResource(R.string.device_sync_share_report_chooser_title)
         OpenVitalsOutlinedButton(
             onClick = {

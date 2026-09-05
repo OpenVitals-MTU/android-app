@@ -23,19 +23,9 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 
 /**
- * A GPX with no locations in it — and an activity all the same.
- *
- * Both fixtures are REAL HealthFit exports the app refused with "GPX route must
- * contain at least 2 timestamped location points". The reasoning behind that
- * refusal was that a GPX is a list of PLACES, so an indoor session cannot be
- * written as one. The files say otherwise: every `<trkpt>` carries a `<time>`
- * and NO `lat`/`lon` whatsoever — 1931 of them for a strength session, 1422 for
- * an indoor run — and the strength file hangs a heart rate off each.
- *
- * What a routeless GPX genuinely lacks is DISTANCE and CALORIES. Those are not
- * invented: distance stays zero, and the calories are estimated by the entry
- * form from the duration — which is safe here exactly because the file measured
- * none to contradict.
+ * A GPX with no locations, and an activity all the same. Both fixtures are real HealthFit
+ * exports the app refused: every `<trkpt>` carries a `<time>` and no `lat`/`lon`.
+ * Distance stays zero and calories are estimated from the duration, because the file measured none.
  */
 class RoutelessGpxImportTest {
 
@@ -94,8 +84,7 @@ class RoutelessGpxImportTest {
 
         assertTrue(parsed.points.isEmpty())
         assertEquals(1421L, parsed.durationSeconds)
-        // `<trk><type>running</type>` — the file says what it is, and is
-        // believed.
+        // `<trk><type>running</type>`: the file says what it is.
         assertEquals("running", parsed.type)
 
         val imported = import(parsed)
@@ -103,15 +92,12 @@ class RoutelessGpxImportTest {
         assertNotNull(imported.request)
         requireNotNull(imported.request)
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING, imported.request.exerciseType)
-        // Nothing was measured, so the estimate is free to fill both fields —
-        // the rule that keeps a guess from ever standing beside a measurement.
+        // Nothing was measured, so the estimate may fill both fields.
         assertTrue(imported.activeCalories.isNotEmpty())
     }
 
     @Test fun `a GPX with neither places nor times is still refused`() {
-        // The guard that survives: an empty (or corrupt, or HTML) file must not
-        // arrive as a blank activity. What changed is that "no LOCATIONS" no
-        // longer means "no activity" — "no timestamps either" does.
+        // An empty or corrupt file must not arrive as a blank activity. "No timestamps" still means no activity.
         val empty = "<?xml version=\"1.0\"?><gpx version=\"1.1\"><trk><trkseg>" +
             "</trkseg></trk></gpx>"
 
@@ -121,9 +107,7 @@ class RoutelessGpxImportTest {
     }
 
     @Test fun `a routed GPX keeps its route AND gains its heart rate`() {
-        // The same collector runs on files that do have a track, so a GPX whose
-        // trackpoints carry `gpxtpx:hr` no longer throws that heart rate away at
-        // the parser — it used to import as a bare line on a map.
+        // A GPX with a track whose trackpoints carry `gpxtpx:hr` no longer throws the heart rate away.
         val gpx = """
             <?xml version="1.0"?>
             <gpx version="1.1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">

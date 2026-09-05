@@ -6,31 +6,13 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 
 /**
- * Bound by the OS while an associated device (a Garmin watch) is in range.
- *
- * Ported from Gadgetbridge's `service/GBCompanionDeviceService.java` (AGPLv3),
- * minus its reconnect logic — this app has no background auto-connect, and
- * inventing one here would start BLE work the user never asked for.
- *
- * SO WHY REGISTER IT AT ALL? The binding itself is the feature. From the
- * platform docs:
- *
- * > The system binding CompanionDeviceService elevates the priority of the
- * > process that the service is running in, and thus may prevent the
- * > Low-memory killer from killing the process at expense of other processes
- * > with lower priority.
- *
- * A FIT-file sync over BLE runs for minutes; that priority bump is what stops
- * it being killed halfway through. The callbacks below are observation points
- * only.
- *
- * API 31+. Below that the OS never binds this and nothing is lost but the
- * boost.
+ * Bound by the OS while an associated watch is in range. The binding is
+ * the feature: it raises the process priority, which keeps a minutes-long
+ * sync from being killed. No reconnect logic. API 31+.
  */
 @RequiresApi(Build.VERSION_CODES.S)
 class OpenVitalsCompanionDeviceService : CompanionDeviceService() {
-    // The address is deliberately not logged: `Log` survives into release
-    // builds, and a Bluetooth MAC identifies the person carrying the watch.
+    // The address is not logged: a MAC identifies the person.
     override fun onDeviceAppeared(address: String) {
         Log.d(CompanionDevicePairing.TAG, "companion device appeared")
     }

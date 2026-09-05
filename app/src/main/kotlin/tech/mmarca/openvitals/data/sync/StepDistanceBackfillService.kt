@@ -16,15 +16,9 @@ import tech.mmarca.openvitals.domain.preferences.StrideLength
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 /**
- * The opt-in "distance from steps" backfill: derives one daily DistanceRecord
- * (steps × stride length) for days that have steps but no distance from any
- * other source, and keeps the derived records reconciled — real distance
- * arriving later evicts them, stride changes rewrite them, disabling the
- * feature purges them.
- *
- * Runs as the last [HistorySyncScheduler] drain (the only write-performing
- * one) and immediately from settings when the user enables the feature or
- * saves a new stride.
+ * The opt-in "distance from steps" backfill: one daily DistanceRecord for
+ * days with steps and no other distance, kept reconciled. The last
+ * [HistorySyncScheduler] drain, and run from settings on enable.
  */
 @Singleton
 class StepDistanceBackfillService @Inject constructor(

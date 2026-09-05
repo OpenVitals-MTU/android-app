@@ -247,9 +247,7 @@ class ActivityRepositoryTest {
         assertEquals(emptyList<DailySteps>(), result.baselineDailySteps)
         assertEquals(emptyList<DailyNutrition>(), result.previousNutrition)
         assertEquals(emptyList<DailyNutrition>(), result.baselineNutrition)
-        // …and, the point: only the current window was paid for. On the Year
-        // range the previous/baseline windows are each another long
-        // Health Connect read.
+        // Only the current window was paid for; on Year the other windows are each another long read.
         coVerify(exactly = 1) {
             hc.readDailySteps(
                 startDate = any(),

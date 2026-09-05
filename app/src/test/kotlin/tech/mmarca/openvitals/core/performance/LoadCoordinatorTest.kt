@@ -8,16 +8,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The newest-wins guard every screen's load runs under.
- *
- * Dart counterpart: the `a stale load does not clobber a newer one` case that
- * `test/integration/view_models_test.dart` repeats for each view model, because
- * over there the `_generation` guard is copy-pasted twelve times and "a copy-pasted
- * guard is exactly what is subtly wrong in one place only". Kotlin has ONE
- * [LoadCoordinator] that every view model delegates to, so the rule is pinned once,
- * here, rather than once per screen.
- */
+/** The newest-wins guard every screen's load runs under. One [LoadCoordinator], pinned once. */
 class LoadCoordinatorTest {
 
     @Test
@@ -30,9 +21,7 @@ class LoadCoordinatorTest {
         // A slow load: it reaches the repository and is still waiting there.
         coordinator.launch(this) {
             stale = this
-            // Swallowing the cancellation is the point: it proves the `isCurrent`
-            // check below carries the guard on its own, rather than relying on the
-            // job cancellation to have already stopped the body.
+            // Swallowing the cancellation proves the `isCurrent` check carries the guard on its own.
             runCatching { gate.await() }
             if (isCurrent) settled += "first"
         }

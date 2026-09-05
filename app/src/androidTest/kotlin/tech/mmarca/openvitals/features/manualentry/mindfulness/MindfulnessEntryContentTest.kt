@@ -14,15 +14,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Port of the rendering case of Flutter's
- * `test/features/manualentry/mindfulness_entry_screen_test.dart`.
- *
- * The mindfulness entry screen offers two ways to record a session — sit with
- * the timer now, or type in minutes you already sat. They are not
- * interchangeable, and the sound pickers are the only reason to choose the
- * timer at all, so all three have to be on the screen together.
- */
+/** The timer, the typed minutes and the sound pickers all have to be on the screen together. */
 class MindfulnessEntryContentTest {
 
     @get:Rule

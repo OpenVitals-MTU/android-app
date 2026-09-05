@@ -4,12 +4,7 @@ import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
-/**
- * OpenVitals' own catalog of beers, alcoholic and alcohol-free. Unlike
- * [CaffeineHealthDrinkCatalog] the nutrients live on each item, and alcoholic
- * drinks carry a reduced hydration multiplier so a serving never counts as a
- * full serving of water.
- */
+/** OpenVitals' own beer catalog. Alcoholic drinks carry a reduced hydration multiplier. */
 object AlcoholHealthDrinkCatalog : HydrationDrinkCatalog {
     private const val BeveragePresetIdPrefix = "alcoholhealth-"
     private const val BeerHydrationMultiplier = 0.6

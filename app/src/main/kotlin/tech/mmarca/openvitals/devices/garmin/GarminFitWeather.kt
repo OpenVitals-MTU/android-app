@@ -8,23 +8,12 @@ import kotlin.math.roundToLong
 import tech.mmarca.openvitals.devices.weather.WeatherSnapshot
 
 /**
- * Encodes a [WeatherSnapshot] as the FIT weather messages a Garmin watch
- * renders in its weather glance — the app's first OUTBOUND FIT: everything
- * else decodes files the watch wrote, this writes records for the watch to
- * read.
- *
- * The wire format is FIT's, carried over GFDI: a `FIT_DEFINITION` (5011)
- * message declaring three local record layouts (current / hourly / daily,
- * all views of global message 128 "weather"), then a `FIT_DATA` (5012)
- * message with the records themselves. Field numbers, sizes and unit
- * conversions mirror Gadgetbridge's generated `FitWeather` table — including
- * its deliberate quirks, because the watch was reverse-engineered against
- * exactly these bytes:
- *
- *  * temperatures are Kelvin - 273 (an integer offset, NOT 273.15 — upstream #4313),
- *  * wind speed is km/h scaled by 298,
- *  * coordinates are semicircles,
- *  * FIT's day_of_week counts Sunday as 0.
+ * Encodes a [WeatherSnapshot] as the FIT weather messages the watch's glance
+ * renders: a FIT_DEFINITION (5011) declaring three local layouts of global
+ * message 128, then a FIT_DATA (5012) with the records. Mirrors
+ * Gadgetbridge's `FitWeather` table, quirks included: temperature is
+ * Kelvin - 273 (not 273.15), wind is km/h scaled by 298, coordinates are
+ * semicircles, and day_of_week counts Sunday as 0.
  */
 object GarminFitWeather {
 
@@ -57,9 +46,8 @@ object GarminFitWeather {
     /** One field of a record layout: `(number, size, baseType)`. */
     private data class Field(val number: Int, val size: Int, val baseType: Int)
 
-    // Field layouts per report type — same subsets Gadgetbridge sends, in
-    // ascending field order. Data records must write these exact fields in
-    // this exact order; the definition is the only schema the watch has.
+    // Field layouts per report type, as Gadgetbridge sends them, in field order.
+    // Data records must write exactly these fields in this order.
     private val currentFields = listOf(
         Field(0, 1, TYPE_ENUM), // weather_report
         Field(1, 1, TYPE_SINT8), // temperature
@@ -122,7 +110,7 @@ object GarminFitWeather {
     ): ByteArray {
         val writer = GarminByteWriter()
 
-        // ── current conditions ──────────────────────────────────────────────
+        // Current conditions.
         writer.writeByte(LOCAL_CURRENT)
         writer.writeByte(REPORT_CURRENT)
         writeTemperature(writer, weather.currentTempKelvin)
@@ -142,7 +130,7 @@ object GarminFitWeather {
         writer.writeByte(INVALID_ENUM) // air quality: not forwarded (yet)
         writer.writeInt(GarminTime.fromInstant(Instant.ofEpochSecond(weather.timestamp)))
 
-        // ── hourly forecast ─────────────────────────────────────────────────
+        // Hourly forecast.
         for (hour in weather.hourly.take(MAX_HOURLY)) {
             writer.writeByte(LOCAL_HOURLY)
             writer.writeByte(REPORT_HOURLY)
@@ -151,8 +139,7 @@ object GarminFitWeather {
             writer.writeShort(hour.windDirectionDegrees.coerceIn(0, 359))
             writeWindSpeed(writer, hour.windSpeedKmh)
             writer.writeByte(hour.precipProbability.coerceIn(0, 100))
-            // The schema has no hourly feels-like; upstream sends the plain
-            // temperature there, and the glance renders it.
+            // The schema has no hourly feels-like; the plain temperature goes there.
             writeTemperature(writer, hour.tempKelvin)
             writer.writeByte(hour.humidity.coerceIn(0, 100))
             writer.writeByte(INVALID_SINT8) // dew point: not in the schema
@@ -161,7 +148,7 @@ object GarminFitWeather {
             writer.writeInt(GarminTime.fromInstant(Instant.ofEpochSecond(hour.timestamp)))
         }
 
-        // ── daily forecast: today, then up to four more days ────────────────
+        // Daily forecast: today, then up to four more days.
         val reportInstant = Instant.ofEpochSecond(weather.timestamp)
         writeDaily(
             writer = writer,
@@ -188,7 +175,7 @@ object GarminFitWeather {
         return writer.toBytes()
     }
 
-    // ── record pieces ───────────────────────────────────────────────────────
+    // Record pieces.
 
     private const val REPORT_CURRENT = 0
     private const val REPORT_HOURLY = 1
@@ -235,11 +222,7 @@ object GarminFitWeather {
     private fun dayOfWeekAt(instant: Instant, zone: ZoneId): DayOfWeek =
         instant.atZone(zone).dayOfWeek
 
-    /**
-     * Kelvin → the sint8 Celsius the watch expects, with upstream's integer
-     * -273 (their #4313: the "wrong" conversion the firmware was tuned
-     * against). Zero Kelvin marks an absent value in the broadcast schema.
-     */
+    /** Kelvin to the sint8 Celsius the watch expects, with upstream's integer -273. Zero marks absent. */
     private fun writeTemperature(writer: GarminByteWriter, kelvin: Int) {
         if (kelvin <= 0) {
             writer.writeByte(INVALID_SINT8)
@@ -260,9 +243,7 @@ object GarminFitWeather {
 
     private fun writeLocation(writer: GarminByteWriter, location: String) {
         val bytes = location.toByteArray(Charsets.UTF_8)
-        // Truncate on a byte budget, never mid-codepoint: when the cut lands
-        // inside a multi-byte character, drop its dangling continuation bytes
-        // (0b10xxxxxx). A name inside the budget is never trimmed at all.
+        // Truncate on a byte budget, never mid-codepoint.
         var length = minOf(bytes.size, LOCATION_BYTES - 1)
         if (length < bytes.size) {
             while (length > 0 && (bytes[length].toInt() and 0xC0) == 0x80) length--
@@ -279,11 +260,7 @@ object GarminFitWeather {
     private fun semicircles(degrees: Double): Long =
         (degrees * SEMICIRCLES_PER_DEGREE).roundToInt().toLong() and 0xFFFFFFFFL
 
-    /**
-     * OpenWeatherMap condition code → FIT `weather_status` ordinal. The same
-     * table Gadgetbridge carries — the broadcast schema speaks OWM codes and
-     * the watch speaks this enum, so the mapping IS the contract.
-     */
+    /** OpenWeatherMap condition code to FIT `weather_status`, Gadgetbridge's table. */
     fun fitCondition(code: Int): Int? = when (code) {
         200, 201, 202, 210, 211, 212, 230, 231, 232, 901 -> 6 // THUNDERSTORMS
         221 -> 14 // SCATTERED_THUNDERSTORMS

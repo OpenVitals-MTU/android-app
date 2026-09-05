@@ -20,13 +20,8 @@ import tech.mmarca.openvitals.data.local.OpenVitalsDatabase
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
 
 /**
- * Port of the run-condition, offline-map and robustness halves of the Flutter
- * `kotlin_data_migration_test.dart` suite, aimed at the INVERSE migrator: the
- * Dart test drives Kotlin -> Flutter, [FlutterDataMigrator] drives
- * Flutter -> Kotlin.
- *
- * The Dart suite injects a `LegacyDataSource`; the Kotlin migrator reads the
- * real on-disk shapes instead, so the fixtures here are a mocked [Context] over
+ * Run conditions, offline maps and robustness of [FlutterDataMigrator] (Flutter to Kotlin).
+ * The migrator reads real on-disk shapes, so the fixtures are a mocked [Context] over
  * [FakeSharedPreferences] files plus real temp directories.
  */
 class FlutterDataMigratorTest {
@@ -84,7 +79,7 @@ class FlutterDataMigratorTest {
         every { context.getDir("flutter", Context.MODE_PRIVATE) } returns flutterDocumentsDir
     }
 
-    /** A database importer that does nothing — the beverage import is out of scope here. */
+    /** A database importer that does nothing. */
     private fun noOpImporter(): FlutterDatabaseImporter = mockk<FlutterDatabaseImporter>().also {
         every { it.importBeverages(any()) } just runs
         every { it.importGarminWellness(any()) } just runs
@@ -199,8 +194,7 @@ class FlutterDataMigratorTest {
     fun `a missing legacy database and files dir are simply skipped`() {
         installFlutterPrefsFile()
         seedFlutterPreference("unit_system", "imperial")
-        // The Flutter documents directory (database + offline maps source) is
-        // not there at all.
+        // The Flutter documents directory is not there at all.
         flutterDocumentsDir = File(temporaryFolder.root, "nonexistent_app_flutter")
 
         val started = runMigration(

@@ -26,14 +26,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of Flutter's
- * `test/features/hydration/reminders/hydration_reminder_card_test.dart`.
- *
- * The card is the whole permission flow for reminders — Kotlin has no
- * reminder-settings view model, so the ask-versus-enable decision lives in the
- * switch's own lambda and cannot be reached any other way. That decision is
- * what these pin: flipping the switch on without notification permission has to
- * ask for it rather than storing an enabled reminder that will never fire.
+ * The card is the whole permission flow for reminders: flipping the switch on without
+ * notification permission must ask for it rather than store a reminder that never fires.
  */
 class HydrationReminderCardTest {
 
@@ -76,9 +70,7 @@ class HydrationReminderCardTest {
 
     @Test
     fun blockedByPermissionWarnsAndOffersToGrant() {
-        // An enabled reminder with no notification permission is a reminder
-        // that silently never arrives. Saying so, and offering the grant, is
-        // the difference between a broken feature and an unfinished setup.
+        // An enabled reminder with no permission never arrives. Saying so and offering the grant is the fix.
         var requested = 0
         setCard(
             config = HydrationReminderConfig(enabled = true),
@@ -137,14 +129,8 @@ class HydrationReminderCardTest {
 
     @Test
     fun tappingATimeRowOpensATimePickerAndReportsWhatItConfirms() {
-        // The window is two clock times, and typing is not an option — the row's
-        // trailing action IS the control. A row that renders the time but opens
-        // nothing leaves the window at its default with no way to say so.
-        //
-        // "Select" is NOT the dialog's word: `HydrationReminderTimeRow` labels
-        // every row's trailing button with it, so an enabled card already shows
-        // two of them with nothing open. The dialog is identified as a dialog,
-        // and by the Cancel that only it carries.
+        // The row's trailing action is the control. "Select" labels every row's button, so the dialog
+        // is identified as a dialog and by the Cancel only it carries.
         var start: LocalTime? = null
         var end: LocalTime? = null
         setCard(
@@ -160,9 +146,7 @@ class HydrationReminderCardTest {
         composeRule.onNode(isDialog()).assertDoesNotExist()
         composeRule.onNodeWithText(string(R.string.action_cancel)).assertDoesNotExist()
 
-        // One Select per time row, in layout order, so the first belongs to the
-        // "Active from" row. WHICH row was opened is proved by the callback that
-        // fires below, not by that ordering.
+        // One Select per time row, in layout order. Which row opened is proved by the callback below.
         val rowActions = composeRule.onAllNodesWithText(string(R.string.action_select))
         rowActions.assertCountEquals(2)
         rowActions[0].performScrollTo().performClick()
@@ -171,8 +155,7 @@ class HydrationReminderCardTest {
         composeRule.onNode(isDialog()).assertExists()
         composeRule.onNodeWithText(string(R.string.action_cancel)).assertIsDisplayed()
 
-        // Confirmed untouched, the picker hands back the time it was seeded
-        // with — and hands it to the start of the window, not the end.
+        // Confirmed untouched, the picker hands back the seeded time to the start of the window.
         composeRule
             .onNode(hasText(string(R.string.action_select)) and hasAnyAncestor(isDialog()))
             .performClick()

@@ -21,13 +21,8 @@ import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 /**
- * The two features that read CoMaps guidance, and the fact that they are two.
- *
- * Guidance on a watch and guidance in a recording each answer to their own
- * switch: either alone keeps the shared feed up, and neither can make the
- * other show anything. Specifically, a wearer following turns on their wrist
- * with nothing recording must not find the recording screen's turn strip lit,
- * and must not have readings banked for an activity that does not exist.
+ * Guidance on a watch and guidance in a recording each answer to their own switch.
+ * Either keeps the shared feed up, and neither can make the other show anything.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CoMapsRecordingWatchTest {
@@ -166,8 +161,7 @@ class CoMapsRecordingWatchTest {
         assertTrue(fixture.feed.guidance.value is CoMapsNavigationState.Active)
         assertTrue(fixture.watch.navigation.value is CoMapsNavigationState.Active)
 
-        // The recording ends. The wrist keeps the feed up; the recording view
-        // goes dark, and its samples went with the session.
+        // The recording ends. The wrist keeps the feed; the recording view goes dark.
         fixture.watch.sync(idle)
         assertEquals(1, fixture.repository.subscriptions)
         assertTrue(fixture.feed.guidance.value is CoMapsNavigationState.Active)

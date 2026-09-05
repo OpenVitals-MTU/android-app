@@ -16,32 +16,18 @@ import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.devices.garmin.GarminLog
 import tech.mmarca.openvitals.devices.garmin.GarminWatchSyncService
 
-/**
- * The Garmin-only watch action that deliberately does NOT go through the sync
- * seam: making the watch ring (find). It is gated on GarminCapability and
- * speaks GFDI directly, so it stays Garmin-typed rather than pretending to be
- * device-agnostic. Port of the Flutter build's
- * `garmin_watch_actions_view_model.dart`.
- */
+/** The find action, Garmin-only: gated on GarminCapability and speaking GFDI directly. */
 data class WatchFindUiState(
     /** The watch currently being made to ring, or null. */
     val findingDeviceId: String? = null,
-    /**
-     * The last find was refused by the watch. A flag, not a message: the
-     * wording is the screen's job, and this layer has no localizations.
-     */
+    /** The last find was refused. A flag; the wording is the screen's. */
     val findFailed: Boolean = false,
     val errorMessage: String? = null,
 ) {
     fun isFindingDevice(deviceId: String): Boolean = findingDeviceId == deviceId
 }
 
-/**
- * Drives the find/ring toggle. A singleton with its own scope for the same
- * reason as [DeviceSyncController]: the alert runs for up to a minute, and the
- * screen that started it may be gone before it ends — the cancel discipline in
- * [GarminWatchSyncService.findWatch] must keep running regardless.
- */
+/** Drives the find toggle. Its own scope: the alert outlives the screen that started it. */
 @Singleton
 class GarminWatchActionsController(
     private val deviceRepository: BleDeviceRepository,
@@ -68,26 +54,17 @@ class GarminWatchActionsController(
     private var findCancel: CompletableDeferred<Unit>? = null
 
     /**
-     * Makes the watch ring, and stops it.
-     *
-     * A toggle rather than a fire-and-forget: the protocol alerts for a
-     * minute unless cancelled, so the same control has to be able to stop it
-     * — and the link stays open for the duration, which is why this cannot
-     * share the sync path that closes it a second in.
-     *
-     * Returns the running job, or null for a stop/no-op.
+     * Makes the watch ring, or stops it. A toggle: the alert runs for a
+     * minute unless cancelled. Returns the running job, or null.
      */
     fun toggleFind(deviceId: String): Job? {
         if (_state.value.isFindingDevice(deviceId)) {
-            // Stop stays enabled until the watch answers the cancel — a full
-            // round trip — so this branch is reachable twice, and completing
-            // a completed deferred must stay harmless.
+            // Stop stays enabled until the watch answers, so this can run twice.
             val cancel = findCancel
             if (cancel != null && !cancel.isCompleted) cancel.complete(Unit)
             return null
         }
-        // One radio: a find cannot start while a sync is running, nor while
-        // another find is in flight.
+        // One radio: no find during a sync or another find.
         if (syncController.state.value.isSyncing || _state.value.findingDeviceId != null) {
             return null
         }

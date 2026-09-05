@@ -7,11 +7,8 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 
 /**
- * Drains the caches' changes tokens once per app open, AFTER the first
- * foreground load settles — Health Connect serializes reads, so a drain running
- * beside a screen's own load makes both slower. The services run sequentially
- * for the same reason. Incremental-only: a metric that never full-synced stays
- * untouched until its screen kicks a [VitalsHistorySyncService.syncAll].
+ * Drains the caches' change tokens once per app open, after the first load
+ * settles, sequentially. Incremental only.
  */
 @Singleton
 class HistorySyncScheduler @Inject constructor(
@@ -26,26 +23,13 @@ class HistorySyncScheduler @Inject constructor(
         if (!drained.compareAndSet(false, true)) return
         drain { vitalsSync.syncIncremental() }
         drain { caloriesSync.syncIncremental() }
-        // After the foreground load has settled: warming the chain is
-        // the most read-hungry of the drains, and Health Connect serializes reads
-        // — running it beside a screen's own load makes both slower. Its own
-        // 30-minute throttle keeps repeat opens cheap.
+        // After the foreground load: the chain warm is the most read-hungry drain.
         drain { bodyEnergyChainSync.syncAll() }
-        // Last: the only drain that WRITES to Health Connect. Off unless the
-        // user opted into the distance backfill; throttled like the others.
+        // Last: the only drain that writes to Health Connect. Off unless opted in.
         drain { stepDistanceSync.syncIncremental() }
     }
 
-    /**
-     * Runs one drain, letting it fail alone.
-     *
-     * The drains are independent caches that merely share a slot, and the
-     * once-per-open latch is already claimed by the time the first one runs. So
-     * an unguarded throw here would not just abandon this open's remaining
-     * drains — it would abandon them for the life of the process, leaving two
-     * caches stale until the app is killed because a third had a bad day.
-     * Cancellation is not a bad day, and must still unwind.
-     */
+    /** Runs one drain, letting it fail alone; the once-per-open latch is already claimed. */
     private suspend fun drain(block: suspend () -> Unit) {
         try {
             block()

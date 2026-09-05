@@ -76,15 +76,7 @@ internal class HealthConnectPermissionService(
     @Volatile
     private var grantedPermissionsCache: GrantedPermissionsCache? = null
 
-    /**
-     * Serialises the cache MISS, so callers that arrive together pay for one
-     * sweep between them.
-     *
-     * The dashboard loads a pass per metric and they all start in the same
-     * instant, so on a cold cache every one of them used to walk the whole
-     * managed-permission list against the package manager — the same answer,
-     * recomputed a couple of dozen times, before a single record was read.
-     */
+    /** Serialises the cache miss, so a dashboard's fan-out pays for one sweep. */
     private val grantedPermissionsMutex = Mutex()
 
     val corePermissions: Set<String> = setOf(
@@ -213,9 +205,7 @@ internal class HealthConnectPermissionService(
         HealthPermission.getWritePermission(OxygenSaturationRecord::class),
         HealthPermission.getWritePermission(RespiratoryRateRecord::class),
         HealthPermission.getWritePermission(BodyTemperatureRecord::class),
-        // The HRV tile writes HeartRateVariabilityRmssdRecord; keeping it here
-        // keeps the Settings "Manual entry write access" card in step with
-        // what the log can actually write.
+        // Keeps the Settings write-access card in step with what the log writes.
         HealthPermission.getWritePermission(HeartRateVariabilityRmssdRecord::class),
     )
 
@@ -263,8 +253,7 @@ internal class HealthConnectPermissionService(
         HealthPermission.getReadPermission(SexualActivityRecord::class),
     )
 
-    // MenstruationPeriodRecord shares WRITE_MENSTRUATION with the flow record,
-    // so the set carries six distinct permission strings for seven record types.
+        // MenstruationPeriodRecord shares WRITE_MENSTRUATION with the flow record.
     val cycleWritePermissions: Set<String> = setOf(
         HealthPermission.getWritePermission(MenstruationFlowRecord::class),
         HealthPermission.getWritePermission(MenstruationPeriodRecord::class),
@@ -275,12 +264,8 @@ internal class HealthConnectPermissionService(
         HealthPermission.getWritePermission(SexualActivityRecord::class),
     )
 
-    // ── Onboarding categories ────────────────────────────────────────────────
-    // Grouped the way Health Connect itself groups permissions, so a row named
-    // "Activity" produces a system dialog headed "Activity". Each category
-    // carries read AND write together — entries created in the app go back to
-    // Health Connect. (VO2 max lives under Activity: that is where Health
-    // Connect files it, not under Vitals.)
+    // Onboarding categories, grouped as Health Connect groups them. Each carries
+    // read and write. VO2 max lives under Activity.
 
     private fun readWrite(record: kotlin.reflect.KClass<out androidx.health.connect.client.records.Record>): Set<String> =
         setOf(HealthPermission.getReadPermission(record), HealthPermission.getWritePermission(record))
@@ -342,8 +327,7 @@ internal class HealthConnectPermissionService(
         addAll(readWrite(CervicalMucusRecord::class))
         addAll(readWrite(IntermenstrualBleedingRecord::class))
         addAll(readWrite(SexualActivityRecord::class))
-        // The period write shares WRITE_MENSTRUATION with the flow record; the
-        // app maintains derived MenstruationPeriodRecords from logged flows.
+        // The period write shares WRITE_MENSTRUATION with the flow record.
         addAll(readWrite(MenstruationPeriodRecord::class))
     }
 
@@ -351,10 +335,7 @@ internal class HealthConnectPermissionService(
         get() = mindfulnessPermissions + mindfulnessWritePermissions
 
     fun onboardingPermissionCatalog(): OnboardingPermissionCatalog {
-        // Only the reads gate step one. The Activity and Sleep rows still ask
-        // for read AND write together, but a user who declines the writes in
-        // the system dialog can still finish onboarding; the log asks for a
-        // tile's writes again when that tile is tapped.
+        // Only the reads gate step one; a tile asks for its writes when tapped.
         val required = (onboardingActivityCategoryPermissions + onboardingSleepCategoryPermissions)
             .filterTo(mutableSetOf()) { it.startsWith(HEALTH_READ_PERMISSION_PREFIX) }
         val categories = listOf(
@@ -398,9 +379,7 @@ internal class HealthConnectPermissionService(
             categories = categories,
             requiredPermissions = required - manualOnlyPermissions,
             routeReadPermission = READ_EXERCISE_ROUTES_PERMISSION,
-            // The device's answer alone. This decides whether onboarding OFFERS
-            // the opt-in, so gating it on the opt-in would hide the only place
-            // the opt-in can be made.
+            // The device's answer alone: this decides whether the opt-in is offered.
             mindfulnessSupportedByDevice = isMindfulnessSessionSupportedByDevice(),
         )
     }
@@ -487,27 +466,13 @@ internal class HealthConnectPermissionService(
             PermissionGrantMode.REQUESTABLE
         }
 
-    /**
-     * Whether the app may ask for mindfulness: the device reports the feature
-     * AND the user has opted in. Everything that derives a permission set reads
-     * this one, never [isMindfulnessSessionSupportedByDevice].
-     */
+    /** Whether the app may ask for mindfulness: device support and the user's opt-in. */
     fun isMindfulnessSessionAvailable(): Boolean =
         mindfulnessIntegrationEnabled() && isMindfulnessSessionSupportedByDevice()
 
     /**
-     * The device's own answer alone, before the user's opt-in is folded in.
-     *
-     * The only legitimate use is deciding whether to OFFER the opt-in: a phone
-     * whose Health Connect has no mindfulness feature should not be shown a
-     * toggle it cannot honour. Deriving permissions from it would defeat the
-     * opt-in.
-     *
-     * Onboarding needs exactly this distinction, and using the opt-in-gated
-     * answer for it deadlocked: the mindfulness STEP was shown only when
-     * mindfulness was already enabled, but the toggle that enables it lives on
-     * that step — so a fresh install skipped the step forever and was never
-     * offered the permission at all.
+     * The device's answer alone. Only for deciding whether to offer the
+     * opt-in; deriving permissions from it would defeat the opt-in.
      */
     fun isMindfulnessSessionSupportedByDevice(): Boolean {
         if (availabilityService.availability() != HealthConnectAvailability.AVAILABLE) return false
@@ -573,8 +538,7 @@ internal class HealthConnectPermissionService(
         }
 
         return grantedPermissionsMutex.withLock {
-            // Whoever held the lock may have just filled the cache; the sweep
-            // this call queued for is that same sweep.
+            // Whoever held the lock may have just filled the cache.
             freshGrantedPermissions()?.let { cached ->
                 Log.d(TAG, "grantedPermissions(cache) count=${cached.size} ${diagnostics.summary()}")
                 return@withLock cached

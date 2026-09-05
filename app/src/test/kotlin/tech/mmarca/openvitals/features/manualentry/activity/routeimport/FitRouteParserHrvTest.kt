@@ -26,7 +26,7 @@ class FitRouteParserHrvTest {
         return header + data
     }
 
-    /** Definition for local message 0 → global 370 (hrv_status_summary). */
+    /** Definition for local message 0, global 370 (hrv_status_summary). */
     private fun hrvDefinition(): ByteArray = byteArrayOf(
         0x40, // definition message, local type 0
         0x00, // reserved

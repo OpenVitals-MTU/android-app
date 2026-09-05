@@ -149,7 +149,7 @@ class BodyViewModelTest {
     private fun boneMassAt(massKg: Double, epochSeconds: Long) =
         BoneMassEntry(time = Instant.ofEpochSecond(epochSeconds), massKg = massKg, source = "test")
 
-    // ─── Initial state ────────────────────────────────────────────────────────
+    // Initial state.
 
     @Test fun `initial range is MONTH`() = runTest {
         val vm = bodyViewModel(emptyRepo())
@@ -184,7 +184,7 @@ class BodyViewModelTest {
         assertTrue(state.boneMassEntries.isEmpty())
     }
 
-    // ─── Load success ─────────────────────────────────────────────────────────
+    // Load success.
 
     @Test fun `load success populates weight entries`() = runTest {
         val entries = listOf(weightAt(75.0, 1_000))
@@ -315,7 +315,7 @@ class BodyViewModelTest {
         assertEquals(entries, vm.uiState.value.boneMassEntries)
     }
 
-    // ─── Delete: optimistic rebuild and rollback ──────────────────────────────
+    // Delete: optimistic rebuild and rollback.
 
     private fun openVitalsWeight(
         id: String,
@@ -354,8 +354,7 @@ class BodyViewModelTest {
         vm.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "w1")
         runCurrent()
 
-        // The reload is still on the wire: the row the screen renders is already
-        // gone, and the summary behind it was rebuilt, not merely the data.
+        // The reload is still on the wire: the row is already gone and the summary was rebuilt.
         assertEquals(listOf(theirs), vm.uiState.value.weightEntries)
         assertEquals(71.0, vm.uiState.value.display.summary.latestWeightKg!!, 0.0001)
         assertNull(vm.uiState.value.error)
@@ -384,12 +383,10 @@ class BodyViewModelTest {
         assertEquals(70.5, state.display.summary.latestWeightKg!!, 0.0001)
     }
 
-    // ─── Load lifecycle: in-flight display, refresh, staleness ────────────────
+    // Load lifecycle: in-flight display, refresh, staleness.
 
     @Test fun `navigating to a new range keeps the previous display until the new one lands`() = runTest {
-        // Flutter blanks the display while a NEW range loads; the Kotlin
-        // view-model deliberately keeps the last one so the chart does not
-        // flash, and only swaps it when the new period answers.
+        // Kotlin keeps the last display while a new range loads so the chart does not flash.
         var gate: CompletableDeferred<Unit>? = null
         val repo = emptyRepo()
         coEvery { repo.loadWeightEntries(any(), any()) } coAnswers {
@@ -470,7 +467,7 @@ class BodyViewModelTest {
         assertFalse(state.isLoading)
     }
 
-    // ─── Load failure ─────────────────────────────────────────────────────────
+    // Load failure.
 
     @Test fun `a permission failure becomes ScreenError PermissionDenied`() = runTest {
         val repo = mockk<BodyRepository>()
@@ -494,7 +491,7 @@ class BodyViewModelTest {
         assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
     }
 
-    // ─── selectRange ──────────────────────────────────────────────────────────
+    // selectRange.
 
     @Test fun `selectRange updates selectedRange`() = runTest {
         val vm = bodyViewModel(emptyRepo())
@@ -518,11 +515,11 @@ class BodyViewModelTest {
         val repo = emptyRepo()
         val vm = bodyViewModel(repo)
         vm.selectRange(TimeRange.YEAR)
-        // init load + selectRange load = 2 calls
+        // init load + selectRange load = 2 calls.
         io.mockk.coVerify(atLeast = 2) { repo.loadBodyPeriod(any(), any()) }
     }
 
-    // ─── previousPeriod / nextPeriod ──────────────────────────────────────────
+    // previousPeriod and nextPeriod.
 
     @Test fun `previousPeriod MONTH moves back one month`() = runTest {
         val vm = bodyViewModel(emptyRepo())
@@ -562,7 +559,7 @@ class BodyViewModelTest {
         assertEquals(before.plusMonths(1), vm.uiState.value.selectedDate)
     }
 
-    // ─── selectDate ───────────────────────────────────────────────────────────
+    // selectDate.
 
     @Test fun `selectDate clamps future date to today`() = runTest {
         val vm = bodyViewModel(emptyRepo())

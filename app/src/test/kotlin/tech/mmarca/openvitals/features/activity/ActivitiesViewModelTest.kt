@@ -418,8 +418,7 @@ class ActivitiesViewModelTest {
 
         advanceUntilIdle()
 
-        // The expensive read (routes, speed, per-session metrics) is issued
-        // exactly once, for the displayed window only...
+        // The expensive read is issued once, for the displayed window only.
         coVerify(exactly = 1) { repo.loadWorkoutsWithMetrics(today.minusDays(6), today) }
         coVerify(exactly = 1) { repo.loadWorkoutsWithMetrics(any(), any()) }
         // ...while the previous and baseline windows take the cheap read.

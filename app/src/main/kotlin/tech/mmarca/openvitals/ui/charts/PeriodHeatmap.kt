@@ -49,14 +49,8 @@ data class PeriodHeatmapCell(
 )
 
 /**
- * The month grid cells (Mon→Sun rows, with leading/trailing fillers).
- *
- * [rolling] chooses what span the grid covers. A calendar month (the default)
- * draws the whole month of [DatePeriod.start] — the 1st to the last day — with
- * days past the loaded window greyed. A rolling window ("Last 30 days") spans two
- * calendar months, so it draws exactly `[period.start, period.end]` as
- * consecutive weeks; drawing only one month of it left ~20 days blank and hid the
- * other month's half of the window entirely.
+ * The month grid cells with fillers. A calendar month draws the whole month
+ * of [DatePeriod.start]; a [rolling] window draws `[period.start, period.end]`.
  */
 fun periodMonthHeatmapCells(
     values: List<PeriodChartValue>,
@@ -89,15 +83,8 @@ fun periodMonthHeatmapCells(
 }
 
 /**
- * The year grid cells, Monday-aligned with leading/trailing fillers so they chunk
- * into whole week columns.
- *
- * [rolling] chooses the span, exactly as it does for [periodMonthHeatmapCells]. A
- * calendar year (the default) draws the whole year of [DatePeriod.start]. A
- * rolling window ("last 365 days") straddles two calendar years, so it draws
- * exactly `[period.start, period.end]` — drawing the start's calendar year
- * dropped every day of the second year, which for a window ending today is
- * almost all of the data.
+ * The year grid cells, Monday-aligned into week columns. A calendar year
+ * draws the whole year; a [rolling] window draws `[period.start, period.end]`.
  */
 fun periodYearHeatmapCells(
     values: List<PeriodChartValue>,
@@ -129,11 +116,7 @@ fun periodYearHeatmapCells(
         List(trailingEmptyCells) { emptyHeatmapCell() }
 }
 
-/**
- * The week columns that begin a month: column index to the month's first day.
- * These carry the grid's labels — the twelve landmarks that make a year of dots
- * navigable.
- */
+/** The week columns that begin a month, to their first day. These carry the labels. */
 internal fun yearHeatmapMonthStartColumns(
     weeks: List<List<PeriodHeatmapCell>>,
 ): List<Pair<Int, LocalDate>> =
@@ -155,8 +138,7 @@ fun PeriodMonthHeatmap(
     onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
     val rolling = LocalPeriodWeekMode.current.usesRollingDates()
-    // Inside a metric-detail scaffold, tapping a day drills into its Day view;
-    // otherwise it falls back to the host's pin-a-day callback (or is inert).
+    // Inside a metric-detail scaffold a tap drills into the Day view.
     val openDay = LocalMetricDayOpener.current
     val onCellTapped = openDay ?: onDateSelected
     val cells = remember(values, period, rolling) { periodMonthHeatmapCells(values, period, rolling) }
@@ -174,8 +156,7 @@ fun PeriodMonthHeatmap(
         }
     }
 
-    // A Canvas publishes no semantics, so without this the chart is absent to a
-    // screen reader rather than merely hard to read.
+    // A Canvas publishes no semantics; this line does.
     OpenVitalsCard(
         modifier = modifier.chartSemantics(
             chartSemanticSummary(title = title, summaryText = summaryText),
@@ -268,8 +249,7 @@ fun PeriodYearHeatmap(
     val minPositiveValue = cells.map { it.value }.filter { it > 0.0 }.minOrNull() ?: 0.0
     val maxValue = cells.maxOfOrNull { it.value }?.coerceAtLeast(1.0) ?: 1.0
 
-    // A Canvas publishes no semantics, so without this the chart is absent to a
-    // screen reader rather than merely hard to read.
+    // A Canvas publishes no semantics; this line does.
     OpenVitalsCard(
         modifier = modifier.chartSemantics(
             chartSemanticSummary(title = title, summaryText = summaryText),
@@ -292,12 +272,7 @@ fun PeriodYearHeatmap(
     }
 }
 
-/**
- * The year as a week-per-column calendar: Monday at the top of each column, month
- * names over the columns that start them. Rows of an arbitrary twenty days had no
- * calendar meaning — the reader could not find April, or see that only weekends
- * were practiced, which are the two questions a year of dots exists to answer.
- */
+/** The year as a week-per-column calendar with month names, so April can be found. */
 @Composable
 private fun YearHeatmapGrid(
     weeks: List<List<PeriodHeatmapCell>>,
@@ -331,9 +306,7 @@ private fun YearHeatmapGrid(
             val gridTop = YearHeatmapLabelHeight.toPx()
             val cornerRadius = CornerRadius(cellPx * 0.3f, cellPx * 0.3f)
 
-            // Greedy from the left, like the bar charts' axis: a label that would
-            // sit on a labelled neighbour (or run off the plot) is dropped rather
-            // than drawn into it.
+            // Greedy from the left: a label that would overlap is dropped.
             var previousLabelEnd = Float.NEGATIVE_INFINITY
             monthColumns.forEach { (weekIndex, monthStart) ->
                 val left = weekIndex * (cellPx + gapPx)
@@ -351,8 +324,7 @@ private fun YearHeatmapGrid(
             weeks.forEachIndexed { weekIndex, week ->
                 val left = weekIndex * (cellPx + gapPx)
                 week.forEachIndexed { dayIndex, dayCell ->
-                    // Fillers keep the columns Monday-aligned; there is no day
-                    // there, so nothing is drawn.
+                    // Fillers keep the columns Monday-aligned; nothing is drawn.
                     if (dayCell.date == null) return@forEachIndexed
                     drawRoundRect(
                         color = heatmapCellColor(
@@ -542,11 +514,7 @@ private fun heatmapCellColor(
     return accentColor.copy(alpha = HeatmapMinCellAlpha + (1f - HeatmapMinCellAlpha) * fraction)
 }
 
-/**
- * The faintest a tracked day may be drawn. The year grid's cells are a few dp
- * across; at a 0.25 floor the lightest of them was indistinguishable from the
- * untracked grey, and a day you practiced must never read as one you did not.
- */
+/** The faintest a tracked day may be drawn. At 0.25 it matched the untracked grey. */
 private const val HeatmapMinCellAlpha = 0.4f
 
 /** A day inside the period with nothing tracked: visibly a slot, visibly empty. */

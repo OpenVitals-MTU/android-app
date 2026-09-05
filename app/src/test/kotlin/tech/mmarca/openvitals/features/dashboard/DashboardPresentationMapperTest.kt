@@ -82,8 +82,7 @@ class DashboardPresentationMapperTest {
         assertEquals(true, display.widgets[DashboardWidgetId.WEEKLY_CARDIO_LOAD]?.hasRecentHistory)
         assertEquals(true, display.widgets[DashboardWidgetId.CARDIO_LOAD]?.hasRecentHistory)
         assertEquals(false, display.widgets[DashboardWidgetId.HYDRATION]?.hasRecentHistory)
-        // The empty-but-recently-used sleep tile is exactly the case that must
-        // not sink.
+        // The empty-but-recently-used sleep tile must not sink.
         assertEquals(false, display.widgets[DashboardWidgetId.SLEEP]?.isDemotableEmptyTile())
     }
 
@@ -143,8 +142,7 @@ class DashboardPresentationMapperTest {
 
     @Test
     fun build_caffeineWidget_activeOnlyHeadlinesWithoutASubtitle() {
-        // Morning carryover, nothing consumed yet: the active amount IS the tile.
-        // The old intake-only value read "No data" here.
+        // Morning carryover, nothing consumed yet: the active amount is the tile.
         val data = DashboardData(date = LocalDate.now(), activeCaffeineMg = 21.0)
 
         val display = DashboardPresentationMapper.build(
@@ -179,9 +177,7 @@ class DashboardPresentationMapperTest {
 
     @Test
     fun build_stepsRing_fillsAgainstTheUsersGoalNotTheDefault() {
-        // The reported bug, exactly: goal set to 6,000, the ring filled to 8,000.
-        // The subtitle being right while the progress is wrong would be a worse
-        // bug, not a better one — so both are asserted.
+        // The reported bug: goal set to 6,000, the ring filled to 8,000. Both are asserted.
         val data = DashboardData(date = LocalDate.now(), steps = 3_000)
 
         val display = DashboardPresentationMapper.build(
@@ -269,8 +265,7 @@ class DashboardPresentationMapperTest {
 
         val widget = requireNotNull(display.widgets[DashboardWidgetId.WATCH])
         assertEquals("v\u00edvoactive 5", widget.watch?.name)
-        // It has content, so it must not read as an empty tile and get sorted
-        // to the back of the carousel.
+        // It has content, so it must not sort to the back of the carousel.
         assertEquals(false, widget.showsNoDataMessage())
     }
 
@@ -285,10 +280,7 @@ class DashboardPresentationMapperTest {
             dateTimeFormatterProvider = dateTimeFormatterProvider,
         )
 
-        // Both hero rings are there, and every widget the dashboard knows
-        // about materialises. Two deliberate exclusions: WORKOUT (its own
-        // activities section renders it) and WATCH (device state, and no watch
-        // was passed — an empty watch tile would be noise).
+        // Every known widget materialises except WORKOUT (its own section) and WATCH (no watch passed).
         assertEquals(DashboardWidgetStyle.CIRCLE, display.widgets[DashboardWidgetId.STEPS]?.style)
         assertEquals(
             DashboardWidgetStyle.CIRCLE,
@@ -317,8 +309,7 @@ class DashboardPresentationMapperTest {
             dateTimeFormatterProvider = dateTimeFormatterProvider,
         )
 
-        // No readings at all: the tiles are still there, just empty, and the
-        // hero rings never disappear.
+        // No readings: the tiles are still there, empty, and the hero rings never disappear.
         assertEquals(
             DashboardWidgetId.entries - DashboardWidgetId.WORKOUT - DashboardWidgetId.WATCH,
             display.widgets.keys.toList(),
@@ -335,9 +326,7 @@ class DashboardPresentationMapperTest {
 
     @Test
     fun build_requiredMetrics_showAZeroReadingRatherThanANoDataMessage() {
-        // A counter the device always answers reads zero; a metric it genuinely
-        // has nothing for says so instead. Showing "No data" for zero steps
-        // would make a rest day look like a broken permission.
+        // A counter the device always answers reads zero; "No data" for zero steps would look like a broken permission.
         val display = DashboardPresentationMapper.build(
             data = DashboardData(
                 date = LocalDate.now(),
@@ -359,9 +348,7 @@ class DashboardPresentationMapperTest {
         assertEquals(true, calories?.showsNoDataMessage())
     }
 
-    // ─── Body Energy tile ─────────────────────────────────────────────────────
-    // Flutter's `dashboard_summary_visibility_test.dart` "Body Energy tile" group.
-    // This is the DASHBOARD tile mapping — the detail screen has its own mapper.
+    // Body Energy tile. The detail screen has its own mapper.
 
     @Test
     fun build_bodyEnergyWidget_rendersCurrentScoreAndStartChargedDrainedSubtitle() {
@@ -391,9 +378,7 @@ class DashboardPresentationMapperTest {
 
     @Test
     fun build_bodyEnergyWidget_isNotSetUpUntilCalibrationCompletes() {
-        // Kotlin gates the tile on the calibration flag rather than on the
-        // timeline's presence: a timeline computed before setup finished must
-        // still read as "not set up", never as a score.
+        // The tile is gated on the calibration flag, not the timeline's presence.
         val data = DashboardData(
             date = LocalDate.of(2026, 1, 2),
             bodyEnergyTimeline = bodyEnergyTimeline(),
@@ -446,11 +431,8 @@ class DashboardPresentationMapperTest {
         confidenceReason = "",
     )
 
-    // ─── device-support gating ────────────────────────────────────────────────
-    // Flutter's `dashboard_summary_visibility_test.dart`. `supportedMetrics` is
-    // what the installed provider can serve AT ALL; a tile that can never fill
-    // is worse than no tile. Null (the fixtures above) means "not established",
-    // which gates nothing.
+    // Device-support gating. `supportedMetrics` is what the provider can serve at all;
+    // null means "not established" and gates nothing.
 
     @Test
     fun build_supportedMetricWithNoReading_stillGetsAnEmptyTile() {
@@ -503,9 +485,7 @@ class DashboardPresentationMapperTest {
 
     @Test
     fun build_deviceSupportsNothing_producesNoTilesAtAll() {
-        // Kotlin's two hero rings are ordinary widgets rather than a separate
-        // always-present summary, so a device that serves nothing renders
-        // nothing at all — Flutter keeps its two rings.
+        // The hero rings are ordinary widgets, so a device that serves nothing renders nothing.
         val display = build(
             DashboardData(date = LocalDate.now(), supportedMetrics = emptySet()),
         )
@@ -516,9 +496,7 @@ class DashboardPresentationMapperTest {
 
     @Test
     fun build_bodyEnergy_followsHeartRateSupport() {
-        // Body Energy is derived, not read: it has no metric of its own, so it
-        // follows the reading it is computed from (Flutter maps it to the
-        // heart-rate permission).
+        // Body Energy is derived, so it follows the reading it is computed from.
         val withHeartRate = build(
             DashboardData(
                 date = LocalDate.now(),

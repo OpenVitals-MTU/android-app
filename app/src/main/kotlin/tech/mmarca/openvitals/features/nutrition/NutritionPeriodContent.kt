@@ -89,9 +89,7 @@ internal fun LazyListScope.nutritionContent(
     }.orEmpty()
 
     if (!display.hasData && state.isLoading) {
-        // Nothing to show yet and still loading: one skeleton where the period chart
-        // will be, so the page does not jump when the data lands. A screen that
-        // already has content keeps it — a skeleton over drawn data would blink.
+        // Still loading: a skeleton where the chart will be. Existing content is kept.
         item {
             ChartSkeleton(
                 modifier = metricModifier(),
@@ -118,8 +116,7 @@ internal fun LazyListScope.nutritionContent(
         if (state.dailyMacros.isNotEmpty()) {
             section(MetricDetailSectionId.ACTIVITY_SUMMARY, primaryMetricsData.isNotEmpty() || additionalMetricsData.isNotEmpty()) {
                 Column {
-                    // A single day has no average worth showing: its total
-                    // already IS the day.
+                    // A single day has no average worth showing.
                     val showAverages = period.start != period.end
                     NutritionOverviewStatisticsContent(primaryMetricsData, showAverages)
                     NutritionAdditionalTotalsContent(additionalMetricsData, showAverages)
@@ -195,9 +192,7 @@ internal fun LazyListScope.nutritionMetricContent(
     }.orEmpty()
 
     if (!display.hasData && state.isLoading) {
-        // Nothing to show yet and still loading: one skeleton where the period chart
-        // will be, so the page does not jump when the data lands. A screen that
-        // already has content keeps it — a skeleton over drawn data would blink.
+        // Still loading: a skeleton where the chart will be. Existing content is kept.
         item {
             ChartSkeleton(
                 modifier = metricModifier(),
@@ -330,18 +325,8 @@ internal fun NutritionOverviewStatisticsContent(
 }
 
 /**
- * One nutrient's tile: the DAILY AVERAGE over a multi-day period, with the
- * period total kept underneath.
- *
- * Nobody eats by the month, so a month's total answers a question nobody asked
- * — the average is the figure that means something across a period, and leading
- * with it is what issue #259 asked for. The total stays as a caption because it
- * is still the honest sum of what was logged, and dropping it would leave no
- * way to see it at all.
- *
- * A single-day period has no average (see the mapper) and shows its total
- * alone: restating one day's food as "1,850 daily average" says the same thing
- * twice.
+ * One nutrient's tile: the daily average over a period, with the total
+ * underneath (#259). A single day shows its total alone.
  */
 @Composable
 private fun NutritionSeriesUiModel.nutrientStat(showAverage: Boolean): InsightStat {
@@ -355,8 +340,7 @@ private fun NutritionSeriesUiModel.nutrientStat(showAverage: Boolean): InsightSt
             accentColor = color,
         )
     }
-    // The title carries the per-day reading, because the nutrient's NAME is
-    // what tells these tiles apart and cannot be given up for a label.
+    // The title carries the per-day reading; the nutrient's name is what tells tiles apart.
     return InsightStat(
         title = stringResource(R.string.stat_nutrient_per_day, name),
         value = average.value,
@@ -465,10 +449,7 @@ private fun NutritionIntradayChartCard(
             Spacer(Modifier.height(16.dp))
 
             if (points.isNotEmpty()) {
-                // Built once here, not inside the zoom content: the plotted points do
-                // not depend on the viewport (the plot applies it), so recomputing
-                // them on every pinch frame would only churn a fresh list and defeat
-                // the plot's geometry cache.
+                // Built outside the zoom content, so the geometry cache holds.
                 val chartPoints = remember(points, selectedDate, isToday) {
                     cumulativeDayPlotPoints(
                         fractions = points.map { (time, value) ->
@@ -478,10 +459,7 @@ private fun NutritionIntradayChartCard(
                     )
                 }
 
-                // Pinch with two fingers to look closer at part of the day. The plot
-                // and its hour row are BOTH inside the zoom and share the one
-                // viewport — a chart whose hours disagreed with its line would be
-                // worse than one that did not zoom at all.
+                // Plot and hour row share the one viewport.
                 ChartZoom(selectedDate, points) { zoom ->
                     Column {
                         MetricLinePlot(
@@ -569,8 +547,7 @@ private fun NutritionEntriesContent(
             entry = entry,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
-            // Only a record this app wrote can be deleted from here, and only when Health
-            // Connect gave it an id to delete by.
+            // Only a record this app wrote, with an id, can be deleted here.
             onDelete = if (entry.isOpenVitalsEntry && entry.id.isNotBlank()) {
                 { onDeleteEntry(entry.id) }
             } else {
@@ -733,8 +710,7 @@ private fun NutritionStatisticsGrid(
 ) {
     val average = metricData.valueDisplayFormatter(display.averageValue)
     val best = metricData.valueDisplayFormatter(display.bestDayValue)
-    // On one day the total, the average and the best day are all the same
-    // number; only the total earns a tile.
+    // On one day the total, average and best day coincide; only the total earns a tile.
     val isDay = period.start == period.end
 
     InsightStatGrid(

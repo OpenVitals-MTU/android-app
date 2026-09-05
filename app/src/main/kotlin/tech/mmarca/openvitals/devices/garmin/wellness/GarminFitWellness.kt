@@ -7,9 +7,7 @@ import tech.mmarca.openvitals.core.fit.FitMessage
 import tech.mmarca.openvitals.core.fit.fitInstant
 import tech.mmarca.openvitals.devices.garmin.GarminLog
 
-/**
- * A Garmin sleep stage, from the FIT `sleep_level` enum (message 275, field 0).
- */
+/** A Garmin sleep stage (FIT `sleep_level`, message 275). */
 enum class FitSleepLevel { UNMEASURABLE, AWAKE, LIGHT, DEEP, REM }
 
 /** One stage span within a sleep session: `[start, end)` spent at [level]. */
@@ -19,32 +17,18 @@ data class FitSleepStage(
     val level: FitSleepLevel,
 )
 
-/**
- * A decoded Garmin sleep FIT file (file type 49): the night's bounds and its
- * stage timeline. The bounds come from the `event`/74 (sleep) start/stop pair;
- * each `sleep_level` message closes a stage that began at the previous one.
- */
+/** A decoded sleep file (type 49): the night's bounds and stage timeline. */
 data class FitSleepSession(
     val start: Instant,
     val end: Instant,
     val stages: List<FitSleepStage>,
-    /**
-     * The watch's own sleep score, 0..100, as shown on the wrist.
-     *
-     * Deliberately kept alongside [stages] rather than folded into them: this
-     * is Garmin's verdict on the night, while the stages are transitions we
-     * interpret ourselves. Where the two disagree, having both is what makes
-     * the disagreement visible instead of silently picking one.
-     */
+    /** The watch's own sleep score, 0..100. Kept beside [stages] so disagreements show. */
     val overallScore: Int? = null,
     /** How many times the watch counted the sleeper waking. */
     val awakeningsCount: Int? = null,
 )
 
-/**
- * A decoded Garmin HRV nightly reading (file type 68):
- * `hrv_status_summary.last_night_average` as an RMSSD in milliseconds.
- */
+/** A decoded HRV nightly reading (type 68): last night's RMSSD in ms. */
 data class FitHrvReading(
     val time: Instant,
     val rmssdMillis: Double,
@@ -52,43 +36,23 @@ data class FitHrvReading(
 
 /**
  * [FitMonitoringPoint.activityType] for a counter whose message named no
- * activity — neither `activity_type` (5) nor `current_activity_type_intensity`
- * (24).
- *
- * Message-local on purpose, matching Gadgetbridge's `getComputedActivityType`:
- * FIT fields are fixed per definition message, so a counter record without a
- * type field is untyped by design, not an abbreviation of the previous
- * message's type. Inheriting the last-declared type stamped whole-day-total
- * restatements with whatever type happened to come before them, and a total
- * landing on a small type's context minted the difference as fresh steps.
- *
- * Deliberately outside FIT's `activity_type` enum: it is not a kind of
- * activity, it is the absence of one, and the day-total sum has to be able to
- * tell it apart from a real bucket.
+ * activity. Message-local, as in Gadgetbridge: inheriting the previous type
+ * minted whole-day restatements as fresh steps. Outside the FIT enum on purpose.
  */
 const val UNKNOWN_FIT_ACTIVITY_TYPE: Int = -1
 
 /**
- * A cumulative monitoring counter reading: a [value] for [activityType] at
- * [time]. Cumulative within a wear-session and per activity type, so a
- * per-file total is a sum of per-type within-file deltas (see the mapper).
+ * A cumulative counter reading for [activityType] at [time]. Cumulative per
+ * wear-session and per type; see the mapper.
  */
 data class FitMonitoringPoint(
     val time: Instant,
-    /**
-     * FIT `activity_type` enum (walking 6, running 1, generic 0, …), or
-     * [UNKNOWN_FIT_ACTIVITY_TYPE] when the message did not carry one.
-     */
+    /** FIT `activity_type`, or [UNKNOWN_FIT_ACTIVITY_TYPE]. */
     val activityType: Int,
     val value: Int,
 )
 
-/**
- * Everything a monitoring file (type 32) carried. The one-per-file summaries
- * (resting HR, BMR) plus the high-frequency series (per-minute HR, breathing,
- * and the cumulative step/distance/calorie counters). Aggregation into Health
- * Connect records happens in the mapper.
- */
+/** Everything a monitoring file (type 32) carried. The mapper aggregates it. */
 data class FitMonitoringSummary(
     val restingHeartRateTime: Instant? = null,
     val restingHeartRateBpm: Int? = null,
@@ -102,25 +66,12 @@ data class FitMonitoringSummary(
     val stepPoints: List<FitMonitoringPoint> = emptyList(),
     val distancePoints: List<FitMonitoringPoint> = emptyList(),
     val caloriePoints: List<FitMonitoringPoint> = emptyList(),
-    /**
-     * Running daily totals of Garmin's intensity minutes `(time, minutes)`.
-     * Cumulative like the step counter, not per-message increments.
-     */
+    /** Running daily totals of intensity minutes. Cumulative, like steps. */
     val moderateMinutes: List<Pair<Instant, Int>> = emptyList(),
     val vigorousMinutes: List<Pair<Instant, Int>> = emptyList(),
-    /**
-     * Garmin stress score `(time, 0..100)`. Health Connect has no type for
-     * this, so it is kept in the app's own database rather than exported.
-     */
+    /** Garmin stress score `(time, 0..100)`. No Health Connect type; kept locally. */
     val stress: List<Pair<Instant, Int>> = emptyList(),
-    /**
-     * Garmin Body Battery `(time, 0..100)`. Same story — no Health Connect
-     * type.
-     *
-     * Note this is the WATCH's measure, distinct from the app's own computed
-     * Body Energy timeline; they are two independent estimates of a similar
-     * idea and must not be conflated.
-     */
+    /** Garmin Body Battery `(time, 0..100)`. The watch's measure, not the app's Body Energy. */
     val bodyEnergy: List<Pair<Instant, Int>> = emptyList(),
 ) {
     val isEmpty: Boolean
@@ -138,18 +89,11 @@ data class FitMonitoringSummary(
 }
 
 /**
- * The fitness metrics a metrics file (Garmin type 44) carried.
- *
- * Each is a snapshot the watch recomputes rather than a series, so at most one
- * of each survives a file — the last seen. Only VO2 max has a Health Connect
- * type; the rest are Garmin's own estimates and stay in the app's database,
- * the same split stress and Body Battery already follow.
+ * The fitness metrics a metrics file (type 44) carried. Each is a snapshot,
+ * last seen wins. Only VO2 max has a Health Connect type.
  */
 data class FitMetricsSummary(
-    /**
-     * When the watch computed these. Null when no message carried a timestamp,
-     * which makes the whole snapshot unplaceable and therefore unusable.
-     */
+    /** When the watch computed these. Null makes the snapshot unusable. */
     val time: Instant? = null,
     /** mL/kg/min. */
     val vo2Max: Double? = null,
@@ -168,13 +112,7 @@ data class FitMetricsSummary(
             trainingLoadChronic == null
 }
 
-/**
- * The watch's own summary of a night (`daily_sleep`), computed on the wrist.
- *
- * Entirely independent of [FitSleepSession]: that is built from stage
- * transitions this app interprets, while these are the numbers the watch shows
- * its wearer. Keeping both is what makes a disagreement between them visible.
- */
+/** The watch's own summary of a night (`daily_sleep`). Independent of [FitSleepSession]. */
 data class FitDailySleep(
     /** When the night ended, per the watch. */
     val endTime: Instant? = null,
@@ -182,25 +120,19 @@ data class FitDailySleep(
     val score: Int? = null,
     /** How long the watch counted the sleeper as awake during the night. */
     val awakeDuration: Duration? = null,
-    /**
-     * Garmin's "sleep pressure" figure. Kept raw — its scale is undocumented
-     * and guessing at units would be worse than passing the number through.
-     */
+    /** Garmin's "sleep pressure". Raw: the scale is undocumented. */
     val pressure: Int? = null,
 ) {
     val isEmpty: Boolean
         get() = score == null && awakeDuration == null && pressure == null
 }
 
-/**
- * Sleep Coach (`sleep_demand`): how much sleep the watch thinks is normally
- * needed, and how much last night's strain called for.
- */
+/** Sleep Coach (`sleep_demand`): the usual need and what last night called for. */
 data class FitSleepDemand(
     val time: Instant? = null,
     /** The usual nightly need. */
     val normal: Duration? = null,
-    /** What this particular night demanded — higher after a hard day. */
+    /** What this night demanded. */
     val demand: Duration? = null,
 ) {
     val isEmpty: Boolean
@@ -208,18 +140,11 @@ data class FitSleepDemand(
 }
 
 /**
- * One Health Snapshot recording: the two-minute on-demand measurement the
- * watch takes when the wearer asks for it.
- *
- * Separate from the monitoring series even though three of the four metrics
- * overlap: these are a deliberate spot measurement at rest, sampled far more
- * densely, and averaging them into the all-day series would blur both.
+ * One Health Snapshot recording: a two-minute on-demand measurement at rest.
+ * Kept apart from the all-day series, which it would blur.
  */
 data class FitHealthSnapshot(
-    /**
-     * Blood oxygen `(time, percent)` — the only Pulse Ox this watch has been
-     * seen to write anywhere.
-     */
+    /** Blood oxygen `(time, percent)`. The only Pulse Ox this watch writes. */
     val spo2: List<Pair<Instant, Int>> = emptyList(),
     val respiration: List<Pair<Instant, Double>> = emptyList(),
     val stress: List<Pair<Instant, Int>> = emptyList(),
@@ -232,36 +157,23 @@ data class FitHealthSnapshot(
             bodyEnergy.isEmpty()
 }
 
-/**
- * A daytime nap the watch recorded, bounded by its own start/end fields rather
- * than the `event`/74 pair that bounds a night.
- */
+/** A daytime nap, bounded by its own start/end fields. */
 data class FitNap(
     val start: Instant,
     val end: Instant,
 )
 
-/**
- * The wellness data a FIT file carried, from one decode pass. Each Garmin file
- * is a single type, so at most one of these is populated (activities have
- * none).
- */
+/** The wellness data one FIT file carried. At most one carrier is populated. */
 data class FitWellness(
-    /**
-     * `file_id.type` — lets the caller tell a non-activity file with no
-     * mappable data (skip it) from an activity file (parse it as an exercise).
-     */
+    /** `file_id.type`. Tells an unmappable wellness file from an activity file. */
     val fileType: Int? = null,
     val sleep: FitSleepSession? = null,
     val hrv: FitHrvReading? = null,
     val monitoring: FitMonitoringSummary? = null,
     val metrics: FitMetricsSummary? = null,
-    /** Daytime naps. A list, not a single value: one sleep file can hold several. */
+    /** Daytime naps. One sleep file can hold several. */
     val naps: List<FitNap> = emptyList(),
-    /**
-     * The watch's own nightly summary and Sleep Coach figures. These arrive in
-     * the METRICS file on a vívoactive 5, not the sleep file.
-     */
+    /** The watch's nightly summary and Sleep Coach figures. In the metrics file on a vívoactive 5. */
     val dailySleep: FitDailySleep? = null,
     val sleepDemand: FitSleepDemand? = null,
     /** From a Health Snapshot file (type 70). */
@@ -277,24 +189,15 @@ data class FitWellness(
             sleepDemand == null &&
             healthSnapshot == null
 
-    /**
-     * True for `activity` (4), `workout` (5) and `course` (6) — the types the
-     * exercise/route importer handles. Everything else is wellness data.
-     */
+    /** True for activity (4), workout (5) and course (6). */
     val isActivityType: Boolean
         get() = fileType == 4 || fileType == 5 || fileType == 6
 }
 
 /**
- * Decodes the **wellness** data a Garmin FIT file carries (sleep, HRV,
- * monitoring, metrics, …) in one pass. Wellness files have no activity session
- * or route, so the activity parser rejects them — this is their path. Returns
- * an empty [FitWellness] for activity, course and workout files.
- *
- * Built on the generic [FitDecoder]: this file owns only the
- * Garmin-proprietary interpretation of the decoded messages. Port of the
- * Flutter build's `garmin_fit_wellness.dart` — the message and field numbers
- * mirror it exactly.
+ * Decodes the wellness data in a Garmin FIT file in one pass. Returns an
+ * empty [FitWellness] for activity, course and workout files. Message and
+ * field numbers mirror the Flutter build.
  */
 fun parseGarminWellness(fitBytes: ByteArray, fileName: String? = null): FitWellness {
     val result = GarminWellnessDecoder(fitBytes).decode()
@@ -315,11 +218,7 @@ fun parseGarminWellness(fitBytes: ByteArray, fileName: String? = null): FitWelln
 fun parseGarminSleepSession(fitBytes: ByteArray, fileName: String? = null): FitSleepSession? =
     parseGarminWellness(fitBytes, fileName = fileName).sleep
 
-/**
- * One file's decoded wellness carriers, merged across a chained stream by
- * [GarminWellnessDecoder]. The switch cases fill disjoint carriers, so the
- * four raw structs never overlap.
- */
+/** One file's decoded carriers, merged across a chained stream. */
 private class FitWellnessResult(
     val fileType: Int?,
     val sleep: FitSleepRaw,
@@ -328,8 +227,7 @@ private class FitWellnessResult(
     val metrics: FitMetricsRaw,
 ) {
     fun merge(other: FitWellnessResult): FitWellnessResult = FitWellnessResult(
-        // First file with a file type wins, matching the activity summary's
-        // per-file merge (a chained stream is one logical export).
+        // First file type wins: a chained stream is one export.
         fileType = fileType ?: other.fileType,
         sleep = sleep.merge(other.sleep),
         hrv = hrv.merge(other.hrv),
@@ -338,10 +236,7 @@ private class FitWellnessResult(
     )
 }
 
-/**
- * The raw HRV reading a file carried (`hrv_status_summary.last_night_average`).
- * At most one is kept — the last seen — since a status file holds one summary.
- */
+/** The raw HRV reading a file carried. Last seen wins. */
 private class FitHrvRaw(
     val time: Instant? = null,
     val rmssdMillis: Double? = null,
@@ -359,11 +254,7 @@ private class FitHrvRaw(
         }
 }
 
-/**
- * The one-per-file monitoring summaries (resting HR, BMR) plus the
- * high-frequency series collected from a type-32 file. The last seen of each
- * scalar wins.
- */
+/** Monitoring summaries and series from a type-32 file. Last scalar wins. */
 private class FitMonitoringRaw(
     val restingHrTime: Instant? = null,
     val restingHrBpm: Int? = null,
@@ -415,11 +306,7 @@ private class FitMonitoringRaw(
     }
 }
 
-/**
- * The raw sleep messages a single FIT file carried: the `event`/74 session
- * bounds and the `sleep_level` transitions. Turned into a [FitSleepSession]
- * once the whole file (or chain of files) is decoded.
- */
+/** The raw sleep messages of one file: session bounds and stage transitions. */
 private class FitSleepRaw(
     val start: Instant? = null,
     val stop: Instant? = null,
@@ -450,40 +337,25 @@ private class FitSleepRaw(
         }
         if (!sessionStart.isBefore(sessionEnd)) return null
         val stages = mutableListOf<FitSleepStage>()
-        // Each `sleep_level` timestamp is the UPPER BOUND (end) of the stage it
-        // names, not its start: the stage runs from the previous transition
-        // (the session start for the first) up to this timestamp. Reading it as
-        // a start — the stage running forward to the NEXT transition — shifts
-        // every span onto the wrong stage, which tripled REM and inflated Awake
-        // against the watch's own screen. Confirmed against Gadgetbridge, which
-        // fills these with an UPPER_BOUND RangeMap
-        // (GarminActivitySampleProvider.overlaySleep).
+        // Each `sleep_level` timestamp is the END of the stage it names.
+        // Reading it as a start tripled REM. Gadgetbridge uses UPPER_BOUND too.
         var boundary = sessionStart
         for ((transition, rawLevel) in sorted) {
-            // Clamp into the session so a stray pre-start / post-stop
-            // transition can neither widen a stage nor walk the boundary
-            // outside the night.
+            // Clamp into the session so a stray transition cannot widen a stage.
             var stageEnd = transition
             if (stageEnd.isBefore(sessionStart)) stageEnd = sessionStart
             if (stageEnd.isAfter(sessionEnd)) stageEnd = sessionEnd
             val stageStart = boundary
             boundary = stageEnd
-            // Advance the boundary for every sample, then skip only an unknown
-            // raw value (null). An `unmeasurable` span is a real level here and
-            // is emitted like any other — it is dropped downstream at the
-            // Health Connect mapping, which has no stage for it.
+            // Advance for every sample; skip only unknown raw values. Unmeasurable
+            // spans are dropped at the Health Connect mapping.
             val level = fitSleepLevelFromRaw(rawLevel) ?: continue
             if (!stageStart.isBefore(stageEnd)) continue
             stages.add(FitSleepStage(start = stageStart, end = stageEnd, level = level))
         }
         if (stages.isEmpty()) return null
-        // DIAGNOSTIC: the raw transitions and the per-stage totals they
-        // produce, to diff against the watch's own screen. Garmin smooths the
-        // displayed hypnogram further than the raw `sleep_level` series does,
-        // so the two never match to the minute — this is how we see by how
-        // much. GarminLog only speaks in debug builds with a sink installed, so
-        // a release build neither prints a person's night nor computes these
-        // totals.
+        // Diagnostic: raw transitions and stage totals, to diff against the watch.
+        // GarminLog only speaks in debug builds.
         if (GarminLog.enabled) {
             val totals = mutableMapOf<FitSleepLevel, Long>()
             for (stage in stages) {
@@ -506,8 +378,7 @@ private class FitSleepRaw(
                         "(${fitSleepLevelFromRaw(rawLevel)?.name ?: "UNKNOWN"})",
                 )
             }
-            // The watch's own verdict on the same night, for comparison against
-            // what the stages above add up to.
+            // The watch's own verdict on the night, for comparison.
             GarminLog.log(
                 "[FIT-SLEEP] watch says: score=${overallScore ?: "-"} " +
                     "awakenings=${awakeningsCount ?: "-"}",
@@ -523,11 +394,7 @@ private class FitSleepRaw(
     }
 }
 
-/**
- * The metrics-file snapshots a decode pass collected. Last seen wins for each,
- * independently: one file can carry a VO2 max message and a training-load
- * message with nothing in common but the file they share.
- */
+/** Metrics-file snapshots. Last seen wins for each, independently. */
 private class FitMetricsRaw(
     val time: Instant? = null,
     val vo2Max: Double? = null,
@@ -543,9 +410,7 @@ private class FitMetricsRaw(
     val sleepDemandTime: Instant? = null,
     val sleepDemandNormalMinutes: Int? = null,
     val sleepDemandMinutes: Int? = null,
-    // Health Snapshot samples. They ride here rather than in their own result
-    // slot because this is already the "everything that is not a session, a
-    // night or a monitoring series" carrier.
+    // Health Snapshot samples ride here too.
     val hsaSpo2: List<Pair<Instant, Int>> = emptyList(),
     val hsaRespiration: List<Pair<Instant, Double>> = emptyList(),
     val hsaStress: List<Pair<Instant, Int>> = emptyList(),
@@ -623,11 +488,8 @@ private fun fitSleepLevelFromRaw(raw: Int): FitSleepLevel? = when (raw) {
 }
 
 /**
- * Walks a (possibly chained) FIT byte stream through the generic [FitDecoder]
- * and interprets each file's messages into the Garmin wellness raw structs.
- * One [GarminWellnessInterpreter] per file; the results merge across the
- * stream so a later file falls back to — rather than concatenates with — an
- * earlier file's one-per-file scalar fields.
+ * Walks a chained FIT stream through [FitDecoder], one interpreter per file.
+ * Later files fall back to, not concatenate with, earlier scalar fields.
  */
 private class GarminWellnessDecoder(private val fileBytes: ByteArray) {
 
@@ -658,11 +520,7 @@ private class GarminWellnessDecoder(private val fileBytes: ByteArray) {
     }
 }
 
-/**
- * Interprets one file's decoded [FitMessage]s into the Garmin wellness raw
- * structs. Its switch cases are disjoint from the activity interpreter's, so
- * an activity file simply yields empty carriers here.
- */
+/** Interprets one file's [FitMessage]s. Activity files yield empty carriers. */
 private class GarminWellnessInterpreter {
     private var fileType: Int? = null
 
@@ -707,8 +565,7 @@ private class GarminWellnessInterpreter {
     private var bmrTime: Instant? = null
     private var bmrKcalPerDay: Double? = null
 
-    // Monitoring high-frequency series, and the running full timestamp used to
-    // reconstruct each message's `timestamp_16`.
+    // Monitoring series, and the running full timestamp for `timestamp_16`.
     private var monLastTimestampRaw: Long? = null
     private val monHeartRate = mutableListOf<Pair<Instant, Int>>()
     private val respiration = mutableListOf<Pair<Instant, Double>>()
@@ -721,8 +578,7 @@ private class GarminWellnessInterpreter {
     private val monVigorousMinutes = mutableListOf<Pair<Instant, Int>>()
 
     fun interpret(messages: List<FitMessage>): FitWellnessResult {
-        // Dispatch in file order, so cases that depend on an earlier message
-        // (monitoring_info before its series) still see it.
+        // File order matters: monitoring_info must precede its series.
         messages.forEach(::dispatch)
         return FitWellnessResult(
             fileType = fileType,
@@ -778,16 +634,12 @@ private class GarminWellnessInterpreter {
         val messageTimestamp = message.timestamp
         when (message.globalMessageNumber) {
             FitFileIdMessageNumber -> {
-                // Only the file type is needed here — it tells the caller
-                // whether the file was wellness at all. Everything else on
-                // file_id is the activity parser's concern.
+                // Only the file type matters here; the rest is the activity parser's.
                 fileType = values[FitFileIdTypeFieldNumber]?.toInt() ?: fileType
             }
 
             FitEventMessageNumber -> {
-                // Only the sleep event (Garmin-proprietary value 74) bounds a
-                // night; every other event (timer, lap, …) that an activity
-                // file carries is ignored here.
+                // Only the sleep event (74) bounds a night.
                 if (values[FitEventFieldNumber] == FitSleepEventValue.toLong() &&
                     messageTimestamp != null
                 ) {
@@ -825,8 +677,7 @@ private class GarminWellnessInterpreter {
             }
 
             FitMonitoringInfoMessageNumber -> {
-                // monitoring_info carries a full timestamp that anchors the
-                // following messages' timestamp_16 values.
+                // Full timestamp that anchors the following timestamp_16 values.
                 if (messageTimestamp != null) monLastTimestampRaw = messageTimestamp
                 val rmr = values[FitRestingMetabolicRateFieldNumber]
                 if (rmr != null && rmr != FitUint16Invalid && rmr > 0) {
@@ -840,17 +691,12 @@ private class GarminWellnessInterpreter {
             FitMonitoringMessageNumber -> readMonitoring(values, messageTimestamp)
 
             FitStressLevelMessageNumber -> {
-                // The stress message carries BOTH the stress score and Body
-                // Battery — Body Battery has no message of its own. Its own
-                // timestamp field is preferred over the record header's, as
-                // Gadgetbridge does.
+                // Carries both stress and Body Battery. Its own timestamp wins, as in Gadgetbridge.
                 val stressTimeRaw = values[FitStressLevelTimeFieldNumber] ?: messageTimestamp
                 if (stressTimeRaw != null) {
                     val at = fitInstant(stressTimeRaw)
                     val stressValue = values[FitStressLevelValueFieldNumber]
-                    // Negative is Garmin's "not measurable" (asleep, moving,
-                    // poor contact), not a low score — dropped rather than
-                    // clamped to 0.
+                    // Negative means "not measurable", so drop it.
                     if (stressValue != null && stressValue in 0..100) {
                         stress.add(at to stressValue.toInt())
                     }
@@ -961,10 +807,7 @@ private class GarminWellnessInterpreter {
             }
 
             FitPhysiologicalMetricsMessageNumber -> {
-                // Only recovery_time is taken. This message also carries VO2
-                // max under a different scale, but max_met_data above is the
-                // one the watch keeps current, and reading both would let a
-                // stale copy win at random.
+                // Only recovery_time. VO2 max comes from max_met_data, which the watch keeps current.
                 val recovery = values[FitRecoveryTimeFieldNumber]
                 if (recovery != null && recovery != FitUint16Invalid) {
                     recoveryTimeMinutes = recovery.toInt()
@@ -988,14 +831,9 @@ private class GarminWellnessInterpreter {
     }
 
     /**
-     * One Health Snapshot message: a whole recording packed into one record.
-     *
-     * The samples are laid out FORWARD from the record's timestamp, `interval`
-     * seconds apart. That is an assumption — nothing documents it and
-     * Gadgetbridge never parses these — so the shape is logged on every
-     * record: compare the printed span against the Health Snapshot on the
-     * watch, and if the window is shifted by its own length, the timestamp
-     * marks the END and this needs inverting.
+     * One Health Snapshot message: a whole recording in one record. Samples
+     * are assumed to run forward from the timestamp; the shape is logged so
+     * this can be checked against the watch.
      */
     private fun readHsaSamples(
         messageNumber: Int,
@@ -1041,10 +879,7 @@ private class GarminWellnessInterpreter {
         }
     }
 
-    /**
-     * One `monitoring` message: resolve its timestamp (full or `timestamp_16`
-     * relative to the running anchor) and pull HR + the cumulative counters.
-     */
+    /** One `monitoring` message: resolve its timestamp and pull HR and counters. */
     private fun readMonitoring(values: Map<Int, Long>, fullTimestamp: Long?) {
         val tsRaw: Long?
         if (fullTimestamp != null) {
@@ -1120,8 +955,7 @@ private const val FitSleepEventValue = 74 // `event` == sleep (Garmin-proprietar
 private const val FitEventTypeStart = 0
 private const val FitEventTypeStop = 1
 
-// HRV status (Garmin file type 68). `hrv_status_summary.last_night_average`
-// (field 1, uint16, scale 128) is the night's RMSSD in ms.
+// HRV status (file type 68). last_night_average is RMSSD in ms, scale 128.
 private const val FitHrvStatusSummaryMessageNumber = 370
 private const val FitHrvLastNightAverageFieldNumber = 1
 private const val FitHrvRmssdScale = 128.0
@@ -1134,17 +968,12 @@ private const val FitMonitoringInfoMessageNumber = 103
 private const val FitRestingMetabolicRateFieldNumber = 5
 private const val FitUint8Invalid = 0xFFL
 
-// Monitoring high-frequency series. `monitoring` (55) carries per-minute HR and
-// the cumulative step/distance/calorie counters; `respiration_rate` (297) the
-// breathing series. Most `monitoring` messages timestamp with `timestamp_16`
-// (field 26) — the low 16 bits relative to the last full timestamp — not a full
-// `timestamp` (253).
+// Monitoring series. Most `monitoring` messages use `timestamp_16` (field 26),
+// the low 16 bits relative to the last full timestamp.
 private const val FitMonitoringMessageNumber = 55
 private const val FitRespirationRateMessageNumber = 297
 
-// stress_level (227) carries the stress score AND Body Battery; the latter has
-// no message of its own. Field numbers from Gadgetbridge's
-// AbstractFitStressLevel (AGPLv3).
+// stress_level (227) carries stress and Body Battery. Field numbers from Gadgetbridge (AGPLv3).
 private const val FitStressLevelMessageNumber = 227
 private const val FitStressLevelValueFieldNumber = 0 // sint8, 0..100 (negative = n/a)
 private const val FitStressLevelTimeFieldNumber = 1 // uint32, Garmin epoch seconds
@@ -1154,24 +983,20 @@ private const val FitMonitoringStepsFieldNumber = 3 // uint32, raw == steps (wal
 private const val FitMonitoringActivityTypeFieldNumber = 5
 private const val FitMonitoringActiveCaloriesFieldNumber = 19 // uint16, cumulative
 
-// current_activity_type_intensity (byte): activity_type in the low 5 bits. Most
-// monitoring messages carry the type here, not in field 5.
+// activity_type in the low 5 bits. Most monitoring messages carry the type here.
 private const val FitMonitoringActivityTypeIntensityFieldNumber = 24
 private const val FitMonitoringActivityTypeMask = 0x1FL
 private const val FitMonitoringTimestamp16FieldNumber = 26
 private const val FitMonitoringHeartRateFieldNumber = 27 // uint8, bpm
 private const val FitRespirationRateFieldNumber = 0 // sint16, ÷100 breaths/min
 
-// Intensity minutes. Garmin writes the running daily totals into 37/38 on this
-// watch; 33/34 are the same quantity under the names the FIT profile documents.
-// Both are read, later-wins, because which pair a device populates varies.
+// Intensity minutes. This watch writes 37/38; 33/34 are the documented names. Later wins.
 private const val FitMonitoringModerateMinutesFieldNumber = 37 // uint16, minutes
 private const val FitMonitoringVigorousMinutesFieldNumber = 38 // uint16, minutes
 private const val FitMonitoringModerateMinutesAltFieldNumber = 33
 private const val FitMonitoringVigorousMinutesAltFieldNumber = 34
 
-// Metrics (Garmin file type 44). Four unrelated messages share the file; each
-// is a one-per-file snapshot rather than a series, so the last seen wins.
+// Metrics (file type 44). One-per-file snapshots, last seen wins.
 private const val FitMaxMetDataMessageNumber = 229
 private const val FitVo2MaxFieldNumber = 2 // uint16, scale 10, mL/kg/min
 private const val FitVo2MaxScale = 10.0
@@ -1183,15 +1008,11 @@ private const val FitTrainingLoadChronicFieldNumber = 4 // uint16
 private const val FitPhysiologicalMetricsMessageNumber = 140
 private const val FitRecoveryTimeFieldNumber = 9 // uint16, minutes
 
-// daily_sleep (384) and sleep_demand (410) — what a vívoactive 5 actually puts
-// in its metrics file, in place of the training-load messages other Garmins
-// use. This is the watch's own verdict on a night, computed on the wrist.
+// daily_sleep (384) and sleep_demand (410): the watch's own verdict on a night.
 private const val FitDailySleepMessageNumber = 384
 private const val FitDailySleepScoreFieldNumber = 2 // uint8, 0..100
 
-// awake_duration is in SECONDS, not the minutes Garmin's FIT profile claims: a
-// real night read 1020 here inside an 8.7-hour window, and 1020 minutes is 17
-// hours. Reading it as minutes would report more time awake than time in bed.
+// awake_duration is in seconds, not the minutes the FIT profile claims.
 private const val FitDailySleepAwakeDurationFieldNumber = 3 // uint16, seconds
 private const val FitDailySleepEndTimeFieldNumber = 11 // uint32, Garmin epoch
 private const val FitDailySleepPressureFieldNumber = 22 // sint16
@@ -1200,12 +1021,8 @@ private const val FitSleepDemandNormalFieldNumber = 0 // uint16, minutes
 private const val FitSleepDemandDemandFieldNumber = 1 // uint16, minutes
 private const val FitSint16Invalid = 0x7FFFL
 
-// Health Snapshot (Garmin file type 70). Each message packs a whole recording
-// into ONE record: field 0 is the seconds between samples and field 1 (plus 2/3
-// for Body Battery) is an ARRAY of readings. Gadgetbridge pulls this file and
-// never parses it, so there is no port to follow and nothing documents how the
-// samples line up against the record timestamp — see the diagnostic in
-// [GarminWellnessInterpreter.readHsaSamples].
+// Health Snapshot (file type 70). One record per recording: field 0 is the
+// sample interval, field 1 an array. Undocumented; see readHsaSamples.
 private const val FitHsaSpo2MessageNumber = 305
 private const val FitHsaStressMessageNumber = 306
 private const val FitHsaRespirationMessageNumber = 307
@@ -1214,15 +1031,12 @@ private const val FitHsaIntervalFieldNumber = 0 // uint16, seconds between sampl
 private const val FitHsaValueFieldNumber = 1 // array of readings
 private const val FitHsaRespirationScale = 100.0
 
-// Sleep extras, in the same type-49 file the stage transitions come from.
-// sleep_stats (346) is the watch's OWN assessment of the night — the scores it
-// shows on the wrist — which is independent of the stages we derive ourselves.
+// Sleep extras in the type-49 file. sleep_stats (346) is the watch's own assessment.
 private const val FitSleepStatsMessageNumber = 346
 private const val FitOverallSleepScoreFieldNumber = 6 // uint8, 0..100
 private const val FitAwakeningsCountFieldNumber = 11 // uint8
 
-// nap (412) bounds a daytime sleep with its own start/end, separate from the
-// night's event/74 pair.
+// nap (412) has its own start/end, separate from the night's event/74 pair.
 private const val FitNapMessageNumber = 412
 private const val FitNapStartFieldNumber = 0 // uint32, Garmin epoch seconds
 private const val FitNapEndFieldNumber = 2 // uint32, Garmin epoch seconds

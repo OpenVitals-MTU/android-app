@@ -22,8 +22,7 @@ class HydrationReminderBootReceiver : BroadcastReceiver() {
 private val RestorableScheduleActions = setOf(
     Intent.ACTION_BOOT_COMPLETED,
     Intent.ACTION_MY_PACKAGE_REPLACED,
-    // The alarms are wall-clock-anchored, so a zone or clock shift needs a
-    // re-arm or the reminder fires at the old absolute instant.
+    // The alarms are wall-clock-anchored, so a zone or clock shift needs a re-arm.
     Intent.ACTION_TIMEZONE_CHANGED,
     Intent.ACTION_TIME_CHANGED,
 )

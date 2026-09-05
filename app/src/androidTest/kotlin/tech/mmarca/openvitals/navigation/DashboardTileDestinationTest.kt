@@ -9,23 +9,9 @@ import org.junit.runner.RunWith
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 
 /**
- * Ported from the `tile destinations match Kotlin` group of Flutter's
- * `test/features/dashboard/dashboard_summary_visibility_test.dart`.
- *
- * That group exists in the Dart suite purely to pin parity WITH this app, so it
- * is the one place worth asserting twice: a tapped tile has to reach the screen
- * that actually shows the metric. Heart, vitals, and body ids each own their
- * `/metric/{id}` screen like everything else — they used to share one
- * overview, which made every tap a two-hop trip to the metric the tile
- * already named.
- *
- * The day rides along as the optional `?day=` argument (Flutter's locations
- * carry no day at all), so a fixed past date is used rather than today, whose
- * suffix `withSelectedDay` deliberately omits.
- *
- * Instrumentation rather than a JVM unit test only because
- * `Screen.Metric.createRoute` percent-encodes through `android.net.Uri`, which
- * is a throwing stub off-device; the function itself needs no device.
+ * A tapped tile has to reach the screen that shows the metric. Heart, vitals and body ids
+ * each own their `/metric/{id}` screen. Instrumentation only because `Screen.Metric.createRoute`
+ * percent-encodes through `android.net.Uri`, a throwing stub off-device.
  */
 @RunWith(AndroidJUnit4::class)
 class DashboardTileDestinationTest {

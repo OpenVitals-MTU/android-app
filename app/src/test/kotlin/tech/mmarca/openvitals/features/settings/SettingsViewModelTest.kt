@@ -207,8 +207,7 @@ class SettingsViewModelTest {
 
         verify { prefs.unitSystemPreference = UnitSystemPreference.IMPERIAL }
         assertEquals(UnitSystemPreference.IMPERIAL, vm.uiState.value.unitSystemPreference)
-        // The displayed system is whatever the repository resolved, not the
-        // raw preference — the fake resolves everything to metric.
+        // The displayed system is what the repository resolved; the fake resolves to metric.
         assertEquals(UnitSystem.METRIC, vm.uiState.value.unitSystem)
     }
 
@@ -321,8 +320,7 @@ class SettingsViewModelTest {
         val prefs = prefs()
         val vm = viewModel(preferencesRepository = prefs)
 
-        // Low defaults to 50, gap is 5 — asking for 40 is gap-clamped to 55,
-        // and the repository's own floor (80) then wins.
+        // Low defaults to 50, gap 5: 40 is gap-clamped to 55, then the repository floor (80) wins.
         vm.setHighHeartRateThresholdBpm(40)
 
         assertEquals(80, vm.uiState.value.highHeartRateThresholdBpm)
@@ -332,8 +330,7 @@ class SettingsViewModelTest {
         val prefs = prefs()
         val vm = viewModel(preferencesRepository = prefs)
 
-        // High defaults to 120, gap is 5 — asking for 130 is gap-clamped to
-        // 115, and the repository's own ceiling (100) then wins.
+        // High defaults to 120, gap 5: 130 is gap-clamped to 115, then the repository ceiling (100) wins.
         vm.setLowHeartRateThresholdBpm(130)
 
         assertEquals(100, vm.uiState.value.lowHeartRateThresholdBpm)
@@ -343,9 +340,7 @@ class SettingsViewModelTest {
         val prefs = prefs()
         val vm = viewModel(preferencesRepository = prefs)
 
-        // High at 90 (allowed), then low asked above it: the gap forces 85,
-        // which the repository accepts as-is — so this proves the gap clamp
-        // rather than the repository's own ceiling (100).
+        // High at 90, then low asked above it: the gap forces 85, which proves the gap clamp.
         vm.setHighHeartRateThresholdBpm(90)
         vm.setLowHeartRateThresholdBpm(95)
 
@@ -356,8 +351,7 @@ class SettingsViewModelTest {
         val prefs = prefs()
         val vm = viewModel(preferencesRepository = prefs)
 
-        // Neither clamp has anything to say about a well-separated pair well
-        // inside the repository's bounds — it must land exactly as asked.
+        // A well-separated pair inside the bounds must land exactly as asked.
         vm.setHighHeartRateThresholdBpm(150)
         vm.setLowHeartRateThresholdBpm(45)
 
@@ -369,8 +363,7 @@ class SettingsViewModelTest {
         val prefs = prefs()
         val vm = viewModel(preferencesRepository = prefs)
 
-        // Low at 90 (allowed), then high asked below it: gap forces 95, which
-        // the repository accepts as-is.
+        // Low at 90, then high asked below it: the gap forces 95.
         vm.setLowHeartRateThresholdBpm(90)
         vm.setHighHeartRateThresholdBpm(80)
 
@@ -524,8 +517,7 @@ class SettingsViewModelTest {
 
         vm.updateCaffeinePreferences(CaffeinePreferences(halfLifeMinutes = 9000))
 
-        // What the card shows afterwards is the STORED value, not the typed
-        // one — otherwise the field keeps a number the app will never use.
+        // The card shows the stored value, not the typed one.
         assertEquals(
             CaffeinePreferences.MaxHalfLifeMinutes,
             vm.uiState.value.caffeinePreferences.halfLifeMinutes,
@@ -714,9 +706,7 @@ class SettingsViewModelTest {
             permissionUxState = permissionUxState(),
         )
         advanceUntilIdle()
-        // Without these, the comparison below would pass vacuously: a view model
-        // that came up busy would bail on isBusy rather than on the missing
-        // analysis this test is about.
+        // Without these the comparison below would pass vacuously on isBusy.
         assertFalse(vm.uiState.value.isAnalyzingAppleHealth)
         assertFalse(vm.uiState.value.isImportingAppleHealth)
         assertNull(vm.uiState.value.appleHealthImportAnalysis)
@@ -725,7 +715,7 @@ class SettingsViewModelTest {
         vm.importSelectedAppleHealthExport()
         advanceUntilIdle()
 
-        // Asserting NOTHING CHANGED, rather than pinning the exact default state.
+        // Asserting nothing changed.
         assertEquals(before, vm.uiState.value)
         verify(exactly = 0) { importController.enqueue(any(), any(), any(), any()) }
     }
@@ -883,8 +873,7 @@ class SettingsViewModelTest {
 
         vm.showTestHydrationReminder()
 
-        // The settings action owns nothing of its own: the reminder it posts
-        // is the same one the schedule posts, so it can never drift from it.
+        // The settings action posts the same reminder the schedule posts.
         verify(exactly = 1) { reminders.showTestReminder(any()) }
     }
 
@@ -1050,9 +1039,7 @@ class SettingsViewModelTest {
             every { prefs.favoriteActivityExerciseType = any() } just runs
             every { prefs.lastActivityExerciseType = any() } just runs
             every { prefs.setBodyEnergyCalibration(any()) } just runs
-            // The real repository normalizes on write — the clamp the card
-            // relies on to make an out-of-range typed value storable — so the
-            // fake must too, or a read-back would prove nothing.
+            // The real repository normalizes on write, so the fake must too.
             every { prefs.setCaffeinePreferences(any()) } answers {
                 caffeinePreferences = firstArg<CaffeinePreferences>().normalized()
             }

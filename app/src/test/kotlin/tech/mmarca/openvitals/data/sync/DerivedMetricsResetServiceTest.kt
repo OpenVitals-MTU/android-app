@@ -28,12 +28,7 @@ import tech.mmarca.openvitals.data.repository.inMemoryPreferences
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 
-/**
- * The reset must leave nothing the chain, the watch fit or the calories cache
- * could seed themselves from, must leave everything the user typed, and must
- * kick the rebuilds itself — the scheduler's once-per-open latch has already
- * fired by the time anyone reaches the settings screen.
- */
+/** The reset leaves nothing to seed from, leaves everything the user typed, and kicks the rebuilds itself. */
 class DerivedMetricsResetServiceTest {
 
     private val manualZones = HeartZoneThresholds(

@@ -41,15 +41,9 @@ import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingController
 
 /**
- * Drives one end-to-end sync with a Garmin watch: take the radio lease, open
- * the link, run the GFDI session, import what it downloaded, remember what was
- * taken and stamp the device.
- *
- * The Garmin implementation of [DeviceSyncPort], folding together the Flutter
- * build's `garmin_watch_sync_service.dart` (radio + protocol) and
- * `garmin_device_sync_port.dart` (the app-level sequence). Everything below it
- * is radio-free and unit-tested; everything above it deals in registered
- * devices and knows nothing about handles or COBS.
+ * Drives one sync with a Garmin watch: take the radio lease, open the link,
+ * run the GFDI session, import, record what was taken, stamp the device.
+ * Everything below it is radio-free; everything above knows nothing of COBS.
  */
 @Singleton
 class GarminWatchSyncService @Inject constructor(
@@ -71,25 +65,16 @@ class GarminWatchSyncService @Inject constructor(
 
     private val phone = GarminPhoneIdentity()
 
-    /**
-     * Outlives one sync on purpose: the chain walk has its own time budget and
-     * a user who closes the sync screen the moment it says "done" must not
-     * cancel the rebuild their sync just made necessary.
-     */
+    /** Outlives one sync: closing the sync screen must not cancel the chain rebuild. */
     private val rebuildScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    /**
-     * Keeps a copy of every download before the watch is told to archive it.
-     * Archiving stops the watch ever offering the file again, so without this
-     * an importer bug would make the data unrecoverable.
-     */
+    /** Keeps a copy of every download before the watch archives it. */
     private val fileStore = GarminFileStore(
         resolveDirectory = { File(context.filesDir, FILE_STORE_DIRECTORY) },
     )
 
     init {
-        // Protocol logging for the whole GFDI stack. Idempotent, and a no-op
-        // outside debug builds — the redaction policy lives in [GarminLog].
+        // Idempotent, and a no-op outside debug builds.
         GarminLog.installLogcatSink()
     }
 
@@ -101,9 +86,7 @@ class GarminWatchSyncService @Inject constructor(
         listenAfter: Duration,
         onProgress: ((DeviceSyncProgress) -> Unit)?,
     ): DeviceSyncResult {
-        // A live activity recording holds the app's foreground slot AND the
-        // radio discipline — refuse to sync until it is finished or discarded,
-        // the same gate the phone-to-phone sync applies.
+        // A live recording holds the foreground slot and the radio. Refuse.
         if (recordingController.state.value.isActive) {
             return DeviceSyncResult.Failed(
                 "An activity recording is in progress. Finish or discard it " +
@@ -127,30 +110,20 @@ class GarminWatchSyncService @Inject constructor(
         if (downloaded.isNotEmpty()) {
             try {
                 importer.import(downloaded)
-                // Recorded exercises take the same path a hand-picked FIT
-                // folder does. Per-file failures are tolerated inside the
-                // importer (the raw bytes stay in the file store as the safety
-                // net), so this cannot fail the sync the wellness import
-                // survived.
+                // Same path as a hand-picked FIT folder. Per-file failures are
+                // tolerated inside the importer.
                 activityImporter.import(downloaded)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
-                // The importer tolerates a bad FILE internally, so reaching
-                // here means the write path itself is unavailable (no Health
-                // Connect, permissions revoked mid-run).
+                // Reaching here means the write path itself is unavailable.
                 GarminLog.log("[GARMIN-SYNC] import failed: $error")
-                // Neither the keys nor the sync stamp are written: nothing
-                // reached Health Connect, so the next run must fetch these
-                // files again.
+                // Nothing reached Health Connect, so the next run must fetch again.
                 return DeviceSyncResult.Failed(describe(error))
             }
 
-            // Recorded AFTER the import, so a run that died mid-import
-            // re-downloads rather than skipping files that never reached
-            // Health Connect. Files with no stable key are not recorded — they
-            // are re-fetched every sync by design rather than skipped on a key
-            // that identifies nothing.
+            // Recorded after the import, so a run that died mid-import re-downloads.
+            // Files with no stable key are re-fetched every sync by design.
             stateStore.recordSyncedFileKeys(
                 device.id,
                 downloaded.mapNotNull { it.entry.dedupKey },
@@ -160,28 +133,15 @@ class GarminWatchSyncService @Inject constructor(
         }
 
         bleDeviceRepository.markSynced(device.id, Instant.now())
-        // The tiles read stored data, and a sync that just landed a night of
-        // sleep must not leave the home screen on its pre-sync numbers until
-        // the system's next periodic tick — which Doze can defer for hours.
+        // A sync that landed a night of sleep must not leave the widgets stale.
         refreshPlacedHomeWidgets(context)
         return DeviceSyncResult.Succeeded(downloaded.size)
     }
 
     /**
-     * Drops the Body Energy days this sync just back-filled, and rebuilds them.
-     *
-     * Body Energy chains across midnight, so a watch handing over a week of
-     * sleep and heart-rate data invalidates not just those days but every day
-     * after them — their seeds came from scores computed without it. The
-     * chain's settling window is a time-based guess at "data might still
-     * arrive"; a completed sync is the precise signal, so use it. Without this
-     * a back-filled day older than the window stays frozen at whatever it
-     * scored before the watch was ever synced, permanently: the staleness rule
-     * stops revisiting a day once it is settled.
-     *
-     * Best-effort. The watch data has already reached Health Connect, and
-     * failing the sync over a cache rebuild would tell the user their sync
-     * failed when it did not.
+     * Drops and rebuilds the Body Energy days this sync back-filled. Body
+     * Energy chains across midnight, so new data invalidates every later day,
+     * and the staleness rule never revisits a settled day. Best-effort.
      */
     private suspend fun refreshBodyEnergy(downloaded: List<GarminDownloadedFile>) {
         val earliest = try {
@@ -205,43 +165,23 @@ class GarminWatchSyncService @Inject constructor(
             }
         }
 
-        // Rebuild rather than leave holes: a foreground open only fills two
-        // missing days inline, so a week of back-fill would otherwise seed
-        // today neutrally until the background pass caught up. Forced past the
-        // throttle because a sync is precisely the event it should react to,
-        // and off the sync's own coroutine because the walk has its own budget
-        // — the Body Energy screen joins this same run when it opens.
+        // Rebuild rather than leave holes. Forced past the throttle, and off the
+        // sync's coroutine because the walk has its own budget.
         rebuildScope.launch {
             runCatching { bodyEnergyChainSync.syncAll(force = true) }
                 .onFailure { GarminLog.log("[GARMIN-SYNC] body-energy rebuild failed: $it") }
-            // Only now teach the gains. The fit asks "where did the watch and
-            // the model disagree", and a model that has not yet seen the sleep
-            // this sync just delivered disagrees for a reason that is not a
-            // mis-set gain — it would learn from an artefact of when data
-            // arrived. Flutter fits before the rebuild and takes that on;
-            // ordering it after costs nothing, since both are already
-            // fire-and-forget, and the watch evidence keeps until the next run
-            // if the rebuild fails.
+            // Fit the gains only after the rebuild, or the model learns from
+            // data that had not arrived yet. The evidence keeps if the rebuild fails.
             runCatching { fitBodyEnergyFromWatch() }
                 .onFailure { GarminLog.log("[GARMIN-SYNC] body-energy calibration skipped: $it") }
         }
     }
 
     /**
-     * Makes the watch at [address] alert, and keeps the link open while it
-     * does. Port of the Flutter build's `GarminWatchSyncService.findWatch`.
-     *
-     * Find is a TOGGLE with a timeout, not a one-shot: the watch alerts for
-     * [timeout] unless cancelled, so the link has to stay open for the
-     * duration — a sync closes it in about a second, which would end the
-     * alert with it. Completing [cancelled] stops the alert early.
-     *
-     * Returns whether the watch ACCEPTED the request. That is not the same as
-     * "the watch is ringing": the protocol answers OK (100) or ERROR (200),
-     * and only the first means anything happened.
-     *
-     * Throws [RadioLeaseBusyException] when something else holds the radio,
-     * and [GarminGattClientException] when the watch cannot be reached.
+     * Makes the watch at [address] alert and keeps the link open while it
+     * does. Find is a toggle with a timeout; completing [cancelled] stops it.
+     * Returns whether the watch accepted the request. Throws
+     * [RadioLeaseBusyException] or [GarminGattClientException].
      */
     suspend fun findWatch(
         address: String,
@@ -259,10 +199,8 @@ class GarminWatchSyncService @Inject constructor(
         val client = GarminGattClient(context, address)
         var transport: GarminMlTransport? = null
         val ready = CompletableDeferred<Unit>()
-        // The watch narrates a find it has ended itself — dismissed on the
-        // wrist, or run out. Without listening for that, the phone holds
-        // "Stop" for the full minute after the alert has already stopped,
-        // which is what a real wearer hit first.
+        // The watch reports a find it ended itself. Without this the phone shows
+        // "Stop" for the full minute.
         val endedOnWatch = CompletableDeferred<Unit>()
         val session = GarminSession(
             scope = this,
@@ -272,9 +210,7 @@ class GarminWatchSyncService @Inject constructor(
             bluetoothName = phone.bluetoothName,
             manufacturer = phone.manufacturer,
             model = phone.model,
-            // A session opened to DO something, not to collect something —
-            // dragging a file sync along would die mid-transfer when the link
-            // closes under it.
+            // A file sync would die mid-transfer when the link closes.
             syncFiles = false,
             onHandshakeReady = { ready.complete(Unit) },
         )
@@ -292,9 +228,7 @@ class GarminWatchSyncService @Inject constructor(
         try {
             transport = client.connect(onFrame = { frame -> frames.trySend(frame) })
             session.start()
-            // The watch ignores anything sent before it has finished
-            // introducing itself, so wait for the handshake rather than
-            // racing it.
+            // The watch ignores anything sent before the handshake finishes.
             if (withTimeoutOrNull(HANDSHAKE_TIMEOUT) { ready.await() } == null) {
                 GarminLog.log("[GARMIN-FIND] the watch never finished its handshake")
                 return@coroutineScope false
@@ -306,15 +240,12 @@ class GarminWatchSyncService @Inject constructor(
             )
             val outcome = GarminFindMyWatch.outcome(reply)
             GarminLog.log("[GARMIN-FIND] ${outcome.name}")
-            // Only an explicit ERROR is a refusal. A reply this app cannot
-            // read is NOT: the watch was seen ringing while an unparsed reply
-            // was being treated as failure, and bailing here is what left it
-            // ringing with no way to stop it.
+            // Only an explicit ERROR is a refusal. An unreadable reply is not:
+            // the watch was seen ringing while one was treated as failure.
             if (outcome.declined) return@coroutineScope false
 
             ringing = true
-            // Hold the link for the alert, or until the user stops it or the
-            // watch reports it over.
+            // Hold the link for the alert, or until stopped.
             withTimeoutOrNull(timeout) {
                 select<Unit> {
                     endedOnWatch.onAwait { }
@@ -323,15 +254,10 @@ class GarminWatchSyncService @Inject constructor(
             }
             true
         } finally {
-            // ALWAYS cancel a started alert, on every path out — including a
-            // thrown error and a user who backed out. A buzzing watch that the
-            // phone has forgotten about is the one outcome worth writing code
-            // to prevent.
+            // Always cancel a started alert, on every path out.
             if (ringing) {
                 try {
-                    // NonCancellable: the cancel must still go out when this
-                    // coroutine is itself being torn down — that teardown is
-                    // exactly the "user backed out" path.
+                    // The cancel must still go out when this coroutine is being torn down.
                     withContext(NonCancellable) {
                         session.protobuf.request(
                             GarminFindMyWatch.cancel(),
@@ -352,14 +278,9 @@ class GarminWatchSyncService @Inject constructor(
     }
 
     /**
-     * The radio half: connect, run the GFDI session to completion, hand back
-     * whatever it downloaded.
-     *
-     * Throws [GarminGattClientException] when the watch cannot be reached or
-     * speaks a transport this app does not implement. A link that drops
-     * mid-sync is NOT an error: the session aborts and returns what it already
-     * has, because a night of sleep already on the phone should not be thrown
-     * away because the user walked out of range.
+     * Connect, run the GFDI session, return what it downloaded. Throws
+     * [GarminGattClientException] when the watch cannot be reached. A dropped
+     * link is not an error: the session returns what it already has.
      */
     private suspend fun pullFiles(
         device: BleSensorDevice,
@@ -371,8 +292,7 @@ class GarminWatchSyncService @Inject constructor(
         val handshakeReady = CompletableDeferred<Unit>()
         val session = GarminSession(
             scope = this,
-            // Bound after the transport opens; the lookup is deferred so the
-            // session can be constructed first and wired in one place.
+            // Bound after the transport opens.
             send = { frame ->
                 (transport ?: throw GarminGattClientException("Not connected")).sendFrame(frame)
             },
@@ -411,25 +331,18 @@ class GarminWatchSyncService @Inject constructor(
         // Housekeeping before the link opens, so it cannot delay the sync.
         fileStore.prune(now = Instant.now())
 
-        // Frames land on the binder thread as they arrive; a channel keeps
-        // their order while handing them to the session's suspending handler.
+        // Frames land on the binder thread; a channel keeps their order.
         val frames = Channel<GarminGfdiFrame>(Channel.UNLIMITED)
         val pump = launch { for (frame in frames) session.handleFrame(frame) }
-        // A dropped link ends the sync with what it has rather than hanging on
-        // `done` forever waiting for frames that will never arrive.
+        // A dropped link ends the sync with what it has.
         val dropWatch = launch { client.onDisconnected.collect { session.abort(it) } }
         try {
-            // Logged BEFORE connecting: a sync that wedged inside connect
-            // produced no output whatsoever, which read as "nothing happened"
-            // rather than "stuck on the radio".
+            // Logged before connecting: a wedge inside connect read as "nothing happened".
             GarminLog.log("[GARMIN-SYNC] connecting to the watch")
             transport = client.connect(onFrame = { frame -> frames.trySend(frame) })
             session.start()
-            // The battery percentage rides the same link, via the protobuf
-            // DeviceStatusService — the one place the watch reports a real
-            // percentage (the GFDI battery message is only good/ok/low).
-            // Fire-and-collect beside the file pull; a watch that never
-            // answers costs the timeout and nothing else.
+            // Battery percentage rides the same link via the protobuf
+            // DeviceStatusService. Collected beside the pull; bounded by a timeout.
             val batteryJob = launch {
                 runCatching {
                     if (withTimeoutOrNull(HANDSHAKE_TIMEOUT) { handshakeReady.await() } == null) {
@@ -447,15 +360,12 @@ class GarminWatchSyncService @Inject constructor(
                 }
             }
             val files = session.done.await()
-            // Bounded: the sync result must not wait on a battery answer that
-            // is not coming.
+            // The result must not wait on a battery answer that is not coming.
             withTimeoutOrNull(BATTERY_TIMEOUT) { batteryJob.join() }
             batteryJob.cancel()
             stateStore.recordCapabilities(device.id, session.capabilities)
             if (listenAfter > Duration.ZERO) {
-                // Diagnostic pass: the sync itself takes about a second, so
-                // holding the link open is the only way to see what the watch
-                // sends unprompted. Whatever arrives is logged by the session.
+                // Diagnostic pass: hold the link to see what the watch sends unprompted.
                 GarminLog.log(
                     "[GARMIN-LISTEN] holding the link open for " +
                         "${listenAfter.inWholeMinutes}m — touch the watch now",
@@ -504,14 +414,8 @@ class GarminWatchSyncService @Inject constructor(
 }
 
 /**
- * The earliest local day a set of downloaded watch files carries data for.
- *
- * Null when the watch dated none of them — its "no date" sentinel is real and
- * observed on a vívoactive 5 — in which case nothing is invalidated and the
- * chain's settling window stays the only safety net, which is what it is for.
- *
- * Top-level and pure so it can be tested without the sync service, which needs
- * a radio, a lease and a live GFDI session to build.
+ * The earliest local day the downloaded files carry data for, or null when
+ * the watch dated none of them. Pure, so it is testable without the service.
  */
 fun garminEarliestAffectedDay(
     downloaded: List<GarminDownloadedFile>,

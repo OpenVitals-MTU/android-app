@@ -25,13 +25,8 @@ import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the rendering cases of Flutter's
- * `test/features/heart/heart_metric_screen_test.dart`.
- *
- * This content is shared by every heart and vitals metric, so two of its
- * branches are worth pinning here rather than per metric: the empty state, and
- * the data-source education link, which is the only route from a reading a user
- * disputes to the app that wrote it.
+ * Shared by every heart and vitals metric: the empty state, and the data-source link,
+ * the only route from a disputed reading to the app that wrote it.
  */
 class HeartMetricContentTest {
 
@@ -54,8 +49,7 @@ class HeartMetricContentTest {
 
     @Test
     fun aLoadedPeriodCarriesTheDataSourceEducationLink() {
-        // "Whose reading is this?" is the first question an unexpected number
-        // provokes, and this link is the only answer the screen offers.
+        // "Whose reading is this?" is the first question, and this link is the only answer.
         setContent(state(hasData = true, summaries = listOf(summary())))
 
         composeRule.onNode(hasScrollAction())
@@ -67,16 +61,13 @@ class HeartMetricContentTest {
 
     @Test
     fun aLoadedPeriodRendersTheOrderedSections() {
-        // A week view is not one card: it is the chart, the threshold checks a
-        // user tunes, the statistics, the per-day breakdown and the confidence
-        // note, in that order. Losing any one of them removes a whole answer
-        // from the screen with nothing to say it is missing.
+        // A week view is the chart, the threshold checks, the statistics, the breakdown and the confidence note, in order.
         setContent(state(hasData = true, summaries = listOf(summary())))
 
         listOf(
             // PERIOD_CHART
             R.string.metric_average_heart_rate,
-            // DAILY_GOAL — the high/low threshold checks live in that slot.
+            // DAILY_GOAL: the threshold checks live in that slot.
             R.string.heart_rate_health_checks_title,
             R.string.section_statistics,
             // ENTRIES

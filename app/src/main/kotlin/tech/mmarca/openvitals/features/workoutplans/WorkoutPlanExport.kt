@@ -26,11 +26,8 @@ import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
 
 /**
- * Plans as a JSON file: a backup that does not depend on Health Connect
- * keeping them, and a way to carry a routine to another phone. Everything the
- * app reads from a plan is written, including goals and targets it cannot
- * edit, so a foreign plan survives the trip. Hand-built JSON because the
- * project uses the serialization runtime without its compiler plugin.
+ * Plans as a JSON file: a backup and a way to another phone. Everything
+ * read is written, so a foreign plan survives. Hand-built JSON.
  */
 object WorkoutPlanExport {
     const val FormatVersion = 1

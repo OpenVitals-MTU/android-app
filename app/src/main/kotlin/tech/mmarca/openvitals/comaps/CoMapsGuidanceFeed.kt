@@ -19,50 +19,17 @@ import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepositor
 import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
 
 /**
- * What CoMaps is guiding right now — the one feed, for everyone who wants it.
+ * What CoMaps is guiding right now: one feed for everyone. Each feature [request]s it
+ * by its own [Reason]; the feed runs while anyone asks.
  *
- * The bottom of four layers, and the only one that touches CoMaps:
- *
- * 1. **this** — reads the guidance;
- * 2. activity recording — shows it on the recording screen, banks it with the
- *    activity, draws the route, all under its own Settings switch;
- * 3. guidance on a watch — puts it on a wrist, under its own per-watch switch;
- * 4. the vendor that owns that wrist — today Garmin, which has no turn-by-turn
- *    channel and so sends a notification instead. A Samsung or a Wear OS watch
- *    would send something else entirely, and belongs at that layer, not here.
- *
- * Layers 2 and 3 are independent features that happen to read the same thing.
- * Either can want guidance without the other; each [request]s it by its own
- * [Reason] and the feed runs while anyone is asking. Neither can see the
- * other's switches, and nothing here knows what a watch is.
- *
- * **Exactly one collector, deliberately.** CoMaps is observed, not polled: its
- * `NavigationService` calls `notifyChange` on the provider URI at every
- * location fix while it guides, so guidance arrives as fast as CoMaps makes it
- * and a phone navigating nowhere is never queried. The repository holds the
- * liveness clock that feed and safety poll share, and a second concurrent
- * subscription would reset that clock under the first — the two would then
- * take turns calling a live route finished. So the subscription lives here,
- * once, and readers read [guidance].
- *
- * One poll stays, because the feed has a blind spot: CoMaps notifies on CHANGE
- * only. Nothing fires when a route ends — that path just calls `stopSelf()` —
- * and CoMaps never clears the routing info its provider reads from, so the
- * last row keeps being served afterwards. Without an occasional ask, a
- * finished turn would be held forever. The poll runs only while a route is
- * actually being followed, which is the only thing it can detect; a route
- * *starting* needs no poll, the observer hears it. This matters because
- * querying the provider STARTS the CoMaps process when it is not running.
+ * Exactly one collector, because a second subscription resets the liveness clock.
+ * A poll runs while a route is followed, since CoMaps never clears its routing info.
  */
 @Singleton
 class CoMapsGuidanceFeed @Inject constructor(
     private val repository: CoMapsNavigationRepository,
 ) {
-    /**
-     * Why the feed is up. Each is a feature with its own switch, and no
-     * reason outranks another: the feed runs while any is asking and stops
-     * when the last one lets go.
-     */
+    /** Why the feed is up. No reason outranks another. */
     enum class Reason {
         /** A GPS recording is running (or being armed) with the integration on. */
         ACTIVITY_RECORDING,
@@ -73,20 +40,12 @@ class CoMapsGuidanceFeed @Inject constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    /**
-     * A flow rather than a set because the askers are on different threads —
-     * the recording controller on Main, a watch relay on its own — and the
-     * start/stop it drives must happen in one place, in order.
-     */
+    /** A flow, not a set: the askers are on different threads, and start/stop must happen in order. */
     private val reasons = MutableStateFlow<Set<Reason>>(emptySet())
 
     private val _guidance = MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
 
-    /**
-     * What CoMaps says, raw: [CoMapsNavigationState.Disabled] whenever nobody
-     * is asking. Readers apply their own switches to it — this one answers
-     * only to whether anybody wants the feed at all.
-     */
+    /** What CoMaps says, raw. [CoMapsNavigationState.Disabled] whenever nobody asks. */
     val guidance: StateFlow<CoMapsNavigationState> = _guidance.asStateFlow()
 
     private var watchJob: Job? = null
@@ -102,19 +61,12 @@ class CoMapsGuidanceFeed @Inject constructor(
     }
 
     /**
-     * Call after a permission dialog closes: the package probe may now answer
-     * differently, and the subscription is re-opened rather than merely re-read.
-     *
-     * Registering the observer needs the grant that just arrived. An attempt
-     * made without it was refused, and a refused observer hears nothing ever
-     * again — so a wearer who switched guidance on and granted afterwards
-     * would have had a dead feed until the next app start. Re-opening reads
-     * the current state on its own, so there is nothing else to ask for.
+     * Call after a permission dialog closes: a refused observer hears nothing
+     * ever again, so the subscription is re-opened.
      */
     fun refresh() {
         repository.onPermissionChanged()
-        // Onto the feed's own scope, like every other start and stop: the jobs
-        // below are single-threaded state and the callers are screens.
+        // Onto the feed's own scope: the jobs below are single-threaded state.
         scope.launch {
             val asking = reasons.value
             if (asking.isEmpty()) return@launch
@@ -129,10 +81,8 @@ class CoMapsGuidanceFeed @Inject constructor(
             _guidance.value = CoMapsNavigationState.Disabled
             return
         }
-        // The feed opens with the current state, so there is no separate first
-        // read to make here — and the safety poll is NOT started here either:
-        // it only exists to catch a route ending, so it runs only while one is
-        // being followed (see [syncSafetyPoll]).
+        // The feed opens with the current state. The safety poll starts only while
+        // a route is being followed; see [syncSafetyPoll].
         if (watchJob == null) {
             watchJob = scope.launch {
                 repository.watchLive().collect(::publish)

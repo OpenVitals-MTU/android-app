@@ -136,11 +136,8 @@ internal fun SleepStagesLaneChart(
     val trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
     val labelStyle = MaterialTheme.typography.titleSmall
 
-    // The label sits above the track in a band of its own; at a large system font the
-    // label text is TALLER than its base box, so the band grows to fit it and the whole
-    // lane with it. Otherwise the label overflows downward onto the track and the
-    // hypnogram reads as drawn on top of its own axis. 'Ag' because an ascender and a
-    // descender together are the tallest a line of this style can get.
+    // The label band grows with the font, or the label overflows onto the track.
+    // 'Ag' is the tallest a line of this style gets.
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val labelHeight = remember(textMeasurer, labelStyle, density) {
@@ -251,11 +248,8 @@ internal fun SleepStagesLaneChart(
                     endY = gradientEndY,
                 )
 
-                // Two paths, because out-of-bed is the one stretch that is NOT a sleep stage:
-                // it is painted flat in its own colour while everything else takes the lane
-                // gradient, which would otherwise hand it the Awake pink for sitting on the
-                // Awake lane. Both share the same geometry and the same connectors, so the
-                // hypnogram keeps its shape and only the gap changes colour.
+                // Out of bed is not a sleep stage: painted flat in its own colour
+                // rather than the lane gradient's Awake pink. Same geometry.
                 val outOfBedColor = stageColor(SleepStage.STAGE_OUT_OF_BED)
                 val sleepPath = Path()
                 val gapPath = Path()
@@ -272,9 +266,7 @@ internal fun SleepStagesLaneChart(
                         }
                         val previous = visibleStages.getOrNull(index - 1)
                         if (previous != null && previous.end == stage.start) {
-                            // Each path carries its own current point now, so the transition
-                            // is anchored explicitly at the previous stage's right edge rather
-                            // than inherited from whatever was appended last.
+                            // Anchored at the previous stage's right edge.
                             path.moveTo(timeX(previous.end), laneCenterY(previous.laneIndex))
                             path.lineTo(left, centerY)
                         } else {
@@ -313,12 +305,8 @@ internal fun SleepStagesLaneChart(
                     } else {
                         label
                     }
-                    // A solid chip, shrink-wrapped to the words and left-aligned. The
-                    // hypnogram's segments and diagonal connectors run under these
-                    // labels at the left edge; without an opaque scrim the path draws
-                    // straight through the text and neither is readable. Opaque on
-                    // purpose — a translucent or gradient scrim still lets the path
-                    // show through, which is the whole problem.
+                    // An opaque chip: the path runs under these labels, and a
+                    // translucent scrim lets it show through.
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -416,10 +404,7 @@ internal fun SleepStagesLaneChart(
     }
 }
 
-/**
- * Grouped per-stage durations (Awake / REM / Light / Deep, plus any out-of-bed gap in a
- * night slept in two goes) for the stage breakdown.
- */
+/** Per-stage durations, plus any out-of-bed gap of a night slept in two goes. */
 internal data class SleepStageDurations(
     val awakeMs: Long,
     val remMs: Long,
@@ -439,10 +424,8 @@ internal data class SleepStageShare(
 )
 
 /**
- * The rows of [SleepStageBreakdown]: only the stages that recorded any time, each with its share
- * of the recorded total. Out of bed — the gap of a night slept in two goes — gets its own row
- * after Awake, so the shares account for the whole span the timeline draws. Empty when nothing
- * was recorded, in which case the card self-hides.
+ * The rows of [SleepStageBreakdown]: only stages with time, each with its
+ * share. Out of bed gets its own row after Awake. Empty hides the card.
  */
 internal fun sleepStageShares(durations: SleepStageDurations): List<SleepStageShare> {
     val totalMs = durations.totalMs.takeIf { it > 0L } ?: return emptyList()
@@ -475,10 +458,7 @@ internal fun sleepStageTypeAt(stages: List<SleepStage>, time: Instant): Int? =
         .firstOrNull { !time.isBefore(it.startTime) && time.isBefore(it.endTime) }
         ?.stageType
 
-/**
- * "Share of time in bed" card wrapping the [SleepStageBreakdown]. Self-hides when there is no stage
- * data. Used across the day / week / month sleep views for a consistent breakdown card.
- */
+/** "Share of time in bed" card wrapping [SleepStageBreakdown]. Hides without stage data. */
 @Composable
 internal fun SleepStageShareCard(
     durations: SleepStageDurations,
@@ -491,11 +471,7 @@ internal fun SleepStageShareCard(
     }
 }
 
-/**
- * Vertical per-stage list (Awake / REM / Light / Deep). Each row shows the stage name, a
- * stage-colored bar that fills to the stage's share of the total, and the duration with that share
- * in parentheses.
- */
+/** Per-stage rows: name, a bar filled to the share, and the duration. */
 @Composable
 internal fun SleepStageBreakdown(
     durations: SleepStageDurations,
@@ -580,10 +556,8 @@ internal fun SleepStageLegend(stages: List<SleepStage>, unitFormatter: UnitForma
 }
 
 /**
- * The in-bed span itself, under everything the night recorded. Where a stage covers it
- * the stage wins; where nothing does, this is what shows, and it means "in bed, nothing
- * recorded here" — NOT "out of bed". Keeping it translucent [SleepColor] is what makes a
- * bar read as sleep at a glance.
+ * The in-bed span under everything recorded. It means "in bed, nothing
+ * recorded", not "out of bed". Translucent [SleepColor] reads as sleep.
  */
 internal val SleepInBedBaseColor: Color = SleepColor.copy(alpha = 0.5f)
 
@@ -594,11 +568,7 @@ internal fun stageColor(stageType: Int): Color = when (stageType) {
     SleepStage.STAGE_REM -> Color(0xFFB3E5FC)
     SleepStage.STAGE_AWAKE_IN_BED -> Color(0xFFF8A6C6)
     SleepStage.STAGE_SLEEPING -> Color(0xFF7EA7F5)
-    // Out of bed sits on the Awake lane and is a kind of awake, so it belongs to the
-    // Awake pink family — a dusty, desaturated rose rather than the bright pink — so
-    // it reads as "up" at a glance while still telling apart from awake-in-bed. It
-    // stays far from every sleep stage (all cool: violet, two blues, a cyan). The
-    // earlier warm brown-grey read as a different kind of thing altogether.
+    // Out of bed is a kind of awake: a dusty rose, far from every cool sleep stage.
     SleepStage.STAGE_OUT_OF_BED -> Color(0xFFC98FA6)
     else -> Color(0xFF90A4AE)
 }

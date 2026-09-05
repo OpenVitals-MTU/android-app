@@ -14,13 +14,9 @@ import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
 
 /**
- * Holds the GPS ephemeris files the user supplied, and remembers what the
- * watch has been asking for.
- *
- * The files are small (tens of kilobytes) and are copied into app storage on
- * import rather than read back through the picker's URI: a watch asks for
- * ephemeris days later, in the background, long after any grant on the
- * original file has gone.
+ * Holds the user's ephemeris files and remembers what the watch asks for.
+ * Files are copied into app storage: the watch asks days later, after any
+ * grant on the original URI has gone.
  */
 @Singleton
 class GarminAgpsStore @Inject constructor(
@@ -35,11 +31,7 @@ class GarminAgpsStore @Inject constructor(
     private val state = MutableStateFlow(read())
     val agps: StateFlow<GarminAgpsState> = state
 
-    /**
-     * Copies an ephemeris file in, deciding what it is from its contents
-     * rather than its name — the user is downloading these from a third party
-     * and the filename tells us nothing we can trust.
-     */
+    /** Copies an ephemeris file in, classified by its contents, not its name. */
     fun import(uri: Uri): GarminAgpsImport {
         val bytes = runCatching {
             context.contentResolver.openInputStream(uri)?.use { input ->
@@ -88,11 +80,7 @@ class GarminAgpsStore @Inject constructor(
         },
     )
 
-    /**
-     * Remembers a URL the watch asked for. This is the only way a user can
-     * find out WHICH ephemeris file their particular watch needs — the URL
-     * names the format, and no two chipsets want the same one.
-     */
+    /** Remembers a URL the watch asked for: the only way to learn which file this chipset needs. */
     private fun recordRequest(url: String, kind: GarminAgpsKind?) {
         val known = prefs.readStringList(KEY_KNOWN_URLS).orEmpty()
         if (url in known) return

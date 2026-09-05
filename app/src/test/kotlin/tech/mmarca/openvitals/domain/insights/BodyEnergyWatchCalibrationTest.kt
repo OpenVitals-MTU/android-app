@@ -53,8 +53,7 @@ class BodyEnergyWatchCalibrationTest {
 
     @Test
     fun `buildWatchObservations downsamples to one reading per bucket`() {
-        // The watch emits ~1/minute; feeding all of them in would let one day
-        // outvote months of evidence.
+        // The watch emits ~1/minute; feeding all in would let one day outvote months.
         val samples = List(180) { i ->
             WatchBodyEnergySample(time = day.plus(Duration.ofMinutes(i.toLong())), score = 70)
         }
@@ -90,8 +89,7 @@ class BodyEnergyWatchCalibrationTest {
 
     @Test
     fun `buildWatchObservations drops readings with no nearby point`() {
-        // Attributing an error to a gain the model was not exercising then would
-        // teach it the wrong lesson.
+        // Attributing an error to a gain the model was not exercising teaches the wrong lesson.
         val samples = listOf(
             WatchBodyEnergySample(time = day.plus(Duration.ofHours(12)), score = 50),
         )
@@ -125,9 +123,7 @@ class BodyEnergyWatchCalibrationTest {
 
     @Test
     fun `the influence comes from the timeline, not a re-derivation`() {
-        // The point already carries the influence the timeline computed, with
-        // the zone/workout context that reconstructing it from drain components
-        // alone would lose.
+        // The point carries the influence the timeline computed, with context re-deriving would lose.
         val samples = listOf(WatchBodyEnergySample(time = day, score = 50))
         val timeline = timeline(
             listOf(
@@ -158,7 +154,7 @@ class BodyEnergyWatchCalibrationTest {
         )
     }
 
-    // ── fitBodyEnergyGains with watch readings ──────────────────────────────
+    // fitBodyEnergyGains with watch readings.
 
     private fun exertionReading(observed: Int, predicted: Int): BodyEnergyWatchReading =
         BodyEnergyWatchReading(
@@ -188,9 +184,7 @@ class BodyEnergyWatchCalibrationTest {
 
     @Test
     fun `one reading barely moves a gain`() {
-        // A watch reading is another model's opinion, and the fit is meant to
-        // converge over days of agreement rather than chase an hour of
-        // disagreement.
+        // A watch reading is another model's opinion; the fit converges over days, not hours.
         val fitted = fitBodyEnergyGains(
             BodyEnergyCalibration(),
             watchReadings = listOf(exertionReading(50, 70)),
@@ -213,8 +207,7 @@ class BodyEnergyWatchCalibrationTest {
 
     @Test
     fun `a realistic day of disagreement converges without saturating`() {
-        // 24 hourly readings each ~10 points off — the everyday case. The gain
-        // should move usefully in a day without pinning to its limit.
+        // 24 hourly readings each ~10 points off: the gain should move usefully without pinning.
         val fitted = fitBodyEnergyGains(
             BodyEnergyCalibration(),
             watchReadings = List(24) { exertionReading(60, 70) },
@@ -226,9 +219,7 @@ class BodyEnergyWatchCalibrationTest {
 
     @Test
     fun `a day of MAXIMAL disagreement does reach the clamp`() {
-        // 24 readings each 100 points wrong. Documented, not accidental: at this
-        // learning rate such a day means the model is badly wrong, and a large
-        // correction is the right answer. The clamp stops it running away.
+        // 24 readings each 100 points wrong: a large correction is right, and the clamp stops a runaway.
         val fitted = fitBodyEnergyGains(
             BodyEnergyCalibration(),
             watchReadings = List(24) { exertionReading(0, 100) },

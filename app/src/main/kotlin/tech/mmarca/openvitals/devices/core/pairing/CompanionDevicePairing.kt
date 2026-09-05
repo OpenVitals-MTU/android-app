@@ -23,28 +23,11 @@ import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
- * CompanionDeviceManager association, used when onboarding a Garmin watch.
- *
- * Ported from the Flutter build's `CompanionDevices.kt` (itself ported from
- * Gadgetbridge's `util/BondingUtil.java` — AGPLv3, the same licence as this
- * app), with the plugin's callback API converted to a suspend function. The
- * association is what lets the OS raise this app's process priority while the
- * watch is in range (see [OpenVitalsCompanionDeviceService]), which a long BLE
- * file sync needs.
- *
- * WHY EVERYTHING DEGRADES QUIETLY: association is optional. The user can
- * decline the system dialog, and presence observation needs API 31+ while the
- * app's minSdk is lower. Neither is an error — a watch that is bonded but not
- * associated still syncs, just without the priority boost. So every method
- * here returns "no association" rather than throwing.
- *
- * WHAT IS NOT LOGGED: the device address. `Log` is not stripped from a release
- * build, and a Bluetooth MAC is a stable identifier for the person carrying
- * it. These lines say what happened, not to whom.
- *
- * Association is scoped to an Activity: the OS hands back an [IntentSender]
- * that must be launched for result. With no Activity attached there is no
- * dialog to show and [associate] resolves false.
+ * CompanionDeviceManager association for a Garmin watch. It lets the OS
+ * raise this app's priority while the watch is in range, which a long sync
+ * needs. Optional: the user can decline, and presence needs API 31+, so
+ * every method returns "no association" rather than throwing. The device
+ * address is never logged. Association needs an attached Activity.
  */
 @Singleton
 class CompanionDevicePairing @Inject constructor(
@@ -60,9 +43,7 @@ class CompanionDevicePairing @Inject constructor(
     private fun manager(): CompanionDeviceManager? =
         applicationContext.getSystemService(CompanionDeviceManager::class.java)
 
-    // -------------------------------------------------------------------------
-    // Activity lifecycle
-    // -------------------------------------------------------------------------
+    // Activity lifecycle.
 
     fun attachToActivity(activity: Activity) {
         val componentActivity = activity as? ComponentActivity
@@ -87,21 +68,15 @@ class CompanionDevicePairing @Inject constructor(
     fun detachFromActivity() {
         launcher?.unregister()
         launcher = null
-        // A dialog in flight when the Activity goes away can never report
-        // back. Resolve it as declined rather than leaking the caller forever.
+        // A dialog in flight when the Activity goes away can never report back.
         resolvePending(false)
     }
 
-    // -------------------------------------------------------------------------
-    // API
-    // -------------------------------------------------------------------------
+    // API.
 
     /**
-     * Asks the OS to associate [address] with this app, showing the system
-     * "Allow OpenVitals to access <watch>?" dialog. True when the user allows
-     * it; false on decline and on every degraded path (no activity attached,
-     * invalid address, CDM unavailable, a request already in flight, or the
-     * platform refusing the request).
+     * Asks the OS to associate [address], showing the system dialog. True when
+     * allowed; false on decline and on every degraded path.
      */
     suspend fun associate(address: String, @Suppress("UNUSED_PARAMETER") displayName: String? = null): Boolean {
         if (!BluetoothAdapter.checkBluetoothAddress(address)) {
@@ -113,9 +88,7 @@ class CompanionDevicePairing @Inject constructor(
             Log.i(TAG, "associate: CompanionDeviceManager unavailable")
             return false
         }
-        // Already associated: the OS never invokes the callback for a repeat
-        // request, so short-circuiting is what keeps re-onboarding from
-        // hanging (Gadgetbridge hits the same trap, BondingUtil.java:377).
+        // Already associated: the OS never calls back for a repeat request.
         if (isAssociated(address)) {
             Log.i(TAG, "associate: already associated")
             startObservingPresence(address)
@@ -143,9 +116,7 @@ class CompanionDevicePairing @Inject constructor(
                 }
             }
 
-            // A Garmin watch is reached over BLE, so it is filtered by scan
-            // filter rather than by classic MAC — the classic filter would
-            // never match and the dialog would sit on "searching" forever.
+            // A Garmin watch is reached over BLE, so filter by scan, not classic MAC.
             val request =
                 AssociationRequest.Builder()
                     .addDeviceFilter(
@@ -171,9 +142,7 @@ class CompanionDevicePairing @Inject constructor(
                         }
 
                         override fun onFailure(error: CharSequence?) {
-                            // Most often the watch simply was not seen within
-                            // the OS's scan window. Not fatal: onboarding
-                            // continues unassociated.
+                            // Usually the watch was not seen in the scan window. Not fatal.
                             Log.w(TAG, "associate: failed: $error")
                             resolvePending(false)
                         }
@@ -181,13 +150,7 @@ class CompanionDevicePairing @Inject constructor(
                     null,
                 )
             } catch (e: Exception) {
-                // `associate` is a binder call that throws SYNCHRONOUSLY when
-                // the platform refuses the request outright — e.g.
-                // IllegalStateException "Must declare uses-feature
-                // android.software.companion_device_setup" if that declaration
-                // is ever dropped from the manifest. Without this catch the
-                // throw escapes instead of the quiet `false` this API
-                // promises, and the pending continuation is never resolved.
+                // `associate` throws synchronously when the platform refuses outright.
                 Log.w(TAG, "associate: request refused: ${e.message}")
                 resolvePending(false)
             }
@@ -213,15 +176,12 @@ class CompanionDevicePairing @Inject constructor(
             manager.disassociate(address)
             Log.i(TAG, "disassociated")
         } catch (e: Exception) {
-            // Nothing associated, or already gone. Forgetting a device must
-            // not fail because the OS had nothing to forget.
+            // Nothing to forget is not a failure.
             Log.i(TAG, "disassociate: ${e.message}")
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Presence observation (API 31+) — what wakes OpenVitalsCompanionDeviceService.
-    // -------------------------------------------------------------------------
+    // Presence observation (API 31+): what wakes OpenVitalsCompanionDeviceService.
 
     private fun startObservingPresence(address: String) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return

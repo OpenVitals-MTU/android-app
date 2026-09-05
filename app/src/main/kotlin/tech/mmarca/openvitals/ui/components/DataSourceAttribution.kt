@@ -42,11 +42,7 @@ fun DataSourceAttribution(
     packageName: String,
     modifier: Modifier = Modifier,
     showIcon: Boolean = true,
-    /**
-     * True for a record that arrived via phone-to-phone sync and shows its
-     * preserved ORIGINAL source app; the label gains a "(synced)" qualifier so
-     * the attribution is not mistaken for a native Health Connect origin.
-     */
+    /** True for a synced record showing its original source; the label gains "(synced)". */
     synced: Boolean = false,
 ) {
     val context = LocalContext.current

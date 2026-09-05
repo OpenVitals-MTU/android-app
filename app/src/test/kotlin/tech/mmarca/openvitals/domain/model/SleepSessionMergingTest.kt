@@ -100,8 +100,7 @@ class SleepSessionMergingTest {
     }
 
     @Test fun `mergeSleepSessions does not double count overlapping same-source records`() {
-        // Mi Fitness shape: the night once as a whole, and again as a partial record
-        // covering the same hours. Summing the parts showed 8h23m of stages as 13h15m.
+        // Mi Fitness shape: the night as a whole and again as a partial record. Summing showed 8h23m as 13h15m.
         val whole = sleep(
             id = "whole",
             source = "com.xiaomi.wearable",
@@ -153,8 +152,7 @@ class SleepSessionMergingTest {
     }
 
     @Test fun `sleepDurationMsFromStages falls back to time in bed when the night has no stage data`() {
-        // A night in bed 8.5 h with no stage data: nothing to subtract awake time
-        // from, so the whole session counts.
+        // No stage data, so nothing to subtract awake time from.
         val timeInBedMs = Duration.ofHours(8).plusMinutes(30).toMillis()
 
         assertEquals(timeInBedMs, sleepDurationMsFromStages(emptyList(), timeInBedMs))
@@ -239,9 +237,7 @@ class SleepSessionMergingTest {
 
     @Test
     fun `mergeSleepSessions removes a near-total cross-source duplicate whose end drifts past the old tolerance`() {
-        // The reported bug: Fitbit + Sleep-as-Android autodetect for one night.
-        // ~100% overlap of the shorter session, but the ends differ by 48 min —
-        // the old 30-min boundary gate wrongly kept both, summing to ~11h26m.
+        // Fitbit + Sleep-as-Android for one night: ~100% overlap, ends 48 min apart. The old 30-min gate kept both.
         val fitbit = sleep(
             id = "fitbit",
             source = "com.fitbit.FitbitMobile",

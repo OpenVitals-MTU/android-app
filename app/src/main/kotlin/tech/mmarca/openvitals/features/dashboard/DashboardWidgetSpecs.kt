@@ -183,15 +183,11 @@ internal fun dashboardWidgetSpecs(
                         val watch = model.watch
                         DashboardPillWidget(
                             title = title,
-                            // The watch's name IS the value here — the tile
-                            // answers "which watch", and battery/last sync sit
-                            // underneath as the supporting detail.
+                            // The watch's name is the value; battery and last sync sit underneath.
                             value = DisplayValue(watch?.name.orEmpty(), ""),
                             icon = meta.icon,
                             accentColor = meta.accentColor,
-                            // Subtitle, not message: a message REPLACES the
-                            // value, which would drop the watch's name — the
-                            // one thing the tile exists to say.
+                            // Subtitle, not message: a message replaces the value.
                             message = loadingMessage.takeIf { model.isLoading },
                             subtitle = watch?.let { watchSubtitle(it) },
                             modifier = modifier,
@@ -199,9 +195,7 @@ internal fun dashboardWidgetSpecs(
                                 {
                                     WatchSyncButton(
                                         isSyncing = current.isSyncing,
-                                        // Editing is drag-and-drop: a live
-                                        // button inside a tile being dragged
-                                        // would fire on the grab.
+                                        // A live button inside a dragged tile would fire on the grab.
                                         onClick = if (isEditingDashboard) null else onSyncWatch,
                                     )
                                 }
@@ -245,8 +239,7 @@ internal fun dashboardWidgetSpecs(
                 addOptionalMetric(
                     id = widgetId,
                     title = title,
-                    // hasValue = false means the number is a synthesized zero,
-                    // not a reading — render the no-data message instead.
+                    // hasValue = false means a synthesized zero, not a reading.
                     value = model.value.takeIf { model.hasValue },
                     icon = meta.icon,
                     accentColor = meta.accentColor,
@@ -267,11 +260,7 @@ internal fun dashboardWidgetSpecs(
     }
 }
 
-/**
- * The tile's sync action. A spinner while the sync runs rather than a disabled
- * icon: the tile is the only place the user sees it happening, and the run
- * outlives the screen that started it.
- */
+/** The sync action: a spinner while the sync runs, since the tile is where the user sees it. */
 private val WatchSyncButtonSize = 32.dp
 private val WatchSyncGlyphSize = 18.dp
 private val WatchSyncSpinnerSize = 20.dp
@@ -299,12 +288,7 @@ private fun WatchSyncButton(isSyncing: Boolean, onClick: (() -> Unit)?) {
     }
 }
 
-/**
- * The line under the watch's name: battery when the watch has reported one,
- * then when it last synced, then how many other watches are paired. Whichever
- * of those exist, joined — a watch that has never synced and never reported a
- * battery still gets a tile, it just has nothing to add.
- */
+/** The line under the watch's name: battery, last sync, other watches, whichever exist. */
 @Composable
 private fun watchSubtitle(watch: WatchWidgetDisplay): String? {
     val isLive = watch.liveHeartRateBpm != null || watch.liveSteps != null
@@ -312,9 +296,7 @@ private fun watchSubtitle(watch: WatchWidgetDisplay): String? {
         watch.liveHeartRateBpm?.let { add(stringResource(R.string.dashboard_watch_live_hr, it)) }
         watch.liveSteps?.let { add(stringResource(R.string.dashboard_watch_live_steps, it)) }
         watch.batteryPercent?.let { add(stringResource(R.string.dashboard_watch_battery, it)) }
-        // When the wrist is streaming, "synced 20 min ago" is both stale news
-        // and the least of what this line has to say — the live values took
-        // its place rather than crowding in beside it.
+        // While streaming, the live values replace the stale sync time.
         watch.lastSyncedAt?.takeIf { !isLive }?.let {
             add(
                 stringResource(
@@ -494,8 +476,7 @@ private fun dashboardWidgetMeta(widgetId: DashboardWidgetId): DashboardWidgetMet
         DashboardWidgetId.ELEVATION -> DashboardWidgetMeta(Icons.Outlined.Terrain, ElevationColor)
         DashboardWidgetId.WHEELCHAIR_PUSHES -> DashboardWidgetMeta(Icons.AutoMirrored.Outlined.Accessible, WheelchairPushesColor)
         DashboardWidgetId.SLEEP -> DashboardWidgetMeta(Icons.Outlined.Bed, SleepColor)
-        // The battery, matching the screen the tile opens — the tile used to show a
-        // heart, which named a different feature.
+        // The battery, matching the screen the tile opens.
         DashboardWidgetId.BODY_ENERGY -> DashboardWidgetMeta(Icons.Outlined.BatteryChargingFull, VitalsColor)
         DashboardWidgetId.HYDRATION -> DashboardWidgetMeta(Icons.Outlined.LocalDrink, HydrationColor)
         DashboardWidgetId.CALORIES_IN,

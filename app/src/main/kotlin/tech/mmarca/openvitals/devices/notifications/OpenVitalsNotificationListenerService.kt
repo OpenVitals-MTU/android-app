@@ -14,31 +14,12 @@ import tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge
 
 /**
  * Reads the phone's notifications so they can be mirrored to a paired Garmin
- * watch.
+ * watch. Bound by the system once the user grants notification access.
  *
- * Bound by the system whenever the process is alive, once the user has granted
- * notification access in system settings — there is no runtime prompt for this
- * permission, and no way to ask for it from inside the app.
- *
- * This class does as little as possible, on purpose:
- *
- *  1. Reduce the notification to the handful of fields GNCS can carry.
- *  2. Ask [NotificationFilter] whether it is worth anything. Most are not, and
- *     rejecting them here — before any Bluetooth is touched — is the single
- *     biggest battery decision in the feature.
- *  3. Buffer the survivors and poke the in-process forwarder.
- *
- * Lifted from the Flutter build's `notification_listener_native` plugin with
- * ONE structural change: step 3 used to persist a callback handle and spin a
- * headless Flutter engine (`ForwarderEngine.wake`); in a single-process Kotlin
- * app the forwarder is an ordinary singleton, so the wake-up became a direct
- * call into [GarminNotificationBridge] and the whole headless-engine problem
- * evaporated.
- *
- * It touches no Bluetooth and holds no protocol knowledge. Nothing is written
- * to disk: notification text lives in a bounded in-memory buffer until the
- * forwarder drains it, and the app has no INTERNET permission, so it cannot
- * leave the phone by any route other than the one Bluetooth link.
+ * Does as little as possible: reduce the notification to what GNCS carries,
+ * ask [NotificationFilter] whether it is worth anything (the biggest battery
+ * decision in the feature), buffer the survivors and poke the forwarder.
+ * Touches no Bluetooth and writes nothing to disk.
  */
 @AndroidEntryPoint
 class OpenVitalsNotificationListenerService : NotificationListenerService() {
@@ -50,34 +31,19 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
         private const val TAG = "OVNotifyListener"
 
         /**
-         * The bound instance, or null when the system has not bound us.
-         *
-         * Needed because dismissing a notification is
-         * [NotificationListenerService.cancelNotification], an instance method on
-         * the bound service — and the request arrives from the forwarder, which
-         * has no reference to it. Cleared on disconnect so a stale instance is
-         * never used.
+         * The bound instance, or null. Dismissing is an instance method, and
+         * the request arrives from the forwarder.
          */
         @Volatile
         var instance: OpenVitalsNotificationListenerService? = null
             private set
 
         /**
-         * The actions a WATCH should be offered, wearable ones first.
-         *
-         * A messaging app publishes two different action lists. The one in
-         * `notification.actions` drives the phone's own shade; the one in the
-         * wearable extender is the one built for a remote device — and it is the
-         * only one whose reply reliably works, because the phone's is typically
-         * an immutable `PendingIntent` on Android 12+, which silently discards
-         * the extras a reply is carried in. A reply sent through the wrong one
-         * reports success and delivers nothing, which is exactly what happened.
-         *
-         * Both lists are returned as androidx `NotificationCompat.Action`, so the
-         * caller does not have to care which it got. Gadgetbridge makes the same
-         * wearable-first choice for the same reason.
-         *
-         * Must be the ONLY way actions are enumerated — see [actionsOf].
+         * The actions a watch should be offered, wearable ones first. The
+         * wearable extender's list is the one built for a remote device, and the
+         * only one whose reply reliably works: the phone's is usually an
+         * immutable PendingIntent that discards the reply extras.
+         * Must be the only way actions are enumerated; see [actionsOf].
          */
         fun wristActions(
             notification: Notification,
@@ -110,12 +76,7 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
         super.onDestroy()
     }
 
-    /**
-     * Clears a notification from the phone, as swiping it away would.
-     *
-     * Returns false when we are not bound — the caller logs it, because there is
-     * nothing to tell the watch.
-     */
+    /** Clears a notification from the phone. False when not bound. */
     fun dismiss(key: String): Boolean = try {
         cancelNotification(key)
         true
@@ -150,9 +111,7 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
                 channelImportance = importanceOf(sbn),
             )
 
-            // A dismissal is judged on the same rules minus the content ones:
-            // withdrawing a card the watch never received is harmless, and
-            // skipping the check would leak the existence of blocked apps.
+            // Same rules minus the content ones, so blocked apps do not leak.
             val verdict = NotificationFilter.verdict(
                 candidate = if (removed) candidate.copy(title = "-", body = "-") else candidate,
                 config = config,
@@ -160,20 +119,17 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
                 interruptionFilter = interruptionFilterOrUnknown(),
             )
             if (verdict != NotificationFilter.Verdict.KEEP) {
-                // Logged at debug and WITHOUT any content: the reason is useful
-                // when the watch stays silent, the text never is.
+                // Debug only, and never the content.
                 Diagnostics.d(TAG, "dropped ${sbn.packageName}: $verdict")
                 return
             }
 
             val id = stableId(sbn)
             if (removed) {
-                // Gone from the phone, so its actions can no longer be fired.
+                // Gone from the phone, so its actions cannot be fired.
                 NotificationStore.forget(id)
             } else {
-                // Kept so the wrist can act on it later: an action is a
-                // PendingIntent owned by the posting app and cannot be rebuilt
-                // from an id.
+                // Kept so the wrist can act on it: a PendingIntent cannot be rebuilt from an id.
                 NotificationStore.retain(id, sbn)
             }
 
@@ -196,56 +152,37 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
                     dismissable = sbn.isClearable,
                 ),
             )
-            // The Flutter build persisted a callback handle here and woke a
-            // headless engine. Single process: the forwarder is right there.
+            // Single process: the forwarder is right there.
             bridge.onNotificationsPending()
         } catch (error: Throwable) {
-            // A listener that throws is killed and unbound by the system, and
-            // the user then has to re-grant access. Nothing here is worth that.
+            // A listener that throws is unbound, and the user must re-grant access.
             Log.w(TAG, "failed to handle a notification: $error")
         }
     }
 
     /**
-     * The actions the posting app attached, in its own order.
-     *
-     * The INDEX is what travels to the watch and back, so an action fired from
-     * the wrist resolves to the same action without anyone having to re-derive
-     * it. (Gadgetbridge maps its custom actions back by re-walking the list and
-     * counting types, and its own comment calls that fragile.) That only holds
-     * because capture and execution both go through [wristActions] — index into
-     * a differently-built list and the wearer gets a different button.
-     *
-     * An action with a `RemoteInput` expects text — the watch offers its
-     * keyboard or canned replies for those.
+     * The posting app's actions, in its own order. The index travels to the
+     * watch and back, so capture and execution must both use [wristActions].
+     * An action with a `RemoteInput` expects text.
      */
     private fun actionsOf(notification: Notification): List<NotificationActionMsg> {
         describeActions(notification)
         return wristActions(notification).mapIndexedNotNull { index, action ->
             val title = action.title?.toString()
             if (title.isNullOrBlank()) return@mapIndexedNotNull null
-            // No intent means nothing can be fired, so offering it would be a
-            // button that silently does nothing — which is the thing being fixed.
+            // No intent means a button that does nothing.
             if (action.actionIntent == null) return@mapIndexedNotNull null
             NotificationActionMsg(
                 index = index,
                 title = title,
                 isReply = !action.remoteInputs.isNullOrEmpty(),
-                // An ACTIVITY intent cannot be fired from here — see the field's
-                // own doc. Reported rather than filtered so the decision about
-                // what to offer stays in one place, next to the slot mapping.
+                // An activity intent cannot be fired from here. Reported, not filtered.
                 fireableFromBackground = action.actionIntent!!.isFireableFromBackground(),
             )
         }
     }
 
-    /**
-     * Dumps what a notification actually offers, so a reply that "sends" and
-     * never arrives can be diagnosed from a log instead of guessed at.
-     *
-     * Deliberately logs STRUCTURE only — labels, result keys, mutability — and
-     * never a word of the message. Debug level, so it costs nothing in release.
-     */
+    /** Logs a notification's action structure, never its text. Debug level. */
     private fun describeActions(notification: Notification) {
         if (!Diagnostics.isEnabled) return
         val wearable = NotificationCompat.WearableExtender(notification).actions
@@ -266,11 +203,8 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
                     if (intent.isImmutable) "IMMUTABLE" else "mutable"
                 else -> "unknown"
             }
-            // The KIND matters more than anything else here. An Activity
-            // PendingIntent opens the app's compose screen rather than sending,
-            // and firing one from a background service is silently blocked by
-            // Android's background-activity-launch rules — no exception, no
-            // effect, which is indistinguishable from a reply that vanished.
+            // An Activity PendingIntent fired from a background service is silently
+            // blocked, which looks exactly like a reply that vanished.
             val kind = when {
                 intent == null -> "none"
                 Build.VERSION.SDK_INT < Build.VERSION_CODES.S -> "unreportable<31"
@@ -290,13 +224,7 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
         }
     }
 
-    /**
-     * The notification's text, preferring the expanded form.
-     *
-     * `EXTRA_BIG_TEXT` is what the user sees when they pull a message down, and
-     * it is what they expect on the wrist; `EXTRA_TEXT` is often truncated with
-     * an ellipsis by the posting app.
-     */
+    /** The notification's text, preferring the expanded form the user sees. */
     private fun bodyOf(notification: Notification): String? {
         val extras = notification.extras
         val big = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
@@ -305,24 +233,15 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
     }
 
     /**
-     * A stable 32-bit id for this notification.
-     *
-     * Derived from the system's own key, which is stable across updates to the
-     * same notification — that is what makes an edited message redraw one card
-     * on the watch instead of buzzing a second time. Masked to 31 bits because
-     * GNCS carries it as an unsigned 32-bit value and a negative id would wrap.
+     * A stable 32-bit id, from the system key, so an edited message redraws
+     * one card. Masked to 31 bits: GNCS carries it unsigned.
      */
     private fun stableId(sbn: StatusBarNotification): Long =
         (sbn.key.hashCode().toLong() and 0x7FFFFFFFL)
 
     /**
-     * The importance the user (or the app) gave this notification's channel.
-     *
-     * Read off the ranking rather than the channel object: `Ranking.getChannel`
-     * needs API 28, `Ranking.getImportance` has been there since 24, and this
-     * app supports 26. Anything unreadable is UNSPECIFIED, which the filter
-     * treats as "allow" — a notification getting through is a better failure
-     * than one silently swallowed.
+     * The channel importance, read off the ranking, which works from API 24.
+     * Unreadable is UNSPECIFIED, which the filter allows.
      */
     private fun importanceOf(sbn: StatusBarNotification): Int = try {
         val ranking = Ranking()
@@ -342,13 +261,7 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
         NotificationFilter.INTERRUPTION_FILTER_UNKNOWN
     }
 
-    /**
-     * The posting app's display name, or null.
-     *
-     * Resolved through the `<queries>` launcher-intent declaration in the app
-     * manifest, never QUERY_ALL_PACKAGES — that one is Play-restricted and its
-     * mere presence blocks upload.
-     */
+    /** The posting app's display name, via the manifest `<queries>`, never QUERY_ALL_PACKAGES. */
     private fun appLabel(packageName: String): String? = try {
         val manager: PackageManager = packageManager
         manager.getApplicationLabel(manager.getApplicationInfo(packageName, 0)).toString()
@@ -358,18 +271,9 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
 }
 
 /**
- * Whether this action's intent can actually be fired from a background service.
- *
- * An ACTIVITY PendingIntent is silently dropped by Android's
- * background-activity-launch rules — no exception and no effect, which is
- * indistinguishable from a reply that vanished — so the watch is told not to
- * offer it.
- *
- * `PendingIntent.isActivity` only exists from API 31. Below that the kind
- * cannot be asked for at all, and the launch restrictions it guards against
- * were not yet in force, so every action is reported as fireable: that is what
- * the platform of the day actually did, and the alternative would hide working
- * reply actions on every device older than Android 12.
+ * Whether this intent can be fired from a background service. An activity
+ * intent is silently dropped. Below API 31 the kind cannot be asked, and the
+ * restriction did not apply, so every action is fireable.
  */
 private fun PendingIntent.isFireableFromBackground(): Boolean =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) !isActivity else true

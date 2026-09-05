@@ -4,45 +4,21 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /**
- * The vocabulary of Garmin's notification service (GNCS) and the pure encoder
- * for a notification's attribute blob.
+ * Garmin's notification service (GNCS) vocabulary and the encoder for an
+ * attribute blob. GNCS is a pull protocol: the phone announces an id and a
+ * category (5033), the watch asks for attributes (5034), then the text goes
+ * across (5035). If the watch never asks, nothing is wrong.
  *
- * GNCS is Garmin's rendering of Apple's ANCS — Gadgetbridge's enums still
- * carry `//was AncsCommand` / `//was AncsAttribute` comments — and it is a
- * **pull** protocol. The phone announces only that a notification exists
- * (message 5033: an id, a category and some flags, and NO text). The watch
- * then asks for the attributes it wants (5034), and only then does the text
- * go across (5035).
- *
- * So there is no "send a notification" call anywhere: there is an
- * announcement, and there is an answer to a question that may never be asked.
- * If the watch never asks — because notifications are switched off on the
- * wrist, or the wearer never looks — the text stays on the phone and nothing
- * has gone wrong.
- *
- * This file is deliberately I/O-free and frame-free: it turns a notification
- * into the bytes of one attribute blob, and nothing else. The GFDI framing
- * and the inbound decoders live in `GarminMessages.kt`; the chunked upload is
- * the notifications handler's job (sub-milestone 7e).
- *
- * Ported from Gadgetbridge's `NotificationsHandler`,
- * `NotificationUpdateMessage` and `NotificationControlMessage` (AGPLv3), via
- * the Flutter build's `garmin_notification_messages.dart`.
+ * I/O-free. Framing and inbound decoders live in `GarminMessages.kt`.
+ * Ported from Gadgetbridge (AGPLv3) via the Flutter build.
  */
 
-/**
- * Whether an announcement adds a notification, updates one already sent, or
- * withdraws it. Ordinal IS the wire value — do not reorder.
- */
+/** Add, update or withdraw a notification. Ordinal is the wire value; do not reorder. */
 enum class GarminNotificationUpdateType { ADD, MODIFY, REMOVE }
 
 /**
- * The notification's kind, as the watch understands it. Ordinal IS the wire
- * value, so the order is load-bearing — do not reorder or remove.
- *
- * The watch groups and prioritises by this, and some faces show a
- * per-category count, which is what the `count` field of an announcement
- * feeds.
+ * The notification's kind. Ordinal is the wire value; do not reorder. The
+ * watch groups by it, and some faces show a per-category count.
  */
 enum class GarminNotificationCategory {
     OTHER, // 0
@@ -72,10 +48,7 @@ enum class GarminNotificationFlag {
     val bit: Int get() = 1 shl ordinal
 }
 
-/**
- * Flags describing what the PHONE can offer for this notification. Bit is
- * `1 shl ordinal`.
- */
+/** What the phone can offer for this notification. Bit is `1 shl ordinal`. */
 enum class GarminNotificationPhoneFlag {
     LEGACY_ACTIONS,
     NEW_ACTIONS,
@@ -86,27 +59,15 @@ enum class GarminNotificationPhoneFlag {
 }
 
 /**
- * The category-flags byte for an announcement.
- *
- * `FOREGROUND` is set unconditionally, and `ACTION_DECLINE` always
- * accompanies it — both verbatim from Gadgetbridge, whose comment is worth
- * keeping because the reason is not guessable from the wire: marking
- * notifications as background "was generating bug reports", since most people
- * expect every notification to raise the watch rather than sit silently in a
- * list.
+ * The category-flags byte. FOREGROUND and ACTION_DECLINE always, verbatim
+ * from Gadgetbridge: background notifications "were generating bug reports".
  */
 fun garminNotificationCategoryFlags(): Int =
     GarminNotificationFlag.FOREGROUND.bit or GarminNotificationFlag.ACTION_DECLINE.bit
 
 /**
- * The commands a watch can send on the notification control channel (5034).
- *
- * [GET_APP_ATTRIBUTES] is the only one not acted on — Gadgetbridge marks it
- * "unknown/untested" and no watch here has ever sent one. Both action
- * commands are honoured: [PERFORM_NOTIFICATION_ACTION] carries an action code
- * this app chose, and [PERFORM_LEGACY_NOTIFICATION_ACTION] is the older
- * accept/refuse pair a watch sends for the control it draws from the
- * ACTION_DECLINE category flag.
+ * Commands on the notification control channel (5034). [GET_APP_ATTRIBUTES]
+ * is untested and not acted on. Both action commands are honoured.
  */
 enum class GarminNotificationCommand(val code: Int) {
     GET_NOTIFICATION_ATTRIBUTES(0),
@@ -122,23 +83,15 @@ enum class GarminNotificationCommand(val code: Int) {
 }
 
 /**
- * One field of a notification the watch can ask for.
- *
- * [hasLengthParam] and [hasAdditionalParams] are not cosmetic: they say how
- * many bytes follow the attribute's own id in a REQUEST, so getting one wrong
- * desynchronises the rest of the request. Codes 0–7 are ANCS's; 127 and 128
- * are Garmin's own additions.
+ * One field the watch can ask for. [hasLengthParam] and
+ * [hasAdditionalParams] say how many bytes follow the id in a request.
+ * Codes 0-7 are ANCS; 127 and 128 are Garmin's.
  */
 enum class GarminNotificationAttribute(
     val code: Int,
     /** A `u16` maximum length follows this attribute's id in a request. */
     val hasLengthParam: Boolean = false,
-    /**
-     * A `u16` follows, and then one more byte nobody has identified.
-     * Gadgetbridge reads it and marks the read `//TODO this is wrong`; it is
-     * reproduced here because a request that includes attribute 127 has to be
-     * walked past correctly whether or not the byte means anything.
-     */
+    /** A `u16` follows, then one unidentified byte. Gadgetbridge reads it too. */
     val hasAdditionalParams: Boolean = false,
 ) {
     APP_IDENTIFIER(0),
@@ -158,10 +111,7 @@ enum class GarminNotificationAttribute(
     }
 }
 
-/**
- * The watch's verdict on one chunk of an attribute blob. Ordinal IS the wire
- * value — do not reorder.
- */
+/** The watch's verdict on one chunk. Ordinal is the wire value; do not reorder. */
 enum class GarminNotificationTransferStatus {
     OK,
     RESEND,
@@ -177,12 +127,8 @@ enum class GarminNotificationTransferStatus {
 }
 
 /**
- * What a wearer can do to a notification, as the watch understands it.
- *
- * The code IS the wire value and also decides where the watch draws the
- * control, which is why the icon position is fixed per code rather than
- * chosen: on a vívoactive the left button is the dismiss position, and
- * putting a reply there would be wrong however it is labelled.
+ * What a wearer can do to a notification. The code is the wire value and
+ * fixes where the watch draws the control.
  */
 enum class GarminNotificationActionKind(
     val code: Int,
@@ -213,10 +159,7 @@ enum class GarminNotificationActionKind(
 
 /**
  * Where the watch draws an action's control. Bit is `1 shl ordinal`.
- *
- * Gadgetbridge's values, and its comment is worth keeping: these are
- * "educated guesses based on the icons' positions on vívomove style". Nobody
- * has the documentation.
+ * Gadgetbridge's "educated guesses"; nobody has the documentation.
  */
 enum class GarminActionIconPosition {
     BOTTOM,
@@ -230,19 +173,11 @@ enum class GarminActionIconPosition {
 /** One action offered on the wrist. */
 data class GarminNotificationAction(
     val kind: GarminNotificationActionKind,
-    /**
-     * What the posting app called it. Shown on the watch for custom actions;
-     * the call and dismiss controls are drawn as icons and ignore it.
-     */
+    /** The posting app's label. Shown for custom actions only. */
     val label: String,
     /**
-     * Which of the Android notification's own actions this is, so one invoked
-     * from the wrist resolves back without re-deriving anything.
-     *
-     * -1 for an action this app synthesised —
-     * [GarminNotificationActionKind.DISMISS] is ours, not the posting app's,
-     * and is performed by clearing the notification rather than by firing one
-     * of its intents.
+     * Index of the Android notification's own action, or -1 for one this app
+     * synthesised, such as DISMISS.
      */
     val androidIndex: Int,
     /** Whether the watch should collect text before invoking it. */
@@ -260,13 +195,9 @@ data class GarminNotificationActionRequest(
 )
 
 /**
- * Encodes the action list for attribute 127.
- *
- * Layout: a count byte, then per action `{u8 code, u8 iconPositionBits,
- * u8 labelByteLength, label}`.
- *
- * An empty list encodes as four zero bytes rather than a bare zero — Garmin's
- * own "no actions" sentinel, which Gadgetbridge sends verbatim.
+ * Encodes the action list for attribute 127: a count byte, then per action
+ * `{u8 code, u8 iconPositionBits, u8 labelByteLength, label}`. An empty
+ * list is four zero bytes, Garmin's own sentinel.
  */
 fun encodeGarminNotificationActions(
     actions: List<GarminNotificationAction>,
@@ -275,8 +206,7 @@ fun encodeGarminNotificationActions(
     val writer = GarminByteWriter().writeByte(actions.size)
     for (action in actions) {
         val label = action.label.toByteArray(Charsets.UTF_8)
-        // One length byte, so a long label would wrap and corrupt every
-        // action after it.
+        // One length byte: a longer label would corrupt every action after it.
         val trimmed = if (label.size > 255) label.copyOf(255) else label
         writer
             .writeByte(action.kind.code)
@@ -287,21 +217,11 @@ fun encodeGarminNotificationActions(
     return writer.toBytes()
 }
 
-/**
- * One notification, as the phone holds it while the watch decides whether to
- * ask about it.
- */
+/** One notification, as the phone holds it while the watch decides. */
 data class GarminNotification(
-    /**
-     * Announced as a `u32`. Stable for the lifetime of the notification on
-     * the phone, because a MODIFY and a REMOVE are matched to an ADD by this
-     * alone.
-     */
+    /** Announced as a `u32`. MODIFY and REMOVE are matched to an ADD by this alone. */
     val id: Long,
-    /**
-     * The posting app's package name, sent as APP_IDENTIFIER. Some watch
-     * faces resolve an icon from it.
-     */
+    /** The posting app's package, sent as APP_IDENTIFIER. Some faces resolve an icon from it. */
     val packageName: String,
     val title: String = "",
     val subtitle: String = "",
@@ -309,10 +229,7 @@ data class GarminNotification(
     val category: GarminNotificationCategory = GarminNotificationCategory.OTHER,
     /** When the notification was posted, sent as DATE in the watch's local time. */
     val postedAt: LocalDateTime,
-    /**
-     * What the wearer can do to it. Empty means the watch is told there are
-     * no actions, and draws none.
-     */
+    /** What the wearer can do. Empty means the watch draws no actions. */
     val actions: List<GarminNotificationAction> = emptyList(),
 ) {
     val hasActions: Boolean get() = actions.isNotEmpty()
@@ -320,22 +237,13 @@ data class GarminNotification(
 
 private val GNCS_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss")
 
-/**
- * Formats a timestamp the way GNCS wants it: `yyyyMMdd'T'HHmmss`, local time.
- *
- * A pure function taking the value rather than reading the clock, so a test
- * can assert the exact bytes without a fixed-clock harness.
- */
+/** Formats a timestamp as GNCS wants it: `yyyyMMdd'T'HHmmss`, local time. */
 fun garminNotificationDate(whenPosted: LocalDateTime): String =
     GNCS_DATE_FORMAT.format(whenPosted)
 
 /**
- * The text this app sends for [attribute], before any truncation.
- *
- * MESSAGE_SIZE is the *character* count of the body, not its byte count —
- * Gadgetbridge sends `String.length`, which is UTF-16 code units, and
- * Kotlin's `String.length` is the same measure, so the two agree by
- * construction.
+ * The text sent for [attribute], before truncation. MESSAGE_SIZE is the
+ * UTF-16 length, as Gadgetbridge sends it.
  */
 fun garminNotificationAttributeText(
     notification: GarminNotification,
@@ -347,26 +255,18 @@ fun garminNotificationAttributeText(
     GarminNotificationAttribute.MESSAGE -> notification.body
     GarminNotificationAttribute.MESSAGE_SIZE -> notification.body.length.toString()
     GarminNotificationAttribute.DATE -> garminNotificationDate(notification.postedAt)
-    // Actions are not implemented as declinable, so nothing can be declined.
+    // Nothing can be declined.
     GarminNotificationAttribute.NEGATIVE_ACTION_LABEL -> ""
-    // Handled as bytes, not text — see [garminNotificationAttributeBytes].
+    // Bytes, not text; see [garminNotificationAttributeBytes].
     GarminNotificationAttribute.ACTIONS -> ""
-    // The number of attachments, as text. Always none: pictures ride a
-    // separate protobuf channel this app does not implement.
+    // Always none: pictures ride a protobuf channel this app does not implement.
     GarminNotificationAttribute.ATTACHMENTS -> "0"
 }
 
 /**
- * The bytes this app sends for [attribute], truncated to [maxLength] when the
- * watch named one.
- *
- * [maxLength] is a count of CHARACTERS, not bytes — it is applied to the
- * string before UTF-8 encoding, as Gadgetbridge does, because that is what
- * the watch has been observed to expect. The cut is nudged back by one when
- * it would land between the halves of a surrogate pair, which would otherwise
- * emit a lone surrogate and make the whole attribute undecodable.
- * (Gadgetbridge does not do this, and an emoji at the truncation point is
- * enough to hit it.)
+ * The bytes sent for [attribute], cut to [maxLength] characters before UTF-8
+ * encoding, as Gadgetbridge does. The cut avoids splitting a surrogate pair,
+ * which would make the attribute undecodable.
  */
 fun garminNotificationAttributeBytes(
     notification: GarminNotification,
@@ -374,9 +274,7 @@ fun garminNotificationAttributeBytes(
     maxLength: Int = 0,
 ): ByteArray {
     if (attribute == GarminNotificationAttribute.ACTIONS) {
-        // NOT truncated to maxLength. The watch names a limit for TEXT it
-        // will render; this value is a packed structure, and cutting it
-        // mid-record would leave the watch parsing a label as an action code.
+        // Not truncated: this is a packed structure, not text.
         return encodeGarminNotificationActions(notification.actions)
     }
     val text = garminNotificationAttributeText(notification, attribute)
@@ -389,17 +287,10 @@ fun garminNotificationAttributeBytes(
 }
 
 /**
- * Builds the attribute blob that answers one GET_NOTIFICATION_ATTRIBUTES
- * request. The result is what gets chunked into 5035 messages.
- *
- * Layout: the command byte, the notification id, then each requested
- * attribute as `{u8 code, u16 byteLength, bytes}`.
- *
- * [requested] must preserve the watch's own order (a `LinkedHashMap`, which
- * is what the control decoder builds) with one exception: **MESSAGE_SIZE is
- * always encoded last**, wherever the watch asked for it. Gadgetbridge does
- * the same, and a watch that receives it mid-blob has been observed to render
- * an empty body.
+ * Builds the blob answering one GET_NOTIFICATION_ATTRIBUTES request: the
+ * command byte, the id, then each attribute as `{u8 code, u16 length, bytes}`.
+ * [requested] keeps the watch's order, except MESSAGE_SIZE always goes last:
+ * mid-blob, a watch renders an empty body.
  */
 fun encodeGarminNotificationAttributes(
     notification: GarminNotification,

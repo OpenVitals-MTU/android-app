@@ -73,11 +73,8 @@ internal class AppleHealthZipReadException(
 )
 
 /**
- * Repairs the two ways free-text fields (workout notes, device names, clinical titles/descriptions)
- * most often break XML well-formedness in the wild: raw control characters that XML 1.0 forbids as
- * literal characters, and bare `&` that the exporting app never escaped. Both trigger Expat's opaque
- * "not well-formed (invalid token)" failure with no indication of which character was at fault, so
- * this both fixes the common cases in place and keeps enough trailing context to explain the rest.
+ * Repairs the two common well-formedness breaks in free-text fields: raw
+ * control characters and bare `&`. Keeps trailing context to explain the rest.
  */
 internal class XmlCharacterSanitizingReader(
     source: Reader,
@@ -192,11 +189,7 @@ private val NamedXmlEntities = setOf("amp", "lt", "gt", "quot", "apos")
 private fun Char.toDisplayable(): String =
     if (code in 0x20..0x7E || this == '\n' || this == '\t') toString() else "\\u%04x".format(code)
 
-/**
- * Thrown in place of a raw [SAXParseException] once export.xml still fails to parse after character
- * sanitization, carrying the trailing text the parser saw so the failure report names the actual
- * offending content instead of just a line/column pair.
- */
+/** Thrown when export.xml still fails after sanitization, carrying the text the parser saw. */
 internal class AppleHealthXmlParseException(
     cause: SAXParseException,
     sanitizer: XmlCharacterSanitizingReader,

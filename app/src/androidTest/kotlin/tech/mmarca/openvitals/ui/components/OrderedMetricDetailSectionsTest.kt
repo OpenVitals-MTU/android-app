@@ -23,14 +23,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the rendering cases of Flutter's
- * `test/core/presentation/metric_detail_sections_test.dart`.
- *
- * Every metric detail screen is laid out by this one function, so the order it
- * draws is the order the user sees everywhere. Two things only exist here: that
- * the stored order actually drives the layout, and that edit mode leaves the
- * reorder reachable without a drag — a pointer gesture is the one way of moving
- * a section that a screen-reader user cannot perform.
+ * Every metric detail screen is laid out by this one function. The stored order drives the
+ * layout, and edit mode leaves the reorder reachable without a drag.
  */
 class OrderedMetricDetailSectionsTest {
 
@@ -49,8 +43,7 @@ class OrderedMetricDetailSectionsTest {
         assertTrue("goal renders above statistics", goalTop < statsTop)
         assertTrue("statistics renders above entries", statsTop < entriesTop)
 
-        // A section declared invisible is not merely off-screen: it is never
-        // built, so a screen with no intraday data has no empty slot for it.
+        // An invisible section is never built, so there is no empty slot for it.
         composeRule.onNodeWithTag(INTRADAY).assertDoesNotExist()
     }
 
@@ -58,8 +51,7 @@ class OrderedMetricDetailSectionsTest {
     fun editModeExposesEachSectionWithItsMoveActions() {
         setSections(isEditing = true)
 
-        // The middle section can go either way; the accessibility actions are
-        // the only non-drag route to reordering.
+        // The accessibility actions are the only non-drag route to reordering.
         val middle = composeRule.onNodeWithContentDescription(MetricDetailSectionId.STATISTICS.name)
         middle.assertIsDisplayed()
 
@@ -78,9 +70,7 @@ class OrderedMetricDetailSectionsTest {
 
     @Test
     fun aSectionThatIsNotBeingEditedIsNotAnnouncedAsReorderable() {
-        // Outside edit mode the same boxes must stay out of the way: a section
-        // that always announced move actions would offer a reorder that does
-        // nothing.
+        // Outside edit mode the boxes must not announce move actions that do nothing.
         setSections(isEditing = false)
 
         composeRule.onNodeWithContentDescription(MetricDetailSectionId.STATISTICS.name)
@@ -112,8 +102,7 @@ class OrderedMetricDetailSectionsTest {
                 )
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     renderOrderedMetricDetailSections(context) {
-                        // Deliberately declared out of order: the stored order,
-                        // not the declaration order, is what must decide.
+                        // Declared out of order: the stored order must decide.
                         section(MetricDetailSectionId.ENTRIES) { Tag(ENTRIES) }
                         section(MetricDetailSectionId.STATISTICS) { Tag(STATS) }
                         section(MetricDetailSectionId.DAILY_GOAL) { Tag(GOAL) }

@@ -25,20 +25,8 @@ import org.junit.Test
 import tech.mmarca.openvitals.features.imports.csv.buildCsvClientRecordId
 
 /**
- * The importers' duplicate lookup: of the ids handed in, which does Health
- * Connect already hold?
- *
- * Dart counterpart: `apple health import > findMatchingImportedClientRecordIds
- * maps targetType and filters` of
- * test/data/source/health/health_connect_native_data_source_test.dart, filed
- * N/A-FRAMEWORK as "wire targetType table". The filtering half is not wire
- * plumbing — Kotlin re-implements it in [HealthConnectManager], and the two
- * importers that call it namespace their ids differently (`apple_health_` and
- * `csv_`).
- *
- * The Flutter native implementation (`HealthConnectNativePlugin.filterExistingClientIds`)
- * matches on `clientRecordId in wanted` and nothing else. The Kotlin port added
- * a prefix guard.
+ * The importers' duplicate lookup. The two importers namespace their ids differently
+ * (`apple_health_` and `csv_`), and the Kotlin port added a prefix guard.
  */
 class ImportedClientRecordIdLookupTest {
 
@@ -81,11 +69,8 @@ class ImportedClientRecordIdLookupTest {
     }
 
     /**
-     * FAILS TODAY. The CSV importer's ids live under the `csv_` namespace
-     * ([buildCsvClientRecordId]), and the lookup drops every id that does not
-     * start with `apple_health_` — so `CsvImportService.countExisting` can never
-     * find anything and a re-import of the very same file reports "0 already
-     * present".
+     * FAILS TODAY. The lookup drops every id not starting with `apple_health_`, so
+     * `CsvImportService.countExisting` never finds anything.
      */
     @Test
     fun `a csv id already in Health Connect comes back as a match`() = runBlocking {

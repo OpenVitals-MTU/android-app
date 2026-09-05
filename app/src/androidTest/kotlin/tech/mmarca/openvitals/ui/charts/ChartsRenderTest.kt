@@ -1,5 +1,4 @@
-// The chart composables live under ui/charts/ but declare ui.components; this
-// file mirrors that rather than adding an import that looks like a mistake.
+// The chart composables live under ui/charts/ but declare ui.components; this file mirrors that.
 package tech.mmarca.openvitals.ui.components
 
 import androidx.compose.foundation.layout.Box
@@ -27,13 +26,8 @@ import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of Flutter's `test/ui/charts/charts_test.dart`.
- *
- * Smoke tests for the hand-rolled charts: each one composes with sample data,
- * in both themes, without throwing. The charts draw into a `Canvas` and expose
- * almost no text, so "it rendered" is asserted through a tagged wrapper — the
- * Compose equivalent of Flutter's `expect(tester.takeException(), isNull)`.
- * Pixels are the goldens' job, deliberately not asserted here.
+ * Smoke tests: each chart composes with sample data, in both themes, without throwing.
+ * "It rendered" is asserted through a tagged wrapper. Pixels are the goldens' job.
  */
 class ChartsRenderTest {
 
@@ -54,8 +48,7 @@ class ChartsRenderTest {
 
     @Test
     fun sparkline_withASingleValue_renders() {
-        // One point has no line to draw between, and the x-step divides by
-        // `size - 1`. Both are the kind of thing that only shows up at n = 1.
+        // One point has no line, and the x-step divides by `size - 1`.
         pump {
             MetricSparklineChart(
                 values = listOf(5.0),
@@ -105,10 +98,7 @@ class ChartsRenderTest {
         composeRule.onNodeWithTag(CHART).performClick()
         composeRule.waitForIdle()
 
-        // Which day, not merely some day. Asserting non-null passed even with
-        // the bucket lookup hardwired to the first slot, which is the whole
-        // thing this is meant to protect: a tap in the middle of a fixed week
-        // lands on the middle of that week.
+        // Which day, not merely some day: a tap in the middle of a fixed week lands on its middle.
         assertEquals(LocalDate.of(2024, 6, 13), selected)
     }
 
@@ -213,9 +203,7 @@ class ChartsRenderTest {
 
     @Test
     fun metricLineChart_rendersNothingWhenThereAreNoPoints() {
-        // Not even its title: an empty series draws nothing at all rather than
-        // a titled, empty frame. "No data" is the screen's message to give, and
-        // a chart heading with blank space under it pre-empts it.
+        // An empty series draws nothing, not a titled empty frame. "No data" is the screen's message.
         pump {
             MetricLineChart(
                 title = "Empty",
@@ -249,8 +237,7 @@ class ChartsRenderTest {
 
     @Test
     fun charts_renderInDarkTheme() {
-        // The charts pick colours off the scheme, and a dark-only division by a
-        // zero alpha would never show up in the light-theme cases above.
+        // A dark-only division by a zero alpha would never show up in the light cases.
         composeRule.setContent {
             OpenVitalsTheme(themeMode = AppThemeMode.DARK) {
                 Box(Modifier.testTag(CHART).verticalScroll(rememberScrollState())) {

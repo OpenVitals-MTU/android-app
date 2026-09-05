@@ -159,10 +159,8 @@ data class PlannedExerciseData(
     val blockCount: Int,
     val source: String,
     /**
-     * The raw Health Connect `dataOrigin` package — who physically wrote the record on this
-     * phone. [source] swaps in a sync-received record's original app for display, so ownership
-     * gates (edit/delete) must use this instead: the app can delete any record it wrote here,
-     * including ones it received through device sync.
+     * The raw `dataOrigin` package. [source] shows a synced record's original
+     * app, so ownership gates must use this.
      */
     val dataOriginPackage: String = source,
     val blocks: List<PlannedExerciseBlockData> = emptyList(),

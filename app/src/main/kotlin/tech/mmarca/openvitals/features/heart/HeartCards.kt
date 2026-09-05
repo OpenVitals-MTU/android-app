@@ -33,11 +33,7 @@ import java.time.ZoneId
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
-/**
- * Day-timeline card statistics, hoisted out of the composable so the sort, the
- * extremes, the minute-bucketed mean and the 30 bpm axis floor are testable on
- * the JVM.
- */
+/** Day-timeline card statistics, hoisted for JVM tests. */
 internal data class HeartRateTimelineStats(
     val sorted: List<HeartRateSample>,
     val minBpm: Long,
@@ -51,14 +47,12 @@ internal fun heartRateTimelineStats(samples: List<HeartRateSample>): HeartRateTi
     val sorted = samples.sortedBy { it.time }
     val minBpm = sorted.minOfOrNull { it.beatsPerMinute } ?: 40L
     val maxBpm = sorted.maxOfOrNull { it.beatsPerMinute } ?: 160L
-    // Minute-bucketed, not per-sample: a workout recorded at 1 Hz must not
-    // outvote the per-minute background series it sits inside.
+    // Minute-bucketed, so a 1 Hz workout does not outvote the background series.
     val avgBpm = sorted
         .timeBucketedAverageOrNull(time = { it.time }, value = { it.beatsPerMinute.toDouble() })
         ?.roundToInt()
         ?: 0
-    // The intraday axis is padded by 5 either side, floored at 30 bpm — never at
-    // min-5 below a plausible resting rate.
+    // Padded by 5 either side, floored at 30 bpm.
     val paddedMin = (minBpm - 5L).coerceAtLeast(30L)
     val paddedMax = maxBpm + 5L
     return HeartRateTimelineStats(

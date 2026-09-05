@@ -22,31 +22,14 @@ import androidx.health.connect.client.records.WeightRecord
 import kotlin.reflect.KClass
 
 /**
- * What a CSV column can be mapped onto, and how its raw text becomes the
- * canonical (metric) value Health Connect stores.
+ * What a CSV column can be mapped onto, and how its text becomes the
+ * canonical value. Every metric is one number at one instant, except
+ * [STEPS], the first interval record: an END_TIMESTAMP column ends each
+ * row's span, and a missing end means one minute. Blood pressure is absent:
+ * it needs two columns per record.
  *
- * v1 covered instant-in-time measurements only — the metrics a smart scale or a
- * vitals export produces. Every one is a single measurement at a single moment,
- * so a mapping needs exactly one timestamp column and one column per metric.
- *
- * [STEPS] is the first interval record ([CsvMetricSpec.isInterval]): its value
- * covers a span of time, so a second timestamp — a [CsvColumnRole.END_TIMESTAMP]
- * column — can say where each row's span ends, with the existing timestamp
- * column as its start. The interval is exactly what the file says, whether
- * that is an hour or a whole day; a row that supplies no end falls back to a
- * one-minute span. Other interval records (sleep, workouts) remain absent:
- * they need more than a number per row.
- *
- * Blood pressure is absent on purpose: systolic and diastolic have to become
- * ONE record, which needs a two-columns-to-one-record rule the mapping model
- * does not have.
- *
- * NOTE: the enum order, the catalog contents and the unit conversions mirror
- * the Flutter build byte for byte — both apps must resolve the same file to the
- * same records so their deterministic clientRecordIds dedup against each other.
- * [STEPS] is appended AFTER that snapshot and defines the contract first: a
- * Flutter build adding it must derive the id from the interval's START instant
- * (`"StepsRecord|<startEpochMillis>"`), exactly like the instant metrics.
+ * The order, catalog and conversions mirror the Flutter build, so both apps
+ * produce the same clientRecordIds. STEPS keys on the interval's start.
  */
 enum class CsvImportMetric {
     WEIGHT,
@@ -68,14 +51,7 @@ enum class CsvImportMetric {
     STEPS,
 }
 
-/**
- * A unit a CSV column's numbers can be written in.
- *
- * This is the unit of the *file*, chosen by the user per column. It is not the
- * app's display unit system: a file can be in pounds while the app displays
- * kilograms, and neither implies the other. Nothing here may consult the unit
- * system preference.
- */
+/** A unit a column's numbers are written in. The file's unit, not the app's display unit. */
 enum class CsvUnit {
     KILOGRAMS,
     POUNDS,
@@ -101,8 +77,7 @@ enum class CsvUnit {
     COUNT,
 }
 
-// The same constants the manual-entry screens use, kept private per file as the
-// house style has it.
+// The same constants the manual-entry screens use.
 private const val PoundsPerKilogram = 2.2046226218
 private const val CentimetersPerInch = 2.54
 private const val KilogramsPerStone = 6.35029318
@@ -111,10 +86,7 @@ private const val KilojoulesPerKilocalorie = 4.184
 private const val FahrenheitFreezingPoint = 32.0
 private const val FahrenheitPerCelsius = 1.8
 
-/**
- * Health Connect stores blood glucose in mmol/L; the US convention is mg/dL.
- * The factor matches the Flutter build's so both directions agree.
- */
+/** Health Connect stores glucose in mmol/L; the US convention is mg/dL. */
 private const val MilligramsPerDeciliterPerMillimolePerLiter = 18.0
 
 /** How a column's raw number becomes the metric's canonical value. */
@@ -127,28 +99,18 @@ sealed interface CsvValueInterpretation {
 data class CsvDirectValue(val unit: CsvUnit) : CsvValueInterpretation
 
 /**
- * The cell holds a **mass**, and the metric is that mass as a percentage of the
- * row's body weight.
- *
- * Scales export "Fat mass (kg)" while Health Connect's `BodyFatRecord` stores a
- * percentage, so the percentage has to be derived — and it can only be derived
- * from the weight measured at the same moment, i.e. the weight column of the
- * SAME row. A row missing that weight cannot produce this metric, which is why
- * [CsvValueInterpretation.needsRowWeight] exists: the mapping validator asks
- * the interpretation, not the metric, whether a weight column is required.
+ * The cell holds a mass, and the metric is that mass as a share of the row's
+ * body weight. Scales export "Fat mass (kg)" while Health Connect stores a
+ * percentage, so the weight column of the same row is needed.
  */
 data class CsvMassShareOfWeight(
-    /** Always a mass unit — the catalog only offers mass units for this. */
+    /** Always a mass unit. */
     val unit: CsvUnit,
 ) : CsvValueInterpretation
 
 /** Everything the importer needs to know about one metric. */
 data class CsvMetricSpec(
-    /**
-     * The Health Connect record class name this produces. Load-bearing: it is a
-     * segment of the deterministic clientRecordId, so it must match the Flutter
-     * build's `targetType` strings exactly.
-     */
+    /** The Health Connect record class name. Part of the clientRecordId; must match Flutter. */
     val targetType: String,
 
     /** The record class, for the existing-id lookup. */
@@ -160,19 +122,11 @@ data class CsvMetricSpec(
     /** Offered in the UI in this order; the first is the default. */
     val interpretations: List<CsvValueInterpretation>,
 
-    /**
-     * Bounds on the CANONICAL value, used to reject a row rather than write a
-     * number Health Connect would happily store. A 900 kg weight is a mis-mapped
-     * column, not a person.
-     */
+    /** Bounds on the canonical value. A 900 kg weight is a mis-mapped column. */
     val plausibleMin: Double,
     val plausibleMax: Double,
 
-    /**
-     * Whether the value covers a span of time rather than an instant. An
-     * interval metric reads the mapping's [CsvColumnRole.END_TIMESTAMP] column
-     * for each row's end; a row without one spans one minute from its start.
-     */
+    /** Whether the value covers a span. Reads the END_TIMESTAMP column; one minute without it. */
     val isInterval: Boolean = false,
 ) {
     val defaultInterpretation: CsvValueInterpretation get() = interpretations.first()
@@ -197,8 +151,7 @@ val CsvMetricCatalog: Map<CsvImportMetric, CsvMetricSpec> = mapOf(
         targetType = "BodyFatRecord",
         recordType = BodyFatRecord::class,
         writePermission = HealthPermission.getWritePermission(BodyFatRecord::class),
-        // The mass interpretations are what make a Withings-style export usable
-        // without editing the file.
+        // The mass interpretations make a Withings-style export usable as is.
         interpretations = listOf(
             CsvDirectValue(CsvUnit.PERCENT),
             CsvDirectValue(CsvUnit.FRACTION),
@@ -206,9 +159,7 @@ val CsvMetricCatalog: Map<CsvImportMetric, CsvMetricSpec> = mapOf(
             CsvMassShareOfWeight(CsvUnit.POUNDS),
             CsvMassShareOfWeight(CsvUnit.GRAMS),
         ),
-        // Below ~2% is not survivable and above ~75% is not anatomically
-        // possible; both mean the weight column used for the derivation was the
-        // wrong one.
+        // Below 2% or above 75% means the wrong weight column was used.
         plausibleMin = 2.0,
         plausibleMax = 75.0,
     ),
@@ -274,10 +225,7 @@ val CsvMetricCatalog: Map<CsvImportMetric, CsvMetricSpec> = mapOf(
         plausibleMax = 12000.0,
     ),
 
-    // ── Vitals ───────────────────────────────────────────────────────────────
-    // Each is one number at one instant, which is the only shape the mapping
-    // model expresses. Ranges are "survivable human", not "clinically normal":
-    // rejecting a real fever or a real bradycardia would be worse than storing it.
+    // Vitals. Ranges are "survivable human", not "clinically normal".
     CsvImportMetric.HEART_RATE to CsvMetricSpec(
         targetType = "HeartRateRecord",
         recordType = HeartRateRecord::class,
@@ -370,28 +318,20 @@ val CsvMetricCatalog: Map<CsvImportMetric, CsvMetricSpec> = mapOf(
         plausibleMax = 100.0,
     ),
 
-    // ── Intervals ────────────────────────────────────────────────────────────
-    // A steps cell counts what happened between the row's start and end
-    // timestamps; without an END_TIMESTAMP column the span defaults to a minute.
+    // Intervals. A steps cell counts what happened between start and end.
     CsvImportMetric.STEPS to CsvMetricSpec(
         targetType = "StepsRecord",
         recordType = StepsRecord::class,
         writePermission = HealthPermission.getWritePermission(StepsRecord::class),
         interpretations = listOf(CsvDirectValue(CsvUnit.COUNT)),
-        // Health Connect refuses a count below 1; 200,000 a day is past any
-        // recorded ultramarathon, so beyond it the column is not steps.
+        // Health Connect refuses a count below 1; 200,000 a day is past any ultramarathon.
         plausibleMin = 1.0,
         plausibleMax = 200000.0,
         isInterval = true,
     ),
 )
 
-/**
- * Converts [value] from [unit] to the metric's canonical unit — kg for masses,
- * metres for height, kcal/day for BMR, percent for body fat, mmol/L for
- * glucose, °C for temperatures, ms for HRV. Storage is always metric; the unit
- * describes the FILE, never the app's display preference.
- */
+/** Converts [value] from [unit] to the metric's canonical (metric) unit. */
 fun convertCsvValueToCanonical(value: Double, unit: CsvUnit): Double = when (unit) {
     CsvUnit.KILOGRAMS -> value
     CsvUnit.POUNDS -> value / PoundsPerKilogram
@@ -417,10 +357,7 @@ fun convertCsvValueToCanonical(value: Double, unit: CsvUnit): Double = when (uni
     CsvUnit.COUNT -> value
 }
 
-/**
- * Unit tokens recognised in a column header, longest first so `kcal` is not
- * matched by `cal` and `lbs` is not matched by `lb`.
- */
+/** Unit tokens recognised in a header, longest first so `kcal` beats `cal`. */
 private val HeaderUnitTokens: List<Pair<String, CsvUnit>> = listOf(
     "kilograms" to CsvUnit.KILOGRAMS,
     "kilogram" to CsvUnit.KILOGRAMS,
@@ -454,12 +391,8 @@ private val HeaderUnitTokens: List<Pair<String, CsvUnit>> = listOf(
 private val HeaderUnitTailRegex = Regex("""\(([^()]*)\)\s*$""")
 
 /**
- * The unit named in [header], or null when it names none.
- *
- * Reads a unit off a label the user has ALREADY chosen to map — it never maps a
- * header string to a metric, so this is a default, not a vendor preset. Only
- * the parenthesised tail is considered, so a column called "Weight in grams of
- * food" cannot be read as grams.
+ * The unit named in [header], or null. Only the parenthesised tail counts, so
+ * "Weight in grams of food" is not read as grams.
  */
 fun detectCsvUnitInHeader(header: String): CsvUnit? {
     val match = HeaderUnitTailRegex.find(header.trim()) ?: return null
@@ -471,10 +404,7 @@ fun detectCsvUnitInHeader(header: String): CsvUnit? {
     return null
 }
 
-/**
- * [spec]'s offered interpretation whose unit is [unit], preferring a direct
- * reading over a derived one. Null when the metric cannot express that unit.
- */
+/** [spec]'s interpretation for [unit], preferring direct over derived. Null if none. */
 fun interpretationForUnit(spec: CsvMetricSpec, unit: CsvUnit): CsvValueInterpretation? {
     spec.interpretations.firstOrNull { it is CsvDirectValue && it.unit == unit }?.let { return it }
     return spec.interpretations.firstOrNull { it is CsvMassShareOfWeight && it.unit == unit }

@@ -21,8 +21,7 @@ class CardioLoadTest {
 
     @Test
     fun `fifteen minute chart buckets force movement fallback`() {
-        // Mimics Health Connect chart aggregation over a ~51 minute workout:
-        // five 15-minute buckets with no consecutive pair inside the 5-minute gap budget.
+        // Five 15-minute buckets, as Health Connect chart aggregation returns over a ~51 minute workout.
         val samples = listOf(
             HeartRateSample(workoutStart, 150, source = ""),
             HeartRateSample(workoutStart.plusSeconds(15 * 60), 155, source = ""),
@@ -71,11 +70,8 @@ class CardioLoadTest {
 
     @Test
     fun `without a trustworthy observed max, age sets the ceiling`() {
-        // A quiet fortnight: nothing above 141 anywhere in the loaded range.
-        // The old estimate took 141 + 10 = 151 as this person's maximum, so
-        // a walk at 95 bpm cleared the elevated threshold (87 bpm against a
-        // 151 ceiling) and scored as training. Tanaka for age 30 says ~187,
-        // which puts the threshold at 97 bpm - above the walk.
+        // A quiet fortnight: nothing above 141. The old estimate took 151 as the maximum, so a walk
+        // at 95 bpm scored as training. Tanaka for age 30 says ~187, threshold 97 bpm.
         val samples = (0 until 30).map { minute ->
             HeartRateSample(workoutStart.plusSeconds(minute * 60L), 95, source = "")
         }
@@ -110,9 +106,7 @@ class CardioLoadTest {
 
     @Test
     fun `a genuinely observed max beats the age estimate`() {
-        // 172 seen on the wrist clears the trustworthiness bar (>= 150 and
-        // well above resting): the person demonstrated it, so it wins over
-        // any formula.
+        // 172 seen on the wrist clears the trustworthiness bar, so it wins over any formula.
         val samples = (0 until 30).map { minute ->
             HeartRateSample(workoutStart.plusSeconds(minute * 60L), 150, source = "")
         }

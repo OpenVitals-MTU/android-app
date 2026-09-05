@@ -3,12 +3,7 @@ package tech.mmarca.openvitals.ui.components
 import java.time.Duration
 import java.time.Instant
 
-/**
- * One bucket of a time series aggregated into fixed-width windows: its representative
- * instant (the bucket centre) and the average, minimum and maximum of the samples that
- * fell in it — everything the aggregated ("Google-Health-style") chart view needs to
- * draw an average line with a min/max band.
- */
+/** One bucket of a series: its centre instant and the average, min and max of its samples. */
 data class BucketPoint(
     val time: Instant,
     val average: Double,
@@ -18,12 +13,8 @@ data class BucketPoint(
 )
 
 /**
- * Buckets [samples] into [bucketMinutes]-wide windows measured from [dayStart],
- * returning one [BucketPoint] per non-empty bucket in ascending time order.
- *
- * Samples before [dayStart] and non-finite values are skipped. Buckets are aligned to
- * [dayStart] so their boundaries are stable across refreshes. Returns an empty list when
- * [bucketMinutes] <= 0 or there is nothing to aggregate.
+ * Buckets [samples] into [bucketMinutes] windows from [dayStart], one
+ * [BucketPoint] per non-empty bucket. Empty when [bucketMinutes] <= 0.
  */
 fun <T> bucketedSeries(
     samples: Iterable<T>,
@@ -47,8 +38,7 @@ fun <T> bucketedSeries(
 
     return buckets.keys.sorted().map { index ->
         val acc = buckets.getValue(index)
-        // Centre of the bucket, so the point sits in the middle of the window it
-        // summarises rather than at its leading edge.
+        // The bucket centre, so the point sits mid-window.
         val centre = dayStart
             .plus(Duration.ofMinutes(index.toLong() * bucketMinutes))
             .plusSeconds(bucketMinutes * 30L)

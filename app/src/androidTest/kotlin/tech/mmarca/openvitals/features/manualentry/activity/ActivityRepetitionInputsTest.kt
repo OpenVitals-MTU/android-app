@@ -26,15 +26,9 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Ports the `repetitions` group of Flutter's
- * `test/features/manualentry/activity/activity_entry_screen_test.dart`.
- *
- * Repetition inputs are shown or hidden purely on the activity type, and each
- * shape means something different to Health Connect: a total, a step count, or
- * a list of sets with rests between them. Showing the wrong shape either loses
- * the sets a user typed or asks for reps on a bike ride. The per-set fields
- * matter most: they are the only place in the app where several identical boxes
- * sit next to each other, so a wiring mistake writes one set's reps over another.
+ * Repetition inputs follow the activity type: a total, a step count, or sets with rests.
+ * The per-set fields are several identical boxes side by side, where a wiring mistake
+ * writes one set's reps over another.
  */
 class ActivityRepetitionInputsTest {
 
@@ -51,8 +45,7 @@ class ActivityRepetitionInputsTest {
 
     @Test
     fun aStepCountedTypeGetsOneTotalAndNoModeSwitch() {
-        // Steps are counted by the phone, not written down set by set. A
-        // Total/Sets switch here would offer a shape steps cannot be stored in.
+        // Steps are counted by the phone, so no Total/Sets switch.
         setInputs(ActivityEntryUiState(selectedActivityType = walkingEntryType))
 
         composeRule.onAllNodesWithText(string(R.string.activity_entry_steps_title)).onFirst().assertIsDisplayed()
@@ -71,8 +64,7 @@ class ActivityRepetitionInputsTest {
 
     @Test
     fun theLastRemainingSetCannotBeDeleted() {
-        // An empty set list is not a workout the write path can build anything
-        // from, and there would be no field left to type the reps back into.
+        // An empty set list leaves no field to type the reps into.
         setInputs(
             ActivityEntryUiState(
                 selectedActivityType = pushUpsEntryType,
@@ -114,9 +106,7 @@ class ActivityRepetitionInputsTest {
 
     @Test
     fun typingInOneSetDoesNotBleedIntoAnother() {
-        // Each box is bound to its own index. Cross-wire them and a user who
-        // corrects set two silently rewrites set one — the kind of mistake that
-        // is only ever noticed after the workout has been saved.
+        // Each box is bound to its own index.
         val reported = mutableListOf<Pair<Int, String>>()
         setInputs(
             state = ActivityEntryUiState(
@@ -142,8 +132,7 @@ class ActivityRepetitionInputsTest {
 
     @Test
     fun aMixedExerciseTypeNamesEachStepAndHidesTheTotalSwitch() {
-        // Calisthenics has no single "total": every step is its own exercise,
-        // so each row carries a picker and the Total/Sets switch is gone.
+        // Calisthenics has no single total: every step is its own exercise with a picker.
         setInputs(
             ActivityEntryUiState(
                 selectedActivityType = checkNotNull(activityEntryTypeById("calisthenics")),

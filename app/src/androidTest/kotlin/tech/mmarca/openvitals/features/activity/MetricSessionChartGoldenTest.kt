@@ -20,17 +20,8 @@ import tech.mmarca.openvitals.testing.assertVisualRootMatchesGolden
 import tech.mmarca.openvitals.testing.goldenInstantAt
 
 /**
- * Port of Flutter's `test/goldens/charts/metric_session_chart_golden_test.dart`.
- *
- * The trace card the recorded session screens wear. The one thing it decides for
- * itself is whether to draw the DOTS: past 120 samples they merge into a smear and
- * are dropped. Both sides of that threshold are photographed here, because a sparse
- * trace losing its points and a dense trace growing them are both regressions no
- * existing test would notice.
- *
- * Kotlin has no single `MetricSessionChart`; the shared scaffold is private and each
- * metric has its own typed entry point, so these shoot the three entry points Flutter
- * shot through the one widget.
+ * The session trace card. Past 120 samples the dots are dropped; both sides are photographed.
+ * Each metric has its own typed entry point, so these shoot all three.
  */
 class MetricSessionChartGoldenTest {
 
@@ -39,10 +30,7 @@ class MetricSessionChartGoldenTest {
 
     @Test
     fun aRecordedTrace_denseEnoughThatTheDotsComeOff() {
-        // One sample every 15 seconds for 45 minutes: 180 of them, which is what a
-        // sensor actually writes and comfortably past the 120 the card will dot.
-        // Rolling terrain, and no noise, so the picture changes only when the PAINTER
-        // changes.
+        // One sample every 15 seconds for 45 minutes: 180, past the 120 the card will dot. No noise.
         val samples = (0 until 180).map { index ->
             SpeedSample(
                 time = START.plusSeconds(index * 15L),
@@ -68,9 +56,7 @@ class MetricSessionChartGoldenTest {
 
     @Test
     fun aTraceSteppedPerSplit_sparseEnoughToShowItsPoints() {
-        // The watch that writes a distance and no speed: the shape of the run is
-        // rebuilt from the splits, so the trace STEPS — two samples per split, at its
-        // ends — and the card counts splits rather than samples.
+        // A watch that writes distance and no speed: the trace steps, two samples per split.
         val splitSpeeds = listOf(3.05, 3.18, 3.11, 2.86, 3.22, 3.30)
         val samples = splitSpeeds.flatMapIndexed { index, speed ->
             listOf(
@@ -85,9 +71,7 @@ class MetricSessionChartGoldenTest {
                     trace = ActivitySplitSpeedTrace(
                         samples = samples,
                         splitCount = splitSpeeds.size,
-                        // The card's own mean would weigh the corners of the steps
-                        // equally with the splits; only the caller knows the
-                        // distances, so only the caller can state the average.
+                        // Only the caller knows the distances, so only the caller can state the average.
                         averageMetersPerSecond = 3.12,
                     ),
                     source = SplitSource.ROUTE,
@@ -105,8 +89,7 @@ class MetricSessionChartGoldenTest {
 
     @Test
     fun cadence_theOtherCardThatSharesThisScaffold() {
-        // Cycling cadence over the same ride, once a minute — the second caller, and
-        // the one whose only difference from speed used to be a whole duplicate file.
+        // Cycling cadence over the same ride, once a minute.
         val samples = (0..45).map { index ->
             ActivityCadenceSample(
                 time = START.plusSeconds(index * 60L),
@@ -138,8 +121,7 @@ class MetricSessionChartGoldenTest {
             .fillMaxWidth()
             .padding(16.dp)
 
-        // A 45-minute ride, on the golden clock. Sessions are instants, not days: the
-        // axis spans the RECORDING, so a trace that stops early stops early.
+        // A 45-minute ride on the golden clock. The axis spans the recording.
         val START: Instant = goldenInstantAt(9, 0)
         val END: Instant = START.plusSeconds(45L * 60L)
     }

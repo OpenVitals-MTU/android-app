@@ -6,13 +6,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The start/end value labels on the widget's Body Energy plot: where they go,
- * and when the plot is too small to hold them at all.
- *
- * Pure geometry — the rasterising itself needs a device, but every clamping
- * decision is a function of floats and is pinned here. Font metrics follow the
- * Android convention: ascent is NEGATIVE (distance above the baseline), descent
- * positive.
+ * The value labels on the widget's Body Energy plot: where they go, and when the plot is too
+ * small to hold them. Ascent is negative, descent positive, as on Android.
  */
 class BodyEnergyPlotLabelTest {
 
@@ -20,7 +15,7 @@ class BodyEnergyPlotLabelTest {
     private val descent = 3f
     private val gap = 3f
 
-    // --- Whether the labels fit ----------------------------------------------
+    // Whether the labels fit.
 
     @Test
     fun `labels fit when they take at most half the width`() {
@@ -68,7 +63,7 @@ class BodyEnergyPlotLabelTest {
         assertFalse(bodyEnergyEdgeLabelsFit(100f, 60f, 10f, 10f, 0f))
     }
 
-    // --- Horizontal placement ------------------------------------------------
+    // Horizontal placement.
 
     @Test
     fun `the start label is flush with the curve's left edge`() {
@@ -85,7 +80,7 @@ class BodyEnergyPlotLabelTest {
         assertEquals(0f, bodyEnergyEdgeLabelX(250f, 200f, alignEnd = true), 0f)
     }
 
-    // --- Vertical placement --------------------------------------------------
+    // Vertical placement.
 
     @Test
     fun `the label prefers sitting above the curve, clear by the gap`() {
@@ -116,8 +111,7 @@ class BodyEnergyPlotLabelTest {
             gap = gap,
         )
 
-        // Below the SPAN's lowest point, so it clears the whole stretch of
-        // curve it covers.
+        // Below the span's lowest point, so it clears the curve it covers.
         assertEquals(12f + gap - ascent, baseline, 0f)
         assertTrue(baseline + ascent >= 0f)
         assertTrue(baseline + descent <= 80f)

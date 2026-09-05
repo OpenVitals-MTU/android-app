@@ -19,12 +19,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.vitals.restingHeartRateValue
 import tech.mmarca.openvitals.features.vitals.skinTemperatureChartEntries
 
-/**
- * Port of test/features/heart/heart_display_test.dart's inline-stats cases: the
- * arithmetic the composables used to hide is hoisted into pure functions
- * (heartRateTimelineStats, bloodPressureStats, spO2Stats, skinTemperatureStats,
- * skinTemperatureChartEntries) so a unit test can call it with a fixture.
- */
+/** The inline-stats arithmetic, hoisted into pure functions so a unit test can call it. */
 class HeartMetricStatsTest {
 
     private val formatter = UnitFormatter(
@@ -68,7 +63,7 @@ class HeartMetricStatsTest {
         source = "Test",
     )
 
-    // ─── heart rate ───────────────────────────────────────────────────────────
+    // Heart rate.
 
     @Test fun `a day of samples sorts oldest first and takes its extremes`() {
         val stats = heartRateTimelineStats(
@@ -86,8 +81,7 @@ class HeartMetricStatsTest {
     }
 
     @Test fun `a 1 Hz workout burst does not outvote the per-minute background`() {
-        // Nine background minutes at 70 bpm, then one minute recorded at 1 Hz
-        // (60 samples) at 130 bpm — the shape Gadgetbridge syncs for a workout.
+        // Nine background minutes at 70 bpm, then one minute at 1 Hz at 130 bpm, as Gadgetbridge syncs a workout.
         val background = (0L until 9L).map { minute ->
             HeartRateSample(
                 time = Instant.parse("2026-03-02T08:00:00Z").plusSeconds(minute * 60),
@@ -105,17 +99,14 @@ class HeartMetricStatsTest {
 
         val stats = heartRateTimelineStats(background + workout)
 
-        // Minute-bucketed: (9 × 70 + 130) / 10. The per-sample mean would have
-        // said 122 — the dense minute outvoting the other nine.
+        // Minute-bucketed: (9 × 70 + 130) / 10. The per-sample mean would say 122.
         assertEquals(76, stats.avgBpm)
         assertEquals(70L, stats.minBpm)
         assertEquals(130L, stats.maxBpm)
     }
 
     @Test fun `the statistics card averages the day the way the timeline does`() {
-        // The 82-vs-116 field report: the dashboard card was already minute
-        // bucketed, but the detail screen's Statistics section still took the
-        // per-sample mean, so the two screens disagreed on the same day.
+        // The 82-vs-116 field report: the detail screen's Statistics still took the per-sample mean.
         val background = (0L until 9L).map { minute ->
             HeartRateSample(
                 time = Instant.parse("2026-09-02T08:00:00Z").plusSeconds(minute * 60),
@@ -134,8 +125,7 @@ class HeartMetricStatsTest {
 
         val stats = heartRateSampleStats(samples)!!
 
-        // Ten minutes, one of them at 130: (9 × 70 + 130) / 10 = 76, not the
-        // per-sample (9 × 70 + 60 × 130) / 69 ≈ 122.
+        // (9 × 70 + 130) / 10 = 76, not the per-sample 122.
         assertEquals(76.0, stats.average, 1e-9)
         assertEquals(heartRateTimelineStats(samples).avgBpm, stats.average.toInt())
         assertEquals(70L, stats.low)
@@ -160,7 +150,7 @@ class HeartMetricStatsTest {
         assertEquals(95L, normal.paddedMax)
     }
 
-    // ─── vitals ───────────────────────────────────────────────────────────────
+    // Vitals.
 
     @Test fun `blood pressure keeps the latest reading and the highest one`() {
         val stats = bloodPressureStats(
@@ -191,8 +181,7 @@ class HeartMetricStatsTest {
         assertEquals(95.0, stats.low, 1e-9)
         assertEquals(99.0, stats.high, 1e-9)
         assertEquals(2, stats.readings)
-        // The previous-period comparison compares average against average, the
-        // way SpO2StatisticsContent builds it.
+        // The previous-period comparison compares average against average.
         val previousAverage = listOf(spO2(2, 97.0)).map { it.percent }.averageOrNull()!!
         val comparison = periodComparison(stats.average, previousAverage)
         assertEquals(97.0, comparison.currentValue, 1e-9)
@@ -210,8 +199,7 @@ class HeartMetricStatsTest {
         assertEquals(0.1, stats.average, 1e-4)
         assertEquals(-0.2, stats.low, 1e-9)
         assertEquals(0.4, stats.high, 1e-9)
-        // …but delta-less entries still count as readings, which is what the
-        // screen prints.
+        // Delta-less entries still count as readings.
         assertEquals(3, stats.readings)
     }
 
@@ -222,12 +210,10 @@ class HeartMetricStatsTest {
         assertNull(skinTemperatureStats(entries))
     }
 
-    // ─── a day average never sits outside its own range ──────────────────────
+    // A day average never sits outside its own range.
 
     @Test fun `resting heart rate averages the samples it also ranges`() {
-        // The provider aggregate disagrees with its own samples. It loses: the
-        // overview card averages the samples, the timeline card ranges them —
-        // one population, printed side by side.
+        // The provider aggregate disagrees with its own samples and loses: both cards use the samples.
         val state = HeartUiState(
             selectedRange = TimeRange.DAY,
             dayRestingSamples = listOf(restingSample(8, 50L), restingSample(9, 60L)),

@@ -1,17 +1,9 @@
 package tech.mmarca.openvitals.devices.garmin
 
 /**
- * Little-endian read cursor over a byte array.
- *
- * Port of the read half of Gadgetbridge's `GarminByteBufferReader` /
- * `MessageReader` (via the Flutter build's `garmin_byte_reader.dart`).
- * Garmin's wire format is little-endian throughout, so the endianness is baked
- * in rather than configurable.
- *
- * Reads are UNSIGNED: [readByte] and [readShort] return the value as a
- * non-negative [Int], [readInt] returns a non-negative [Long] — matching the
- * Dart original, whose 64-bit ints made every u8/u16/u32 read naturally
- * unsigned. [readLong] returns the raw 64 bits.
+ * Little-endian read cursor over a byte array. Reads are unsigned:
+ * [readByte] and [readShort] return non-negative [Int], [readInt] a
+ * non-negative [Long]. [readLong] returns the raw 64 bits.
  */
 class GarminByteReader(private val data: ByteArray) {
 
@@ -55,12 +47,8 @@ class GarminByteReader(private val data: ByteArray) {
     }
 
     /**
-     * A length-prefixed UTF-8 string: one length byte then that many bytes.
-     *
-     * Garmin includes the terminating NUL in the length, so it is stripped
-     * here — otherwise every device name arrives with a trailing NUL that
-     * survives into the UI. Malformed UTF-8 decodes to replacement characters
-     * rather than throwing, matching Dart's `allowMalformed: true`.
+     * A length-prefixed UTF-8 string. Garmin counts the terminating NUL in
+     * the length, so it is stripped. Malformed UTF-8 decodes to replacements.
      */
     fun readString(): String {
         val length = readByte()
@@ -75,16 +63,8 @@ class GarminByteReader(private val data: ByteArray) {
     }
 
     /**
-     * A NUL-terminated UTF-8 string: bytes up to the first zero, which is
-     * consumed.
-     *
-     * The OTHER string shape on this wire. Most Garmin fields are
-     * length-prefixed ([readString]), but the notification control channel
-     * sends an app identifier with no length at all — so reading it with
-     * [readString] would take the first byte as a length and desynchronise
-     * everything after it. A missing terminator returns the rest of the buffer
-     * rather than throwing, because a truncated frame is the watch's problem,
-     * not a crash.
+     * A NUL-terminated UTF-8 string. The notification control channel sends
+     * an app identifier with no length. A missing terminator returns the rest.
      */
     fun readNullTerminatedString(): String {
         val start = position

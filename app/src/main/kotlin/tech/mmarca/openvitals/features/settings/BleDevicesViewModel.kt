@@ -59,9 +59,7 @@ class BleDevicesViewModel @Inject constructor(
         localState,
     ) { devices, discovered, local ->
         local.copy(
-            // The Sensors screen owns the live-sensor role only. A sync-only
-            // watch belongs to the Watches screen; one that the user also added
-            // here carries capabilities, so it shows up in both — deliberately.
+            // The Sensors screen owns the live role only. A watch with capabilities shows in both.
             devices = devices.filter { it.isLiveSensorCapable },
             discoveredDevices = discovered,
         )
@@ -181,9 +179,7 @@ class BleDevicesViewModel @Inject constructor(
         val state = localState.value
         val selected = state.selectedDevice ?: return
         if (state.addCapabilities.isEmpty()) {
-            // Finding nothing at all reads differently from unticking
-            // everything: a watch exposes the heart-rate service only while it
-            // is broadcasting, so say that instead of blaming the selection.
+            // Finding nothing differs from unticking everything: a watch broadcasts only sometimes.
             localState.update {
                 it.copy(
                     errorMessage = if (state.discoveredCapabilities.isEmpty()) {
@@ -201,9 +197,7 @@ class BleDevicesViewModel @Inject constructor(
         } else {
             null
         }
-        // No kind: this path decides the device is a sensor, never that it
-        // stops being a watch. Omitting it keeps an already-onboarded watch's
-        // sync role intact while adding the live one on top.
+        // No kind: this path never turns a watch into a sensor.
         deviceRepository.addDevice(
             displayName = state.addDisplayName,
             address = selected.address,

@@ -62,8 +62,7 @@ class SleepScheduleAxisTest {
     }
 
     @Test fun `a long but possible lie-in still counts`() {
-        // The guard rejects the impossible, not the merely unusual: 14 h in bed is
-        // a real thing a person can do and must still set the scale.
+        // The guard rejects the impossible, not the unusual: 14 h in bed must still set the scale.
         val lieIn = night("2026-07-05", "2026-07-04T20:00:00Z", "2026-07-05T10:00:00Z")
 
         val axis = SleepScheduleAxis.range(listOf(lieIn), zone, anchorMinute)
@@ -74,7 +73,7 @@ class SleepScheduleAxisTest {
         assertEquals(1320.0 + 14 * 60, axis.max, 0.0)
     }
 
-    // ─── anchoredMinutes ──────────────────────────────────────────────────────
+    // anchoredMinutes.
 
     @Test fun `the anchor itself is minute zero`() {
         val atAnchor = Instant.parse("2026-07-01T22:00:00Z")
@@ -83,8 +82,7 @@ class SleepScheduleAxisTest {
         // …and the same holds for an 18:00 sleep window, the Flutter default.
         val eighteen = Instant.parse("2026-07-01T18:00:00Z")
         assertEquals(0.0, SleepScheduleAxis.anchoredMinutes(eighteen, zone, 18 * 60), 0.0)
-        // An evening bedtime sits early on the axis; a morning wake-up wraps past
-        // midnight rather than back to the top.
+        // An evening bedtime sits early on the axis; a morning wake-up wraps past midnight.
         assertEquals(
             5.0 * 60,
             SleepScheduleAxis.anchoredMinutes(Instant.parse("2026-07-01T23:00:00Z"), zone, 18 * 60),
@@ -109,7 +107,7 @@ class SleepScheduleAxisTest {
         }
     }
 
-    // ─── anchoredMinute <-> clock ────────────────────────────────────────────
+    // anchoredMinute to clock and back.
 
     @Test fun `clockTime round-trips the anchor and a wrapped morning`() {
         assertEquals(LocalTime.of(18, 0), SleepScheduleAxis.clockTime(0, 18 * 60))

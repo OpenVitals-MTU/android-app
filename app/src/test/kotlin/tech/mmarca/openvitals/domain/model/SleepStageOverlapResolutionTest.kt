@@ -10,11 +10,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * [resolveSleepStages] — a writer (seen in the wild: coredevices.coreapp) that
- * records one stretch of the night under TWO stage records made the summed
- * asleep time exceed the session window: "Sleep 10h 02m — 9h 33m time in bed".
- * Every instant must count once, and where two stages claim it the deeper one
- * wins, matching how Google Fit renders the same data.
+ * A writer that records one stretch under two stage records made asleep time exceed the
+ * session window. Every instant counts once, and the deeper stage wins.
  */
 class SleepStageOverlapResolutionTest {
 
@@ -39,8 +36,7 @@ class SleepStageOverlapResolutionTest {
     )
 
     @Test fun `overlapping light and deep never sum past the session window`() {
-        // Stage records sum to 10h — more time asleep than the 9h33m in bed —
-        // because 08:00–09:00 of the night is recorded as BOTH light and deep.
+        // Stage records sum to 10h in a 9h33m window because 08:00 to 09:00 is both light and deep.
         val raw = listOf(
             stage(SleepStage.STAGE_LIGHT, 0, 120),
             stage(SleepStage.STAGE_DEEP, 120, 180),
@@ -107,8 +103,7 @@ class SleepStageOverlapResolutionTest {
             listOf(stage(SleepStage.STAGE_LIGHT, 0, 60)),
             resolveSleepStages(duplicated, sessionStart, sessionEnd),
         )
-        // The duration helpers are union-based too, so even an unresolved
-        // duplicate can never double a stated total.
+        // The duration helpers are union-based too, so a duplicate can never double a total.
         assertEquals(
             Duration.ofMinutes(60).toMillis(),
             duplicated.durationMsForTypes(setOf(SleepStage.STAGE_LIGHT)),

@@ -129,9 +129,7 @@ internal fun heartRateRangeSummary(summaries: List<HeartRateSummary>): LongRange
     )
 }
 
-// Null rather than an invented range. These used to fall back to 40/80 bpm and
-// 0/100 ms — numbers no one measured, which only stayed off screen because every
-// call site happened to guard on isNotEmpty() first.
+// Null rather than an invented range: the old 40/80 bpm fallback was never measured.
 internal fun restingHeartRateRangeSummary(entries: List<DailyRestingHR>): LongRangeSummary? {
     val average = entries.map { it.bpm }.averageOrNull() ?: return null
     return LongRangeSummary(
@@ -157,10 +155,7 @@ internal fun <T> dailyRangeVitalsPoints(
 ): VitalsDailyRange {
     val dayRanges = entries
         .groupBy { time(it).atZone(ZoneId.systemDefault()).toLocalDate() }
-        // groupBy never yields an empty group, so these aggregates always have a
-        // value; the zero fallback states that rather than leaning on NaN not
-        // showing. Minute-bucketed like every other per-day mean, so the line
-        // agrees with the daily series and the statistics card.
+        // groupBy never yields an empty group. Minute-bucketed like every per-day mean.
         .map { (date, dayEntries) ->
             val values = dayEntries.map(value)
             val average = dayEntries.timeBucketedAverageOrNull(time = time, value = value) ?: 0.0

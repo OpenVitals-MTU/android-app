@@ -8,11 +8,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.devices.notifications.NotificationActionMsg
 import tech.mmarca.openvitals.devices.notifications.NotificationMsg
 
-/**
- * Port of the Flutter build's `garmin_notification_actions_test.dart`: mapping
- * an Android notification's actions onto GNCS's fixed slots, and the byte
- * encoding of the ACTIONS attribute.
- */
+/** Mapping an Android notification's actions onto GNCS's fixed slots, and encoding the ACTIONS attribute. */
 class GarminNotificationActionsTest {
 
     private fun message(
@@ -43,13 +39,11 @@ class GarminNotificationActionsTest {
         fireableFromBackground = fireable,
     )
 
-    // ── mapping Android actions onto the watch ──────────────────────────────
+    // Mapping Android actions onto the watch.
 
     @Test
     fun `every dismissable notification gets a dismiss the app did not provide`() {
-        // Android has no "clear this" action — clearing is the listener's job —
-        // so it has to be synthesised, and marked so the performer cancels
-        // instead of firing an intent that does not exist.
+        // Android has no "clear this" action, so it is synthesised and marked so the performer cancels.
         val actions = garminActionsFor(message())
 
         assertEquals(GarminNotificationActionKind.DISMISS, actions.single().kind)
@@ -104,8 +98,7 @@ class GarminNotificationActionsTest {
 
     @Test
     fun `a second reply becomes a plain button rather than overwriting the first`() {
-        // The watch has one reply control, so a second would silently replace
-        // it.
+        // The watch has one reply control, so a second would replace it.
         val actions = garminActionsFor(
             message(
                 actions = listOf(
@@ -135,10 +128,7 @@ class GarminNotificationActionsTest {
 
     @Test
     fun `an action that only opens the app is not offered at all`() {
-        // A stock SMS app publishes a "Reply" that prefills its compose screen
-        // rather than sending, and Android blocks a background activity launch —
-        // so it does nothing, silently. Offering it puts back the dead button
-        // this feature exists to remove.
+        // A stock SMS "Reply" prefills a compose screen, which Android blocks in the background. Offering it puts back a dead button.
         val actions = garminActionsFor(
             message(
                 actions = listOf(
@@ -173,7 +163,7 @@ class GarminNotificationActionsTest {
         assertEquals(3, actions.last().androidIndex)
     }
 
-    // ── encoding the ACTIONS attribute ──────────────────────────────────────
+    // Encoding the ACTIONS attribute.
 
     @Test
     fun `no actions encodes as the four-zero-byte sentinel`() {
@@ -254,8 +244,7 @@ class GarminNotificationActionsTest {
 
     @Test
     fun `an absurdly long label is trimmed rather than wrapping the length byte`() {
-        // A length byte cannot carry more than 255, and wrapping would make the
-        // watch read the next action code as label text.
+        // A length byte cannot carry more than 255; wrapping would read the next code as label text.
         val bytes = encodeGarminNotificationActions(
             listOf(
                 GarminNotificationAction(

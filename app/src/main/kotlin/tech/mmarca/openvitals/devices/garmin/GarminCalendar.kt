@@ -1,12 +1,6 @@
 package tech.mmarca.openvitals.devices.garmin
 
-/**
- * One event the phone can offer the watch's calendar glance.
- *
- * Times are epoch seconds. All-day events keep their calendar-provider
- * convention (midnight UTC boundaries); the responder shifts them to local
- * midnight the way the watch expects.
- */
+/** One event for the watch's calendar glance. All-day events keep midnight-UTC bounds. */
 data class GarminCalendarEvent(
     val title: String,
     val location: String? = null,
@@ -18,16 +12,9 @@ data class GarminCalendarEvent(
 )
 
 /**
- * Answers the watch's calendar asks (`GdiCalendarService`).
- *
- * The watch names the window, the field lengths and the event cap it can
- * take, and re-asks periodically for as long as the link lives — there is no
- * push. Ported from Gadgetbridge's `processProtobufCalendarRequest`.
- *
- * [eventsProvider] returns the events overlapping the asked window, or null
- * when calendar sync is off for this watch — which still gets an OK with no
- * events, upstream's answer, because an UNANSWERED ask is re-sent every
- * thirty seconds forever.
+ * Answers the watch's calendar asks. The watch names the window and caps,
+ * and re-asks periodically. A null [eventsProvider] (sync off) still gets
+ * an OK with no events: an unanswered ask is re-sent forever.
  */
 class GarminCalendarResponder(
     private val eventsProvider: ((beginEpochSeconds: Long, endEpochSeconds: Long) -> List<GarminCalendarEvent>?)? = null,
@@ -41,8 +28,7 @@ class GarminCalendarResponder(
         val service = protobufField(readProtobuf(payload), GarminSmartService.CALENDAR)?.bytes
             ?: return null
         val request = protobufField(readProtobuf(service), CALENDAR_REQUEST)?.bytes
-            // A calendar message that is not a request (a stray response,
-            // some future shape): claimed but unknown, as upstream answers.
+            // Not a request: claimed but unknown, as upstream answers.
             ?: return calendarResponse(STATUS_UNKNOWN, emptyList())
 
         val fields = readProtobuf(request)
@@ -70,12 +56,10 @@ class GarminCalendarResponder(
         val sent = events.asSequence()
             .filter { it.endEpochSeconds >= begin && it.startEpochSeconds <= end }
             .filter { includeAllDay || !it.allDay }
-            // Upstream ships up to double the reported max without issue, but
-            // the reported number is the one the watch stands behind.
+            // The reported max is the one the watch stands behind.
             .take(maxEvents)
             .map { event ->
-                // All-day events carry midnight-UTC boundaries; the watch
-                // wants midnight in the wearer's day.
+                // All-day events want midnight in the wearer's day.
                 val shift = if (event.allDay) -zoneOffsetSeconds(event.startEpochSeconds) else 0L
                 ProtobufWriter().apply {
                     if (includeOrganizer && event.organizer != null) {
@@ -110,7 +94,7 @@ class GarminCalendarResponder(
             .toBytes()
     }
 
-    // ── field numbers (gdi_calendar_service.proto) ──────────────────────────
+    // Field numbers (gdi_calendar_service.proto).
     private companion object {
         const val CALENDAR_REQUEST = 1
         const val CALENDAR_RESPONSE = 2
@@ -141,7 +125,7 @@ class GarminCalendarResponder(
         const val STATUS_UNKNOWN = 0
         const val STATUS_OK = 1
 
-        /** For a watch that names no limits — generous, since none observed do. */
+        /** For a watch that names no limits. */
         const val DEFAULT_MAX_TEXT = 100
         const val DEFAULT_MAX_EVENTS = 20
     }

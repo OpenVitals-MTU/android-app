@@ -7,21 +7,10 @@ import java.time.Instant
 import kotlin.reflect.KClass
 
 /**
- * Generic page-streamed read of all records of a type in a range, for the
- * phone-to-phone sync feature. Unlike the metric readers this is type-agnostic:
- * sync moves every negotiated record type through one code path.
- *
- * Streamed, not accumulated: the caller sees one page at a time and the page
- * is dropped before the next is fetched. Accumulating the whole window in one
- * list — a data-dense year is easily a hundred thousand records — pinned small
- * heaps at their limit and GC-thrashed the session until its timeouts fired.
- *
- * A page read failure (including an exhausted rate-limit retry) THROWS rather
- * than degrading to empty: sync is the one reader whose silence lies — a
- * truncated stream let the session finish and report a complete transfer that
- * wasn't. The [action] itself runs OUTSIDE the logging envelope so a failure
- * in the caller — the sync link dying mid-send — propagates as its own error
- * rather than being logged as a read failure.
+ * Page-streamed read of every record of a type in a range, for sync.
+ * Streamed, not accumulated: a year pinned small heaps at their limit. A
+ * page failure throws rather than truncating: a short stream once reported
+ * a complete transfer. [action] runs outside the logging envelope.
  */
 internal class SyncRecordsReader(private val support: HealthConnectReaderSupport) {
 

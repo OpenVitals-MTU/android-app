@@ -8,24 +8,14 @@ import tech.mmarca.openvitals.domain.model.coMapsReadableDirection
 import tech.mmarca.openvitals.domain.model.coMapsTurnKindForDirection
 
 /**
- * CoMaps guidance, worded for a watch face.
- *
- * Garmin has no turn-by-turn channel a phone can drive, so the guidance goes
- * to the wrist as a notification: one notification, updated in place as the
- * route unfolds. The watch shows the title large and the body under it, so
- * the turn is the title, the distance to it the subtitle, and the rest is
- * body text. Distances and times arrive from CoMaps already formatted in
- * the wearer's own units and are shown as sent, exactly as on the phone.
+ * CoMaps guidance worded for a watch face: the turn is the title, the
+ * distance the subtitle, the rest body text. Distances are shown as sent.
  */
 data class GarminNavigationNotice(
     val title: String,
     val subtitle: String,
     val body: String,
-    /**
-     * What must change for the notice to be worth re-announcing at once: the
-     * manoeuvre and the street it leads onto. The distance counting down is
-     * not in it, so a straight road is refreshed on a timer, not per fix.
-     */
+    /** What must change to re-announce at once: manoeuvre and street. Countdowns wait for the timer. */
     val instructionKey: String,
 ) {
     /** Everything shown, so an unchanged notice is never re-sent. */
@@ -54,11 +44,7 @@ data class GarminNavigationNotice(
             )
         }
 
-        /**
-         * Plain words for the arrows the phone draws. Not localized, like the
-         * rest of the CoMaps vocabulary shown in the app: the watch cannot
-         * draw an arrow, and the instruction must read the same on both.
-         */
+        /** Plain words for the arrows. Not localized, like the rest of the CoMaps vocabulary. */
         private fun turnPhrase(kind: CoMapsTurnKind, exitNumber: String): String? = when (kind) {
             CoMapsTurnKind.STRAIGHT -> "Continue straight"
             CoMapsTurnKind.SLIGHT_LEFT -> "Bear left"
@@ -87,15 +73,9 @@ data class GarminNavigationNotice(
 }
 
 /**
- * Decides when the watch hears about guidance, kept apart from the radio so
- * it can be tested with a clock.
- *
- * CoMaps speaks at every location fix, about once a second, and nearly every
- * reading differs from the last only by a few metres on the countdown. A
- * notification MODIFY per fix would keep the link busy for nothing the
- * wearer can read, so: a new manoeuvre or street goes out at once, a mere
- * countdown change waits for [refreshIntervalMillis], and an identical
- * notice is never re-sent. Guidance ending withdraws the notification.
+ * Decides when the watch hears about guidance. A new manoeuvre goes out at
+ * once, a countdown change waits for [refreshIntervalMillis], an identical
+ * notice is never re-sent. Testable with a clock.
  */
 class GarminNavigationRelayPolicy(
     private val refreshIntervalMillis: Long = DEFAULT_REFRESH_INTERVAL_MILLIS,

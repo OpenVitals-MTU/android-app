@@ -16,10 +16,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 
-/**
- * Full-width outlined button linking out to an external research/reference page. Opens [url] in
- * the browser via an ACTION_VIEW intent; failure to resolve a handler is swallowed.
- */
+/** Full-width outlined button opening [url] in the browser. A missing handler is swallowed. */
 @Composable
 fun ReferenceLinkButton(
     title: String,

@@ -25,20 +25,11 @@ import tech.mmarca.openvitals.domain.model.BleSpeedSample
 import tech.mmarca.openvitals.domain.model.BleStepsCadenceSample
 
 /**
- * The per-point series a GPX carries in its `<extensions>`: heart rate,
- * cadence, speed — the Garmin `gpxtpx:TrackPointExtension` every exporter
- * writes, and the only thing an indoor GPX has to say besides the time.
- *
- * Read off the ROUTED files too, which is a fix in its own right: a GPX with a
- * track and a heart-rate extension used to import as a bare line on a map, its
- * heart rate thrown away at the parser.
+ * The per-point series in a GPX's `<extensions>`: heart rate, cadence,
+ * speed. Read off routed files too.
  */
 internal class GpxSampleCollector(
-    /**
-     * Decides which Health Connect record the cadence belongs in. Pedalling
-     * cadence and step cadence are different record types, and `cad` is just
-     * "cad".
-     */
+    /** Decides which cadence record type: `cad` is just "cad". */
     private val isRunning: Boolean,
 ) {
     private val heartRates = mutableListOf<BleHeartRateSample>()
@@ -74,8 +65,7 @@ internal class GpxSampleCollector(
             },
             stepsCadenceSamples = if (isRunning) {
                 cadences.map { (time, rpm) ->
-                    // Running cadence is written per FOOT, as in TCX: 85 means
-                    // 170 steps a minute.
+                    // Running cadence is per foot, as in TCX.
                     BleStepsCadenceSample(time = time, stepsPerMinute = rpm.toLong() * 2)
                 }
             } else {
@@ -84,11 +74,7 @@ internal class GpxSampleCollector(
         )
 
     private companion object {
-        /**
-         * Matched by LOCAL name, so the namespace prefix (`gpxtpx:`, `ns3:`,
-         * none at all) does not matter — exporters disagree about it and none of
-         * them are wrong.
-         */
+        /** Matched by local name: exporters disagree about the prefix. */
         fun Element.extensionValue(localName: String): Double? {
             val namespaced = getElementsByTagNameNS("*", localName)
             val plain = if (namespaced.length == 0) getElementsByTagName(localName) else namespaced
@@ -109,8 +95,7 @@ internal object GpxRouteParser {
             .parse(InputSource(StringReader(gpxText)))
         val metadata = document.routeMetadata()
         val mutablePoints = mutableListOf<MutableRoutePoint>()
-        // Every trackpoint that carries a TIME, whether or not it carries a
-        // place. See [routelessImport]: this is the indoor session.
+        // Every trackpoint with a time, whether or not it has a place.
         val timestamps = mutableListOf<Instant>()
         val samples = GpxSampleCollector(
             isRunning = !metadata.type.orEmpty().lowercase().contains("bik") &&
@@ -142,7 +127,7 @@ internal object GpxRouteParser {
             ).copy(bleSamples = samples.buffer)
         }
 
-        // No route. That is not the same as no activity — see below.
+        // No route is not the same as no activity.
         if (timestamps.size >= MinRoutePoints) {
             return routelessImport(
                 fileName = fileName,
@@ -153,35 +138,16 @@ internal object GpxRouteParser {
         }
 
         throw IllegalArgumentException(
-            // Now genuinely empty: no places AND no times. A file with neither
-            // has nothing in it to import, and this is the guard that keeps a
-            // corrupt XML (or an HTML error page saved as .gpx) from arriving as
-            // a blank activity.
+            // No places and no times: nothing to import. Keeps a corrupt XML from arriving blank.
             "This GPX has nothing in it: no timestamped track points, with or " +
                 "without locations.",
         )
     }
 
     /**
-     * A GPX with no places, and an activity all the same.
-     *
-     * The app used to refuse this outright — "GPX route must contain at least 2
-     * timestamped location points" — on the theory that a GPX is a list of
-     * PLACES and an indoor session therefore cannot be written as one. That was
-     * wrong, and two real HealthFit exports say so: a strength session of 1931
-     * `<trkpt>`, and an indoor run of 1422, every one of them carrying a
-     * `<time>` and NO `lat`/`lon` at all. The GPX schema does require those
-     * attributes; real exporters omit them anyway, and the file that results is
-     * not corrupt — it is a timestamped series with the positions left out,
-     * which is exactly what an indoor activity is.
-     *
-     * So what a routeless GPX gives up is DISTANCE and CALORIES, not the
-     * session: the timestamps give the start, the end and the duration, and the
-     * extensions give the heart rate. Distance stays 0 (for a strength session
-     * there is nothing to be wrong about, and for a treadmill the file simply
-     * did not say), and calories are left for the entry form to estimate —
-     * which it does, from duration, precisely because nothing here was measured
-     * to contradict it.
+     * A GPX with no places, and an activity all the same. Real exporters
+     * write indoor sessions as timestamped `<trkpt>`s with no `lat`/`lon`.
+     * Distance stays 0 and calories are left for the form to estimate.
      */
     private fun routelessImport(
         fileName: String?,

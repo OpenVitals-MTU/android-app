@@ -222,9 +222,7 @@ internal fun DashboardWidgetCarousel(
                 modifier = Modifier
                     .onGloballyPositioned { coordinates -> fixedSectionBounds = coordinates.boundsInRoot() }
                     .zIndex(if (draggingWidgetId in fixedIds) 2f else 0f),
-                // The shipped layout: rings 16dp under the date row, flush
-                // against the quick actions (which carry their own 14dp), and
-                // drawn SQUARE rather than at two stacked tile rows.
+                // The shipped layout: rings 16dp under the date row, drawn square.
                 topPadding = DashboardHeroSectionTopPadding,
                 bottomPadding = DashboardHeroSectionBottomPadding,
                 squareRowSpan = true,
@@ -234,10 +232,7 @@ internal fun DashboardWidgetCarousel(
 
             if (carouselPages.isNotEmpty()) {
                 HorizontalDivider(
-                    // 16dp of air above the rule and 4 below it (the carousel
-                    // adds its own 8): the divider separates the summary from
-                    // the carousel, and cramping it to 4/4 read as part of the
-                    // buttons row.
+                    // 16dp above the rule and 4 below; the carousel adds its own 8.
                     modifier = Modifier.padding(
                         start = DashboardScreenPadding,
                         end = DashboardScreenPadding,

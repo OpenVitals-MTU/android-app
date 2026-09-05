@@ -101,32 +101,15 @@ data class SettingsUiState(
     val routeImportProgress: RouteBulkImportProgress? = null,
     val routeImportResult: RouteBulkImportResult? = null,
     val routeImportError: String? = null,
-    /**
-     * Which card owns the bulk import surface above (progress, result, error).
-     * The route card and the FIT card share one importer, so each shows only
-     * the run it started.
-     */
+    /** Which card owns the bulk import surface. Two cards share one importer. */
     val routeImportSource: RouteBulkImportSource = RouteBulkImportSource.ROUTE_FILES,
-    /**
-     * The FIT folder picker is up, or the tree is being walked. A folder of a
-     * thousand files takes a moment, and a button that looks dead is a button
-     * that gets pressed again.
-     */
+    /** The FIT folder picker is up, or the tree is being walked. */
     val isScanningFitFolder: Boolean = false,
-    /**
-     * The folder was readable and simply had no FIT files in it. Its own state,
-     * not an error: the user picked the wrong folder, nothing broke.
-     */
+    /** The folder was readable and had no FIT files. Not an error. */
     val fitFolderHadNoFitFiles: Boolean = false,
-    /**
-     * How many files were listed, when the folder held more than the scan will
-     * take. Null when nothing was dropped.
-     */
+    /** How many files were listed when more were found than the scan takes. */
     val fitFolderTruncatedAt: Int? = null,
-    /**
-     * The scan itself failed (an unreadable tree). A file that fails to import
-     * is the bulk importer's business and lands in [routeImportError].
-     */
+    /** The scan itself failed. Import failures land in [routeImportError]. */
     val fitFolderScanError: String? = null,
     val offlineMapPacks: List<OfflineMapPack> = emptyList(),
     val activeOfflineMapFormat: OfflineMapPackFormat? = null,
@@ -247,11 +230,7 @@ class SettingsViewModel @Inject constructor(
     companion object {
         private const val TAG = "SettingsViewModel"
 
-        /**
-         * Bulk route import flushes one batched insert per this many files, or
-         * sooner once the pending batch carries this many route points — so
-         * peak memory is bounded by GPS data rather than file count.
-         */
+        /** Bulk route import flushes one insert per this many files, or sooner by route points. */
         private const val MaxPendingImportFiles = 25
         private const val MaxPendingImportRoutePoints = 50_000
     }
@@ -321,11 +300,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Diagnostics only: the contributors seen in the last week of heart-rate
-     * and sleep data — the two metrics a watch most reliably writes. Empty
-     * when nothing has been read (no permission, or nothing synced yet).
-     */
+    /** Diagnostics: the contributors seen in the last week of heart-rate and sleep data. */
     private suspend fun loadHealthConnectSources() {
         if (!BuildConfig.OPENVITALS_DIAGNOSTICS) return
         val end = LocalDate.now()
@@ -344,11 +319,7 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
-    /**
-     * Folds the latest measured Health Connect weight/height into the card
-     * state. The declared values were already seeded, so the fields are never
-     * blank while Health Connect is read.
-     */
+    /** Folds the latest Health Connect weight and height into the card state. */
     private suspend fun resolveBodyProfileFromHealthConnect() {
         val declared = preferencesRepository.bodyProfile()
         val resolved = runCatching { bodyRepository.resolveBodyProfile(declared) }
@@ -532,12 +503,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * "Import a folder of FIT files": walk the picked tree, list what is in
-     * it, and hand every FIT file to the bulk importer one file at a time.
-     *
-     * The scan's own outcomes (nothing found, list truncated, unreadable tree)
-     * land in the `fitFolder*` state; the import itself reports through the
-     * shared bulk-import surface tagged [RouteBulkImportSource.FIT_FOLDER].
+     * Walks the picked tree and hands every FIT file to the bulk importer.
+     * Scan outcomes land in the `fitFolder*` state; the import reports through
+     * the shared surface tagged [RouteBulkImportSource.FIT_FOLDER].
      */
     fun importFitFolder(treeUri: Uri) {
         if (isBulkImportBusy) return
@@ -576,9 +544,7 @@ class SettingsViewModel @Inject constructor(
                 isScanningFitFolder = false,
                 fitFolderTruncatedAt = scan.files.size.takeIf { scan.truncated },
             )
-            // URIs, not bytes: each file is opened when the importer reaches
-            // it. A folder of four hundred rides costs the heap one ride at a
-            // time.
+            // URIs, not bytes: each file is opened when the importer reaches it.
             runBulkImport(scan.files.map { it.uri }, RouteBulkImportSource.FIT_FOLDER)
         }
     }
@@ -601,15 +567,11 @@ class SettingsViewModel @Inject constructor(
             routeImportError = null,
         )
 
-        // Health Connect rate-limits per API call, not per record: one
-        // insert per file exhausted the daily allowance around 1700 files.
-        // Parsed activities accumulate and flush as ONE insert per batch,
-        // bounded by file count and by route points so peak memory tracks
-        // GPS data, not file count.
+        // Health Connect rate-limits per API call: one insert per file exhausted
+        // the daily allowance around 1700 files. Flush as one insert per batch.
         val pending = mutableListOf<ActivityWriteRequest>()
         var pendingRoutePoints = 0
-        // Garmin wellness FIT files carry nightly HRV instead of an
-        // activity; they collect separately and batch the same way.
+        // Garmin wellness FIT files carry nightly HRV; they batch separately.
         val pendingHrvFiles = mutableListOf<List<FitHrvReading>>()
 
         suspend fun flushHrv() {
@@ -652,8 +614,7 @@ class SettingsViewModel @Inject constructor(
                 }
                 Log.w(TAG, "Route bulk import batch failed; retrying file by file", error)
             }
-            // The batched insert is atomic, so one bad file sinks the whole
-            // batch — retry file by file so only the guilty one fails.
+            // The batched insert is atomic; retry file by file so only the bad one fails.
             for (request in batch) {
                 if (rateLimited) return
                 try {
@@ -688,8 +649,7 @@ class SettingsViewModel @Inject constructor(
 
             runCatching {
                 val routeImport = routeFileImporter.import(uri)
-                // Headless import: the route's texts are generated and
-                // parsed with the same units, so any consistent pair works.
+                // Headless import: any consistent unit pair works.
                 val importUnits = ActivityEntryUnits.uniform(_uiState.value.unitSystem)
                 val routeState = initialActivityEntryState(
                     clock = clock,
@@ -714,9 +674,7 @@ class SettingsViewModel @Inject constructor(
                     flush()
                 }
             }.onFailure { error ->
-                // A FIT file that is not an activity may be a Garmin
-                // wellness file carrying nightly HRV — import that instead
-                // of failing the file.
+                // A non-activity FIT may be a wellness file with nightly HRV.
                 val hrvReadings = routeFileImporter.importFitWellnessHrv(uri)
                 if (hrvReadings.isNotEmpty()) {
                     pendingHrvFiles += hrvReadings
@@ -741,8 +699,7 @@ class SettingsViewModel @Inject constructor(
                 importedFiles = importedFiles,
                 failedFiles = failedFiles,
             ),
-            // A rate-limited run stops rather than blaming the files it never
-            // attempted, so the error surfaces even with zero failed files.
+            // A rate-limited run stops rather than blaming files it never attempted.
             routeImportError = lastError.takeIf { failedFiles > 0 || rateLimited },
         )
     }
@@ -984,8 +941,7 @@ class SettingsViewModel @Inject constructor(
     fun setHealthConnectMindfulnessEnabled(enabled: Boolean) {
         preferencesRepository.healthConnectMindfulnessEnabled = enabled
         _uiState.value = _uiState.value.copy(healthConnectMindfulnessEnabled = enabled)
-        // The declared mindfulness permission sets just changed shape, so the
-        // availability, categories, and granted sets all need a re-read.
+        // The declared mindfulness permission sets changed shape; re-read everything.
         refresh()
     }
 
@@ -1113,11 +1069,7 @@ class SettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(appLockEnabled = enabled)
     }
 
-    /**
-     * Commits the zone ladder, and the birth year when the calibration card owns
-     * the field. Here it does not — the Body profile card above it does — so
-     * [birthYear] is normally null and the profile is left alone.
-     */
+    /** Commits the zone ladder. [birthYear] is normally null: the Body profile card owns it. */
     fun updateBodyEnergyCalibration(calibration: BodyEnergyCalibration, birthYear: Int? = null) {
         if (birthYear != null) {
             updateBodyProfile(preferencesRepository.bodyProfile().copy(birthYear = birthYear))
@@ -1138,10 +1090,7 @@ class SettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(bodyProfile = saved)
         if (!_uiState.value.canWriteBodyMeasurements) return
         // A changed weight or height is written to Health Connect as a real
-        // measurement, so BMI, FFMI and the caffeine half-life all move
-        // together instead of the app holding two of each number. Only on a
-        // real change: saving an unchanged card must not litter the body
-        // history with a duplicate entry every time it is opened.
+        // measurement. Only on a real change, or every save adds a duplicate.
         viewModelScope.launch {
             val now = Instant.now()
             suspend fun write(type: BodyMeasurementType, value: Double?) {
@@ -1163,11 +1112,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Returns the learned gains to neutral and forgets the watch readings behind
-     * them, leaving the user's own zone settings alone — they did not learn
-     * anything, so there is nothing there to unlearn.
-     */
+    /** Returns the learned gains to neutral and forgets the watch readings. Zone settings stay. */
     fun resetBodyEnergyPersonalTuning() {
         val current = preferencesRepository.bodyEnergyCalibration()
         updateBodyEnergyCalibration(
@@ -1182,10 +1127,8 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * Wipes every derived metric the app keeps outside Health Connect — the
-     * Body Energy chain and its learned tuning, the expenditure cache — and
-     * kicks their rebuild. [onComplete] fires once the wipe has landed, with
-     * whether it succeeded; the rebuild carries on in the background.
+     * Wipes every derived metric kept outside Health Connect and kicks their
+     * rebuild. [onComplete] fires once the wipe has landed.
      */
     fun resetDerivedMetrics(onComplete: (Boolean) -> Unit) {
         if (_uiState.value.isResettingDerivedMetrics) return

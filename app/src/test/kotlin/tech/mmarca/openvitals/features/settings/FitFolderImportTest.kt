@@ -65,13 +65,8 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 /**
- * "Import a folder of FIT files", the Kotlin counterpart of Flutter's
- * `test/features/settings/fit_import_view_model_test.dart`.
- *
- * The folder walk itself ([RouteFolderScanner]) talks to `DocumentsContract`
- * and is mocked here; what this file pins is everything the view model does
- * around it — the scan outcomes (`fitFolder*` state), and that the files the
- * scan found reach the shared bulk importer tagged as the FIT card's run.
+ * "Import a folder of FIT files". The folder walk ([RouteFolderScanner]) is mocked;
+ * this pins the scan outcomes and that the files reach the bulk importer tagged as the FIT card's run.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class FitFolderImportTest {
@@ -139,8 +134,7 @@ class FitFolderImportTest {
         val tree = mockk<Uri>()
         val files = folderFiles(2)
         coEvery { scanner.scan(tree, any()) } returns RouteFolderScan(files = files, truncated = false)
-        // The scan hands over URIs only; the bytes are the importer's business,
-        // opened as each file is reached and in the scan's (name) order.
+        // The scan hands over URIs only; the importer opens each file as it is reached.
         val opened = mutableListOf<Uri>()
         files.forEachIndexed { index, file ->
             coEvery { routeFileImporter.import(file.uri) } answers {
@@ -209,8 +203,7 @@ class FitFolderImportTest {
         advanceUntilIdle()
 
         val state = vm.uiState.value
-        // Said out loud, with the number that was taken — an import that
-        // silently skipped the tail would read exactly like one that finished.
+        // Said out loud, with the number taken; a silent skip would look like a finished import.
         assertEquals(4, state.fitFolderTruncatedAt)
         assertEquals(4, state.routeImportResult?.importedFiles)
         assertFalse(state.fitFolderHadNoFitFiles)
@@ -274,8 +267,7 @@ class FitFolderImportTest {
         val scanner = mockk<RouteFolderScanner>()
         val tree = mockk<Uri>()
         val other = mockk<Uri>()
-        // The scan never completes within the test, so the busy flag is
-        // observable while the second pick and the route bulk import arrive.
+        // The scan never completes, so the busy flag is observable.
         coEvery { scanner.scan(tree, any()) } coAnswers {
             kotlinx.coroutines.suspendCancellableCoroutine<RouteFolderScan> { }
         }
@@ -314,14 +306,13 @@ class FitFolderImportTest {
         vm.importFitFolder(broken)
         advanceUntilIdle()
 
-        // The "no FIT files" line from the first pick must not linger next to
-        // the second pick's error.
+        // The first pick's "no FIT files" line must not linger next to the second pick's error.
         val state = vm.uiState.value
         assertFalse(state.fitFolderHadNoFitFiles)
         assertEquals("tree unreadable", state.fitFolderScanError)
     }
 
-    // --- fixtures -----------------------------------------------------------
+    // Fixtures.
 
     private val BaseStart: Instant = Instant.parse("2026-06-01T08:00:00Z")
 

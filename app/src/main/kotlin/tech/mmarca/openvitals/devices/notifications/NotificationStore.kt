@@ -4,27 +4,10 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
- * Process-wide state shared between the listener service and the forwarder.
- *
- * A Kotlin `object`, deliberately: the listener service is bound by the system
- * long before any UI (or any Hilt-injected consumer) exists, and in the
- * Flutter build the same statics were what let the service and a headless
- * engine share one buffer. Keeping the shape means keeping the guarantees.
- *
- * The BUFFER is memory-only and bounded. Notification text is never written to
- * disk — it lives here until the forwarder drains it and nowhere else. The
- * CONFIG is persisted, because the service is bound long before any UI has run
- * (after a reboot, or after the process was killed) and has to be able to
- * filter without asking anyone.
- *
- * The prefs FILE and KEY names are exactly the Flutter build's
- * (`openvitals_notification_listener` / `forwarding_enabled` /
- * `blocked_packages` / `watch_address`): that file was written by the same
- * package name into the same app data directory, so an in-place upgrade
- * install inherits the native-side configuration with no migration at all.
- * The Flutter-era `forwarder_callback_handle` and `diagnostics` keys are
- * simply never read again — the headless engine is gone and diagnostics come
- * from `BuildConfig.OPENVITALS_DIAGNOSTICS`.
+ * Process-wide state shared by the listener service and the forwarder. An
+ * `object`, because the service is bound before any UI or Hilt exists. The
+ * buffer is memory-only and bounded; the config is persisted so the service
+ * can filter after a reboot. File and key names are the Flutter build's.
  */
 object NotificationStore {
 
@@ -33,27 +16,14 @@ object NotificationStore {
     private const val KEY_BLOCKED = "blocked_packages"
     private const val KEY_WATCH_ADDRESS = "watch_address"
 
-    /**
-     * How many notifications wait for the forwarder.
-     *
-     * Bounded so a phone that posts faster than the watch can be reached cannot
-     * grow this without limit. Twenty is generous against the watch's own
-     * ten-deep answerable queue: anything older than that could not be answered
-     * even if it were kept.
-     */
+    /** Notifications waiting for the forwarder. Twenty is generous against the watch's ten. */
     private const val MAX_PENDING = 20
 
     private val pending = ArrayDeque<NotificationMsg>()
 
     /**
-     * How many notifications stay ACTIONABLE.
-     *
-     * The watch can act on a notification long after it was announced, so the
-     * `StatusBarNotification` behind it has to be kept — an action is a
-     * `PendingIntent` owned by the posting app, and there is no way to
-     * reconstruct one from an id. Matches the ten the GNCS handler keeps
-     * answerable: a notification it cannot describe is one the watch will not
-     * offer actions for either.
+     * Notifications that stay actionable. A `PendingIntent` cannot be rebuilt
+     * from an id. Matches the ten the GNCS handler keeps.
      */
     private const val MAX_ACTIONABLE = 10
 
@@ -63,9 +33,7 @@ object NotificationStore {
     private fun prefs(context: Context): SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    // -------------------------------------------------------------------------
-    // Config
-    // -------------------------------------------------------------------------
+    // Config.
 
     fun readConfig(context: Context): NotificationFilter.Config {
         val p = prefs(context)
@@ -82,14 +50,11 @@ object NotificationStore {
             .putStringSet(KEY_BLOCKED, config.blockedPackages)
             .putString(KEY_WATCH_ADDRESS, config.watchAddress)
             .apply()
-        // Config changes can only make forwarding narrower or point at a
-        // different watch, so anything already buffered is now suspect.
+        // A config change can only narrow forwarding, so the buffer is suspect.
         if (!config.enabled) clearPending()
     }
 
-    // -------------------------------------------------------------------------
-    // The pending buffer
-    // -------------------------------------------------------------------------
+    // The pending buffer.
 
     /** Buffers [message], dropping the oldest if the buffer is full. */
     @Synchronized
@@ -116,15 +81,12 @@ object NotificationStore {
     @Synchronized
     fun hasPending(): Boolean = pending.isNotEmpty()
 
-    // -------------------------------------------------------------------------
-    // Actionable notifications
-    // -------------------------------------------------------------------------
+    // Actionable notifications.
 
     /** Remembers [sbn] under [id] so its actions can be fired later. */
     @Synchronized
     fun retain(id: Long, sbn: android.service.notification.StatusBarNotification) {
-        // Re-inserted rather than updated, so an edited notification counts as
-        // freshly used and does not age out early.
+        // Re-inserted, so an edited notification does not age out early.
         actionable.remove(id)
         actionable[id] = sbn
         while (actionable.size > MAX_ACTIONABLE) {

@@ -23,7 +23,7 @@ class BodyEnergyTimelineTest {
     private val date: LocalDate = LocalDate.now(zone)
     private val dayStart: Instant = date.atStartOfDay(zone).toInstant()
 
-    // resting/max pair used by the energy-balance cases.
+    // Resting/max pair for the energy-balance cases.
     private val restfulResting = 55L
     private val restfulMax = 190L
 
@@ -158,7 +158,7 @@ class BodyEnergyTimelineTest {
         assertTrue(timeline.points.any { it.primaryInfluence == BodyEnergyPrimaryInfluence.RECOVERY_DEBT })
     }
 
-    // ── energy-balance behaviour ────────────────────────────────────────────
+    // Energy-balance behaviour.
 
     @Test
     fun `an idle waking day declines rather than staying flat`() {
@@ -184,9 +184,7 @@ class BodyEnergyTimelineTest {
 
     @Test
     fun `a data gap after the day has shown life keeps draining basal`() {
-        // Watch worn 08:00-12:00, then on the charger until 18:00. The wearer's
-        // metabolism does not pause with the watch: the gap buckets keep the
-        // basal drain, so the line keeps easing down instead of flat-lining.
+        // Worn 08:00-12:00, then charging until 18:00. Gap buckets keep the basal drain.
         val wornStart = dayStart.plus(Duration.ofHours(8))
         val wornEnd = wornStart.plus(Duration.ofHours(4))
         val now = dayStart.plus(Duration.ofHours(18))
@@ -209,10 +207,8 @@ class BodyEnergyTimelineTest {
 
     @Test
     fun `a gap before the first signal of the day stays frozen`() {
-        // Nothing recorded until 14:00: the untracked night and morning hold the
-        // seed. A device-less stretch must not slide toward zero with nothing to
-        // ever charge it back, and an untracked night must not be billed as
-        // hours of wakefulness.
+        // Nothing recorded until 14:00: the untracked stretch holds the seed
+        // and is not billed as wakefulness.
         val firstData = dayStart.plus(Duration.ofHours(14))
         val now = dayStart.plus(Duration.ofHours(16))
         val timeline = calculateBodyEnergyTimeline(
@@ -233,9 +229,7 @@ class BodyEnergyTimelineTest {
 
     @Test
     fun `steps without active calories still drain through a gap`() {
-        // Phone-recorded steps land in Health Connect with no active-calorie
-        // series and no heart rate. The steps stand in for the calories, so the
-        // walk drains instead of moving nothing.
+        // Phone steps have no calorie series and no heart rate; the steps stand in for the calories.
         val wornStart = dayStart.plus(Duration.ofHours(8))
         val wornEnd = wornStart.plus(Duration.ofHours(4))
         val now = dayStart.plus(Duration.ofHours(18))
@@ -375,17 +369,13 @@ class BodyEnergyTimelineTest {
             )
         )
 
-        // Both variants must stay off the floor, or this stops measuring the
-        // gain: the amplified day's drain would be capped by the fall rather
-        // than by the model.
+        // Both must stay off the floor, or the fall caps the drain instead of the model.
         assertTrue(neutral.currentScore > 0)
         assertTrue(amplified.currentScore > 0)
         assertTrue(amplified.drained > neutral.drained)
     }
 
-    // ── the carry-over seed ─────────────────────────────────────────────────
-    // Body Energy is a chain, so the seed is the day's most consequential
-    // input: it is what makes midnight not a reset.
+    // The carry-over seed. Body Energy is a chain, so the seed is what makes midnight not a reset.
 
     private fun seeded(previousEndScore: Int?): BodyEnergyTimeline =
         calculateBodyEnergyTimeline(
@@ -430,8 +420,7 @@ class BodyEnergyTimelineTest {
 
     @Test
     fun `a day with no usable data carries the seed instead of resetting`() {
-        // The regression this guards: empty() used to hardcode 50, so a single
-        // data-less day silently reset the whole chain.
+        // empty() used to hardcode 50, so a data-less day reset the chain.
         val timeline = calculateBodyEnergyTimeline(
             BodyEnergyTimelineInputs(
                 date = date,
@@ -495,11 +484,8 @@ class BodyEnergyTimelineTest {
         assertEquals(BodyEnergyReasonCode.LEGACY, bodyEnergyReasonCodeForText("something else entirely"))
     }
 
-    // ── the day totals reconcile ────────────────────────────────────────────
-    // The contract this pins: Start + Charged - Drained == the score the day
-    // ended on. It used to be false by design — charged/drained were gross
-    // unclamped sums, so a day that drained twice its available energy reported
-    // the whole figure and the summary card did not add up.
+    // Day totals reconcile: Start + Charged - Drained == end score.
+    // Gross unclamped sums used to break this.
 
     private fun assertReconciles(timeline: BodyEnergyTimeline) {
         assertEquals(
@@ -533,13 +519,10 @@ class BodyEnergyTimelineTest {
     @Test
     fun `a day that bottoms out reports the fall, not the model`() {
         // Seeded low and drained far harder than there was energy for.
-        // Previously this reported the whole gross drain and the card was
-        // unreadable as a ledger.
         val timeline = bottomedOutDay()
 
         assertEquals(0, timeline.currentScore)
-        // The cap is what was AVAILABLE, not the starting score: a day can drain
-        // everything it began with plus anything it earned back along the way.
+        // The cap is what was available, not the starting score.
         assertEquals(timeline.startScore + timeline.charged, timeline.drained)
         assertReconciles(timeline)
     }
@@ -567,9 +550,7 @@ class BodyEnergyTimelineTest {
 
     @Test
     fun `the breakdown sums to the headline on a clamped day`() {
-        // The regression this guards: scaling only the two totals would leave
-        // "What moved it" listing the model's full drain directly beneath a
-        // header showing the clamped one.
+        // Scaling only the totals would leave the breakdown showing the full drain.
         val timeline = bottomedOutDay()
 
         var charge = 0.0
@@ -586,9 +567,8 @@ class BodyEnergyTimelineTest {
 
     @Test
     fun `a bucket that both charges and drains still feeds both totals`() {
-        // Waking mid-bucket: sleep charge and basal drain in the same bucket.
-        // Net-only accounting would post the difference to one side and lose the
-        // other, which is why the clamp is attributed proportionally instead.
+        // Waking mid-bucket: charge and drain in one bucket.
+        // The clamp is attributed proportionally so neither side is lost.
         val wake = dayStart.plus(Duration.ofHours(6)).plus(Duration.ofMinutes(2))
         val end = dayStart.plus(Duration.ofHours(8))
 
@@ -609,8 +589,7 @@ class BodyEnergyTimelineTest {
 
     @Test
     fun `a fully clamped bucket keeps a truthful driver at zero magnitude`() {
-        // primaryInfluence stays computed from the raw magnitudes: scaling it to
-        // zero alongside them would label a hard workout "steady".
+        // primaryInfluence comes from the raw magnitudes, or a hard workout would read as steady.
         val timeline = bottomedOutDay()
 
         val flattened = timeline.points.filter { it.score == 0 && it.delta == 0.0 }
@@ -638,10 +617,8 @@ class BodyEnergyTimelineTest {
         )
     }
 
-    // ── the recovery-debt drain is correctable ──────────────────────────────
-    // A hard workout arms recovery debt for the buckets after it. Until the
-    // wiring fix that drain was scaled by no gain at all, so an error the model
-    // attributed to it could never be corrected however hard the fit tried.
+    // The recovery-debt drain is correctable.
+    // It used to be scaled by no gain, so the fit could not correct it.
 
     private fun afterHardWorkout(activityGain: Double): BodyEnergyTimeline {
         val start = dayStart.plus(Duration.ofHours(8))
@@ -673,8 +650,7 @@ class BodyEnergyTimelineTest {
 
     @Test
     fun `recovery debt does not drag the basal drain with it`() {
-        // Basal answers for the waking floor only; the activity gain must not
-        // move it, or the two would be inseparable in the fit.
+        // Basal answers for the waking floor only; the activity gain must not move it.
         val neutral = afterHardWorkout(1.0).points.sumOf { it.basalDrain }
         val amplified = afterHardWorkout(2.0).points.sumOf { it.basalDrain }
 
@@ -708,11 +684,7 @@ class BodyEnergyTimelineTest {
         assertTrue(timeline.points.any { it.primaryInfluence == BodyEnergyPrimaryInfluence.SLEEP_RECOVERY })
     }
 
-    // ── the waking-rest charge ──────────────────────────────────────────────
-    // v3 removed the waking charge because it under-drained active days.
-    // Removing it entirely overshot: measured against a real week the model lost
-    // ~10 points EVERY day and the chain sat pinned on the floor, because with
-    // charge sleep-only a quiet day can only decline at the basal rate.
+    // The waking-rest charge. v3 removed it and the chain sat on the floor, losing ~10 points a day.
 
     private fun quietDay(wakingBpm: Long, restingBpm: Long = 58): BodyEnergyTimeline {
         val wake = dayStart.plus(Duration.ofHours(7))
@@ -743,11 +715,8 @@ class BodyEnergyTimelineTest {
 
     @Test
     fun `the rest ceiling is a share of reserve, not a fixed offset`() {
-        // Measured over a real week, the old resting-plus-8 band earned ZERO
-        // rest charge on six days of seven. A reserve fraction widens it and,
-        // more importantly, moves with the person.
-        //
-        // resting 60, max 190 -> reserve 130. 15% is 79.5 bpm.
+        // The old resting-plus-8 band earned zero rest charge six days in seven.
+        // A reserve fraction moves with the person. Resting 60, max 190: reserve 130, 15% is 79.5 bpm.
         fun at(bpm: Long): BodyEnergyTimeline {
             val wake = dayStart.plus(Duration.ofHours(7))
             val end = dayStart.plus(Duration.ofHours(20))
@@ -765,15 +734,13 @@ class BodyEnergyTimelineTest {
 
         // 75 bpm is 15 above resting — outside the old band, inside this one.
         assertTrue(chargesAwake(at(75)))
-        // 88 bpm is only 21% of reserve, so zone 1 would have allowed it — but
-        // it is 28 beats above resting and in the top stress tier.
+        // 88 bpm is 21% of reserve but 28 above resting and in the top stress tier.
         assertFalse(chargesAwake(at(88)))
     }
 
     @Test
     fun `the rest charge does not fire once the heart rate leaves the resting band`() {
-        // The gate is what makes this safe where the v3 version was not: an
-        // active day must gain nothing from it.
+        // The gate: an active day must gain nothing from it.
         val resting = quietDay(wakingBpm = 60)
         val busy = quietDay(wakingBpm = 95)
 
@@ -783,10 +750,8 @@ class BodyEnergyTimelineTest {
 
     @Test
     fun `a trickle of activity drain does not block the rest charge`() {
-        // The regression this pins: requiring ZERO activity drain in the bucket
-        // made the charge almost inert. The activity series is hourly and
-        // cumulative and gets interpolated across every 5-minute bucket, so a
-        // sliver of drain lands nearly everywhere.
+        // Requiring zero activity drain made the charge inert:
+        // the interpolated hourly series puts a sliver of drain nearly everywhere.
         val wake = dayStart.plus(Duration.ofHours(7))
         val end = dayStart.plus(Duration.ofHours(22))
         val timeline = calculateBodyEnergyTimeline(
@@ -812,10 +777,7 @@ class BodyEnergyTimelineTest {
 
     @Test
     fun `the rest charge is suppressed while recovery debt is still being billed`() {
-        // Sitting quietly after a hard session is exactly the state recovery
-        // debt models. Charging through it would overstate the recovery and,
-        // since the rest rate exceeds the debt rate, hide recovery debt as an
-        // influence.
+        // Sitting quietly after a hard session is recovery debt. Charging through it would overstate recovery.
         val timeline = quietAfterWorkout()
 
         val debtBuckets = timeline.points.filter { it.recoveryDebtDrain > 0.0 }
@@ -834,8 +796,7 @@ class BodyEnergyTimelineTest {
 
     @Test
     fun `but a larger drain still outranks quiet rest`() {
-        // QUIET_REST competes rather than short-circuiting: whichever actually
-        // moved the score more is the influence reported.
+        // QUIET_REST competes; whichever moved the score more is reported.
         val timeline = quietAfterWorkout()
 
         assertTrue(timeline.points.any { it.primaryInfluence == BodyEnergyPrimaryInfluence.RECOVERY_DEBT })
@@ -860,19 +821,9 @@ class BodyEnergyTimelineTest {
 
     @Test
     fun `the age-derived max heart rate uses Tanaka, like the rest of the app`() {
-        // Body Energy used 220 - age while heart-rate recovery used Tanaka
-        // (208 - 0.7*age) off the same birth year, so the app disagreed with
-        // itself by a couple of bpm — and this is the one feeding the zone
-        // ladder the whole drain model rests on.
-        //
-        // The bpm values matter. An OBSERVED max is preferred once the samples
-        // reach max(150, resting + 60), so anything at or above 150 never
-        // exercises the age formula at all. Below that, with age 33 and resting
-        // 60, zone 3 starts at 60% of heart-rate reserve:
-        //   Tanaka   max 185 -> reserve 125 -> zone 3 from 135 bpm
-        //   220-age  max 187 -> reserve 127 -> zone 3 from 136.2 bpm
-        // So 136 bpm is zone 3 under Tanaka and still zone 2 under the old
-        // formula, while 140 is zone 3 under both.
+        // Body Energy used 220 - age while heart-rate recovery used Tanaka.
+        // With age 33 and resting 60, zone 3 starts at 135 bpm under Tanaka and 136.2 under 220 - age.
+        // So 136 is zone 3 only under Tanaka; 140 is zone 3 under both.
         val start = dayStart.plus(Duration.ofHours(8))
         val end = start.plus(Duration.ofHours(2))
 
@@ -889,15 +840,13 @@ class BodyEnergyTimelineTest {
 
         // 136 bpm must already be zone 3, as Tanaka puts it.
         assertEquals(drainAt(140), drainAt(136))
-        // And 130 must still be zone 2, or the fixture spans one zone and the
-        // assertion above proves nothing.
+        // 130 must still be zone 2, or the fixture spans one zone.
         assertTrue(drainAt(130) < drainAt(136))
     }
 
     @Test
     fun `the manual profile heart rates no longer reach the model`() {
-        // v11 removed the manual resting/max inputs: BodyProfile keeps the
-        // fields for other features, but Body Energy must ignore them.
+        // v11 removed the manual resting/max inputs; Body Energy must ignore them.
         val start = dayStart.plus(Duration.ofHours(8))
         val end = start.plus(Duration.ofHours(2))
         val samples = heartRateSamples(start, end, bpm = 120)
@@ -925,7 +874,7 @@ class BodyEnergyTimelineTest {
         assertEquals(withoutProfile.confidence, withProfile.confidence)
     }
 
-    // ── fixtures ────────────────────────────────────────────────────────────
+    // Fixtures.
 
     private fun inputs(
         now: Instant,
@@ -966,11 +915,7 @@ class BodyEnergyTimelineTest {
             .map { time -> HeartRateSample(time = time, beatsPerMinute = bpm, source = "test") }
             .toList()
 
-    /**
-     * Hourly cumulative active-calorie progress: [hourlyActiveKcal] is the burn
-     * during each hour from [fromHour], accumulated into the cumulative series
-     * the algorithm expects.
-     */
+    /** Hourly active kcal from [fromHour], accumulated into the cumulative series the algorithm expects. */
     private fun activityProgress(
         hourlyActiveKcal: List<Double>,
         fromHour: Long = 0,

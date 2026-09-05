@@ -13,15 +13,8 @@ import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * The route-drawing half of Flutter's
- * `test/features/activity/maps/route_map_view_test.dart`.
- *
- * With no offline map pack imported — the state of any phone that has not gone
- * looking for one — this preview is what the app actually draws for a recorded
- * route. It projects latitudes onto a canvas, so the degenerate routes are the
- * dangerous ones: a route with no span divides by zero, and a session whose
- * route failed to import has none at all. Either one crashes the activity
- * detail screen, not just the map.
+ * With no map pack this preview is what the app draws for a route. It projects onto a canvas,
+ * so a route with no span divides by zero and one with no points crashes the detail screen.
  */
 class RoutePreviewTest {
 
@@ -50,8 +43,7 @@ class RoutePreviewTest {
 
     @Test
     fun aSinglePointRouteIsHandledGracefully() {
-        // One fix means a zero-wide bounding box; projecting into it is a
-        // division by zero unless the span is guarded.
+        // One fix is a zero-wide bounding box; projecting into it divides by zero unless guarded.
         setPreview(listOf(point(52.5200, 13.4050, 0)))
 
         composeRule.onNodeWithTag(TAG).assertExists()

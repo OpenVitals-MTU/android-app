@@ -66,13 +66,8 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 /**
- * Bulk route/activity file import, the Kotlin counterpart of Flutter's
- * `test/features/imports/route_bulk_import_view_model_test.dart`.
- *
- * The behaviour lives in [SettingsViewModel.importRouteFiles] rather than in a
- * dedicated view model, so this file drives a [SettingsViewModel] but only ever
- * asserts on the bulk-import surface (`routeImportProgress`, `routeImportResult`,
- * `routeImportError`) and on what reaches the repository.
+ * Bulk route/activity file import. The behaviour lives in [SettingsViewModel.importRouteFiles],
+ * so this drives a [SettingsViewModel] and asserts only on the bulk-import surface.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RouteBulkImportTest {
@@ -101,10 +96,7 @@ class RouteBulkImportTest {
         val first = mockk<Uri>()
         val broken = mockk<Uri>()
         val last = mockk<Uri>()
-        // Snapshotted as each file is REACHED. `uiState` is a conflated
-        // StateFlow, so a collector would only ever see the last value of a run
-        // that never suspends; reading it from inside the importer is what pins
-        // the per-file tick.
+        // Snapshotted as each file is reached. `uiState` is conflated, so a collector would only see the last value.
         val progress = mutableListOf<RouteBulkImportProgress?>()
         lateinit var vm: SettingsViewModel
         coEvery { routeFileImporter.import(first) } answers {
@@ -132,10 +124,7 @@ class RouteBulkImportTest {
         vm.importRouteFiles(listOf(first, broken, last))
         advanceUntilIdle()
 
-        // One snapshot per file, each already knowing the total and naming the
-        // file being worked on (1-based). Failures are counted as they land;
-        // the imported COUNT lands with the BATCH, not with the file, because
-        // the files are written together — so it is still 0 on the last tick.
+        // One snapshot per file, naming the file (1-based). The imported count lands with the batch, so it is 0 on the last tick.
         assertEquals(
             listOf(
                 RouteBulkImportProgress(totalFiles = 3, currentFileIndex = 1),
@@ -182,8 +171,7 @@ class RouteBulkImportTest {
         val uris = uris(1)
         stubImports(routeFileImporter, uris)
         coEvery { activityRepository.hasActivityWritePermission(any<ActivityWriteRequest>()) } returns true
-        // Writes fail, batched and singly alike — otherwise the file-by-file
-        // retry would quietly rescue the run the test is about.
+        // Writes fail batched and singly, or the file-by-file retry rescues the run.
         coEvery { activityRepository.writeActivityEntries(any()) } throws
             IllegalStateException("Health Connect said no")
         coEvery { activityRepository.writeActivityEntry(any()) } throws
@@ -232,12 +220,8 @@ class RouteBulkImportTest {
     }
 
     @Test fun `opens files as it reaches them, never the whole folder up front`() = runTest {
-        // The memory contract of a FOLDER import. Activities are written in
-        // batches — Health Connect charges its quota per call, so writing one
-        // file at a time exhausts it — which means the BATCH is what has to fit
-        // in memory, not the folder. The contract survives only because the
-        // batch is bounded: the importer must never read a whole folder before
-        // writing anything, or a big folder OOMs before the first import.
+        // The memory contract of a folder import: the batch must fit in memory, not the folder.
+        // The importer must never read a whole folder before writing anything.
         val events = mutableListOf<String>()
         val activityRepository = activityRepo()
         val routeFileImporter = routeFileImporter()
@@ -263,9 +247,7 @@ class RouteBulkImportTest {
         vm.importRouteFiles(uris)
         advanceUntilIdle()
 
-        // Something was WRITTEN before the last file was ever OPENED. That is
-        // the whole guarantee: reads are bounded by the batch, not by the size
-        // of the folder.
+        // Something was written before the last file was opened.
         val firstWrite = events.indexOf("writeBatch")
         val lastRead = events.lastIndexOf("read:f59.fit")
         assertTrue(firstWrite >= 0)
@@ -279,11 +261,8 @@ class RouteBulkImportTest {
     }
 
     @Test fun `writes activities in batches, not one Health Connect call per file`() = runTest {
-        // The reason batching exists. Health Connect charges its API-call quota
-        // PER CALL, not per record, so a call per file spends a unit of quota
-        // per file and a folder of a couple of thousand dies partway through on
-        // "API call quota exceeded". This asserts the CALL COUNT, because the
-        // call count IS the quota bill.
+        // Health Connect charges quota per call, so a call per file dies on a large folder.
+        // The call count is the quota bill.
         val activityRepository = activityRepo()
         val routeFileImporter = routeFileImporter()
         val uris = uris(60)
@@ -314,11 +293,8 @@ class RouteBulkImportTest {
     }
 
     @Test fun `a spent Health Connect quota stops the run instead of failing every file`() = runTest {
-        // The bug this was written for: when the quota runs out mid-import,
-        // every REMAINING file fails for the same reason. Treating that as "one
-        // bad file and carry on" marched through the rest of the folder and
-        // reported hundreds of perfectly good files as failures. The data is
-        // fine and the quota refills, so the run stops and says so.
+        // When the quota runs out, every remaining file fails for the same reason.
+        // Carrying on reported hundreds of good files as failures. The run stops and says so.
         val activityRepository = activityRepo()
         val routeFileImporter = routeFileImporter()
         val uris = uris(60)
@@ -339,9 +315,7 @@ class RouteBulkImportTest {
         advanceUntilIdle()
 
         val state = vm.uiState.value
-        // Stopped at the first refusal: one batch attempted, and NOT retried
-        // file by file (a quota refusal is not a bad record — retrying singly
-        // would only spend more of a quota that is already gone).
+        // One batch attempted and not retried file by file.
         assertEquals(1, batches.size)
         coVerify(exactly = 0) { activityRepository.writeActivityEntry(any()) }
         // ...and the remaining files were never even opened.
@@ -382,13 +356,9 @@ class RouteBulkImportTest {
     }
 
     @Test fun `an activity file is imported as an activity, not skipped as wellness`() = runTest {
-        // Regression: a Garmin writes VO2 max and recovery time INTO the
-        // activity it just recorded. Once those messages were parsed, the file
-        // started yielding wellness data, the importer branched on that rather
-        // than on the file type, and a real workout was silently skipped
-        // instead of imported. In the Kotlin port the wellness fallback is only
-        // reachable from the FAILURE branch, so the guarantee is that a file
-        // that parses as an activity never consults it at all.
+        // A Garmin writes VO2 max into the activity it recorded, so the file yields wellness data.
+        // The importer once branched on that and skipped a real workout. The wellness fallback
+        // is only reachable from the failure branch.
         val activityRepository = activityRepo()
         val routeFileImporter = routeFileImporter()
         val fitHrvImportService = mockk<FitHrvImportService>(relaxed = true)
@@ -439,7 +409,7 @@ class RouteBulkImportTest {
         coVerify(exactly = 0) { activityRepository.writeActivityEntries(any()) }
     }
 
-    // --- fixtures -----------------------------------------------------------
+    // Fixtures.
 
     private val BaseStart: Instant = Instant.parse("2026-06-01T08:00:00Z")
 

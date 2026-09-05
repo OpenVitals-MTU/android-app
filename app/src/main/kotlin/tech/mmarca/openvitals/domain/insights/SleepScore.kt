@@ -20,22 +20,10 @@ import tech.mmarca.openvitals.domain.model.dailySleepSummary
 import tech.mmarca.openvitals.domain.model.sleepDurationMsFromStages
 
 /*
- * Sleep score — a 0–100 wellness estimate aligned with Garmin's three-pillar
- * framing (duration, quality, overnight recovery) and the sleep-science
- * references that framing cites:
- *
- * - Duration: NSF age-banded recommendations (Hirshkowitz 2015) and AASM/SRS
- *   adult consensus that healthy adults need ≥7 h (Watson 2015). Regularly
- *   sleeping <7 h associates with cardiometabolic risk (Grandner 2014; Liu 2013).
- * - Quality: NSF sleep-quality recommendations (Ohayon 2017) — efficiency,
- *   wake after sleep onset / continuity, and restorative stage architecture
- *   (deep + REM) when consumer staging is available.
- * - Overnight recovery: autonomic recovery during the night from HRV RMSSD
- *   relative to the personal baseline — the same recovery science Garmin
- *   describes for Body Battery / overnight recovery.
- *
- * Missing inputs never invent numbers: stage and HRV pillars go neutral and
- * confidence drops. The score is not a diagnosis.
+ * Sleep score: a 0-100 estimate on three pillars, duration (NSF/AASM),
+ * quality (efficiency, continuity, stage architecture) and overnight
+ * recovery (HRV RMSSD against the personal baseline). Missing inputs go
+ * neutral and lower confidence. Not a diagnosis.
  */
 
 /** Duration pillar weight (NSF / AASM quantity). */
@@ -65,10 +53,7 @@ enum class SleepScoreConfidence {
     NO_DATA,
 }
 
-/**
- * NSF 2015 recommended sleep duration window for an age band, plus soft floors
- * and ceilings used when scoring outside the ideal range.
- */
+/** NSF 2015 recommended sleep window for an age band, with soft floors and ceilings. */
 data class SleepDurationTarget(
     val idealMinHours: Double,
     val idealMaxHours: Double,
@@ -109,20 +94,13 @@ data class SleepScoreEstimate(
     }
 }
 
-/**
- * Optional overnight HRV inputs for the recovery pillar. [rmssdMs] should be
- * measured inside the sleep session window; [baselineRmssdMs] is the personal
- * recent baseline (e.g. median of prior nights).
- */
+/** Overnight HRV inputs for the recovery pillar. [rmssdMs] is measured inside the session. */
 data class OvernightHrvInput(
     val rmssdMs: Double,
     val baselineRmssdMs: Double,
 )
 
-/**
- * Builds overnight HRV inputs by averaging RMSSD samples inside each night's
- * main sleep window and using the median of prior nights as baseline.
- */
+/** Overnight HRV inputs: RMSSD averaged inside each night, baseline the median of prior nights. */
 fun overnightHrvInputsByDate(
     sessions: List<SleepData>,
     hrvSamples: List<HrvSample>,
@@ -147,10 +125,7 @@ fun overnightHrvInputsByDate(
     return overnightHrvInputsFromNightRmssd(nightRmssd)
 }
 
-/**
- * Builds overnight HRV inputs from already-bucketed daily RMSSD values
- * (for example sleep-screen cross-metric HRV).
- */
+/** Overnight HRV inputs from daily RMSSD values. */
 fun overnightHrvInputsFromDaily(
     dailyHrv: List<DailyHrv>,
     start: LocalDate,
@@ -356,10 +331,7 @@ fun calculateSleepScore(
     )
 }
 
-/**
- * NSF 2015 age-banded recommended sleep duration. Adults default to 7–9 h when
- * age is unknown (AASM/SRS adult consensus).
- */
+/** NSF 2015 age-banded sleep duration. Adults default to 7-9 h when age is unknown. */
 fun sleepDurationTargetForAge(ageYears: Int?): SleepDurationTarget = when {
     ageYears == null -> SleepDurationTarget(7.0, 9.0, 4.0, 11.0)
     ageYears < 14 -> SleepDurationTarget(9.0, 11.0, 6.0, 13.0) // school-aged 6–13
@@ -384,13 +356,8 @@ internal fun durationPoints(hours: Double, target: SleepDurationTarget): Double 
 }
 
 /**
- * The quality pillar of one night: how well it was slept, as distinct from how
- * long ([durationPoints]) and how the autonomic system answered
- * ([recoveryPoints]).
- *
- * Its own type because Body Energy needs this pillar WITHOUT the other two —
- * its sleep charge already counts the minutes and already reads overnight HRV,
- * so the whole sleep score would count both of those twice.
+ * The quality pillar of one night. Its own type because Body Energy needs
+ * it without duration and HRV, which its sleep charge already counts.
  */
 data class SleepQualityPillar(
     val efficiencyPoints: Double,
@@ -399,20 +366,9 @@ data class SleepQualityPillar(
     /** Whether the night carried deep/REM staging, or only its bounds. */
     val staged: Boolean,
     /**
-     * The same night read as a CONTINUOUS 0..1, for models that ask how much it
-     * restored rather than whether it was healthy.
-     *
-     * The scored points answer a clinical question and answer it with
-     * thresholds: efficiency at or above 85% is good, time awake at or under
-     * twenty minutes is good, and both earn full marks the moment they clear.
-     * That is the right shape for a score citing NSF and AASM, and the wrong
-     * shape for recovery — it makes a flawless night and a merely good one
-     * identical, when the following day is not.
-     *
-     * So this ramp keeps going where the score stops: efficiency all the way to
-     * 100%, time awake all the way to none. Stage architecture is NOT stretched
-     * the same way, because more deep sleep past the healthy band is not more
-     * recovery — a band is genuinely what that one is.
+     * The same night as a continuous 0..1. The scored points use clinical
+     * thresholds and stop distinguishing nights past them; this ramp keeps
+     * going. Stage architecture is not stretched: more deep sleep is not more recovery.
      */
     val continuousFraction: Double,
 ) {
@@ -422,12 +378,7 @@ data class SleepQualityPillar(
     val fraction: Double get() = (total / SleepScoreQualityWeight).coerceIn(0.0, 1.0)
 }
 
-/**
- * The quality pillar for [session]. Without staging the stage share is
- * redistributed into efficiency and continuity, so quality still totals
- * [SleepScoreQualityWeight] rather than being quietly capped at three quarters
- * of it.
- */
+/** The quality pillar for [session]. Without staging, the stage share is redistributed. */
 fun sleepQualityPillar(
     session: SleepData,
     sleepDurationMs: Long,
@@ -436,9 +387,7 @@ fun sleepQualityPillar(
 ): SleepQualityPillar {
     val stagePercents = stagePercents(session, sleepDurationMs)
     val staged = session.stages.any { it.stageType.isDeepOrRemStage() } && stagePercents != null
-    // The continuous read. Weighted like the scored pillar so the two stay
-    // recognisably the same measure, with the stage share redistributed the
-    // same way when a night has no staging to judge.
+    // The continuous read, weighted like the scored pillar.
     val continuousEfficiency = ((sleepEfficiencyPercent - 65.0) / 35.0).coerceIn(0.0, 1.0)
     val continuousContinuity = ((90.0 - wakeAfterSleepOnsetMinutes) / 90.0).coerceIn(0.0, 1.0)
     val continuousStages = stagePercents
@@ -472,23 +421,15 @@ fun sleepQualityPillar(
     )
 }
 
-/**
- * NSF quality: sleep efficiency ≥85% is good. Map 65%→0 and 85%→full so the
- * clinically meaningful threshold earns full credit.
- */
+/** NSF quality: efficiency at or above 85% is good. 65% maps to 0. */
 internal fun efficiencyPoints(efficiencyPercent: Double): Double =
     EfficiencyShare * ((efficiencyPercent - 65.0) / 20.0).coerceIn(0.0, 1.0)
 
-/**
- * NSF quality: WASO ≤20 min is good. Map 90 min→0 and 20 min→full.
- */
+/** NSF quality: WASO at or under 20 min is good. 90 min maps to 0. */
 internal fun continuityPoints(wakeAfterSleepOnsetMinutes: Double): Double =
     ContinuityShare * ((90.0 - wakeAfterSleepOnsetMinutes) / 70.0).coerceIn(0.0, 1.0)
 
-/**
- * Restorative stage architecture: deep ~13–23% and REM ~20–25% of total sleep
- * time are typical adult targets. Soft trapezoid scoring around those bands.
- */
+/** Deep ~13-23% and REM ~20-25% are typical adult targets. Soft trapezoid scoring. */
 internal fun stageBalancePoints(deepAndRemPercent: Pair<Double, Double>): Double {
     val (deep, rem) = deepAndRemPercent
     val deepRatio = bandRatio(deep, idealMin = 13.0, idealMax = 23.0, floor = 5.0, ceiling = 35.0)
@@ -496,11 +437,7 @@ internal fun stageBalancePoints(deepAndRemPercent: Pair<Double, Double>): Double
     return StageShare * ((deepRatio + remRatio) / 2.0)
 }
 
-/**
- * Overnight recovery from HRV: overnight RMSSD at or above the personal baseline
- * earns full credit; values materially below baseline reduce the pillar.
- * The mapping is continuous so progressive impairment always lowers the score.
- */
+/** Overnight RMSSD at or above baseline earns full credit; below reduces it continuously. */
 internal fun recoveryPoints(rmssdMs: Double, baselineRmssdMs: Double): Double {
     val ratio = (rmssdMs / baselineRmssdMs).coerceAtLeast(0.0)
     val scoreRatio = when {

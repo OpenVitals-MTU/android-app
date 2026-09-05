@@ -7,16 +7,8 @@ import java.time.ZoneId
 import org.junit.Test
 
 /**
- * The day a watch sync has to invalidate the Body Energy chain from.
- *
- * Body Energy chains across midnight, so a watch handing over a week of sleep
- * and heart-rate invalidates not just those days but every day after them —
- * their seeds came from scores computed without the data. Getting this day
- * wrong by one either leaves a back-filled day frozen at its pre-sync score
- * (too late) or spends the rebuild budget on days nothing changed (too early).
- *
- * Pure and top-level precisely so it can be checked here: the sync service
- * around it needs a radio, a lease and a live GFDI session.
+ * The day a watch sync invalidates the Body Energy chain from. Too late leaves a back-filled
+ * day frozen; too early spends the rebuild budget on unchanged days.
  */
 class GarminEarliestAffectedDayTest {
 
@@ -36,9 +28,7 @@ class GarminEarliestAffectedDayTest {
 
     @Test
     fun `files the watch never dated are skipped rather than counted as today`() {
-        // The "no date" sentinel is real and observed on a vivoactive 5. Treating
-        // it as an instant would either invalidate from the epoch or from today,
-        // and both are wrong.
+        // The "no date" sentinel is observed on a vivoactive 5. As an instant it would invalidate from the epoch or today.
         val earliest = garminEarliestAffectedDay(
             listOf(
                 file(at = null),
@@ -53,17 +43,14 @@ class GarminEarliestAffectedDayTest {
 
     @Test
     fun `a sync where nothing carries a date invalidates nothing`() {
-        // Null, not "today": with no idea which days moved, the chain's own
-        // settling window stays the only safety net — which is what it is for.
+        // Null, not "today": the chain's settling window stays the only safety net.
         assertThat(garminEarliestAffectedDay(listOf(file(at = null)), zone = UTC)).isNull()
         assertThat(garminEarliestAffectedDay(emptyList(), zone = UTC)).isNull()
     }
 
     @Test
     fun `the day is the wearer's local day, not UTC's`() {
-        // 23:30 in Madrid on the 14th is 21:30 UTC the same day — but 00:30 UTC
-        // on the 15th once the offset goes the other way. The chain is keyed by
-        // local date, so the conversion has to use the phone's zone.
+        // 00:30 UTC on the 15th is still the 14th in Madrid. The chain is keyed by local date.
         val file = file(at = "2026-06-15T00:30:00Z")
 
         assertThat(garminEarliestAffectedDay(listOf(file), zone = ZoneId.of("Pacific/Auckland")))

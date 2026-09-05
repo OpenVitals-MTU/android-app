@@ -132,9 +132,7 @@ class HeartVitalsSummariesTest {
     }
 
     @Test fun `dailyAverageLinePoints buckets a burst so it does not outvote the spot checks`() {
-        // Two spot checks at 12 and 18, and one minute at 12:30 recorded every second
-        // at 30 — the overnight-monitoring shape. Three occupied minutes:
-        // (12 + 18 + 30) / 3 = 20, not the per-sample (12 + 18 + 60 × 30) / 62.
+        // Two spot checks and one minute recorded every second: three occupied minutes, (12 + 18 + 30) / 3 = 20.
         val burst = (0L until 60L).map { second ->
             reading(Instant.parse("2026-04-20T12:30:00Z").plusSeconds(second).toString(), 30.0)
         }

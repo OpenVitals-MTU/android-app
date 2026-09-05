@@ -198,8 +198,7 @@ class CsvMappingValidationTest {
 
     @Test
     fun `choosing day-first answers the ambiguity and clears the issue`() {
-        // Once the user has said which ordering it is, repeating the question
-        // would block a mapping that is now fully specified.
+        // Once the user has said which ordering it is, repeating the question would block the mapping.
         val issues = validateCsvMapping(
             mappingOf(
                 listOf(
@@ -225,7 +224,7 @@ class CsvMappingValidationTest {
         assertTrue(issues.isEmpty())
     }
 
-    // ── initialCsvMapping ────────────────────────────────────────────────────
+    // initialCsvMapping.
 
     @Test
     fun `the first column that parses as a date is pre-selected`() {
@@ -239,8 +238,7 @@ class CsvMappingValidationTest {
 
     @Test
     fun `no metric is guessed from a header name`() {
-        // Guessing metrics from labels would be the vendor-preset behaviour this
-        // importer deliberately does without.
+        // Guessing metrics from labels is the vendor-preset behaviour this importer does without.
         val mapping = initialCsvMapping(
             headerRow = listOf("Date", "Weight (kg)", "Fat mass (kg)"),
             sample = Sample,
@@ -259,7 +257,7 @@ class CsvMappingValidationTest {
         assertNull(mapping.timestampColumn)
     }
 
-    // ── requiredWritePermissions ─────────────────────────────────────────────
+    // requiredWritePermissions.
 
     @Test
     fun `only the mapped metrics permissions are required`() {
@@ -310,7 +308,7 @@ class CsvMappingValidationTest {
         )
     }
 
-    // ── detectCsvUnitInHeader ────────────────────────────────────────────────
+    // detectCsvUnitInHeader.
 
     @Test
     fun `a parenthesised unit is read off the header`() {
@@ -331,7 +329,7 @@ class CsvMappingValidationTest {
         assertNull(detectCsvUnitInHeader("Date"))
     }
 
-    // ── interval metrics ─────────────────────────────────────────────────────
+    // Interval metrics.
 
     /** `TimeFrom,TimeTo,Steps` sampled rows. */
     private val stepsSample = listOf(

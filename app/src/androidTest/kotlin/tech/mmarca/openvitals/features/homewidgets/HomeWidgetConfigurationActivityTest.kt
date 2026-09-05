@@ -26,21 +26,9 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.testing.string
 
 /**
- * Ports the reachable half of Flutter's
- * `test/features/homewidgets/home_widget_configure_test.dart` and the
- * `widget-type resolution` / `backing out` cases of
- * `home_widget_beverage_configure_test.dart`.
- *
- * Flutter resolves the picker from a deep link (`/widget-configure/<type>`),
- * so its tests drive a route. This app has no such route: Android launches the
- * activity the widget's `appwidget-provider` names in `android:configure`, and
- * the picker is a plain `ListView` rather than Compose. The equivalent
- * assertions are therefore the provider metadata (which picker a widget type
- * opens) and the real activity under `ActivityScenario` (what it renders, and
- * what it returns when the user backs out).
- *
- * The launch id is a fixed number no placed widget can own; nothing here writes
- * a selection, so the device is left as it was found.
+ * Android launches the activity the widget's `appwidget-provider` names, and the picker is
+ * a plain `ListView`. So the assertions are the provider metadata and the real activity under
+ * `ActivityScenario`. The launch id is one no placed widget can own; nothing here writes a selection.
  */
 @RunWith(AndroidJUnit4::class)
 class HomeWidgetConfigurationActivityTest {
@@ -48,7 +36,7 @@ class HomeWidgetConfigurationActivityTest {
     private val context: Context
         get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-    // ── widget-type resolution: which picker each widget declares ────────────
+    // Widget-type resolution: which picker each widget declares.
 
     @Test
     fun aBeverageWidgetOpensTheBeveragePicker() {
@@ -85,7 +73,7 @@ class HomeWidgetConfigurationActivityTest {
         )
     }
 
-    // ── the metric picker's own rendering ────────────────────────────────────
+    // The metric picker's own rendering.
 
     @Test
     fun theMetricPickerRendersThePromptAndTheMetricCatalog() {
@@ -109,18 +97,13 @@ class HomeWidgetConfigurationActivityTest {
             scenario.onActivity { activity ->
                 assertEquals(string(R.string.home_metric_widget_config_title), activity.title)
             }
-            // …and the top of it is actually on screen, not just in an adapter.
+            // And the top of it is on screen, not only in an adapter.
             onView(withText(string(R.string.metric_steps))).check(matches(isDisplayed()))
             onView(withText(string(R.string.metric_distance))).check(matches(isDisplayed()))
         }
     }
 
-    /**
-     * The picker the beverage widgets launch is a beverage picker whichever
-     * branch it takes — the drink list or the "no drinks" message, which the
-     * device's own catalog decides — and it is never the metric one. The title
-     * is the assertion because the activity sets it before it reads anything.
-     */
+    /** The beverage widgets launch a beverage picker whichever branch it takes. The title is set before anything is read. */
     @Test
     fun theBeveragePickerIsNeverTheMetricPicker() {
         launchBeveragePicker().use { scenario ->
@@ -135,7 +118,7 @@ class HomeWidgetConfigurationActivityTest {
         }
     }
 
-    // ── backing out: RESULT_CANCELED stands, nothing is persisted ────────────
+    // Backing out: RESULT_CANCELED stands, nothing is persisted.
 
     @Test
     fun backingOutOfTheMetricPickerNeverFinishesTheConfiguration() {
@@ -166,7 +149,7 @@ class HomeWidgetConfigurationActivityTest {
         }
     }
 
-    // ── helpers ─────────────────────────────────────────────────────────────
+    // Helpers.
 
     private val beveragePicker: ComponentName
         get() = ComponentName(context, HomeQuickBeverageWidgetConfigurationActivity::class.java)

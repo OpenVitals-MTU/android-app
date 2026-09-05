@@ -10,12 +10,7 @@ import org.junit.Test
 import org.json.JSONArray
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
 
-/**
- * The watermark is what lets a day's counters be written as intraday intervals
- * across many syncs: each one differences from where the last stopped. It has
- * to survive a restart, and it has to be right — a wrong watermark either
- * loses a stretch of the day or writes it twice.
- */
+/** The watermark lets a day's counters be written across many syncs. A wrong one loses a stretch or writes it twice. */
 class GarminCounterWatermarkStoreTest {
 
     private lateinit var prefs: FakeSharedPreferences
@@ -95,9 +90,7 @@ class GarminCounterWatermarkStoreTest {
 
     @Test
     fun `an unreadable entry is dropped rather than guessed at`() {
-        // Half a watermark would either lose a day's steps or write them
-        // twice. Re-importing the day from its start is the safer of the two
-        // mistakes.
+        // Half a watermark would lose or double a day's steps. Re-importing from the start is safer.
         seedLines(
             "2026-07-25|not-a-number|1|2|3",
             "2026-07-24|too|few",
@@ -111,11 +104,7 @@ class GarminCounterWatermarkStoreTest {
 
     @Test
     fun `a watermark written before the legacy flag reads as not retired`() {
-        // Five fields is the pre-legacyRetired form, and dropping those lines
-        // would re-import each day from midnight. Reading them as NOT retired
-        // is both lossless and correct: a day written under the old form still
-        // has its whole-day record, and is exactly the day whose next sync
-        // must supersede it.
+        // Five fields is the pre-legacyRetired form. Reading them as not retired is lossless and correct.
         seedLines(
             "2026-07-25|1784000000000|100|200|300",
             "2026-07-24|1784000000000|100|200|300|1",
@@ -203,8 +192,7 @@ class GarminCounterWatermarkStoreTest {
 
     @Test
     fun `a line from before the open-bucket start loads it as null`() {
-        // Correct, not merely tolerated: those versions began every bucket on
-        // the grid, which is exactly what null means to the importer.
+        // Correct: those versions began every bucket on the grid, which is what null means.
         seedLines("2026-07-30|1753822800000|3400|0|0|1|6:3400|-|-|120|9500|8")
 
         val mark = store.load().getValue("2026-07-30")
@@ -214,8 +202,7 @@ class GarminCounterWatermarkStoreTest {
 
     @Test
     fun `a line from before the open-bucket seeds loads them as zero`() {
-        // Correct, not merely tolerated: those versions withheld the open
-        // bucket, so there is nothing already written for the seed to restate.
+        // Correct: those versions withheld the open bucket, so there is nothing for the seed to restate.
         seedLines("2026-07-30|1753822800000|3400|0|0|1|6:3400|-|-")
 
         val mark = store.load().getValue("2026-07-30")
@@ -227,9 +214,7 @@ class GarminCounterWatermarkStoreTest {
 
     @Test
     fun `a line from before the maps loads with them null, and stays null`() {
-        // Null is "types unknowable", an empty map is "no types" — the
-        // importer adopts silently on the first and counts fully on the
-        // second, so a re-save must not flatten one into the other.
+        // Null is "types unknowable", an empty map is "no types"; a re-save must not flatten one into the other.
         seedLines("2026-07-29|1753822800000|6123|0|0|1")
 
         assertNull(store.load().getValue("2026-07-29").stepsByType)
@@ -248,8 +233,7 @@ class GarminCounterWatermarkStoreTest {
 
     @Test
     fun `clear forgets everything`() {
-        // For a Health Connect wipe: the records the watermarks describe are
-        // gone, so trusting them would leave every day short forever.
+        // For a Health Connect wipe: the records are gone, so trusting the watermarks would leave every day short.
         store.save(mapOf("2026-07-25" to mark(Instant.ofEpochMilli(1_784_000_000_000), 24843)))
 
         store.clear()

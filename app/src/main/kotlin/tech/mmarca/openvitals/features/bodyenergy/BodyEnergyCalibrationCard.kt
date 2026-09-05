@@ -40,19 +40,9 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 
 /**
- * The Body Energy setup gate and settings card: the heart-zone ladder, the birth
- * year automatic zones are derived from, and the tuning the watch has learned.
- *
- * v11 removed the manual maximum and resting heart rate boxes. Both are measured
- * from the user's own data now, and a typed maximum used to be the ONLY route to
- * high confidence — which had it backwards, since an observed maximum has to
- * clear a plausibility floor before the model will use it and a typed one
- * cleared nothing.
- *
- * What is left needs the birth year: with no typed maximum, Tanaka-from-age is
- * the only estimate, and without it the model falls back to resting + 70, which
- * for a resting 60 claims a maximum of 130 and reads a brisk walk as zone 5. So
- * Save refuses rather than producing a confidently wrong score.
+ * The Body Energy setup gate and settings card: the zone ladder, the birth
+ * year automatic zones need, and the learned tuning. Without a birth year
+ * the model falls back to resting + 70, so Save refuses.
  */
 @Composable
 fun BodyEnergyCalibrationCard(
@@ -190,8 +180,7 @@ fun BodyEnergyCalibrationCard(
             OpenVitalsButton(
                 onClick = {
                     val typedBirthYear = birthYear.toOptionalInt()
-                    // Manual zones ARE the ladder, so they need no age. Automatic
-                    // zones cannot be derived without one.
+                    // Manual zones need no age; automatic zones cannot be derived without one.
                     val missing = !useManualZones && !isUsableBirthYear(typedBirthYear, showBirthYear, bodyProfile)
                     birthYearMissing = missing
                     if (missing) return@OpenVitalsButton
@@ -230,14 +219,7 @@ fun BodyEnergyCalibrationCard(
     }
 }
 
-/**
- * What the watch has taught the model, as four plain multipliers.
- *
- * The heading and its line always show; the rows and the Reset only once there
- * is something to reset. The whole block used to be gated on having learned
- * something, which made "sync a watch to start personalising these" unreachable
- * — the one state where that sentence is the only thing worth saying.
- */
+/** What the watch has taught the model. The heading always shows; the rows once there is something. */
 @Composable
 private fun BodyEnergyPersonalTuningSection(
     calibration: BodyEnergyCalibration,
@@ -249,9 +231,7 @@ private fun BodyEnergyPersonalTuningSection(
         style = MaterialTheme.typography.bodyMedium,
     )
     Text(
-        // Zero gets its own string rather than a `zero` plural item: English has
-        // no CLDR zero rule, so Android would resolve 0 to `other` and the card
-        // would say "Learned from 0 watch readings."
+        // English has no CLDR zero rule, so zero gets its own string.
         text = if (calibration.watchObservationCount == 0) {
             stringResource(R.string.body_energy_personalization_watch_none)
         } else {
@@ -325,11 +305,7 @@ private fun CalibrationNumberField(
     )
 }
 
-/**
- * Whether automatic zones have an age to work from. Where this card does not own
- * the field, the stored profile is the answer — the requirement does not go away
- * just because the box is somewhere else.
- */
+/** Whether automatic zones have an age. Where this card does not own the field, the profile answers. */
 private fun isUsableBirthYear(
     typed: Int?,
     showBirthYear: Boolean,

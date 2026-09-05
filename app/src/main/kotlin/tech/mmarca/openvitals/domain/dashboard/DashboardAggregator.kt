@@ -36,14 +36,9 @@ object DashboardAggregator {
         )
 
     /**
-     * The previous weeks that may form the [weeklyCardioTarget] baseline: the
-     * ones scored with the same yardstick as the current week. A TRIMP week
-     * measured against a median of movement-fallback weeks (a few points a
-     * day from steps) reads as thousands of percent "over target" - not
-     * because training exploded but because the yardstick changed. This
-     * happens by construction for the older weeks, whose heart-rate samples
-     * are never loaded. A movement-only user still compares fallback weeks
-     * with fallback weeks, exactly as before.
+     * The previous weeks that may form the cardio-target baseline: those
+     * scored with the same yardstick. A TRIMP week against movement-fallback
+     * weeks read as thousands of percent over target.
      */
     fun comparablePreviousWeekScores(
         currentWeek: List<CardioLoadEstimate>,

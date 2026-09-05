@@ -48,9 +48,7 @@ internal fun NavGraphBuilder.settingsRoutes(
         SettingsSectionScreen(SettingsSection.SENSORS, onImportRouteFile, onImportFitFile, onRouteFilesImported)
     }
 
-    // A bespoke screen, not a settings card list (mirrors the Flutter app's
-    // dedicated Watches route): paired-watch rows that open the per-watch
-    // device view, plus the scan → classify → onboard add flow.
+    // A bespoke screen: paired-watch rows plus the add flow.
     composable(Screen.SettingsWatches.route) {
         WatchesSettingsScreen(
             viewModel = hiltViewModel(),
@@ -117,8 +115,7 @@ internal fun NavGraphBuilder.settingsRoutes(
         ReportBuilderScreen(onDone = { navController.popBackStack() })
     }
 
-    // A full bespoke wizard, not a settings card list (mirrors the Flutter
-    // app's dedicated deviceSync route).
+    // A bespoke wizard, not a settings card list.
     composable(Screen.SettingsDeviceSync.route) {
         DeviceSyncScreen(onDone = { navController.popBackStack() })
     }

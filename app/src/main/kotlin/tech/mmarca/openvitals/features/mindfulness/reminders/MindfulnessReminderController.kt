@@ -33,18 +33,7 @@ class MindfulnessReminderController @Inject constructor(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + dispatcherProvider.io)
 
-    /**
-     * Serializes everything that decides when the next reminder fires.
-     *
-     * Each of those paths suspends on a repository read between choosing a
-     * config and arming the alarm, so two of them in flight interleave: the
-     * user nudges the reminder time twice, both read today's minutes, and
-     * whichever finishes last arms the single shared PendingIntent — which is
-     * as likely to be the time the user just moved away from as the one they
-     * settled on. Holding the lock across the read and the arm makes the last
-     * caller in the one that decides. The hydration twin has held this since
-     * the same race was found there.
-     */
+    /** Serialises scheduling, so the last caller in is the one that arms the alarm. */
     private val scheduling = Mutex()
 
     fun config(): MindfulnessReminderConfig =

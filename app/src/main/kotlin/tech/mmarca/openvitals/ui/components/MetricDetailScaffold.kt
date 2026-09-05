@@ -77,22 +77,16 @@ fun MetricDetailScaffold(
         sectionListState?.reorderableState = reorderableSectionState
     }
     val isSectionDragActive = reorderableSectionState?.isAnyItemDragging == true
-    // Remembered so the local keeps one identity across recompositions; a fresh
-    // lambda every frame would invalidate every chart that reads it.
+    // Remembered, or a fresh lambda would invalidate every chart that reads it.
     val openDay = remember(onSelectDay, onSelectRange, onSelectDate) {
         onSelectDay ?: { date: LocalDate ->
-            // Screens that have not wired the driver's atomic selectDay still land
-            // on the right day: the range switch persists Day, the date pins it,
-            // and the superseded first load is dropped by the load coordinator.
+            // Screens without an atomic selectDay still land on the right day.
             onSelectRange(TimeRange.DAY)
             onSelectDate(date)
         }
     }
 
-    // One reload, one indicator. The spinner belongs to the pull gesture and
-    // answers it; every load the user did not pull for - a resume, a sync, a
-    // period switch - speaks through the inline banner instead. Both at once
-    // was the screen saying the same thing twice.
+    // One reload, one indicator: the spinner answers the pull only.
     var pullRefreshRequested by remember { mutableStateOf(false) }
     LaunchedEffect(isLoading) {
         if (!isLoading) pullRefreshRequested = false

@@ -17,10 +17,7 @@ import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
 
-/**
- * Records what the use case asked the platform to do, and answers with
- * whatever the test set up. No radio, no Activity, no plugin.
- */
+/** Records what the use case asked the platform to do. No radio, no Activity, no plugin. */
 private class FakePairing : WatchPairingPort {
     var bondResult = WatchBondResult.BONDED
     var associateResult = true
@@ -114,16 +111,13 @@ class OnboardGarminWatchUseCaseTest {
         assertTrue(registered.isBikeComputer)
         assertFalse(registered.isWatch)
         assertTrue(registered.isGarminGfdi)
-        // Live capabilities are opted in later from the device card, so it
-        // starts capability-less and out of the recording coordinator's
-        // assignment.
+        // Live capabilities are opted in later, so it starts capability-less.
         assertTrue(registered.capabilities.isEmpty())
     }
 
     @Test
     fun `a registered watch never takes part in capability assignment`() = runTest {
-        // A real sensor owning heart rate, so the assignment map is not empty
-        // for the wrong reason.
+        // A real sensor owning heart rate, so the assignment map is not empty for the wrong reason.
         repo.addDevice(
             displayName = "Chest strap",
             address = "AA:BB:CC:DD:EE:FF",
@@ -154,8 +148,7 @@ class OnboardGarminWatchUseCaseTest {
         assertTrue(outcome is GarminOnboardOutcome.Failed)
         assertEquals(GarminOnboardStep.BONDING, (outcome as GarminOnboardOutcome.Failed).step)
         assertTrue(repo.devices.isEmpty())
-        // The association is never even attempted — there is nothing to
-        // associate.
+        // The association is never attempted.
         assertEquals(listOf("bond:E0:48:24:D5:F7:10"), pairing.calls)
     }
 
@@ -178,8 +171,7 @@ class OnboardGarminWatchUseCaseTest {
 
         val outcome = useCase(watch, displayName = "vívoactive 5")
 
-        // The whole point: the association buys background priority, not
-        // access.
+        // The association buys background priority, not access.
         assertTrue(outcome is GarminOnboardOutcome.Succeeded)
         assertFalse((outcome as GarminOnboardOutcome.Succeeded).associated)
         assertEquals(1, repo.devices.size)
@@ -217,10 +209,7 @@ class OnboardGarminWatchUseCaseTest {
 
         useCase(watch, displayName = "vívoactive 5")
 
-        // Probing an unbonded watch enumerates a link with no encryption, so
-        // the GFDI characteristics are absent and the verdict would read
-        // "unknown" — a false negative that looks exactly like an unsupported
-        // device.
+        // Probing an unbonded watch sees no GFDI characteristics, a false negative that looks unsupported.
         assertTrue(probe.calls.isEmpty())
     }
 
@@ -230,8 +219,7 @@ class OnboardGarminWatchUseCaseTest {
 
         val outcome = useCase(watch, displayName = "vívoactive 5")
 
-        // Refusing a pairing the user just confirmed on the watch would be
-        // worse than registering one that cannot sync yet and saying so.
+        // Refusing a pairing the user confirmed on the watch is worse than registering one that cannot sync yet.
         assertTrue(outcome is GarminOnboardOutcome.Succeeded)
         val succeeded = outcome as GarminOnboardOutcome.Succeeded
         assertEquals(GarminTransportVariant.UNKNOWN, succeeded.transport.variant)

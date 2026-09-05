@@ -249,8 +249,7 @@ class CaffeineViewModelTest {
 
         assertFalse(vm.uiState.value.isLoading)
         assertEquals(ScreenError.Message("the provider hung up"), vm.uiState.value.error)
-        // Kotlin's display is not nullable: a failed load simply leaves the untouched
-        // default insights in place, so there is nothing for the cards to draw.
+        // A failed load leaves the default insights in place, so there is nothing to draw.
         assertTrue(vm.uiState.value.display.curvePoints.isEmpty())
     }
 
@@ -267,8 +266,7 @@ class CaffeineViewModelTest {
         assertNull(state.error)
         assertEquals(CaffeineSleepImpactStatus.UNLIKELY, caffeineSleepImpactStatus(state.display))
         assertTrue(caffeineDistributionBars(state.analyticsDisplay.sourceTotals).isEmpty())
-        // The curve is still plotted (a flat 24h-back/18h-forward zero line), and the
-        // threshold line has to fit in something.
+        // The curve is still plotted as a flat zero line, and the threshold line has to fit.
         assertTrue(state.display.curvePoints.isNotEmpty())
         assertTrue(
             caffeineCurveMaxMg(

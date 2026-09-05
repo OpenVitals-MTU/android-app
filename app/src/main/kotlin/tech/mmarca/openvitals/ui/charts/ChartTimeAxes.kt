@@ -15,28 +15,16 @@ import kotlin.math.min
 import kotlin.math.roundToLong
 
 /**
- * The x axes a time chart can sit on, and the label rows that describe them.
- *
- * These exist because the same twenty lines kept being written per card, and most
- * copies were wrong the same way: each intraday card scaled its x positions by the
- * time ELAPSED so far — so on a chart opened at 12:49 a 09:29 reading landed at 74%
- * of the width — and then drew a fixed `00:00 / 06:00 / 12:00 / 18:00` row
- * underneath. The chart's only job is to say WHEN, and it said the wrong hour. So
- * the rule lives here once: **the x axis is the whole day (or the whole session),
- * always.** Today's series simply stops at "now" instead of stretching to the right
- * edge, which is honest — the rest of the day has not happened.
+ * The x axes a time chart sits on, and their label rows. One rule: the x
+ * axis is the whole day or the whole session, always. Today's series stops
+ * at now rather than stretching to the edge.
  */
 
 private const val MinutesPerDay = 1440f
 
 /**
- * The five evenly-spaced labels under a day chart, for the slice of the day on show.
- *
- * Evenly spaced across the PLOT, so each one says what time it is at that point —
- * which at full zoom is `00:00 / 06:00 / 12:00 / 18:00 / 24:00`, exactly the row the
- * cards always drew, and zoomed in is the hours actually under the plot. A row that
- * still said `00:00 … 24:00` over a plot showing half past seven to nine would be
- * the elapsed-scaling bug back again.
+ * Five evenly spaced labels under a day chart, for the slice on show. At
+ * full zoom `00:00 / 06:00 / 12:00 / 18:00 / 24:00`.
  */
 fun dayAxisLabelsFor(viewport: ChartViewport = ChartViewport.Full): List<String> =
     (0..4).map { tick ->
@@ -50,11 +38,7 @@ private fun hhmm(minutesIntoDay: Float): String {
     return "%02d:%02d".format(hours, minutes)
 }
 
-/**
- * The `00:00 … 24:00` label row under an intraday chart. Wrap in
- * [ChartXAxisWithYAxis] when the plot above has a y-axis gutter — a row that starts
- * at the card's edge does not describe a plot that starts 64dp in.
- */
+/** The `00:00 … 24:00` row under an intraday chart. Wrap in [ChartXAxisWithYAxis] when the plot has a y gutter. */
 @Composable
 fun DayAxisLabels(
     viewport: ChartViewport = ChartViewport.Full,
@@ -70,42 +54,24 @@ fun axisFractionOf(start: Instant, end: Instant, time: Instant): Float {
     return elapsed.toFloat() / spanMs
 }
 
-/**
- * Whether the day `[dayStart, dayEnd)` is the one [now] falls in.
- *
- * Judged against the clock it is handed rather than the wall clock, so a chart
- * (and a test) can say which day it is looking at.
- */
+/** Whether `[dayStart, dayEnd)` is the day [now] falls in. */
 fun isDayToday(dayStart: Instant, dayEnd: Instant, now: Instant): Boolean =
     !now.isBefore(dayStart) && now.isBefore(dayEnd)
 
-/**
- * How much of the day a series may claim: the now-fraction on today, and the whole
- * width on any other day.
- *
- * Today's line stops at "now" — held out to the right edge at two in the afternoon
- * it would draw ten hours that have not happened.
- */
+/** How much of the day a series may claim: the now-fraction today, the whole width otherwise. */
 fun dayEndFraction(dayStart: Instant, dayEnd: Instant, now: Instant): Float =
     if (isDayToday(dayStart, dayEnd, now)) axisFractionOf(dayStart, dayEnd, now) else 1f
 
 /**
- * A running total's line: anchored at `(0, 0)` — it climbs from nothing at
- * midnight — and held flat at the last value out to [endFraction], so a day that
- * stopped accumulating reads as a plateau rather than a cliff. [endFraction] is the
- * now-fraction on today and 1 on a past day: a line held out to the right edge at
- * two in the afternoon would draw ten hours that have not happened.
- *
- * [fractions] are `(day fraction, running total)` pairs, ascending by fraction.
+ * A running total's line: anchored at `(0, 0)` and held flat at the last
+ * value out to [endFraction]. [fractions] are `(day fraction, total)` pairs.
  */
 fun cumulativeDayPlotPoints(
     fractions: List<Pair<Float, Double>>,
     endFraction: Float,
 ): List<MetricLinePlotPoint> {
     if (fractions.isEmpty()) return emptyList()
-    // The anchor and the hold are scaffolding, not entries — marked synthetic
-    // so the plot draws them as line only. A dot at "now" read as an entry
-    // nobody made.
+    // The anchor and the hold are scaffolding, marked synthetic so they get no dot.
     return buildList(fractions.size + 2) {
         add(MetricLinePlotPoint(xFraction = 0f, value = 0.0, synthetic = true))
         fractions.forEach { (fraction, value) ->
@@ -121,11 +87,7 @@ fun cumulativeDayPlotPoints(
     }
 }
 
-/**
- * A raw (non-cumulative) day series' line: each reading at its real position across
- * the day, and nothing invented — no midnight anchor, no trailing hold. A weight at
- * 06:00 says nothing about midnight, and nothing about tonight.
- */
+/** A raw day series' line: each reading at its real position, nothing invented. */
 fun <T> rawDayPlotPoints(
     samples: List<T>,
     dayStart: Instant,
@@ -145,18 +107,9 @@ fun <T> rawDayPlotPoints(
 data class SessionPause(val start: Instant, val end: Instant)
 
 /**
- * Where a moment sits within one recorded session, and the axis that says so.
- *
- * The day axis's counterpart, for a chart whose x axis is a workout rather than a
- * day: a sample is placed against the WHOLE session, not against the samples that
- * happen to exist.
- *
- * The axis counts only MOVING time. A pause is not part of the ride, so it gets
- * none of the chart: a 21-minute bike ride with a 10½-minute pause in it spent more
- * than half the width of every card on a stretch where nothing was recorded, and
- * the elevation trace drew a smooth spline across the hole — a climb that never
- * happened, because a line joins the fixes either side of a gap whatever sits
- * between them. Collapsing the pause puts those two fixes next to each other.
+ * Where a moment sits within one session, and the axis that says so. The
+ * axis counts only moving time: a pause gets none of the chart, so the two
+ * fixes either side of it sit next to each other.
  */
 @Immutable
 class SessionAxis(
@@ -164,19 +117,10 @@ class SessionAxis(
     val end: Instant,
     pauses: List<SessionPause> = emptyList(),
 ) {
-    /**
-     * The pauses clipped to the session, ordered and merged where they overlap —
-     * merged because the arithmetic below subtracts each in turn, and two
-     * overlapping segments (which a source app is free to write) would otherwise
-     * have their shared stretch taken out twice.
-     */
+    /** The pauses clipped to the session, ordered and merged where they overlap. */
     val pauses: List<SessionPause> = normalizePauses(pauses, start, end)
 
-    /**
-     * MOVING milliseconds — the session's span less what it was paused for, and the
-     * full width of the axis. At least 1: sessions of zero duration exist (a
-     * recording stopped the instant it started) and would divide by zero.
-     */
+    /** Moving milliseconds, the full width of the axis. At least 1. */
     val durationMs: Long = max(
         Duration.between(start, end).toMillis() - this.pauses.sumOf { pause ->
             Duration.between(pause.start, pause.end).toMillis()
@@ -188,13 +132,8 @@ class SessionAxis(
     fun fractionOf(time: Instant): Float = movingMillisAt(time).toFloat() / durationMs
 
     /**
-     * Moving milliseconds from the start of the session up to [time].
-     *
-     * An instant INSIDE a pause resolves to the moment the pause began: nothing
-     * moved while it ran, so everything recorded during it belongs at that one point
-     * on the axis. (Heart rate keeps sampling through a pause — a strap does not
-     * stop because the ride did — and those samples stack there rather than
-     * stretching the pause back open.)
+     * Moving milliseconds up to [time]. An instant inside a pause resolves
+     * to the moment the pause began.
      */
     private fun movingMillisAt(time: Instant): Long {
         val at = time.toEpochMilli()
@@ -209,19 +148,11 @@ class SessionAxis(
         return moving.coerceIn(0L, durationMs)
     }
 
-    /**
-     * The inverse of [fractionOf]: how far into the session that x was. The
-     * scrubber needs it — a finger lands on an x, and the chart has to say when
-     * that was. Moving elapsed, matching the labels directly under it.
-     */
+    /** The inverse of [fractionOf], for the scrubber. */
     fun elapsedAt(fraction: Float): Duration =
         Duration.ofMillis((fraction.coerceIn(0f, 1f) * durationMs).roundToLong())
 
-    /**
-     * Elapsed labels at the quarters — `0:00 … 15:00 … 30:00 … 45:00 … 1:00:00` —
-     * computed from the slice of the session ON SHOW, which at full zoom is the
-     * whole of it and gives back exactly the five it always did.
-     */
+    /** Elapsed labels at the quarters of the slice on show. */
     fun elapsedLabelsFor(viewport: ChartViewport = ChartViewport.Full): List<String> =
         (0..4).map { tick ->
             formatElapsedChartLabel(
@@ -269,11 +200,7 @@ private fun normalizePauses(
     return merged
 }
 
-/**
- * The recording-elapsed format the session axis labels use: `m:ss` under an hour,
- * `h:mm:ss` above — the same shape as the recording screen's stopwatch, so the axis
- * under a workout chart reads like the timer that produced it.
- */
+/** `m:ss` under an hour, `h:mm:ss` above, like the recording stopwatch. */
 fun formatElapsedChartLabel(duration: Duration): String {
     val totalSeconds = duration.seconds.coerceAtLeast(0L)
     val hours = totalSeconds / 3600
@@ -296,11 +223,7 @@ fun SessionAxisLabels(
     AxisLabelRow(labels = axis.elapsedLabelsFor(viewport), modifier = modifier)
 }
 
-/**
- * The instants a row of CLOCK times under a chart should name: when the visible
- * slice starts, when it ends, and the moment halfway between. At full zoom that is
- * exactly the start/middle/end the caller always drew.
- */
+/** The instants a row of clock times names: start, middle and end of the visible slice. */
 fun timeAxisInstantsFor(
     start: Instant,
     end: Instant,

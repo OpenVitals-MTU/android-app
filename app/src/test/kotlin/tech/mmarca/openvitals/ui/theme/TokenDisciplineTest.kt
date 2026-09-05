@@ -5,27 +5,11 @@ import java.io.File
 import org.junit.Test
 
 /**
- * A ratchet on bare numbers for spacing, radius and alpha.
+ * A ratchet on bare numbers for spacing, radius and alpha: the count may fall, never rise.
  *
- * The design system's rule is *"no bare numbers for spacing, radius, or alpha"*
- * in new code, with the existing ones migrated per screen and under golden
- * cover. That rule was prose, and prose does not stop the count going up.
- *
- * This is not a migration and does not try to be one. A blanket sweep would be
- * actively wrong: `16.dp` is `Spacing.lg` when it is padding and is nothing of
- * the sort when it is an icon's size, and a script cannot tell those apart.
- * What this does is hold the line — the number may fall, never rise — so the
- * backlog can be worked off a screen at a time without new debt arriving behind
- * it.
- *
- * **When this fails on a change that adds UI:** use the tokens (`Spacing`,
- * `Radii`, `Emphasis`, `LayoutMetrics`). If the value genuinely is not one of
- * them — an icon size, a stroke width, a chart geometry constant — give it a
- * named `private val` next to its use, which is also not a bare number.
- *
- * **When you migrate a screen:** lower the ceiling in the same commit. That is
- * the ratchet tightening, and it is the only edit to these numbers that should
- * ever happen.
+ * A blanket sweep would be wrong, because `16.dp` is `Spacing.lg` as padding and not as an icon size.
+ * When this fails on new UI, use the tokens or a named `private val` next to the use.
+ * When you migrate a screen, lower the ceiling in the same commit.
  */
 class TokenDisciplineTest {
 
@@ -69,11 +53,7 @@ class TokenDisciplineTest {
 
     @Test
     fun `the theme itself is allowed to hold the numbers`() {
-        // The scales have to be literals SOMEWHERE, and that somewhere is the
-        // token file. This guards the exclusion rather than leaving it implicit:
-        // if DesignTokens.kt stopped containing bare dp values, the scale would
-        // have been indirected into something that is no longer a single place
-        // to read it.
+        // The scales must be literals somewhere, and that is the token file. This guards the exclusion.
         val tokens = File("$SourceRoot/ui/theme/DesignTokens.kt").readText()
 
         assertWithMessage("the token file is the one place a bare dp belongs")
@@ -87,10 +67,7 @@ class TokenDisciplineTest {
             .filterNot { it.path.contains(ExcludedThemeDir) }
             .sumOf { file ->
                 file.readLines()
-                    // A named definition is the sanctioned form — "give it a
-                    // named private val next to its use" — so it must not
-                    // count against the ceiling, or following the rule would
-                    // trip the guard that enforces it.
+                    // A named definition is the sanctioned form, so it must not count against the ceiling.
                     .filterNot { line -> NamedDefinition.matches(line.trim()) }
                     .sumOf { line -> pattern.findAll(line).count() }
             }
@@ -114,9 +91,7 @@ class TokenDisciplineTest {
         /** `RoundedCornerShape(12.dp)` instead of a theme shape. */
         val BareCorner = Regex("""RoundedCornerShape\(\s*\d""")
 
-        // Ceilings, measured 2026-08-04 with named definitions excluded (they
-        // are the sanctioned form, so counting them would punish following the
-        // rule). These may only ever go DOWN.
+        // Ceilings, measured 2026-08-04 with named definitions excluded. These may only go down.
         // 2026-09-05: DerivedMetricsResetCard migrated (1941 -> 1933).
         // 2026-09-05: FitImportCard migrated (1933 -> 1925).
         const val MaxBareDp = 1925

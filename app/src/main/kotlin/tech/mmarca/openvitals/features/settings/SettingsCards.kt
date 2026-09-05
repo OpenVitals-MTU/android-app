@@ -299,13 +299,7 @@ private val settingsCardIconTopOffset = 2.dp
 private val settingsButtonIconSize = 18.dp
 private val settingsButtonIconGap = 6.dp
 
-/**
- * Which days a nutrition average divides by.
- *
- * Phrased as the ON state people asked for — "average logged days only" —
- * rather than as its inverse, because leaving out the blank days is the
- * default and the thing most eaters mean.
- */
+/** Which days a nutrition average divides by. Phrased as the ON state people asked for. */
 @Composable
 internal fun NutritionAverageBasisCard(
     loggedDaysOnly: Boolean,
@@ -581,9 +575,7 @@ internal fun ChartAggregationCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
-            // Chips, not a segmented row: four options with labels this long do
-            // not fit one line on a phone, and a FlowRow wraps where a segmented
-            // row truncates.
+            // Chips, not a segmented row: four long labels do not fit one line.
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
@@ -742,10 +734,8 @@ internal fun ActivityRecordingPreferencesCard(
     coMapsPermissionName: () -> String? = { null },
     onCoMapsPermissionResult: () -> Unit = {},
 ) {
-    // CoMaps' own runtime permission, named after the installed flavour and so
-    // resolved at tap time. Requested the moment the integration is switched
-    // on, because a toggle that silently needs a second grant elsewhere reads
-    // as a toggle that does not work.
+    // CoMaps' own permission, named after the installed flavour. Requested when
+    // the integration is switched on.
     val coMapsPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { onCoMapsPermissionResult() }
@@ -1438,8 +1428,7 @@ internal fun HydrationGoalCard(
     onGoalChange: (Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Stored litres always step by 0.25 L; only the label follows the unit
-    // system, so a user on imperial still lands on the same stored values.
+    // Stored litres step by 0.25 L; only the label follows the unit system.
     val unitFormatter = remember(unitSystem) { UnitFormatter({ unitSystem }) }
     SettingsStepperCard(
         title = stringResource(R.string.settings_hydration_goal_title),
@@ -1460,13 +1449,10 @@ internal fun ActivitySplitDistanceCard(
     onSelect: (Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // The presets are shown in the user's units, so the labels need the same
-    // formatter the splits-card header uses — the two must never disagree
-    // about what "every 1 km" means.
+    // The same formatter the splits-card header uses.
     val unitFormatter = remember(unitSystem) { UnitFormatter({ unitSystem }) }
     val presets = ActivitySplitDistance.presetsFor(unitSystem)
-    // The nearest preset, not an exact match: a stored 1000 m has no exact
-    // imperial preset, and highlighting nothing would read as "unset".
+    // The nearest preset: a stored 1000 m has no exact imperial preset.
     val selectedPreset = ActivitySplitDistance.nearestPreset(selectedMeters, presets)
 
     OpenVitalsCard(
@@ -1688,8 +1674,7 @@ private fun UnitQuantity.labelRes(): Int = when (this) {
     UnitQuantity.BLOOD_GLUCOSE -> R.string.settings_unit_quantity_blood_glucose
 }
 
-// The unit symbols UnitFormatter itself renders, so the picker previews
-// exactly what the screens will show.
+// The unit symbols UnitFormatter renders, so the picker previews what the screens show.
 private fun UnitQuantity.unitLabel(system: UnitSystem): String {
     val imperial = system == UnitSystem.IMPERIAL
     return when (this) {
@@ -2221,14 +2206,8 @@ internal fun RouteImportCard(
 }
 
 /**
- * The FIT importer: one file for review, or a whole FOLDER straight through.
- *
- * A single file opens the activity review screen. That is the right thing for
- * one file and the wrong one for two hundred, which is what the folder button
- * is for: it writes every FIT file under the picked folder straight to Health
- * Connect through the same bulk importer the route card uses. The folder is
- * picked as a SAF tree and walked by `RouteFolderScanner`, so it needs no
- * storage permission.
+ * The FIT importer: one file for review, or a whole folder straight through
+ * the bulk importer. The folder is a SAF tree, so no storage permission.
  */
 @Composable
 internal fun FitImportCard(
@@ -2296,9 +2275,7 @@ internal fun FitImportCard(
                 )
             }
 
-            // The folder held more files than the scan will take. Said out
-            // loud, because an import that silently skipped the tail would
-            // read exactly like one that finished.
+            // Said out loud: a silently skipped tail reads like a finished import.
             truncatedAt?.let { limit ->
                 Text(
                     text = stringResource(R.string.settings_fit_import_folder_truncated, limit),
@@ -2308,8 +2285,7 @@ internal fun FitImportCard(
                 )
             }
 
-            // Not an error: the folder was perfectly readable and simply had
-            // no FIT files in it.
+            // Not an error: the folder had no FIT files.
             if (folderHadNoFitFiles) {
                 Text(
                     text = stringResource(R.string.settings_fit_import_folder_empty),
@@ -2342,9 +2318,7 @@ internal fun FitImportCard(
                             importProgress.failedFiles,
                         )
                     } else {
-                        // Walking a memory card with a thousand rides on it
-                        // takes a moment, and a button that looks dead gets
-                        // pressed again.
+                        // A button that looks dead gets pressed again.
                         stringResource(R.string.settings_fit_import_folder_scanning)
                     },
                     style = MaterialTheme.typography.bodySmall,
@@ -2353,9 +2327,7 @@ internal fun FitImportCard(
                 )
             }
 
-            // The folder import writes straight to Health Connect, so it needs
-            // the same write permissions the route bulk import does. A single
-            // file goes through the review screen, which asks on its own.
+            // The folder import writes straight to Health Connect, so it needs the write permissions.
             if (missingPermissions.isNotEmpty()) {
                 OpenVitalsTonalButton(
                     onClick = onGrantPermissions,

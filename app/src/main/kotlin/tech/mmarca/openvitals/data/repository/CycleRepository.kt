@@ -219,8 +219,7 @@ class CycleRepositoryImpl @Inject constructor(
         return hc.readCycleEntry(kind, id)?.time?.toLocalDay()
     }
 
-    // Derived MenstruationPeriodRecords track the flow days; a failure here is
-    // deferrable (the write already landed, the next flow mutation reconciles).
+    // Derived period records track the flow days; a failure here is deferrable.
     private suspend fun reconcileAfterFlowMutation(kind: CycleEntryKind, days: Set<LocalDate>) {
         if (kind != CycleEntryKind.MENSTRUATION_FLOW || days.isEmpty()) return
         runCatching { hc.reconcileMenstruationPeriods(days) }

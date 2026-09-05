@@ -10,11 +10,7 @@ import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.toBeverageCategory
 
-/**
- * Static matching metadata derived from CaffeineHealth GPL-3.0 consumable_items.json.
- * OpenVitals uses it as seed/matching metadata for beverages; Health Connect remains
- * the source of truth for logged nutrition records.
- */
+/** Matching metadata from CaffeineHealth's GPL-3.0 catalog. Health Connect stays the source of truth. */
 object CaffeineHealthDrinkCatalog : HydrationDrinkCatalog {
     private const val BeveragePresetIdPrefix = "caffeinehealth-"
     private val CombiningMarks = Regex("\\p{Mn}+")

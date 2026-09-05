@@ -24,18 +24,9 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the card-rendering cases of Flutter's
- * `test/features/bodyenergy/body_energy_details_screen_test.dart`.
- *
- * Body Energy is a number the app invents about someone's body from signals it
- * only partly has, so the cases that matter are the ones where it has to admit
- * that: a day with nothing to compute from must say so rather than draw a
- * confident flat line, the inputs card must name the signal it went without, and
- * "What moved it" must not go blank when nothing did.
- *
- * The screen itself hands `bodyEnergyContent` a `DailyReadinessViewModel`, so
- * the composition of the cards is not reachable here; each card is exercised on
- * the display state the production mapper builds.
+ * Body Energy is a number the app invents from partial signals, so the cases that matter are
+ * where it must admit that: no data says so, the inputs card names the missing signal,
+ * and "What moved it" does not go blank. Each card is exercised on the mapper's display state.
  */
 class BodyEnergyCardsTest {
 
@@ -56,17 +47,14 @@ class BodyEnergyCardsTest {
             .onNodeWithText(string(R.string.body_energy_timeline_day_title))
             .performScrollTo()
             .assertIsDisplayed()
-        // The hour row only exists inside the timeline chart, so a day that ends
-        // at 24:00 is the cheapest proof the chart itself composed.
+        // The hour row only exists inside the timeline chart, so "24:00" proves the chart composed.
         composeRule.onNodeWithText("24:00").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText(string(R.string.body_energy_timeline_no_data)).assertDoesNotExist()
     }
 
     @Test
     fun withNoTimelineAtAllTheCardShowsNoScoreRatherThanAZero() {
-        // Nothing was loaded for the day. The score has to read as absent, not
-        // as a measured nought — a battery drawn at zero is a claim about the
-        // user's body that nobody made.
+        // The score must read as absent, not as a measured nought.
         setContent { BodyEnergyCard(display = NO_TIMELINE.toBodyEnergyDisplayState()) }
 
         composeRule.onAllNodesWithText("--").onFirst().assertIsDisplayed()
@@ -83,11 +71,8 @@ class BodyEnergyCardsTest {
 
     @Test
     fun aDayWithNothingToComputeFromStillNamesItsScoreAsUncomputed() {
-        // The subtler failure. Body Energy is a chain, so a day the model could
-        // not compute still carries yesterday's closing score and prints it —
-        // and printed alone that 50 is indistinguishable from a measured 50. The
-        // confidence line is the only thing standing between the two, so it has
-        // to say "No data" and say why.
+        // A day the model could not compute still carries yesterday's score. The confidence line
+        // is the only thing separating it from a measured 50.
         setContent {
             BodyEnergyCard(
                 display = BodyEnergyTimeline
@@ -120,8 +105,7 @@ class BodyEnergyCardsTest {
 
     @Test
     fun aLowConfidenceDayNamesWhyItIsLowRatherThanJustScoringLower() {
-        // A low-confidence day still shows a number, and a number with no
-        // caveat next to it is indistinguishable from a measured one.
+        // A number with no caveat is indistinguishable from a measured one.
         setContent {
             BodyEnergyCard(
                 display = bodyEnergyTimeline(
@@ -142,9 +126,7 @@ class BodyEnergyCardsTest {
 
     @Test
     fun theInputsCardNamesTheSignalTheDayWentWithout() {
-        // The one place a user can find out that the estimate was made without
-        // their resting heart rate. Without it, a lower score looks like a worse
-        // day rather than a thinner day of data.
+        // The one place a user learns the estimate was made without their resting heart rate.
         setContent {
             BodyEnergyInputsCard(
                 display = bodyEnergyTimeline(
@@ -163,10 +145,7 @@ class BodyEnergyCardsTest {
 
     @Test
     fun theExplainerCardsSayWhatMovedItAndHowItIsEstimated() {
-        // A day where nothing stood out still has to answer "what moved it" —
-        // an empty card would read as a rendering failure rather than as a
-        // quiet day — and the method card is the only place the estimate
-        // explains itself at all.
+        // A quiet day still has to answer "what moved it", or the card reads as a rendering failure.
         setContent {
             Column {
                 BodyEnergyReasonsCard(reasons = emptyList(), hasTimeline = false)
@@ -191,7 +170,7 @@ class BodyEnergyCardsTest {
     }
 
     private companion object {
-        /** No day was loaded at all — the nullable-receiver mapper's own case. */
+        /** No day was loaded at all. */
         val NO_TIMELINE: BodyEnergyTimeline? = null
     }
 }

@@ -40,11 +40,7 @@ class GarminMlTransportTest {
         )
     }
 
-    /**
-     * The close-handle response — also sent UNREQUESTED when the watch shuts
-     * a service down. Field order differs from registration:
-     * `[handle 0][CLOSE_HANDLE_RESP][u64 client][u16 service][handle][status]`
-     */
+    /** The close-handle response, also sent unrequested: `[handle 0][CLOSE_HANDLE_RESP][u64 client][u16 service][handle][status]`. */
     private fun closeResponse(
         handle: Int = 3,
         status: Int = 0,
@@ -59,10 +55,7 @@ class GarminMlTransportTest {
         .writeByte(status)
         .toBytes()
 
-    /**
-     * The control response the watch sends to grant a handle:
-     * `[handle 0][REGISTER_ML_RESP][u64 client][u16 service][status][handle][reliable]`
-     */
+    /** The control response granting a handle: `[handle 0][REGISTER_ML_RESP][u64 client][u16 service][status][handle][reliable]`. */
     private fun registerResponse(
         handle: Int = 3,
         status: Int = 0,
@@ -102,7 +95,7 @@ class GarminMlTransportTest {
         transport.ready.await()
     }
 
-    // ── opening the GFDI channel ─────────────────────────────────────────────
+    // Opening the GFDI channel.
 
     @Test
     fun `closes stale handles before registering`() = runTest {
@@ -176,7 +169,7 @@ class GarminMlTransportTest {
         }
     }
 
-    // ── sending frames ───────────────────────────────────────────────────────
+    // Sending frames.
 
     @Test
     fun `prefixes every write with the granted handle`() = runTest {
@@ -252,7 +245,7 @@ class GarminMlTransportTest {
         assertTrue(logs.last().contains("maxWrite=20"))
     }
 
-    // ── receiving frames ─────────────────────────────────────────────────────
+    // Receiving frames.
 
     @Test
     fun `reassembles a frame split across several packets`() = runTest {
@@ -320,7 +313,7 @@ class GarminMlTransportTest {
         assertTrue(frames.isEmpty())
     }
 
-    // ── the watch closing GFDI mid-session ───────────────────────────────────
+    // The watch closing GFDI mid-session.
 
     @Test
     fun `a watch-initiated GFDI close deafens the channel and reports it`() = runTest {
@@ -328,8 +321,7 @@ class GarminMlTransportTest {
 
         transport.handleInbound(closeResponse(handle = 3))
 
-        // The held link would otherwise keep writing to a dead handle — the
-        // silent-deafness failure Gadgetbridge fixed in CommunicatorV2.
+        // The held link would otherwise keep writing to a dead handle.
         assertFalse(transport.isReady)
         assertEquals(1, gfdiClosedCount)
         try {
@@ -343,8 +335,7 @@ class GarminMlTransportTest {
     fun `a close for a stale handle changes nothing`() = runTest {
         openChannel(handle = 3)
 
-        // Our own CLOSE_ALL on open provokes closes for handles from previous
-        // sessions; those must not kill the channel just granted.
+        // Our CLOSE_ALL on open provokes closes for old handles; those must not kill the new channel.
         transport.handleInbound(closeResponse(handle = 9))
 
         assertTrue(transport.isReady)
@@ -369,8 +360,7 @@ class GarminMlTransportTest {
 
         transport.reopenGfdi()
 
-        // Registration only — a CLOSE_ALL here would tear down whatever else
-        // the watch is running, and is only right on a cold open.
+        // Registration only: a CLOSE_ALL here would tear down whatever else the watch is running.
         assertEquals(1, written.size)
         assertEquals(0, written.single()[1].toInt()) // REGISTER_ML_REQ
 
@@ -387,8 +377,7 @@ class GarminMlTransportTest {
         openChannel(handle = 5)
         written.clear()
 
-        // Send a large frame, then feed its own bytes back as if echoed by
-        // the watch — end-to-end proof that chunking and reassembly agree.
+        // Send a large frame, then feed its bytes back as if echoed: chunking and reassembly must agree.
         val payload = ByteArray(500) { ((it * 11) and 0xFF).toByte() }
         val frame = GarminGfdiFrame.build(5004, payload)
         transport.sendFrame(frame)

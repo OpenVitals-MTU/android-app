@@ -17,20 +17,9 @@ import tech.mmarca.openvitals.devices.garmin.GarminLog
 
 /**
  * Owns the automatic watch sync schedule: the stored per-watch interval and
- * the `WorkManager` periodic work that honours it.
- *
- * One unique periodic work per watch rather than one ticker for all of them,
- * because the interval is a per-watch choice and two watches on different
- * schedules must not be forced onto the slower one. The unique name is derived
- * from the device id, so re-choosing an interval replaces the schedule instead
- * of stacking a second one on top of it.
- *
- * `WorkManager` is durable across reboots and app updates on its own, which is
- * why this feature is periodic work rather than an alarm: nothing here has to
- * be re-armed from a boot receiver. [restoreAll] exists for the cases
- * `WorkManager` does not cover — a force-stop, a cleared work database, a
- * restore onto a new phone — and it KEEPs any live schedule so opening the app
- * never pushes the next run further away.
+ * the `WorkManager` periodic work. One unique work per watch, named by
+ * device id, so a new interval replaces the schedule. [restoreAll] covers
+ * what WorkManager does not, and keeps any live schedule.
  */
 @Singleton
 class WatchAutoSyncScheduler @Inject constructor(
@@ -43,14 +32,7 @@ class WatchAutoSyncScheduler @Inject constructor(
 
     fun interval(deviceId: String): AutoSyncInterval = stateStore.autoSyncInterval(deviceId)
 
-    /**
-     * Stores the choice and re-plans the watch's schedule to match it.
-     *
-     * The period restarts from now rather than being amended in place, which
-     * is what someone switching from two hours to thirty minutes is asking
-     * for: the next run inside half an hour, not at the end of a two-hour
-     * window that started before they changed their mind.
-     */
+    /** Stores the choice and re-plans from now, so a shorter interval runs sooner. */
     fun setInterval(deviceId: String, interval: AutoSyncInterval) {
         stateStore.setAutoSyncInterval(deviceId, interval)
         if (interval.isOn) {
@@ -60,26 +42,16 @@ class WatchAutoSyncScheduler @Inject constructor(
         }
     }
 
-    /**
-     * Re-plans every paired watch's schedule from what is stored. Idempotent,
-     * and cheap enough for an app start: one preference read per watch, then a
-     * KEEP that leaves an existing schedule exactly where it was.
-     */
+    /** Re-plans every paired watch from what is stored. Idempotent; KEEP leaves live schedules alone. */
     fun restoreAll() {
-        // Runs from Application.onCreate. Whatever WorkManager makes of the
-        // request, a watch schedule is not worth failing app start over: the
-        // next start tries again, and a scheduled sync is a convenience over
-        // the Sync button, never the only way data arrives.
+        // Runs from Application.onCreate. Not worth failing app start over.
         runCatching {
             deviceRepository.devices.forEach { device ->
                 val interval = stateStore.autoSyncInterval(device.id)
                 if (interval.isOn && device.isGarminGfdi) {
                     enqueue(device.id, interval, ExistingPeriodicWorkPolicy.KEEP)
                 } else {
-                    // Covers a watch that stopped being syncable (re-registered
-                    // as a live sensor) and one whose schedule outlived its
-                    // preference, both of which would otherwise wake the radio
-                    // for a sync nobody has asked for since.
+                    // A watch that stopped being syncable, or a schedule that outlived its preference.
                     cancel(device.id)
                 }
             }
@@ -107,10 +79,7 @@ class WatchAutoSyncScheduler @Inject constructor(
             TimeUnit.MINUTES,
         )
             .setInputData(WatchAutoSyncWorker.inputData(deviceId))
-            // Battery only. There is no network constraint to set: the whole
-            // sync is Bluetooth, and the app holds no internet permission.
-            // A phone below its low-battery mark has better things to spend
-            // the radio on than data that will still be on the watch later.
+            // Battery only: the sync is Bluetooth, and the app has no internet permission.
             .setConstraints(Constraints.Builder().setRequiresBatteryNotLow(true).build())
             .setBackoffCriteria(BackoffPolicy.LINEAR, RETRY_BACKOFF_MINUTES, TimeUnit.MINUTES)
             .build()
@@ -118,11 +87,7 @@ class WatchAutoSyncScheduler @Inject constructor(
     }
 
     companion object {
-        /**
-         * A watch that was out of range is usually back within minutes, so the
-         * first retry comes well before the next scheduled run rather than
-         * writing the period off.
-         */
+        /** A watch out of range is usually back within minutes. */
         private const val RETRY_BACKOFF_MINUTES = 10L
 
         fun uniqueWorkName(deviceId: String): String = "watch-auto-sync-$deviceId"

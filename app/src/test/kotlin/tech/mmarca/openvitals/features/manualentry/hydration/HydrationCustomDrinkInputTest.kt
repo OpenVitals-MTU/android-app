@@ -50,8 +50,7 @@ class HydrationCustomDrinkInputTest {
 
     @Test
     fun `customHydrationDrinkFromInput one invalid nutrient rejects the whole drink, not just that nutrient`() {
-        // The filtered map's size is compared to the input's, so a single bad
-        // value fails the drink rather than silently dropping the nutrient.
+        // A single bad value fails the drink rather than silently dropping the nutrient.
         val drink = CustomHydrationDrinkInput(
             name = "Soda",
             volumeMilliliters = 330.0,

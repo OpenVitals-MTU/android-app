@@ -13,19 +13,9 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * The access gate every metric screen shows instead of its content.
- *
- * Flutter tests this once per screen — `Hydration screen shows the access gate
- * when permission missing`, and the same case again for mindfulness, nutrition,
- * caffeine, cycle and heart. In Kotlin those screens do not each own a gate:
- * they wrap their content in `HealthConnectScreenShell`, which delegates here.
- * So the behaviour is pinned once, where it lives, rather than six times over
- * six screens that would all be exercising this same composable.
- *
- * What that leaves uncovered is a screen that forgets to wrap itself at all.
- * That is a wiring mistake rather than a gate mistake, and the per-screen
- * content tests are where it shows up — a screen with no shell renders its
- * content when it should be showing a gate.
+ * The access gate every metric screen shows instead of its content. Screens wrap
+ * themselves in `HealthConnectScreenShell`, which delegates here, so it is pinned once.
+ * A screen that forgets to wrap itself shows up in its own content tests.
  */
 class HealthConnectAccessGateTest {
 
@@ -41,9 +31,7 @@ class HealthConnectAccessGateTest {
 
     @Test
     fun insufficientAccess_replacesTheContentAndOffersToGrant() {
-        // Replaces rather than overlays: a screen that renders empty charts
-        // behind a gate is telling the user they have no data, when what they
-        // have is no permission.
+        // Replaces rather than overlays: empty charts behind a gate say "no data" when it is "no permission".
         var granted = 0
         setGate(HealthConnectAccessGateMode.INSUFFICIENT_ACCESS, onGrant = { granted++ })
 
@@ -58,9 +46,7 @@ class HealthConnectAccessGateTest {
 
     @Test
     fun doubleCancelRecovery_sendsTheUserToSettingsRatherThanAskingAgain() {
-        // Asking a third time is how a permission dialog stops being shown at
-        // all. Once the user has declined twice, the only route left is the
-        // Health Connect settings screen, so the gate offers that instead.
+        // After two declines the dialog stops showing, so the gate offers the settings screen instead.
         var openedSettings = 0
         var granted = 0
         setGate(
@@ -80,8 +66,7 @@ class HealthConnectAccessGateTest {
 
     @Test
     fun syncPaused_saysSoRatherThanShowingStaleData() {
-        // Paused sync is not missing permission, and showing whatever was last
-        // read would present it as current.
+        // Paused sync is not missing permission, and stale data would present as current.
         var openedSettings = 0
         setGate(HealthConnectAccessGateMode.SYNC_PAUSED, onOpenSettings = { openedSettings++ })
 

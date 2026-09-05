@@ -24,10 +24,7 @@ enum class ReportBuilderStep { CONFIGURE, BUILDING, DONE }
 /** The preset lookback chips; `null` selection means a custom range. */
 val ReportLookbackPresets = listOf(30, 90, 180, 365)
 
-/**
- * Keeps custom ranges inside what the vitals daily cache can serve, so a
- * hand-picked range stays as fast as the presets.
- */
+/** Keeps custom ranges inside what the vitals daily cache can serve. */
 const val ReportMaxRangeDays = 730L
 
 data class ReportBuilderState(
@@ -60,10 +57,8 @@ data class ReportBuilderState(
 }
 
 /**
- * The report builder's three steps: configure → build (in this scope, per the
- * in-ViewModel rule for user-attended work) → share or save the staged PDF.
- * Any configuration change after a build invalidates the staged file — the
- * PDF on disk must always match the selection on screen.
+ * The report builder: configure, build, share or save. Any configuration
+ * change after a build invalidates the staged PDF.
  */
 @HiltViewModel
 class ReportBuilderViewModel @Inject constructor(

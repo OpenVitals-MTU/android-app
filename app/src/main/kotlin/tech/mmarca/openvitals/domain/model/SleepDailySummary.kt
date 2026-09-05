@@ -10,10 +10,7 @@ import tech.mmarca.openvitals.domain.preferences.SleepWindow
 /** Display-level synthetic id for a night built from two or more segments. */
 const val MERGED_NIGHT_ID_PREFIX = "daily:"
 
-/**
- * Two contiguous sleep clusters further apart than this are a night and a nap,
- * not one night.
- */
+/** Two clusters further apart than this are a night and a nap. */
 val SleepNapGap: Duration = Duration.ofHours(3)
 
 internal data class SleepRangeWindow(
@@ -22,13 +19,8 @@ internal data class SleepRangeWindow(
 )
 
 /**
- * Date D's night ends at D [SleepWindow.endHour] and starts at
- * [SleepWindow.startHour] — on D-1 when the window spans midnight (the 18:00 →
- * 10:00 default), on D itself when it does not (00:00 → 12:00) — a night lands
- * on its WAKE-UP date either way. Anchoring a same-day window's start on D-1
- * stretched every night to 36 hours: each date's window swallowed the
- * neighbouring night too, the longer of the two won the night, and the loser
- * was filed as that date's "nap".
+ * Date D's night ends at D [SleepWindow.endHour] and starts on D-1 when the
+ * window spans midnight, on D otherwise. A night lands on its wake-up date.
  */
 internal fun sleepRangeStartFor(
     selectedDate: LocalDate,
@@ -54,11 +46,7 @@ internal fun sleepRangeWindowFor(
     end = sleepRangeEndFor(selectedDate, sleepWindow).atZone(zone).toInstant(),
 )
 
-/**
- * The sessions belonging to [selectedDate]'s night. Membership is by START
- * time only: a sleep-in running past the morning boundary stays with its
- * night instead of dropping out.
- */
+/** The sessions of [selectedDate]'s night, by start time, so a sleep-in stays with its night. */
 internal fun sleepSessionsForRange(
     sessions: List<SleepData>,
     selectedDate: LocalDate,
@@ -78,10 +66,8 @@ internal data class SleepNightSplit(
 )
 
 /**
- * Clusters the window's sessions by contiguity (gap ≤ [napGap], measured
- * against the cluster's running max end so nested sessions never split) and
- * keeps the cluster with the largest UNION of slept time as the night;
- * everything else is a nap.
+ * Clusters the sessions by contiguity (gap at most [napGap], against the
+ * running max end) and keeps the largest union as the night.
  */
 internal fun splitNightAndNaps(
     windowedSessions: List<SleepData>,
@@ -121,12 +107,7 @@ internal fun splitNightAndNaps(
     return SleepNightSplit(night = night, naps = naps)
 }
 
-/**
- * Every nap belonging to [selectedDate]: the night window's non-night clusters
- * plus sessions starting in the daytime gap. Night and daytime tile the whole
- * day by start time, so nothing is ever dropped — the selected date's own
- * evening belongs to the NEXT date's night.
- */
+/** Every nap of [selectedDate]: the night window's other clusters plus daytime sessions. */
 internal fun dailyNaps(
     sessions: List<SleepData>,
     selectedDate: LocalDate,
@@ -137,8 +118,7 @@ internal fun dailyNaps(
         sleepSessionsForRange(sessions, selectedDate, sleepWindow, zone),
     ).naps
     val daytimeStart = selectedDate.atTime(sleepWindow.endHour.coerceIn(0, 23), 0).atZone(zone).toInstant()
-    // The gap runs to where the NEXT date's night begins — the same evening for
-    // a midnight-spanning window, the next midnight for a same-day one.
+    // The gap runs to where the next date's night begins.
     val daytimeEnd = sleepRangeStartFor(selectedDate.plusDays(1), sleepWindow).atZone(zone).toInstant()
     val daytimeNaps = sessions.filter { session ->
         !session.startTime.isBefore(daytimeStart) && session.startTime.isBefore(daytimeEnd)
@@ -147,12 +127,9 @@ internal fun dailyNaps(
 }
 
 /**
- * The one canonical night for [selectedDate]: the window's night cluster,
- * naps excluded, duration as the UNION of slept intervals (overlapping
- * cross-source survivors can never exceed real time), and stages concatenated
- * with wake gaps filled. A single-segment night keeps its real id — and stays
- * tappable; a multi-segment night gets the synthetic un-openable
- * [MERGED_NIGHT_ID_PREFIX] id.
+ * The canonical night for [selectedDate]: naps excluded, duration as the
+ * union of slept intervals, stages concatenated with gaps filled. A
+ * multi-segment night gets the synthetic [MERGED_NIGHT_ID_PREFIX] id.
  */
 internal fun dailySleepSummary(
     sessions: List<SleepData>,

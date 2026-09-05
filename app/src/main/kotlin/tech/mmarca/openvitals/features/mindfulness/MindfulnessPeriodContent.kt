@@ -80,9 +80,7 @@ internal fun LazyListScope.mindfulnessPeriodContent(
 ) {
     val display = state.display
     if (!display.hasData && state.isLoading) {
-        // Nothing to show yet and still loading: one skeleton where the period chart
-        // will be, so the page does not jump when the data lands. A screen that
-        // already has content keeps it — a skeleton over drawn data would blink.
+        // Still loading: a skeleton where the chart will be. Existing content is kept.
         item {
             ChartSkeleton(
                 modifier = metricModifier(),
@@ -258,10 +256,7 @@ private fun MindfulnessIntradayChartCard(
             Spacer(Modifier.height(16.dp))
 
             if (points.isNotEmpty()) {
-                // Built once here, not inside the zoom content: the plotted points do
-                // not depend on the viewport (the plot applies it), so recomputing
-                // them on every pinch frame would only churn a fresh list and defeat
-                // the plot's geometry cache.
+                // Built outside the zoom content, so the geometry cache holds.
                 val chartPoints = remember(points, selectedDate, isToday) {
                     cumulativeDayPlotPoints(
                         fractions = points.map { (time, value) ->
@@ -271,10 +266,7 @@ private fun MindfulnessIntradayChartCard(
                     )
                 }
 
-                // Pinch with two fingers to look closer at part of the day. The plot
-                // and its hour row are BOTH inside the zoom and share the one
-                // viewport — a chart whose hours disagreed with its line would be
-                // worse than one that did not zoom at all.
+                // Plot and hour row share the one viewport.
                 ChartZoom(selectedDate, points) { zoom ->
                     Column {
                         MetricLinePlot(

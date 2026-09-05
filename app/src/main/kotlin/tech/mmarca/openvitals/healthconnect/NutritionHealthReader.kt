@@ -61,18 +61,14 @@ internal class NutritionHealthReader(
         val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
         return support.withLogging("readDailyNutrition[$start..$end]", emptyList()) {
             val client = support.client()
-            // One reading serves every chunk: the estimate wants the latest BMR
-            // on record, which does not change with the chunk being read.
+            // One reading serves every chunk: the latest BMR does not change per chunk.
             val bmrKcalPerDay = if (includeCalories && includeEstimatedCalories) {
                 client.readLatestBmrKcalPerDayBefore(end)
             } else {
                 null
             }
-            // Chunked like readDailySteps: a year-long day-bucketed aggregate is
-            // one parcel that can overflow the Binder buffer (see
-            // DailyAggregateMaxQueryDays). One guard around all chunks, so a
-            // failure anywhere still fails the whole read to its empty fallback
-            // — callers branch on "no data", and a half-zeroed year would lie.
+            // Chunked like readDailySteps. One guard around all chunks, so a failure
+            // anywhere fails the whole read: a half-zeroed year would lie.
             val aggregateRows = dailyAggregateDateChunks(startDate, endDate).flatMap { (chunkStart, chunkEnd) ->
                 readDailyNutritionChunk(
                     startDate = chunkStart,
@@ -111,13 +107,9 @@ internal class NutritionHealthReader(
             )
         ).byLocalDate(zone).map { day ->
             val date = day.date
-            // Health Connect synthesizes a basal baseline for TotalCaloriesBurned
-            // even over ranges without a single record — a never-tracked year still
-            // aggregates to ~BMR kcal on every day. A bucket no record contributed
-            // to reports empty dataOrigins; treat it as no data, not as a burn.
-            // Origins cover the whole request, so the check is only sound while the
-            // request carries calorie metrics alone; with hydration in the same
-            // request a hydration-only day would defeat it, so it is skipped there.
+            // Health Connect synthesizes a basal baseline even with no records. A
+            // bucket with empty dataOrigins is no data. Only sound with calorie
+            // metrics alone, so it is skipped with hydration in the request.
             val hasCalorieRecords =
                 includeHydration || day.any { it.dataOrigins.isNotEmpty() }
             val totalCaloriesKcal = if (includeCalories && hasCalorieRecords) {
@@ -148,9 +140,7 @@ internal class NutritionHealthReader(
         }
     }
 
-    // Chunked like readDailyNutrition — with ~40 nutrient metrics per bucket, a
-    // year-long request is the biggest parcel this reader can produce. Same
-    // single guard around all chunks: a failure anywhere fails the whole read.
+    // Chunked like readDailyNutrition, with one guard around all chunks.
     suspend fun readDailyMacros(startDate: LocalDate, endDate: LocalDate): List<DailyMacros> {
         val zone = ZoneId.systemDefault()
         val start = startDate.atStartOfDay(zone).toInstant()
@@ -234,8 +224,7 @@ internal class NutritionHealthReader(
         }
 
         val startTime = request.time
-        // Health Connect needs a strictly positive interval, so an instantaneous intake
-        // is a one-second record.
+        // Health Connect needs a strictly positive interval.
         val endTime = request.endTime
             ?.takeIf { it.isAfter(startTime) }
             ?: startTime.plusSeconds(1)

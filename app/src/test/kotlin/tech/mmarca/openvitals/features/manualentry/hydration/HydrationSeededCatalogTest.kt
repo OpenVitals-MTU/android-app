@@ -29,12 +29,7 @@ import tech.mmarca.openvitals.domain.model.CaffeineSourceCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
-/**
- * In-memory stand-in for [BeverageDao]; the unit suite has no SQLite, so each
- * `@Query`'s SQL is reimplemented over a map (the `is_deleted = 0` filter, the
- * `sort_order, name COLLATE NOCASE` ordering, `COALESCE(MAX(sort_order), -1) + 1`
- * and the IGNORE/UPSERT conflict strategies).
- */
+/** In-memory stand-in for [BeverageDao]; each `@Query`'s SQL is reimplemented over a map. */
 private class InMemoryBeverageDao : BeverageDao {
     private val rows = linkedMapOf<String, BeverageEntity>()
 
@@ -77,12 +72,7 @@ private class InMemoryBeverageDao : BeverageDao {
     }
 }
 
-/**
- * Ported from mobile-app test/features/manualentry/hydration_seeded_catalog_test.dart.
- *
- * Exercises the real [BeverageStore], not a fake catalog: the seeded drinks only
- * exist because the store seeds them on first read.
- */
+/** Exercises the real [BeverageStore]: the seeded drinks only exist because it seeds them on first read. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class HydrationSeededCatalogTest {
 

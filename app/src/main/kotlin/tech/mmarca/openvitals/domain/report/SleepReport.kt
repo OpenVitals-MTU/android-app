@@ -21,13 +21,8 @@ private const val MinNightDurationMs = 3 * 60 * 60 * 1000L
 private const val MinutesPerDay = 24 * 60
 
 /**
- * The sleep section's arithmetic: sessions in, one row per night plus schedule
- * averages and the stage mix out. Bedtime/wake averages are CIRCULAR means of
- * minutes-of-day — bedtimes straddle midnight, and 23:30 with 00:30 must
- * average to midnight, not to noon. Stage numbers only count sessions whose
- * stages cover enough of their span to be truthful
- * ([sleepSessionHasReliableStages]); with none, the mix is null and the
- * per-night stage cells stay empty.
+ * The sleep section: one row per night, schedule averages and the stage
+ * mix. Bedtime averages are circular means. Stages count only reliable nights.
  */
 fun sleepDetail(
     sessions: List<SleepData>,
@@ -83,12 +78,7 @@ private fun stageMix(staged: List<SleepData>): ReportSleepStageMix? {
     )
 }
 
-/**
- * The circular mean of clock times expressed as minutes of day: each time
- * becomes an angle on the 24 h circle, the angles are averaged as vectors, and
- * the mean angle converts back. This is what makes 23:30 + 00:30 average to
- * 00:00 instead of 12:00.
- */
+/** The circular mean of minutes of day, so 23:30 and 00:30 average to 00:00. */
 internal fun circularMeanMinutes(minutesOfDay: List<Int>): Int? {
     if (minutesOfDay.isEmpty()) return null
     val sinSum = minutesOfDay.sumOf { sin(it * 2.0 * PI / MinutesPerDay) }

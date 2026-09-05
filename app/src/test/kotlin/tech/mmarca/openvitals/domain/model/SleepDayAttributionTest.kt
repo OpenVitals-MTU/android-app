@@ -11,12 +11,8 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 
 /**
- * A night is classified by when you FELL ASLEEP (its start), against the
- * configurable night window (default 18:00 -> 10:00). Start-based keeps a night
- * on the wake-up date (bed 22:40 -> next morning) as before, AND keeps a
- * sleep-in past the morning hour with its night instead of misfiling it as a
- * nap. Sessions that begin outside the window are daytime naps, reported
- * apart — never dropped.
+ * A night is classified by when you fell asleep, against the night window (default 18:00 to 10:00).
+ * A sleep-in stays with its night, and sessions outside the window are daytime naps.
  */
 class SleepDayAttributionTest {
 
@@ -53,8 +49,7 @@ class SleepDayAttributionTest {
     }
 
     @Test fun `a sleep-in past the morning hour stays that night, not a nap`() {
-        // Bed 01:00, up 11:00 — wakes an hour after the 10:00 end. End-based
-        // attribution would call it a daytime nap; start-based keeps it the night.
+        // Up at 11:00, an hour after the window end. End-based attribution would call it a nap.
         val sleepIn = session("in", t(18, 1, 0), t(18, 11, 0))
         val night = sleepSessionsForRange(
             listOf(sleepIn),
@@ -88,10 +83,8 @@ class SleepDayAttributionTest {
     }
 
     @Test fun `a same-day window keeps each night on its own date`() {
-        // A 00:00 -> 12:00 window lies wholly within the wake-up date. Anchored
-        // on D-1 it spanned 36 hours, so each date's window swallowed the
-        // neighbouring night too: "today" showed whichever adjacent night was
-        // longer, and the loser was filed as a full-length "nap".
+        // A 00:00 to 12:00 window lies within the wake-up date. Anchored on D-1 it spanned 36 hours
+        // and swallowed the neighbouring night.
         val window = SleepWindow(startHour = 0, endHour = 12)
         val nights = listOf(
             session("n6", t(6, 2, 8), t(6, 11, 43)),

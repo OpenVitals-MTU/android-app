@@ -16,15 +16,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Ports the sensor-readiness half of the `setup screen` group of Flutter's
- * `test/features/manualentry/activity/recording/activity_recording_screen_test.dart`.
- *
- * Live rep counting depends on hardware not every phone has. A device without a
- * proximity sensor cannot count push-ups at all, and the difference between
- * saying so here and letting the user start anyway is the difference between a
- * known limitation and a workout that silently records zero reps. The panel is
- * also where a user learns where to put the phone, which is what makes the
- * count work in the first place.
+ * A phone without a proximity sensor cannot count push-ups. Saying so is the difference
+ * between a known limitation and a workout that records zero reps.
  */
 class RecordingGuidancePanelTest {
 
@@ -63,8 +56,7 @@ class RecordingGuidancePanelTest {
 
     @Test
     fun aStepCountedActivityWithoutActivityRecognitionSaysWhatIsMissing() {
-        // The step detector is there, but Android will not hand its events over
-        // without the permission — so "ready" would be a lie.
+        // The step detector is there, but Android withholds its events without the permission.
         setPanel(
             activityType = requireType("treadmill"),
             readiness = RecordingSensorReadiness(

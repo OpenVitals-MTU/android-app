@@ -18,18 +18,9 @@ import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.testing.string
 
 /**
- * Port of `renders onboarding start screen when onboarding incomplete` from
- * Flutter's `test/widget_test.dart`.
- *
- * The start gate is computed inside [MainActivity]'s `setContent` from the
- * injected `PreferencesRepository`, so there is no seam to call: the only way
- * to assert it is to launch the real activity against a preferences file that
- * says onboarding is unfinished. The flag is saved and put back afterwards so a
- * shared device is left as it was found.
- *
- * The onboarding tagline is the fingerprint because it is in the onboarding
- * header, which BOTH branches of the screen render — the app must not depend on
- * whether the device running the suite happens to have Health Connect.
+ * The start gate is computed inside [MainActivity]'s `setContent`, so the real activity is
+ * launched against a preferences file that says onboarding is unfinished. The flag is put back
+ * afterwards. The onboarding tagline is the fingerprint because both branches render it.
  */
 @RunWith(AndroidJUnit4::class)
 class MainActivityStartDestinationTest {
@@ -38,10 +29,7 @@ class MainActivityStartDestinationTest {
         get() = InstrumentationRegistry.getInstrumentation().targetContext
             .getSharedPreferences(PreferencesRepository.PREFS_FILE, Context.MODE_PRIVATE)
 
-    /**
-     * Runs BEFORE the activity is launched — the gate is read once, on the
-     * first composition, so a `@Before` method would be too late.
-     */
+    /** Runs before the activity is launched; the gate is read once, on the first composition. */
     private val unfinishedOnboarding = object : ExternalResource() {
         private var previousOnboardingDone = false
         private var previousAppLockEnabled = false
@@ -51,8 +39,7 @@ class MainActivityStartDestinationTest {
             previousAppLockEnabled = preferences.getBoolean(AppLockEnabledKey, false)
             preferences.edit(commit = true) {
                 putBoolean(OnboardingDoneKey, false)
-                // The lock gate would sit in front of whatever the start
-                // destination is, so it is out of the way for this assertion.
+                // The lock gate would sit in front of the start destination.
                 putBoolean(AppLockEnabledKey, false)
             }
         }

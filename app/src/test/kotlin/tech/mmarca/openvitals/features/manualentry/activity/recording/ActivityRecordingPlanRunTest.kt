@@ -43,12 +43,7 @@ import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntry
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
-/**
- * The plan cursor riding inside a repetition recording: push-ups twice with a
- * rest, then a plank. Rep steps end at their target, timed steps on a
- * deadline, and every transition carries the step's own exercise and rest into
- * the recorded set.
- */
+/** The plan cursor inside a repetition recording: rep steps end at their target, timed steps on a deadline. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ActivityRecordingPlanRunTest {
 
@@ -283,8 +278,7 @@ class ActivityRecordingPlanRunTest {
         assertEquals(2L, recorder.state.value.repetitionSets.single().repetitions)
         assertEquals(0, recorder.state.value.repetitionSets.single().planStepIndex)
 
-        // Skip the second push-up set, then Back from the plank: the skipped
-        // step recorded nothing, so nothing is popped.
+        // Skip the second set, then Back from the plank: the skipped step recorded nothing, so nothing is popped.
         recorder.startNextRepetitionSet()
         recorder.skipPlanStep()
         assertEquals(2, recorder.state.value.planStepIndex)

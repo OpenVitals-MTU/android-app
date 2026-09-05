@@ -11,10 +11,7 @@ import tech.mmarca.openvitals.domain.model.BleDeviceConnectionStatus
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 
-/**
- * Direct unit tests for the sensor-status mapping the dashboard's top-bar
- * battery action reads, mirroring Flutter's `dashboard_sensor_status_test.dart`.
- */
+/** The sensor-status mapping the dashboard's battery action reads. */
 class DashboardSensorStatusTest {
 
     private fun device(

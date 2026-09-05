@@ -40,13 +40,7 @@ fun OpenVitalsVisualTestSurface(
     height: Dp = 852.dp,
     content: @Composable () -> Unit,
 ) {
-    // Theme and dynamic colour are pinned for the same reason density is: a
-    // golden compares pixels, and both of these otherwise make those pixels a
-    // property of the phone that ran the test rather than of the UI. Left to
-    // the defaults, the mode follows the device — so a baseline recorded in
-    // light mode fails every pixel on a device in dark mode — and the palette
-    // follows the wallpaper, so it changes when the user does. Neither is a UI
-    // regression, and both read as one.
+    // Theme and dynamic colour are pinned: left to the defaults, both make the pixels a property of the phone.
     OpenVitalsTheme(themeMode = AppThemeMode.LIGHT, dynamicColor = false) {
         CompositionLocalProvider(LocalDensity provides Density(density = 1f, fontScale = 1f)) {
             Box(

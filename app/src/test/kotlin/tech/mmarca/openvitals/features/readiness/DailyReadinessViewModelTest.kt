@@ -30,12 +30,7 @@ import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
-/**
- * Port of test/features/readiness/training_readiness_details_view_model_test.dart.
- * The Kotlin detail screen shares [DailyReadinessViewModel] rather than owning a
- * separate details view-model: the load publication, day navigation, force
- * refresh, staleness guard and failure mapping live here.
- */
+/** The detail screen shares [DailyReadinessViewModel]: load publication, navigation, refresh, staleness guard, failure mapping. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class DailyReadinessViewModelTest {
 
@@ -88,9 +83,7 @@ class DailyReadinessViewModelTest {
 
     @Test
     fun `load publishes the insight for the loaded day`() = runTest {
-        // Flutter also asserts the precomputed detail display; the Kotlin detail
-        // spec is built inside the composable, so the insight publication is the
-        // assertable part (DIVERGED).
+        // The detail spec is built inside the composable, so the insight publication is the assertable part.
         val loader = RecordingLoader()
         val vm = viewModel(loader.mock())
         advanceUntilIdle()

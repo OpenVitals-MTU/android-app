@@ -19,24 +19,14 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 /**
- * Typed payloads carried inside [SyncFrame]s, with their (de)serialization.
- *
- * Small control messages (Hello, Auth, BatchAck, Abort) are compact JSON.
- * Record [SyncBatch]es — the only large payloads — are JSON then gzipped, since
- * a batch of health records compresses well and the link is slow.
+ * Typed payloads inside [SyncFrame]s. Control messages are compact JSON;
+ * record batches are JSON then gzipped.
  */
 
-/**
- * The protocol version both peers announce in [SyncHello]. Bump on any wire
- * change; the session refuses a peer on a different version.
- */
+/** The protocol version in [SyncHello]. Bump on any wire change. */
 const val SYNC_PROTOCOL_VERSION: Int = 1
 
-/**
- * The largest a decompressed batch may be. A batch is JSON of at most a few
- * hundred records; 64 MiB is ample headroom, but the hard cap turns a gzip bomb
- * into a bounded [SyncMessageFormatException] instead of an out-of-memory crash.
- */
+/** The largest a decompressed batch may be. Turns a gzip bomb into a bounded exception. */
 const val MAX_DECOMPRESSED_BATCH_BYTES: Int = 64 * 1024 * 1024
 
 /** Thrown when a message payload cannot be decoded. Fatal to the session. */
@@ -44,27 +34,17 @@ class SyncMessageFormatException(message: String, cause: Throwable? = null) :
     Exception(message, cause)
 
 /**
- * One record to sync: an opaque serialized [payload] plus the deterministic
- * content [key] used for dedup, tagged with its Health Connect [recordType]
- * (e.g. `StepsRecord`) so the receiver can group and route it.
- *
- * The protocol treats [payload] as opaque bytes — the health-record codec
- * fills it in. Dedup is entirely by [key]; [originPackage] rides OUTSIDE both
- * the payload and the key so it can never perturb the content fingerprint.
+ * One record to sync: an opaque [payload], the content [key] for dedup and
+ * its [recordType]. [originPackage] rides outside both, so it never touches
+ * the fingerprint.
  */
 class SyncItem(
     val key: String,
     val recordType: String,
     val payload: ByteArray,
     /**
-     * Package of the app that ORIGINALLY recorded this data — the sender's
-     * Health Connect `dataOrigin`, or, when the sender itself received the
-     * record by sync, the origin it preserved (so an A→B→C chain passes the
-     * original through). Optional on the wire (`o`): a build predating the
-     * field omits it, and decoding a message without it yields null — both
-     * directions of a mixed-version pair still sync, the receiver merely
-     * falls back to its own attribution as before. Still protocol version 1
-     * for exactly that reason.
+     * The app that originally recorded this data, preserved through chains.
+     * Optional on the wire, so mixed-version pairs still sync.
      */
     val originPackage: String? = null,
 ) {
@@ -91,16 +71,9 @@ class SyncItem(
 class SyncHello(
     val protocolVersion: Int,
     val deviceName: String,
-    /**
-     * The peer's installed Health Connect provider version code, or null if
-     * unknown. Informational — surfaced in the report, not used for gating.
-     */
+    /** The peer's Health Connect provider version, or null. Informational. */
     val hcProviderVersion: Long?,
-    /**
-     * Record types this device supports (already filtered through the local
-     * permission/provider gate). The syncable set is the intersection of both
-     * peers' lists.
-     */
+    /** Record types this device supports. The syncable set is the intersection. */
     val supportedTypes: List<String>,
     /** This peer's 256-bit session nonce. */
     val nonce: ByteArray,
@@ -145,10 +118,7 @@ class SyncAuthProof(val proof: ByteArray) {
     }
 }
 
-/**
- * A gzipped batch of records flowing one direction, tagged with a monotonic
- * [seq] the receiver echoes in a [SyncBatchAck].
- */
+/** A gzipped batch flowing one way, with a [seq] the receiver echoes in a [SyncBatchAck]. */
 class SyncBatch(val seq: Int, val items: List<SyncItem>) {
 
     fun encode(): ByteArray {
@@ -164,11 +134,7 @@ class SyncBatch(val seq: Int, val items: List<SyncItem>) {
 
     companion object {
         fun decode(bytes: ByteArray): SyncBatch = decoding("batch") {
-            // Inflate through a size-capped loop: gzip's ratio reaches ~1000:1,
-            // so a 16 MiB frame (the frame cap) could inflate toward GiB.
-            // Decoding is chunked, so this throws as soon as output crosses the
-            // cap — the bomb never fully materializes. The cap is far above any
-            // real batch.
+            // Inflate through a size-capped loop, so a gzip bomb never materializes.
             val inflated = ByteArrayOutputStream()
             GZIPInputStream(ByteArrayInputStream(bytes)).use { input ->
                 val buffer = ByteArray(64 * 1024)
@@ -190,10 +156,7 @@ class SyncBatch(val seq: Int, val items: List<SyncItem>) {
     }
 }
 
-/**
- * Acknowledges the batch with the given [seq] — the stop-and-wait signal the
- * sender waits for before sending the next batch.
- */
+/** Acknowledges batch [seq]: the stop-and-wait signal. */
 class SyncBatchAck(val seq: Int) {
     fun encode(): ByteArray = jsonToBytes(buildJsonObject { put("seq", seq) })
 
@@ -215,7 +178,7 @@ class SyncAbort(val reason: String) {
     }
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers.
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -233,11 +196,7 @@ private fun JsonObject.string(key: String): String {
     return value.jsonPrimitive.content
 }
 
-/**
- * Wraps a decode so ANY failure — malformed JSON, a wrong-typed or missing
- * field from a buggy/hostile peer — surfaces as one typed
- * [SyncMessageFormatException] the session turns into a clean abort.
- */
+/** Wraps a decode so any failure surfaces as one [SyncMessageFormatException]. */
 private inline fun <T> decoding(what: String, block: () -> T): T =
     try {
         block()

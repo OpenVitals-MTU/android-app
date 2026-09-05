@@ -16,27 +16,9 @@ val BlueGrey40 = Color(0xFF5E5F68)
 val Teal40 = OpenVitalsGreen
 
 /**
- * Metric accent colours — the contrast-audited palette from the OpenVitals
- * design system (`../design-system/tokens/colors.css`).
- *
- * These replace the stock Material-500 swatches this file used to carry, which
- * failed WCAG 1.4.11's 3:1 floor for graphical objects on **eight of the
- * seventeen**: measured against this app's own light (#FCFCFF) and dark
- * (#1A1C1E) surfaces, floors/amber came out at **1.59:1** — the value is drawn
- * as a chart stroke and an icon, so 3:1 is the binding rule, and 1.59 is not
- * close. Steps, sleep, weight, hydration, workout, body fat and elevation
- * failed on one surface each. Every accent below clears 3:1 against BOTH, worst
- * case 3.09.
- *
- * There is barely any headroom, so: **never brighten one of these without
- * re-measuring against both surfaces.** Making an accent "pop" is the exact
- * regression this palette was built to fix. Dynamic colour re-tints the chrome
- * but not these, so the static surfaces stay the binding constraint; AMOLED
- * only ever increases contrast.
- *
- * They belong on data alone — icons, strokes, small indicators — and never on
- * interactive chrome, so a wallpaper-derived `primary` cannot make a control
- * impersonate a metric.
+ * Metric accent colours from the design system, contrast-audited: every
+ * one clears WCAG 3:1 against both surfaces, worst case 3.09. Never
+ * brighten one without re-measuring. Data only, never interactive chrome.
  */
 val StepsColor = Color(0xFF3F9A63)
 val DistanceColor = Color(0xFF3B7DD8)

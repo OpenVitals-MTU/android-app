@@ -4,14 +4,8 @@ import java.time.Duration
 import java.time.Instant
 
 /**
- * One reading of CoMaps' live navigation row.
- *
- * Every field is exactly what the provider hands over — the distances arrive
- * **already formatted for display** ("450 m", "1.2 km"), because CoMaps
- * formats them against its own locale and unit settings before exposing them.
- * We do not parse them back into numbers: the number we would recover is not
- * one we could re-format any better, and a distance the user reads in CoMaps
- * should read the same here.
+ * One reading of CoMaps' navigation row. Distances arrive already formatted
+ * for display and are never parsed back.
  */
 data class CoMapsNavigationSnapshot(
     val sampledAt: Instant,
@@ -28,11 +22,7 @@ data class CoMapsNavigationSnapshot(
     val pedestrianDirection: String = "",
     val exitNumber: String = "",
 ) {
-    /**
-     * Everything except the timestamp, so two readings taken seconds apart that
-     * say the same thing compare equal. This is what decides whether a sample
-     * is worth keeping — see [CoMapsNavigationSampleRecorder].
-     */
+    /** Everything except the timestamp, so equal readings compare equal. */
     val contentKey: String
         get() = listOf(
             sessionState,
@@ -50,13 +40,7 @@ data class CoMapsNavigationSnapshot(
         ).joinToString("|")
 }
 
-/**
- * What OpenVitals can currently learn from CoMaps.
- *
- * Every one of these is a *normal* state, not an error to shout about: the
- * user is recording an activity, and CoMaps guidance is a bonus. Recording
- * continues through all of them.
- */
+/** What OpenVitals can learn from CoMaps. Every state is normal; recording continues. */
 sealed interface CoMapsNavigationState {
     /** The user has not switched the integration on. */
     data object Disabled : CoMapsNavigationState
@@ -64,34 +48,19 @@ sealed interface CoMapsNavigationState {
     /** No known CoMaps package is installed. */
     data object AppUnavailable : CoMapsNavigationState
 
-    /**
-     * CoMaps is installed, but this build does not expose the navigation
-     * provider (it predates the provider, or is a variant without it).
-     */
+    /** CoMaps is installed but this build has no navigation provider. */
     data object ProviderUnavailable : CoMapsNavigationState
 
-    /**
-     * The provider is there, but we have not been granted
-     * `<comapsPackage>.permission.READ_NAVIGATION_DATA`.
-     */
+    /** The provider is there, but READ_NAVIGATION_DATA is not granted. */
     data object PermissionMissing : CoMapsNavigationState
 
-    /**
-     * CoMaps is there and readable, but is not currently guiding anyone.
-     * Either the provider answered with an empty row, or it answered with a
-     * row whose `session_state` says nobody is being guided — see
-     * [isCoMapsGuiding].
-     */
+    /** CoMaps is readable but not guiding anyone; see [isCoMapsGuiding]. */
     data object NotNavigating : CoMapsNavigationState
 
     /** CoMaps is navigating, and this is what it says. */
     data class Active(
         val snapshot: CoMapsNavigationSnapshot,
-        /**
-         * Null from a CoMaps predating the geometry contract. Here rather
-         * than on [snapshot] because the snapshot is persisted, and a
-         * revision is not history.
-         */
+        /** Null from a CoMaps predating the geometry contract. Not on [snapshot]: that is persisted. */
         val routeRevision: Int? = null,
         val destination: CoMapsCoordinate? = null,
         val destinationName: String? = null,
@@ -101,48 +70,25 @@ sealed interface CoMapsNavigationState {
     data class Error(val message: String? = null) : CoMapsNavigationState
 }
 
-/**
- * CoMaps' `RoutingSessionState` values, as the provider spells them.
- * Only a subset means "someone is being guided right now".
- */
+/** CoMaps' `RoutingSessionState` values that mean someone is being guided. */
 private val CoMapsGuidingSessionStates = setOf(
-    // Following the line, and the one case that matters most for a recording:
-    // off it, recalculating, still very much navigating.
+    // Off the line and recalculating is still navigating.
     "OnRoute",
     "OffRoute",
-    // The session is live; the instructions are momentarily stale rather than
-    // gone. Blanking the panel here would make it flicker on every rebuild.
+    // Live session, stale instructions. Blanking here would flicker.
     "RouteNeedsRebuild",
     "RouteRebuilding",
 )
 
 /**
- * Whether `session_state` means CoMaps is actually guiding someone.
- *
- * This is load-bearing, and the reason is not obvious from our side.
- * **CoMaps never clears its cached routing info** — `RoutingController`
- * assigns `mCachedRoutingInfo` but nothing ever nulls it — and the provider
- * answers straight out of that cache. So the empty cursor we treat as "not
- * navigating" only ever happens *before the first route of the CoMaps
- * process*. Once any route has been built, the provider keeps returning that
- * route's row indefinitely, long after the user arrived and closed it.
- *
- * Without this check the panel pins the last turn of the last route and calls
- * it live guidance — and no amount of polling or observing would notice,
- * because nothing changes and nothing is notified. The column is the only
- * signal there is.
- *
- * Unknown values are treated as NOT guiding: a state we do not recognise is
- * not one we should draw a turn arrow for.
+ * Whether `session_state` means CoMaps is guiding. Load-bearing: CoMaps never
+ * clears its cached routing info, so the provider keeps returning the last
+ * route's row forever. Unknown values count as not guiding.
  */
 fun isCoMapsGuiding(sessionState: String): Boolean =
     sessionState.trim() in CoMapsGuidingSessionStates
 
-/**
- * The turn arrow to draw. CoMaps' own direction vocabulary is far richer than
- * this (it distinguishes, for instance, which side of a roundabout you leave
- * by), but a turn shown to someone mid-run has to be readable at a glance.
- */
+/** The turn arrow to draw. Coarser than CoMaps' vocabulary, readable mid-run. */
 enum class CoMapsTurnKind {
     UNKNOWN,
     STRAIGHT,
@@ -158,13 +104,9 @@ enum class CoMapsTurnKind {
 }
 
 /**
- * Maps a raw CoMaps direction name to a turn arrow.
- *
- * CoMaps sends the *enum name* of its own direction type, and it has changed
- * spelling before — `TurnRight` in one build, `TURN_RIGHT` in another. So this
- * normalizes away case and separators and then matches on substrings, which
- * survives both. The order matters: `SHARPRIGHT` and `SLIGHTRIGHT` must be
- * tested before the bare `RIGHT` they both contain.
+ * Maps a raw CoMaps direction name to an arrow. Spelling has changed between
+ * builds, so this normalizes and matches substrings. Order matters:
+ * SHARPRIGHT before RIGHT.
  */
 fun coMapsTurnKindForDirection(direction: String): CoMapsTurnKind {
     val normalized = direction.uppercase().replace(Regex("[^A-Z]"), "")
@@ -186,14 +128,7 @@ fun coMapsTurnKindForDirection(direction: String): CoMapsTurnKind {
     }
 }
 
-/**
- * A raw direction name rendered as something a person would read: `TURN_RIGHT`
- * and `TurnSlightLeft` both become "Turn right" / "Turn slight left".
- *
- * Deliberately not localized. It is CoMaps' vocabulary, not ours, and it is a
- * fallback for a direction we do not have an arrow for — inventing
- * translations for an enum we do not own would be worse than showing it.
- */
+/** A raw direction name as readable text. Not localized: it is CoMaps' vocabulary. */
 fun coMapsReadableDirection(direction: String): String {
     val words = direction
         .replace('_', ' ')
@@ -206,21 +141,13 @@ fun coMapsReadableDirection(direction: String): String {
         .joinToString(" ")
 }
 
-/**
- * CoMaps drives cars and it walks people, and it fills exactly one of the two
- * direction fields depending on which.
- */
+/** CoMaps fills one of two direction fields, depending on driving or walking. */
 fun coMapsNavigationDirection(snapshot: CoMapsNavigationSnapshot): String =
     snapshot.carDirection.ifEmpty { snapshot.pedestrianDirection }
 
 /**
- * Decides which live readings are worth keeping in the activity's history.
- *
- * The provider will happily answer every second, and almost every answer is
- * the same as the last one. A sample is kept when the guidance actually
- * *changed*, or when [minSampleInterval] has passed since the last one kept —
- * so a long straight road costs one sample every 15 seconds rather than
- * fifteen, and a flurry of turns is never missed.
+ * Keeps a live reading when the guidance changed or [minSampleInterval]
+ * passed since the last kept one.
  */
 class CoMapsNavigationSampleRecorder(
     private val minSampleInterval: Duration = Duration.ofSeconds(15),
@@ -243,22 +170,15 @@ class CoMapsNavigationSampleRecorder(
         get() = recorded.toList()
 }
 
-/**
- * One point of a planned route. Not an exercise route point: that one requires
- * a timestamp and means "where the user actually was".
- */
+/** One point of a planned route, unlike an exercise route point. */
 data class CoMapsCoordinate(
     val latitude: Double,
     val longitude: Double,
 )
 
 /**
- * The route CoMaps is guiding along.
- *
- * Never part of [CoMapsNavigationSnapshot]: that one is sampled into
- * `contentKey` and persisted per sample, so a polyline on it would be
- * stringified and written once per banked reading. This rides on live
- * recording state instead, and is never saved.
+ * The route CoMaps is guiding along. Never on [CoMapsNavigationSnapshot],
+ * which is persisted per sample.
  */
 class CoMapsRoutePolyline(
     /** Bumped by CoMaps on every build, rebuild and close. */
@@ -276,12 +196,7 @@ class CoMapsRoutePolyline(
 
     fun longitudeAt(index: Int): Double = points[index * 2 + 1]
 
-    /**
-     * O(1) on purpose. This sits on state rebuilt every second, and a deep
-     * compare of tens of thousands of doubles is the cost this feature must
-     * not add. The length guards a process restart reissuing revision 0 for a
-     * different route.
-     */
+    /** O(1) on purpose: this sits on state rebuilt every second. */
     override fun equals(other: Any?): Boolean =
         other is CoMapsRoutePolyline &&
             other.revision == revision &&

@@ -23,14 +23,7 @@ import tech.mmarca.openvitals.domain.model.CoMapsNavigationSnapshot
 import tech.mmarca.openvitals.domain.model.coMapsReadableDirection
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 
-/**
- * The CoMaps guidance that was saved while this activity was recorded — the
- * streets, turns and distances the user was actually being given at the time.
- *
- * App-local history: none of this came from, or ever goes to, Health Connect.
- * Renders nothing when the recording banked no guidance, which is most
- * activities.
- */
+/** The CoMaps guidance saved while this activity was recorded. App-local. Nothing when none was banked. */
 @Composable
 internal fun ActivityCoMapsNavigationCard(
     samples: List<CoMapsNavigationSnapshot>,
@@ -55,7 +48,7 @@ internal fun ActivityCoMapsNavigationCard(
                 )
             }
 
-            // Oldest first — the order they were driven in.
+            // Oldest first.
             samples.sortedBy { it.sampledAt }.forEachIndexed { index, sample ->
                 if (index > 0) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

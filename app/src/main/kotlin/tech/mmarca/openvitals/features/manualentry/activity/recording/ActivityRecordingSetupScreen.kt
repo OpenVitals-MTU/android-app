@@ -178,9 +178,6 @@ internal fun ActivityRecordingSetupScreen(
                     )
                 }
                 // The fix status is about GPS, so it goes away with GPS.
-                // Leaving "waiting for a fix" on screen under a recording that
-                // will never use one would be telling the user to wait for
-                // something that is not coming.
                 if (!withoutGps) {
                     PreRecordingGpsFixStatus(
                         state = gpsFixState,
@@ -205,11 +202,7 @@ internal fun ActivityRecordingSetupScreen(
                 }
             } else if (selectedType.recordingSensor == ActivityRecordingSensor.BLE) {
                 ActivityRecordingSensorStatusCard(deviceStatuses = recordingState.bleDeviceStatuses)
-                // The heart-rate-recovery test, offered only where it can
-                // actually be measured: it needs a heart rate arriving live,
-                // every second, right through the minutes after the effort —
-                // which means a connected sensor. A watch cannot drive this;
-                // Health Connect hands its data over long after the fact.
+                // The recovery test needs a live heart rate every second, so a connected sensor.
                 val hasHeartRateSensor = recordingState.bleDeviceStatuses.any { status ->
                     status.status == BleConnectionStatus.CONNECTED &&
                         BleSensorCapability.HEART_RATE in status.capabilities
@@ -329,13 +322,7 @@ internal fun ActivityRecordingSetupScreen(
     }
 }
 
-/**
- * Whether Start can be pressed.
- *
- * Recording without GPS waits for nothing: there is no fix to acquire, no
- * location permission to ask for, and no sensor to require. A duration IS a
- * recording.
- */
+/** Whether Start can be pressed. Without GPS there is nothing to wait for. */
 internal fun activityRecordingStartEnabled(
     baseEnabled: Boolean,
     recordingWithoutGps: Boolean,
@@ -381,9 +368,7 @@ internal fun activityRecordingStartAction(
 ): ActivityRecordingStartAction = when {
     supportsStepCounting && !hasActivityRecognitionPermission ->
         ActivityRecordingStartAction.RequestActivityRecognitionPermission
-    // Not asked for when the user has said they do not want GPS: demanding the
-    // location permission for a recording that will never look at a location is
-    // exactly the kind of thing that makes people distrust a health app.
+    // Not asked for when the user declined GPS: a needless location prompt breeds distrust.
     supportsGpsRoute && !recordingWithoutGps && !hasPrecisePermission ->
         ActivityRecordingStartAction.RequestLocationPermission
     hrrTest && recordingSensor == ActivityRecordingSensor.BLE -> {
@@ -392,8 +377,7 @@ internal fun activityRecordingStartAction(
         ActivityRecordingStartAction.StartHeartRateRecoveryTest(
             HeartRateRecoveryTestConfig(
                 warmupSeconds = ((warmupMinutes ?: 3) * 60).coerceIn(0, 60 * 60),
-                // A target is optional: the rider can always end the effort by
-                // hand, and on a day when the legs are not there they will have to.
+                // A target is optional: the effort can always be ended by hand.
                 targetHeartRateBpm = targetBpm?.takeIf { it > 0 },
             ),
         )
@@ -676,11 +660,7 @@ private fun RecordingWithoutGpsSwitch(
     }
 }
 
-/**
- * Says what a GPS-less recording will cost, before it costs it. The barometer
- * and the step detector never needed a position, so they keep running; what is
- * lost is only what is genuinely derived from location.
- */
+/** Says what a GPS-less recording will cost. Barometer and steps keep running. */
 @Composable
 internal fun RecordingWithoutGpsWarning(
     countsSteps: Boolean,

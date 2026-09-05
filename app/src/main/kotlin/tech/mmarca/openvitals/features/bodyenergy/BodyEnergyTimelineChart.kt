@@ -40,17 +40,9 @@ import tech.mmarca.openvitals.ui.theme.WorkoutColor
 private const val MinutesPerDay = 24 * 60
 
 /**
- * The Body Energy day timeline: the shared [MetricLinePlot] over a 0-100 score,
- * a charge/drain influence strip beneath it, and the hour row under both.
- *
- * The line used to be drawn here by hand — its own spline, its own grid, and no
- * hour axis at all, so a card that could tell you the score could not tell you
- * WHEN. All three now sit inside one [ChartZoom] and share the one viewport: a
- * strip whose bars sat under the wrong stretch of the curve they explain, or an
- * hour row that disagreed with either, would be worse than not zooming at all.
- *
- * Everything drawn arrives precomputed on [BodyEnergyDisplayState] — the bucket
- * fractions, the bar magnitudes and the strip's scale.
+ * The Body Energy day timeline: the shared [MetricLinePlot], an influence
+ * strip beneath it and the hour row, all inside one [ChartZoom] sharing one
+ * viewport. Everything drawn arrives precomputed on [BodyEnergyDisplayState].
  */
 @Composable
 internal fun BodyEnergyTimelineChart(
@@ -65,11 +57,8 @@ internal fun BodyEnergyTimelineChart(
     val influenceColors = bodyEnergyInfluenceColors()
     val timeFormatter = remember { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT) }
 
-    // Scores are integers (0..100) sampled per bucket, so the raw series is a
-    // staircase. Damp that quantization with the shared moving average before it
-    // reaches the plot, otherwise the curve traces the steps and reads as
-    // jagged. A DATA decision, which is why it happens here and not in the
-    // painter.
+    // Scores are integers per bucket, so the raw series is a staircase. Damp it
+    // before the plot. A data decision, not a painter one.
     val plotPoints = remember(points) {
         movingAverageY(points.map { Offset(it.xFraction, it.score.toFloat()) })
             .map { MetricLinePlotPoint(xFraction = it.x, value = it.y.toDouble()) }
@@ -79,9 +68,7 @@ internal fun BodyEnergyTimelineChart(
         Column(modifier = Modifier.fillMaxWidth()) {
             MetricLinePlot(
                 points = plotPoints,
-                // A score DEFINED as 0 to 100. Deliberately unpadded: padding
-                // would invent headroom above a ceiling and depth below a floor,
-                // and a 0-100 score that draws itself off its own scale lies.
+                // A score defined as 0 to 100. Unpadded on purpose.
                 minValue = 0.0,
                 maxValue = 100.0,
                 accentColor = accentColor,
@@ -91,8 +78,7 @@ internal fun BodyEnergyTimelineChart(
                 drawPoints = points.size <= 40,
                 viewport = zoom.viewport,
                 multiTouch = zoom.multiTouch,
-                // The score points carry no timestamp of their own — only where
-                // they sit across the day — which is all the tooltip needs.
+                // The score points carry only their position across the day.
                 scrubLabel = { point ->
                     point.value.roundToInt().toString() to clockAt(point.xFraction, timeFormatter)
                 },
@@ -115,9 +101,7 @@ internal fun BodyEnergyTimelineChart(
                         .height(ChartTokens.heightInfluenceStrip),
                 )
             }
-            // The plot has a y-axis gutter, so the hour row insets to match it —
-            // the line's x, the bar's x and the row's 12:00 all come from the
-            // same fraction of the same day.
+            // The plot has a y-axis gutter, so the hour row insets to match.
             ChartXAxisWithYAxis(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -150,23 +134,18 @@ private fun BodyEnergyInfluenceBars(
         if (bars.isEmpty()) return@Canvas
         val scale = maxMagnitude.takeIf { it > 0.0 } ?: 1.0
         val minBarWidth = 2.dp.toPx()
-        // Bars ride the SAME viewport as the score line above: position through
-        // it, widen by the zoom factor, and clip rather than clamp so a bar
-        // half-off the edge stays honestly half-off.
+        // Bars ride the same viewport as the line: position through it, clip rather than clamp.
         val body: DrawScope.() -> Unit = {
             bars.forEach { bar ->
                 val visibleFraction = viewport.visibleFraction(bar.xFraction.coerceIn(0f, 1f))
-                // Cheap cull: a bar well outside the window contributes nothing.
+                // A bar well outside the window contributes nothing.
                 if (visibleFraction < -0.05f || visibleFraction > 1.05f) return@forEach
                 val x = size.width * visibleFraction
-                // The bar keeps its share of the DAY, so it grows as the day is
-                // stretched: its plot width is that share divided by the visible
-                // span.
+                // The bar keeps its share of the day, so it grows as the day is stretched.
                 val width = (size.width * (bar.widthFraction / viewport.span) * 0.82f)
                     .coerceIn(minBarWidth, size.width)
                 val left = x - width / 2f
-                // The one bar-corner rule, rather than this strip's own flat 2px
-                // — which made it the only bar in the app with square shoulders.
+                // The one bar-corner rule.
                 val radiusPx = ChartTokens.barRadius(width.toDp()).toPx()
                 val cornerRadius = CornerRadius(radiusPx, radiusPx)
                 val color = colors.getValue(bar.influence)
@@ -188,9 +167,7 @@ private fun BodyEnergyInfluenceBars(
                         cornerRadius = cornerRadius,
                     )
                 }
-                // A NO_DATA bucket with neither charge nor drain reads as a
-                // low-emphasis tick spanning the strip: nothing moved, and we do
-                // not know whether anything should have.
+                // A NO_DATA bucket with neither charge nor drain is a low-emphasis tick.
                 if (bar.charge <= 0.0 &&
                     bar.drain <= 0.0 &&
                     bar.influence == BodyEnergyPrimaryInfluence.NO_DATA
@@ -209,35 +186,27 @@ private fun BodyEnergyInfluenceBars(
     }
 }
 
-/**
- * The clock time a fraction of the way through the day, in the device's own
- * 12/24-hour convention.
- */
+/** The clock time a fraction of the way through the day. */
 private fun clockAt(fraction: Float, formatter: DateTimeFormatter): String {
     val minutes = (fraction.coerceIn(0f, 1f) * MinutesPerDay).roundToInt()
     return LocalTime.of((minutes / 60).coerceIn(0, 23), minutes % 60).format(formatter)
 }
 
 /**
- * The accent colour for every Body Energy influence, resolved once so the strip
- * painter can look one up without a composable call per bar.
- *
- * Charge is cool, drain is warm, and everyday activity gets its own hue rather
- * than borrowing exertion's: "a 20k-step day" and "a hard session" are the two
- * readings this split exists to tell apart, and one colour for both would put
- * them back together in the only place the user can see.
+ * The accent colour per influence, resolved once for the strip painter.
+ * Charge is cool, drain is warm; everyday activity gets its own hue.
  */
 @Composable
 internal fun bodyEnergyInfluenceColors(): Map<BodyEnergyPrimaryInfluence, Color> = mapOf(
-    // Recovery / charge — cool hues, clearly separated from the warm drain set.
+    // Recovery and charge: cool hues.
     BodyEnergyPrimaryInfluence.SLEEP_RECOVERY to StepsColor, // green
     BodyEnergyPrimaryInfluence.QUIET_REST to WorkoutColor, // cyan
-    // Drain — warm hues plus everyday activity's blue, spread so each is distinct.
+    // Drain: warm hues plus everyday activity's blue.
     BodyEnergyPrimaryInfluence.EVERYDAY_ACTIVITY to DistanceColor, // blue
     BodyEnergyPrimaryInfluence.EXERTION to CaloriesColor, // red
     BodyEnergyPrimaryInfluence.ELEVATED_HEART_RATE to FloorsColor, // amber
     BodyEnergyPrimaryInfluence.RECOVERY_DEBT to HeartColor, // magenta
-    // Neutral / absent — low-emphasis greys.
+    // Neutral or absent: low-emphasis greys.
     BodyEnergyPrimaryInfluence.NO_DATA to MaterialTheme.colorScheme.outline,
     BodyEnergyPrimaryInfluence.STEADY to MaterialTheme.colorScheme.onSurfaceVariant,
 )

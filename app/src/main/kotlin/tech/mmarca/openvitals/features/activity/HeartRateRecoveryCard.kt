@@ -29,12 +29,8 @@ import tech.mmarca.openvitals.domain.insights.HeartRateRecoveryReading
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 
 /**
- * How far the heart rate fell once the effort stopped, for one workout.
- *
- * The card's job is as much to say what it does NOT know as what it does. A watch that
- * reverts to a reading a minute the moment a workout ends cannot produce the thirty-second
- * mark, and it comes back blank here rather than interpolated — with a line underneath
- * saying why, because a blank with no explanation reads as a bug.
+ * How far the heart rate fell after one workout. A mark the watch could not
+ * record comes back blank with a line saying why, never interpolated.
  */
 @Composable
 internal fun HeartRateRecoveryCard(
@@ -132,11 +128,7 @@ private fun HeartRateRecoveryMarksRow(reading: HeartRateRecoveryReading) {
     }
 }
 
-/**
- * Why the reading looks the way it does. Ordered so the most consequential comes
- * first: what makes the number meaningless, then what makes it uncomparable, then
- * what merely makes it rough.
- */
+/** Why the reading looks the way it does, most consequential first. */
 @Composable
 private fun issueExplanations(reading: HeartRateRecoveryReading): List<String> {
     val issues = reading.issues

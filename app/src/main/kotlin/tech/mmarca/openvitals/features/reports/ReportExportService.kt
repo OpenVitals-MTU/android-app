@@ -39,12 +39,7 @@ import tech.mmarca.openvitals.features.reports.pdf.ReportValueFormatter
 
 internal const val ReportExportCacheDirectory = "report_exports"
 
-/**
- * The whole report pipeline behind one call: read via [ReportDataLoader],
- * render via [ReportPdfWriter], stage the PDF in the cache for share/save.
- * Runs in the caller's coroutine (the builder ViewModel) — this repo runs
- * user-attended work in ViewModels, not WorkManager (see CsvImportService).
- */
+/** The report pipeline: read, render, stage the PDF. Runs in the caller's coroutine. */
 @Singleton
 class ReportExportService @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -89,7 +84,7 @@ class ReportExportService @Inject constructor(
 
     fun metricTitle(metric: ReportMetric): String = context.getString(metricTitleRes(metric))
 
-    // ── labels ──────────────────────────────────────────────────────────────
+    // Labels.
 
     private fun buildLabels(data: ReportData): ReportPdfLabels {
         val formatters = DateTimeFormatterProvider()
@@ -251,7 +246,7 @@ class ReportExportService @Inject constructor(
             }
     }
 
-    // ── values ──────────────────────────────────────────────────────────────
+    // Values.
 
     private fun formatter(granularity: ReportGranularity): ReportValueFormatter =
         object : ReportValueFormatter {

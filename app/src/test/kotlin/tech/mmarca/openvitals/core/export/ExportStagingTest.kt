@@ -11,14 +11,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.core.diagnostics.DiagnosticsExportCacheDirectory
 import tech.mmarca.openvitals.features.activity.RouteExportCacheDirectory
 
-/**
- * Ported from the Flutter `test/core/export/export_staging_test.dart`.
- *
- * The staging area every export passes through on its way to another app: the
- * cache root stands in for `Context.cacheDir`, so the feature directory, the
- * 24 h sweep and the overwrite-instead-of-stack rule are all exercised through
- * the production staging call.
- */
+/** The staging area every export passes through: the feature directory, the 24 h sweep and the overwrite rule. */
 class ExportStagingTest {
 
     private lateinit var cacheRoot: File
@@ -48,8 +41,7 @@ class ExportStagingTest {
 
     @Test
     fun `two features staging the same name do not collide`() {
-        // The directory name is the only thing separating them, so this is the
-        // property that keeps a diagnostics log from overwriting a route export.
+        // The directory name is what keeps a diagnostics log from overwriting a route export.
         assertNotEquals(DiagnosticsExportCacheDirectory, RouteExportCacheDirectory)
 
         val route = featureDirectory(RouteExportCacheDirectory)

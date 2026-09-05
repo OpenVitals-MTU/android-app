@@ -6,13 +6,8 @@ import android.bluetooth.BluetoothSocket
 import java.io.IOException
 
 /**
- * RFCOMM server. [listen] opens the server socket (publishing an SDP record for
- * [SyncBluetooth.APP_UUID]) so a peer can find it; [accept] then blocks for ONE
- * inbound connection. Split so the manager can report "listening" to the caller
- * the instant the socket is open, before the blocking accept.
- *
- * [cancel] closes the server socket, which unblocks a waiting [accept] (it
- * throws, and [accept] returns null).
+ * RFCOMM server. [listen] opens the socket, [accept] blocks for one
+ * connection, [cancel] closes the socket and unblocks [accept].
  */
 internal class RfcommServer(private val adapter: BluetoothAdapter) {
     private var serverSocket: BluetoothServerSocket? = null
@@ -27,11 +22,7 @@ internal class RfcommServer(private val adapter: BluetoothAdapter) {
             )
     }
 
-    /**
-     * Blocks until a peer connects (returns its socket) or the server is
-     * cancelled/errors (returns null). Closes the listening socket once a peer
-     * is accepted — one connection per session.
-     */
+    /** Blocks until a peer connects, or null when cancelled. One connection per session. */
     fun accept(): BluetoothSocket? {
         val server = serverSocket ?: return null
         return try {
@@ -39,7 +30,7 @@ internal class RfcommServer(private val adapter: BluetoothAdapter) {
             try {
                 server.close()
             } catch (_: IOException) {
-                // best effort
+                // Best effort.
             }
             socket
         } catch (_: IOException) {
@@ -55,7 +46,7 @@ internal class RfcommServer(private val adapter: BluetoothAdapter) {
         try {
             serverSocket?.close()
         } catch (_: IOException) {
-            // best effort
+            // Best effort.
         }
         serverSocket = null
     }

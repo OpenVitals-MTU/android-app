@@ -41,19 +41,10 @@ sealed interface CoMapsProviderAnswer {
 }
 
 /**
- * One emission of the live feed.
- *
- * [live] marks an emission that came from a `notifyChange` — CoMaps saying
- * something moved. It is the ONLY evidence a route is still being driven:
- * CoMaps never clears the routing info its provider answers from, so a
- * finished route keeps being served until the CoMaps process dies.
- *
- * [observing] says whether that evidence can arrive at all. When the observer
- * could not be registered there is none, and the reader must go back to
- * believing what it reads.
- *
- * [initial] marks the first emission of a NEW watch — a fresh recording.
- * Whatever a previous watch learned about a previous route does not carry over.
+ * One emission of the live feed. [live] marks a `notifyChange`, the only
+ * evidence a route is still being driven: CoMaps never clears its routing
+ * info. [observing] says whether that evidence can arrive. [initial] marks
+ * the first emission of a new watch.
  */
 data class CoMapsLiveEvent(
     val answer: CoMapsProviderAnswer,
@@ -63,21 +54,13 @@ data class CoMapsLiveEvent(
 )
 
 /**
- * The platform surface of the CoMaps integration — a `ContentResolver` query,
- * a `PackageManager` lookup, an intent launch — and nothing else. It
- * classifies nothing: it reports what it found and hands the raw row up,
- * because "is this navigating?" is a domain question and domain questions
- * belong where they can be answered without a device.
+ * The platform surface of the CoMaps integration: a `ContentResolver` query,
+ * a `PackageManager` lookup, an intent launch. It classifies nothing.
  *
- * CoMaps exposes a live-navigation `ContentProvider` (upstream PR #4588):
- * `content://<comapsPackage>.provider.navigation/live`, read-protected by the
- * runtime permission `<comapsPackage>.permission.READ_NAVIGATION_DATA`.
- *
- * Package visibility is load-bearing. From Android 11 an app cannot see a
- * package it has not declared, so `AndroidManifest.xml` lists every known
- * CoMaps package *and* every provider authority in `<queries>`. Without that
- * the resolves below silently return null and CoMaps looks uninstalled while
- * it is running.
+ * CoMaps exposes `content://<comapsPackage>.provider.navigation/live`,
+ * guarded by `<comapsPackage>.permission.READ_NAVIGATION_DATA`. Every known
+ * package and authority must be in the manifest `<queries>`, or resolves
+ * silently return null.
  */
 @Singleton
 class CoMapsNavigationSource @Inject constructor(
@@ -108,8 +91,7 @@ class CoMapsNavigationSource @Inject constructor(
             ).use { cursor ->
                 when {
                     cursor == null -> CoMapsProviderAnswer.ProviderUnavailable
-                    // The provider answers an empty cursor when nobody is
-                    // being guided anywhere. That is not an error.
+                    // An empty cursor means nobody is being guided. Not an error.
                     !cursor.moveToFirst() -> CoMapsProviderAnswer.NotNavigating
                     else -> CoMapsProviderAnswer.Active(
                         LiveColumns.associateWith { column -> cursor.typedValue(column) },
@@ -125,19 +107,9 @@ class CoMapsNavigationSource @Inject constructor(
     }
 
     /**
-     * Watches the live row and pushes a fresh reading on every change.
-     *
-     * CoMaps' `NavigationService` calls `notifyChange` on the provider URI at
-     * every location fix while it guides, so guidance arrives as fast as
-     * CoMaps makes it and a phone that is navigating nowhere is never queried.
-     *
-     * The first emission is the CURRENT state, not a change: a subscriber that
-     * attached mid-route would otherwise see nothing until the next fix.
-     *
-     * Registration is best-effort. A missing app, a build with no provider, a
-     * revoked grant — all ordinary states the query already describes, so a
-     * failure to observe emits that state and stops there rather than erroring
-     * the flow. The recording never depends on guidance.
+     * Watches the live row and pushes a reading on every change. The first
+     * emission is the current state. Registration is best-effort: a failure
+     * emits the state the query describes and stops.
      */
     fun liveUpdates(): Flow<CoMapsLiveEvent> = callbackFlow {
         var observer: ContentObserver? = null
@@ -166,9 +138,7 @@ class CoMapsNavigationSource @Inject constructor(
                 null
             }
         }
-        // Registered FIRST so `observing` is the truth by the time it is sent.
-        // This one is a read of whatever the provider is holding, not evidence
-        // that anybody is navigating.
+        // Registered first so `observing` is the truth. This is a read, not evidence.
         trySend(
             CoMapsLiveEvent(
                 answer = withContext(Dispatchers.IO) { queryLiveBlocking() },
@@ -183,10 +153,8 @@ class CoMapsNavigationSource @Inject constructor(
     }
 
     /**
-     * The followed route as interleaved `lat, lon` doubles, or null when there
-     * is no route to read. Its own method, never folded into [queryLive]: that
-     * runs per location fix, and a route is thousands of points that only
-     * change with `route_revision`.
+     * The followed route as interleaved `lat, lon`, or null. Separate from
+     * [queryLive], which runs per fix; a route only changes with `route_revision`.
      */
     suspend fun queryRoute(): DoubleArray? = withContext(Dispatchers.IO) {
         val authority = providerAuthority() ?: return@withContext null
@@ -217,14 +185,8 @@ class CoMapsNavigationSource @Inject constructor(
     }
 
     /**
-     * The permission guarding the provider, for the CoMaps that is actually
-     * installed.
-     *
-     * CoMaps declares it as `${applicationId}.permission.READ_NAVIGATION_DATA`,
-     * so the NAME varies per flavour exactly as the authority does — Play is
-     * `app.comaps.google.…` and F-Droid is `app.comaps.fdroid.…`. Asking for
-     * the wrong one is denied silently and forever. Null when no CoMaps is
-     * installed — there is then no permission to hold.
+     * The provider's permission for the installed CoMaps. The name varies per
+     * flavour; asking for the wrong one is denied forever. Null without CoMaps.
      */
     fun permissionName(): String? =
         installedPackage()?.let { packageName -> "$packageName$PermissionSuffix" }
@@ -235,18 +197,14 @@ class CoMapsNavigationSource @Inject constructor(
             PackageManager.PERMISSION_GRANTED
     }
 
-    /** Drops the cached package choice — after a grant, the probe may answer differently. */
+    /** Drops the cached package choice; after a grant the probe may answer differently. */
     fun invalidateResolvedPackage() {
         resolvedPackage = null
     }
 
     fun canLaunchCoMaps(): Boolean = launchPackage() != null
 
-    /**
-     * Hands CoMaps the map, centred on our latest fix when we have one, so the
-     * user can plan a route there. OpenVitals never plans or navigates: CoMaps
-     * owns the route, we own the recording.
-     */
+    /** Hands CoMaps the map, centred on our latest fix, for route planning. */
     fun launchForPlanning(latitude: Double?, longitude: Double?): Boolean {
         val packageName = launchPackage() ?: return false
         val intent = if (latitude != null && longitude != null) {
@@ -266,12 +224,7 @@ class CoMapsNavigationSource @Inject constructor(
         }
     }
 
-    /**
-     * Column values arrive typed: the distances are *strings already
-     * formatted* by CoMaps against its own locale and units, the times are
-     * ints, the completion is a double. Read each as what it is, and let a
-     * column CoMaps did not send simply be absent.
-     */
+    /** Column values arrive typed; read each as what it is. */
     private fun Cursor.typedValue(column: String): Any? {
         val index = getColumnIndex(column)
         if (index < 0 || isNull(index)) return null
@@ -285,13 +238,9 @@ class CoMapsNavigationSource @Inject constructor(
     private enum class RouteSupport { YES, NO, DENIED }
 
     /**
-     * The one CoMaps this build talks to: provider, permission and launch
-     * intent must come from the SAME package, or the app asks one flavour for
-     * a grant and queries another. Preferred in order: one whose provider
-     * answers `/route`; one that refused the probe, since a refusal means
-     * "not granted yet" and choosing it is what puts it in front of the
-     * prompt; whichever resolved first. Cached, because [queryLive] runs once
-     * per fix.
+     * The one CoMaps this build talks to. Provider, permission and launch
+     * intent must share a package. Prefers one whose provider answers
+     * `/route`, then one that refused the probe (not granted yet). Cached.
      */
     private fun coMapsPackage(): String? {
         val cached = resolvedPackage
@@ -316,8 +265,7 @@ class CoMapsNavigationSource @Inject constructor(
             ?: candidates.first()
     }
 
-    /** Asked of the URI, not of a column list: a CoMaps without the geometry
-     * contract does not match `/route` and answers a null cursor. */
+    /** Asked of the URI: a CoMaps without the geometry contract answers a null cursor. */
     private fun probeRouteGeometry(authority: String): RouteSupport = try {
         context.contentResolver.query(
             Uri.parse("content://$authority/route"),
@@ -378,19 +326,10 @@ class CoMapsNavigationSource @Inject constructor(
         }
 
     companion object {
-        /**
-         * A SUFFIX, not a whole name: CoMaps declares
-         * `${applicationId}.permission.READ_NAVIGATION_DATA`, so the
-         * flavour's package goes in front (see [permissionName]).
-         */
+        /** A suffix: the flavour's package goes in front. See [permissionName]. */
         private const val PermissionSuffix = ".permission.READ_NAVIGATION_DATA"
 
-        /**
-         * Every CoMaps flavour we know of. The authority is the package plus
-         * `.provider.navigation` (CoMaps builds it from its own
-         * applicationId), so one list drives both package detection and
-         * provider resolution.
-         */
+        /** Every known CoMaps flavour. The authority is the package plus `.provider.navigation`. */
         val KnownCoMapsPackages = listOf(
             "app.comaps",
             "app.comaps.fdroid",
@@ -417,8 +356,7 @@ class CoMapsNavigationSource @Inject constructor(
             "next_street",
             "completion_percent",
             "exit_num",
-            // Null on a CoMaps predating the geometry contract, which is how
-            // the package probe tells the two apart.
+            // Null on a CoMaps predating the geometry contract.
             "route_revision",
             "route_point_count",
             "dest_lat",

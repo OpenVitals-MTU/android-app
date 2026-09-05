@@ -70,9 +70,7 @@ class AppleHealthImportProgressTest {
             notSelectedRecords = 5,
         )
 
-        // THE regression premise: selectedPreparedRecords is 1 in both snapshots, so
-        // the old selected-only formula would report the same number twice while the
-        // importer streams past five unselected records.
+        // selectedPreparedRecords is 1 in both snapshots, so the old formula reported the same number twice.
         assertEquals(1, before.selectedPreparedRecords)
         assertEquals(1, afterUnselectedRecords.selectedPreparedRecords)
         assertEquals(18, before.percent)
@@ -81,8 +79,7 @@ class AppleHealthImportProgressTest {
 
     @Test
     fun `a complete phase is 100 even with no totals at all`() {
-        // The COMPLETE check runs BEFORE the denominator check, so a finished
-        // import never reports "unknown".
+        // The COMPLETE check runs before the denominator check, so a finished import never reports "unknown".
         val progress = AppleHealthImportProgress(phase = AppleHealthImportPhase.COMPLETE)
 
         assertEquals(100, progress.percent)

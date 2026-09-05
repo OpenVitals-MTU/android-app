@@ -43,10 +43,7 @@ enum class DashboardWidgetId {
     MINDFULNESS,
     CYCLE,
 
-    /**
-     * A paired watch. Device state, not a metric — it has no
-     * [DashboardMetric], and materialises only once a watch exists.
-     */
+    /** A paired watch. Device state, not a metric. */
     WATCH,
 }
 
@@ -58,8 +55,7 @@ const val DashboardFixedWidgetCount = DashboardWidgetGridColumns * DashboardFixe
 val DefaultDashboardWidgetIds: List<DashboardWidgetId> = listOf(
     DashboardWidgetId.STEPS,
     DashboardWidgetId.WEEKLY_CARDIO_LOAD,
-    // First tile after the two hero rings: it is the one the user taps to
-    // sync, so it belongs on the first page rather than the last.
+    // First after the hero rings: it is the tile the user taps to sync.
     DashboardWidgetId.WATCH,
     DashboardWidgetId.DISTANCE,
     DashboardWidgetId.CALORIES_OUT,
@@ -101,28 +97,16 @@ fun customizableDashboardWidgetIds(widgetIds: List<DashboardWidgetId>): List<Das
     widgetIds.distinct()
 
 /**
- * Every id that existed before [dashboardKnownWidgetIds] started being
- * recorded. Seeded on the first migration so the ids introduced alongside it —
- * [DashboardWidgetId.WATCH] — read as NEW rather than as widgets the user had
- * already been offered and chosen to drop.
- *
- * A later release adds nothing here: from now on the stored set is maintained,
- * so any newly added id is automatically new to every install.
+ * Every id that existed before known ids were recorded, so the ids added
+ * alongside read as new. Nothing is added here later.
  */
 private val WidgetIdsKnownBeforeTracking: Set<String> =
     (DashboardWidgetId.entries - DashboardWidgetId.WATCH).mapTo(mutableSetOf()) { it.name }
 
 /**
- * The saved layout with any widget this install has never offered appended.
- *
- * The saved order is the user's arrangement, so a widget missing from it is
- * normally one they removed on purpose — but a widget added by an app update is
- * missing for a completely different reason, and returning the stored list
- * verbatim hid it from every user who had ever edited their dashboard. The
- * known-ids set is what separates the two, so a deliberate removal stays
- * removed while a genuinely new tile appears at the end.
- *
- * Returns the ids to render, and persists both lists when something was added.
+ * The saved layout with any never-offered widget appended. The known-ids
+ * set tells a deliberate removal from a widget added by an update.
+ * Persists both lists when something was added.
  */
 fun dashboardWidgetIdsWithNewOnesAppended(
     storedIds: List<String>?,
@@ -132,10 +116,8 @@ fun dashboardWidgetIdsWithNewOnesAppended(
 ): List<DashboardWidgetId> {
     val allIds = DashboardWidgetId.entries.map { it.name }.toSet()
     val recordKnown = { order: List<String>? -> if (knownIds != allIds) persist(order, allIds) }
-    // An install that has never edited its dashboard follows the default order,
-    // which already carries every id. Record the baseline for the next update,
-    // but write NO order: an empty one reads as "the user removed everything"
-    // and would leave the dashboard blank.
+    // No saved order follows the default. Record the baseline but write no
+    // order: an empty one reads as "removed everything".
     if (storedIds == null) {
         recordKnown(null)
         return DefaultDashboardWidgetIds
@@ -151,15 +133,7 @@ fun dashboardWidgetIdsWithNewOnesAppended(
     return dashboardWidgetIdsFromStored(appended)
 }
 
-/**
- * Places each new id where the DEFAULT order puts it relative to the widgets
- * the user kept, rather than at the end.
- *
- * Appending buried a new tile on the last carousel page, which for something
- * like the watch — the tile you tap to sync — is the wrong end of the
- * dashboard. The user's own arrangement is untouched: only the new id is
- * positioned, and only against the tiles still present.
- */
+/** Places each new id where the default order puts it relative to the kept widgets. */
 private fun insertByDefaultOrder(
     stored: List<String>,
     fresh: List<DashboardWidgetId>,
@@ -170,16 +144,11 @@ private fun insertByDefaultOrder(
     val positionOf = { name: String -> defaultIndex[name] ?: Int.MAX_VALUE }
     val result = stored.toMutableList()
     fresh.sortedBy { positionOf(it.name) }
-        // Already in the layout: the known-ids set says it is new, the saved
-        // order says otherwise. Trust the order — inserting again would write
-        // the id twice, and only the render-time distinct() would hide it.
+        // Already in the layout: trust the order over the known-ids set.
         .filterNot { it.name in stored }
         .forEach { id ->
         val target = positionOf(id.name)
-        // Straight after the last kept widget that PRECEDES it in the default
-        // order, rather than before the first that follows: an id the default
-        // order does not mention sorts as "after everything", and scanning
-        // forwards would let the first of those block the insertion.
+        // After the last kept widget that precedes it, so an unlisted id sorts last.
         result.add(result.indexOfLast { positionOf(it) < target } + 1, id.name)
     }
     return result
@@ -243,13 +212,8 @@ fun dashboardWidgetIdsInGridPages(
 }
 
 /**
- * Whether the installed Health Connect provider can serve this widget's metric
- * at all (see [tech.mmarca.openvitals.domain.model.DashboardData.supportedMetrics]).
- *
- * BODY_ENERGY is derived rather than read, so it has no [DashboardMetric] of its
- * own; it follows heart rate, the reading it is computed from. A widget with no
- * metric behind it at all (WORKOUT renders through the activities section) is
- * never gated.
+ * Whether the provider can serve this widget's metric. BODY_ENERGY follows
+ * heart rate. A widget with no metric is never gated.
  */
 internal fun DashboardWidgetId.isSupportedBy(supportedMetrics: Set<DashboardMetric>): Boolean =
     when (this) {
@@ -297,6 +261,6 @@ fun DashboardWidgetId.toDashboardMetricOrNull(): DashboardMetric? = when (this) 
     DashboardWidgetId.CARDIO_LOAD -> DashboardMetric.WEEKLY_CARDIO_LOAD
     DashboardWidgetId.MINDFULNESS -> DashboardMetric.MINDFULNESS
     DashboardWidgetId.CYCLE -> DashboardMetric.CYCLE
-    // Device state: nothing in Health Connect backs it, so it is never gated.
+    // Device state, never gated.
     DashboardWidgetId.WATCH -> null
 }

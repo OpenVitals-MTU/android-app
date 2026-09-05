@@ -7,16 +7,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The curve is decoration. The data still has to be true.
- *
- * A plain spline (Catmull-Rom, natural cubic) overshoots: to stay smooth through a
- * corner it swings past the points either side. On a cumulative chart that reads as the
- * running total DIPPING between two drinks — a line saying you un-drank water. These
- * tests pin that it cannot happen.
- *
- * The Android-backed [smoothPath] cannot be walked in a JVM test, so these sample the
- * pure [monotoneCubicSegments] layer with the cubic Bézier formula — the same geometry
- * the path builder emits.
+ * The curve is decoration; the data must stay true. A plain spline overshoots, which on a
+ * cumulative chart reads as the total dipping. These sample the pure [monotoneCubicSegments]
+ * layer with the cubic Bézier formula, since [smoothPath] cannot run on the JVM.
  */
 class ChartCurveTest {
 
@@ -55,9 +48,7 @@ class ChartCurveTest {
     }
 
     @Test fun `a rising series never dips on the way up`() {
-        // Screen coords: y grows DOWNWARD, so a rising total is a falling y. The three
-        // clustered points then the long flat run are exactly the shape that makes a
-        // naive spline overshoot.
+        // Screen coords: y grows downward. Three clustered points then a flat run is the overshoot shape.
         val samples = sampled(
             listOf(
                 Offset(0f, 200f),
@@ -69,7 +60,7 @@ class ChartCurveTest {
         )
 
         for (i in 1 until samples.size) {
-            // The curve must never go back DOWN — that would be the running total dipping.
+            // The curve must never go back down.
             assertTrue(
                 "y rose from ${samples[i - 1].y} to ${samples[i].y} at sample $i",
                 samples[i].y <= samples[i - 1].y + 0.01f,
@@ -78,8 +69,7 @@ class ChartCurveTest {
     }
 
     @Test fun `a flat run stays flat`() {
-        // "You drank nothing between nine and six" must read as a flat line, not as a
-        // gentle bulge that implies you were sipping the whole time.
+        // No drinks between nine and six must read as a flat line, not a bulge.
         val samples = sampled(
             listOf(
                 Offset(0f, 200f),
@@ -110,8 +100,7 @@ class ChartCurveTest {
     }
 
     @Test fun `draws a vertical riser straight rather than looping through it`() {
-        // Two readings at the same instant. No function curves through that, and a
-        // spline that tries will loop the path back on itself.
+        // Two readings at the same instant. A spline that tries would loop back on itself.
         val points = listOf(
             Offset(0f, 100f),
             Offset(50f, 100f),
@@ -137,7 +126,7 @@ class ChartCurveTest {
         assertEquals(1, monotoneCubicSegments(listOf(Offset(0f, 0f), Offset(10f, 10f))).size)
     }
 
-    // ── movingAverageY ──────────────────────────────────────────────────────
+    // movingAverageY.
 
     @Test fun `fewer than three points pass through untouched`() {
         val points = listOf(Offset(0f, 10f), Offset(1f, 20f))
@@ -145,7 +134,7 @@ class ChartCurveTest {
     }
 
     @Test fun `averages a centred window and clamps it at the edges`() {
-        // 5 points -> radius (5/16=0) coerced up to 1.
+        // 5 points: radius (5/16=0) coerced up to 1.
         val points = listOf(
             Offset(0f, 0f),
             Offset(1f, 10f),
@@ -160,12 +149,12 @@ class ChartCurveTest {
         assertEquals(10f, result[1].y, 1e-4f) // (0+10+20)/3
         assertEquals(20f, result[2].y, 1e-4f)
         assertEquals(35f, result[4].y, 1e-4f) // (30+40)/2 — clamped at the end
-        // x is never touched: this smooths the SAMPLES, not the axis.
+        // x is never touched.
         result.forEachIndexed { index, offset -> assertEquals(points[index].x, offset.x, 0f) }
     }
 
     @Test fun `the window widens with the point count up to radius four`() {
-        // 80 points -> radius (80/16=5) coerced down to 4: a nine-sample window.
+        // 80 points: radius (80/16=5) coerced down to 4, a nine-sample window.
         val points = List(80) { Offset(it.toFloat(), if (it == 40) 90f else 0f) }
 
         val result = movingAverageY(points)

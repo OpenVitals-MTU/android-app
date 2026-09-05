@@ -28,14 +28,9 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * The order the dashboard body actually renders, derived from the saved layout.
- *
- * Outside edit mode, tiles with no data sink below the ones with some — but only
- * within the carousel, because the fixed hero section keeps its geometry. The
- * partition is stable, so both groups keep their saved relative order. In edit
- * mode the true saved order is kept instead: a drag has to land where the card
- * visually is, and showing a partition the grid would immediately re-apply makes
- * that impossible.
+ * The order the dashboard renders. Outside edit mode, carousel tiles with
+ * no data sink below the ones with some, in a stable partition. Edit mode
+ * keeps the saved order, so a drag lands where the card is.
  */
 internal fun dashboardVisibleWidgetIds(
     dashboardWidgets: List<DashboardWidgetId>,
@@ -47,33 +42,21 @@ internal fun dashboardVisibleWidgetIds(
 ): List<DashboardWidgetId> {
     val ordered = dashboardWidgets
         .filter { it in specIds }
-        // Outside edit mode an unsupported metric has no widget at all, so this
-        // only bites while editing: a metric the device cannot serve that the
-        // user never deliberately placed goes to the add tray, not the grid.
-        // Once they place it from the tray it stays, exactly like any other.
+        // While editing, an unsupported metric the user never placed goes to the tray.
         .filterNot { isEditingDashboard && it in display.unsupportedIds && it !in placedWidgetIds }
     if (isEditingDashboard || !sortEmptyTilesLast) return ordered
-    // A tile that has not answered yet is not an empty tile. Metrics now land
-    // one at a time, so demoting on a half-filled dashboard would reshuffle the
-    // grid under the user's finger on every arrival — and promote each tile
-    // back the moment its own data showed up. The saved order holds until the
-    // last tile has spoken.
+    // A tile still loading is not empty. Hold the saved order until every tile has answered.
     if (display.widgets.values.any { it.isLoading }) return ordered
     val fixed = dashboardWidgetIdsThatFitRows(ordered, DashboardFixedWidgetRows).toSet()
     val rest = ordered.filterNot { it in fixed }
-    // A tile with nothing behind it today goes to the back; a tile offering to
-    // set a feature UP does not. See [isDemotableEmptyTile].
+    // An empty tile goes to the back; a setup offer does not. See [isDemotableEmptyTile].
     val (withData, empty) = rest.partition { id ->
         display.widgets[id]?.isDemotableEmptyTile() != true
     }
     return ordered.filter { it in fixed } + withData + empty
 }
 
-/**
- * The edit-mode add tray: everything the grid does NOT show, in layout order.
- * That is where a removed widget waits — and where a metric the device cannot
- * serve is offered, so it can be placed rather than silently vanishing.
- */
+/** The edit-mode add tray: everything the grid does not show, in layout order. */
 internal fun dashboardTrayWidgetIds(
     specIds: List<DashboardWidgetId>,
     visibleIds: List<DashboardWidgetId>,
@@ -81,10 +64,7 @@ internal fun dashboardTrayWidgetIds(
 ): List<DashboardWidgetId> =
     if (isEditingDashboard) specIds.filterNot { it in visibleIds } else emptyList()
 
-/**
- * Today's activities: the workout LIST wins whenever it has entries; the lone
- * [DashboardData.workout] is only the fallback for a day that carries one.
- */
+/** Today's activities: the workout list wins; the lone workout is the fallback. */
 internal fun dashboardActivitiesForDay(data: DashboardData): List<ExerciseData> =
     data.workouts.ifEmpty { data.workout?.let(::listOf).orEmpty() }
 
@@ -95,11 +75,7 @@ private val DashboardQuickActionsTopPadding = 14.dp
 @Composable
 internal fun DashboardContent(
     data: DashboardData,
-    /**
-     * The day the user asked for — ahead of [data]'s date while a switch is
-     * still loading. The date row follows this; tiles show a loading state
-     * until [data] catches up.
-     */
+    /** The day the user asked for, ahead of [data] while a switch loads. */
     selectedDate: LocalDate = data.date,
     display: DashboardDisplayState,
     unitFormatter: UnitFormatter,
@@ -125,11 +101,7 @@ internal fun DashboardContent(
     onOpenLog: () -> Unit,
     onStartActivity: () -> Unit,
     onToggleDashboardEdit: () -> Unit,
-    /**
-     * The widgets the user deliberately placed (the persisted layout). Only
-     * these keep a metric the device cannot serve in the edit grid; the rest of
-     * those go to the add tray.
-     */
+    /** The widgets the user placed. Only these keep an unsupported metric in the edit grid. */
     placedWidgetIds: Set<DashboardWidgetId> = emptySet(),
 ) {
     val zone = ZoneId.systemDefault()
@@ -140,11 +112,8 @@ internal fun DashboardContent(
             dashboardWidgets
         }
     }
-    // The data on hand still belongs to another day while a switch is loading.
-    // The date row already answers the tap, so the tiles must not show the old
-    // day's numbers under it — they read "loading" until their day arrives.
-    // Ordering below still uses the real display: the demotion partition keeps
-    // the old day's order until the new day lands, instead of jumping twice.
+    // While a switch loads, the tiles read "loading" rather than the old day's numbers.
+    // Ordering keeps the old day's partition until the new day lands.
     val awaitingSelectedDay = data.date != selectedDate
     val widgetDisplay = remember(display, awaitingSelectedDay) {
         if (awaitingSelectedDay) {
@@ -221,9 +190,7 @@ internal fun DashboardContent(
                     bottom = DashboardScrollBottomPadding,
                 ),
             ) {
-                // Every item carries an explicit key: unkeyed items are identified
-                // by list position, so a change above them used to re-create every
-                // sibling below — replaying ring sweeps with stale values.
+                // Explicit keys, or a change above re-creates every sibling below.
                 item(key = "day_navigator") {
                     DayNavigator(
                         date = selectedDate,
@@ -239,10 +206,7 @@ internal fun DashboardContent(
                 }
 
                 item(key = "widgets") {
-                    // The reveal animations play once per DAY on display: the whole
-                    // widget section is keyed on the loaded data's date, so a day
-                    // switch sweeps the rings in exactly when the new day's data
-                    // lands — and a refresh of the same day never replays them.
+                    // Reveal animations play once per day on display.
                     key(data.date) {
                         DashboardWidgetCarousel(
                             visibleIds = visibleIds,
@@ -256,8 +220,7 @@ internal fun DashboardContent(
                                     onOpenLog = onOpenLog,
                                     onStartActivity = onStartActivity,
                                     onToggleDashboardEdit = onToggleDashboardEdit,
-                                    // 14dp under the rings, nothing below: the divider
-                                    // carries its own 16dp of air.
+                                    // 14dp under the rings; the divider carries its own air.
                                     modifier = Modifier.padding(
                                         start = DashboardScreenPadding,
                                         end = DashboardScreenPadding,
@@ -277,8 +240,7 @@ internal fun DashboardContent(
                     }
                 }
 
-                // The sensor-status card is deliberately absent here: the top-bar
-                // battery action is the sensors entry point.
+                // The sensor-status card is absent: the top-bar battery action is the entry point.
 
                 dashboardActivitiesToday(
                     // The old day's workouts must not sit under the new day's date.

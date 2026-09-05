@@ -40,22 +40,10 @@ data class DiscoveredSyncDevice(
 enum class SyncConnectionState { IDLE, CONNECTED, DISCONNECTED, CONNECT_FAILED }
 
 /**
- * The Bluetooth side of phone-to-phone sync: discoverability, discovery, one
- * RFCOMM socket (server or client), and byte pumps — nothing about health
- * records or the wire protocol, which lives in `protocol/`.
- *
- * Kotlin absorption of the Flutter plugin (`BluetoothSyncNativePlugin` +
- * `bluetooth_sync_service.dart`): with no Pigeon bridge in the way, the plugin
- * layer collapses into this one class exposing suspend functions and Flows.
- * Callers must hold the runtime Bluetooth permissions (SCAN / CONNECT /
- * ADVERTISE) before scanning or connecting — adapter calls surface a missing
- * grant as an exception rather than crashing.
- *
- * Inbound bytes go into an UNLIMITED [Channel] created when the socket opens,
- * so bytes that arrive after the socket connects but before the SyncSession
- * attaches its reader are BUFFERED and replayed, never dropped — the native
- * reader starts pumping the moment the socket connects, seconds before the
- * session runs.
+ * The Bluetooth side of phone-to-phone sync: discoverability, discovery,
+ * one RFCOMM socket and byte pumps. Callers hold the runtime permissions.
+ * Inbound bytes buffer in an unlimited channel from the moment the socket
+ * opens, so nothing is dropped before the session attaches its reader.
  */
 @Singleton
 class BluetoothSyncManager @Inject constructor(
@@ -79,20 +67,14 @@ class BluetoothSyncManager @Inject constructor(
 
     fun isBluetoothEnabled(): Boolean = adapter()?.isEnabled == true
 
-    /**
-     * The system dialog intent asking to make this phone discoverable for
-     * [seconds]. Launch through an ActivityResult launcher; the result code IS
-     * the granted discoverable window in seconds (RESULT_CANCELED = declined).
-     */
+    /** The system discoverable dialog for [seconds]. The result code is the granted window. */
     fun requestDiscoverableIntent(seconds: Int): Intent =
         Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE)
             .putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, seconds)
 
     /**
-     * Opens the RFCOMM server socket and returns once it is listening; a
-     * background job then blocks on accept for ONE inbound connection, which
-     * lands on [connectionState]. Throws if Bluetooth is off or SCAN/CONNECT
-     * is missing.
+     * Opens the RFCOMM server and returns once listening; a job then accepts
+     * one inbound connection onto [connectionState].
      */
     suspend fun startListening() {
         val adapter = adapter() ?: throw IOException("Bluetooth unavailable")
@@ -124,11 +106,7 @@ class BluetoothSyncManager @Inject constructor(
         server = null
     }
 
-    /**
-     * Runs one discovery scan, emitting devices as they are found; the flow
-     * COMPLETES when the scan window closes (~12 s) — the UI's cue to offer a
-     * rescan. Cancelling the collection cancels the scan.
-     */
+    /** One discovery scan. The flow completes when the window closes (~12 s). */
     fun startDiscovery(): Flow<DiscoveredSyncDevice> = callbackFlow {
         val adapter = adapter()
         if (adapter == null) {
@@ -159,30 +137,22 @@ class BluetoothSyncManager @Inject constructor(
             try {
                 if (adapter.isDiscovering) adapter.cancelDiscovery()
             } catch (_: SecurityException) {
-                // missing BLUETOOTH_SCAN; nothing to cancel
+                // Missing BLUETOOTH_SCAN; nothing to cancel.
             }
         }
     }
 
-    /**
-     * Already-bonded devices as scan-list seeds — the fallback for OEMs whose
-     * discoverable UX is unreliable: a previously-paired peer connects without
-     * a fresh scan finding it.
-     */
+    /** Bonded devices as scan-list seeds, for OEMs whose discoverable UX is unreliable. */
     fun bondedCandidates(): List<DiscoveredSyncDevice> = try {
         adapter()?.bondedDevices.orEmpty().map { it.toDiscovered() }
     } catch (_: SecurityException) {
         emptyList()
     }
 
-    /**
-     * Dials [address] (guest role) and returns once the socket is open —
-     * triggering the OS pairing dialog on a first-time peer. Throws on failure.
-     */
+    /** Dials [address] (guest role) and returns once the socket is open. */
     suspend fun connect(address: String) {
         val adapter = adapter() ?: throw IOException("Bluetooth unavailable")
-        // Guard against a re-entrant connect while one socket is already open —
-        // a second RFCOMM connect to the same UUID fails with "already opened".
+        // A second RFCOMM connect to the same UUID fails with "already opened".
         if (channel != null) {
             Log.w(SyncBluetooth.TAG, "connect: ignoring, a connection is already open")
             return
@@ -199,11 +169,7 @@ class BluetoothSyncManager @Inject constructor(
         onSocketConnected(socket)
     }
 
-    /**
-     * The [SyncByteTransport] over the live connection. Valid while
-     * [connectionState] is [SyncConnectionState.CONNECTED]; its inbound channel
-     * has been buffering since the socket opened.
-     */
+    /** The [SyncByteTransport] over the live connection. Its inbound channel has been buffering. */
     fun transport(): SyncByteTransport = TransportImpl()
 
     /** Closes the socket and any pending server. Idempotent. */
@@ -214,21 +180,17 @@ class BluetoothSyncManager @Inject constructor(
         inbound.close()
     }
 
-    /**
-     * Full teardown between wizard runs: closes everything and re-arms a fresh
-     * inbound buffer + IDLE state so the next session starts clean.
-     */
+    /** Full teardown between wizard runs: closes everything and re-arms a fresh buffer. */
     fun reset() {
         disconnect()
         inbound = Channel(Channel.UNLIMITED)
         _connectionState.value = SyncConnectionState.IDLE
     }
 
-    // ── Internals ────────────────────────────────────────────────────────────
+    // Internals.
 
     private fun onSocketConnected(socket: BluetoothSocket) {
-        // Fresh buffer per connection, armed BEFORE the reader starts so no
-        // byte can slip past it.
+        // Fresh buffer per connection, armed before the reader starts.
         val connectionInbound = Channel<ByteArray>(Channel.UNLIMITED)
         inbound = connectionInbound
         val byteChannel = try {
@@ -238,9 +200,7 @@ class BluetoothSyncManager @Inject constructor(
                 onClosed = {
                     Log.i(SyncBluetooth.TAG, "socket closed by peer/link")
                     channel = null
-                    // A dropped link MUST end the inbound byte stream — a
-                    // SyncSession parked in its receive loop learns of a dead
-                    // link only from its inbound closing.
+                    // A dropped link must close the inbound stream; the session learns of it that way.
                     connectionInbound.close()
                     emitState(SyncConnectionState.DISCONNECTED)
                 },
@@ -251,8 +211,7 @@ class BluetoothSyncManager @Inject constructor(
             return
         }
         channel = byteChannel
-        // Publish 'connected' before starting the reader so no observer can
-        // see bytes before the connection state.
+        // Publish connected before the reader starts.
         emitState(SyncConnectionState.CONNECTED)
         byteChannel.start()
     }
@@ -276,11 +235,7 @@ class BluetoothSyncManager @Inject constructor(
         return DiscoveredSyncDevice(address = address, name = deviceName, bonded = isBonded)
     }
 
-    /**
-     * Binds the transport to the manager's CURRENT connection. Outbound writes
-     * run on IO under a mutex so the session's concurrent sender/receiver/ack
-     * writes stay ordered on the one socket.
-     */
+    /** Binds the transport to the current connection. Writes run on IO under a mutex. */
     private inner class TransportImpl : SyncByteTransport {
         private val writeMutex = Mutex()
 

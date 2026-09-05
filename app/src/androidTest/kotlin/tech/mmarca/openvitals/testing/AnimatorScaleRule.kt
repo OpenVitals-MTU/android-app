@@ -6,17 +6,9 @@ import java.io.FileInputStream
 import org.junit.rules.ExternalResource
 
 /**
- * Turns the device's reduce-motion switch on and off for a test.
- *
- * OpenVitals reads `ValueAnimator.areAnimatorsEnabled()`, which is the system
- * animator scale — there is no app-level override to fake. So a test about
- * reduce-motion behaviour has to move the real setting, and put it back
- * afterwards whether it passed or not.
- *
- * The setting reaches the process asynchronously, so [motion] waits for
- * `areAnimatorsEnabled` to actually agree before returning. Composing before
- * that lands would read the previous value and the test would assert against
- * the wrong branch — quietly, and only sometimes.
+ * Turns the device's reduce-motion switch on and off for a test. The app reads the system
+ * animator scale, so the real setting is moved and put back. [motion] waits for
+ * `areAnimatorsEnabled` to agree before returning.
  */
 class AnimatorScaleRule : ExternalResource() {
 

@@ -23,13 +23,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the catalog cases of Flutter's
- * `test/features/manualentry/hydration_entry_screen_test.dart`.
- *
- * Logging a drink is meant to take one tap from the notification or the tile,
- * so what this card does before the user types anything is the whole feature:
- * it has to say where the day stands, keep a long drinks list navigable, and
- * open straight onto the drink a deep link named.
+ * Logging a drink is one tap from the notification or the tile, so the card must say where
+ * the day stands, keep a long list navigable, and open straight onto a deep-linked drink.
  */
 class HydrationEntryCatalogTest {
 
@@ -38,9 +33,7 @@ class HydrationEntryCatalogTest {
 
     @Test
     fun showsTodaysHydrationAgainstTheDailyGoal() {
-        // Half a litre in is a different decision from two litres in. Without
-        // the goal beside it the number is unanchored, and the card is the only
-        // place it appears before the drink is logged.
+        // Without the goal beside it the number is unanchored.
         setCard(state(todayLiters = 0.5, goalLiters = 2.0))
 
         val expected = "${FORMATTER.hydration(0.5).text} / ${FORMATTER.hydration(2.0).text}"
@@ -49,8 +42,7 @@ class HydrationEntryCatalogTest {
 
     @Test
     fun categorySectionsStartCollapsedAndExpandOnTap() {
-        // A saved-drinks list long enough to be worth categorising is too long
-        // to scroll past, so every named category arrives shut.
+        // A list long enough to categorise is too long to scroll, so every category arrives shut.
         setCard(state(savedDrinks = listOf(espresso(), greenTea())))
 
         val coffees = string(R.string.hydration_catalog_section_coffees)
@@ -64,8 +56,7 @@ class HydrationEntryCatalogTest {
 
     @Test
     fun searchingForceExpandsTheSectionsAndFiltersTheRows() {
-        // Typing a name is the escape hatch from the categories; leaving the
-        // matching section collapsed would show a hit count and hide the hit.
+        // Typing a name is the escape hatch; a collapsed match would hide the hit.
         setCard(state(savedDrinks = listOf(espresso(), greenTea())))
 
         composeRule.onNode(hasSetTextAction()).performScrollTo().performTextInput("espr")
@@ -76,8 +67,7 @@ class HydrationEntryCatalogTest {
 
     @Test
     fun theEditToggleSwapsLoggingForEditMoveAndDeleteActions() {
-        // The same row is both "log this" and "change this". Without the
-        // toggle, a tap meant to fix a drink's volume would log it instead.
+        // The same row is both "log this" and "change this".
         setCard(state(savedDrinks = listOf(unassignedWater())))
 
         composeRule.onNodeWithContentDescription(string(R.string.cd_edit_drink))
@@ -100,9 +90,7 @@ class HydrationEntryCatalogTest {
 
     @Test
     fun aLogDrinkIdDeepLinkOpensThatDrinksEntryDialog() {
-        // The hydration reminder's action carries a drink id. Landing on the
-        // catalog instead of that drink's dialog turns a one-tap log into a
-        // hunt through the list.
+        // The reminder's action carries a drink id. Landing on the catalog turns one tap into a hunt.
         setCard(state(savedDrinks = listOf(espresso())), initialLogDrinkId = ESPRESSO_ID)
 
         composeRule
@@ -112,8 +100,7 @@ class HydrationEntryCatalogTest {
 
     @Test
     fun anUnknownLogDrinkIdOpensThePlainCatalog() {
-        // Drinks get deleted while a reminder is still on screen. The link has
-        // to degrade to the catalog rather than to an empty dialog.
+        // Drinks get deleted while a reminder is on screen. The link degrades to the catalog.
         setCard(state(savedDrinks = listOf(espresso())), initialLogDrinkId = "deleted-drink")
 
         composeRule

@@ -94,8 +94,7 @@ class ActivityRouteExportTest {
     }
 
     @Test fun `sorted points require a non-empty route`() {
-        // The share/save path must fail rather than hand another app an empty
-        // track it will render as a blank map.
+        // The share path must fail rather than hand another app an empty track.
         val workout = workout(title = null, notes = null, points = emptyList())
 
         assertThrows(IllegalArgumentException::class.java) {

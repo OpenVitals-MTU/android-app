@@ -62,8 +62,7 @@ class FlutterPrefsCodecTest {
 
     @Test
     fun `java serialized list with base64 line wraps decodes`() {
-        // android.util.Base64.DEFAULT (what the plugin encodes with) wraps
-        // lines every 76 chars; a long list forces at least one wrap.
+        // android.util.Base64.DEFAULT wraps lines every 76 chars; a long list forces a wrap.
         val values = (1..40).map { "element_number_$it" }
         val encoded = javaSerializedListPayload(values, wrapLines = true)
         assertThat(encoded).contains("\n")

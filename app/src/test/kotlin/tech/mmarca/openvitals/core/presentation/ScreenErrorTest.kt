@@ -13,8 +13,7 @@ class ScreenErrorTest {
     }
 
     @Test fun `a permission failure becomes ScreenError PermissionDenied`() {
-        // Health Connect refuses an ungranted read by throwing SecurityException;
-        // the screens need the type, not the platform's wording, to offer a way out.
+        // Health Connect refuses an ungranted read with SecurityException; the screens need the type to offer a way out.
         val error = SecurityException("steps write").toScreenError()
         assertEquals(ScreenError.PermissionDenied, error)
     }

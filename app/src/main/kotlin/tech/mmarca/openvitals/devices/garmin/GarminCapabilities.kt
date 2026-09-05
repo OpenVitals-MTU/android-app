@@ -1,19 +1,10 @@
 package tech.mmarca.openvitals.devices.garmin
 
 /**
- * The capabilities a Garmin watch declares in the CONFIGURATION handshake.
- *
- * The watch sends a 15-byte bitmap — 120 flags, one per entry below, in this
- * exact order: bit `n` lives in byte `n / 8` at bit `n % 8`. The order IS the
- * wire format, so entries must never be reordered or removed; unknown flags
- * keep their `UNK_NNN` names for that reason.
- *
- * The entry NAME is also the persisted form ([wireName], stored by
- * [GarminDeviceStateStore]) — renaming an entry would orphan every stored
- * capability set, so don't.
- *
- * Ported from Gadgetbridge's `GarminCapability` (AGPLv3, the same licence as
- * this app), via the Flutter build's `garmin_capabilities.dart`.
+ * The capabilities a watch declares in the CONFIGURATION handshake: a
+ * 15-byte bitmap, bit `n` in byte `n / 8`. Declaration order is the wire
+ * format and the name is persisted, so never reorder, remove or rename.
+ * From Gadgetbridge (AGPLv3).
  */
 enum class GarminCapability {
     CONNECT_MOBILE_FIT_LINK,
@@ -147,12 +138,7 @@ enum class GarminCapability {
         get() = ordinal
 
     companion object {
-        /**
-         * Decodes the CONFIGURATION bitmap into the capabilities it sets.
-         *
-         * A short buffer is not an error: a future watch may send fewer bytes
-         * than we know flags, and everything past the end is simply absent.
-         */
+        /** Decodes the bitmap. A short buffer is not an error; missing bytes are absent flags. */
         fun decode(bits: ByteArray): Set<GarminCapability> {
             val out = mutableSetOf<GarminCapability>()
             for (capability in entries) {

@@ -23,15 +23,7 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.testing.testUnitFormatter
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Descendant of Flutter's
- * `test/features/activity/activity_route_export_buttons_test.dart`.
- *
- * The save/share format buttons have since moved to the export card
- * ([ActivityWorkoutExportButtonsTest] covers them there); what remains the
- * route card's own is open-in-map — offered exactly when a route exists,
- * because handing a map app an empty track renders as a blank map.
- */
+/** Open-in-map is offered exactly when a route exists; an empty track renders as a blank map. */
 class ActivityRouteExportButtonsTest {
 
     @get:Rule

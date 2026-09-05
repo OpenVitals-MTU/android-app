@@ -8,11 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.health.connect.client.PermissionController
 
-/**
- * Owns an entry form's Health Connect write-permission request: the form's
- * Grant button asks Health Connect for exactly the metric's own write set,
- * and the result lands back on the form, granted or not.
- */
+/** Owns an entry form's write-permission request: the Grant button asks for the metric's own set. */
 @Stable
 class ManualEntryWritePermissionRequester internal constructor(
     private val launchDialog: (Set<String>) -> Unit,

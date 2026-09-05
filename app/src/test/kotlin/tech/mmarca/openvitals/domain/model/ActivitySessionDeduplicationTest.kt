@@ -64,8 +64,7 @@ class ActivitySessionDeduplicationTest {
             lastModifiedTime = Instant.parse("2026-07-12T11:00:00Z"),
         )
 
-        // Same richness, same duration -- only lastModifiedTime can separate them,
-        // and it must, whichever order they arrive in.
+        // Same richness, same duration: only lastModifiedTime can separate them, in either arrival order.
         assertEquals("newer", deduplicateExerciseSessions(listOf(older, newer)).single().id)
         assertEquals("newer", deduplicateExerciseSessions(listOf(newer, older)).single().id)
     }

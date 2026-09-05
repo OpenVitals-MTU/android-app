@@ -8,12 +8,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * The watch's live readings, as they arrive over the held link.
- *
- * In memory only, deliberately: these are a window on what the wrist is
- * doing RIGHT NOW, and a value that outlives the connection is a lie the UI
- * would keep telling. Everything worth keeping arrives later as FIT records
- * through the normal sync, with the watch's own timestamps and gap-filling.
+ * The watch's live readings over the held link. In memory only: a value
+ * that outlives the connection is a lie. The FIT sync keeps the record.
  */
 @Singleton
 class GarminRealtimeStore @Inject constructor() {
@@ -40,9 +36,7 @@ class GarminRealtimeStore @Inject constructor() {
                 spo2Percent = reading.percent,
                 spo2At = now,
             )
-            // Beat-to-beat intervals arrive many times a second and mean
-            // nothing on their own; they are for a future HRV calculation,
-            // not for display, so nothing is stored yet.
+            // Beat-to-beat intervals are for a future HRV calculation; not stored yet.
             is GarminRealtimeReading.Hrv -> state.value
         }
     }
@@ -53,10 +47,7 @@ class GarminRealtimeStore @Inject constructor() {
     }
 }
 
-/**
- * The latest live values, each with when it arrived so a stale one can be
- * hidden rather than shown as current.
- */
+/** The latest live values, each with its arrival time, so a stale one can be hidden. */
 data class GarminRealtimeState(
     val heartRateBpm: Int? = null,
     val heartRateAt: Instant? = null,
@@ -68,11 +59,7 @@ data class GarminRealtimeState(
     val spo2Percent: Int? = null,
     val spo2At: Instant? = null,
 ) {
-    /**
-     * Heart rate if it is recent enough to still describe the wearer. The
-     * watch pushes on change, so a quiet minute is normal and a much longer
-     * silence means the reading has stopped being live.
-     */
+    /** Heart rate if recent enough to describe the wearer. The watch pushes on change. */
     fun freshHeartRate(now: Instant = Instant.now()): Int? {
         val at = heartRateAt ?: return null
         if (Duration.between(at, now) > FRESHNESS) return null

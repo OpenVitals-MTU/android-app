@@ -243,7 +243,7 @@ class HeartViewModelTest {
         onLowHeartRateThresholdChanged = onLowHeartRateThresholdChanged,
     )
 
-    // ─── Initial state ────────────────────────────────────────────────────────
+    // Initial state.
 
     @Test fun `initial range is WEEK`() = runTest {
         val vm = heartViewModel(emptyRepo(), emptyVitalsRepo())
@@ -315,7 +315,7 @@ class HeartViewModelTest {
         }
     }
 
-    // ─── WEEK range loads summaries, NOT samples ───────────────────────────────
+    // WEEK range loads summaries, not samples.
 
     @Test fun `WEEK range calls loadDailyHeartRateSummaries`() = runTest {
         val summaries = listOf(HeartRateSummary(today.minusDays(1), 72L, 55L, 110L))
@@ -346,8 +346,7 @@ class HeartViewModelTest {
         assertTrue(display.hasData)
         assertTrue(display.hasPeriodHeartRateSummaries)
         assertEquals(2, display.sortedDailySummaries.size)
-        // The period keeps both orders: the summaries come out oldest first, and
-        // the entry list reverses them.
+        // The summaries come out oldest first, and the entry list reverses them.
         assertEquals(
             listOf(today.minusDays(1), today),
             display.sortedDailySummaries.map { it.date },
@@ -385,7 +384,7 @@ class HeartViewModelTest {
         coVerify(exactly = 0) { repo.loadHeartRateSamples(any()) }
     }
 
-    // ─── DAY range loads samples, NOT summaries ───────────────────────────────
+    // DAY range loads samples, not summaries.
 
     @Test fun `DAY range calls loadHeartRateSamples`() = runTest {
         val samples = listOf(HeartRateSample(Instant.now(), 75L, "test"))
@@ -511,7 +510,7 @@ class HeartViewModelTest {
         assertEquals(2, vm.uiState.value.highHeartRateCheck.count)
     }
 
-    // ─── A1: multi-day resting HR + HRV trends ────────────────────────────────
+    // A1: multi-day resting HR and HRV trends.
 
     @Test fun `WEEK range loads dailyRestingHR trend`() = runTest {
         val trend = listOf(
@@ -541,7 +540,7 @@ class HeartViewModelTest {
 
     @Test fun `WEEK range clears dayRestingBpm and dayHrvMs`() = runTest {
         val vm = heartViewModel(emptyRepo(), emptyVitalsRepo())
-        // default range is WEEK — verify point-in-time fields are null
+        // The default range is WEEK, so the point-in-time fields are null.
         assertNull(vm.uiState.value.dayRestingBpm)
         assertNull(vm.uiState.value.dayHrvMs)
     }
@@ -585,7 +584,7 @@ class HeartViewModelTest {
         coVerify(atLeast = 1) { repo.loadDailyHRV(any(), any()) }
     }
 
-    // ─── B1: vitals merged into heart ────────────────────────────────────────
+    // B1: vitals merged into heart.
 
     @Test fun `load exposes missing vitals permissions`() = runTest {
         val vitalsRepo = emptyVitalsRepo()
@@ -611,7 +610,7 @@ class HeartViewModelTest {
         assertEquals(122, vm.uiState.value.latestBloodPressure?.systolicMmHg)
     }
 
-    // ─── Load failure ─────────────────────────────────────────────────────────
+    // Load failure.
 
     @Test fun `a permission failure becomes ScreenError PermissionDenied`() = runTest {
         val repo = mockk<HeartRepository>()
@@ -625,8 +624,7 @@ class HeartViewModelTest {
     }
 
     @Test fun `a permission failure on the overview becomes ScreenError PermissionDenied`() = runTest {
-        // The overview loads heart and vitals together; the vitals half being
-        // refused takes the whole load with it, and the refusal keeps its type.
+        // The vitals half being refused takes the whole load with it, and the refusal keeps its type.
         val vitalsRepo = emptyVitalsRepo()
         coEvery { vitalsRepo.loadVitalsPeriod(any(), any()) } throws SecurityException("vitals read")
         coEvery { vitalsRepo.loadVitalsPeriod(any(), any(), any()) } throws SecurityException("vitals read")
@@ -650,8 +648,7 @@ class HeartViewModelTest {
     }
 
     @Test fun `either half failing fails the combined load`() = runTest {
-        // The overview loads heart and vitals together; the vitals half falling
-        // over takes the whole load with it rather than half-painting a screen.
+        // The vitals half falling over takes the whole load with it rather than half-painting.
         val vitalsRepo = emptyVitalsRepo()
         coEvery { vitalsRepo.loadVitalsPeriod(any(), any()) } throws RuntimeException("vitals are down")
         coEvery { vitalsRepo.loadVitalsPeriod(any(), any(), any()) } throws RuntimeException("vitals are down")
@@ -669,7 +666,7 @@ class HeartViewModelTest {
         assertTrue(vm.uiState.value.dailySummaries.isEmpty())
     }
 
-    // ─── refresh / staleness ──────────────────────────────────────────────────
+    // Refresh and staleness.
 
     @Test fun `refresh reloads the current selection in force mode`() = runTest {
         val repo = emptyRepo()
@@ -706,7 +703,7 @@ class HeartViewModelTest {
         assertEquals(61L, state.display.metric.heartRateRangeSummary?.average)
     }
 
-    // ─── selectRange ──────────────────────────────────────────────────────────
+    // selectRange.
 
     @Test fun `selectRange updates selectedRange`() = runTest {
         val vm = heartViewModel(emptyRepo(), emptyVitalsRepo())
@@ -714,7 +711,7 @@ class HeartViewModelTest {
         assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
     }
 
-    // ─── previousPeriod / nextPeriod ──────────────────────────────────────────
+    // previousPeriod and nextPeriod.
 
     @Test fun `previousPeriod WEEK moves back one week`() = runTest {
         val vm = heartViewModel(emptyRepo(), emptyVitalsRepo())
@@ -751,7 +748,7 @@ class HeartViewModelTest {
         assertEquals(before.plusWeeks(1), vm.uiState.value.selectedDate)
     }
 
-    // ─── selectDate ───────────────────────────────────────────────────────────
+    // selectDate.
 
     @Test fun `selectDate clamps future date to today`() = runTest {
         val vm = heartViewModel(emptyRepo(), emptyVitalsRepo())

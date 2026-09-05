@@ -137,15 +137,13 @@ class RouteFileParserTest {
         assertEquals(0, result.originalPointCount)
         assertEquals(Instant.parse("2026-05-26T08:30:00Z"), result.startTime)
         assertEquals(Instant.parse("2026-05-26T09:15:00Z"), result.endTime)
-        // FIT session field 11 is `total_calories`; the session has no
-        // active-calorie field, so active stays unknown rather than invented.
+        // FIT session field 11 is `total_calories`; there is no active-calorie field, so active stays unknown.
         assertEquals(220.0, result.totalCaloriesKcal!!, 0.001)
         assertNull(result.activeCaloriesKcal)
     }
 
     @Test fun `a RUNNING FIT file doubles the cadence into steps`() {
-        // FIT reports running cadence as STRIDES per minute -- one leg. Health Connect
-        // wants steps. A runner at 90 spm is taking 180 steps.
+        // FIT reports running cadence as strides per minute; Health Connect wants steps. 90 spm is 180 steps.
         val result = RouteFileParser.parseFile(
             fitActivityBytes(
                 sport = 1, // running

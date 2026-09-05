@@ -17,15 +17,8 @@ import org.junit.Test
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of Flutter's `test/ui/charts/day_axis_test.dart` and
- * `session_axis_test.dart`.
- *
- * The labels themselves are pure and covered on the JVM by
- * `ChartTimeAxesTest`. What is only true on a device is where the row is drawn:
- * a chart with a y-axis gutter starts 64dp into its card, and a label row that
- * starts at the card's edge describes a plot that is not there. Every tick ends
- * up naming the wrong moment, which is the elapsed-scaling bug wearing a
- * different hat.
+ * Where the row is drawn: a chart with a y-axis gutter starts 64dp into its card, and a
+ * label row starting at the card's edge names the wrong moment at every tick.
  */
 class ChartAxisLayoutTest {
 
@@ -51,8 +44,7 @@ class ChartAxisLayoutTest {
 
     @Test
     fun dayAxisLabels_aPainterWithNoYAxisCanOptOut() {
-        // A chart drawn edge to edge gets its row edge to edge; the inset is the
-        // wrapper's doing, not the row's, so it is opt-in rather than baked in.
+        // An edge-to-edge chart gets an edge-to-edge row; the inset is the wrapper's, opt-in.
         composeRule.setContent {
             OpenVitalsTheme {
                 Column(Modifier.fillMaxWidth()) { DayAxisLabels() }

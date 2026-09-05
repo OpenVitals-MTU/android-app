@@ -8,11 +8,7 @@ import tech.mmarca.openvitals.domain.model.ReportBpReading
 import tech.mmarca.openvitals.domain.model.ReportBpSlotAverage
 import tech.mmarca.openvitals.domain.model.ReportMetricSummary
 
-/**
- * [dedupeReadings] keyed on the value pair — see that helper for the rule.
- * At equal instants the copy carrying an explicit meal context wins, so an
- * echoing app's bare duplicate never shadows the annotated original.
- */
+/** [dedupeReadings] on the value pair. At equal instants the copy with a meal context wins. */
 fun distinctBloodPressureReadings(entries: List<BloodPressureEntry>): List<BloodPressureEntry> =
     dedupeReadings(
         entries.sortedWith(compareBy({ it.time }, { it.mealContext == null })),
@@ -21,14 +17,9 @@ fun distinctBloodPressureReadings(entries: List<BloodPressureEntry>): List<Blood
     )
 
 /**
- * The blood-pressure section's arithmetic, pure and clock-free: raw readings
- * in, the reading list, meal-context averages and per-component summaries out.
- *
- * A reading's context is the user's EXPLICIT choice when the record carries
- * one (OpenVitals entries encode it); otherwise it is estimated from the
- * local time — anchored on typical meal hours (breakfast ~08:00, lunch
- * ~13:00, dinner ~20:00), with the after-dinner window wrapping midnight
- * because a 1 AM reading was taken before sleep, not before breakfast.
+ * The blood-pressure section: reading list, meal-context averages and
+ * per-component summaries. Context is the user's choice on OpenVitals
+ * records, else estimated from typical meal hours.
  */
 fun bloodPressureDetail(
     entries: List<BloodPressureEntry>,

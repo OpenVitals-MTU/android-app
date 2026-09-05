@@ -22,14 +22,8 @@ import tech.mmarca.openvitals.testing.testUnitFormatter
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of Flutter's
- * `test/features/manualentry/activity/recording/activity_recorded_sensor_summary_test.dart`.
- *
- * This is the only look a user gets at what the strap actually recorded before
- * the session is written to Health Connect. The average, the range and the
- * sample count are the numbers they would use to decide the recording is
- * trustworthy — and the elapsed axis has to span the SESSION, not the samples,
- * or a strap that dropped out for the last ten minutes looks like a shorter ride.
+ * The only look a user gets at what the strap recorded before the session is written.
+ * The elapsed axis spans the session, not the samples.
  */
 class ActivityRecordedSensorSummaryTest {
 
@@ -43,8 +37,7 @@ class ActivityRecordedSensorSummaryTest {
 
         composeRule.onNodeWithText(string(R.string.activity_recording_live_heart_rate)).assertIsDisplayed()
         composeRule.onNodeWithText(string(R.string.summary_average)).performScrollTo().assertIsDisplayed()
-        // 120..149 across thirty samples averages 134.5, which rounds to 135.
-        // The y-axis names the same value at its midpoint, so this is not unique.
+        // 120..149 over thirty samples averages 134.5, rounded to 135. The y-axis names the same value.
         composeRule.onAllNodesWithText(formatter.heartRate(135).text).onFirst().assertIsDisplayed()
         composeRule.onNodeWithText(string(R.string.summary_range)).performScrollTo().assertIsDisplayed()
         composeRule
@@ -54,16 +47,14 @@ class ActivityRecordedSensorSummaryTest {
         composeRule.onNodeWithText(string(R.string.summary_samples)).performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText(formatter.count(30)).performScrollTo().assertIsDisplayed()
 
-        // The elapsed axis spans the whole hour the session lasted, even though
-        // the last sample landed two minutes short of it.
+        // The axis spans the whole hour, though the last sample landed two minutes short.
         composeRule.onNodeWithText("0:00").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("1:00:00").performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun withoutASessionRangeTheAxisFallsBackToTheSamples() {
-        // A draft that has lost its session bounds still has to plot something
-        // honest: the span the samples themselves cover, not a guessed hour.
+        // A draft with no session bounds plots the span the samples cover.
         setSummary(samples = buffer(), sessionStart = null, sessionEnd = null)
 
         // Samples run 0, 2, ... 58 minutes, so the axis ends at 58:00.

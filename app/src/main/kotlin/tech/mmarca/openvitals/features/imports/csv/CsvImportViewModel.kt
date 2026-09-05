@@ -21,13 +21,7 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 /** Which step of the importer the screen is showing. */
 enum class CsvImportStep { PICK, MAPPING, CONFIRM, IMPORTING, DONE }
 
-/**
- * The importer's state.
- *
- * Progress and result are a tally, not a success-or-failure command: a finished
- * import is "written 4,102, already present 210, rejected 68", and it is
- * observable *while it runs*.
- */
+/** The importer's state. Progress and result are a tally, observable while it runs. */
 data class CsvImportState(
     val step: CsvImportStep = CsvImportStep.PICK,
 
@@ -45,28 +39,18 @@ data class CsvImportState(
     val progress: CsvImportProgress? = null,
     val result: CsvImportResult? = null,
 
-    /**
-     * A failure that stopped the screen doing anything useful — an unreadable
-     * file, not a rejected row.
-     */
+    /** A failure that stopped the screen: an unreadable file, not a rejected row. */
     val error: String? = null,
     val granted: Set<String> = emptySet(),
 
-    /**
-     * The write permissions the import flow can actually ask for on this
-     * device. Requesting one outside this set would be refused rather than
-     * prompted, so the request set is intersected with it.
-     */
+    /** The write permissions this device can ask for; the request set is intersected with it. */
     val supportedWritePermissions: Set<String> = emptySet(),
 ) {
     /** Whether the mapping is complete enough to import. */
     val canContinue: Boolean
         get() = issues.isEmpty() && (mapping?.metricColumns?.isNotEmpty() == true)
 
-    /**
-     * The write permissions this mapping needs, can actually be asked for on
-     * this device, and does not already have.
-     */
+    /** The write permissions this mapping needs, can ask for, and lacks. */
     val missingPermissions: Set<String>
         get() {
             val required = mapping?.requiredWritePermissions ?: emptySet()
@@ -177,10 +161,7 @@ class CsvImportViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Points column [columnIndex] at [role]/[metric], defaulting the
-     * interpretation from the column's own header unit.
-     */
+    /** Points column [columnIndex] at [role]/[metric], defaulting the interpretation from the header unit. */
     fun setColumnRole(
         columnIndex: Int,
         role: CsvColumnRole,

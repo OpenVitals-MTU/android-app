@@ -13,30 +13,19 @@ import org.mapsforge.map.datastore.MultiMapDataStore
 import org.mapsforge.map.datastore.Way
 
 /**
- * The merge policy the offline base map builds its [MultiMapDataStore] with.
+ * The merge policy the base map builds its [MultiMapDataStore] with. A one-word choice
+ * (`DataPolicy.DEDUPLICATE`) whose consequence is invisible until two packs meet.
  *
- * This is a contract test over a library class rather than over our own code,
- * and it earns its place: the policy is a one-word choice in
- * MapsforgeRouteMap.kt (`MultiMapDataStore.DataPolicy.DEDUPLICATE`) whose
- * consequence is invisible until two packs meet, and getting it wrong shipped a
- * blank wedge across the seam between an imported 400MB pack and a 200MB one.
- *
- * The trap is that `supportsTile` is only a zoom-range and bounding-box check.
- * A pack's bounding box is a RECTANGLE around a region-shaped extract, so two
- * adjacent regions have overlapping boxes even where their data does not
- * overlap at all. Under RETURN_FIRST the first pack claims every tile in that
- * rectangle — including the ones where it holds nothing — and answers with an
- * empty bundle, and the pack that actually covers the ground is never asked.
- *
- * Ported from test/features/activity/maps/multimap_merge_policy_test.dart.
+ * `supportsTile` is only a box check, and a pack's box is a rectangle around a region-shaped
+ * extract. Under RETURN_FIRST the first pack claims every tile in its rectangle, answers empty,
+ * and the pack that covers the ground is never asked. That shipped a blank wedge across a seam.
  */
 class MultiMapMergePolicyTest {
 
-    /** A tile inside BOTH packs' bounding boxes — the seam. */
+    /** A tile inside both packs' boxes: the seam. */
     private val seamTile = Tile(8710, 5620, 14, 256)
 
-    // Two packs whose boxes both swallow the tile, as two adjacent regional
-    // extracts do. Only the second has anything to draw there.
+    // Two packs whose boxes both swallow the tile. Only the second has anything to draw there.
     private val seamBox: BoundingBox = seamTile.boundingBox.let { box ->
         BoundingBox(
             box.minLatitude - 1,
@@ -59,8 +48,7 @@ class MultiMapMergePolicyTest {
 
         val result = datastore.readMapData(seamTile)
 
-        // The pack that covers the ground must be read even when an earlier
-        // pack claims the tile through its bounding box.
+        // The pack that covers the ground must be read even when an earlier pack claims the tile.
         assertEquals(1, result.ways.size)
         assertEquals(1, holdsTheData.reads)
     }
@@ -80,9 +68,7 @@ class MultiMapMergePolicyTest {
 
     @Test
     fun `a tile only one pack covers reads only that pack`() {
-        // The merge must not cost anything away from the seam: a tile deep
-        // inside one region never touches the other, because the box does not
-        // intersect.
+        // A tile deep inside one region never touches the other.
         val datastore = MultiMapDataStore(MultiMapDataStore.DataPolicy.DEDUPLICATE)
         val farAway = FakeMapDataStore(BoundingBox(-40.0, -40.0, -30.0, -30.0), ways = emptyList())
         datastore.addMapDataStore(farAway, false, false)
@@ -115,12 +101,7 @@ class MultiMapMergePolicyTest {
         null,
     )
 
-    /**
-     * A pack that answers `supportsTile` exactly as `MapFile` does — the box and
-     * the zoom range, with no idea whether there is data inside — while [ways]
-     * models what it ACTUALLY holds. Empty models a pack whose box covers the
-     * tile but whose data stops short of it.
-     */
+    /** Answers `supportsTile` as `MapFile` does, from the box and zoom range, while [ways] models what it holds. */
     private class FakeMapDataStore(
         private val boundingBox: BoundingBox,
         private val ways: List<Way>,

@@ -3,14 +3,8 @@ package tech.mmarca.openvitals.domain.preferences
 import tech.mmarca.openvitals.domain.insights.DefaultSplitDistanceMeters
 
 /**
- * The split distance preference: how far apart the activity detail screen cuts
- * derived splits ("every 1 km").
- *
- * STORED IN METERS, always — storage is metric in this codebase and imperial
- * exists only at the display boundary. The imperial presets below are exact
- * mile fractions converted to meters on the way in, so a user who picks
- * "1 mi" and later switches to metric sees 1.609 km worth of splits, not a
- * silently rounded 1600 m.
+ * The split distance preference, stored in meters. Imperial presets are
+ * exact mile fractions, so "1 mi" survives a switch to metric as 1.609 km.
  */
 internal object ActivitySplitDistance {
 
@@ -49,12 +43,7 @@ internal object ActivitySplitDistance {
         return meters.coerceIn(minMeters, maxMeters)
     }
 
-    /**
-     * The preset closest to [meters], so the settings chips still show a
-     * selection after the user switches unit systems (a stored 1000 m has no
-     * exact imperial preset; the honest thing is to highlight the nearest one
-     * rather than show nothing selected).
-     */
+    /** The preset closest to [meters], so the chips keep a selection after a unit switch. */
     fun nearestPreset(meters: Double, presets: List<Double>): Double {
         var best = presets.first()
         var bestDelta = kotlin.math.abs(presets.first() - meters)

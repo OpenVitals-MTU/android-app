@@ -40,24 +40,14 @@ import tech.mmarca.openvitals.ui.theme.Spacing
 
 private val PlanControlHeight = 56.dp
 
-/**
- * The row holds up to four controls once Back appears (step 2 onwards), so
- * the icon-only buttons are squares with no side padding and the text
- * buttons give up Material's 24dp — otherwise "Done" and "Finish session"
- * wrap mid-word on a phone-width screen (#281). The labels shrink rather
- * than wrap as a last resort.
- */
+/** Up to four controls in one row: squares with no side padding, or the labels wrap (#281). */
 private val PlanIconButtonPadding = PaddingValues(0.dp)
 private val PlanTextButtonPadding = PaddingValues(horizontal = Spacing.md)
 
 /** The last seconds of a rest read as "Get ready" and are announced. */
 internal const val GetReadySeconds = 5L
 
-/**
- * What to do now, and how far along the plan is. Leads with the step in words
- * and the live number underneath — reps done over target, or the seconds left
- * — because a phone on the floor beside a plank is read from a metre away.
- */
+/** What to do now, and how far along. Read from a metre away, so the step leads in words. */
 @Composable
 internal fun ActivityPlanStepBanner(
     state: ActivityRecordingState,

@@ -17,16 +17,8 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * The REAL Kotlin readers, against the REAL corpus, on the JVM.
- *
- * 3,593 records derived from an actual Health Connect export — 43 heart-rate
- * records, 3 exercise sessions across two writers, 9 nights of sleep, 2,052
- * distance records, a 954-point GPS route — loaded into Google's own
- * FakeHealthConnectClient and read back through the readers the app actually ships.
- *
- * Everything below the Pigeon boundary is real here. That is the point: the bugs
- * this project keeps producing live in exactly this layer, and a Dart-side fake
- * cannot see them, because it sits above the code with the problem.
+ * The real readers, against the real corpus, on the JVM.
+ * 3,593 records from an actual export, loaded into Google's FakeHealthConnectClient.
  */
 class FixtureReaderTest {
 
@@ -47,18 +39,9 @@ class FixtureReaderTest {
     }
 
     /**
-     * Seeds the fixture, ONE WRITER AT A TIME.
-     *
-     * Health Connect stamps a record's `dataOrigin` from the package that inserted
-     * it — an app cannot claim to be another app — and Google's fake faithfully does
-     * the same, overwriting whatever `dataOrigin` the record was built with. So
-     * inserting everything in one go collapses 21 writers into one, and every
-     * multi-writer test (dedup, sleep merge, the manual-entry count) silently becomes
-     * a single-writer test that passes for the wrong reason.
-     *
-     * `setPackageName` is the fake's answer to that, and it is the ONLY reason
-     * multi-writer behaviour is testable at all: on a real device you would need one
-     * signed APK per writer.
+     * Seeds the fixture one writer at a time. The fake stamps `dataOrigin` from the inserting
+     * package, so inserting everything at once collapses 21 writers into one.
+     * `setPackageName` is the only way multi-writer behaviour is testable at all.
      */
     private suspend fun seeded(): FakeHealthConnectClient {
         val client = FakeHealthConnectClient()
@@ -101,8 +84,7 @@ class FixtureReaderTest {
 
     @Test
     fun `Health Connect hides that workout's heart rate from a windowed read`() = runTest {
-        // Characterisation. Proves the corpus reproduces the bug, so the next test is
-        // testing the FIX rather than testing nothing.
+        // Characterisation: the corpus reproduces the bug, so the next test tests the fix.
         val c = seeded()
         val workout = HcFixture.swallowedWorkout()
 
@@ -133,10 +115,7 @@ class FixtureReaderTest {
     @Test
     fun `speed samples survive the same trap, which is what the splits ride on`() =
         runTest {
-            // The 1 km splits silently fell back to "estimated" on exactly the activities
-            // whose heart rate had vanished — same bug, different record type. SpeedRecord
-            // is a series record too, and Health Connect filters it by the record's own
-            // boundary just the same.
+            // The splits fell back to "estimated" on the same activities: SpeedRecord is a series record too.
             val c = seeded()
             val route = HcFixture.routeWorkout()
 
@@ -153,10 +132,8 @@ class FixtureReaderTest {
     @Test
     fun `every record keeps the provenance the Pigeon messages kept dropping`() =
         runTest {
-            // recordingMethod, lastModifiedTime and the zone offsets were declared on the
-            // domain models, rendered by the UI, and carried by NOTHING — the messages they
-            // cross on never had the fields. This asserts the READER puts them in the Msg,
-            // which is the half no Dart test can see.
+            // recordingMethod, lastModifiedTime and the zone offsets were carried by nothing.
+            // This asserts the reader puts them in the Msg.
             val c = seeded()
             val week = HcFixture.swallowingHeartRateRecord()
 
@@ -176,9 +153,7 @@ class FixtureReaderTest {
 
     @Test
     fun `the GPS session keeps its route points`() = runTest {
-        // Route points were dropped between the fixture and the domain more than
-        // once. Distance, pace and the 1 km splits are all computed from them, so a
-        // session that arrives without its track quietly falls back to estimates.
+        // Route points were dropped more than once. Distance, pace and splits are computed from them.
         val c = seeded()
         val route = HcFixture.routeWorkout()
         val expected = route.exerciseRouteResult.let { it as ExerciseRouteResult.Data }
@@ -188,8 +163,7 @@ class FixtureReaderTest {
             route.startTime.minusSeconds(3600),
             route.endTime.plusSeconds(3600),
         )
-        // Matched on the boundary, not the id: the fake re-stamps a record's id on
-        // insertion, so the fixture's own id is not what comes back out.
+        // Matched on the boundary: the fake re-stamps ids on insertion.
         val session = sessions.single { it.startTime == route.startTime }
 
         assertThat(expected).isGreaterThan(500)
@@ -207,18 +181,13 @@ class FixtureReaderTest {
             .readSleepSessions(first.minusSeconds(86_400), last.plusSeconds(86_400))
 
         assertThat(sessions).isNotEmpty()
-        // Merging can COMBINE overlapping sessions, so the count may be lower than
-        // the raw 9 — but it must never be zero, and the stages must survive the
-        // trip: without them the hypnogram is empty and the "share of time in bed"
-        // card has nothing to divide.
+        // Merging can combine sessions, so the count may be lower than 9, but the stages must survive.
         assertThat(sessions.any { it.stages.isNotEmpty() }).isTrue()
     }
 
     @Test
     fun `two writers on one night are merged into one`() = runTest {
-        // The fixture has nights written by two apps. Merging them is the whole
-        // reason the sleep merge exists, and it cannot be exercised by hand-made
-        // data — a real person with a watch AND a phone app is what produces this.
+        // Nights written by two apps, which hand-made data cannot produce.
         val c = seeded()
         val nights = HcFixture.sleep()
         val multiWriter = nights
@@ -265,8 +234,7 @@ class FixtureReaderTest {
             )
 
             assertThat(sessions.map { it.source }.toSet().size).isAtLeast(2)
-            // And nothing was lost on the way: every session in the fixture makes
-            // the trip, not just the ones that happen to start inside the window.
+            // Every session in the fixture makes the trip, not only those starting inside the window.
             assertThat(sessions).hasSize(HcFixture.exercise().size)
         }
 }

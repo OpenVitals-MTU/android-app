@@ -37,13 +37,9 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsFilledButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 
 /**
- * The "Sync with another phone" wizard. Renders each step of
- * [DeviceSyncViewModel]'s state machine; the ActivityResult choreography
- * (Bluetooth runtime grants → Health Connect grants → the host's discoverable
- * dialog) lives here because launchers are Compose-scoped.
- *
- * Teardown is the ViewModel's `onCleared`: the VM is scoped to this route, so
- * leaving the wizard by ANY path tears the RFCOMM apparatus down.
+ * The "Sync with another phone" wizard. The permission choreography lives
+ * here because launchers are Compose-scoped. Leaving the route tears the
+ * RFCOMM apparatus down via the ViewModel.
  */
 @Composable
 fun DeviceSyncScreen(
@@ -58,8 +54,7 @@ fun DeviceSyncScreen(
     val discoverableLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
     ) { result ->
-        // For ACTION_REQUEST_DISCOVERABLE the result code IS the granted
-        // discoverable window in seconds; RESULT_CANCELED (0) means declined.
+        // The result code is the granted discoverable window in seconds.
         val seconds =
             if (result.resultCode == Activity.RESULT_CANCELED) 0 else result.resultCode
         viewModel.startHosting(seconds)
@@ -137,7 +132,7 @@ fun DeviceSyncScreen(
     }
 }
 
-// ── Shared wizard pieces ─────────────────────────────────────────────────────
+// Shared wizard pieces.
 
 @Composable
 internal fun DeviceSyncHero(icon: ImageVector, title: String, body: String) {

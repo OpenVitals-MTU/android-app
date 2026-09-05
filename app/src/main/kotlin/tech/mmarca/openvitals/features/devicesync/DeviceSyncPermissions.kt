@@ -7,11 +7,8 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 
 /**
- * Runtime Bluetooth permission gate for phone-to-phone sync.
- *
- * Sync needs SCAN + CONNECT (like the BLE sensor stack) plus ADVERTISE for the
- * host's discoverable request (API 31+). Pre-31 the runtime permissions are
- * the location ones: classic discovery requires fine location there.
+ * Runtime Bluetooth permissions for sync: SCAN, CONNECT and ADVERTISE on
+ * API 31+, the location permissions before.
  */
 object DeviceSyncPermissions {
 

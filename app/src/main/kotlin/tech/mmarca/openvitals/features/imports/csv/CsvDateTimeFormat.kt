@@ -14,22 +14,11 @@ import java.util.Locale
 
 /**
  * Turning a CSV timestamp cell into an instant plus a wall-clock offset.
- *
- * Health Connect stores both: the instant says when, the `zoneOffset` says what
- * the clock on the wall read. A CSV usually supplies only the second, so the
- * zone has to come from somewhere — hence [CsvTimeZoneMode].
- *
- * The one rule that overrides everything: if the text carries its own offset
- * (ISO 8601 `+05:30` or `Z`), the file wins and the selected mode is ignored.
+ * A CSV usually gives only the wall clock, so the zone comes from
+ * [CsvTimeZoneMode]. Text that carries its own offset always wins.
  */
 
-/**
- * A timestamp column's shape.
- *
- * Families, not one entry per pattern: a single file often mixes
- * `2026-07-01 08:12:00` and `2026-07-01`, so each family tries its patterns in
- * order and the first that consumes the whole cell wins.
- */
+/** A timestamp column's shape. Families, not patterns: one file often mixes several. */
 enum class CsvDateTimeFormat {
     /** Try every family over the sample and pick the one that parses most rows. */
     AUTO,
@@ -58,19 +47,13 @@ enum class CsvDateTimeFormat {
 
 /** Where the wall-clock offset comes from when the text does not carry one. */
 enum class CsvTimeZoneMode {
-    /**
-     * This phone's zone, resolved against the OS tz database AT THE ROW'S DATE —
-     * so a reading from a 2019 summer gets 2019's summer offset, not today's.
-     */
+    /** This phone's zone, resolved at the row's date, so 2019 rows get 2019's offset. */
     DEVICE,
 
     /** The text is already UTC. */
     UTC,
 
-    /**
-     * One fixed offset for the whole file, for an export from a device that
-     * lived in a single offset. No DST.
-     */
+    /** One fixed offset for the whole file. No DST. */
     FIXED_OFFSET,
 }
 
@@ -125,19 +108,9 @@ private val MonthFirstPatterns = listOf(
 )
 
 /**
- * The families [CsvDateTimeFormat.AUTO] considers, in preference order — the
- * first family with the highest match count wins.
- *
- * [CsvDateTimeFormat.YEAR_FIRST] deliberately precedes [CsvDateTimeFormat.ISO_8601]:
- * the ISO family accepts a space separator too, so it parses `2026-07-01 08:12:00`
- * and would otherwise take the tie and label a plain year-first file "ISO 8601".
- * Both resolve that text identically, so this only decides which name the user
- * is shown — but showing the wrong one erodes trust in a screen whose whole job
- * is to let them check the interpretation. ISO still wins where it is the only
- * match: a `T` separator or an explicit offset.
- *
- * A tie between [CsvDateTimeFormat.DAY_FIRST] and [CsvDateTimeFormat.MONTH_FIRST]
- * is NOT broken by this order — see [detectCsvDateTimeFormat].
+ * The families AUTO considers, in preference order. YEAR_FIRST precedes
+ * ISO_8601 so a plain year-first file is not labelled ISO; ISO still wins
+ * on a `T` or an offset. A DAY_FIRST/MONTH_FIRST tie is not broken here.
  */
 private val AutoCandidates = listOf(
     CsvDateTimeFormat.YEAR_FIRST,
@@ -149,13 +122,8 @@ private val AutoCandidates = listOf(
 )
 
 /**
- * 1990-01-01 and 2100-01-01 as epoch milliseconds.
- *
- * An epoch format that accepted ANY integer would swallow a column of step
- * counts or rep counts: `1` is a valid epoch second, and auto-detection would
- * then pick that column as the timestamp and date every reading to 1970. No
- * body measurement predates 1990 or postdates 2100, so bounding it costs
- * nothing real and removes a whole class of silent mis-detection.
+ * 1990-01-01 and 2100-01-01 as epoch millis. An epoch format accepting any
+ * integer would swallow a step-count column and date everything to 1970.
  */
 private const val MinPlausibleEpochMillis = 631_152_000_000L
 private const val MaxPlausibleEpochMillis = 4_102_444_800_000L
@@ -165,13 +133,10 @@ private fun isPlausibleEpochMillis(millis: Long): Boolean =
 
 private val ExplicitOffsetRegex = Regex("""(?:Z|[+-]\d{2}:?\d{2})$""")
 
-/**
- * Whether [text] carries its own UTC offset, which always beats the selected
- * [CsvTimeZoneMode].
- */
+/** Whether [text] carries its own UTC offset, which beats the selected mode. */
 fun csvTimestampHasExplicitOffset(text: String): Boolean {
     val trimmed = text.trim()
-    // Guard against a bare `2026-07-01` whose `-01` is a month, not an offset.
+    // A bare `2026-07-01` has a month, not an offset.
     if ('T' !in trimmed && ' ' !in trimmed) {
         return trimmed.endsWith("Z")
     }
@@ -179,13 +144,9 @@ fun csvTimestampHasExplicitOffset(text: String): Boolean {
 }
 
 /**
- * The wall-clock fields of [text] under [format] — i.e. the numbers as written,
- * with no zone applied yet. Null when it does not parse.
- *
- * Returning "naive" fields is what lets [resolveCsvInstant] apply the zone
- * afterwards; parsing straight to a zoned value would bake in the host's current
- * offset and silently shift every historical row across a DST boundary. For the
- * epoch formats — which are instants already — this is the UTC wall clock.
+ * The wall-clock fields of [text] under [format], no zone applied. Null when
+ * it does not parse. Parsing straight to a zoned value would bake in the
+ * host's current offset across DST boundaries.
  */
 fun parseCsvWallClock(
     text: String,
@@ -205,8 +166,7 @@ fun parseCsvWallClock(
         }
         CsvDateTimeFormat.EPOCH_MILLIS -> {
             val millis = trimmed.toLongOrNull() ?: return null
-            // A 10-digit number is seconds; requiring 12+ digits keeps AUTO from
-            // reading every epoch-seconds file as 1970.
+            // 12+ digits keeps AUTO from reading epoch seconds as 1970.
             if (trimmed.replace("-", "").length < 12) return null
             if (!isPlausibleEpochMillis(millis)) return null
             LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneOffset.UTC)
@@ -228,11 +188,7 @@ fun parseCsvWallClock(
     }
 }
 
-/**
- * The Flutter build's ISO family is Dart's `DateTime.tryParse`, which accepts a
- * space as well as a `T` separator, an optional offset, and a bare date. This
- * matches that acceptance so a mapping made on either app reads the same files.
- */
+/** Matches Dart's `DateTime.tryParse`: space or `T`, optional offset, bare date. */
 private fun parseIsoWallClock(text: String): LocalDateTime? {
     val normalized = if ('T' !in text && ' ' in text) text.replaceFirst(' ', 'T') else text
     runCatching { return OffsetDateTime.parse(normalized).withOffsetSameLocal(ZoneOffset.UTC).toLocalDateTime() }
@@ -244,8 +200,7 @@ private fun parseIsoWallClock(text: String): LocalDateTime? {
 private fun tryPatterns(text: String, patterns: List<String>): LocalDateTime? {
     for (pattern in patterns) {
         val formatter = runCatching { formatterFor(pattern) }.getOrNull() ?: continue
-        // DateTimeFormatter.parse rejects trailing input, so 'yyyy-MM-dd' does
-        // not silently swallow '2026-07-01 08:12:00' and drop the time.
+        // DateTimeFormatter.parse rejects trailing input, so a date pattern does not drop the time.
         runCatching {
             val parsed = formatter.parse(text)
             val date = LocalDate.from(parsed)
@@ -269,10 +224,7 @@ private fun formatterFor(pattern: String): DateTimeFormatter =
         }
     }
 
-/**
- * Resolves [text] to an instant plus the offset to store with it, or null when
- * it does not parse under [settings].
- */
+/** Resolves [text] to an instant plus offset, or null. */
 fun resolveCsvInstant(text: String, settings: CsvDateTimeSettings): CsvInstant? {
     val trimmed = text.trim()
     val wall = parseCsvWallClock(trimmed, settings.format, settings.customPattern) ?: return null
@@ -290,7 +242,7 @@ fun resolveCsvInstant(text: String, settings: CsvDateTimeSettings): CsvInstant? 
         }
     }
 
-    // Epoch formats are instants already; there is no wall clock to reinterpret.
+    // Epoch formats are instants already.
     val isEpoch = settings.format == CsvDateTimeFormat.EPOCH_SECONDS ||
         settings.format == CsvDateTimeFormat.EPOCH_MILLIS ||
         (settings.format == CsvDateTimeFormat.AUTO && trimmed.toLongOrNull() != null)
@@ -306,8 +258,7 @@ fun resolveCsvInstant(text: String, settings: CsvDateTimeSettings): CsvInstant? 
             CsvInstant(wall.toInstant(offset), offset)
         }
         CsvTimeZoneMode.DEVICE -> {
-            // Resolving the wall clock against the zone's own rules applies the
-            // offset that held on THAT date, DST included.
+        // Resolving against the zone's rules applies the offset that held on that date.
             val zoned = wall.atZone(ZoneId.systemDefault())
             CsvInstant(zoned.toInstant(), zoned.offset)
         }
@@ -328,21 +279,15 @@ data class CsvDateTimeDetection(
     val format: CsvDateTimeFormat,
     val matchedRows: Int,
     val totalRows: Int,
-    /**
-     * Day-first and month-first BOTH parsed every sampled row, so the ordering
-     * cannot be inferred from the data.
-     */
+    /** Day-first and month-first both parsed every row, so the ordering cannot be inferred. */
     val ambiguousDayMonth: Boolean,
 ) {
     val matchedNothing: Boolean get() = matchedRows == 0
 }
 
 /**
- * Picks the timestamp family that parses the most of [samples].
- *
- * Refuses to guess between `dd/MM` and `MM/dd` when both parse everything:
- * `01/07/2026` is genuinely undecidable, and choosing wrong silently writes a
- * year of measurements onto the wrong days. The UI must make the user choose.
+ * Picks the family that parses the most of [samples]. Refuses to guess
+ * between `dd/MM` and `MM/dd`; the UI must make the user choose.
  */
 fun detectCsvDateTimeFormat(samples: List<String>): CsvDateTimeDetection {
     val values = samples.map { it.trim() }.filter { it.isNotEmpty() }

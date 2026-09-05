@@ -25,15 +25,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.ui.theme.Motion
 
-/**
- * The shape of what is coming, while it comes.
- *
- * A spinner in the middle of a card says "something is happening". A skeleton says "a
- * chart is happening, and it will be about this big" — so the page does not jump when
- * the data lands, and the eye has already found the place to look. It is also the
- * difference between a screen that feels like it is loading and one that feels like it
- * is broken.
- */
+/** The shape of what is coming, so the page does not jump and the eye finds its place. */
 enum class ChartSkeletonShape { LINE, BARS }
 
 @Composable
@@ -43,9 +35,7 @@ fun ChartSkeleton(
     height: Dp = ChartTokens.heightDay,
     barCount: Int = 7,
 ) {
-    // A REPEATING animation is the one kind that never settles. When the user has asked
-    // their phone to stop moving things (animator scale off), it is pinned to a still
-    // frame instead of pulsing.
+    // A repeating animation never settles; under reduced motion it is a still frame.
     val animationsEnabled = remember { ValueAnimator.areAnimatorsEnabled() }
     val pulse = if (animationsEnabled) {
         rememberInfiniteTransition(label = "ChartSkeletonPulse").animateFloat(
@@ -61,8 +51,7 @@ fun ChartSkeleton(
         0f
     }
 
-    // Breathes between two alphas rather than sweeping a gradient across the card: a
-    // shimmer that travels is a thing to watch, and this is a thing to stop noticing.
+    // Breathes between two alphas rather than sweeping: a thing to stop noticing.
     val color = ChartTokens.track.copy(alpha = 0.35f + 0.25f * pulse)
 
     when (shape) {
@@ -77,8 +66,7 @@ fun ChartSkeleton(
                 Box(
                     modifier = Modifier
                         .width(SkeletonBarWidth)
-                        // Uneven, because a row of identical bars reads as data — a very
-                        // boring week — rather than as an absence of it.
+                        // Uneven, or a row of identical bars reads as data.
                         .fillMaxHeight(SkeletonBarFractions[index % SkeletonBarFractions.size])
                         .background(
                             color = color,

@@ -17,15 +17,8 @@ import tech.mmarca.openvitals.testing.assertVisualRootMatchesGolden
 import tech.mmarca.openvitals.testing.goldenInstant
 
 /**
- * Port of Flutter's `test/goldens/charts/sleep_stage_chart_golden_test.dart`.
- *
- * [SleepStagesLaneChart] — the hypnogram. The single most intricate painter in the
- * app: four lanes, one [androidx.compose.ui.graphics.Path] over every segment,
- * connectors wherever two stages touch, and a vertical gradient stretched across the
- * lane centres so a segment's colour comes from WHERE it is rather than from what it
- * is. Nothing about that survives a unit test. A regression here — a connector that
- * stops connecting, a gradient that collapses to one colour — is invisible except in
- * a picture.
+ * [SleepStagesLaneChart], the hypnogram: four lanes, connectors where stages touch, and a
+ * gradient across the lane centres. A regression here is invisible except in a picture.
  */
 class SleepStageChartGoldenTest {
 
@@ -52,8 +45,7 @@ class SleepStageChartGoldenTest {
 
     @Test
     fun theSameNightOnTheDayCard_labelsWithoutTotals() {
-        // The day card lists the same totals underneath, so repeating them in the lane
-        // labels would say everything twice.
+        // The day card lists the same totals underneath.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 340.dp) {
                 SleepStagesLaneChart(
@@ -73,10 +65,8 @@ class SleepStageChartGoldenTest {
 
     @Test
     fun aDeviceThatOnlySaysAsleep() {
-        // The cheap tracker: no stage detail at all, just SLEEPING and AWAKE. It still
-        // gets four lanes — the standard set is fixed — and everything it recorded
-        // lands in the Light lane, which is where SLEEPING is grouped. Two empty lanes
-        // is the honest picture, and it is a picture worth having.
+        // A cheap tracker with only SLEEPING and AWAKE still gets four lanes;
+        // everything lands in the Light lane and two lanes stay empty.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 340.dp) {
                 SleepStagesLaneChart(
@@ -100,13 +90,8 @@ class SleepStageChartGoldenTest {
 
     @Test
     fun aSplitNight_theStretchOutOfBed() {
-        // Two sessions of one night with a get-up between them. The week chart has always
-        // drawn that stretch in translucent SleepColor, because it paints the in-bed span
-        // as a base block and only overlays the stages it has; the day view painted the
-        // same stretch in the Awake pink, because the gap was handed to it typed
-        // STAGE_AWAKE and every segment took its colour from the lane gradient. This is
-        // the picture of the two views finally agreeing — and the gap is the one segment
-        // in the chart that does NOT come from the gradient, which is worth a photograph.
+        // Two sessions with a get-up between them. The day view used to paint the gap in Awake pink
+        // while the week chart used translucent SleepColor. The gap is the one segment not from the gradient.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 340.dp) {
                 SleepStagesLaneChart(
@@ -127,16 +112,14 @@ class SleepStageChartGoldenTest {
     private companion object {
         val FORMATTER = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC })
 
-        // Pinned rather than localized: `ofLocalizedTime` follows the device, and the
-        // scrub tooltip is not what these pictures are about.
+        // Pinned rather than localized: `ofLocalizedTime` follows the device.
         val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
         val CHART: Modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
 
-        // A night that straddles midnight, because every night does, and the chart's x
-        // axis is the session rather than the day.
+        // A night that straddles midnight; the x axis is the session, not the day.
         val BEDTIME: Instant = goldenInstant(2026, 6, 21, 23, 15)
         val WAKE_UP: Instant = goldenInstant(2026, 6, 22, 7, 5)
 
@@ -146,13 +129,7 @@ class SleepStageChartGoldenTest {
             stageType = type,
         )
 
-        /**
-         * A plausible architecture: deep early, REM lengthening toward morning, a brief
-         * wake before dawn. The stages are CONTIGUOUS on purpose — the connectors are
-         * only drawn where one stage ends exactly where the next begins, so a fixture
-         * with gaps in it would photograph a chart with no connectors and quietly stop
-         * testing them.
-         */
+        /** Deep early, REM lengthening toward morning, a brief wake before dawn. Contiguous on purpose, or the connectors go untested. */
         fun night(): List<SleepStage> = listOf(
             stage(SleepStage.STAGE_AWAKE, 0, 10),
             stage(SleepStage.STAGE_LIGHT, 10, 55),
@@ -169,13 +146,7 @@ class SleepStageChartGoldenTest {
             stage(SleepStage.STAGE_LIGHT, 450, 470),
         )
 
-        /**
-         * The same night, but slept in two goes with 90 minutes up in between — the shape
-         * `combineNightStages` produces once it bridges two sessions less than three hours
-         * apart. Contiguous like [night], so the connectors into and out of the gap are in
-         * the picture too: they are the only ones that cross between the two paths the
-         * chart now draws.
-         */
+        /** The same night slept in two goes, 90 minutes up in between, as `combineNightStages` produces. */
         fun splitNight(): List<SleepStage> = listOf(
             stage(SleepStage.STAGE_LIGHT, 0, 40),
             stage(SleepStage.STAGE_DEEP, 40, 95),

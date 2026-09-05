@@ -17,7 +17,7 @@ class GarminGattReportTest {
         services = services,
     )
 
-    // ── isSupported ──────────────────────────────────────────────────────────
+    // isSupported.
 
     @Test
     fun `true for the transports this app can drive`() {
@@ -27,15 +27,12 @@ class GarminGattReportTest {
 
     @Test
     fun `false when the verdict says nothing usable`() {
-        // These two must stay distinct in the model even though both are
-        // "no": unknown means "we enumerated and did not recognise it"
-        // (report it), unreachable means "we learnt nothing" (retry is
-        // worthwhile).
+        // Unknown means "enumerated and did not recognise"; unreachable means "learnt nothing", worth a retry.
         assertFalse(report(GarminTransportVariant.UNKNOWN).isSupported)
         assertFalse(report(GarminTransportVariant.UNREACHABLE).isSupported)
     }
 
-    // ── describe ─────────────────────────────────────────────────────────────
+    // describe.
 
     @Test
     fun `renders every service and characteristic under one grep-able tag`() {
@@ -54,8 +51,7 @@ class GarminGattReportTest {
 
         val lines = gattReport.describe().split('\n')
 
-        // Every line carries the tag: the log is read with grep, and an
-        // untagged continuation line would be invisible in the results.
+        // Every line carries the tag: the log is read with grep.
         assertTrue(lines.all { it.startsWith("[GARMIN-GATT]") })
         assertTrue(lines.first().contains("variant=v1"))
         assertTrue(lines.first().contains("services=1"))
@@ -89,7 +85,7 @@ class GarminGattReportTest {
         assertTrue(gattReport.describe().contains("[read,notify]"))
     }
 
-    // ── classify (the probe's pure half) ─────────────────────────────────────
+    // classify (the probe's pure half).
 
     @Test
     fun `classifies a V2 multi-link table and prefers it over V1`() {
@@ -99,8 +95,7 @@ class GarminGattReportTest {
                 characteristics = mapOf(
                     GarminUuids.uuidForHandle(0x2810) to listOf("notify"),
                     GarminUuids.uuidForHandle(0x2820) to listOf("writeNoRsp"),
-                    // A V1 pair as well: V2 must still win, matching
-                    // GarminSupport.initializeDevice.
+                    // A V1 pair as well: V2 must still win.
                     GarminUuids.GFDI_SEND_V1 to listOf("writeNoRsp"),
                     GarminUuids.GFDI_RECEIVE_V1 to listOf("notify"),
                 ),

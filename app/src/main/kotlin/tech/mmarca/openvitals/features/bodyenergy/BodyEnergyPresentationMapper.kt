@@ -19,11 +19,7 @@ data class BodyEnergyDisplayState(
     val topReasons: List<BodyEnergyReason> = emptyList(),
     val inputRows: List<BodyEnergyInputRow> = emptyList(),
     val inputSummary: BodyEnergyInputSummary? = null,
-    /**
-     * The tallest bar the influence strip has to fit, floored at 1.0 so an
-     * all-zero day divides by something. Precomputed here rather than scanned by
-     * the painter on every repaint.
-     */
+    /** The tallest influence bar, floored at 1.0. Precomputed for the painter. */
     val maxInfluenceMagnitude: Double = 1.0,
 ) {
     val isEmpty: Boolean
@@ -106,9 +102,7 @@ fun BodyEnergyTimeline?.toBodyEnergyDisplayState(): BodyEnergyDisplayState {
         )
     }
     val influenceBars = timeline.points.map { point ->
-        // Every v11 drain component, and the APPLIED activity drain rather than
-        // the two competing estimates: the bar has to be the same number the
-        // score moved by, or the strip explains a curve it does not match.
+        // The applied activity drain, not the two estimates: the bar must match the score.
         val drain = point.basalDrain +
             point.appliedActivityDrain +
             point.stressDrain +
@@ -139,22 +133,13 @@ fun BodyEnergyTimeline?.toBodyEnergyDisplayState(): BodyEnergyDisplayState {
     )
 }
 
-/**
- * The influence strip scales every bar against the tallest one; a day with no
- * charge and no drain divides by 1.0 rather than by zero.
- */
+/** The tallest bar, floored at 1.0 so an empty day divides by something. */
 private fun List<BodyEnergyInfluenceBar>.maxInfluenceMagnitude(): Double =
     maxOfOrNull { maxOf(it.charge, it.drain) }?.takeIf { it > 0.0 } ?: 1.0
 
 /**
- * The day's charge and drain broken down by what caused them, biggest first.
- *
- * Charge is attributed per BUCKET (sleep or quiet rest, whichever the bucket's
- * primary influence says), drain per COMPONENT — the score moved by four named
- * amounts every bucket, so summing each one across the day is the only reading
- * that adds back up to the headline. The applied activity drain is everyday
- * movement when the active-calorie estimate carried it and exertion when heart
- * rate did, which is the one place the two estimates are told apart.
+ * The day's charge and drain by cause, biggest first. Charge per bucket,
+ * drain per component, so the sums add back up to the headline.
  */
 private fun BodyEnergyTimeline.topReasons(): List<BodyEnergyReason> {
     val chargeReasons = points
@@ -204,10 +189,7 @@ private fun BodyEnergyTimelinePoint.drainComponents(): List<Pair<BodyEnergyPrima
         activityInfluence to appliedActivityDrain,
         BodyEnergyPrimaryInfluence.ELEVATED_HEART_RATE to stressDrain,
         BodyEnergyPrimaryInfluence.RECOVERY_DEBT to recoveryDebtDrain,
-        // Basal is reported as STEADY: it never competes to be a bucket's
-        // primary influence, but across a whole day it is often the largest
-        // single thing that happened, and hiding it would leave the card unable
-        // to explain a quiet day at all.
+        // Basal is STEADY: never a bucket's primary influence, but often the day's largest.
         BodyEnergyPrimaryInfluence.STEADY to basalDrain,
     )
 }
@@ -284,12 +266,8 @@ private fun BodyEnergyInputSummary.inputRows(): List<BodyEnergyInputRow> =
     )
 
 /**
- * The score this day carried over from the previous one.
- *
- * Body Energy is a chain, so this row is the one place a reset is explicable: a
- * chain gap says the predecessor is too far back to trust, and a floored
- * carry-over shows both numbers (`3 -> 10`) rather than silently presenting the
- * raised one as if it were measured.
+ * The score carried over from the previous day. A chain gap or a floored
+ * carry-over shows both numbers rather than presenting the raised one as measured.
  */
 private fun BodyEnergyInputSummary.previousScoreRow(): BodyEnergyInputRow {
     if (seedSource == BodyEnergySeedSource.CHAIN_GAP) {

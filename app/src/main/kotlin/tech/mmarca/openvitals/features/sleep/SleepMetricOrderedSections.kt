@@ -328,11 +328,7 @@ internal fun sleepStageDurationsOf(summary: SleepOverviewSummary) = SleepStageDu
     outOfBedMs = summary.outOfBedDurationMs,
 )
 
-/**
- * Week and month draw the time-aligned schedule chart, but only when at least one night knows its
- * bedtime and the plausible nights yield an axis; otherwise (and always on day/year) the plain
- * duration bar chart is used.
- */
+/** Week and month draw the schedule chart when a night knows its bedtime and an axis exists. */
 internal fun useSleepScheduleChart(
     selectedRange: TimeRange,
     scheduleDays: List<SleepScheduleDay>,
@@ -345,18 +341,11 @@ internal fun useSleepScheduleChart(
 internal fun sleepEntriesNewestFirst(sessions: List<SleepData>): List<SleepData> =
     sessions.sortedByDescending { it.endTime }
 
-/**
- * Health Connect RECORDING_METHOD_MANUAL_ENTRY sessions only — an actively-recorded night is not
- * a manual entry.
- */
+/** RECORDING_METHOD_MANUAL_ENTRY sessions only. */
 internal fun sleepManualEntryCount(sessions: List<SleepData>): Int =
     sessions.count { it.recordingMethod == RecordingMethod.MANUAL_ENTRY }
 
-/**
- * Period totals over the duration points: only the nights that recorded sleep count as nights, and
- * an empty period derives zeroes rather than NaN. Hoisted out of the statistics composable so the
- * arithmetic is testable on the JVM.
- */
+/** Period totals over the duration points. Empty periods derive zeroes, not NaN. */
 internal data class SleepPeriodTotals(
     val nights: Int,
     val totalHours: Double,
@@ -397,7 +386,7 @@ private fun SleepStatisticsSectionContent(
     Column(modifier = Modifier.fillMaxWidth()) {
         DailyGoalStatistics(
             progress = goalProgress,
-            // One night is its own gap to the target, not an average of anything.
+            // One night is its own gap to the target.
             averageGap = if (isDay) {
                 null
             } else {
@@ -492,9 +481,7 @@ private fun SleepTargetContextSectionContent(
     targetHours: Double,
     unitFormatter: UnitFormatter,
 ) {
-    // Two nights minimum: every line of this card reads "average sleep is...", and the
-    // mean of a single night is just that night wearing a word it has not earned. The day
-    // view answers the same question honestly through the daily goal card above.
+    // Two nights minimum: the mean of one night has not earned the word.
     val nights = durationPoints.filter { it.hours > 0.0 }
     if (nights.size < 2) return
     val averageHours = nights.map { it.hours }.average()

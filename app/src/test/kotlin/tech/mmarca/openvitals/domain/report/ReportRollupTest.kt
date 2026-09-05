@@ -12,7 +12,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 
 class ReportRollupTest {
 
-    // A Monday, so the Monday-aligned weekly cases read plainly.
+    // A Monday, so the weekly cases read plainly.
     private val monday = LocalDate.of(2026, 6, 1)
 
     private fun day(offset: Long, value: Double, min: Double? = null, max: Double? = null, secondary: Double? = null) =

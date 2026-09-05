@@ -123,8 +123,7 @@ internal fun LazyListScope.stepsContent(
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_steps, R.string.message_no_step_updates, Icons.AutoMirrored.Outlined.DirectionsWalk, StepsColor)
     } else {
-        // Nothing to show yet and still loading: the shape of the chart that is
-        // coming, so the page does not jump when the data lands.
+        // Still loading: the shape of the coming chart, so the page does not jump.
         metricChartSkeleton()
     }
 }
@@ -217,8 +216,7 @@ internal fun LazyListScope.distanceContent(
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_distance, R.string.message_no_distance_updates, Icons.Outlined.Straighten, DistanceColor)
     } else {
-        // Nothing to show yet and still loading: the shape of the chart that is
-        // coming, so the page does not jump when the data lands.
+        // Still loading: the shape of the coming chart.
         metricChartSkeleton()
     }
 }
@@ -311,8 +309,7 @@ internal fun LazyListScope.caloriesContent(
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_calories_burned, R.string.message_no_calories_burned, Icons.Outlined.LocalFireDepartment, CaloriesColor)
     } else {
-        // Nothing to show yet and still loading: the shape of the chart that is
-        // coming, so the page does not jump when the data lands.
+        // Still loading: the shape of the coming chart.
         metricChartSkeleton()
     }
 }
@@ -410,8 +407,7 @@ internal fun LazyListScope.activeCaloriesContent(
             ActiveCaloriesColor,
         )
     } else {
-        // Nothing to show yet and still loading: the shape of the chart that is
-        // coming, so the page does not jump when the data lands.
+        // Still loading: the shape of the coming chart.
         metricChartSkeleton()
     }
 }
@@ -521,8 +517,7 @@ internal fun LazyListScope.floorsContent(
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_floors_climbed, R.string.message_no_floors_climbed, Icons.Outlined.Stairs, FloorsColor)
     } else {
-        // Nothing to show yet and still loading: the shape of the chart that is
-        // coming, so the page does not jump when the data lands.
+        // Still loading: the shape of the coming chart.
         metricChartSkeleton()
     }
 }
@@ -615,8 +610,7 @@ internal fun LazyListScope.elevationContent(
     } else if (!state.isLoading) {
         noMetricData(R.string.metric_elevation_gained, R.string.message_no_elevation, Icons.Outlined.Terrain, ElevationColor)
     } else {
-        // Nothing to show yet and still loading: the shape of the chart that is
-        // coming, so the page does not jump when the data lands.
+        // Still loading: the shape of the coming chart.
         metricChartSkeleton()
     }
 }

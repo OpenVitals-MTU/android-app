@@ -45,32 +45,17 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsCardStyle
 import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
- * Watch notification forwarding: the master switch, the two gates, and the
- * per-app blocklist.
- *
- * The list is a BLOCKLIST: every app is on until it is switched off. An
- * allow-list would contradict what the master switch says it does, and would
- * leave a newly-installed messaging app silent for no visible reason. The
- * apps come from a `<queries>` MAIN/LAUNCHER declaration, never
- * QUERY_ALL_PACKAGES.
- *
- * Port of the Flutter build's `watch_notification_apps_screen.dart` plus the
- * `_WatchNotificationsRow` (master switch, access gate, prominent disclosure)
- * that lived on its watch device screen — folded into one screen here because
- * 7d's watch device screen does not exist yet; it links here.
+ * Watch notification forwarding: the master switch, the two gates and the
+ * per-app blocklist. A blocklist, so a new messaging app is not silent.
  */
 @Composable
 fun WatchNotificationAppsScreen(viewModel: WatchNotificationAppsViewModel) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Resolving every installed app's label is a platform round trip per app,
-    // so it happens when this screen is opened rather than earlier.
+    // Resolving every app's label is a round trip per app, so it waits for this screen.
     LaunchedEffect(Unit) { viewModel.loadApps() }
 
-    // Notification access is granted on a SYSTEM screen, and Android gives no
-    // callback when it happens — the user simply leaves and comes back.
-    // Without re-reading on resume the card keeps showing "not granted" over a
-    // permission that is already there, and the switch reads as dead.
+    // Access is granted on a system screen with no callback; re-read on resume.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
 
     if (state.showDisclosure) {
@@ -124,10 +109,7 @@ fun WatchNotificationAppsScreen(viewModel: WatchNotificationAppsViewModel) {
                     AppRow(
                         app = app,
                         onSendsChanged = { sends ->
-                            // Inverted on purpose: the switch reads "sends to
-                            // the watch", which is what the user is deciding,
-                            // while the stored state is the set of apps that
-                            // do not.
+                            // Inverted: the switch reads "sends", the stored state is the blocklist.
                             viewModel.setBlocked(app.packageName, blocked = !sends)
                         },
                     )
@@ -260,11 +242,7 @@ private fun AppRow(
     }
 }
 
-/**
- * The prominent disclosure Google Play requires BEFORE notification access is
- * requested: what is read, where it goes, how to turn it off. Dismissing the
- * dialog counts as declining.
- */
+/** The prominent disclosure Google Play requires before notification access. Dismissing declines. */
 @Composable
 private fun DisclosureDialog(
     onAccept: () -> Unit,

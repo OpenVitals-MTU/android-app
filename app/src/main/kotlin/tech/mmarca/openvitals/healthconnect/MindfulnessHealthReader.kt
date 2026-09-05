@@ -83,8 +83,7 @@ internal class MindfulnessHealthReader(
                 metadata = Metadata.manualEntryWithId(id = id, device = existing.metadata.device),
                 mindfulnessSessionType = existing.mindfulnessSessionType,
                 title = request.title,
-                // The edit form prefills its notes field from the record, so the
-                // request's notes ARE the user's decision — including clearing them.
+                // The edit form prefills notes, so the request's notes are the decision, clearing included.
                 notes = request.notes,
             )
 

@@ -48,9 +48,7 @@ fun SwipeToDeleteEntryRow(
         enableDismissFromStartToEnd = false,
         onDismiss = dismissAction,
         backgroundContent = {
-            // Painted only while the row is actually displaced. The
-            // background is composed at rest too, and any row whose content
-            // is not fully opaque let the delete red bleed straight through.
+            // Painted only while displaced, or the delete red bleeds through translucent content.
             if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
                 Box(
                     modifier = Modifier

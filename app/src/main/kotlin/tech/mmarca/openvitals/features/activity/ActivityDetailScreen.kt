@@ -331,8 +331,7 @@ internal fun ActivityDetailContent(
                 )
             }
         }
-        // Only a reading with a measured peak is worth a card: without one there
-        // was no recovery to speak of, and the card would open with a blank.
+        // Only a reading with a measured peak is worth a card.
         if (heartRateRecovery != null && heartRateRecovery.peakBpm != null) {
             item {
                 HeartRateRecoveryCard(
@@ -343,9 +342,7 @@ internal fun ActivityDetailContent(
                 )
             }
         }
-        // Recorded speed, or the split-derived reconstruction — never both:
-        // a measurement beats a reconstruction, and two speed cards on one
-        // screen disagreeing by a hair would be worse than either alone.
+        // Recorded speed, or the split-derived reconstruction, never both.
         if (speedSamples.isNotEmpty()) {
             item {
                 ActivitySpeedChartCard(
@@ -445,8 +442,7 @@ internal fun ActivityDetailContent(
             )
         }
         item {
-            // The route formats join the card only when there is a route to
-            // put in them; the metric formats are unconditional.
+            // Route formats only with a route; metric formats always.
             val hasExportableRoute = workout.route.status == ExerciseRouteStatus.DATA &&
                 workout.route.points.isNotEmpty()
             WorkoutExportCard(

@@ -56,18 +56,14 @@ internal fun ActivityHeartRateChartCard(
     val avgBpm = sorted.map { it.beatsPerMinute }.average().roundToInt()
     val paddedMin = (minBpm - 5L).coerceAtLeast(30L)
     val paddedMax = maxBpm + 5L
-    // The axis counts only moving time: a pause is not part of the ride, so it
-    // gets none of the chart. Heart rate keeps sampling through a pause (a strap
-    // does not stop because the ride did); those samples stack at the moment the
-    // pause began rather than stretching it back open.
+    // The axis counts only moving time. Samples taken during a pause stack at its start.
     val axis = remember(sessionStart, sessionEnd, pauses) {
         SessionAxis(start = sessionStart, end = sessionEnd, pauses = pauses)
     }
     val chartHeight = 180.dp
     val zone = ZoneId.systemDefault()
     val timeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-    // Built once, identity-stable across pinch frames, so the plot's geometry
-    // cache holds.
+    // Built once, identity-stable, so the geometry cache holds.
     val chartPoints = remember(sorted, axis) {
         sorted.map { sample ->
             MetricLinePlotPoint(
@@ -107,8 +103,7 @@ internal fun ActivityHeartRateChartCard(
                     modifier = Modifier.weight(1f),
                 )
             }
-            // The plot and its elapsed row share the one viewport, so the labels
-            // always describe the slice of the session actually on show.
+            // Plot and elapsed row share the one viewport.
             ChartZoom(sessionStart, sessionEnd, samples) { zoom ->
                 Column {
                     MetricLinePlot(
@@ -123,9 +118,7 @@ internal fun ActivityHeartRateChartCard(
                         drawPoints = sorted.size <= 120,
                         viewport = zoom.viewport,
                         multiTouch = zoom.multiTouch,
-                        // Moving elapsed, matching the labels directly under it:
-                        // reporting wall-clock here would have the scrubber
-                        // disagree with its own axis.
+                        // Moving elapsed, matching the labels under it.
                         scrubLabel = { point ->
                             unitFormatter.heartRate(point.value.roundToLong()).text to
                                 formatElapsedChartLabel(axis.elapsedAt(point.xFraction))

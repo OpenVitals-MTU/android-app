@@ -227,10 +227,7 @@ internal fun recordingDashboardStats(
     val speed = state.currentSensorSpeedMetersPerSecond
         ?: state.effectiveCurrentSpeedMetersPerSecond(now)
 
-    // The turn as one more metric: how far, labelled with the street it is
-    // onto — a figure and the thing the figure is about, the shape every other
-    // cell has. Nothing to show is shown as the waiting dash every idle sensor
-    // uses, never as a zero to a street that does not exist.
+    // The turn as one more metric: distance, labelled with the street. Nothing is the idle dash.
     val guidance = (coMapsNavigation as? CoMapsNavigationState.Active)?.snapshot
     val guidanceDistance = guidance?.distanceToTurn.orEmpty()
     val guidanceStreet = guidance?.nextStreet.orEmpty()
@@ -293,11 +290,7 @@ internal fun recordingDashboardStats(
     )
 }
 
-/**
- * [coMapsGuidance] adds the turn tile. It is gated on the integration actually
- * being switched on, because an always-empty cell holding a grid slot open for
- * a feature the user does not use is worse than no cell.
- */
+/** [coMapsGuidance] adds the turn tile, gated on the integration being on. */
 internal fun availableRecordingDashboardFields(
     state: ActivityRecordingState,
     coMapsGuidance: Boolean = false,

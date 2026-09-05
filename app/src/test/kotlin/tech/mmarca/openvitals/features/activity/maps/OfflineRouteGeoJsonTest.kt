@@ -29,8 +29,7 @@ class OfflineRouteGeoJsonTest {
 
     @Test
     fun `break indexes split the route into separate segments, tail included`() {
-        // The drawing layer drops a one-point tail (a polyline needs two), but
-        // `routeSegments` keeps it — losing it here would lose the point itself.
+        // The drawing layer drops a one-point tail, but `routeSegments` keeps it.
         val segments = routeSegments(routePoints(5), routeBreakIndexes = listOf(2, 4))
 
         assertEquals(3, segments.size)
@@ -44,8 +43,7 @@ class OfflineRouteGeoJsonTest {
             routeBreakIndexes = listOf(2),
         ).features().orEmpty()
 
-        // Two drawable segments: [0,1] and [2,3,4]. The one-point tail case is
-        // covered above; here the coordinates themselves must survive the trip.
+        // Two drawable segments: [0,1] and [2,3,4]. The coordinates must survive the trip.
         assertEquals(2, features.size)
         val first = (features[0].geometry() as LineString).coordinates()
         assertEquals(2, first.size)

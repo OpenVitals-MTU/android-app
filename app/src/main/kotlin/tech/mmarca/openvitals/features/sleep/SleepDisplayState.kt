@@ -66,10 +66,7 @@ data class SleepOverviewSchedule(
     val endMinute: Int,
 )
 
-/**
- * One night's sleep window and stages, used by the time-aligned week/month schedule chart.
- * [inBedStart]/[inBedEnd] are null for nights with no recorded sleep.
- */
+/** One night's window and stages for the schedule chart. Null bounds for nights with no sleep. */
 @Immutable
 data class SleepScheduleDay(
     val date: LocalDate,

@@ -20,16 +20,8 @@ import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 
 /**
- * The Daily Readiness verdict as a card, hosted by the Body Energy screen.
- *
- * This used to be a screen of its own, reached from an app-bar icon. Body energy
- * was one of its two sub-scores; the merge inverts that — the Body Energy view
- * is the home and readiness rides along as the day's verdict — so the panel no
- * longer links to body energy, which is the screen around it.
- *
- * [date] is the host's selected day. The card keeps its own view-model pointed
- * at that day, and renders a placeholder rather than a different day's verdict
- * while the two are out of step.
+ * The readiness verdict as a card on the Body Energy screen. [date] is the
+ * host's day; a placeholder shows while the two are out of step.
  */
 @Composable
 fun DailyReadinessCard(

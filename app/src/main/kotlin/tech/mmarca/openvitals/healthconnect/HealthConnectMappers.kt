@@ -159,9 +159,7 @@ internal fun SleepSessionRecord.toSleepData(): SleepData {
 internal fun MindfulnessSessionRecord.toMindfulnessSession(appPackageName: String? = null) = MindfulnessSession(
     id = metadata.id,
     title = title,
-    // Flutter-era builds stamped Dart's null-to-string into records with no
-    // notes; those live on in Health Connect, so the literal "null" (and
-    // blank) reads as no-notes rather than as a note saying "null".
+    // Flutter-era builds stored the literal "null" for missing notes.
     notes = notes?.takeUnless { it.isBlank() || it == "null" },
     startTime = startTime,
     endTime = endTime,

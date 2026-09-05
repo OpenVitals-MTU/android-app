@@ -80,13 +80,7 @@ class OnboardingViewModelTest {
         coEvery { repo.grantedPermissions() } returns granted
     }
 
-    /**
-     * The two mindfulness keys are backed by real vars rather than constants.
-     * The view-model now re-reads them after a toggle — the catalog derives the
-     * mindfulness permissions from them, so a cached copy goes stale the moment
-     * they flip — and a stub that always answers `false` would report the write
-     * as having no effect.
-     */
+    /** The mindfulness keys are real vars: the view model re-reads them after a toggle. */
     private fun prefs(optedIn: Boolean = false): PreferencesRepository = mockk<PreferencesRepository>().also { prefs ->
         var legacyOptIn = optedIn
         var integrationEnabled = optedIn
@@ -144,8 +138,7 @@ class OnboardingViewModelTest {
         assertTrue(activity.required)
         assertEquals(2, activity.total)
         assertEquals(setOf("activity_r", "activity_w"), vm.missingRequestableFor(OnboardingCategoryId.ACTIVITY))
-        // The opt-in rows are NOT folded into the required set — there is no
-        // second "grant the rest" request for them to feed.
+        // The opt-in rows are not folded into the required set.
         val required = requireNotNull(state.catalog).requiredPermissions
         assertEquals(setOf("activity_r", "sleep_r"), required)
         // Writes are asked for alongside the reads but never gate step one.
@@ -199,8 +192,7 @@ class OnboardingViewModelTest {
             ),
             catalog.categories.map { it.id },
         )
-        // Every category carries a non-empty permission set; an empty one would
-        // render as a row whose button grants nothing.
+        // An empty permission set would render as a row whose button grants nothing.
         assertTrue(catalog.categories.all { it.permissions.isNotEmpty() })
     }
 
@@ -208,8 +200,7 @@ class OnboardingViewModelTest {
         val vm = viewModel(repo = repo(granted = emptySet()))
         advanceUntilIdle()
 
-        // Route reads belong to no category: the additional-access row's button
-        // can only ask for what the row itself lists.
+        // Route reads belong to no category: the row's button can only ask for what it lists.
         val row = requireNotNull(vm.uiState.value.additionalAccessRow)
         assertEquals(setOf("history", "background"), row.permissions)
         assertFalse("route_read" in row.permissions)
@@ -217,14 +208,12 @@ class OnboardingViewModelTest {
             setOf("history", "background"),
             vm.missingRequestableFor(OnboardingCategoryId.ADDITIONAL_ACCESS),
         )
-        // The step still applies, and stays unsatisfied, because the manual
-        // grant is outstanding — that is what sends the user to settings.
+        // The manual grant is outstanding, which sends the user to settings.
         assertTrue(vm.uiState.value.routesOutstanding)
     }
 
     @Test fun `the additional-access row counts only what its button can grant`() = runTest {
-        // Counting the route read here made the row read "2 of 3" forever: the
-        // third could never be granted from anywhere the button leads.
+        // Counting the route read made the row read "2 of 3" forever.
         val vm = viewModel(
             repo = repo(granted = setOf("history", "background")),
         )
@@ -235,8 +224,7 @@ class OnboardingViewModelTest {
         assertEquals(2, row.grantedCount)
         assertTrue(row.fullyGranted)
         assertTrue(vm.missingRequestableFor(OnboardingCategoryId.ADDITIONAL_ACCESS).isEmpty())
-        // Fully granted as a row, yet the walkthrough is still owed — so the
-        // last step keeps applying and stays unsatisfied.
+        // Fully granted as a row, yet the walkthrough is still owed.
         assertTrue(vm.uiState.value.routesOutstanding)
         assertTrue(vm.uiState.value.stepApplies(OnboardingStep.ADDITIONAL_ACCESS))
     }
@@ -424,8 +412,7 @@ class OnboardingViewModelTest {
         val vm = viewModel(repo = repo(granted = setOf("activity_r", "sleep_r")))
         advanceUntilIdle()
 
-        // Cycle, mindfulness and additional access have their own steps; step
-        // one's button must not drag them into its dialog.
+        // Cycle, mindfulness and additional access have their own steps.
         assertEquals(
             setOf("activity_w", "body_r", "body_w", "nutrition_r", "sleep_w", "vitals_r"),
             vm.missingRequestableForCategories(),
@@ -523,17 +510,11 @@ class OnboardingViewModelTest {
         verify { prefs.onboardingDone = true }
     }
 
-    // ── The mindfulness opt-in deadlock ──────────────────────────────────────
+    // The mindfulness opt-in deadlock.
 
     @Test fun `a supporting device is offered the mindfulness step before opting in`() = runTest {
-        // The deadlock this guards: the step carries the ONLY opt-in toggle, and
-        // it used to be shown only when mindfulness was already enabled. On a
-        // fresh install the step was therefore skipped forever and the
-        // permission was never offered at all.
-        //
-        // So the two flags must stay independent — the device supports the
-        // feature (step offered) while the catalog carries no mindfulness
-        // category (the user has not opted in yet).
+        // The step carries the only opt-in toggle and used to show only when already enabled,
+        // so a fresh install skipped it forever. The two flags must stay independent.
         val vm = viewModel(
             repo = repo(catalog = catalog(mindfulnessSupported = false).copy(
                 mindfulnessSupportedByDevice = true,
@@ -561,10 +542,8 @@ class OnboardingViewModelTest {
     }
 
     @Test fun `opting in rebuilds the catalog so the permission becomes requestable`() = runTest {
-        // The second half of the bug: the catalog derives its mindfulness
-        // permissions from the very preference the toggle writes, so the cached
-        // copy goes stale the moment it flips. Without a rebuild the row stays
-        // missing and Grant launches an empty request, which does nothing.
+        // The catalog derives its mindfulness permissions from the preference the toggle writes,
+        // so without a rebuild the row stays missing and Grant launches an empty request.
         val repo = mockk<HealthRepository>()
         every { repo.availability() } returns HealthConnectAvailability.AVAILABLE
         coEvery { repo.grantedPermissions() } returns emptySet()
@@ -608,8 +587,7 @@ class OnboardingViewModelTest {
         advanceUntilIdle()
 
         assertNull(vm.uiState.value.mindfulnessRow)
-        // The step stays available: the toggle has to remain reachable to be
-        // turned back on.
+        // The toggle has to remain reachable to be turned back on.
         assertTrue(vm.uiState.value.stepApplies(OnboardingStep.MINDFULNESS))
     }
 }

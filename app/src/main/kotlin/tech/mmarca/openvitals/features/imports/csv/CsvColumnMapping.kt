@@ -1,26 +1,16 @@
 package tech.mmarca.openvitals.features.imports.csv
 
-/**
- * What the user decided each CSV column means, and whether that decision is
- * usable. Pure immutable values — no repository, no clock, no context — so the
- * screen can re-validate on every edit and the tests can assert one issue at a
- * time.
- */
+/** What the user decided each column means, and whether that is usable. Pure values. */
 
 /** What a column is used for. */
 enum class CsvColumnRole {
-    /** Not imported. The default — a column has to be opted in. */
+    /** Not imported. The default. */
     IGNORE,
 
     /** The measurement's date and time; for an interval metric, its start. */
     TIMESTAMP,
 
-    /**
-     * Where an interval metric's span ends. Only consumed by metrics whose
-     * spec says [CsvMetricSpec.isInterval]; instant metrics on the same row
-     * ignore it. Optional: a row that supplies no end — the column unmapped,
-     * or its cell blank — spans one minute from its start instead.
-     */
+    /** Where an interval metric's span ends. Optional: a missing end means one minute. */
     END_TIMESTAMP,
 
     /** A body metric. */
@@ -33,10 +23,7 @@ data class CsvColumnMapping(
     val role: CsvColumnRole = CsvColumnRole.IGNORE,
     /** Set only when [role] is [CsvColumnRole.METRIC]. */
     val metric: CsvImportMetric? = null,
-    /**
-     * How this column's number becomes the metric's canonical value. Set only
-     * when [role] is [CsvColumnRole.METRIC].
-     */
+    /** How this column's number becomes the canonical value. METRIC only. */
     val interpretation: CsvValueInterpretation? = null,
 ) {
     val isMetric: Boolean get() = role == CsvColumnRole.METRIC && metric != null
@@ -45,10 +32,7 @@ data class CsvColumnMapping(
 
     val isEndTimestamp: Boolean get() = role == CsvColumnRole.END_TIMESTAMP
 
-    /**
-     * The interpretation to actually use, falling back to the metric's default
-     * so a mapping is never half-specified.
-     */
+    /** The interpretation to use, falling back to the metric's default. */
     val effectiveInterpretation: CsvValueInterpretation?
         get() {
             val selected = metric ?: return null
@@ -80,10 +64,7 @@ data class CsvImportMapping(
     val needsWeightColumn: Boolean
         get() = metricColumns.any { it.effectiveInterpretation?.needsRowWeight == true }
 
-    /**
-     * The Health Connect write permissions this mapping actually needs — not
-     * every import write, only the metrics in use.
-     */
+    /** The write permissions this mapping needs: only the metrics in use. */
     val requiredWritePermissions: Set<String>
         get() = metricColumns.mapNotNullTo(mutableSetOf()) { column ->
             column.metric?.let { CsvMetricCatalog[it]?.writePermission }
@@ -151,15 +132,12 @@ fun validateCsvMapping(
         }
     }
 
-    // Asked of the INTERPRETATION, not the metric: "body fat as a percentage"
-    // needs no weight column, "body fat as a mass in kg" does. Modelling the
-    // requirement on the value is what keeps this from being a special case.
+    // Asked of the interpretation, not the metric: only a mass needs a weight column.
     if (mapping.needsWeightColumn && mapping.weightColumn == null) {
         issues += CsvMappingIssue.MASS_SHARE_NEEDS_WEIGHT_COLUMN
     }
 
-    // No issue for an interval metric WITHOUT an end column: the converter
-    // defaults those rows to a one-minute span, so the mapping is importable.
+    // No issue for an interval metric without an end column: one-minute spans.
     val endTimestamps = mapping.columns.filter { it.isEndTimestamp }
     if (endTimestamps.size > 1) {
         issues += CsvMappingIssue.MULTIPLE_END_TIMESTAMP_COLUMNS
@@ -179,17 +157,13 @@ fun validateCsvMapping(
             } else if (mapping.dateTime.format == CsvDateTimeFormat.AUTO &&
                 detectCsvDateTimeFormat(values).ambiguousDayMonth
             ) {
-                // Only while the format is still AUTO. Once the user has picked
-                // day-first or month-first they have answered the question, and
-                // repeating it would block a mapping that is now fully specified.
+                // Only while the format is AUTO; a chosen order answers the question.
                 issues += CsvMappingIssue.AMBIGUOUS_DAY_MONTH_ORDER
             }
         }
     }
 
-    // The end column is read with the same format settings, so a TimeTo column
-    // that parses nowhere should stop the mapping too — but the day/month
-    // ambiguity question is asked once, on the start column above.
+    // The end column uses the same settings; the day/month question is asked once.
     if (endTimestamps.size == 1 && sample.isNotEmpty()) {
         val index = endTimestamps.single().columnIndex
         val values = sample.mapNotNull { row ->
@@ -207,12 +181,8 @@ fun validateCsvMapping(
 }
 
 /**
- * A starting mapping for [headerRow]: everything ignored, except the first
- * column that parses as a date, which is pre-selected as the timestamp.
- *
- * Deliberately does NOT guess metrics from header text — that would be the
- * vendor-preset behaviour this importer does without. The date guess is safe
- * because it is checked against the DATA, not the label.
+ * A starting mapping: everything ignored except the first column that
+ * parses as a date. Metrics are never guessed from header text.
  */
 fun initialCsvMapping(
     headerRow: List<String>,

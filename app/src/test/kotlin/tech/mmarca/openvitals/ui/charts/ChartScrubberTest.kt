@@ -4,11 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/**
- * The scrub's landing rule, tested at the pure layer: nearest SAMPLE by x, never an
- * interpolation. The curve between two samples is a shape the app invented, and a
- * tooltip must only ever report a number that was actually measured.
- */
+/** The scrub lands on the nearest sample by x, never an interpolation. */
 class ChartScrubberTest {
 
     private fun target(x: Float) =
@@ -27,8 +23,7 @@ class ChartScrubberTest {
     }
 
     @Test fun `a tie keeps the first target`() {
-        // Strict less-than: exactly between two samples, the earlier one wins, so the
-        // selection is stable rather than flickering with float noise.
+        // Strict less-than: exactly between two samples, the earlier wins, so the selection is stable.
         val targets = listOf(target(0.4f), target(0.6f))
         assertEquals(0, nearestScrubTargetIndex(targets, 0.5f))
     }

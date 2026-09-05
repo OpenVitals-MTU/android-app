@@ -8,20 +8,11 @@ import org.junit.Test
 
 /**
  * The app's scales against the OpenVitals design system (`../design-system`).
- *
- * The design system is the golden: `tokens/spacing.css`, `tokens/shape.css`,
- * `tokens/typography.css` and `tokens/motion.css` are the source of these
- * numbers, and `docs/audit-1.md` records why several of them are what they are.
- * The audit's own rule applies here — nothing is guessed; every value below was
- * copied from a token file, not remembered.
- *
- * This is deliberately a scale test, not a screen test. What it protects is the
- * thing that silently rots: a value drifting one step out of the ladder, or a
- * sixth radius appearing because someone typed a number at a call site.
+ * Every value below was copied from a token file. This guards the ladder, not the screens.
  */
 class DesignSystemConformanceTest {
 
-    // ── Spacing: the 4dp Material grid ──────────────────────────────────────
+    // Spacing: the 4dp Material grid.
 
     @Test
     fun `the spacing scale is the design system's 4dp grid`() {
@@ -52,13 +43,11 @@ class DesignSystemConformanceTest {
             .isInStrictOrder()
     }
 
-    // ── Component metrics ───────────────────────────────────────────────────
+    // Component metrics.
 
     @Test
     fun `the touch target is Material's 48dp, not the iOS 44`() {
-        // Finding F1. 44 is the iOS HIG floor and this is an Android-only app;
-        // Material and Compose both say 48. Visual containers may be smaller so
-        // long as the hit area pads out to this.
+        // Finding F1: Material and Compose say 48. Visual containers may be smaller if the hit area pads out.
         assertThat(LayoutMetrics.minTouchTarget).isEqualTo(48.dp)
     }
 
@@ -72,14 +61,11 @@ class DesignSystemConformanceTest {
         assertThat(LayoutMetrics.iconSurfaceSize).isEqualTo(52.dp)
     }
 
-    // ── Shape ───────────────────────────────────────────────────────────────
+    // Shape.
 
     @Test
     fun `the card corner is 12dp`() {
-        // Finding F10, and the one value the design system is most explicit
-        // about: OpenVitals cards draw a 12dp corner. The 16 this app used to
-        // carry is named there as the origin of a stray radius that never
-        // matched a shipped pixel.
+        // Finding F10: OpenVitals cards draw a 12dp corner. The old 16 never matched a shipped pixel.
         assertThat(Radii.md).isEqualTo(12.dp)
     }
 
@@ -90,21 +76,17 @@ class DesignSystemConformanceTest {
         assertThat(Radii.md).isEqualTo(12.dp)
         assertThat(Radii.lg).isEqualTo(24.dp)
         assertThat(Radii.xl).isEqualTo(32.dp)
-        // sm and md coincide on purpose: the app does not distinguish an input
-        // corner from a card corner today. Two names so they CAN diverge later
-        // without touching every call site — do not "fix" this into one.
+        // sm and md coincide on purpose. Two names so they can diverge later; do not fold them.
         assertWithMessage("sm and md are documented as coinciding")
             .that(Radii.sm)
             .isEqualTo(Radii.md)
     }
 
-    // ── Typography ──────────────────────────────────────────────────────────
+    // Typography.
 
     @Test
     fun `body and title styles carry Material 3 tracking`() {
-        // Finding F4.2. These styles used to omit letter spacing entirely while
-        // the label styles carried theirs — an accident of this file's origin.
-        // The design system settled it in favour of M3's values.
+        // Finding F4.2: these styles used to omit letter spacing. The design system chose M3's values.
         assertThat(AppTypography.titleMedium.letterSpacing).isEqualTo(0.15.sp)
         assertThat(AppTypography.titleSmall.letterSpacing).isEqualTo(0.1.sp)
         assertThat(AppTypography.bodyLarge.letterSpacing).isEqualTo(0.5.sp)
@@ -121,9 +103,7 @@ class DesignSystemConformanceTest {
 
     @Test
     fun `the heavier headline and title weights are kept`() {
-        // Finding F4.1: heavier than M3's defaults, and deliberately so — the
-        // brand is numbers-first with big bold numerals. Pinned so a later
-        // "align with Material" sweep has to argue with this test first.
+        // Finding F4.1: heavier than M3 on purpose, the brand is numbers-first.
         assertThat(AppTypography.headlineLarge.fontWeight?.weight).isEqualTo(700)
         assertThat(AppTypography.headlineMedium.fontWeight?.weight).isEqualTo(600)
         assertThat(AppTypography.titleLarge.fontWeight?.weight).isEqualTo(600)
@@ -131,12 +111,11 @@ class DesignSystemConformanceTest {
 
     @Test
     fun `the metric headline uses tabular figures`() {
-        // A counter that changes width as it counts is the one thing a
-        // numbers-first dashboard cannot do.
+        // A counter that changes width as it counts is what a numbers-first dashboard cannot do.
         assertThat(AppTypography.headlineMedium.fontFeatureSettings).isEqualTo("tnum")
     }
 
-    // ── Motion ──────────────────────────────────────────────────────────────
+    // Motion.
 
     @Test
     fun `the motion scale is the design system's four durations`() {
@@ -164,14 +143,11 @@ class DesignSystemConformanceTest {
         ).isInStrictOrder()
     }
 
-    // ── Emphasis ────────────────────────────────────────────────────────────
+    // Emphasis.
 
     @Test
     fun `the emphasis ladder is the tint scale, not Material state layers`() {
-        // Finding F11: these are a tint ladder for STATIC content. Material's
-        // state layers (hover 8 / focus 10 / press 10 / drag 16) are a
-        // different system that Material widgets already apply. They share only
-        // the 38% disabled value. Do not merge them.
+        // Finding F11: a tint ladder for static content, not Material's state layers. Do not merge them.
         assertThat(Emphasis.wash).isEqualTo(0.12f)
         assertThat(Emphasis.subtle).isEqualTo(0.22f)
         assertThat(Emphasis.disabled).isEqualTo(0.38f)

@@ -27,10 +27,7 @@ import tech.mmarca.openvitals.domain.model.ReportPoint
 import tech.mmarca.openvitals.domain.model.ReportValueKind
 import tech.mmarca.openvitals.ui.components.smoothPath
 
-/**
- * Every localized string the PDF needs, resolved BEFORE the writer runs — the
- * writer never touches a Context, so it stays constructible in any test.
- */
+/** Every localized string the PDF needs, resolved before the writer runs. */
 data class ReportPdfLabels(
     val reportTitle: String,
     val subtitleLines: List<String>,
@@ -122,14 +119,9 @@ interface ReportValueFormatter {
 }
 
 /**
- * Renders [ReportData] to a PDF via [PdfDocument] — no dependencies beyond the
- * platform, which is the entire reason this app can ship a PDF exporter at all
- * (offline-only, F-Droid, no third-party engines). Two passes: pure layout
- * planning first (page count known), then drawing.
- *
- * A fixed print palette rather than the Material theme: the artifact is a
- * document handed to a doctor, not a themed screen, and must read the same on
- * paper as in a viewer's dark mode.
+ * Renders [ReportData] to a PDF via [PdfDocument], with no third-party
+ * engine. Two passes: layout, then drawing. A fixed print palette, since
+ * the document must read the same on paper as in a dark viewer.
  */
 class ReportPdfWriter(
     private val labels: ReportPdfLabels,
@@ -245,7 +237,7 @@ class ReportPdfWriter(
         }
     }
 
-    // ── layout ──────────────────────────────────────────────────────────────
+    // Layout.
 
     private fun lineHeight(paint: TextPaint): Float =
         paint.fontMetrics.let { it.descent - it.ascent }
@@ -395,11 +387,7 @@ class ReportPdfWriter(
         return items
     }
 
-    /**
-     * The blood-pressure section past the chart: per-component stats rows, the
-     * time-of-day averages, and every reading — replacing the generic bucket
-     * table whose Min/Max columns cannot say WHICH component they mean.
-     */
+    /** The blood-pressure section past the chart: per-component stats, time-of-day averages, every reading. */
     private fun bloodPressureItems(detail: ReportBloodPressureDetail): List<LayoutItem> {
         val metric = ReportMetric.BLOOD_PRESSURE
         val items = mutableListOf<LayoutItem>()
@@ -498,11 +486,7 @@ class ReportPdfWriter(
 
     private fun rowHeight() = lineHeight(tableCellPaint) + 5f
 
-    /**
-     * The glucose section past the chart: overall stats, per-meal-context
-     * averages (fasting first, the number a doctor asks for), then every
-     * reading with its context.
-     */
+    /** The glucose section past the chart: stats, per-meal averages (fasting first), every reading. */
     private fun glucoseItems(detail: ReportGlucoseDetail): List<LayoutItem> {
         val metric = ReportMetric.BLOOD_GLUCOSE
         val items = mutableListOf<LayoutItem>()
@@ -743,7 +727,7 @@ class ReportPdfWriter(
         return items
     }
 
-    // ── drawing ─────────────────────────────────────────────────────────────
+    // Drawing.
 
     private fun drawPage(canvas: Canvas, page: ReportPage) {
         page.blocks.forEach { placed ->
@@ -837,9 +821,7 @@ class ReportPdfWriter(
                 drawRect(bar.left, bar.top, bar.right, bar.bottom, barPaint)
             }
             if (chart.bandMaxPoints.size > 1 && chart.bandMinPoints.size > 1) {
-                // A closed polygon rather than two joined splines: appending a
-                // second smooth contour would start its own subpath and break
-                // the fill, and at band alpha the faceting is invisible.
+                // A closed polygon: a second smooth contour would start its own subpath.
                 val band = Path()
                 band.moveTo(chart.bandMaxPoints.first().x, chart.bandMaxPoints.first().y)
                 chart.bandMaxPoints.drop(1).forEach { band.lineTo(it.x, it.y) }

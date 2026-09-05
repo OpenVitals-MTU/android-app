@@ -4,11 +4,8 @@ import java.util.UUID
 import kotlin.random.Random
 
 /**
- * Small watch-initiated service conversations that must be ANSWERED for the
- * watch to get on with its life — it retries an unanswered service request
- * every half minute, and its startup errands (the weather fetch among them)
- * queue behind the ones it considers essential. Calendar asks have their own
- * responder ([GarminCalendarResponder]); this one keeps the auth exchange.
+ * Small watch-initiated conversations that must be answered, or the watch
+ * retries every half minute and queues its errands. Keeps the auth exchange.
  */
 object GarminServiceResponders {
 
@@ -26,14 +23,7 @@ object GarminServiceResponders {
         return null
     }
 
-    /**
-     * Fabricated OAuth credentials, exactly as Gadgetbridge's "fake OAuth"
-     * makes them. There is no Garmin account anywhere in this app, but the
-     * watch gates its online-flavoured features — the weather fetch through
-     * the phone included — on believing it has credentials. The values are
-     * never used against any real service: every request the watch makes with
-     * them terminates in this app's own HTTP responder.
-     */
+    /** Fabricated OAuth credentials, as Gadgetbridge makes them. Never used against a real service. */
     private fun oauthResponse(): ByteArray {
         GarminLog.log("[GARMIN-AUTH] watch asked for credentials; issuing fake ones")
         val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"

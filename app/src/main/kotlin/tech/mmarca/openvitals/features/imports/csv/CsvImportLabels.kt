@@ -4,13 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import tech.mmarca.openvitals.R
 
-/**
- * Localised labels for the CSV importer's enums.
- *
- * Kept out of the widgets so the screen renders labels and decides nothing, and
- * so every `when` here is exhaustive — adding a metric or a unit breaks the
- * build until it has a string.
- */
+/** Localised labels for the importer's enums. Every `when` is exhaustive. */
 
 @Composable
 internal fun csvMetricLabel(metric: CsvImportMetric): String = stringResource(
@@ -63,10 +57,7 @@ internal fun csvUnitLabel(unit: CsvUnit): String = stringResource(
     },
 )
 
-/**
- * A direct value reads as its unit; a derived one says what it is derived from,
- * because "kg" alone on a body-fat column would be a lie.
- */
+/** A direct value reads as its unit; a derived one says what it derives from. */
 @Composable
 internal fun csvInterpretationLabel(interpretation: CsvValueInterpretation): String =
     when (interpretation) {

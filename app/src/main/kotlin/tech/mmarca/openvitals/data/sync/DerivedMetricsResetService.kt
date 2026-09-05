@@ -18,24 +18,10 @@ import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.features.homewidgets.refreshPlacedHomeWidgets
 
 /**
- * The "start over" reset for everything OpenVitals derives on its own and keeps
- * outside Health Connect: the Body Energy chain, the baselines and learned
- * gains it is tuned by, and the expenditure day cache. Recovery and readiness
- * have no storage of their own — they are recomputed from these plus live
- * Health Connect reads — so wiping this set is what puts them back to a fresh
- * install.
- *
- * Deliberately NOT touched, because the user typed them rather than the app
- * learning them: the body profile, manual heart zones, the setup-completed flag,
- * daily goals, and the unrelated vitals caches (SpO2, blood pressure, ...).
- * Nothing here writes to Health Connect, and the raw watch wellness samples
- * (source data the app cannot re-read from anywhere) stay too.
- *
- * [reset] wipes synchronously and then kicks the rebuilds on the service's own
- * scope: a full calories rebuild is a two-year Health Connect read, and it must
- * outlive the settings screen that asked for it. The rebuild is best-effort like
- * every other history sync — the screens recompute on open regardless, so a
- * failed rebuild only costs the first open its cache.
+ * The "start over" reset for everything derived and kept outside Health
+ * Connect: the Body Energy chain, its baselines and gains, the expenditure
+ * cache. Typed values (profile, zones, goals) and raw watch samples stay.
+ * [reset] wipes, then rebuilds on its own scope, best-effort.
  */
 @Singleton
 class DerivedMetricsResetService(
@@ -70,15 +56,9 @@ class DerivedMetricsResetService(
         refreshWidgets = ::refreshPlacedHomeWidgets,
     )
 
-    /**
-     * Wipes the derived state and returns once the wipe has landed; the rebuild
-     * runs on afterwards. The returned [Job] is the rebuild, for callers (tests)
-     * that want to wait for it.
-     */
+    /** Wipes and returns once landed. The returned [Job] is the rebuild. */
     suspend fun reset(): Job {
-        // The chain first: its cursor row is also the warm-pass throttle and the
-        // stored global signature, so dropping it is what makes the next pass
-        // a full one.
+        // The chain first: its cursor row is also the throttle and the global signature.
         timelineStore.purgeAll()
         baselineStore.clearBaselines()
         for (key in VitalsCacheKeys.LEGACY_CALORIES_BURNED + VitalsCacheKeys.CALORIES_BURNED) {
@@ -88,12 +68,7 @@ class DerivedMetricsResetService(
         return rebuildScope.launch { rebuild() }
     }
 
-    /**
-     * Back to what a fresh install reads: neutral gains, no watch evidence
-     * consumed, no mirrored seed, no remembered permission set. The version and
-     * epoch go to zero rather than to the current values so the repository
-     * stamps them itself on the next load, exactly as it does on first run.
-     */
+    /** Back to a fresh install: neutral gains, no evidence, no mirror. Version and epoch go to zero. */
     private fun resetLearnedPreferences() {
         val current = preferencesRepository.bodyEnergyCalibration()
         preferencesRepository.setBodyEnergyCalibration(
@@ -112,12 +87,7 @@ class DerivedMetricsResetService(
         preferencesRepository.bodyEnergyPermissionSignature = null
     }
 
-    /**
-     * Called directly rather than through [HistorySyncScheduler]: its
-     * once-per-open latch has already fired, and it is incremental-only anyway
-     * — a cache with no cursor stays empty until something asks for a full
-     * sync. Sequential, because Health Connect serializes reads.
-     */
+    /** Called directly, not via the scheduler: its latch has fired. Sequential for Health Connect. */
     private suspend fun rebuild() {
         rebuildStep("calories") { caloriesSync.syncAll() }
         rebuildStep("body energy chain") { bodyEnergyChainSync.syncAll(force = true) }

@@ -89,7 +89,7 @@ class WorkoutPlanBuilderViewModel(
         }
     }
 
-    // --- session fields --------------------------------------------------
+    // Session fields.
 
     fun updateTitle(text: String) = updateForm { copy(titleText = text) }
     fun updateNotes(text: String) = updateForm { copy(notesText = text) }
@@ -98,7 +98,7 @@ class WorkoutPlanBuilderViewModel(
     fun updateStartTime(text: String) = updateForm { copy(startTimeText = text) }
     fun updateDurationMinutes(text: String) = updateForm { copy(durationMinutesText = text) }
 
-    // --- blocks ----------------------------------------------------------
+    // Blocks.
 
     fun addBlock() = updateForm { copy(blocks = blocks + WorkoutPlanBlockInput()) }
 
@@ -115,7 +115,7 @@ class WorkoutPlanBuilderViewModel(
 
     fun updateBlockRounds(blockId: String, text: String) = updateBlock(blockId) { copy(roundsText = text) }
 
-    // --- steps -----------------------------------------------------------
+    // Steps.
 
     fun addStep(blockId: String, choice: WorkoutPlanStepChoice) =
         updateBlock(blockId) { copy(steps = steps + WorkoutPlanStepInput.active(choice)) }
@@ -140,7 +140,7 @@ class WorkoutPlanBuilderViewModel(
     fun updateStepDescription(blockId: String, stepId: String, text: String) =
         updateStep(blockId, stepId) { copy(descriptionText = text) }
 
-    // --- save ------------------------------------------------------------
+    // Save.
 
     fun save() {
         val current = _uiState.value
@@ -165,15 +165,14 @@ class WorkoutPlanBuilderViewModel(
 
     fun clearError() = _uiState.update { it.copy(error = null) }
 
-    // --- helpers ---------------------------------------------------------
+    // Helpers.
 
     private fun updateForm(transform: WorkoutPlanFormInput.() -> WorkoutPlanFormInput) {
         _uiState.update { state ->
             val form = state.form.transform()
             state.copy(
                 form = form,
-                // Re-validate live only once the user has seen errors; before that the
-                // form stays quiet until the first save attempt.
+                // Re-validate live only once the user has seen errors.
                 validationErrors = if (state.validationErrors.isEmpty()) emptySet() else validateWorkoutPlan(form),
             )
         }

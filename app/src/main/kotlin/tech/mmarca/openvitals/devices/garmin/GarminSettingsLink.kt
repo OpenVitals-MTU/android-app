@@ -23,29 +23,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 import tech.mmarca.openvitals.devices.core.RadioLeaseBusyException
 
 /**
- * An OPEN conversation with the watch's settings service.
- *
- * Held open on purpose. The file sync connects, works and closes in about a
- * second; browsing settings is the opposite shape — a person reads a screen,
- * decides, taps, reads the result — and reconnecting per request would cost a
- * handshake every time and lose the watch's own idea of where it is in the
- * tree.
- *
- * Everything here is correlated by CONTENT rather than request id: the watch
- * answers a settings request under an id of its own, so a reply is
- * indistinguishable from traffic it started, and matching on "is this
- * settings traffic" is not enough either — several arrive unprompted, and the
- * first one seen answered nothing that had been asked.
- *
- * **Radio discipline.** The lease is held for the whole browse and renewed on
- * a timer. A renewal that fails means somebody asked for the radio (a file
- * sync, via [tech.mmarca.openvitals.devices.core.RadioLeases]'s waiter
- * semantics) — the link closes itself at once, which releases the lease and
- * lets the waiter take it. That replaces the Flutter build's explicit
- * `WatchSettingsLinks.release` call from the sync side: here the yield is
- * driven from the holder's end, exactly as the notification forwarder yields.
- *
- * Port of the Flutter build's `garmin_settings_link.dart`.
+ * An open conversation with the watch's settings service, held open because browsing
+ * is read, tap, read. Replies are correlated by content, not request id: the watch
+ * answers under its own ids. A failed lease renewal closes the link at once.
  */
 class GarminSettingsLink private constructor(
     private val scope: CoroutineScope,
@@ -57,29 +37,17 @@ class GarminSettingsLink private constructor(
 ) {
 
     /**
-     * Every request runs on [scope]'s dispatcher — the same one the frame
-     * pump uses. [GarminProtobufTransport] keeps plain maps, safe exactly as
-     * long as everything touching them shares one sequential dispatcher, as
-     * the sync, find and notification paths already arrange; without this a
-     * caller's own dispatcher (a view-model's Main) would race the pump.
-     * [scope] must therefore dispatch sequentially.
+     * Every request runs on [scope]'s dispatcher, which must be sequential:
+     * [GarminProtobufTransport] keeps plain maps shared with the frame pump.
      */
     private val confinement = scope.coroutineContext.minusKey(Job)
 
-    /**
-     * Settings replies the watch sent under an id of its own — the only way
-     * most answers arrive on this watch.
-     */
+    /** Settings replies the watch sent under its own id. */
     private val replies = MutableSharedFlow<ByteArray>(extraBufferCapacity = 16)
 
     /**
-     * Fires the moment the link goes away, so a request in flight fails at
-     * once instead of waiting out a timeout for a reply that can never
-     * arrive. A dropped watch left the screen saying "Reading from the
-     * watch…" for thirty seconds with nothing on the other end.
-     *
-     * Replay 1, so a request that subscribes after the drop still learns of
-     * it immediately.
+     * Fires when the link goes away, so a request in flight fails at once
+     * rather than waiting out its timeout. Replay 1 for late subscribers.
      */
     private val gone = MutableSharedFlow<Unit>(replay = 1)
 
@@ -91,20 +59,10 @@ class GarminSettingsLink private constructor(
     private var renewals: Job? = null
     private var dropJob: Job? = null
 
-    /**
-     * Whether the link is still usable. A watch that walks away closes it,
-     * and every later request would otherwise wait out its full timeout.
-     */
+    /** Whether the link is still usable. */
     val isOpen: Boolean get() = !closed
 
-    /**
-     * Fetches one screen: its layout AND the values currently behind it.
-     *
-     * Both, because they answer different questions — the definition says
-     * there is a "Repeat" row, the state says it is set to Weekday. A screen
-     * built from the definition alone cannot show what anything is set to,
-     * and a switch has no value at all outside the state.
-     */
+    /** Fetches one screen: its layout and the values behind it. */
     suspend fun screen(screenId: Int): GarminSettingsScreen? {
         val definition = ask(
             GarminSettingsService.screenDefinition(screenId),
@@ -113,11 +71,7 @@ class GarminSettingsLink private constructor(
             expectScreen = screenId,
         ) ?: return null
 
-        // Asked twice if need be. The state is what makes a switch a switch —
-        // a screen without it renders every toggle inert — and a single
-        // dropped reply was enough to leave an alarm looking uncontrollable.
-        // One retry costs a round trip; getting it wrong costs the whole
-        // point of the screen.
+        // Asked twice if need be: without the state every toggle renders inert.
         var state = ask(
             GarminSettingsService.screenState(screenId),
             "screen $screenId state",
@@ -141,9 +95,7 @@ class GarminSettingsLink private constructor(
         }
         val screen = parseGarminSettingsScreen(definition, stateReply = state)
         if (screen != null) {
-            // Every row as parsed, not as raw bytes: a long hex dump is
-            // truncated by logcat, and what matters when a control is missing
-            // is which KIND each row came out as.
+            // Every row as parsed: what matters is which kind each came out as.
             GarminLog.log(
                 "[GARMIN-SETTINGS] screen $screenId \"${screen.title}\" " +
                     "${screen.entries.size} rows, state=${screen.hasState}",
@@ -162,12 +114,8 @@ class GarminSettingsLink private constructor(
     }
 
     /**
-     * Flips a switch on the watch, and reports whether the watch agreed.
-     *
-     * Returns null when the watch did not answer at all, which is
-     * deliberately distinct from false: "it refused" and "it never heard"
-     * call for different words on screen, and collapsing them would report a
-     * lost message as a rejection.
+     * Flips a switch and reports whether the watch agreed. Null means no
+     * answer, which is distinct from a refusal.
      */
     suspend fun setSwitch(screenId: Int, entryId: Int, value: Boolean): Boolean? {
         GarminLog.log("[GARMIN-SETTINGS] → switch $screenId/$entryId = $value")
@@ -201,10 +149,7 @@ class GarminSettingsLink private constructor(
         return GarminSettingsService.changeSucceeded(reply)
     }
 
-    /**
-     * Activates a delete row. The answer matters more here than anywhere
-     * else: this is the one operation that cannot be undone.
-     */
+    /** Activates a delete row. The one operation that cannot be undone. */
     suspend fun delete(screenId: Int, entryId: Int): Boolean? {
         GarminLog.log("[GARMIN-SETTINGS] → delete $screenId/$entryId")
         val reply = ask(
@@ -242,20 +187,14 @@ class GarminSettingsLink private constructor(
         teardown()
     }
 
-    /**
-     * Tears the link down once, on whichever path gets there first: an
-     * explicit [close], a failed lease renewal, or the watch dropping the
-     * connection (which the Dart original left to a later close — leaking the
-     * renewal timer, and with it the lease).
-     */
+    /** Tears the link down once, from whichever path gets there first. */
     private fun teardown() {
         if (!tornDown.compareAndSet(false, true)) return
         closed = true
         renewals?.cancel()
         dropJob?.cancel()
         signalGone()
-        // Fails every request in flight, so nothing waits out a timeout for a
-        // reply that can never come.
+        // Fails every request in flight.
         session.abort("link closed")
         teardownTransport()
         releaseLease()
@@ -267,18 +206,10 @@ class GarminSettingsLink private constructor(
     }
 
     /**
-     * Sends a request and waits for the reply that ANSWERS it.
-     *
-     * Both sources are RACED rather than awaited together: some replies echo
-     * the request id and some arrive as the watch's own traffic, and waiting
-     * for both made every screen cost the full timeout, because the id-based
-     * one never completes on this watch.
-     *
-     * [expectScreen] is the screen the reply must be ABOUT. Without it, a
-     * retransmitted definition for some other screen satisfies the wait, and
-     * the caller pairs one screen's layout with another's values — an alarm
-     * list whose titles came from the old read and whose times came from the
-     * alarm underneath it.
+     * Sends a request and waits for the reply that answers it. Both reply
+     * sources are raced: the id-based one never completes on this watch.
+     * [expectScreen] is the screen the reply must be about, or a retransmitted
+     * definition for another screen would satisfy the wait.
      */
     private suspend fun ask(
         request: ByteArray,
@@ -318,8 +249,7 @@ class GarminSettingsLink private constructor(
                 answer.complete(reply)
             }
 
-            // UNDISPATCHED, so both watchers are subscribed before the
-            // request goes out — a reply cannot slip between send and listen.
+            // UNDISPATCHED, so both watchers subscribe before the request goes out.
             val replyWatch = launch(start = CoroutineStart.UNDISPATCHED) {
                 replies.collect { offer(it) }
             }
@@ -338,8 +268,7 @@ class GarminSettingsLink private constructor(
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
-                    // A closed link aborts the transport, which fails the
-                    // request — the gone signal already resolves the wait.
+                    // A closed link aborts the transport; the gone signal resolves the wait.
                 }
             }
             try {
@@ -366,11 +295,9 @@ class GarminSettingsLink private constructor(
             while (isActive) {
                 delay(GarminRadioLease.renewInterval)
                 if (!lease.renew(address, GarminRadioOwners.SETTINGS)) {
-                    // Somebody asked for the radio — a sync, most likely. The
-                    // link yields rather than making them wait out the TTL.
+                    // Somebody asked for the radio. Yield rather than make them wait.
                     GarminLog.log("[GARMIN-SETTINGS] yielding the radio")
-                    // Torn down from a sibling job: teardown cancels THIS
-                    // job, which must not cancel the teardown under itself.
+                    // From a sibling job: teardown cancels this one.
                     scope.launch { teardown() }
                     return@launch
                 }
@@ -395,29 +322,17 @@ class GarminSettingsLink private constructor(
         /** How long the watch gets to finish introducing itself. */
         private val HANDSHAKE_TIMEOUT = 15.seconds
 
-        /**
-         * How long to wait for the current radio holder to let go, mirroring
-         * `withRadioLease`: the likely holder is the notification forwarder,
-         * which yields on its next renew tick.
-         */
+        /** How long to wait for the current radio holder to let go. */
         private const val HANDOVER_WAIT_MILLIS = 8_000L
         private const val RETRY_STEP_MILLIS = 250L
 
         /**
-         * Connects, completes the handshake, and opens the settings service
-         * for a locale.
+         * Connects, completes the handshake and opens the settings service for
+         * a locale, which decides the language of every title.
          *
-         * The locale is not cosmetic: the watch translates every title it
-         * later sends using it, so this decides what language the whole tree
-         * comes back in.
-         *
-         * [scope] hosts the link's long-lived jobs (frame pump, renewals,
-         * drop watch) and must outlive the link.
-         *
-         * Throws [RadioLeaseBusyException] when the radio cannot be taken,
-         * [GarminGattClientException] when the watch cannot be reached, and
-         * [kotlinx.coroutines.TimeoutCancellationException] when it connects
-         * but never introduces itself.
+         * [scope] hosts the link's long-lived jobs and must outlive it. Throws
+         * [RadioLeaseBusyException], [GarminGattClientException] or
+         * [kotlinx.coroutines.TimeoutCancellationException].
          */
         suspend fun open(
             context: Context,
@@ -448,13 +363,9 @@ class GarminSettingsLink private constructor(
                 bluetoothName = phoneName,
                 manufacturer = manufacturer,
                 model = model,
-                // Nothing to collect: this link exists to read settings, and
-                // a file sync running underneath would fight it for the radio
-                // and die when it closes.
+                // A file sync underneath would fight for the radio and die on close.
                 syncFiles = false,
-                // Any held link should answer the watch's weather fetches —
-                // this one is often the longest-lived connection the watch
-                // gets all day.
+                // Any held link should answer the watch's weather fetches.
                 weatherProvider = weatherProvider,
                 agpsSource = agpsSource,
                 calendarProvider = calendarProvider,
@@ -463,21 +374,17 @@ class GarminSettingsLink private constructor(
                 },
             )
 
-            // Frames land on the binder thread as they arrive; a channel
-            // keeps their order while handing them to the session's
-            // suspending handler.
+            // Frames land on the binder thread; a channel keeps their order.
             val frames = Channel<GarminGfdiFrame>(Channel.UNLIMITED)
             val pump = scope.launch { for (frame in frames) session.handleFrame(frame) }
 
             try {
                 transport = gatt.connect(onFrame = { frame -> frames.trySend(frame) })
                 session.start()
-                // Anything sent before the watch finishes introducing itself
-                // is dropped.
+                // Anything sent before the handshake finishes is dropped.
                 withTimeout(HANDSHAKE_TIMEOUT) { ready.await() }
             } catch (error: Throwable) {
-                // Nothing is listening yet, so the transport is the only
-                // thing to undo.
+                // Nothing is listening yet; only the transport needs undoing.
                 pump.cancel()
                 frames.close()
                 session.abort("handshake failed")
@@ -500,9 +407,7 @@ class GarminSettingsLink private constructor(
             link.startRenewals(address, lease)
             link.watchForDrop(gatt)
 
-            // Fired and forgotten: the init reply lands on a field of its own
-            // that nothing downstream needs; it is sent to open the service,
-            // not to be read.
+            // Fire and forget: the init reply is not needed downstream.
             scope.launch {
                 link.ask(
                     GarminSettingsService.init(language = language, region = region),
@@ -513,11 +418,7 @@ class GarminSettingsLink private constructor(
             return link
         }
 
-        /**
-         * Takes the lease, or asks for it and waits briefly — the same
-         * handover dance as `withRadioLease`, hand-rolled because the link
-         * holds across suspension points rather than around one body.
-         */
+        /** Takes the lease, or asks and waits briefly, as `withRadioLease` does. */
         private suspend fun acquireOrWait(lease: GarminRadioLease, address: String) {
             if (lease.acquire(address, GarminRadioOwners.SETTINGS)) return
             lease.request(address, GarminRadioOwners.SETTINGS)
@@ -530,10 +431,7 @@ class GarminSettingsLink private constructor(
             throw RadioLeaseBusyException(lease.owner(address) ?: "another task")
         }
 
-        /**
-         * A link over a session that never connected — for tests that need
-         * the request/teardown machinery without a watch on the other end.
-         */
+        /** A link over a session that never connected, for tests. */
         @VisibleForTesting
         fun forTest(scope: CoroutineScope, session: GarminSession): GarminSettingsLink {
             val link = GarminSettingsLink(

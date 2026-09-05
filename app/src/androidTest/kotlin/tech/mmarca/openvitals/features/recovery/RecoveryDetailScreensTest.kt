@@ -26,13 +26,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Ports of Flutter's `sleep_score_detail_screen_test.dart` and
- * `sleep_efficiency_detail_screen_test.dart`.
- *
- * Both screens exist to explain a derived number rather than to report a
- * measurement, so the collapsible calculation card is the point of them: a user
- * who distrusts a score has nowhere else to look. Its default state matters too
- * — expanded by default would bury the score it is explaining.
+ * Both screens explain a derived number, so the collapsible calculation card is the point.
+ * Collapsed by default, or it buries the score it explains.
  */
 class RecoveryDetailScreensTest {
 
@@ -72,8 +67,7 @@ class RecoveryDetailScreensTest {
 
     @Test
     fun aNoDataDaySleepScoreStillRendersItsCards() {
-        // A night with nothing recorded still has to explain what the score
-        // would have been made of, or the screen is blank with no reason given.
+        // A night with nothing recorded still has to explain what the score would be made of.
         composeRule.setContent {
             OpenVitalsTheme {
                 SleepScoreDetailContent(
@@ -129,11 +123,8 @@ class RecoveryDetailScreensTest {
 
     @Test
     fun theSleepScoreScreenRendersItsFourCardsFromAFixedEstimate() {
-        // The estimate is injected rather than recomputed, so every number on
-        // the screen is traceable to one field of it. That is the point: the
-        // four cards are a chain — verdict, method, the day's figures, the
-        // literature — and a screen that renders three of them explains a score
-        // it never shows the workings for.
+        // The estimate is injected, so every number traces to one field. The four cards are a chain:
+        // verdict, method, the day's figures, the literature.
         composeRule.setContent {
             OpenVitalsTheme {
                 SleepScoreDetailContent(
@@ -154,8 +145,7 @@ class RecoveryDetailScreensTest {
         scrollTo(string(R.string.sleep_score_calculation_title))
         scrollTo(string(R.string.action_show_calculation))
 
-        // 3. The day's figures: the scored pillars, quality breakdown, then the
-        //    measurements they were derived from.
+        // 3. The day's figures: pillars, quality breakdown, measurements.
         scrollTo(string(R.string.sleep_score_day_numbers_title))
         scrollTo(string(R.string.sleep_score_component_duration))
         scrollTo(FORMATTER.decimal(ESTIMATE.durationPoints, 1))
@@ -197,8 +187,7 @@ class RecoveryDetailScreensTest {
             }
         }
 
-        // 1. Summary: the efficiency headline rather than the score, its
-        //    confidence and the note.
+        // 1. Summary: the efficiency headline, its confidence and the note.
         composeRule.onNodeWithText(string(R.string.recovery_sleep_efficiency)).assertIsDisplayed()
         composeRule
             .onAllNodesWithText(FORMATTER.percent(ESTIMATE.sleepEfficiencyPercent, 0).value)
@@ -211,8 +200,7 @@ class RecoveryDetailScreensTest {
         scrollTo(string(R.string.sleep_efficiency_calculation_title))
         scrollTo(string(R.string.action_show_calculation))
 
-        // 3. The day's figures — the two durations the ratio is made of, the
-        //    wake time it subtracts, and the records behind them.
+        // 3. The day's figures: the two durations, the wake time, the records.
         scrollTo(string(R.string.sleep_efficiency_day_numbers_title))
         scrollTo(string(R.string.sleep_score_efficiency))
         scrollTo(FORMATTER.duration(SLEEP_MINUTES.minutesAsMillis()))

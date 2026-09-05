@@ -86,8 +86,7 @@ class CoMapsNavigationRepositoryTest {
     }
 
     @Test fun `a cached row whose session is over reads as not navigating`() = runTest {
-        // CoMaps never clears its routing cache: a finished route keeps being
-        // served, session_state and all. The state column is the only signal.
+        // CoMaps never clears its routing cache, so the state column is the only signal.
         val repo = repository()
         coEvery { source.queryLive() } returns
             CoMapsProviderAnswer.Active(guidingRow(sessionState = "RouteFinished"))
@@ -96,8 +95,7 @@ class CoMapsNavigationRepositoryTest {
     }
 
     @Test fun `an integer exit number and a zero exit both survive`() = runTest {
-        // exit_num arrives as an int straight off RoutingInfo.exitNum; casting
-        // it as a string took the whole panel down for entire routes once.
+        // exit_num arrives as an int; casting it as a string took the panel down for entire routes.
         val repo = repository()
         coEvery { source.queryLive() } returns
             CoMapsProviderAnswer.Active(guidingRow(extras = mapOf("exit_num" to 3L)))
@@ -120,13 +118,11 @@ class CoMapsNavigationRepositoryTest {
             CoMapsLiveEvent(row, live = false, observing = true, initial = true),
             CoMapsLiveEvent(row, live = true, observing = true, initial = false),
         )
-        // The initial read is within no window yet -> not navigating; the live
-        // change is evidence -> active.
+        // The initial read is within no window: not navigating. A live change is evidence: active.
         assertEquals(CoMapsNavigationState.NotNavigating, opening[0])
         assertTrue(opening[1] is CoMapsNavigationState.Active)
 
-        // The safety poll asks again 20 seconds later. Nothing has changed
-        // since — the route ended — so the same row is no longer believed.
+        // The safety poll 20 seconds later: nothing changed, so the same row is no longer believed.
         clock = clock.plusSeconds(20)
         coEvery { source.queryLive() } returns row
         assertEquals(CoMapsNavigationState.NotNavigating, repo.readLive())
@@ -168,8 +164,7 @@ class CoMapsNavigationRepositoryTest {
         coEvery { source.queryRoute() } returns DoubleArray(2) { it.toDouble() }
         assertNull(repo.readRouteGeometry(revision = 1))
 
-        // A real corner (the middle point sits ~100 m off the chord), so the
-        // sub-pixel simplification must keep all three.
+        // A real corner, so the sub-pixel simplification must keep all three.
         coEvery { source.queryRoute() } returns
             doubleArrayOf(59.0, 24.0, 59.001, 24.002, 59.0, 24.004)
         val polyline = repo.readRouteGeometry(revision = 1)!!

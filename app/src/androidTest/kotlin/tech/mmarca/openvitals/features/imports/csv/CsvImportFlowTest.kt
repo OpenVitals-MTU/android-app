@@ -36,16 +36,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * The mapping and confirm steps of Flutter's
- * `test/features/imports/csv/csv_import_screen_test.dart`, driven through a real
- * [CsvImportViewModel] over a real file on disk.
- *
- * The view model is constructed rather than injected: everything these steps
- * need — describing the picked document, sampling it, validating the mapping,
- * and previewing what would be written — happens before a single record is
- * handed to Health Connect. `startImport` is deliberately never called, because
- * the import service writes through the real Health Connect client and a test
- * that ran it would leave records on the device it ran on.
+ * The mapping and confirm steps, driven through a real [CsvImportViewModel] over a real file.
+ * `startImport` is never called: it writes through the real Health Connect client.
  */
 class CsvImportFlowTest {
 
@@ -65,9 +57,7 @@ class CsvImportFlowTest {
 
     @Test
     fun pickingAFileListsOneRowPerColumnWithItsHeader() {
-        // One editor per column, each naming the column it edits and showing
-        // that column's own values. Collapsing those is how a user maps weight
-        // onto the fat-mass column without noticing.
+        // One editor per column, each showing that column's own values, so weight cannot be mapped onto fat mass unnoticed.
         pick(withingsFile())
 
         // The preview names every column of the file that was read.
@@ -75,9 +65,7 @@ class CsvImportFlowTest {
         assertShown(WEIGHT_HEADER)
         assertShown(FAT_MASS_HEADER)
 
-        // The sample line under a tile's header is that column's own values, so
-        // it is the anchor that proves the tiles are three different columns
-        // rather than the same one three times.
+        // The sample line under a tile proves the tiles are three different columns.
         listOf(
             "2026-07-01 08:12:00 · 2026-07-02 08:14:00",
             "78.4 · 78.6",
@@ -87,8 +75,7 @@ class CsvImportFlowTest {
             composeRule.onNodeWithText(samples).assertIsDisplayed()
         }
 
-        // Every header is now on screen twice: once in the preview, once as the
-        // title of the tile that maps it.
+        // Every header is on screen twice: in the preview and as a tile title.
         assertEquals(2, nodeCount(DATE_HEADER))
         assertEquals(2, nodeCount(WEIGHT_HEADER))
         assertEquals(2, nodeCount(FAT_MASS_HEADER))
@@ -96,9 +83,7 @@ class CsvImportFlowTest {
 
     @Test
     fun aFreshlyPickedFileCannotContinueUntilAMetricColumnIsChosen() {
-        // The importer guesses the timestamp column and nothing else, so a file
-        // that has only just been picked has nothing to write yet. Continuing
-        // from here would run an import that imports nothing.
+        // Only the timestamp column is guessed, so a fresh pick has nothing to write yet.
         pick(withingsFile())
 
         composeRule
@@ -108,9 +93,7 @@ class CsvImportFlowTest {
 
     @Test
     fun bodyFatAsAMassWithNoWeightColumnSaysSoAndKeepsContinueDisabled() {
-        // Body fat given in kilograms is only a percentage once it is divided by
-        // that row's weight. With no weight column there is nothing to divide
-        // by, and importing anyway would write a kilogram count as a percent.
+        // Body fat in kilograms is only a percentage divided by that row's weight.
         val viewModel = pick(withingsFile())
 
         onMain {
@@ -135,8 +118,7 @@ class CsvImportFlowTest {
 
     @Test
     fun theConfirmStepShowsTheObservedRangeForEachMetric() {
-        // The guard against a bad derivation: a fat mass divided by the wrong
-        // column shows up here as 3% or 150%, before anything is written.
+        // A fat mass divided by the wrong column shows up here as 3% or 150%.
         val viewModel = pick(withingsFile())
         mapWeight(viewModel)
         continueToConfirm()
@@ -164,9 +146,7 @@ class CsvImportFlowTest {
 
     @Test
     fun readingAnAmbiguousFileMonthFirstIsVisibleInTheDateSpan() {
-        // The guard the single-row echo cannot give: `01/07` is plausible read
-        // either way, but a span running January to March rather than three days
-        // in July is not.
+        // `01/07` reads plausibly either way; a span running January to March does not.
         val viewModel = pick(
             writeCsv(
                 "ambiguous.csv",
@@ -235,11 +215,7 @@ class CsvImportFlowTest {
         }
     }
 
-    /**
-     * The importer's own step switch, minus the Health Connect shell — which
-     * asks a real Health Connect what it is allowed to do and cannot answer
-     * inside a test. The pick step has its own test file.
-     */
+    /** The importer's step switch, minus the Health Connect shell that cannot answer in a test. */
     private fun setSteps(viewModel: CsvImportViewModel) {
         composeRule.setContent {
             OpenVitalsTheme {
@@ -257,10 +233,7 @@ class CsvImportFlowTest {
         }
     }
 
-    /**
-     * The date span as the screen renders it: the locale's own long date format,
-     * so a `01/07/2026` read as January says the word January.
-     */
+    /** The date span as the screen renders it, in the locale's long date format. */
     private fun dateSpan(from: String, to: String): String {
         val locale: Locale = context.resources.configuration.locales[0]
         val format = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale)
@@ -283,8 +256,7 @@ class CsvImportFlowTest {
 
     private fun newViewModel(): CsvImportViewModel {
         val preferences = PreferencesRepository(context)
-        // Constructible without Health Connect: the client is made lazily, and
-        // nothing these cases do reaches it.
+        // Constructible without Health Connect: the client is made lazily.
         val manager = HealthConnectManager(
             context = context,
             syncGate = HealthConnectSyncGate(preferences),
@@ -317,11 +289,7 @@ class CsvImportFlowTest {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(block)
     }
 
-    /**
-     * Nothing granted and nothing to grant. The confirm step's permission
-     * callout is not what these cases are about, and refusing to answer anything
-     * else keeps the fake from quietly standing in for Health Connect.
-     */
+    /** Nothing granted and nothing to grant, so the fake cannot stand in for Health Connect. */
     private object NothingGrantedHealthRepository : HealthRepository {
         override fun availability() = error("unused")
 

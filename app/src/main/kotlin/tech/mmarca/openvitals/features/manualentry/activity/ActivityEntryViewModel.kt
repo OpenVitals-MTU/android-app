@@ -161,11 +161,7 @@ class ActivityEntryViewModel(
         applyLaunchIntent()
     }
 
-    /**
-     * Applies the caller's intent (carried as navigation arguments) so the screen opens directly
-     * in the requested state instead of the generic source chooser. Only runs for a fresh entry:
-     * an edit target or a restored in-progress recording draft always takes precedence.
-     */
+    /** Applies the navigation arguments' intent. Fresh entries only; an edit or a draft wins. */
     private fun applyLaunchIntent() {
         if (editActivityId != null) return
         if (_uiState.value.isRecordingDraft) return
@@ -179,16 +175,12 @@ class ActivityEntryViewModel(
             launchPlanId != null -> startWithPlan(launchPlanId)
             launchMode == Screen.ActivityEntryMode.RECORD -> prepareGpsRecording()
             launchMode == Screen.ActivityEntryMode.MANUAL -> startManualEntry()
-            // The bare route and the legacy PLAN intent both land on the start hub;
-            // the state is already fresh, so only the plan list needs loading.
+            // The bare route and the legacy PLAN intent both land on the hub.
             else -> loadHubPlans()
         }
     }
 
-    /**
-     * Opens the requested plan straight into the prefilled entry form. A plan
-     * that no longer exists falls back to the hub, which says so.
-     */
+    /** Opens the plan into the prefilled form. A missing plan falls back to the hub. */
     fun startWithPlan(planId: String) {
         recordingDraftStore?.clear()
         viewModelScope.launch {
@@ -248,8 +240,7 @@ class ActivityEntryViewModel(
             _uiState.value = _uiState.value.copy(isLoadingHubPlans = true, hubPlansError = null, hubPlansAvailable = true)
             runCatching { repository.loadExistingPlannedWorkouts(today) }
                 .onSuccess { plans ->
-                    // Recently done plans are the ones worth repeating; a missing
-                    // permission here costs the Repeat row, never the hub.
+                    // A missing permission costs the Repeat row, never the hub.
                     val recent = runCatching {
                         repository.loadPlannedWorkouts(today.minusDays(RecentPlanLookbackDays), today)
                     }.getOrDefault(emptyList())
@@ -275,11 +266,7 @@ class ActivityEntryViewModel(
         }
     }
 
-    /**
-     * A hub row's Start: show the recording setup for this plan. A plan the
-     * recorder cannot walk through (a running plan, say) falls back to the
-     * prefilled form, which is what Log would have done.
-     */
+    /** A hub row's Start. A plan the recorder cannot walk falls back to the form. */
     fun prepareGuidedPlan(planId: String) {
         val cached = _uiState.value.hubPlans.firstOrNull { it.id == planId }
         if (cached != null) {
@@ -754,12 +741,7 @@ class ActivityEntryViewModel(
         }
     }
 
-    /**
-     * Hands the current steps to the plan builder: writes a one-block plan
-     * titled like the session, links it, and asks the screen to open the
-     * builder on it. Writing first keeps the builder oblivious to where a plan
-     * came from — it only ever loads by id.
-     */
+    /** Hands the steps to the plan builder: writes a one-block plan, links it, opens the builder. */
     fun saveAsPlan(units: ActivityEntryUnits) {
         val current = _uiState.value
         if (current.isSavingAsPlan) return
@@ -863,7 +845,7 @@ class ActivityEntryViewModel(
         val currentState = _uiState.value
 
         recordingDraftStore?.clear()
-        // The setup screen offers today's plan as a shortcut, so the hub list is needed here too.
+        // The setup screen offers today's plan as a shortcut.
         if (currentState.hubPlans.isEmpty()) loadHubPlans()
         _uiState.value = currentState.copy(
             mode = ActivityEntryMode.RECORDING,
@@ -949,11 +931,8 @@ class ActivityEntryViewModel(
             return
         }
 
-        // With CoMaps guidance on, the setup screen's Start is a doorway, not
-        // a trigger: arm the recording dashboard so the user can set a route
-        // up in CoMaps — or dismiss the guidance card — and start from there.
-        // The dashboard's own Start lands here too, and passes: by then the
-        // controller is already prepared.
+        // With CoMaps guidance on, Start arms the dashboard so a route can be set
+        // up first. The dashboard's own Start lands here too and passes.
         if (!withoutGps &&
             currentState.selectedActivityType.recordingKind() == ActivityRecordingKind.GPS_ROUTE &&
             recorder.state.value.activityTypeId == null &&
@@ -1006,11 +985,7 @@ class ActivityEntryViewModel(
         }
     }
 
-    /**
-     * Starts a guided heart-rate-recovery test instead of an ordinary
-     * recording: warm up, go hard, then stop dead and let the app watch the
-     * heart rate come down.
-     */
+    /** Starts a guided heart-rate-recovery test: warm up, go hard, stop dead. */
     fun startHeartRateRecoveryTest(config: HeartRateRecoveryTestConfig) {
         val recorder = activityRecorder
         if (recorder == null) {
@@ -1170,8 +1145,7 @@ class ActivityEntryViewModel(
                 }
                 val heartRateSamples = heartRepository?.loadHeartRateSamples(workout.startTime, workout.endTime)
                     .orEmpty()
-                // The link is what keeps the plan marked completed across an edit;
-                // its title is only decoration, so a failed lookup costs nothing.
+                // The link keeps the plan marked completed; the title is decoration.
                 val linkedPlan = workout.plannedExerciseSessionId?.let { planId ->
                     ActivityLinkedPlan(planId, runCatching { repository.loadPlannedWorkout(planId) }.getOrNull()?.title)
                 }
@@ -1375,12 +1349,9 @@ class ActivityEntryViewModel(
             startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(start),
             startTimeText = TimeFormatter.format(start.toLocalTime()),
             durationMinutesText = durationMinutes.toString(),
-            // Distance is the one thing a GPS-less recording genuinely cannot
-            // know, so it is left empty for the user to fill in.
+            // Distance is the one thing a GPS-less recording cannot know.
             distanceText = "",
-            // Elevation is NOT. It came from the barometer, which never needed
-            // a position, and blanking it here was throwing away a measurement
-            // the phone had actually taken.
+            // Elevation came from the barometer, which never needed a position.
             elevationText = if (selectedActivityType.supportsElevation && snapshot.elevationGainedMeters > 0.0) {
                 elevationInputText(
                     snapshot.elevationGainedMeters,

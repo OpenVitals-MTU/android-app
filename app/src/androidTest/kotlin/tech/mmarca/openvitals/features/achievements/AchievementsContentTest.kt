@@ -17,15 +17,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Port of the rendering cases of Flutter's
- * `test/features/achievements/achievements_screen_test.dart`.
- *
- * A badge card has to be honest in both directions: an unearned badge says how
- * far along it is rather than hiding, and an earned one changes the whole card
- * rather than just filling a bar. Getting that wrong turns a progress screen
- * into a wall of identical grey.
- */
+/** An unearned badge says how far along it is, and an earned one changes the whole card. */
 class AchievementsContentTest {
 
     @get:Rule
@@ -65,8 +57,7 @@ class AchievementsContentTest {
 
     @Test
     fun aLockedBadgeIsStillDrawnAndStillNamed() {
-        // Hiding what has not been earned leaves nothing to aim at, which is
-        // the whole point of the screen.
+        // Hiding what has not been earned leaves nothing to aim at.
         setContent {
             AchievementBadgeCard(
                 progress = badge(unlocked = false, ratio = 0.4f, current = 4_000.0),

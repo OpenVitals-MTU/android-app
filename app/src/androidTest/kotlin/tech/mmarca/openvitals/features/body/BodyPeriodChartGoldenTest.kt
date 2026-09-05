@@ -20,18 +20,8 @@ import tech.mmarca.openvitals.ui.components.PeriodChartValue
 import tech.mmarca.openvitals.ui.theme.WeightColor
 
 /**
- * Weight over a week, a month and a year.
- *
- * Month and year used to be drawn by the calendar heatmap, which colours a day
- * by how big its number is. That reads well for a quantity that can be zero and
- * can be huge — steps, minutes — and reads as nothing at all for one that
- * spends its life inside a two-kilo band: forty dots of near-identical colour,
- * answering "did you weigh yourself on the 14th" while hiding which way the
- * line is going.
- *
- * Photographed rather than asserted because "the trend is legible" is not a
- * property any assertion holds. A test that the chart contains 31 points passes
- * just as happily when they are all flattened onto an axis that starts at zero.
+ * Weight over a week, a month and a year. The calendar heatmap read as nothing for a
+ * quantity living inside a two-kilo band. "The trend is legible" is not a property an assertion holds.
  */
 class BodyPeriodChartGoldenTest {
 
@@ -55,8 +45,7 @@ class BodyPeriodChartGoldenTest {
 
     @Test
     fun month_aTrendWhereThereWasACalendar() {
-        // Weighed most mornings but not all: the gaps are what the heatmap was
-        // good at showing and the line has to survive.
+        // Weighed most mornings but not all: the gaps have to survive the line.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 393.dp, height = 320.dp) {
                 Chart(
@@ -112,10 +101,7 @@ class BodyPeriodChartGoldenTest {
         )
     }
 
-    /**
-     * A slow slide with the daily noise a real scale produces — the signal the
-     * heatmap could not show, and the reason the axis must not start at zero.
-     */
+    /** A slow slide with the daily noise a real scale produces, the reason the axis must not start at zero. */
     private fun weights(from: LocalDate, days: Int, everyNthDay: Int): List<PeriodChartValue> =
         (0 until days step everyNthDay).map { day ->
             val drift = START_KG - day * DRIFT_KG_PER_DAY
@@ -127,8 +113,7 @@ class BodyPeriodChartGoldenTest {
         }
 
     private companion object {
-        // A fixed week, never `LocalDate.now()`: a golden that moves with the
-        // calendar draws a different picture every day the suite runs.
+        // A fixed week, never `LocalDate.now()`.
         val MONDAY: LocalDate = LocalDate.of(2026, 5, 4)
         const val START_KG = 78.4
         const val DRIFT_KG_PER_DAY = 0.012

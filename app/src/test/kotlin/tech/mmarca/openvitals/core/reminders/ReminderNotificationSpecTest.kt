@@ -7,11 +7,7 @@ import tech.mmarca.openvitals.features.hydration.reminders.NotificationId as Hyd
 import tech.mmarca.openvitals.features.mindfulness.reminders.ChannelId as MindfulnessChannelId
 import tech.mmarca.openvitals.features.mindfulness.reminders.NotificationId as MindfulnessNotificationId
 
-/**
- * Ported from the Flutter `test/core/reminders/reminder_notification_spec_test.dart`.
- * Every reminder feature registered in the app is listed here, so the uniqueness
- * guards below cover it — a new feature adds its ids to these lists.
- */
+/** Every reminder feature is listed here so the uniqueness guards cover it. */
 class ReminderNotificationSpecTest {
 
     private val allNotificationIds = listOf(HydrationNotificationId, MindfulnessNotificationId)

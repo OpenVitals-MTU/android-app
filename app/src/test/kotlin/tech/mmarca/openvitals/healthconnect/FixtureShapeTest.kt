@@ -10,22 +10,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Asserts the fixture still has the SHAPES the tests depend on.
- *
- * Not that the JSON parses — that a `>12 h` heart-rate record still exists and still
- * swallows a workout; that more than one app still wrote sleep on the same night;
- * that the GPS route still has enough points to compute a split from.
- *
- * Without this, the fixture can be regenerated, re-sliced, or hand-edited into
- * something that still loads, still passes every other test, and no longer contains
- * a single one of the bugs the suite exists to catch. Every test above it would stay
- * green while testing nothing at all. That is a worse position than having no
- * fixture, because it looks like coverage.
- *
- * The record-level halves of this guard (the swallowing record, the naive windowed
- * read, the provenance fields) are asserted through the real reader in
- * [FixtureReaderTest]; what is left here is the raw-JSON shape the reader never
- * looks at.
+ * Asserts the fixture still has the shapes the tests depend on: a swallowing heart-rate
+ * record, multi-writer sleep, a route long enough to split. Without this the fixture
+ * could be regenerated into something that loads and tests nothing.
+ * The record-level halves are asserted in [FixtureReaderTest]; this is the raw-JSON shape.
  */
 class FixtureShapeTest {
 
@@ -41,9 +29,7 @@ class FixtureShapeTest {
 
     @Test
     fun `more than one app wrote sleep on the same night`() {
-        // Multi-writer sleep is what exercises the merge; multi-writer anything is
-        // what exercises dedup. It cannot be invented by hand — this is the shape
-        // real data has and synthetic data never does.
+        // Multi-writer sleep exercises the merge; multi-writer anything exercises dedup.
         val byNight = records("sleep").groupBy(
             keySelector = {
                 Instant.ofEpochMilli(it["start"].asLong).atOffset(ZoneOffset.UTC).toLocalDate()
@@ -71,26 +57,18 @@ class FixtureShapeTest {
 
     @Test
     fun `the sibling records that a session does NOT carry are present`() {
-        // The walking-activity bug. A Health Connect ExerciseSessionRecord carries
-        // almost nothing — a watch writes the walk as a session with a duration, and
-        // puts its steps, distance and calories in SEPARATE records over the same
-        // window. Reading the session alone reported "Not available" for numbers the
-        // watch had recorded, directly above a chart of that same activity's step
-        // cadence. Without these siblings in the fixture, the fix is untestable.
+        // A watch writes a walk as a session and puts steps, distance and calories in separate
+        // records. Without these siblings the walking-activity fix is untestable.
         listOf("steps", "distance", "activeCalories").forEach { key ->
             assertTrue("No $key sibling records.", records(key).isNotEmpty())
         }
-        // And the calorie chain's second branch (active + BMR pro-rated) is
-        // unreachable without a BMR record to pro-rate.
+        // The calorie chain's second branch needs a BMR record to pro-rate.
         assertTrue(records("basalMetabolicRate").isNotEmpty())
     }
 
     @Test
     fun `speed is a SERIES record, so splits hit the same bug as heart rate`() {
-        // Same shape, same trap: Health Connect filters SpeedRecord by the record's
-        // own boundary too, which is why the 1 km splits silently fell back to
-        // "estimated" on exactly the activities whose heart rate had vanished. A
-        // speed record with no samples proves nothing.
+        // Health Connect filters SpeedRecord by the record's boundary too. A speed record with no samples proves nothing.
         val speed = records("speed")
         assertTrue(speed.isNotEmpty())
         assertTrue(
@@ -102,13 +80,8 @@ class FixtureShapeTest {
 
     @Test
     fun `the synthetic records are exactly the two we could not derive`() {
-        // The export contains ZERO PowerRecords and ZERO CyclingPedalingCadenceRecords
-        // — this person has no power meter. Those two are hand-authored so the power
-        // fix has something to be tested against.
-        //
-        // Everything else must inherit its shape from real data. If a `synthetic`
-        // flag ever appears on a third record type, someone has quietly started
-        // inventing the thing the fixture exists to preserve.
+        // The export has no PowerRecords or CyclingPedalingCadenceRecords; those two are hand-authored.
+        // Everything else must inherit its shape from real data.
         val synthetic = fixture.entrySet()
             .filter { (key, value) -> key != "manifest" && value is JsonArray }
             .filter { (_, value) ->

@@ -27,8 +27,7 @@ class GarminDeviceStateStoreTest {
 
         store.recordSyncedFileKeys(deviceId, listOf("128/49/1", "128/32/2"))
 
-        // A second store over the same prefs is the real round-trip — this is
-        // what proves the exact key/format survives a restart.
+        // A second store over the same prefs is the real round-trip.
         assertEquals(
             setOf("128/49/1", "128/32/2"),
             GarminDeviceStateStore(prefs).syncedFileKeys(deviceId),
@@ -79,8 +78,7 @@ class GarminDeviceStateStoreTest {
             setOf(GarminCapability.SYNC, GarminCapability.FIND_MY_WATCH),
         )
 
-        // Second store over the same prefs — proves the wireName format
-        // persists.
+        // A second store over the same prefs proves the wireName format persists.
         assertEquals(
             setOf(GarminCapability.SYNC, GarminCapability.FIND_MY_WATCH),
             GarminDeviceStateStore(prefs).capabilities(deviceId),
@@ -95,10 +93,7 @@ class GarminDeviceStateStoreTest {
 
     @Test
     fun `clear drops both capabilities and synced-file history`() {
-        // What forgetting a watch must do: a re-pairing starts clean,
-        // re-learning capabilities from a fresh handshake and re-fetching
-        // files rather than trusting a record of a device that is no longer
-        // here.
+        // Forgetting a watch means a re-pairing starts clean.
         store.recordSyncedFileKeys(deviceId, listOf("128/49/1"))
         store.recordCapabilities(deviceId, setOf(GarminCapability.SYNC))
 
@@ -106,8 +101,7 @@ class GarminDeviceStateStoreTest {
 
         assertTrue(store.syncedFileKeys(deviceId).isEmpty())
         assertTrue(store.capabilities(deviceId).isEmpty())
-        // And it survives a reload — the keys are gone from storage, not just
-        // the in-memory view.
+        // The keys are gone from storage, not only the in-memory view.
         val reloaded = GarminDeviceStateStore(prefs)
         assertTrue(reloaded.syncedFileKeys(deviceId).isEmpty())
         assertTrue(reloaded.capabilities(deviceId).isEmpty())
@@ -134,8 +128,7 @@ class GarminDeviceStateStoreTest {
 
     @Test
     fun `automatic sync is stored as minutes, not as an ordinal`() {
-        // The stored value has to mean the same thing to a build that adds or
-        // drops an interval, which an enum position would not.
+        // The stored value must survive a build that adds or drops an interval.
         store.setAutoSyncInterval(deviceId, AutoSyncInterval.EVERY_2_HOURS)
 
         assertEquals(120, prefs.getInt("garmin_auto_sync_minutes_$deviceId", 0))
@@ -147,8 +140,7 @@ class GarminDeviceStateStoreTest {
 
         store.setStayConnected(deviceId, false)
 
-        // The point of the default is that it loses to a choice: a wearer who
-        // turned the link off must not have it handed back by a later build.
+        // The default loses to a choice: a wearer who turned the link off must not get it back.
         assertFalse(GarminDeviceStateStore(prefs).stayConnected(deviceId))
     }
 

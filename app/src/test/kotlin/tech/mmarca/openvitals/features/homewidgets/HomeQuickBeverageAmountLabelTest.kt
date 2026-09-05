@@ -11,8 +11,7 @@ class HomeQuickBeverageAmountLabelTest {
 
     @Test
     fun `metric sub-litre volumes read in millilitres, without a space`() {
-        // The widget's compact form — the entry screen renders the same drink
-        // as "250 ml".
+        // The widget's compact form; the entry screen renders "250 ml".
         assertEquals("250ml", quickBeverageAmountLabel(drink(250.0), metric))
         assertEquals("330ml", quickBeverageAmountLabel(drink(330.0), metric))
     }

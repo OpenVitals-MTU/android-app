@@ -53,9 +53,7 @@ class HealthConnectReaderSupportTest {
 
         assertEquals(7, result)
         assertEquals(1, attempts)
-        // The backoff is armed for a minute. Riding it out here, once per read
-        // and before the concurrency permit, is what let a single throttled
-        // call hold a whole screen for minutes.
+        // Riding out the minute-long backoff once per read let a single throttled call hold a screen for minutes.
         assertTrue(testScheduler.currentTime - startedAt < DEFAULT_BACKOFF_MILLIS)
     }
 
@@ -81,8 +79,7 @@ class HealthConnectReaderSupportTest {
         val support = support()
         var attempts = 0
 
-        // The sync path has no screen behind it, so resuming after a minute
-        // beats restarting a half-finished transfer.
+        // The sync path has no screen behind it, so resuming after a minute beats restarting.
         val result = support.withLoggingOrThrow("sync") {
             attempts += 1
             if (attempts == 1) {

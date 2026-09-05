@@ -3,27 +3,14 @@ package tech.mmarca.openvitals.features.imports.csv
 import java.util.Locale
 
 /**
- * The text report a finished CSV import can hand back to the user.
- *
- * Pure: takes the run's inputs and outcome, returns a string. No clock, no I/O,
- * no context — so it is trivially testable and can be rendered from anywhere.
- *
- * Deliberately NOT sanitised, exactly like the Apple Health import report: it is
- * an explicit user export for troubleshooting, so it names the file, the columns
- * and the values that were rejected. It carries no health values that the user's
- * own CSV did not already contain.
+ * The text report of a finished CSV import. Pure. Not sanitised, like the
+ * Apple Health report: it names the file, columns and rejected values.
  */
 
 /** The suggested file name for a saved CSV import report. */
 const val CSV_IMPORT_REPORT_FILE_NAME = "openvitals-csv-import-report.txt"
 
-/**
- * Renders [result] and the mapping that produced it as plain text.
- *
- * The file name and dialect are passed in from the run rather than re-derived,
- * so the report describes what actually happened rather than what a fresh sniff
- * would decide now.
- */
+/** Renders [result] as text. File name and dialect come from the run, not a fresh sniff. */
 fun buildCsvImportReport(
     fileName: String?,
     mapping: CsvImportMapping,
@@ -73,7 +60,7 @@ fun buildCsvImportReport(
         appendLine()
         appendLine("Rejections by reason")
         appendLine("--------------------")
-        // Complete counts, never truncated — the per-row log below is what gets capped.
+        // Complete counts; the per-row log below is what gets capped.
         for ((reason, count) in result.diagnosticCounts) {
             appendLine("${reasonLabel(reason)}: $count")
         }

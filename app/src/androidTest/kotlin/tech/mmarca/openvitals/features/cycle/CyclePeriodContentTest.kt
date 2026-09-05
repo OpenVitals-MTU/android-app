@@ -22,15 +22,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Port of the rendering cases of Flutter's
- * `test/features/cycle/cycle_screen_test.dart`.
- *
- * The derivations are covered on the JVM by `CyclePresentationMapperTest`; what
- * is asserted here is that the content draws the branch the display state
- * chose. The permission-gate case from that file lives in
- * `HealthConnectAccessGateTest` — see its doc for why it is pinned once.
- */
+/** The content draws the branch the display state chose. The derivations are in `CyclePresentationMapperTest`. */
 class CyclePeriodContentTest {
 
     @get:Rule
@@ -42,8 +34,7 @@ class CyclePeriodContentTest {
             state(hasData = true, summary = CyclePeriodSummary(periodDays = 5)),
         )
 
-        // The label appears on both the summary card and the statistics row
-        // below it, so the first is the summary the loaded branch owes.
+        // The label appears on the summary card and the statistics row; the first is the summary.
         composeRule.onAllNodesWithText(string(R.string.metric_period_days))
             .onFirst()
             .assertIsDisplayed()

@@ -78,11 +78,7 @@ internal fun respiratoryRateBuckets(
     yearAggregation = PeriodBarAggregation.AVERAGE_NON_ZERO,
 )
 
-/**
- * A day's respiratory rate: minute-bucketed, the same mean the Health Connect
- * daily series uses for the same date, so the two paths cannot disagree. Zero
- * for no entries, matching the zero-means-no-data convention of the buckets.
- */
+/** A day's respiratory rate, minute-bucketed like the daily series. Zero for no entries. */
 private fun List<RespiratoryRateEntry>.respiratoryRateDayAverage(): Double =
     timeBucketedAverageOrNull(time = { it.time }, value = { it.breathsPerMinute }) ?: 0.0
 

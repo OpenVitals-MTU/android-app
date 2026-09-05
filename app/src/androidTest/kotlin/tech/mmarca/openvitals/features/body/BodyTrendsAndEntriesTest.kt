@@ -36,14 +36,8 @@ import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * The trend-chart and entry-row cases of Flutter's
- * `test/features/body/body_screen_test.dart`.
- *
- * The body screen is a stack of metrics the user may track none, one or all of.
- * Two things follow from that and neither is visible from the view model: a
- * metric with no readings must not draw an empty chart that reads as a flat
- * line, and a reading this app did not write must not offer to delete it —
- * Health Connect refuses the delete, so the row would swipe away and come back.
+ * A metric with no readings must not draw an empty chart, and a reading this app did not
+ * write must not offer a delete that Health Connect would refuse.
  */
 class BodyTrendsAndEntriesTest {
 
@@ -52,12 +46,8 @@ class BodyTrendsAndEntriesTest {
 
     @Test
     fun theAggregateChartsOnlyTheMetricsThatWereActuallyTracked() {
-        // Weight was tracked; body fat was not. Every metric is named in the
-        // statistics grid whether it has data or not, so "is body fat on the
-        // screen" proves nothing — the question is whether a chart is drawn for
-        // it. The trends section comes first and the statistics grid directly
-        // after it, so the charts are exactly what lies between the two
-        // headings.
+        // Every metric is named in the statistics grid, so the question is whether a chart is drawn.
+        // The charts are exactly what lies between the trends heading and the statistics heading.
         setBody(state(weights = listOf(weight())))
 
         val trends = string(R.string.section_body_trends)
@@ -90,8 +80,7 @@ class BodyTrendsAndEntriesTest {
 
     @Test
     fun aReadingThisAppDidNotWriteIsNotSwipeDeletable() {
-        // Health Connect only lets an app delete its own records, so offering
-        // the gesture at all would promise a delete that silently fails.
+        // Health Connect only lets an app delete its own records.
         val deleted = mutableListOf<Pair<BodyMeasurementType, String>>()
         setBody(
             state(weights = listOf(weight(isOpenVitalsEntry = false, source = "com.other.scale"))),
@@ -173,11 +162,7 @@ class BodyTrendsAndEntriesTest {
         composeRule.onAllNodes(hasScrollToIndexAction()).onFirst().performScrollToNode(hasText(text))
     }
 
-    /**
-     * One reading of the merged semantics tree, so that every position compared
-     * below comes from the same frame. Positions are unclipped, because a node
-     * below the fold is still laid out.
-     */
+    /** One reading of the merged semantics tree, unclipped, so every position is one frame. */
     private fun snapshot(): List<Rendered> {
         val collected = mutableListOf<Rendered>()
         fun walk(node: SemanticsNode) {

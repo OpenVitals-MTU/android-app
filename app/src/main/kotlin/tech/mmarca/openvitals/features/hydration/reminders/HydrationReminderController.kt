@@ -37,16 +37,7 @@ class HydrationReminderController @Inject constructor(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + dispatcherProvider.io)
 
-    /**
-     * Serializes everything that decides when the next reminder fires.
-     *
-     * Each of those paths suspends on repository reads between choosing a
-     * config and arming the alarm, so two of them in flight interleave: the
-     * user nudges the interval twice, both read, and whichever finishes last
-     * arms its alarm — which is as likely to be the config the user just
-     * replaced as the one they settled on. Holding the lock across the read and
-     * the arm makes the last caller in the one that decides.
-     */
+    /** Serialises scheduling, so the last caller in is the one that arms the alarm. */
     private val scheduling = Mutex()
 
     fun config(): HydrationReminderConfig =
@@ -96,11 +87,8 @@ class HydrationReminderController @Inject constructor(
     }
 
     /**
-     * Logs a plain-water volume from a notification action tap. Remembers the
-     * size before the write and independently of whether it succeeds; the
-     * schedule is re-anchored only after a real write — a refused one (revoked
-     * permission) must not re-anchor the countdown to a drink that never
-     * landed. Never throws: a failed tap simply logs nothing.
+     * Logs plain water from a notification action. Remembers the size before
+     * the write; re-anchors the schedule only after a real write. Never throws.
      */
     fun handleQuickAdd(milliliters: Double, onComplete: () -> Unit = {}) {
         scope.launch {
@@ -116,8 +104,7 @@ class HydrationReminderController @Inject constructor(
                         hydrationMultiplier = 1.0,
                         nutritionName = null,
                         nutrientValues = emptyMap(),
-                        // Plain water writes no nutrition record, so the
-                        // permission is never consulted.
+                        // Plain water writes no nutrition record.
                         canWriteNutrition = false,
                     )
                 }.getOrElse { error ->
@@ -133,8 +120,7 @@ class HydrationReminderController @Inject constructor(
                             applyConfigNow(preferencesRepository.hydrationReminderConfig())
                         }
                     }.onFailure { error ->
-                        // Re-anchoring is a nicety; never surface an error over
-                        // a drink that has already landed.
+                        // Re-anchoring is a nicety; never surface an error over a landed drink.
                         Log.w(TAG, "Hydration quick-add re-anchor failed", error)
                     }
                 }
@@ -144,11 +130,7 @@ class HydrationReminderController @Inject constructor(
         }
     }
 
-    /**
-     * Posts the hydration reminder notification immediately, exactly as a
-     * scheduled fire would — same channel, same content. Diagnostics only;
-     * does not touch the schedule.
-     */
+    /** Posts the reminder immediately, as a scheduled fire would. Diagnostics only. */
     fun showTestReminder(onComplete: () -> Unit = {}) {
         scope.launch {
             try {
@@ -193,11 +175,7 @@ class HydrationReminderController @Inject constructor(
         scheduleNextReminder(config, dailyGoalMet = goalMet, lastIntake = lastIntakeTime())
     }
 
-    /**
-     * When the last drink was logged (yesterday or today), so the countdown is
-     * measured from it rather than from whenever the schedule was re-applied.
-     * Null on any failure — the anchorless behavior is today's behavior.
-     */
+    /** When the last drink was logged, so the countdown is measured from it. Null on failure. */
     private suspend fun lastIntakeTime(): ZonedDateTime? = runCatching {
         val today = LocalDate.now()
         hydrationRepository.loadHydrationEntries(today.minusDays(1), today)

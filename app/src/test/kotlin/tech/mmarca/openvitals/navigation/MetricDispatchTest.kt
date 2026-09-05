@@ -8,13 +8,7 @@ import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.features.heart.HeartMetric
 import tech.mmarca.openvitals.features.nutrition.NutritionMetric
 
-/**
- * Ported from the Flutter `test/navigation/metric_dispatch_test.dart`, which
- * pins the `/metric/{metricId}` dispatch to this precedence: the calories
- * AGGREGATE intercepts its ids before the per-metric activity screens can claim
- * them, body/heart/vitals/nutrition each open their focused metric screen, and
- * `WORKOUT` renders the activities aggregate.
- */
+/** The `/metric/{metricId}` dispatch precedence: the calories aggregate intercepts first, then the focused screens, and `WORKOUT` opens the activities aggregate. */
 class MetricDispatchTest {
 
     @Test

@@ -6,12 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 
-/**
- * The routing half of the fit: which gain an observation is allowed to move.
- *
- * An influence must move the gain that scales the component it blames, or the
- * gain drifts to answer for something it does not control.
- */
+/** The routing half of the fit: an influence must move the gain that scales the component it blames. */
 class BodyEnergyCalibrationFitTest {
 
     private val now: Instant = Instant.parse("2026-07-15T20:00:00Z")
@@ -29,10 +24,7 @@ class BodyEnergyCalibrationFitTest {
             dominantInfluence = influence,
         )
 
-    /**
-     * Enough identical readings to clear the per-reading step, which is small on
-     * purpose — one watch reading is not meant to swing the model.
-     */
+    /** Enough identical readings to clear the per-reading step, which is small on purpose. */
     private fun repeated(
         count: Int,
         observed: Int,
@@ -84,10 +76,7 @@ class BodyEnergyCalibrationFitTest {
 
     @Test
     fun `recovery debt moves the activity gain, not basal`() {
-        // Recovery-debt drain is scaled by activityDrainGain. Routing it to
-        // basal — as this used to — aimed at a gain that scales the waking floor
-        // and not recovery debt at all, so it could never fix the error while
-        // corrupting the basal figure trying.
+        // Recovery-debt drain is scaled by activityDrainGain. Routing it to basal could never fix the error.
         val fitted = fitBodyEnergyGains(
             BodyEnergyCalibration(),
             watchReadings = repeated(10, 30, 70, BodyEnergyPrimaryInfluence.RECOVERY_DEBT),
@@ -99,8 +88,7 @@ class BodyEnergyCalibrationFitTest {
 
     @Test
     fun `steady still moves basal, the one influence it answers for`() {
-        // The timeline reports steady exactly when every competing drain is
-        // zero, which leaves the basal floor as the only thing that moved.
+        // Steady means every competing drain is zero, so only the basal floor moved.
         val fitted = fitBodyEnergyGains(
             BodyEnergyCalibration(),
             watchReadings = repeated(10, 30, 70, BodyEnergyPrimaryInfluence.STEADY),
@@ -124,9 +112,7 @@ class BodyEnergyCalibrationFitTest {
 
     @Test
     fun `quiet rest moves the sleep gain, which scales the rest charge`() {
-        // The waking-rest charge is scaled by sleepChargeGain, so that is the
-        // gain a quiet-rest mismatch has to move. Read HIGHER than predicted, so
-        // resting recharged more than modelled and the gain goes up.
+        // The waking-rest charge is scaled by sleepChargeGain. Read higher than predicted, so the gain goes up.
         val fitted = fitBodyEnergyGains(
             BodyEnergyCalibration(),
             watchReadings = repeated(10, 90, 60, BodyEnergyPrimaryInfluence.QUIET_REST),

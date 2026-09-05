@@ -75,13 +75,7 @@ data class DailyGoalProgress(
         get() = trackedDays.takeIf { it > 0 }
             ?.let { (goalMetDays * 100.0 / it).roundToInt() }
             ?: 0
-    /**
-     * The trailing run of met days. An unmet day that has not finished yet
-     * ([today] or later) is skipped rather than treated as a break — the day is
-     * still in progress, so only a PAST unmet day can end the streak. Without
-     * the skip, every streak read 0 right after midnight until something was
-     * logged for the new day.
-     */
+    /** The trailing run of met days. An unfinished day is skipped, so only a past unmet day ends it. */
     fun currentStreakDays(today: LocalDate = LocalDate.now()): Int {
         var count = 0
         days.sortedBy { it.date }.asReversed().forEach { day ->
@@ -108,16 +102,9 @@ data class DailyGoalProgress(
             return longest
         }
     /**
-     * The cumulative standing against the goal over the part of the period
-     * that has already happened. Per-day stats say *how many* days were met;
-     * this says how far the running total sits from goal × elapsed days —
-     * the number someone needs when a bad day has to be made up over the
-     * rest of the week.
-     *
-     * Every calendar day up to and including [today] counts as expected,
-     * tracked or not: a day with nothing logged contributes 0. Days after
-     * [today] are not expected yet. Null when no day of the period has
-     * happened yet.
+     * The cumulative standing against goal times elapsed days. Every day up
+     * to [today] counts as expected; untracked days contribute 0. Null when
+     * no day of the period has happened.
      */
     fun goalBalance(today: LocalDate = LocalDate.now()): DailyGoalBalance? {
         val elapsed = days.filter { !it.date.isAfter(today) }

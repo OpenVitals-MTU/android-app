@@ -23,14 +23,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the rendering cases of Flutter's
- * `test/features/settings/offline_maps_card_test.dart`.
- *
- * Offline maps are the only way to see a route without a network — someone
- * hiking with no signal has nothing else. The card is where a map is brought in
- * and where the app admits which of the two renderers it is actually using, so
- * a card that loses its empty state, its pack list or its import button strands
- * that user with no way to tell what went wrong.
+ * Offline maps are the only way to see a route without a network. The card must keep its
+ * empty state, its pack list and its import button.
  */
 class OfflineMapsCardTest {
 
@@ -49,8 +43,7 @@ class OfflineMapsCardTest {
             .performScrollTo()
             .assertIsEnabled()
 
-        // With nothing imported there is nothing to choose between, so the
-        // renderer picker must stay away rather than offer two empty options.
+        // With nothing imported the renderer picker must stay away.
         composeRule
             .onNodeWithText(string(R.string.settings_offline_maps_render_format_title))
             .assertDoesNotExist()
@@ -61,8 +54,7 @@ class OfflineMapsCardTest {
         setCard(mapPacks = listOf(ESTONIA), activeFormat = OfflineMapPackFormat.PMTILES)
 
         composeRule.onNodeWithText(ESTONIA.displayName).performScrollTo().assertIsDisplayed()
-        // The detail line is what tells a user WHICH file a pack came from —
-        // without it two imports of the same region are indistinguishable.
+        // The detail line tells a user which file a pack came from.
         composeRule
             .onNodeWithText(
                 string(
@@ -82,8 +74,7 @@ class OfflineMapsCardTest {
         composeRule.onNodeWithText(formatOption(R.string.settings_offline_maps_format_pmtiles, 1))
             .performScrollTo()
             .assertIsEnabled()
-        // Switching to a renderer with no packs would silently blank the map,
-        // so that choice is not offered until something is imported for it.
+        // Switching to a renderer with no packs would blank the map, so it is not offered.
         composeRule.onNodeWithText(formatOption(R.string.settings_offline_maps_format_mapsforge, 0))
             .performScrollTo()
             .assertIsNotEnabled()
@@ -100,8 +91,7 @@ class OfflineMapsCardTest {
             ),
         )
 
-        // Tapping import twice would copy the same file over itself, so the
-        // button has to be visibly out of action while a copy is running.
+        // Tapping import twice would copy the file over itself, so the button is out of action.
         composeRule.onNodeWithText(string(R.string.settings_offline_maps_importing))
             .performScrollTo()
             .assertIsNotEnabled()
@@ -115,8 +105,7 @@ class OfflineMapsCardTest {
             )
             .performScrollTo()
             .assertIsDisplayed()
-        // A multi-gigabyte region takes minutes; the user needs to know they can
-        // leave rather than sit and watch the bar.
+        // A multi-gigabyte region takes minutes; the user needs to know they can leave.
         composeRule.onNodeWithText(string(R.string.settings_offline_maps_import_background))
             .performScrollTo()
             .assertIsDisplayed()
@@ -182,10 +171,7 @@ class OfflineMapsCardTest {
     }
 
     private companion object {
-        /**
-         * A sub-kilobyte pack on purpose: the size formatter reports plain bytes
-         * below 1 kB, so the expected detail line stays exact in every locale.
-         */
+        /** A sub-kilobyte pack, so the size formatter reports plain bytes in every locale. */
         val ESTONIA = OfflineMapPack(
             id = "estonia-00000001",
             displayName = "estonia",

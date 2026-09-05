@@ -326,12 +326,8 @@ internal fun LazyListScope.noMetricData(
 }
 
 /**
- * The shape of the chart that is coming, while it comes.
- *
- * One skeleton, where the metric's main period chart will be, and ONLY when the screen
- * has nothing to show yet. A metric that already has a chart drawn keeps it while the
- * next period loads: swapping real data for a skeleton on every refresh would blink the
- * whole screen for something the user can already read.
+ * One skeleton where the period chart will be, only while the screen has
+ * nothing to show. A drawn chart is kept while the next period loads.
  */
 internal fun LazyListScope.metricChartSkeleton() {
     item {

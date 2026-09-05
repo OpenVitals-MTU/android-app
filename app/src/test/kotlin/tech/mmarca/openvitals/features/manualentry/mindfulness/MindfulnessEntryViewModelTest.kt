@@ -205,8 +205,7 @@ class MindfulnessEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        // 2 minutes, bell every 1 minute: one interval bell at 60 s, then the
-        // completion bell at 120 s — not two bells at the end.
+        // 2 minutes, bell every minute: one interval bell at 60 s, then the completion bell at 120 s.
         vm.updateDurationMinutes("2")
         vm.updateIntervalEnabled(true)
         vm.updateIntervalMinutes("1")
@@ -370,8 +369,7 @@ class MindfulnessEntryViewModelTest {
         advanceTimeBy(60_000L)
         advanceUntilIdle()
 
-        // Ran down to completion and banked the session: no longer running, not
-        // paused either, and the countdown sits at zero.
+        // Ran down and banked the session: not running, not paused, countdown at zero.
         assertFalse(vm.uiState.value.isTimerRunning)
         assertFalse(vm.uiState.value.isTimerPaused)
         assertTrue(vm.uiState.value.timerCompleted)

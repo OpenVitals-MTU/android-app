@@ -58,21 +58,10 @@ sealed interface KeyMapping {
 }
 
 /**
- * Pure mapping table from a decoded Flutter preference entry (see
- * [FlutterPrefsReader]) to the Kotlin app's on-disk representation.
- *
- * This is the exact inverse of the Flutter app's forward migration
- * (`mobile-app/lib/data/migration/kotlin_data_migration.dart`): key names are
- * identical on both sides (the Dart repository was a 1:1 port that kept
- * Kotlin's storage keys), so most entries are a typed copy. The exceptions —
- * enums persisted as Dart lowerCamel `.name`s, the `app_language` storage
- * value, the renamed `detail_range_hrr` key, the flattened BLE registry key,
- * the list-vs-joined-string hydration history and the keys that are
- * meaningless on this side — are enumerated here.
- *
- * Types matter: SharedPreferences readers throw [ClassCastException] on a type
- * mismatch, so every value is emitted as the exact type the current Kotlin
- * reader uses (`getInt` vs `getLong` vs `getFloat` vs `getStringSet`).
+ * Pure mapping from a decoded Flutter preference entry to the Kotlin app's
+ * on-disk form: the inverse of the Flutter forward migration. Key names
+ * match on both sides, so most entries are a typed copy; the exceptions are
+ * enumerated here. Types matter: SharedPreferences readers throw on a mismatch.
  */
 object FlutterPrefsKeyTable {
 
@@ -94,11 +83,8 @@ object FlutterPrefsKeyTable {
         }
 
         if (key == BLE_DEVICES_KEY) {
-            // Kotlin keeps the same JSON under file "ble_sensor_devices", key
-            // "devices" — the one key in the whole migration whose name differs
-            // from its file. Copied VERBATIM: the Flutter payload carries extra
-            // `kind`/`integration` fields that the current Kotlin decoder
-            // ignores but phase 7 (watches) will want intact.
+            // The one key whose name differs from its file. Copied verbatim:
+            // the extra Flutter fields are wanted intact later.
             if (value !is String || value.isEmpty()) return KeyMapping.Skip("BLE registry is not a string")
             return KeyMapping.Write(TargetWrite(TargetPrefsFile.BLE_DEVICES, "devices", TargetValue.StringValue(value)))
         }
@@ -113,30 +99,24 @@ object FlutterPrefsKeyTable {
         if (key == "app_language") return mapAppLanguage(value)
         if (key == "health_connect_mindfulness_enabled") {
             if (value !is Boolean) return KeyMapping.Skip("expected a boolean")
-            // The Kotlin repository reads health_connect_mindfulness_enabled
-            // with the legacy mindfulness_opt_in as fallback default; writing
-            // both keeps every read path consistent.
+            // Kotlin reads the new key with the legacy one as fallback; write both.
             return KeyMapping.Write(
                 mainWrite(key, TargetValue.BooleanValue(value)),
                 mainWrite("mindfulness_opt_in", TargetValue.BooleanValue(value)),
             )
         }
         if (key == "recent_hydration_amounts_milliliters") {
-            // Flutter: plugin-encoded string LIST of doubles. Kotlin: one
-            // comma-joined string (see PreferencesRepository.recentHydrationAmountsMilliliters).
+            // Flutter: a string list of doubles. Kotlin: one comma-joined string.
             if (value !is List<*>) return KeyMapping.Skip("expected a string list")
             val joined = value.filterIsInstance<String>().joinToString(",") { it.trim() }
             return KeyMapping.Write(mainWrite(key, TargetValue.StringValue(joined)))
         }
         if (key == DART_HRR_RANGE_KEY) {
-            // Dart renamed Kotlin's detail_range_heart_rate_recovery to
-            // detail_range_hrr; translate the value AND the key back.
+            // Dart renamed the key; translate value and key back.
             return mapEnum(key, value, timeRangeNames, targetKey = KOTLIN_HRR_RANGE_KEY)
         }
         if (key == KOTLIN_HRR_RANGE_KEY) {
-            // Dart never writes this key: it can only be the stale Kotlin-era
-            // value the forward migration copied into the Flutter file. The
-            // fresh Flutter value lives under detail_range_hrr and wins.
+            // Dart never writes this key: a stale Kotlin-era copy. detail_range_hrr wins.
             return KeyMapping.Drop("superseded by $DART_HRR_RANGE_KEY")
         }
 
@@ -147,13 +127,8 @@ object FlutterPrefsKeyTable {
     }
 
     /**
-     * The Kotlin `DashboardWidgetId` name for a home-metric-widget selection
-     * stored by the Flutter build (`DashboardMetric.storageName`), or null when
-     * it cannot be represented (skip + log; the user re-picks the metric).
-     *
-     * Dart split Kotlin's CARDIO_LOAD into WEEKLY_CARDIO_LOAD and
-     * INTENSITY_MINUTES. Today's Kotlin enum has WEEKLY_CARDIO_LOAD (kept
-     * as-is) but no INTENSITY_MINUTES, which maps back to CARDIO_LOAD.
+     * The Kotlin `DashboardWidgetId` for a Flutter home-metric selection, or
+     * null. Dart's INTENSITY_MINUTES maps back to CARDIO_LOAD.
      */
     fun kotlinMetricWidgetId(storedId: String): String? {
         val mapped = if (storedId == "INTENSITY_MINUTES") "CARDIO_LOAD" else storedId
@@ -163,12 +138,8 @@ object FlutterPrefsKeyTable {
     // region Enum transcoding
 
     /**
-     * Resolves a Dart enum `.name` (lowerCamelCase) against the REAL Kotlin
-     * enum constants by fold-matching — strip `_`, lowercase — so
-     * `oralContraceptive` matches `ORAL_CONTRACEPTIVE`, `last7Days` matches
-     * `LAST_7_DAYS`, and (stale, Kotlin-era) `MONDAY_TO_SUNDAY` still matches
-     * itself. A value with no Kotlin counterpart is skipped, never written as
-     * garbage.
+     * Resolves a Dart enum `.name` against the real Kotlin constants by fold
+     * matching (strip `_`, lowercase). No counterpart means skip.
      */
     private fun mapEnum(
         key: String,
@@ -186,11 +157,8 @@ object FlutterPrefsKeyTable {
     private fun fold(name: String): String = name.replace("_", "").lowercase()
 
     /**
-     * `app_language` differs in WHAT is stored, not just its casing: Dart
-     * persists the enum `.name` ("english", "system"), Kotlin persists
-     * `AppLanguage.storageValue` — the BCP-47 tag ("en") or the literal
-     * "SYSTEM". Raw tags are also accepted in case a stale Kotlin-era value
-     * ("en"/"SYSTEM") survived in the Flutter file.
+     * `app_language` stores different values: Dart the enum name, Kotlin the
+     * BCP-47 tag or "SYSTEM". Raw tags are accepted too.
      */
     private fun mapAppLanguage(value: Any): KeyMapping {
         if (value !is String || value.isEmpty()) return KeyMapping.Skip("expected a language name string")
@@ -215,21 +183,9 @@ object FlutterPrefsKeyTable {
     // region Typed copy
 
     /**
-     * The default: same key, value re-typed for its Kotlin reader.
-     *
-     * * `Boolean` -> Boolean.
-     * * `Long` (every Dart int) -> Kotlin `Int`, except the two keys Kotlin
-     *   reads with `getLong` ([longKeys]); unknown keys whose value exceeds Int
-     *   range also stay Long rather than truncate.
-     * * `Double` -> Kotlin `Float` (every fractional preference is `getFloat`).
-     * * `List<String>` -> Kotlin `StringSet` (`acknowledged_permissions`,
-     *   `acknowledged_feature_permissions_*`, `custom_hydration_drinks`,
-     *   `hydration_container_volume_milliliters` are all `getStringSet`; the
-     *   copy-for-future Garmin/watch lists ride along the same way).
-     *
-     * Keys with no current Kotlin reader (e.g. `garmin_notifications_*`,
-     * `apple_health_import_*`) are still copied typed under the same name —
-     * harmless now, and phase 7 keeps Flutter's key names.
+     * The default: same key, value re-typed for its Kotlin reader. Long to
+     * Int except [longKeys] and out-of-range values; Double to Float; string
+     * lists to StringSet. Keys with no Kotlin reader yet are copied typed.
      */
     private fun mapTyped(key: String, value: Any): KeyMapping =
         when (value) {
@@ -263,12 +219,7 @@ object FlutterPrefsKeyTable {
 
     private val timeRangeNames = TimeRange.entries.map { it.name }
 
-    /**
-     * Enum-valued keys, resolved against the real Kotlin enum constants. The
-     * detail-range family comes from [PeriodRangePreferenceKey] itself so a new
-     * screen cannot fall out of sync; `detail_range_heart_rate_recovery` is
-     * excluded because it is dropped/renamed above.
-     */
+    /** Enum-valued keys. The detail-range family comes from [PeriodRangePreferenceKey]. */
     private val enumValuedKeys: Map<String, List<String>> = buildMap {
         put("unit_system", UnitSystem.entries.map { it.name })
         put("app_theme_mode", AppThemeMode.entries.map { it.name })
@@ -305,27 +256,15 @@ object FlutterPrefsKeyTable {
     )
 
     /**
-     * Keys deliberately not migrated, with the reason logged for each.
-     *
-     * The dashboard trio is unportable by vocabulary: Kotlin persists
-     * `DashboardWidgetId` enum names while the Flutter dashboard persisted tile
-     * TITLES (plus a separate ring order) — copying them would inject ids the
-     * Kotlin grid can never match. One manual re-order is the whole cost.
-     *
-     * The `_recordingKeys` block mirrors Flutter's
-     * `activity_recording_serialization.dart`: a transient in-flight recording
-     * snapshot, stored under generic key names (`status`, `points`, …) that
-     * would land as junk in `openvitals_prefs`. The forward migration skipped
-     * in-flight recordings for the same reason.
+     * Keys deliberately not migrated. The dashboard trio persisted tile titles,
+     * not ids. The recording block is a transient in-flight snapshot.
      */
     private val droppedKeys: Map<String, String> = buildMap {
         val dashboard = "Flutter dashboard layout uses tile titles, not DashboardWidgetId names"
         put("dashboard_widget_order", dashboard)
         put("dashboard_ring_order", dashboard)
         put("dashboard_hidden_widgets", dashboard)
-        // body_energy_setup_epoch is deliberately NOT dropped: the Flutter-era
-        // body-energy preferences are honored wholesale (user decision), so it
-        // rides the generic typed copy for the body-energy chain to consume.
+        // body_energy_setup_epoch is not dropped: Flutter-era body-energy prefs are honoured.
         put("bodyEnergyPrefsTimelinePurged.v1", "Flutter-side cache-purge bookkeeping")
 
         val transient = "transient in-flight activity recording state"

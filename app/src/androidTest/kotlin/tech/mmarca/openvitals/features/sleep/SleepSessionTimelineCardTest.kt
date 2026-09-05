@@ -29,13 +29,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Ports the timeline-card half of Flutter's `sleep_stage_share_card_test.dart`.
- *
- * The day view's night card is the one place the SHAPE of a night is on show —
- * when the deep sleep happened, not merely how much of it there was. Reduced to a
- * proportional strip it would only restate the breakdown card underneath it.
- */
+/** The night card shows the shape of a night: when the deep sleep happened, not only how much. */
 class SleepSessionTimelineCardTest {
 
     @get:Rule
@@ -43,9 +37,7 @@ class SleepSessionTimelineCardTest {
 
     @Test
     fun theNightIsDrawnAsALaneChartAndNotAFlatBar() {
-        // One lane per stage, stacked: Deep must sit below Light, at the time it
-        // happened. A single strip of segments laid end to end would still show
-        // every stage name and every duration, and be worth nothing.
+        // One lane per stage, stacked: Deep must sit below Light, at the time it happened.
         setCard(onClick = null)
 
         composeRule.onNodeWithText(string(R.string.sleep_stage_light)).assertIsDisplayed()
@@ -69,8 +61,7 @@ class SleepSessionTimelineCardTest {
 
     @Test
     fun tappingTheCardOpensThatNightAndSaysSoFirst() {
-        // The card is the way into the detail screen, and the tap has to survive
-        // the hypnogram's own scrub gesture sitting directly under the finger.
+        // The tap has to survive the hypnogram's own scrub gesture under the finger.
         var opened = 0
         setCard(onClick = { opened++ })
 
@@ -82,9 +73,7 @@ class SleepSessionTimelineCardTest {
 
     @Test
     fun aMergedNightOffersNoDetailToOpen() {
-        // Two sessions in one night are shown as a single merged summary whose id
-        // belongs to no record. There is nothing to open, so the card must not
-        // advertise a way in that would dead-end.
+        // A merged summary of two sessions has no record to open, so the card must not advertise a way in.
         setCard(onClick = null)
 
         composeRule.onNodeWithText(string(R.string.action_details)).assertDoesNotExist()

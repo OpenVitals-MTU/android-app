@@ -1,10 +1,6 @@
 package tech.mmarca.openvitals.domain.model
 
-/**
- * Shared stepping and clamping rules for the high/low heart-rate alert thresholds.
- * Used by both the heart screen and the settings Recovery section so the two
- * surfaces can never disagree about what a valid threshold pair looks like.
- */
+/** Stepping and clamping rules for the alert thresholds, shared by both surfaces. */
 object HeartRateThresholds {
     const val STEP_BPM = 5
 

@@ -20,13 +20,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of Flutter's `test/features/activity/activity_heart_rate_recovery_test.dart`.
- *
- * This card is the one place a wellness estimate gets presented as a number
- * about the user's heart, so what it says when it is unsure matters more than
- * what it says when it is confident. Every case here is about the unsure path:
- * a missing mark reads as "not measured" rather than a zero, and a submaximal
- * effort still shows the reading but says why it is not comparable.
+ * A wellness estimate presented as a number about the user's heart, so the unsure path matters:
+ * a missing mark reads as "not measured", and a submaximal effort says why it is not comparable.
  */
 class HeartRateRecoveryCardTest {
 
@@ -50,8 +45,7 @@ class HeartRateRecoveryCardTest {
 
     @Test
     fun aWatchThatStoppedRecordingSaysSoRatherThanShowingNumbers() {
-        // No samples after the stop is not a recovery of zero. Printing a
-        // number here would invent a measurement out of an absent one.
+        // No samples after the stop is not a recovery of zero.
         setCard(
             reading(
                 quality = HeartRateRecoveryQuality.NO_DATA,
@@ -70,9 +64,7 @@ class HeartRateRecoveryCardTest {
 
     @Test
     fun aSubmaximalGuidedTestStillShowsTheCardFlagged() {
-        // The drop is real; it just cannot be compared against readings taken
-        // after a harder effort. Hiding it would lose a measurement, and
-        // showing it unflagged would invite a comparison that misleads.
+        // The drop is real but not comparable. Hiding it loses a measurement; showing it unflagged misleads.
         setCard(
             reading(
                 quality = HeartRateRecoveryQuality.NOT_COMPARABLE,

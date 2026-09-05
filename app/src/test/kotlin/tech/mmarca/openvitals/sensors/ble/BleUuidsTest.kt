@@ -10,14 +10,8 @@ class BleUuidsTest {
 
     @Test
     fun `the Garmin scan filter filters on the ADVERTISED member service, not GFDI`() {
-        // Regression, found on a real vívoactive 5 (2026-07-22). Its
-        // advertisement is:
-        //   mServiceUuids=[0000fe1f-0000-1000-8000-00805f9b34fb]
-        //   mManufacturerSpecificData={135=[...]}   // 0x0087 = Garmin
-        //   mDeviceName=vívoactive 5
-        // and carries NO GFDI UUID — GFDI is a GATT service that appears only
-        // after connecting. Filtering the scan on it matched nothing, so the
-        // watch was invisible unless the user toggled "Show all devices".
+        // A real vívoactive 5 advertises only the Garmin member service (fe1f) and no GFDI UUID.
+        // Filtering the scan on GFDI matched nothing.
         assertTrue(BleUuids.SCAN_SERVICE_UUIDS.contains(BleUuids.GARMIN_MEMBER_SERVICE))
         assertFalse(
             "a scan filter on a connect-only GATT service hides every Garmin " +
@@ -28,9 +22,7 @@ class BleUuidsTest {
 
     @Test
     fun `the member service grants no sensor capabilities`() {
-        // A watch streams nothing live. If this ever returned a capability, the
-        // watch would enter capability assignment and the recording coordinator
-        // would connect to it and wait for notifications it never sends.
+        // A watch streams nothing live; a capability here would make the coordinator connect and wait forever.
         assertTrue(BleUuids.capabilitiesForService(BleUuids.GARMIN_MEMBER_SERVICE).isEmpty())
     }
 

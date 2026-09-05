@@ -38,17 +38,9 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.Instant
 
 /**
- * View-model for the "Sync with another phone" wizard.
- *
- * Orchestrates the Bluetooth manager (discoverability / discovery / connect)
- * and the pure-Kotlin [SyncSession] over the live RFCOMM transport, reading
- * and writing Health Connect through [HealthConnectSyncStore]. One state flow
- * drives the whole state-machine flow the screen renders.
- *
- * Permission choreography lives in the screen (ActivityResult launchers must):
- * Bluetooth runtime grants → Health Connect grants → (host) the discoverable
- * dialog. The VM entry points [startHosting] / [startScanning] assume those
- * already ran.
+ * View-model for the "Sync with another phone" wizard. Drives the Bluetooth
+ * manager and the [SyncSession] over RFCOMM. The screen handles permissions;
+ * [startHosting] and [startScanning] assume they were granted.
  */
 @HiltViewModel
 class DeviceSyncViewModel @Inject constructor(
@@ -68,8 +60,7 @@ class DeviceSyncViewModel @Inject constructor(
     private var connectionJob: Job? = null
     private var syncJob: Job? = null
 
-    // Bumped on reset()/cancel() so a session tearing down in the background
-    // can't write its result over a freshly-reset wizard.
+    // Bumped on reset so a session tearing down cannot write over a fresh wizard.
     private var generation = 0
 
     private var foregroundStartedByUs = false
@@ -79,13 +70,11 @@ class DeviceSyncViewModel @Inject constructor(
         loadStoredReport()
     }
 
-    // ── Permission plumbing (driven by the screen's launchers) ───────────────
+    // Permission plumbing, driven by the screen's launchers.
 
     /**
-     * The Health Connect permissions the wizard asks for: READ + WRITE for
-     * every syncable type this device's provider + manifest can grant — the
-     * guest must be able to WRITE received records (an unpermitted write throws
-     * and, since a batch insert is atomic, drops the whole batch).
+     * The Health Connect permissions the wizard asks for: read and write for
+     * every syncable type. The guest must be able to write received records.
      */
     fun healthPermissionsToRequest(): Set<String> = buildSet {
         for ((type, suffix) in syncableTypePermissionSuffix) {
@@ -95,9 +84,7 @@ class DeviceSyncViewModel @Inject constructor(
                 "PlannedExerciseSessionRecord" ->
                     if (!healthConnectManager.isPlannedExerciseAvailable()) continue
                 "SkinTemperatureRecord" -> {
-                    // WRITE_SKIN_TEMPERATURE is not declared in the manifest, so
-                    // only the read half is requestable — and without the write
-                    // half the type is not syncable on this device anyway.
+                    // WRITE_SKIN_TEMPERATURE is not in the manifest, so only the read half is requestable.
                     if (healthConnectManager.isSkinTemperatureAvailable()) {
                         add(healthReadPermission(suffix))
                     }
@@ -114,8 +101,7 @@ class DeviceSyncViewModel @Inject constructor(
         viewModelScope.launch {
             val granted = runCatching { healthConnectManager.grantedPermissions() }
                 .getOrNull() ?: return@launch
-            // A type is syncable on THIS device only if it holds both a read
-            // (to send) and a write (to receive) grant.
+            // Syncable here only with both a read and a write grant.
             val available = syncableTypePermissionSuffix
                 .filterValues { suffix ->
                     healthReadPermission(suffix) in granted &&
@@ -141,12 +127,9 @@ class DeviceSyncViewModel @Inject constructor(
     fun discoverableIntent(): Intent =
         bluetooth.requestDiscoverableIntent(DISCOVERABLE_SECONDS)
 
-    // ── Step 1: role ─────────────────────────────────────────────────────────
+    // Step 1: role.
 
-    /**
-     * Host role, called with the granted discoverable window (0 = declined).
-     * Generates the pairing code and opens the RFCOMM server.
-     */
+    /** Host role, with the granted discoverable window (0 = declined). Opens the RFCOMM server. */
     fun startHosting(grantedSeconds: Int) {
         if (!bluetooth.isBluetoothEnabled()) {
             _uiState.update { it.copy(bluetoothUnavailable = true) }
@@ -192,8 +175,7 @@ class DeviceSyncViewModel @Inject constructor(
             it.copy(
                 role = SyncRole.GUEST,
                 step = DeviceSyncStep.GUEST_SCANNING,
-                // Bonded phones seed the list — the fallback when an OEM's
-                // discoverable window is flaky and the scan misses the peer.
+                // Bonded phones seed the list, for OEMs whose discoverable window is flaky.
                 devices = bluetooth.bondedCandidates(),
                 scanning = true,
                 error = null,
@@ -227,15 +209,14 @@ class DeviceSyncViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.w(TAG, "discovery failed: ${e.message}")
             }
-            // The scan window closed itself (~12 s); without consuming this the
-            // UI would spin forever with no "no devices found" affordance.
+            // The scan window closed itself; consume it or the UI spins forever.
             if (_uiState.value.step == DeviceSyncStep.GUEST_SCANNING) {
                 _uiState.update { it.copy(scanning = false) }
             }
         }
     }
 
-    // ── Step 2 (guest): select + code ────────────────────────────────────────
+    // Step 2 (guest): select and code.
 
     fun selectDevice(device: DiscoveredSyncDevice) {
         discoveryJob?.cancel()
@@ -285,7 +266,7 @@ class DeviceSyncViewModel @Inject constructor(
         }
     }
 
-    // ── Steps 3-4: range + types ─────────────────────────────────────────────
+    // Steps 3-4: range and types.
 
     fun setRange(range: SyncRange) = _uiState.update { it.copy(range = range) }
 
@@ -299,14 +280,13 @@ class DeviceSyncViewModel @Inject constructor(
 
     fun goToTypes() = _uiState.update { it.copy(step = DeviceSyncStep.TYPES) }
 
-    // ── Step 5: sync ─────────────────────────────────────────────────────────
+    // Step 5: sync.
 
     fun startSync() {
         val state = _uiState.value
         val role = state.role ?: return
         if (syncJob?.isActive == true) return
-        // A live activity recording holds the app's foreground slot AND the
-        // radio discipline — refuse to sync until it is finished or discarded.
+        // A live recording holds the foreground slot and the radio. Refuse.
         if (recordingController.state.value.isActive) {
             _uiState.update { it.copy(error = DeviceSyncError.RECORDING_ACTIVE) }
             return
@@ -316,8 +296,7 @@ class DeviceSyncViewModel @Inject constructor(
         _uiState.update { it.copy(step = DeviceSyncStep.SYNCING, error = null, progress = null) }
 
         syncJob = viewModelScope.launch {
-            // Wait until the RFCOMM socket is actually connected before the
-            // handshake (the host may still be waiting for the guest to dial).
+            // Wait for the socket to connect before the handshake.
             val connected = withTimeoutOrNull(CONNECT_WAIT_MILLIS) {
                 bluetooth.connectionState.first { it == SyncConnectionState.CONNECTED }
             }
@@ -347,13 +326,8 @@ class DeviceSyncViewModel @Inject constructor(
                     deviceName = deviceName(),
                     supportedTypes = state.availableTypes.toList(),
                     selectedTypes = state.selectedTypes.toList(),
-                    // Real datasets can be large (a CGM alone is ~100k
-                    // readings/year). Bigger batches cut the number of
-                    // stop-and-wait round-trips; the store additionally caps a
-                    // batch by payload BYTES so its transfer stays well inside
-                    // the ack timeout. The timeout itself is generous enough
-                    // to ride out a Health Connect rate-limit pause (60s wait
-                    // + retry) on the slow side.
+                    // Bigger batches cut stop-and-wait round trips; the store also caps
+                    // by bytes. The timeout rides out a Health Connect rate-limit pause.
                     batchSize = 500,
                     batchTimeoutMillis = 300_000,
                 ),
@@ -363,9 +337,7 @@ class DeviceSyncViewModel @Inject constructor(
                     _uiState.update { it.copy(progress = progress) }
                 }
             }
-            // Keep the process foregrounded for the duration of the transfer so
-            // the OS does not kill the app if the user switches away
-            // (best-effort; the transfer itself stays in-process).
+            // Keep the process foregrounded so the OS does not kill it. Best-effort.
             foregroundStartedByUs = DeviceSyncForegroundService.start(context)
             try {
                 val report = session.run()
@@ -384,9 +356,7 @@ class DeviceSyncViewModel @Inject constructor(
                     return@launch
                 }
                 persistReport(report)
-                // The tiles read stored data, so records that just arrived from
-                // the other phone must not leave the home screen on its
-                // pre-sync numbers until the system's next periodic tick.
+                // Records just arrived; the widgets must not stay on pre-sync numbers.
                 runCatching { refreshPlacedHomeWidgets(context) }
                 if (gen != generation) return@launch
                 _uiState.update { it.copy(step = DeviceSyncStep.REPORT, report = report) }
@@ -395,13 +365,10 @@ class DeviceSyncViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.w(TAG, "session threw: ${e.message}")
                 if (gen != generation) return@launch
-                // Even an ugly death gets a report: the last progress counters
-                // plus the exception are what a bug report needs, and without
-                // them "sync failed" is indistinguishable from "did nothing".
+                // Even an ugly death gets a report with the last counters and the exception.
                 val partial = partialReport(e)
                 persistReport(partial)
-                // Move OFF the syncing step so the UI leaves the progress
-                // spinner and can render the failure.
+                // Leave the syncing step so the UI can render the failure.
                 _uiState.update {
                     it.copy(
                         step = DeviceSyncStep.REPORT,
@@ -422,11 +389,7 @@ class DeviceSyncViewModel @Inject constructor(
         reportStore.writeReport(text)
     }
 
-    /**
-     * A best-effort report for a session that died with an exception instead of
-     * a clean abort: the progress counters the UI last saw, plus the error. The
-     * peer name and per-type tallies live inside the dead session and are lost.
-     */
+    /** A best-effort report for a session that died with an exception. Per-type tallies are lost. */
     private fun partialReport(cause: Exception): SyncReport {
         val progress = _uiState.value.progress
         return SyncReport(
@@ -451,13 +414,11 @@ class DeviceSyncViewModel @Inject constructor(
         }
     }
 
-    // ── Reset / teardown ─────────────────────────────────────────────────────
+    // Reset and teardown.
 
     /**
-     * Cancels an in-flight or pending sync and returns to the start. Tearing
-     * the Bluetooth manager down closes the transport, which ends any running
-     * SyncSession (its inbound closes → abort), and the bumped generation
-     * stops that session's result from landing on the reset wizard.
+     * Cancels the sync and returns to the start. Tearing the manager down
+     * ends any session; the bumped generation keeps its result off the wizard.
      */
     fun cancel() = reset()
 
@@ -486,7 +447,7 @@ class DeviceSyncViewModel @Inject constructor(
         stopForegroundIfOurs()
     }
 
-    // ── Internals ────────────────────────────────────────────────────────────
+    // Internals.
 
     private fun observeConnection() {
         if (connectionJob?.isActive == true) return
@@ -494,11 +455,8 @@ class DeviceSyncViewModel @Inject constructor(
             bluetooth.connectionState.collect { connection ->
                 Log.i(TAG, "connectionState=$connection step=${_uiState.value.step}")
                 if (connection == SyncConnectionState.CONNECTED) {
-                    // The host sits on a static "waiting" screen until a peer
-                    // connects. Advance it into the range/type picker so it
-                    // runs its own half of the (bidirectional) session —
-                    // without this the host never starts a session and the
-                    // guest's handshake finds no peer.
+                    // Advance the host from its waiting screen into the picker, so it
+                    // runs its half of the session.
                     val state = _uiState.value
                     if (state.role == SyncRole.HOST && state.step == DeviceSyncStep.HOST_WAITING) {
                         _uiState.update { it.copy(step = DeviceSyncStep.RANGE) }
@@ -509,9 +467,7 @@ class DeviceSyncViewModel @Inject constructor(
     }
 
     private fun stopForegroundIfOurs() {
-        // Only stop a service WE started; DeviceSyncForegroundService.stop only
-        // ever addresses its own class, so an unrelated foreground service
-        // (e.g. a GPS recording) can never be torn down from here.
+        // Only stop a service we started. A GPS recording can never be torn down from here.
         if (!foregroundStartedByUs) return
         foregroundStartedByUs = false
         DeviceSyncForegroundService.stop(context)

@@ -79,8 +79,7 @@ class BodyEnergyCalibrationTest {
 
     @Test
     fun `the zone signature ignores the gains the watch learner moves`() {
-        // A cache keyed on both halves together would be invalidated by the
-        // learner doing its job; the chain anchor only wants the configuration.
+        // A cache keyed on both halves would be invalidated by the learner; the anchor only wants the configuration.
         val neutral = BodyEnergyCalibration()
         val learned = BodyEnergyCalibration(activityDrainGain = 1.4)
 

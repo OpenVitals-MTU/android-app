@@ -33,16 +33,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
-/**
- * The permission gating around the activity reads: which reads run at all, and
- * which optional aggregates they ask the provider for.
- *
- * Ported from the Flutter suite:
- * - test/data/repository/activity_repository_daily_steps_test.dart
- * - test/data/repository/activity_repository_period_flags_test.dart
- * - test/data/repository/activity_repository_activity_progress_test.dart
- * - test/data/repository/activity_repository_workouts_with_metrics_test.dart
- */
+/** The permission gating around the activity reads: which reads run, and which optional aggregates they ask for. */
 class ActivityRepositoryGatingTest {
 
     private val stepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
@@ -65,12 +56,11 @@ class ActivityRepositoryGatingTest {
         unmockkStatic(Log::class)
     }
 
-    // --- daily steps -------------------------------------------------------
+    // Daily steps.
 
     @Test
     fun `loadDailySteps scans from the full start when history access is not gated`() = runTest {
-        // The provider does not require the history permission at all, so there
-        // is no 30-day clamp even though it was never granted.
+        // The provider does not require the history permission, so there is no 30-day clamp.
         val start = LocalDate.of(2009, 1, 1)
         val end = LocalDate.of(2026, 7, 10)
         val hc = hc(granted = setOf(stepsPermission), additionalDataAccessPermissions = emptySet())
@@ -141,7 +131,7 @@ class ActivityRepositoryGatingTest {
         }
     }
 
-    // --- period flags ------------------------------------------------------
+    // Period flags.
 
     @Test
     fun `period read requests floors and elevation when granted`() = runTest {
@@ -216,7 +206,7 @@ class ActivityRepositoryGatingTest {
         }
     }
 
-    // --- intraday progress opt-out ----------------------------------------
+    // Intraday progress opt-out.
 
     @Test
     fun `includeActivityProgress false skips the intraday read on Day`() = runTest {
@@ -244,7 +234,7 @@ class ActivityRepositoryGatingTest {
         }
     }
 
-    // --- workouts with metrics --------------------------------------------
+    // Workouts with metrics.
 
     @Test
     fun `loadWorkoutsWithMetrics forwards both metrics when distance and speed are granted`() = runTest {
@@ -264,8 +254,7 @@ class ActivityRepositoryGatingTest {
 
         val workouts = ActivityRepositoryImpl(hc).loadWorkoutsWithMetrics(workoutStart, workoutEnd)
 
-        // The read still happens (the sessions themselves are readable) — only
-        // the aggregate metrics are dropped. It must not throw.
+        // The read still happens; only the aggregate metrics are dropped.
         assertEquals(1, withMetricsCalls)
         assertEquals(false, capturedIncludeDistance)
         assertEquals(false, capturedIncludeSpeed)
@@ -305,7 +294,7 @@ class ActivityRepositoryGatingTest {
         assertEquals(LocalDate.of(2026, 7, 8).atStartOfDay(zone).toInstant(), capturedEnd)
     }
 
-    // --- planned workouts --------------------------------------------------
+    // Planned workouts.
 
     @Test
     fun `loadPlannedWorkout throws SecurityException when planned exercise is unavailable`() = runTest {
@@ -341,7 +330,7 @@ class ActivityRepositoryGatingTest {
         coVerify(exactly = 1) { hc.deletePlannedExerciseSession("plan-1") }
     }
 
-    // --- fixtures ----------------------------------------------------------
+    // Fixtures.
 
     private val workoutStart = LocalDate.of(2026, 7, 1)
     private val workoutEnd = LocalDate.of(2026, 7, 7)

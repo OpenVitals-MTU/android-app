@@ -19,14 +19,7 @@ import tech.mmarca.openvitals.testing.readinessInsight
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Port of the rendering cases of Flutter's
- * `test/features/readiness/daily_readiness_card_test.dart`.
- *
- * Reachable now that `readinessInsight()` exists — the insight has twenty-two
- * required fields and three nested insights, and building one inline cost more
- * than the assertions were worth.
- */
+/** The readiness panel, reachable now that `readinessInsight()` builds the twenty-two-field insight. */
 class DailyReadinessPanelTest {
 
     @get:Rule
@@ -42,8 +35,7 @@ class DailyReadinessPanelTest {
 
     @Test
     fun theConfidenceLineIsRenderedFromResources() {
-        // Both halves come from strings.xml now; before that they were English
-        // literals in two copies of this function.
+        // Both halves come from strings.xml now.
         setPanel(
             readinessInsight(
                 confidence = ReadinessConfidence.LOW,
@@ -64,8 +56,7 @@ class DailyReadinessPanelTest {
 
     @Test
     fun noSelfLink_theCardOffersTrainingButNotBodyEnergy() {
-        // Inside the Body Energy screen the panel must not offer a way back to
-        // the screen the user is already looking at.
+        // Inside the Body Energy screen the panel must not offer a way back to itself.
         var openedTraining = 0
         setPanel(readinessInsight(), onOpenBodyEnergyDetails = null) { openedTraining++ }
 

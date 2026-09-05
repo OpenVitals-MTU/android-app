@@ -25,19 +25,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Ports the permission cases of Flutter's
- * `test/features/mindfulness/reminders/mindfulness_reminder_settings_view_model_test.dart`.
- *
- * Kotlin has no reminder-settings view model to point them at: the ask-versus-
- * enable decision lives in the switch's own `onCheckedChange`, so the card is
- * the only place it can be observed — the same route
- * `HydrationReminderCardTest` takes for the hydration half of this behaviour.
- *
- * The half that stays out of reach is the OS round trip itself: the launcher and
- * the `enableRemindersAfterPermission` flag live in `MindfulnessScreen`, and a
- * test cannot grant `POST_NOTIFICATIONS` to its own process without restarting
- * it. What the card owns is the decision either side of that trip, and that is
- * what these pin.
+ * The ask-versus-enable decision lives in the switch's `onCheckedChange`, so the card is
+ * the only place to observe it. The OS round trip itself is out of reach in a test.
  */
 class MindfulnessReminderCardTest {
 
@@ -62,8 +51,7 @@ class MindfulnessReminderCardTest {
         assertEquals("flipping it on must ask for the permission", 1, requested)
         assertNull("and must not store a reminder that can never fire", toggled)
 
-        // Once the permission is there the same flip enables the reminder
-        // instead of asking again.
+        // Once the permission is there the same flip enables the reminder.
         composeRule.runOnIdle { hasPermission = true }
         composeRule.onNode(isToggleable()).performScrollTo().performClick()
         composeRule.waitForIdle()
@@ -74,9 +62,7 @@ class MindfulnessReminderCardTest {
 
     @Test
     fun aDeniedPermissionLeavesTheReminderOffRatherThanSilentlyDead() {
-        // The failure this guards against is silent: an enabled reminder with no
-        // notification permission never arrives, and the card would still read
-        // as switched on. Refusing the flip keeps the switch honest.
+        // An enabled reminder with no permission never arrives. Refusing the flip keeps the switch honest.
         var toggled: Boolean? = null
         setCard(
             config = MindfulnessReminderConfig(enabled = false),

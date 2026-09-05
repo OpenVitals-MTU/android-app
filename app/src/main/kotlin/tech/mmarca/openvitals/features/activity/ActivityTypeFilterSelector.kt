@@ -17,12 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import tech.mmarca.openvitals.R
 
-/**
- * The dropdown's options: the types actually present, plus whatever is selected
- * even when the period no longer contains it — otherwise choosing "Yoga" and
- * paging back to a week without yoga would silently blank the filter — sorted by
- * the label the user reads, not by the Health Connect constant behind it.
- */
+/** The types present, plus the selection even when absent, sorted by label. */
 internal fun activityTypeFilterOptions(
     availableActivityTypes: List<Int>,
     selectedActivityType: Int?,

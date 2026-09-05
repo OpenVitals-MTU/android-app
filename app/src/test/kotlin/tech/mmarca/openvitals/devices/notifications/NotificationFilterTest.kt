@@ -3,14 +3,7 @@ package tech.mmarca.openvitals.devices.notifications
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
-/**
- * The filter runs on every notification the phone posts, so a bug here means a
- * watch that buzzes constantly and a battery that goes. These are JVM tests
- * with no Android at all.
- *
- * Lifted with the filter from the Flutter build's
- * `notification_listener_native` plugin test.
- */
+/** The filter runs on every notification the phone posts; a bug here means a watch that buzzes constantly. */
 class NotificationFilterTest {
 
     private val ownPackage = "tech.mmarca.openvitals"
@@ -173,9 +166,7 @@ class NotificationFilterTest {
 
     @Test
     fun `the category duplicates track the real Garmin enum's ordinals`() {
-        // The Pigeon boundary is gone, but the duplication policy stayed — so
-        // this pin, which the Dart side could not have, keeps the two from
-        // drifting silently.
+        // The duplication policy stayed after the Pigeon boundary went; this pin keeps the two from drifting.
         val garmin = tech.mmarca.openvitals.devices.garmin.GarminNotificationCategory.entries
         assertThat(NotificationFilter.Category.INCOMING_CALL)
             .isEqualTo(garmin.indexOfFirst { it.name == "INCOMING_CALL" })

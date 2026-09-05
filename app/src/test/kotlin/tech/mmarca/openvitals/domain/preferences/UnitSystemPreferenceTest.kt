@@ -66,8 +66,7 @@ class UnitSystemPreferenceTest {
     }
 
     @Test fun `explicit storage values match the pre-SYSTEM enum names`() {
-        // These are what the app wrote before "Follow system" existed; an
-        // existing user's stored choice must keep decoding as that choice.
+        // What the app wrote before "Follow system" existed; a stored choice must keep decoding.
         assertEquals(UnitSystemPreference.METRIC, UnitSystemPreference.fromStorageValue("METRIC"))
         assertEquals(UnitSystemPreference.IMPERIAL, UnitSystemPreference.fromStorageValue("IMPERIAL"))
     }

@@ -32,14 +32,8 @@ import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the rendering and navigation cases of Flutter's
- * `test/features/activity/activities_screen_test.dart`.
- *
- * The activities overview is the only screen that shows a week as a whole: the
- * sessions, the five key-metric cards, and the way through from each card to
- * the metric behind it. A card that stops opening its detail is a dead end the
- * user has no other route around, because nothing else on the screen links
- * there.
+ * The activities overview: the sessions, the five key-metric cards, and the way through
+ * from each card to its metric. Nothing else on the screen links there.
  */
 class ActivitiesOrderedContentTest {
 
@@ -103,9 +97,7 @@ class ActivitiesOrderedContentTest {
 
     @Test
     fun theKeyMetricSparklineLabelsEveryWeekdayBucket() {
-        // The sparkline is seven points with no axis of its own: without the
-        // weekday row underneath, a peak is a shape rather than "you walked
-        // most on Wednesday".
+        // The sparkline has no axis, so the weekday row underneath is what names the peak.
         val dates = (0L until 7L).map { WEEK_START.plusDays(it) }
         composeRule.setContent {
             OpenVitalsTheme {
@@ -120,9 +112,7 @@ class ActivitiesOrderedContentTest {
 
         val locale = java.util.Locale.getDefault()
         val expected = dates.map { activityOverviewBucketLabel(it, TimeRange.WEEK, locale) }
-        // Weekday initials collide in most locales (Tuesday/Thursday in
-        // English), so the count per distinct label is what pins "one label per
-        // bucket" rather than the labels themselves.
+        // Weekday initials collide (Tuesday/Thursday), so the count per distinct label is what pins one label per bucket.
         expected.distinct().forEach { label ->
             assertEquals(
                 "\"$label\" is drawn once for each day it names",

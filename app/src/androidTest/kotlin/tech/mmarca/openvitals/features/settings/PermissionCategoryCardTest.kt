@@ -18,13 +18,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of Flutter's `test/features/settings/permission_categories_card_test.dart`.
- *
- * This card is the only place inside the app where a user can see WHICH health
- * data they have handed over and hand over more. A category that renders its
- * name but loses its status line, or shows a Grant button that asks for
- * nothing, leaves someone unable to tell a feature that is switched off from
- * one that is broken.
+ * The only place a user sees which health data they handed over. A category without its
+ * status line, or a Grant button that asks for nothing, hides a switched-off feature behind a broken one.
  */
 class PermissionCategoryCardTest {
 
@@ -33,9 +28,7 @@ class PermissionCategoryCardTest {
 
     @Test
     fun rendersARowPerCategoryWithGrantedOptionalAndUnsupportedStatus() {
-        // Sleep is fully granted, heart is not, and mindfulness is a category
-        // this Health Connect build does not carry at all — three different
-        // facts that must not collapse into one label.
+        // Sleep is granted, heart is not, and mindfulness is absent from this build: three facts, three labels.
         setContent(granted = SLEEP_PERMISSIONS)
 
         composeRule.onNodeWithText(string(R.string.onboarding_category_activity_sleep))
@@ -62,9 +55,7 @@ class PermissionCategoryCardTest {
 
     @Test
     fun aGrantButtonRequestsThatCategorysPermissions() {
-        // The request has to carry the category's own permission set; asking
-        // for nothing would return "granted" and leave the row unchanged
-        // forever.
+        // The request must carry the category's permission set; asking for nothing leaves the row unchanged forever.
         var requested: Set<String>? = null
         setContent(granted = SLEEP_PERMISSIONS, onGrantHeart = { requested = it })
 

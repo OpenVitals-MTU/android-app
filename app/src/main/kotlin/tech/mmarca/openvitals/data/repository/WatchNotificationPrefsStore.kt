@@ -8,33 +8,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Which phone notifications are mirrored to a paired Garmin watch.
+ * Which phone notifications are mirrored to a Garmin watch: a blocklist. The disclosure
+ * flag is stored so toggling does not re-prompt. Mirrored into `NotificationStore`'s
+ * file, since the listener runs before any UI.
  *
- * A **blocklist**, not an allow-list: the feature forwards everything the
- * structural filter lets through, and the user silences the apps they do not
- * want. An allow-list would quietly contradict what the switch says it does,
- * and would leave a newly-installed messaging app silent for no visible
- * reason.
- *
- * The disclosure flag is stored here rather than derived from [enabled]
- * because the two are not the same: consent is given once and remembered, and
- * switching the feature off and on again must not re-prompt.
- *
- * Everything here is mirrored into `NotificationStore`'s own config file by
- * the view-model that writes it — the listener's filter runs before any UI
- * exists, so it cannot read these keys itself.
- *
- * **Key names are Flutter's, verbatim** (`garmin_notifications_enabled`,
- * `garmin_notifications_blocked_packages`,
- * `garmin_notifications_disclosure_accepted`): the phase-5 migrator copies the
- * Flutter values across under exactly these names. Deliberately its OWN
- * SharedPreferences file rather than a corner of [PreferencesRepository] — the
- * main prefs file is a coordination point six workstreams already touch, and
- * this store has exactly one reader and one writer. Because the migrator's
- * typed-copy fallback lands unrouted `garmin_notifications_*` keys in the MAIN
- * file (`openvitals_prefs`), this store adopts any values found there, once,
- * on first construction — so a Flutter-era configuration survives the upgrade
- * without this store ever writing to the shared file.
+ * Key names are Flutter's. Values the migrator left in the main file are adopted once.
  */
 @Singleton
 class WatchNotificationPrefsStore(
@@ -59,10 +37,7 @@ class WatchNotificationPrefsStore(
         get() = prefs.getBoolean(KEY_ENABLED, false)
         set(value) = prefs.edit { putBoolean(KEY_ENABLED, value) }
 
-    /**
-     * Packages the user has silenced, as a set for the membership test the
-     * filter and the picker both do.
-     */
+    /** Packages the user has silenced. */
     var blockedPackages: Set<String>
         get() = prefs.getStringSet(KEY_BLOCKED, emptySet())?.toSet() ?: emptySet()
         set(value) = prefs.edit { putStringSet(KEY_BLOCKED, value) }
@@ -73,22 +48,12 @@ class WatchNotificationPrefsStore(
         blockedPackages = next
     }
 
-    /**
-     * Whether the user has been shown what notification access means and
-     * agreed to it. Required by Google Play before the permission is
-     * requested, and remembered so turning the feature off and on again does
-     * not re-prompt.
-     */
+    /** Whether the user accepted the disclosure. Required by Google Play before the request. */
     var disclosureAccepted: Boolean
         get() = prefs.getBoolean(KEY_DISCLOSURE_ACCEPTED, false)
         set(value) = prefs.edit { putBoolean(KEY_DISCLOSURE_ACCEPTED, value) }
 
-    /**
-     * One-time adoption of values the phase-5 migrator left in the main prefs
-     * file. Read-only towards that file — the copies simply become this
-     * store's initial state, and a value the user has since changed here is
-     * never overwritten (own-file keys win).
-     */
+    /** One-time adoption of values the migrator left in the main file. Own-file keys win. */
     private fun adoptMigratedValues(main: SharedPreferences) {
         prefs.edit {
             if (!prefs.contains(KEY_ENABLED) && main.contains(KEY_ENABLED)) {

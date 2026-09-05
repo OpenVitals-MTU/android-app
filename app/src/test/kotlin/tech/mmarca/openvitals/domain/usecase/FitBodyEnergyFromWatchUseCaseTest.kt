@@ -34,17 +34,9 @@ import tech.mmarca.openvitals.domain.model.GarminWellnessSample
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 
 /**
- * Teaching the Body Energy gains from the watch's own Body Battery.
- *
- * Without this the watch data a sync stores is only ever drawn on the watch
- * screen — the model never learns from it and the gains sit at their defaults
- * however much evidence accumulates.
- *
- * What is worth pinning is not the arithmetic of the fit (that is
- * `BodyEnergyCalibrationFitTest`'s) but the bookkeeping around it, because
- * every way of getting it wrong is silent: counting an hour twice makes the
- * learning rate depend on how often the user taps Sync, and advancing the
- * watermark over a day that was never examined destroys evidence permanently.
+ * Teaching the Body Energy gains from the watch's Body Battery.
+ * The fit arithmetic is `BodyEnergyCalibrationFitTest`'s; this pins the bookkeeping,
+ * because counting an hour twice or advancing the watermark past unexamined days is silent.
  */
 class FitBodyEnergyFromWatchUseCaseTest {
 
@@ -77,8 +69,7 @@ class FitBodyEnergyFromWatchUseCaseTest {
 
     @Test
     fun `an hour of watch samples counts once, however many samples it holds`() = runTest {
-        // The watch emits about a sample a minute. Feeding every one in would
-        // let a single day outvote months of evidence.
+        // A sample a minute would let one day outvote months of evidence.
         val samples = (0 until 60).map { minute ->
             sample(NOON.plus(Duration.ofMinutes(minute.toLong())), score = 40)
         }
@@ -93,8 +84,7 @@ class FitBodyEnergyFromWatchUseCaseTest {
 
     @Test
     fun `syncing the same hour twice does not teach the model twice`() = runTest {
-        // The defect this watermark exists to prevent: ten syncs in an hour
-        // must not teach ten times as fast as one, from identical watch data.
+        // Ten syncs in an hour must not teach ten times as fast as one.
         givenSamples(listOf(sample(NOON, score = 40)))
         givenTimeline(TODAY, points = listOf(point(NOON, score = 70)))
         val at = NOON.plus(Duration.ofHours(2))
@@ -109,9 +99,7 @@ class FitBodyEnergyFromWatchUseCaseTest {
 
     @Test
     fun `the watermark lands on the newest fitted bucket, not on now`() = runTest {
-        // It has to be the bucket the evidence came from. Stamping "now" would
-        // retire the hours between the last sample and the sync as if they had
-        // been examined.
+        // It has to be the bucket the evidence came from, or the hours until the sync retire unexamined.
         val newest = NOON.plus(Duration.ofHours(1))
         givenSamples(listOf(sample(NOON, 40), sample(newest, 45)))
         givenTimeline(TODAY, points = listOf(point(NOON, 70), point(newest, 72)))
@@ -125,9 +113,7 @@ class FitBodyEnergyFromWatchUseCaseTest {
 
     @Test
     fun `a recent day the chain has not reached yet is waited for, not skipped`() = runTest {
-        // This is the lossy-watermark bug. A day with no timeline is not
-        // unpairable, merely early — advancing past it retires evidence that
-        // was never examined, and the samples are then permanently invisible.
+        // A day with no timeline is merely early. Advancing past it makes its samples permanently invisible.
         givenSamples(listOf(sample(NOON, 40)))
         coEvery { bodyEnergy.loadTimeline(any()) } returns
             BodyEnergyTimelineResult(query = anyQuery(), days = emptyList())
@@ -140,8 +126,7 @@ class FitBodyEnergyFromWatchUseCaseTest {
 
     @Test
     fun `a cold day older than the grace period is retired so the days behind it can move`() = runTest {
-        // The counterweight: the watermark is one scalar, so waiting forever for
-        // a day that will never have heart data holds every later day hostage.
+        // The watermark is one scalar, so a day that will never have heart data must not hold later days hostage.
         val old = NOON.minus(Duration.ofDays(5))
         givenSamples(listOf(sample(old, 40)))
         coEvery { bodyEnergy.loadTimeline(any()) } returns
@@ -155,9 +140,7 @@ class FitBodyEnergyFromWatchUseCaseTest {
 
     @Test
     fun `days are retired oldest first, and a cold recent day stops the run`() = runTest {
-        // The watermark can only say "everything before here is done", so a
-        // warm day AFTER a cold one must not be fitted — that would claim the
-        // cold day was handled too.
+        // A warm day after a cold one must not be fitted; that would claim the cold day was handled.
         val dayOne = NOON.minus(Duration.ofDays(1))
         givenSamples(listOf(sample(dayOne, 40), sample(NOON, 44)))
         coEvery { bodyEnergy.loadTimeline(any()) } answers {
@@ -180,8 +163,7 @@ class FitBodyEnergyFromWatchUseCaseTest {
 
     @Test
     fun `a first run looks back a week rather than at everything ever synced`() = runTest {
-        // An install importing months of watch history must not try to fit all
-        // of it in one pass.
+        // Months of watch history must not be fitted in one pass.
         val from = slot<Instant>()
         coEvery { wellness.samplesBetween(any(), capture(from), any()) } returns emptyList()
 
@@ -214,8 +196,7 @@ class FitBodyEnergyFromWatchUseCaseTest {
 
     @Test
     fun `a failing sample read is swallowed and changes nothing`() = runTest {
-        // Calibration is an enhancement; it must never fail the sync that
-        // triggered it, and the evidence must survive to the next run.
+        // Calibration must never fail the sync that triggered it.
         coEvery { wellness.samplesBetween(any(), any(), any()) } throws IllegalStateException("db closed")
 
         val fitted = useCase()(now = NOON)
@@ -237,11 +218,7 @@ class FitBodyEnergyFromWatchUseCaseTest {
 
     @Test
     fun `a day whose timeline pairs nothing is held, then retired with the rest`() = runTest {
-        // A timeline that exists but has no point within the pairing gap is
-        // treated like a day with no timeline at all: held while it is recent,
-        // because a later chain pass can fill in the missing buckets, and
-        // retired once it ages past the grace period so it cannot stall the
-        // watermark forever.
+        // A timeline with no point in the pairing gap is held while recent and retired past the grace period.
         givenSamples(listOf(sample(NOON, 40)))
         givenTimeline(TODAY, points = listOf(point(NOON.plus(Duration.ofHours(6)), score = 70)))
 
@@ -255,7 +232,7 @@ class FitBodyEnergyFromWatchUseCaseTest {
         assertThat(watermark).isGreaterThan(0L)
     }
 
-    // ── fixtures ─────────────────────────────────────────────────────────────
+    // Fixtures.
 
     private fun useCase() = FitBodyEnergyFromWatchUseCase(
         wellnessRepository = wellness,

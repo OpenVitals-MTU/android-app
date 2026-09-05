@@ -10,10 +10,7 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectRateLimitBackoff
 /** Records handed to Health Connect per insert call. */
 const val CSV_WRITE_BATCH_SIZE = 300
 
-/**
- * Ids per existing-record lookup. Rows arrive in time order, so 500 daily
- * weigh-ins is one query covering roughly 1.4 years.
- */
+/** Ids per existing-record lookup. 500 daily weigh-ins is about 1.4 years. */
 const val CSV_DUPLICATE_LOOKUP_CHUNK = 500
 
 /** A cooperative cancel flag the UI flips; checked at row and batch boundaries. */
@@ -29,17 +26,9 @@ class CsvImportCancellation {
 }
 
 /**
- * Runs a CSV import: stream rows, convert, count what is already there, write
- * in batches, and tally the result.
- *
- * Deliberately NOT WorkManager and NOT a foreground service. The app declares
- * exactly one foreground service, which is why an Apple Health import already
- * refuses to run while a GPS recording is active — and that machinery exists
- * for multi-gigabyte exports taking tens of minutes. A body-composition CSV is
- * bounded by how often a human stands on a scale: ten years of twice-daily
- * weigh-ins is ~7,300 rows and a file well under a megabyte. Staying in-process
- * is not just cheaper, it means a CSV import can run *while* an activity is
- * being recorded.
+ * Runs a CSV import: stream rows, convert, count what is present, write in
+ * batches, tally. In-process, not a foreground service: a CSV is bounded by
+ * how often a human stands on a scale, and this way it runs during a recording.
  */
 @Singleton
 class CsvImportService @Inject constructor(
@@ -48,12 +37,8 @@ class CsvImportService @Inject constructor(
     private val reader = CsvTableReader()
 
     /**
-     * Imports [source] under [mapping], reporting progress through [onProgress].
-     *
-     * [totalBytes] is the file's size from the SAF provider (zero when unknown),
-     * used only as the progress denominator.
-     *
-     * Never throws: every failure becomes a [CsvImportResult] the screen renders.
+     * Imports [source] under [mapping]. [totalBytes] is only the progress
+     * denominator. Never throws: every failure becomes a [CsvImportResult].
      */
     suspend fun run(
         source: CsvInputSource,
@@ -75,8 +60,7 @@ class CsvImportService @Inject constructor(
             }
         }
 
-        // Guards against one file listing the same measurement twice. Cross-import
-        // duplicates are a separate, chunked lookup below.
+        // Guards against one file listing the same measurement twice.
         val seenIds = mutableSetOf<String>()
         val pending = mutableListOf<CsvConvertedRecord>()
 
@@ -145,10 +129,8 @@ class CsvImportService @Inject constructor(
     }
 
     /**
-     * Writes everything in [pending], clearing it. Counts how many ids were
-     * already in Health Connect first — purely to report "you have imported this
-     * before"; the write happens either way, because the id excludes the value
-     * and so cannot say whether anything changed. Health Connect upserts.
+     * Writes [pending]. Counts ids already in Health Connect first, to
+     * report only; the write happens either way, since Health Connect upserts.
      */
     private suspend fun flush(
         pending: MutableList<CsvConvertedRecord>,
@@ -175,9 +157,7 @@ class CsvImportService @Inject constructor(
             )
         }
 
-        // The batch is ATOMIC — Health Connect wrote none of it and the failure
-        // does not name the record it choked on. Retry singly so the good
-        // records still land and only the guilty one is counted as rejected.
+        // The batch is atomic and the failure names no record. Retry singly.
         var written = 0
         var rejected = 0
         for (single in batch) {
@@ -208,13 +188,7 @@ class CsvImportService @Inject constructor(
         return FlushOutcome(written = written, rejected = rejected, alreadyPresent = alreadyPresent)
     }
 
-    /**
-     * How many of [batch]'s ids Health Connect already holds.
-     *
-     * Grouped by record type (the lookup takes one) and chunked, with the window
-     * spanning only the chunk's own instants. A lookup failure is not fatal: it
-     * costs an accurate "already present" count, not the import.
-     */
+    /** How many of [batch]'s ids Health Connect holds. A lookup failure only costs the count. */
     private suspend fun countExisting(batch: List<CsvConvertedRecord>): Int {
         var total = 0
         for ((recordType, records) in batch.groupBy { it.recordType }) {
@@ -253,10 +227,7 @@ private fun CsvImportProgress.apply(flush: FlushOutcome): CsvImportProgress = co
     rejected = rejected + flush.rejected,
 )
 
-/**
- * Aborts the row flow once a terminal result (cancel, rate limit) is assembled.
- * Flow collection has no `break`; this is the sanctioned equivalent.
- */
+/** Aborts the row flow once a terminal result is assembled. Flow collection has no `break`. */
 private class StopCollectingException : Exception() {
     override fun fillInStackTrace(): Throwable = this
 }

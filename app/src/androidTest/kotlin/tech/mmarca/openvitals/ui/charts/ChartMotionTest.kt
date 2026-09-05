@@ -18,18 +18,9 @@ import tech.mmarca.openvitals.testing.AnimatorScaleRule
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of Flutter's `test/ui/charts/chart_skeleton_test.dart`.
- *
- * Two animations and the one switch that governs them. The skeleton REPEATS,
- * which is the only kind that can hang an idle-wait forever; the reveal runs
- * once, which is milder but would still leave a single-frame assertion looking
- * at half a chart.
- *
- * Reduce-motion is the answer to both, and it is not a test convenience: it is
- * the accessibility contract. Someone who has asked their phone to stop moving
- * things has asked these to stop too, and vestibular disorders are why that
- * switch exists. Flutter fakes it with `MediaQuery.disableAnimations`; Kotlin
- * reads the real system scale, so [AnimatorScaleRule] moves the real setting.
+ * Two animations and the switch that governs them. The skeleton repeats, which can hang
+ * an idle-wait forever; the reveal runs once. Reduce-motion is the accessibility contract,
+ * and Kotlin reads the real system scale, so [AnimatorScaleRule] moves the real setting.
  */
 class ChartMotionTest {
 
@@ -51,8 +42,7 @@ class ChartMotionTest {
             }
         }
 
-        // If the repeat were still running this would never return, which is
-        // exactly the failure the switch exists to prevent.
+        // If the repeat were still running this would never return.
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(SKELETON).assertExists()
     }
@@ -68,9 +58,7 @@ class ChartMotionTest {
             }
         }
 
-        // A repeating animation never goes idle, so "it is animating" cannot be
-        // asserted by waiting. Two frames far enough apart in its pulse have to
-        // differ instead — which is the property the user actually gets.
+        // A repeating animation never goes idle, so two frames far apart in its pulse must differ.
         composeRule.mainClock.advanceTimeByFrame()
         val first = composeRule.onNodeWithTag(SKELETON).captureToImage().asAndroidBitmap()
         composeRule.mainClock.advanceTimeBy(400)
@@ -94,8 +82,7 @@ class ChartMotionTest {
         }
         composeRule.waitForIdle()
 
-        // Not zero-then-one: one immediately. Anything that renders a chart and
-        // asserts on a single frame has to be shown the whole chart.
+        // Not zero-then-one: one immediately.
         assertEquals(1f, seen.first(), 0f)
         assertEquals(1f, seen.last(), 0f)
     }

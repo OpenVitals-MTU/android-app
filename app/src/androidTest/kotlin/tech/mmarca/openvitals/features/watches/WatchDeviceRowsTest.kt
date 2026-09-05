@@ -21,13 +21,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the affordance-visibility cases of Flutter's
- * `test/features/settings/watch_device_screen_test.dart`.
- *
- * These rows are the whole vocabulary of what a paired device can do. Showing
- * a wrist-wellness "Data" view for a bike computer sends the user to a screen
- * that is empty by construction; losing "Sync" strands every ride still on the
- * device. Both failures look like missing data rather than a missing button.
+ * These rows are the vocabulary of what a paired device can do. A wrist-wellness "Data" view
+ * for a bike computer is empty by construction; losing "Sync" strands every ride on the device.
  */
 class WatchDeviceRowsTest {
 
@@ -44,8 +39,7 @@ class WatchDeviceRowsTest {
 
     @Test
     fun aBikeComputerSyncsButHasNoWellnessDataView() {
-        // An Edge records rides, not sleep or resting heart rate: its "Data"
-        // view would be permanently empty, so it is not offered at all.
+        // An Edge records rides, not sleep: its "Data" view would be empty, so it is not offered.
         setActions(device = bikeComputer())
 
         composeRule.onNodeWithText(string(R.string.settings_watch_action_sync)).assertIsDisplayed()
@@ -54,8 +48,7 @@ class WatchDeviceRowsTest {
 
     @Test
     fun aBikeComputerOffersItsLiveSensorRole() {
-        // Broadcast mode is usually only on during a ride, so the role has to
-        // be detectable from here while the device is actually live.
+        // Broadcast mode is usually only on during a ride, so the role must be detectable here.
         var detected = 0
         composeRule.setContent {
             OpenVitalsTheme {
@@ -77,9 +70,7 @@ class WatchDeviceRowsTest {
 
     @Test
     fun alarmsAndFindAreLiveActions() {
-        // Both reach the watch's own settings service. A rendered-but-dead
-        // Alarms icon is indistinguishable from a watch that ignored the
-        // request.
+        // Both reach the watch's settings service. A dead Alarms icon looks like a watch that ignored the request.
         var alarms = 0
         var find = 0
         setActions(device = watch(), onOpenAlarms = { alarms++ }, onToggleFind = { find++ })
@@ -95,9 +86,7 @@ class WatchDeviceRowsTest {
 
     @Test
     fun theOnDeviceSettingsRowOpensTheWatchsOwnSettingsTree() {
-        // The row opens the tree's root; everything below it is whatever the
-        // watch sends. A row that renders but does not open leaves the whole
-        // tree unreachable.
+        // The row opens the tree's root; a row that does not open leaves the whole tree unreachable.
         var opened = 0
         composeRule.setContent {
             OpenVitalsTheme { OnDeviceSettingsRow(onOpen = { opened++ }) }
@@ -110,13 +99,7 @@ class WatchDeviceRowsTest {
         composeRule.runOnIdle { assertEquals(1, opened) }
     }
 
-    /**
-     * The action button itself, found by the accessible name its icon carries.
-     *
-     * Not by the visible label's sibling: every action in the row flattens into
-     * the same semantics parent, so "the clickable next to this text" matches
-     * all four of them.
-     */
+    /** The action button, found by its icon's accessible name. Every action flattens into one semantics parent. */
     private fun watchActionButton(labelRes: Int): SemanticsNodeInteraction =
         composeRule.onNodeWithContentDescription(string(labelRes))
 
@@ -130,8 +113,7 @@ class WatchDeviceRowsTest {
                 Column {
                     ActionsRow(
                         device = device,
-                        // Empty capabilities means "never synced", which the
-                        // screen reads as unknown-so-show rather than absent.
+                        // Empty capabilities means "never synced", which the screen reads as show.
                         state = WatchDeviceUiState(device = device),
                         isBikeComputer = device.isBikeComputer,
                         onOpenData = {},

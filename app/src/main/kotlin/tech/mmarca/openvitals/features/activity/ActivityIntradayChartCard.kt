@@ -32,15 +32,8 @@ import java.time.ZoneId
 import kotlin.math.roundToLong
 
 /**
- * A cumulative metric (steps, calories, distance…) across one day, as a whole card.
- *
- * The x axis is the WHOLE day, always. This card used to scale its x positions by
- * the time elapsed so far — so on a chart opened at 12:49 a 09:29 reading landed at
- * 74% of the width — and then drew a fixed `00:00 / 06:00 / 12:00 / 18:00` row
- * underneath, patched with "Now" in place of "24:00". The chart's only job is to
- * say WHEN, and it said the wrong hour. A point now sits at its real hour; today's
- * series simply stops at the now-fraction instead of stretching to the right edge,
- * and midnight is midnight again.
+ * A cumulative metric across one day, as a card. The x axis is the whole
+ * day; today's series stops at now.
  */
 @Composable
 internal fun IntradayActivityChartCard(
@@ -63,10 +56,7 @@ internal fun IntradayActivityChartCard(
     val maxValue = points.lastOrNull()?.second?.coerceAtLeast(1.0) ?: 1.0
     val dayMillis = Duration.between(dayStart, dayEnd).toMillis().coerceAtLeast(1L)
 
-    // Built once here, not inside the zoom content: the plotted points do not
-    // depend on the viewport (the plot applies it), so recomputing them on every
-    // pinch frame would only churn a fresh list and defeat the plot's geometry
-    // cache. One list, stable identity, reused across zoom frames.
+    // Built outside the zoom content, so the geometry cache holds.
     val chartPoints = remember(points, selectedDate, isToday) {
         cumulativeDayPlotPoints(
             fractions = points.map { (time, value) ->
@@ -97,10 +87,7 @@ internal fun IntradayActivityChartCard(
             Spacer(Modifier.height(16.dp))
 
             if (points.isNotEmpty()) {
-                // Pinch with two fingers to look closer at part of the day. The
-                // plot and its hour row are BOTH inside the zoom, and share the
-                // one viewport — a chart whose hours disagreed with its line would
-                // be worse than one that did not zoom at all.
+                // Plot and hour row share the one viewport.
                 ChartZoom(selectedDate, points) { zoom ->
                     Column {
                         MetricLinePlot(
@@ -114,9 +101,7 @@ internal fun IntradayActivityChartCard(
                             drawPoints = false,
                             viewport = zoom.viewport,
                             multiTouch = zoom.multiTouch,
-                            // Drag along the chart and it tells you the total and
-                            // the hour it stood at that. The number was always in
-                            // the data and never on the screen.
+                            // Drag to read the total and the hour it stood at.
                             scrubLabel = { point ->
                                 val at = dayStart.plusMillis(
                                     (point.xFraction.coerceIn(0f, 1f) * dayMillis).roundToLong(),

@@ -9,15 +9,9 @@ internal const val FitEpochUnixSeconds = 631_065_600L
 fun fitInstant(value: Long): Instant = Instant.ofEpochSecond(FitEpochUnixSeconds + value)
 
 /**
- * One decoded FIT data message: its global number, the field maps the generic
- * [FitDecoder] walk extracted (keyed by field number), and the resolved record
- * timestamp in FIT-epoch seconds (null when the message carried none).
- *
- * This is the seam between the generic FIT container walk and any domain
- * interpretation: the reader emits these knowing no message types, and each
- * interpreter switches on [globalMessageNumber] and reads the fields it knows.
- *
- * Port of the Flutter build's `core/fit/fit_message.dart`.
+ * One decoded FIT data message: global number, field maps by field number,
+ * and the resolved timestamp in FIT-epoch seconds. The seam between the
+ * generic walk and any domain interpretation.
  */
 class FitMessage(
     val globalMessageNumber: Int,
@@ -34,28 +28,13 @@ class FitFileMessages(
 )
 
 /**
- * Generic FIT container reader: walks a `.FIT` byte stream and emits its data
- * messages as [FitMessage]s, knowing NOTHING about what any message means. The
- * domain interpretation (activity route import, Garmin wellness) lives in
- * separate consumers that switch on [FitMessage.globalMessageNumber].
- *
- * Decodes EVERY field of EVERY message — there is no message allowlist —
- * because a reusable reader has no basis to guess which a consumer wants, and
- * FIT files are small enough that the extra field decoding is free. Consumers
- * simply ignore the messages and fields they do not know.
- *
- * Extracted from `FitRouteParser`'s private decoder (one FIT decoder
- * app-wide), matching the Flutter build's `core/fit/fit_reader.dart`. Malformed
- * input throws [IllegalArgumentException] with the same messages the private
- * decoder used, so callers' error handling is unchanged.
+ * Generic FIT container reader: emits data messages knowing nothing about
+ * what they mean. Decodes every field of every message. Malformed input
+ * throws [IllegalArgumentException].
  */
 object FitDecoder {
 
-    /**
-     * True when [bytes] begins a FIT file at [offset] (a valid header carrying
-     * the `.FIT` magic). Used to spot the start of each file in a concatenated
-     * stream.
-     */
+    /** True when [bytes] begins a FIT file at [offset]. Spots each file in a chained stream. */
     fun isFitFileAt(bytes: ByteArray, offset: Int): Boolean {
         if (offset < 0 || offset + FitMinimumHeaderSize > bytes.size) return false
         val headerSize = bytes[offset].toUnsignedInt()
@@ -70,11 +49,8 @@ object FitDecoder {
     fun isFitFile(bytes: ByteArray): Boolean = isFitFileAt(bytes, 0)
 
     /**
-     * Decodes ONE FIT file starting at [startOffset], returning its data
-     * messages (in file order) and the offset the next chained file would
-     * begin at. The caller loops this across a concatenated stream, resetting
-     * nothing — each file is self-contained (its own local-message definitions
-     * and timestamp anchor).
+     * Decodes one FIT file at [startOffset]: its messages and the offset the
+     * next chained file begins at. Each file is self-contained.
      */
     fun readFile(bytes: ByteArray, startOffset: Int): FitFileMessages =
         FitFileReader(bytes, startOffset).read()
@@ -296,12 +272,9 @@ private fun ByteArray.readUnsignedIntAt(index: Int, littleEndian: Boolean): Long
     readIntAt(index, littleEndian).toLong() and 0xFFFFFFFFL
 
 /**
- * Every element of an array field, invalid sentinels dropped.
- *
- * FIT expresses an array as a field whose declared size is a multiple of its
- * base type's — the Health Snapshot messages pack a whole two-minute recording
- * into one record this way. [fitLong] reads only the first element, which is
- * right for every scalar field and silently loses the rest of an array.
+ * Every element of an array field, invalid sentinels dropped. Health
+ * Snapshot packs a whole recording into one record this way; [fitLong]
+ * reads only the first element.
  */
 private fun ByteArray.fitLongArray(field: FitFieldDefinition, littleEndian: Boolean): List<Long> {
     val baseType = field.baseType and FitBaseTypeMask
@@ -357,8 +330,7 @@ private fun ByteArray.fitLong(field: FitFieldDefinition, littleEndian: Boolean):
 private fun ByteArray.fitString(field: FitFieldDefinition): String? {
     val baseType = field.baseType and FitBaseTypeMask
     if (baseType != FitBaseTypeString) return null
-    // Trim, and treat an all-blank name as absent — inlined rather than
-    // importing the route-import helper so the reader stays generic.
+    // Trim, and treat an all-blank name as absent.
     return toString(Charsets.UTF_8)
         .trimEnd('\u0000')
         .trim()

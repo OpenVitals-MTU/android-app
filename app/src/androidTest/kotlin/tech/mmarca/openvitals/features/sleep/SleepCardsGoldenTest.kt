@@ -13,18 +13,8 @@ import tech.mmarca.openvitals.testing.OpenVitalsVisualTestSurface
 import tech.mmarca.openvitals.testing.assertVisualRootMatchesGolden
 
 /**
- * Port of Flutter's `test/goldens/charts/sleep_cards_golden_test.dart`.
- *
- * [SleepStageShareCard] — the proportional stage-share bars. In Flutter these shipped
- * as empty grey tracks: the coloured fill was a non-positioned child of a Stack, took
- * loose constraints, and a childless box under loose constraints is zero pixels tall.
- * Every test passed, because every test asserted on the numbers beside the bars — and
- * the numbers were right the whole time. This is the assertion nobody thought to
- * write.
- *
- * Kotlin takes the DURATIONS and folds the shares itself (`sleepStageShares`), where
- * Flutter is handed pre-clamped fractions, so the fixture is four totals rather than
- * four fractions. Same card, same bars.
+ * [SleepStageShareCard]: the proportional stage-share bars. In Flutter these shipped as
+ * empty grey tracks while every test passed on the numbers beside them.
  */
 class SleepCardsGoldenTest {
 
@@ -33,7 +23,7 @@ class SleepCardsGoldenTest {
 
     @Test
     fun aNightBrokenDownByStage() {
-        // A 7h 50m night, in the proportions a staged tracker actually reports.
+        // A 7h 50m night in the proportions a staged tracker reports.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 300.dp) {
                 SleepStageShareCard(
@@ -54,10 +44,7 @@ class SleepCardsGoldenTest {
 
     @Test
     fun aDeviceThatOnlySaysAsleep() {
-        // The cheap tracker: no stage detail, so everything it recorded is grouped into
-        // the Light row and only two rows survive. One at nearly the full track, one at
-        // almost none of it — the two ends of the bar's range in a single shot. A 2%
-        // bar that renders as nothing is the same class of bug as a 100% bar that does.
+        // A cheap tracker: only the Light row and one near-empty row survive. A 2% bar rendering as nothing is a bug.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 240.dp) {
                 SleepStageShareCard(

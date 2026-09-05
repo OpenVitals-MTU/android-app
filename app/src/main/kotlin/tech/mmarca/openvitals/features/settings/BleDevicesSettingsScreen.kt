@@ -383,10 +383,7 @@ private fun BleAddDeviceDialog(
         confirmButton = {
             TextButton(
                 onClick = onSave,
-                // Keep Save tappable once a device is chosen so an empty
-                // capability set surfaces the ViewModel error instead of a
-                // dead control — common when a watch is found but Broadcast
-                // Heart Rate is off and discovery returns nothing.
+                // Keep Save tappable, so an empty capability set surfaces the error.
                 enabled = state.selectedDevice != null && !state.isDiscoveringCapabilities,
             ) {
                 Text(text = stringResource(R.string.action_save))

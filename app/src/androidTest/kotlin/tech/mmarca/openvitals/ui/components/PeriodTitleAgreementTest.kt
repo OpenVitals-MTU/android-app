@@ -17,19 +17,9 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Every surface that names a period names it the same way.
- *
- * `localizedPeriodTitle` has thirty-five call sites and only the navigator ever
- * passed `weekPeriodMode`; the rest defaulted to calendar weeks. On rolling
- * ranges that put "Last 30 days" in the navigator and "This month" on the card
- * subtitle and chart summary directly beneath it — three labels for one window,
- * two of them wrong. It now defaults from `LocalPeriodWeekMode`, which the
- * scaffold already published for the heatmap.
- *
- * The bug was invisible to a per-call-site test, because each site was
- * individually consistent with the default it was given. What has to be pinned
- * is the agreement between them, so these assert on the count of a label rather
- * than on any one surface.
+ * Every surface names a period the same way. Only the navigator passed `weekPeriodMode`,
+ * so rolling ranges showed "Last 30 days" beside "This month". It now defaults from
+ * `LocalPeriodWeekMode`. These assert on the count of a label, not on any one surface.
  */
 class PeriodTitleAgreementTest {
 
@@ -44,8 +34,7 @@ class PeriodTitleAgreementTest {
             period = DatePeriod(today.minusDays(29), today),
         )
 
-        // All three, not one: an unthreaded call site shows up here as a count
-        // of 1 beside two "This month"s.
+        // All three: an unthreaded call site shows up as a count of 1.
         composeRule
             .onAllNodesWithText(string(R.string.period_last_30_days))
             .assertCountEquals(SURFACES)
@@ -67,11 +56,7 @@ class PeriodTitleAgreementTest {
         composeRule.onNodeWithText(string(R.string.period_last_30_days)).assertDoesNotExist()
     }
 
-    /**
-     * Three call sites that do not pass the mode, standing in for the
-     * thirty-four that do not: a card subtitle, a chart summary and a bare
-     * title. Each reads the ambient value or it does not.
-     */
+    /** Three call sites that do not pass the mode: a card subtitle, a chart summary and a bare title. */
     private fun setThreeSurfaces(mode: WeekPeriodMode, period: DatePeriod) {
         composeRule.setContent {
             OpenVitalsTheme {

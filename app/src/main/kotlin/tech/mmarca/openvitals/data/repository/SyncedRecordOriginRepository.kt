@@ -12,14 +12,9 @@ import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginEntity
 import tech.mmarca.openvitals.healthconnect.SyncedSourceOverlay
 
 /**
- * System of record for the original source apps of phone-to-phone-synced
- * records (`synced_record_origins`), and the single writer of the in-memory
- * [SyncedSourceOverlay] the Health Connect readers substitute from.
- *
- * The table maps a synced record's `sync_<hex>` clientRecordId to the package
- * of the app that originally recorded it on the sending phone — the
- * attribution Health Connect itself cannot keep, because the receiver's write
- * re-stamps `dataOrigin` with OpenVitals' own package.
+ * System of record for the original source apps of synced records, and
+ * the single writer of [SyncedSourceOverlay]. Health Connect re-stamps
+ * `dataOrigin` on write, so this keeps the attribution it cannot.
  */
 @Singleton
 class SyncedRecordOriginRepository @Inject constructor(
@@ -28,11 +23,7 @@ class SyncedRecordOriginRepository @Inject constructor(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.io)
 
-    /**
-     * Fire-and-forget overlay hydration for app start. Until it completes,
-     * synced records display their raw Health Connect attribution — the
-     * pre-feature behavior, never an error.
-     */
+    /** Fire-and-forget hydration for app start. Until done, synced records show the raw attribution. */
     fun warmOverlay() {
         scope.launch { runCatching { hydrateOverlay() } }
     }
@@ -44,18 +35,10 @@ class SyncedRecordOriginRepository @Inject constructor(
         origins
     }
 
-    /**
-     * All preserved origins, for the sync read path's pass-through: when a
-     * record that itself arrived by sync is re-sent (an A→B→C chain), the wire
-     * must carry the ORIGINAL origin, not this phone's re-stamped one.
-     */
+    /** All preserved origins, so a re-sent record carries its original origin through a chain. */
     suspend fun preservedOrigins(): Map<String, String> = hydrateOverlay()
 
-    /**
-     * Persists origins for records that just landed from a peer (fingerprint →
-     * original package) and refreshes the overlay so the UI attributes them
-     * immediately.
-     */
+    /** Persists origins for records that just landed and refreshes the overlay. */
     suspend fun recordOrigins(originsByClientRecordId: Map<String, String>) {
         if (originsByClientRecordId.isEmpty()) return
         withContext(dispatchers.io) {

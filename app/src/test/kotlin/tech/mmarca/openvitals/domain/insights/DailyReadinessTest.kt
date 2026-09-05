@@ -281,14 +281,11 @@ class DailyReadinessTest {
     }
 
 
-    // ── Measured body energy ─────────────────────────────────────────────────
+    // Measured body energy.
 
     @Test
     fun measuredBodyEnergyReplacesTheEstimate() {
-        // The deltas above assemble an ESTIMATE of the same quantity the
-        // body-energy engine measures. When the engine has an answer, it wins —
-        // otherwise the panel would show one number and the screen it links to
-        // another.
+        // The deltas estimate the quantity the body-energy engine measures. When the engine answers, it wins.
         val withoutTimeline = calculateDailyReadiness(baseData())
         val withTimeline = calculateDailyReadiness(baseData(bodyEnergy = timeline(current = 64, start = 71)))
 
@@ -333,8 +330,7 @@ class DailyReadinessTest {
 
     @Test
     fun aDrainedStartCountsEvenWhenTheDayHasRecovered() {
-        // Starting the day at 30 or below is its own signal: the battery may
-        // read fine now, but it began the day already spent.
+        // Starting the day at 30 or below is its own signal.
         val low = calculateDailyReadiness(baseData(bodyEnergy = timeline(current = 62, start = 28)))
 
         assertTrue(low.factors.any { it.kind == ReadinessFactorKind.BODY_ENERGY_LOW })

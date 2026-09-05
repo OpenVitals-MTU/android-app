@@ -14,13 +14,8 @@ import org.junit.Test
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityRecordingSensor
 
 /**
- * What counts as a fix good enough to start a run on, and what the setup screen
- * does with it.
- *
- * [Location] has no JVM implementation, so the fixes are mocked at the four
- * getters [activityGpsFixQuality] actually reads. The age deliberately comes
- * from the wall clock rather than an elapsed-realtime stamp, so no `SystemClock`
- * is touched.
+ * What counts as a fix good enough to start on. [Location] has no JVM implementation,
+ * so the fixes are mocked at the four getters [activityGpsFixQuality] reads.
  */
 class ActivityRecordingGpsFixTest {
 
@@ -107,8 +102,7 @@ class ActivityRecordingGpsFixTest {
 
     @Test
     fun `setup screen - switched to record without GPS, a run starts at once - no fix, no permission`() {
-        // GPS permission held but no fix: without the switch this run cannot start
-        // at all, so a run never starts from an unknown position.
+        // GPS permission held but no fix: a run never starts from an unknown position.
         assertFalse(
             "no fix yet",
             activityRecordingStartEnabled(
@@ -121,8 +115,7 @@ class ActivityRecordingGpsFixTest {
             ),
         )
 
-        // The whole point of the switch: there is nothing to wait for. No fix, and
-        // it does not even matter whether the location permission was ever granted.
+        // With the switch there is nothing to wait for, whatever the permission state.
         assertTrue(
             activityRecordingStartEnabled(
                 baseEnabled = true,
@@ -139,8 +132,7 @@ class ActivityRecordingGpsFixTest {
             hasActivityRecognitionPermission = true,
             supportsGpsRoute = true,
             recordingWithoutGps = true,
-            // Asking for the location permission for a recording that will never
-            // use it is exactly what makes people distrust a health app.
+            // Asking for location for a recording that never uses it is what makes people distrust a health app.
             hasPrecisePermission = false,
             hrrTest = false,
             recordingSensor = ActivityRecordingSensor.GPS,

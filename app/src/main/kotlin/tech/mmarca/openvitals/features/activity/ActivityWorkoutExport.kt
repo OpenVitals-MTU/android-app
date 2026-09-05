@@ -23,15 +23,9 @@ import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 /**
- * Workout export WITHOUT the GPS route: the session's metrics — type, times,
- * distance, calories, heart rate — and nothing about where it happened.
- *
- * This is deliberately not a variant of the route export. The route export
- * exists only when a route does; this one exists for every workout, including
- * a treadmill run that never had a route and a session whose route the user
- * does not want to hand out. TCX is the interchange format built for exactly
- * that (`Position` is optional — see [TcxRouteParser]), and CSV is for
- * spreadsheets.
+ * Workout export without the GPS route: the session's metrics and nothing
+ * about where it happened. Exists for every workout, route or not. TCX
+ * makes `Position` optional; CSV is for spreadsheets.
  */
 internal enum class ActivityWorkoutExportFormat(
     val mimeType: String,
@@ -59,10 +53,7 @@ internal fun Context.saveActivityWorkoutExport(
         } ?: error("Unable to open export destination.")
     }
 
-/**
- * Same staging contract as [shareActivityRoute]: cache file, FileProvider URI,
- * system share sheet, no success toast — the chooser appearing IS the feedback.
- */
+/** Same staging as [shareActivityRoute]: cache file, FileProvider URI, share sheet, no toast. */
 internal fun Context.shareActivityWorkout(
     workout: ExerciseData,
     heartRateSamples: List<HeartRateSample>,
@@ -111,19 +102,10 @@ private fun writeActivityWorkoutExport(
 }
 
 /**
- * A routeless TCX: one `Lap` carrying the session totals, and a `Track` of
- * heart-rate-only trackpoints — `Position` never written, which is the whole
- * point. The app's own [TcxRouteParser] reads this back as "the indoor case:
- * no route, and a complete activity all the same", and so does everything
- * else that accepted a treadmill TCX before us.
- *
- * The session is written as a single lap even when the workout recorded laps:
- * calories and heart rate exist only as session totals here, and TCX requires
- * `Calories` on every lap — splitting totals across laps would be invented
- * data, and importers that sum laps would double it.
- *
- * [serializer] is a parameter only so a JVM unit test can supply one:
- * `android.util.Xml` is a throwing stub off-device. Production never passes it.
+ * A routeless TCX: one `Lap` with the session totals and a `Track` of
+ * heart-rate-only trackpoints. A single lap even when laps were recorded:
+ * TCX requires `Calories` per lap, and splitting totals would invent data.
+ * [serializer] is a parameter only so a JVM test can supply one.
  */
 internal fun writeActivityWorkoutTcx(
     workout: ExerciseData,
@@ -148,11 +130,9 @@ internal fun writeActivityWorkoutTcx(
     serializer.startTag(null, "Lap")
     serializer.attribute(null, "StartTime", workout.startTime.toString())
     serializer.textElement("TotalTimeSeconds", (workout.durationMs / 1000.0).toWorkoutDecimal())
-    // `DistanceMeters` and `Calories` are REQUIRED by the TCX schema; a workout
-    // without them writes zero, exactly as watches write a lap without either.
+    // `DistanceMeters` and `Calories` are required by the schema; zero when unknown.
     serializer.textElement("DistanceMeters", (workout.totalDistanceMeters ?: 0.0).toWorkoutDecimal())
-    // TCX `Calories` is the session total and TCX has no active-calorie field
-    // (see TcxRouteParser); active fills in only when no total was recorded.
+    // TCX `Calories` is the session total; active only stands in without a total.
     val calories = workout.totalCaloriesKcal ?: workout.activeCaloriesKcal ?: 0.0
     serializer.textElement("Calories", calories.roundToInt().coerceAtLeast(0).toString())
     averageBpm?.let { serializer.heartRateElement("AverageHeartRateBpm", it) }
@@ -171,8 +151,7 @@ internal fun writeActivityWorkoutTcx(
     }
     serializer.endTag(null, "Lap")
 
-    // TCX has no title field; `Notes` on the Activity is where every exporter
-    // puts free text, so title and notes both land there.
+    // TCX has no title field; title and notes both land in `Notes`.
     val notesText = listOfNotNull(
         workout.title?.takeIf { it.isNotBlank() },
         workout.notes?.takeIf { it.isNotBlank() },
@@ -189,10 +168,8 @@ internal fun writeActivityWorkoutTcx(
 }
 
 /**
- * One header row and one value row: the shape a spreadsheet pivots over when
- * several of these land in one folder. Machine-stable on purpose — SI units,
- * ISO-8601 times, `Locale.US` decimals, English headers — because a CSV that
- * follows the phone's locale breaks the moment two users share a sheet.
+ * One header row and one value row. Machine-stable: SI units, ISO-8601
+ * times, `Locale.US` decimals, English headers.
  */
 internal fun writeActivityWorkoutCsv(
     workout: ExerciseData,
@@ -233,20 +210,11 @@ internal fun writeActivityWorkoutCsv(
 
 /**
  * A routeless FIT Activity file: file_id, heart-rate-only records, one lap,
- * one session, one activity message — and no position field DEFINED anywhere,
- * which is this format's whole promise. Framing (header, sentinels, CRCs) is
- * [FitEncoder]'s; this function owns the message vocabulary, the same split
- * the read side keeps between [FitDecoder] and `FitRouteParser`.
+ * one session, one activity message, no position field defined anywhere.
  *
- * Two field choices look asymmetric on purpose, because our own re-importer
- * reads field 21 as `total_ascent` on BOTH the session and the lap, while the
- * real FIT profile numbers ascent 22 on the session (21 there is `max_power`):
- * ascent is written as session 22 (what Garmin/Strava read) AND lap 21 (what
- * `FitRouteParser` reads — also correct FIT). For the same reason the session
- * power fields (20/21) and the lap position fields (3-6) are never written.
- *
- * Everything numeric is a scaled integer: our decoder's `fitLong` drops float
- * fields, and scaled integers are what watches write anyway.
+ * Ascent is written as session 22 (the FIT profile) and lap 21 (what
+ * `FitRouteParser` reads on both). Session power fields (20/21) and lap
+ * position fields (3-6) are never written. Everything is a scaled integer.
  */
 internal fun writeActivityWorkoutFit(
     workout: ExerciseData,
@@ -418,10 +386,7 @@ internal fun writeActivityWorkoutFit(
 internal fun ExerciseData.workoutExportFileName(format: ActivityWorkoutExportFormat): String =
     exportFileName(extension = format.extension, fallbackName = "workout")
 
-/**
- * The samples worth exporting: within the session, time-ordered, and inside
- * TCX's `unsignedByte` range — a 0 bpm is a sensor dropout, not a heart.
- */
+/** The samples worth exporting: inside the session, ordered, inside `unsignedByte`. 0 bpm is a dropout. */
 private fun ExerciseData.heartRateSamplesForExport(
     heartRateSamples: List<HeartRateSample>,
 ): List<HeartRateSample> =
@@ -441,10 +406,7 @@ private fun ExerciseData.averageHeartRateForExport(
             ?.average()
             ?.roundToLong()
 
-/**
- * TCX's `Sport` vocabulary is three words wide — Running, Biking, Other — and
- * a treadmill run is still a run (the import side documents the same reading).
- */
+/** TCX's `Sport` is Running, Biking or Other. A treadmill run is a run. */
 private fun Int.toTcxSport(): String = when (this) {
     ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
     ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL,
@@ -456,11 +418,8 @@ private fun Int.toTcxSport(): String = when (this) {
 }
 
 /**
- * Health Connect exercise type → FIT `(sport, sub_sport)`. The sub-sport is
- * only set where it IS the activity (a treadmill run, a trainer ride) or where
- * FIT files the sport under a generic bucket (fitness equipment, training) and
- * the sub-sport carries the identity. Everything unmapped is (generic, generic),
- * which importers treat as "a workout" — the same fallback the CSV takes.
+ * Health Connect exercise type to FIT `(sport, sub_sport)`. The sub-sport is
+ * set only where it is the activity. Unmapped is (generic, generic).
  */
 private fun Int.toFitSport(): Pair<Long, Long> = when (this) {
     ExerciseSessionRecord.EXERCISE_TYPE_RUNNING -> 1L to 0L
@@ -527,12 +486,7 @@ private fun String.csvEscaped(): String =
         this
     }
 
-/**
- * The machine-stable activity name for the CSV: Health Connect's own constant
- * vocabulary in snake_case, never the localized label — a CSV that follows the
- * phone's language breaks the moment two users share a sheet. Covers the same
- * types as [exerciseTypeLabelRes], and falls back the same way.
- */
+/** The machine-stable activity name for the CSV: Health Connect's constants in snake_case. */
 internal fun exerciseTypeExportName(type: Int): String = when (type) {
     ExerciseSessionRecord.EXERCISE_TYPE_BADMINTON -> "badminton"
     ExerciseSessionRecord.EXERCISE_TYPE_BASEBALL -> "baseball"
@@ -605,10 +559,8 @@ private const val FitMimeType = "application/vnd.ant.fit"
 private const val TcxNamespace = "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"
 internal const val WorkoutExportCacheDirectory = "workout_exports"
 
-// The FIT vocabulary this exporter writes. Message and field numbers are from
-// Garmin's FIT profile; only what the writer emits is named here — the read
-// side keeps its own table in FitRouteParser, deliberately (interpretation
-// stays with each consumer).
+// The FIT vocabulary this exporter writes, from Garmin's FIT profile. The
+// read side keeps its own table in FitRouteParser.
 private const val FitLocalFileId = 0
 private const val FitLocalRecord = 1
 private const val FitLocalLap = 2
@@ -637,11 +589,11 @@ private const val FitTotalDistanceField = 9
 private const val FitTotalCaloriesField = 11
 private const val FitLapAvgHeartRateField = 15
 private const val FitLapMaxHeartRateField = 16
-/** Lap numbering; also what our own importer reads on BOTH messages. */
+/** Lap numbering; also what our importer reads on both messages. */
 private const val FitLapTotalAscentField = 21
 private const val FitSessionAvgHeartRateField = 16
 private const val FitSessionMaxHeartRateField = 17
-/** Session numbering — 21 there is max_power and must never be written. */
+/** Session numbering. 21 there is max_power and must never be written. */
 private const val FitSessionTotalAscentField = 22
 private const val FitSessionFirstLapIndexField = 25
 private const val FitSessionNumLapsField = 26

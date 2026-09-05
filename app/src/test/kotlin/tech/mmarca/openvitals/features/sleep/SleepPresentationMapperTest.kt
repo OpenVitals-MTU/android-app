@@ -123,8 +123,7 @@ class SleepPresentationMapperTest {
     }
 
     @Test fun `duration points fall back to time in bed when the night has no stage data`() {
-        // Nothing to subtract awake from, so the whole session counts: 8.5 h in
-        // bed reads as 8.5 h asleep.
+        // Nothing to subtract awake from, so the whole session counts.
         val session = localNight(anchorDate, hours = 8.5).copy(stages = emptyList())
         val dayQuery = weekQuery.copy(range = TimeRange.DAY, anchorDate = anchorDate)
 
@@ -174,8 +173,7 @@ class SleepPresentationMapperTest {
         assertTrue(display.dailySessions.isEmpty())
         assertNull(display.dailySummary)
         assertTrue(display.dayNaps.isEmpty())
-        // No night, no reading: the score and the schedule self-hide, and the
-        // stage breakdown has nothing to split.
+        // No night, no reading: the score and the schedule self-hide.
         assertNull(display.overviewSummary.sleepScore)
         assertNull(display.overviewSummary.schedule)
         assertNull(display.overviewSummary.sleepEfficiencyPercent)

@@ -29,7 +29,7 @@ class CaloriesDerivationsTest {
         source = "test",
     )
 
-    // --- statistics ---
+    // Statistics.
 
     @Test
     fun `statistics are null for empty input rather than zero`() {
@@ -89,7 +89,7 @@ class CaloriesDerivationsTest {
         assertEquals(2, statistics.bmrReadingCount)
     }
 
-    // --- breakdown rows ---
+    // Breakdown rows.
 
     @Test
     fun `breakdown rows are empty when nothing was recorded`() {

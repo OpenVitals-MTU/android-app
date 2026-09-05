@@ -1,18 +1,10 @@
 package tech.mmarca.openvitals.devices.garmin
 
 /**
- * A minimal protobuf writer/reader, for the handful of Garmin messages this
- * app sends and reads.
- *
- * Deliberately hand-rolled rather than generated. The alternative is a
- * protobuf runtime plus a `protoc` step in the build, to encode messages that
- * amount to a nested field and an integer — a code generator, a toolchain
- * dependency and a build phase, for a few dozen bytes. Everything here is
- * wire types 0 (varint) and 2 (length-delimited); nothing Garmin sends on the
- * paths this app uses needs more.
- *
- * Field numbers come from Gadgetbridge's `.proto` files (AGPLv3), named at
- * each call site so a reader can check them against the schema.
+ * A minimal protobuf writer and reader for the few Garmin messages this
+ * app uses. Hand-rolled: a runtime and a protoc step for a nested field and
+ * an integer is not worth it. Field numbers from Gadgetbridge's `.proto`
+ * files (AGPLv3), named at each call site.
  */
 
 /** Builds one protobuf message. */
@@ -37,14 +29,7 @@ class ProtobufWriter {
         return this
     }
 
-    /**
-     * A nested message with no fields set.
-     *
-     * Not the same as omitting it: protobuf distinguishes an absent field
-     * from a present-but-empty one, and Garmin uses the empty message as the
-     * whole request for actions that take no arguments (cancelling a find,
-     * for one).
-     */
+    /** A nested message with no fields. Distinct from omitting it; Garmin uses it as a whole request. */
     fun emptyMessage(field: Int): ProtobufWriter = nested(field, ByteArray(0))
 
     fun string(field: Int, value: String): ProtobufWriter =
@@ -91,12 +76,7 @@ class ProtobufField(
     val bytes: ByteArray? = null,
 )
 
-/**
- * Reads the top-level fields of a protobuf message.
- *
- * Shallow on purpose: nesting is resolved by calling this again on a field's
- * bytes, which keeps the reader honest about not knowing the schema.
- */
+/** Reads the top-level fields. Shallow: nesting is resolved by calling this on a field's bytes. */
 fun readProtobuf(data: ByteArray): List<ProtobufField> {
     val out = mutableListOf<ProtobufField>()
     var i = 0
@@ -145,8 +125,7 @@ fun readProtobuf(data: ByteArray): List<ProtobufField> {
                 i += 8
             }
             else ->
-                // An unknown wire type means the rest cannot be located; stop
-                // rather than walk off into noise.
+                // An unknown wire type means the rest cannot be located.
                 return out
         }
     }
@@ -157,10 +136,7 @@ fun readProtobuf(data: ByteArray): List<ProtobufField> {
 fun protobufField(fields: List<ProtobufField>, field: Int): ProtobufField? =
     fields.firstOrNull { it.field == field }
 
-/**
- * Field numbers in Garmin's top-level `Smart` message
- * (`gdi_smart_proto.proto`). Only the services this app speaks are listed.
- */
+/** Field numbers in Garmin's top-level `Smart` message. Only the services this app speaks. */
 object GarminSmartService {
     const val CALENDAR = 1
     const val HTTP = 2

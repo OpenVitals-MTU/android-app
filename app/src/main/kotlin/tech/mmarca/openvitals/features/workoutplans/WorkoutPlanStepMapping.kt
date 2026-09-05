@@ -18,10 +18,8 @@ import tech.mmarca.openvitals.features.manualentry.activity.recording.planStepSe
 import tech.mmarca.openvitals.features.manualentry.activity.toActivityEntryType
 
 /**
- * The one seam between a Health Connect plan and the manual activity form's
- * step rows. The builder edits plans in full; the form only needs a flat,
- * executable list of "do this, then rest", so blocks are unrolled by their
- * round count and a rest step attaches to the row before it.
+ * The seam between a Health Connect plan and the form's step rows: blocks
+ * unroll by round count and a rest step attaches to the row before it.
  */
 private inline fun PlannedExerciseData.forEachUnrolledStep(
     block: (blockIndex: Int, round: Int, rounds: Int, step: PlannedExerciseStepData) -> Unit,
@@ -66,11 +64,9 @@ fun PlannedExerciseData.toRepetitionSetInputs(ownSegmentType: Int?): List<Activi
 }
 
 /**
- * The plan as the live recording runs it: the same unroll and rest folding as
- * the form rows, but with absolute segment types and resolved labels, plus the
- * recognizer (if any) that can count each step. [localizedTitle] offers each
- * sensor-backed exercise's name in the phone's language so a step named
- * "Liegestütze" finds the push-up recognizer as readily as "Push-ups" does.
+ * The plan as the live recording runs it: the same unroll, with absolute
+ * segment types, labels and recognizers. [localizedTitle] matches a
+ * localized step name to its recognizer.
  */
 fun PlannedExerciseData.toPlanRunSteps(
     localizedTitle: (type: ActivityEntryType) -> String? = { null },
@@ -78,8 +74,7 @@ fun PlannedExerciseData.toPlanRunSteps(
     val steps = mutableListOf<ActivityPlanRunStep>()
     forEachUnrolledStep { blockIndex, round, rounds, step ->
         val isRest = step.isRestStep()
-        // "Set N" is what the form writes when it has no better name; a null
-        // label reads as the segment type's name, in the user's language.
+        // "Set N" is the form's placeholder; a null label reads as the segment type's name.
         val label = step.description?.trim()?.takeIf { it.isNotEmpty() && !it.startsWith("Set ") }
         when (val completion = step.completion) {
             is PlannedExerciseCompletion.Repetitions -> if (!isRest) {
@@ -120,11 +115,7 @@ fun PlannedExerciseData.toPlanRunSteps(
 fun PlannedExerciseData.isGuidedRunnable(): Boolean =
     toActivityEntryType()?.isRepetitionLike == true && toPlanRunSteps().isNotEmpty()
 
-/**
- * Form rows → plan steps: an active step per row (rep or duration goal) and a
- * rest step after any row with a rest. Null when a row's goal is not a positive
- * number, which is also what the form's own validation rejects.
- */
+/** Form rows to plan steps. Null when a goal is not a positive number. */
 fun List<ActivityRepetitionSetInput>.toPlannedSteps(ownSegmentType: Int): List<PlannedExerciseStepData>? =
     flatMapIndexed { index, row ->
         val goal = row.repetitionsText.trim().toLongOrNull()?.takeIf { it > 0L } ?: return null
@@ -146,10 +137,8 @@ fun List<ActivityRepetitionSetInput>.toPlannedSteps(ownSegmentType: Int): List<P
     }.takeIf { it.isNotEmpty() }
 
 /**
- * Form rows as plan blocks: consecutive identical rows (same exercise, goal
- * and rest) collapse into one block with that many rounds, so "push-ups ×3"
- * comes back as a block of three rounds rather than three copies. A step
- * whose rest differs from its neighbours' breaks the run.
+ * Form rows as plan blocks: consecutive identical rows collapse into one
+ * block with that many rounds. A differing rest breaks the run.
  */
 fun List<ActivityRepetitionSetInput>.toPlannedBlocks(ownSegmentType: Int): List<PlannedExerciseBlockData>? {
     val rows = this

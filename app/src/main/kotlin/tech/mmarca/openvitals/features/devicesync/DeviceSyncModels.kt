@@ -44,11 +44,8 @@ enum class DeviceSyncError {
 }
 
 /**
- * Every record type the sync can move, mapped to its Health Connect permission
- * suffix (`READ_<suffix>` / `WRITE_<suffix>`). The generic read/write path
- * (`forEachSyncRecordPage` / `insertImportedRecords`) covers all of these; the
- * per-device permission gate then hides any a given provider/manifest doesn't
- * grant.
+ * Every record type the sync can move, to its permission suffix. The
+ * per-device gate hides any a provider does not grant.
  */
 val syncableTypePermissionSuffix: Map<String, String> = linkedMapOf(
     // Activity
@@ -176,23 +173,14 @@ data class DeviceSyncState(
     val codeEntry: String = "",
     val codeError: Boolean = false,
     val range: SyncRange = SyncRange.YEAR_1,
-    /**
-     * The syncable types this device can actually read AND write (granted
-     * Health Connect permissions on a provider that defines them). The picker
-     * only offers these.
-     */
+    /** The syncable types this device can read and write. The picker offers only these. */
     val availableTypes: Set<String> = emptySet(),
     val selectedTypes: Set<String> = emptySet(),
     val progress: SyncProgress? = null,
     val report: SyncReport? = null,
     /** The shareable report text (for Copy/Share), set when a report is produced. */
     val reportText: String = "",
-    /**
-     * The persisted report of the LAST sync (this run or an earlier one), read
-     * back from [tech.mmarca.openvitals.features.devicesync.store.DeviceSyncReportStore]
-     * so the role step can offer it — the user who hit a failure yesterday can
-     * still send us the evidence today.
-     */
+    /** The persisted report of the last sync, so a failure from yesterday can still be sent. */
     val lastReportText: String = "",
     val error: DeviceSyncError? = null,
     val bluetoothUnavailable: Boolean = false,

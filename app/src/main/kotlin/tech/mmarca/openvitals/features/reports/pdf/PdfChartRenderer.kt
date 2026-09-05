@@ -8,10 +8,8 @@ import tech.mmarca.openvitals.ui.components.chartYAxisLabels
 import tech.mmarca.openvitals.ui.components.decimateOffsets
 
 /**
- * A report chart, fully resolved to PDF coordinates. Pure data: the geometry
- * is computed here (JVM-testable), the writer only strokes it. AVERAGE metrics
- * draw as a smoothed line with a min/max band; SUM metrics draw as zero-based
- * bars. Blood pressure adds a second (diastolic) line.
+ * A report chart resolved to PDF coordinates. Pure data. AVERAGE metrics
+ * draw as a line with a band; SUM metrics as bars; blood pressure adds a line.
  */
 data class PdfChartData(
     val valueKind: ReportValueKind,
@@ -44,17 +42,10 @@ private const val XAxisHeight = 16f
 private const val MaxLinePoints = 240
 private const val MaxXLabels = 6
 
-/**
- * Above this many buckets, per-point markers stop being points and become a
- * smear over the line — dense charts draw the line alone.
- */
+/** Above this many buckets, markers become a smear; dense charts draw the line alone. */
 private const val MaxMarkerPoints = 90
 
-/**
- * Lays [points] out inside a width×height box. [formatAxisValue] renders the
- * Y-axis numbers; [bucketLabel] the X-axis dates; [approxCharWidth] is the
- * label font's average glyph width, used to drop X labels that would overlap.
- */
+/** Lays [points] out in a box. [approxCharWidth] drops X labels that would overlap. */
 fun buildPdfChart(
     points: List<ReportPoint>,
     valueKind: ReportValueKind,
@@ -178,11 +169,7 @@ fun buildPdfChart(
     )
 }
 
-/**
- * Up to [MaxXLabels] evenly spread bucket labels, then a second pass drops any
- * whose estimated extent would overlap its predecessor — better fewer labels
- * than an unreadable smear on a dense monthly report.
- */
+/** Up to [MaxXLabels] spread labels, minus any whose extent would overlap its predecessor. */
 private fun buildXLabels(
     points: List<ReportPoint>,
     xCenterFor: (Int) -> Float,

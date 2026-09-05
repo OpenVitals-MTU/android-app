@@ -50,11 +50,7 @@ internal object AppleHealthImportParser {
             parseZipExportStreaming(input, consumer, options.parseRecordDetails)
         }
 
-    /**
-     * Parses export.xml directly off the ZIP stream without extracting it to a temp file.
-     * Only valid when workout route files are not needed, since those may appear after
-     * export.xml in the archive.
-     */
+    /** Parses export.xml off the ZIP stream without extracting it. Only valid when routes are not needed. */
     private fun parseZipExportStreaming(
         input: InputStream,
         consumer: AppleHealthXmlEventConsumer?,
@@ -106,8 +102,7 @@ internal object AppleHealthImportParser {
                                     foundExportXml = true
                                 }
                                 entry.name.isAppleWorkoutRouteFile() -> {
-                                    // Stream the GPX entry directly; buffering it as a byte array costs
-                                    // megabytes per routed workout during the zip sweep.
+                                    // Stream the GPX entry; buffering it costs megabytes per routed workout.
                                     val entryInput = CountingInputStream(NonClosingInputStream(zipInput))
                                     try {
                                         AppleHealthImportRouteParser.parse(entry.name, entryInput)?.let { routeFile ->
@@ -154,8 +149,7 @@ internal object AppleHealthImportParser {
         parseRecordDetails: Boolean,
     ): AppleParsedExport {
         val handler = AppleHealthXmlHandler(consumer, routeFiles, parseRecordDetails)
-        // Apple's exporter always writes UTF-8 (declared in the XML prolog); decoding explicitly
-        // lets the sanitizer inspect and repair characters before Expat ever sees them.
+        // Apple writes UTF-8; decoding explicitly lets the sanitizer repair characters first.
         val sanitizer = XmlCharacterSanitizingReader(InputStreamReader(input, StandardCharsets.UTF_8))
         try {
             secureSaxParserFactory().newSAXParser().parse(InputSource(sanitizer), handler)
@@ -399,12 +393,8 @@ private class MutableAppleWorkoutRoute : MutableAppleElement {
 }
 
 /**
- * Deduplicates the handful of attribute values that repeat across every record in an export, so a
- * buffered record costs its own data rather than another copy of its device and source names.
- *
- * Capped because a pool is only ever a win for low-cardinality values: if an export turns out to
- * carry a distinct value per record, the pool stops growing rather than becoming the leak it was
- * added to prevent.
+ * Deduplicates the attribute values that repeat across every record.
+ * Capped, so a high-cardinality export cannot turn the pool into a leak.
  */
 private class AppleAttributePool(private val maxEntries: Int = 4_096) {
     private val pool = HashMap<String, String>()
@@ -425,9 +415,7 @@ private class MutableAppleRecord(
     pool: AppleAttributePool,
 ) : MutableAppleElement {
     override val metadata: MutableMap<String, String> = linkedMapOf()
-    // Pooled: SAX hands back a fresh String per attribute per element, and these five repeat across
-    // the whole export -- one phone writes one `device` blob of ~120 characters for every one of a
-    // million step samples. `value` and the dates are not pooled; they are genuinely per-record.
+    // Pooled: these five repeat across the whole export. `value` and the dates are per-record.
     private val type = pool.shared(attributes.value("type")) ?: "Record"
     private val sourceName = pool.shared(attributes.value("sourceName"))
     private val sourceVersion = pool.shared(attributes.value("sourceVersion"))

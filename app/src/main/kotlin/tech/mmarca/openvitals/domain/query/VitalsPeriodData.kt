@@ -13,11 +13,7 @@ import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
 
 data class VitalsPeriodData(
     val missingVitalsPermissions: Set<String> = emptySet(),
-    /**
-     * Overview metrics whose daily read blew its per-metric budget on this
-     * range. Their lists arrive empty; the UI says so instead of blanking the
-     * whole screen.
-     */
+    /** Metrics whose daily read blew its budget. Their lists are empty; the UI says so. */
     val timedOutMetrics: Set<VitalsPeriodMetric> = emptySet(),
     val bloodPressure: List<BloodPressureEntry> = emptyList(),
     val previousBloodPressure: List<BloodPressureEntry> = emptyList(),
@@ -40,8 +36,7 @@ data class VitalsPeriodData(
     val skinTemperature: List<SkinTemperatureEntry> = emptyList(),
     val previousSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
     val baselineSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
-    // Non-day overview loads carry one aggregated point per local day instead of
-    // raw entries, plus the window's true latest reading per metric for the cards.
+    // Non-day loads carry one point per day plus the window's latest reading.
     val bloodPressureDaily: List<DailyBloodPressurePoint> = emptyList(),
     val spO2Daily: List<DailyVitalPoint> = emptyList(),
     val respiratoryRateDaily: List<DailyVitalPoint> = emptyList(),

@@ -15,14 +15,8 @@ import tech.mmarca.openvitals.domain.model.ExerciseRouteStatus
 import tech.mmarca.openvitals.domain.model.SpeedSample
 
 /**
- * The derivations the detail cards used to run in their build paths — the pace
- * scale the split bars are drawn against, the height profile, and the speed
- * trace rebuilt from the splits — as pure functions.
- *
- * Flutter counterpart: test/features/activity/activity_detail_display_test.dart.
- * Kotlin has no single `buildActivityDetailDisplay`; the same derivations sit on
- * `ActivityDetailDisplay.kt` and are folded into `ActivityDetailUiState` by the
- * view model, so each one is exercised directly here.
+ * The detail-card derivations as pure functions: the pace scale, the height profile,
+ * and the speed trace rebuilt from the splits.
  */
 class ActivityDetailDisplayTest {
 
@@ -57,11 +51,7 @@ class ActivityDetailDisplayTest {
     // endregion
 
     // region the elevation profile
-    //
-    // Health Connect has no elevation SERIES. ElevationGainedRecord is one total
-    // for the session — it says you climbed 240 m, never where. The altitudes on
-    // the route are the only thing that knows the shape of a climb, so that is
-    // what the profile is drawn from.
+    // Health Connect has no elevation series, so the profile is drawn from the route altitudes.
 
     @Test fun `the elevation profile comes from the route altitudes, oldest first`() {
         val samples = elevationProfile(route(listOf(120.0, 145.5, 132.0)))
@@ -72,16 +62,14 @@ class ActivityDetailDisplayTest {
     }
 
     @Test fun `the elevation profile skips the points the device gave no height for`() {
-        // A fix taken indoors, or under a poor sky, carries no altitude. Reading
-        // that as sea level would draw a cliff that never happened.
+        // A fix with no altitude must not read as sea level and draw a cliff.
         val samples = elevationProfile(route(listOf(120.0, null, 132.0)))
 
         assertEquals(listOf(120.0, 132.0), samples.map { it.meters })
     }
 
     @Test fun `one height is not an elevation profile`() {
-        // A single point draws no line, and a card with no line is worse than no
-        // card. The screen renders nothing.
+        // A single point draws no line, so the screen renders nothing.
         assertTrue(elevationProfile(route(listOf(120.0, null, null))).isEmpty())
     }
 
@@ -96,10 +84,7 @@ class ActivityDetailDisplayTest {
     // endregion
 
     // region speed rebuilt from the splits
-    //
-    // Most watches write a route and a distance but no SpeedRecord, so the speed
-    // card never appeared for them — while the splits card, sitting right above
-    // it, knew each segment's distance and duration all along.
+    // Most watches write a route and a distance but no SpeedRecord, so the speed card never appeared.
 
     /** 1 km in 5:00 = 3.33 m/s, then 1 km in 6:00 = 2.78 m/s. */
     private fun twoSplits() = ActivitySplits(
@@ -115,17 +100,14 @@ class ActivityDetailDisplayTest {
     @Test fun `a split holds its speed across its window - the trace is a step`() {
         val trace = splitSpeedTrace(recordedSpeed = emptyList(), splits = twoSplits())!!
 
-        // Two points per split, at the same height: flat from here to there. A
-        // split's speed is an average over a window, not a reading at an
-        // instant, and a smooth curve would claim a resolution it does not have.
+        // Two points per split, at the same height. A split's speed is an average over a window.
         assertEquals(4, trace.samples.size)
         assertEquals(2, trace.splitCount)
         assertEquals(1_000.0 / 300.0, trace.samples[0].metersPerSecond, 0.001)
         assertEquals(1_000.0 / 300.0, trace.samples[1].metersPerSecond, 0.001)
         assertEquals(1_000.0 / 360.0, trace.samples[2].metersPerSecond, 0.001)
         assertEquals(1_000.0 / 360.0, trace.samples[3].metersPerSecond, 0.001)
-        // And it steps at the boundary: the first split's end is the second's
-        // start, one instant carrying both speeds.
+        // It steps at the boundary: one instant carrying both speeds.
         assertEquals(trace.samples[1].time, trace.samples[2].time)
         assertTrue(trace.samples.first().time.isBefore(trace.samples.last().time))
     }
@@ -133,19 +115,15 @@ class ActivityDetailDisplayTest {
     @Test fun `the average is distance over time, NOT the mean of the plotted points`() {
         val trace = splitSpeedTrace(recordedSpeed = emptyList(), splits = twoSplits())!!
 
-        // 2 km in 11:00. The chart would otherwise average its own samples, and
-        // the mean of two equal-DISTANCE splits' speeds is their arithmetic mean
-        // (3.06 m/s) where the truth is the harmonic one (3.03 m/s) — a session
-        // reported very slightly faster than it was run, contradicting the
-        // average speed in the header of the same screen.
+        // 2 km in 11:00. The mean of two equal-distance splits' speeds is arithmetic (3.06 m/s);
+        // the truth is harmonic (3.03 m/s), and the header shows the truth.
         assertEquals(2_000.0 / 660.0, trace.averageMetersPerSecond, 0.0001)
         val arithmetic = (1_000.0 / 300.0 + 1_000.0 / 360.0) / 2.0
         assertTrue(trace.averageMetersPerSecond < arithmetic)
     }
 
     @Test fun `a recorded trace wins - a measurement beats a reconstruction`() {
-        // Two speed cards on one screen, disagreeing by a hair, would be worse
-        // than either alone.
+        // Two speed cards on one screen must not disagree.
         val trace = splitSpeedTrace(
             recordedSpeed = listOf(
                 SpeedSample(time = start, metersPerSecond = 3.1, source = "test")
@@ -157,11 +135,8 @@ class ActivityDetailDisplayTest {
     }
 
     @Test fun `estimated splits draw NOTHING - they are flat by construction`() {
-        // The estimated source spreads the total distance evenly over the
-        // duration, so every split necessarily carries the activity's average
-        // pace. A line through them would assert a metronomic pace nobody
-        // measured — the same reason the splits card paints no bars for it, and
-        // a line is a stronger claim than a bar.
+        // The estimated source spreads distance evenly, so every split carries the average pace.
+        // A line through them would claim a metronomic pace nobody measured.
         val trace = splitSpeedTrace(
             recordedSpeed = emptyList(),
             splits = ActivitySplits(
@@ -179,8 +154,7 @@ class ActivityDetailDisplayTest {
     }
 
     @Test fun `one split is an average, not a trace`() {
-        // It is the number the header already states. Drawing it as a chart adds
-        // nothing but the suggestion that it was measured over time.
+        // The header already states this number. A chart adds only the suggestion it was measured.
         val trace = splitSpeedTrace(
             recordedSpeed = emptyList(),
             splits = ActivitySplits(
@@ -210,8 +184,7 @@ class ActivityDetailDisplayTest {
     }
 
     @Test fun `a lap with no distance or no time is skipped, not drawn at zero`() {
-        // A paused lap, or a lap the device wrote no length for, has no speed —
-        // and no speed is not zero speed, which would draw a plunge to the floor.
+        // A paused lap has no speed, and no speed is not zero speed.
         val trace = splitSpeedTrace(
             recordedSpeed = emptyList(),
             splits = ActivitySplits(
@@ -228,14 +201,13 @@ class ActivityDetailDisplayTest {
 
         assertEquals(2, trace.splitCount)
         assertEquals(4, trace.samples.size)
-        // The skipped lap is out of the average as well: 800 m over 185 s, not
-        // over the 215 s the stopped clock ran for.
+        // The skipped lap is out of the average too: 800 m over 185 s, not 215 s.
         assertEquals(800.0 / 185.0, trace.averageMetersPerSecond, 0.0001)
     }
 
     // endregion
 
-    /** A route whose points carry [altitudes] — null where the device gave none. */
+    /** A route whose points carry [altitudes], null where the device gave none. */
     private fun route(altitudes: List<Double?>) = ExerciseRouteData(
         status = ExerciseRouteStatus.DATA,
         points = altitudes.mapIndexed { index, altitude ->
@@ -259,10 +231,7 @@ class ActivityDetailDisplayTest {
         isPartial = false,
     )
 
-    /**
-     * Consecutive splits, each starting where the last one ended — a real cut of
-     * a session, unlike [split], which stacks them all at the session start.
-     */
+    /** Consecutive splits, each starting where the last ended. [split] stacks them at the session start. */
     private fun consecutive(legs: List<Pair<Double, Duration>>): List<ActivitySplit> {
         var legStart = start
         return legs.mapIndexed { index, (meters, elapsed) ->

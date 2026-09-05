@@ -1,25 +1,11 @@
 package tech.mmarca.openvitals.devices.notifications
 
 /**
- * Decides whether a notification is worth forwarding to the watch.
- *
- * Pure logic over [Candidate], with no Android types anywhere, so it is unit
- * tested on the JVM. That matters more here than anywhere else in this
- * package: this is the code that runs on EVERY notification the phone posts —
- * a media player repainting its transport controls once a second, a download
- * progress bar ticking — and a bug in it means the watch buzzes constantly and
- * the battery goes.
- *
- * Everything is structural except [Config.blockedPackages]. The user chooses
- * which apps to silence; they do not get to choose to be spammed by ongoing
- * notifications, because nobody wants that and offering it is how a settings
- * screen grows a footgun.
- *
- * Lifted verbatim from the Flutter build's `notification_listener_native`
- * plugin, minus the "waking a Flutter isolate" framing — the forwarder is now
- * an in-process call away, but rejecting most notifications here, before any
- * Bluetooth is touched, is still the single biggest battery decision in the
- * feature.
+ * Decides whether a notification is worth forwarding to the watch. Pure
+ * logic, JVM-tested: it runs on every notification the phone posts. Only
+ * [Config.blockedPackages] is the user's; ongoing notifications are always
+ * dropped. Rejecting here, before Bluetooth, is the feature's biggest
+ * battery decision.
  */
 object NotificationFilter {
 
@@ -74,13 +60,7 @@ object NotificationFilter {
         DO_NOT_DISTURB,
     }
 
-    /**
-     * Whether [candidate] should reach the watch.
-     *
-     * [ownPackage] is this app's own id. Forwarding our own reminders would loop:
-     * a hydration reminder would arrive on the wrist as a mirrored phone
-     * notification rather than as itself.
-     */
+    /** Whether [candidate] should reach the watch. [ownPackage] stops our own reminders looping. */
     fun verdict(
         candidate: Candidate,
         config: Config,
@@ -92,24 +72,17 @@ object NotificationFilter {
         if (candidate.packageName == ownPackage) return Verdict.OWN_PACKAGE
         if (candidate.packageName in config.blockedPackages) return Verdict.BLOCKED
 
-        // The phone already has a quiet-hours setting, so this reuses it rather
-        // than inventing a second one the user has to keep in sync. UNKNOWN is
-        // treated as "allow": it means the listener has not been told yet, and
-        // silently swallowing notifications is worse than one arriving during
-        // Do Not Disturb.
+        // Reuses the phone's quiet hours. UNKNOWN means allow: swallowing is worse.
         if (interruptionFilter == INTERRUPTION_FILTER_NONE ||
             interruptionFilter == INTERRUPTION_FILTER_ALARMS
         ) {
             return Verdict.DO_NOT_DISTURB
         }
 
-        // The big one. A media player, a navigation session and a download all
-        // post ongoing notifications and repaint them constantly; without this
-        // the watch never stops buzzing.
+        // Media players and downloads repaint ongoing notifications constantly.
         if (candidate.ongoing || candidate.foregroundService) return Verdict.ONGOING
 
-        // The parent of a bundle. Keeping it would deliver every chat thread
-        // twice — once as itself and once inside the summary.
+        // The parent of a bundle: keeping it delivers every thread twice.
         if (candidate.groupSummary) return Verdict.GROUP_SUMMARY
 
         // The posting app explicitly said this should not leave the phone.
@@ -130,14 +103,8 @@ object NotificationFilter {
     }
 
     /**
-     * Maps a notification to `GarminNotificationCategory`'s ordinal.
-     *
-     * In the Flutter build these values were duplicated from the Dart enum
-     * because no enum could be shared across the Pigeon boundary. Here the
-     * real enum lives one package over (`devices/garmin`), but the duplicates
-     * are kept so this file stays exactly as portable and dependency-free as
-     * the original: the wire values are frozen, the enum's KDoc says so, and
-     * the test below names them.
+     * `GarminNotificationCategory` ordinals, duplicated so this file stays
+     * dependency-free. The wire values are frozen.
      */
     object Category {
         const val OTHER = 0
@@ -155,13 +122,7 @@ object NotificationFilter {
         const val SMS = 12
     }
 
-    /**
-     * Translates Android's `Notification.category` into a GNCS category.
-     *
-     * A null or unrecognised category is OTHER rather than a guess: the watch
-     * groups and prioritises by this, so mislabelling a message as a call is
-     * worse than declining to label it.
-     */
+    /** Android's `Notification.category` as a GNCS category. Unrecognised is OTHER, not a guess. */
     fun categoryOrdinal(androidCategory: String?): Int = when (androidCategory) {
         "call" -> Category.INCOMING_CALL
         "missed_call" -> Category.MISSED_CALL

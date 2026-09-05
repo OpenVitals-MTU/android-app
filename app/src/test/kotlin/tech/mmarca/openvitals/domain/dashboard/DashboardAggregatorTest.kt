@@ -64,11 +64,8 @@ class DashboardAggregatorTest {
     )
 
     @Test fun `fallback-scored weeks do not set the target for a TRIMP week`() {
-        // Heart-rate samples are loaded for a shorter window than the scored
-        // range, so the older weeks can only score from steps - a few points
-        // a day. Their median once stood in as the "target" for a
-        // TRIMP-scored week, and readiness announced "2640% of your current
-        // load target" for an ordinary week.
+        // Older weeks score from steps only. Their median once stood in as the target for a
+        // TRIMP-scored week, and readiness announced "2640% of your current load target".
         val currentWeek = List(3) { trimpDay(40) }
         val previousWeeks = listOf(
             List(7) { trimpDay(20) },      // comparable: also HR-scored
@@ -83,8 +80,7 @@ class DashboardAggregatorTest {
     }
 
     @Test fun `a movement-only user keeps their fallback baseline`() {
-        // No heart rate anywhere: fallback weeks compare with fallback weeks,
-        // exactly as before the yardstick check existed.
+        // No heart rate anywhere: fallback weeks compare with fallback weeks.
         val currentWeek = List(3) { fallbackDay(3) }
         val previousWeeks = listOf(
             List(7) { fallbackDay(2) },
@@ -103,8 +99,7 @@ class DashboardAggregatorTest {
             previousWeekScores = emptyList(),
         )
 
-        // 120 over 3 days paces to 280 for the week: the ratio stays near
-        // daysElapsed/7 instead of exploding against someone else's yardstick.
+        // 120 over 3 days paces to 280 for the week: the ratio stays near daysElapsed/7.
         assertEquals(DashboardWeeklyCardioLoadTargetSource.CURRENT_PACE, target?.source)
     }
 }

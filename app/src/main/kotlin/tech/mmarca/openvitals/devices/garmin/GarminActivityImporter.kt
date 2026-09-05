@@ -15,21 +15,9 @@ import tech.mmarca.openvitals.features.manualentry.activity.withRouteImport
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileParser
 
 /**
- * Imports the ACTIVITY-type FIT files a watch sync pulled as exercises, down
- * the exact conversion path a hand-picked folder import uses (`RouteFileParser`
- * → activity entry state → `ActivityWriteRequest`), so a ride copied off the
- * watch and the same ride imported by hand cannot come out different.
- *
- * Mirror of the Flutter build's `GarminDeviceSyncPort` handing every download
- * to `RouteBulkImportViewModel.importRouteFiles` — there the one importer
- * splits wellness from activities internally; here the wellness half already
- * lives in [tech.mmarca.openvitals.devices.garmin.wellness.FitWellnessImporter],
- * so this class carries only the exercise half.
- *
- * Deliberately never throws (except cancellation): the Flutter bulk importer
- * tolerates every per-file failure and the sync completes around it, with the
- * raw bytes kept in [GarminFileStore] as the recovery net. Failing the sync
- * here would re-download files whose wellness data already landed.
+ * Imports the activity FIT files a sync pulled, down the same path a folder
+ * import uses, so the two cannot differ. Never throws except cancellation:
+ * per-file failures are tolerated, and the raw bytes stay in [GarminFileStore].
  */
 @Singleton
 class GarminActivityImporter @Inject constructor(
@@ -82,8 +70,7 @@ class GarminActivityImporter @Inject constructor(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            // The batched insert is atomic, so one bad file sinks the whole
-            // batch — retry file by file so only the guilty one fails.
+            // The batch is atomic; retry file by file so only the bad one fails.
             GarminLog.log("[GARMIN-IMPORT] activity batch failed, retrying singly: $error")
             for (request in requests) {
                 try {
@@ -97,8 +84,7 @@ class GarminActivityImporter @Inject constructor(
             }
         }
         if (written > 0) {
-            // The same bookkeeping the folder importer does: the last imported
-            // exercise type seeds the next manual entry's default.
+            // The last imported type seeds the next manual entry's default.
             preferencesRepository.lastActivityExerciseType = requests.last().exerciseType
             GarminLog.log("[GARMIN-IMPORT] wrote $written watch activities")
         }
@@ -106,8 +92,7 @@ class GarminActivityImporter @Inject constructor(
     }
 
     private suspend fun buildRequest(file: GarminDownloadedFile): ActivityWriteRequest? {
-        // Indexed, not numbered: several files share the 65535 "unset" file
-        // number, and identically-named entries cannot be told apart.
+        // Indexed, not numbered: several files share the 65535 "unset" number.
         val routeImport = RouteFileParser.parseFile(
             file.bytes,
             fileName = "${file.entry.type.label}_${file.entry.fileIndex}.fit",

@@ -23,15 +23,8 @@ import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the rendering cases of Flutter's
- * `test/features/nutrition/nutrition_screen_test.dart`.
- *
- * Both the per-metric screen (protein, carbs, …) and the overview draw from the
- * same display state and owe the same empty/loaded contract. The access-gate
- * case lives in `HealthConnectAccessGateTest`.
- *
- * The empty-day case from `nutrition_intraday_chart_test.dart` is here too — the
- * message is chosen inside the Compose card and has no display-state field.
+ * The per-metric screen and the overview share the same empty/loaded contract.
+ * The empty-day chart message is chosen inside the card, so it is tested here.
  */
 class NutritionContentTest {
 
@@ -63,9 +56,7 @@ class NutritionContentTest {
 
     @Test
     fun aDayWithNoMealsSaysSoInsteadOfDrawingALineFromNothingToNothing() {
-        // A day the user tracked nothing on still opens: the chart card is there,
-        // and it has to say the day is empty. Drawing a flat line at zero instead
-        // reads as a day that was measured and came out at nothing.
+        // An untracked day still opens, and the chart card says it is empty rather than drawing zero.
         setMetricContent(
             NutritionUiState(
                 isLoading = false,
@@ -85,8 +76,7 @@ class NutritionContentTest {
             ),
         )
 
-        // The card names the screen, not the metric: one intraday card serves
-        // every nutrient, so "Nutrition on this day." is what it can honestly say.
+        // One intraday card serves every nutrient, so it names the screen, not the metric.
         composeRule
             .onNodeWithText(string(R.string.summary_empty_day, string(R.string.screen_nutrition)))
             .assertIsDisplayed()

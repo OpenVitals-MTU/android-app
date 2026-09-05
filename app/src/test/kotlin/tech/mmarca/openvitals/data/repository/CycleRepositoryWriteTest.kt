@@ -26,12 +26,7 @@ import tech.mmarca.openvitals.domain.model.CycleRecordValues
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
-/**
- * The write guards and the period-reconcile triggering. The permission failure
- * must be a SecurityException specifically: ScreenError maps only that type to
- * PermissionDenied, and the vitals repository's IllegalStateException variant
- * is a standing example of the bug this pins against.
- */
+/** The write guards and reconcile triggering. The permission failure must be a SecurityException: ScreenError maps only that type. */
 class CycleRepositoryWriteTest {
 
     private val zone: ZoneId = ZoneId.systemDefault()

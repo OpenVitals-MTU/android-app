@@ -14,17 +14,14 @@ class GarminMessagesTest {
 
     private fun b(vararg xs: Int) = ByteArray(xs.size) { xs[it].toByte() }
 
-    /**
-     * Round-trips an outgoing message through the frame layer, as the
-     * transport will: build → parse → decode.
-     */
+    /** Round-trips an outgoing message through the frame layer: build, parse, decode. */
     private fun roundTrip(wire: ByteArray): GarminInboundMessage =
         decodeGarminMessage(GarminGfdiFrame.parse(wire))
 
     private fun payloadShort(payload: ByteArray, at: Int = 0): Int =
         (payload[at].toInt() and 0xFF) or ((payload[at + 1].toInt() and 0xFF) shl 8)
 
-    // ── GarminTime ───────────────────────────────────────────────────────────
+    // GarminTime.
 
     @Test
     fun `the Garmin epoch maps to 1989-12-31T000000Z`() {
@@ -40,7 +37,7 @@ class GarminMessagesTest {
         )
     }
 
-    // ── GarminFileType ───────────────────────────────────────────────────────
+    // GarminFileType.
 
     @Test
     fun `maps the FIT sub-types the importer consumes`() {
@@ -63,7 +60,7 @@ class GarminMessagesTest {
         assertTrue(GarminFileType.ACTIVITY.wanted)
     }
 
-    // ── GarminDirectory.parse ────────────────────────────────────────────────
+    // GarminDirectory.parse.
 
     /** Builds one 16-byte directory record. */
     private fun entry(
@@ -120,10 +117,8 @@ class GarminMessagesTest {
 
     @Test
     fun `an unset file number yields NO dedup key`() {
-        // A real vívoactive 5 returned two DIFFERENT sleep files both numbered
-        // 65535. Keying on that collapsed them into one and would have made
-        // every future sleep file look already-synced — silent, permanent data
-        // loss.
+        // A real watch returned two different sleep files both numbered 65535.
+        // Keying on that would make every future sleep file look already synced.
         val entries = GarminDirectory.parse(
             entry(index = 113, dataType = 128, subType = 49, number = 0xFFFF, timestamp = 1000) +
                 entry(index = 116, dataType = 128, subType = 49, number = 0xFFFF, timestamp = 1000) +
@@ -139,9 +134,8 @@ class GarminMessagesTest {
 
     @Test
     fun `an undated file yields NO dedup key`() {
-        // Without the date the key is type + number, and a watch cycles its
-        // monitoring file numbers: that key once made a new day's file look
-        // synced weeks earlier, so it was skipped and archived unread.
+        // Without the date the key is type + number, and a watch cycles its numbers,
+        // so a new day's file once looked synced and was archived unread.
         val entry = GarminDirectory.parse(
             entry(index = 5, dataType = 128, subType = 32, number = 7, timestamp = 0),
         ).single()
@@ -178,10 +172,7 @@ class GarminMessagesTest {
         )
         assertEquals(2, filtered.totalRecords)
         assertTrue(filtered.entries.isEmpty())
-        // The raw codes are what make an unmapped type diagnosable on a
-        // device, and the INDEX is what lets an entry be matched against the
-        // files the watch announces separately over the protobuf
-        // FileSyncService.
+        // The raw codes make an unmapped type diagnosable; the index matches an entry against announced files.
         assertTrue(filtered.skipped.contains("6:128/55?"))
         assertTrue(filtered.skipped.contains("7:deviceXml!"))
         assertEquals(listOf(6, 7), filtered.allIndexes)
@@ -194,13 +185,12 @@ class GarminMessagesTest {
         assertEquals(1, GarminDirectory.parse(data).size)
     }
 
-    // ── outbound messages round-trip through the frame layer ─────────────────
+    // Outbound messages round-trip through the frame layer.
 
     @Test
     fun `download request carries the file index and fresh type`() {
         val status = roundTrip(buildDownloadRequest(fileIndex = 5))
-        // The watch replies with a status; the request itself is not inbound,
-        // so assert on the raw frame instead.
+        // The request itself is not inbound, so assert on the raw frame.
         assertTrue(status is GarminUnhandledMessage)
         val frame = GarminGfdiFrame.parse(buildDownloadRequest(fileIndex = 5))
         assertEquals(GarminMessageId.DOWNLOAD_REQUEST, frame.messageType)
@@ -232,7 +222,7 @@ class GarminMessagesTest {
         assertEquals(8, frame.payload[0].toInt())
     }
 
-    // ── inbound message decoding ─────────────────────────────────────────────
+    // Inbound message decoding.
 
     /** Builds a RESPONSE (5000) frame carrying a download-request status. */
     private fun downloadStatusFrame(
@@ -295,14 +285,13 @@ class GarminMessagesTest {
 
     @Test
     fun `an out-of-vocabulary message decodes to unhandled not an error`() {
-        // Music control (5041) — a message the watch sends that a read-only
-        // sync ignores.
+        // Music control (5041): a message a read-only sync ignores.
         val msg = roundTrip(GarminGfdiFrame.build(5041, b(1, 2, 3)))
         assertTrue(msg is GarminUnhandledMessage)
         assertEquals(5041, (msg as GarminUnhandledMessage).messageType)
     }
 
-    // ── the watch asking for the time (5052) ────────────────────────────────
+    // The watch asking for the time (5052).
 
     @Test
     fun `a current-time request decodes its reference id`() {
@@ -353,12 +342,11 @@ class GarminMessagesTest {
 
     @Test
     fun `the time request acks itself so no generic ack is added`() {
-        // Its response envelope IS the acknowledgement; a generic ACK first
-        // would be a second reply to the same ask.
+        // Its response envelope is the acknowledgement; a generic ACK would be a second reply.
         assertTrue(GarminMessageId.CURRENT_TIME_REQUEST in garminSelfAcknowledgedTypes)
     }
 
-    // ── find-my-phone (5039/5040) ───────────────────────────────────────────
+    // Find-my-phone (5039/5040).
 
     @Test
     fun `a find-my-phone request carries its duration`() {
@@ -373,7 +361,7 @@ class GarminMessagesTest {
         assertTrue(msg is GarminFindMyPhoneCancel)
     }
 
-    // ── file announcements (5009) ───────────────────────────────────────────
+    // File announcements (5009).
 
     @Test
     fun `a file-available message decodes as a directory entry`() {
@@ -400,8 +388,7 @@ class GarminMessagesTest {
 
     @Test
     fun `an unknown announced type falls back to unhandled`() {
-        // Golf scorecards (255/246) have no name here; the announcement is
-        // acked and logged, never crashed on.
+        // Golf scorecards (255/246) have no name here; the announcement is acked and logged.
         val wire = GarminByteWriter()
             .writeShort(9).writeByte(255).writeByte(246).writeShort(1)
             .writeByte(0).writeByte(0).writeInt(10L).writeInt(0L)
@@ -410,7 +397,7 @@ class GarminMessagesTest {
         assertTrue(msg is GarminUnhandledMessage)
     }
 
-    // ── battery over the protobuf DeviceStatusService ───────────────────────
+    // Battery over the protobuf DeviceStatusService.
 
     @Test
     fun `the battery ask nests an empty request under device status`() {

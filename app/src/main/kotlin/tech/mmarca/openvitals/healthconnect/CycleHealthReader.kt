@@ -238,12 +238,8 @@ internal class CycleHealthReader(
     }
 
     /**
-     * Rewrites the derived MenstruationPeriodRecords around [days] so the
-     * intervals track the flow days currently in Health Connect. Spans covered
-     * by another app's period record are left to that app; only records this
-     * app authored are ever updated or deleted. Runs synchronously after a
-     * flow mutation — the caller treats failures as deferrable (the next flow
-     * mutation reconciles again).
+     * Rewrites the derived MenstruationPeriodRecords around [days]. Spans
+     * covered by another app are left alone. Failures are deferrable.
      */
     suspend fun reconcileMenstruationPeriods(days: Set<LocalDate>) = withContext(Dispatchers.IO) {
         if (days.isEmpty()) return@withContext
@@ -408,11 +404,7 @@ private fun ClosedRange<LocalDate>.toPeriodRecord(zone: ZoneId, metadata: Metada
     )
 }
 
-/**
- * Per-kind payload validation, shared by write and update. Bounds mirror the
- * Health Connect record constants; BBT uses the 35-39 °C basal range rather
- * than the platform's 0-100 °C — a reading outside it is an input error.
- */
+/** Per-kind payload validation. BBT uses the 35-39 °C basal range, not the platform's 0-100. */
 internal fun validateCycleEntry(request: CycleEntryWriteRequest, now: Instant = Instant.now()) {
     require(!request.time.isAfter(now.plus(FUTURE_TIME_GRACE))) {
         "Cycle entries cannot be in the future."

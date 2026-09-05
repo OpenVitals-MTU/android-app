@@ -14,13 +14,9 @@ import androidx.compose.ui.platform.LocalContext
 import kotlin.math.abs
 
 /**
- * Which way the phone is pointing, degrees clockwise from north, or null when
- * disabled or the device cannot say.
- *
- * State only moves on a change the eye can see (a few degrees), so the sensor
- * ticking at UI rate does not recompose the map at UI rate. [enabled] exists
- * because this powers the live-recording arrow only — a detail screen showing
- * an old route must not hold the compass awake.
+ * Which way the phone points, degrees clockwise from north, or null. State
+ * moves only on a visible change. [enabled] keeps a detail screen from
+ * holding the compass awake.
  */
 @Composable
 internal fun rememberDeviceHeadingDegrees(enabled: Boolean): State<Float?> {

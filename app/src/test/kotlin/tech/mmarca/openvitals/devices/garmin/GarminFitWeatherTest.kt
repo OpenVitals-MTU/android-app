@@ -8,11 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.devices.weather.WeatherSnapshot
 
-/**
- * The FIT weather encoding, byte for byte — the watch's glance is the only
- * consumer, so the bytes ARE the contract (mirrored from Gadgetbridge's
- * generated `FitWeather` table).
- */
+/** The FIT weather encoding, byte for byte. The watch's glance is the only consumer, so the bytes are the contract. */
 class GarminFitWeatherTest {
 
     private fun snapshot(
@@ -38,7 +34,7 @@ class GarminFitWeatherTest {
         daily = daily,
     )
 
-    // ── definitions ─────────────────────────────────────────────────────────
+    // Definitions.
 
     @Test
     fun `definitions declare three layouts of global message 128`() {
@@ -84,7 +80,7 @@ class GarminFitWeatherTest {
         )
     }
 
-    // ── the current-conditions record ───────────────────────────────────────
+    // The current-conditions record.
 
     @Test
     fun `the current record carries the conditions in FIT units`() {
@@ -128,8 +124,7 @@ class GarminFitWeatherTest {
 
     @Test
     fun `a long location truncates on a codepoint boundary`() {
-        // "Vitoria-Gasteiz" is 15 bytes — one over the 14-byte budget; the
-        // cut must not leave half a codepoint behind for accented names.
+        // "Vitoria-Gasteiz" is 15 bytes, one over budget; the cut must not split a codepoint.
         val reader = GarminByteReader(
             GarminFitWeather.dataPayload(snapshot().copy(location = "Vitoria-Gasteíz")),
         )
@@ -142,7 +137,7 @@ class GarminFitWeatherTest {
         assertTrue('�' !in decoded)
     }
 
-    // ── forecasts ───────────────────────────────────────────────────────────
+    // Forecasts.
 
     @Test
     fun `hourly and daily records follow under their own slots`() {
@@ -183,7 +178,7 @@ class GarminFitWeatherTest {
         assertEquals(31, reader.readByte()) // 304K
         assertEquals(1, reader.readByte()) // OWM 801 → PARTLY_CLOUDY
 
-        // Daily records, slot 2: today first (Wednesday), then tomorrow.
+        // Daily records, slot 2: today first, then tomorrow.
         reader.readBytes(2 + 2 + 1 + 1 + 1 + 1 + 4 + 1 + 4) // rest of hourly
         assertEquals(2, reader.readByte())
         assertEquals(2, reader.readByte()) // report: daily
@@ -235,7 +230,7 @@ class GarminFitWeatherTest {
         assertEquals(5, dailyCount) // today + 4 forecast days
     }
 
-    // ── condition mapping ───────────────────────────────────────────────────
+    // Condition mapping.
 
     @Test
     fun `condition codes map like upstream`() {

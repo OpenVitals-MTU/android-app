@@ -7,18 +7,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Pins the statistical cycle rules (drip-style, reimplemented): segmentation
- * with a one-day break tolerance, the three-completed-cycles prediction
- * threshold, the SD-driven window width, and the day-numbering conventions.
- * These rules drive both the predictions UI and the derived
- * MenstruationPeriodRecord spans, so regressions here corrupt stored data,
- * not just labels.
+ * The statistical cycle rules: segmentation with a one-day break tolerance, the three-cycle
+ * prediction threshold, the SD-driven window width, and day numbering. They also drive the
+ * derived MenstruationPeriodRecord spans, so regressions corrupt stored data.
  */
 class CycleCalculationsTest {
 
     private fun day(n: Int): LocalDate = LocalDate.of(2026, 1, 1).plusDays((n - 1).toLong())
 
-    // ---------------------------------------------------------------- segments
+    // Segments.
 
     @Test
     fun `a single bleeding day is one single-day segment`() {
@@ -44,7 +41,7 @@ class CycleCalculationsTest {
         assertEquals(listOf(day(1)..day(2)), segments)
     }
 
-    // ------------------------------------------------------------- cycle starts
+    // Cycle starts.
 
     @Test
     fun `empty input yields empty statistics`() {
@@ -70,7 +67,7 @@ class CycleCalculationsTest {
         assertEquals(99, stats.currentCycleDay)
     }
 
-    // -------------------------------------------------------------- predictions
+    // Predictions.
 
     private fun startsEvery(lengthDays: Long, count: Int): List<LocalDate> =
         (0 until count).map { day(1).plusDays(lengthDays * it) }

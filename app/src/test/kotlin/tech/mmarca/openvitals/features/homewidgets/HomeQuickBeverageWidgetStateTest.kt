@@ -8,12 +8,7 @@ import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.navigation.Screen
 
-/**
- * The cached payload a quick-beverage refresh re-pushes.
- *
- * A refresh runs without a network or a repository behind it more often than
- * not, so what the widget already holds is what the user keeps seeing.
- */
+/** The cached payload a quick-beverage refresh re-pushes; a refresh usually runs with no repository behind it. */
 class HomeQuickBeverageWidgetStateTest {
     private val context = stringResourceContext()
 
@@ -45,8 +40,7 @@ class HomeQuickBeverageWidgetStateTest {
 
     @Test
     fun `leaves an unconfigured instance on its native state`() {
-        // No title written means nothing has ever been pushed: the widget keeps
-        // its own not-configured rendering rather than showing a blank tile.
+        // No title written means nothing has ever been pushed: the widget keeps its not-configured rendering.
         assertNull(mutablePreferencesOf().toQuickBeverageSnapshot(context))
         assertNull(
             mutablePreferencesOf(HomeQuickBeverageWidgetState.drinkIdKey to "espresso")

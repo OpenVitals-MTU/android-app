@@ -15,13 +15,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-/**
- * Which receiver a quick-beverage instance is redrawn through.
- *
- * The 2x1 and the 1x1 share one storage namespace and one log action, so the
- * instance's own provider is the only thing that says which of them to push —
- * pick the wrong one and the tap updates a widget that is not on screen.
- */
+/** The 2x1 and 1x1 share storage and log action, so the instance's provider decides which to push. */
 class HomeQuickBeverageWidgetReceiverTest {
     private val appWidgetManager = mockk<AppWidgetManager>()
     private val context = mockk<Context>().also { context ->

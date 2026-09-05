@@ -288,9 +288,7 @@ internal fun HydrationGoalCard(
                 )
             }
             Spacer(Modifier.height(12.dp))
-            // Clamped, with no overflow indicator: a value can exceed its target — you can
-            // drink two litres against a 1.5-litre goal — and a bar that ran past its track
-            // would paint outside the card.
+            // Clamped: a value can exceed its target, and a bar past its track paints outside the card.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

@@ -35,15 +35,8 @@ import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * The populated half of Flutter's "Protein metric screen renders hero, chart,
- * goal card, statistics and meals" (`nutrition_screen_test.dart`).
- *
- * The empty case is already pinned by `NutritionContentTest`; what is left is
- * the one that says a tracked day is worth opening. Each of those five pieces
- * answers a different question — how much today, how the week went, whether the
- * target was hit, what the period averages, and which meals it came from — and
- * the screen builds them from separate parts of the display state, so any of
- * them can go missing on its own.
+ * A tracked day: hero, chart, goal card, statistics and meals. Each is built from a
+ * separate part of the display state, so any can go missing on its own.
  */
 class NutritionMetricScreenTest {
 
@@ -54,18 +47,14 @@ class NutritionMetricScreenTest {
     fun aTrackedProteinPeriodRendersItsHeroAndItsChart() {
         setMetricContent(trackedState())
 
-        // The hero names the metric and the chart repeats it as its title, so
-        // the second node is the chart the hero alone would not prove.
+        // The hero names the metric and the chart repeats it, so the second node proves the chart.
         val protein = string(R.string.metric_protein)
         composeRule.onAllNodesWithText(protein).onFirst().assertIsDisplayed()
         assertTrue(
             "the hero should be followed by a chart carrying the same title",
             composeRule.onAllNodesWithText(protein).fetchSemanticsNodes().size >= 2,
         )
-        // The hero's own number: the period total, in grams. The same total is
-        // legitimately repeated in the chart's summary line and in the
-        // statistics grid, so this pins that it is rendered and on screen, not
-        // that it is rendered once.
+        // The period total is legitimately repeated, so this pins that it is on screen, not that it is rendered once.
         composeRule
             .onAllNodesWithText(FORMATTER.count(TOTAL_PROTEIN_GRAMS.toInt()), substring = true)
             .onFirst()
@@ -78,8 +67,7 @@ class NutritionMetricScreenTest {
 
         scrollTo(string(R.string.daily_goal))
         composeRule.onNodeWithText(string(R.string.daily_goal)).assertIsDisplayed()
-        // Two of the three tracked days met the target — the count is the whole
-        // point of the card.
+        // Two of the three tracked days met the target.
         composeRule
             .onNodeWithText(string(R.string.goal_progress, GOAL_MET_DAYS, TRACKED_DAYS))
             .assertIsDisplayed()
@@ -138,8 +126,7 @@ class NutritionMetricScreenTest {
                                 date = date,
                                 value = DAILY_PROTEIN_GRAMS,
                                 isTracked = true,
-                                // One day short of the target, so the card has a
-                                // ratio to get wrong rather than a clean sweep.
+                                // One day short of the target, so the card has a ratio to get wrong.
                                 isMet = index < GOAL_MET_DAYS,
                             )
                         },

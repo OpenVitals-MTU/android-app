@@ -100,7 +100,7 @@ fun ReportBuilderScreen(
     }
 }
 
-// ── configure ───────────────────────────────────────────────────────────────
+// Configure.
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -321,7 +321,7 @@ internal fun ReportConfigureStep(
     }
 }
 
-// ── building ────────────────────────────────────────────────────────────────
+// Building.
 
 @Composable
 internal fun ReportBuildingStep(
@@ -373,7 +373,7 @@ internal fun ReportBuildingStep(
     }
 }
 
-// ── done ────────────────────────────────────────────────────────────────────
+// Done.
 
 @Composable
 internal fun ReportDoneStep(
@@ -461,10 +461,7 @@ internal fun ReportDoneStep(
     }
 }
 
-/**
- * Same intent shape as the route share: FileProvider URI, ACTION_SEND with
- * clipData, chooser, and no success toast — the chooser IS the feedback.
- */
+/** Same intent shape as the route share. No toast: the chooser is the feedback. */
 private fun shareReport(context: Context, file: File): Result<Unit> = runCatching {
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     val shareIntent = Intent(Intent.ACTION_SEND).apply {

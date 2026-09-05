@@ -35,8 +35,7 @@ class LoadSleepPeriodUseCase @Inject constructor(
         } else {
             sleepRepository.loadSleepPeriod(query, sleepWindow, refreshMode)
         }
-        // Include lookback nights so overnight HRV can form a personal baseline
-        // for the first days of the selected period.
+        // Include lookback nights so overnight HRV has a baseline from the first day.
         val hrvStart = query.windows.current.start.minusDays(SleepScoreLookbackDays - 1)
         val crossDailyHrv = heartRepository
             ?.loadDailyHRV(hrvStart, query.windows.current.end)

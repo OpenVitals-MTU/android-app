@@ -16,8 +16,7 @@ class VitalsDailySynthesisTest {
             DailyVitalPoint(date = date.plusDays(1), value = 100.0, count = 3),
         )
 
-        // (90 + 100) / 2, not the count-weighted (90 + 3 × 100) / 4 = 97.5: a
-        // night of continuous monitoring must not outvote a day's spot check.
+        // (90 + 100) / 2, not the count-weighted 97.5: a night of monitoring must not outvote a spot check.
         assertEquals(95.0, points.dailyMeanOrNull()!!, 0.0001)
         assertEquals(4, points.totalReadings())
     }

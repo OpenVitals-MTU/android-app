@@ -67,11 +67,7 @@ class CsvImportViewModelTest {
         }
     }
 
-    /**
-     * [unsupported] stands in for what the installed provider does not define:
-     * the manager's supported set is the catalog minus those, which is what
-     * [CsvImportState.missingPermissions] intersects with.
-     */
+    /** [unsupported] is what the installed provider does not define; the supported set is the catalog minus those. */
     private fun viewModel(
         granted: Set<String> = emptySet(),
         unsupported: Set<String> = emptySet(),
@@ -133,8 +129,7 @@ class CsvImportViewModelTest {
         vm.setColumnRole(1, role = CsvColumnRole.METRIC, metric = CsvImportMetric.WEIGHT)
         assertEquals(setOf(WriteWeight), vm.uiState.value.missingPermissions)
 
-        // The user grants it in the Health Connect dialog; the post-request
-        // refresh re-resolves the granted set.
+        // The user grants it in the dialog; the post-request refresh re-resolves the granted set.
         granted = setOf(WriteWeight)
         vm.refreshPermissions()
         vm.uiState.first { WriteWeight in it.granted }
@@ -219,10 +214,7 @@ class CsvImportViewModelTest {
 
     @Test
     fun `a permission the installed provider does not define is never requested`() = runTest {
-        // AGENTS.md invariant: the app pins a connect-client ahead of what most
-        // providers implement, and REQUESTING an unsupported permission throws
-        // rather than being refused. Without the supported-set intersection,
-        // missingPermissions would return the raw catalog set and ask for it.
+        // Requesting an unsupported permission throws, so missingPermissions must intersect with the supported set.
         val vm = viewModel(unsupported = setOf(WriteBodyWaterMass))
 
         vm.pickFile(withingsUri())
@@ -360,8 +352,7 @@ class CsvImportViewModelTest {
         vm.setDialect(sniffed.copy(fieldDelimiter = ","))
         vm.uiState.first { !it.isLoadingFile && it.sample?.dialect?.fieldDelimiter == "," }
 
-        // Forced onto a comma, the header is one cell that still holds its
-        // semicolon — the file was re-read, not left as it was.
+        // Forced onto a comma, the header is one cell still holding its semicolon: the file was re-read.
         assertEquals("Datum;Gewicht", vm.uiState.value.sample?.headerRow?.first())
     }
 }

@@ -6,17 +6,8 @@ import org.junit.Test
 import java.time.LocalDate
 
 /**
- * Dart: 'changing the week mode reloads the selection and retitles'
- * (test/ui/components/metric_detail_scaffold_test.dart), portable half.
- *
- * The scaffold-level Dart test asserts that flipping [WeekPeriodMode] triggers a
- * fresh load callback for the UNCHANGED anchor and swaps the title. In Kotlin the
- * reload trigger lives in the view models (e.g. ActivityViewModel's
- * observeWeekPeriodMode collects the preference flow, updates the driver, and
- * calls load()). What is portable — and pinned here — is the reason the reload is
- * mandatory: the same untouched anchor derives a differently-shaped period under
- * the new mode, so the previous data cannot legally stay on screen, and the title
- * follows the new mode.
+ * Flipping [WeekPeriodMode] must reload the unchanged anchor: the same anchor derives a
+ * differently shaped period, so the old data cannot stay on screen, and the title follows.
  */
 class PeriodSelectionDriverWeekModeTest {
 
@@ -42,9 +33,7 @@ class PeriodSelectionDriverWeekModeTest {
         // The anchor selection itself is untouched by the mode flip...
         assertEquals(anchorBefore, driver.selection)
 
-        // ...but the unchanged anchor now derives a differently-shaped current
-        // window, which is exactly why the host must be asked to reload: keeping
-        // the old data would scatter a calendar week under a rolling-window title.
+        // The unchanged anchor now derives a differently shaped window, so the host must reload.
         val queryAfter = loadQuery(driver)
         assertNotEquals(queryBefore.windows.current, queryAfter.windows.current)
         assertEquals(

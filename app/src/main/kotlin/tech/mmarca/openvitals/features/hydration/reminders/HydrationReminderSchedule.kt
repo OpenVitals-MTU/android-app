@@ -5,10 +5,8 @@ import java.time.ZonedDateTime
 import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
 
 /**
- * The next fire. With a [lastIntake] anchor (and no met goal) the countdown is
- * measured from the last logged drink: anchor+interval snapped into the active
- * window, then rolled forward past [now] for a stale anchor — so the schedule
- * survives boot and config re-applies without losing its anchor.
+ * The next fire. With a [lastIntake] anchor the countdown is measured from
+ * the last drink, snapped into the window and rolled past [now].
  */
 internal fun calculateNextHydrationReminderTime(
     now: ZonedDateTime,
@@ -18,8 +16,7 @@ internal fun calculateNextHydrationReminderTime(
 ): ZonedDateTime {
     if (!dailyGoalMet && lastIntake != null) {
         var candidate = nextReminderFrom(lastIntake, config)
-        // Defensive bound: every step strictly advances by at least the
-        // interval, but never spin if a degenerate config does not.
+        // Defensive bound: never spin on a degenerate config.
         var steps = 0
         while (!candidate.isAfter(now) && steps < MaxAnchorRollForwardSteps) {
             val following = nextReminderFrom(candidate, config)

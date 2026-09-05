@@ -17,25 +17,15 @@ enum class ReportSection {
     MINDFULNESS,
 }
 
-/**
- * How daily values combine into a coarser bucket — and what the summary's
- * headline number means. SUM metrics (steps, calories) add up; AVERAGE metrics
- * (weight, heart rate) mean out, and a "total" would be nonsense.
- */
+/** How daily values combine into a bucket. SUM metrics add up; AVERAGE metrics mean out. */
 enum class ReportValueKind {
     SUM,
     AVERAGE,
 }
 
 /**
- * The metrics a health report can carry — [DashboardMetric] minus the five
- * that have no exportable daily series: BMI and FFMI are display-time
- * derivations with no stored history, WEEKLY_CARDIO_LOAD and INTENSITY_MINUTES
- * are estimates without a range read, and CYCLE is seven heterogeneous event
- * lists rather than a numeric series.
- *
- * Values stay in storage units (metric); formatting happens only at render,
- * via [unitQuantity] where a display override applies.
+ * The metrics a report can carry: [DashboardMetric] minus the five with no
+ * exportable daily series. Values stay in storage units until render.
  */
 enum class ReportMetric(
     val dashboardMetric: DashboardMetric,
@@ -95,10 +85,8 @@ data class ReportRequest(
 )
 
 /**
- * One daily observation feeding the rollup, in storage units. [min]/[max]
- * carry a real intra-day spread where the source has one (heart rate);
- * elsewhere they stay null and the daily value stands alone. [secondaryValue]
- * carries diastolic for blood pressure and stays null everywhere else.
+ * One daily observation in storage units. [min]/[max] carry a real intra-day
+ * spread where the source has one. [secondaryValue] is diastolic for blood pressure.
  */
 data class ReportDailyValue(
     val date: LocalDate,
@@ -109,10 +97,8 @@ data class ReportDailyValue(
 )
 
 /**
- * One chart/table row: a calendar bucket the range actually has data in.
- * [bucketStart]/[bucketEnd] are clamped to the report range, so a monthly
- * bucket at the edge shows the dates it truly covers. Gap buckets are omitted
- * entirely, never zero-filled.
+ * One chart or table row: a calendar bucket with data. Bounds are clamped
+ * to the report range. Gap buckets are omitted, never zero-filled.
  */
 data class ReportPoint(
     val bucketStart: LocalDate,
@@ -126,11 +112,7 @@ data class ReportPoint(
     val secondaryMax: Double? = null,
 )
 
-/**
- * The stats row under a chart. Always computed from DAILY values — bucketing
- * must not change what "min" or "average" means. [total] is null for AVERAGE
- * metrics, where a sum would be meaningless.
- */
+/** The stats row under a chart, always from daily values. [total] is null for AVERAGE metrics. */
 data class ReportMetricSummary(
     val average: Double,
     val min: Double,
@@ -169,17 +151,10 @@ data class ReportMetricResult(
     val detail: ReportMetricDetail? = null,
 )
 
-/**
- * A metric's section body beyond the generic chart+stats+bucket-table. The
- * writer branches on the concrete type; null keeps the generic rendering.
- */
+/** A metric's section body beyond the generic rendering; null keeps the generic one. */
 sealed interface ReportMetricDetail
 
-/**
- * One raw blood-pressure measurement. [context] is the reading's meal
- * context: the user's explicit choice on OpenVitals-written records, a
- * time-of-day estimate ([contextEstimated] = true) on everything else.
- */
+/** One raw blood-pressure measurement. [context] is estimated from time of day on foreign records. */
 data class ReportBpReading(
     val time: Instant,
     val systolicMmHg: Int,
@@ -200,11 +175,7 @@ data class ReportBpSlotAverage(
     val readings: Int,
 )
 
-/**
- * Everything the report's blood-pressure section shows beyond the generic
- * chart: the full reading list, the time-of-day averages, and per-component
- * summaries — systolic and diastolic never share a stat again.
- */
+/** The blood-pressure section: reading list, time-of-day averages, per-component summaries. */
 data class ReportBloodPressureDetail(
     val readings: List<ReportBpReading>,
     val slotAverages: List<ReportBpSlotAverage>,
@@ -212,10 +183,7 @@ data class ReportBloodPressureDetail(
     val diastolic: ReportMetricSummary,
 ) : ReportMetricDetail
 
-/**
- * Health Connect's BloodGlucoseRecord.RELATION_TO_MEAL_* constants, mirrored
- * so the domain stays library-free — pinned against androidx by a test.
- */
+/** Health Connect's RELATION_TO_MEAL_* constants, mirrored so the domain stays library-free. */
 object GlucoseRecordValues {
     const val RELATION_TO_MEAL_UNKNOWN = 0
     const val RELATION_TO_MEAL_GENERAL = 1
@@ -240,10 +208,7 @@ data class ReportGlucoseContextAverage(
     val readings: Int,
 )
 
-/**
- * The glucose section: every reading with its meal context, averaged by
- * relation to meal — fasting average is the number a doctor asks for first.
- */
+/** The glucose section: every reading, averaged by relation to meal. */
 data class ReportGlucoseDetail(
     val readings: List<ReportGlucoseReading>,
     val contextAverages: List<ReportGlucoseContextAverage>,
@@ -288,11 +253,7 @@ data class ReportSleepStageMix(
     val awakePct: Double,
 )
 
-/**
- * The sleep section: schedule (circular-mean bedtime/wake), stage mix over
- * nights with reliable stage data, and one row per night. Naps (< 3 h) are
- * excluded throughout — the report is clinical, not a nap log.
- */
+/** The sleep section: schedule, stage mix, one row per night. Naps under 3 h are excluded. */
 data class ReportSleepDetail(
     val nights: List<ReportSleepNight>,
     val averageBedtimeMinutes: Int?,
@@ -312,10 +273,8 @@ data class ReportReadingsDetail(
 ) : ReportMetricDetail
 
 /**
- * Everything the PDF renderer consumes. [effectiveStart] is the range the
- * loader could actually serve — later than the requested start when the
- * history permission clamps reads, in which case [truncatedToDays] says what
- * the range shrank to and [historyPermissionMissing] is true.
+ * Everything the PDF renderer consumes. [effectiveStart] is later than the
+ * requested start when the history permission clamps reads.
  */
 data class ReportData(
     val request: ReportRequest,

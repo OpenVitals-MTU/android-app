@@ -559,9 +559,7 @@ class HydrationEntryViewModel @Inject constructor(
                         if (result.effectiveLiters > 0.0) {
                             runCatching { reminderController?.hideReminderNotification() }
                         }
-                        // Re-anchor the reminder countdown to the drink just
-                        // saved and reschedule — on every success, so the next
-                        // reminder measures from the latest intake.
+                        // Re-anchor the reminder to the drink just saved.
                         runCatching { reminderController?.applyConfig() }
                         refreshFrequentDrinkOptions()
                     }

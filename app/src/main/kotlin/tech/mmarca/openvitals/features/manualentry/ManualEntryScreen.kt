@@ -28,10 +28,7 @@ fun ManualEntryScreen(
     onOpenWorkoutPlans: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    // A tile only opens its entry screen. The screen shows the write-permission
-    // callout when needed, and its Grant button is the one place that asks
-    // Health Connect, so the single dialog Health Connect allows is not spent
-    // here before the user has seen the form.
+    // A tile only opens its entry screen, so the one dialog Health Connect allows is not spent here.
     val specs = manualEntryWidgetSpecs(
         isEditingWidgets = state.isEditingWidgets,
         onOpenHydrationEntry = viewModel::onHydrationWidgetTapped,
@@ -41,8 +38,7 @@ fun ManualEntryScreen(
         onOpenBodyMeasurementEntry = viewModel::onBodyMeasurementWidgetTapped,
         onOpenVitalsMeasurementEntry = viewModel::onVitalsMeasurementWidgetTapped,
         onOpenCycleEntry = viewModel::onCycleWidgetTapped,
-        // The plans screen carries its own Health Connect gate, so the tile
-        // navigates directly instead of going through the view model.
+        // The plans screen carries its own gate, so the tile navigates directly.
         onOpenWorkoutPlans = onOpenWorkoutPlans,
     )
     val specsById = specs.associateBy { it.id }

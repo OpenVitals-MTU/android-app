@@ -112,8 +112,7 @@ class HomeQuickBeverageWidgetDrinkOrderingTest {
             category = BeverageCategory.WATER,
             isPreloaded = true,
         )
-        // A user drink in the *last* category still outranks a preloaded one in
-        // the first: the custom/preloaded split is the outer sort key.
+        // The custom/preloaded split is the outer sort key.
         val userOther = drink(
             id = "user_other",
             name = "user_other",
@@ -150,9 +149,7 @@ class HomeQuickBeverageWidgetDrinkOrderingTest {
             frequentDrinks = emptyList(),
         )
 
-        // WATER 0, COFFEE 1, ENERGY_DRINK 2, TEA 3, CHOCOLATE 4, SODA 5,
-        // SUPPLEMENT/OTHER/null 6 — and inside a category, name lowercased
-        // ("Alpha" < "beta", which a case-sensitive sort would get backwards).
+        // Category order, then name lowercased inside a category.
         assertEquals(
             listOf(
                 "water",

@@ -24,12 +24,7 @@ import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
 
-/**
- * Port of the Flutter build's `garmin_watch_actions_view_model_test.dart`:
- * find is a toggle, an impatient double-stop must not throw, a refusal is a
- * flag rather than a message, and one radio means a find stands down while a
- * sync runs.
- */
+/** Find is a toggle, a double-stop must not throw, a refusal is a flag, and a find stands down during a sync. */
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class GarminWatchActionsControllerTest {
 
@@ -78,9 +73,7 @@ class GarminWatchActionsControllerTest {
             syncController = syncController,
             findWatch = { address, cancelled ->
                 seenFindAddress = address
-                // Ends when the caller cancels, as the real one does — a find
-                // that returned immediately would never exercise the toggle's
-                // stop path.
+                // Ends when the caller cancels, as the real one does.
                 cancelled.await()
                 findAccepted
             },
@@ -91,8 +84,7 @@ class GarminWatchActionsControllerTest {
 
     @Test
     fun `find is a toggle - a second tap stops it`() = runTest {
-        // The watch alerts for a minute unless cancelled, so the control that
-        // starts it has to be the one that stops it.
+        // The watch alerts for a minute unless cancelled, so the control that starts it stops it.
         val watch = addWatch()
         val (controller, _) = harness()
 
@@ -109,8 +101,7 @@ class GarminWatchActionsControllerTest {
 
     @Test
     fun `stopping twice before the watch answers does not throw`() = runTest {
-        // Stop stays enabled until the watch acknowledges the cancel — a full
-        // round trip — so an impatient second tap lands inside that window.
+        // Stop stays enabled until the watch acknowledges, so a second tap lands inside that window.
         val watch = addWatch()
         val (controller, _) = harness()
 
@@ -128,9 +119,7 @@ class GarminWatchActionsControllerTest {
 
     @Test
     fun `a refused find is reported as a flag, not a message`() = runTest {
-        // The wording belongs to the screen; this layer has no localizations,
-        // and one that invented an English string would leak it into every
-        // locale.
+        // The wording belongs to the screen; this layer has no localizations.
         val watch = addWatch()
         findAccepted = false
         val (controller, _) = harness()
@@ -146,13 +135,11 @@ class GarminWatchActionsControllerTest {
 
     @Test
     fun `a find is refused while a sync holds the radio`() = runTest {
-        // One radio: the sync state lives in the shared controller, and a
-        // find must stand down while a sync is running.
+        // One radio: a find must stand down while a sync runs.
         val watch = addWatch()
         val (controller, syncController) = harness()
         val syncing = syncController.syncDevice(watch.id)
-        // The sync sets its state synchronously before the first await, so
-        // the radio reads as busy the instant we try to find.
+        // The sync sets its state before the first await, so the radio reads busy at once.
         assertTrue(syncController.state.value.isSyncing)
 
         val find = controller.toggleFind(watch.id)

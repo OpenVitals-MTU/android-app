@@ -502,12 +502,9 @@ class ActivityRepositoryImpl @Inject constructor(
     }
 
     /**
-     * The cached daily calories-burned series, or null to fall through to the
-     * live read. The cache stores only positive recorded-total days, so it can
-     * neither serve ranges predating its lookback window (cached emptiness
-     * there would be a lie) nor the OpenVitals-calculated-calories mode (the
-     * caller checks that before asking). Missing days zero-fill so consumers
-     * see the same full-range series the live read produces.
+     * The cached daily calories-burned series, or null to fall through. The
+     * cache serves neither ranges before its window nor calculated-calories
+     * mode. Missing days zero-fill.
      */
     private suspend fun cachedCaloriesBurned(start: LocalDate, end: LocalDate): List<DailyNutrition>? {
         val dao = cacheDao ?: return null
@@ -548,11 +545,7 @@ class ActivityRepositoryImpl @Inject constructor(
         }.getOrNull()?.atZone(ZoneId.systemDefault())?.toLocalDate()
     }
 
-    /**
-     * The app never writes TotalCaloriesBurned itself, but a workout changes
-     * what Health Connect derives for its day — patch those days so the cached
-     * year view agrees with the write immediately.
-     */
+    /** A workout changes what Health Connect derives for its day; patch those days. */
     private suspend fun afterActivityWrite(days: Set<LocalDate>) {
         caloriesSync?.patchDays(days)
     }
@@ -674,8 +667,7 @@ class ActivityRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping updateActivityEntry missingCount=${missingPermissions.size}")
             throw SecurityException("Missing Health Connect activity write permission.")
         }
-        // The pre-edit day is captured first so a workout moved across midnight
-        // patches both the day it left and the day it landed on.
+        // The pre-edit day is captured first, so a move across midnight patches both days.
         val oldDay = dayOfActivity(id)
         hc.updateActivityEntry(id, request)
         val newDay = request.startTime.atZone(ZoneId.systemDefault()).toLocalDate()

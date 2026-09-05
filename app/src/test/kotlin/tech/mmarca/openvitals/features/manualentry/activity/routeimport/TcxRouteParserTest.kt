@@ -24,15 +24,8 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 
 /**
- * TCX — the format Strava and Garmin export an INDOOR activity as, and the one
- * the app could not read.
- *
- * A user reporting "GPX route must contain at least 2 timestamped location
- * points" on an indoor activity was usually holding a TCX. It is XML, so it
- * fell through the dispatcher into the GPX parser, which looked for `trkpt`,
- * found none, and blamed the file — while the file was carrying a complete
- * session: duration, distance, calories, heart rate and cadence, with the
- * `Position` element that a GPX cannot live without simply absent.
+ * TCX, the format Strava and Garmin export an indoor activity as. It is XML, so it fell
+ * into the GPX parser, which found no `trkpt` and blamed the file.
  */
 class TcxRouteParserTest {
 
@@ -60,9 +53,7 @@ class TcxRouteParserTest {
         assertEquals(15_000.0, parsed.distanceMeters, 0.001)
         assertEquals(1800L, parsed.durationSeconds)
         assertEquals(420.0, parsed.totalCaloriesKcal!!, 0.001)
-        // TCX has no active-calorie field, so active stays unknown rather than
-        // being invented — an estimate placed beside a measured total is what
-        // made every routeless FIT file unsavable.
+        // TCX has no active-calorie field, so active stays unknown rather than invented.
         assertNull(parsed.activeCaloriesKcal)
         assertEquals(Instant.parse("2026-01-14T18:30:00Z"), parsed.startTime)
         assertEquals(Instant.parse("2026-01-14T19:00:00Z"), parsed.endTime)
@@ -75,8 +66,7 @@ class TcxRouteParserTest {
             listOf(110L, 142L, 138L),
             parsed.bleSamples.heartRateSamples.map { it.beatsPerMinute },
         )
-        // A bike's cadence is PEDALLING cadence: a different Health Connect
-        // record from a runner's steps, and the sport is what decides which.
+        // A bike's cadence is pedalling cadence, a different record from a runner's steps.
         assertEquals(
             listOf(85L, 92L, 88L),
             parsed.bleSamples.cyclingCadenceSamples.map { it.rpm },
@@ -111,8 +101,7 @@ class TcxRouteParserTest {
         assertEquals(2_000.0, parsed.distanceMeters, 0.001)
         assertEquals(150.0, parsed.totalCaloriesKcal!!, 0.001)
         assertEquals(3, parsed.bleSamples.heartRateSamples.size)
-        // A runner's TCX cadence counts ONE foot: 82 is 164 steps a minute, and
-        // every watch that reads it doubles it back.
+        // A runner's TCX cadence counts one foot: 82 is 164 steps a minute.
         assertEquals(
             listOf(164L, 172L, 168L),
             parsed.bleSamples.stepsCadenceSamples.map { it.stepsPerMinute },
@@ -130,9 +119,7 @@ class TcxRouteParserTest {
     }
 
     @Test fun `a TCX is recognised by its CONTENT not its extension`() {
-        // The dispatcher sniffs. A .tcx renamed to .gpx used to die in the GPX
-        // parser with a message about location points — the very report that
-        // started this.
+        // The dispatcher sniffs: a .tcx renamed to .gpx used to die in the GPX parser.
         val bytes = requireNotNull(javaClass.getResourceAsStream("/tcx/indoor_ride.tcx")) {
             "Missing fixture /tcx/indoor_ride.tcx"
         }.use { it.readBytes() }

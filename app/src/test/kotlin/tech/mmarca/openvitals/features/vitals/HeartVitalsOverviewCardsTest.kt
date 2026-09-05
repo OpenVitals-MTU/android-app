@@ -29,11 +29,7 @@ import tech.mmarca.openvitals.features.heart.HeartUiState
 import tech.mmarca.openvitals.features.heart.bloodPressureStats
 import tech.mmarca.openvitals.features.heart.heartRateTimelineStats
 
-/**
- * Port of test/features/vitals/heart_vitals_overview_display_test.dart. Kotlin
- * derives these card values in the overview layer rather than in one display
- * object, so the test calls the same pure helpers the screen calls.
- */
+/** The overview card values, through the same pure helpers the screen calls. */
 class HeartVitalsOverviewCardsTest {
 
     private val formatter = UnitFormatter(
@@ -73,7 +69,7 @@ class HeartVitalsOverviewCardsTest {
     private fun point(date: LocalDate, value: Double, count: Int) =
         DailyVitalPoint(date = date, value = value, count = count)
 
-    // ─── heart rate ───────────────────────────────────────────────────────────
+    // Heart rate.
 
     @Test fun `a day of samples sorts oldest first and averages them`() {
         val state = HeartUiState(
@@ -114,14 +110,13 @@ class HeartVitalsOverviewCardsTest {
         assertEquals(71L, summary.average) // (70 + 72) / 2.
         assertEquals(55L, summary.min)
         assertEquals(120L, summary.max)
-        // The card prints the same mean; a period draws no intraday timeline and
-        // names no source.
+        // A period draws no intraday timeline and names no source.
         assertEquals("71", state.averageHeartRateValue(formatter)?.value)
         assertNull(state.daySamples.sourceForDay(TimeRange.WEEK))
         assertNull(heartRateRangeSummary(emptyList()))
     }
 
-    // ─── resting heart rate and HRV ───────────────────────────────────────────
+    // Resting heart rate and HRV.
 
     @Test fun `a day reads the provider aggregate not the daily series`() {
         val state = HeartUiState(
@@ -149,7 +144,7 @@ class HeartVitalsOverviewCardsTest {
         assertNull(state.restingHeartRateValue(formatter))
     }
 
-    // ─── cardiovascular ───────────────────────────────────────────────────────
+    // Cardiovascular.
 
     @Test fun `blood pressure sorts counts and takes the latest reading`() {
         val entries = listOf(bp(18, 128, 82), bp(8, 118, 76))
@@ -188,15 +183,14 @@ class HeartVitalsOverviewCardsTest {
             spO2Daily = listOf(point(monday, 95.0, 1), point(tuesday, 98.0, 3)),
         )
 
-        // One vote per day: (95 + 98) / 2 = 96.5, not the count-weighted
-        // (95*1 + 98*3) / 4 = 97.25 that let a well-sampled day outvote the rest.
+        // One vote per day: (95 + 98) / 2 = 96.5, not the count-weighted 97.25.
         assertEquals(96.5, state.spO2Daily.dailyMeanOrNull()!!, 1e-9)
         assertEquals(4, state.spO2Daily.totalReadings())
         assertNull(emptyList<DailyVitalPoint>().dailyMeanOrNull())
         assertEquals(0, emptyList<DailyVitalPoint>().totalReadings())
     }
 
-    // ─── vo2 max ──────────────────────────────────────────────────────────────
+    // VO2 max.
 
     @Test fun `vo2 max sorts counts and takes the latest reading`() {
         val entries = listOf(
@@ -217,14 +211,13 @@ class HeartVitalsOverviewCardsTest {
         val daily = listOf(point(monday, 42.0, 1), point(tuesday, 44.0, 2))
         val entries = daily.toVo2MaxEntries()
 
-        // One synthetic point per day, in date order; the card's readings total
-        // the raw counts, not the number of synthetic points.
+        // One synthetic point per day; the card totals the raw counts.
         assertEquals(listOf(42.0, 44.0), entries.map { it.vo2MaxMlPerKgPerMin })
         assertEquals(3, daily.totalReadings())
         assertTrue(entries.hasRenderableChartData(TimeRange.WEEK) { it.time })
     }
 
-    // ─── body temperature ─────────────────────────────────────────────────────
+    // Body temperature.
 
     @Test fun `body temperature counts its readings and takes the latest`() {
         val entries = listOf(
@@ -248,7 +241,7 @@ class HeartVitalsOverviewCardsTest {
         assertEquals(listOf(36.4, 36.9), entries.map { it.temperatureCelsius })
     }
 
-    // ─── skin temperature ─────────────────────────────────────────────────────
+    // Skin temperature.
 
     @Test fun `skin temperature charts a daily delta point per day with a daily mean`() {
         val daily = listOf(point(monday, -0.2, 2), point(tuesday, 0.4, 1))
@@ -258,8 +251,7 @@ class HeartVitalsOverviewCardsTest {
 
         assertEquals(2, chartEntries.size)
         assertEquals(listOf(-0.2, 0.4), chartEntries.map { it.averageDeltaCelsius })
-        // One vote per day: (-0.2 + 0.4) / 2 = 0.1, not the count-weighted
-        // (-0.2*2 + 0.4*1) / 3 = 0.0.
+        // One vote per day: (-0.2 + 0.4) / 2 = 0.1, not the count-weighted 0.0.
         assertEquals(0.1, daily.dailyMeanOrNull()!!, 1e-9)
     }
 
@@ -279,10 +271,8 @@ class HeartVitalsOverviewCardsTest {
     }
 
     @Test fun `a delta-less newest entry does not blank the card (day)`() {
-        // The card used to read the newest entry of the UNFILTERED list, so one
-        // reading arriving without a delta emptied it while its own chart still
-        // plotted the readings that had one. It now reads the newest entry that
-        // actually carries a delta: the same population the chart draws.
+        // The card used to read the newest entry of the unfiltered list, so a delta-less reading emptied it.
+        // It now reads the newest entry that carries a delta, the population the chart draws.
         val entries = listOf(skin(8, 0.4), skin(20, null))
         val state = HeartUiState(
             selectedRange = TimeRange.DAY,
@@ -315,7 +305,7 @@ class HeartVitalsOverviewCardsTest {
         )
     }
 
-    // ─── an empty period ──────────────────────────────────────────────────────
+    // An empty period.
 
     @Test fun `an empty period derives an empty display section by section`() {
         val state = HeartUiState(selectedRange = TimeRange.WEEK, isLoading = false)

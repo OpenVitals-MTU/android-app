@@ -86,8 +86,7 @@ class SleepReportTest {
             "barely",
             barelyStagedStart,
             at(4, 7),
-            // One 30-minute stage over an 8-hour span: coverage far below the
-            // reliability floor, so it must not pollute the mix.
+            // One 30-minute stage over 8 hours: coverage far below the floor, so it must not pollute the mix.
             stages = listOf(
                 SleepStage(barelyStagedStart, barelyStagedStart.plus(Duration.ofMinutes(30)), SleepStage.STAGE_AWAKE),
             ),

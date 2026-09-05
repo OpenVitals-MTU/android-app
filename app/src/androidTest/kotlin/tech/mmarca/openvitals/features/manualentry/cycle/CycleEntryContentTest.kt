@@ -22,11 +22,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * The cycle day-log shows ONE section at a time: a category picker chooses
- * which record type is being logged, and only that section's inputs render.
- * Edit mode scopes to the record being edited with no picker at all — an edit
- * that rendered the other sections would silently write records the user
- * never meant to touch.
+ * The cycle day-log shows one section at a time. Edit mode scopes to the record being edited,
+ * or it would write records the user never meant to touch.
  */
 class CycleEntryContentTest {
 
@@ -83,9 +80,7 @@ class CycleEntryContentTest {
             .performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText(string(R.string.cycle_observation_basal_body_temperature))
             .performScrollTo().assertIsDisplayed()
-        // ...but only the selected category's input renders — as a collapsed
-        // dropdown showing "Not specified". Exactly one: the other sections'
-        // dropdowns are not in the tree at all.
+        // Only the selected category's input renders, as a collapsed dropdown. Exactly one.
         composeRule.onAllNodesWithText(string(R.string.option_not_specified))
             .assertCountEquals(1)
         composeRule.onNodeWithText(string(R.string.cycle_entry_section_spotting))
@@ -125,8 +120,7 @@ class CycleEntryContentTest {
 
         composeRule.onNodeWithText(string(R.string.cycle_entry_bbt_location))
             .performScrollTo().assertIsDisplayed()
-        // "Period flow" appears once — the category chip. If the flow section
-        // rendered too, its dropdown label would make it two.
+        // "Period flow" appears once, as the chip. If the flow section rendered too, it would be two.
         composeRule.onAllNodesWithText(string(R.string.cycle_entry_section_flow))
             .assertCountEquals(1)
     }

@@ -11,10 +11,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Splitting a night window's sessions into the one night and its naps, the
- * wall-clock duration of that night, and the union sweep the duration rests on.
- */
+/** Splitting a night window's sessions into the night and its naps, and the wall-clock duration of the night. */
 class SleepNightSplitTest {
 
     private val zone: ZoneId = ZoneOffset.UTC
@@ -35,7 +32,7 @@ class SleepNightSplitTest {
         source = "fitbit",
     )
 
-    // --- splitNightAndNaps ---
+    // splitNightAndNaps.
 
     @Test fun `splitNightAndNaps keeps a night broken by a short early-morning wake together`() {
         // 23:43->05:37 then 07:17->09:33: a 1h40m wake, one night.
@@ -72,7 +69,7 @@ class SleepNightSplitTest {
         assertEquals(emptyList<String>(), split.naps.map { it.id })
     }
 
-    // --- dailySleepSummary: night only, wall-clock ---
+    // dailySleepSummary: night only, wall-clock.
 
     @Test fun `dailySleepSummary sums the night segments in wall-clock and excludes a nap`() {
         val a = s("a", t(2026, 7, 11, 23, 43), t(2026, 7, 12, 5, 37)) // 5h54
@@ -112,8 +109,7 @@ class SleepNightSplitTest {
     }
 
     @Test fun `dailySleepSummary counts overlapping night sessions once (union, not sum)`() {
-        // The reported pair, had it slipped past dedup: 1:15-6:40 and 1:16-7:28.
-        // Sum would be 11h37m; the union (1:15-7:28) is 6h13m.
+        // The reported pair: 1:15-6:40 and 1:16-7:28. Sum would be 11h37m; the union is 6h13m.
         val a = s("a", t(2026, 7, 14, 1, 15), t(2026, 7, 14, 6, 40))
         val b = s("b", t(2026, 7, 14, 1, 16), t(2026, 7, 14, 7, 28))
 
@@ -122,7 +118,7 @@ class SleepNightSplitTest {
         assertEquals(Duration.ofHours(6).plusMinutes(13).toMillis(), summary!!.durationMs)
     }
 
-    // --- sleepSessionsUnionMs ---
+    // sleepSessionsUnionMs.
 
     @Test fun `sleepSessionsUnionMs counts overlapping intervals shared time once`() {
         val a = s("a", t(2026, 7, 14, 1, 15), t(2026, 7, 14, 6, 40))

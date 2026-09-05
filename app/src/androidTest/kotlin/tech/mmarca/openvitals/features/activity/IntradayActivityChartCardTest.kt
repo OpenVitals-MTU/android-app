@@ -17,15 +17,8 @@ import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the `MetricDayChart` widget cases of Flutter's
- * `test/ui/charts/metric_day_chart_test.dart`.
- *
- * Flutter has one card with a `shape` switch; Kotlin's cumulative half is
- * [IntradayActivityChartCard], the card six features share. The shapes
- * themselves are pinned as arithmetic by `ChartTimeAxesTest`; what only a device
- * can answer is whether a day with nothing in it says so instead of drawing an
- * empty plot, and whether a day that does have readings gets the hour row that
- * makes the plot mean anything.
+ * [IntradayActivityChartCard], shared by six features. A day with nothing must say so instead
+ * of drawing an empty plot, and a day with readings gets the hour row.
  */
 class IntradayActivityChartCardTest {
 
@@ -39,8 +32,7 @@ class IntradayActivityChartCardTest {
         composeRule
             .onNodeWithText(string(R.string.summary_empty_day, EMPTY_LABEL))
             .assertIsDisplayed()
-        // No plot means no hour row either: a `00:00 … 24:00` strip under
-        // nothing would describe a chart that is not there.
+        // No plot means no hour row either.
         composeRule.onNodeWithText(NOON).assertDoesNotExist()
     }
 

@@ -66,9 +66,7 @@ class HydrationReminderControllerTest {
     }
 
     @Test fun `the anchor read spans back into yesterday, not just today`() = runTest {
-        // A drink at 23:50 must still anchor the schedule after midnight — a
-        // today-only read made the pre-midnight intake vanish at 00:10 and let
-        // an early reminder fire from the window start.
+        // A drink at 23:50 must still anchor the schedule after midnight.
         every { preferencesRepository.hydrationDailyGoalLiters } returns 2.0
         coEvery { hydrationRepository.loadDailyHydration(any(), any()) } returns emptyList()
         coEvery { hydrationRepository.loadHydrationEntries(any(), any()) } returns emptyList()
@@ -82,9 +80,7 @@ class HydrationReminderControllerTest {
     }
 
     @Test fun `an intake read failure counts as zero and still schedules`() = runTest {
-        // `runCatching { … }.getOrDefault(0.0)`: the user still gets reminded
-        // when Health Connect cannot be read. The failure path logs, and
-        // android.util.Log has no JVM body, so it is stubbed out here.
+        // The user still gets reminded when Health Connect cannot be read. Log has no JVM body.
         mockkStatic(Log::class)
         every { Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
         every { preferencesRepository.hydrationDailyGoalLiters } returns 2.0
@@ -104,8 +100,7 @@ class HydrationReminderControllerTest {
     }
 
     @Test fun `logging a drink re-anchors and reschedules`() = runTest {
-        // The entry screen re-applies the persisted config after a save; that
-        // is the Kotlin equivalent of Flutter's onHydrationLogged hook.
+        // The entry screen re-applies the persisted config after a save.
         every { preferencesRepository.hydrationReminderConfig() } returns
             HydrationReminderConfig(enabled = true)
         every { preferencesRepository.hydrationDailyGoalLiters } returns 2.0
@@ -191,16 +186,14 @@ class HydrationReminderControllerTest {
         controller.handleQuickAdd(350.0)
         mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
 
-        // The size is still remembered — same rule as the entry screen — but a
-        // refused write must not re-anchor the countdown.
+        // The size is still remembered, but a refused write must not re-anchor the countdown.
         verify { hydrationRepository.recordRecentHydrationAmountMilliliters(350.0) }
         coVerify(exactly = 0) { hydrationRepository.writeHydrationEntry(any()) }
         verify(exactly = 0) { alarmManager.schedule(any()) }
     }
 
     @Test fun `a failing re-anchor never fails the logged drink`() = runTest {
-        // The re-anchor logs and swallows, and android.util.Log has no JVM body,
-        // so it is stubbed out here.
+        // The re-anchor logs and swallows; Log has no JVM body.
         mockkStatic(Log::class)
         every { Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
         every { hydrationRepository.setLastCustomHydrationAmountMilliliters(any()) } returns Unit
@@ -235,10 +228,7 @@ class HydrationReminderControllerTest {
     }
 
     @Test fun `concurrent applies serialize instead of interleaving`() = runTest {
-        // Both applies suspend on the same repository reads between choosing a
-        // config and arming the alarm. Interleaved, whichever finishes last
-        // arms its alarm — so a user nudging the interval twice could be left
-        // on the value they just moved away from.
+        // Both applies suspend on the same reads. Interleaved, whichever finishes last arms its alarm.
         every { preferencesRepository.hydrationDailyGoalLiters } returns 2.0
         coEvery { hydrationRepository.loadHydrationEntries(any(), any()) } returns emptyList()
 
@@ -247,9 +237,7 @@ class HydrationReminderControllerTest {
         coEvery { hydrationRepository.loadDailyHydration(any(), any()) } coAnswers {
             inFlight++
             if (inFlight > 1) overlapped = true
-            // A real suspension: `yield()` is a no-op on an unconfined
-            // dispatcher whose queue is empty, so the probe never actually
-            // parked here and the overlap assertion could not fail.
+            // A real suspension: `yield()` is a no-op on an empty unconfined queue.
             delay(10)
             inFlight--
             listOf(DailyHydration(LocalDate.now(), 0.5))

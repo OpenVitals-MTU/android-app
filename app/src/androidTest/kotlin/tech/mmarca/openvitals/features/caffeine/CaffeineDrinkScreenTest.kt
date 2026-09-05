@@ -22,14 +22,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of Flutter's `test/features/caffeine/caffeine_drink_screen_test.dart`.
- *
- * This screen deliberately loads nothing of its own — it reads the entry list
- * the caffeine screen already loaded, so the two can never disagree about which
- * coffees exist. That makes its failure mode structural: an id that is no
- * longer in that list (deleted while the screen was open, or followed from a
- * stale link) must say "no data" rather than silently show someone else's
- * drink, which would have the user reading the wrong dose.
+ * This screen reads the entry list the caffeine screen loaded. An id no longer in that list
+ * must say "no data" rather than show someone else's drink.
  */
 class CaffeineDrinkScreenTest {
 
@@ -41,11 +35,9 @@ class CaffeineDrinkScreenTest {
         val titles = mutableListOf<String?>()
         setScreen(entryId = FLAT_WHITE.id, onTitleChanged = { titles += it })
 
-        // The name reaches the toolbar through the caller, so this is where a
-        // regression would show up as an untitled detail screen.
+        // The name reaches the toolbar through the caller.
         composeRule.waitUntil(TIMEOUT_MS) { titles.contains(FLAT_WHITE.name) }
-        // The dose is the whole reason someone taps a row: 128 mg of coffee at
-        // 4pm is a different decision from 40 mg of tea.
+        // The dose is the whole reason someone taps a row.
         val dose = FORMATTER.count(FLAT_WHITE.caffeineMg.toInt())
         composeRule.waitUntil(TIMEOUT_MS) {
             composeRule.onAllNodesWithText(dose, substring = true)
@@ -64,8 +56,7 @@ class CaffeineDrinkScreenTest {
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
-        // Falling back to "the first drink we have" would be worse than an
-        // error: the user would read a stranger's dose as their own.
+        // Falling back to the first drink would have the user read a stranger's dose.
         composeRule.onNodeWithText(FLAT_WHITE.name!!).assertDoesNotExist()
         assertEquals(listOf<String?>(null), titles.distinct())
     }

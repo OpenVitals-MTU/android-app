@@ -68,8 +68,7 @@ class BodyEnergyPresentationMapperTest {
 
         val bar = timeline.toBodyEnergyDisplayState().influenceBars.single()
 
-        // The applied activity drain is the STRONGER of the two estimates, not
-        // their sum: they describe the same movement from different sensors.
+        // The applied activity drain is the stronger of the two estimates, not their sum.
         assertEquals(1.5 + 0.11 + 0.2 + 0.07, bar.drain, 0.0001)
     }
 
@@ -113,9 +112,7 @@ class BodyEnergyPresentationMapperTest {
 
         val reasons = timeline.toBodyEnergyDisplayState().topReasons
 
-        // Charge and drain compete in ONE ranking, biggest amount first; the
-        // smaller contributors (quiet rest 0.8, recovery debt 0.6) fall off the
-        // three-slot list entirely.
+        // Charge and drain compete in one ranking; the smaller contributors fall off the three-slot list.
         assertEquals(
             listOf(
                 BodyEnergyPrimaryInfluence.EXERTION,
@@ -157,8 +154,7 @@ class BodyEnergyPresentationMapperTest {
     fun `activity drain reads as everyday movement when calories carried it`() {
         val timeline = timeline(
             points = listOf(
-                // Calories over heart rate: a 20k-step day the wrist never
-                // noticed.
+                // Calories over heart rate: a 20k-step day the wrist never noticed.
                 point(minutes = 0, score = 49, intensityDrain = 0.2, activityEnergyDrain = 1.4),
                 point(minutes = 5, score = 48, intensityDrain = 0.2, activityEnergyDrain = 1.1),
             )
@@ -186,10 +182,7 @@ class BodyEnergyPresentationMapperTest {
 
     @Test
     fun `basal drain is reported as a steady reason across the day`() {
-        // Basal never wins a single bucket — it is deliberately excluded from
-        // that competition — but summed over a quiet day it is often the only
-        // thing that happened, and a card that could not say so would have
-        // nothing to explain the decline with.
+        // Basal never wins a bucket, but summed over a quiet day it is often the only thing that happened.
         val timeline = timeline(
             points = (0 until 24).map { index ->
                 point(minutes = index * 5L, score = 50 - index / 4, basalDrain = 0.11)
@@ -245,9 +238,7 @@ class BodyEnergyPresentationMapperTest {
 
     @Test
     fun `a chain gap reads as missing rather than as a fresh start`() {
-        // The predecessor exists but is too far back to trust, which is not the
-        // same as never having had one — the row has to say so or the reset
-        // looks like lost data.
+        // A predecessor too far back to trust is not the same as never having one; the row must say so.
         val row = previousScoreRow(
             BodyEnergyInputSummary(seedSource = BodyEnergySeedSource.CHAIN_GAP, previousEndScore = 41)
         )

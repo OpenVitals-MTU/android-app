@@ -16,15 +16,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the loaded-content case of Flutter's
- * `test/features/recovery/recovery_screen_test.dart` (Kotlin's counterpart of
- * that screen is `StressDetailsScreen`).
- *
- * Physiological stress is the app's most easily over-read number: it looks like
- * a measurement of how stressed someone is, and it is an HRV-and-heart-rate
- * strain estimate. So the card has to carry its level and its confidence
- * together, and the inputs list has to say when it had nothing to list rather
- * than render as a card with a heading and a void under it.
+ * Physiological stress is an HRV-and-heart-rate strain estimate, easily over-read. The card
+ * carries its level and confidence together, and the inputs list says when it had nothing.
  */
 class StressDetailsContentTest {
 
@@ -41,8 +34,7 @@ class StressDetailsContentTest {
         composeRule.onNodeWithText(string(R.string.screen_stress_tracking)).assertIsDisplayed()
         composeRule.onNodeWithText("28/100").assertIsDisplayed()
         composeRule.onNodeWithText(string(R.string.stress_label_low)).assertIsDisplayed()
-        // Level and confidence travel together: a strain estimate shown without
-        // how sure it is reads as a measurement.
+        // Level and confidence travel together.
         composeRule
             .onNodeWithText(
                 "${string(R.string.cardio_load_confidence_high)} · " +
@@ -53,10 +45,7 @@ class StressDetailsContentTest {
 
     @Test
     fun anEstimateWithNoListedInputsSaysSoInsteadOfShowingAnEmptyCard() {
-        // The estimate arrives with no factor lines and no coverage lines — the
-        // ordinary case for a day with thin HRV data. Both cards must name that
-        // absence, because "no inputs shown" and "inputs we forgot to render"
-        // look identical to a user otherwise.
+        // No factor lines and no coverage lines, the ordinary case for thin HRV data. Both cards must name the absence.
         setContent()
 
         scrollTo(string(R.string.stress_details_no_inputs))

@@ -17,52 +17,25 @@ import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 
 /**
- * The 5-minute-bucket Body Energy timeline algorithm.
+ * The 5-minute-bucket Body Energy timeline.
  *
- * The original model derived drain purely from heart-rate zones, with no basal
- * cost and a daytime rest charge. That under-drained active days (a 20k-step,
- * low-heart-rate day read ~75 when it felt like 10%). V3 reframed it as an
- * energy balance — a basal waking floor plus an activity drain that is the
- * stronger of the heart-rate-zone estimate and an active-calorie estimate.
- *
- * Research: the activity-drain component is heart-rate-zone training load
- * (Banister TRIMP, https://pmc.ncbi.nlm.nih.gov/articles/PMC6561225/;
- * training-load monitoring review, https://pmc.ncbi.nlm.nih.gov/articles/PMC4213373/),
- * taken as the stronger of the zone estimate and an active-calorie estimate; the
- * basal floor is resting metabolism. The energy-balance framing is a documented
- * product design, not a single published model.
+ * An energy balance: a basal waking floor plus an activity drain, the stronger
+ * of the heart-rate-zone estimate (Banister TRIMP,
+ * https://pmc.ncbi.nlm.nih.gov/articles/PMC6561225/) and an active-calorie
+ * estimate. The framing is a product design, not a published model.
  */
 const val BodyEnergyTimelineBucketMinutes = 5L
 
-/**
- * v11: the manual resting and max heart rate inputs were removed, so the zone
- * ladder is derived from observed data for everyone. Anyone who had typed a
- * maximum gets a different ladder and a different score, and the confidence rule
- * changed with it, so every stored day has to be recomputed.
- */
+/** Bump when a change means every stored day must be recomputed. */
 const val BodyEnergyTimelineAlgorithmVersion = 12
 
-/**
- * The score a day starts on when there is no previous day to carry from — a
- * brand-new install, or a chain gap too wide to close. Not a default for a day
- * that *does* have a predecessor: the whole point of the chain is that midnight
- * is not a reset.
- */
+/** Start score when there is no previous day to carry from. */
 const val BodyEnergyNeutralStartScore = 50
 
 /**
- * Floor applied to a *carried* seed, so one over-drawn day cannot pin the chain
- * at zero forever.
- *
- * A product guard, not a physiological derivation (the energy-balance framing
- * above is itself a design, not a published model). Charge is sleep-dominated
- * and caps near +45 across a full night, while drain is unbounded — a heavy day
- * can accumulate 200 points of it. Zero is therefore an absorbing state: once a
- * day ends there, every later day would start there too. 10 sits unambiguously
- * inside the "Low" band, so it never flatters a depleted user, and leaves ~7
- * hours of basal drain of headroom so the next morning is not already pinned
- * before breakfast. Applies only to a carried seed — never to
- * [BodyEnergyNeutralStartScore], and never to a score computed within a day.
+ * Floor for a carried seed. Charge caps near +45 a night while drain is
+ * unbounded, so zero would be an absorbing state. 10 stays in the "Low" band
+ * and leaves about 7 hours of basal headroom.
  */
 const val BodyEnergyCarryOverFloor = 10
 
@@ -70,94 +43,45 @@ const val BodyEnergyCarryOverFloor = 10
 private const val SleepPointsPerMinute = 0.10
 
 /**
- * How far a night's QUALITY may scale its charge, either side of neutral.
- *
- * The charge already counted the minutes slept and already read overnight HRV;
- * what it never read was how well those minutes went. Two nights of the same
- * length — one unbroken with a full deep/REM share, one shallow and repeatedly
- * awake — charged within a couple of points of each other, which is not what
- * the following day feels like.
- *
- * ±20%: enough that a good night and a poor one of equal length land ten to
- * fifteen points apart, and bounded so a single night of broken staging cannot
- * undo eight hours actually slept. Duration stays the dominant term, which it
- * should be.
+ * How far a night's quality scales its charge. ±20% separates a good and a
+ * poor night of equal length by 10-15 points without undoing the hours slept.
  */
 private const val SleepQualitySwing = 0.20
 
 /**
- * The quality fraction an ordinary night scores, and how far either side of it
- * the pillar realistically travels.
+ * The quality fraction of an ordinary night, and the span to full effect.
  *
- * NOT the pillar's arithmetic midpoint. Half of full marks sounds like the
- * neutral point and is not: efficiency alone earns its full share above 85%,
- * which most nights clear, so a genuinely broken night — an hour awake, almost
- * no deep sleep — still scores about 0.59 and would have been rewarded for it.
- * Centring on the theoretical middle would have charged nearly every night a
- * bonus and called it neutral.
- *
- * 0.72 is a decent night on the continuous read — good efficiency, a little
- * time awake, a reasonable deep and REM share — and it charges exactly what it
- * charged before this factor existed. That matters beyond taste: [BodyEnergyCalibration.sleepChargeGain]
- * is fitted against watch readings, and a factor that sat above neutral on the
- * ordinary night would inflate every night rather than tell them apart, leaving
- * the fit to undo it for watch owners and nobody to undo it for everyone else.
- *
- * The ±0.32 span reaches full penalty at 0.40 — an hour awake with almost no
- * deep sleep — and full marks land near +18%, short of the clamp, so a flawless
- * night still reads above a merely good one instead of the two meeting at a
- * ceiling.
+ * Not the arithmetic midpoint: efficiency alone clears its full share on most
+ * nights, so a broken night still scores about 0.59. 0.72 is a decent night
+ * and charges what it did before this factor existed, which keeps
+ * [BodyEnergyCalibration.sleepChargeGain] honest. The span reaches full
+ * penalty at 0.40 and full marks near +18%, under the clamp.
  */
 private const val TypicalSleepQualityFraction = 0.72
 private const val SleepQualityFractionSpan = 0.32
 
 /**
- * Points charged per minute of genuinely quiet waking time.
- *
- * Recovering while awake is real but slower than sleep. Lowered from 0.02 when
- * the gate widened from "within 8 bpm of resting" to a share of heart-rate
- * reserve: the diagnostic showed the charge over-shooting where it did fire
- * (quiet-rest observations ran 13.8 points ABOVE the watch) while firing on only
- * one day in seven. Widening the band and lowering the rate are the same
- * correction read from both ends.
+ * Points charged per minute of quiet waking time. Lowered from 0.02 when the
+ * gate widened to a share of heart-rate reserve.
  */
 private const val RestPointsPerMinute = 0.012
 
 /**
- * How much of the heart-rate reserve still counts as quiet enough to recover.
- *
- * Fifteen percent: comfortably above the resting-plus-8 band that measured out
- * at essentially zero over a real week, and comfortably below zone 1 (thirty
- * percent), which would charge at a heart rate nearly thirty beats above
- * resting. Being a fraction, it moves with the person.
+ * Share of heart-rate reserve that still counts as quiet. Above the old
+ * resting-plus-8 band, below zone 1, and it moves with the person.
  */
 private const val RestChargeReserveCeiling = 0.15
 
-/**
- * Points of Body Energy drained per minute of basal metabolism while awake.
- * ~0.022 accrues roughly 20 points across a 16-hour waking day, so the line
- * always trends gently down when nothing else is happening.
- */
+/** Basal drain per waking minute: about 20 points over a 16-hour day. */
 private const val BasalPointsPerMinute = 0.022
 
-/**
- * Reference BMR the basal drain is calibrated around; a higher measured BMR
- * drains proportionally faster (bounded).
- */
+/** Reference BMR; a higher measured BMR drains proportionally faster. */
 private const val ReferenceBmrKcalPerDay = 1600.0
 
-/**
- * Points of Body Energy drained per kilocalorie of active energy expenditure.
- * Chosen so a heavy ~700 active-kcal day contributes ~40 points of drain.
- */
+/** Drain per active kilocalorie: a heavy 700 kcal day is about 40 points. */
 private const val ActiveKcalToPoints = 0.06
 
-/**
- * Fallback conversion for buckets whose activity progress carries STEPS but no
- * active-calorie figure (a phone pedometer writing bare step counts into Health
- * Connect). ~0.04 kcal per step is the common walking approximation; it only
- * substitutes when the calorie series is silent, never adds to it.
- */
+/** Fallback when a bucket has steps but no calories. Never added on top. */
 private const val KcalPerStep = 0.04
 
 enum class BodyEnergyConfidence {
@@ -186,24 +110,15 @@ enum class BodyEnergyPrimaryInfluence {
     STEADY,
 }
 
-/**
- * Where a day's starting score came from. Surfaced in the UI so a reset is
- * always explicable rather than looking like lost data.
- */
+/** Where a day's starting score came from. Shown in the UI. */
 enum class BodyEnergySeedSource {
-    /**
-     * No previous day to carry from — a first run, or every stored day
-     * invalidated by a calibration or algorithm change.
-     */
+    /** No previous day to carry from. */
     NEUTRAL,
 
     /** The previous day's end score, chained across midnight. */
     CARRIED_OVER,
 
-    /**
-     * A stored day exists but too far back to chain within the read budget, so
-     * this day starts neutral. A background chain sync closes the gap.
-     */
+    /** A stored day exists but is too far back to chain. A background sync closes the gap. */
     CHAIN_GAP,
 }
 
@@ -215,9 +130,7 @@ enum class BodyEnergyCalibrationMode {
 
 /**
  * Which sentence [BodyEnergyTimeline.confidenceReason] is. The English string
- * stays canonical (and is what the store persists), the UI renders the code
- * through its string catalog. [LEGACY] marks a row stored before codes existed;
- * the UI falls back to the English text then.
+ * is persisted; the UI renders the code. [LEGACY] marks rows stored before codes.
  */
 enum class BodyEnergyReasonCode {
     LEGACY,
@@ -237,12 +150,9 @@ data class BodyEnergyTimelinePoint(
     val state: BodyEnergyBucketState,
     val confidence: BodyEnergyConfidence,
     val charge: Double = delta.coerceAtLeast(0.0),
-    /** Heart-rate-zone estimate of the activity drain (the backstop signal). */
+    /** Heart-rate-zone estimate of the activity drain. */
     val intensityDrain: Double = 0.0,
-    /**
-     * Active-calorie estimate of the activity drain. The drain actually applied
-     * for activity is [appliedActivityDrain].
-     */
+    /** Active-calorie estimate of the activity drain. See [appliedActivityDrain]. */
     val activityEnergyDrain: Double = 0.0,
     /** Basal metabolic drain while awake. */
     val basalDrain: Double = 0.0,
@@ -250,11 +160,7 @@ data class BodyEnergyTimelinePoint(
     val recoveryDebtDrain: Double = 0.0,
     val primaryInfluence: BodyEnergyPrimaryInfluence = BodyEnergyPrimaryInfluence.STEADY,
 ) {
-    /**
-     * The activity drain actually applied: the stronger of the heart-rate-zone
-     * and active-calorie estimates, never their sum. The two describe the same
-     * movement from different sensors, so adding them would bill it twice.
-     */
+    /** The stronger of the two activity estimates, never their sum. */
     val appliedActivityDrain: Double
         get() = maxOf(intensityDrain, activityEnergyDrain)
 }
@@ -273,11 +179,7 @@ data class BodyEnergyInputSummary(
     val hasHrvBaseline: Boolean = false,
     val hasRespiratoryBaseline: Boolean = false,
     val previousEndScore: Int? = null,
-    /**
-     * Whether [previousEndScore] was raised to [BodyEnergyCarryOverFloor] before
-     * seeding the day. Carried rather than recomputed by the UI so the stored
-     * row records what actually happened.
-     */
+    /** Whether [previousEndScore] was raised to [BodyEnergyCarryOverFloor]. */
     val carryOverFloorApplied: Boolean = false,
     val seedSource: BodyEnergySeedSource = BodyEnergySeedSource.NEUTRAL,
     val calibrationMode: BodyEnergyCalibrationMode = BodyEnergyCalibrationMode.AUTOMATIC,
@@ -298,12 +200,7 @@ data class BodyEnergyTimeline(
     val signature: String = "",
 ) {
     companion object {
-        /**
-         * A day the model could not compute. It still carries the chain: a day
-         * without heart-rate or sleep data is a day we know nothing about, not a
-         * day the user's energy reset — returning a flat 50 here would break
-         * every subsequent day's seed.
-         */
+        /** A day the model could not compute. It still carries the chain. */
         fun empty(
             date: LocalDate,
             reason: String,
@@ -328,31 +225,11 @@ data class BodyEnergyTimeline(
 }
 
 /**
- * The score a day starts on, given the previous day's end score.
+ * How much a night's quality scales its charge, up to [SleepQualitySwing]
+ * either side of 1.0.
  *
- * The single place the carry-over rules live: a missing predecessor means
- * [BodyEnergyNeutralStartScore], a present one is carried but floored at
- * [BodyEnergyCarryOverFloor]. Shared by the calculator and
- * [BodyEnergyTimeline.empty] so a data-less day seeds identically to a computed
- * one.
- */
-/**
- * How much a night's quality scales its charge: 1.0 for a night of ordinary
- * quality, up to [SleepQualitySwing] either side of that.
- *
- * Reads the sleep score's QUALITY pillar alone — efficiency, continuity and
- * stage architecture. Not the whole sleep score: its other two pillars are
- * duration and overnight HRV, and the charge already counts both, so folding
- * the score in whole would count them twice and make this a duration
- * multiplier in disguise.
- *
- * Neutral (exactly 1.0) for a night this cannot honestly judge: under an hour
- * slept, or no deep/REM staging. A source that writes only a start and an end
- * would otherwise score a flawless night by construction — its sleep duration
- * IS its time in bed, so efficiency reads 100% and wake time zero — and would
- * be handed the full bonus for recording nothing. Those nights charge exactly
- * what they charged before this existed, which is the promise made to anyone
- * not wearing a staging device.
+ * Reads only the QUALITY pillar; duration and HRV are already counted.
+ * Neutral for a night it cannot judge: under an hour, or no staging.
  */
 internal fun sleepChargeQualityFactor(session: SleepData): Double {
     val timeInBedMs = Duration.between(session.startTime, session.endTime).toMillis()
@@ -370,9 +247,7 @@ internal fun sleepChargeQualityFactor(session: SleepData): Double {
         wakeAfterSleepOnsetMinutes = wakeMinutes,
     )
     if (!quality.staged) return 1.0
-    // The CONTINUOUS read, not the scored points: the score stops distinguishing
-    // nights once they clear its clinical thresholds, and a flawless night and a
-    // merely good one are exactly the pair this is here to tell apart.
+    // The continuous read: the scored points stop distinguishing good nights.
     val deviation = ((quality.continuousFraction - TypicalSleepQualityFraction) / SleepQualityFractionSpan)
         .coerceIn(-1.0, 1.0)
     return 1.0 + deviation * SleepQualitySwing
@@ -395,10 +270,7 @@ data class BodyEnergyTimelineInputs(
     val sleepSessions: List<SleepData> = emptyList(),
     val workouts: List<ExerciseData> = emptyList(),
     val respiratoryRateSamples: List<RespiratoryRateEntry> = emptyList(),
-    /**
-     * Hourly, cumulative activity progress (steps + active calories). Used to
-     * estimate the active-calorie drain the heart-rate-zone signal misses.
-     */
+    /** Hourly, cumulative steps and active calories. */
     val activityProgress: List<ActivityProgressPoint> = emptyList(),
     /** Latest basal metabolic rate in kcal/day, if the device reports it. */
     val basalMetabolicRateKcalPerDay: Double? = null,
@@ -408,25 +280,15 @@ data class BodyEnergyTimelineInputs(
     val hrvBaselineRmssdMs: Double? = null,
     val respiratoryRateBaseline: Double? = null,
     val previousEndScore: Int? = null,
-    /**
-     * Left null by callers that cannot tell a cold start from a chain gap — see
-     * [resolvedSeedSource]. Only the repository knows, so it passes this
-     * explicitly when it matters.
-     */
+    /** Null when the caller cannot tell a cold start from a chain gap. */
     val seedSource: BodyEnergySeedSource? = null,
     val calibration: BodyEnergyCalibration = BodyEnergyCalibration.Automatic,
-    /**
-     * Only the birth year is read by v11 (Tanaka age max, and the calibration
-     * mode reported in the summary). The manual resting/max heart rate fields
-     * are deliberately ignored — see [resolveIntensityContext].
-     */
+    /** Only the birth year is read. Manual heart-rate fields are ignored. */
     val bodyProfile: BodyProfile = BodyProfile(),
     val now: Instant = Instant.now(),
     val zone: ZoneId = ZoneId.systemDefault(),
 ) {
-    /**
-     * A caller that supplies a previous score has, by definition, chained.
-     */
+    /** A caller that supplies a previous score has chained. */
     val resolvedSeedSource: BodyEnergySeedSource
         get() = seedSource ?: if (previousEndScore != null) {
             BodyEnergySeedSource.CARRIED_OVER
@@ -500,15 +362,13 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
         ?.let { (it / ReferenceBmrKcalPerDay).coerceIn(0.5, 2.0) }
         ?: 1.0
 
-    // Personal gains (clamped by normalized()); 1.0 leaves the objective model
-    // untouched.
+    // Personal gains; 1.0 leaves the model untouched.
     val gains = inputs.calibration.normalized()
 
-    // One factor per night, computed once rather than per five-minute bucket.
+    // One factor per night, not per bucket.
     val qualityFactors = inputs.sleepSessions.associate { it.id to sleepChargeQualityFactor(it) }
 
-    // The day opens where the previous one closed (floored), not at a fixed 50 —
-    // see [bodyEnergySeedScore].
+    // The day opens where the previous one closed, floored.
     var score = bodyEnergySeedScore(inputs.previousEndScore).toDouble()
     val startScore = score.roundToInt()
     var charged = 0.0
@@ -529,9 +389,8 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
 
             val avgHeartRate = heartRateAverages[index]
             val sleepMinutes = inputs.sleepSessions.sumOf { it.overlapMinutes(bucketStart, bucketEnd) }
-            // The night this bucket falls in, so its charge is scaled by the
-            // quality of THAT night. Weighted by overlap for the bucket that
-            // straddles two sessions, which is the nap-then-night case.
+            // Scale charge by the quality of the night this bucket falls in.
+            // Weighted by overlap when the bucket straddles two sessions.
             val sleepQualityFactor = if (sleepMinutes > 0.0) {
                 inputs.sleepSessions.sumOf { session ->
                     val minutes = session.overlapMinutes(bucketStart, bucketEnd)
@@ -567,26 +426,14 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
             val notSleeping = sleepMinutes <= 0.0
             val recordedKcal = activeKcalPerBucket.getOrElse(index) { 0.0 }
             val bucketSteps = stepsPerBucket.getOrElse(index) { 0.0 }
-            // Steps stand in for active calories only when the calorie series is
-            // silent for the bucket — a phone pedometer writing bare step counts
-            // (the 4k-step walk that used to move nothing because the watch was
-            // off).
+            // Steps stand in for calories only when the calorie series is silent.
             val activeKcal = if (recordedKcal > 0.0) recordedKcal else bucketSteps * KcalPerStep
-            // A day that has shown life keeps burning through its gaps: once any
-            // signal (heart rate, sleep, activity) has been seen today, an
-            // unmeasured awake bucket still pays the basal drain — a watch on the
-            // charger does not pause the wearer's metabolism. BEFORE the first
-            // signal the line stays frozen, which keeps two cases honest: a
-            // device-less day holds its seed instead of sliding to zero with
-            // nothing to ever charge it back, and an untracked night is not
-            // billed as hours of wakefulness.
+            // Once any signal is seen today, unmeasured awake buckets still pay basal
+            // drain. Before the first signal the line stays frozen.
             daySignalSeen = daySignalSeen || avgHeartRate != null || sleepMinutes > 0.0 || activeKcal > 0.0
-            // Awake-and-present: heart rate is being sampled, active energy was
-            // spent, or the day's data has started and this is a mid-day gap.
             val awakePresent = notSleeping && (avgHeartRate != null || activeKcal > 0.0 || daySignalSeen)
 
-            // Elevated heart rate while awake and not working out. Strengthened
-            // from the original so ordinary sympathetic stress registers.
+            // Elevated heart rate while awake and not working out.
             val rawStressDrain = if (avgHeartRate == null) {
                 0.0
             } else {
@@ -599,7 +446,6 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
                     else -> 0.0
                 }
             }
-            // Heart-rate-zone estimate of the activity drain (the backstop signal).
             val rawIntensityDrain = if (avgHeartRate != null) {
                 drainRateForZone(zone) * bucketMinutes * exerciseMultiplier * fatigueMultiplier
             } else if (workoutMinutes >= 2.0) {
@@ -607,25 +453,17 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
             } else {
                 0.0
             }
-            // Active-calorie estimate — captures walking, chores and other
-            // movement that never lifts heart rate out of the low zones.
+            // Captures movement that never lifts heart rate out of the low zones.
             val rawActivityEnergyDrain = if (notSleeping) activeKcal * ActiveKcalToPoints else 0.0
             val rawRecoveryDebtDrain = if (recoveryDebtBuckets > 0) 0.015 * bucketMinutes else 0.0
-            // Baseline metabolic cost of being awake — the floor that keeps the
-            // line trending down when nothing else is happening.
             val rawBasalDrain = if (awakePresent) BasalPointsPerMinute * bucketMinutes * basalScale else 0.0
             val drainMultiplier = maxOf(hrvFactor.drainMultiplier, respirationFactor.drainMultiplier)
             val intensityDrain = rawIntensityDrain * drainMultiplier * gains.activityDrainGain
             val activityEnergyDrain = rawActivityEnergyDrain * drainMultiplier * gains.activityDrainGain
             val stressDrain = rawStressDrain * drainMultiplier * gains.stressDrainGain
-            // Recovery debt is a CONSEQUENCE of hard activity — it is armed only
-            // by `zone >= 3 && workoutMinutes > 0` below, and sized by the zone
-            // reached — so it moves with the activity gain rather than a fifth
-            // one of its own. "Hard days cost me more than this says" is one
-            // claim, not two.
+            // Recovery debt follows hard activity, so it shares the activity gain.
             val recoveryDebtDrain = rawRecoveryDebtDrain * drainMultiplier * gains.activityDrainGain
-            // Basal is a metabolic constant, not a stress response — no
-            // HRV/respiration modifier, just the personal gain.
+            // Basal is a metabolic constant: no HRV or respiration modifier.
             val basalDrain = rawBasalDrain * gains.basalDrainGain
             // Activity is the stronger of the two estimates, never their sum.
             val appliedActivityDrain = maxOf(intensityDrain, activityEnergyDrain)
@@ -643,41 +481,14 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
                 val resting = intensityContext.restingHeartRateBpm
                 resting != null && avgHeartRate <= resting + 8
             }
-            // Quiet enough to be recovering: a small fraction of heart-rate
-            // reserve.
-            //
-            // A fraction rather than an absolute offset, because the offset does
-            // not survive the profile changing — and zone 1 is far too generous
-            // a ceiling: with resting 60 and max 190, 88 bpm is 28 beats above
-            // resting and in the top stress tier, yet only 21% of reserve. Falls
-            // back to the old resting-plus-8 band when there is no max to
-            // measure reserve against, which is the conservative direction.
+            // A fraction of reserve, not an offset, so it survives profile changes.
+            // Falls back to resting-plus-8 when there is no max.
             val restReserve = avgHeartRate?.let { intensityContext.reserveFor(it) }
             val quietEnough = restReserve?.let { it <= RestChargeReserveCeiling } ?: restEligible
-            // Sleep charges, and so — modestly — does genuinely quiet waking
-            // time.
-            //
-            // V3 removed the waking charge outright because the old one fired on
-            // any low-delta bucket and under-drained active days. Removing it
-            // entirely overshot: with charge sleep-only a quiet day can never
-            // recover, only decline at the basal rate. Measured against a real
-            // week, the model lost ~10 points EVERY day and the chain sat pinned
-            // on the floor.
-            //
-            // Deliberately NOT gated on "no activity drain in this bucket": the
-            // activity series is hourly and cumulative and gets interpolated
-            // across every 5-minute bucket, so a trickle lands almost
-            // everywhere. The wrist decides whether you are resting; the drain
-            // still applies and the two net out.
-            //
-            // Recovery debt is the one exception. Sitting quietly an hour after
-            // a hard session is exactly the state that debt exists to model —
-            // the body is not yet recovering, which is the whole point — so
-            // charging through it would both overstate the recovery and, since
-            // the rest rate is larger than the debt rate, hide recovery debt as
-            // an influence entirely.
-            // Quality scales the sleep charge and nothing else: quiet waking
-            // rest has no night to judge.
+            // Quiet waking time charges modestly. Not gated on activity drain: the
+            // activity series is interpolated everywhere, so the two net out.
+            // Recovery debt is the exception: the body is not yet recovering.
+            // Quality scales the sleep charge only.
             val chargeModifier = hrvFactor.chargeMultiplier / respirationFactor.chargePenalty
             val charge = when {
                 sleepMinutes > 0.0 ->
@@ -692,18 +503,8 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
             val scoreBefore = score
             score = (score + delta).coerceIn(0.0, 100.0)
             val applied = score - scoreBefore
-            // A bucket only partly lands once the score reaches 0 or 100.
-            // Attribute the part that landed proportionally across charge and
-            // drain, so the day's totals — and the per-bucket components "What
-            // moved it" breaks down — describe what actually moved the score
-            // rather than what the model wanted to move it. That makes
-            // `startScore + charged - drained == currentScore` hold exactly.
-            //
-            // Proportional rather than net-only because a bucket can carry both
-            // — one straddling wake-up has sleep charge and basal drain — and
-            // net-only would drop the drain from every charging bucket. Scaling
-            // uniformly also preserves every magnitude comparison, so it cannot
-            // change which influence wins.
+            // Once the score hits 0 or 100 only part of a bucket lands. Scale charge
+            // and drain proportionally so start + charged - drained == score holds.
             val landed = if (delta == 0.0) 1.0 else (applied / delta).coerceIn(0.0, 1.0)
             charged += charge * landed
             drained += drain * landed
@@ -743,14 +544,9 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
                 BodyEnergyTimelinePoint(
                     time = bucketStart,
                     score = score.roundToInt().coerceIn(0, 100),
-                    // Scaled by `landed`, like the day totals, so the breakdown
-                    // always sums to the headline. `primaryInfluence`
-                    // deliberately stays computed from the raw magnitudes above:
-                    // a fully clamped bucket scales every component to zero, and
-                    // deriving the influence from those would report a hard
-                    // workout as `STEADY`. The chart then draws a zero-height bar
-                    // in the right colour, and the watch fit keeps a truthful
-                    // driver.
+                    // Scaled by `landed` so the breakdown sums to the headline.
+                    // `primaryInfluence` keeps the raw magnitudes: a clamped bucket
+                    // would otherwise report a hard workout as STEADY.
                     delta = applied,
                     state = state,
                     confidence = confidence,
@@ -794,14 +590,8 @@ fun calculateBodyEnergyTimeline(inputs: BodyEnergyTimelineInputs): BodyEnergyTim
 }
 
 /**
- * The day's charge and drain totals as integers that still add up.
- *
- * The running doubles satisfy `start + charged - drained == end` exactly, but the
- * card shows three rounded integers and the score is rounded separately per
- * bucket — so rounding each independently can leave the row a point apart
- * (`Start 50 + 36 - 3` against an end score of 84). The residual is absorbed by
- * the larger of the two totals, where a single point is proportionally the least
- * misleading, so the summary always reads as one ledger.
+ * Charge and drain totals as integers that still add up. Rounding each
+ * separately can leave the row a point off; the larger total absorbs it.
  */
 private fun reconciledTotals(
     charged: Double,
@@ -851,8 +641,7 @@ private fun calibrationMode(
     return when {
         normalizedCalibration.useManualZones && normalizedCalibration.manualZoneThresholdsBpm != null ->
             BodyEnergyCalibrationMode.MANUAL_ZONES
-        // v11 reads nothing else off the profile: the manual resting and max
-        // heart rate fields no longer reach this model.
+        // Only the birth year is read from the profile.
         normalizedProfile.birthYear != null -> BodyEnergyCalibrationMode.MANUAL_VALUES
         else -> BodyEnergyCalibrationMode.AUTOMATIC
     }
@@ -872,21 +661,15 @@ private fun primaryInfluence(
     if (state == BodyEnergyBucketState.UNMEASURABLE) return BodyEnergyPrimaryInfluence.NO_DATA
     if (charge > 0.0 && sleepMinutes > 0.0) return BodyEnergyPrimaryInfluence.SLEEP_RECOVERY
 
-    // Basal drain is deliberately excluded from the competition: it is the
-    // ever-present floor, reported as steady, never as the notable influence.
+    // Basal is the ever-present floor, never the notable influence.
     val maxDrain = maxOf(appliedActivityDrain, stressDrain, recoveryDebtDrain)
 
-    // Waking charge is reachable again as of the v8 rest charge, and it COMPETES
-    // rather than short-circuiting. A bucket can now both charge and carry a
-    // drain — resting quietly an hour after a hard workout charges while
-    // recovery debt is still being billed — so the influence is whichever
-    // actually moved the score more. Sleep is the exception above: nothing else
-    // drains during it, so there is nothing to compete with.
+    // Waking charge competes with drain rather than short-circuiting. Sleep is
+    // the exception: nothing else drains during it.
     if (charge > 0.0 && charge >= maxDrain) return BodyEnergyPrimaryInfluence.QUIET_REST
     if (maxDrain <= 0.0) return BodyEnergyPrimaryInfluence.STEADY
     if (maxDrain == appliedActivityDrain) {
-        // Low-heart-rate movement with no workout is everyday activity; anything
-        // heart-rate- or workout-driven is exertion.
+        // Low-heart-rate movement with no workout is everyday activity.
         val everyday = energyDriven && zone < 2 && workoutMinutes <= 0.0
         return if (everyday) {
             BodyEnergyPrimaryInfluence.EVERYDAY_ACTIVITY
@@ -904,10 +687,7 @@ private data class IntensityContext(
     val manualZones: HeartZoneThresholds?,
     val confidence: BodyEnergyConfidence,
 ) {
-    /**
-     * Fraction of heart-rate reserve at [heartRateBpm], or null when there is no
-     * resting/max pair to measure it against.
-     */
+    /** Fraction of heart-rate reserve at [heartRateBpm], or null without a resting/max pair. */
     fun reserveFor(heartRateBpm: Double): Double? {
         val resting = restingHeartRateBpm ?: return null
         val max = maxHeartRateBpm ?: return null
@@ -962,10 +742,7 @@ private fun resolveIntensityContext(
         inputs.observedMaxHeartRateBpm,
         heartRateSamples.maxOfOrNull { it.beatsPerMinute },
     ).maxOrNull()
-    // Tanaka (208 - 0.7*age), matching heart-rate recovery. The two used
-    // different formulas off the same birth year, so the app disagreed with
-    // itself about a person's max heart rate by several bpm — and this one feeds
-    // the zone ladder that the whole drain model rests on.
+    // Tanaka (208 - 0.7*age), matching heart-rate recovery.
     val ageMax = profile.ageYears(inputs.date)
         ?.let { maxOf(1L, (208.0 - 0.7 * it).roundToInt().toLong()) }
     val maxHeartRate = when {
@@ -975,11 +752,7 @@ private fun resolveIntensityContext(
         resting != null -> resting + 70L
         else -> null
     }
-    // A max the user TYPED used to be the only route to high, which had it
-    // backwards: an observed max comes from their own heart rate and already has
-    // to clear `max(150, resting + 60)` before it is used at all, while the typed
-    // one cleared nothing. With the manual input gone, the measured value takes
-    // the confidence it was always the better claim to.
+    // An observed max already cleared max(150, resting + 60), so it earns high confidence.
     val confidence = when {
         resting != null && observedMax != null && maxHeartRate == observedMax -> BodyEnergyConfidence.HIGH
         resting != null && ageMax != null -> BodyEnergyConfidence.MEDIUM
@@ -1071,11 +844,7 @@ private fun confidenceReasonCode(
     BodyEnergyConfidence.NO_DATA -> BodyEnergyReasonCode.NO_USABLE_DATA
 }
 
-/**
- * The code a PERSISTED English reason corresponds to, for rows stored before
- * codes existed — the sentences are fixed, so the mapping is exact; anything
- * unrecognised stays [BodyEnergyReasonCode.LEGACY] and renders as stored.
- */
+/** The code for a persisted English reason. Unrecognised text stays [BodyEnergyReasonCode.LEGACY]. */
 fun bodyEnergyReasonCodeForText(reason: String): BodyEnergyReasonCode = when (reason) {
     "Heart-rate intensity has strong calibration." -> BodyEnergyReasonCode.STRONG_CALIBRATION
     "Heart-rate intensity uses observed or age-based calibration." ->
@@ -1155,12 +924,8 @@ private inline fun <T> List<T>.bucketedAverages(
 }
 
 /**
- * A cumulative hourly series differenced into 5-minute buckets.
- *
- * [ActivityProgressPoint] is hourly and cumulative (each point's total is the
- * running figure at that hour's end). Treating the cumulative series as
- * piecewise-linear and differencing per bucket spreads each hour's burn evenly
- * across its buckets — the intended hourly→5-minute mapping.
+ * A cumulative hourly series differenced into 5-minute buckets. Each hour's
+ * burn is spread evenly across its buckets.
  */
 private fun List<ActivityProgressPoint>.cumulativePerBucket(
     bucketCount: Int,
@@ -1170,7 +935,7 @@ private fun List<ActivityProgressPoint>.cumulativePerBucket(
     val result = DoubleArray(bucketCount.coerceAtLeast(0))
     if (bucketCount <= 0 || isEmpty()) return result
 
-    // Cumulative knots, minutes-from-start → running value, starting at 0.
+    // Cumulative knots: minutes from start to running value.
     val knotMinutes = mutableListOf(0.0)
     val knotValues = mutableListOf(0.0)
     filter { value(it) != null }

@@ -5,12 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Direct unit tests for [XmlCharacterSanitizingReader], mirroring Flutter's
- * `apple_health_import_xml_support_test.dart`. The reader is drained through a
- * deliberately tiny buffer so the pending-escape carry between read() calls is
- * exercised the same way Flutter's chunked stream transformer is.
- */
+/** [XmlCharacterSanitizingReader], drained through a tiny buffer so the pending-escape carry is exercised. */
 class AppleHealthImportXmlSupportTest {
 
     private fun sanitize(input: String, bufferSize: Int = 3): Pair<String, XmlCharacterSanitizingReader> {

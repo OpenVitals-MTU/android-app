@@ -6,10 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityRecordingSensor
 
-/**
- * The sensor-kind to Android-sensor-type mapping the recording service asks
- * the platform with: a kind with no Android type never reaches SensorManager.
- */
+/** A sensor kind with no Android type never reaches SensorManager. */
 class ActivityRecordingSensorTypeTest {
 
     @Test

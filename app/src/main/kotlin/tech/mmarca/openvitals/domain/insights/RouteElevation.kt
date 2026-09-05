@@ -3,44 +3,18 @@ package tech.mmarca.openvitals.domain.insights
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 
 /**
- * Cumulative ascent from a series of altitudes, with GPS noise filtered out.
- *
- * Summing every positive difference between consecutive points — the obvious
- * implementation — does not work for GPS altitude. Vertical GPS error is around
- * ±3–5 m and resamples every point, so on a one-hour ride the naive sum banks
- * that noise thousands of times: a perfectly flat route reports ~6 km of climb.
- * A per-step minimum does not rescue it either, because the noise is far larger
- * than any sane step.
- *
- * Two filters, applied in order, and both are needed:
- *
- * 1. Smoothing. An exponential moving average over the altitudes removes the
- *    sample-to-sample jitter that produces the bulk of the false gain.
- * 2. Hysteresis. Gain is banked only once the smoothed altitude has moved
- *    [MIN_STEP_METERS] from the last accepted reference — not from the previous
- *    sample. Movement smaller than that never shifts the reference, so noise
- *    cannot ratchet upward.
- *
- * Against simulated routes (1 Hz, σ = 3 m vertical error) this reports 304 m
- * for a true 300 m, 757 m for a true 750 m, and ~15 m for a genuinely flat
- * route. The barometer path in the recording service already smooths, which is
- * why it was accurate while every GPS-derived figure was not.
+ * Cumulative ascent from altitudes, with GPS noise filtered out. Summing
+ * every positive step banks the ±3-5 m vertical error thousands of times.
+ * Two filters: an exponential moving average, then hysteresis, so gain is
+ * banked only once the smoothed altitude moves [MIN_STEP_METERS] from the
+ * last accepted reference. Simulated flat routes report about 15 m.
  */
 object RouteElevation {
 
-    /**
-     * EMA weight for a new altitude sample. Heavier smoothing rejects noise
-     * better but lags, and the lag under-reports sparse routes — an imported
-     * GPX with one point every 100 m has few samples for the average to catch
-     * up on. 0.3 keeps every case tested within ~5%.
-     */
+    /** EMA weight. Heavier smoothing lags and under-reports sparse routes. */
     private const val SMOOTHING_ALPHA = 0.3
 
-    /**
-     * How far the smoothed altitude must move from the accepted reference
-     * before the move counts. Comfortably above GPS vertical noise once
-     * smoothed.
-     */
+    /** How far the smoothed altitude must move before it counts. Above smoothed GPS noise. */
     private const val MIN_STEP_METERS = 5.0
 
     data class Change(val gain: Double, val loss: Double)
@@ -90,16 +64,11 @@ object RouteElevation {
                 loss += -delta
                 reference = nextSmoothed
             }
-            // Anything smaller is noise: the reference deliberately does NOT
-            // move, so repeated jitter cannot accumulate.
+            // Anything smaller is noise: the reference does not move.
         }
 
-        // Settle the smoothing lag against the final RAW altitude. The moving
-        // average trails the true altitude by roughly its time constant, and on
-        // a short or sparse route that trailing tail is a large share of the
-        // whole. Comparing the last real altitude against the reference
-        // recovers exactly that remainder; it costs nothing on long noisy
-        // routes, where any residue is a single sub-step value.
+        // Settle the smoothing lag against the final raw altitude: on a short
+        // route the trailing tail is a large share of the whole.
         val finalAltitude = lastAltitude
         val finalReference = reference
         if (finalAltitude != null && finalReference != null) {

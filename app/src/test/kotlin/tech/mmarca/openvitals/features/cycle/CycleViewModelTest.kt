@@ -132,9 +132,7 @@ class CycleViewModelTest {
     }
 
     @Test fun `a permission failure becomes ScreenError PermissionDenied`() = runTest {
-        // Distinct from the missingPermissions state a *successful* load reports:
-        // this is the read itself being refused, and the screen turns it into a
-        // grant affordance rather than a dead-end message.
+        // The read itself is refused, and the screen turns it into a grant affordance.
         val repo = mockk<CycleRepository>()
         every { repo.phase4Permissions } returns setOf("cycle")
         coEvery { repo.loadCyclePeriod(any()) } throws SecurityException("cycle read")
@@ -217,8 +215,7 @@ class CycleViewModelTest {
         val repo = repo()
         val vm = viewModel(repo)
 
-        // Nothing to resume to: the selection is already today's period, so the
-        // refresh flag is what reloads it — forced.
+        // The selection is already today's period, so the refresh flag is what reloads it.
         vm.resumeCurrentPeriod(refreshCurrent = true)
         advanceUntilIdle()
 

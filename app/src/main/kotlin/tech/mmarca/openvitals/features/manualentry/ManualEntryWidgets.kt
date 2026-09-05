@@ -431,9 +431,7 @@ internal fun vitalsMeasurementWidgetSpec(
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
 ): ManualEntryWidgetSpec {
     val click = if (isEditingWidgets) null else ({ onOpenVitalsMeasurementEntry(type) })
-    // Grid tiles carry the long names the Flutter add-entry screen ships
-    // (Blood oxygen, Body temperature); the entry screens keep the short
-    // titleRes names (SpO2, Body temp), matching Flutter's split.
+    // Grid tiles carry the long names; the entry screens keep the short ones, as in Flutter.
     val gridTitleRes = when (type) {
         VitalsMeasurementType.SPO2 -> R.string.screen_spo2
         VitalsMeasurementType.BODY_TEMPERATURE -> R.string.screen_body_temperature

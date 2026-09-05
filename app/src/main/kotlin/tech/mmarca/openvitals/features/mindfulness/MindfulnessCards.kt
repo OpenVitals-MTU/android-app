@@ -308,10 +308,7 @@ private fun MindfulnessSessionRowContent(
     val dateFormatter = dateTimeFormatterProvider.mediumDate()
     val timeFormatter = dateTimeFormatterProvider.shortTime()
     val notes = session.notes?.takeIf { it.isNotBlank() }
-    // Notes are the most personal text in the record, so the list never prints
-    // them unasked: they stay behind a deliberate tap, and fold away again.
-    // Keyed to the row's session so a recycled slot never shows another
-    // session's notes as revealed.
+    // Notes stay behind a deliberate tap. Keyed to the session, so a recycled slot never leaks.
     var notesRevealed by remember(session.id) { mutableStateOf(false) }
 
     OpenVitalsCard(

@@ -11,16 +11,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Every assertion here pins a FIXED offset rather than the device zone.
- *
- * [CsvTimeZoneMode.DEVICE] resolves against whatever tz database the host has,
- * so asserting a UTC instant under it would pass in Madrid and fail in UTC CI.
- * The one device-mode test below asserts the RELATIONSHIP (offset round-trips
- * back to the same wall clock), which holds in every zone.
+ * Every assertion pins a fixed offset. [CsvTimeZoneMode.DEVICE] resolves against the host,
+ * so the one device-mode test asserts the relationship, which holds in every zone.
  */
 class CsvDateTimeFormatTest {
 
-    // ── resolveCsvInstant ────────────────────────────────────────────────────
+    // resolveCsvInstant.
 
     @Test
     fun `a timezone-less timestamp at a fixed plus two resolves two hours earlier in UTC`() {
@@ -131,12 +127,11 @@ class CsvDateTimeFormatTest {
         assertEquals(Instant.parse("2026-07-01T08:12:00Z"), resolved!!.utc)
     }
 
-    // ── parseCsvWallClock ────────────────────────────────────────────────────
+    // parseCsvWallClock.
 
     @Test
     fun `a date-only pattern does not silently swallow a trailing time`() {
-        // The formatter must reject the leftover ' 08:12:00' rather than drop
-        // it; dropping it would move every reading to midnight.
+        // The leftover ' 08:12:00' must be rejected, not dropped, or every reading moves to midnight.
         assertEquals(
             LocalDateTime.of(2026, 7, 1, 8, 12),
             parseCsvWallClock("2026-07-01 08:12:00", CsvDateTimeFormat.YEAR_FIRST),
@@ -150,9 +145,7 @@ class CsvDateTimeFormatTest {
 
     @Test
     fun `a small counting number is not accepted as an epoch timestamp`() {
-        // Without a plausibility bound, `1` is a valid epoch second, so a column
-        // of step counts or reps would be auto-detected as the timestamp and
-        // every reading dated to 1970.
+        // Without a plausibility bound, a column of step counts would be detected as epoch seconds.
         assertNull(parseCsvWallClock("1", CsvDateTimeFormat.EPOCH_SECONDS))
         assertNull(parseCsvWallClock("250", CsvDateTimeFormat.EPOCH_SECONDS))
         assertNull(parseCsvWallClock("1", CsvDateTimeFormat.AUTO))
@@ -163,7 +156,7 @@ class CsvDateTimeFormatTest {
         assertNotNull(parseCsvWallClock("1782000000", CsvDateTimeFormat.EPOCH_SECONDS))
     }
 
-    // ── csvTimestampHasExplicitOffset ────────────────────────────────────────
+    // csvTimestampHasExplicitOffset.
 
     @Test
     fun `a bare ISO date is not mistaken for carrying an offset`() {
@@ -182,7 +175,7 @@ class CsvDateTimeFormatTest {
         assertFalse(csvTimestampHasExplicitOffset("2026-07-01 08:12:00"))
     }
 
-    // ── detectCsvDateTimeFormat ──────────────────────────────────────────────
+    // detectCsvDateTimeFormat.
 
     @Test
     fun `a year-first sample is detected as year-first`() {

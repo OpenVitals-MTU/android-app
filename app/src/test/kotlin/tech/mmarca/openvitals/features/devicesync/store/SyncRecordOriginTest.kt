@@ -22,11 +22,8 @@ import tech.mmarca.openvitals.features.devicesync.protocol.SyncItem
 import tech.mmarca.openvitals.healthconnect.SyncedSourceOverlay
 
 /**
- * Original-source preservation for phone-to-phone sync: the optional
- * `originPackage` wire field, its mixed-version compatibility in both
- * directions, its guaranteed absence from the content fingerprint, the
- * pass-through of an already-preserved origin on re-sync (A→B→C), and the
- * receiver-side store mapping selection.
+ * Original-source preservation for phone-to-phone sync: the optional `originPackage` wire field,
+ * mixed-version compatibility, its absence from the fingerprint, pass-through on re-sync (A to B to C).
  */
 class SyncRecordOriginTest {
 
@@ -53,7 +50,7 @@ class SyncRecordOriginTest {
         )
     }
 
-    // ── wire round-trip ──────────────────────────────────────────────────────
+    // Wire round-trip.
 
     @Test
     fun `origin survives a batch encode-decode round trip`() {
@@ -71,8 +68,7 @@ class SyncRecordOriginTest {
 
     @Test
     fun `a legacy batch without the origin field still decodes (old peer to new)`() {
-        // Hand-built wire bytes exactly as a build predating the field sends
-        // them: only k/t/p per item, gzipped — protocol v1 either way.
+        // Wire bytes as a build predating the field sends them: only k/t/p per item, gzipped.
         val reference = item(null)
         val payloadB64 = Base64.getEncoder().encodeToString(reference.payload)
         val legacyJson =
@@ -91,9 +87,7 @@ class SyncRecordOriginTest {
 
     @Test
     fun `the origin rides as a separate ignorable field (new peer to old)`() {
-        // An old build reads only k/t/p from each item object and ignores
-        // unknown keys, so it is enough that those three fields are identical
-        // with and without the origin — the "o" field is purely additive.
+        // An old build reads only k/t/p and ignores unknown keys, so "o" is purely additive.
         val withOrigin = SyncBatch(1, listOf(item(gadgetbridge))).encode()
         val json = Json.parseToJsonElement(gunzip(withOrigin)).jsonObject
         val itemJson = json.getValue("items").jsonArray.single().jsonObject
@@ -108,16 +102,14 @@ class SyncRecordOriginTest {
         assertEquals(gadgetbridge, itemJson.getValue("o").jsonPrimitive.content)
     }
 
-    // ── fingerprint invariance ───────────────────────────────────────────────
+    // Fingerprint invariance.
 
     @Test
     fun `the origin never enters the fingerprint or the payload`() {
         val without = item(null)
         val with = item(gadgetbridge)
 
-        // Same clientRecordId (dedup key) and byte-identical payload whether or
-        // not the origin is attached — so records synced by builds with and
-        // without the field keep converging on one Health Connect record.
+        // Same key and payload with or without the origin, so builds with and without the field converge.
         assertEquals(without.key, with.key)
         assertArrayEquals(without.payload, with.payload)
         // And the receiver-side recomputation agrees.
@@ -125,13 +117,11 @@ class SyncRecordOriginTest {
         assertEquals(without.key, syncFingerprint(decoded))
     }
 
-    // ── pass-through (A→B→C) ─────────────────────────────────────────────────
+    // Pass-through (A to B to C).
 
     @Test
     fun `a preserved origin wins over the local dataOrigin on re-send`() {
-        // On phone B the record's Health Connect dataOrigin is OpenVitals (B
-        // wrote it), but B preserved Gadgetbridge for its fingerprint — C must
-        // be told Gadgetbridge.
+        // On phone B the dataOrigin is OpenVitals, but B preserved Gadgetbridge; C must be told Gadgetbridge.
         val fingerprint = "sync_abc"
 
         assertEquals(
@@ -154,8 +144,7 @@ class SyncRecordOriginTest {
                 preservedOrigins = emptyMap(),
             ),
         )
-        // A synced record with no preserved origin (landed from an old-version
-        // peer) still announces the local attribution rather than nothing.
+        // A synced record with no preserved origin still announces the local attribution.
         assertEquals(
             openVitals,
             resolveOriginalSource(
@@ -166,7 +155,7 @@ class SyncRecordOriginTest {
         )
     }
 
-    // ── receiver-side mapping selection ──────────────────────────────────────
+    // Receiver-side mapping selection.
 
     @Test
     fun `only a foreign non-blank origin is worth persisting`() {
@@ -177,7 +166,7 @@ class SyncRecordOriginTest {
         assertNull(persistableOrigin(null, openVitals))
     }
 
-    // ── device provenance (Metadata.device across the wire) ──────────────────
+    // Device provenance (Metadata.device across the wire).
 
     private fun watchRecord(): WeightRecord = WeightRecord(
         time = Instant.parse("2026-02-01T08:00:00Z"),
@@ -207,8 +196,7 @@ class SyncRecordOriginTest {
 
     @Test
     fun `a legacy payload without a device decodes with the pre-field phone default`() {
-        // Strip the `device` key to reproduce a payload from a build that
-        // predates it — the receiver must fall back, not fail.
+        // Strip the `device` key to reproduce a payload from an older build; the receiver must fall back.
         val original = watchRecord()
         val legacyPayload = encodeSyncRecordPayload(original)
             .toString(Charsets.UTF_8)
@@ -243,12 +231,11 @@ class SyncRecordOriginTest {
 
     @Test
     fun `the device never enters the fingerprint`() {
-        // Identical content, different recording hardware — the dedup key must
-        // agree or a re-sync after a device-metadata change would duplicate.
+        // Identical content, different hardware: the dedup key must agree.
         assertEquals(syncFingerprint(record()), syncFingerprint(watchRecord()))
     }
 
-    // ── display overlay ──────────────────────────────────────────────────────
+    // Display overlay.
 
     @Test
     fun `the overlay substitutes the preserved origin for a synced record`() {
@@ -271,7 +258,7 @@ class SyncRecordOriginTest {
         }
     }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
+    // Helpers.
 
     private fun gunzip(bytes: ByteArray): String =
         GZIPInputStream(bytes.inputStream()).readBytes().toString(Charsets.UTF_8)

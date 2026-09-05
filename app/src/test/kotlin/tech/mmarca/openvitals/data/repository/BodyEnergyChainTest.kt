@@ -27,9 +27,7 @@ import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 
 /**
  * The chain: what a day opens on, and what invalidates that claim.
- *
- * "Now" is late on 1 June, so 1 June is today and everything before it is a
- * completed past day.
+ * "Now" is late on 1 June, so 1 June is today and earlier days are complete.
  */
 class BodyEnergyChainTest {
 
@@ -196,10 +194,8 @@ class BodyEnergyChainTest {
         val yesterday = today.minusDays(1)
         seedStoredDay(r, yesterday)
 
-        // Rewrite yesterday's row with a signature from a different world. The
-        // regression this guards: validating a predecessor against the REQUESTED
-        // day's signature instead of its own, which the body profile's
-        // date-dependent signature made silently wrong across a birthday.
+        // Rewrite yesterday's row with a foreign signature. A predecessor used to be validated
+        // against the requested day's signature instead of its own.
         val stored = timelines.storedDaysBetween(yesterday, yesterday).single()
         val cached = timelines.load(yesterday, stored.signature)!!
         timelines.save(cached.copy(signature = "v11|not-this-calibration|0|0"))
@@ -215,11 +211,8 @@ class BodyEnergyChainTest {
 
     @Test
     fun `a gain the watch learner nudged still seeds the next day`() = runTest {
-        // The learner moves the gains by a fraction of a percent per
-        // observation, and they used to be part of the day signature. So one
-        // watch reading invalidated all fourteen stored days at once, the next
-        // load found no valid predecessor, and the day opened on the neutral 50
-        // with yesterday sitting at 0.
+        // The learned gains used to be part of the signature, so one watch reading
+        // invalidated all fourteen stored days and the day opened on 50.
         val r = repo()
         val yesterdayEnd = seedStoredDay(r, today.minusDays(1))
 
@@ -235,9 +228,7 @@ class BodyEnergyChainTest {
 
     @Test
     fun `but editing the heart zones does break the chain`() = runTest {
-        // The other half of the split. Zones change what a bucket MEANS, and
-        // only ever because someone edited a setting, so a reset there is
-        // honest.
+        // Zones change what a bucket means and only change when a setting is edited.
         val r = repo()
         seedStoredDay(r, today.minusDays(1))
 
@@ -267,9 +258,7 @@ class BodyEnergyChainTest {
 
         val target = today.minusDays(3)
         val before = timelines.storedDaysBetween(target, target).single().endScore
-        // Swap in a harder day: a much higher heart rate drains further, so the
-        // end score moves. Deliberately NOT a data-less day — that is the case
-        // the empty-recompute guard protects.
+        // A harder day moves the end score. Not a data-less day, which the empty-recompute guard covers.
         val recomputed = load(
             repo(heartRepository = FakeHeartRepository(wakingBpm = 115L)),
             target,
@@ -329,10 +318,8 @@ class BodyEnergyChainTest {
 
     @Test
     fun `a failed permission read does not orphan the stored chain`() = runTest {
-        // The regression behind the widget's intermittent "Start: 50": the
-        // permission hash used to collapse to a constant when the read failed,
-        // which made every stored day look like it came from another permission
-        // world — no anchor validated, and the day silently reopened neutral.
+        // The permission hash used to collapse to a constant when the read failed,
+        // so no anchor validated and the widget showed "Start: 50".
         val yesterdayEnd = seedStoredDay(repo(), today.minusDays(1))
 
         val day = load(repo(healthRepository = failingPermissionsHealthRepository()), today)
@@ -343,8 +330,7 @@ class BodyEnergyChainTest {
 
     @Test
     fun `a permission read that never succeeded still starts neutral`() = runTest {
-        // Nothing cached to fall back on — a fresh install whose very first
-        // read fails. The documented neutral default is the whole truth then.
+        // A fresh install whose first read fails: the neutral default is the whole truth.
         val day = load(repo(healthRepository = failingPermissionsHealthRepository()), today)
 
         assertEquals(BodyEnergyNeutralStartScore, day.startScore)
@@ -397,9 +383,7 @@ class BodyEnergyChainTest {
 
     @Test
     fun `an empty store falls back to the mirror, not the neutral 50`() = runTest {
-        // The store exists but holds nothing — a cleared database under prefs
-        // that survived. That is the store-less situation wearing a store, and
-        // it degrades the same way: the mirrored score, not a reset.
+        // A cleared database under surviving prefs degrades to the mirrored score, not a reset.
         prefs.bodyEnergyChainSeedMirror = "${today.minusDays(1).toEpochDay()}|43"
 
         val day = load(repo(), today)
@@ -410,8 +394,7 @@ class BodyEnergyChainTest {
 
     @Test
     fun `a chain gap still carries yesterday's mirrored score`() = runTest {
-        // The anchor is too far back to fill, but the mirror knows what
-        // yesterday closed on — its row was lost, not the day itself.
+        // The anchor is too far back to fill, but the mirror knows yesterday's close.
         val r = repo()
         seedStoredDay(r, today.minusDays(5))
         prefs.bodyEnergyChainSeedMirror = "${today.minusDays(1).toEpochDay()}|37"
@@ -424,9 +407,7 @@ class BodyEnergyChainTest {
 
     @Test
     fun `computing today keeps the mirror fresh`() = runTest {
-        // Mirroring only completed days froze the mirror on whatever past day
-        // was last recomputed; on a device where only the widgets run (they ask
-        // for today alone) it was reliably stale by the time it was needed.
+        // Mirroring only completed days left the mirror stale on widget-only devices.
         val day = load(repo(), today)
 
         assertEquals(
@@ -437,8 +418,7 @@ class BodyEnergyChainTest {
 
     @Test
     fun `a rescued day reopens on the same chained score across recomputes`() = runTest {
-        // The first rescue moves the mirror onto today; the day's own opening
-        // score keeps later refreshes from oscillating back to 50.
+        // The first rescue moves the mirror onto today, so later refreshes do not oscillate back to 50.
         prefs.bodyEnergyChainSeedMirror = "${today.minusDays(1).toEpochDay()}|43"
         val r = repo()
 
@@ -541,8 +521,7 @@ class BodyEnergyChainTest {
 
     @Test
     fun `a signature change still rebuilds a settled day`() = runTest {
-        // "Never stale" must not be read as "never updated": a calibration edit
-        // has to reach even a day the settling window would otherwise freeze.
+        // A calibration edit must reach even a day the settling window would freeze.
         val r = repo()
         val settled = today.minusDays(BodyEnergyChainSettlingDays + 3)
         seedStoredDay(r, settled)
@@ -561,8 +540,7 @@ class BodyEnergyChainTest {
         val r = repo()
         val ancient = today.minusDays(BodyEnergyChainSettlingDays + 5)
         seedStoredDay(r, ancient)
-        // Retention keeps the summary and drops the buckets; serving that would
-        // put a real headline score above an empty chart.
+        // Retention keeps the summary and drops the buckets; serving that puts a headline over an empty chart.
         dao.purgeBucketsBefore(ancient.toEpochDay() + 1)
         val callsBefore = heart.dayGraphCalls
 
@@ -620,8 +598,7 @@ class BodyEnergyChainTest {
 
     @Test
     fun `a genuinely data-less day with nothing stored is still recorded`() = runTest {
-        // The guard protects existing buckets; it must not stop a first, honest
-        // "we know nothing about this day" from being written.
+        // The guard protects existing buckets; a first honest empty day must still be written.
         val target = today.minusDays(2)
 
         load(repo(heartRepository = FakeHeartRepository(wakingBpm = null)), target)
@@ -637,9 +614,7 @@ class BodyEnergyChainTest {
 
     @Test
     fun `the gain reset runs on any load, not only when the chain sync fires`() = runTest {
-        // It used to live in the chain sync service, which is only kicked by the
-        // Body Energy screen — so the dashboard, the widgets and the diagnostics
-        // all reached the model without it and the reset silently never ran.
+        // The reset used to live in the chain sync service, which only the Body Energy screen kicks.
         prefs.setBodyEnergyCalibration(
             BodyEnergyCalibration(
                 sleepChargeGain = 0.8,
@@ -661,9 +636,7 @@ class BodyEnergyChainTest {
 
     @Test
     fun `the reset rewinds the watch fit watermark so the gains can relearn`() = runTest {
-        // The reset without this is a trap: it tells the model to relearn from
-        // 1.0 while the watermark still says every stored watch sample has been
-        // consumed.
+        // Without this the model relearns from 1.0 while the watermark says every sample is consumed.
         prefs.bodyEnergyWatchFitWatermarkMillis = now.toEpochMilli()
 
         load(repo(), today)
@@ -673,9 +646,7 @@ class BodyEnergyChainTest {
 
     @Test
     fun `the watermark rewinds on an install already at this algorithm version`() = runTest {
-        // The rewind used to hang off the algorithm-version reset, which returns
-        // early when the version already matches — so on every install that had
-        // seen the current version, which is all of them, it was dead code.
+        // The rewind used to hang off the version reset, which returns early when the version matches.
         prefs.bodyEnergyGainsAlgorithmVersion = BodyEnergyTimelineAlgorithmVersion
         prefs.bodyEnergyWatchFitEpoch = 0
         prefs.bodyEnergyWatchFitWatermarkMillis = now.toEpochMilli()
@@ -688,8 +659,7 @@ class BodyEnergyChainTest {
 
     @Test
     fun `the watermark is not rewound again once that epoch is recorded`() = runTest {
-        // Otherwise every load re-reads a week of watch samples and refits the
-        // gains from them, compounding the same evidence without end.
+        // Otherwise every load refits the gains from the same week of samples.
         prefs.bodyEnergyGainsAlgorithmVersion = BodyEnergyTimelineAlgorithmVersion
         prefs.bodyEnergyWatchFitEpoch = BodyEnergyWatchFitEpoch
         val watermark = now.toEpochMilli()
@@ -702,8 +672,7 @@ class BodyEnergyChainTest {
 
     @Test
     fun `the watermark rewinds even when there were no personal gains to reset`() = runTest {
-        // A model still sitting at 1.0 is the one with the most to relearn, and
-        // the early return for "nothing to reset" used to skip it.
+        // A model still at 1.0 has the most to relearn; the early return used to skip it.
         prefs.bodyEnergyWatchFitWatermarkMillis = now.toEpochMilli()
         prefs.setBodyEnergyCalibration(BodyEnergyCalibration())
 

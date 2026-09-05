@@ -25,25 +25,12 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 
 /**
- * Importing an activity that has NO GPS: an indoor run, a trainer ride, a
- * strength session.
+ * Importing an activity with no GPS. Both fixtures are real files that used to fail:
  *
- * Both fixtures are REAL files a user could not import. They parsed fine — the
- * FIT parser has always had a routeless branch — and then died one layer later,
- * twice over:
- *
- *  * CALORIES. A FIT session records `total_calories` and has no active-calorie
- *    field, so active came back null and the form ESTIMATED it from METs and
- *    distance. The estimate landed beside the file's own measured total and
- *    exceeded it (226 estimated active against a measured 208 total), so the
- *    write was refused for "total cannot be lower than active" — an invented
- *    number contradicting a measured one. This hit every routeless FIT file.
- *
- *  * SPORT. Type inference joined the sport, the name and the FILE NAME into
- *    one string and substring-matched it, testing `run` before `cycling`. So
- *    `…Indoor_CyclingiSmoothRun.fit` — a 27 km trainer ride — imported as a
- *    RUN, because the exporter's name is in the file name. The FIT sport said
- *    cycling, and knew, and was outvoted.
+ *  * Calories: a FIT session has no active-calorie field, so the form estimated it,
+ *    the estimate exceeded the measured total, and the write was refused.
+ *  * Sport: type inference substring-matched sport, name and file name together,
+ *    so `Indoor_CyclingiSmoothRun.fit` imported as a run.
  */
 class IndoorFitImportTest {
 
@@ -80,8 +67,7 @@ class IndoorFitImportTest {
 
         val imported = import(parsed)
 
-        // It used to be null here — refused, because an estimated 226 active
-        // sat above the measured 208 total.
+        // Used to be null: an estimated 226 active sat above the measured 208 total.
         assertNotNull(imported.request)
         requireNotNull(imported.request)
         assertEquals(208.0, imported.request.totalCaloriesKcal!!, 0.001)
@@ -112,16 +98,12 @@ class IndoorFitImportTest {
         )
         assertEquals(27_460.0, imported.request.distanceMeters!!, 0.001)
         assertEquals(945.0, imported.request.totalCaloriesKcal!!, 0.001)
-        // The heart rate the trainer recorded rides along in the sample buffer
-        // — an indoor ride has no route to carry it, but it is not without
-        // data.
+        // The heart rate the trainer recorded rides along in the sample buffer.
         assertEquals(8, imported.request.bleSamples.heartRateSamples.size)
     }
 
     @Test fun `a file that measured NO calories still gets both estimated`() {
-        // The mirror of the calorie fix, and the reason it is "estimate both or
-        // estimate neither" rather than "never estimate": a GPX carries no
-        // calories at all, and its import must still arrive with a usable pair.
+        // A GPX carries no calories, and its import must still arrive with a usable pair.
         val start = Instant.parse("2026-05-26T08:30:00Z")
         val clock = Clock.systemDefaultZone()
         val state = ActivityEntryUiState()
@@ -144,11 +126,8 @@ class IndoorFitImportTest {
     }
 
     @Test fun `a generic FIT sport still yields to the name`() {
-        // FIT's `training` and `fitness equipment` are its "I do not know"
-        // answers. The sport wins over the file name only when it NAMES
-        // something — otherwise `Functional Strength Training.fit` would import
-        // as a generic workout, losing what the only informative word in the
-        // file was telling us.
+        // FIT's `training` and `fitness equipment` mean "I do not know". The sport wins over
+        // the file name only when it names something.
         val strength = inferActivityType(
             RouteFileImport(
                 fileName = "Functional Strength Training.fit",

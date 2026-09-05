@@ -6,13 +6,9 @@ import java.nio.ByteOrder
 import java.util.zip.GZIPInputStream
 
 /**
- * The three shapes of GPS ephemeris ("AGPS") data a Garmin watch asks for.
- *
- * Which one a watch wants is decided by its GPS chipset, not by us: the watch
- * names it in the request URL, and a file of the wrong shape is worse than no
- * file — it can leave the watch's GPS worse off than the almanac it already
- * had. So an imported file is classified by its own contents and only ever
- * served for the kind it actually is.
+ * The three shapes of ephemeris data a watch asks for. The chipset decides;
+ * a file of the wrong shape is worse than none, so imports are classified
+ * by content and served only for their own kind.
  */
 enum class GarminAgpsKind {
     /** A tar of per-constellation CPE files, requested with `?constellations=`. */
@@ -34,12 +30,8 @@ enum class GarminAgpsConstellation(val fileName: String) {
 }
 
 /**
- * Reads and sanity-checks ephemeris data the user supplied.
- *
- * Ported from Gadgetbridge's `GarminAgpsFile` (AGPLv3), including its seven-day
- * freshness rule for rxNetworks: ephemeris is a prediction of where the
- * satellites will be, and a stale prediction is not a smaller benefit but an
- * actively wrong one.
+ * Reads and sanity-checks user-supplied ephemeris. From Gadgetbridge's
+ * `GarminAgpsFile` (AGPLv3), including the seven-day rxNetworks rule.
  */
 object GarminAgpsFile {
 
@@ -58,11 +50,7 @@ object GarminAgpsFile {
         else -> null
     }
 
-    /**
-     * Whether [bytes] is usable for [kind] right now. Separate from
-     * [classify] because freshness expires: a file that classified fine at
-     * import can be too old to serve by the time the watch asks.
-     */
+    /** Whether [bytes] is usable for [kind] now. Separate from [classify]: freshness expires. */
     fun isValid(
         bytes: ByteArray,
         kind: GarminAgpsKind,
@@ -131,11 +119,7 @@ object GarminAgpsFile {
     }
 }
 
-/**
- * Just enough tar to check what is inside one. The archives here are a handful
- * of small binaries, so this walks the headers rather than pulling in an
- * archive library for four filenames.
- */
+/** Just enough tar to list what is inside one. */
 internal object GarminTar {
 
     private const val BLOCK = 512
@@ -159,8 +143,7 @@ internal object GarminTar {
                 .takeWhile { it != 0.toByte() }
                 .toByteArray()
                 .toString(Charsets.US_ASCII)
-            // Two zeroed blocks mark the end of the archive; one empty name is
-            // enough to stop, since nothing useful follows it.
+            // Two zeroed blocks end the archive; one empty name is enough.
             if (name.isEmpty()) break
             names.add(name)
             val size = bytes.copyOfRange(offset + SIZE_OFFSET, offset + SIZE_OFFSET + SIZE_LENGTH)

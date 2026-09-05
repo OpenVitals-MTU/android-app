@@ -51,10 +51,8 @@ private sealed interface StepPickerTarget {
 }
 
 /**
- * The session's repetition structure: one total, a step count, or a list of
- * steps. A step is "an exercise, a reps-or-seconds goal, then a rest"; for the
- * generic set types every step names its own exercise, while push-ups and the
- * like keep the simple rows because there is only one exercise to name.
+ * The session's repetition structure: one total, a step count, or a list
+ * of steps. Generic set types name an exercise per step.
  */
 @Composable
 internal fun ActivityRepetitionInputs(

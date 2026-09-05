@@ -8,19 +8,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDateTime
 
-/**
- * Port of the Flutter build's `garmin_notification_messages_test.dart`: the
- * GNCS vocabulary, the attribute-blob encoder, the announcement/data/status
- * builders and the NOTIFICATION_CONTROL / NOTIFICATION_DATA decoders.
- */
+/** The GNCS vocabulary, the attribute-blob encoder, the builders and the decoders. */
 class GarminNotificationMessagesTest {
 
     private fun b(vararg xs: Int) = ByteArray(xs.size) { xs[it].toByte() }
 
-    /**
-     * Round-trips an outgoing message through the frame layer, as the
-     * transport will: build → parse → decode.
-     */
+    /** Round-trips an outgoing message through the frame layer: build, parse, decode. */
     private fun roundTrip(wire: ByteArray): GarminInboundMessage =
         decodeGarminMessage(GarminGfdiFrame.parse(wire))
 
@@ -58,7 +51,7 @@ class GarminNotificationMessagesTest {
         postedAt = LocalDateTime.of(2026, 7, 28, 9, 5, 3),
     )
 
-    // ── garminNotificationDate ──────────────────────────────────────────────
+    // garminNotificationDate.
 
     @Test
     fun `formats as yyyyMMddTHHmmss with every field zero-padded`() {
@@ -68,7 +61,7 @@ class GarminNotificationMessagesTest {
         )
     }
 
-    // ── garminNotificationAttributeBytes ────────────────────────────────────
+    // garminNotificationAttributeBytes.
 
     @Test
     fun `MESSAGE_SIZE counts the body characters, not its bytes`() {
@@ -101,9 +94,7 @@ class GarminNotificationMessagesTest {
 
     @Test
     fun `a cut that would split an emoji drops it rather than half of it`() {
-        // '👍' is one rune but two UTF-16 code units, so a cut at 3 lands
-        // between its halves. A lone surrogate makes the whole attribute
-        // undecodable.
+        // '👍' is two UTF-16 code units, so a cut at 3 leaves a lone surrogate.
         val value = garminNotificationAttributeBytes(
             notification(body = "ok👍!"),
             GarminNotificationAttribute.MESSAGE,
@@ -121,7 +112,7 @@ class GarminNotificationMessagesTest {
         assertArrayEquals(b(0, 0, 0, 0), value)
     }
 
-    // ── encodeGarminNotificationAttributes ──────────────────────────────────
+    // encodeGarminNotificationAttributes.
 
     @Test
     fun `writes the command byte and the notification id first`() {
@@ -187,7 +178,7 @@ class GarminNotificationMessagesTest {
         )
     }
 
-    // ── buildNotificationUpdate ─────────────────────────────────────────────
+    // buildNotificationUpdate.
 
     @Test
     fun `carries the update type, category and id with no text at all`() {
@@ -244,7 +235,7 @@ class GarminNotificationMessagesTest {
         assertEquals(0x04, payloadFor(attachments = true).last().toInt()) // HAS_ATTACHMENTS
     }
 
-    // ── buildNotificationData ───────────────────────────────────────────────
+    // buildNotificationData.
 
     @Test
     fun `declares the total size, the running CRC and the offset`() {
@@ -262,7 +253,7 @@ class GarminNotificationMessagesTest {
         )
     }
 
-    // ── buildNotificationSubscriptionStatus ─────────────────────────────────
+    // buildNotificationSubscriptionStatus.
 
     private val incomingSubscription =
         GarminNotificationSubscription(enable = true, unknown = 7)
@@ -288,7 +279,7 @@ class GarminNotificationMessagesTest {
         )
     }
 
-    // ── buildNotificationControlStatus ──────────────────────────────────────
+    // buildNotificationControlStatus.
 
     @Test
     fun `names NOTIFICATION_CONTROL with ACK, chunk OK and no error`() {
@@ -299,7 +290,7 @@ class GarminNotificationMessagesTest {
         )
     }
 
-    // ── decoding NOTIFICATION_CONTROL ───────────────────────────────────────
+    // Decoding NOTIFICATION_CONTROL.
 
     @Test
     fun `an attribute request reads the id and every requested field`() {
@@ -351,9 +342,7 @@ class GarminNotificationMessagesTest {
 
     @Test
     fun `ACTIONS consumes its length AND its extra byte, so the next attribute still parses`() {
-        // The asymmetry most likely to desynchronise the decoder: attribute
-        // 127 is followed by a u16 and then one more byte nobody has
-        // identified.
+        // Attribute 127 is followed by a u16 and one unidentified byte.
         val message = roundTrip(
             controlFrame(
                 0x00,
@@ -374,8 +363,7 @@ class GarminNotificationMessagesTest {
 
     @Test
     fun `an unknown attribute stops the walk instead of mis-parsing the rest`() {
-        // 0x63 is not an attribute this app knows, and nothing says how many
-        // bytes follow it — so guessing would turn the remainder into nonsense.
+        // 0x63 is unknown and nothing says how many bytes follow it, so decoding stops.
         val message = roundTrip(
             controlFrame(
                 0x00,
@@ -433,7 +421,7 @@ class GarminNotificationMessagesTest {
         assertTrue(message is GarminUnhandledMessage)
     }
 
-    // ── decoding a NOTIFICATION_DATA transfer status ────────────────────────
+    // Decoding a NOTIFICATION_DATA transfer status.
 
     @Test
     fun `OK can proceed`() {
@@ -461,12 +449,11 @@ class GarminNotificationMessagesTest {
         assertFalse(message.canProceed)
     }
 
-    // ── acknowledgement policy ──────────────────────────────────────────────
+    // Acknowledgement policy.
 
     @Test
     fun `NOTIFICATION_CONTROL is self-acknowledged, so no generic ACK is sent`() {
-        // It gets a three-byte control status; a generic ACK as well would be
-        // a second reply to one question.
+        // It gets a three-byte control status; a generic ACK too would be a second reply.
         assertTrue(
             garminSelfAcknowledgedTypes.contains(GarminMessageId.NOTIFICATION_CONTROL),
         )

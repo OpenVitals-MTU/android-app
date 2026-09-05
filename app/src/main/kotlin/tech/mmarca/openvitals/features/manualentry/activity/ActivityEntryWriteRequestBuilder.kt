@@ -62,23 +62,9 @@ internal fun buildWriteRequest(
             }
         }
     }
-    // The session has to CONTAIN the samples it carries.
-    //
-    // A recording reaches this form as text, at minute granularity: the start
-    // loses its seconds, and the duration is rounded up to a whole minute.
-    // Start 10:00:59 for 120 seconds therefore rebuilds as 10:00:00 -> 10:02:00,
-    // while the last sample was taken at 10:02:59. Health Connect does not drop
-    // the samples past the end — it CLAMPS them into the session, stacking that
-    // final minute of readings onto one instant. For a bike ride that is an
-    // odd-looking tail. For a heart-rate recovery, which is measured from
-    // exactly those samples, it is the whole measurement.
-    //
-    // So the end is stretched to cover the last sample, the same way the route
-    // branch above stretches it to cover the last GPS point.
-    //
-    // A live recording fills `recordedBleSamples` from the paired sensors. An
-    // IMPORT fills the same series from the file — heart rate, cadence, speed
-    // parsed out of a TCX or FIT — and hands it over on the imported route.
+    // The session must contain its samples: Health Connect clamps samples past
+    // the end onto one instant. The form loses seconds, so the end is stretched
+    // to the last sample. An import fills the same series from the file.
     var bleSamples = if (state.recordedBleSamples.isEmpty()) {
         state.importedRoute?.bleSamples ?: BleRecordingSampleBuffer()
     } else {
@@ -88,10 +74,8 @@ internal fun buildWriteRequest(
     if (lastSampleTime != null && !lastSampleTime.isBefore(end)) {
         end = lastSampleTime.plusSeconds(1)
     }
-    // The start cannot be stretched the same way: it is the user's, and they
-    // may have moved it forward on purpose. But samples before it would be
-    // clamped ONTO it, which invents a reading that was never taken. Rather
-    // than write that, the samples are dropped.
+    // The start is the user's and is not stretched. Samples before it are
+    // dropped rather than clamped onto it.
     val firstSampleTime = bleSamples.firstSampleTime()
     if (firstSampleTime != null && firstSampleTime.isBefore(start)) {
         bleSamples = BleRecordingSampleBuffer()
@@ -173,23 +157,10 @@ internal fun buildWriteRequest(
 }
 
 /**
- * Marks where the effort stopped, for a guided heart-rate-recovery test. Null
- * when this was not one.
- *
- * A REST segment running from the moment of cessation to the END OF THE
- * SESSION — not for a fixed five minutes. If it were fixed, a rider who took
- * ninety seconds to press save would leave it no longer trailing, and the
- * reader would quietly fall back to the session end as the moment effort
- * stopped: a later moment, a lower heart rate to measure from, and a
- * flattering recovery that never happened. Running it to the end is identical
- * when they save on time, and correct when they do not.
- *
- * Only REST and PAUSE segments are emitted, never an "active" one. Health
- * Connect validates a segment's type against the session's exercise type —
- * a mismatch throws and takes the whole save with it — and rest and pause are
- * the two that are universal. Nothing needs an active segment: the reader only
- * looks for the trailing rest, and Health Connect does not ask segments to
- * cover the session.
+ * Marks where the effort stopped in a recovery test, or null. A REST
+ * segment from cessation to the end of the session, not a fixed five
+ * minutes, so a slow save cannot flatter the recovery. Only REST and PAUSE
+ * segments are emitted: Health Connect validates types against the session.
  */
 internal fun buildRecoveryExerciseSegments(
     state: ActivityEntryUiState,
@@ -199,9 +170,7 @@ internal fun buildRecoveryExerciseSegments(
     val recoveryStart = state.recordedRecoveryStartTime ?: return null
     if (!recoveryStart.isAfter(start) || !recoveryStart.isBefore(end)) return null
 
-    // Explicit segments SUPPRESS the ones the native writer would otherwise
-    // synthesize from the pause intervals, so the pauses have to be carried
-    // here by hand or they are lost.
+    // Explicit segments suppress the synthesized pause segments, so carry them by hand.
     val pauseSegments = state.recordedPauseIntervals
         .insideActivityRange(start, end)
         .filter { it.startTime.isBefore(recoveryStart) }
@@ -318,10 +287,7 @@ internal fun buildActivityExerciseSegments(
     start: Instant,
     end: Instant,
 ): List<ActivityExerciseSegmentWrite>? {
-    // A heart-rate-recovery test wins over everything else: the recovery mark
-    // is the only record of where the effort stopped, and without it the
-    // session read back later is just a workout that happens to end in some
-    // sitting down.
+    // A recovery test wins: the mark is the only record of where the effort stopped.
     val recovery = buildRecoveryExerciseSegments(state, start, end)
     if (recovery != null) return recovery
 

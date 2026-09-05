@@ -37,12 +37,8 @@ import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 /**
- * Port of the "Garmin watch onboarding" group of the Flutter build's
- * `ble_devices_view_model_test.dart`. In Kotlin the watch half of that
- * view-model is its own screen state ([WatchesViewModel]), so these cover the
- * sheet-level flow — no capability probe for a GFDI device, what a refused
- * pairing leaves on screen, and the no-companion notice's lifetime — while
- * `OnboardGarminWatchUseCaseTest` covers what gets written to the registry.
+ * The sheet-level flow: no capability probe for a GFDI device, what a refused pairing leaves
+ * on screen, and the no-companion notice's lifetime. Registry writes are `OnboardGarminWatchUseCaseTest`.
  */
 class WatchesViewModelTest {
 
@@ -107,7 +103,7 @@ class WatchesViewModelTest {
         advertisesSyncService = true,
     )
 
-    /** A Garmin Edge — GFDI like a watch, but its own kind. */
+    /** A Garmin Edge: GFDI like a watch, but its own kind. */
     private val bikeComputer = BleDiscoveredDevice(
         address = "E0:48:24:D5:F7:20",
         name = "Edge 840",
@@ -135,10 +131,7 @@ class WatchesViewModelTest {
         }
     }
 
-    /**
-     * Granted by default: most tests are about pairing, and an outstanding
-     * permission would divert them into the checklist before the scan.
-     */
+    /** Granted by default, so pairing tests are not diverted into the checklist. */
     private fun osPermissions(
         catalog: OsPermissionCatalog = OsPermissionCatalog(
             rows = listOf(
@@ -159,7 +152,7 @@ class WatchesViewModelTest {
         osPermissionsService = os,
     )
 
-    // ── Android's own permissions, asked when the first watch is added ──────
+    // Android's own permissions, asked when the first watch is added.
 
     private fun osRow(id: OsPermissionId, granted: Boolean, vararg permissions: String) =
         OsPermissionRow(id = id, permissions = permissions.toList(), granted = granted)
@@ -213,8 +206,7 @@ class WatchesViewModelTest {
 
         vm.openAddFlow()
 
-        // Only Bluetooth truly blocks pairing; a refused extra must not trap
-        // the user on the checklist.
+        // Only Bluetooth blocks pairing; a refused extra must not trap the user.
         assertFalse(vm.uiState.value.showPermissionsGate)
         assertTrue(vm.uiState.value.showAddFlow)
     }
@@ -236,8 +228,7 @@ class WatchesViewModelTest {
         vm.queueAllSpecialPermissions()
         vm.openNextSpecialPermission()
 
-        // Only the first: the app leaves the foreground to show it, so a
-        // second would land behind it and never be seen.
+        // Only the first: the app leaves the foreground to show it, so a second would never be seen.
         verify(exactly = 1) { service.openSettingsFor(OsPermissionId.BATTERY_OPTIMIZATION) }
         verify(exactly = 0) { service.openSettingsFor(OsPermissionId.NOTIFICATION_FORWARDING) }
 
@@ -271,8 +262,7 @@ class WatchesViewModelTest {
         )
         vm.openNextSpecialPermission()
 
-        // Reopening a settled screen would walk the user through a permission
-        // they already gave, so it skips to what is still outstanding.
+        // A settled screen is skipped.
         verify(exactly = 0) { service.openSettingsFor(OsPermissionId.BATTERY_OPTIMIZATION) }
         verify(exactly = 1) { service.openSettingsFor(OsPermissionId.NOTIFICATION_FORWARDING) }
     }
@@ -366,8 +356,7 @@ class WatchesViewModelTest {
 
         assertEquals(false, closed)
         assertTrue(repo.devices.isEmpty())
-        // The sheet must survive: re-scanning to retry a mistyped code is a
-        // pointless round trip.
+        // The sheet must survive: re-scanning to retry a mistyped code is a pointless round trip.
         assertNotNull(vm.uiState.value.selectedDevice)
         assertTrue(vm.uiState.value.showAddFlow)
         assertFalse(vm.uiState.value.isOnboarding)
@@ -398,9 +387,7 @@ class WatchesViewModelTest {
 
         vm.onboardSelectedWatch()
 
-        // Onboarding closes the add flow itself, and the screen reads the
-        // notice AFTER the sheet pops to raise it — so closing must not
-        // consume it.
+        // The screen reads the notice after the sheet pops, so closing must not consume it.
         assertFalse(vm.uiState.value.showAddFlow)
         assertEquals(WatchOnboardNotice.NO_COMPANION, vm.uiState.value.onboardNotice)
 

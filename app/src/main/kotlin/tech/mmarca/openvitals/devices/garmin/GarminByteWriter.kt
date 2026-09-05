@@ -1,13 +1,6 @@
 package tech.mmarca.openvitals.devices.garmin
 
-/**
- * Little-endian write cursor.
- *
- * Port of Gadgetbridge's `MessageWriter` (via the Flutter build's
- * `garmin_byte_writer.dart`). Grows as needed; [toBytes] returns exactly what
- * was written. Writers return `this` so call sites can chain, mirroring the
- * Dart cascades the protocol code was written with.
- */
+/** Little-endian write cursor. Grows as needed; writers return `this` for chaining. */
 class GarminByteWriter(initialCapacity: Int = 256) {
 
     private var buffer = ByteArray(if (initialCapacity > 0) initialCapacity else 1)
@@ -63,11 +56,8 @@ class GarminByteWriter(initialCapacity: Int = 256) {
     }
 
     /**
-     * A length-prefixed UTF-8 string, NUL-terminated inside the length — the
-     * shape `MessageWriter.writeString` produces and the watch expects.
-     *
-     * Truncated to fit the single length byte (including the NUL), because an
-     * over-long device name must not corrupt every field after it in the frame.
+     * A length-prefixed UTF-8 string, NUL-terminated inside the length.
+     * Truncated to fit the length byte, so a long name cannot corrupt the frame.
      */
     fun writeString(value: String): GarminByteWriter {
         val encoded = value.toByteArray(Charsets.UTF_8)
@@ -78,10 +68,7 @@ class GarminByteWriter(initialCapacity: Int = 256) {
         return this
     }
 
-    /**
-     * Overwrites 2 bytes at [offset] — used to backfill the frame length once
-     * the payload is written.
-     */
+    /** Overwrites 2 bytes at [offset], to backfill the frame length. */
     fun patchShort(offset: Int, value: Int) {
         buffer[offset] = value.toByte()
         buffer[offset + 1] = (value shr 8).toByte()

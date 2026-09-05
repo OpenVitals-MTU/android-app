@@ -9,7 +9,7 @@ import org.junit.Test
 
 class SyncPairingTest {
 
-    // ── generatePairingCode ──────────────────────────────────────────────────
+    // generatePairingCode.
 
     @Test
     fun `pairing code is always six digits, zero-padded`() {
@@ -19,14 +19,14 @@ class SyncPairingTest {
         assertTrue(Regex("^\\d{6}$").matches(code))
     }
 
-    // ── generateSyncNonce ────────────────────────────────────────────────────
+    // generateSyncNonce.
 
     @Test
     fun `nonce is 32 bytes`() {
         assertEquals(SYNC_NONCE_BYTES, generateSyncNonce(Random(1)).size)
     }
 
-    // ── deriveSessionKey ─────────────────────────────────────────────────────
+    // deriveSessionKey.
 
     private val hostNonce = ByteArray(SYNC_NONCE_BYTES) { 0xA1.toByte() }
     private val guestNonce = ByteArray(SYNC_NONCE_BYTES) { 0xB2.toByte() }
@@ -50,15 +50,14 @@ class SyncPairingTest {
 
     @Test
     fun `nonce order is fixed, so host and guest roles agree`() {
-        // Swapping which arg is "host" changes the key — proving the order is
-        // load-bearing and both sides must agree on who is host.
+        // Swapping which arg is "host" changes the key, so both sides must agree on who is host.
         val ab = deriveSessionKey("111111", hostNonce, guestNonce)
         val ba = deriveSessionKey("111111", guestNonce, hostNonce)
 
         assertFalse(constantTimeEquals(ab, ba))
     }
 
-    // ── auth proof exchange ──────────────────────────────────────────────────
+    // Auth proof exchange.
 
     private val exchangeHostNonce = generateSyncNonce(Random(2))
     private val exchangeGuestNonce = generateSyncNonce(Random(3))
@@ -71,8 +70,7 @@ class SyncPairingTest {
         val hostKey = keyFor("424242")
         val guestKey = keyFor("424242")
 
-        // Host authenticates over the guest's nonce with the host role; guest
-        // verifies over its own nonce using the host role.
+        // Host authenticates over the guest's nonce with the host role; guest verifies the same.
         val hostProof = computeAuthProof(hostKey, exchangeGuestNonce, AUTH_ROLE_HOST)
         val guestExpectsHost = computeAuthProof(guestKey, exchangeGuestNonce, AUTH_ROLE_HOST)
         assertTrue(constantTimeEquals(hostProof, guestExpectsHost))
@@ -86,10 +84,7 @@ class SyncPairingTest {
     @Test
     fun `a reflected proof does not validate (role binding)`() {
         val key = keyFor("424242")
-        // The attacker echoes the host's own proof back. Under a role-less
-        // scheme this validated; now the host expects a GUEST-role proof over
-        // its nonce, which the reflected host-role proof over the guest nonce
-        // is not.
+        // The attacker echoes the host's proof back. The host now expects a guest-role proof over its nonce.
         val hostProof = computeAuthProof(key, exchangeGuestNonce, AUTH_ROLE_HOST)
         val hostExpectsGuest = computeAuthProof(key, exchangeHostNonce, AUTH_ROLE_GUEST)
 
@@ -107,7 +102,7 @@ class SyncPairingTest {
         assertFalse(constantTimeEquals(hostProof, guestExpectsHost))
     }
 
-    // ── constantTimeEquals ───────────────────────────────────────────────────
+    // constantTimeEquals.
 
     @Test
     fun `constantTimeEquals is true only for identical byte arrays`() {

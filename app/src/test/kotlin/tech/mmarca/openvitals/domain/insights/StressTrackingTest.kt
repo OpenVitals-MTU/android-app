@@ -156,9 +156,7 @@ class StressTrackingTest {
 
     @Test
     fun `every English sentence has a structured mirror carrying its numbers`() {
-        // The contract: the English lists stay canonical, and the UI renders the
-        // templates. Every appended sentence must have an item beside it, or the
-        // localized screen silently drops a line.
+        // Every appended sentence must have an item beside it, or the localized screen drops a line.
         val hrStart = Instant.parse("2026-06-10T06:00:00Z")
         val hrEnd = Instant.parse("2026-06-10T10:00:00Z")
         val estimate = calculatePhysiologicalStress(

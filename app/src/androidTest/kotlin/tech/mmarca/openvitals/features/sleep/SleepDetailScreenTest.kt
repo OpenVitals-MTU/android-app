@@ -30,13 +30,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of Flutter's `sleep_detail_screen_test.dart`.
- *
- * The detail screen is where a user goes to argue with a number: it is the only
- * place that shows what the tracker actually wrote down — which device, recorded
- * how, in which time zone, split into which stages. If any of that silently stops
- * rendering, the app is asking to be trusted on a figure it will no longer show
- * the workings for.
+ * The detail screen is the only place that shows what the tracker wrote down: which device,
+ * recorded how, in which zone, split into which stages.
  */
 class SleepDetailScreenTest {
 
@@ -45,14 +40,10 @@ class SleepDetailScreenTest {
 
     @Test
     fun theDetailScreenShowsTheNightItsBreakdownItsMetadataAndItsStageEvents() {
-        // Every one of these is a separate card, and they are separate lazy items:
-        // one of them dropping out is invisible to a test that only checks the
-        // screen opened. The metadata rows in particular are the user's only way to
-        // tell a watch-recorded night from a hand-typed one.
+        // Every one of these is a separate lazy item, so one dropping out is invisible to a test that only opens the screen.
         setDetail(session())
 
-        // The summary card opens the screen, so it is on show without scrolling.
-        // Its title is repeated in the metadata card below, hence the first match.
+        // The summary card opens the screen. Its title repeats in the metadata card, hence the first match.
         composeRule.onAllNodesWithText("Night sleep").onFirst().assertIsDisplayed()
         composeRule.onNodeWithText(FORMATTER.duration(EIGHT_HOURS_MS)).assertIsDisplayed()
 
@@ -66,8 +57,7 @@ class SleepDetailScreenTest {
         assertShown("Acme")
         assertShown("Watch 5")
         assertShown("Slept well")
-        // Both ends of the night carry the offset; a session that lost one of them
-        // would still pass a "some offset is on screen" check.
+        // Both ends of the night carry the offset.
         assertShown(string(R.string.detail_start_zone))
         composeRule.onAllNodesWithText(ZONE_OFFSET_TEXT).assertCountEquals(2)
 
@@ -79,10 +69,7 @@ class SleepDetailScreenTest {
 
     @Test
     fun aNightOfBackToBackStagesDrawsWithoutTearingTheChart() {
-        // Contiguous stages make the hypnogram walk its cross-lane connector for
-        // every hop — the branch that draws the diagonal from one lane to the next.
-        // A night recorded properly is exactly the night that exercises it, so a
-        // fault there would break the charts of the users with the best data.
+        // Contiguous stages make the hypnogram draw its cross-lane connector for every hop.
         composeRule.setContent {
             OpenVitalsTheme {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -114,9 +101,8 @@ class SleepDetailScreenTest {
 
     @Test
     fun aNightWithoutStagesSaysSoRatherThanShowingAnEmptyChart() {
-        // Plenty of writers record only a start and an end. The screen has to admit
-        // there are no stages instead of offering an empty hypnogram and a stage
-        // event list with nothing in it — and an untitled session still needs a name.
+        // Many writers record only a start and an end. The screen must admit there are no stages,
+        // and an untitled session still needs a name.
         setDetail(
             SleepData(
                 id = "s1",
@@ -130,8 +116,7 @@ class SleepDetailScreenTest {
         assertShown(string(R.string.message_no_stages))
         assertShown(string(R.string.detail_sleep_session))
 
-        // Scrolled to the last row of the last card: there is nothing below, so the
-        // absent stage-event section is genuinely absent rather than merely unbuilt.
+        // Scrolled to the last row of the last card, so the stage-event section is genuinely absent.
         composeRule
             .onNode(hasScrollAction())
             .performScrollToNode(hasText(string(R.string.detail_notes)))

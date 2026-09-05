@@ -7,12 +7,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import tech.mmarca.openvitals.domain.model.SleepStage
 
-/**
- * Port of test/features/sleep/presentation/sleep_stage_scrubber_test.dart's
- * scrub cases. The gesture itself is a widget concern; what is portable is the
- * fraction→clock-time mapping and the stage lookup underneath the finger, which
- * SleepStagesLaneChart calls through [sleepScrubTimeAt] / [sleepStageTypeAt].
- */
+/** The fraction-to-clock-time mapping and the stage lookup under the finger. */
 class SleepStageScrubberTest {
 
     // A night that straddles midnight: 470 minutes from 23:15 to 07:05.
@@ -35,8 +30,7 @@ class SleepStageScrubberTest {
     )
 
     @Test fun `a horizontal drag reveals the clock time and stage at the finger`() {
-        // A quarter across: 0.25 of 470 min past 23:15 is 01:12:30, and the stage
-        // there is Light (10–145 min).
+        // A quarter across: 01:12:30, in the Light block (10 to 145 min).
         val time = sleepScrubTimeAt(bedtime, totalMs, 0.25f)
 
         assertEquals(Instant.parse("2026-06-22T01:12:30Z"), time)
@@ -49,8 +43,7 @@ class SleepStageScrubberTest {
             Instant.parse("2026-06-22T03:10:00Z"),
             sleepScrubTimeAt(bedtime, totalMs, 0.5f),
         )
-        // Three-quarters across: 0.75 of 470 min past 23:15 is 05:07:30, in the
-        // REM block (275–355 min).
+        // Three-quarters across: 05:07:30, in the REM block (275 to 355 min).
         val threeQuarters = sleepScrubTimeAt(bedtime, totalMs, 0.75f)
         assertEquals(Instant.parse("2026-06-22T05:07:30Z"), threeQuarters)
         assertEquals(SleepStage.STAGE_REM, sleepStageTypeAt(night, threeQuarters))

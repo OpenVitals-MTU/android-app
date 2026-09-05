@@ -22,22 +22,12 @@ import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 /** The tagged surface every scaled screen is rendered into. */
 const val TextScaleRootTag = "openvitals_text_scale_root"
 
-/**
- * The largest font scale Android's accessibility settings offer.
- *
- * Not a stress value: it is one slider away for every user, and a health app
- * skews towards people who run it. A screen that only reads at 1.0 is a screen
- * those users cannot use.
- */
+/** The largest font scale Android offers. It is one slider away for every user. */
 const val LargestSystemFontScale = 2f
 
 /**
- * A phone-sized surface with the density pinned and the font scale turned up.
- *
- * Density is fixed at 1 so the surface is the same 393x852 box on every device —
- * a layout that only holds on a large phone is not a layout that holds. The font
- * scale is the only thing that varies, which is the point: everything that moves
- * between 1.0 and 2.0 moved because of the text.
+ * A phone-sized surface with density pinned at 1 (a 393x852 box on every device)
+ * and the font scale turned up, so everything that moves, moved because of the text.
  */
 @Composable
 fun TextScaleSurface(
@@ -62,19 +52,10 @@ fun TextScaleSurface(
 }
 
 /**
- * Asserts the scaled screen drew something, and that none of it ran off the side.
- *
- * Width is the axis with no way out. A screen that grows taller at 2.0 scrolls;
- * a label that grows wider than the phone is simply unreadable, and it is
- * invisible at 1.0 where the same label fits with room to spare.
- *
- * The minimum-content half is there so the width half cannot pass for the wrong
- * reason: a screen that threw its content away under the larger metrics — or
- * never composed at all — overflows nothing, and would otherwise read as a pass.
- *
- * Inside a horizontally scrollable container the window narrows to that
- * container, and anything parked entirely outside it is left alone — the
- * carousel page waiting off to the right is not an overflow, it is the carousel.
+ * Asserts the scaled screen drew something and none of it ran off the side.
+ * Width has no way out: a taller screen scrolls, a wider label is unreadable.
+ * The minimum-content half stops a screen that composed nothing from passing.
+ * Inside a horizontal scroller the window narrows to that container.
  */
 fun ComposeTestRule.assertScaledScreenFitsItsWidth(
     minTextNodes: Int = 3,

@@ -81,11 +81,7 @@ class PreferencesRepository @Inject constructor(
     /** The resolved system — never [UnitSystemPreference.SYSTEM]'s raw form. */
     val unitSystemFlow: StateFlow<UnitSystem> = _unitSystem.asStateFlow()
 
-    /**
-     * Per-quantity display-unit overrides; a quantity absent from the map
-     * follows the base unit setting. Overrides act only at the formatting
-     * boundary — stored health data stays metric.
-     */
+    /** Per-quantity display-unit overrides. Stored health data stays metric. */
     val unitOverridesFlow: StateFlow<Map<UnitQuantity, UnitSystem>> = _unitOverrides.asStateFlow()
     val appLanguageFlow: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
     val appThemeModeFlow: StateFlow<AppThemeMode> = _appThemeMode.asStateFlow()
@@ -106,20 +102,12 @@ class PreferencesRepository @Inject constructor(
         get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
         set(value) { prefs.edit { putBoolean(KEY_ONBOARDING_DONE, value) } }
 
-    /**
-     * Off by default: some devices report support for mindfulness but cannot
-     * show the permission, and asking for it crashes the system Health Connect
-     * app — so the user opts in explicitly during onboarding.
-     */
+    /** Off by default: asking for the mindfulness permission crashes Health Connect on some devices. */
     var mindfulnessOptIn: Boolean
         get() = prefs.getBoolean(KEY_MINDFULNESS_OPT_IN, false)
         set(value) { prefs.edit { putBoolean(KEY_MINDFULNESS_OPT_IN, value) } }
 
-    /**
-     * Gates the whole Health Connect mindfulness integration (permissions,
-     * availability, manual entry). Defaults to the legacy onboarding opt-in so
-     * users who opted in before this toggle existed keep the feature.
-     */
+    /** Gates the Health Connect mindfulness integration. Defaults to the legacy opt-in. */
     var healthConnectMindfulnessEnabled: Boolean
         get() = prefs.getBoolean(
             KEY_HEALTH_CONNECT_MINDFULNESS_ENABLED,
@@ -139,11 +127,7 @@ class PreferencesRepository @Inject constructor(
             _unitSystem.value = value.resolve(systemUnitSystem::current)
         }
 
-    /**
-     * Re-resolves a [UnitSystemPreference.SYSTEM] choice against the OS.
-     * Called on configuration changes, which is how locale and Android 14+
-     * regional-preference (`-u-ms-`) changes arrive.
-     */
+    /** Re-resolves a SYSTEM choice against the OS. Called on configuration changes. */
     fun refreshSystemUnitSystem() {
         _unitSystem.value = _unitSystemPreference.value.resolve(systemUnitSystem::current)
     }
@@ -223,11 +207,7 @@ class PreferencesRepository @Inject constructor(
     val weekPeriodMode: WeekPeriodMode
         get() = activityWeekMode.toWeekPeriodMode()
 
-    /**
-     * How far apart the activity detail screen cuts derived splits, in meters.
-     * Normalized on read AND write, so a stale or hand-edited preference can
-     * never feed the splits engine a zero, negative, or absurd distance.
-     */
+    /** Split distance in meters, normalized on read and write so a bad value never reaches the engine. */
     var activitySplitDistanceMeters: Double
         get() = _activitySplitDistanceMeters.value
         set(value) {
@@ -243,11 +223,7 @@ class PreferencesRepository @Inject constructor(
             _showOpenVitalsCalculatedCalories.value = value
         }
 
-    /**
-     * What the nutrition screens divide a period total by to get a daily
-     * figure. Defaults to logged days only, which is what someone who logs
-     * some days and not others means by "my daily calories".
-     */
+    /** What the nutrition screens divide a period total by. Defaults to logged days only. */
     var nutritionAverageBasis: NutritionAverageBasis
         get() = _nutritionAverageBasis.value
         set(value) {
@@ -396,9 +372,7 @@ class PreferencesRepository @Inject constructor(
             normalized.manualZoneThresholdsBpm?.let {
                 putString(KEY_BODY_ENERGY_ZONE_THRESHOLDS_BPM, it.toPreferenceString())
             } ?: remove(KEY_BODY_ENERGY_ZONE_THRESHOLDS_BPM)
-            // The learned gains persist too. They are the whole point of the
-            // watch fit, and an algorithm bump can only *reset* something that
-            // survived a process restart.
+            // The learned gains persist too; an algorithm bump can only reset what survived.
             putFloat(KEY_BODY_ENERGY_SLEEP_CHARGE_GAIN, normalized.sleepChargeGain.toFloat())
             putFloat(KEY_BODY_ENERGY_ACTIVITY_DRAIN_GAIN, normalized.activityDrainGain.toFloat())
             putFloat(KEY_BODY_ENERGY_BASAL_DRAIN_GAIN, normalized.basalDrainGain.toFloat())
@@ -408,11 +382,7 @@ class PreferencesRepository @Inject constructor(
         _bodyEnergyCalibration.value = normalized
     }
 
-    /**
-     * The algorithm version the stored gains were fitted against. A mismatch is
-     * what tells the repository the gains describe a model that no longer
-     * exists.
-     */
+    /** The algorithm version the stored gains were fitted against. */
     var bodyEnergyGainsAlgorithmVersion: Int
         get() = prefs.getInt(KEY_BODY_ENERGY_GAINS_ALGORITHM_VERSION, 0)
         set(value) { prefs.edit { putInt(KEY_BODY_ENERGY_GAINS_ALGORITHM_VERSION, value) } }
@@ -428,11 +398,8 @@ class PreferencesRepository @Inject constructor(
         set(value) { prefs.edit { putLong(KEY_BODY_ENERGY_WATCH_FIT_WATERMARK_MILLIS, value) } }
 
     /**
-     * `epochDay|endScore|startScore|chained` for the newest computed Body
-     * Energy day, mirrored out of Room so a context that cannot serve the
-     * chain from storage still carries it instead of restarting at the neutral
-     * score. Rows written before the two trailing fields existed are still
-     * accepted for the day-after read.
+     * `epochDay|endScore|startScore|chained` for the newest Body Energy day,
+     * mirrored out of Room. Older rows without the trailing fields are accepted.
      */
     var bodyEnergyChainSeedMirror: String?
         get() = prefs.getString(KEY_BODY_ENERGY_CHAIN_SEED_MIRROR, null)
@@ -446,11 +413,7 @@ class PreferencesRepository @Inject constructor(
             }
         }
 
-    /**
-     * The permission-set hash the Body Energy chain signatures were last
-     * computed from, kept so a FAILED permission read does not have to be
-     * reported as a permission CHANGE. Null until the first successful read.
-     */
+    /** The last permission-set hash, so a failed read is not reported as a change. */
     var bodyEnergyPermissionSignature: Int?
         get() = if (prefs.contains(KEY_BODY_ENERGY_PERMISSION_SIGNATURE)) {
             prefs.getInt(KEY_BODY_ENERGY_PERMISSION_SIGNATURE, 0)
@@ -716,12 +679,7 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
-    /**
-     * The last cup sizes logged, most recent first, for the reminder's
-     * one-tap actions. Stored as a comma-joined string — the Flutter build
-     * stored the same key as a plugin-encoded string list, so the data
-     * migration must transcode it (see FlutterDataMigrator).
-     */
+    /** The last cup sizes logged, most recent first. Comma-joined; the migration transcodes it. */
     fun recentHydrationAmountsMilliliters(): List<Double> =
         prefs.getString(KEY_RECENT_HYDRATION_AMOUNTS_MILLILITERS, null)
             .orEmpty()
@@ -830,12 +788,7 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
-    /**
-     * The widget ids this install has already offered the user, so a widget
-     * added by an app update can be told apart from one the user deliberately
-     * removed — both are simply absent from the saved order. Null before the
-     * first migration ran.
-     */
+    /** Widget ids already offered, so an update's new widget differs from a removed one. */
     fun dashboardKnownWidgetIds(): Set<String>? =
         prefs.getString(KEY_DASHBOARD_KNOWN_WIDGETS, null)
             ?.split(KEY_VALUE_SEPARATOR)
@@ -930,8 +883,7 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
-    // A user who saved METRIC/IMPERIAL before SYSTEM existed keeps that
-    // explicit choice; only the unset (fresh-install) case follows the OS.
+    // An explicit METRIC/IMPERIAL saved before SYSTEM existed is kept.
     private fun readUnitSystemPreference(): UnitSystemPreference =
         UnitSystemPreference.fromStorageValue(prefs.getString(KEY_UNIT_SYSTEM, null))
             ?: UnitSystemPreference.SYSTEM

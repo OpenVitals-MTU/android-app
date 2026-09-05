@@ -26,8 +26,7 @@ class ActivityPresentationMapperTest {
         weekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     )
 
-    // The three days the metric-display cases share; all inside `weekQuery`'s
-    // Monday-to-Sunday window so the goal fold sees them.
+    // Three days inside `weekQuery`'s Monday-to-Sunday window, so the goal fold sees them.
     private val day3 = LocalDate.of(2026, 5, 6)
     private val day4 = LocalDate.of(2026, 5, 7)
     private val day5 = LocalDate.of(2026, 5, 8)
@@ -289,13 +288,10 @@ class ActivityPresentationMapperTest {
     }
 
     @Test fun `steps has data whenever rows exist, distance needs a positive one`() {
-        // Steps: the column is never null, so a row is a reading even at zero —
-        // a day the user did not move is a real, chartable zero.
+        // Steps: the column is never null, so a zero row is a real, chartable zero.
         assertTrue(stepsDisplay(listOf(dailySteps(day3))).hasData)
 
-        // Distance parts company with Flutter here on purpose: a zero-distance
-        // row is treated as no reading, so the screen shows its placeholder
-        // rather than a flat line at the axis.
+        // Distance diverges from Flutter on purpose: a zero-distance row is no reading.
         assertFalse(metricDisplayOf(ActivityMetric.DISTANCE, listOf(dailySteps(day3)), 5_000.0).hasData)
         assertTrue(
             metricDisplayOf(

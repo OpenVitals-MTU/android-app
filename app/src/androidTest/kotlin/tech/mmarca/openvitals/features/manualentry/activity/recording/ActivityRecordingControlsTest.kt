@@ -21,14 +21,8 @@ import tech.mmarca.openvitals.testing.testUnitFormatter
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Ports the portable half of the `recording screen` group of Flutter's
- * `test/features/manualentry/activity/recording/activity_recording_screen_test.dart`.
- *
- * The control bar is what a rider reaches for mid-effort, one-handed, without
- * reading. Offering Finish before a session has started ends a recording that
- * never happened; hiding Pause once it has started means the only way to stop
- * for a level crossing is to finish. Lap and Marker are guarded because neither
- * means anything before there is a position to hang them on.
+ * The control bar a rider reaches for without reading. Finish before a start ends nothing;
+ * Lap and Marker mean nothing before there is a position.
  */
 class ActivityRecordingControlsTest {
 
@@ -63,9 +57,7 @@ class ActivityRecordingControlsTest {
 
     @Test
     fun aRunningGpsSessionShowsItsTabsPauseLapAndMarker() {
-        // The tab row and the control bar are the two halves the recording
-        // screen assembles; a lap with one point is a lap of nothing, and a
-        // marker with no position has nowhere to sit on the map.
+        // A lap with one point is a lap of nothing, and a marker with no position has nowhere to sit.
         setContent {
             ActivityRecordingTabRow(selectedTab = ActivityRecordingTab.STATS, onSelect = {})
             GpsRecordingControls(
@@ -103,8 +95,7 @@ class ActivityRecordingControlsTest {
 
     @Test
     fun aRepetitionSessionCountsRepsAndOffersEndSet() {
-        // Focus mode is a clock and a distance read at arm's length; a set of
-        // pull-ups has neither, so it is deliberately not offered here.
+        // Focus mode is a clock and a distance; a set of pull-ups has neither.
         setContent {
             RepetitionRecordingStats(
                 state = repetitionState(count = 7L),

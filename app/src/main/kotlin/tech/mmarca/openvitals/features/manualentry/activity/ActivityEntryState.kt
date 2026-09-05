@@ -100,15 +100,8 @@ data class ActivityLinkedPlan(
 )
 
 /**
- * How the session felt, on a four-step scale.
- *
- * Drawn with Material's outlined sentiment glyphs rather than emoji. The design
- * system's rule is absolute — icons carry all visual shorthand, never emoji —
- * and the reasons are practical as well as stylistic: an emoji renders in the
- * system emoji font, so it ignores the app's colour scheme entirely, changes
- * shape between Android versions and vendor skins, and cannot be tinted to
- * carry selection state. These four are a scale, and a scale has to look like
- * one set.
+ * How the session felt, on a four-step scale. Material glyphs, not emoji:
+ * emoji ignore the colour scheme and cannot carry selection state.
  */
 enum class ActivityEntryFeeling(
     val icon: ImageVector,
@@ -137,12 +130,7 @@ enum class ActivityEntryFeeling(
     ),
 }
 
-/**
- * One set of the session. A set is normally "N reps of the activity's own
- * exercise", but a plan can put a different exercise (a plank inside a push-up
- * session) or a timed hold in the sequence, so a set may carry its own segment
- * type and a duration goal instead of a rep count.
- */
+/** One set. A plan can put a different exercise or a timed hold in the sequence. */
 data class ActivityRepetitionSetInput(
     /** The rep count, or the seconds when [isDuration]. */
     val repetitionsText: String = "",
@@ -202,17 +190,10 @@ data class ActivityEntryUiState(
     val isRecordingDraft: Boolean = false,
     val saveCompleted: Boolean = false,
     val recordedBleSamples: BleRecordingSampleBuffer = BleRecordingSampleBuffer(),
-    /**
-     * CoMaps guidance banked during the recording, saved app-locally beside
-     * the activity — never written to Health Connect.
-     */
+    /** CoMaps guidance banked during the recording. App-local only. */
     val recordedCoMapsSamples: List<CoMapsNavigationSnapshot> = emptyList(),
     val sessionHeartRateSamples: List<HeartRateSample> = emptyList(),
-    /**
-     * The instant the effort stopped in a guided heart-rate-recovery test,
-     * carried from the recording so the write path can mark it as a trailing
-     * rest segment. Null for every ordinary activity.
-     */
+    /** When the effort stopped in a recovery test, written as a trailing rest segment. */
     val recordedRecoveryStartTime: Instant? = null,
 ) {
     val routePoints: List<ExerciseRoutePoint>

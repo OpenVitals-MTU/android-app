@@ -15,18 +15,8 @@ import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelinePoint
 val BodyEnergyFixtureDate: LocalDate = LocalDate.of(2026, 6, 23)
 
 /**
- * A whole, plausible Body Energy day, so a test can name the one thing it cares
- * about.
- *
- * The production model needs a day of heart rate, sleep, workouts and activity
- * progress to produce one of these, and the timeline carries fifteen fields plus
- * a point per five-minute bucket. Feeding the real calculator would make every
- * rendering assertion depend on the drain constants, which are tuned regularly
- * and are somebody else's test.
- *
- * The defaults describe an unremarkable, well-measured day — charged a little
- * overnight, drained a little since, high confidence — so whatever a test
- * overrides is visibly the thing under test.
+ * A whole, plausible Body Energy day, so a test can name the one thing it cares about.
+ * The defaults describe an unremarkable, well-measured day.
  */
 fun bodyEnergyTimeline(
     date: LocalDate = BodyEnergyFixtureDate,
@@ -89,10 +79,7 @@ fun bodyEnergyPoint(
     primaryInfluence = influence,
 )
 
-/**
- * What the day was computed from. Defaults to a fully measured day; a test that
- * cares about a missing signal turns exactly that one off.
- */
+/** What the day was computed from. Defaults to a fully measured day. */
 fun bodyEnergyInputSummary(
     heartRateSampleCount: Int = 288,
     sleepSessionCount: Int = 1,

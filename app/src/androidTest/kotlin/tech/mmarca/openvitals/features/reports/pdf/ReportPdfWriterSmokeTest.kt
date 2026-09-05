@@ -29,12 +29,7 @@ import tech.mmarca.openvitals.domain.model.ReportMetricSummary
 import tech.mmarca.openvitals.domain.model.ReportPoint
 import tech.mmarca.openvitals.domain.model.ReportRequest
 
-/**
- * The one thing no JVM test can prove: android.graphics.pdf.PdfDocument, fed
- * the real block pipeline, emits an actual PDF. Charts, tables, notices and a
- * failed section all in one document — if any draw call is wrong on a real
- * runtime, this is where it surfaces.
- */
+/** What no JVM test can prove: PdfDocument, fed the real block pipeline, emits an actual PDF. */
 class ReportPdfWriterSmokeTest {
 
     private val end = LocalDate.of(2026, 7, 31)

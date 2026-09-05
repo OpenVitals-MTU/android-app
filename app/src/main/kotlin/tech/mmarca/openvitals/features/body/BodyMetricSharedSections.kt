@@ -507,18 +507,8 @@ internal fun LazyListScope.bmiEntries(
 }
 
 /**
- * One body metric's history over a week, month or year, as a LINE.
- *
- * Weight, body fat and their siblings are levels, not accumulations. The
- * period chart used to hand month and year to the calendar heatmap, which
- * colours each day by how big its number is — a reading of a quantity that
- * spends its life inside a two-kilo band, drawn as forty near-identical dots.
- * It answered "did you weigh yourself on the 14th" and hid the only thing
- * anyone opens the screen for, which is which way the line is going.
- *
- * A line is what the heart and vitals screens already draw for the same shape
- * of data; this brings the body screens in with them. The DAY range keeps its
- * own intraday chart, where the x axis is hours rather than dates.
+ * One body metric's history over a period, as a line. These are levels, not
+ * accumulations, and a heatmap hid which way the line was going.
  */
 @Composable
 internal fun BodyPeriodMetricChart(
@@ -792,10 +782,7 @@ internal fun bodyReadingItems(
         }
     }
 
-/**
- * The reading list as the screen renders it: newest first. Extracted from the
- * four call sites that each sorted inline, so the ordering rule is testable.
- */
+/** The reading list as rendered: newest first. */
 internal fun List<BodyReadingItem>.newestFirst(): List<BodyReadingItem> =
     sortedByDescending { it.time }
 

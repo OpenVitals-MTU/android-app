@@ -216,10 +216,7 @@ internal fun ActivityRecordingScreen(
             delay(1_000L)
         }
     }
-    // While the pre-start GPS screen is on display, the guidance watch runs
-    // so the screen can show what CoMaps is doing before anything records.
-    // Armed here and disarmed the moment the screen goes away or the session
-    // starts.
+    // While the pre-start screen shows, the guidance watch runs so CoMaps state is visible.
     val coMapsPrestartArmed = state.recordingKind == ActivityRecordingKind.GPS_ROUTE &&
         state.status == ActivityRecordingStatus.IDLE
     val currentOnCoMapsPrestartWatch by rememberUpdatedState(onCoMapsPrestartWatch)
@@ -227,29 +224,20 @@ internal fun ActivityRecordingScreen(
         currentOnCoMapsPrestartWatch(coMapsPrestartArmed)
         onDispose { currentOnCoMapsPrestartWatch(false) }
     }
-    // Guidance dismissal, per thing-dismissed: swatting the overlay away
-    // silences THIS route, swatting a card silences THAT state. A reroute, a
-    // state change or a new session each speak again. Held here rather than
-    // in the tabs because dismissal is also how the start gate below opens.
+    // Dismissal per thing dismissed: the overlay silences this route, a card its
+    // state. Held here because dismissal also opens the start gate.
     val coMapsGuidanceKey = when (coMapsNavigation) {
         is CoMapsNavigationState.Active -> "active:${coMapsNavigation.routeRevision ?: -1}"
         else -> coMapsNavigation::class.simpleName.orEmpty()
     }
-    // Keyed on the activity, NOT on startTime: startTime changes the instant Start is
-    // pressed, so a card dismissed while setting the ride up came straight back and had
-    // to be dismissed a second time. Setting a ride up and riding it is one continuous
-    // act. A genuinely new session drops this screen from the composition and takes the
-    // dismissal with it, and a reroute or a change of guidance state re-arms it through
-    // the key below.
+    // Keyed on the activity, not startTime, which changes the instant Start is
+    // pressed and brought a dismissed card straight back.
     var dismissedCoMapsGuidanceKey by rememberSaveable(state.activityTypeId) {
         mutableStateOf<String?>(null)
     }
     val coMapsGuidanceDismissed = dismissedCoMapsGuidanceKey == coMapsGuidanceKey
-    // The start gate: with the integration on and CoMaps not yet guiding, the first Start is
-    // a question, not a trigger. It asks in a dialog the user can answer on the spot, rather
-    // than refusing and pointing at a card to dismiss — that card only lives on the map tab,
-    // so from anywhere else the instruction was unfollowable. Guiding already, answered once,
-    // or integration off: Start starts, as ever.
+    // The start gate: with the integration on and CoMaps not guiding, the first
+    // Start asks in a dialog rather than pointing at a card on another tab.
     val coMapsStartGateActive = coMapsPrestartArmed &&
         coMapsNavigation !is CoMapsNavigationState.Disabled &&
         coMapsNavigation !is CoMapsNavigationState.Active &&
@@ -294,8 +282,7 @@ internal fun ActivityRecordingScreen(
                     OpenVitalsButton(
                         onClick = {
                             askBeforeStartingWithoutRoute = false
-                            // Answered for this guidance state, so Start is a trigger from here
-                            // on. A reroute or a change of state re-arms the question.
+                            // Answered for this state; a reroute re-arms the question.
                             dismissedCoMapsGuidanceKey = coMapsGuidanceKey
                             onStartRecording(idleGpsFixState.latestPreciseFix)
                         },
@@ -304,8 +291,7 @@ internal fun ActivityRecordingScreen(
                     }
                 },
                 dismissButton = {
-                    // Not "Cancel": the reason to say no here is to go and set a route, so the
-                    // way out is the thing the user would do next.
+                    // Not "Cancel": the way out is to go and set a route.
                     OpenVitalsTextButton(
                         onClick = {
                             askBeforeStartingWithoutRoute = false
@@ -361,8 +347,7 @@ internal fun ActivityRecordingScreen(
                 ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Above everything, because during a recovery test it is the only
-            // thing on this screen the rider needs.
+            // Above everything: during a recovery test it is all the rider needs.
             if (state.isHeartRateRecoveryTest) {
                 ActivityHeartRateRecoveryPhaseBanner(
                     state = state,

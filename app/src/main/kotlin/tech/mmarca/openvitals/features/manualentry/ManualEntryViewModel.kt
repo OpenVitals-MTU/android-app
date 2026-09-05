@@ -23,11 +23,8 @@ import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 
 /**
- * The log grid. A tile opens its entry screen and nothing else: the screen
- * carries the write-permission callout, and its Grant button is the one place
- * that asks Health Connect. Health Connect can mark a permission "don't ask
- * again" after a single decline (seen on Android 17), so a request from the
- * grid would spend the only dialog before the user has even seen the form.
+ * The log grid. A tile only opens its entry screen: Health Connect can
+ * stop asking after one decline, so the grid never spends that dialog.
  */
 @Immutable
 data class ManualEntryUiState(
@@ -54,7 +51,7 @@ class ManualEntryViewModel @Inject constructor(
     )
     val uiState: StateFlow<ManualEntryUiState> = _uiState.asStateFlow()
 
-    // ── tiles: each opens its entry screen ──────────────────────────────────
+    // Tiles: each opens its entry screen.
 
     fun onHydrationWidgetTapped() {
         _uiState.value = _uiState.value.copy(pendingHydrationEntryNavigation = true)
@@ -112,7 +109,7 @@ class ManualEntryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(pendingCycleEntryNavigation = false)
     }
 
-    // ── widget layout ───────────────────────────────────────────────────────
+    // Widget layout.
 
     fun toggleWidgetEdit() {
         _uiState.value = _uiState.value.copy(isEditingWidgets = !_uiState.value.isEditingWidgets)

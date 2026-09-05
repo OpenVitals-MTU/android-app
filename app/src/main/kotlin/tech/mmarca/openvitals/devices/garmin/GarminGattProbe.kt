@@ -3,18 +3,9 @@ package tech.mmarca.openvitals.devices.garmin
 import android.content.Context
 
 /**
- * [GarminTransportProbe] over [GarminGattClient].
- *
- * The first piece of the GFDI transport: before anything can be sent to a
- * watch, this establishes which characteristics to send it on. It connects,
- * enumerates, classifies and hangs up — no GFDI traffic, no writes. The
- * radio work lives in [GarminGattClient.enumerateServices]; this file only
- * classifies what came back, which keeps `android.bluetooth` in exactly one
- * file.
- *
- * The full service map is logged, not just the verdict. A watch that comes
- * back [GarminTransportVariant.UNKNOWN] is the case that needs diagnosing,
- * and the map is the only evidence that explains it.
+ * [GarminTransportProbe] over [GarminGattClient]: connect, enumerate,
+ * classify, hang up. The full service map is logged, since it is the only
+ * evidence for an UNKNOWN verdict.
  */
 class GarminGattProbe(private val context: Context) : GarminTransportProbe {
 
@@ -33,7 +24,7 @@ class GarminGattProbe(private val context: Context) : GarminTransportProbe {
             variant = classify(services),
             services = services,
         )
-        // Log line by line so nothing is dropped or reordered in logcat.
+        // Line by line, so logcat drops nothing.
         for (line in report.describe().split('\n')) {
             GarminLog.log(line)
         }
@@ -47,12 +38,7 @@ class GarminGattProbe(private val context: Context) : GarminTransportProbe {
     )
 
     companion object {
-        /**
-         * V2 is checked FIRST, matching `GarminSupport.initializeDevice`: a
-         * watch that offers both must be driven over the multi-link
-         * transport, because that is what its firmware expects to carry the
-         * sync.
-         */
+        /** V2 first, as `GarminSupport.initializeDevice`: a watch offering both expects multi-link. */
         fun classify(services: List<GarminGattService>): GarminTransportVariant {
             val characteristics = buildSet {
                 for (service in services) addAll(service.characteristics.keys)

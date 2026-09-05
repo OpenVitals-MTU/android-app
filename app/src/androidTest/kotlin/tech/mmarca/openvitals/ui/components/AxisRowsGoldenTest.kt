@@ -1,5 +1,4 @@
-// The chart composables live under ui/charts/ but declare ui.components; this
-// file mirrors that rather than adding an import that looks like a mistake.
+// The chart composables live under ui/charts/ but declare ui.components; this file mirrors that.
 package tech.mmarca.openvitals.ui.components
 
 import androidx.compose.foundation.Canvas
@@ -23,16 +22,9 @@ import tech.mmarca.openvitals.testing.goldenDates
 import tech.mmarca.openvitals.testing.goldenInstant
 
 /**
- * Port of Flutter's `test/goldens/charts/axis_rows_golden_test.dart`.
- *
- * The axis rows, photographed WITHOUT a chart on top of them. Every one is a strip
- * of text that only means something in relation to the plot above it, which is why
- * they are worth shooting alone: the bug they exist to prevent is a row that is
- * internally perfect and lines up with nothing.
- *
- * Kotlin says "inset" differently from Flutter: there is no `inset` parameter, the
- * row is wrapped in [ChartXAxisWithYAxis] when the plot above has a y-axis gutter
- * and left bare when it does not. Both conventions are shot, same as Flutter.
+ * The axis rows, photographed without a chart on top. The bug they prevent is a row that is
+ * internally perfect and lines up with nothing. A row is wrapped in [ChartXAxisWithYAxis]
+ * when the plot has a y-axis gutter and left bare when it does not; both are shot.
  */
 class AxisRowsGoldenTest {
 
@@ -41,8 +33,7 @@ class AxisRowsGoldenTest {
 
     @Test
     fun yAxisColumn_matchesGolden() {
-        // Three labels, top-to-bottom: max, mid, min. `chartYAxisLabels` steps up to a
-        // finer format when the compact one would print the same string twice.
+        // Three labels: max, mid, min. `chartYAxisLabels` steps up to a finer format to avoid duplicates.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 180.dp) {
                 GuideYAxisChart()
@@ -70,8 +61,7 @@ class AxisRowsGoldenTest {
 
     @Test
     fun dayLabelsUnderAPlotWithNoYAxis_matchesGolden() {
-        // The body-energy strip's case: the plot starts at the card's edge, so the row
-        // does too — no [ChartXAxisWithYAxis] wrapper.
+        // The body-energy strip's case: the plot starts at the card's edge, so no wrapper.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 200.dp) {
                 Column(Modifier.fillMaxWidth()) {
@@ -87,9 +77,7 @@ class AxisRowsGoldenTest {
 
     @Test
     fun sessionElapsedLabels_insetAndNot_matchGolden() {
-        // A 1h 12m session, so the quarter labels are 0:00 / 18:00 / 36:00 / 54:00 /
-        // 1:12:00 — the point at which `formatElapsedChartLabel` starts printing an
-        // hour field and the row's five labels stop being the same width.
+        // A 1h 12m session, where `formatElapsedChartLabel` starts printing an hour field.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 100.dp) {
                 val axis = SessionAxis(
@@ -141,8 +129,7 @@ class AxisRowsGoldenTest {
 
     @Test
     fun periodAxis_year_keepsTheTwelveMonthNames() {
-        // Twelve buckets, so `isPeriodChartLabelVisible` shows all of them; a year fed
-        // raw DAYS instead would thin to every thirtieth.
+        // Twelve buckets, so every label shows; a year fed raw days would thin to every thirtieth.
         val months = (7..12).map { LocalDate.of(2025, it, 1) } +
             (1..6).map { LocalDate.of(2026, it, 1) }
 
@@ -161,11 +148,7 @@ class AxisRowsGoldenTest {
     }
 }
 
-/**
- * A plot that draws nothing but [drawYAxisGuides] — the shared primitive every real
- * painter opens with. The axis rows need SOMETHING above them to be aligned against,
- * and the real painters are all private to their charts.
- */
+/** A plot that draws only [drawYAxisGuides], so the rows have something to align against. */
 @androidx.compose.runtime.Composable
 private fun GuidePlot() {
     val gridColor = ChartTokens.grid(MaterialTheme.colorScheme.primary)

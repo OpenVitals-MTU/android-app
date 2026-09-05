@@ -16,27 +16,11 @@ import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
 
 /**
- * Puts CoMaps guidance onto a paired Garmin watch, as one notification updated
- * in place.
- *
- * A feature in its own right, and nothing to do with activity recording: the
- * wearer who wants the next turn on their wrist has not necessarily started a
- * session, and often does not want to. So this asks [CoMapsGuidanceFeed] for
- * guidance on its own behalf — whenever the per-watch "CoMaps guidance on
- * watch" toggle is on and a Garmin watch is actually paired — and follows what
- * comes back. A recording may be asking for the same feed for its own reasons;
- * neither can switch the other off, and while both are on, the wrist and the
- * phone's turn strip are reading the same state and cannot disagree.
- *
- * The Garmin-specific half is what happens next: Garmin has no turn-by-turn
- * channel a phone can drive, so guidance goes out as a notification. Another
- * vendor would put it somewhere else entirely, and would be another class at
- * this layer asking the same feed the same way — it needs nothing from here
- * and nothing from recording.
- *
- * The notification is withdrawn the moment guidance stops — the route ended,
- * the toggle went off, the watch was forgotten — so a finished route never
- * lingers on the wrist.
+ * Puts CoMaps guidance on a Garmin watch as one notification updated in
+ * place. Independent of activity recording: it asks [CoMapsGuidanceFeed] on
+ * its own behalf whenever the per-watch toggle is on and a Garmin watch is
+ * paired. Garmin has no turn-by-turn channel, hence a notification. The
+ * notification is withdrawn the moment guidance stops.
  */
 @Singleton
 class GarminNavigationRelay @Inject constructor(
@@ -52,21 +36,14 @@ class GarminNavigationRelay @Inject constructor(
     private val policy = GarminNavigationRelayPolicy()
     private var started = false
 
-    /**
-     * Starts following the guidance feed, and asking for it. Called once from
-     * the app's `onCreate`; Disabled is in the stream too, and is what takes
-     * the notification down when a route ends.
-     */
+    /** Starts following the feed. Called once from `onCreate`. Disabled takes the notification down. */
     fun start() {
         if (started) return
         started = true
         scope.launch {
             guidanceFeed.guidance.collect { relay(it) }
         }
-        // The paired watches are half the answer to "does anyone want this on
-        // a wrist", so pairing or forgetting one changes it as much as the
-        // toggle does. The flow replays its current value, which is also the
-        // first ask.
+        // Pairing or forgetting a watch changes the answer as much as the toggle.
         scope.launch {
             deviceRepository.devicesFlow.collect { syncGuidanceRequest() }
         }
@@ -79,11 +56,7 @@ class GarminNavigationRelay @Inject constructor(
         if (!enabled) scope.launch { relay(CoMapsNavigationState.Disabled) }
     }
 
-    /**
-     * Tells the guidance feed whether the wrist needs it up. This is what makes
-     * the wrist independent of a recording: the feed runs because a watch is
-     * waiting for it, not because a session is.
-     */
+    /** Tells the feed whether the wrist needs it. The feed runs because a watch waits, not a session. */
     private fun syncGuidanceRequest() {
         guidanceFeed.request(CoMapsGuidanceFeed.Reason.WATCH, wantsGuidanceOnWatch())
     }
@@ -123,10 +96,7 @@ class GarminNavigationRelay @Inject constructor(
     }
 
     companion object {
-        /**
-         * Above the 31-bit ids the notification listener derives, so it can
-         * never collide with a forwarded phone notification.
-         */
+        /** Above the 31-bit listener ids, so it never collides with a forwarded notification. */
         const val NAVIGATION_NOTIFICATION_ID = 0x8000_0001L
     }
 }

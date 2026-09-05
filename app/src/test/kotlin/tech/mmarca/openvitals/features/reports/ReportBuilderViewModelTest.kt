@@ -127,8 +127,7 @@ class ReportBuilderViewModelTest {
         coEvery { service.build(any(), any(), any(), any(), any(), any()) } coAnswers {
             val cancellation = arg<ReportCancellation>(5)
             handed = cancellation
-            // A real build outlives the cancel tap; without this the fake
-            // finishes before cancelBuild() runs and the test asserts nothing.
+            // A real build outlives the cancel tap; without this the fake finishes first.
             while (!cancellation.isCancelled) kotlinx.coroutines.delay(10)
             File("r.pdf")
         }

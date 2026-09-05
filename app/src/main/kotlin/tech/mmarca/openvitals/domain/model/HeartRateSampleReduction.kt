@@ -5,10 +5,7 @@ import kotlin.math.roundToLong
 /** Upper bound for day-view heart rate charts and in-memory use. */
 const val MaxHeartRateChartSamples = 2_500
 
-/**
- * Reduces high-frequency heart rate samples to a chart-friendly count while preserving
- * the overall day shape via bucket averaging.
- */
+/** Reduces high-frequency samples to a chart-friendly count by bucket averaging. */
 fun List<HeartRateSample>.reducedForChart(
     maxSamples: Int = MaxHeartRateChartSamples,
 ): List<HeartRateSample> {

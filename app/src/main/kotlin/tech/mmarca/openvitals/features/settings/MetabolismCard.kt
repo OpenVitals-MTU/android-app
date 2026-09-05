@@ -26,11 +26,7 @@ import tech.mmarca.openvitals.features.caffeine.MetabolismEditor
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsTonalButton
 
-/**
- * The nine physiological caffeine-clearance factors, edited as part of the
- * Body profile section. Saves through the same CaffeinePreferences store as
- * the caffeine model card under Nutrition.
- */
+/** The nine caffeine-clearance factors, under Body profile. Same store as the caffeine model card. */
 @Composable
 internal fun MetabolismCard(
     preferences: CaffeinePreferences,

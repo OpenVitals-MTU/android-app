@@ -5,12 +5,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import android.content.Context
 import tech.mmarca.openvitals.features.activity.exerciseSegmentLabelRes
 
-/**
- * One pickable exercise. [description] is only set for presets Health Connect
- * has no constant for (push-ups ride on `OTHER_WORKOUT`), and it is what gets
- * stored on the step so the plan reads back as "Push-ups" rather than "Other
- * workout" in every app that shows it.
- */
+/** One pickable exercise. [description] is set for presets with no Health Connect constant. */
 data class WorkoutPlanStepChoice(
     val segmentType: Int,
     val description: String? = null,

@@ -6,10 +6,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 
-/**
- * The quick-add offer and its button labels — the millilitre volumes a
- * reminder notification proposes, and how each one reads per unit system.
- */
+/** The quick-add volumes a reminder proposes, and how each reads per unit system. */
 class HydrationReminderQuickAddTest {
 
     @Test
@@ -57,8 +54,7 @@ class HydrationReminderQuickAddTest {
 
     @Test
     fun `quick add amounts never offer the same size twice`() {
-        // 250 fills slot one; the duplicate last-custom and the duplicate 250
-        // fallback are both skipped, so the bottle default lands in slot two.
+        // 250 fills slot one; the duplicates are skipped, so the bottle default lands in slot two.
         assertEquals(
             listOf(250.0, 500.0),
             hydrationQuickAddAmountsMilliliters(
@@ -101,8 +97,7 @@ class HydrationReminderQuickAddTest {
 
     @Test
     fun `quick add actions are labelled in fluid ounces for imperial`() {
-        // The volume itself stays in millilitres — the storage unit, not the
-        // display unit — so a unit-system change cannot corrupt what a tap logs.
+        // The volume stays in millilitres, so a unit-system change cannot corrupt what a tap logs.
         assertEquals(
             "12 fl oz",
             hydrationQuickAddLabel(

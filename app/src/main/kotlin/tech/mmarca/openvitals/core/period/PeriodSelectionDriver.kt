@@ -32,12 +32,7 @@ class PeriodSelectionDriver(
     fun selectDate(date: LocalDate): PeriodSelection =
         updateUserSelection(selection.selectDate(date))
 
-    /**
-     * Drill into a single day: switch to the Day range anchored on [date] — the
-     * month heatmap's tap-to-open-day. Persists the range like [selectRange] so
-     * the screen reopens on Day, and pins the past period like [selectDate] so a
-     * resume does not bounce the user back to today.
-     */
+    /** Drill into a single day: the Day range anchored on [date], persisted and pinned. */
     fun selectDay(date: LocalDate): PeriodSelection {
         onRangeSelected(TimeRange.DAY)
         return updateUserSelection(selection.selectRange(TimeRange.DAY).selectDate(date))

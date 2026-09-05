@@ -6,33 +6,20 @@ import java.io.InputStreamReader
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
-/**
- * A fresh stream over the picked file, or null when it cannot be opened.
- *
- * The reader takes this rather than a path because the file arrives through the
- * Storage Access Framework (`ContentResolver.openInputStream`) — there is no
- * filesystem path, and the file is never held in memory.
- */
+/** A fresh stream over the picked file, or null. There is no path: files arrive through SAF. */
 fun interface CsvInputSource {
     fun open(): InputStream?
 }
 
-/** How many data rows the mapping screen samples. The stream is closed after
- * this, so picking a 400 MB export still opens instantly. */
+/** Data rows the mapping screen samples. The stream closes after this. */
 const val CSV_PREVIEW_ROWS = 50
 
-/** Delimiters worth guessing between. Semicolon matters: it is what a European
- * locale's spreadsheet exports, because the comma is its decimal separator. */
+/** Delimiters worth guessing between. Semicolon is what a European spreadsheet exports. */
 val CsvFieldDelimiters: List<String> = listOf(",", ";", "\t", "|")
 
 /**
- * The separator and line ending a file actually uses.
- *
- * Both must be right. The tokenizer does not fail on a wrong line ending — it
- * returns ONE row with the entire file crammed into the last field, which
- * downstream looks like a file with a single unparsable row rather than a
- * mis-sniffed dialect. [CsvTableReader] therefore sniffs it rather than
- * assuming, and [CsvSample.looksMisparsed] catches the case anyway.
+ * The separator and line ending a file uses. A wrong line ending yields one
+ * row with the whole file in its last field, so both are sniffed.
  */
 data class CsvDialect(
     val fieldDelimiter: String,
@@ -52,10 +39,7 @@ data class CsvSample(
 
     val isEmpty: Boolean get() = headerRow.isEmpty() || dataRows.isEmpty()
 
-    /**
-     * A single very wide row whose cells contain line breaks — the signature of a
-     * mis-sniffed line ending, which otherwise reads as "one unparsable row".
-     */
+    /** A single wide row with line breaks in its cells: a mis-sniffed line ending. */
     val looksMisparsed: Boolean
         get() = dataRows.isEmpty() && headerRow.size <= 2 && headerRow.any { "\n" in it }
 
@@ -66,23 +50,14 @@ data class CsvSample(
         }
 }
 
-/**
- * Thrown when a picked file cannot be read at all. The view-model turns it into
- * a screen error; nothing below that layer catches it.
- */
+/** Thrown when a picked file cannot be read at all. */
 class CsvReadException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
-/**
- * One tokenised data row and its 1-based line number in the file, so a
- * diagnostic can name the row the user has to go look at.
- */
+/** One tokenised data row and its 1-based line number. */
 data class CsvRow(
     val rowNumber: Int,
     val fields: List<String>,
-    /**
-     * Raw bytes consumed from the file by the time this row was emitted, for a
-     * determinate progress bar. Approximate by however much the decoder buffered.
-     */
+    /** Bytes consumed by the time this row was emitted, for a progress bar. */
     val bytesRead: Long = 0,
 ) {
     /** The trimmed cell at [index], or null when the row is too short or blank there. */
@@ -96,12 +71,8 @@ data class CsvRow(
 class CsvTableReader {
 
     /**
-     * Guesses the dialect from the first chunk of [source].
-     *
-     * The delimiter is whichever candidate appears most often OUTSIDE quotes on
-     * the first line — counting inside quotes would pick the comma out of
-     * `"Weight (kg)","Fat mass (kg)"` in a semicolon file. The line ending is
-     * CRLF when the first break is preceded by a carriage return.
+     * Guesses the dialect from the first chunk: the most frequent delimiter
+     * outside quotes on the first line, and CRLF when the first break has one.
      */
     fun sniffDialect(source: CsvInputSource): CsvDialect {
         val head = readHead(source)
@@ -167,13 +138,7 @@ class CsvTableReader {
         )
     }
 
-    /**
-     * Every data row in [source], in file order, with the byte offset reached so
-     * far so a caller can show determinate progress without counting rows first.
-     *
-     * The header row is dropped when [hasHeaderRow]. Rows are emitted as they are
-     * tokenised; the file is never held in memory.
-     */
+    /** Every data row in file order, with the byte offset reached. The file is never held in memory. */
     fun rows(
         source: CsvInputSource,
         dialect: CsvDialect,
@@ -231,16 +196,13 @@ class CsvTableReader {
 }
 
 /**
- * A pull-based RFC 4180 tokenizer over one stream: quoted fields, `""` escapes,
- * embedded newlines and delimiters inside quotes, and a configurable delimiter
- * and line ending. Every cell stays a String — the column's interpretation
- * decides how to read it, and `4,5` in a semicolon file must not become a list.
+ * A pull-based RFC 4180 tokenizer: quoted fields, `""` escapes, embedded
+ * newlines, configurable delimiter and line ending. Every cell stays a String.
  */
 private class CsvTokenizer(stream: InputStream, dialect: CsvDialect) {
     private val counting = CountingInputStream(stream)
 
-    // The default decoder replaces malformed bytes, so one bad byte cannot kill
-    // an otherwise fine export.
+    // The default decoder replaces malformed bytes, so one bad byte cannot kill the export.
     private val reader = InputStreamReader(counting, Charsets.UTF_8)
 
     private val delimiter = dialect.fieldDelimiter[0]
@@ -334,8 +296,7 @@ private class CsvTokenizer(stream: InputStream, dialect: CsvDialect) {
         }
     }
 
-    // One-character pushback so multi-character tokens (CRLF, `""` escapes) can
-    // be matched without a full lookahead buffer.
+    // One-character pushback for multi-character tokens.
     private fun read(): Int {
         if (pushback >= 0) {
             val value = pushback
@@ -383,12 +344,5 @@ private fun countOutsideQuotes(line: String, needle: String): Int {
     return count
 }
 
-/**
- * The UTF-8 byte-order mark, as an escape rather than the character itself.
- *
- * Spreadsheet exports routinely start with one, and left in place it becomes
- * part of the first column's header so no mapping matches it. Written literally
- * the file itself carries a stray BOM mid-source, which is both invisible in a
- * diff and something tooling flags.
- */
+/** The UTF-8 byte-order mark, as an escape so the source carries no literal BOM. */
 private const val Utf8ByteOrderMark = "\uFEFF"

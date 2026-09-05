@@ -13,16 +13,10 @@ import tech.mmarca.openvitals.domain.model.DashboardWeeklyCardioLoad
 import tech.mmarca.openvitals.domain.model.DashboardWeeklyCardioLoadTargetSource
 import tech.mmarca.openvitals.domain.model.ExerciseData
 
-/**
- * The dashboard body's own derivations, mirroring Flutter's
- * `dashboard_display_test.dart` "tiles with no data sink below the ones with
- * some" and "activities" groups. Both are pure functions extracted from
- * `DashboardContent`, so no Compose runtime is involved.
- */
+/** The dashboard body's own derivations, pure functions extracted from `DashboardContent`. */
 class DashboardContentLayoutTest {
 
-    // STEPS and WEEKLY_CARDIO_LOAD each span two rows, so together they fill the
-    // fixed hero section exactly — everything after them lands in the carousel.
+    // STEPS and WEEKLY_CARDIO_LOAD fill the hero section; everything after them lands in the carousel.
     private val savedOrder = listOf(
         DashboardWidgetId.STEPS,
         DashboardWidgetId.WEEKLY_CARDIO_LOAD,
@@ -87,7 +81,7 @@ class DashboardContentLayoutTest {
         sortEmptyTilesLast = sortEmptyTilesLast,
     )
 
-    // ─── tiles with no data sink below the ones with some ─────────────────────
+    // Tiles with no data sink below the ones with some.
 
     @Test
     fun `empty tiles come last in the carousel in saved order`() {
@@ -119,8 +113,7 @@ class DashboardContentLayoutTest {
 
     @Test
     fun `the edit grid keeps the true saved order`() {
-        // A drag lands where the card visually is: edit mode must not show the
-        // partition it would immediately re-apply.
+        // A drag lands where the card is: edit mode must not show the partition.
         val plain = visibleIds()
         val editing = visibleIds(isEditingDashboard = true)
 
@@ -130,8 +123,7 @@ class DashboardContentLayoutTest {
 
     @Test
     fun `a tile still loading holds its place instead of sinking`() {
-        // Sinking a loading tile would reorder the carousel twice on every open:
-        // down while empty, back up when its data lands.
+        // Sinking a loading tile would reorder the carousel twice on every open.
         val held = visibleIds(display = display(loading = setOf(DashboardWidgetId.CALORIES_OUT)))
 
         assertEquals(
@@ -149,10 +141,7 @@ class DashboardContentLayoutTest {
 
     @Test
     fun `no tile is demoted while any tile is still loading`() {
-        // Metrics land one at a time, so demoting on a half-filled dashboard
-        // reshuffles the grid on every arrival — and promotes each tile back
-        // the moment its own data shows up. SLEEP has data and HYDRATION does
-        // not, and neither moves while anything is still reading.
+        // Metrics land one at a time, so nothing moves while anything is still reading.
         assertEquals(savedOrder, visibleIds(display = display(loading = setOf(DashboardWidgetId.SLEEP))))
 
         // The demotion still happens, once the last tile has spoken.
@@ -171,8 +160,7 @@ class DashboardContentLayoutTest {
 
     @Test
     fun `a saved order that leads with an empty tile still sinks it`() {
-        // The user's own order puts an empty tile first in the carousel; the
-        // partition still applies, and the empty tile is not dropped.
+        // The user's order puts an empty tile first; the partition still applies and the tile is not dropped.
         val reordered = listOf(
             DashboardWidgetId.STEPS,
             DashboardWidgetId.WEEKLY_CARDIO_LOAD,
@@ -189,10 +177,8 @@ class DashboardContentLayoutTest {
 
     @Test
     fun `an empty tile with recent history holds its place instead of sinking`() {
-        // "Empty today" is not "unused": a sleep tile is empty every morning
-        // until the night syncs, and demoting it made the user's arrangement
-        // look ignored on every pencil toggle. Place the empty CALORIES_OUT
-        // ahead of the data tiles: without history it sinks, with it it holds.
+        // "Empty today" is not "unused": a sleep tile is empty every morning until the night syncs.
+        // Without history the empty tile sinks, with it it holds.
         val reordered = listOf(
             DashboardWidgetId.STEPS,
             DashboardWidgetId.WEEKLY_CARDIO_LOAD,
@@ -236,9 +222,7 @@ class DashboardContentLayoutTest {
 
     @Test
     fun `a hidden hero ring leaves the row and joins the tray`() {
-        // Kotlin's saved list is authoritative: a removed widget is simply
-        // absent from it, and the edit-mode tray is the complement of what the
-        // grid shows.
+        // The saved list is authoritative: a removed widget is absent from it, and the tray is the complement.
         val withoutSteps = savedOrder - DashboardWidgetId.STEPS
 
         val visible = visibleIds(widgets = withoutSteps, isEditingDashboard = true)
@@ -250,16 +234,11 @@ class DashboardContentLayoutTest {
         )
     }
 
-    // ─── unsupported metrics in edit mode ─────────────────────────────────────
-    // Flutter's "edit mode materialises an unsupported metric into the tray, not
-    // the carousel" (dashboard_display_test.dart / dashboard_screen_test.dart).
-    // Outside edit mode the mapper drops an unsupported metric entirely, so the
-    // whole question only exists while editing.
+    // Unsupported metrics in edit mode. Outside edit mode the mapper drops them entirely.
 
     @Test
     fun `edit mode materialises an unsupported metric into the tray not the carousel`() {
-        // HYDRATION is materialised only because edit mode asked for it: the
-        // provider cannot serve it, and the user never placed it deliberately.
+        // HYDRATION is materialised only because edit mode asked for it.
         val display = display().copy(unsupportedIds = setOf(DashboardWidgetId.HYDRATION))
 
         val visible = visibleIds(
@@ -313,7 +292,7 @@ class DashboardContentLayoutTest {
         )
     }
 
-    // ─── activities ───────────────────────────────────────────────────────────
+    // Activities.
 
     @Test
     fun `the workout list wins when it has entries`() {
@@ -353,16 +332,12 @@ class DashboardContentLayoutTest {
         source = "test",
     )
 
-    // ─── a setup prompt is not an empty tile ──────────────────────────────────
+    // A setup prompt is not an empty tile.
 
     @Test
     fun `a tile offering to set a feature up keeps its place`() {
-        // Body Energy sat eleventh in the default order and rendered on the LAST
-        // page of the carousel for anyone who had not set it up — which is
-        // everyone who still needs to. The dashboard tile is the only entry
-        // point to the feature in the whole app, so demoting it on the grounds
-        // that the user has not used it yet is how the feature stays
-        // undiscovered.
+        // Body Energy rendered on the last carousel page for anyone who had not set it up.
+        // The tile is the only entry point to the feature, so demoting it keeps it undiscovered.
         val notSetUp = DashboardWidgetId.BODY_ENERGY
         val order = listOf(
             DashboardWidgetId.STEPS,
@@ -402,8 +377,7 @@ class DashboardContentLayoutTest {
 
     @Test
     fun `a genuinely empty tile is still demoted`() {
-        // The counterweight: this is the behaviour that makes the carousel worth
-        // paging through, and it must survive the exception above.
+        // The counterweight: the demotion must survive the exception above.
         val visible = visibleIds()
         val empties = listOf(DashboardWidgetId.CALORIES_OUT, DashboardWidgetId.HYDRATION)
 

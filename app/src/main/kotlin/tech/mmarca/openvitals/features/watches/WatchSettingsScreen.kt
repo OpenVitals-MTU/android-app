@@ -55,18 +55,9 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
- * One screen of the watch's own settings, rendered from what the watch sent.
- *
- * The app defines none of this. Titles, option lists and the order of rows
- * all come from the watch, already translated into the locale it was handed —
- * so this screen's whole job is to turn declared controls into real ones and
- * to be honest when it cannot.
- *
- * Port of the Flutter build's `watch_settings_screen.dart`. Two adaptations:
- * the top bar here is the route table's static title, so the watch's own
- * screen title renders as a heading inside the content; and change results
- * (refused / unanswered) show as inline notices rather than snackbars — this
- * scaffold owns no snackbar host.
+ * One screen of the watch's own settings, rendered from what the watch
+ * sent. The watch's title renders as a heading inside the content, and
+ * change results show as inline notices: this scaffold has no snackbar host.
  */
 @Composable
 fun WatchSettingsScreen(
@@ -84,9 +75,7 @@ fun WatchSettingsScreen(
         }
     }
 
-    // Walking back out of a subscreen re-reads THIS one: what happened in
-    // there changes what belongs here — "Add Alarm" creates the alarm this
-    // list does not show yet, and a delete removed a row it still does.
+    // Walking back out of a subscreen re-reads this one.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.onResumed()
     }
@@ -111,9 +100,7 @@ fun WatchSettingsScreen(
 
         else -> {
             val screen = state.screen ?: return
-            // Blank rows are dropped: an alarm list reserves one per slot and
-            // leaves the unused ones with no title at all, which drew twenty
-            // empty cards under a single real alarm.
+            // Blank rows are dropped: an alarm list reserves one per slot.
             val rows = screen.entries.filterNot { it.isBlank }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -157,8 +144,7 @@ private fun ScreenHeader(
 ) {
     Column(modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.md)) {
         if (!watchTitle.isNullOrBlank()) {
-            // The watch's own name for this screen — the top bar carries the
-            // app's static title, so the watch's word for it lives here.
+            // The watch's own name for this screen.
             Text(
                 text = watchTitle,
                 style = MaterialTheme.typography.titleLarge,
@@ -216,9 +202,7 @@ private fun EntryRow(
             title = title,
             summary = entry.summary,
             enabled = !busy,
-            // Disabled while in flight rather than optimistic: the value
-            // shown is the watch's, and a switch that flips before the watch
-            // agrees would be reporting a request as a result.
+            // Disabled while in flight, not optimistic: the value shown is the watch's.
             onClick = if (busy) null else ({ onToggle(!(entry.switchedOn ?: false)) }),
             trailing = {
                 if (busy) {
@@ -241,8 +225,7 @@ private fun EntryRow(
         )
 
         GarminEntryKind.OPTIONS -> {
-            // Only offered when the watch actually sent choices. An empty
-            // list here would open a dialog with nothing in it.
+            // Only offered when the watch sent choices.
             val canChoose = entry.options.isNotEmpty() && !busy
             RowCard(
                 title = title,
@@ -272,9 +255,7 @@ private fun EntryRow(
         )
 
         GarminEntryKind.NUMBER -> {
-            // The watch bounds these itself and does not send the bounds, so
-            // a picker here could offer a value it will refuse. Left readable
-            // until the limits are known.
+            // The watch bounds these itself and does not send the bounds. Read-only until known.
             val value = listOfNotNull(
                 entry.summary?.takeIf { it.isNotEmpty() },
                 entry.unit?.takeIf { it.isNotEmpty() },
@@ -288,9 +269,7 @@ private fun EntryRow(
         }
 
         GarminEntryKind.ACTION -> RowCard(
-            // A button the WATCH put here, run under the watch's own label.
-            // Asked first, always: an action row has no value to inspect
-            // beforehand and no way to undo afterwards.
+            // A button the watch put here. Asked first: there is no undo.
             title = title,
             summary = null,
             titleColor = MaterialTheme.colorScheme.error,
@@ -300,9 +279,7 @@ private fun EntryRow(
         )
 
         GarminEntryKind.INERT -> RowCard(
-            // Present on the watch, not actionable from a phone. Dimmed
-            // rather than dropped, so the screen still matches what is on the
-            // wrist.
+            // On the watch, not actionable from a phone. Dimmed, not dropped.
             title = title,
             summary = entry.summary,
             titleColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -424,10 +401,7 @@ private fun OptionsDialog(
                             .clickable { onChosen(option.index) }
                             .padding(vertical = WatchSettingRowPadding),
                     ) {
-                        // By POSITION, which is what the watch actually
-                        // reports. Matching the summary text against the
-                        // titles held up until a screen arrived with an empty
-                        // summary, and then nothing looked selected at all.
+                        // By position, which is what the watch reports.
                         Icon(
                             imageVector = if (option.index == entry.selectedIndex) {
                                 Icons.Outlined.RadioButtonChecked
@@ -455,11 +429,7 @@ private fun OptionsDialog(
     )
 }
 
-/**
- * Opened at the watch's OWN time. Starting from "now" meant every edit began
- * at the wrong number, so nudging an alarm by ten minutes actually reset it
- * to whenever you happened to open the picker.
- */
+/** Opened at the watch's own time, so a nudge does not reset the alarm to now. */
 @Composable
 private fun EntryTimePickerDialog(
     title: String?,
@@ -497,12 +467,7 @@ private fun EntryTimePickerDialog(
     }
 }
 
-/**
- * Runs an action row, after asking — under the watch's own wording: this app
- * does not know what the row does beyond what the watch called it, and
- * inventing a friendlier description would be claiming knowledge it does not
- * have.
- */
+/** Runs an action row after asking, under the watch's own wording. */
 @Composable
 private fun ConfirmActionDialog(
     title: String,

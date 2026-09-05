@@ -71,7 +71,7 @@ internal fun ExerciseData.toEditState(
         repetitionMode = repetitionEditState.mode,
         repetitionTotalText = repetitionEditState.totalText,
         repetitionSets = repetitionEditState.sets,
-        // Carried so an edit keeps the plan completed; the title arrives later, if at all.
+        // Carried so an edit keeps the plan completed.
         linkedPlan = plannedExerciseSessionId?.let { ActivityLinkedPlan(id = it, title = null) },
         importedRoute = routeImport,
         recordedPauseIntervals = segments
@@ -197,27 +197,15 @@ internal fun inferActivityType(
     routeImport: RouteFileImport,
     currentType: ActivityEntryType,
 ): ActivityEntryType {
-    // The file's DECLARED sport is asked first, and on its own.
-    //
-    // Everything used to be shovelled into one string — sport, activity name and
-    // FILE NAME — and matched by substring. So `Indoor_CyclingiSmoothRun.fit`
-    // imported a 27 km bike ride as a RUN: the exporter's name is in the file
-    // name, `run` is tested before `cycling`, and the FIT sport (which said
-    // cycling, and knows) was outvoted by a word in a file name. Reordering the
-    // tests would not fix it — any name can contain any word.
-    //
-    // A file that names no sport (GPX, KML) still falls back to the name and the
-    // file name, which is all it has.
+    // The declared sport is asked first, on its own. Matching one string of
+    // sport, name and file name once imported a bike ride as a run.
     val declared = routeImport.type?.lowercase()?.trim().orEmpty()
     val guessed = listOfNotNull(routeImport.name, routeImport.fileName)
         .joinToString(separator = " ")
         .lowercase()
 
-    // ...but only when it actually NAMES something. FIT's `training` and
-    // `fitness equipment` are its generic buckets — the file saying "training"
-    // is the file saying it does not know — and there the name and file name
-    // are all there is: `Functional Strength Training.fit` is a strength
-    // session, and only its name says so.
+    // Only when it names something: FIT's `training` and `fitness equipment`
+    // are generic buckets, and then the name is all there is.
     val declaredType = declared.takeIf { it.isNotEmpty() }?.let(::matchExerciseType)
     val declaredNamesIt =
         declaredType != null && declaredType != ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT
@@ -235,10 +223,7 @@ internal fun inferActivityType(
         ?: DefaultActivityEntryTypes.first { !requiresGpsRoute || it.supportsGpsRoute }
 }
 
-/**
- * The Health Connect exercise type [sourceText] names, or null when it names
- * none.
- */
+/** The exercise type [sourceText] names, or null. */
 private fun matchExerciseType(sourceText: String): Int? =
     when {
         sourceText.containsAny("treadmill") -> ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL
@@ -250,9 +235,7 @@ private fun matchExerciseType(sourceText: String): Int? =
         sourceText.containsAny("ski") -> ExerciseSessionRecord.EXERCISE_TYPE_SKIING
         sourceText.containsAny("hike", "hiking") -> ExerciseSessionRecord.EXERCISE_TYPE_HIKING
         sourceText.containsAny("run", "running", "jog") -> ExerciseSessionRecord.EXERCISE_TYPE_RUNNING
-        // Before the plain bike: a trainer ride is a different exercise type,
-        // and a stationary bike that imported as outdoor cycling would put a
-        // 27 km ride on a map it never touched.
+        // Before the plain bike: a trainer ride must not land on a map.
         sourceText.containsAny("indoor cycling", "stationary bike", "spin") -> {
             ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY
         }

@@ -15,15 +15,8 @@ sealed interface ScreenError {
 }
 
 /**
- * The one rule for "this failed because a permission is missing".
- *
- * Health Connect refuses an ungranted read or write by throwing
- * [SecurityException], and the repositories throw the same type when they
- * short-circuit a call whose permission they know is missing. The cause chain is
- * walked because a repository or worker often wraps the platform throwable in
- * its own. This is the predicate `AppleHealthImportErrorFormatter.isPermissionDenied`
- * was built on; it lives here so the import card and [toScreenError] cannot
- * drift apart.
+ * The one rule for "this failed because a permission is missing": a
+ * [SecurityException] anywhere in the cause chain.
  */
 fun Throwable.isPermissionFailure(): Boolean =
     generateSequence(this) { it.cause.takeIf { cause -> cause !== it } }
@@ -79,9 +72,7 @@ object ScreenErrorHandler {
     fun handle(throwable: Throwable, context: ScreenErrorContext = ScreenErrorContext()): ScreenError {
         if (throwable is CancellationException) throw throwable
         warn(context.logTag, context.logMessage, throwable)
-        // A missing permission is not a dead end: the screens turn this case into
-        // a "grant access" affordance, so it must stay a type and never collapse
-        // into a Message carrying Health Connect's own wording.
+        // A missing permission stays a type: the screens turn it into a grant affordance.
         if (throwable.isPermissionFailure()) return ScreenError.PermissionDenied
         return throwable.message
             ?.takeIf { it.isNotBlank() }

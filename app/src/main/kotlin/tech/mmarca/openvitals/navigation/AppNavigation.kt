@@ -102,11 +102,8 @@ fun AppNavigation(
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    // Destinations that accept a pinned day register with SELECTED_DAY_QUERY_PATTERN
-    // appended, so the raw pattern is e.g. `metric/{metricId}?selectedDay={selectedDay}`.
-    // Every comparison below is against the bare Screen route — strip the query
-    // pattern once here (a bare `== Screen.Metric.route` would otherwise never
-    // match, which is how every metric screen lost its top-bar title).
+    // Day-accepting destinations register with a query pattern appended; compare
+    // against the bare route or nothing matches.
     val currentRoute = currentDestination?.route?.substringBefore('?')
     val currentMetricId = if (currentRoute == Screen.Metric.route) {
         navBackStackEntry?.arguments?.getString(METRIC_ID_ARG)?.toDashboardWidgetIdOrNull()
@@ -135,9 +132,9 @@ fun AppNavigation(
     var activityEntryTopBarEditState by remember { mutableStateOf<TopBarEditState?>(null) }
     var activityRecordingOutdoorTopBarState by remember { mutableStateOf<TopBarOutdoorModeState?>(null) }
     var isActivityRecordingFocusMode by remember { mutableStateOf(false) }
-    // The drink screen's title is the drink's own name, which only the screen knows.
+    // The drink screen's title is the drink's name, which only the screen knows.
     var caffeineDrinkTitle by remember { mutableStateOf<String?>(null) }
-    // Likewise the watch device screen's title is the watch's display name.
+    // Likewise the watch device screen's title.
     var watchDeviceTitle by remember { mutableStateOf<String?>(null) }
     var dashboardRefreshRequest by remember { mutableIntStateOf(0) }
     var dashboardDeviceActionVisible by remember { mutableStateOf(false) }
@@ -238,10 +235,8 @@ fun AppNavigation(
         currentRoute == Screen.ActivityEntry.basePath ||
             currentRoute == Screen.ActivityEntryEdit.basePath
     val isActivityRecordingFocusRoute = isActivityEntryRoute && isActivityRecordingFocusMode
-    // Outdoor mode repaints the recording body pure black (or pure white in a light theme) for
-    // readability in direct sun. It only ever reached the body, so the app bar above it and the
-    // gesture-bar inset below it stayed the ordinary theme surface -- the framed-slab look that
-    // defeats the point of the mode. The chrome takes the same ground while it is on.
+    // Outdoor mode repaints the recording body pure black or white; the chrome
+    // takes the same ground while it is on.
     val activityRecordingOutdoorBackground = activityRecordingOutdoorTopBarState
         ?.takeIf { isActivityEntryRoute && it.enabled }
         ?.let { if (appThemeMode.isDarkTheme(isSystemInDarkTheme())) Color.Black else Color.White }
@@ -272,9 +267,7 @@ fun AppNavigation(
         )
     }
 
-    // Keyed on the metric id too: navigating metric→metric (widget taps, deep
-    // links) must drop the previous screen's edit toggle — a metric screen that
-    // does not register section editing would otherwise inherit a stale one.
+    // Keyed on the metric id too: metric-to-metric navigation must drop a stale edit toggle.
     LaunchedEffect(currentRoute, currentMetricId) {
         if (currentRoute !in metricSectionRoutes) {
             metricSectionTopBarState = null
@@ -308,11 +301,8 @@ fun AppNavigation(
             currentRoute != Screen.Onboarding.route
         ) {
             navController.navigate(externalNavigationRoute) {
-                // singleTop only for argument-less destinations: on parameterized
-                // routes (metric/{id}, body energy dates, drink logs) it would
-                // reuse the top entry — and its ViewModel, seeded with the
-                // PREVIOUS arguments — so a FLOORS widget tap from the steps
-                // screen would render floors content over a steps-seeded state.
+                // singleTop only for argument-less destinations: a parameterized
+                // route would reuse the top entry's ViewModel with old arguments.
                 launchSingleTop = externalNavigationRoute == Screen.Dashboard.route ||
                     externalNavigationRoute == Screen.HydrationEntry.route ||
                     externalNavigationRoute == Screen.ActivityEntry.createRoute()
@@ -382,8 +372,7 @@ fun AppNavigation(
         Screen.SettingsHealthConnect.route,
         Screen.SettingsPermissions.route -> stringResource(R.string.settings_health_connect_group_title)
         Screen.SettingsDebugDiagnostics.route -> stringResource(R.string.settings_debug_diagnostics_group_title)
-        // The watch device screen is titled with the watch's own name, which
-        // only the screen knows (the caffeine drink screen's idiom).
+        // Titled with the watch's own name, which only the screen knows.
         Screen.WatchDevice.route -> watchDeviceTitle.orEmpty()
         Screen.WatchData.route -> stringResource(R.string.settings_watch_data_title)
         Screen.WatchNotifications.route -> stringResource(R.string.screen_watch_notifications)
@@ -414,8 +403,7 @@ fun AppNavigation(
         action = addEntryAction,
         containerColor = activityRecordingOutdoorBackground,
         topBarActions = {
-            // The hydration screen's app-bar add-drink shortcut, as shipped in
-            // Flutter (its only app-bar action on that screen).
+            // The hydration screen's app-bar add-drink shortcut.
             if (currentRoute == Screen.Metric.route &&
                 currentMetricId == DashboardWidgetId.HYDRATION
             ) {
@@ -456,9 +444,7 @@ fun AppNavigation(
                             topBarEditState.isEditing &&
                                 (isActivityRecordingEditState || currentRoute in metricSectionRoutes) ->
                                 Icons.Outlined.Check
-                            // Metric detail screens use the section-layout affordance the
-                            // Flutter app shipped: tune sliders, flipping to a check while
-                            // editing.
+                            // Metric screens use the section-layout affordance: tune, then check.
                             currentRoute in metricSectionRoutes -> Icons.Outlined.Tune
                             else -> Icons.Outlined.Edit
                         },
@@ -486,9 +472,7 @@ fun AppNavigation(
                 }
             }
             if (currentRoute == Screen.Dashboard.route) {
-                // The Daily Readiness screen merged into the Body Energy view,
-                // which the dashboard's own Body Energy tile already opens — so
-                // the app-bar shortcut to it went with the screen.
+                // The readiness screen merged into Body Energy, which the tile opens.
                 if (dashboardDeviceActionVisible) {
                     OpenVitalsIconButton(
                         onClick = {
@@ -557,8 +541,7 @@ fun AppNavigation(
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     refreshRequest = dashboardRefreshRequest,
                     onOpenMetric = { metricId ->
-                        // Body Energy is the one destination that takes a date:
-                        // a tile opened from "yesterday" shows yesterday.
+                        // Body Energy takes a date: a tile opened from yesterday shows yesterday.
                         val dashboardSelectedDate = dashboardViewModel.uiState.value.selectedDate
                         navController.navigate(
                             dashboardTileDestination(metricId, dashboardSelectedDate),
@@ -595,8 +578,7 @@ fun AppNavigation(
                 arguments = listOf(navArgument(BODY_ENERGY_DATE_ARG) { type = NavType.StringType }),
             ) { entry ->
                 val bodyEnergyViewModel = hiltViewModel<BodyEnergyViewModel>()
-                // The readiness verdict is a card on this screen now, so its
-                // view-model is scoped to this entry alongside the timeline's.
+                // The readiness verdict is a card here, so its view-model is scoped to this entry.
                 val dailyReadinessViewModel = hiltViewModel<DailyReadinessViewModel>()
                 val selectedDate = entry.arguments
                     ?.getString(BODY_ENERGY_DATE_ARG)
@@ -1009,10 +991,7 @@ private fun addEntryActionForCurrentRoute(
     currentMetricId: DashboardWidgetId?,
     onNavigate: (String) -> Unit,
 ): MetricAction? {
-    // The shipped Flutter app's only floating add affordance is the
-    // mindfulness "Log session" FAB. Every other screen adds entries through
-    // its own content, the dashboard Log sheet, or — for hydration — the
-    // app-bar add-drink shortcut rendered in topBarActions.
+    // The only floating add affordance is the mindfulness FAB.
     if (currentRoute != Screen.Metric.route) return null
     if (currentMetricId != DashboardWidgetId.MINDFULNESS) return null
     return MetricAction(
@@ -1031,8 +1010,7 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.FLOORS -> R.string.metric_floors_climbed
         DashboardWidgetId.ELEVATION -> R.string.metric_elevation_gained
         DashboardWidgetId.WHEELCHAIR_PUSHES -> R.string.metric_wheelchair_pushes
-        // The WORKOUT tile lands on the activities overview; Flutter titles it
-        // with the screen's own name, not the tile label.
+        // The WORKOUT tile lands on the activities overview.
         DashboardWidgetId.WORKOUT -> R.string.screen_activities
         DashboardWidgetId.SLEEP -> R.string.metric_sleep
         DashboardWidgetId.BODY_ENERGY -> R.string.metric_body_energy

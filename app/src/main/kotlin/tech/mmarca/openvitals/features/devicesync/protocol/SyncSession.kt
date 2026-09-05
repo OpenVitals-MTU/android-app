@@ -16,60 +16,35 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The sync session state machine: handshake → authenticate → bidirectional
- * record exchange → report. Pure Kotlin over a [SyncByteTransport], so the
- * whole protocol is testable over an in-memory pipe with no Bluetooth.
+ * The sync session state machine: handshake, authenticate, bidirectional
+ * record exchange, report. Pure Kotlin over a [SyncByteTransport].
  *
- * The session is SYMMETRIC — both phones run the same code, differing only in
- * [SyncRole] (which fixes the nonce order for the shared key). Records flow
- * both ways over the one socket at once: a sender loop pushes our records and
- * waits for per-batch acks (stop-and-wait backpressure), while a receiver loop
- * dedups and writes the peer's records and acks them. Inbound frames are
- * demultiplexed by type to whichever loop is waiting.
+ * Symmetric: both phones run the same code, differing only in [SyncRole].
+ * A sender loop pushes records with stop-and-wait acks while a receiver
+ * loop dedups, writes and acks the peer's.
  */
 
-/**
- * Which side of the pairing this phone is. Fixes the (host, guest) nonce order
- * so both derive the same session key.
- */
+/** Which side of the pairing this phone is. Fixes the nonce order for the shared key. */
 enum class SyncRole { HOST, GUEST }
 
-/**
- * Thrown when a session ends early — bad protocol version, failed auth, a
- * dropped link, or a peer/local abort.
- */
+/** Thrown when a session ends early. */
 class SyncAborted(val reason: String) : Exception(reason)
 
-/**
- * The Health Connect side of a session, injected so the protocol stays free of
- * health dependencies (and testable with an in-memory fake).
- */
+/** The Health Connect side of a session, injected so the protocol stays testable. */
 interface SyncRecordStore {
     /**
-     * Streams the dedup key of every local record for [types] in the session's
-     * window. These keys are the session's dedup baseline: an incoming peer
-     * record is a duplicate iff we already hold a record with the same content
-     * fingerprint. Keys only — the session hashes and discards each one, so
-     * the baseline never holds the records themselves.
+     * Streams the dedup key of every local record for [types] in the window.
+     * The session hashes and discards each one.
      */
     fun readKeys(types: Set<String>): Flow<String>
 
     /**
-     * Streams this phone's records for [types] in the window as chunks of at
-     * most [chunkSize] items, each carrying its dedup [SyncItem.key]. A cold
-     * flow read lazily: the session sends each chunk and drops it before the
-     * next is produced, so the whole window is never in memory at once — a
-     * data-dense year materialized up front used to GC-thrash small heaps
-     * until the link timed out.
+     * Streams this phone's records as chunks of at most [chunkSize]. A cold
+     * flow, so the whole window is never in memory at once.
      */
     fun readItemChunks(types: Set<String>, chunkSize: Int): Flow<List<SyncItem>>
 
-    /**
-     * Writes [items] to Health Connect (post-dedup) and returns the
-     * [SyncItem.key]s that actually landed. A key missing from the result was
-     * received but not written (an undecodable item, or a type whose batch
-     * insert was rejected) — the session then does NOT count it as imported.
-     */
+    /** Writes [items] and returns the keys that landed. A missing key is not counted as imported. */
     suspend fun writeItems(items: List<SyncItem>): Set<String>
 }
 
@@ -103,10 +78,8 @@ class SyncSession(
 
     private val report = SyncReportBuilder()
 
-    // Hashed, not the key strings themselves: the baseline covers every local
-    // record in the window, and 16 bytes an entry is the difference between a
-    // large sync fitting a small heap or not. Confinement per [SyncKeyHasher]:
-    // seeded before the exchange loops start, then touched only by the receiver.
+    // Hashed, not the key strings: 16 bytes an entry is what fits a small heap.
+    // Seeded before the loops start, then touched only by the receiver.
     private val seenKeys = HashSet<SyncKeyHash>()
     private val keyHasher = SyncKeyHasher()
 
@@ -130,24 +103,16 @@ class SyncSession(
 
     private val frameReader = SyncFrameReader()
 
-    // The sender and receiver loops both write to the ONE full-duplex link;
-    // unordered concurrent writes would corrupt frames, so every outbound frame
-    // takes this lock (the counterpart of the Dart transport's send chain).
+    // Both loops write to the one link; every outbound frame takes this lock.
     private val sendMutex = Mutex()
 
-    /**
-     * Runs the session and resolves with the report (both success and clean
-     * abort produce a report; cancellation propagates as cancellation).
-     */
+    /** Runs the session and resolves with the report. Cancellation propagates. */
     suspend fun run(): SyncReport = coroutineScope {
         val readerJob = launch { readLoop() }
         try {
             val peer = handshake()
             authenticate(peer)
-            // Only now may record frames be processed. Batch/ack/sendDone
-            // arriving before this are a protocol violation (a peer that hasn't
-            // proved the code trying to push data) and abort the session — see
-            // [dispatch].
+            // Record frames before this are a protocol violation; see [dispatch].
             authenticated = true
             val negotiated = negotiateTypes(peer)
             exchange(negotiated)
@@ -198,10 +163,8 @@ class SyncSession(
 
     private suspend fun authenticate(peer: SyncHello) {
         emit(phase = SyncPhase.AUTHENTICATING)
-        // A peer that echoes OUR nonce back could reflect our own proof to pass
-        // auth without knowing the code (host==guest nonce makes both proofs
-        // identical). Two independently-generated 256-bit nonces are never
-        // equal by chance, so a match means reflection — reject it.
+        // A peer echoing our nonce could reflect our own proof. Two 256-bit
+        // nonces are never equal by chance.
         if (constantTimeEquals(peer.nonce, nonce)) {
             throw SyncAborted("peer reflected our nonce")
         }
@@ -211,9 +174,7 @@ class SyncSession(
         val sessionKey = deriveSessionKey(config.code, hostNonce, guestNonce)
         val myRole = if (config.role == SyncRole.HOST) AUTH_ROLE_HOST else AUTH_ROLE_GUEST
         val peerRole = if (config.role == SyncRole.HOST) AUTH_ROLE_GUEST else AUTH_ROLE_HOST
-        // Prove over the peer's nonce with OUR role; verify their proof over
-        // our nonce with THEIR role. The role binding is what defeats
-        // reflection.
+        // Prove over the peer's nonce with our role, verify theirs with their role.
         val myProof = computeAuthProof(sessionKey, challengeNonce = peer.nonce, roleByte = myRole)
         send(SyncFrameType.AUTH, SyncAuthProof(myProof).encode())
         val peerProof = await(peerAuth, config.handshakeTimeoutMillis, "timed out waiting for auth")
@@ -233,15 +194,9 @@ class SyncSession(
     private suspend fun exchange(negotiated: List<String>) {
         emit(phase = SyncPhase.EXCHANGING)
         val types = negotiated.toSet()
-        // Seed the dedup baseline from a keys-only pass over our own records.
-        // A peer record is a duplicate iff we already hold one with the same
-        // content fingerprint, so our own keys ARE that set — dedup is then an
-        // in-memory lookup instead of a per-batch Health Connect re-read. It is
-        // also stricter: it catches records we hold natively (no
-        // clientRecordId), which a clientRecordId-only check would miss and
-        // re-import. The baseline must be COMPLETE before the receiver writes
-        // its first incoming batch, which is why this pass runs before the
-        // loops rather than folding into the sender's stream.
+        // Seed the dedup baseline from our own keys, so dedup is an in-memory
+        // lookup. It also catches records held natively with no clientRecordId.
+        // Must be complete before the receiver writes its first batch.
         store.readKeys(types).collect { key -> seenKeys += keyHasher.hash(key) }
         // Sender and receiver run concurrently over the one full-duplex link.
         coroutineScope {
@@ -253,9 +208,7 @@ class SyncSession(
     private suspend fun runSender(types: Set<String>) {
         var seq = 0
         var sent = 0
-        // Stop-and-wait per chunk, and the chunk is dropped before the store
-        // produces the next one — peak sender memory is one batch, not the
-        // window.
+        // Stop-and-wait per chunk; peak sender memory is one batch.
         store.readItemChunks(types, config.batchSize).collect { chunk ->
             if (chunk.isEmpty()) return@collect
             seq += 1
@@ -274,11 +227,8 @@ class SyncSession(
         var received = 0
         var written = 0
         while (true) {
-            // Defense in depth for a link that goes silent WITHOUT a disconnect
-            // event (out of range, a wedged peer): a gap longer than the batch
-            // timeout during an active stop-and-wait exchange means the peer is
-            // gone. A clean close (sendDone) closes the channel first, so this
-            // never fires on a healthy sync.
+            // A link that goes silent without a disconnect event: a gap longer
+            // than the batch timeout means the peer is gone.
             val result = withTimeoutOrNull(config.batchTimeoutMillis) {
                 incomingBatches.receiveCatching()
             } ?: throw SyncAborted("timed out waiting for the next batch")
@@ -289,10 +239,7 @@ class SyncSession(
             val batch = result.getOrThrow()
             val fresh = mutableListOf<SyncItem>()
             for (item in batch.items) {
-                // seenKeys holds every record we already had (seeded from
-                // readKeys) plus everything written earlier this session, so
-                // this one lookup covers both cross-device and within-session
-                // dedup.
+                // seenKeys covers cross-device and within-session dedup.
                 val keyHash = keyHasher.hash(item.key)
                 if (keyHash in seenKeys) {
                     report.recordReceived(item.recordType, duplicate = true)
@@ -301,9 +248,7 @@ class SyncSession(
                     seenKeys += keyHash
                 }
             }
-            // Count `imported` from what actually landed, not from what we
-            // tried to write — a failed batch insert must not be reported as
-            // imported.
+            // Count imported from what landed, not what was tried.
             var writtenKeys: Set<String> = emptySet()
             if (fresh.isNotEmpty()) {
                 emit(phase = SyncPhase.WRITING)
@@ -363,10 +308,8 @@ class SyncSession(
                 SyncFrameType.BATCH_ACK,
                 SyncFrameType.SEND_DONE,
                 -> {
-                    // Record frames before auth are a protocol violation —
-                    // reject without decoding (a gzip batch is never inflated
-                    // for an unauthenticated peer, closing the pre-auth OOM
-                    // vector).
+                    // Record frames before auth are rejected without decoding, so an
+                    // unauthenticated peer cannot trigger a gzip inflate.
                     if (!authenticated) {
                         failPending("${frame.type.wireName} before authentication")
                         return
@@ -386,10 +329,7 @@ class SyncSession(
                 SyncFrameType.ABORT -> handleAbort(SyncAbort.decode(frame.payload).reason)
             }
         } catch (e: Exception) {
-            // A frame from a hostile/buggy peer can parse as JSON but have the
-            // wrong shape (a missing field, an unknown enum, a wrong-typed
-            // value). Turn any decode failure into a clean session abort with a
-            // reason instead of letting it escape the read loop.
+            // A frame can parse as JSON with the wrong shape. Abort cleanly.
             failPending("bad ${frame.type.wireName} frame: ${e.message}")
         }
     }
@@ -407,9 +347,7 @@ class SyncSession(
         val ack = pendingAck
         pendingAck = null
         ack?.completeExceptionally(error)
-        // Closing the batch channel with a cause makes a parked receiver loop
-        // rethrow it; pre-exchange there is no receiver and the deferreds above
-        // are what unblock the handshake/auth awaits.
+        // Closing the channel with a cause makes a parked receiver rethrow it.
         incomingBatches.close(error)
     }
 
@@ -424,8 +362,7 @@ class SyncSession(
             } catch (e: SyncAborted) {
                 throw e
             } catch (e: Exception) {
-                // A dead carrier (socket closed mid-write) must surface as a
-                // clean session abort with a report, not an escaping I/O error.
+                // A dead carrier must surface as a clean abort with a report.
                 throw SyncAborted("link error: ${e.message}")
             }
         }

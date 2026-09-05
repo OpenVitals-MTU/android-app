@@ -57,9 +57,6 @@ interface HydrationRepository {
 
     suspend fun deleteHydrationEntry(id: String)
 
-    /**
-     * Rolls back a just-written hydration record by the clientRecordId
-     * [writeHydrationEntry] returned, for when the paired nutrition write fails.
-     */
+    /** Rolls back a just-written record when the paired nutrition write fails. */
     suspend fun deleteHydrationEntryByClientRecordId(clientRecordId: String)
 }

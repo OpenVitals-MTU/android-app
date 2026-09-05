@@ -16,15 +16,8 @@ import tech.mmarca.openvitals.testing.OpenVitalsVisualTestSurface
 import tech.mmarca.openvitals.testing.assertVisualRootMatchesGolden
 
 /**
- * Port of Flutter's `test/goldens/charts/distribution_bars_golden_test.dart`.
- *
- * The "labelled proportional bar" rows: a label, a value on the right, and a bar
- * under it whose fraction is the row's share of the biggest row in the same card.
- *
- * The fixtures lean on the same two places a bar can lie: a row at essentially the
- * FULL width (where the rounded end cap either meets the track's end or overshoots
- * it) and a row at almost nothing (where a bar can round down to a bare stub, or to
- * nothing at all, and take the row's meaning with it).
+ * Labelled proportional bar rows. The fixtures lean on the two places a bar can lie:
+ * a row at full width and a row at almost nothing.
  */
 class DistributionBarsGoldenTest {
 
@@ -33,11 +26,7 @@ class DistributionBarsGoldenTest {
 
     @Test
     fun caffeineBySource() {
-        // `caffeineDistributionBars` cuts to the top six and scales each against the
-        // tallest of them, so the first row is always exactly 1.0 — the full-width
-        // case is not an edge case here, it is EVERY card's first row. The last row is
-        // 2% of the tallest: a row that renders as an empty track there is the bug,
-        // and the number beside it would still be right.
+        // The first row is always exactly 1.0 and the last is 2% of the tallest; an empty track there is the bug.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 340.dp) {
                 CaffeineDistributionCard(
@@ -61,8 +50,7 @@ class DistributionBarsGoldenTest {
 
     @Test
     fun caffeineByCategory_longLabelsAgainstTheValue() {
-        // The label takes the weight and the value does not, so a long name has to
-        // yield rather than push the milligrams off the card.
+        // The label takes the weight, so a long name yields rather than pushing the value off the card.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 280.dp) {
                 CaffeineDistributionCard(
@@ -100,8 +88,7 @@ class DistributionBarsGoldenTest {
 
     @Test
     fun caffeineByTimeOfDay() {
-        // Four fixed buckets, always all four, so an evening of nothing is a bucket at
-        // zero rather than a missing row — the shape of the day is the point.
+        // Four fixed buckets, always all four: an evening of nothing is a bucket at zero.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 360.dp, height = 280.dp) {
                 CaffeineTimeBucketsCard(
@@ -109,9 +96,7 @@ class DistributionBarsGoldenTest {
                         CaffeineTimeBucket(CaffeineTimeOfDayBucket.MORNING, 512.0),
                         CaffeineTimeBucket(CaffeineTimeOfDayBucket.AFTERNOON, 340.0),
                         CaffeineTimeBucket(CaffeineTimeOfDayBucket.EVENING, 48.0),
-                        // Nothing at all after midnight. A zero-fraction bar and a
-                        // missing bar are different claims, and this card makes the
-                        // first one.
+                        // A zero-fraction bar and a missing bar are different claims.
                         CaffeineTimeBucket(CaffeineTimeOfDayBucket.NIGHT, 0.0),
                     ),
                     unitFormatter = FORMATTER,

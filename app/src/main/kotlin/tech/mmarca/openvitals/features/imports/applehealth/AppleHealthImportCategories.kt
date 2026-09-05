@@ -54,10 +54,7 @@ internal fun ConvertedAppleRecord.importCategory(): AppleHealthImportCategory =
 internal fun ConvertedAppleRecord.hasExerciseRoute(): Boolean =
     (record as? ExerciseSessionRecord)?.exerciseRouteResult is ExerciseRouteResult.Data
 
-/**
- * Category prediction used by the pre-import analysis scan, keyed by Apple source type.
- * Must stay in sync with [importCategory], which classifies the converted Health Connect record.
- */
+/** Category prediction for the pre-import scan. Must stay in sync with [importCategory]. */
 internal fun AppleRecord.analysisCategory(mindfulnessAvailable: Boolean): AppleHealthImportCategory? =
     type.analysisCategory(mindfulnessAvailable)
 

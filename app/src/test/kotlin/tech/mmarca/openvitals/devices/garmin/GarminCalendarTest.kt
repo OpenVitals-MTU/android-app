@@ -5,11 +5,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The calendar glance responder, exercised with the protobuf a watch sends
- * (`gdi_calendar_service`). The watch asks with a window and its own limits;
- * there is no push.
- */
+/** The calendar glance responder. The watch asks with a window and its own limits; there is no push. */
 class GarminCalendarTest {
 
     /** 2026-08-12T08:00:00Z and friends. */
@@ -106,8 +102,7 @@ class GarminCalendarTest {
         val reply = responder(crowded).handle(request(maxEvents = 5, maxTitle = 12))!!
 
         val sent = events(reply)
-        // The watch said 5 events of 12 characters; sending more is asking a
-        // 176-pixel screen to cope.
+        // The watch said 5 events of 12 characters; sending more asks a 176-pixel screen to cope.
         assertEquals(5, sent.size)
         assertEquals("Event number", title(sent[0]))
     }

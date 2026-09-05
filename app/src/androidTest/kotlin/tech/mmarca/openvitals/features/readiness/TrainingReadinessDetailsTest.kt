@@ -19,14 +19,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of Flutter's
- * `test/features/readiness/training_readiness_details_screen_test.dart`.
- *
- * This screen exists to justify a number the app made up about how hard someone
- * should train today, so the cases worth pinning are the ones where the
- * justification is thin: a verdict band that must read "needs more data" however
- * flattering the score is, and a signals list that has to say it had no signals
- * rather than render as an empty card.
+ * The verdict band must read "needs more data" however flattering the score, and the
+ * signals list must say it had none rather than render empty.
  */
 class TrainingReadinessDetailsTest {
 
@@ -59,9 +53,7 @@ class TrainingReadinessDetailsTest {
 
     @Test
     fun withNoTrainingSideSignalsItSaysSoRatherThanShowingAnEmptyCard() {
-        // The insight is never short of factors — it is short of factors this
-        // screen is allowed to cite. A silently empty "Signals used" card would
-        // present the score as if it rested on something.
+        // An empty "Signals used" card would present the score as if it rested on something.
         setContent(
             readinessInsight(
                 factors = listOf(
@@ -79,9 +71,7 @@ class TrainingReadinessDetailsTest {
 
     @Test
     fun anUnknownStateReadsAsNeedsMoreDataHoweverHighTheScore() {
-        // The dangerous case. An unknown state still carries a number, and a
-        // number banded as "Strong" is an instruction to go and train hard on
-        // the strength of data the app knows it does not have.
+        // An unknown state banded as "Strong" is an instruction to train hard on data the app does not have.
         setContent(
             readinessInsight(
                 state = ReadinessState.UNKNOWN,
@@ -106,8 +96,7 @@ class TrainingReadinessDetailsTest {
             OpenVitalsTheme {
                 ReadinessScoreDetailsContent(
                     state = DailyReadinessUiState(
-                        // A fixed past day: the screen's forward arrow and its
-                        // date header must not depend on the day the suite runs.
+                        // A fixed past day, so the forward arrow and date header do not depend on the run date.
                         selectedDate = LocalDate.of(2026, 6, 23),
                         insight = insight,
                         isLoading = false,

@@ -5,12 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The reconcile diff decides which derived MenstruationPeriodRecords are
- * inserted, rewritten, or removed after every flow mutation. A wrong action
- * list either duplicates a period (double-counted period days) or deletes a
- * record another app owns the truth for, so each branch is pinned.
- */
+/** The reconcile diff decides which derived MenstruationPeriodRecords are inserted, rewritten or removed. Each branch is pinned. */
 class CyclePeriodReconcileTest {
 
     private fun d(n: Int): LocalDate = LocalDate.of(2026, 3, 1).plusDays((n - 1).toLong())

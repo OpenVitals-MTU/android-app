@@ -25,18 +25,10 @@ import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 /**
- * Keeps the local vitals daily-aggregate cache current via the Health Connect
- * Changes API, one token per record type.
- *
- * The expensive part — reading a metric's whole history raw — is paid ONCE per
- * metric, in [syncAll]'s full rebuild. After that, each poll of the changes
- * token names the local days that gained or changed records, and only those
- * days are re-read. Deletions carry no date, so any deletion (and an expired
- * token) falls back to the full rebuild.
- *
- * Freshness is cursor presence, not age: readers trust the cached rows exactly
- * while a cursor row with a token exists, and this service rebuilds whenever it
- * does not.
+ * Keeps the vitals daily-aggregate cache current via the Changes API, one
+ * token per type. The full history read is paid once; after that only
+ * changed days are re-read. Deletions and expired tokens force a rebuild.
+ * Freshness is cursor presence, not age.
  */
 @Singleton
 class VitalsHistorySyncService @Inject constructor(
@@ -131,9 +123,7 @@ class VitalsHistorySyncService @Inject constructor(
     private suspend fun fullSync(spec: MetricSpec) {
         val today = LocalDate.now()
         val earliest = today.minusDays(HistoryLookbackDays)
-        // Register the token BEFORE the slow history read: records written while
-        // the read runs are then caught by the next incremental drain instead of
-        // falling into neither snapshot.
+        // Register the token before the slow read, so records written meanwhile are caught.
         val token = hc.getChangesToken(spec.recordType)
         val rows = spec.read(earliest, today)
         dao.replaceMetric(spec.key, rows)
@@ -151,8 +141,7 @@ class VitalsHistorySyncService @Inject constructor(
         while (true) {
             val batch = hc.getChanges(token)
             if (batch.tokenExpired || batch.hasDeletions) {
-                // Deletions carry only an id — the affected day is unknowable,
-                // so the whole metric rebuilds. Same for an expired token.
+                // Deletions carry no date, so the whole metric rebuilds. Same for an expired token.
                 fullSync(spec)
                 return
             }
@@ -160,19 +149,15 @@ class VitalsHistorySyncService @Inject constructor(
                 recomputeDay(spec, day)
             }
             token = batch.nextToken
-            // Persisted after the page's days are applied: a crash mid-page
-            // replays the page, and the absolute recompute makes that harmless.
+            // Persisted after the page is applied: a replay is harmless.
             dao.writeToken(spec.key, token)
             if (!batch.hasMore) break
         }
     }
 
     /**
-     * Write-through hook: recomputes just [days] after the app's own write,
-     * update, or delete. No-op without a cursor — a partial cache the readers
-     * would trust must never be seeded outside a full sync. Failures are
-     * swallowed: a patch must never fail the write, and the next drain
-     * reconciles anyway. The changes token is deliberately untouched.
+     * Write-through hook: recomputes just [days] after the app's own write.
+     * No-op without a cursor. Failures are swallowed; the next drain reconciles.
      */
     suspend fun patchDays(key: String, days: Set<LocalDate>) {
         try {
@@ -212,12 +197,7 @@ object VitalsCacheKeys {
     /** No cache spec behind it — HRV reads live; the key only names the metric. */
     const val HRV = "hrv"
 
-    /**
-     * The `.v2` suffix is the cache-format version: rows written before the
-     * synthesized-basal fix carry Health Connect's BMR baseline as burned days,
-     * and bumping the key makes the cursor lookup miss, forcing the rebuild
-     * that rewrites them.
-     */
+    /** `.v2` is the cache-format version: bumping it forces the rebuild that rewrites old rows. */
     const val CALORIES_BURNED = "totalCaloriesBurned.v2"
     val LEGACY_CALORIES_BURNED = listOf("totalCaloriesBurned")
 }

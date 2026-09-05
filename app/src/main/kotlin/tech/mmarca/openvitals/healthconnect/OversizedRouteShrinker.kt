@@ -6,17 +6,9 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.Record
 
 /**
- * Health Connect caps a single record at roughly 1 MB, a limit its platform
- * `RateLimiter` enforces and no API exposes. The only record this app builds
- * whose size follows the data is an exercise session with a GPS route, and a
- * multi-hour ride recorded at one point per second crosses the cap. The insert
- * then fails the same way on every retry, which in a batched import also
- * takes the whole batch down with it.
- *
- * The platform does say how far over the record was
- * ("single record size limit: 1000000, was: 1700644"), which is enough to
- * decimate the route by that ratio and try again. Seen first in Gadgetbridge's
- * Health Connect exporter, which hit the same wall with the same watches.
+ * Health Connect caps a record at roughly 1 MB, and a long GPS route
+ * crosses it. The error names the limit and the actual size, which is
+ * enough to decimate the route by that ratio and retry.
  */
 internal object OversizedRouteShrinker {
 
@@ -28,10 +20,7 @@ internal object OversizedRouteShrinker {
     /** The smallest route worth keeping; Health Connect wants at least two points. */
     private const val MinPoints = 2
 
-    /**
-     * Parses the limit and actual size out of a record-size failure, or null
-     * when [error] is about something else.
-     */
+    /** The limit and actual size out of a record-size failure, or null. */
     fun recordSizeOverrun(error: Throwable): Pair<Long, Long>? {
         val match = recordSizeRegex.find(error.message.orEmpty()) ?: return null
         val limit = match.groupValues[1].toLongOrNull() ?: return null
@@ -40,11 +29,7 @@ internal object OversizedRouteShrinker {
         return limit to was
     }
 
-    /**
-     * Returns [records] with every routed exercise session's route decimated
-     * by `limit / was`, or null when nothing in the list can be made smaller,
-     * so the caller lets the original failure stand.
-     */
+    /** [records] with every route decimated by `limit / was`, or null when nothing can shrink. */
     fun shrink(records: List<Record>, limit: Long, was: Long): List<Record>? {
         val keepRatio = (limit.toDouble() / was.toDouble()) * Margin
         var shrankAny = false
@@ -61,19 +46,14 @@ internal object OversizedRouteShrinker {
         return if (shrankAny) result else null
     }
 
-    /**
-     * Keeps [target] points spread evenly over the route, always including
-     * the first and the last. Each index is taken once, so timestamps stay
-     * strictly increasing, which Health Connect requires of a route.
-     */
+    /** Keeps [target] points spread evenly, first and last included, timestamps strictly increasing. */
     fun decimate(points: List<ExerciseRoute.Location>, target: Int): List<ExerciseRoute.Location> {
         if (target >= points.size) return points
         val lastIndex = points.lastIndex
         val kept = ArrayList<ExerciseRoute.Location>(target)
         var previous = -1
         for (slot in 0 until target) {
-            // Rounded position of this slot along the route; the last slot
-            // lands exactly on lastIndex.
+            // The last slot lands exactly on lastIndex.
             var index = (slot.toLong() * lastIndex / (target - 1)).toInt()
             if (index <= previous) index = previous + 1
             kept.add(points[index])

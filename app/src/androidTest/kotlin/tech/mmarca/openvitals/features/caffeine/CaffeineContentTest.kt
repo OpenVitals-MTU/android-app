@@ -20,15 +20,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Port of the rendering case of Flutter's
- * `test/features/caffeine/caffeine_screen_test.dart`; the access-gate case is
- * pinned once for every screen in `HealthConnectAccessGateTest`.
- *
- * The caffeine screen is a long lazy list, and the two things a user opens it
- * for — how much is in them right now, and the curve that says when it will be
- * gone — are the first cards on it.
- */
+/** The two cards a user opens the caffeine screen for are the first on the list. */
 class CaffeineContentTest {
 
     @get:Rule
@@ -46,9 +38,7 @@ class CaffeineContentTest {
 
         composeRule.onNodeWithText(string(R.string.caffeine_section_dashboard)).assertIsDisplayed()
         composeRule.onNodeWithText(string(R.string.caffeine_current_title)).assertIsDisplayed()
-        // The curve card used to draw with no title of its own while the
-        // translated string sat unused — the chart is unreadable without one,
-        // because nothing else on it says what the line is.
+        // The curve card used to draw with no title while the translated string sat unused.
         composeRule
             .onNode(hasScrollAction())
             .performScrollToNode(hasText(string(R.string.caffeine_curve_title)))

@@ -9,16 +9,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * SharedPreferences cache for the expensive 28-day Body Energy baselines, keyed
- * by date and a caller-supplied signature (permission fingerprint + algorithm
- * version).
- *
- * The day *timelines* used to live here too, encoded as one delimited string per
- * day. They now live in Room ([BodyEnergyTimelineStore]) because the chain has
- * to read a previous day's end score cheaply and a multi-day view needs a range
- * query — neither of which a prefs blob can do. The baselines stayed: they are
- * five numbers a day with working adjacent-day reuse, and moving them would add
- * a table for no benefit.
+ * SharedPreferences cache for the 28-day Body Energy baselines, keyed by
+ * date and signature. The day timelines moved to Room; the baselines are
+ * five numbers a day and stayed.
  */
 @Singleton
 open class BodyEnergyBaselineCacheStore @Inject constructor(
@@ -40,16 +33,7 @@ open class BodyEnergyBaselineCacheStore @Inject constructor(
         }
     }
 
-    /**
-     * One-shot removal of the retired timeline entries.
-     *
-     * The prefs store never evicted anything, so an install that has run since
-     * the feature shipped is carrying one ~15 KB string per (day × signature)
-     * for timelines that now live in Room. Matched narrowly: `2026-07-26|-123`
-     * is the only key shape the timeline half ever wrote, and the baseline keys
-     * carry a `baseline|` prefix so they cannot match. Flag-guarded so it runs
-     * once per install.
-     */
+    /** One-shot removal of the retired timeline entries, matched narrowly by key shape. Flag-guarded. */
     open fun purgeLegacyTimelineEntries() {
         if (prefs.getBoolean(PurgedFlagKey, false)) return
         val stale = prefs.all.keys.filter { LegacyTimelineKey.matches(it) }
@@ -59,10 +43,7 @@ open class BodyEnergyBaselineCacheStore @Inject constructor(
         }
     }
 
-    /**
-     * Drops every cached baseline — the "start over" reset. The legacy-purge
-     * flag survives: it records a cleanup that happened, not a cache state.
-     */
+    /** Drops every cached baseline. The legacy-purge flag survives. */
     open fun clearBaselines() {
         val cached = prefs.all.keys.filter { it.startsWith(BaselineKeyPrefix) }
         if (cached.isEmpty()) return

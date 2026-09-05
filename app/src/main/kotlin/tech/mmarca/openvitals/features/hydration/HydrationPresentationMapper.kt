@@ -56,10 +56,7 @@ object HydrationPresentationMapper {
             trackedDates = tracked.map { it.date },
             sampleCount = tracked.size,
             dayLiters = dailyHydration.sumOf { it.liters },
-            // How much of the period you actually met the goal on — NOT the average of the
-            // days you happened to log. Dividing by tracked days meant that logging one day
-            // and hitting the goal filled the bar completely, so the bar rewarded you for
-            // logging less.
+            // Met days over elapsed days, not tracked days, or logging less filled the bar.
             goalProgress = if (summary.elapsedDays > 0) {
                 (summary.goalMetDays.toDouble() / summary.elapsedDays).coerceIn(0.0, 1.0)
             } else {
@@ -69,10 +66,7 @@ object HydrationPresentationMapper {
     }
 }
 
-/**
- * Days of [period] that have happened. A goal you have not had the chance to miss yet must
- * not count against you, so a period running past today is cut at today.
- */
+/** Days of [period] that have happened, cut at today. */
 private fun elapsedDays(period: DatePeriod, today: LocalDate): Int {
     val end = if (period.end.isAfter(today)) today else period.end
     if (end.isBefore(period.start)) return 0
@@ -102,9 +96,7 @@ private fun List<DailyHydration>.summaryForGoal(
     var trailingGoalStreak = 0
     for (day in reversed) {
         if (!day.meetsDailyGoal(dailyGoalLiters)) {
-            // A day that has not finished yet cannot break the streak — the same protection
-            // elapsedDays gives goalProgress. Without it the current streak collapsed to 0 at
-            // midnight until today's goal was met.
+            // An unfinished day cannot break the streak.
             if (day.date.isBefore(today)) break else continue
         }
         trailingGoalStreak += 1
@@ -114,8 +106,7 @@ private fun List<DailyHydration>.summaryForGoal(
         trackedDays = trackedDays,
         loggedDays = size,
         elapsedDays = elapsedDays,
-        // Deliberately still per TRACKED day: an average of the days you drank is a
-        // meaningful number, where a bar's denominator is not.
+        // Still per tracked day: an average of the days you drank is meaningful.
         averageLiters = trackedDays.takeIf { it > 0 }?.let { totalLiters / it } ?: 0.0,
         bestDayLiters = maxOfOrNull { it.liters } ?: 0.0,
         goalMetDays = goalMetDays,

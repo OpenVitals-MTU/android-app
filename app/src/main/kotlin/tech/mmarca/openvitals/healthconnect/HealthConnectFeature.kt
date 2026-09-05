@@ -55,22 +55,14 @@ enum class HealthConnectFeature {
             HealthPermission.getReadPermission(ExerciseSessionRecord::class),
             HealthPermission.getReadPermission(RespiratoryRateRecord::class),
         )
-        // The log's grid opens with any (or no) write permission: each entry
-        // screen asks Health Connect for exactly its own write set from its
-        // Grant button, the way CSV_IMPORT asks at the confirm step. Only the
-        // sync-paused gate still applies to the grid.
+        // The log's grid opens with any write permission; each entry screen asks for its own.
         MANUAL_ENTRY -> emptySet()
         DATA_IMPORT -> manager.dataImportWritePermissions
-        // The CSV importer's gate requires NO permissions: which write
-        // permissions are needed is not known until the user has mapped the
-        // file's columns, so the confirm step asks for exactly those instead.
+        // The needed permissions are unknown until the columns are mapped.
         CSV_IMPORT -> emptySet()
-        // Same shape as CSV_IMPORT: the report builder asks for exactly the
-        // selected metrics' read permissions, and builds fine on a partial
-        // grant — ungranted metrics land in the PDF's notice instead.
+        // The report builder asks for the selected metrics' reads and builds on a partial grant.
         HEALTH_REPORT -> emptySet()
-        // Empty on devices whose Health Connect lacks planned exercise, so the
-        // gate lets the screen through to show its own "unavailable" state.
+        // Empty where Health Connect lacks planned exercise, so the screen shows its own state.
         WORKOUT_PLANS -> manager.plannedExercisePermissions
     }
 

@@ -15,11 +15,7 @@ interface SleepRepository {
         refreshMode: RefreshMode = RefreshMode.NORMAL,
     ): SleepPeriodData
 
-    /**
-     * One aggregate duration per day of the range, without fetching sessions —
-     * the cheap read for range consumers such as the health report. Days the
-     * provider recorded no sleep come back with `durationMs == 0`.
-     */
+    /** One duration per day without fetching sessions. Days with no sleep read `durationMs == 0`. */
     suspend fun loadDailySleepDurations(
         start: LocalDate,
         end: LocalDate,

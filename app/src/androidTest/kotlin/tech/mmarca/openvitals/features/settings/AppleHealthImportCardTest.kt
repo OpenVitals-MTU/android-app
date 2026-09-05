@@ -20,14 +20,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the rendering cases of Flutter's
- * `test/features/settings/apple_health_import_card_test.dart`.
- *
- * An Apple Health export is a one-shot migration: someone leaves an iPhone
- * behind, imports years of history, and never opens this card again. If the
- * card cannot say how much access it has, cannot start, or swallows the fact
- * that part of the archive was unreadable, the user walks away believing they
- * brought everything across when they did not.
+ * An Apple Health export is a one-shot migration. The card must say how much access it has,
+ * start, and admit when part of the archive was unreadable.
  */
 class AppleHealthImportCardTest {
 
@@ -40,8 +34,7 @@ class AppleHealthImportCardTest {
 
         composeRule.onNodeWithText(string(R.string.settings_apple_health_import_title))
             .assertIsDisplayed()
-        // Health Connect grants are per record type, so "some of it worked" is a
-        // real outcome; the count is the only place a user can see which it was.
+        // Grants are per record type, so the count is the only place to see which worked.
         composeRule
             .onNodeWithText(
                 string(R.string.settings_apple_health_import_permissions, 1, PERMISSIONS.size),
@@ -70,9 +63,7 @@ class AppleHealthImportCardTest {
             .performScrollTo()
             .performClick()
 
-        // A truncated or re-rendered report is worse than none: the diagnostics
-        // it carries are what a maintainer needs to explain a missing year of
-        // data, so both affordances must pass the import's own text through.
+        // Both affordances must pass the import's own text through; a truncated report is worse than none.
         assertEquals(RESULT.shareableReportText, copied)
         assertEquals(1, saveRequests)
     }
@@ -81,9 +72,7 @@ class AppleHealthImportCardTest {
     fun anArchiveThatLostItsWorkoutRoutesSaysSoRatherThanReportingSuccess() {
         setCard(result = RESULT.copy(workoutRoutesIncomplete = true))
 
-        // Routes cannot be re-imported later from a partial ZIP — the user has to
-        // go back to the phone and export again, which they will only do if the
-        // card admits the archive ended early.
+        // Routes cannot be re-imported from a partial ZIP, so the card must admit the archive ended early.
         composeRule
             .onNodeWithText(string(R.string.settings_apple_health_import_routes_incomplete))
             .performScrollTo()

@@ -27,24 +27,10 @@ import kotlinx.coroutines.isActive
 import tech.mmarca.openvitals.ui.theme.LocalReducedMotion
 
 /**
- * A ring that empties clockwise as a countdown runs out, with the digits (or
- * anything else) in the middle.
- *
- * The point is the phone on the floor a metre away during a plank or a rest:
- * the arc gives a sense of how much of the window is left without reading the
- * digits. It is decorative for accessibility purposes — the digits inside
- * carry the value and any live-region announcements — so the canvas has no
- * semantics of its own.
- *
- * Timing: the ring is driven by wall-clock time against [endsAt], not by the
- * caller's once-a-second [now], so it sweeps smoothly between ticks. The frame
- * loop runs only while the countdown is running and stops when it hits zero.
- * Under reduced motion there is no frame loop: the arc steps with [now], which
- * is what "remove animations" asks for.
- *
- * [endsAt] is null when the countdown is not running — paused, or not started
- * — and the ring holds full, matching the digits, which show the whole
- * duration in that state.
+ * A ring that empties clockwise as a countdown runs out, with the digits in
+ * the middle. Decorative for accessibility: the digits carry the value.
+ * Driven by wall-clock time against [endsAt], so it sweeps smoothly; under
+ * reduced motion it steps with [now]. A null [endsAt] holds the ring full.
  */
 @Composable
 fun CountdownRing(
@@ -93,8 +79,7 @@ fun CountdownRing(
                 size = arcSize,
                 style = Stroke(width = strokePx),
             )
-            // The clock is read here, in the draw phase, so each frame redraws
-            // the arc without recomposing the content in the middle.
+            // Read in the draw phase, so each frame redraws without recomposing the content.
             val clock = if (smooth) frameClockMillis else now.toEpochMilli()
             val fraction = countdownRemainingFraction(endMillis, totalMillis, clock)
             if (fraction > 0f) {

@@ -22,15 +22,8 @@ import tech.mmarca.openvitals.domain.model.BleStepsCadenceSample
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 /**
- * The permissions a save actually needs.
- *
- * A recorded activity does not go to Health Connect as one record. The session
- * and every sensor series it carries go in ONE atomic insert call, so a series
- * the app never asked permission for does not silently go missing — it takes
- * the whole save down with it. The gate must therefore ask for exactly what the
- * writer will write.
- *
- * Ported from test/data/repository/activity_repository_write_permissions_test.dart.
+ * The session and every sensor series go in one atomic insert, so a series without
+ * permission takes the whole save down. The gate must ask for exactly what the writer writes.
  */
 class ActivityRepositoryWritePermissionsTest {
 
@@ -59,9 +52,7 @@ class ActivityRepositoryWritePermissionsTest {
 
     @Test
     fun `a recording with heart rate asks to write heart rate`() {
-        // The bug: it did not. A user who granted WRITE_EXERCISE but not
-        // WRITE_HEART_RATE was told the save was permitted, and then the whole
-        // insert was thrown.
+        // A user with WRITE_EXERCISE but not WRITE_HEART_RATE was told the save was permitted, then the insert threw.
         val permissions = repository.activityWritePermissions(
             request(
                 bleSamples = BleRecordingSampleBuffer(
@@ -88,13 +79,10 @@ class ActivityRepositoryWritePermissionsTest {
         // Asked for, because they were recorded.
         assertTrue(writeHeartRate in permissions)
         assertTrue(writePower in permissions)
-        // NOT asked for: the writer skips an empty series rather than writing an
-        // empty record, so asking would demand a permission we never use.
+        // Not asked for: the writer skips an empty series.
         assertFalse(writeSpeed in permissions)
         assertFalse(writeStepsCadence in permissions)
-        // The cycling-cadence write permission is an alias of WRITE_EXERCISE in
-        // the Health Connect client, so an unrecorded cadence series cannot be
-        // distinguished from the session permission itself — nothing to assert.
+        // The cycling-cadence write permission is an alias of WRITE_EXERCISE, so nothing to assert.
         assertEquals(writeExercise, writeCyclingCadence)
     }
 

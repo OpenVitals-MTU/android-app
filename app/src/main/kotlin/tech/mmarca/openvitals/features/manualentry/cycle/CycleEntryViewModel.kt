@@ -162,8 +162,7 @@ class CycleEntryViewModel @Inject constructor(
 
     fun save(unitSystem: UnitSystem = UnitSystem.METRIC) {
         val current = _uiState.value
-        // One record kind per log: only the section on screen is saved, whatever
-        // else may still be sitting filled behind another category tab.
+        // One record kind per log: only the section on screen is saved.
         val kinds = if (current.isEditMode) {
             setOfNotNull(current.editKind)
         } else {

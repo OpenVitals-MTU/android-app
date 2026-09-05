@@ -4,12 +4,7 @@ import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
 
-/**
- * How the app should treat a discovered device: which integration owns it
- * (`null` = a plain live sensor, owned by no file-sync integration) and as
- * what [BleDeviceKind]. The authoritative mapping from a scanned device to how
- * it is registered and driven.
- */
+/** How the app treats a discovered device: the owning integration (null for a plain sensor) and its kind. */
 data class DeviceClassification(
     val integration: DeviceIntegration? = null,
     val kind: BleDeviceKind,
@@ -20,23 +15,12 @@ data class DeviceClassification(
     }
 }
 
-/**
- * One integration's verdict on a scanned device — its [DeviceClassification],
- * or `null` when the device is not its own. Each integration (Garmin, WearOS,
- * …) supplies one; the scanner/onboarding asks them all, so no generic code
- * names a protocol. Mirrors the advertisement-shaped [DeviceScanClassifier],
- * but decides the whole (integration, kind) mapping.
- */
+/** One integration's verdict on a scanned device, or null when it is not its own. */
 fun interface DeviceClassifier {
     fun classify(device: BleDiscoveredDevice): DeviceClassification?
 }
 
-/**
- * Maps [device] to how the app should treat it: the first [classifiers]
- * verdict that claims it, else a plain [DeviceClassification.SENSOR]. Order
- * matters — pass the stronger signal first (Garmin's member service beats a
- * name match).
- */
+/** The first [classifiers] verdict that claims [device], else a plain sensor. Stronger signals first. */
 fun classifyDevice(
     device: BleDiscoveredDevice,
     classifiers: Iterable<DeviceClassifier>,

@@ -3,17 +3,9 @@ package tech.mmarca.openvitals.devices.garmin
 import java.time.Instant
 
 /**
- * Garmin's live-streaming services, by their ML service code.
- *
- * Each is a channel of its own on the multi-link transport: open the service
- * and the watch pushes small fixed payloads as the values change, until it is
- * closed again. This is NOT the FIT stream (5011/5012) — that carries the
- * watch's capabilities and file-shaped records; live readings ride here.
- *
- * Codes from Gadgetbridge's `CommunicatorV2.Service` (AGPLv3). Only the ones
- * this app parses are listed; the watch has more (accelerometer, calories,
- * intensity, stress, Body Battery), each cheap to add once something wants
- * them.
+ * Garmin's live-streaming services by ML service code. Each is its own
+ * channel: open it and the watch pushes small payloads. Not the FIT
+ * stream. Codes from Gadgetbridge (AGPLv3); only the parsed ones are listed.
  */
 enum class GarminRealtimeService(val code: Int) {
     HEART_RATE(6),
@@ -40,14 +32,8 @@ sealed class GarminRealtimeReading {
 }
 
 /**
- * Parses the payloads of [GarminRealtimeService] channels.
- *
- * Every parser returns null rather than throwing on a short or
- * sentinel-valued packet: these arrive unsolicited, on a link held for hours,
- * and one odd reading must never take the link down. The watch signals "I do
- * not know" with out-of-range values rather than by staying quiet — a
- * respiration of -2, an SpO2 of -1 — so those are dropped here instead of
- * being shown as real measurements.
+ * Parses the live channels. Every parser returns null on a short or
+ * sentinel packet: one odd reading must never take the link down.
  */
 object GarminRealtimeParser {
 
@@ -67,8 +53,7 @@ object GarminRealtimeParser {
     private fun parseHeartRate(payload: ByteArray): GarminRealtimeReading? {
         if (payload.size < 2) return null
         val bpm = payload[1].toInt() and 0xFF
-        // Zero is the watch saying it has no reading (off the wrist, or still
-        // settling), not a heart that stopped.
+        // Zero means no reading, not a stopped heart.
         if (bpm <= 0) return null
         val resting = if (payload.size >= 3) (payload[2].toInt() and 0xFF) else 0
         return GarminRealtimeReading.HeartRate(

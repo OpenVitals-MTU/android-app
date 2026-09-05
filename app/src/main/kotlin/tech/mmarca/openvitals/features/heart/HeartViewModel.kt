@@ -122,9 +122,7 @@ data class HeartUiState(
     val latestVo2Max: Vo2MaxEntry? = null,
     val latestBloodGlucose: BloodGlucoseEntry? = null,
     val latestSkinTemperature: SkinTemperatureEntry? = null,
-    // Non-day overview loads: aggregated daily points (the entry lists above hold
-    // one synthesised entry per day), so summaries can stay count-weighted, plus
-    // the metrics whose daily read blew its budget on this range.
+    // Non-day loads: aggregated daily points, plus the metrics whose read blew its budget.
     val bloodPressureDaily: List<DailyBloodPressurePoint> = emptyList(),
     val spO2Daily: List<DailyVitalPoint> = emptyList(),
     val respiratoryRateDaily: List<DailyVitalPoint> = emptyList(),
@@ -307,13 +305,7 @@ class HeartViewModel(
         }
     }
 
-    /**
-     * Kicks the vitals history sync once per screen open, AFTER the first load
-     * settles — Health Connect serializes reads, so a sync running beside the
-     * load makes both slower. When it completes, one reload re-derives the
-     * overview from the now-populated cache (which also clears any
-     * "too much data" placeholders the live load produced).
-     */
+    /** Kicks the vitals history sync once per open, after the first load; one reload when it completes. */
     private fun kickVitalsHistorySyncOnce() {
         val sync = vitalsSync ?: return
         if (vitalsSyncKicked) return

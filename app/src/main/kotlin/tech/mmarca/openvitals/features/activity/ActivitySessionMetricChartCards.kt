@@ -65,16 +65,9 @@ internal fun ActivitySpeedChartCard(
 }
 
 /**
- * Speed over the session for a device that recorded none — rebuilt from the
- * splits, which know how far each segment went and how long it took.
- *
- * The trace STEPS, one flat run per split, because that is the resolution the
- * numbers have — a split's speed is an average over its window, not a reading
- * at an instant. The title says where it came from ("every 1 km", "per lap")
- * and the stat row counts SPLITS rather than samples, because there are no
- * samples here. The [ActivitySplitSpeedTrace] states its own average: the
- * chart's own mean would weigh a 200 m limp home equally with a 1 km split and
- * quietly report a faster session than happened.
+ * Speed rebuilt from the splits for a device that recorded none. The trace
+ * steps, one flat run per split, and the stat row counts splits. The
+ * trace states its own average: the chart's mean would be wrong.
  */
 @Composable
 internal fun ActivitySplitSpeedChartCard(
@@ -89,9 +82,7 @@ internal fun ActivitySplitSpeedChartCard(
 ) {
     if (trace.samples.isEmpty()) return
 
-    // ESTIMATED never reaches here (it is flat by construction, so the display
-    // builds no trace for it), and neither does SPEED_SAMPLES (that source
-    // exists only when speed WAS recorded, and the recorded card wins).
+    // ESTIMATED never reaches here (flat by construction), nor SPEED_SAMPLES (the recorded card wins).
     val title: String
     val countLabel: String
     when (source) {
@@ -125,13 +116,8 @@ internal fun ActivitySplitSpeedChartCard(
 }
 
 /**
- * The height profile of the session.
- *
- * Health Connect has no elevation series: `ElevationGainedRecord` is one total
- * for the whole session — it says you climbed 240 m, never where. So this is
- * drawn from the ROUTE's altitudes, the only thing in Health Connect that
- * knows the shape of a climb. An activity with no route, or a route recorded
- * without altitude, has no profile to show and no card.
+ * The height profile. Health Connect has no elevation series, so this is
+ * drawn from the route's altitudes. No route or altitude, no card.
  */
 @Composable
 internal fun ActivityElevationChartCard(
@@ -203,16 +189,10 @@ private fun ActivitySessionMetricChartCard(
     accentColor: Color,
     valueFormatter: (Double) -> String,
     modifier: Modifier = Modifier,
-    // Speed and cadence cannot be negative, and an axis that starts anywhere
-    // else would be lying about how fast you were going. ELEVATION is the
-    // opposite: a run between 300 m and 350 m has fifty metres of relief in
-    // it, and pinning the axis to sea level would draw it as a flat line at
-    // the top of the card. Height is read against the ground, not against
-    // zero — and can be below it.
+    // Speed and cadence cannot be negative. Elevation is read against the
+    // ground, not zero, and can be below it.
     floorAtZero: Boolean = true,
-    // A recorded trace counts its samples; a trace stepped per split says so
-    // itself, because "12 samples" for six splits would be counting the
-    // corners of the steps.
+    // A stepped trace counts splits, not the corners of the steps.
     countText: String? = null,
     countLabel: String? = null,
     averageOverride: Double? = null,
@@ -226,9 +206,7 @@ private fun ActivitySessionMetricChartCard(
     val valueRange = (maxValue - minValue).coerceAtLeast(0.001)
     val paddedMin = (minValue - valueRange * 0.1).let { if (floorAtZero) it.coerceAtLeast(0.0) else it }
     val paddedMax = maxValue + valueRange * 0.1
-    // The axis counts only moving time: a pause is not part of the ride, so it
-    // gets none of the chart — collapsing it also stops the spline from drawing a
-    // climb across a hole where nothing was recorded.
+    // The axis counts only moving time: a pause gets none of the chart.
     val axis = remember(sessionStart, sessionEnd, pauses) {
         SessionAxis(start = sessionStart, end = sessionEnd, pauses = pauses)
     }
@@ -236,8 +214,7 @@ private fun ActivitySessionMetricChartCard(
     val zone = ZoneId.systemDefault()
     val timeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
     val drawPoints = sortedValues.size <= 120
-    // Built once, identity-stable across pinch frames, so the plot's geometry
-    // cache holds.
+    // Built once, identity-stable, so the geometry cache holds.
     val chartPoints = remember(sortedValues, axis) {
         sortedValues.map { (time, value) ->
             MetricLinePlotPoint(xFraction = axis.fractionOf(time), value = value)
@@ -277,8 +254,7 @@ private fun ActivitySessionMetricChartCard(
                     modifier = Modifier.weight(1f),
                 )
             }
-            // The plot and its elapsed row share the one viewport, so the labels
-            // always describe the slice of the session actually on show.
+            // Plot and elapsed row share the one viewport.
             ChartZoom(sessionStart, sessionEnd, sortedValues) { zoom ->
                 Column {
                     MetricLinePlot(
@@ -293,7 +269,7 @@ private fun ActivitySessionMetricChartCard(
                         drawPoints = drawPoints,
                         viewport = zoom.viewport,
                         multiTouch = zoom.multiTouch,
-                        // Moving elapsed, matching the labels directly under it.
+                        // Moving elapsed, matching the labels under it.
                         scrubLabel = { point ->
                             valueFormatter(point.value) to
                                 formatElapsedChartLabel(axis.elapsedAt(point.xFraction))

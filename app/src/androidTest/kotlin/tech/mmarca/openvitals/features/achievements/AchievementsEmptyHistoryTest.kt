@@ -22,15 +22,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Port of "shows the no-activity message with empty history" from Flutter's
- * `test/features/achievements/achievements_screen_test.dart`.
- *
- * Every badge is locked on a phone that has never recorded a step, and a wall
- * of locked badges looks exactly like a broken permission. The screen has to
- * say which of the two it is, because the fix is different: grant history
- * access, or go for a walk.
- */
+/** A wall of locked badges looks like a broken permission. The screen has to say which it is. */
 class AchievementsEmptyHistoryTest {
 
     @get:Rule
@@ -54,9 +46,7 @@ class AchievementsEmptyHistoryTest {
         composeRule.waitUntil(TIMEOUT_MS) { !viewModel.uiState.value.isLoading }
 
         val noData = string(R.string.achievements_no_data_title)
-        // The screen's outer LazyColumn. The stats strip and the category filter
-        // chips are lazy rows of their own, so the matcher is not unique — and
-        // the outer list is the ancestor, so it is the one traversed first.
+        // The screen's outer LazyColumn; the stats strip and filter chips are lazy rows of their own.
         composeRule
             .onAllNodes(hasScrollToIndexAction())
             .onFirst()

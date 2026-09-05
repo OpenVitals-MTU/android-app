@@ -212,8 +212,7 @@ class AppleHealthImportService
                     diagnosticLimit = MaxRawDiagnostics,
                     reportUnavailableWorkoutRoutes = AppleHealthImportCategory.WORKOUTS in selectedCategories,
                 )
-                // Serializes every onProgress invocation: the worker's progress callback mutates
-                // shared state and must never run concurrently from parse thread + writer.
+                // The progress callback mutates shared state from two threads.
                 val progressMutex = Mutex()
                 val batchChannel = Channel<List<ConvertedAppleRecord>>(capacity = BatchChannelCapacity)
                 val writer = ConvertedBatchWriter(
@@ -228,8 +227,7 @@ class AppleHealthImportService
                     progressMutex = progressMutex,
                     selectedCategories = selectedCategories,
                     writer = writer,
-                    // The SAX parse thread cannot suspend; trySendBlocking completes lock-free when
-                    // the channel has capacity and only blocks under real writer backpressure.
+                    // The SAX thread cannot suspend; trySendBlocking only blocks under backpressure.
                     sendBatch = { batch -> batchChannel.trySendBlocking(batch).getOrThrow() },
                 )
                 writer.publishProgress = { phase ->
@@ -523,13 +521,9 @@ class AppleHealthImportService
             private val bufferedRecords = mutableListOf<AppleRecord>()
             private val overlapDedupRecords = mutableListOf<AppleRecord>()
 
-            // Additive records (steps, distance, active energy) are cross-source deduplicated
-            // against each other, which needs them sorted together -- historically the whole
-            // export's worth, held to the end of the parse. On a step-dense export that is the
-            // single largest thing on the heap and what made large imports die at the 256MB cap.
-            // Records that cannot overlap in time cannot dedup against each other, so anything
-            // ending before the latest start seen (less a carry window for out-of-order exports)
-            // is settled and released as the parse runs.
+            // Additive records dedup against each other, which needs them sorted
+            // together. Holding a whole export killed large imports, so anything
+            // ending before the latest start seen, less a carry window, is released.
             private var maxAdditiveStart: Instant? = null
             private var nextAdditiveFlushSize = AdditiveOverlapFlushInterval
             private var additiveWindowFlushes = 0
@@ -538,9 +532,7 @@ class AppleHealthImportService
             private val convertedBatch = mutableListOf<ConvertedAppleRecord>()
             private val categoryStats = linkedMapOf<AppleHealthImportCategory, MutableAppleHealthImportCategorySummary>()
 
-            // Parse-side counters are volatile so the concurrent batch writer coroutine can read
-            // consistent progress totals without touching converter.typeStats (which the parse
-            // thread mutates via getOrPut while the writer runs).
+            // Volatile so the writer coroutine can read progress without touching typeStats.
             @Volatile
             private var parsedRecords = 0
 
@@ -643,13 +635,8 @@ class AppleHealthImportService
             }
 
             /**
-             * Settles every buffered record that can no longer overlap anything still to come and
-             * keeps the rest. A record with no usable date never participates in dedup at all, so
-             * it settles immediately.
-             *
-             * An export whose records are badly out of order can leave the carry above
-             * [MaxCarriedAdditiveRecords] -- there the oldest are settled anyway, which is a bound
-             * on memory bought with a little dedup accuracy, and is reported as such.
+             * Settles every buffered record that can no longer overlap anything
+             * to come. Past [MaxCarriedAdditiveRecords] the oldest settle anyway.
              */
             private fun flushAdditiveOverlapWindow() {
                 val watermark = maxAdditiveStart?.minus(AdditiveOverlapCarryWindow)
@@ -694,9 +681,7 @@ class AppleHealthImportService
                         "additiveWindows=$additiveWindowFlushes forcedAdditiveRecords=$forcedAdditiveWindowRecords",
                 )
                 flushBufferedRecords()
-                // Emit-based conversion: converted records flow straight into the batch pipeline
-                // (with a periodic heartbeat log) instead of materializing one giant list. For
-                // step/energy-heavy exports this phase covers hundreds of thousands of records.
+                // Converted records flow straight into the batch pipeline, not one giant list.
                 var emittedFromGroups = 0
                 converter.convertBufferedGroups(
                     records = overlapDedupRecords,
@@ -802,14 +787,9 @@ class AppleHealthImportService
         }
 
         /**
-         * Consumes converted-record batches from the import pipeline and performs the Health
-         * Connect I/O (duplicate lookup + insert) concurrently with parsing/conversion.
-         *
-         * Runs as a single sequential coroutine: batch N's insert must complete before batch N+1's
-         * duplicate lookup so cross-batch duplicates inside one export are detected. All state in
-         * this class is owned by that coroutine; the atomics exist only so the parse thread can
-         * read progress totals. Final per-type accounting is merged back into the converter's
-         * typeStats via [mergeInto] after the writer has completed.
+         * Consumes converted batches and does the Health Connect I/O
+         * concurrently with parsing. One sequential coroutine: batch N must
+         * insert before batch N+1's duplicate lookup.
          */
         private inner class ConvertedBatchWriter(
             private val importLogs: MutableList<String>,
@@ -970,8 +950,7 @@ class AppleHealthImportService
             records: List<ConvertedAppleRecord>,
             importLogs: MutableList<String>,
         ): Set<String> {
-            // Chunks are disjoint (recordType, timeRange) queries whose results are unioned, so
-            // they can run concurrently. Parallelism stays low to respect Health Connect rate limits.
+            // Disjoint queries, unioned, so they run concurrently. Low parallelism for rate limits.
             val queries = records
                 .filter { it.clientRecordId != null }
                 .groupBy { it.recordType }
@@ -1026,10 +1005,7 @@ class AppleHealthImportService
                 return AppleHealthInsertionResult(imported = records.size)
             }
             batchResult.exceptionOrNull()?.let { error ->
-                // A quota failure must not fall into the per-record retry: that
-                // would turn one failed 300-record call into 300 more calls
-                // against an already-exhausted quota. The import is resumable —
-                // fail it and let the checkpoint carry on later.
+                // A quota failure must not fall into the per-record retry. The import is resumable.
                 if (HealthConnectRateLimitBackoff.isRateLimitFailure(error)) {
                     importLogs.addImportError("Batch insert rate limited count=${records.size}; not retrying", error)
                     throw error
@@ -1189,8 +1165,7 @@ private fun MutableList<AppleHealthImportDiagnostic>.addDiagnostic(
     diagnostic: AppleHealthImportDiagnostic,
     diagnosticSummaries: MutableMap<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>,
 ) {
-    // Summaries stay complete (grouped counts), but the raw list is capped so re-importing an
-    // already-imported export cannot accumulate one diagnostic per record and OOM the report builder.
+    // The raw list is capped so a re-import cannot OOM the report builder.
     diagnosticSummaries.add(diagnostic)
     if (size < MaxRawDiagnostics) {
         add(diagnostic)
@@ -1424,10 +1399,7 @@ private const val BufferedGroupHeartbeatInterval = 10_000
 /** How many additive records may pile up before the settled ones are released. */
 private const val AdditiveOverlapFlushInterval = 25_000
 
-/**
- * Records ending within this much of the newest start seen are carried rather than settled: Apple
- * writes export.xml in roughly chronological order, and this is the slack for "roughly".
- */
+/** Records ending within this of the newest start are carried: Apple's order is only roughly chronological. */
 private val AdditiveOverlapCarryWindow: Duration = Duration.ofDays(2)
 
 /** The hard ceiling on the carry, so a badly ordered export still cannot grow it without limit. */

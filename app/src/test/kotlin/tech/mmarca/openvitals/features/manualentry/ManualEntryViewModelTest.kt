@@ -74,10 +74,7 @@ class ManualEntryViewModelTest {
         verify { preferencesRepository.setManualEntryWidgetOrder(listOf(ManualEntryWidgetId.HYDRATION.name)) }
     }
 
-    // A tile opens its screen without consulting Health Connect: the screen's
-    // Grant button is the one place that asks, so the strict preferences mock
-    // (no permission stubs) and the absence of any repository here are the
-    // guard against a request creeping back into the grid.
+    // A tile opens its screen without consulting Health Connect; the strict mocks guard against a request creeping back.
 
     @Test fun `hydration tap opens the entry screen`() = runTest {
         val vm = ManualEntryViewModel(prefs())

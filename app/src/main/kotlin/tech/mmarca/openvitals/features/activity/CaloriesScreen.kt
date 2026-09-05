@@ -75,9 +75,7 @@ fun CaloriesScreen(
         selectedDate = state.selectedDate,
         key = "calories",
     )
-    // The breakdown fans two lists into maps and merges them by date. Recomputing
-    // that on every recomposition — the list scrolls, so there are many — is what
-    // made the screen crawl. Keyed on exactly the state the builder reads.
+    // Keyed on exactly the state the builder reads; recomputing per recomposition made the screen crawl.
     val period = remember(state.selectedRange, state.selectedDate, state.weekPeriodMode) {
         displayPeriodFor(state.selectedRange, state.selectedDate, weekPeriodMode = state.weekPeriodMode)
     }
@@ -143,9 +141,7 @@ private fun LazyListScope.renderCaloriesOrderedContent(
     chartDaySelection: tech.mmarca.openvitals.ui.components.ChartDaySelection,
 ) {
     if (!state.hasAnyCaloriesData() && state.isLoading) {
-        // Nothing to show yet and still loading: one skeleton where the period chart
-        // will be, so the page does not jump when the data lands. A screen that
-        // already has content keeps it — a skeleton over drawn data would blink.
+        // Still loading: a skeleton where the chart will be. Existing content is kept.
         item {
             ChartSkeleton(
                 modifier = metricModifier(),
@@ -617,10 +613,7 @@ private fun bmrHistoryValues(entries: List<BmrEntry>): List<PeriodChartValue> =
             }
         }
 
-/**
- * The Statistics grid's six numbers. Null means "no readings to aggregate", which
- * the grid renders as the no-data marker — never as a real zero.
- */
+/** The Statistics grid's six numbers. Null means no readings, never a real zero. */
 internal data class CaloriesStatistics(
     val totalSum: Double? = null,
     val totalAverage: Double? = null,

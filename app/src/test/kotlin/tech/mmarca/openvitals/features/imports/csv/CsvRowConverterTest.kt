@@ -22,10 +22,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The Withings scale export this feature was built for:
- * `Date,"Weight (kg)","Fat mass (kg)","Bone mass (kg)","Muscle mass (kg)","Hydration (kg)",Comments`
- */
+/** The Withings scale export: `Date,"Weight (kg)","Fat mass (kg)","Bone mass (kg)","Muscle mass (kg)","Hydration (kg)",Comments` */
 private fun withingsMapping(
     bodyFatInterpretation: CsvValueInterpretation? = null,
     includeWeight: Boolean = true,
@@ -121,7 +118,7 @@ private fun convertOne(
 
 class CsvRowConverterTest {
 
-    // ── convertCsvRow ────────────────────────────────────────────────────────
+    // convertCsvRow.
 
     @Test
     fun `a Withings row produces one record for each mapped metric`() {
@@ -269,8 +266,7 @@ class CsvRowConverterTest {
 
     @Test
     fun `a derived body fat outside the plausible range is rejected rather than stored`() {
-        // Fat mass divided by a weight column that is not body weight — the
-        // failure this guard exists for.
+        // Fat mass divided by a weight column that is not body weight.
         val conversion = convertCsvRow(
             row = row(listOf("2026-07-01 08:12:00", "16.0", "15.2", "3.1", "55.0", "42.3", "")),
             mapping = withingsMapping(),
@@ -335,7 +331,7 @@ class CsvRowConverterTest {
         assertEquals(ZoneOffset.ofHours(2), record.zoneOffset)
     }
 
-    // ── buildCsvClientRecordId ───────────────────────────────────────────────
+    // buildCsvClientRecordId.
 
     @Test
     fun `the id is namespaced to csv so it cannot collide with apple_health`() {
@@ -349,9 +345,8 @@ class CsvRowConverterTest {
 
     @Test
     fun `the id is byte-identical to the Flutter build's`() {
-        // Pinned against the Dart implementation: sha256("WeightRecord|1782886320000"),
-        // first 16 bytes as hex. Users who imported via the Flutter build dedup
-        // against exactly this string.
+        // Pinned against Dart: sha256("WeightRecord|1782886320000"), first 16 bytes as hex.
+        // Flutter-build imports dedup against exactly this string.
         assertEquals(
             "csv_weightrecord_dc1bc96fac534f11b1fc16459d2da1fa",
             buildCsvClientRecordId(
@@ -377,9 +372,7 @@ class CsvRowConverterTest {
 
     @Test
     fun `a corrected value at the same instant keeps the id, so the re-import replaces the record instead of duplicating it`() {
-        // This IS the upsert contract: Health Connect replaces on a matching
-        // clientRecordId, so excluding the value from the id is what makes a
-        // corrected file overwrite rather than double up.
+        // The upsert contract: excluding the value from the id makes a corrected file overwrite.
         val before = convertCsvRow(
             row = row(listOf("2026-07-01 08:12:00", "78.4")),
             mapping = weightMapping(CsvDirectValue(CsvUnit.KILOGRAMS)),
@@ -419,7 +412,7 @@ class CsvRowConverterTest {
         )
     }
 
-    // ── vitals metrics ───────────────────────────────────────────────────────
+    // Vitals metrics.
 
     @Test
     fun `a Withings temperature export row becomes a BodyTemperatureRecord`() {
@@ -516,12 +509,9 @@ class CsvRowConverterTest {
         )
     }
 
-    // ── steps ────────────────────────────────────────────────────────────────
+    // Steps.
 
-    /**
-     * The TimeFrom/TimeTo shape a steps export has:
-     * `TimeFrom,TimeTo,Steps[,Weight]` — start, end, then metrics.
-     */
+    /** The `TimeFrom,TimeTo,Steps[,Weight]` shape a steps export has. */
     private fun stepsMapping(withWeight: Boolean = false): CsvImportMapping = CsvImportMapping(
         columns = listOfNotNull(
             CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
@@ -591,8 +581,7 @@ class CsvRowConverterTest {
 
     @Test
     fun `a row truncated before the end column is a blank end, not a rejected row`() {
-        // Trailing empty columns are normal in exports; losing the row's weight
-        // because its optional TimeTo was cut off would be the wrong trade.
+        // Trailing empty columns are normal; losing the weight because TimeTo was cut off would be the wrong trade.
         val mapping = CsvImportMapping(
             columns = listOf(
                 CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
@@ -622,8 +611,7 @@ class CsvRowConverterTest {
 
     @Test
     fun `a mapping with no end column at all imports steps as one-minute spans`() {
-        // `TimeFrom,Steps` — the shape a bare export has. The mapping is not
-        // blocked; each row just claims no more time than its own instant.
+        // `TimeFrom,Steps`: each row claims no more time than its own instant.
         val conversion = convertCsvRow(
             row = row(listOf("2026-07-01 08:00:00", "1500")),
             mapping = singleMetricMapping(CsvImportMetric.STEPS, CsvDirectValue(CsvUnit.COUNT)),
@@ -687,8 +675,7 @@ class CsvRowConverterTest {
 
     @Test
     fun `every catalog metric can build a record from its canonical value`() {
-        // Guards the switch in buildCsvImportRecord against a metric added to
-        // the enum without a case building the WRONG record type.
+        // Guards against a metric added to the enum building the wrong record type.
         for (metric in CsvImportMetric.entries) {
             val spec = CsvMetricCatalog.getValue(metric)
             val converted = buildCsvImportRecord(
@@ -702,7 +689,7 @@ class CsvRowConverterTest {
         }
     }
 
-    // ── previewInstantRange ──────────────────────────────────────────────────
+    // previewInstantRange.
 
     private val previewRows = listOf(
         listOf("2026-07-03 08:11:00", "78.2"),
@@ -723,8 +710,7 @@ class CsvRowConverterTest {
 
     @Test
     fun `reading the same file day-first instead of month-first moves the span to a different month`() {
-        // The whole point of showing the span: `01/07` is plausible either way
-        // on its own, but the RANGE it implies is not.
+        // `01/07` is plausible either way; the range it implies is not.
         val ambiguous = listOf(
             listOf("01/07/2026", "78.4"),
             listOf("02/07/2026", "78.6"),
@@ -800,8 +786,7 @@ class CsvRowConverterTest {
 
     @Test
     fun `the span is the wall clock in the file, not the UTC instant`() {
-        // A +02:00 file says 08:12 on the wall; showing 06:12 would look like a
-        // bug to the user comparing against their own spreadsheet.
+        // A +02:00 file says 08:12 on the wall; showing 06:12 would look like a bug.
         val range = previewInstantRange(
             rows = listOf(listOf("2026-07-01 08:12:00", "78.4")),
             mapping = CsvImportMapping(
@@ -825,7 +810,7 @@ class CsvRowConverterTest {
         assertEquals(8, range!!.first.hour)
     }
 
-    // ── parseCsvNumber ───────────────────────────────────────────────────────
+    // parseCsvNumber.
 
     @Test
     fun `a comma decimal separator parses as a decimal, not a thousands mark`() {

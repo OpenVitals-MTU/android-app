@@ -18,14 +18,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
-/**
- * Port of the Flutter `history_sync_scheduler_test.dart` suite.
- *
- * The Dart fakes implement the service interfaces; the Kotlin services are
- * concrete classes, so the same recording stand-in is built with mockk over
- * them. [Recorder] is the Dart `_Recorder`: it captures the order the drains
- * ran in and whether any two were ever in flight at once.
- */
+/** [Recorder] captures the order the drains ran in and whether any two overlapped. */
 class HistorySyncSchedulerTest {
 
     @Before
@@ -80,8 +73,7 @@ class HistorySyncSchedulerTest {
 
     @Test
     fun `the drains run one after another, never at the same time`() = runTest {
-        // Health Connect serializes concurrent reads, so overlapping drains are
-        // the 30s->80s contention the per-screen sequencing exists to avoid.
+        // Health Connect serializes reads, so overlapping drains are the contention the sequencing avoids.
         scheduler.drainIncrementalOnce()
 
         assertEquals(listOf("vitals", "calories", "bodyEnergy", "stepDistance"), recorder.started)
@@ -90,9 +82,7 @@ class HistorySyncSchedulerTest {
 
     @Test
     fun `no drain starts a first full sync`() = runTest {
-        // A first full sync is a multi-minute history read and stays owned by
-        // the screen that needs the cache: a user who never opens the vitals
-        // overview must not pay for its 730-day reads on every app open.
+        // A first full sync is a multi-minute read owned by the screen that needs it.
         scheduler.drainIncrementalOnce()
 
         coVerify(exactly = 0) { vitals.syncAll() }
@@ -101,9 +91,7 @@ class HistorySyncSchedulerTest {
 
     @Test
     fun `a failing drain does not starve the ones after it`() = runTest {
-        // The once-per-open latch is claimed before the first drain runs, so a
-        // throw that escaped here would abandon the remaining drains for the
-        // life of the process, not just this open.
+        // The once-per-open latch is claimed before the first drain, so an escaped throw would abandon the rest for the process's life.
         coEvery { vitals.syncIncremental() } throws IllegalStateException("read failed")
 
         scheduler.drainIncrementalOnce()
@@ -113,8 +101,7 @@ class HistorySyncSchedulerTest {
 
     @Test
     fun `a cancelled drain still unwinds`() = runTest {
-        // Cancellation is not a failing drain: swallowing it would keep the
-        // scheduler running after its caller has gone away.
+        // Cancellation is not a failing drain.
         coEvery { calories.syncIncremental() } throws CancellationException("gone")
 
         var cancelled = false

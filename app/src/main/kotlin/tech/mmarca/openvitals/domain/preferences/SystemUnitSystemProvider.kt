@@ -6,12 +6,8 @@ import android.os.Build
 import java.util.Locale
 
 /**
- * Maps a BCP-47 measurement-system token — the `-u-ms-` regional-preference
- * extension Android 14+ writes, or an ICU MeasurementSystem name — to the unit
- * system OpenVitals displays. UK maps to metric: the UK system is metric-first
- * (road distances and pints are the exceptions, and OpenVitals shows neither
- * as its primary units), and Android's measurement-system setting exposes no
- * mixed option that could distinguish further.
+ * Maps a BCP-47 `-u-ms-` token or an ICU MeasurementSystem name to a unit
+ * system. UK maps to metric: it is metric-first for everything shown here.
  */
 fun unitSystemForMeasurementSystem(measurementSystem: String?): UnitSystem? =
     when (measurementSystem?.lowercase(Locale.ROOT)) {
@@ -20,22 +16,13 @@ fun unitSystemForMeasurementSystem(measurementSystem: String?): UnitSystem? =
         else -> null
     }
 
-/**
- * The single seam through which a [UnitSystemPreference.SYSTEM] choice becomes
- * a concrete [UnitSystem]. Everything that switches on the unit system reads
- * the already-resolved value from PreferencesRepository (directly or through
- * UnitFormatter) — nothing else consults ICU or the locale.
- */
+/** The single seam through which a SYSTEM choice becomes a [UnitSystem]. */
 fun interface SystemUnitSystemProvider {
 
     fun current(): UnitSystem
 
     companion object {
-        /**
-         * The `-u-ms-` extension is checked before ICU because platform ICU
-         * versions differ in whether they honour the keyword; the country
-         * fallback covers the local-test JVM, where android.icu is a stub.
-         */
+        /** `-u-ms-` first, then ICU, then the country fallback (the test JVM stubs ICU). */
         val Default = SystemUnitSystemProvider {
             val locale = Locale.getDefault()
             unitSystemForMeasurementSystem(locale.getUnicodeLocaleType("ms"))
@@ -44,13 +31,12 @@ fun interface SystemUnitSystemProvider {
         }
 
         private fun icuMeasurementSystem(locale: Locale): UnitSystem? {
-            // LocaleData.getMeasurementSystem exists from API 28; below that
-            // (minSdk is 26) the -u-ms- extension or country fallback decides.
+            // LocaleData.getMeasurementSystem exists from API 28.
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return null
             return runCatching {
                 when (LocaleData.getMeasurementSystem(ULocale.forLocale(locale))) {
                     LocaleData.MeasurementSystem.US -> UnitSystem.IMPERIAL
-                    // SI, and UK as metric-first — see unitSystemForMeasurementSystem.
+                    // SI, and UK as metric-first.
                     else -> UnitSystem.METRIC
                 }
             }.getOrNull()

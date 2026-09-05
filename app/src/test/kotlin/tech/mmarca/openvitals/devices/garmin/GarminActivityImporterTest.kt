@@ -9,14 +9,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 
-/**
- * The tolerance rules of the watch-activity import: only ACTIVITY-type files
- * are considered, and a file the parser rejects is skipped rather than
- * sinking the sync (the raw bytes stay in the Garmin file store as the
- * recovery net). The happy path — a real FIT activity becoming an
- * `ActivityWriteRequest` — is covered by the route-import parser tests it
- * delegates to.
- */
+/** Only ACTIVITY files are considered, and a file the parser rejects is skipped rather than sinking the sync. */
 class GarminActivityImporterTest {
 
     private val activityRepository = mockk<ActivityRepository>(relaxed = true)
@@ -50,8 +43,7 @@ class GarminActivityImporterTest {
 
     @Test
     fun `an undecodable activity file is skipped, never thrown`() = runTest {
-        // Three junk bytes are not a FIT file; the parser rejects them and
-        // the import must swallow that per file.
+        // Three junk bytes are not a FIT file; the import must swallow that per file.
         val written = importer.import(listOf(file(GarminFileType.ACTIVITY)))
 
         assertEquals(0, written)

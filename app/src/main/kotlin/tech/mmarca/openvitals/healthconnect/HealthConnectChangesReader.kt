@@ -19,12 +19,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.reflect.KClass
 
-/**
- * What one poll of a changes token reports: which local days had records
- * inserted or updated (the cache recomputes just those days), whether anything
- * was deleted (deletions carry only an id, so the affected metric full-rebuilds),
- * and the token to store for the next poll.
- */
+/** One poll of a changes token: the days to recompute, whether anything was deleted, the next token. */
 data class HealthConnectChanges(
     val upsertedDays: List<LocalDate>,
     val hasDeletions: Boolean,
@@ -34,13 +29,8 @@ data class HealthConnectChanges(
 )
 
 /**
- * The Health Connect Changes API, exposed for the local daily-aggregate cache.
- *
- * A token is registered per record type (respiratory rate, SpO2, …); polling it
- * returns which local days had records inserted/updated (so the cache recomputes
- * just those days) and whether anything was deleted (deletions carry only an id,
- * so the cache full-rebuilds that metric then). This is what lets a year of
- * densely-sampled data be read raw ONCE and then kept current cheaply.
+ * The Changes API for the daily-aggregate cache: one token per record
+ * type, so a year is read raw once and then kept current cheaply.
  */
 internal class HealthConnectChangesReader(
     private val support: HealthConnectReaderSupport,
@@ -82,9 +72,7 @@ internal class HealthConnectChangesReader(
             )
         }
 
-    // Tokens are registered per record type, so only these reach here. The
-    // calorie records are interval records (startTime/endTime), bucketed by their
-    // start to match the daily calories-burned cache.
+    // Only registered types reach here. Calorie interval records bucket by their start.
     private fun instantOf(record: Record): Instant? = when (record) {
         is BloodPressureRecord -> record.time
         is OxygenSaturationRecord -> record.time

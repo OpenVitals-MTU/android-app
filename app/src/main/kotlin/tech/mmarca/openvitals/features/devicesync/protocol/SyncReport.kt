@@ -2,10 +2,7 @@ package tech.mmarca.openvitals.features.devicesync.protocol
 
 import java.time.Instant
 
-/**
- * Outcome + progress models for a sync session, mirroring the Apple Health
- * import's counters so the report screen can render them the same way.
- */
+/** Outcome and progress models for a session, mirroring the Apple Health import's counters. */
 
 /** Coarse phase of a session, for the progress label. */
 enum class SyncPhase {
@@ -36,10 +33,7 @@ data class SyncTypeSummary(
     val duplicateSkipped: Int = 0,
 )
 
-/**
- * The final result of a session, shown on the report screen. Each device
- * reports what IT wrote (bidirectional merge means both sides have one).
- */
+/** The final result of a session. Each device reports what it wrote. */
 data class SyncReport(
     /** True if the session finished cleanly; false if it aborted. */
     val completed: Boolean,
@@ -70,11 +64,8 @@ class SyncReportBuilder {
         private set
 
     /**
-     * Records one received item. [imported] is true only when it was actually
-     * written to Health Connect (a fresh item whose write succeeded);
-     * [duplicate] is true when it was skipped as already present. A fresh item
-     * whose write FAILED is neither — counted as received but not imported, so
-     * the report cannot claim "imported N" when nothing landed.
+     * Records one received item. [imported] only when written; [duplicate]
+     * when already present. A failed write is neither.
      */
     fun recordReceived(recordType: String, imported: Boolean = false, duplicate: Boolean = false) {
         itemsReceived += 1
@@ -106,12 +97,7 @@ class SyncReportBuilder {
     )
 }
 
-/**
- * Formats a [SyncReport] as the shareable plain-text report shown on the report
- * screen and written to `DeviceSyncReportStore`. English by design, like the
- * Apple Health import report file — it is a technical artifact, not UI text.
- * [generatedAt] is injected so the output is deterministic in tests.
- */
+/** Formats a [SyncReport] as shareable text. English by design: a technical artifact. */
 fun buildSyncReportText(report: SyncReport, generatedAt: Instant): String = buildString {
     appendLine("OpenVitals — Sync With Another Phone report")
     appendLine("Generated: $generatedAt")

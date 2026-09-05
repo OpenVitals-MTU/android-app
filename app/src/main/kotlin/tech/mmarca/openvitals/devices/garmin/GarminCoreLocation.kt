@@ -22,12 +22,7 @@ data class GarminPhoneLocation(
     val speedMetersPerSecond: Float,
 )
 
-/**
- * Last-known phone position for the watch's location requests. No fix is ever
- * REQUESTED here — this is a passive read of what other apps already
- * established, because waking GPS on the watch's behalf is a battery decision
- * the user never made.
- */
+/** Last-known phone position for the watch. A passive read; no fix is ever requested. */
 @Singleton
 class GarminPhoneLocationSource @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -71,20 +66,13 @@ class GarminPhoneLocationSource @Inject constructor(
 }
 
 /**
- * Answers the watch's `CoreService` location conversation — the prerequisite
- * for its weather fetch. The watch will not spend its own GPS on weather: it
- * asks the PHONE where it is, and with that unanswered the weather glance
- * never even attempts its HTTP fetch. Mirrors Gadgetbridge's handling in
- * `ProtocolBufferHandler` (`gdi_core.proto`).
+ * Answers the watch's `CoreService` location conversation, the
+ * prerequisite for its weather fetch. Mirrors Gadgetbridge.
  */
 class GarminCoreLocation(
     private val locationProvider: () -> GarminPhoneLocation?,
 ) {
-    /**
-     * A reply, and optionally a message of our own to send right after it —
-     * granting a location-update subscription means immediately delivering
-     * one, or the watch sits waiting on a stream that never starts.
-     */
+    /** A reply, and optionally a follow-up: a granted subscription must deliver an update at once. */
     class Reply(val payload: ByteArray, val followUp: ByteArray? = null)
 
     private companion object {
@@ -112,9 +100,7 @@ class GarminCoreLocation(
             return Reply(smartCore(getLocationResponse()))
         }
         protobufField(fields, SET_ENABLED_REQUEST)?.bytes?.let { request ->
-            // The grant, then a first update on its heels: the watch treats
-            // the subscription as live only once something arrives on it,
-            // and its weather fetch waits behind that.
+            // The grant, then a first update: the subscription is live only once something arrives.
             return Reply(
                 payload = smartCore(setEnabledResponse(request)),
                 followUp = locationUpdateNotification(),
@@ -151,10 +137,8 @@ class GarminCoreLocation(
     }
 
     /**
-     * Acknowledges an update subscription. Each requested stream is granted
-     * on paper; no stream is actually sent — the watch re-asks with
-     * `GetLocationRequest` when it wants a fix, which [getLocationResponse]
-     * serves. Streaming would mean holding GPS on the watch's schedule.
+     * Acknowledges a subscription on paper; no stream is sent. The watch
+     * re-asks with `GetLocationRequest` when it wants a fix.
      */
     private fun setEnabledResponse(request: ByteArray): ByteArray {
         val requested = readProtobuf(request)

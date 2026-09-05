@@ -228,8 +228,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     inputText = if (_uiState.value.isEditMode) _uiState.value.inputText else "",
                     secondaryInputText = if (_uiState.value.isEditMode) _uiState.value.secondaryInputText else "",
-                    // A saved add clears the picked time: the NEXT measurement
-                    // defaults to "now" instead of inheriting this one's clock.
+                    // A saved add clears the picked time, so the next entry defaults to now.
                     editTime = if (_uiState.value.isEditMode) _uiState.value.editTime else null,
                     isSavingEntry = false,
                     saveCompleted = true,

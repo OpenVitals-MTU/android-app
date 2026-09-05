@@ -33,23 +33,11 @@ import kotlinx.coroutines.withTimeoutOrNull
 class GarminGattClientException(message: String) : Exception(message)
 
 /**
- * The one file in the Garmin stack that touches `android.bluetooth`.
- *
- * Everything above it — [GarminMlTransport], the session, the messages, the
- * framing — moves bytes and is tested with no radio. This connects, finds the
- * multi-link characteristic pair, and wires the two together:
- *
- *   notify characteristic → [GarminMlTransport.handleInbound]
- *   [GarminMlTransport]'s write callback → send characteristic
- *
- * Port of the Flutter build's `garmin_ble_transport.dart`, written against
- * `BluetoothGatt` directly. Modelled on `BleGattConnection`'s connect/notify
- * idioms but deliberately a separate class: that one is capability/aggregator
- * shaped with a reconnect loop, and a sync is a bounded operation the user
- * started, so a dropped link should end it and report, not silently redial.
- *
- * One instance drives ONE connection attempt — the await-able steps inside
- * are single-shot. Make a new instance to reconnect.
+ * The one file in the Garmin stack that touches `android.bluetooth`. It
+ * connects, finds the multi-link characteristic pair and wires it to
+ * [GarminMlTransport]. A separate class from `BleGattConnection`: a sync is
+ * bounded, so a dropped link should end it, not redial. One instance drives
+ * one connection attempt.
  */
 class GarminGattClient(
     private val context: Context,
@@ -58,17 +46,10 @@ class GarminGattClient(
 ) {
 
     private companion object {
-        /**
-         * Gadgetbridge asks for 515; Android negotiates down as needed. A
-         * bigger MTU is the single largest factor in sync speed, since every
-         * GFDI frame is chunked to fit one write.
-         */
+        /** Gadgetbridge asks for 515. A bigger MTU is the largest factor in sync speed. */
         const val DESIRED_MTU = 515
 
-        /**
-         * Long, because a probe's connect can happen right after bonding,
-         * when the watch may still be settling its encrypted link.
-         */
+        /** Long, because a connect right after bonding may find the watch still settling. */
         val CONNECT_TIMEOUT: Duration = 20.seconds
         val DISCOVER_TIMEOUT: Duration = 10.seconds
         val MTU_TIMEOUT: Duration = 5.seconds
@@ -96,12 +77,7 @@ class GarminGattClient(
     private val disconnected = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val onDisconnected: SharedFlow<String> = disconnected
 
-    /**
-     * Runs the GFDI re-registration when the watch closes the handle — the
-     * control callback arrives on the binder thread, and the write it needs is
-     * suspending. Owned here so the healing is invisible to callers, the way
-     * Gadgetbridge's `CommunicatorV2` requeues its own registration.
-     */
+    /** Runs the GFDI re-registration when the watch closes the handle. Invisible to callers. */
     private val healScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     // Single-shot bridges from the GATT callback into coroutines.
@@ -211,11 +187,9 @@ class GarminGattClient(
     }
 
     /**
-     * Connects, opens the GFDI channel and returns the transport to send on.
-     *
-     * Throws [GarminGattClientException] when the watch is unreachable or
-     * exposes no V2 characteristic pair — the latter meaning it is a V1
-     * device, which this app does not implement (see [GarminMlTransport]).
+     * Connects, opens the GFDI channel and returns the transport. Throws
+     * [GarminGattClientException] when unreachable or when there is no V2
+     * pair (a V1 device, not implemented).
      */
     @SuppressLint("MissingPermission")
     suspend fun connect(
@@ -239,9 +213,7 @@ class GarminGattClient(
             write = { packet -> writeToCharacteristic(packet) },
             onFrame = onFrame,
             onServiceData = { serviceCode, payload ->
-                // Live readings ride their own ML services, unframed. An
-                // unparseable one is dropped rather than logged loudly: they
-                // arrive continuously on a link held for hours.
+                // Live readings are unframed and continuous; drop unparseable ones quietly.
                 val service = GarminRealtimeParser.serviceFor(serviceCode)
                 if (service != null) {
                     GarminRealtimeParser.parse(service, payload)?.let { reading ->
@@ -252,10 +224,7 @@ class GarminGattClient(
                 }
             },
             onGfdiClosed = {
-                // Re-register rather than tear down: on a held link (the
-                // notification forwarder, a listen window) the watch closing
-                // GFDI is recoverable, and without this the link goes
-                // silently deaf instead.
+                // Re-register rather than tear down: on a held link this is recoverable.
                 healScope.launch {
                     runCatching { ml?.reopenGfdi() }
                         .onFailure { log("[GARMIN-BLE] GFDI reopen failed: $it") }
@@ -266,9 +235,7 @@ class GarminGattClient(
         transport.onMtuChanged(mtu)
         ml = transport
 
-        // Subscribe BEFORE opening the channel: the watch's registration
-        // response can arrive the instant the request lands, and a late
-        // subscription would miss it and hang the handshake.
+        // Subscribe before opening the channel, or a fast response is missed.
         try {
             subscribe(receive)
         } catch (error: Exception) {
@@ -286,10 +253,7 @@ class GarminGattClient(
         return transport
     }
 
-    /**
-     * Connects, enumerates the GATT table and hangs up — the probe path. No
-     * GFDI traffic, no writes.
-     */
+    /** Connects, enumerates the GATT table and hangs up. The probe path. */
     suspend fun enumerateServices(): List<GarminGattService> {
         val (services, _) = connectAndDiscover(requestMtu = false)
         return services.map { service ->
@@ -336,7 +300,7 @@ class GarminGattClient(
         }
         val currentGatt = gatt ?: throw GarminGattClientException("Not connected")
 
-        // Best-effort: a refused MTU request just means smaller writes.
+        // A refused MTU request just means smaller writes.
         var mtu = 23
         if (requestMtu) {
             val requested = runCatching { currentGatt.requestMtu(DESIRED_MTU) }
@@ -362,11 +326,7 @@ class GarminGattClient(
         return services to mtu
     }
 
-    /**
-     * The first receive/send pair present on the device, scanning the handle
-     * window in order — the same first-match rule as
-     * `CommunicatorV2.initializeDevice`.
-     */
+    /** The first receive/send pair in the handle window, as `CommunicatorV2` does. */
     private fun findMlPair(
         services: List<BluetoothGattService>,
     ): Pair<BluetoothGattCharacteristic, BluetoothGattCharacteristic>? {
@@ -417,11 +377,8 @@ class GarminGattClient(
         val currentGatt = gatt ?: throw GarminGattClientException("Not connected")
         val characteristic = sendCharacteristic
             ?: throw GarminGattClientException("Not connected")
-        // Write-without-response throughout: the ML layer carries its own
-        // framing and the GFDI layer its own acks, so per-write confirmations
-        // would only halve throughput on a link that already has to move
-        // whole FIT files. The stack still reports buffer availability via
-        // onCharacteristicWrite, which is what paces the next write.
+        // Write-without-response: ML and GFDI carry their own framing and acks,
+        // and confirmations would halve throughput. onCharacteristicWrite paces writes.
         writeMutex.withLock {
             val completion = CompletableDeferred<Unit>()
             writeCompleted = completion
@@ -444,8 +401,7 @@ class GarminGattClient(
                 writeCompleted = null
                 throw GarminGattClientException("Characteristic write failed")
             }
-            // Paced, not required: some stacks coalesce no-response writes and
-            // a missing callback must not stall the whole transfer.
+            // Paced, not required: some stacks coalesce no-response writes.
             withTimeoutOrNull(WRITE_TIMEOUT) { runCatching { completion.await() } }
             writeCompleted = null
         }

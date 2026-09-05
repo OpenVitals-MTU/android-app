@@ -10,12 +10,7 @@ import tech.mmarca.openvitals.data.repository.WatchNotificationPrefsStore
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
-/**
- * The gate logic ported from the Flutter build's
- * `watch_notifications_view_model.dart`: prominent disclosure BEFORE the
- * permission, the permission BEFORE the preference, and the blocklist
- * round-trip — all against a fake platform gateway.
- */
+/** Disclosure before the permission, the permission before the preference, and the blocklist round-trip. */
 class WatchNotificationAppsViewModelTest {
 
     @get:Rule
@@ -26,10 +21,7 @@ class WatchNotificationAppsViewModelTest {
         var openedSettings = 0
         var pushedConfig = 0
 
-        /**
-         * The app query throws — what a host with no package manager answer
-         * looks like. The screen must stay usable rather than stuck loading.
-         */
+        /** The app query throws. The screen must stay usable rather than stuck loading. */
         var appListThrows = false
         var apps = listOf(
             InstalledApp("com.example.chat", "Chat"),
@@ -115,9 +107,7 @@ class WatchNotificationAppsViewModelTest {
 
     @Test
     fun `without notification access the system screen opens and nothing is enabled`() = runTest {
-        // Consent alone is not enough: the permission can only be granted on
-        // Android's own settings screen, so the flow sends the user there and
-        // stops.
+        // Consent alone is not enough: the permission is granted on Android's settings screen.
         store.disclosureAccepted = true
         gateway.accessGranted = false
         val vm = viewModel()
@@ -131,9 +121,7 @@ class WatchNotificationAppsViewModelTest {
 
     @Test
     fun `access is re-read at enable time, not trusted from stale state`() = runTest {
-        // Android gives no callback when access is granted — the user leaves
-        // for a system screen and comes back — so the cached flag is stale by
-        // construction. Trusting it is what made the switch refuse to move.
+        // Android gives no callback when access is granted, so the cached flag is stale by construction.
         store.disclosureAccepted = true
         gateway.accessGranted = false
         val vm = viewModel()
@@ -169,8 +157,7 @@ class WatchNotificationAppsViewModelTest {
         assertTrue(vm.uiState.value.accessGranted)
         assertTrue(vm.uiState.value.active)
         assertFalse(vm.uiState.value.loading)
-        // Pushed on every refresh rather than only on change, because the
-        // paired watch can change without the switch moving.
+        // Pushed on every refresh, because the paired watch can change without the switch moving.
         assertTrue(gateway.pushedConfig >= 1)
     }
 
@@ -205,9 +192,7 @@ class WatchNotificationAppsViewModelTest {
 
     @Test
     fun `an app list that cannot be read leaves the screen usable, not stuck loading`() = runTest {
-        // A host that cannot answer the query is what a non-Android or
-        // restricted platform looks like. An empty list is a screen that says
-        // "no apps"; a stuck spinner is a screen nobody can leave.
+        // A host that cannot answer the query: an empty list, not a stuck spinner.
         gateway.appListThrows = true
         val vm = viewModel()
 

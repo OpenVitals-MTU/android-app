@@ -5,12 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/**
- * The clientRecordId token is the ONLY place the BP meal context lives —
- * Health Connect has no field for it — so encode/parse must round-trip
- * perfectly, and a foreign or mangled id must read as "no context", never
- * crash or mis-read.
- */
+/** The clientRecordId token is the only place the BP meal context lives, so encode/parse must round-trip and a foreign id must read as "no context". */
 class BpMealContextTest {
 
     private val baseId = "openvitals_vitals_blood_pressure_1750000000000_abc-123"

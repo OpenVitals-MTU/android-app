@@ -21,14 +21,7 @@ import tech.mmarca.openvitals.domain.insights.workoutGuidelineProgress
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.ExerciseData
 
-/**
- * The derivations the activities screen runs in its build path — the key-metric
- * totals, the sparkline buckets, the strip markers and the statistics fold.
- *
- * Flutter counterpart: test/features/activity/activities_display_test.dart.
- * Kotlin has no single `buildActivitiesDisplay`; the same folds sit as internal
- * functions on `ActivitiesOverviewSections.kt`.
- */
+/** The activities screen's folds: key-metric totals, sparkline buckets, strip markers and statistics. */
 class ActivitiesOverviewSectionsTest {
 
     private val monday = LocalDate.of(2026, 3, 2)
@@ -160,8 +153,7 @@ class ActivitiesOverviewSectionsTest {
         assertEquals(session, activityOverviewMarkerWorkout(strip.first()))
         assertNull(activityOverviewMarkerWorkout(strip.last()))
 
-        // A month draws no strip at all: 28 cells, or one cell standing for
-        // four days and marked for a workout on any of them.
+        // A month draws no strip: 28 cells, or one cell standing for four days.
         assertTrue(activityOverviewStripBuckets(days, TimeRange.MONTH).isEmpty())
     }
 

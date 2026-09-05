@@ -160,7 +160,7 @@ class DashboardDataLoader @Inject constructor(
             emptySet()
         }
 
-    // ─── Dashboard ────────────────────────────────────────────────────────────
+    // Dashboard.
 
     suspend fun loadDashboard(query: DashboardQuery): DashboardData =
         withContext(dispatchers.io) {
@@ -268,16 +268,9 @@ class DashboardDataLoader @Inject constructor(
         } else {
             dayEnd
         }
-        // Convention: NIGHT-WINDOW ATTRIBUTION (the sleep tile's rule). The
-        // overnight vitals — HRV, resting HR, respiratory rate, SpO2, skin
-        // temperature — are measured while asleep, so "day D's value" is the
-        // night that ended on D's morning. A [00:00, 24:00) read left those
-        // tiles empty (or showing a post-midnight fraction of last night)
-        // until a fresh same-day sample landed. Their reads therefore WIDEN
-        // back to the night start; each keeps its day end, so a later daytime
-        // measurement still wins where "latest" semantics apply. History
-        // charts keep calendar-day bucketing — overnight samples land after
-        // midnight, so both agree in practice.
+        // Night-window attribution: overnight vitals (HRV, resting HR, respiration,
+        // SpO2, skin temperature) for day D are the night ending on D's morning,
+        // so their reads widen back to the night start.
         val nightStart = sleepRangeStartFor(date, sleepWindow).atZone(zone).toInstant()
 
         val steps = readIfNeeded(wants(DashboardMetric.STEPS), readStepsPermission, "steps") {
@@ -335,8 +328,7 @@ class DashboardDataLoader @Inject constructor(
             readNutritionPermission,
             "activeCaffeine",
         ) {
-            // Active caffeine decays across midnight, so yesterday's entries
-            // still contribute to this morning's figure.
+            // Active caffeine decays across midnight.
             val zone = ZoneId.systemDefault()
             val entries = hc.readNutritionEntries(
                 start = date.minusDays(1).atStartOfDay(zone).toInstant(),
@@ -401,9 +393,7 @@ class DashboardDataLoader @Inject constructor(
             readRestingHRPermission,
             "resting heart rate",
         ) {
-            // Samples, not the day's BPM_AVG aggregate: the aggregate cannot
-            // express the widened night window, and latest-wins is what the
-            // tile wants anyway.
+            // Samples, not the day aggregate: the aggregate cannot express the night window.
             hc.readRestingHeartRateSamples(nightStart, dayEnd)
                 .maxByOrNull { it.time }
                 ?.beatsPerMinute
@@ -523,8 +513,7 @@ class DashboardDataLoader @Inject constructor(
         ) {
             hc.readMenstruationPeriods(dayStart, dayEnd)
         }
-        // Feeds tile demotion only: a cycle is monthly, so "recently used" has
-        // to look back further than the selected day (~1.5 cycles).
+        // Feeds tile demotion only: a cycle is monthly, so look back ~1.5 cycles.
         val recentCycleHistory = readIfNeeded(
             wants(DashboardMetric.CYCLE),
             readMenstruationPeriodPermission,
@@ -788,8 +777,7 @@ class DashboardDataLoader @Inject constructor(
         val rangeEndInstant = rangeEnd.plusDays(1).atStartOfDay(zone).toInstant()
         val heartRateSampleStartInstant = heartRateSampleStart.atStartOfDay(zone).toInstant()
         val heartRateSampleEndInstant = heartRateSampleEnd.plusDays(1).atStartOfDay(zone).toInstant()
-        // Older history weeks use steps/workout fallback for cardio targets; HR samples are
-        // limited to two weeks (current period plus one prior week) to balance accuracy and cost.
+        // HR samples are limited to two weeks to balance accuracy and cost.
         return DashboardWeeklyTrainingRawData(
             dailySteps = readDashboardCardioLoadSteps(rangeStart, rangeEnd, granted),
             heartRateSamples = if (readHeartRatePermission in granted) {
@@ -886,8 +874,7 @@ class DashboardDataLoader @Inject constructor(
                 .toList()
             val currentScore = currentPeriodEstimates.sumOf { it.score }
             val todayScore = cardioEstimatesByDate[date]?.score ?: 0
-            // Only weeks scored with the current week's yardstick may form
-            // the target baseline - see comparablePreviousWeekScores.
+            // Only weeks scored with the current yardstick form the baseline.
             val previousPeriodScores = DashboardAggregator.comparablePreviousWeekScores(
                 currentWeek = currentPeriodEstimates,
                 previousWeeks = (1L..DashboardCardioLoadHistoryPeriods).map { periodsAgo ->
@@ -977,14 +964,9 @@ class DashboardDataLoader @Inject constructor(
         }
 
     /**
-     * The metrics the installed Health Connect provider can serve at all — i.e.
-     * every permission the metric reads is one the provider defines. A metric
-     * outside this set can never be granted, so the dashboard hides its tile
-     * entirely rather than showing one that can never fill.
-     *
-     * Deliberately evaluated with `showOpenVitalsCalculatedCalories = false`:
-     * whether a metric is supported BY THE DEVICE must not depend on a user
-     * preference.
+     * The metrics the provider can serve at all; the rest hide their tiles.
+     * Evaluated with calculated calories off: device support must not depend
+     * on a preference.
      */
     private fun supportedMetrics(): Set<DashboardMetric> {
         val managed = hc.managedPermissions
@@ -1001,11 +983,7 @@ class DashboardDataLoader @Inject constructor(
         val permissions = metrics.flatMapTo(mutableSetOf()) { metric ->
             permissionsForMetric(metric, showOpenVitalsCalculatedCalories)
         }
-        // `grantedPermissions()` only ever reports permissions inside
-        // `managedPermissions`, which has the provider's unsupported ones
-        // subtracted. Anything outside it can neither be reported as granted nor
-        // meaningfully requested, so keeping it here would strand the permission
-        // callout on a set the user cannot grant.
+        // Anything outside `managedPermissions` can never be granted or requested.
         return permissions.intersect(hc.managedPermissions)
     }
 

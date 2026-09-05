@@ -16,17 +16,8 @@ import tech.mmarca.openvitals.domain.insights.BodyEnergyPrimaryInfluence
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of Flutter's `test/features/bodyenergy/body_energy_chart_zoom_test.dart`.
- *
- * The Body Energy timeline is a line PLUS an influence strip PLUS an hour row,
- * and all three ride one viewport. That sharing is the whole point: a strip that
- * kept the day's full scale while the line stretched would sit the bars under
- * hours they did not happen in, so the card would explain the curve with the
- * wrong causes — worse than not zooming at all.
- *
- * The viewport arithmetic is covered on the JVM by `ChartViewportTest`; what only
- * a device answers is whether a pinch on this particular chart reaches it, and
- * whether the hour row follows.
+ * The line, the influence strip and the hour row ride one viewport. A strip that kept the
+ * day's full scale would explain the curve with the wrong causes.
  */
 class BodyEnergyChartZoomTest {
 
@@ -62,9 +53,7 @@ class BodyEnergyChartZoomTest {
         composeRule.onNodeWithTag(CHART).performTouchInput { pinchApart() }
         composeRule.waitForIdle()
 
-        // After: only a slice of the day remains under the plot, so neither end
-        // of the day is on the row any more. An hour row that still read
-        // 00:00 … 24:00 would be describing a plot that no longer shows it.
+        // After: only a slice remains under the plot, so neither end of the day is on the row.
         composeRule.onNodeWithText("24:00").assertDoesNotExist()
         composeRule.onNodeWithText("00:00").assertDoesNotExist()
     }
@@ -75,8 +64,7 @@ class BodyEnergyChartZoomTest {
         val right = center + Offset(40f, 0f)
         down(0, left)
         down(1, right)
-        // Several steps rather than one jump: the detector accumulates its scale
-        // across moves, and a single teleport is not what a real pinch looks like.
+        // Several steps rather than one jump: the detector accumulates its scale across moves.
         repeat(6) { step ->
             val spread = 40f * (step + 1)
             moveTo(0, left - Offset(spread, 0f))

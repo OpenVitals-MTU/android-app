@@ -43,27 +43,16 @@ import tech.mmarca.openvitals.navigation.WATCH_DEVICE_ID_ARG
 import tech.mmarca.openvitals.navigation.WATCH_SETTINGS_SCREEN_ID_ARG
 
 /**
- * How long a link outlives the last screen watching it.
- *
- * Long enough to walk from the Alarms list into one alarm without paying for
- * a second handshake, short enough that backing out of settings gives the
- * radio back. There is only ONE link to a watch: while this is held, a file
- * sync cannot connect.
+ * How long a link outlives the last screen watching it. Long enough to walk
+ * into one alarm without a second handshake. A held link blocks file sync.
  */
 private val LINK_GRACE = 20.seconds
 
 /**
- * Which watches currently have a settings link open — one per watch, shared
- * by every screen browsing it.
- *
- * A watch has one radio, so this is not a cache — it is the record of who
- * holds it. Port of the Flutter build's `WatchSettingsLinks` plus the link
- * provider it guarded: with no Riverpod here, this registry owns opening,
- * sharing, the grace window and closing. The file-sync handoff needs no call
- * into it — a sync's lease request makes the held link's next renewal fail,
- * and the link closes itself (see [GarminSettingsLink]) — but [releaseNow]
- * keeps the Flutter build's take-it-back semantics available to any caller
- * that wants the radio without waiting a renew tick.
+ * Which watches have a settings link open, one per watch, shared by every
+ * screen browsing it. Owns opening, sharing, the grace window and closing.
+ * A sync's lease request makes the link close itself; [releaseNow] takes
+ * the radio back without waiting a renew tick.
  */
 @Singleton
 class WatchSettingsLinks @VisibleForTesting internal constructor(
@@ -81,9 +70,7 @@ class WatchSettingsLinks @VisibleForTesting internal constructor(
         stateStore: tech.mmarca.openvitals.devices.garmin.GarminDeviceStateStore,
         calendarSource: tech.mmarca.openvitals.devices.garmin.GarminCalendarSource,
     ) : this(
-        // Sequential on purpose: the link confines its protobuf traffic to
-        // this scope's dispatcher (see GarminSettingsLink), the same
-        // arrangement GarminNotificationBridge makes for the forwarder.
+        // Sequential: the link confines its protobuf traffic to this dispatcher.
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism(1)),
         grace = LINK_GRACE,
         opener = { scope, deviceId ->
@@ -120,11 +107,7 @@ class WatchSettingsLinks @VisibleForTesting internal constructor(
 
     private val held = HashMap<String, Held>()
 
-    /**
-     * Declares a screen of [deviceId]'s tree open. Starts connecting at once
-     * — the link is the expensive part, and the screen is already waiting —
-     * and cancels any pending grace-window close.
-     */
+    /** Declares a screen of [deviceId]'s tree open. Connects at once and cancels a pending close. */
     @Synchronized
     fun retain(deviceId: String) {
         val holder = held.getOrPut(deviceId) { Held(newAttempt(deviceId)) }
@@ -133,13 +116,7 @@ class WatchSettingsLinks @VisibleForTesting internal constructor(
         holder.graceJob = null
     }
 
-    /**
-     * The counterpart of [retain]. When the last screen lets go, the link
-     * survives for the grace window and then closes: walking from the Alarms
-     * list into one alarm must not pay for a second handshake, but a watch
-     * should not be left holding a connection because somebody backed out of
-     * a menu.
-     */
+    /** The counterpart of [retain]. The link survives the grace window, then closes. */
     @Synchronized
     fun release(deviceId: String) {
         val holder = held[deviceId] ?: return
@@ -154,13 +131,8 @@ class WatchSettingsLinks @VisibleForTesting internal constructor(
     }
 
     /**
-     * The open link for [deviceId], connecting or re-connecting as needed.
-     *
-     * Only valid between [retain] and [release]. A previous attempt that
-     * failed — or a link the watch has since dropped — is replaced with a
-     * fresh one, which is what "Try again" amounts to.
-     *
-     * Throws when the watch cannot be reached.
+     * The open link for [deviceId], connecting as needed. Valid between
+     * [retain] and [release]. A failed or dropped link is replaced.
      */
     suspend fun link(deviceId: String): GarminSettingsLink = attemptFor(deviceId).await()
 
@@ -168,11 +140,7 @@ class WatchSettingsLinks @VisibleForTesting internal constructor(
     @Synchronized
     fun isHeld(deviceId: String): Boolean = held.containsKey(deviceId)
 
-    /**
-     * Closes any link held on [deviceId], and waits for it to be gone.
-     *
-     * Awaited rather than fired off, because the caller wants the radio.
-     */
+    /** Closes any link on [deviceId] and waits for it to be gone. */
     suspend fun releaseNow(deviceId: String) {
         val attempt = take(deviceId, expected = null) ?: return
         GarminLog.log("[GARMIN-SETTINGS] releasing the link for $deviceId")
@@ -196,10 +164,7 @@ class WatchSettingsLinks @VisibleForTesting internal constructor(
     private fun newAttempt(deviceId: String): Deferred<GarminSettingsLink> =
         scope.async { opener(scope, deviceId) }
 
-    /**
-     * Removes and returns [deviceId]'s attempt — or null when it has been
-     * re-retained since [expected] scheduled this close, or is already gone.
-     */
+    /** Removes and returns [deviceId]'s attempt, or null if re-retained since [expected]. */
     @Synchronized
     private fun take(deviceId: String, expected: Held?): Deferred<GarminSettingsLink>? {
         val holder = held[deviceId] ?: return null
@@ -228,11 +193,7 @@ enum class WatchSettingsChangeResult {
     /** It answered, and said no. */
     REFUSED,
 
-    /**
-     * It never answered. Deliberately distinct from [REFUSED] — the request
-     * may or may not have landed, and reporting a lost message as a rejection
-     * would be a guess presented as fact.
-     */
+    /** It never answered. Distinct from [REFUSED]: the request may or may not have landed. */
     UNANSWERED,
 }
 
@@ -241,11 +202,7 @@ enum class WatchSettingsNotice { REFUSED, UNANSWERED }
 
 /** One-shot instructions to the screen. */
 enum class WatchSettingsEvent {
-    /**
-     * The screen this VM shows described something just deleted; showing it
-     * further would be a page for a thing that no longer exists — and the
-     * watch answers a dead screen's id with its parent's contents.
-     */
+    /** The screen described something just deleted. The watch answers a dead id with its parent. */
     CLOSE_SCREEN,
 }
 
@@ -264,18 +221,9 @@ data class WatchSettingsUiState(
 }
 
 /**
- * One screen of the watch's own settings tree.
- *
- * Port of the Flutter build's `watch_settings_view_model.dart`. The link is
- * owned by [WatchSettingsLinks] and only BORROWED here — this VM retains it
- * for its lifetime, so pushing deeper into the tree (a new route entry, a new
- * VM) shares the same connection, and the registry's grace window keeps it up
- * across the gap.
- *
- * Every change re-reads the screen rather than assuming it worked: the watch
- * owns these settings and can clamp, round or ignore what it is asked, and
- * showing the value we requested instead of the one it holds would quietly
- * disagree with the wrist.
+ * One screen of the watch's settings tree. The link is borrowed from
+ * [WatchSettingsLinks] and shared with deeper screens. Every change re-reads
+ * the screen: the watch may clamp, round or ignore what it is asked.
  */
 @HiltViewModel
 class WatchSettingsViewModel @Inject constructor(
@@ -294,10 +242,7 @@ class WatchSettingsViewModel @Inject constructor(
     private val eventFlow = MutableSharedFlow<WatchSettingsEvent>(extraBufferCapacity = 4)
     val events: SharedFlow<WatchSettingsEvent> = eventFlow.asSharedFlow()
 
-    /**
-     * Set once the first read lands, so the resume hook can tell "came back
-     * from a subscreen" apart from the screen's own first appearance.
-     */
+    /** Set once the first read lands, so resume can tell a return from a first appearance. */
     private var loadedOnce = false
 
     private var loadJob: Job? = null
@@ -312,14 +257,7 @@ class WatchSettingsViewModel @Inject constructor(
         load()
     }
 
-    /**
-     * Called when the screen comes back to the foreground. Whatever happened
-     * in a subscreen changes what belongs here — "Add Alarm" opens a screen
-     * that creates one, and a list still showing the rows from before it
-     * existed makes the watch and the phone disagree about something the
-     * person just did — so returning re-reads. This also covers a delete's
-     * "invalidate everything": the popped-to parent re-reads on resume.
-     */
+    /** Re-reads on return to the foreground: a subscreen may have changed what belongs here. */
     fun onResumed() {
         if (!loadedOnce) return
         load()
@@ -340,11 +278,7 @@ class WatchSettingsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Activates an [GarminEntryKind.ACTION] row — the watch-marked delete.
-     * On success the screen is told to close: it described the thing just
-     * removed.
-     */
+    /** Activates an [GarminEntryKind.ACTION] row, the delete. On success the screen closes. */
     fun runAction(entryId: Int) {
         change(entryId, closeOnSuccess = true) { link -> link.delete(screenId, entryId) }
     }
@@ -377,10 +311,7 @@ class WatchSettingsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * The shape every change shares: apply, then RE-READ — see the class doc
-     * for why the re-read is not belt and braces.
-     */
+    /** The shape every change shares: apply, then re-read. */
     private fun change(
         entryId: Int,
         closeOnSuccess: Boolean = false,
@@ -417,8 +348,7 @@ class WatchSettingsViewModel @Inject constructor(
                 eventFlow.tryEmit(WatchSettingsEvent.CLOSE_SCREEN)
                 return@launch
             }
-            // Not "if applied": the watch may have half-heard, and the screen
-            // must show what the watch holds, not what was asked of it.
+            // Not "if applied": show what the watch holds, not what was asked.
             load(clearNotice = false)
         }
     }

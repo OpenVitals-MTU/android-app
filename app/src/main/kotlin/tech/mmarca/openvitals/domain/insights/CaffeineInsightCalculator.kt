@@ -226,8 +226,7 @@ object CaffeineInsightCalculator {
             .filter { !it.date.isAfter(today) }
             .sortedByDescending { it.date }
             .forEach { stat ->
-                // An un-lived night (tonight's projection) can neither extend nor break the
-                // streak — skip it and keep counting from the last real night.
+                // An un-lived night neither extends nor breaks the streak.
                 if (!stat.nightCompleted) return@forEach
                 if (!stat.safeForSleep) return streak
                 streak += 1
@@ -275,12 +274,8 @@ object CaffeineInsightCalculator {
     }
 
     /**
-     * The instant day [date]'s bedtime falls on.
-     *
-     * A bedtime before noon is an after-midnight one — day D's night runs into the small
-     * hours of D+1 — so its instant falls on the NEXT date: a 00:00 bedtime for July 1 is the
-     * midnight that ends July 1, not the one that started it. Anchoring it to the same date
-     * made every day's "safe for sleep" measure the caffeine from before that day's drinks.
+     * The instant day [date]'s bedtime falls on. A bedtime before noon is
+     * after midnight and falls on the next date.
      */
     private fun bedtimeInstant(date: LocalDate, bedtime: LocalTime, zone: ZoneId): Instant {
         val onDate = if (bedtime.hour < 12) date.plusDays(1) else date

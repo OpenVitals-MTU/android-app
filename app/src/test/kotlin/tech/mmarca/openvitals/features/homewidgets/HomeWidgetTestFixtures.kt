@@ -17,13 +17,8 @@ import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelinePoint
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 
 /**
- * A [Context] whose string lookups are deterministic in the resource id and the
- * format arguments.
- *
- * The widgets pick between strings — "Charged" or "Steady", "No data" or
- * "Today" — and it is the *choice* these tests are about, not the English. A
- * stable stand-in for each id lets a test assert the choice by naming the same
- * id, exactly as the Flutter tests name the l10n getter.
+ * A [Context] whose string lookups are deterministic in the resource id and arguments,
+ * so a test asserts the choice of string by naming the id.
  */
 internal fun stringResourceContext(): Context = mockk<Context>().also { context ->
     every { context.getString(any<Int>()) } answers { "res:${firstArg<Int>()}" }
@@ -36,12 +31,7 @@ internal fun stringResourceContext(): Context = mockk<Context>().also { context 
     }
 }
 
-/**
- * Stubs [Uri]'s percent codec, which the route builders in `Screen` run through.
- *
- * Identity is faithful for every route argument these tests use — ISO dates,
- * metric ids and drink ids carry no reserved character.
- */
+/** Stubs [Uri]'s percent codec as identity; no route argument here carries a reserved character. */
 internal fun mockUriCodec() {
     mockkStatic(Uri::class)
     every { Uri.encode(any<String>()) } answers { firstArg<String>() }

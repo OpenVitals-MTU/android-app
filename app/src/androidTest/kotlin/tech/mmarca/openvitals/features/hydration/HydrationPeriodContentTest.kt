@@ -28,20 +28,9 @@ import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the rendering cases of Flutter's
- * `test/features/hydration/hydration_screen_test.dart`.
- *
- * The totals and the has-data decision are covered on the JVM. What is only
- * visible here is which of the two empty messages the screen chooses — a
- * distinction Kotlin makes and Flutter does not, and one that matters: a period
- * where nothing was drunk and a period where drinks were logged but none of
- * them counted as hydration are different facts about the user's week, and only
- * one of them means "you did not log anything".
- *
- * The entry-order case from `hydration_display_test.dart` and the day-chart case
- * from `hydration_intraday_chart_test.dart` live here too: Kotlin sorts inside
- * the content and picks the chart inside the content, so neither has a display
- * field a JVM test could read.
+ * Which of the two empty messages the screen chooses: nothing drunk, or drinks logged that
+ * did not count as hydration. Entry order and the day chart are tested here because
+ * Kotlin decides both inside the content.
  */
 class HydrationPeriodContentTest {
 
@@ -52,8 +41,7 @@ class HydrationPeriodContentTest {
     fun rendersTheSummaryOnceLoaded() {
         setContent(state(hasData = true, dailyHydration = listOf(DailyHydration(ANCHOR, 2.1))))
 
-        // A week summarises a total; only a DAY view is titled with the metric
-        // name alone, so asserting the latter here would pass for the wrong reason.
+        // A week summarises a total; only a day view is titled with the metric name alone.
         composeRule.onNodeWithText(string(R.string.metric_total_hydration)).assertIsDisplayed()
     }
 
@@ -68,9 +56,7 @@ class HydrationPeriodContentTest {
 
     @Test
     fun aPeriodWithDrinksButNoHydrationSaysSoDifferently() {
-        // Beverages were logged; none of them added hydration. Telling the user
-        // "no entries were recorded" would contradict the list of entries the
-        // very same screen is about to show them.
+        // Beverages were logged; none added hydration. "No entries" would contradict the list below.
         setContent(state(hasData = false, entries = listOf(entry())))
 
         composeRule
@@ -92,17 +78,14 @@ class HydrationPeriodContentTest {
 
     @Test
     fun theEntryListIsNewestFirst() {
-        // The list is a log, and a log the user scans top-down to check what they
-        // have already drunk. Sorted the other way, the glass they just logged is
-        // buried under every glass from the start of the period.
+        // The glass just logged must be on top, not under every glass from the start of the period.
         val morning = entry(id = "morning", hour = 9, liters = 0.3)
         val afternoon = entry(id = "afternoon", hour = 14, liters = 0.5)
         val formatter = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC })
 
         composeRule.setContent {
             OpenVitalsTheme {
-                // Handed to the content oldest-first, so a content that simply
-                // renders what it is given fails rather than passes by luck.
+                // Handed over oldest-first, so rendering the input order fails.
                 HydrationEntriesContent(
                     entries = listOf(morning, afternoon),
                     unitFormatter = formatter,
@@ -126,9 +109,7 @@ class HydrationPeriodContentTest {
 
     @Test
     fun aDayIsDrawnOverAnHourAxisRatherThanAsOneBarForTheWholeDay() {
-        // The Day view once drew the WEEK chart with a single day in it: one fat
-        // bar restating a total the card above it already shows. A day chart
-        // exists to say WHEN you drank, and that is the hour axis under it.
+        // The day view once drew the week chart with a single fat bar. A day chart says when you drank.
         setContent(
             state(
                 hasData = true,
@@ -140,8 +121,7 @@ class HydrationPeriodContentTest {
         dayAxisLabelsFor().forEach { hourLabel ->
             composeRule.onNodeWithText(hourLabel).assertIsDisplayed()
         }
-        // The period bar chart is titled; the day chart is not. Its title showing
-        // up here would mean the day fell back to the week chart.
+        // The period chart is titled; the day chart is not.
         composeRule.onNodeWithText(string(R.string.metric_hydration_trend)).assertDoesNotExist()
     }
 

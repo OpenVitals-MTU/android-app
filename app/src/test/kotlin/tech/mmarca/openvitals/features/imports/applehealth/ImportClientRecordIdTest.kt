@@ -6,24 +6,18 @@ import org.junit.Test
 
 /**
  * The deterministic `clientRecordId` scheme the Apple Health importer writes.
- *
- * Dart counterpart: test/domain/model/import_client_record_id_test.dart. Flutter
- * extracted a shared `buildImportClientRecordId(namespace, prefix, parts)`;
- * Kotlin deliberately keeps a builder per importer, so the apple_health builder
- * ([buildStableClientRecordId]) and its slug ([toStableIdSegment]) are what the
- * shared-builder cases assert against here. The csv namespace has its own
- * coverage in features/imports/csv/CsvRowConverterTest.kt.
+ * Kotlin keeps a builder per importer; the csv namespace is covered in CsvRowConverterTest.
  */
 class ImportClientRecordIdTest {
 
-    // ── buildImportClientRecordId ───────────────────────────────────────────
+    // buildImportClientRecordId.
 
     @Test
     fun `an empty prefix still yields a three-part id`() {
         assertTrue(buildStableClientRecordId("", "parts").startsWith("apple_health_record_"))
     }
 
-    // ── toStableIdSegment ───────────────────────────────────────────────────
+    // toStableIdSegment.
 
     @Test
     fun `a mixed-case type name slugs to lowercase`() {
@@ -45,17 +39,9 @@ class ImportClientRecordIdTest {
         assertEquals("record", "---".toStableIdSegment())
     }
 
-    // ── buildStableClientRecordId ───────────────────────────────────────────
+    // buildStableClientRecordId.
 
-    /**
-     * Golden ids for the apple_health namespace.
-     *
-     * Health Connect dedups and upserts on `clientRecordId`, so if these change,
-     * every record a previous release wrote becomes unreachable: a re-import
-     * stops recognising its own past output and writes duplicates instead of
-     * replacing. Verified byte-for-byte against the Dart goldens in
-     * test/domain/model/import_client_record_id_test.dart.
-     */
+    /** Golden ids. If these change, every record a previous release wrote becomes unreachable. */
     @Test
     fun `the apple_health namespace still produces the ids it always has`() {
         val goldens = mapOf(

@@ -23,12 +23,7 @@ import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
-/**
- * Port of the sensor half of the Flutter build's
- * `ble_devices_view_model_test.dart`: the add flow (probe → fall back to the
- * advertisement → conflict check → save) and the edit flow, against a real
- * registry and a coordinator that never touches a radio.
- */
+/** The sensor add flow (probe, fall back to the advertisement, conflict check, save) and the edit flow. */
 class BleDevicesViewModelTest {
 
     @get:Rule

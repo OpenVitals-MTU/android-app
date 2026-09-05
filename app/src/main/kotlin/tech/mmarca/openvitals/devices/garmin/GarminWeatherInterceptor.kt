@@ -7,17 +7,9 @@ import org.json.JSONObject
 import tech.mmarca.openvitals.devices.weather.WeatherSnapshot
 
 /**
- * Serves the watch's own weather requests.
- *
- * Modern watches (vívoactive 5 era) do not take FIT weather at all: their
- * capability bitmap omits `WEATHER_CONDITIONS`, and instead the watch issues
- * what looks like a Garmin Connect API call (`api.gcs.garmin.com/weather/...`)
- * through the HTTP proxy, expecting the phone to play the internet. This
- * answers those endpoints from the companion-app snapshot — no request ever
- * leaves the phone.
- *
- * Mirrors Gadgetbridge's `WeatherInterceptor`: the same JSON shapes, down to
- * the integer Kelvin-273 quirk their Venu dumps showed.
+ * Serves the watch's weather requests. Modern watches ask through the HTTP
+ * proxy with Garmin Connect API calls; this answers from the companion-app
+ * snapshot. Mirrors Gadgetbridge's `WeatherInterceptor`, quirks included.
  */
 class GarminWeatherInterceptor(
     private val weatherProvider: () -> WeatherSnapshot?,
@@ -43,7 +35,7 @@ class GarminWeatherInterceptor(
         )
     }
 
-    // ── the weather endpoints, Garmin Connect API shaped ────────────────────
+    // The weather endpoints, Garmin Connect API shaped.
 
     private fun weatherJson(
         path: String,
@@ -96,8 +88,7 @@ class GarminWeatherInterceptor(
         speedUnit: String,
     ): JSONArray {
         val days = JSONArray()
-        // Today first, from the top-level fields, then the stored forecasts —
-        // the same synthesis upstream applies (`todayAsDaily`).
+        // Today first, from the top-level fields, then the stored forecasts.
         val today = WeatherSnapshot.DailyForecast(
             minTempKelvin = weather.todayMinTempKelvin,
             maxTempKelvin = weather.todayMaxTempKelvin,
@@ -110,8 +101,7 @@ class GarminWeatherInterceptor(
             val date = reportInstant.plusSeconds(index * 86_400L).atZone(zone)
             days.put(
                 JSONObject().apply {
-                    // v2 counts Monday as 1; v1 uses java.util.Calendar's
-                    // Sunday-as-1 numbering.
+                    // v2 counts Monday as 1; v1 uses Sunday-as-1.
                     put(
                         "dayOfWeek",
                         if (version == 2) date.dayOfWeek.value else (date.dayOfWeek.value % 7) + 1,
@@ -156,7 +146,7 @@ class GarminWeatherInterceptor(
         return hours
     }
 
-    // ── pieces ──────────────────────────────────────────────────────────────
+    // Pieces.
 
     private fun value(value: Number, units: String) = JSONObject().apply {
         put("value", value)
@@ -188,14 +178,11 @@ class GarminWeatherInterceptor(
         return directions[(Math.round(normalized / 45.0) % 8).toInt()]
     }
 
-    /**
-     * OWM condition code → the icon index of the watch's own glyph set,
-     * mapped by upstream from a real Venu 3.
-     */
+    /** OWM condition code to the watch's icon index, mapped by upstream from a Venu 3. */
     fun garminIcon(code: Int): Int = when (code) {
         in 200..232 -> 27 // thunderstorms
         771, 781, 900, 901, 902, 905, in 951..962 -> 46 // wind and storm
-        // Before the rain range: 511 sits inside it but is a freezing mix.
+        // Before the rain range: 511 is a freezing mix.
         511, 615, 616, 906 -> 40 // freezing rain, sleety mixes, hail
         in 300..321, in 500..531 -> 17 // drizzle and rain
         611, 612, in 600..602, in 620..622 -> 38 // snow

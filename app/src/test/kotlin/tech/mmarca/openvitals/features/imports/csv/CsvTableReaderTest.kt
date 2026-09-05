@@ -18,7 +18,7 @@ class CsvTableReaderTest {
 
     private val commaLf = CsvDialect(fieldDelimiter = ",", eol = "\n")
 
-    // ── sniffDialect ─────────────────────────────────────────────────────────
+    // sniffDialect.
 
     @Test
     fun `a comma file with quoted headers is sniffed as comma-delimited`() {
@@ -31,8 +31,7 @@ class CsvTableReaderTest {
 
     @Test
     fun `a semicolon file whose quoted headers contain commas is sniffed as semicolon-delimited`() {
-        // The commas live INSIDE quotes; counting them would pick the wrong
-        // delimiter and collapse the file to two columns.
+        // The commas are inside quotes; counting them would pick the wrong delimiter.
         val source = sourceOf(
             "Datum;\"Gewicht (kg), netto\";\"Fett (kg), gesamt\"\n2026-07-01;78,4;15,2\n",
         )
@@ -49,15 +48,13 @@ class CsvTableReaderTest {
 
     @Test
     fun `an LF file is sniffed as LF`() {
-        // Getting this wrong does not throw: the tokenizer returns ONE row with
-        // the whole file in the last field. That silent-corruption mode is why
-        // the line ending is sniffed rather than assumed.
+        // Getting this wrong returns one row with the whole file in the last field, so the line ending is sniffed.
         val source = sourceOf("Date,Weight\n2026-07-01,78.4\n")
 
         assertEquals("\n", reader.sniffDialect(source).eol)
     }
 
-    // ── sample ───────────────────────────────────────────────────────────────
+    // sample.
 
     @Test
     fun `a quoted header containing a comma reads as a single column`() {
@@ -78,8 +75,7 @@ class CsvTableReaderTest {
 
     @Test
     fun `a quoted field containing newlines survives a chunk boundary intact`() = runTest {
-        // The interesting row sits well past the 64 KB sniff boundary, so this
-        // fails if the tokenizer does not carry state across buffer refills.
+        // The interesting row sits past the 64 KB sniff boundary, so state must carry across refills.
         val buffer = StringBuilder("Date,Weight,Comments\n")
         repeat(4000) { i ->
             buffer.append("2026-07-01,78.4,filler row $i padding padding padding\n")
@@ -130,7 +126,7 @@ class CsvTableReaderTest {
         assertEquals(listOf("15.2", "15.4"), sample.columnValues(1))
     }
 
-    // ── rows ─────────────────────────────────────────────────────────────────
+    // rows.
 
     @Test
     fun `the header row is not emitted as data`() = runTest {
@@ -138,8 +134,7 @@ class CsvTableReaderTest {
 
         assertEquals(1, rows.size)
         assertEquals(listOf("2026-07-01", "78.4"), rows.single().fields)
-        // 1-based and counted over the FILE, so a diagnostic names the line the
-        // user has to open.
+        // 1-based and counted over the file, so a diagnostic names the line the user opens.
         assertEquals(2, rows.single().rowNumber)
     }
 
@@ -154,16 +149,11 @@ class CsvTableReaderTest {
         val totalBytes = content.toByteArray(Charsets.UTF_8).size.toLong()
         assertTrue(rows.last().bytesRead > 0)
         assertTrue(rows.last().bytesRead <= totalBytes)
-        // The progress fraction is bytesRead/totalBytes, so the numerator has to
-        // actually GROW as the file is consumed — a counter stuck at its first
-        // buffer would satisfy the bounds above while pinning the bar at 0%.
+        // The numerator has to grow as the file is consumed, or the bar pins at 0%.
         assertTrue(rows.last().bytesRead > rows.first().bytesRead)
         val readings = rows.map { it.bytesRead }
         assertEquals(readings.sorted(), readings)
-        // ...and it reaches the end of the file, so the bar finishes at 100%.
-        // Flutter asserts the denominator via CsvTableReader.byteLength(); the
-        // Kotlin reader has no such API (totalBytes comes from the SAF cursor),
-        // so the numerator reaching the file length is the equivalent pin.
+        // And it reaches the end of the file, so the bar finishes at 100%.
         assertEquals(totalBytes, rows.last().bytesRead)
     }
 
@@ -183,7 +173,7 @@ class CsvTableReaderTest {
         }
     }
 
-    // ── CsvRow cell ──────────────────────────────────────────────────────────
+    // CsvRow cell.
 
     @Test
     fun `a short row reports null rather than throwing`() {

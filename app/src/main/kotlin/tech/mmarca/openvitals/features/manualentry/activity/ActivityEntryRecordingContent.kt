@@ -30,9 +30,7 @@ internal fun ActivityEntryRecordingContent(
 ) {
     val coMapsNavigation by viewModel.coMapsNavigation.collectAsStateWithLifecycle()
     val coMapsRoute by viewModel.coMapsRoute.collectAsStateWithLifecycle()
-    // The CoMaps permission is CoMaps' own runtime permission, named after the
-    // installed flavour — resolved at tap time, not composition time, because
-    // the user may well install CoMaps while this screen is open.
+    // CoMaps' permission is resolved at tap time: CoMaps may be installed while this screen is open.
     val coMapsPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { viewModel.refreshCoMapsGuidance() }

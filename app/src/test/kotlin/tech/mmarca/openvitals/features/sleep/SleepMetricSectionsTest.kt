@@ -12,13 +12,7 @@ import tech.mmarca.openvitals.domain.model.RecordingMethod
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
 
-/**
- * Port of the derivations test/features/sleep/sleep_display_test.dart asserts on
- * `SleepDisplay`: the stage shares, the newest-night-first entry lists, the
- * manual-entry confidence count, the schedule-chart rule and the period totals.
- * Kotlin computes these in the sections layer, so the test calls the pure
- * helpers the composables call.
- */
+/** The sleep derivations: stage shares, newest-first entry lists, manual-entry count, schedule-chart rule, period totals. */
 class SleepMetricSectionsTest {
 
     private val zone: ZoneId = ZoneId.systemDefault()
@@ -49,7 +43,7 @@ class SleepMetricSectionsTest {
         )
     }
 
-    // ─── the stage shares split the recorded stage time, and only it ─────────
+    // The stage shares split the recorded stage time, and only it.
 
     @Test fun `the stage shares split the recorded stage time and only it`() {
         val fourHours = 4 * 3_600_000L
@@ -114,7 +108,7 @@ class SleepMetricSectionsTest {
         assertTrue(shares.all { it.percent == 25 })
     }
 
-    // ─── the entry lists come out newest night first ─────────────────────────
+    // The entry lists come out newest night first.
 
     @Test fun `the entry lists come out newest night first`() {
         val older = night(tuesday, hours = 6.0, id = "older")
@@ -123,16 +117,14 @@ class SleepMetricSectionsTest {
         val ordered = sleepEntriesNewestFirst(listOf(older, newer))
 
         assertEquals(listOf("newer", "older"), ordered.map { it.id })
-        // …while the raw period list the schedule and confidence readings take is
-        // left in the order it arrived.
+        // The raw period list is left in arrival order.
         assertEquals(listOf("older", "newer"), listOf(older, newer).map { it.id })
     }
 
-    // ─── manual-entry confidence ─────────────────────────────────────────────
+    // Manual-entry confidence.
 
     @Test fun `an actively-recorded night is not a manual entry`() {
-        // Health Connect's RECORDING_METHOD_MANUAL_ENTRY is 3; 1 is
-        // ACTIVELY_RECORDED, a night the watch recorded.
+        // RECORDING_METHOD_MANUAL_ENTRY is 3; 1 is ACTIVELY_RECORDED.
         val sessions = listOf(
             night(wednesday, recordingMethod = RecordingMethod.ACTIVELY_RECORDED),
         )
@@ -148,7 +140,7 @@ class SleepMetricSectionsTest {
         assertEquals(0, sleepManualEntryCount(listOf(night(wednesday))))
     }
 
-    // ─── a week whose nights know their bedtimes gets the schedule chart ─────
+    // A week whose nights know their bedtimes gets the schedule chart.
 
     @Test fun `a week whose nights know their bedtimes gets the schedule chart`() {
         val days = (0L until 7L).map { offset ->
@@ -166,7 +158,7 @@ class SleepMetricSectionsTest {
         assertNotNull(axis)
         assertTrue(useSleepScheduleChart(TimeRange.WEEK, scheduleDays, axis))
         assertTrue(useSleepScheduleChart(TimeRange.MONTH, scheduleDays, axis))
-        // …but the DAY view never does: it draws the night's own hypnogram.
+        // The day view never does: it draws the night's own hypnogram.
         assertFalse(useSleepScheduleChart(TimeRange.DAY, scheduleDays, axis))
         assertFalse(useSleepScheduleChart(TimeRange.YEAR, scheduleDays, axis))
     }
@@ -180,7 +172,7 @@ class SleepMetricSectionsTest {
         assertFalse(useSleepScheduleChart(TimeRange.WEEK, scheduleDays, scheduleAxis = null))
     }
 
-    // ─── only the nights that recorded sleep count as nights ─────────────────
+    // Only the nights that recorded sleep count as nights.
 
     @Test fun `only the nights that recorded sleep count as nights`() {
         val points = listOf(

@@ -38,16 +38,7 @@ fun localizedPeriodTitle(
     range: TimeRange,
     period: DatePeriod,
     today: LocalDate = LocalDate.now(),
-    /**
-     * Defaulted from the ambient mode rather than the calendar constant.
-     *
-     * There are thirty-five call sites and exactly one — the navigator — ever
-     * passed this. The rest silently got calendar weeks, so a user on rolling
-     * ranges read "Last 30 days" in the navigator and "This month" on the card
-     * and chart directly beneath it, about the same data. The scaffold already
-     * publishes the mode for the heatmap; reading it here means no call site has
-     * to remember.
-     */
+    /** Defaulted from the ambient mode, so no call site can fall back to calendar weeks by mistake. */
     weekPeriodMode: WeekPeriodMode = LocalPeriodWeekMode.current,
 ): String {
     val locale = LocalLocale.current.platformLocale

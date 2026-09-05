@@ -6,12 +6,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Appending widgets added by an app update to a layout saved before they
- * existed.
- *
- * The saved order is the user's arrangement, so the migration has to tell two
- * identical-looking cases apart: a widget missing because the user removed it,
- * and one missing because it did not exist when they arranged their dashboard.
+ * Appending widgets added by an update to a layout saved before they existed, without
+ * resurrecting widgets the user removed.
  */
 class DashboardWidgetOrderMigrationTest {
 
@@ -44,8 +40,7 @@ class DashboardWidgetOrderMigrationTest {
             persist = recorder::persist,
         )
 
-        // The default order puts the watch straight after the hero rings, so
-        // it lands before SLEEP rather than on the last carousel page.
+        // The default order puts the watch after the hero rings, before SLEEP.
         assertEquals(
             listOf(DashboardWidgetId.STEPS, DashboardWidgetId.WATCH, DashboardWidgetId.SLEEP, DashboardWidgetId.CYCLE),
             result,
@@ -67,9 +62,7 @@ class DashboardWidgetOrderMigrationTest {
         )
         val recorder = Recorder()
 
-        // The known set says WATCH is new, the saved order says it is already
-        // placed. The order wins; a duplicate would only be hidden by the
-        // render-time distinct().
+        // The saved order says it is already placed, and the order wins.
         val result = dashboardWidgetIdsWithNewOnesAppended(
             storedIds = stored,
             knownIds = null,
@@ -87,8 +80,7 @@ class DashboardWidgetOrderMigrationTest {
         val stored = listOf(DashboardWidgetId.STEPS.name, DashboardWidgetId.SLEEP.name)
         val recorder = Recorder()
 
-        // Everything has been offered already, so FLOORS is absent because the
-        // user dropped it — resurrecting it would undo a deliberate edit.
+        // Everything has been offered already, so FLOORS is absent because the user dropped it.
         val result = dashboardWidgetIdsWithNewOnesAppended(
             storedIds = stored,
             knownIds = allIds,
@@ -110,8 +102,7 @@ class DashboardWidgetOrderMigrationTest {
         )
 
         assertEquals(DefaultDashboardWidgetIds, result)
-        // Writing an order here would read as "the user removed everything";
-        // an empty saved order renders a blank dashboard.
+        // Writing an order here would read as "the user removed everything".
         assertNull(recorder.order)
         assertEquals(allIds, recorder.known)
         assertTrue(DashboardWidgetId.WATCH in result)
@@ -140,18 +131,14 @@ class DashboardWidgetOrderMigrationTest {
         val stored = DashboardWidgetId.entries.map { it.name }
         val recorder = Recorder()
 
-        // Pretend CYCLE is the new one: absent from the known set, present in
-        // the enum. The migration is driven by that difference alone, so the
-        // next release needs no new code.
+        // Pretend CYCLE is the new one. The migration is driven by the known-set difference alone.
         val result = dashboardWidgetIdsWithNewOnesAppended(
             storedIds = stored - DashboardWidgetId.CYCLE.name,
             knownIds = allIds - DashboardWidgetId.CYCLE.name,
             persist = recorder::persist,
         )
 
-        // After MINDFULNESS, which precedes it in the default order. (This
-        // fixture stores the ids in ENUM order, so WATCH sits late here and
-        // lands between them; a real saved order derives from the default one.)
+        // After MINDFULNESS, which precedes it in the default order.
         assertTrue(
             result.indexOf(DashboardWidgetId.CYCLE) >
                 result.indexOf(DashboardWidgetId.MINDFULNESS),
@@ -162,8 +149,7 @@ class DashboardWidgetOrderMigrationTest {
     fun `an id the default order never mentions does not block placement`() {
         val recorder = Recorder()
 
-        // BLOOD_GLUCOSE is in the enum but not in the default order, so it has
-        // no position; it must not act as a wall the new tile stops in front of.
+        // BLOOD_GLUCOSE has no default position; it must not act as a wall.
         val result = dashboardWidgetIdsWithNewOnesAppended(
             storedIds = listOf(DashboardWidgetId.BLOOD_GLUCOSE.name, DashboardWidgetId.SLEEP.name),
             knownIds = null,

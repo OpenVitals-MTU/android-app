@@ -24,11 +24,7 @@ enum class PhysiologicalStressConfidence {
     NO_DATA,
 }
 
-/**
- * Which sentence a structured stress list item renders as. The English lists on
- * the estimate stay canonical, the UI renders the template through its string
- * catalog with [StressListItem.args] filling the numbers.
- */
+/** Which sentence a stress list item renders as. The English stays canonical. */
 enum class StressItemTemplate {
     // Contributing factors.
     HRV_BELOW_BASELINE,
@@ -76,11 +72,7 @@ enum class StressItemTemplate {
 /** One structured entry of the estimate's factor/coverage/caveat lists. */
 data class StressListItem(
     val template: StressItemTemplate,
-    /**
-     * The numbers the template's sentence embeds, in the order that template
-     * defines. Coverage windows pass start/end as epoch milliseconds; NaN marks
-     * an absent optional.
-     */
+    /** The numbers the template embeds. Windows pass epoch millis; NaN marks absent. */
     val args: List<Double> = emptyList(),
 )
 
@@ -99,11 +91,7 @@ data class PhysiologicalStressEstimate(
     val contributingFactors: List<String>,
     val dataCoverage: List<String>,
     val caveats: List<String>,
-    /**
-     * The structured mirrors of the three lists above, for the UI to render
-     * through the catalog. Empty on a fixture built before they existed — the
-     * screen falls back to the English lists then.
-     */
+    /** Structured mirrors of the lists above. Empty on older fixtures, which fall back to English. */
     val factorItems: List<StressListItem> = emptyList(),
     val coverageItems: List<StressListItem> = emptyList(),
     val caveatItems: List<StressListItem> = emptyList(),
@@ -470,8 +458,7 @@ private fun stressConfidenceReason(
 private fun stressDataCoverage(data: DashboardData): Pair<List<String>, List<StressListItem>> {
     val coverage = mutableListOf<String>()
     val items = mutableListOf<StressListItem>()
-    // Sample windows travel as epoch milliseconds so the UI can format them in
-    // the viewer's locale; NaN marks "no window".
+    // Windows travel as epoch millis so the UI formats them; NaN marks no window.
     fun window(count: Int, start: Instant?, end: Instant?): List<Double> = listOf(
         count.toDouble(),
         start?.toEpochMilli()?.toDouble() ?: Double.NaN,

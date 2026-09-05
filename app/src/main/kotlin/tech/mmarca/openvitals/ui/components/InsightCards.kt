@@ -30,11 +30,7 @@ data class InsightStat(
     val unit: String,
     val icon: ImageVector,
     val accentColor: Color,
-    /**
-     * A quieter second line under the title, for the figure the headline
-     * replaced — nutrition puts the period total here once the tile leads with
-     * the daily average. Omitted when there is nothing to say.
-     */
+    /** A quieter second line under the title, for the figure the headline replaced. */
     val caption: String? = null,
 )
 
@@ -50,9 +46,7 @@ fun InsightStatGrid(
     ) {
         stats.chunked(columns.coerceAtLeast(1)).forEach { rowStats ->
             Row(
-                // Intrinsic height so the cards in a row match: only some of
-                // them carry a caption, and without this the one that does
-                // stands taller than the one beside it.
+                // Intrinsic height so the cards in a row match.
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min),

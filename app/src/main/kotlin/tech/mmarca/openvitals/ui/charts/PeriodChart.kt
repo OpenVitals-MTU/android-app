@@ -100,26 +100,14 @@ fun periodBarBuckets(
 }
 
 /**
- * Which slots of [dates] get a label on the x axis.
- *
- * The axis has a slot per DATE, and how many dates there are depends on what
- * drew the chart: a year of bars is twelve monthly buckets, a year of line is
- * three hundred and sixty-five days. Both arrive here, so the rule reads the
- * dates rather than counting slots.
- *
- * Every candidate is then spaced out, because a label is far wider than the
- * slot it sits over and two that land close together overlap into nonsense —
- * a year once ended "DDec", a month of 28 days would have collided its 26th
- * with its 28th.
+ * Which slots of [dates] get a label. The rule reads the dates: a year may
+ * be twelve months or 365 days. Candidates are then spaced out, because a
+ * label is wider than its slot.
  */
 fun periodChartLabelIndices(
     dates: List<LocalDate>,
     selectedRange: TimeRange,
-    /**
-     * How many slots apart two labels must be to be drawn side by side. The
-     * axis measures this from the widest label and the width it actually has;
-     * one is the default for callers that only care which slots are CANDIDATES.
-     */
+    /** Slots apart two labels must be. One for callers that only want candidates. */
     minimumGap: Int = 1,
 ): Set<Int> {
     if (dates.isEmpty()) return emptySet()
@@ -128,11 +116,7 @@ fun periodChartLabelIndices(
         TimeRange.DAY,
         TimeRange.WEEK -> dates.indices.toList()
 
-        // Twelve or fewer is a monthly axis — the bar chart's buckets, or the
-        // month starts a line's year axis borrows — and every one is worth
-        // naming. More than that is a daily axis, where the months are the only
-        // landmarks: naming every thirtieth DAY instead drifted off the
-        // calendar and printed "May" twice.
+        // Twelve or fewer is a monthly axis; more is daily, and only month starts are named.
         TimeRange.YEAR -> if (dates.size <= MonthsInYear) {
             dates.indices.toList()
         } else {
@@ -145,10 +129,8 @@ fun periodChartLabelIndices(
 }
 
 /**
- * Keeps [candidates] in order, dropping any that sits within [minimumGap] slots
- * of the one kept before it. Greedy from the left: the run's first label is the
- * one the reader anchors on, so a crowded end loses its label rather than its
- * beginning.
+ * Keeps [candidates] in order, dropping any within [minimumGap] of the last
+ * kept. Greedy from the left, so a crowded end loses its label.
  */
 private fun spacedOut(candidates: List<Int>, minimumGap: Int): Set<Int> {
     val kept = mutableSetOf<Int>()
@@ -164,11 +146,7 @@ private fun spacedOut(candidates: List<Int>, minimumGap: Int): Set<Int> {
 
 const val MonthsInYear = 12
 
-/**
- * The first of each month the period touches — the twelve landmarks a year's
- * axis labels, whether the chart behind it is drawn a month at a time or a day
- * at a time.
- */
+/** The first of each month the period touches. */
 fun monthStartsIn(period: DatePeriod): List<LocalDate> {
     val lastMonth = period.end.withDayOfMonth(1)
     return generateSequence(period.start.withDayOfMonth(1)) { month ->
@@ -177,13 +155,7 @@ fun monthStartsIn(period: DatePeriod): List<LocalDate> {
 }
 
 
-/**
- * The horizontal geometry of one bar chart: how wide a slot is, and how much of that slot
- * the bar itself takes.
- *
- * Pulled out of the painter because it is arithmetic, not drawing, and because the axis
- * strip underneath has to agree with it exactly.
- */
+/** The horizontal geometry of one bar chart. Pulled out so the axis strip agrees exactly. */
 @Immutable
 data class PeriodBarGeometry(
     val visibleSlots: Float,
@@ -201,12 +173,8 @@ fun periodBarGapDp(visibleSlots: Int): Float = when {
 }
 
 /**
- * The slot/bar widths for a plot [plotWidth] px across showing [viewportSpan] of
- * [bucketCount] buckets, at [pxPerDp] pixels to the dp.
- *
- * Sized by how many slots FIT on screen, not by how many exist: the gap is about how
- * crowded the plot LOOKS, and a zoomed-in chart showing three bars is not crowded just
- * because the week has seven.
+ * Slot and bar widths for a plot showing [viewportSpan] of [bucketCount]
+ * buckets. Sized by how many slots fit on screen, not how many exist.
  */
 fun periodBarGeometry(
     plotWidth: Float,
@@ -227,19 +195,11 @@ fun periodBarGeometry(
     )
 }
 
-/**
- * Where slot [index] of [bucketCount] starts, as a fraction of the plot. A bucket is a
- * SLOT on the same `0..1` axis every other chart uses — the nth of n — so zooming it is
- * the same arithmetic, and the slots simply get wider as fewer of them are on screen.
- */
+/** Where slot [index] starts, as a fraction of the plot. Same axis every chart uses. */
 fun periodSlotLeftFraction(index: Int, bucketCount: Int, viewport: ChartViewport): Float =
     viewport.visibleFraction(index.toFloat() / bucketCount.coerceAtLeast(1))
 
-/**
- * Whether a slot starting at [slotLeft] and [slotWidth] wide overlaps a plot [plotWidth]
- * across. Wholly off one side or the other there is nothing to draw, and laying out its
- * label would be work done for a bar nobody can see.
- */
+/** Whether a slot overlaps the plot. Off-screen slots draw nothing. */
 fun isPeriodSlotVisible(slotLeft: Float, slotWidth: Float, plotWidth: Float): Boolean =
     slotLeft <= plotWidth && slotLeft + slotWidth >= 0f
 
@@ -288,8 +248,7 @@ fun PeriodBarChart(
         onDateSelected != null &&
         buckets.isNotEmpty()
 
-    // A Canvas publishes no semantics, so without this the chart is absent to a
-    // screen reader rather than merely hard to read.
+    // A Canvas publishes no semantics; this line does.
     OpenVitalsCard(
         modifier = modifier.chartSemantics(
             chartSemanticSummary(title = title, summaryText = summaryText),
@@ -303,23 +262,14 @@ fun PeriodBarChart(
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(12.dp))
-            // The bars and the dates under them are BOTH inside the zoom and share the
-            // one viewport. A bar chart whose dates had drifted off the bars they name
-            // would be worse than one that never zoomed at all.
-            //
-            // No scrubber here, deliberately: a scrub layer on the period charts broke
-            // the pinch (its drag detector claimed the first finger of the pinch) and was
-            // reverted in the Flutter app. The tap-to-select-day interaction is untouched
-            // — the zoom claims nothing single-finger.
+            // Bars and dates share the one viewport. No scrubber: it broke the pinch.
             ChartZoom(selectedRange, period.start, period.end) { zoom ->
                 val viewport = zoom.viewport
                 val currentViewport by rememberUpdatedState(viewport)
                 val chartTapModifier = if (canSelect) {
                     Modifier.pointerInput(buckets, onDateSelected) {
                         detectTapGestures { offset ->
-                            // The finger lands on the PLOT; the bucket it is over depends
-                            // on what is on show. Tapping the third bar of a zoomed chart
-                            // has to select the third bar you can SEE.
+                            // The bucket under the finger depends on what is on show.
                             val xFraction =
                                 (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
                             val index =
@@ -396,8 +346,7 @@ private fun DrawScope.drawPeriodBars(
     val barWidth = geometry.barWidth
     val minVisibleHeight = 4.dp.toPx()
 
-    // Zoomed, the outermost bars run past the plot edges; clip so they end at the plot
-    // rather than spilling across the card.
+    // Zoomed, the outermost bars run past the plot edges; clip.
     val drawBars: DrawScope.() -> Unit = {
         buckets.forEachIndexed { index, bucket ->
             val slotLeft = periodSlotLeftFraction(index, buckets.size, viewport) * size.width
@@ -429,11 +378,8 @@ private fun DrawScope.drawPeriodBars(
                 .coerceAtLeast(maxOf(minVisibleHeight, minLabelHeight))
                 .coerceAtMost(size.height)
             val left = slotLeft + (slotWidth - barWidth) / 2f
-            // Grown by `progress`. The LABEL is not: it is laid out against the bar's
-            // FINAL height (that is what reserves room for it) and drawn only once the
-            // bar has arrived — a number sliding up inside a growing rectangle is a
-            // number nobody can read, and a label that overflows a half-grown bar is
-            // worse than one that waits.
+            // The bar grows with `progress`. The label is laid out against the
+            // final height and drawn once the bar has arrived.
             val drawnHeight = barHeight * progress.coerceIn(0f, 1f)
             val top = size.height - drawnHeight
             val radius = (barWidth / 2f).coerceAtMost(8.dp.toPx())
@@ -496,20 +442,13 @@ private fun DrawScope.measureBarValueLabel(
     )
 }
 
-/**
- * The lines a bar's value label is drawn as: the number with its unit split onto a
- * second line, or the whole (trimmed) text as one line. Null when there is nothing
- * worth drawing at all.
- */
+/** The lines a bar's label is drawn as: number and unit split, or one line. Null when empty. */
 internal fun barLabelLines(text: String): List<String>? {
     if (text.isBlank()) return null
     return splitBarValueLabel(text) ?: listOf(text.trim())
 }
 
-/**
- * What a set of measured label lines amounts to: the widest line, and the lines
- * stacked with a gap between them.
- */
+/** Measured label lines: the widest, and the lines stacked with a gap. */
 internal data class BarLabelMeasurement<T>(
     val lines: List<T>,
     val width: Int,
@@ -517,11 +456,8 @@ internal data class BarLabelMeasurement<T>(
 )
 
 /**
- * The pure half of the bar-label decision, parameterized by [measure] so a JVM
- * test can stand in a deterministic measurer for Compose text measurement: measure
- * every line, DROP the label when any line overruns [maxWidth], otherwise report
- * the widest line as the width and the stacked line heights (plus [lineGap]
- * between lines) as the height.
+ * The pure half of the bar-label decision, parameterized by [measure] for
+ * tests. Drops the label when any line overruns [maxWidth].
  */
 internal fun <T> measureBarLabelLines(
     lines: List<String>,
@@ -602,9 +538,7 @@ fun PeriodChartXAxis(
     /** The slice of the period on show, when the chart above has been pinched. */
     viewport: ChartViewport = ChartViewport.Full,
 ) {
-    // Wrapped so the row's own width is known before its labels are chosen: how
-    // many of them fit is a property of the width, and the same axis draws on a
-    // phone and on a tablet.
+    // Wrapped so the row's width is known before its labels are chosen.
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         PeriodChartXAxisRow(
             dates = dates,
@@ -624,10 +558,7 @@ private fun PeriodChartXAxisRow(
     rowWidth: Dp,
     viewport: ChartViewport,
 ) {
-    // Measured, not guessed. How many slots a label needs depends on the label
-    // ("Jan" against "1"), on how many slots the row is divided into, and on how
-    // wide the row ended up — a year's twelve months fit a tablet and collide on
-    // a phone, and the same axis code draws both.
+    // Measured, not guessed: a year's twelve months fit a tablet and collide on a phone.
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = MaterialTheme.typography.labelSmall
     val density = LocalDensity.current
@@ -649,10 +580,8 @@ private fun PeriodChartXAxisRow(
             ).size.width
         } ?: 0
         val slotWidth = with(density) { rowWidth.toPx() } / dates.size.coerceAtLeast(1)
-        // Measured against the label plus a fixed margin rather than plus a
-        // whole SLOT: a slot is a month on a year's axis and a day on a
-        // month's, so "one more slot" means wildly different amounts of room
-        // and cost a year six labels it had space for.
+        // Against the label plus a fixed margin, not a whole slot: a slot is a
+        // month on one axis and a day on another.
         val needed = widest + with(density) { LabelBreathingRoom.toPx() }
         val gap = if (slotWidth <= 0f) 1 else ceil(needed / slotWidth).toInt()
         periodChartLabelIndices(dates, selectedRange, minimumGap = gap)
@@ -672,12 +601,8 @@ private fun PeriodChartXAxisRow(
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Clip,
-                // A slot is one day (or one month) wide and only some of them
-                // carry a label, so a label measured against its OWN slot is
-                // measured against a width the design never meant it to fit: a
-                // month read "1(" for the 16th. The slots it spills into are the
-                // blank ones either side, and the gap above keeps the next label
-                // clear of them.
+                // A label is wider than its own slot; it spills into the blank
+                // slots either side.
                 modifier = Modifier.wrapContentWidth(unbounded = true),
             )
         } else {
@@ -686,7 +611,7 @@ private fun PeriodChartXAxisRow(
     }
 
     if (!viewport.isZoomed) {
-        // Unzoomed, the slots ARE the row: even weights, exactly as before.
+        // Unzoomed, the slots are the row.
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top,
@@ -703,9 +628,7 @@ private fun PeriodChartXAxisRow(
         return
     }
 
-    // Zoomed, a date has to sit over ITS OWN bar. Evenly spacing whichever labels survive
-    // would drift them off the bars they name — and a bar chart whose dates belong to the
-    // wrong bars is worse than one that does not zoom.
+    // Zoomed, a date has to sit over its own bar.
     Box(
         modifier = Modifier
             .fillMaxWidth()

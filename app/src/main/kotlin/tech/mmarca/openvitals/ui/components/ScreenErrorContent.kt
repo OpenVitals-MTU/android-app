@@ -12,12 +12,7 @@ import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 
-/**
- * The grant request the surrounding Health Connect shell already owns, exposed to
- * whatever it wraps. Null when the composable is not inside a shell — the callout
- * then falls back to opening Health Connect's own permission screen, which is
- * always a way out.
- */
+/** The grant request the Health Connect shell owns. Null outside a shell; the callout then opens settings. */
 class HealthConnectGrantAccess(
     val permissions: Set<String>,
     val onGrant: (Set<String>) -> Unit,
@@ -25,14 +20,7 @@ class HealthConnectGrantAccess(
 
 val LocalHealthConnectGrantAccess = compositionLocalOf<HealthConnectGrantAccess?> { null }
 
-/**
- * Renders a [ScreenError] in the place a screen keeps for it.
- *
- * [ScreenError.PermissionDenied] is deliberately not just red text: a screen that
- * failed for a missing permission gets the standard [PermissionCallout] so the
- * user can grant it without hunting through Settings. Every other error keeps the
- * plain [ErrorMessage] it always had.
- */
+/** Renders a [ScreenError]. A missing permission gets the [PermissionCallout], not red text. */
 @Composable
 fun ScreenErrorContent(
     screenError: ScreenError?,

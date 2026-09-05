@@ -8,10 +8,7 @@ import tech.mmarca.openvitals.domain.model.ReportGlucoseDetail
 import tech.mmarca.openvitals.domain.model.ReportGlucoseReading
 import tech.mmarca.openvitals.domain.model.ReportMetricSummary
 
-/**
- * The clinical ordering of meal contexts in the averages table: fasting first
- * (the number a doctor asks for), then around meals, then the catch-alls.
- */
+/** The clinical ordering of meal contexts: fasting first. */
 private val ContextOrder = listOf(
     GlucoseRecordValues.RELATION_TO_MEAL_FASTING,
     GlucoseRecordValues.RELATION_TO_MEAL_BEFORE_MEAL,
@@ -24,11 +21,7 @@ private val ContextOrder = listOf(
 fun distinctBloodGlucoseReadings(entries: List<BloodGlucoseEntry>): List<BloodGlucoseEntry> =
     dedupeReadings(entries, time = { it.time }, key = { it.millimolesPerLiter to it.relationToMeal })
 
-/**
- * The glucose section's arithmetic, pure and clock-free: raw readings in, the
- * reading list, per-meal-context averages and the overall summary out. Null
- * when there is nothing to report.
- */
+/** The glucose section: reading list, per-context averages, overall summary. Null when empty. */
 fun bloodGlucoseDetail(
     entries: List<BloodGlucoseEntry>,
     zone: ZoneId,

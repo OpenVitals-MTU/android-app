@@ -54,16 +54,9 @@ private val CsvMimeTypes = arrayOf(
 )
 
 /**
- * The CSV importer: pick → map columns → confirm → import → result.
- *
- * A pushed route rather than a Settings card, because a column-mapping editor
- * cannot live in the flat card list a settings section builds without that
- * screen hosting another screen's state.
- *
- * The Health Connect shell requires NO permissions for this feature
- * ([HealthConnectFeature.CSV_IMPORT]): which ones are needed is not known until
- * the mapping is done, and swapping the whole screen out mid-mapping would be
- * hostile. The mapped-metric permissions are asked for at the confirm step.
+ * The CSV importer: pick, map, confirm, import, result. A pushed route,
+ * since a mapping editor cannot live in a settings card list. Permissions
+ * are asked at the confirm step, once the mapping says which.
  */
 @Composable
 fun CsvImportScreen(
@@ -75,7 +68,7 @@ fun CsvImportScreen(
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
-        // Cancelling the picker is not an error and must not change the step.
+        // Cancelling the picker is not an error.
         if (uri != null) viewModel.pickFile(uri)
     }
 
@@ -304,14 +297,9 @@ internal fun CsvConfirmStep(
                             modifier = Modifier.padding(top = 8.dp),
                         )
                         Spacer(Modifier.height(12.dp))
-                        // The date span is the last guard against a day/month
-                        // mix-up. The live echo on the previous step only shows
-                        // row 1, and `01/07` reads plausibly either way; a span
-                        // running to the wrong month — or backwards — does not.
+                        // The date span is the last guard against a day/month mix-up.
                         CsvDateRangeLine(sample = sample, mapping = mapping)
-                        // The per-metric range is the guard against a bad
-                        // derivation: fat mass divided by the wrong weight
-                        // column shows up here as 3% or 150%.
+                        // The per-metric range catches a bad derivation as 3% or 150%.
                         mapping.metricColumns.forEach { column ->
                             CsvMetricRangeLine(column = column, sample = sample, mapping = mapping)
                         }
@@ -336,12 +324,7 @@ internal fun CsvConfirmStep(
     }
 }
 
-/**
- * The first and last dates the sampled rows resolve to, rendered with the
- * locale's own long date format rather than echoing the file's text — a
- * `01/07/2026` read as January shows the word "January". The point is to make
- * the interpretation legible, not to repeat the input.
- */
+/** The first and last sampled dates in the locale's long format, so the interpretation is legible. */
 @Composable
 private fun CsvDateRangeLine(sample: CsvSample, mapping: CsvImportMapping) {
     val range = previewInstantRange(rows = sample.dataRows, mapping = mapping) ?: return

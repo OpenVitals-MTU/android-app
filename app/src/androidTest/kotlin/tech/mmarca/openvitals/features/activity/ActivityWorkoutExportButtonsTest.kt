@@ -16,13 +16,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * The export card is every way a workout leaves the app. The metric formats
- * (TCX, CSV, FIT) are unconditional — the data they export exists for every
- * workout. The route formats (GPX, KMZ) appear exactly when a route does:
- * offering them for a routeless workout would export an empty track, and no
- * export action may be offered for a route that does not exist.
- */
+/** The metric formats (TCX, CSV, FIT) are unconditional; the route formats (GPX, KMZ) appear exactly when a route does. */
 class ActivityWorkoutExportButtonsTest {
 
     @get:Rule

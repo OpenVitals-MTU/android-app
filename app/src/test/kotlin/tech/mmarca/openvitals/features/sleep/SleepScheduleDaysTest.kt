@@ -9,11 +9,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
 
-/**
- * Port of test/features/sleep/sleep_schedule_chart_test.dart's `toSleepScheduleDays`
- * group: the overview days are mapped onto one schedule bar each — its in-bed span
- * and its stages — with no night leaving a bedtime behind.
- */
+/** `toSleepScheduleDays`: one schedule bar per overview day, with no night leaving a bedtime behind. */
 class SleepScheduleDaysTest {
 
     private fun at(day: Int, hour: Int, minute: Int = 0): Instant =

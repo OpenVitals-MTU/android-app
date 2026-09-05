@@ -22,25 +22,10 @@ import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * A reload used to raise a transient "syncing" banner — an item that appeared
- * at the TOP of the list, above everything the reader had scrolled past, and
- * vanished again when the load landed. On the dashboard that banner shoved the
- * whole page down and back on every reload, and the fix removed it there; this
- * scaffold now does the same: no transient banner, no load-time insertion, the
- * sections' own states carry the load. Only the persistent sync-paused banner
- * remains — it enters the list once and keeps its place.
- *
- * That removal is what these tests pin. The item count is asserted alongside
- * the position for a reason: the old banner sat off-screen above the viewport
- * and was never composed, so position assertions alone would hold either way;
- * the count is what distinguishes "the transient banner is gone" from "the
- * scaffold quietly regressed into inserting something else".
- *
- * The position assertions still carry weight on their own: if a transient
- * item ever returns above the viewport, the keyed sections
- * (`item(key = sectionId)`) are what keep the reader's row pinned — drop the
- * keys and the page lurches down and back on every load, on every metric
- * screen.
+ * A delete's reload raises the "syncing" banner at the top of the list. The scroll position
+ * holds because [orderedMetricDetailSections] keys every section item, so the list anchors
+ * to the section the reader is inside. The item count is asserted alongside, because the
+ * banner is never composed and a scaffold that inserted nothing would pass the position check.
  */
 class MetricDetailScaffoldScrollAnchorTest {
 
@@ -102,9 +87,7 @@ class MetricDetailScaffoldScrollAnchorTest {
         isLoading = true
         composeRule.waitForIdle()
 
-        // The transient sync banner is gone; a reload must not insert ANY item.
-        // Without this the position assertion below would hold for a scaffold
-        // that grew a different item instead.
+        // The banner is above the viewport, never composed, but it is in the list.
         assertEquals(
             "the reload inserted an item into the list; the transient banner was removed",
             itemsBefore,

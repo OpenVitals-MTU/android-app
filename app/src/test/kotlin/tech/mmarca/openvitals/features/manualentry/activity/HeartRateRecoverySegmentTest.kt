@@ -19,14 +19,8 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import java.time.Instant
 
 /**
- * The guided test writes the moment effort stopped; the reader finds it again.
- *
- * These two halves are the feature. The recording knows the instant of
- * cessation and nothing else does — Health Connect has no field for it, so it
- * goes in as a trailing REST segment. If the segment the writer produces is
- * not one the reader accepts, the guided test silently degrades to an ordinary
- * workout — which is then not measured at all — and nobody would notice until
- * the recovery went missing.
+ * The guided test writes the moment effort stopped as a trailing REST segment; the reader
+ * finds it again. If the two disagree, the guided test degrades to an ordinary workout.
  */
 class HeartRateRecoverySegmentTest {
 
@@ -84,15 +78,10 @@ class HeartRateRecoverySegmentTest {
             .filter { it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST }
         assertEquals(1, rest.size)
         assertEquals(effortEnded, rest.single().startTime)
-        // To the END of the session, not for a fixed five minutes: a rider who
-        // takes a while to press save must not leave the segment stranded
-        // mid-session, where the reader would ignore it and measure from the
-        // session end instead.
+        // To the end of the session, not a fixed five minutes, or a slow save strands the segment mid-session.
         assertEquals(request.endTime, rest.single().endTime)
 
-        // No "active" segment. Health Connect validates a segment's type
-        // against the session's exercise type and THROWS on a mismatch; rest
-        // and pause are the two universal types.
+        // No "active" segment: Health Connect throws on a type mismatch. Rest and pause are universal.
         assertTrue(
             request.exerciseSegments.all {
                 it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST ||
@@ -108,9 +97,7 @@ class HeartRateRecoverySegmentTest {
 
     @Test
     fun `pauses during the effort survive alongside the recovery mark`() {
-        // Explicit segments suppress the ones the native writer would
-        // synthesize from the pause intervals, so they have to be carried
-        // through by hand or they vanish.
+        // Explicit segments suppress the ones the writer synthesizes from pauses, so they are carried by hand.
         val pauseStart = LocalDateTime.of(2026, 7, 14, 10, 5).atZone(zone).toInstant()
         val pauseEnd = LocalDateTime.of(2026, 7, 14, 10, 7).atZone(zone).toInstant()
         val request = buildWriteRequest(
@@ -136,8 +123,7 @@ class HeartRateRecoverySegmentTest {
                 it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST
             },
         )
-        // And the reader has no recovery window at all — an ordinary recording
-        // carries no abrupt-stop mark, so it is not measured.
+        // An ordinary recording carries no abrupt-stop mark, so it is not measured.
         assertNull(heartRateRecoveryWindowFor(readBack(request)))
     }
 }

@@ -3,18 +3,9 @@ package tech.mmarca.openvitals.devices.weather
 import org.json.JSONObject
 
 /**
- * One weather report as a companion weather app broadcast it, in Gadgetbridge's
- * generic-weather JSON schema — the de-facto standard Breezy Weather (and
- * every other Gadgetbridge-aware weather app) already speaks. Implementing
- * the same schema is what lets those apps feed OpenVitals with zero changes
- * on their side: the user just adds this app's package name as a broadcast
- * target.
- *
- * Units follow that schema, quirks included: temperatures in KELVIN as
- * integers, wind in km/h, timestamps in unix SECONDS. Conversion to what the
- * watch wants happens in the FIT encoder, not here — this type stores what
- * was received, verbatim, so a stored snapshot can be re-encoded differently
- * later without loss.
+ * One weather report in Gadgetbridge's generic-weather JSON schema, which
+ * Breezy Weather already speaks. Units follow the schema: Kelvin integers,
+ * km/h, unix seconds. Stored verbatim; the FIT encoder converts.
  */
 data class WeatherSnapshot(
     /** When the provider says this report was observed, unix seconds. */
@@ -118,11 +109,7 @@ data class WeatherSnapshot(
     }
 
     companion object {
-        /**
-         * Parses the broadcast schema. Absent fields default rather than
-         * fail — the schema grew over years and senders fill what they have,
-         * so a strict parser would reject real-world payloads.
-         */
+        /** Parses the broadcast schema. Absent fields default: senders fill what they have. */
         fun fromJson(json: JSONObject): WeatherSnapshot = WeatherSnapshot(
             timestamp = json.optLong("timestamp", System.currentTimeMillis() / 1000),
             location = json.optString("location", ""),

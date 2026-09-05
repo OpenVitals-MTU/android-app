@@ -54,10 +54,7 @@ internal data class ActivityDetailUiState(
     /** The distance the derived splits were cut at, for the card headers. */
     val splitDistanceMeters: Double = ActivitySplitDistance.defaultMeters,
 
-    /**
-     * The slowest and fastest split, in seconds per kilometre — the pace-bar
-     * scale. Null when no split has a pace (which leaves the bars unpainted).
-     */
+    /** The slowest and fastest split in s/km, the pace-bar scale. Null leaves the bars unpainted. */
     val slowestSplitPaceSeconds: Double? = null,
     val fastestSplitPaceSeconds: Double? = null,
 
@@ -132,10 +129,8 @@ internal class ActivityDetailViewModel(
                     } else {
                         emptyList()
                     }
-                    // Speed, cadence, markers and the recovery each degrade to
-                    // empty on failure: a missing permission costs one card,
-                    // never the screen. The session and the heart-rate read do
-                    // not degrade — without them there is nothing to show.
+                    // Speed, cadence, markers and recovery degrade to empty on failure.
+                    // The session and the heart-rate read do not.
                     val speedSamples = if (workout != null) {
                         runCatching {
                             repository.loadSpeedSamples(workout.startTime, workout.endTime)
@@ -234,12 +229,7 @@ internal class ActivityDetailViewModel(
                     .orEmpty()
             }
 
-    /**
-     * The recovery reading for [workout], or null when the session carries no
-     * qualifying stop mark — in which case no heart-rate read is issued at all:
-     * the session window read already happened, and a second one would be spent
-     * on a number that cannot exist.
-     */
+    /** The recovery reading, or null without a stop mark, in which case no read is issued. */
     private suspend fun loadHeartRateRecovery(workout: ExerciseData): HeartRateRecoveryReading? {
         val heartRepository = heartRepository ?: return null
         val window = heartRateRecoveryWindowFor(workout) ?: return null
@@ -250,8 +240,7 @@ internal class ActivityDetailViewModel(
             samples = samples,
             restingHeartRateBpm = profile?.restingHeartRateBpm,
             ageYears = profile?.ageYears(),
-            // The 90-day observed maximum is a trend-screen concern; on the card,
-            // the explicit profile maximum plus the Tanaka estimate cover it.
+            // The 90-day observed maximum is a trend-screen concern.
             observedMaxHeartRateBpm = null,
             explicitMaxHeartRateBpm = profile?.maxHeartRateBpm,
         )
@@ -263,11 +252,7 @@ internal class ActivityDetailViewModel(
                 ?: ActivitySplitDistance.defaultMeters,
         )
 
-    /**
-     * Re-cut the splits when the preference changes while the screen is open —
-     * a state update only. The Health Connect data on screen did not change,
-     * so nothing is reloaded.
-     */
+    /** Re-cuts the splits when the preference changes. A state update only. */
     private fun observeSplitDistance() {
         val preferences = preferencesRepository ?: return
         viewModelScope.launch {
@@ -280,10 +265,7 @@ internal class ActivityDetailViewModel(
         }
     }
 
-    /**
-     * The state with its splits (and everything derived from them) re-cut at
-     * [splitDistanceMeters], from the samples the state already holds.
-     */
+    /** The state with its splits re-cut at [splitDistanceMeters]. */
     private fun ActivityDetailUiState.withSplitsCutAt(
         splitDistanceMeters: Double,
     ): ActivityDetailUiState {

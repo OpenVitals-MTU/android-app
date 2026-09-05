@@ -25,13 +25,7 @@ internal fun quickBeverageWidgetDrinkOptions(
     return frequentOptions + customOptions + catalogOptions
 }
 
-/**
- * How the configuration picker lists the drinks: "name - amount", in the order
- * [quickBeverageWidgetDrinkOptions] settled on.
- *
- * The amount runs through the same label the hydration entry screen uses, so a
- * drink reads identically wherever the user meets it.
- */
+/** The picker's labels: "name - amount", using the hydration entry screen's own amount label. */
 internal fun quickBeverageWidgetPickerLabels(
     drinks: List<CustomHydrationDrink>,
     unitFormatter: UnitFormatter,

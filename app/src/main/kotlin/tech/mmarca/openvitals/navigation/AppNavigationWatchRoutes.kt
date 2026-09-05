@@ -9,13 +9,7 @@ import tech.mmarca.openvitals.features.watches.WatchDeviceScreen
 import tech.mmarca.openvitals.features.watches.WatchNotificationAppsScreen
 import tech.mmarca.openvitals.features.watches.WatchSettingsScreen
 
-/**
- * The watch-facing destinations (`features/watches`).
- *
- * Pushed detail screens, deliberately in no special route set — they behave
- * like any other pushed destination: back arrow, plain top bar, no bottom
- * navigation.
- */
+/** The watch-facing destinations. Plain pushed screens. */
 internal fun NavGraphBuilder.watchRoutes(
     navController: NavHostController,
     onWatchDeviceTitleChanged: (String?) -> Unit,
@@ -51,10 +45,8 @@ internal fun NavGraphBuilder.watchRoutes(
         WatchNotificationAppsScreen(viewModel = hiltViewModel())
     }
 
-    // The watch's own settings tree (7f). A list row that leads deeper pushes
-    // the SAME route with a different screen id, so walking the tree is plain
-    // back-stack navigation — and the screens share one held-open link, whose
-    // lifetime the view-model layer owns across the pushes.
+    // A row that leads deeper pushes the same route with another screen id;
+    // the screens share one held link.
     composable(Screen.WatchSettings.route) {
         WatchSettingsScreen(
             viewModel = hiltViewModel(),

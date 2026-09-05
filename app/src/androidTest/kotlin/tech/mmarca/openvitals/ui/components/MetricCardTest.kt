@@ -14,13 +14,7 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Port of Flutter's `test/ui/components/metric_card_test.dart`.
- *
- * These are the small shared pieces every metric screen is assembled from, so
- * they are worth pinning once here rather than through each screen that draws
- * them.
- */
+/** The small shared pieces every metric screen is assembled from, pinned once. */
 class MetricCardTest {
 
     @get:Rule

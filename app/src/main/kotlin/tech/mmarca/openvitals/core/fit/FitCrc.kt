@@ -1,19 +1,9 @@
 package tech.mmarca.openvitals.core.fit
 
 /**
- * The FIT CRC-16 — the checksum over a FIT file's header (bytes 0..11 into
- * bytes 12..13) and over the whole file into the trailing two bytes.
- *
- * Byte-for-byte port of Gadgetbridge's `ChecksumCalculator.computeCrc`
- * (AGPLv3, the same licence as this app) — a nibble-table CRC that Garmin
- * uses both for FIT files and for GFDI packet framing ([GarminCrc] in the
- * device layer delegates here), so it must be ported literally rather than
- * swapped for a library CRC-16.
- *
- * Bytes are read unsigned (`b and 0xFF`) before the nibble selects, which
- * gives the identical result to Gadgetbridge's signed-byte arithmetic —
- * `b and 15` and `(b shr 4) and 15` select the same two nibbles either way,
- * and that is all the algorithm reads from each byte.
+ * The FIT CRC-16, over a file's header and over the whole file. A literal
+ * port of Gadgetbridge's nibble-table CRC (AGPLv3), also used for GFDI
+ * framing. Bytes are read unsigned, which gives the identical result.
  */
 object FitCrc {
 
@@ -22,10 +12,7 @@ object FitCrc {
         0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400,
     )
 
-    /**
-     * CRC over `data[offset until offset+length]`, seeded with [initialCrc]
-     * (0 for a whole file or packet). Masked to 16 bits.
-     */
+    /** CRC over `data[offset until offset+length]`, seeded with [initialCrc]. */
     fun compute(
         data: ByteArray,
         offset: Int = 0,

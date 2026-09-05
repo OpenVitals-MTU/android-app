@@ -11,18 +11,9 @@ import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 
 /**
- * The session written to Health Connect has to CONTAIN the samples it carries.
- *
- * A recording reaches the entry form as TEXT, at minute granularity: the start
- * time loses its seconds, and the duration is rounded up to a whole minute.
- * The write path then rebuilds the session range from that text — so the
- * rebuilt end can land before the last sample that was actually recorded.
- *
- * Health Connect does not drop a sample that falls outside its session. It
- * CLAMPS it to the session bounds. So the samples past the end are not lost,
- * they are stacked onto the closing instant, all sharing one timestamp —
- * which is worse than losing them. For a heart-rate recovery, computed from
- * precisely those last samples, it is everything.
+ * The session written to Health Connect has to contain the samples it carries. The form
+ * rebuilds the range from minute-granularity text, so the end can land before the last
+ * sample. Health Connect clamps such samples onto the closing instant, which ruins a recovery.
  */
 class RecordedSessionRangeTest {
 
@@ -47,9 +38,7 @@ class RecordedSessionRangeTest {
 
     @Test
     fun `the end is stretched to cover the last sample`() {
-        // The recording really ran 10:00:59 -> 10:02:59, but the form's text
-        // rebuilt it as 10:00 -> 10:02. The last minute of samples would be
-        // clamped onto 10:02:00 without the stretch.
+        // The recording ran 10:00:59 -> 10:02:59, rebuilt from text as 10:00 -> 10:02.
         val lastSample = start.plusSeconds(179)
         val request = buildWriteRequest(
             recorded(heartRate(listOf(start.plusSeconds(60) to 120L, lastSample to 150L))),
@@ -62,10 +51,7 @@ class RecordedSessionRangeTest {
 
     @Test
     fun `samples before the start are dropped rather than clamped onto it`() {
-        // The start is the user's: they may have moved it forward on purpose.
-        // A sample before it would be clamped ONTO it, inventing a reading at
-        // a time it was never taken — better to write no heart rate than a
-        // fiction.
+        // The start is the user's. A sample before it would be clamped onto it, inventing a reading.
         val request = buildWriteRequest(
             recorded(heartRate(listOf(start.minusSeconds(30) to 110L, start.plusSeconds(30) to 120L))),
             ActivityEntryUnits.uniform(UnitSystem.METRIC),

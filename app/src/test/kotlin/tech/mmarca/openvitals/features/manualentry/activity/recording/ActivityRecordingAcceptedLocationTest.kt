@@ -18,18 +18,9 @@ import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 
 /**
- * The live GPS accumulator: every number the recording screen shows while you
- * are moving — distance, elevation, speed, the route and its breaks, and the
- * auto-idle clock — is folded here, one fix at a time.
- *
- * It used to live inside the controller's `acceptConvertedLocation`, welded to
- * the Android location stack, and so had no tests at all. These are those tests.
- *
- * `Location.distanceBetween` is a platform static with no JVM implementation, so
- * it is stubbed here with the same WGS84 geodesy Android uses: a milli-degree of
- * latitude at the equator is the meridian arc — 110.574 m, not the 111.19 m
- * "mean degree" you get from a sphere. The arithmetic under test is the fold,
- * not the ellipsoid.
+ * The live GPS accumulator: distance, elevation, speed, the route and its breaks, and the
+ * auto-idle clock, one fix at a time. `Location.distanceBetween` has no JVM implementation,
+ * so it is stubbed with the same WGS84 geodesy Android uses.
  */
 class ActivityRecordingAcceptedLocationTest {
 
@@ -70,10 +61,7 @@ class ActivityRecordingAcceptedLocationTest {
         verticalAccuracyMeters = null,
     )
 
-    /**
-     * Distance and time gates opened up, so a test only fights the gate it means
-     * to. `routeGapMeters = null` means "never break the route".
-     */
+    /** Gates opened up, so a test only fights the gate it means to. `routeGapMeters = null` never breaks the route. */
     private val preferences = ActivityRecordingPreferences(
         recordingDistanceIntervalMeters = 5,
         recordingTimeIntervalMillis = 0,
@@ -206,8 +194,7 @@ class ActivityRecordingAcceptedLocationTest {
 
     @Test fun `an implausible jump is dropped rather than banked`() {
         val first = accept(recording(), point(seconds = 0))
-        // ~111 m in 1 s = 111 m/s, far past any plausible speed, and far past the
-        // combined accuracy of the two fixes.
+        // ~111 m in 1 s is far past any plausible speed and past the fixes' combined accuracy.
         val result = accept(first, point(seconds = 1, latMilliDegrees = 1.0))
 
         assertEquals(1, result.points.size)
@@ -222,8 +209,7 @@ class ActivityRecordingAcceptedLocationTest {
             point(seconds = 0),
             prefs = idlePreferences,
         )
-        // Moves again 30 s later, with a 10 s idle timeout: 20 s of that was idle,
-        // not 30.
+        // Moves again 30 s later with a 10 s idle timeout: 20 s of that was idle.
         val result = accept(
             first,
             point(seconds = 30, latMilliDegrees = 1.0),
@@ -251,9 +237,7 @@ class ActivityRecordingAcceptedLocationTest {
     }
 
     @Test fun `a route break does not stop the auto-idle clock`() {
-        // Regression guard: the break path must leave lastMovementAt alone, so the
-        // stationary stretch that CAUSED the gap is still charged as idle when the
-        // next real leg lands.
+        // The break path must leave lastMovementAt alone, so the stationary stretch is still charged as idle.
         val gapped = ActivityRecordingPreferences(
             recordingDistanceIntervalMeters = 5,
             recordingTimeIntervalMillis = 0,
@@ -276,11 +260,7 @@ class ActivityRecordingAcceptedLocationTest {
 private const val WgsSemiMajorAxisMeters = 6_378_137.0
 private const val WgsEccentricitySquared = 0.00669437999014
 
-/**
- * The WGS84 geodesic distance over the short legs these tests use — the same
- * ellipsoid `Location.distanceBetween` measures on, via the local radii of
- * curvature rather than the full Vincenty inverse.
- */
+/** The WGS84 geodesic distance over short legs, via the local radii of curvature. */
 private fun wgs84DistanceMeters(
     startLatitude: Double,
     startLongitude: Double,

@@ -34,7 +34,7 @@ internal fun workoutPlanFormForNewPlan(now: LocalDateTime): WorkoutPlanFormInput
     )
 }
 
-// --- from Health Connect ---------------------------------------------------
+// From Health Connect.
 
 internal fun PlannedExerciseData.toWorkoutPlanForm(zone: ZoneId): WorkoutPlanFormInput {
     val start = startTime.atZone(startZoneOffset ?: zone)
@@ -102,7 +102,7 @@ internal fun PlannedExerciseStepData.toStepInput(): WorkoutPlanStepInput {
     }
 }
 
-// --- to Health Connect -----------------------------------------------------
+// To Health Connect.
 
 internal fun validateWorkoutPlan(form: WorkoutPlanFormInput): Set<WorkoutPlanValidationError> = buildSet {
     if (form.titleText.isBlank()) add(WorkoutPlanValidationError(WorkoutPlanValidationErrorKind.TITLE_REQUIRED))

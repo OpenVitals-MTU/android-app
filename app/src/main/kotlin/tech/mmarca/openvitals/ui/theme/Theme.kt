@@ -35,9 +35,7 @@ private val DarkColorScheme = darkColorScheme(
     errorContainer = Color(0xFF93000A),
     onError = Color(0xFF690005),
     onErrorContainer = Color(0xFFFFDAD6),
-    // background == surface, as M3 prescribes and the shipped design drew:
-    // the dashboard scaffold paints `background`, and a darker #101416 here
-    // made every card float on a page eight tone-steps too deep.
+    // background == surface, as M3 prescribes; a darker value made every card float.
     background = SurfaceDark,
     onBackground = Color(0xFFE0E3E6),
     surface = SurfaceDark,
@@ -85,14 +83,7 @@ private val LightColorScheme = lightColorScheme(
     surfaceContainerHighest = Color(0xFFE3E6E9),
 )
 
-/**
- * The design system's shape scale, one name per [Radii] step.
- *
- * `medium` is the card corner and reads 12dp, not the 16 it carried before:
- * the design system pins 12 as the OpenVitals card radius, and identifies this
- * very constant as where the stray 16 came from. Every `OpenVitalsCard`
- * defaults to `shapes.medium`, so this is the one line that sets it.
- */
+/** The shape scale, one name per [Radii] step. `medium` is the 12dp card corner. */
 private val AppShapes = Shapes(
     extraSmall = RoundedCornerShape(Radii.xs),
     small = RoundedCornerShape(Radii.sm),
@@ -131,8 +122,7 @@ fun OpenVitalsTheme(
         else -> LightColorScheme
     }
 
-    // Resolved once here so every screen reads the same answer, and so the
-    // system setting is consulted in one place rather than at each animation.
+    // Resolved once, so every screen reads the same answer.
     val reducedMotion = !animatorsEnabled()
 
     CompositionLocalProvider(LocalReducedMotion provides reducedMotion) {
@@ -158,11 +148,7 @@ private fun ColorScheme.toAmoledColorScheme(): ColorScheme =
         outlineVariant = Color(0xFF3A3A3A),
     )
 
-/**
- * Whether the running scheme is the AMOLED one, told from its defining property rather than from
- * the preference: the point of that theme is that a black pixel is an unlit pixel, so anything
- * painting screen furniture has to be able to ask.
- */
+/** Whether the running scheme is the AMOLED one, told from its defining property. */
 @Composable
 fun isAmoledColorScheme(): Boolean {
     val colorScheme = MaterialTheme.colorScheme

@@ -38,11 +38,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Round-trip + fingerprint-stability tests for the sync record codec — one
- * record of each structural family, mirroring the Dart
- * `import_record_sync_codec_test.dart`.
- */
+/** Round-trip and fingerprint-stability tests for the sync record codec, one record per structural family. */
 class SyncRecordCodecTest {
 
     private fun utc(day: Int, hour: Int = 0, minute: Int = 0): Instant =
@@ -251,7 +247,7 @@ class SyncRecordCodecTest {
         ),
     )
 
-    // ── round-trip encode/decode ─────────────────────────────────────────────
+    // Round-trip encode/decode.
 
     @Test
     fun `every sample record survives an encode-decode round trip`() {
@@ -268,8 +264,7 @@ class SyncRecordCodecTest {
 
             assertEquals(type, syncRecordTypeName(decoded))
             assertEquals(fingerprint, decoded.metadata.clientRecordId)
-            // Re-fingerprinting the decoded record yields the same id —
-            // proving the identifying content survived the round trip.
+            // Re-fingerprinting the decoded record yields the same id.
             assertEquals("re-fingerprint of $type", fingerprint, syncFingerprint(decoded))
         }
     }
@@ -282,7 +277,7 @@ class SyncRecordCodecTest {
         }
     }
 
-    // ── fingerprint ──────────────────────────────────────────────────────────
+    // Fingerprint.
 
     @Test
     fun `fingerprint is stable and prefixed sync_`() {
@@ -330,8 +325,7 @@ class SyncRecordCodecTest {
 
     @Test
     fun `unit round-trip drift within quantization does not change the fingerprint`() {
-        // Mass round-trips through grams inside Health Connect; a few ulps of
-        // binary drift must hash identically or every re-sync re-imports.
+        // Mass round-trips through grams; a few ulps of drift must hash identically.
         val exact = WeightRecord(
             time = utc(2),
             zoneOffset = null,
@@ -348,12 +342,11 @@ class SyncRecordCodecTest {
         assertEquals(syncFingerprint(exact), syncFingerprint(drifted))
     }
 
-    // ── out-of-range peer data is clamped, not crashed ────────────────────────
+    // Out-of-range peer data is clamped, not crashed.
 
     @Test
     fun `an out-of-range completionKind maps to unknown, not RangeError`() {
-        // Device sync round-trips the completion-goal kind from another phone,
-        // so a corrupt or newer value must not throw and abort the whole batch.
+        // A corrupt or newer completion-goal kind from another phone must not abort the batch.
         val plan = samples.filterIsInstance<PlannedExerciseSessionRecord>().single()
         val payload = encodeSyncRecordPayload(plan)
             .toString(Charsets.UTF_8)

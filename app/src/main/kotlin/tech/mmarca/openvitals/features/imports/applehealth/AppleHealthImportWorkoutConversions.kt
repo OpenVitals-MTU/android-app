@@ -126,7 +126,7 @@ internal fun AppleHealthImportConverter.convertWorkouts(
     }
 
 private fun AppleWorkout.toSynthesizedExerciseRoute(interval: AppleInterval): ExerciseRoute? {
-    // routes are already deduplicated by path at parse time (AppleHealthImportParser.toWorkout).
+    // Routes are deduplicated by path at parse time.
     val points = routes
         .flatMap { it.points }
         .filter { it.latitude in -90.0..90.0 && it.longitude in -180.0..180.0 }
@@ -134,10 +134,8 @@ private fun AppleWorkout.toSynthesizedExerciseRoute(interval: AppleInterval): Ex
 
     val cumulativeDistances = points.runningRouteDistances()
     val totalDistanceMeters = cumulativeDistances.lastOrNull() ?: 0.0
-    // Offsets are computed at millisecond resolution: Health Connect stores route location times
-    // with millisecond precision, so sub-millisecond spacing collapses consecutive points to the
-    // same timestamp and violates ExerciseRoute's strictly-increasing-time requirement when the
-    // session is read back (breaking duplicate detection and session reads).
+    // Millisecond offsets: Health Connect stores route times at millisecond precision,
+    // and a collapsed timestamp violates the strictly-increasing rule.
     val durationMillis = Duration.between(interval.start.instant, interval.end.instant)
         .toMillis()
         .coerceAtLeast(points.size.toLong() + 1L)

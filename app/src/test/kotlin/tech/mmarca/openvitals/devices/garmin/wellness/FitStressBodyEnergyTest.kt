@@ -6,11 +6,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Test
 
-/**
- * The `stress_level` (227) message: the stress score and Body Battery, which
- * has no message of its own. Port of the Flutter build's
- * `fit_stress_body_energy_test.dart`.
- */
+/** The `stress_level` (227) message: the stress score and Body Battery, which has no message of its own. */
 class FitStressBodyEnergyTest {
 
     /** `stress_level`: field 0 stress (sint8), 1 time (uint32), 3 body energy (uint8). */
@@ -46,8 +42,7 @@ class FitStressBodyEnergyTest {
             ),
         ).monitoring!!
 
-        // Both series come off ONE message — Body Battery has no message of
-        // its own.
+        // Both series come off one message.
         assertEquals(listOf(t0 to 42, t0.plusSeconds(60) to 51), m.stress)
         assertEquals(listOf(t0 to 72, t0.plusSeconds(60) to 72), m.bodyEnergy)
     }
@@ -73,8 +68,7 @@ class FitStressBodyEnergyTest {
 
     @Test
     fun `the stress message alone makes a file non-empty`() {
-        // Without this the monitoring summary would be dropped as empty and
-        // the samples never reach the database.
+        // Without this the monitoring summary would be dropped as empty.
         val m = parseGarminWellness(
             stressFile(listOf(Triple(Instant.parse("2026-07-22T10:00:00Z"), 40, 70))),
         ).monitoring

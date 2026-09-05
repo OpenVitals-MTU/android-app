@@ -9,11 +9,8 @@ private val monthFormatter = DateTimeFormatter.ofPattern("LLLL yyyy")
 private val yearFormatter = DateTimeFormatter.ofPattern("yyyy")
 
 /**
- * A dated span for a *past* rolling window ("22 May – 20 Jun 2026"), so a
- * rolling last-N-days period that no longer ends today reads as the span it
- * actually is rather than borrowing the single calendar month/year its start
- * falls in (which named a mostly-June window "May 2026"). The year rides on the
- * end date, and on the start too when the window straddles a year boundary.
+ * A dated span for a past rolling window ("22 May – 20 Jun 2026"), rather
+ * than the calendar month its start falls in.
  */
 internal fun rollingSpanTitle(
     period: DatePeriod,

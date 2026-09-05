@@ -19,20 +19,9 @@ import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPort
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncResult
 
-/**
- * Where a device sync has got to, for the row that started it. Port of the
- * Flutter build's `DeviceSyncState` (`device_sync_view_model.dart`, the watch
- * one in `features/settings/application`).
- *
- * Device-agnostic: any integration's sync drives this same state through the
- * [DeviceSyncPort] seam.
- */
+/** Where a device sync has got to, for the row that started it. Device-agnostic. */
 data class DeviceSyncUiState(
-    /**
-     * The device id being synced, or null when idle. Scoped rather than a
-     * bare flag because the screen can list several watches and only one row
-     * should show a spinner.
-     */
+    /** The device id being synced, or null. Scoped so only one row shows a spinner. */
     val syncingDeviceId: String? = null,
     val phase: DeviceSyncPhase? = null,
     val filesTotal: Int = 0,
@@ -47,15 +36,9 @@ data class DeviceSyncUiState(
 }
 
 /**
- * Runs a device sync through whichever integration owns the device, and feeds
- * the row's state off the port's progress and outcome. Port of the Flutter
- * build's `DeviceSyncViewModel`.
- *
- * A singleton with its OWN scope rather than a screen view-model: the sync
- * outlives the screen that started it (Flutter's provider was app-lifetime),
- * so backing out of the device view must not kill a download mid-file — and
- * every watch surface reads the same state, so two screens cannot disagree
- * about whether the radio is busy.
+ * Runs a device sync through the integration that owns the device. A
+ * singleton with its own scope: the sync outlives the screen, and every
+ * watch surface reads the same state.
  */
 @Singleton
 class DeviceSyncController(
@@ -79,37 +62,17 @@ class DeviceSyncController(
 
     companion object {
         /**
-         * How long a MANUAL sync lingers after the files are pulled.
-         *
-         * The watch runs its own on-connection errands — fetching weather
-         * through the HTTP proxy, notably — a few seconds after the link
-         * comes up, on a rate limit of its own. A sync that disconnects the
-         * moment the files land hangs up before those errands run, which is
-         * why the weather glance stayed empty with everything else working.
-         * Manual syncs only: background ones stay short, this costs radio.
+         * How long a manual sync lingers after the pull. The watch runs its
+         * own errands (weather) seconds after the link comes up.
          */
         val MANUAL_SYNC_LINGER: Duration = 20.seconds
     }
 
     /**
-     * Syncs [deviceId], one sync at a time — the radio is a single resource,
-     * and two sessions against one watch would fight over its handles.
-     *
-     * A device no [DeviceSyncPort.canSync] claims (a live sensor, an unknown
-     * id) is a no-op. Returns the running sync, or null when nothing started.
-     * [listenAfter] is the diagnostic listen window held open after the sync.
-     *
-     * [silent] is for a sync nobody asked for (the automatic schedule): the
-     * run drives the same progress state, so the screens still show the radio
-     * as busy and a second sync cannot start, but a failure ends idle instead
-     * of throwing a red banner onto a screen the user never touched. A watch
-     * out of range at 3am is not an error to report; the last-sync time says
-     * everything there is to say.
-     *
-     * The result comes back through a [Deferred] rather than a bare [Job] so a
-     * background caller can act on the outcome. Nothing has to await it —
-     * [DeviceSyncPort.sync] never throws, so an ignored one cannot swallow a
-     * failure that mattered.
+     * Syncs [deviceId], one at a time. A device no port claims is a no-op.
+     * [listenAfter] is the diagnostic window held open after the sync.
+     * [silent] is for the automatic schedule: a failure ends idle, no banner.
+     * Returns a [Deferred] so a background caller can act on the outcome.
      */
     fun syncDevice(
         deviceId: String,
@@ -120,22 +83,14 @@ class DeviceSyncController(
         val device = deviceRepository.devices.firstOrNull { it.id == deviceId } ?: return null
         if (!syncPort.canSync(device)) return null
 
-        // Set BEFORE the launch, so the instant the tap returns the radio
-        // already reads as busy to anything else that asks.
+        // Set before the launch, so the radio reads busy at once.
         _state.value = DeviceSyncUiState(
             syncingDeviceId = deviceId,
             phase = DeviceSyncPhase.HANDSHAKE,
         )
         return scope.async {
-            // The port owns the pull → import → store → stamp sequence; this
-            // controller only drives the row's state off its progress/outcome.
-            //
-            // The catch is defensive, not expected: the seam's contract is
-            // that a sync never throws. It matters because `async` holds an
-            // uncaught exception until somebody awaits it, so a port that
-            // broke the contract would otherwise leave the radio reading busy
-            // for the rest of the process's life and silently refuse every
-            // later sync.
+            // The port owns the sequence. The catch is defensive: `async` holds an
+            // uncaught exception, which would leave the radio reading busy forever.
             val result = try {
                 syncPort.sync(
                     device,

@@ -20,15 +20,8 @@ import tech.mmarca.openvitals.ui.theme.StepsColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 
 /**
- * Port of Flutter's `test/goldens/charts/summary_ring_golden_test.dart`.
- *
- * [DashboardSummaryCard] — the hero gauges at the top of the dashboard. An
- * open-bottom arc: 280° starting at 130°, round caps, an accent fill over an outline
- * track. The two ends of its range are where it can lie. At zero the fill must not be
- * drawn at all — a round cap on a zero-length arc still paints a dot, which reads as
- * "you have started" when you have not. Over goal the progress is clamped, so a 135%
- * day and a 100% day are the same picture, and the NUMBER in the middle is the only
- * thing that can tell them apart.
+ * [DashboardSummaryCard]: the hero gauges. At zero the fill must not be drawn, because a
+ * round cap on a zero-length arc paints a dot. Over goal the progress is clamped.
  */
 class SummaryRingGoldenTest {
 
@@ -71,8 +64,7 @@ class SummaryRingGoldenTest {
 
     @Test
     fun pastTheGoal_theArcClosesTheNumberKeepsGoing() {
-        // Clamped to 1.0 inside the card. The gauge cannot overrun its own track, so
-        // 135% and 100% draw the same arc.
+        // Clamped to 1.0 inside the card, so 135% and 100% draw the same arc.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = RING_WIDTH, height = RING_WIDTH) {
                 Ring(
@@ -90,10 +82,7 @@ class SummaryRingGoldenTest {
 
     @Test
     fun aValueLongEnoughToFightTheRingForRoom() {
-        // The centre text is an [tech.mmarca.openvitals.ui.components.AutoResizeText]:
-        // it shrinks rather than wraps or clips. A six-figure step count on a 174dp
-        // ring is the case that exercises it, and the one where a regression would show
-        // as an ellipsis instead of a number.
+        // The centre text shrinks rather than wraps or clips. A six-figure count on a 174dp ring exercises it.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = RING_WIDTH, height = RING_WIDTH) {
                 Ring(
@@ -131,9 +120,7 @@ class SummaryRingGoldenTest {
     }
 
     private companion object {
-        // Half of a phone's content width, less the gap: what a dashboard row gives
-        // each ring when two share it. The gauge scales its stroke off its own side, so
-        // the width is part of the fixture, not a detail of the harness.
+        // Half a phone's content width, less the gap. The gauge scales its stroke off its side, so the width is part of the fixture.
         val RING_WIDTH = 174.dp
     }
 }

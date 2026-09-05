@@ -17,21 +17,10 @@ import kotlin.math.roundToLong
 object DashboardPresentationMapper {
 
     /**
-     * Maps a loaded day onto the dashboard's widget models.
-     *
-     * Every metric the device SUPPORTS produces a widget — an empty one when the
-     * reading is absent or its permission is not granted. Only metrics the
-     * installed Health Connect provider cannot serve at all are dropped, via
-     * [DashboardData.supportedMetrics]; a tile that can never fill is worse than
-     * no tile. The required metrics (steps, distance, hydration, body fat, heart
-     * rate, resting HR, mindfulness) still show their zero, because zero is a
-     * real reading there.
-     *
-     * [includeUnsupported] materialises a widget for EVERY id, device support or
-     * not — the edit-mode expansion. Without it a metric the provider cannot
-     * serve has no widget, so a user could never place it. The ids so
-     * materialised are reported in [DashboardDisplayState.unsupportedIds]; the
-     * caller keeps them out of the live carousel.
+     * Maps a loaded day onto widget models. Every supported metric gets a
+     * widget, empty when absent or ungranted; unsupported ones are dropped.
+     * [includeUnsupported] materialises every id for edit mode and reports
+     * them in [DashboardDisplayState.unsupportedIds].
      */
     fun build(
         data: DashboardData,
@@ -48,9 +37,7 @@ object DashboardPresentationMapper {
         val unsupportedIds = mutableSetOf<DashboardWidgetId>()
         val widgets = buildMap {
             DashboardWidgetId.entries.forEach { widgetId ->
-                // A null supported set means device support was never
-                // established (a fixture, or a day published before the first
-                // load answered): gate nothing.
+                // A null supported set means never established: gate nothing.
                 val isSupported = supportedMetrics == null || widgetId.isSupportedBy(supportedMetrics)
                 if (!isSupported && !includeUnsupported) return@forEach
                 val widget = buildWidget(
@@ -289,9 +276,7 @@ object DashboardPresentationMapper {
         )
         DashboardWidgetId.CAFFEINE -> optionalMetricWidget(
             id = widgetId,
-            // Today headlines the pharmacologically ACTIVE caffeine (it decays
-            // across midnight); consumed-today drops to the subtitle. A past
-            // day keeps intake semantics — "active then" is unknowable now.
+            // Today headlines active caffeine; consumed-today drops to the subtitle.
             value = data.activeCaffeineMg
                 ?.let { DisplayValue(unitFormatter.count(it.roundToInt()), "mg") }
                 ?: data.caffeineGrams?.let { NutritionNutrient.CAFFEINE.displayValue(it, unitFormatter) },
@@ -425,8 +410,7 @@ object DashboardPresentationMapper {
             hasRecentHistory = DashboardMetric.CYCLE in data.recentHistoryMetrics,
             isLoading = isLoading,
         )
-        // No watch paired, no tile: an empty "no data" watch tile would be
-        // noise on every dashboard belonging to someone who owns no watch.
+        // No watch paired, no tile.
         DashboardWidgetId.WATCH -> watch?.let {
             DashboardWidgetDisplayModel(id = widgetId, watch = it, isLoading = isLoading)
         }

@@ -7,21 +7,11 @@ import org.json.JSONArray
 import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
 
 /**
- * Garmin's own per-device state, kept out of the generic `BleDeviceRepository`
- * so that registry carries no Garmin knowledge: the GFDI capability bitmap a
- * watch declared in its last handshake, and which of its files a previous sync
- * already pulled.
- *
- * SharedPreferences-backed and keyed by the registry's `deviceId`. The KEY
- * names (`ble_synced_files_<deviceId>`, `garmin_capabilities_<deviceId>`) are
- * exactly what the Flutter build used — there they lived in
- * `FlutterSharedPreferences` under a `flutter.` prefix; this store uses its
- * OWN prefs file with the un-prefixed names, and phase 5's migrator copies the
- * Flutter values across. Do NOT read `FlutterSharedPreferences` here.
- *
- * Fire-and-forget like the registry (SharedPreferences' async apply), so there
- * is nothing to Result-type. Ordered string lists are encoded as JSON arrays —
- * a `StringSet` would lose the insertion order the synced-file cap depends on.
+ * Garmin's per-device state, kept out of the generic registry: the
+ * capability bitmap from the last handshake, and which files a previous
+ * sync pulled. SharedPreferences-backed, keyed by `deviceId`. The key names
+ * are the Flutter build's; the migrator copies the values across. Do not
+ * read `FlutterSharedPreferences` here. Lists are JSON arrays to keep order.
  */
 class GarminDeviceStateStore(private val prefs: SharedPreferences) {
 
@@ -29,14 +19,10 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
         context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE),
     )
 
-    /**
-     * What the watch declared it can do, from the last handshake. Empty when a
-     * watch has never synced.
-     */
+    /** What the watch declared in its last handshake. Empty if never synced. */
     fun capabilities(deviceId: String): Set<GarminCapability> {
         val raw = prefs.readStringList(capabilitiesPrefsKey(deviceId)) ?: return emptySet()
-        // Matched by WIRE NAME, not index: the enum's order is the bitmap's
-        // order, so storing indexes would rot the moment a flag is named.
+        // Matched by wire name, not index, so naming a flag cannot rot stored data.
         val byName = GarminCapability.entries.associateBy { it.wireName }
         return raw.mapNotNull { byName[it] }.toSet()
     }
@@ -49,19 +35,14 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
         )
     }
 
-    /**
-     * Which of a watch's files a previous sync already pulled, keyed by
-     * `GarminDirectoryEntry.dedupKey`.
-     */
+    /** Files a previous sync pulled, by `GarminDirectoryEntry.dedupKey`. */
     fun syncedFileKeys(deviceId: String): Set<String> =
         prefs.readStringList(syncedKeysPrefsKey(deviceId))?.toSet() ?: emptySet()
 
     fun recordSyncedFileKeys(deviceId: String, keys: Iterable<String>) {
         if (!keys.any()) return
         val prefsKey = syncedKeysPrefsKey(deviceId)
-        // Order matters for the cap: a list keeps insertion order, so trimming
-        // from the front drops the OLDEST keys, which are the least likely to
-        // be re-offered by the watch.
+        // A list keeps insertion order, so trimming from the front drops the oldest keys.
         val existing = prefs.readStringList(prefsKey).orEmpty()
         val existingSet = existing.toHashSet()
         val merged = existing + keys.filterNot { it in existingSet }
@@ -78,22 +59,8 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
     }
 
     /**
-     * Drops everything this store holds for [deviceId] — capabilities and
-     * synced file keys. Called when a watch is forgotten, so a re-pairing
-     * starts clean (re-learning capabilities from a fresh handshake and
-     * re-fetching files rather than trusting a record of a device that is no
-     * longer here).
-     */
-    /**
-     * Whether this watch should be held connected whenever it is in range —
-     * the companion mode the watch was designed around. Default off: a held
-     * link spends watch and phone battery, and that trade is the user's.
-     */
-    /**
-     * Whether the watch still needs the pair-flow completion trio
-     * (PAIR_COMPLETE / SYNC_COMPLETE / SETUP_WIZARD_COMPLETE). Set on
-     * onboarding, cleared once a session has sent it — a factory-fresh watch
-     * sits on its "connect to the app" wizard screen until it hears this.
+     * Whether the watch still needs the pair-flow completion trio. Set on
+     * onboarding, cleared once a session has sent it.
      */
     fun setupWizardPending(deviceId: String): Boolean =
         prefs.getBoolean(setupWizardPrefsKey(deviceId), false)
@@ -102,11 +69,7 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
         prefs.edit { putBoolean(setupWizardPrefsKey(deviceId), pending) }
     }
 
-    /**
-     * Whether the watch should stream live readings over the held link.
-     * Off by default: an open stream keeps the watch's sensor and radio busy,
-     * which is the wearer's battery to spend.
-     */
+    /** Whether the watch streams live readings over the held link. Off by default: it costs battery. */
     fun liveReadings(deviceId: String): Boolean =
         prefs.getBoolean(liveReadingsPrefsKey(deviceId), false)
 
@@ -114,11 +77,7 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
         prefs.edit { putBoolean(liveReadingsPrefsKey(deviceId), enabled) }
     }
 
-    /**
-     * Whether the watch may read the phone's calendar. Off by default: this
-     * is the single most personal thing the app can hand a watch, and it must
-     * never happen because a default said so.
-     */
+    /** Whether the watch may read the phone's calendar. Off by default. */
     fun calendarSync(deviceId: String): Boolean =
         prefs.getBoolean(calendarSyncPrefsKey(deviceId), false)
 
@@ -126,11 +85,7 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
         prefs.edit { putBoolean(calendarSyncPrefsKey(deviceId), enabled) }
     }
 
-    /**
-     * Whether CoMaps guidance followed during a recording is shown on the
-     * watch. Off by default: it is a notification the wrist keeps receiving
-     * for the length of a route, and that is the wearer's to ask for.
-     */
+    /** Whether CoMaps guidance is shown on the watch. Off by default. */
     fun navigationOnWatch(deviceId: String): Boolean =
         prefs.getBoolean(navigationOnWatchPrefsKey(deviceId), false)
 
@@ -139,17 +94,9 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
     }
 
     /**
-     * Whether the link to this watch is held open whenever it is in range.
-     *
-     * **On by default**, unlike everything else here, because it is what a
-     * Garmin watch expects a companion phone to do: weather, find-my-phone,
-     * live readings and guidance on the wrist all ride a held link, and a
-     * wearer who pairs a watch and finds none of it working has no way to
-     * guess that one switch was the reason. It costs battery on both sides,
-     * which is why the card says so and the switch is there to turn off.
-     *
-     * A wearer who does turn it off has that written down, so this default
-     * never reaches them again.
+     * Whether the link is held open whenever the watch is in range. On by
+     * default: weather, find-my-phone, live readings and guidance all ride it.
+     * A wearer who turns it off has that written down.
      */
     fun stayConnected(deviceId: String): Boolean =
         prefs.getBoolean(stayConnectedPrefsKey(deviceId), true)
@@ -159,13 +106,8 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
     }
 
     /**
-     * How often this watch is synced on its own. Off by default: a sync wakes
-     * both radios and spends the wearer's battery, so it stays something they
-     * asked for.
-     *
-     * Stored as MINUTES rather than an ordinal, so an interval this build
-     * offers and a later one drops degrades to off instead of silently
-     * becoming a different schedule.
+     * How often the watch syncs on its own. Off by default. Stored as
+     * minutes, so a dropped interval degrades to off, not another schedule.
      */
     fun autoSyncInterval(deviceId: String): AutoSyncInterval =
         AutoSyncInterval.fromMinutes(prefs.getInt(autoSyncPrefsKey(deviceId), 0))
@@ -205,11 +147,7 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
     companion object {
         const val PREFS_FILE = "garmin_device_state"
 
-        /**
-         * Cap on remembered file keys per watch. A few years of daily monitor,
-         * sleep and HRV files plus activities lands well inside this; the cap
-         * only exists so the list cannot grow without bound.
-         */
+        /** Cap on remembered file keys per watch, so the list cannot grow without bound. */
         private const val MAX_SYNCED_FILE_KEYS = 4000
 
         private fun SharedPreferences.readStringList(key: String): List<String>? {

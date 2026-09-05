@@ -32,14 +32,9 @@ import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 import tech.mmarca.openvitals.ui.theme.HeartColor
 
 /**
- * Heart-rate recovery over time: how far the heart rate fell one minute after each hard
- * effort stopped, and whether it is falling further as the weeks go by.
- *
- * The screen's hardest job is the EMPTY case, which for most people is the usual one. A
- * watch stops recording heart rate the moment a workout ends, so the fall cannot be
- * measured from readings that were never taken — and an empty chart with no explanation
- * reads as a broken app rather than as the truth about the data. So the workouts that
- * could not be measured are counted and shown, not silently dropped.
+ * Heart-rate recovery over time. The empty case is the usual one: a watch
+ * stops recording when a workout ends, so unmeasured workouts are counted
+ * and shown, not dropped.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,9 +70,7 @@ fun HeartRateRecoveryScreen(
         ) { period ->
             val comparable = state.comparable
 
-            // Hard workouts whose recovery could not be measured. NOT dropped: a screen
-            // that quietly showed only the measurable ones would look as though the user
-            // had barely trained, when in fact their device simply stopped recording.
+            // Not dropped: a screen showing only the measurable ones would look like no training.
             val unmeasured = state.readings.size - comparable.size
 
             if (comparable.isEmpty()) {
@@ -98,10 +91,7 @@ fun HeartRateRecoveryScreen(
                         selectedRange = state.selectedRange,
                         period = period,
                         accentColor = HeartColor,
-                        // The average of the falls we could actually measure — never of
-                        // the ones we could not, which are counted separately below
-                        // rather than averaged as zeroes and made to look like a
-                        // collapse in fitness.
+                        // The average of the measured falls only.
                         summaryValue = unitFormatter
                             .heartRate(averageDropBpm(comparable).roundToLong())
                             .text,
@@ -154,8 +144,7 @@ internal fun HeartRateRecoveryEmptyCard(modifier: Modifier = Modifier) {
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(8.dp))
-            // Why it is empty, and what would fill it. Without this the screen looks
-            // broken to the very people it is most often empty for.
+            // Why it is empty, and what would fill it.
             Text(
                 text = stringResource(R.string.heart_rate_recovery_empty_watch),
                 style = MaterialTheme.typography.bodyMedium,

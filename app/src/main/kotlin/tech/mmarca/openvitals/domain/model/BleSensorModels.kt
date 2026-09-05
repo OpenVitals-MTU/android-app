@@ -3,24 +3,13 @@ package tech.mmarca.openvitals.domain.model
 import java.time.Instant
 
 /**
- * What a registered Bluetooth device IS, which decides how the app talks to it.
- *
- * A [SENSOR] streams live values over standard GATT services while a recording
- * runs (heart-rate strap, power meter) and owns [BleSensorCapability]s. A
- * [WATCH] streams nothing: it holds recorded FIT files that are pulled over
- * GFDI on demand, so it carries no capabilities. A [BIKE_COMPUTER] (Garmin
- * Edge) does BOTH: it pulls recorded ride FIT files over GFDI like a watch AND
- * can broadcast live standard-GATT sensor values (heart rate, speed/cadence,
- * power) into a recording like a sensor. The two roles are independent —
- * file-sync keys off [BleSensorDevice.isGarminGfdi] (kind + integration), the
- * live role off a non-empty [BleSensorDevice.capabilities] — so a device can
- * hold either or both.
+ * What a registered Bluetooth device is. A [SENSOR] streams live GATT values
+ * and owns capabilities. A [WATCH] holds FIT files pulled over GFDI. A
+ * [BIKE_COMPUTER] does both. File sync keys off [BleSensorDevice.isGarminGfdi],
+ * the live role off a non-empty [BleSensorDevice.capabilities].
  */
 enum class BleDeviceKind(
-    /**
-     * Persisted form, so renaming the Kotlin identifier can't orphan stored
-     * devices. The Flutter build wrote these exact strings to the registry.
-     */
+    /** Persisted form, so a rename cannot orphan stored devices. */
     val storageName: String,
 ) {
     SENSOR("SENSOR"),
@@ -35,15 +24,9 @@ enum class BleDeviceKind(
 }
 
 /**
- * Which integration owns a [BleDeviceKind.WATCH]. A Garmin watch speaks GFDI
- * over BLE (FIT-file sync, settings tree, find). A WearOS watch (Galaxy,
- * Pixel, …) shares none of that protocol: it is a BLE-discoverable live
- * heart-rate source whose recorded data arrives through Health Connect, not a
- * FIT pull.
- *
- * Null for a plain sensor, and for a Garmin watch stored before this field
- * existed — [BleSensorDevice.isGarminWatch] treats a null-integration watch as
- * Garmin, the only watch integration that existed then.
+ * Which integration owns a [BleDeviceKind.WATCH]. Garmin speaks GFDI; WearOS
+ * is a live heart-rate source whose data arrives via Health Connect. Null
+ * for a sensor, and for a Garmin watch stored before this field existed.
  */
 enum class DeviceIntegration(val storageName: String) {
     GARMIN("GARMIN"),
@@ -82,75 +65,38 @@ data class BleSensorDevice(
     val batteryPercent: Int? = null,
     val batteryUpdatedAt: Instant? = null,
     val addedAt: Instant,
-    /**
-     * Defaulted rather than required so every existing call site — and every
-     * device already in storage, written before this field existed — keeps
-     * meaning what it meant.
-     */
+    /** Defaulted so devices stored before this field existed keep their meaning. */
     val kind: BleDeviceKind = BleDeviceKind.SENSOR,
-    /**
-     * Which integration owns this device when it is a [BleDeviceKind.WATCH].
-     * Null for a sensor, and for a Garmin watch stored before this field
-     * existed — [isGarminWatch] treats a null-integration watch as Garmin.
-     */
+    /** The owning integration for a watch. Null means legacy Garmin. */
     val integration: DeviceIntegration? = null,
-    /**
-     * When this device's recorded files were last pulled. Null for a watch
-     * that has never synced, and always null for a [BleDeviceKind.SENSOR].
-     */
+    /** When recorded files were last pulled. Null for a sensor or a never-synced watch. */
     val lastSyncedAt: Instant? = null,
 ) {
-    /**
-     * Literally a watch — deliberately NOT a bike computer, so an Edge never
-     * renders with watch-only UI (the avatar, the wellness "Data" view).
-     */
+    /** Literally a watch, not a bike computer, so an Edge never gets watch-only UI. */
     val isWatch: Boolean
         get() = kind == BleDeviceKind.WATCH
 
-    /**
-     * A Garmin Edge bike computer: a GFDI file-sync device (like a watch) that
-     * is also a candidate live BLE sensor (unlike a watch).
-     */
+    /** A Garmin Edge: a GFDI sync device that is also a candidate live sensor. */
     val isBikeComputer: Boolean
         get() = kind == BleDeviceKind.BIKE_COMPUTER
 
-    /**
-     * A device the app drives over Garmin's GFDI protocol (FIT sync, settings,
-     * find) — a watch OR a bike computer, but never a WearOS watch. This is the
-     * file-sync eligibility concept; it depends on [kind] + [integration] and
-     * is independent of [capabilities]. A null-integration watch is legacy
-     * Garmin — the sole GFDI integration before WearOS.
-     */
+    /** Driven over GFDI: a Garmin watch or bike computer, never WearOS. The file-sync concept. */
     val isGarminGfdi: Boolean
         get() = (kind == BleDeviceKind.WATCH || kind == BleDeviceKind.BIKE_COMPUTER) &&
             integration != DeviceIntegration.WEAROS
 
-    /**
-     * A watch the app drives over Garmin's GFDI protocol. Use where the UI
-     * genuinely means "a watch"; for file-sync eligibility use [isGarminGfdi],
-     * which also admits an Edge bike computer.
-     */
+    /** A Garmin watch. For file-sync eligibility use [isGarminGfdi]. */
     val isGarminWatch: Boolean
         get() = isWatch && integration != DeviceIntegration.WEAROS
 
-    /**
-     * A WearOS smartwatch (Galaxy, Pixel, …): a watch with no Garmin protocol —
-     * live heart rate over BLE, recorded data via Health Connect.
-     */
+    /** A WearOS watch: live heart rate over BLE, recorded data via Health Connect. */
     val isWearosWatch: Boolean
         get() = isWatch && integration == DeviceIntegration.WEAROS
 
     /**
-     * Can hold live [BleSensorCapability]s and take part in a recording: a
-     * plain [BleDeviceKind.SENSOR], a [BleDeviceKind.BIKE_COMPUTER]
-     * broadcasting standard GATT, or a [BleDeviceKind.WATCH] the user added
-     * through the Sensors path as well — a Garmin in "broadcast heart rate"
-     * mode exposes the standard HR service like any strap. Gates the
-     * Sensors-screen listing and capability UI.
-     *
-     * The capability set is what separates the last case from a sync-only
-     * watch: the watch path registers with none, so a watch only becomes live
-     * when the Sensors path gives it one.
+     * Can hold live capabilities and join a recording: a sensor, a bike
+     * computer, or a watch the user also added through the Sensors path.
+     * A sync-only watch registers with no capabilities.
      */
     val isLiveSensorCapable: Boolean
         get() = kind == BleDeviceKind.SENSOR ||
@@ -234,12 +180,8 @@ data class BleRecordingSampleBuffer(
             stepsCadenceSamples.isEmpty()
 
     /**
-     * The span the recorded samples actually cover, or null when there are
-     * none. The session written to Health Connect has to CONTAIN this: Health
-     * Connect clamps a sample that falls outside its session into the bounds,
-     * so a session that ends even a second early does not drop the samples past
-     * its end — it stacks every one of them onto the closing instant, which is
-     * worse than losing them.
+     * The span the samples cover, or null. The session must contain it:
+     * Health Connect stacks out-of-bounds samples onto the closing instant.
      */
     fun firstSampleTime(): Instant? = sampleTimes().minOrNull()
 
@@ -283,7 +225,7 @@ data class BleRecordingSampleBuffer(
         )
 
     companion object {
-        // ~6 hours at 1 Hz; applied only when finishing a recording as a safety cap.
+        // About 6 hours at 1 Hz; a safety cap when finishing a recording.
         const val MaxSamplesPerSeries = 21_600
     }
 }
@@ -294,16 +236,9 @@ data class BleDiscoveredDevice(
     val rssi: Int?,
     val suggestedCapabilities: Set<BleSensorCapability>,
     /**
-     * The advertisement carried a member service that an integration's
-     * `DeviceScanClassifier` recognised — the scanner's signal that this is a
-     * file-sync watch to onboard rather than a live sensor. A single
-     * integration (Garmin) claims these today; the per-integration verdict
-     * lives in the classifier, so this generic model holds the evidence, not
-     * the classification.
-     *
-     * Deliberately the ADVERTISED member service, not a GFDI/transport UUID:
-     * those are GATT services, invisible until connected, so no advertisement
-     * ever carries them.
+     * The advertisement carried a member service a classifier recognised:
+     * a file-sync watch to onboard. The advertised service, not a GATT UUID,
+     * which no advertisement carries.
      */
     val advertisesSyncService: Boolean = false,
 )

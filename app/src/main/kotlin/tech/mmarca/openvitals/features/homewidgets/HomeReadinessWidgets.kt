@@ -89,11 +89,8 @@ class HomeDailyReadinessWidgetReceiver : UpdatingHomeWidgetReceiver() {
 class HomeBodyEnergyWidget : GlanceAppWidget() {
     override val stateDefinition = HomeMetricWidgetState.definition
 
-    // EXACT, not Responsive: the curve is drawn to fit the width it is given,
-    // so it needs the width the widget actually has. Responsive reports the
-    // largest DECLARED size that fits, which on a 309dp widget is the 220dp
-    // bucket — and the plot would then be drawn far narrower than the card it
-    // sits in, with the rest of it empty.
+    // Exact, not Responsive: the curve is drawn to the width the widget has.
+    // Responsive reports the largest declared bucket, far narrower than the card.
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -167,17 +164,9 @@ abstract class UpdatingHomeWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 /**
- * A read that did not happen leaves the tile alone.
- *
- * The periodic tick fires every 30 minutes whatever the phone is doing, so it
- * regularly lands while Health Connect is mid-update or Doze has slowed the
- * read past its budget. Writing the failure snapshot then would replace real
- * numbers with rows of `--` and the word "No data" — a home screen telling the
- * user they slept nothing and walked nowhere on a day they did, and holding
- * that lie until a later tick happens to succeed. The last good snapshot is
- * stale; the failure snapshot is wrong, and only one of the two is worth
- * showing. The widget is still told to redraw either way, so a state written
- * by some other path is picked up.
+ * A read that did not happen leaves the tile alone. The periodic tick often
+ * lands mid-update or under Doze; writing the failure snapshot would replace
+ * real numbers with "No data". The widget still redraws.
  */
 suspend fun refreshDailyReadinessWidget(context: Context, appWidgetId: Int) {
     if (!hasAppWidgetInfo(context, appWidgetId)) return
@@ -205,18 +194,10 @@ suspend fun refreshBodyEnergyWidget(context: Context, appWidgetId: Int) {
 }
 
 /**
- * Whether a freshly built Body Energy snapshot may replace [previous], the one
- * the tile is showing — the [candidate] to write, or null to keep the tile as
- * it is.
- *
- * A timeline whose seed DEFAULTED (no previous day could be found to carry
- * from) is still built from real data, so it produces a plausible-looking tile
- * whose "Start" is the neutral 50 rather than yesterday's end. When the tile
- * is already showing a chained snapshot for the same day, those stale-but-right
- * numbers win over the fresh-but-wrong ones; the next refresh that resolves the
- * chain replaces them. A different route means a different day (the route
- * carries the date), and a rowless previous snapshot is the not-yet-configured
- * fallback — both always give way.
+ * Whether a fresh Body Energy snapshot may replace [previous]: the
+ * [candidate] to write, or null to keep the tile. A snapshot whose seed
+ * defaulted loses to a chained one for the same day. A different route or a
+ * rowless previous always gives way.
  */
 internal fun bodyEnergySnapshotToWrite(
     candidate: HomeMetricWidgetSnapshot,
@@ -257,16 +238,9 @@ private fun HomeWidgetContentFromState(fallbackTitle: String) {
 }
 
 /**
- * Body Energy: the numbers, and the day's curve beside them.
- *
- * One layout at every size rather than a stacked variant for tall widgets. The
- * numbers are what the widget is for and the curve is context around them, so
- * the text column keeps what it needs and the curve takes the whole of the
- * rest — all the leftover width, all the height. Making it wider or taller
- * grows the plot; making it narrower shrinks the plot, and nothing else moves.
- *
- * Only when the leftover is too thin to hold a shape does the plot go, and the
- * tile falls back to the plain text layout.
+ * Body Energy: the numbers, and the day's curve beside them. One layout at
+ * every size: the text column keeps what it needs and the curve takes the
+ * rest. Too thin a leftover drops the plot for the text layout.
  */
 @Composable
 private fun HomeBodyEnergyContentFromState(fallbackTitle: String) {
@@ -282,8 +256,7 @@ private fun HomeBodyEnergyContentFromState(fallbackTitle: String) {
             route = Screen.Dashboard.route,
         )
 
-    // Sized to the widest line it holds ("Charged: +34" at 11sp) rather than
-    // padded out: every dp kept here is a dp the curve does not get.
+    // Sized to the widest line ("Charged: +34" at 11sp); every dp here is taken from the curve.
     val textWidth = 108.dp
     val gap = 10.dp
     val plotWidth = size.width.value - 2 * BodyEnergyPadding.value - textWidth.value - gap.value
@@ -341,8 +314,7 @@ private fun HomeBodyEnergyContentFromState(fallbackTitle: String) {
                     ),
                 )
             }
-            // Only where there is height to hold them. On a short widget these
-            // are what gives way, not the score or the curve.
+            // Only where there is height. On a short widget these give way first.
             if (plotHeight >= BodyEnergyRowsMinHeight) {
                 snapshot.rows.take(2).forEach { row ->
                     Text(
@@ -360,8 +332,7 @@ private fun HomeBodyEnergyContentFromState(fallbackTitle: String) {
         Spacer(modifier = GlanceModifier.width(gap))
         Image(
             provider = ImageProvider(plot),
-            // Described by what it shows, not as "chart": a screen reader
-            // saying "39 Low" reads the same thing the sighted user does.
+            // Described by what it shows, so a screen reader reads "39 Low".
             contentDescription = "${snapshot.value} ${snapshot.subtitle}".trim(),
             contentScale = ContentScale.FillBounds,
             modifier = GlanceModifier.width(plotWidth.dp).height(plotHeight.dp),
@@ -577,20 +548,14 @@ private suspend fun loadDailyReadinessSnapshot(context: Context): HomeMetricWidg
         buildDailyReadinessSnapshot(context, insight)
     }.getOrNull()
 
-/**
- * The Daily Readiness widget's snapshot, from an already-loaded insight.
- *
- * Split out of [loadDailyReadinessSnapshot] so the shape of the tile can be
- * pinned without a dashboard load behind it.
- */
+/** The Daily Readiness snapshot from a loaded insight. Split out so tests can pin its shape. */
 internal fun buildDailyReadinessSnapshot(
     context: Context,
     insight: DailyReadinessInsight?,
     date: LocalDate = LocalDate.now(),
 ): HomeMetricWidgetSnapshot {
     val title = context.getString(R.string.screen_daily_readiness)
-    // The readiness verdict lives on the Body Energy screen since the merge, so
-    // that is where the widget lands.
+    // The readiness verdict lives on the Body Energy screen.
     val route = Screen.BodyEnergyDetails.createRoute(date.toString())
     if (insight == null || insight.state == ReadinessState.UNKNOWN) {
         return fallbackStatusSnapshot(context, title, route)
@@ -646,16 +611,12 @@ internal fun buildBodyEnergySnapshot(
 }
 
 /**
- * Thins [values] down to at most [MaxHomeWidgetSeriesPoints], evenly.
- *
- * The LAST value always survives. It is the one the widget also prints as the
- * current score, and a plot whose line ended somewhere other than the number
- * beside it would be visibly disagreeing with itself.
+ * Thins [values] to at most [MaxHomeWidgetSeriesPoints], evenly. The last
+ * value always survives: it is the score printed beside the plot.
  */
 internal fun homeWidgetSeries(values: List<Int>): List<Int> {
     if (values.size <= MaxHomeWidgetSeriesPoints) return values.toList()
-    // Spread the sample points across the whole range rather than taking every
-    // Nth from the start, which would stop short of the end by up to N.
+    // Spread across the whole range, not every Nth from the start.
     val step = (values.size - 1).toDouble() / (MaxHomeWidgetSeriesPoints - 1)
     return List(MaxHomeWidgetSeriesPoints) { index -> values[(index * step).roundToInt()] }
 }
@@ -664,10 +625,7 @@ internal const val MaxHomeWidgetSeriesPoints = 48
 
 /**
  * Null when the dashboard read failed; see [refreshDailyReadinessWidget].
- *
- * The readiness and Body Energy sub-reads are not held to that standard: they
- * are two rows of nine, and a tile carrying seven real numbers and two `--`
- * rows is worth drawing.
+ * The readiness and Body Energy sub-reads may fail: two rows of nine.
  */
 private suspend fun loadTodayVitalsSnapshot(context: Context): HomeMetricWidgetSnapshot? {
     val dashboardResult = loadDashboardResult(context, TodayVitalsMetrics).getOrNull() ?: return null
@@ -680,12 +638,7 @@ private suspend fun loadTodayVitalsSnapshot(context: Context): HomeMetricWidgetS
     )
 }
 
-/**
- * The Today widget's row list, from already-loaded dashboard data.
- *
- * The row order is the widget's contract — it is what the user reads top to
- * bottom — so it lives in one pure function rather than inside the loader.
- */
+/** The Today widget's rows from loaded data. Row order is the contract, so it lives here. */
 internal fun buildTodayVitalsSnapshot(
     context: Context,
     data: DashboardData,
@@ -717,13 +670,7 @@ internal fun buildTodayVitalsSnapshot(
     )
 }
 
-/**
- * Marks a read that ran past [WidgetLoadTimeoutMillis] as a failure.
- *
- * A timeout used to fall out of these loaders as a null, which is the same
- * value a genuinely empty day produces — so the two were drawn the same. They
- * are not the same, and only one of them may overwrite a good tile.
- */
+/** A read past [WidgetLoadTimeoutMillis] is a failure, not an empty day, and must not overwrite a good tile. */
 private class WidgetLoadTimeoutException : Exception("The widget read ran out of time")
 
 private suspend fun loadReadinessInsight(context: Context): Result<DailyReadinessInsight?> =
@@ -754,8 +701,7 @@ private suspend fun loadBodyEnergyTimeline(context: Context): Result<BodyEnergyT
             HomeMetricWidgetEntryPoint::class.java,
         )
         val today = LocalDate.now()
-        // The timeout wraps the LOAD, not the day it produced: a day with
-        // nothing on it is a legitimate null result and must stay a success.
+        // The timeout wraps the load, not the day it produced: an empty day is a success.
         val result = withTimeoutOrNull(WidgetLoadTimeoutMillis) {
             entryPoint.bodyEnergyRepository().loadTimeline(
                 BodyEnergyTimelineQuery(

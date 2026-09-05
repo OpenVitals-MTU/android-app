@@ -4,19 +4,10 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * The watch's own settings tree, over the protobuf settings service.
- *
- * The app defines none of this: the watch sends a MENU — screens, entries,
- * titles and option lists — already translated into whatever locale it is
- * handed. This layer asks for a screen and reports what came back; deciding
- * how to draw it is somebody else's job.
- *
- * Field numbers from Gadgetbridge's `gdi_settings_service.proto` (AGPLv3).
- * That schema is older than this watch's firmware, so anything unrecognised is
- * carried rather than dropped — a settings tree read wrongly produces a screen
- * of plausible but incorrect controls, which is worse than one that is missing.
- *
- * Port of the Flutter build's `garmin_settings_service.dart`, byte for byte.
+ * The watch's settings tree over the protobuf settings service. The watch
+ * sends the menu, translated; this layer asks for a screen and reports it.
+ * Field numbers from Gadgetbridge's `gdi_settings_service.proto` (AGPLv3),
+ * which is older than this firmware, so unknown fields are carried, not dropped.
  */
 object GarminSettingsService {
 
@@ -53,9 +44,7 @@ object GarminSettingsService {
     private const val CHANGE_POSITION = 11
     private const val POSITION_DELETE = 2
 
-    // Where each response nests the thing it is about, and where that thing
-    // names its screen. Read off a vívoactive 5: the definition and state
-    // responses use field 2, the change response field 3.
+    // Where each response nests its screen. The change response uses field 3.
     private const val RESPONSE_INNER = 2
     private const val CHANGE_RESPONSE_INNER = 3
     private const val RESPONSE_SCREEN_ID = 1
@@ -68,24 +57,12 @@ object GarminSettingsService {
     const val ROOT_SCREEN_ID = 36352
 
     /**
-     * The Alarms list, measured on a vívoactive 5 (Settings → Clocks →
-     * Alarms).
-     *
-     * A well-known id rather than a walk from the root: reaching it by walking
-     * costs four round trips every time somebody taps Alarms, and the id has
-     * been stable across every read of this watch. If a future model moves it,
-     * the screen will come back empty rather than wrong — which is why the
-     * caller reports "the watch sent nothing" instead of inventing a list.
+     * The Alarms list, measured on a vívoactive 5. A well-known id saves
+     * four round trips; if it moves, the screen comes back empty, not wrong.
      */
     const val ALARMS_SCREEN_ID = 68
 
-    /**
-     * How long the watch may take to build a screen.
-     *
-     * Measured: a root definition arrived after more than ten seconds, so the
-     * transport's default timed the request out and a later, unrelated
-     * settings message was mistaken for the answer.
-     */
+    /** How long the watch may take to build a screen. A root definition took over ten seconds. */
     val REPLY_TIMEOUT: Duration = 30.seconds
 
     /** The SettingsService field a reply of each kind arrives in. */
@@ -93,28 +70,15 @@ object GarminSettingsService {
     const val STATE_RESPONSE_FIELD = STATE_RESPONSE
     const val CHANGE_RESPONSE_FIELD = CHANGE_RESPONSE
 
-    /**
-     * Whether [reply] carries the response field [responseField].
-     *
-     * Correlating on "is this a settings message" was not enough: the watch
-     * sends several, and the first to arrive was a five-byte one on field 7
-     * that answered nothing we asked.
-     */
+    /** Whether [reply] carries [responseField]. The watch sends several unprompted. */
     fun carries(reply: ByteArray?, responseField: Int): Boolean {
         val service = unwrap(reply) ?: return false
         return protobufField(readProtobuf(service), responseField) != null
     }
 
     /**
-     * Which SCREEN a reply is about, or null if it does not say.
-     *
-     * Every response nests the screen it describes at the same place, which is
-     * the only way to tell one from another: the watch retransmits anything it
-     * thinks went unacknowledged, so a definition for a screen asked about
-     * minutes ago can arrive while a different one is pending. Matching on the
-     * response field alone handed the alarm LIST's layout back as the answer
-     * for one alarm's screen, which drew a list of rows whose titles and
-     * values came from two different places.
+     * Which screen a reply is about, or null. The watch retransmits old
+     * definitions, so the response field alone is not enough.
      */
     fun screenIdOf(reply: ByteArray?, responseField: Int): Int? {
         val service = unwrap(reply) ?: return null
@@ -126,12 +90,7 @@ object GarminSettingsService {
         return protobufField(readProtobuf(inner), RESPONSE_SCREEN_ID)?.varint?.toInt()
     }
 
-    /**
-     * Opens the settings service for a locale.
-     *
-     * The watch translates every title it later sends using this, so it
-     * decides what language the whole tree comes back in.
-     */
+    /** Opens the settings service for a locale, which decides the tree's language. */
     fun init(language: String = "en_US", region: String = "us"): ByteArray {
         val request = ProtobufWriter()
             .string(INIT_LANGUAGE, language)
@@ -152,13 +111,7 @@ object GarminSettingsService {
         return smart(service)
     }
 
-    /**
-     * Asks for one screen's STATE — the current value behind each entry.
-     *
-     * Separate from the definition because the two change on different clocks:
-     * the layout is fixed for a firmware, the values move as the watch is
-     * used.
-     */
+    /** Asks for one screen's state: the value behind each entry. */
     fun screenState(screenId: Int): ByteArray {
         val request = ProtobufWriter().varint(REQ_SCREEN_ID, screenId).toBytes()
         val service = ProtobufWriter().nested(STATE_REQUEST, request).toBytes()
@@ -187,16 +140,8 @@ object GarminSettingsService {
     }
 
     /**
-     * Changes ONE entry on ONE screen.
-     *
-     * The only write in this whole stack — everything else reads. A malformed
-     * change does not fail politely: it is applied to a real watch someone
-     * depends on, so each value kind is a separate builder rather than one
-     * generic setter that could put a time in a switch's field.
-     *
-     * The reply carries a status AND the screen's new state, so a caller can
-     * confirm what the watch actually did rather than assume the request
-     * landed.
+     * Changes one entry on one screen. The only write in this stack, so each
+     * value kind has its own builder. The reply carries a status and the new state.
      */
     fun changeSwitch(screenId: Int, entryId: Int, value: Boolean): ByteArray =
         change(
@@ -206,10 +151,7 @@ object GarminSettingsService {
             ProtobufWriter().varint(1, if (value) 1 else 0).toBytes(),
         )
 
-    /**
-     * [index] is a position in the option list the DEFINITION supplied for
-     * this entry — never a guessed ordinal.
-     */
+    /** [index] is a position in the option list the definition supplied. */
     fun changeOption(screenId: Int, entryId: Int, index: Int): ByteArray =
         change(screenId, entryId, CHANGE_OPTION, ProtobufWriter().varint(1, index).toBytes())
 
@@ -229,12 +171,8 @@ object GarminSettingsService {
     }
 
     /**
-     * Activates a row that deletes something.
-     *
-     * The row carries no target at all — it is a button, not a setting — and
-     * `ChangeRequest` has no field for "activate this". `Position { index,
-     * delete }` is its only delete-shaped member, and a vívoactive 5 accepted
-     * it and removed the alarm, so that is what this sends.
+     * Activates a delete row. `ChangeRequest` has no "activate" field;
+     * `Position { index, delete }` is what a vívoactive 5 accepted.
      */
     fun changeDelete(screenId: Int, entryId: Int): ByteArray =
         change(
@@ -262,13 +200,7 @@ object GarminSettingsService {
         return smart(service)
     }
 
-    /**
-     * What the watch made of a change: null when it did not answer with one.
-     *
-     * SUCCESS is 0 here — unlike the find service, where OK is 100. Two
-     * enums, two meanings for zero, which is exactly the kind of thing that
-     * turns a refusal into a silent success.
-     */
+    /** What the watch made of a change, or null. SUCCESS is 0 here, unlike find's 100. */
     fun changeSucceeded(reply: ByteArray?): Boolean? {
         val service = unwrap(reply) ?: return null
         val response =
@@ -293,19 +225,14 @@ object GarminSettingsService {
             val fields = readProtobuf(entry)
             val target = protobufField(fields, ENTRY_TARGET)?.bytes ?: continue
             val targetFields = readProtobuf(target)
-            // Types 0 and 9 are both "another screen" — 9 carries an option
-            // list with it, which is what an alarm's own screen is. Type 6
-            // opens an activity ON the watch and 7 is hidden; neither can be
-            // walked into.
+            // Types 0 and 9 are both another screen. 6 opens something on the
+            // watch and 7 is hidden.
             val targetType = protobufField(targetFields, TARGET_TYPE)?.varint
             if (targetType != 0L && targetType != TARGET_SUBSCREEN_WITH_OPTIONS.toLong()) {
                 continue
             }
             val screenId = protobufField(targetFields, TARGET_SUBSCREEN)?.varint?.toInt()
-            // Screen zero is how an EMPTY slot is written — an alarm list
-            // reserves a row per slot and points the unused ones at nothing.
-            // Requesting it would ask the watch for a screen that does not
-            // exist.
+            // Screen zero is an empty slot.
             if (screenId == null || screenId == 0) continue
 
             var title: String? = null
@@ -319,14 +246,7 @@ object GarminSettingsService {
         return out
     }
 
-    /**
-     * Prints a reply's structure, field by field, without interpreting it.
-     *
-     * The point of the first exchange is to SEE what the watch sends. Naming
-     * the fields we think we recognise while still showing everything else is
-     * what separates "the schema matches" from "the schema is close enough to
-     * look like it matches".
-     */
+    /** Prints a reply's structure field by field, naming what is recognised. */
     fun describe(payload: ByteArray, indent: String = "  ") {
         for (field in readProtobuf(payload)) {
             val bytes = field.bytes
@@ -350,11 +270,7 @@ object GarminSettingsService {
         }
     }
 
-    /**
-     * Printable ASCII only — the watch sends titles as UTF-8 strings, and
-     * guessing that arbitrary bytes are text turns a nested message into
-     * mojibake.
-     */
+    /** Printable ASCII only; guessing text turns nested messages into mojibake. */
     private fun asText(bytes: ByteArray): String? {
         if (bytes.isEmpty()) return null
         for (byte in bytes) {

@@ -10,8 +10,7 @@ import org.junit.Test
 class PeriodTitleTest {
     private val today = LocalDate.of(2026, 6, 10)
 
-    // The dated labels run through DateTimeFormatter, so the month/day names are
-    // locale-sensitive; the titles themselves are hard-coded English.
+    // The dated labels are locale-sensitive; the titles themselves are hard-coded English.
     private var previousLocale: Locale = Locale.getDefault()
 
     @Before
@@ -126,9 +125,7 @@ class PeriodTitleTest {
 
     @Test
     fun pastRollingPeriodsReadAsTheDatedSpanTheyCover() {
-        // A rolling month that no longer ends today is a 30-day span, not the
-        // single calendar month its start falls in ("April 2026" for a mostly-May
-        // window).
+        // A rolling month that no longer ends today is a 30-day span, not the calendar month its start falls in.
         assertEquals(
             "12 Apr – 11 May 2026",
             periodTitle(

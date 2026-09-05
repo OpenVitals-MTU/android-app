@@ -12,10 +12,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * A night split by a wake between 60 min and 3 h (the screenshot's 01:22-05:18
- * | 07:34-09:38) is one night whose segments must combine into a continuous
- * stage timeline — the gap filled as out-of-bed — or the day view hides the
- * hypnogram ("only partly staged") and the week/month bar shows a hole.
+ * A night split by a wake between 60 min and 3 h is one night whose segments combine into a
+ * continuous timeline, the gap filled as out-of-bed.
  */
 class SleepSplitNightTest {
 
@@ -95,11 +93,7 @@ class SleepSplitNightTest {
         assertFalse(stages.any { it.stageType == SleepStage.STAGE_OUT_OF_BED })
     }
 
-    /**
-     * The gap is time out of bed, so it must not land in the Awake row of "Share of
-     * time in bed", nor in the score's wake-after-sleep-onset. Typing it STAGE_AWAKE
-     * put the whole 2h16 there and reported it as restless time in bed.
-     */
+    /** The gap is time out of bed, not awake time in bed. Typing it STAGE_AWAKE reported 2h16 of restless bed. */
     @Test fun `the wake gap is not counted as awake time`() {
         val stages = combineNightStages(listOf(segment1, segment2), maxGap = SleepNapGap)
 
@@ -107,8 +101,7 @@ class SleepSplitNightTest {
     }
 
     @Test fun `the split night is reliable once its gap is filled`() {
-        // Before the fix the combined night spanned the gap without a stage there,
-        // so coverage fell below 0.5 and the hypnogram was hidden.
+        // Before the fix coverage fell below 0.5 and the hypnogram was hidden.
         val summary = dailySleepSummary(
             listOf(segment1, segment2),
             LocalDate.of(2026, 7, 19),

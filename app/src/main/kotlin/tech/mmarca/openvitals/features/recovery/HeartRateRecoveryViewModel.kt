@@ -39,26 +39,13 @@ import tech.mmarca.openvitals.domain.insights.heartRateRecoveryWindowFor
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 
-/**
- * Sessions shorter than this cannot have had a recovery worth measuring — and reading
- * heart rate for every 90-second entry in a busy month is a lot of Health Connect calls
- * for nothing.
- */
+/** Shorter sessions cannot have a recovery worth measuring, and each costs a read. */
 private val minimumHeartRateRecoverySessionDuration: Duration = Duration.ofMinutes(5)
 
-/**
- * How many sessions the heart-rate reads fan out over at once. The Health Connect layer
- * already serializes reads; the chunk exists so a year of sessions does not hold every
- * pending read's samples in memory at once.
- */
+/** How many sessions the reads fan out over at once, to bound memory. */
 private const val heartRateRecoveryReadConcurrency = 8
 
-/**
- * The ceiling on how many sessions a period will look at. Rather than let the screen
- * crawl, the newest are taken and the fact is REPORTED
- * ([HeartRateRecoveryUiState.truncated]) — a silently short chart is a chart that lies
- * about what it looked at.
- */
+/** The most sessions a period looks at. The newest are taken and the truncation is reported. */
 internal const val maxHeartRateRecoverySessions = 400
 
 /** How far back of the period end the observed maximum heart rate is looked for. */
@@ -81,32 +68,22 @@ data class HeartRateRecoveryUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
 
-    /**
-     * Every guided recovery test in the period, newest first, whether or not its
-     * recovery could be measured. The ones that could NOT are the point: a screen that
-     * quietly dropped them would look like the user simply had not trained.
-     */
+    /** Every guided test in the period, newest first, measurable or not. The unmeasured ones matter. */
     val readings: List<HeartRateRecoverySessionReading> = emptyList(),
 
     /** The period held more sessions than the cap and only the most recent were read. */
     val truncated: Boolean = false,
     val error: ScreenError? = null,
 ) {
-    /**
-     * The ones that may be plotted: a real, comparable fall with a one-minute mark in
-     * it. On watch data this is commonly none of them, and the screen has to say so
-     * rather than draw an empty chart.
-     */
+    /** The ones that may be plotted: a comparable fall with a one-minute mark. Often none on watch data. */
     val comparable: List<HeartRateRecoverySessionReading>
         get() = readings.filter { it.reading.isComparable }
 }
 
 /**
- * The read path for the heart-rate-recovery history.
- *
- * Nothing is stored. Every point on this screen is recomputed, on the spot, from the
- * heart-rate samples Health Connect holds — the same pure function the single-workout
- * card uses, so the two can never disagree about the same workout.
+ * The read path for the recovery history. Nothing is stored: every point
+ * is recomputed from Health Connect samples by the same function the
+ * single-workout card uses.
  */
 @HiltViewModel
 class HeartRateRecoveryViewModel(
@@ -246,9 +223,7 @@ class HeartRateRecoveryViewModel(
         val window = query.windows.current
         val workouts = activityRepository.loadWorkouts(window.start, window.end)
 
-        // Only guided recovery tests are measurable: a workout with no abrupt-stop mark
-        // (a qualifying trailing rest segment) is not a recovery reading and must not
-        // count towards the "unmeasured" tally or cost a heart-rate read.
+        // Only guided tests are measurable; other workouts cost no read.
         val candidates = workouts
             .filter { workout ->
                 Duration.between(workout.startTime, workout.endTime) >=
@@ -263,9 +238,7 @@ class HeartRateRecoveryViewModel(
             return PeriodData(readings = emptyList(), truncated = truncated)
         }
 
-        // Both are worth asking for once for the whole period rather than per workout.
-        // The observed maximum decides, together with the resting rate, whether a peak
-        // counts as near-maximal — one daily-summary read covers the trailing 90 days.
+        // Asked once for the whole period: the observed maximum covers the trailing 90 days.
         val profile = bodyProfileProvider()
         val observedMaxHeartRateBpm = observedMaxHeartRate(window.end)
         val restingHeartRateBpm = profile.restingHeartRateBpm
@@ -300,8 +273,7 @@ class HeartRateRecoveryViewModel(
     ): HeartRateRecoverySessionReading {
         val window = heartRateRecoveryWindowFor(workout)
 
-        // A failed or empty read is not an error here: it is the ordinary answer for a
-        // watch that stopped recording when the workout ended.
+        // A failed or empty read is the ordinary answer for a watch that stopped recording.
         val samples = if (window == null) {
             emptyList()
         } else {

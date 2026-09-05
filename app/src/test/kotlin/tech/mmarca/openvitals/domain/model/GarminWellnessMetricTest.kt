@@ -8,8 +8,7 @@ class GarminWellnessMetricTest {
 
     @Test
     fun `storage names match the Flutter drift rows exactly`() {
-        // Phase 5 imports the preserved drift file 1:1, so these strings must
-        // be byte-identical to what the Flutter build stored.
+        // The preserved drift file imports 1:1, so these strings must match what the Flutter build stored.
         val expected = mapOf(
             GarminWellnessMetric.STRESS to "stress",
             GarminWellnessMetric.BODY_ENERGY to "body_energy",

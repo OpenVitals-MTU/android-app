@@ -6,14 +6,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * `AppNavigation` decides what the app bar shows by comparing the live destination against these
- * routes, and it strips the query first (`route.substringBefore('?')`) because a destination
- * registered with optional arguments reports them as part of its own pattern.
- *
- * [Screen.ActivityEntry] is the one screen that bakes a query into its route, so comparing the
- * stripped live route against its full [Screen.route] never matched. Everything the app bar keys
- * on that screen fell through in silence: no title, no edit toggle, no outdoor-mode toggle, and
- * the top bar stayed on screen in the recording focus mode that exists to hide it.
+ * `AppNavigation` compares the live destination against these routes after stripping the query.
+ * [Screen.ActivityEntry] bakes a query into its route, so it never matched and the app bar
+ * fell through: no title, no toggles, top bar visible in focus mode.
  */
 class ScreenRouteMatchingTest {
 
@@ -36,8 +31,7 @@ class ScreenRouteMatchingTest {
 
     @Test
     fun `no two screens share a base path`() {
-        // Matching happens on the base path, so a collision would make two screens
-        // indistinguishable to every app-bar decision.
+        // Matching happens on the base path, so a collision makes two screens indistinguishable.
         val byBasePath = AllScreens.groupBy { it.basePath }.filterValues { it.size > 1 }
 
         assertTrue(

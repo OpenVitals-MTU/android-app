@@ -54,11 +54,7 @@ class VitalsRepositoryImpl @Inject constructor(
     companion object {
         private const val TAG = "VitalsRepository"
 
-        /**
-         * Per-metric budget for the overview's daily reads. Generous next to a
-         * healthy read (sparse metrics finish in well under a second) yet far
-         * inside anyone's patience for the whole screen.
-         */
+        /** Per-metric budget for the overview's daily reads. */
         private const val VitalsMetricBudgetMillis = 6_000L
     }
 
@@ -199,15 +195,9 @@ class VitalsRepositoryImpl @Inject constructor(
     }
 
     /**
-     * The non-day overview load: one aggregated point per local day per metric,
-     * plus each metric's true latest reading in the window for the cards.
-     *
-     * Every daily read gets its own time budget. A densely sampled metric (a
-     * year of continuous SpO2 or respiratory rate) can take the better part of
-     * a minute to read raw; when the combined load was all-or-nothing, that one
-     * metric failed the whole screen. Now it costs its own card — the metric
-     * lands in [VitalsPeriodData.timedOutMetrics] and everything else renders.
-     * The latest reads stay unbudgeted: at `maxRecords = 1` they are near-free.
+     * The overview load: one point per local day per metric, plus each
+     * metric's latest reading. Every daily read has its own budget, so a
+     * dense metric costs its own card, not the screen.
      */
     private suspend fun loadOverviewDailyVitals(
         start: LocalDate,
@@ -303,11 +293,7 @@ class VitalsRepositoryImpl @Inject constructor(
         )
     }
 
-    /**
-     * The cache-first daily read for one concrete vitals metric — the single
-     * body behind both the overview's budgeted lambdas and the public
-     * [loadDailyVitals] range read.
-     */
+    /** The cache-first daily read for one metric, behind the overview and [loadDailyVitals]. */
     private suspend fun dailyVitalsCore(
         metric: VitalsPeriodMetric,
         start: LocalDate,
@@ -379,11 +365,9 @@ class VitalsRepositoryImpl @Inject constructor(
     }
 
     /**
-     * The cached daily points for one metric, or null to fall through to the
-     * live read. Cursor presence is the entire freshness model — the sync
-     * services rebuild or drain it; nothing here checks age. Ranges predating
-     * the lookback window fall through too: cached emptiness there would be
-     * a lie.
+     * The cached daily points, or null to fall through to the live read.
+     * Cursor presence is the whole freshness model. Ranges before the
+     * lookback window fall through too.
      */
     private suspend fun cachedDaily(key: String, start: LocalDate, end: LocalDate): List<DailyVitalPoint>? {
         val dao = cacheDao ?: return null
@@ -418,8 +402,7 @@ class VitalsRepositoryImpl @Inject constructor(
         VitalsMeasurementType.SPO2 -> VitalsCacheKeys.SPO2
         VitalsMeasurementType.RESPIRATORY_RATE -> VitalsCacheKeys.RESPIRATORY_RATE
         VitalsMeasurementType.BODY_TEMPERATURE -> VitalsCacheKeys.BODY_TEMPERATURE
-        // HRV has no vitals daily cache (the heart feature reads it straight
-        // from Health Connect); patchDays is a no-op for a spec-less key.
+        // HRV has no daily cache; patchDays is a no-op for a spec-less key.
         VitalsMeasurementType.HRV -> VitalsCacheKeys.HRV
     }
 
@@ -605,8 +588,7 @@ class VitalsRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping updateVitalsMeasurementEntry type=${request.type} missingCount=${missingPermissions.size}")
             throw SecurityException("Missing Health Connect write permission for ${request.type}")
         }
-        // The pre-edit day is captured first so an entry moved across midnight
-        // patches both the day it left and the day it landed on.
+        // The pre-edit day is captured first, so a move across midnight patches both days.
         val oldDay = dayOfEntry(request.type, id)
         hc.updateVitalsMeasurementEntry(id, request)
         val newDay = request.time.atZone(ZoneId.systemDefault()).toLocalDate()

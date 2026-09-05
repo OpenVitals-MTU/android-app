@@ -103,8 +103,7 @@ internal fun MetricRouteContent(
     when (val destination = metricRouteDestinationFor(metricId)) {
         MetricRouteDestination.Calories -> {
             val caloriesViewModel = hiltViewModel<CaloriesViewModel>()
-            // No section-edit affordance: the shipped Flutter calories screen
-            // has no app-bar tune toggle, so the edit state is not hoisted.
+            // No section-edit affordance on the calories screen.
             CaloriesScreen(
                 viewModel = caloriesViewModel,
                 unitFormatter = unitFormatter,
@@ -198,8 +197,7 @@ internal fun MetricRouteContent(
         }
         MetricRouteDestination.Hydration -> {
             val hydrationViewModel = hiltViewModel<HydrationViewModel>()
-            // No section-edit affordance: the shipped Flutter hydration
-            // screen's only app-bar action is the add-drink shortcut.
+            // No section-edit affordance: the hydration app bar has only the add-drink shortcut.
             HydrationScreen(
                 viewModel = hydrationViewModel,
                 unitFormatter = unitFormatter,
@@ -251,11 +249,7 @@ internal fun MetricRouteContent(
     }
 }
 
-/**
- * Where a `/metric/{id}` route lands. Extracted from [MetricRouteContent] so the
- * dispatch precedence — the calories and body AGGREGATES intercepting their ids
- * before the per-metric screens can claim them — is decided by a pure function.
- */
+/** Where a `/metric/{id}` route lands. A pure function, so the precedence is testable. */
 internal sealed interface MetricRouteDestination {
     data object Calories : MetricRouteDestination
     data class Nutrition(val metric: NutritionMetric) : MetricRouteDestination
@@ -525,16 +519,9 @@ internal fun String.toVitalsMeasurementTypeOrNull(): VitalsMeasurementType? =
     runCatching { VitalsMeasurementType.valueOf(this) }.getOrNull()
 
 /**
- * Where a dashboard tile opens. Extracted from the dashboard's `onOpenMetric`
- * lambda so the mapping can be asserted without a NavController: the calories
- * and nutrition aggregates claim their ids first, and everything else — body,
- * heart, and vitals ids included — lands on its own `/metric/{id}` screen.
- * Body tiles used to share one overview, which made every tap a two-hop trip
- * to the metric the tile already named.
- *
- * Body Energy is the one destination that takes the day in its PATH; the rest
- * carry [selectedDate] as the optional `?day=` argument, which
- * [withSelectedDay] omits for today.
+ * Where a dashboard tile opens. The calories and nutrition aggregates claim
+ * their ids first; everything else lands on its own metric screen. Body
+ * Energy takes the day in its path; the rest carry it as `?day=`.
  */
 internal fun dashboardTileDestination(
     metricId: DashboardWidgetId,
@@ -552,8 +539,7 @@ internal fun dashboardTileDestination(
     DashboardWidgetId.BODY_ENERGY -> Screen.BodyEnergyDetails.createRoute(selectedDate.toString())
     DashboardWidgetId.WEEKLY_CARDIO_LOAD,
     DashboardWidgetId.CARDIO_LOAD -> CardioLoadDetailRoute.withSelectedDay(selectedDate)
-    // Device state, so it opens the watches list rather than a metric detail —
-    // and carries no day, since a watch is not a reading for a date.
+    // Device state: opens the watches list, and carries no day.
     DashboardWidgetId.WATCH -> Screen.SettingsWatches.route
     else -> Screen.Metric.createRoute(metricId.name).withSelectedDay(selectedDate)
 }

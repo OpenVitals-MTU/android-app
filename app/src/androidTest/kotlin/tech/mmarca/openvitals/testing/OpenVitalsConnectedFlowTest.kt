@@ -182,10 +182,7 @@ class OpenVitalsConnectedFlowTest {
         var refreshCount = 0
         var addCount = 0
         var navigatedRoute: String? = null
-        // The scaffold reports the intent; the HOST owns the date. A fake host
-        // that only counts the callback can never move the period, which is how
-        // an earlier version of this test rendered the period and asserted
-        // nothing about it.
+        // The scaffold reports the intent; the host owns the date.
         var selectedDate by mutableStateOf(LocalDate.now().minusWeeks(2))
 
         composeRule.setContent {
@@ -225,15 +222,9 @@ class OpenVitalsConnectedFlowTest {
             }
         }
 
-        // Range selection is deliberately NOT asserted here. The earlier version
-        // checked `selectedRange == WEEK`, which was its untouched initial value
-        // and true before the screen existed. Selection itself is properly
-        // covered by MaterialUxComponentsTest and MetricDetailScaffoldHeaderTest;
-        // a third copy inside this flow added a tautology, not coverage.
+        // Range selection is not asserted here; it is covered by MaterialUxComponentsTest and MetricDetailScaffoldHeaderTest.
 
-        // The period the scaffold derives is the point of it, so it is read
-        // before and after moving: an earlier version rendered this string and
-        // never asserted it, so displayPeriodFor could have returned a constant.
+        // The derived period is read before and after moving.
         val startingPeriod = renderedPeriod()
 
         composeRule.onNodeWithContentDescription("Previous period").performClick()
@@ -290,9 +281,7 @@ class OpenVitalsConnectedFlowTest {
             }
         }
 
-        // The LazyColumn only composes what fits the viewport, and the cards'
-        // full-line-height text boxes push the later sections below it — scroll
-        // each label in before clicking.
+        // The LazyColumn only composes what fits, so scroll each label in before clicking.
         listOf("Display", "Activities", "Nutrition", "Recovery", "Health Connect")
             .forEach { label ->
                 composeRule.onNode(hasScrollAction()).performScrollToNode(hasText(label))

@@ -26,9 +26,7 @@ internal class AppleHealthImportConverter(
     private val diagnosticSummaries = linkedMapOf<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>()
     internal val typeStats = linkedMapOf<String, MutableAppleImportTypeStats>()
 
-    // Aggregate counters mirroring typeStats sums. All mutation happens on the parse thread; these
-    // volatiles let a concurrent writer coroutine read progress totals without iterating typeStats
-    // (which the parse thread mutates via getOrPut).
+    // Volatile counters, so the writer coroutine can read progress without iterating typeStats.
     @Volatile
     internal var unsupportedCount: Int = 0
         private set
@@ -139,10 +137,8 @@ internal class AppleHealthImportConverter(
         }
 
     /**
-     * Emit-based variant: converted records are handed to [emit] as they are produced instead of
-     * being materialized in one list. For step/energy-heavy exports the additive group can span
-     * hundreds of thousands of records, so streaming keeps memory bounded and lets the import
-     * pipeline start writing while conversion is still running.
+     * Emit-based variant: records go to [emit] as produced, so a step-heavy
+     * export stays bounded and the writer can start early.
      */
     fun convertBufferedGroups(
         records: List<AppleRecord>,
@@ -176,12 +172,8 @@ internal class AppleHealthImportConverter(
     }
 
     /**
-     * Converts one time window of buffered additive records during a streaming import.
-     *
-     * Dedup only ever relates records that overlap in time, so a window whose records all end
-     * before anything still to come can be settled and released instead of being held until the
-     * parse ends. The caller owns the windowing; this is the same pass [convert] runs, minus the
-     * fingerprint bookkeeping that only the whole-export path reads back.
+     * Converts one time window of buffered additive records. Dedup only
+     * relates overlapping records, so a settled window can be released early.
      */
     fun convertAdditiveOverlapWindow(records: List<AppleRecord>, emit: (ConvertedAppleRecord) -> Unit) {
         convertAdditiveOverlapSensitiveRecords(records, emit, trackConsumedRecords = false)
@@ -195,9 +187,7 @@ internal class AppleHealthImportConverter(
         val additiveRecords = records.filter { it.type in AppleAdditiveOverlapSensitiveTypes }
         if (additiveRecords.isEmpty()) return
 
-        // Single pass: records without a usable start date cannot participate in overlap dedup
-        // (and can never share a fingerprint with a candidate, since startDate is part of the
-        // fingerprint), so they convert directly; the rest are deduplicated in deterministic order.
+        // Records without a usable start date cannot dedup and convert directly.
         val candidates = ArrayList<AppleAdditiveOverlapCandidate>(additiveRecords.size)
         additiveRecords.forEach { record ->
             val candidate = record.toAdditiveOverlapCandidate()

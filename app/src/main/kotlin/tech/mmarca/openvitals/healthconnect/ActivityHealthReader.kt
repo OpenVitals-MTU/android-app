@@ -312,12 +312,7 @@ internal class ActivityHealthReader(
         }
     }
 
-    /**
-     * The hourly intraday series. This is the only read the Day range issues that
-     * the other ranges do not, so an unbounded stall here hangs the Day spinner
-     * forever while Week/Month/Year keep working — hence the budget. Blowing it
-     * degrades to "no intraday line", exactly as any other aggregate failure does.
-     */
+    /** The hourly intraday series, budgeted: a stall here would hang the Day spinner alone. */
     suspend fun readRawActivityProgress(
         date: LocalDate,
         includeSteps: Boolean = true,
@@ -1012,14 +1007,9 @@ internal class ActivityHealthReader(
     }
 
     /**
-     * Writes many activities in ONE insertRecords call. Health Connect
-     * rate-limits per API call, not per record, so a bulk import that inserted
-     * one file at a time exhausted the daily write allowance around 1700 files
-     * — batched, the same import costs one quota unit per batch.
-     *
-     * The insert is atomic: either every activity in the batch lands or none
-     * does, which is why the bulk importer retries a failed batch file by file
-     * to find the guilty one.
+     * Writes many activities in one call. Health Connect rate-limits per
+     * call, so one file at a time exhausted the daily allowance. The insert
+     * is atomic, hence the importer's file-by-file retry.
      */
     suspend fun writeActivityEntries(requests: List<ActivityWriteRequest>): List<String> = withContext(Dispatchers.IO) {
         if (requests.isEmpty()) return@withContext emptyList()
@@ -1094,11 +1084,7 @@ internal class ActivityHealthReader(
         )
     }
 
-    /**
-     * `insertRecords`, retried with a smaller GPS route when the platform
-     * rejects a record for its size. See [OversizedRouteShrinker]; anything
-     * else, or a list with nothing left to shrink, fails as it did.
-     */
+    /** `insertRecords`, retried with a smaller route when the platform rejects a record's size. */
     private suspend fun insertShrinkingRoutes(records: List<Record>): List<String> =
         withShrunkRoutes(records) { support.client().insertRecords(it).recordIdsList }
 

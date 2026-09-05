@@ -24,15 +24,8 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the chart-level pinch cases of Flutter's `day_chart_zoom_test.dart`,
- * `metric_line_chart_zoom_test.dart`, `session_chart_zoom_test.dart` and
- * `bar_chart_zoom_test.dart`.
- *
- * `ChartZoomGestureTest` proves the gesture reaches a viewport. These prove the
- * chart *wires that viewport into its axis*, which is a separate mistake and a
- * worse one: a plot that zooms while its hour row stays at `00:00 … 24:00`
- * still names every reading, just with the wrong times. It looks right, and it
- * is the elapsed-scaling bug all over again.
+ * `ChartZoomGestureTest` proves the gesture reaches a viewport. These prove the chart wires
+ * that viewport into its axis: a zoomed plot over an unzoomed hour row names every reading with the wrong time.
  */
 class ChartPinchAxisTest {
 
@@ -72,8 +65,7 @@ class ChartPinchAxisTest {
         composeRule.onNodeWithTag(CHART).performTouchInput { pinchApart() }
         composeRule.waitForIdle()
 
-        // Zoomed about the middle, the visible slice no longer starts at
-        // midnight — so neither may the row.
+        // Zoomed about the middle, the visible slice no longer starts at midnight.
         composeRule.onNodeWithText(MIDNIGHT).assertDoesNotExist()
     }
 
@@ -100,17 +92,13 @@ class ChartPinchAxisTest {
         composeRule.onNodeWithTag(CHART).performTouchInput { pinchApart() }
         composeRule.waitForIdle()
 
-        // The elapsed row is derived from the viewport, so zooming past the
-        // start of the session has to take "00:00" off the row with it.
+        // The elapsed row is derived from the viewport, so zooming past the start drops "00:00".
         composeRule.onNodeWithText(fullLabels.first()).assertDoesNotExist()
     }
 
     @Test
     fun aWeekBarChart_drawsEveryDayUntilItIsPinched() {
-        // Unzoomed a week is seven slots and seven dates. Zoomed, the days that
-        // have scrolled off must not be drawn at all: a date with no bar under
-        // it names nothing, and a row that kept all seven would put every label
-        // over the wrong bar.
+        // Zoomed, the days that scrolled off must not be drawn, or every label sits over the wrong bar.
         val formatter = DateTimeFormatterProvider()
         val days = (0L..6L).map { MONDAY.plusDays(it) }
         val labels = days.map { formatter.chartDayOfMonth().format(it) }
@@ -138,18 +126,14 @@ class ChartPinchAxisTest {
         composeRule.onNodeWithTag(CHART).performTouchInput { pinchApart() }
         composeRule.waitForIdle()
 
-        // Pinched about the middle of the week, neither end is on the plot any
-        // more, so neither end may be on the row.
+        // Pinched about the middle, neither end is on the plot.
         composeRule.onNodeWithText(labels.first()).assertDoesNotExist()
         composeRule.onNodeWithText(labels.last()).assertDoesNotExist()
     }
 
     @Test
     fun pinchingAYearLineChart_zoomsItsDateRowToo() {
-        // The year chart pinches like the day one. Unzoomed the date axis is an
-        // even row of slots; zoomed it lays its surviving labels over their own
-        // slots and drops the rest — so a month at the far end of the year stops
-        // being named once it is off the plot.
+        // The year chart: zoomed, surviving labels sit over their own slots and the rest are dropped.
         val formatter = DateTimeFormatterProvider()
         val year = 2024
         val points = (1..12).map { month ->

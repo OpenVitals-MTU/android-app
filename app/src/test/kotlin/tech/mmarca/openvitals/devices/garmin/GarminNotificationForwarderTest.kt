@@ -13,12 +13,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Port of the Flutter build's `garmin_notification_forwarder_test.dart`. The
- * Dart suite ran under `fakeAsync`; here the forwarder's timers are `delay`
- * jobs on the test scope, so `advanceTimeBy` plays the same role — no radio
- * and no real time anywhere.
- */
+/** The forwarder's timers are `delay` jobs on the test scope, so `advanceTimeBy` drives them. */
 class GarminNotificationForwarderTest {
 
     private companion object {
@@ -34,11 +29,7 @@ class GarminNotificationForwarderTest {
 
         private val gone = MutableSharedFlow<Unit>(extraBufferCapacity = 4)
 
-        /**
-         * A real handler, because the forwarder reads `handler.held` on close
-         * to take back anything the watch never subscribed for. Its `send`
-         * goes nowhere: these tests assert on [pushed], not on wire bytes.
-         */
+        /** A real handler, because the forwarder reads `handler.held` on close. Its `send` goes nowhere. */
         override val handler = GarminGncsHandler(send = {})
 
         override val isOpen: Boolean get() = !closed
@@ -54,9 +45,7 @@ class GarminNotificationForwarderTest {
 
         override suspend fun push(notification: GarminNotification) {
             pushed.add(notification)
-            // Routed through the real handler, as the real link does, so
-            // `handler.held` reflects what has actually been announced versus
-            // what is still waiting on the watch to subscribe.
+            // Routed through the real handler, so `handler.held` reflects what is still waiting.
             handler.post(notification)
         }
 
@@ -176,8 +165,7 @@ class GarminNotificationForwarderTest {
         fixture.forwarder.setRealtimeService(GarminRealtimeService.HEART_RATE, true)
         elapse(10)
 
-        // Applied to the link that is already up, so the switch does not wait
-        // for a reconnect.
+        // Applied to the live link, so the switch does not wait for a reconnect.
         assertEquals(
             listOf(GarminRealtimeService.HEART_RATE to true),
             fixture.links.single().realtimeToggles,
@@ -193,8 +181,7 @@ class GarminNotificationForwarderTest {
         fixture.forwarder.setHostForeground(true)
         elapse(10)
 
-        // The watch holds its online errands until it believes the companion
-        // app is paying attention.
+        // The watch holds its online errands until it believes the companion app is paying attention.
         assertEquals(listOf(true), fixture.links.single().foregroundStates)
     }
 
@@ -202,8 +189,7 @@ class GarminNotificationForwarderTest {
     fun `a foreground change with no link is simply dropped`() = runTest {
         val fixture = build()
 
-        // Nothing to tell: the next link sends the current state during its
-        // own handshake.
+        // Nothing to tell: the next link sends the current state during its handshake.
         fixture.forwarder.setHostForeground(true)
         elapse(10)
 
@@ -215,7 +201,7 @@ class GarminNotificationForwarderTest {
         runCurrent()
     }
 
-    // ── coalescing ──────────────────────────────────────────────────────────
+    // Coalescing.
 
     @Test
     fun `three notifications 200ms apart open ONE link, not three`() = runTest {
@@ -234,8 +220,7 @@ class GarminNotificationForwarderTest {
     @Test
     fun `a steady drip cannot postpone the connect past the ceiling`() = runTest {
         val f = build()
-        // One arrival per second forever would reset a pure debounce every
-        // time.
+        // One arrival per second forever would reset a pure debounce every time.
         for (i in 0L until 10L) {
             f.forwarder.post(notification(i))
             runCurrent()
@@ -274,13 +259,12 @@ class GarminNotificationForwarderTest {
         assertEquals(listOf(42L), f.links.single().withdrawn)
     }
 
-    // ── the link is held ────────────────────────────────────────────────────
+    // The link is held.
 
     @Test
     fun `the link is still open minutes after the last notification`() = runTest {
-        // The whole point of the change: a Garmin watch expects a continuously
-        // connected phone, and a link that closes leaves it saying "reconnect
-        // to phone to refresh data" and sometimes failing to re-subscribe.
+        // A Garmin watch expects a continuously connected phone. A link that closes leaves it
+        // saying "reconnect to phone" and sometimes failing to re-subscribe.
         val f = build()
         f.forwarder.post(notification(1))
         runCurrent()
@@ -305,18 +289,14 @@ class GarminNotificationForwarderTest {
 
     @Test
     fun `a notification the watch never subscribed for survives the link dropping`() = runTest {
-        // The handler lives and dies with its link, and the forwarder has
-        // already dropped the item from its own queue by then — so without
-        // taking the unannounced ones back, a watch that walks away in the
-        // second between "queued" and "subscribed" loses exactly the
-        // notification the link was opened for.
+        // The handler dies with its link and the forwarder has already dropped the item from its queue.
+        // Without taking the unannounced ones back, a watch that walks away loses the notification.
         val f = build()
         f.forwarder.post(notification(1))
         runCurrent()
         elapse(2_000)
 
-        // The link is up but the watch has not subscribed, so the handler is
-        // holding it rather than having announced it.
+        // The link is up but the watch has not subscribed, so the handler holds it.
         val first = f.links.single()
         assertEquals(1L, first.pushed.single().id)
         assertEquals(
@@ -344,8 +324,7 @@ class GarminNotificationForwarderTest {
             runCurrent()
             elapse(30 * 60 * 1_000)
 
-            // Unbounded retries at the first backoff would be ~120 in half an
-            // hour.
+            // Unbounded retries at the first backoff would be ~120 in half an hour.
             assertTrue("$attempts attempts", attempts < 15)
             assertTrue("but it must keep trying ($attempts attempts)", attempts > 3)
         }
@@ -383,7 +362,7 @@ class GarminNotificationForwarderTest {
             )
         }
 
-    // ── the radio lease ─────────────────────────────────────────────────────
+    // The radio lease.
 
     @Test
     fun `the lease is taken before connecting and held with the link`() = runTest {
@@ -399,8 +378,7 @@ class GarminNotificationForwarderTest {
 
     @Test
     fun `the radio is given up when a sync asks for it, and taken back after`() = runTest {
-        // Without this a permanently held link would block every sync, find
-        // and settings browse — things the user actively initiated.
+        // Without this a held link would block every sync, find and settings browse.
         val f = build()
         f.forwarder.post(notification(1))
         runCurrent()
@@ -447,7 +425,7 @@ class GarminNotificationForwarderTest {
         assertEquals(1L, f.links.single().pushed.single().id)
     }
 
-    // ── failure ─────────────────────────────────────────────────────────────
+    // Failure.
 
     @Test
     fun `a failed connect does not leave the lease held`() = runTest {
@@ -461,8 +439,7 @@ class GarminNotificationForwarderTest {
 
     @Test
     fun `a held link never reports idle, so the forwarder is not torn down`() = runTest {
-        // The bridge disposes the forwarder on onIdle. Firing it while a link
-        // is held would kill the forwarder underneath a connected watch.
+        // The bridge disposes the forwarder on onIdle. Firing it while a link is held would kill it under a connected watch.
         var idleCount = 0
         val f = build(onIdle = { idleCount++ })
         f.forwarder.post(notification(1))

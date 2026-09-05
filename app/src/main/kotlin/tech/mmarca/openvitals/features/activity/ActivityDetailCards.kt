@@ -151,9 +151,7 @@ internal fun MetricsCard(
             metric = ActivityDetailMetric.DISTANCE,
             exerciseType = exerciseType,
         )
-        // Pace is not merely hidden when irrelevant — it is not even computed.
-        // Any distance-and-duration session yields a number, but "13:07 min/km"
-        // for a bike ride is speed wearing the wrong clothes.
+        // Pace is not even computed when irrelevant: "13:07 min/km" for a ride is speed misdressed.
         MetricRow(
             label = stringResource(R.string.metric_average_pace),
             value = if (isMetricRelevant(ActivityDetailMetric.AVERAGE_PACE, exerciseType)) {
@@ -240,11 +238,7 @@ internal fun MetricsCard(
     }
 }
 
-/**
- * One metrics row, or nothing: shown whenever the metric HAS a value, and for a
- * null value only when that absence is informative for this kind of exercise —
- * see [isMetricRelevant].
- */
+/** One metrics row, or nothing: shown with a value, or when its absence matters; see [isMetricRelevant]. */
 @Composable
 private fun MetricRow(
     label: String,

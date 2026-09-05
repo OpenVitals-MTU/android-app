@@ -41,15 +41,8 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.timeAxisInstantsFor
 
 /**
- * One drink, and what it is doing to you.
- *
- * The caffeine screen can tell you there are 240mg in you. It cannot tell you which of the
- * three coffees that is, or which one is still going to be there at bedtime. This can: the
- * same model that builds the day's curve, asked about one drink.
- *
- * No second load. The entries are already in [CaffeineViewModel] — they are what the whole
- * curve is built from — so the detail screen reads the same list the list screen read, and the
- * two can never be showing different coffees.
+ * One drink and what it is doing to you: the day's model asked about one
+ * drink. No second load: the entries are already in [CaffeineViewModel].
  */
 @Composable
 fun CaffeineDrinkScreen(
@@ -67,8 +60,7 @@ fun CaffeineDrinkScreen(
     }
 
     if (entry == null) {
-        // Deleted while its own screen was open, or followed from something stale. A load
-        // still in flight lands as a state update and rebuilds this.
+        // Deleted while open, or followed from something stale.
         if (!state.isLoading) {
             ErrorMessage(message = stringResource(R.string.no_data))
         }
@@ -151,10 +143,7 @@ private fun CaffeineDrinkHeadlineCard(
     }
 }
 
-/**
- * The four numbers: what it peaked at, what is left, and the two moments that decide whether
- * it is a sleep problem.
- */
+/** The four numbers: the peak, what is left, and the two moments that decide bedtime. */
 @Composable
 private fun CaffeineDrinkStatsCard(
     profile: CaffeineDrinkProfile,
@@ -218,7 +207,7 @@ private fun CaffeineDrinkCurveCard(
     val spanMillis = (end.toEpochMilli() - start.toEpochMilli()).coerceAtLeast(1L)
     val accentColor = MaterialTheme.colorScheme.primary
 
-    // Built once, identity-stable across pinch frames, so the plot's geometry cache holds.
+    // Built once, identity-stable, so the geometry cache holds.
     val chartPoints = remember(curve) {
         curve.map { point ->
             MetricLinePlotPoint(
@@ -235,17 +224,13 @@ private fun CaffeineDrinkCurveCard(
                 style = MaterialTheme.typography.titleSmall,
             )
             Spacer(Modifier.height(12.dp))
-            // Pinch it. The curve runs 36 hours — long enough to answer "when is this gone",
-            // and far too long to read the rise and the peak off, which all happen in the
-            // first two. Zoom is what makes one chart do both.
+            // The curve runs 36 hours; zoom makes one chart show the fade and the peak.
             ChartZoom(curve) { zoom ->
                 Column {
                     MetricLinePlot(
                         points = chartPoints,
                         minValue = 0.0,
-                        // This drink's own scale, so a small tea fills its chart the same way
-                        // a double espresso fills its own. The comparison between drinks is
-                        // what the list is for; this chart is about the SHAPE of one of them.
+                        // This drink's own scale: the chart is about its shape.
                         maxValue = if (profile.peakMg <= 0.0) 1.0 else profile.peakMg,
                         accentColor = accentColor,
                         chartHeight = ChartTokens.heightDay,
@@ -263,9 +248,7 @@ private fun CaffeineDrinkCurveCard(
                         },
                     )
                     Spacer(Modifier.height(8.dp))
-                    // The x axis this chart never had. A drink's curve with no hours under it
-                    // can tell you it fades, and not when — which is the only thing anyone
-                    // opened it to find out.
+                    // The x axis: a fade with no hours under it says nothing.
                     ChartXAxisWithYAxis {
                         val edges = timeAxisInstantsFor(start, end, zoom.viewport)
                         Row(

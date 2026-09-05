@@ -11,10 +11,7 @@ import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
 
-/**
- * The dashboard's watch tile. Device state rather than a metric, so it is built
- * straight from the registry instead of a loaded day.
- */
+/** The dashboard's watch tile: device state, built from the registry instead of a loaded day. */
 class DashboardWatchWidgetTest {
 
     private fun device(
@@ -43,8 +40,7 @@ class DashboardWatchWidgetTest {
     fun `no watch paired means no tile at all`() {
         val sensors = listOf(device("TICKR", BleDeviceKind.SENSOR))
 
-        // An empty "no data" watch tile would be noise on the dashboard of
-        // someone who owns no watch.
+        // An empty watch tile would be noise for someone who owns no watch.
         assertNull(sensors.toWatchWidgetDisplay())
     }
 
@@ -58,8 +54,7 @@ class DashboardWatchWidgetTest {
             listOf(idle, syncing).toWatchWidgetDisplay(syncingDeviceId = "vívoactive 5"),
         )
 
-        // Otherwise the spinner would sit on a watch that is not the one
-        // actually working.
+        // The spinner must sit on the watch actually working.
         assertEquals("vívoactive 5", display.name)
         assertTrue(display.isSyncing)
     }
@@ -133,8 +128,7 @@ class DashboardWatchWidgetTest {
             listOf(watch).toWatchWidgetDisplay(live = live, now = now.plusSeconds(30)),
         )
 
-        // Only one watch can hold a link at a time, so the live values belong
-        // to the watch on the tile or to nothing.
+        // Only one watch holds a link at a time, so the live values belong to the tile's watch or nothing.
         assertEquals(71, display.liveHeartRateBpm)
         assertEquals(4200, display.liveSteps)
     }

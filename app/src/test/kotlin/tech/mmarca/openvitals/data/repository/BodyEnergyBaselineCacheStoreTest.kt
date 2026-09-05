@@ -14,12 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
 
-/**
- * Port of the Flutter `body_energy_baseline_cache_store_test.dart` suite. The
- * Kotlin store is SharedPreferences-backed, so the Dart
- * `SharedPreferences.setMockInitialValues` seeding maps onto a seeded
- * [FakeSharedPreferences].
- */
+/** The store is SharedPreferences-backed, so the Dart seeding maps onto a seeded [FakeSharedPreferences]. */
 class BodyEnergyBaselineCacheStoreTest {
 
     private val date = LocalDate.of(2026, 7, 6)
@@ -90,9 +85,7 @@ class BodyEnergyBaselineCacheStoreTest {
     }
 
     @Test fun `purgeLegacyTimelineEntries removes the retired timeline keys and nothing else`() {
-        // The timeline half wrote `<date>|<signatureHash>`; the baselines it
-        // shared the file with carry a `baseline|` prefix, and neither may be
-        // confused with an ordinary preference.
+        // The timeline half wrote `<date>|<signatureHash>`; the baselines carry a `baseline|` prefix.
         val (store, prefs) = newStore(
             mapOf(
                 "2026-07-06|-1234567" to "encoded timeline",

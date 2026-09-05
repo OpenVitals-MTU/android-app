@@ -9,10 +9,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
-/**
- * Ported from mobile-app test/features/nutrition/nutrition_intraday_chart_test.dart
- * (the `cumulativeNutritionPoints (Kotlin parity)` group).
- */
+/** `cumulativeNutritionPoints`. */
 class NutritionIntradayChartTest {
 
     private val day: Instant = Instant.parse("2026-03-04T00:00:00Z")

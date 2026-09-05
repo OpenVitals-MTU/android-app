@@ -40,12 +40,8 @@ import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Ports the section-composition cases of Flutter's `sleep_screen_test.dart` and
- * `sleep_overview_card_test.dart`.
- *
- * These are the parts of the Sleep screen a user notices only when they are wrong:
- * a correlation claimed from too little data, a page that renders blank because of
- * the day it was opened on, an empty state that names the wrong span of time.
+ * Section composition of the Sleep screen: a correlation claimed from too little data,
+ * a blank page caused by the day it was opened on, an empty state naming the wrong span.
  */
 class SleepScreenSectionsTest {
 
@@ -54,8 +50,7 @@ class SleepScreenSectionsTest {
 
     @Test
     fun aCoupleOfNightsIsNotEnoughToClaimASleepHrvCorrelation() {
-        // Two nights can be made to correlate perfectly by chance. Showing the card
-        // anyway would dress up noise as a finding about the user's own body.
+        // Two nights can correlate perfectly by chance. Showing the card dresses up noise as a finding.
         composeRule.setContent {
             OpenVitalsTheme {
                 Column {
@@ -75,9 +70,7 @@ class SleepScreenSectionsTest {
 
     @Test
     fun aWeekOfNightsPairedWithHrvShowsTheCorrelationCard() {
-        // The other half of the same rule: once there are enough paired nights the
-        // insight has to actually appear, or the threshold is indistinguishable
-        // from the card being broken.
+        // With enough paired nights the insight must appear, or the threshold looks like a broken card.
         composeRule.setContent {
             OpenVitalsTheme {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -97,10 +90,7 @@ class SleepScreenSectionsTest {
 
     @Test
     fun theDayViewClosesWithTheDataSourceEducationLink() {
-        // Sleep numbers come from whichever app wrote them, and the day view is
-        // where a user lands when a figure looks wrong. The link out to the data
-        // sources is the answer to "where did this come from" and has to survive
-        // section reordering at the bottom of the list.
+        // The link to the data sources answers "where did this come from" and must survive reordering.
         setSleepContent { sectionContext ->
             sleepDayContent(
                 state = dayState(),
@@ -127,10 +117,8 @@ class SleepScreenSectionsTest {
 
     @Test
     fun aPeriodViewStillRendersWhenTheSelectedDayHasNoSleep() {
-        // Open the app after midnight and today has no night yet, so the selected
-        // day's summary is null while the week behind it is full of data. The period
-        // view must not be derived from the selected day: a user switching to the
-        // week would get a blank page for a week they did sleep through.
+        // After midnight today has no night yet. The period view must not derive from the selected day,
+        // or the week view is blank for a week the user slept through.
         setSleepContent { sectionContext ->
             sleepPeriodContent(
                 state = weekState(),
@@ -158,9 +146,7 @@ class SleepScreenSectionsTest {
 
     @Test
     fun theDayEmptyStateNamesTheSelectedDayAndNotThePeriod() {
-        // "No sleep data for the selected day" and "in the selected period" answer
-        // different questions. Showing the period wording on the day view tells a
-        // user their whole week is missing when only last night is.
+        // The day and period empty states answer different questions.
         composeRule.setContent {
             OpenVitalsTheme {
                 LazyColumn { sleepNoDataContent(selectedRange = TimeRange.DAY) }
@@ -175,10 +161,8 @@ class SleepScreenSectionsTest {
 
     @Test
     fun theOverviewKeepsAsleepTimeInBedAndAwakeAsThreeDistinctFigures() {
-        // The point of the overview is "focus on sleep, not time in bed": asleep is
-        // promoted, time in bed is kept but demoted, and awake sits beside it. Wire
-        // any two of them to the same source and the card silently stops saying
-        // anything — three identical numbers still look like a working card.
+        // Asleep is promoted, time in bed demoted, awake beside it. Wired to the same source,
+        // three identical numbers still look like a working card.
         composeRule.setContent {
             OpenVitalsTheme {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -228,11 +212,8 @@ class SleepScreenSectionsTest {
 
     @Test
     fun theDayViewDropsTheKeyMetricsListButKeepsTheOverviewCards() {
-        // On a single night the four key metrics are all restatements: the schedule is
-        // the timeline chart's own axis, REM and deep sleep are measured bars in the
-        // share-of-time-in-bed card, and sleep efficiency was superseded by the sleep
-        // score that feeds the recharge battery. The overview cards above them are not
-        // redundant, so hiding the list must not take those with it.
+        // On a single night the four key metrics are restatements of the cards above them.
+        // Hiding the list must not take the overview cards with it.
         setSleepContent { sectionContext ->
             sleepDayContent(
                 state = dayState(),
@@ -249,8 +230,7 @@ class SleepScreenSectionsTest {
             )
         }
 
-        // The whole overview is one lazy item, so scrolling to it composes the key
-        // metrics too if they are still there to compose.
+        // The whole overview is one lazy item, so scrolling to it composes the key metrics too.
         composeRule
             .onNode(hasScrollAction())
             .performScrollToNode(hasText(string(R.string.recovery_sleep_score)))
@@ -265,9 +245,7 @@ class SleepScreenSectionsTest {
 
     @Test
     fun theDayViewTakesNoAveragesOverASingleNight() {
-        // "Avg gap" and "Average sleep is 1h below your target" both describe a mean,
-        // and the mean of one night is that night with a word in front of it. The
-        // daily goal card above already says how that night stood against the target.
+        // The mean of one night is that night with a word in front of it. The goal card already covers it.
         setSleepContent { sectionContext ->
             sleepDayContent(
                 state = dayState(),
@@ -295,8 +273,7 @@ class SleepScreenSectionsTest {
 
     @Test
     fun aWeekOfNightsStillAveragesAgainstTheTarget() {
-        // The other half of the rule: once there is more than one night to average,
-        // both must come back, or the day-view fix has quietly emptied the period view.
+        // With more than one night to average, both must come back.
         setSleepContent { sectionContext ->
             sleepPeriodContent(
                 state = weekState(),

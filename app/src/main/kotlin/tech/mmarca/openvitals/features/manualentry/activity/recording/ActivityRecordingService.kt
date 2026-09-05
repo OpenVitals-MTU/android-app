@@ -200,8 +200,7 @@ class ActivityRecordingService : Service() {
                 } else if (state.status == ActivityRecordingStatus.RECORDING && state.recordingKind == ActivityRecordingKind.REPETITION) {
                     stopLocationUpdates()
                     stopPressureUpdates()
-                    // In a plan run the exercise changes per step, and with it
-                    // the recognizer; a step nothing can sense gets no sensor.
+                    // In a plan run the recognizer changes per step.
                     val wanted = state.sensorActivityType()
                     if (wanted?.id != activeSensorTypeId) stopSensorUpdates()
                     if (wanted != null) startSensorUpdates(state) else stopSensorUpdates()
@@ -210,12 +209,8 @@ class ActivityRecordingService : Service() {
                     state.recordingKind == ActivityRecordingKind.TIMED &&
                     activityEntryTypeById(state.activityTypeId)?.supportsGpsRoute == true
                 ) {
-                    // A run recorded WITHOUT GPS still has a barometer and a
-                    // step detector. Neither needs a position: elevation gain
-                    // comes from air pressure and steps from the accelerometer.
-                    // Gated on supportsGpsRoute so the stationary bike and the
-                    // strength session — the timed recordings that never had
-                    // these sensors — stay exactly as they were.
+                    // Without GPS the barometer and step detector still run: neither
+                    // needs a position. Gated on supportsGpsRoute.
                     stopLocationUpdates()
                     startPressureUpdates()
                     if (activityEntryTypeById(state.activityTypeId)?.supportsStepCounting == true) {
@@ -239,10 +234,7 @@ class ActivityRecordingService : Service() {
             .launchIn(serviceScope)
     }
 
-    /**
-     * A plan run's notification carries a countdown, which only moves when the
-     * text is rebuilt; state emits do not happen every second, so a ticker does.
-     */
+    /** A plan run's notification carries a countdown; state emits are not per second, so a ticker is. */
     private fun syncNotificationTicker(state: ActivityRecordingState) {
         val wantsTicker = state.isPlanRun &&
             (state.status == ActivityRecordingStatus.RESTING || state.planStepEndTime() != null)

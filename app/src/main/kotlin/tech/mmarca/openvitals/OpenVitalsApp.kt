@@ -28,16 +28,9 @@ class OpenVitalsApp : Application() {
     @Inject lateinit var watchAutoSyncScheduler: WatchAutoSyncScheduler
 
     override fun onCreate() {
-        // The one-time Flutter->Kotlin data migration is deliberately split
-        // around super.onCreate(). @HiltAndroidApp member-injects this class
-        // DURING super.onCreate(), and PreferencesRepository (an injected
-        // field here) eagerly snapshots its SharedPreferences into StateFlows
-        // at construction — so every preference write must land before that,
-        // which rules out Hilt-injecting the migrator itself. The beverage
-        // database import instead needs the Hilt-provided Room singleton, so
-        // it runs right after super.onCreate() via an EntryPoint (Room
-        // singletons are created lazily on first request, and no Activity can
-        // exist yet). See FlutterDataMigrator's KDoc.
+        // The Flutter migration splits around super.onCreate(): preference writes
+        // must land before Hilt constructs PreferencesRepository, and the database
+        // import needs the Hilt-provided Room. See FlutterDataMigrator.
         val flutterMigrator = FlutterDataMigrator(this)
         val flutterMigrationPending = flutterMigrator.migrateIfNeeded()
         super.onCreate()
@@ -52,26 +45,18 @@ class OpenVitalsApp : Application() {
         AppCompatDelegate.setApplicationLocales(preferencesRepository.appLanguage.toLocaleListCompat())
         appForegroundGate.registerProcessLifecycle(ProcessLifecycleOwner.get())
         ProcessLifecycleOwner.get().lifecycle.addObserver(reminderRestoreBootstrap)
-        // Hydrates the synced-source display overlay so records received from
-        // another phone show their original source app, not OpenVitals.
+        // Synced records show their original source app.
         syncedRecordOriginRepository.warmOverlay()
-        // Companion mode survives process death only if every start re-arms
-        // it: presence observation plus the held watch link, for whichever
-        // watch has stay-connected on.
+        // Companion mode must be re-armed on every start.
         garminNotificationBridge.onAppStart()
         garminNavigationRelay.start()
-        // WorkManager keeps the automatic sync schedules across reboots and
-        // updates by itself; this re-plans them after the cases it does not
-        // cover (a force-stop, a restore onto another phone) and keeps any
-        // live schedule where it is.
+        // Re-plans the sync schedules after what WorkManager does not cover.
         watchAutoSyncScheduler.restoreAll()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        // Locale and Android 14+ regional-preference changes (the `-u-ms-`
-        // measurement system among them) arrive here before the activities
-        // recreate; a "follow system" unit choice must re-resolve first.
+        // Locale and regional-preference changes arrive here first.
         preferencesRepository.refreshSystemUnitSystem()
     }
 }

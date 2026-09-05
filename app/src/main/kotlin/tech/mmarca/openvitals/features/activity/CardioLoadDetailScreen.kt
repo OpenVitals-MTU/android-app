@@ -258,9 +258,7 @@ private fun CardioLoadNumbersCard(
                     value = DisplayValue(unitFormatter.decimal(estimate.expectedMinutes, 1), "min"),
                 ),
                 DetailMetric(
-                    // An estimated figure says so on the tile itself. "Max HR
-                    // 151" with no qualifier reads as "you reached 151 today",
-                    // which the day's own heart-rate graph then contradicts.
+                    // An estimated figure says so, or the day's graph contradicts it.
                     title = stringResource(
                         if (estimate.restingHeartRateObserved) {
                             R.string.cardio_load_resting_hr

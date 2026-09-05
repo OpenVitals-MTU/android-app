@@ -21,30 +21,12 @@ import tech.mmarca.openvitals.core.period.TimeRange
 /**
  * Every ranged read, over every range, against the real corpus.
  *
- * Kotlin counterpart of Flutter's `test/integration/use_cases_test.dart` — one
- * table rather than one file per read, because they all owe the same
- * guarantees: a day, a week, a month and a year all return over real data; an
- * empty day returns empty-but-VALID rather than throwing; and nothing comes
- * back from outside the window that was asked for.
+ * One table for all reads: a day, a week, a month and a year return over real data,
+ * an empty day returns empty but valid, and nothing comes back from outside the window.
+ * It sits at the reader layer because the repositories need Android; the window bugs
+ * live here anyway.
  *
- * ## Why this sits at the reader layer and not, as in Flutter, at the use case
- *
- * Flutter boots its whole Riverpod graph with only the Health Connect boundary
- * faked, so its table drives the use cases. The Kotlin equivalent cannot: the
- * repositories above these readers need a `Context`, `SharedPreferences` and
- * Room, none of which exist on a bare JVM, and this module has no Robolectric.
- * So the table stops where the Android dependencies start, and the composition
- * above it stays covered by the per-ViewModel tests.
- *
- * That still covers the layer that matters most. Everything below this line is
- * real — the readers, their chunking and windowing, the aggregate bucketing and
- * every mapper — and it is where the window bugs actually live: the clipped
- * DST tail bucket that blanked a day was in exactly this code, invisible to
- * anything that mocked a reader out.
- *
- * `today` is pinned to the corpus's own last day, so that a week or a year
- * window looks BACKWARDS into real records rather than forwards into an empty
- * present. Without that, every range case would pass over no data at all.
+ * `today` is pinned to the corpus's last day, so windows look backwards into real records.
  */
 class FixtureRangeLoadTest {
 
@@ -66,20 +48,9 @@ class FixtureRangeLoadTest {
     /**
      * One ranged read, reduced to the instants it answered with.
      *
-     * The reads return a dozen unrelated model types; what every one of them
-     * owes is the same, and all of it is expressible in terms of when the
-     * things it returned happened.
-     *
-     * The two flags are statements of fact about the corpus and the read, not
-     * preferences — they are what makes an empty answer either a pass or a
-     * failure, and both are pinned so a read that quietly stops returning
-     * anything fails here instead of passing as a thin corpus.
-     *
-     * @param corpusCovered the fixture holds records this read can find. The
-     *   fixture is an activity/heart/sleep export: it carries no resting heart
-     *   rate, HRV, nutrition, mindfulness, body or cycle records at all.
-     * @param gapFilled the read emits one row per date in the range whether or
-     *   not that date had data, so even an empty window answers non-empty.
+     * @param corpusCovered the fixture holds records this read can find. It carries no resting
+     *   heart rate, HRV, nutrition, mindfulness, body or cycle records.
+     * @param gapFilled the read emits one row per date, so an empty window answers non-empty.
      */
     private class RangedRead(
         val name: String,
@@ -150,10 +121,8 @@ class FixtureRangeLoadTest {
     @Test
     fun `the ranged reads answer inside their window, over real data, and never shrink`() =
         runTest(timeout = 5.minutes) {
-            // One walk of the table asserting all three guarantees, rather than
-            // three walks: the corpus is 4,370 records and a walk is not cheap.
-            // Violations are collected instead of thrown so one broken read
-            // reports every range it broke, not just the first.
+            // One walk of the table for all three guarantees; a walk over 4,370 records is not cheap.
+            // Violations are collected so one broken read reports every range it broke.
             val readers = readers(seeded())
             val anchor = corpusLastDay()
             val problems = mutableListOf<String>()
@@ -171,10 +140,8 @@ class FixtureRangeLoadTest {
                     if (read.corpusCovered && answered.isEmpty()) {
                         problems += "${read.name}/${range.label}: found nothing over real data"
                     }
-                    // The windows nest, so their answers must too. A read whose
-                    // month returns fewer rows than its week has lost records to
-                    // a window edge — which is how the clipped DST bucket first
-                    // showed itself.
+                    // The windows nest, so their answers must too. A month with fewer rows than
+                    // its week lost records to a window edge.
                     if (answered.size < narrower) {
                         problems += "${read.name}/${range.label}: returned ${answered.size}, " +
                             "fewer than the narrower range's $narrower"
@@ -188,8 +155,7 @@ class FixtureRangeLoadTest {
 
     @Test
     fun `an empty day is empty-but-valid, never a throw`() = runTest(timeout = 5.minutes) {
-        // "No data" is an answer, not a failure — every screen branches on the
-        // difference. A day well before the corpus begins has nothing in it.
+        // "No data" is an answer, not a failure.
         val readers = readers(seeded())
         val empty = corpusFirstDay().minusDays(400)
         val (start, end) = TimeRange.DAY.window(empty)
@@ -230,13 +196,7 @@ class FixtureRangeLoadTest {
 
     private fun readers(client: FakeHealthConnectClient) = Readers(support(client))
 
-    /**
-     * Seeds the corpus one writer at a time; see `FixtureReaderTest.seeded`.
-     *
-     * Seeded once for the whole class rather than per test: 4,370 records is
-     * several seconds of inserts, every case here only reads, and four
-     * identical corpora prove nothing a shared one does not.
-     */
+    /** Seeds the corpus once for the class; 4,370 inserts take seconds and every case only reads. */
     private fun seeded(): FakeHealthConnectClient = corpus
 
 
@@ -255,11 +215,8 @@ class FixtureRangeLoadTest {
         const val APP_PACKAGE = "tech.mmarca.openvitals"
 
         /**
-         * The zone the corpus was RECORDED in, not the machine's. The fake keeps
-         * only interval records wholly inside an instant window, and the corpus's
-         * overnight sleep sessions only fit wholly inside a day drawn on the
-         * corpus's own clock — a UTC machine's day window starts 43 minutes into
-         * the anchor night's session and the read comes back empty.
+         * The zone the corpus was recorded in. The fake keeps only interval records wholly inside
+         * the window, and the overnight sessions only fit a day drawn on the corpus's own clock.
          */
         val ZONE: ZoneId = HcFixture.exercise().first().startZoneOffset
             ?: error("the corpus's exercise records carry no zone offset")

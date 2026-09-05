@@ -14,11 +14,7 @@ enum class WorkoutPlanGoalType {
     DURATION,
 }
 
-/**
- * How the builder treats a step. [UNSUPPORTED] keeps a step the builder cannot
- * edit (a distance goal from another app, say) so a round-trip through the
- * builder never silently drops part of someone else's plan.
- */
+/** How the builder treats a step. [UNSUPPORTED] keeps a step it cannot edit, so nothing is dropped. */
 enum class WorkoutPlanStepKind {
     ACTIVE,
     REST,

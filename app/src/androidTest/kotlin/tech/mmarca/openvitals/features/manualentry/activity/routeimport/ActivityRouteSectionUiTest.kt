@@ -28,15 +28,8 @@ import tech.mmarca.openvitals.testing.testUnitFormatter
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Ports the `ActivityEntryCard with an imported route` group of Flutter's
- * `test/features/manualentry/activity/activity_route_section_test.dart`.
- *
- * An imported route is a list of places and times. Saving it against push-ups
- * would attach a map to an activity Health Connect will not carry one for, so
- * the type list narrows the moment a route is attached — and widens again when
- * there is none, or half the app's activities become unreachable. The summary
- * beside it is the only chance a user gets to notice the file they picked is
- * the wrong ride before it is written.
+ * The type list narrows when a route is attached and widens when there is none. The summary
+ * beside it is the user's chance to notice they picked the wrong ride.
  */
 class ActivityRouteSectionUiTest {
 
@@ -64,8 +57,7 @@ class ActivityRouteSectionUiTest {
 
     @Test
     fun withNoRouteEveryTypeIsStillOnOffer() {
-        // Guards the test above from becoming vacuous, and pins the thing that
-        // would otherwise quietly hide indoor activities from manual entry.
+        // Pins the thing that would otherwise hide indoor activities from manual entry.
         setContent {
             TestActivityEntryCard(
                 state = ActivityEntryUiState(
@@ -78,8 +70,7 @@ class ActivityRouteSectionUiTest {
 
         openTypeSelector()
 
-        // The menu scrolls, so existing in the list is the assertion — being on
-        // screen is a matter of where in the list the type happens to sit.
+        // The menu scrolls, so existing in the list is the assertion.
         composeRule.onNodeWithText(string(pushUpsEntryType.labelRes)).assertExists()
     }
 
@@ -118,8 +109,7 @@ class ActivityRouteSectionUiTest {
             .performScrollTo()
             .assertIsDisplayed()
 
-        // 5 km in 30 minutes is 6:00 /km; ten of those minutes were paused, so
-        // the pace reported over moving time only is 4:00 /km.
+        // 5 km in 30 minutes with ten paused: 4:00 /km over moving time.
         val movingMillis = Duration.ofMinutes(20).toMillis()
         composeRule
             .onNodeWithText(

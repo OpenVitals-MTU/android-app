@@ -40,13 +40,8 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 
 /**
- * The splits card on the activity detail screen: one row per split (or per
- * device lap), with a bar whose length tracks the split's pace so a slow
- * kilometre is visible without reading a single number.
- *
- * The header states the PROVENANCE, and the estimated case says out loud that
- * the identical pace on every row is an artefact of missing data — the whole
- * point of keeping [SplitSource] on the result.
+ * The splits card: one row per split with a pace bar. The header states
+ * the provenance, and the estimated case says its even pace is an artefact.
  */
 @Composable
 internal fun ActivitySplitsCard(
@@ -117,9 +112,7 @@ internal fun ActivitySplitsCard(
                     unitMeters = unitMeters,
                     slowestPaceSeconds = slowestPaceSeconds,
                     fastestPaceSeconds = fastestPaceSeconds,
-                    // The estimated source gives every split the same pace: a
-                    // bar chart of it would be a straight line masquerading as
-                    // a measurement. Show the numbers, drop the bar.
+                    // The estimated source gives every split the same pace; no bar.
                     showBar = splits.source != SplitSource.ESTIMATED,
                 )
                 Spacer(Modifier.height(10.dp))
@@ -143,7 +136,7 @@ private fun SplitRow(
     val pace = unitFormatter.averagePace(split.distanceMeters, split.elapsedMs)
     val delta = split.paceDeltaSecondsPerUnit(unitMeters)
 
-    // A partial split is short ON PURPOSE — say so, or it reads as a bad fix.
+    // A partial split is short on purpose; say so.
     val distance = unitFormatter.distance(split.distanceMeters).text
     val distanceText = if (split.isPartial) {
         "$distance (${stringResource(R.string.activity_splits_partial)})"
@@ -199,11 +192,7 @@ private fun SplitRow(
     }
 }
 
-/**
- * avg HR · elevation ± · pace delta. Each piece is dropped when its datum is
- * missing rather than rendered as a zero: a treadmill split has NO elevation,
- * which is not the same claim as "flat".
- */
+/** avg HR, elevation, pace delta. A missing datum is dropped, not shown as zero. */
 @Composable
 private fun splitDetailLine(
     split: ActivitySplit,
@@ -243,11 +232,8 @@ private fun formatSplitDeltaSeconds(seconds: Double): String {
 }
 
 /**
- * A pace bar: the slowest split in the activity fills the track, the fastest
- * leaves it visibly shorter. Deliberately NOT zero-based — the interesting
- * range of a run is the few percent between its fastest and slowest kilometre,
- * and a zero-based bar squashes that into invisibility. The floor is 25% of
- * the track so the fastest split still reads as a bar, not as nothing.
+ * A pace bar: the slowest split fills the track. Not zero-based, or the few
+ * percent between fastest and slowest vanish. Floor at 25% of the track.
  */
 @Composable
 private fun PaceBar(

@@ -17,14 +17,7 @@ import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 
-/**
- * Ported from mobile-app
- * test/features/manualentry/activity/recording/activity_recording_serialization_test.dart.
- *
- * Kotlin splits the persistence in two: the metadata goes to SharedPreferences and the
- * route points to a file next to it, so the round-trip drives both halves of
- * [ActivityRecordingStore].
- */
+/** Metadata goes to SharedPreferences and route points to a file, so the round-trip drives both halves of [ActivityRecordingStore]. */
 class ActivityRecordingSerializationTest {
 
     private lateinit var filesDir: File

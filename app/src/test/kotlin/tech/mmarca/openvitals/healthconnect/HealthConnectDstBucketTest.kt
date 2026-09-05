@@ -26,22 +26,10 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * What a daily read answers over a range that crosses a DST fall-back.
- *
- * `Duration.ofDays(1)` slicing is instant-aligned, so a range holding a 25-hour
- * local day is an hour longer than a whole number of slices, and Health Connect
- * returns that leftover hour as a clipped final bucket. Its midpoint lands on
- * the same local date as the full bucket before it — so a reader that dates
- * buckets one at a time reports the final day twice, or keeps only the sliver
- * and blanks a day the user actually recorded.
- *
- * Dart counterparts: `reads > readDailySteps sums a clipped tail bucket onto its
- * date instead of overwriting it` and `reads > readDailyHydration sums same-date
- * buckets instead of keeping the last` of
- * test/data/source/health/health_connect_native_data_source_test.dart.
- *
- * The zone is pinned rather than taken from the machine: on a UTC CI box there
- * is no transition to cross and every assertion here would pass vacuously.
+ * A daily read over a range crossing a DST fall-back. `Duration.ofDays(1)` slicing is
+ * instant-aligned, so a 25-hour local day leaves a clipped final bucket whose midpoint
+ * lands on the same date as the bucket before it. The zone is pinned, because on a UTC
+ * box there is no transition to cross.
  */
 class HealthConnectDstBucketTest {
 
@@ -67,8 +55,7 @@ class HealthConnectDstBucketTest {
 
     @Test
     fun `the range really does hand back a clipped tail bucket`() = onARealClock {
-        // The premise every other case here rests on. If Health Connect ever
-        // stopped clipping, these tests would pass while proving nothing.
+        // The premise every other case rests on: Health Connect clips.
         val client = seeded(
             steps(500, at(LAST, 12), at(LAST, 13)),
             steps(120, at(LAST, 23), at(LAST, 23, minutes = 45)),
@@ -127,8 +114,7 @@ class HealthConnectDstBucketTest {
             val client = seeded(
                 heartRate(at(LAST, 12), 60),
                 heartRate(at(LAST, 13), 80),
-                // A single high sample in the tail hour: it must raise the day's
-                // maximum without becoming the day's average on its own.
+                // A single high sample in the tail hour must raise the maximum without becoming the average.
                 heartRate(at(LAST, 23), 150),
             )
 
@@ -137,10 +123,7 @@ class HealthConnectDstBucketTest {
             val day = days.single { it.date == LAST }
             assertThat(day.maxBpm).isEqualTo(150)
             assertThat(day.minBpm).isEqualTo(60)
-            // Hour-sliced and duration-weighted: three recorded hours (60, 80,
-            // 150 — the last inside the DST leftover hour) count once each, so
-            // the tail sample is a third of the day's average, neither the whole
-            // of it nor drowned by an all-day bucket.
+            // Hour-sliced and duration-weighted: three recorded hours count once each.
             assertThat(day.avgBpm).isIn(96L..97L)
         }
 

@@ -28,10 +28,7 @@ class HeartRateAggregatedSamplesTest {
     fun `a local day of insight buckets does not fit in one request`() {
         val bucketsInADay = Duration.ofDays(1).toMinutes() / HeartRateInsightBucketDuration.toMinutes()
 
-        // The point of the budget: a day has to be SPLIT. Raising the bucket
-        // budget past a day's worth would put the whole day back into one
-        // grouped-duration response, which is the parcel Health Connect
-        // refuses to hand back on a densely recorded phone.
+        // A day has to be split: a whole day in one grouped-duration response is the parcel Health Connect refuses.
         assertTrue(bucketsInADay > MaxInsightAggregateBuckets)
     }
 

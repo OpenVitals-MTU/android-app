@@ -34,18 +34,8 @@ import tech.mmarca.openvitals.domain.model.OnboardingCategoryId
 import tech.mmarca.openvitals.domain.model.PermissionGrantMode
 
 /**
- * The phased permission sets, the feature gates, and the mindfulness opt-in.
- *
- * Dart counterparts: test/data/source/health/health_permissions_test.dart and
- * test/data/source/health/mindfulness_opt_in_test.dart, plus the `availability`
- * feature-flag cases from health_connect_native_data_source_test.dart.
- *
- * Flutter splits this across a `HealthPermissionService` fed by a
- * `HealthConnectFeatureFlags` value object and a data source that resolves those
- * flags. Kotlin folds both halves into [HealthConnectPermissionService]: the
- * getters ask the feature gate directly, and the gate reads the provider on
- * demand. So a flag in Dart becomes a `getFeatureStatus` answer here, and the
- * opt-in becomes the `mindfulnessIntegrationEnabled` lambda.
+ * The phased permission sets, the feature gates and the mindfulness opt-in.
+ * Ported from the Flutter permission tests; here the feature gate answers directly.
  */
 class HealthConnectPermissionServiceTest {
 
@@ -63,11 +53,9 @@ class HealthConnectPermissionServiceTest {
         unmockkStatic(Log::class)
     }
 
-    // ── phased permission sets ──────────────────────────────────────────────
+    // Phased permission sets.
 
-    // A bump is a deliberate act, not an accident: it re-prompts every existing
-    // user with the new-permissions dialog. 3 = cycle writes became requestable,
-    // 4 = the HRV write joined the vitals writes.
+    // A bump re-prompts every user. 3 = cycle writes requestable, 4 = HRV write joined vitals.
     @Test
     fun `PERMISSION_SET_VERSION is pinned`() {
         assertThat(HealthConnectPermissionService.PERMISSION_SET_VERSION).isEqualTo(4)
@@ -132,12 +120,8 @@ class HealthConnectPermissionServiceTest {
 
     @Test
     fun `the permission set the app asks for is the one the device supports`() {
-        // Dart: resolveSupportedPermissions() diffs what the app wants against what
-        // the provider will grant, and getting it wrong left onboarding stuck at
-        // 9/11 with no way forward. Kotlin resolves the same taxonomy through the
-        // feature gate, so this is the set the resolution starts from: it must be
-        // the real taxonomy rather than a stub, and it must carry the two reads
-        // every screen depends on.
+        // Getting this set wrong left onboarding stuck at 9/11.
+        // It must be the real taxonomy and carry the two reads every screen needs.
         val managed = service().managedPermissions
 
         assertThat(managed).isNotEmpty()
@@ -146,7 +130,7 @@ class HealthConnectPermissionServiceTest {
         assertThat(managed).contains(HealthPermission.getReadPermission(ExerciseSessionRecord::class))
     }
 
-    // ── feature gating ──────────────────────────────────────────────────────
+    // Feature gating.
 
     @Test
     fun `mindfulness is excluded from phase2 and the requestable writes when unavailable`() {
@@ -163,11 +147,8 @@ class HealthConnectPermissionServiceTest {
         assertThat(service.phase2Permissions).contains(READ_MINDFULNESS)
     }
 
-    // Kotlin 1.9.0 (1f2b435) moved the availability check into the getters
-    // themselves, because the per-call-site guards had been forgotten in
-    // allPermissions and managedPermissions — so an unsupported device still
-    // asked for a mindfulness permission its provider does not define, and the
-    // request could never be granted.
+    // 1.9.0 moved the availability check into the getters. Per-call guards had been forgotten,
+    // so an unsupported device asked for a permission it could never be granted.
     @Test
     fun `mindfulness permissions are empty when the provider lacks the feature`() {
         val service = service(availableFeatures = emptySet())
@@ -195,16 +176,13 @@ class HealthConnectPermissionServiceTest {
                 .that(set.filter { it.contains("MINDFULNESS") })
                 .isEmpty()
         }
-        // And the onboarding catalog drops the category entirely rather than
-        // offering an empty row.
+        // The onboarding catalog drops the category rather than offering an empty row.
         assertThat(service.onboardingPermissionCatalog().category(OnboardingCategoryId.MINDFULNESS))
             .isNull()
     }
 
-    // The opt-in exists because some providers crash their own permission screen
-    // on mindfulness, taking every other permission down with them. Onboarding
-    // asks for everything in ONE request, so if mindfulness could get into it an
-    // opted-in user on such a device could not grant anything at all.
+    // Some providers crash their permission screen on mindfulness.
+    // Onboarding asks for everything in one request, so mindfulness must stay out.
     @Test
     fun `an AVAILABLE mindfulness still stays out of the required set`() {
         val service = service(availableFeatures = setOf(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION))
@@ -218,15 +196,8 @@ class HealthConnectPermissionServiceTest {
         ).isEmpty()
     }
 
-    // Dart: 'the device answer and the opt-in are separate flags'.
-    //
-    // These two were folded into one, and the fold was a shipping bug rather
-    // than a divergence. `mindfulnessSupportedByDevice` decides whether
-    // onboarding OFFERS the mindfulness step, and the opt-in toggle lives on
-    // that step and nowhere else in onboarding — so deriving it from the
-    // opt-in-gated answer meant a fresh install skipped the step forever and
-    // was never offered the permission at all. The only way in was to finish
-    // onboarding and find the toggle in Settings.
+    // The device answer and the opt-in are separate flags.
+    // Folding them made a fresh install skip the mindfulness step forever.
     @Test
     fun `the device answer and the opt-in stay separate flags`() {
         val deviceOnly = service(
@@ -238,8 +209,7 @@ class HealthConnectPermissionServiceTest {
         assertThat(deviceOnly.isMindfulnessSessionAvailable()).isFalse()
         assertThat(deviceOnly.mindfulnessPermissions).isEmpty()
         assertThat(deviceOnly.mindfulnessWritePermissions).isEmpty()
-        // But the device's own answer is reported unfolded, so the opt-in can be
-        // offered on a phone that can honour it.
+        // The device's own answer is reported unfolded so the opt-in can be offered.
         assertThat(deviceOnly.isMindfulnessSessionSupportedByDevice()).isTrue()
         assertThat(deviceOnly.onboardingPermissionCatalog().mindfulnessSupportedByDevice).isTrue()
 
@@ -253,8 +223,7 @@ class HealthConnectPermissionServiceTest {
 
     @Test
     fun `a phone whose provider lacks the feature is offered no opt-in at all`() {
-        // The other half of the split: a toggle the device cannot honour must
-        // not be shown, however the preference happens to read.
+        // A toggle the device cannot honour must not be shown.
         val unsupported = service(
             availableFeatures = emptySet(),
             mindfulnessIntegrationEnabled = true,
@@ -277,9 +246,7 @@ class HealthConnectPermissionServiceTest {
         assertThat(noProvider.onboardingPermissionCatalog().mindfulnessSupportedByDevice).isFalse()
     }
 
-    // Onboarding asks Activity and Sleep for read AND write in one dialog, but
-    // only the reads gate step one: declining every write must still let a
-    // user finish onboarding. The log asks for writes per tile later.
+    // Onboarding asks Activity and Sleep for read and write, but only the reads gate step one.
     @Test
     fun `the onboarding required set is the activity and sleep reads only`() {
         val required = service().onboardingPermissionCatalog().requiredPermissions
@@ -300,8 +267,7 @@ class HealthConnectPermissionServiceTest {
             .isEmpty()
         assertThat(service.minimumOnboardingPermissions.intersect(CYCLE_WRITE_PERMISSIONS))
             .isEmpty()
-        // But the import set still carries the cycle writes — the split is for
-        // onboarding's benefit, not the CSV importer's.
+        // The import set still carries the cycle writes.
         assertThat(service.dataImportWritePermissions)
             .containsAtLeastElementsIn(CYCLE_WRITE_PERMISSIONS)
     }
@@ -318,8 +284,7 @@ class HealthConnectPermissionServiceTest {
             .contains(HealthPermission.getWritePermission(MenstruationPeriodRecord::class))
     }
 
-    // The log's HRV tile writes HeartRateVariabilityRmssdRecord, so the
-    // Settings "Manual entry write access" card must be able to grant it.
+    // The HRV tile writes HeartRateVariabilityRmssdRecord, so the Settings card must grant it.
     @Test
     fun `the HRV write is a vitals write so the log tile and the Settings card agree`() {
         val service = service()
@@ -337,18 +302,9 @@ class HealthConnectPermissionServiceTest {
         assertThat(withSkin.vitalsPermissions).contains(READ_SKIN_TEMPERATURE)
     }
 
-    // ── the mindfulness opt-in ──────────────────────────────────────────────
-    //
-    // A Health Connect module on a de-Googled ROM can DEFINE the mindfulness
-    // permission and report FEATURE_MINDFULNESS_SESSION as available, while its
-    // own permission screen has no category for it and throws
-    // `IllegalArgumentException: No Category for fitness permission type
-    // MINDFULNESS` the moment it is asked to draw a row for it. The system Health
-    // Connect app dies, and the user can then grant this app *nothing at all*.
-    //
-    // The permission screen renders the permissions we ASK FOR, so not asking is
-    // what keeps that phone usable. There is no API that tells us the UI is
-    // broken, so the device's own "yes" is not enough on its own.
+    // The mindfulness opt-in. A de-Googled Health Connect can report the feature available
+    // and still crash its permission screen on it, leaving the user unable to grant anything.
+    // Not asking is what keeps that phone usable.
 
     @Test
     fun `with the integration off, mindfulness is never asked for`() {
@@ -356,10 +312,7 @@ class HealthConnectPermissionServiceTest {
 
         assertThat(service.mindfulnessPermissions).isEmpty()
         assertThat(service.mindfulnessWritePermissions).isEmpty()
-        // And — the part that actually matters — it is absent from the sets the
-        // app hands to Health Connect when it asks for permissions. A permission
-        // we do not request cannot be drawn, and cannot crash the screen drawing
-        // it.
+        // And absent from the sets handed to Health Connect: an unrequested permission cannot crash the screen.
         assertThat(service.allPermissions.filter { it.contains("MINDFULNESS") }).isEmpty()
         assertThat(service.managedPermissions.filter { it.contains("MINDFULNESS") }).isEmpty()
     }
@@ -378,9 +331,7 @@ class HealthConnectPermissionServiceTest {
         val off = optIn(enabled = false)
         val on = optIn(enabled = true)
 
-        // Every other permission the app asks for is untouched: the point of the
-        // opt-in is that the user can still grant the other twenty-odd metrics on
-        // a phone whose Health Connect cannot cope with this one.
+        // Every other permission is untouched.
         val lostByOptingOut = on.allPermissions - off.allPermissions
         assertThat(lostByOptingOut).isNotEmpty()
         assertThat(lostByOptingOut.filter { !it.contains("MINDFULNESS") }).isEmpty()
@@ -388,9 +339,8 @@ class HealthConnectPermissionServiceTest {
 
     @Test
     fun `a device that says YES is still refused while the user has not`() {
-        // The reported phone: the module reports the feature available (it defines
-        // the permission and the enum) and its permission UI still cannot draw it.
-        // The device's answer alone must not be enough.
+        // The reported phone: feature available, permission UI cannot draw it.
+        // The device's answer alone is not enough.
         val service = service(
             availableFeatures = setOf(
                 HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION,
@@ -433,11 +383,9 @@ class HealthConnectPermissionServiceTest {
         assertThat(service.mindfulnessPermissions).isEmpty()
     }
 
-    // ── optional-feature availability ───────────────────────────────────────
+    // Optional-feature availability.
 
-    // Dart: 'resolveFeatureFlags reads optional-feature availability'. Kotlin has
-    // no resolve step — the getters ask the provider on demand — so the flags are
-    // read straight off the service.
+    // Kotlin has no resolve step; the getters ask the provider on demand.
     @Test
     fun `optional-feature availability is read per feature`() {
         val service = service(
@@ -449,8 +397,7 @@ class HealthConnectPermissionServiceTest {
 
         assertThat(service.isSkinTemperatureAvailable()).isTrue()
         assertThat(service.isPlannedExerciseAvailable()).isFalse()
-        // Unlike Dart's data source, the Kotlin opt-in lambda DEFAULTS to on, so
-        // an available device is available unless the user opted out.
+        // The opt-in lambda defaults to on.
         assertThat(service.isMindfulnessSessionAvailable()).isTrue()
         // A feature the provider does not have takes its permissions with it.
         assertThat(service.plannedExercisePermissions).isEmpty()
@@ -467,12 +414,8 @@ class HealthConnectPermissionServiceTest {
         )
     }
 
-    // Dart: 'UNKNOWN feature status resolves the flag to unavailable'. Health
-    // Connect's Kotlin API has no UNKNOWN constant — it reports an int — so the
-    // portable half is that the gate is `== FEATURE_STATUS_AVAILABLE`, and ANY
-    // other answer, including one this version of the SDK has no name for, is
-    // unavailable. A `!= UNAVAILABLE` gate would turn a provider too old to
-    // answer into a feature we then ask permissions for.
+    // The gate is `== FEATURE_STATUS_AVAILABLE`. Any other int, including one
+    // this SDK has no name for, is unavailable.
     @Test
     fun `a feature status this SDK has no name for resolves to unavailable`() {
         val service = service(unknownStatusFeatures = setOf(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION))
@@ -481,9 +424,7 @@ class HealthConnectPermissionServiceTest {
         assertThat(service.mindfulnessPermissions).isEmpty()
     }
 
-    // Every feature gate short-circuits on availability before it ever reaches
-    // the provider: asking a client that does not exist is how the whole app
-    // used to fall over on a phone without Health Connect.
+    // Every gate short-circuits on availability before reaching the provider.
     @Test
     fun `no feature is available while Health Connect itself is not`() {
         val service = service(
@@ -503,8 +444,7 @@ class HealthConnectPermissionServiceTest {
         assertThat(service.additionalDataAccessPermissions).isEmpty()
     }
 
-    // Dart's data source caches the resolved flags; Kotlin caches the raw
-    // getFeatureStatus answer instead, and every getter goes through the cache.
+    // The raw getFeatureStatus answer is cached and every getter uses the cache.
     @Test
     fun `a feature status is asked of the provider only once`() {
         var calls = 0
@@ -518,7 +458,7 @@ class HealthConnectPermissionServiceTest {
         assertThat(calls).isEqualTo(1)
     }
 
-    // ── harness ─────────────────────────────────────────────────────────────
+    // Harness.
 
     private fun optIn(enabled: Boolean) = service(
         availableFeatures = setOf(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION),
@@ -561,11 +501,7 @@ class HealthConnectPermissionServiceTest {
     }
 
     private companion object {
-        /**
-         * A status int this version of the SDK has no constant for — the Kotlin
-         * shape of Dart's `FeatureStatusMsg.unknown`, which a provider too old to
-         * answer returns.
-         */
+        /** A status int this SDK has no constant for, as a provider too old to answer returns. */
         const val UNNAMED_FEATURE_STATUS = 0
 
         const val READ_EXERCISE_ROUTES = "android.permission.health.READ_EXERCISE_ROUTES"
@@ -578,8 +514,7 @@ class HealthConnectPermissionServiceTest {
             HealthPermission.getReadPermission(SkinTemperatureRecord::class)
 
         /**
-         * Spelled out independently of the code under test so a drifted
-         * `cycleWritePermissions` set fails here instead of shifting silently.
+         * Spelled out independently so a drifted `cycleWritePermissions` fails here.
          * The period write string is WRITE_MENSTRUATION, shared with flow.
          */
         val CYCLE_WRITE_PERMISSIONS: Set<String> = setOf(

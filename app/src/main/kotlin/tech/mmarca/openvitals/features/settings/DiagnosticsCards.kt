@@ -26,10 +26,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 
-/**
- * Diagnostics: fires the hydration reminder notification immediately,
- * identical to a scheduled fire — same channel, same content, same actions.
- */
+/** Diagnostics: fires the hydration reminder immediately, as a scheduled fire would. */
 @Composable
 internal fun ReminderTestCard(
     onShowTestReminder: () -> Unit,
@@ -75,11 +72,7 @@ internal fun ReminderTestCard(
     }
 }
 
-/**
- * Diagnostics: which apps contributed heart-rate and sleep records over the
- * last week — the quickest way to tell whether a paired watch's data is
- * actually landing in Health Connect. English-only, matching the log export.
- */
+/** Diagnostics: which apps contributed heart-rate and sleep records over the last week. */
 @Composable
 internal fun HealthConnectSourcesCard(
     sources: List<HealthConnectSource>,

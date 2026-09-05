@@ -96,9 +96,7 @@ private fun buildMetricDisplay(
 ): NutritionMetricDisplay {
     val nutrient = metric.nutrient
     val series = dailyMacros.nutrientSeries(nutrient).averagedOver(period, averageBasis, today)
-    // Only the selected period's series is averaged: the previous and baseline
-    // windows are here for their totals and their day values, and an average
-    // taken against THIS period's calendar would describe neither of them.
+    // Only the selected period is averaged; the other windows are here for their totals.
     val previousSeries = previousDailyMacros.nutrientSeries(nutrient)
     val baselineSeries = baselineDailyMacros.nutrientSeries(nutrient)
     val rawValues = series.values.map { it.value }
@@ -142,13 +140,7 @@ private fun List<DailyMacros>.totals(): NutritionPeriodTotals =
         fatGrams = sumOf { it.fatGrams },
     )
 
-/**
- * The same series with its daily average filled in for [period].
- *
- * Computed for every period, a single day included — where it comes to the
- * day's own total, which is what the baseline insight compares against. Whether
- * it is worth SHOWING beside that total is the screen's call, not this one's.
- */
+/** The series with its daily average for [period]. Whether to show it is the screen's call. */
 private fun NutritionNutrientSeries.averagedOver(
     period: tech.mmarca.openvitals.core.period.DatePeriod,
     basis: NutritionAverageBasis,

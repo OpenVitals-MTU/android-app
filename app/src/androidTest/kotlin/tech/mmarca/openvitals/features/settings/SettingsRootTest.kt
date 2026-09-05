@@ -17,15 +17,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Port of Flutter's `test/features/settings/settings_screen_test.dart`.
- *
- * Settings is a routing surface: every section card is the only way into the
- * screen behind it, so a card that renders without its click, or a section that
- * silently stops being listed, strands a whole feature with nothing to report.
- * The version footer matters for the same reason — it is what a bug report
- * quotes.
- */
+/** Settings is a routing surface: every section card is the only way into its screen. */
 class SettingsRootTest {
 
     @get:Rule
@@ -57,10 +49,7 @@ class SettingsRootTest {
 
     @Test
     fun theSupportCardOffersItsThreeRoutesOut() {
-        // Each button is the only way to its destination, so what matters is
-        // that each one reaches its OWN handler. An earlier version of this
-        // test declared these counters, never read them, and passed with all
-        // three buttons deleted.
+        // Each button must reach its own handler. An earlier version never read these counters.
         var issues = 0
         var discussion = 0
         var support = 0
@@ -85,8 +74,7 @@ class SettingsRootTest {
         composeRule.onNodeWithText(string(R.string.settings_support_action))
             .performScrollTo().performClick()
 
-        // Not just "three clicks happened": each handler exactly once, so a
-        // pair of buttons wired to the same lambda fails here.
+        // Each handler exactly once, so two buttons wired to one lambda fail.
         assertEquals(1, issues)
         assertEquals(1, discussion)
         assertEquals(1, support)

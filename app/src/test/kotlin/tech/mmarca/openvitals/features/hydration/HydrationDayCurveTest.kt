@@ -6,10 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import tech.mmarca.openvitals.domain.model.HydrationEntry
 
-/**
- * Ported from mobile-app test/features/hydration/hydration_display_test.dart
- * (`the day curve accumulates, in time order, skipping empty drinks`).
- */
+/** The day curve accumulates, in time order, skipping empty drinks. */
 class HydrationDayCurveTest {
 
     private val morning: Instant = Instant.parse("2026-03-02T08:00:00Z")

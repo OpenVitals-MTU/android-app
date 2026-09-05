@@ -49,13 +49,7 @@ import tech.mmarca.openvitals.ui.theme.SleepColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 
-/**
- * The day's readiness verdict.
- *
- * [onOpenBodyEnergyDetails] is null when the panel is already inside the Body
- * Energy screen: a tile that navigates to the screen you are looking at is a
- * dead end, and the score it would show is the headline three cards above it.
- */
+/** The day's readiness verdict. [onOpenBodyEnergyDetails] is null inside the Body Energy screen. */
 @Composable
 internal fun DailyReadinessPanel(
     insight: DailyReadinessInsight,
@@ -133,10 +127,7 @@ internal fun DailyReadinessPanel(
                 onOpenBodyEnergyDetails?.let { onOpen ->
                     DailyReadinessMetric(
                         label = stringResource(R.string.dashboard_readiness_body_energy),
-                        // The MEASURED battery, since the insight now takes its
-                        // body-energy score from the timeline: the panel used to
-                        // show the estimate and navigate to the engine, so the
-                        // number here and the number there disagreed.
+                        // The measured battery, so this number and the engine's agree.
                         value = "${insight.bodyEnergyScore}/100",
                         icon = Icons.Outlined.BatteryChargingFull,
                         color = HeartColor,
@@ -438,14 +429,7 @@ private fun DailyReadinessFactors(
     }
 }
 
-/**
- * The factor's headline, localized where a translation exists.
- *
- * Only the body-energy kinds have one: they are what this phase added, and the
- * rest of the readiness catalog still renders the English the domain wrote.
- * Falling back to [DailyReadinessFactor.label] is what lets the two coexist
- * without a template layer for all twenty-six kinds.
- */
+/** The factor's headline, localized where a translation exists; else [DailyReadinessFactor.label]. */
 @Composable
 private fun readinessFactorLabel(factor: DailyReadinessFactor): String =
     when (factor.kind) {

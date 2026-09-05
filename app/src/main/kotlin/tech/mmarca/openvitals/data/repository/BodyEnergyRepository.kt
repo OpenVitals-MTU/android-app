@@ -37,18 +37,12 @@ import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 
 /**
- * Composes the heart / sleep / activity / vitals repositories to build a per-day
- * body-energy timeline via [calculateBodyEnergyTimeline].
+ * Builds the per-day Body Energy timeline from the heart, sleep, activity and
+ * vitals repositories.
  *
- * Body Energy is a *chain*: each day opens where the previous one closed, so the
- * stored end score is an input to the next computation, not just a cache entry.
- * [resolveSeed] is what makes that true — the original port only ever read a
- * cached predecessor under TODAY's signature and, because the detail screen asks
- * for one day at a time, rarely found one, so days silently restarted at 50.
- *
- * The expensive 28-day baselines stay in SharedPreferences
- * ([BodyEnergyBaselineCacheStore]); the day timelines live in Room
- * ([BodyEnergyTimelineStore]).
+ * Body Energy is a chain: each day opens where the previous one closed, so
+ * the stored end score is an input to the next day. [resolveSeed] makes that
+ * true. Baselines live in SharedPreferences, day timelines in Room.
  */
 @Singleton
 class BodyEnergyRepositoryImpl(
@@ -60,11 +54,7 @@ class BodyEnergyRepositoryImpl(
     private val healthRepository: HealthRepository,
     private val preferencesRepository: PreferencesRepository,
     private val baselineCacheStore: BodyEnergyBaselineCacheStore,
-    /**
-     * Nullable so a context that must not open Room can still build a
-     * repository. Without it the chain degrades to the prefs seed mirror (see
-     * [seedFromMirror]).
-     */
+    /** Nullable for contexts that must not open Room. Then the chain uses the prefs mirror. */
     private val timelineStore: BodyEnergyTimelineStore?,
     private val now: () -> Instant = Instant::now,
     private val zone: ZoneId = ZoneId.systemDefault(),
@@ -96,11 +86,7 @@ class BodyEnergyRepositoryImpl(
     )
 
     override suspend fun loadTimeline(query: BodyEnergyTimelineQuery): BodyEnergyTimelineResult {
-        // Here rather than in the chain sync service, which is only kicked by
-        // the Body Energy screen — the dashboard, the widgets and the
-        // diagnostics all reach the model without it, so the reset silently
-        // never ran for them. This is the one path every computation goes
-        // through.
+        // Here, not in the chain sync service: this is the one path every computation takes.
         resetGainsIfAlgorithmChanged()
 
         val context = ChainContext(
@@ -109,9 +95,7 @@ class BodyEnergyRepositoryImpl(
             permissionSignature = permissionSignature(),
         )
 
-        // The day loop stays sequential and threads the previous day's freshly
-        // computed end score forward, so only `period.start` pays the walk-back.
-        // The within-day reads are what run concurrently (see computeDay).
+        // Sequential: each day threads its end score forward. Within-day reads run concurrently.
         val days = mutableListOf<BodyEnergyTimeline>()
         var date = query.period.start
         var carried: ChainSeed? = null
@@ -146,26 +130,18 @@ class BodyEnergyRepositoryImpl(
             return cached
         }
 
-        // A forced refresh applies to the requested day only — the chain fill
-        // below always uses the normal staleness rules. Recomputing a fortnight
-        // of days because the user pulled to refresh is exactly the runaway the
-        // fill bound exists to prevent.
+        // A forced refresh applies to the requested day only.
         val seed = seedOverride ?: resolveSeed(date, context)
         return computeDay(
             date = date,
             context = context,
             seed = seed,
-            // Only a past day can invalidate days after it; today has none.
+            // Only a past day can invalidate the days after it.
             rippleForward = date.isBefore(today()),
         )
     }
 
-    /**
-     * The score [date] opens on: the previous day's end, chained.
-     *
-     * Costs ONE SQLite query on the warm path — yesterday stored and valid — and
-     * no Health Connect read at all. That is what the day-summary table buys.
-     */
+    /** The score [date] opens on: the previous day's end. One SQLite query on the warm path. */
     private suspend fun resolveSeed(date: LocalDate, context: ChainContext): ChainSeed {
         val store = timelineStore ?: return seedFromMirror(date)
 
@@ -173,18 +149,13 @@ class BodyEnergyRepositoryImpl(
             date.minusDays(ChainLookbackDays),
             date.minusDays(1),
         )
-        // A store with no history at all degrades exactly like a store-less
-        // context: the prefs mirror. Distinct from the anchor==null case below,
-        // where stored rows EXIST but none validates — that is a deliberate
-        // chain break (zone edit, permission change) the mirror must not undo.
+        // No history at all degrades to the prefs mirror. Distinct from anchor == null
+        // below, which is a deliberate chain break the mirror must not undo.
         if (window.isEmpty()) return seedFromMirror(date)
         val byEpochDay = window.associateBy { it.date.toEpochDay() }
 
-        // The newest stored day strictly before `date` whose CHAIN signature
-        // still validates against ITS OWN date's. Deliberately not the full
-        // signature: a row computed under gains the learner has since nudged is
-        // still an honest carry-over, and rejecting it strands the day on the
-        // neutral 50.
+        // The newest stored day before `date` whose CHAIN signature validates against
+        // its own date. Not the full signature: nudged gains still make an honest carry.
         var anchor: BodyEnergyStoredDay? = null
         for (back in 1..ChainLookbackDays) {
             val candidate = date.minusDays(back)
@@ -197,33 +168,20 @@ class BodyEnergyRepositoryImpl(
             }
         }
 
-        // Rows exist but none validates: a deliberate chain break (a zone edit,
-        // a permission change), and seeding neutral is the honest reading of
-        // one. NOT rescued by the mirror — it carries no signature, so it would
-        // resurrect exactly the chain the break severed.
+        // Rows exist but none validates: a deliberate chain break. Seed neutral.
         if (anchor == null) return ChainSeed.Neutral
 
         val gap = date.toEpochDay() - anchor.date.toEpochDay() - 1
         if (gap == 0L) return ChainSeed.carried(anchor.endScore)
 
         if (gap > ChainForegroundFillDays) {
-            // Too wide to close inside the read budget. Carrying a score from
-            // over a week ago through a field the screen labels as the previous
-            // day's would be a worse lie than an honest reset, so the day starts
-            // neutral and says so. The warm service closes the gap for next
-            // time. The mirror can still rescue the seed: it is accepted only
-            // when it holds exactly yesterday's score, and yesterday having no
-            // stored row while the mirror has it means the row was lost (a
-            // forward ripple), not that the day never happened.
+            // Too wide to close in budget: start neutral and say so. The mirror can
+            // still rescue the seed when it holds exactly yesterday's score.
             return mirrorSeedOr(date, ChainSeed.ChainGap)
         }
 
-        // Close the gap forward, oldest first, persisting each day so the next
-        // open is warm. No forward ripple inside the fill: the days after each
-        // one are exactly the days being written next.
-        //
-        // A gap day that times out or fails must not fail the day the user asked
-        // for; it just leaves the chain broken until the warm service retries.
+        // Close the gap forward, oldest first. A failing gap day must not fail the
+        // requested day.
         val filled = try {
             withTimeoutOrNull(ChainFillBudgetMillis) {
                 fillGap(
@@ -238,9 +196,7 @@ class BodyEnergyRepositoryImpl(
         } catch (_: Throwable) {
             null
         }
-        // A fill that failed or timed out degrades to the mirror before it
-        // degrades to a gap: yesterday's mirrored score is the chained value
-        // the fill was trying to reconstruct.
+        // A failed fill degrades to the mirror before it degrades to a gap.
         return filled ?: mirrorSeedOr(date, ChainSeed.ChainGap)
     }
 
@@ -250,10 +206,7 @@ class BodyEnergyRepositoryImpl(
         return if (mirrored.score != null) mirrored else fallback
     }
 
-    /**
-     * Computes and persists `[from, until)` so the requested day has a stored
-     * predecessor, returning the seed it should open on.
-     */
+    /** Computes and persists `[from, until)`, returning the seed the requested day opens on. */
     private suspend fun fillGap(
         from: LocalDate,
         until: LocalDate,
@@ -276,17 +229,9 @@ class BodyEnergyRepositoryImpl(
     }
 
     /**
-     * Returns the learned gains to neutral once, when the algorithm they were
-     * fitted against has been replaced.
-     *
-     * A gain is a multiplier on a component, so it only means anything relative
-     * to the model that produced the errors it came from. A `sleepChargeGain` of
-     * 0.80 fitted under an older model can suppress exactly the charge the new
-     * one introduced, leaving the model fighting its own correction while the
-     * watch fit crawls back at 0.1 per observation.
-     *
-     * Only the four multipliers and the observation count reset — manual heart
-     * zones, the body profile and the setup flag are untouched.
+     * Resets the learned gains once when the algorithm changes. A gain fitted
+     * under an older model can suppress what the new one introduced. Manual
+     * zones, the profile and the setup flag are untouched.
      */
     private fun resetGainsIfAlgorithmChanged() {
         rewindWatchFitIfEpochChanged()
@@ -309,16 +254,9 @@ class BodyEnergyRepositoryImpl(
     }
 
     /**
-     * Rewinds the watch fit watermark once per [BodyEnergyWatchFitEpoch].
-     *
-     * The watermark records how far the watch evidence has already been
-     * consumed, so leaving it ahead while the gains go back to 1.0 means the
-     * model is told to relearn and then denied everything it would relearn from.
-     * An epoch of its own says what is meant — "the fit machinery changed,
-     * re-read the evidence" — without claiming a model change or discarding the
-     * stored chain the way an algorithm bump would. Hanging it off the
-     * algorithm-version reset made it dead code on every install already at the
-     * current version, which is all of them.
+     * Rewinds the watch fit watermark once per [BodyEnergyWatchFitEpoch], so a
+     * relearn has evidence to read. Separate from the algorithm version, which
+     * would discard the stored chain.
      */
     private fun rewindWatchFitIfEpochChanged() {
         if (preferencesRepository.bodyEnergyWatchFitEpoch == BodyEnergyWatchFitEpoch) return
@@ -327,14 +265,9 @@ class BodyEnergyRepositoryImpl(
     }
 
     /**
-     * The store-less fallback: the mirrored scores, accepted when they belong
-     * to the day immediately before [date] — or to [date] itself, in which
-     * case the day REOPENS on the same score it opened on before, so a rescue
-     * survives its own recompute (the first rescued compute moves the mirror
-     * onto [date], and without this clause the next refresh would find nothing
-     * for yesterday and fall back to 50 again). The `chained` flag keeps a
-     * neutrally-opened day honest: reopening one is a fresh Neutral, never a
-     * carry-over it did not have.
+     * The store-less fallback: the mirrored scores, accepted for the day before
+     * [date] or for [date] itself, so a rescue survives its own recompute.
+     * A neutrally opened day reopens as a fresh Neutral.
      */
     private fun seedFromMirror(date: LocalDate): ChainSeed {
         val encoded = preferencesRepository.bodyEnergyChainSeedMirror ?: return ChainSeed.Neutral
@@ -362,8 +295,7 @@ class BodyEnergyRepositoryImpl(
         val baselineStart = date.minusDays(BaselineDays)
         val baselineEnd = date.minusDays(1)
 
-        // Independent reads run concurrently: start every job, then await. The
-        // baseline runs alongside them; only respiratory depends on it.
+        // Independent reads run concurrently. Only respiratory depends on the baseline.
         val baselinesJob = async {
             loadBaselines(
                 date = date,
@@ -377,16 +309,13 @@ class BodyEnergyRepositoryImpl(
         val hrvJob = async { heartRepository.loadHrvSamples(dayStart, dayEnd) }
         val sleepJob = async { sleepRepository.loadSleepSessions(date.minusDays(1), date) }
         val workoutsJob = async { activityRepository.loadWorkouts(date, date) }
-        // Hourly steps + active calories, and the basal rate — the
-        // energy-balance inputs the heart-rate-zone model alone was missing.
+        // Energy-balance inputs the heart-rate-zone model alone was missing.
         val activityProgressJob = async { activityRepository.loadActivityProgress(date) }
         val basalMetabolicRateJob = async { bodyRepository.loadLatestBMR() }
         val restingJob = async { heartRepository.loadRestingHeartRate(date) }
 
         val baselines = baselinesJob.await()
-        // Respiratory is loaded only when a respiratory baseline exists (the
-        // stress factor is inert without one), so it can only start after the
-        // baseline resolves.
+        // Respiratory is only loaded when a respiratory baseline exists.
         val respiratoryJob: Deferred<List<RespiratoryRateEntry>>? =
             if (baselines.respiratoryRateBaseline != null) {
                 async { vitalsRepository.loadRespiratoryRate(date, date) }
@@ -431,13 +360,9 @@ class BodyEnergyRepositoryImpl(
 
         val store = timelineStore
         if (store != null) {
-            // A recompute that found nothing must not replace a day we already
-            // have. Without the (user-optional, dialog-ungrantable) history
-            // grant Health Connect serves only ~30 days, so an old day can come
-            // back empty purely because its data is out of reach — and `save`
-            // deletes that day's buckets before writing, so the stored timeline
-            // would be the thing lost. Skip the ripple too: nothing downstream
-            // changed, because nothing here did.
+            // A recompute that found nothing must not replace a stored day: without
+            // the history grant Health Connect serves only ~30 days, and save deletes
+            // the day's buckets first.
             if (timeline.points.isEmpty() && store.hasStoredPoints(date)) {
                 return@coroutineScope store.load(date, signature) ?: timeline
             }
@@ -445,10 +370,7 @@ class BodyEnergyRepositoryImpl(
             val stored = if (rippleForward) store.storedDaysBetween(date, date) else emptyList()
             val previousEnd = stored.firstOrNull()?.endScore
             store.save(timeline)
-            // Ripple only when the end score actually moved. A routine recompute
-            // that lands on the same number changes nothing downstream, and
-            // wiping a week of stored days for a no-op would guarantee a chain
-            // gap on the next open.
+            // Ripple only when the end score moved.
             if (rippleForward && previousEnd != null && previousEnd != timeline.currentScore) {
                 store.invalidateForward(date.plusDays(1), today())
             }
@@ -458,16 +380,8 @@ class BodyEnergyRepositoryImpl(
     }
 
     /**
-     * Mirrors the newest computed day for a context whose store cannot serve
-     * the chain, as `epochDay|endScore|startScore|chained`. TODAY's row is
-     * mirrored too — mirroring only completed days left the mirror frozen on
-     * whatever past day was last recomputed, so on a device where only the
-     * widgets run (which ask for today alone) it was reliably stale by the
-     * time it was needed, and every fallback that consulted it landed on the
-     * neutral 50 instead. Today's running score is exactly what tomorrow's
-     * seed should be once midnight passes, and today's own opening score is
-     * what a mid-day rescue reopens on (see [seedFromMirror]). Only moves
-     * forward, so an old day being backfilled cannot overwrite it.
+     * Mirrors the newest computed day, today included, as
+     * `epochDay|endScore|startScore|chained`. Only moves forward.
      */
     private fun writeSeedMirror(timeline: BodyEnergyTimeline) {
         if (timeline.date.isAfter(today())) return
@@ -479,10 +393,7 @@ class BodyEnergyRepositoryImpl(
             "${timeline.date.toEpochDay()}|${timeline.currentScore}|${timeline.startScore}|$chained"
     }
 
-    /**
-     * Reuse a fresh cached baseline (this day or an adjacent one), else
-     * recompute the 28-day medians + observed max and cache.
-     */
+    /** Reuse a fresh cached baseline (this or an adjacent day), else recompute and cache. */
     private suspend fun loadBaselines(
         date: LocalDate,
         baselineStart: LocalDate,
@@ -500,8 +411,7 @@ class BodyEnergyRepositoryImpl(
                 .filter { it > 0L }
                 .medianLongOrNull()
         }
-        // Observed max is taken over the whole baseline window, not just the
-        // current day's samples.
+        // Observed max is taken over the whole baseline window.
         val observedMax = async {
             heartRepository.loadHeartRateSamples(baselineStartInstant, dayStart)
                 .maxOfOrNull { it.beatsPerMinute }
@@ -542,15 +452,8 @@ class BodyEnergyRepositoryImpl(
     }
 
     /**
-     * The granted-permission hash the chain signatures embed — or, when the
-     * live read fails or Health Connect is momentarily unavailable, the last
-     * hash a successful read produced.
-     *
-     * Falling back to a constant here (the old behaviour) turned every
-     * transient read failure into an apparent permission CHANGE: no stored day
-     * validated as an anchor any more, so the widget's next refresh silently
-     * reopened the day on the neutral 50 until a later read succeeded. A failed
-     * read says nothing about the permissions, so the last known truth stands.
+     * The granted-permission hash for chain signatures, or the last successful
+     * one when the read fails. A failed read says nothing about permissions.
      */
     private suspend fun permissionSignature(): Int =
         runCatching {
@@ -572,30 +475,16 @@ class BodyEnergyRepositoryImpl(
             ?: 0
 
     /**
-     * The signature a row for [date] is stored under: the chain part, plus the
-     * learned gains the row was actually computed with.
-     *
-     * Always computed from the row's OWN date. The body profile's signature
-     * varies by date (its age gate is relative to the day being asked about), so
-     * validating yesterday's row against today's signature — what the original
-     * seed lookup did — silently breaks the chain across a birthday.
+     * The signature a row for [date] is stored under. Always from the row's own
+     * date: the profile signature varies by date.
      */
     private fun signatureFor(date: LocalDate, context: ChainContext): String =
         "${chainSignatureFor(date, context)}|${context.calibration.gainSignature().hashCode()}"
 
     /**
-     * Everything a CARRY-OVER SCORE depends on, with the learned gains left out.
-     *
-     * A seed is one number from the previous day, not a timeline, and it has to
-     * survive the watch fit nudging a gain by a fraction of a percent. Folding
-     * the gains in meant every observation the learner absorbed invalidated all
-     * fourteen stored days at once, so the next load found no valid predecessor
-     * and fell back to the neutral 50 — turning a sub-percent model change into
-     * a visible 40-point jump, which is the exact discontinuity the chain exists
-     * to remove.
-     *
-     * Serving a cached timeline still requires the full signature. This is only
-     * for deciding whether a stored day is a legitimate ANCHOR to continue from.
+     * Everything a carry-over score depends on, gains left out. Folding gains
+     * in invalidated every stored day on each learner nudge. Serving a cached
+     * timeline still needs the full signature.
      */
     private fun chainSignatureFor(date: LocalDate, context: ChainContext): String {
         val combined = "${context.calibration.zoneSignature()}|${context.bodyProfile.signature(date)}"
@@ -612,19 +501,9 @@ class BodyEnergyRepositoryImpl(
         "v$BodyEnergyTimelineAlgorithmVersion|baseline|$permissionSignature"
 
     /**
-     * Whether [timeline] should be recomputed rather than served.
-     *
-     * Three tiers. Today is volatile and re-reads every 15 minutes. A day inside
-     * [BodyEnergyChainSettlingDays] can still gain late-arriving watch data, so
-     * it re-reads daily. A settled day never does: nothing new will arrive for
-     * it, and recomputing would spend ~8 Health Connect reads to reproduce what
-     * is already stored — which is what made the whole bucket table write-only,
-     * since retention keeps 120 days but nothing read one older than a day.
-     *
-     * "Never stale" is not "never updated": [BodyEnergyTimelineStore.load] still
-     * requires a signature match, so a calibration edit, a permission change or
-     * an algorithm-version bump all rebuild a settled day, and
-     * [RefreshMode.FORCE] bypasses this entirely.
+     * Whether [timeline] should be recomputed. Today re-reads every 15 minutes,
+     * a day inside [BodyEnergyChainSettlingDays] daily, a settled day never.
+     * A signature mismatch or [RefreshMode.FORCE] still rebuilds a settled day.
      */
     private fun timelineIsStale(timeline: BodyEnergyTimeline, date: LocalDate): Boolean {
         val instant = now()
@@ -637,14 +516,8 @@ class BodyEnergyRepositoryImpl(
     }
 
     /**
-     * Whether a cached timeline still has what it claims.
-     *
-     * Retention purges buckets past `BodyEnergyBucketRetentionDays` but keeps
-     * the summary row, so such a day still carries a score and a confidence with
-     * nothing to draw. Serving it would put a headline above a blank chart — a
-     * hole that only stayed hidden while every old day was recomputed anyway. A
-     * genuinely data-less day is the exception: NO_DATA with no points is the
-     * whole truth about it.
+     * Whether a cached timeline still has its points. Retention purges buckets
+     * but keeps the summary row. NO_DATA with no points is the exception.
      */
     private fun cacheIsUsable(cached: BodyEnergyTimeline): Boolean =
         cached.points.isNotEmpty() || cached.confidence == BodyEnergyConfidence.NO_DATA
@@ -660,34 +533,21 @@ class BodyEnergyRepositoryImpl(
         const val PastDayCacheHours = 24L
         const val BaselineCacheHours = 24L
 
-        /**
-         * How far back a stored chain anchor is looked for. Pure SQLite — one
-         * query covers the whole window — so this bound costs nothing to raise.
-         */
+        /** How far back a chain anchor is looked for. One SQLite query, cheap to raise. */
         const val ChainLookbackDays = 14L
 
         /**
-         * How many missing days the FOREGROUND load will recompute to close a
-         * gap. Deliberately far smaller than [ChainLookbackDays]: each day is ~8
-         * Health Connect reads. Two days covers "I last opened the app the day
-         * before yesterday", which is the common gap; anything wider is
-         * [tech.mmarca.openvitals.data.sync.BodyEnergyChainSyncService]'s job.
+         * Missing days the foreground load recomputes. Each day is ~8 Health
+         * Connect reads; wider gaps are the chain sync service's job.
          */
         const val ChainForegroundFillDays = 2L
 
-        /**
-         * Sub-budget for the gap fill. A slow fill must degrade to a neutral
-         * seed, never fail the whole timeline load.
-         */
+        /** Budget for the gap fill. A slow fill degrades to a neutral seed. */
         const val ChainFillBudgetMillis = 12_000L
     }
 }
 
-/**
- * The per-load inputs every day in a chain walk shares. Only the date varies,
- * which is what lets the signature be computed for an arbitrary day rather than
- * just the requested one.
- */
+/** The per-load inputs every day in a chain walk shares. Only the date varies. */
 private data class ChainContext(
     val calibration: BodyEnergyCalibration,
     val bodyProfile: BodyProfile,
@@ -696,10 +556,7 @@ private data class ChainContext(
 
 /** A resolved starting score, and where it came from. */
 private data class ChainSeed(
-    /**
-     * The previous day's end score, or null when there is nothing to carry — in
-     * which case the calculator falls back to the neutral start score.
-     */
+    /** The previous day's end score, or null when there is nothing to carry. */
     val score: Int?,
     val source: BodyEnergySeedSource,
 ) {

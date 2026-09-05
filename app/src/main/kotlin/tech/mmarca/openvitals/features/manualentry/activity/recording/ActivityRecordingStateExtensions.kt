@@ -7,11 +7,7 @@ import tech.mmarca.openvitals.domain.insights.RouteElevation
 import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 
-/**
- * Whether focus mode has a session to focus on: the flag alone is not enough.
- * An idle recorder has nothing to show, and a repetition session has no focus
- * mode in the first place.
- */
+/** Whether focus mode has a session to focus on: an idle or repetition session has none. */
 internal val ActivityRecordingState.canUseFocusMode: Boolean
     get() = isActive && recordingKind != ActivityRecordingKind.REPETITION
 
@@ -111,14 +107,8 @@ internal fun List<ActivityRecordedRepetitionSet>.withLastRestSeconds(restSeconds
     }
 
 /**
- * Elevation gain to show while recording — and the same figure that is saved,
- * so the dashboard cannot disagree with the review screen.
- *
- * [ActivityRecordingState.elevationGainedMeters] is a running sum of raw
- * per-point rises and is NOT used: GPS vertical noise makes it wildly high (a
- * real 750 m climb reported ~15 km). The route is re-derived through the
- * smoothing + hysteresis filter instead. The barometer figure is already
- * filtered and wins when present.
+ * Elevation gain to show and to save. The raw running sum is not used: GPS
+ * noise reported a 750 m climb as 15 km. The barometer figure wins when present.
  */
 fun ActivityRecordingState.displayElevationGainedMeters(): Double =
     if (hasBarometerElevation) {

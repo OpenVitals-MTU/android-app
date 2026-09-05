@@ -59,7 +59,7 @@ class ActivityViewModelTest {
         }
     }
 
-    // ─── Daily goal ───────────────────────────────────────────────────────────
+    // Daily goal.
 
     @Test fun `the goal steppers move and persist the daily goal`() = runTest {
         val persisted = mutableListOf<Double>()
@@ -119,7 +119,7 @@ class ActivityViewModelTest {
         coVerify(exactly = 1) { repo.loadActivityPeriod(any(), any(), any()) }
     }
 
-    // ─── Initial state ────────────────────────────────────────────────────────
+    // Initial state.
 
     @Test fun `initial range is WEEK`() = runTest {
         val vm = viewModel(emptyRepo())
@@ -134,7 +134,7 @@ class ActivityViewModelTest {
         assertTrue(state.nutrition.isEmpty())
     }
 
-    // ─── Load success / failure ───────────────────────────────────────────────
+    // Load success and failure.
 
     @Test fun `load success populates data`() = runTest {
         val steps = listOf(DailySteps(today, 8_000L, 6_000.0))
@@ -171,7 +171,7 @@ class ActivityViewModelTest {
         assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
     }
 
-    // ─── selectRange ──────────────────────────────────────────────────────────
+    // selectRange.
 
     @Test fun `selectRange updates selectedRange`() = runTest {
         val vm = viewModel(emptyRepo())
@@ -183,11 +183,11 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         val vm = viewModel(repo)
         vm.selectRange(TimeRange.MONTH)
-        // init load + selectRange load = 2 bundled period calls
+        // init load + selectRange load = 2 bundled period calls.
         coVerify(atLeast = 2) { repo.loadActivityPeriod(any(), any(), any()) }
     }
 
-    // ─── previousPeriod ───────────────────────────────────────────────────────
+    // previousPeriod.
 
     @Test fun `previousPeriod DAY moves back one day`() = runTest {
         val vm = viewModel(emptyRepo())
@@ -220,13 +220,13 @@ class ActivityViewModelTest {
         assertEquals(before.minusYears(1), vm.uiState.value.selectedDate)
     }
 
-    // ─── nextPeriod ───────────────────────────────────────────────────────────
+    // nextPeriod.
 
     @Test fun `nextPeriod DAY is blocked when selectedDate is today`() = runTest {
         val repo = emptyRepo()
         val vm = viewModel(repo)
         vm.selectRange(TimeRange.DAY)
-        // selectedDate should be today after init
+        // selectedDate is today after init.
         val before = vm.uiState.value.selectedDate
 
         vm.nextPeriod()
@@ -257,7 +257,7 @@ class ActivityViewModelTest {
         assertEquals(before.plusWeeks(1), vm.uiState.value.selectedDate)
     }
 
-    // ─── selectDate ───────────────────────────────────────────────────────────
+    // selectDate.
 
     @Test fun `selectDate clamps future date to today`() = runTest {
         val vm = viewModel(emptyRepo())
@@ -271,7 +271,7 @@ class ActivityViewModelTest {
         assertEquals(pastAnchor, vm.uiState.value.selectedDate)
     }
 
-    // ─── DAY range loads activityProgress ────────────────────────────────────
+    // DAY range loads activityProgress.
 
     @Test fun `load for DAY range calls loadActivityProgress`() = runTest {
         val progress = listOf(ActivityProgressPoint(java.time.Instant.now(), 500L, null, null))
@@ -311,12 +311,12 @@ class ActivityViewModelTest {
     @Test fun `load for WEEK range returns empty activityProgress`() = runTest {
         val repo = emptyRepo()
         val vm = viewModel(repo)
-        // WEEK is the default range
+        // WEEK is the default range.
         assertTrue(vm.uiState.value.activityProgress.isEmpty())
         coVerify(exactly = 0) { repo.loadActivityProgress(any()) }
     }
 
-    // ─── A3: floors, active calories, elevation ───────────────────────────────
+    // A3: floors, active calories, elevation.
 
     @Test fun `DailySteps with A3 fields flows through state unchanged`() = runTest {
         val steps = listOf(
@@ -385,7 +385,7 @@ class ActivityViewModelTest {
         assertEquals(7, days[1].floorsClimbed)
     }
 
-    // ─── Zero = permission granted, no data ───────────────────────────────────
+    // Zero means permission granted, no data.
 
     @Test fun `floorsClimbed zero is non-null so chart shows for any range including DAY`() = runTest {
         val steps = listOf(DailySteps(today, 5_000L, 4_000.0, floorsClimbed = 0))
@@ -431,7 +431,7 @@ class ActivityViewModelTest {
         assertTrue(vm.uiState.value.dailySteps.any { it.activeCaloriesKcal != null })
     }
 
-    // ─── Calories burned chart data ──────────────────────────────────────────
+    // Calories burned chart data.
 
     @Test fun `nutrition with calories burned flows through state for any range including DAY`() = runTest {
         val nutrition = listOf(DailyNutrition(today, hydrationLiters = 0.0, caloriesBurnedKcal = 500.0))

@@ -38,11 +38,7 @@ import tech.mmarca.openvitals.domain.preferences.CaffeineHormonalStatus
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.CaffeineSleepSensitivity
 
-/**
- * The four caffeine-model parameters shown under Settings > Nutrition.
- * The physiological factors live in [MetabolismEditor] (Settings > Body
- * profile) because they are facts about the person, not the model.
- */
+/** The four caffeine-model parameters. The physiological factors live in [MetabolismEditor]. */
 @Composable
 internal fun CaffeineModelEditor(
     preferences: CaffeinePreferences,
@@ -86,11 +82,7 @@ internal fun CaffeineModelEditor(
     }
 }
 
-/**
- * The nine physiological factors that shift caffeine clearance. Shown under
- * Settings > Body profile > Metabolism; edits the same [CaffeinePreferences]
- * store as [CaffeineModelEditor].
- */
+/** The nine physiological factors that shift clearance, under Body profile. */
 @Composable
 internal fun MetabolismEditor(
     preferences: CaffeinePreferences,

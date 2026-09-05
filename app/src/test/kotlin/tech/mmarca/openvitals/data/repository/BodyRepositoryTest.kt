@@ -29,10 +29,7 @@ class BodyRepositoryTest {
         heightCm = 178.0,
     )
 
-    /**
-     * A source with an optional measured weight and height, and a controllable
-     * permission set — the two axes the resolution has to get right.
-     */
+    /** A source with an optional measured weight and height, and a controllable permission set. */
     private fun source(
         weightKg: Double? = null,
         heightCm: Double? = null,
@@ -55,8 +52,7 @@ class BodyRepositoryTest {
         BodyRepositoryImpl(hc).resolveBodyProfile(declared)
 
     @Test fun `a measured weight beats the declared one`() = runTest {
-        // The whole point: the app used to be 76 kg on the caffeine screen and
-        // 81 kg on the body screen, with nothing reconciling the two.
+        // The app used to be 76 kg on the caffeine screen and 81 kg on the body screen.
         val resolved = resolve(source(weightKg = 81.2, heightCm = 181.0))
 
         assertEquals(81.2, resolved.weightKg!!, 1e-9)
@@ -71,8 +67,7 @@ class BodyRepositoryTest {
     }
 
     @Test fun `a missing permission falls back rather than blanking the value`() = runTest {
-        // A filter that returns nothing must be indistinguishable from "no
-        // preference", not from "you weigh nothing".
+        // A filter that returns nothing must read as "no preference", not "you weigh nothing".
         val resolved = resolve(source(weightKg = 81.2, heightCm = 181.0, granted = emptySet()))
 
         assertEquals(76.0, resolved.weightKg!!, 1e-9)
@@ -80,8 +75,7 @@ class BodyRepositoryTest {
     }
 
     @Test fun `the rest of the profile is untouched by resolution`() = runTest {
-        // Resolution is about body size only. Age and the heart rates are declared
-        // facts with no measured counterpart.
+        // Resolution is about body size only.
         val resolved = resolve(source(weightKg = 81.2))
 
         assertEquals(1993, resolved.birthYear)

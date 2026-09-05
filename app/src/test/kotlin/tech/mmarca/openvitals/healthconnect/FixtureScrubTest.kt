@@ -6,24 +6,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The safety control, and the most important test in this repository.
- *
- * `golden.json` is DERIVED from a real person's Health Connect export — heart rate,
- * sleep, workouts, the lot — and this repo is PUBLIC. Git history is append-only: a
- * leak committed here cannot be taken back by a later commit. So the fixture is
- * checked on every run, not just on the day it was generated.
- *
- * It is not hypothetical. The first generated fixture leaked twice, and both were
- * caught here:
- *
- *  * the manifest embedded the writer ALIAS TABLE, whose *keys* are the real
- *    package names — the scrubber leaked its own key;
- *  * `com.example.healthsync` as an alias still told the world which apps this
- *    person runs, which is most of what the scrub is for.
- *
- * The Kotlin tier reads the very same file the Dart tier does (Gradle puts it on
- * this module's test classpath), so this guard has to run on both sides or the
- * fixture is only checked when someone happens to run the other suite.
+ * The safety control. `golden.json` is derived from a real person's export and this repo
+ * is public, so the fixture is checked on every run. The first fixture leaked twice: the
+ * alias table's keys were the real package names, and an alias still named the vendor.
  */
 class FixtureScrubTest {
 
@@ -43,8 +28,7 @@ class FixtureScrubTest {
 
     @Test
     fun `no real writer, vendor or person appears anywhere in the fixture`() {
-        // Substrings, not whole package names: an alias that merely *contains* the
-        // vendor ("com.example.healthsync") is not an alias.
+        // Substrings, not whole package names.
         val denied = listOf(
             "gadgetbridge", "freeyourgadget", "nodomain",
             "garmin", "hevy", "technogym", "opentracks", "dennisguse",
@@ -68,8 +52,7 @@ class FixtureScrubTest {
 
     @Test
     fun `every writer is either an example alias or OpenVitals itself`() {
-        // Fail CLOSED. A writer the alias table has never heard of must not be able
-        // to reach the file just because nobody thought about it.
+        // Fail closed: a writer the alias table has never heard of must not reach the file.
         val writers = fixture["manifest"].asJsonObject["writers"].asJsonArray.map { it.asString }
 
         writers.forEach { writer ->
@@ -90,9 +73,7 @@ class FixtureScrubTest {
 
     @Test
     fun `no coordinate is anywhere near the real route`() {
-        // The track is rotated and re-anchored to a synthetic origin in the North
-        // Sea. Shape, length and speed profile survive — so distance, pace and
-        // splits are genuinely exercised — but the location does not.
+        // The track is rotated and re-anchored to the North Sea. Shape, length and speed survive.
         fixture["exercise"].asJsonArray.forEach { session ->
             session.asJsonObject["route"].asJsonArray.forEach { point ->
                 val lat = point.asJsonObject["lat"].asDouble
@@ -110,8 +91,7 @@ class FixtureScrubTest {
 
     @Test
     fun `no free text survived`() {
-        // Titles and notes are the one field a human types into. Never carry one
-        // across.
+        // Titles and notes are the one field a human types into.
         val canned = setOf("Session", "Sleep", "Recorded by a device.", "Sleep data from a device.")
 
         listOf("exercise", "sleep").forEach { key ->

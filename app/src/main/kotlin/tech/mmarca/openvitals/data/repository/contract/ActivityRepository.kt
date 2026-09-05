@@ -18,17 +18,9 @@ import tech.mmarca.openvitals.domain.model.SpeedSample
 
 interface ActivityRepository {
     /**
-     * [includeActivityProgress] opts out of the hourly intraday series. The Day
-     * range is the only range that issues that read, so a screen that never draws
-     * an intraday line pays a Health Connect aggregate for nothing — and, before
-     * the read was given a timeout, could be stranded on the loading spinner by
-     * it while Week/Month/Year kept working.
-     *
-     * [includeComparisonWindows] opts out of the previous/baseline window reads.
-     * They exist for the movement-metric screens' period comparison; a screen
-     * that renders the current window alone (the calories overview) would pay
-     * up to four extra year-long Health Connect aggregates for series it never
-     * draws.
+     * [includeActivityProgress] opts out of the hourly intraday series, which
+     * only the Day range draws. [includeComparisonWindows] opts out of the
+     * previous/baseline reads, up to four year-long aggregates.
      */
     suspend fun loadActivityPeriod(
         query: PeriodLoadQuery,
@@ -106,10 +98,7 @@ interface ActivityRepository {
 
     suspend fun writeActivityEntry(request: ActivityWriteRequest): String
 
-    /**
-     * Writes many activities in one atomic Health Connect call — one quota
-     * unit per batch instead of one per activity. Either all land or none do.
-     */
+    /** Writes many activities in one atomic call: one quota unit per batch. */
     suspend fun writeActivityEntries(requests: List<ActivityWriteRequest>): List<String>
 
     suspend fun updateActivityEntry(id: String, request: ActivityWriteRequest)

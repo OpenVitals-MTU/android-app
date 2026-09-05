@@ -585,10 +585,8 @@ class AppleHealthImportServiceTest {
 
     @Test
     fun `synthesized route times stay strictly increasing at millisecond precision`() {
-        // Paused GPS produces runs of identical coordinates (zero distance progress). Offsets must
-        // still advance by >= 1ms per point: Health Connect stores route times at millisecond
-        // precision, and ExerciseRoute requires strictly increasing times when the session is read
-        // back. Sub-millisecond spacing breaks duplicate detection and session reads.
+        // Paused GPS repeats coordinates. Offsets must still advance by at least 1 ms per point,
+        // because ExerciseRoute requires strictly increasing millisecond times.
         val pausedPoints = (0 until 50).joinToString("\n") {
             """<trkpt lat="59.000000" lon="24.000000"><ele>0</ele><time>2026-07-05T08:34:11Z</time></trkpt>"""
         }
@@ -1330,8 +1328,7 @@ class AppleHealthImportServiceTest {
 
     @Test
     fun `the scan percent climbs while the parser streams the export`() = runTest {
-        // The user-visible bug this pins: without parse-time ticks, parsedElements stays 0
-        // for the entire scan and the bar sits at 0% before jumping straight to 88.
+        // Without parse-time ticks the bar sat at 0% and jumped straight to 88.
         val elements = ProgressReportElementInterval * 2 + 1000
         val xml = largeHeartRateExport(count = elements)
         val uri = mockk<Uri>()
@@ -1349,8 +1346,7 @@ class AppleHealthImportServiceTest {
         AppleHealthImportService(context, repository).importAppleHealthExport(
             uri,
             selectedCategories = setOf(AppleHealthImportCategory.BODY),
-            // Exactly what the worker does to every progress the service emits:
-            // re-seed the denominator the analysis pass measured.
+            // What the worker does to every progress: re-seed the denominator the analysis measured.
             progress = { progress -> progresses += progress.copy(expectedParsedElements = elements) },
         )
 
@@ -1366,7 +1362,7 @@ class AppleHealthImportServiceTest {
             assertTrue(percents[index] > percents[index - 1])
             assertTrue(percents[index] > 0)
         }
-        // Well past zero *before* conversion starts — the point of the whole fix.
+        // Well past zero before conversion starts.
         assertTrue(percents.last() > 50)
         val converting = progresses.first { it.phase == AppleHealthImportPhase.CONVERTING }
         assertTrue(requireNotNull(converting.percent) >= percents.last())
@@ -1374,9 +1370,7 @@ class AppleHealthImportServiceTest {
 
     @Test
     fun `the analysis scan reports its running element count`() = runTest {
-        // Analysis is the pass that *measures* the total, so it has no denominator and
-        // its bar stays indeterminate — but its "Scanned N items" line must not read 0
-        // for the whole scan.
+        // Analysis measures the total, so its bar is indeterminate, but "Scanned N items" must not read 0.
         val elements = ProgressReportElementInterval * 2
         val xml = largeHeartRateExport(count = elements)
         val uri = mockk<Uri>()
@@ -1408,10 +1402,8 @@ class AppleHealthImportServiceTest {
 
     @Test
     fun `early-skipped records leave the element stack and correlations intact`() = runTest {
-        // The three ways an early skip can silently corrupt data: a skip marker left on
-        // the stack, metadata leaking into the next record, and a correlation CHILD
-        // skipped (which would break the whole group). Only vitals is selected, so every
-        // heart-rate record here is unselected — including the correlation's own child.
+        // Three ways an early skip corrupts data: a skip marker left on the stack, metadata leaking
+        // into the next record, and a correlation child skipped. Only vitals is selected.
         val xml =
             """
             <HealthData>
@@ -1461,16 +1453,14 @@ class AppleHealthImportServiceTest {
             selectedCategories = setOf(AppleHealthImportCategory.VITALS),
         )
 
-        // The correlation's children were never skipped, so the group still converts;
-        // the oxygen record parsed after a skipped one is unharmed.
+        // The correlation's children were never skipped, so the group still converts.
         assertEquals(1, insertedRecords.count { it is BloodPressureRecord })
         assertEquals(
             1,
             insertedRecords.count { it is androidx.health.connect.client.records.OxygenSaturationRecord },
         )
         assertEquals(2, result.importedRecords)
-        // Only the two TOP-LEVEL heart-rate records are early-skipped: the correlation's
-        // own heart-rate child is a group member and never booked as an unselected skip.
+        // Only the two top-level heart-rate records are early-skipped; the correlation's child is a group member.
         assertEquals(2, result.notSelectedRecords)
         assertEquals(4, result.convertedRecords)
         assertTrue(result.shareableReportText.contains("earlySkippedUnselectedRecords=2"))
@@ -1478,9 +1468,7 @@ class AppleHealthImportServiceTest {
 
     @Test
     fun `parser reads streaming zip entries with data descriptors and no central directory`() {
-        // A ZIP written the way a *streaming* writer does it: the local header's sizes are
-        // unknown (flag bit 3) and a data descriptor follows the payload; no central
-        // directory exists to look the sizes up in.
+        // A streaming ZIP: sizes unknown in the local header (flag bit 3), data descriptor after the payload, no central directory.
         val xml =
             """
             <HealthData>
@@ -1546,8 +1534,7 @@ class AppleHealthImportServiceTest {
 
     @Test
     fun `service unions parallel duplicate check chunks across types and time spans`() = runTest {
-        // Two record types, each spanning far more than the 6h duplicate-check window,
-        // producing multiple disjoint lookup chunks that run concurrently.
+        // Two record types spanning more than the 6h duplicate-check window, so lookup chunks run concurrently.
         val xml =
             """
             <HealthData>
@@ -1637,10 +1624,7 @@ class AppleHealthImportServiceTest {
             appendLine("</HealthData>")
         }
 
-    /**
-     * A ZIP with flag-bit-3 local headers (sizes unknown), raw-deflate payloads, trailing
-     * data descriptors, and no central directory beyond its opening signature.
-     */
+    /** A ZIP with flag-bit-3 local headers, raw-deflate payloads, trailing descriptors and no central directory. */
     private fun streamingZip(entries: Map<String, String>): ByteArray {
         val out = ByteArrayOutputStream()
         entries.forEach { (name, contents) ->
@@ -1786,11 +1770,9 @@ class AppleHealthImportServiceTest {
 
     @Test
     fun `additive records are settled during the parse instead of held to the end`() = runTest {
-        // Steps, distance and active energy are cross-source deduplicated against each other,
-        // which used to mean buffering every one of them until the parse finished -- the single
-        // biggest thing on the heap, and what killed large imports at Android's 256MB cap.
-        // Records that cannot overlap in time cannot dedup against each other, so they must be
-        // converted and released as the parse runs.
+        // Steps, distance and active energy dedup against each other, which used to buffer all of them
+        // until the parse finished and killed large imports at the 256MB cap. Records that cannot
+        // overlap in time must be converted and released as the parse runs.
         val start = Instant.parse("2023-01-01T00:00:00Z")
         val recordCount = 30_000
         val xml = buildString {
@@ -1840,9 +1822,8 @@ class AppleHealthImportServiceTest {
 
     @Test
     fun `windowed conversion still drops a sample another source already covered`() {
-        // The dedup that the buffering exists for, run the way the streaming import now runs it.
-        // Records that overlap always land in the same window -- the carry window is days wide and
-        // an overlapping pair is minutes apart -- so windowing must not weaken this.
+        // The dedup the buffering exists for. Overlapping records always land in the same window,
+        // so windowing must not weaken it.
         val parsed = parseXml(
             """
             <HealthData>
@@ -1868,9 +1849,7 @@ class AppleHealthImportServiceTest {
 
     @Test
     fun `time-separated windows convert the same records as one pass over all of them`() {
-        // The windowing rule in one assertion: two sets of records far enough apart in time that
-        // no member of one can overlap a member of the other convert identically whether they are
-        // handed over together or a window at a time.
+        // Two sets of records too far apart to overlap convert identically whether handed over together or per window.
         val xml =
             """
             <HealthData>

@@ -15,16 +15,7 @@ import tech.mmarca.openvitals.data.repository.WatchNotificationPrefsStore
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Port of the empty-state case of Flutter's
- * `test/features/settings/watch_notification_apps_screen_test.dart`.
- *
- * The per-app blocklist is a list of every launchable app. When the platform
- * hands back nothing — a locked-down profile, or a host that refused the query
- * — the screen has to say so. Blank space under a switch that reads "on" is
- * indistinguishable from an app whose list is still loading, and the user waits
- * for something that is never coming.
- */
+/** When the platform hands back no apps, the screen has to say so rather than look like it is loading. */
 class WatchNotificationAppsScreenTest {
 
     @get:Rule
@@ -58,9 +49,7 @@ class WatchNotificationAppsScreenTest {
 
     @Test
     fun anAppListThatCannotBeReadLeavesTheScreenUsableRatherThanStuckLoading() {
-        // A host that cannot answer the query is the same situation from the
-        // user's side as a phone with nothing to list — and the one thing it
-        // must not do is spin forever.
+        // A host that cannot answer must not spin forever.
         setScreen(FakeGateway(apps = emptyList(), throwsOnList = true))
 
         awaitEmptyState()
@@ -82,8 +71,7 @@ class WatchNotificationAppsScreenTest {
         val prefs = context.getSharedPreferences(TEST_PREFS_FILE, Context.MODE_PRIVATE)
         prefs.edit { clear() }
         val store = WatchNotificationPrefsStore(prefs)
-        // Forwarding already on and access already granted: the app list only
-        // exists once both gates are open.
+        // The app list only exists once forwarding is on and access is granted.
         store.enabled = true
         store.disclosureAccepted = true
 

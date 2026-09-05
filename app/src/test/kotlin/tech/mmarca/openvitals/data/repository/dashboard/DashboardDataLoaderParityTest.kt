@@ -66,11 +66,8 @@ import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 /**
- * The dashboard loader cases Flutter's `dashboard_data_loader_test.dart` pins
- * beyond the ones in `data/repository/DashboardDataLoaderTest.kt`: the
- * point-in-time active-caffeine read, the permission set the callout is computed
- * against, and the device-support gating (`supportedMetrics`) the tile mapper
- * now depends on.
+ * The point-in-time active-caffeine read, the permission set behind the callout,
+ * and the device-support gating (`supportedMetrics`).
  */
 class DashboardDataLoaderParityTest {
 
@@ -135,7 +132,7 @@ class DashboardDataLoaderParityTest {
         unmockkStatic(Log::class)
     }
 
-    // ─── active caffeine (point-in-time decaying quantity) ────────────────────
+    // Active caffeine (point-in-time decaying quantity).
 
     @Test fun `morning carryover from last night is reported for today`() = runTest {
         val entries = listOf(caffeineNutritionEntry(hoursAgo = 8, milligrams = 150.0))
@@ -164,8 +161,7 @@ class DashboardDataLoaderParityTest {
             preferences = CaffeinePreferences(),
             now = Instant.now(),
         ).currentMg
-        // Active caffeine decays by well under 0.1 mg between the two "now"
-        // samples, so the tile and the detail screen agree.
+        // Active caffeine decays by well under 0.1 mg between the two "now" samples.
         assertEquals(screenCurrentMg, data.activeCaffeineMg ?: 0.0, 0.1)
     }
 
@@ -233,9 +229,7 @@ class DashboardDataLoaderParityTest {
             recentHistoryMetrics = setOf(DashboardMetric.SLEEP),
         )
 
-        // Metrics load a pass each, so a later pass's answer used to be dropped
-        // entirely — and an empty-today tile whose metric HAS recent history
-        // demoted to the back of the grid as though it never had any.
+        // A later pass's answer used to be dropped, so an empty-today tile with recent history sank.
         assertEquals(
             setOf(DashboardMetric.STEPS, DashboardMetric.SLEEP),
             first.mergeLoaded(second).recentHistoryMetrics,
@@ -266,14 +260,11 @@ class DashboardDataLoaderParityTest {
         assertEquals(21.0, first.mergeLoaded(second).activeCaffeineMg ?: 0.0, 1e-9)
     }
 
-    // ─── permissions and device support ───────────────────────────────────────
+    // Permissions and device support.
 
     @Test fun `omits permissions the installed provider cannot grant`() = runTest {
-        // The provider does not define WHEELCHAIR_PUSHES (the app's connect
-        // client is newer than it) and the mindfulness feature is unavailable —
-        // neither permission can ever be granted, and `grantedPermissions()`
-        // cannot even report them, so requiring them would strand the
-        // dashboard's permission callout on an ungrantable set.
+        // The provider does not define WHEELCHAIR_PUSHES and mindfulness is unavailable.
+        // Requiring them would strand the callout on an ungrantable set.
         val hc = mockk<HealthConnectManager>()
         every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
         every { hc.managedPermissions } returns setOf(stepsPermission)
@@ -302,8 +293,7 @@ class DashboardDataLoaderParityTest {
         every { hc.managedPermissions } returns allDashboardPermissions - setOf(
             wheelchairPushesPermission,
             bloodGlucosePermission,
-            // Feature-flagged permissions are absent from `managedPermissions`
-            // when the device does not offer them.
+            // Feature-flagged permissions are absent from `managedPermissions` when unavailable.
             skinTemperaturePermission,
             mindfulnessPermission,
         )
@@ -318,8 +308,7 @@ class DashboardDataLoaderParityTest {
             ),
         )
 
-        // Reported for every metric, not just the queried ones — the dashboard
-        // uses it to decide which tiles exist at all.
+        // Reported for every metric: the dashboard decides which tiles exist from it.
         val supported = data.supportedMetrics
         assertNotNull(supported)
         assertTrue(DashboardMetric.STEPS in supported!!)
@@ -368,14 +357,13 @@ class DashboardDataLoaderParityTest {
             ),
         )
 
-        // The availability gate short-circuits granted permissions, so nothing
-        // is read and every permission the day needs reads as missing.
+        // The availability gate short-circuits, so nothing is read and every permission reads as missing.
         assertEquals(0L, data.steps)
         assertTrue(stepsPermission in data.missingPermissions)
         coVerify(exactly = 0) { hc.grantedPermissions() }
     }
 
-    // ─── fixtures ─────────────────────────────────────────────────────────────
+    // Fixtures.
 
     private fun caffeineQuery(date: LocalDate) = DashboardQuery(
         date = date,

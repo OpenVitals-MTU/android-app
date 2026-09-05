@@ -15,31 +15,13 @@ import tech.mmarca.openvitals.domain.model.GarminWellnessSample
 import tech.mmarca.openvitals.features.imports.applehealth.isDuplicateClientRecordFailure
 
 /**
- * Runs the whole wellness import for one sync's downloaded FIT files:
+ * Runs the wellness import for one sync's FIT files: Health Connect records
+ * through the shared insert pipeline, the cumulative counters accumulated
+ * across every file and differenced once against the watermarks, and the
+ * watch-only metrics into [GarminWellnessRepository]. Activity files are
+ * left to the activity importer.
  *
- *  1. Health Connect records (sleep, HRV, VO2 max, naps, monitoring
- *     summaries, Health Snapshot) through the same
- *     [AppleHealthImportRepository.insertImportedRecords] pipeline the Apple
- *     Health importer uses — deterministic `clientRecordId`s make a re-import
- *     upsert instead of duplicate.
- *  2. The cumulative counters, accumulated across EVERY file of the run and
- *     differenced once against the stored watermarks — a file only knows the
- *     minutes it holds, and an interval record needs the reading before its
- *     first one.
- *  3. The watch-only metrics (stress, Body Battery, sleep scores, …) into the
- *     app's own table via [GarminWellnessRepository] — Health Connect has no
- *     types for them.
- *
- * Mirrors the Flutter build's wellness half of `RouteBulkImportViewModel.
- * importRouteFiles` plus `GarminDeviceSyncPort._storeWatchOnlyMetrics`.
- * Activity-type files (4/5/6) are left alone here — their wellness passengers
- * (VO2 max, recovery time) are still extracted, but the exercise itself is not
- * imported in this milestone; the raw bytes stay in the Garmin file store.
- *
- * Throws when the write path itself is unavailable (no Health Connect,
- * permissions revoked mid-run) — the caller treats that as a failed sync and
- * re-downloads the files next time. A single undecodable FILE is tolerated and
- * skipped, like the bulk importer tolerates one bad file in a batch.
+ * Throws when the write path is unavailable; a single bad file is skipped.
  */
 @Singleton
 class FitWellnessImporter @Inject constructor(
@@ -61,8 +43,7 @@ class FitWellnessImporter @Inject constructor(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
-                // A file the decoder rejects must not sink the night's data in
-                // the files beside it.
+                // A rejected file must not sink the files beside it.
                 GarminLog.log(
                     "[GARMIN-IMPORT] undecodable ${file.entry.type.label} " +
                         "index=${file.entry.fileIndex}: $error",
@@ -77,9 +58,7 @@ class FitWellnessImporter @Inject constructor(
             records += fitNapImportRecords(wellness.naps)
             wellness.healthSnapshot?.let { records += fitHealthSnapshotImportRecords(it) }
 
-            // The cumulative counters are held back and mapped ONCE at the end
-            // of the run: a file only knows the minutes it holds, and an
-            // interval record needs the reading before its first one.
+            // Counters are mapped once at the end: an interval needs the reading before it.
             wellness.monitoring?.let { counters = counters.merge(fitMonitoringCounters(it)) }
 
             watchOnly += watchOnlySamples(wellness)
@@ -88,25 +67,16 @@ class FitWellnessImporter @Inject constructor(
         writeRecords(records)
         writeCounters(counters)
 
-        // Stored after the Health Connect writes, like the Flutter build: the
-        // app's own table has no quota and its upsert is idempotent, so its
-        // order matters less — but a failure here still fails the sync, so the
-        // files are re-fetched rather than silently losing the series.
+        // After the Health Connect writes, like the Flutter build. A failure still fails the sync.
         wellnessRepository.upsert(watchOnly)
         if (watchOnly.isNotEmpty()) {
             GarminLog.log("[GARMIN-IMPORT] stored ${watchOnly.size} watch-only samples")
         }
     }
 
-    /**
-     * One batched insert; duplicate-clientRecordId rejections are retried
-     * record by record and counted as success — the record is already there,
-     * which is exactly what a deterministic id promises.
-     */
+    /** One batched insert. Duplicate-id rejections are retried one by one and count as success. */
     private suspend fun writeRecords(records: List<Record>) {
-        // Several files can restate the same record (the watch re-offers a
-        // file whose archive flag did not stick); the LAST occurrence wins,
-        // matching the order Health Connect would have applied the upserts in.
+        // Several files can restate the same record; the last occurrence wins.
         val deduped = records
             .associateBy { it.metadata.clientRecordId ?: it }
             .values
@@ -121,8 +91,7 @@ class FitWellnessImporter @Inject constructor(
         } catch (error: Exception) {
             if (!error.isDuplicateClientRecordFailure()) throw error
         }
-        // The batch is atomic, so one duplicate rejected all of it. Retry one
-        // by one so the genuinely new records still land.
+        // The batch is atomic; retry one by one so new records still land.
         var written = 0
         for (record in deduped) {
             try {
@@ -143,18 +112,13 @@ class FitWellnessImporter @Inject constructor(
         if (counters.isEmpty) return
         val mapped = fitMonitoringCounterRecords(counters, previous = watermarkStore.load())
         if (mapped.records.isEmpty()) {
-            // Nothing new to write, but the cursor still moved: the run may
-            // have read past the previous watermark and found only movement
-            // inside the still-filling bucket. Persisting it keeps an
-            // idempotent re-sync from re-walking the same minutes, and it
-            // cannot lose data because there was none to lose.
+            // Nothing new, but the cursor moved. Persisting it keeps a re-sync
+            // from re-walking the same minutes, and nothing is lost.
             watermarkStore.save(mapped.watermarks)
             return
         }
         writeRecords(mapped.records)
-        // Stored only once the records are IN. A watermark for records that
-        // were never written would skip those minutes for good — the next sync
-        // would difference from a reading Health Connect never received.
+        // Only once the records are in, or those minutes would be skipped for good.
         watermarkStore.save(mapped.watermarks)
         GarminLog.log(
             "[GARMIN-IMPORT] wrote ${mapped.records.size} intraday counter " +
@@ -162,19 +126,13 @@ class FitWellnessImporter @Inject constructor(
         )
     }
 
-    /**
-     * The watch-only metrics one decoded file carried, for the app's own
-     * table. Port of the Flutter build's
-     * `GarminDeviceSyncPort._storeWatchOnlyMetrics` inner loop.
-     */
+    /** The watch-only metrics one decoded file carried. */
     private fun watchOnlySamples(wellness: FitWellness): List<GarminWellnessSample> = buildList {
         fun add(metric: GarminWellnessMetric, at: Instant, value: Long) {
             add(GarminWellnessSample(metric = metric, time = at, value = value))
         }
 
-        // The metrics file: one snapshot, several unrelated numbers. VO2 max
-        // is absent on purpose — Health Connect has a type for it, so it goes
-        // down the import path with everything else it can hold.
+        // VO2 max is absent on purpose: Health Connect has a type for it.
         val metrics = wellness.metrics
         val metricsAt = metrics?.time
         if (metrics != null && metricsAt != null) {
@@ -192,9 +150,7 @@ class FitWellnessImporter @Inject constructor(
             }
         }
 
-        // daily_sleep: the watch's own nightly summary, which arrives in the
-        // METRICS file rather than the sleep file. Keyed to the night's end,
-        // which is the only instant the message carries.
+        // daily_sleep arrives in the metrics file. Keyed to the night's end.
         val daily = wellness.dailySleep
         val dailyAt = daily?.endTime
         if (daily != null && dailyAt != null) {
@@ -232,10 +188,8 @@ class FitWellnessImporter @Inject constructor(
             }
         }
 
-        // Health Snapshot stress / Body Battery. Stored under the same metrics
-        // as the all-day series: they are the same quantity on the same scale,
-        // just measured deliberately rather than passively, and the
-        // (metric, time) key keeps them from colliding.
+        // Health Snapshot stress and Body Battery: the same quantity as the all-day
+        // series, measured deliberately. The (metric, time) key keeps them apart.
         val snapshot = wellness.healthSnapshot
         if (snapshot != null) {
             for ((at, value) in snapshot.stress) {

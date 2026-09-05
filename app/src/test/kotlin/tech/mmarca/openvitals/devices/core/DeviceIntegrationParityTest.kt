@@ -9,12 +9,7 @@ import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
 
-/**
- * The ownership-helper matrix per device shape: which of
- * isGarminWatch/isWearosWatch/isWatch/isBikeComputer/isGarminGfdi/
- * isLiveSensorCapable holds for an explicit Garmin watch, a plain sensor and
- * an Edge bike computer.
- */
+/** The ownership-helper matrix for an explicit Garmin watch, a plain sensor and an Edge. */
 class DeviceIntegrationParityTest {
 
     private fun watch(integration: DeviceIntegration? = null): BleSensorDevice =

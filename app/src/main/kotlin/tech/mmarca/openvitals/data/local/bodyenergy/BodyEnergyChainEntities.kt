@@ -5,32 +5,16 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * One row per local calendar day of the Body Energy chain: the day's headline
- * numbers plus everything its input summary carries.
- *
- * Keyed by [epochDay] ALONE, deliberately. The [signature] is a *validity
- * stamp*, not a discriminator: there is exactly one true timeline per day at any
- * moment. Keying by `(day, signature)` would accumulate an orphan row for every
- * calibration edit and force each chain read to filter; keying by day means a
- * recompute overwrites in place and the table can never exceed one row per day
- * the user has lived. A signature mismatch on read is simply a miss.
- *
- * [endScore] is what seeds the *next* day — the reason this table exists. It is
- * readable without touching [BodyEnergyBucketEntity], which is why the buckets
- * are a separate table rather than an encoded column here: the chain walk-back
- * asks this question up to a fortnight's worth of times per screen open and must
- * not decode 288 points to answer it.
+ * One row per local day of the Body Energy chain. Keyed by [epochDay]
+ * alone: the [signature] is a validity stamp, so a recompute overwrites in
+ * place. [endScore] seeds the next day and is readable without touching the
+ * buckets, which is why they are a separate table.
  */
 @Entity(tableName = "body_energy_days")
 data class BodyEnergyDayEntity(
     @PrimaryKey
     @ColumnInfo(name = "epoch_day") val epochDay: Long,
-    /**
-     * The per-day signature (`v11|<zones+profile hash>|<permission hash>|<gain
-     * hash>`) this row was computed under, compared on read against the
-     * signature built for THIS row's own date — the body profile's signature
-     * varies by date, so one built for day D can never validate day D-1.
-     */
+    /** The per-day signature this row was computed under, compared against this row's own date. */
     @ColumnInfo(name = "signature") val signature: String,
     @ColumnInfo(name = "start_score") val startScore: Int,
     @ColumnInfo(name = "end_score") val endScore: Int,
@@ -59,15 +43,9 @@ data class BodyEnergyDayEntity(
 )
 
 /**
- * The 5-minute buckets behind each [BodyEnergyDayEntity] — ~288 for a full day.
- *
- * [epochDay] is the LOCAL calendar day and is stored explicitly rather than
- * derived from [timeMillis]: for most of the world a bucket's UTC instant falls
- * on a different UTC day than its local date, so deriving it would scatter one
- * day's buckets across two partitions.
- *
- * Enum-valued columns hold the enum's `name` — greppable in a `sqlite3` dump and
- * immune to a Kotlin enum being reordered.
+ * The 5-minute buckets behind each day. [epochDay] is the local day, stored
+ * explicitly: deriving it from the UTC instant would split a day across two.
+ * Enum columns hold the enum's `name`.
  */
 @Entity(
     tableName = "body_energy_buckets",
@@ -90,22 +68,11 @@ data class BodyEnergyBucketEntity(
     @ColumnInfo(name = "primary_influence") val primaryInfluence: String,
 )
 
-/**
- * How many days of 5-minute buckets are kept. Past this the day's summary row
- * survives — so the chain, and any long-range daily-score chart, stay intact —
- * but its buckets are dropped. Buckets are ~99% of the chain's bytes and nothing
- * reads them more than a few weeks back.
- */
+/** Days of buckets kept. The summary row survives, so the chain stays intact. */
 const val BodyEnergyBucketRetentionDays = 120L
 
 /**
- * The `vitals_sync_cursors` key the Body Energy chain keeps its bookkeeping
- * under. That table is generic per-key sync state, so the chain reuses it rather
- * than cloning a two-column table.
- *
- * `changes_token` holds the GLOBAL signature — algorithm version, zones and
- * permissions, without the per-day profile component — so a calibration edit can
- * purge the whole chain in one comparison. `last_full_sync_millis` is the warm
- * service's last completed pass.
+ * The `vitals_sync_cursors` key for the chain. `changes_token` holds the
+ * global signature, `last_full_sync_millis` the warm service's last pass.
  */
 const val BodyEnergyChainCursorKey = "bodyEnergyChain.v1"

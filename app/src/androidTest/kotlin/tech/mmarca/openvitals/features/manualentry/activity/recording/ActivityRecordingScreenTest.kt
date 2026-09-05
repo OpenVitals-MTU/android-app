@@ -21,22 +21,11 @@ import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Ports the whole-screen half of the `recording screen` group of Flutter's
- * `test/features/manualentry/activity/recording/activity_recording_screen_test.dart`
- * — the cases about what the screen offers as a whole, rather than what one
- * control bar renders (that is `ActivityRecordingControlsTest`).
+ * What the recording screen offers as a whole. The control bar is `ActivityRecordingControlsTest`.
  *
- * All three are about a screen someone is looking at mid-effort, one-handed,
- * often at arm's length. Rearranging the dashboard while a recording is running
- * would mean dragging tiles around with a thumb that is meant to be on the
- * handlebars, so the editor is offered only when the session is stopped.
- * Focus mode is the opposite promise: everything else goes away, and it has to
- * come back on the first tap or the rider is trapped in it.
- *
- * The screen owns none of that state — the host (`ActivityEntryScreen`) does,
- * so it can drop its app bar for focus mode and put the edit toggle in it.
- * These tests therefore drive the screen the way that host does: they hold the
- * flags and hand the screen the callbacks, which is the shape the app has.
+ * The editor is offered only when the session is stopped, and focus mode must exit on one tap.
+ * The host (`ActivityEntryScreen`) owns that state, so these tests hold the flags and hand
+ * the screen the callbacks.
  */
 class ActivityRecordingScreenTest {
 
@@ -45,9 +34,7 @@ class ActivityRecordingScreenTest {
 
     @Test
     fun theDashboardEditToggleOnlyOffersItselfWhileIdleOrPaused() {
-        // Reported to the host rather than rendered here: the toggle lives in
-        // the app bar. Offering it mid-recording would invite a layout change
-        // to the very numbers being recorded.
+        // Reported to the host, which owns the app-bar toggle. Editing mid-recording would move the numbers being recorded.
         val reportedCanEdit = mutableListOf<Boolean>()
         val status = mutableStateOf(ActivityRecordingStatus.RECORDING)
         composeRule.setContent {
@@ -84,9 +71,7 @@ class ActivityRecordingScreenTest {
 
     @Test
     fun editingTheDashboardSwapsTheTabsForTheAddFieldChips() {
-        // The editor takes over the tab area rather than sitting under it: the
-        // map and the split tables are not editable, and leaving them reachable
-        // would let the user wander off mid-edit into a tab that ignores them.
+        // The editor takes over the tab area: the map and split tables are not editable.
         var toggleEdit: (() -> Unit)? = null
         composeRule.setContent {
             OpenVitalsTheme {
@@ -157,16 +142,14 @@ class ActivityRecordingScreenTest {
         composeRule.onNodeWithText(string(R.string.activity_entry_recording_focus)).performClick()
         composeRule.waitForIdle()
 
-        // Focus mode replaces the tabs with the clock, the dashboard grid and
-        // one full-width Pause.
+        // Focus mode replaces the tabs with the clock, the grid and one full-width Pause.
         composeRule.onNodeWithText(statsTab).assertDoesNotExist()
         composeRule.onNodeWithContentDescription(exitFocus).assertIsDisplayed()
         composeRule
             .onNodeWithContentDescription(string(R.string.cd_toggle_recording_outdoor_mode))
             .assertIsDisplayed()
 
-        // The way out has to be one tap, from inside a mode that hides the
-        // system bars and the app bar with them.
+        // The way out is one tap, from a mode that hides the system bars and the app bar.
         composeRule.onNodeWithContentDescription(exitFocus).performClick()
         composeRule.waitForIdle()
 
@@ -175,10 +158,7 @@ class ActivityRecordingScreenTest {
 
     @Test
     fun theOutdoorToggleInFocusModeHandsTheChoiceBackToTheHost() {
-        // Outdoor mode survives leaving focus mode, so the screen must not keep
-        // it: it reports the change and the host holds it. A toggle that only
-        // flipped a local flag would snap back to normal contrast the moment
-        // the rider left focus mode, in the same sunlight.
+        // Outdoor mode survives leaving focus mode, so the host holds it, not the screen.
         val reported = mutableListOf<Boolean>()
         composeRule.setContent {
             OpenVitalsTheme {
@@ -219,10 +199,8 @@ class ActivityRecordingScreenTest {
 
     @Test
     fun aRepetitionRecordingIsNeverLeftInFocusMode() {
-        // `canUseFocusMode` excludes repetitions: focus mode is a clock and a
-        // distance read at arm's length, and a set of pull-ups has neither. A
-        // host that asked for it anyway must be corrected rather than obeyed,
-        // or the counter and its +/- would be off screen mid-set.
+        // `canUseFocusMode` excludes repetitions: a set of pull-ups has no clock or distance to show.
+        // A host asking anyway must be corrected, or the counter would be off screen mid-set.
         val reported = mutableListOf<Boolean>()
         composeRule.setContent {
             OpenVitalsTheme {
@@ -266,19 +244,10 @@ class ActivityRecordingScreenTest {
         composeRule.onNodeWithText(string(R.string.activity_entry_recording_end_set)).assertExists()
     }
 
-    /**
-     * A GPS session that is under way, so the pre-start fix poller stays off.
-     *
-     * Only the IDLE branch of the screen asks the device where it is; every
-     * case here is about a session that has already started, which is what
-     * keeps these tests off the real GPS.
-     */
+    /** A GPS session under way, so the pre-start fix poller stays off and no test touches the real GPS. */
     @Test
     fun `dismissing the CoMaps card before starting keeps it dismissed once riding`() {
-        // Setting a ride up and riding it is one continuous act. The dismissal used to be
-        // keyed on the recording's start time, so pressing Start reset it and the card the
-        // user had just swatted away came straight back, needing a second dismissal with
-        // the ride already running.
+        // The dismissal used to be keyed on the start time, so pressing Start brought the card back.
         val status = mutableStateOf(ActivityRecordingStatus.IDLE)
         composeRule.setContent {
             OpenVitalsTheme {
@@ -318,8 +287,7 @@ class ActivityRecordingScreenTest {
 
     @Test
     fun `the tab row is the first thing on the screen, above any guidance card`() {
-        // The guidance card is about one tab's content and can run tall; above the tabs it
-        // pushed the way between them down the screen.
+        // The guidance card can run tall; above the tabs it pushed them down the screen.
         composeRule.setContent {
             OpenVitalsTheme {
                 ActivityRecordingScreen(
@@ -363,9 +331,7 @@ class ActivityRecordingScreenTest {
 
     @Test
     fun `starting with no route set asks before it starts, and starts when answered`() {
-        // Start is a question here, not a refusal. It used to raise a toast telling the user to
-        // dismiss the guidance card -- an instruction they could not follow from any tab but the
-        // map, since that is the only place the card lives.
+        // Start is a question, not a refusal. It used to raise a toast the user could not follow from any tab but the map.
         var started = 0
         composeRule.setContent {
             OpenVitalsTheme {

@@ -3,11 +3,7 @@ package tech.mmarca.openvitals.features.watches
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/**
- * Port of `watch_data_screen_test.dart`'s "Sleep Coach reads as a comparison,
- * not a bare number": the row's whole value is what tonight's need says
- * against the usual one.
- */
+/** Sleep Coach reads as a comparison against the usual need, not a bare number. */
 class SleepCoachReadingTest {
 
     @Test
@@ -15,8 +11,7 @@ class SleepCoachReadingTest {
         val reading = sleepCoachReading(neededMinutes = 520, usualMinutes = 470)
 
         assertEquals("8h 40m", reading.neededText)
-        // "8h 40m needed" alone says nothing; against the usual 7h 50m it says
-        // what the day's strain cost.
+        // "8h 40m needed" alone says nothing; against the usual 7h 50m it says what the strain cost.
         assertEquals(
             SleepCoachComparison.Above(extraText = "50 min", usualText = "7h 50m"),
             reading.comparison,

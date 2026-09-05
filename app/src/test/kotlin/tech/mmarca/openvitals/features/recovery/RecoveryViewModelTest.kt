@@ -132,8 +132,7 @@ class RecoveryViewModelTest {
 
     @Test
     fun `a day the lookback never reached is blank, not an error`() = runTest {
-        // The seven-day window ends today; a day outside it is not in `days` at
-        // all, and `today` has to fall back to a blank day rather than throw.
+        // A day outside the seven-day window is not in `days`; `today` falls back to a blank day.
         val outOfLookback = today.minusDays(30)
         val vm = viewModel(sessions = listOf(sleepSession(today)))
 

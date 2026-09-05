@@ -12,16 +12,8 @@ import tech.mmarca.openvitals.testing.OpenVitalsVisualTestSurface
 import tech.mmarca.openvitals.testing.assertVisualRootMatchesGolden
 
 /**
- * The nutrition overview tiles, which issue #259 turned inside out: a period
- * total is a number nobody eats by, so a multi-day period leads with the daily
- * average and keeps the total as a caption.
- *
- * Worth a picture rather than an assertion because the whole change is about
- * what the eye lands on. The value, the title and the caption say three
- * different things in three different sizes, and an assertion that all three
- * strings are present holds just as well if the caption ends up as big as the
- * headline, or if the tile beside it stands a line taller because it has no
- * caption of its own to draw.
+ * The nutrition overview tiles (#259): a multi-day period leads with the daily average and
+ * keeps the total as a caption. A picture, because the change is about what the eye lands on.
  */
 class NutritionStatTilesGoldenTest {
 
@@ -49,8 +41,7 @@ class NutritionStatTilesGoldenTest {
 
     @Test
     fun day_totalAloneWithNoAverageToRestateIt() {
-        // One day's total already IS the day. A tile reading "1,850 calories
-        // per day / 1,850 kcal total" says the same thing twice.
+        // One day's total already is the day, so no caption.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 393.dp, height = 372.dp) {
                 NutritionOverviewStatisticsContent(
@@ -70,9 +61,7 @@ class NutritionStatTilesGoldenTest {
 
     @Test
     fun period_someoneWhoLogsCaloriesButNotMacros() {
-        // Only one tile of the four has anything to average, so only one draws
-        // a caption. The others must not end up shorter than it — this is the
-        // shot that catches a ragged row.
+        // Only one tile draws a caption. The others must not end up shorter than it.
         composeRule.setContent {
             OpenVitalsVisualTestSurface(width = 393.dp, height = 372.dp) {
                 NutritionOverviewStatisticsContent(
@@ -90,10 +79,7 @@ class NutritionStatTilesGoldenTest {
         composeRule.assertVisualRootMatchesGolden("nutrition_stat_tiles_partial")
     }
 
-    /**
-     * The four overview tiles, built the way the mapper builds them: a week of
-     * seven logged days, so the average is the total over seven.
-     */
+    /** The four overview tiles as the mapper builds them: a week of seven logged days. */
     private fun macros(
         energyKcal: Double,
         proteinGrams: Double,
@@ -122,8 +108,7 @@ class NutritionStatTilesGoldenTest {
     private companion object {
         const val DAYS = 7
 
-        // A fixed week, never `LocalDate.now()`: a golden that moves with the
-        // calendar draws a different picture every day the suite runs.
+        // A fixed week, never `LocalDate.now()`.
         val MONDAY: LocalDate = LocalDate.of(2026, 5, 4)
         val FORMATTER = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC })
     }

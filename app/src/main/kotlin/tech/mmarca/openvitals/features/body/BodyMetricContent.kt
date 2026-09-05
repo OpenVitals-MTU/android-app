@@ -84,11 +84,7 @@ internal fun LazyListScope.bodyContent(
     )
 }
 
-/**
- * Whether the period has anything at all to render — a latest value for any
- * metric, or a single reading of any kind. Extracted from [bodyContent] so the
- * rule is reachable without a composition; the expression is unchanged.
- */
+/** Whether the period has anything to render. Extracted so the rule is testable. */
 internal fun hasAnyBodyData(
     state: BodyUiState,
     unitFormatter: UnitFormatter,

@@ -4,23 +4,13 @@ import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.time.Instant
 
-/**
- * A UTC [Instant] as a FIT timestamp — seconds since the FIT epoch, the
- * inverse of [fitInstant]. Sub-second precision truncates (FIT timestamps are
- * whole seconds) and pre-1990 instants clamp to 0 rather than going negative.
- */
+/** A UTC [Instant] as a FIT timestamp, the inverse of [fitInstant]. Pre-1990 clamps to 0. */
 fun fitTimestamp(time: Instant): Long =
     (time.epochSecond - FitEpochUnixSeconds).coerceAtLeast(0L)
 
 /**
- * FIT base types as they appear on the wire in a field definition — the high
- * bit set on the multi-byte types marks them endian-able, exactly the values
- * the GFDI weather encoder writes. [FitDecoder] masks the bit off with
- * `FitBaseTypeMask` when reading, so both spellings meet in the middle.
- *
- * Only the types the encoder can serialize are listed; notably no floats —
- * FIT convention (and our own decoder) is scaled integers, and `fitLong`
- * would drop a float field on re-import.
+ * FIT base types as they appear on the wire, high bit set on multi-byte
+ * types. No floats: the convention is scaled integers.
  */
 object FitBaseType {
     const val ENUM = 0x00
@@ -33,11 +23,7 @@ object FitBaseType {
     const val UINT32 = 0x86
 }
 
-/**
- * One field of a message definition: its number, wire base type, and size in
- * bytes. The size defaults to the base type's own; only a STRING needs it
- * spelled out (FIT strings are fixed-size, NUL-padded).
- */
+/** One field of a definition. Only a STRING needs its size spelled out. */
 class FitEncoderField(
     val number: Int,
     val baseType: Int,
@@ -49,22 +35,10 @@ class FitEncoderField(
 }
 
 /**
- * Generic FIT container writer — the encode-side mirror of [FitDecoder]:
- * definition and data records, invalid sentinels for absent values, and the
- * file framing (14-byte header, data size, header CRC, trailing file CRC),
- * knowing NOTHING about what any message means. Which messages to write, and
- * with which fields, stays with the consumer, exactly as interpretation does
- * on the read side.
- *
- * A data message writes every defined field in definition order, taking each
- * value from the map by field number — a caller cannot misalign a record
- * against its definition. A missing or null value becomes the base type's
- * invalid sentinel, which [FitDecoder] (and every other FIT reader) treats as
- * "absent".
- *
- * The file is buffered in memory: the header's data size and both CRCs are
- * only knowable once every record is written, and every FIT file this app
- * produces is small.
+ * Generic FIT container writer, the mirror of [FitDecoder]: definition and
+ * data records, invalid sentinels for absent values, and the file framing.
+ * A data message writes every defined field in definition order from the
+ * map, so a record cannot misalign. Buffered in memory for the CRCs.
  */
 class FitEncoder {
 
@@ -122,8 +96,7 @@ class FitEncoder {
         FitEncoderMagic.forEachIndexed { index, char -> file[8 + index] = char.code.toByte() }
         file.setUInt16(12, FitCrc.compute(file, offset = 0, length = 12))
         body.copyInto(file, destinationOffset = FitEncoderHeaderSize)
-        // The trailing CRC covers everything before it — header (with its own
-        // CRC bytes) and data.
+        // The trailing CRC covers header and data.
         file.setUInt16(file.size - 2, FitCrc.compute(file, offset = 0, length = file.size - 2))
         output.write(file)
     }

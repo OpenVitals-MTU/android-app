@@ -580,8 +580,7 @@ class DashboardDataLoaderTest {
 
         assertEquals(setOf(DashboardMetric.CYCLE), data.loadedMetrics)
         assertEquals(2, data.menstruationPeriodDays)
-        // Two reads: the day window for the tile, the 45-day probe for the
-        // recent-history demotion signal.
+        // Two reads: the day window for the tile, the 45-day probe for the demotion signal.
         coVerify(exactly = 2) { hc.readMenstruationPeriods(any(), any()) }
         assertEquals(setOf(DashboardMetric.CYCLE), data.recentHistoryMetrics)
     }
@@ -826,14 +825,13 @@ class DashboardDataLoaderTest {
         assertEquals(20.0, data.bmi ?: 0.0, 0.01)
     }
 
-    // ─── Night-window attribution for the overnight vitals ────────────────────
+    // Night-window attribution for the overnight vitals.
 
     @Test fun `overnight vitals read back to the night-window start`() = runTest {
         val date = LocalDate.of(2026, 7, 24)
         val nightStart = atLocal(date.minusDays(1), 18)
         val dayEnd = atLocal(date.plusDays(1), 0)
-        // Stamped 23:00 the previous evening: inside the night window, outside
-        // [00:00, 24:00) — the read that used to leave the tiles empty.
+        // Stamped 23:00 the previous evening: inside the night window, outside [00:00, 24:00).
         val hc = overnightVitalsHc(listOf(VitalsReading(atLocal(date.minusDays(1), 23), 50.0)))
 
         val data = loadOvernightVitals(hc, date)
@@ -984,12 +982,7 @@ class DashboardDataLoaderTest {
         )
     )
 
-    /**
-     * A manager whose five overnight reads honor the window they are handed, so
-     * a day-clamped read returns nothing: these tests fail on the attribution
-     * rule itself rather than on an argument match alone. One [VitalsReading]
-     * feeds every metric so a single expected value covers all five tiles.
-     */
+    /** A manager whose overnight reads honor the window they are handed, so a day-clamped read returns nothing. */
     private fun overnightVitalsHc(readings: List<VitalsReading>): HealthConnectManager {
         val hc = mockk<HealthConnectManager>()
         every { hc.availability() } returns HealthConnectAvailability.AVAILABLE

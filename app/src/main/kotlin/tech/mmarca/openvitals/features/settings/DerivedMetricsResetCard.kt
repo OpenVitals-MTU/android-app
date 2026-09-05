@@ -28,13 +28,7 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.theme.Spacing
 
-/**
- * The "start over" card for the metrics OpenVitals derives itself — Body
- * energy, recovery and expenditure. The wipe is not undoable and takes up to
- * four months of Body energy history with it, so unlike the tuning reset next
- * to it this one confirms first.
- */
-/** Nudges the leading icon down to sit on the title's cap height. */
+/** The "start over" card for the derived metrics. Not undoable, so it confirms first. */
 private val LeadingIconOpticalOffset = 2.dp
 private val LeadingIconSize = 20.dp
 private val ProgressIndicatorSize = 18.dp

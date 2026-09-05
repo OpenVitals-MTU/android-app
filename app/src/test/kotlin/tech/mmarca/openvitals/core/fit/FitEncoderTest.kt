@@ -9,12 +9,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.devices.garmin.GarminCrc
 
-/**
- * The encoder's one promise: whatever it frames, [FitDecoder] — the app's own
- * generic reader — decodes back, field for field, absence for absence. That
- * makes the pair self-checking: an encoding bug breaks these tests before it
- * breaks an export.
- */
+/** Whatever the encoder frames, [FitDecoder] decodes back, field for field. */
 class FitEncoderTest {
 
     @Test fun `every base type round-trips through the app's own decoder`() {
@@ -123,8 +118,7 @@ class FitEncoderTest {
     }
 
     @Test fun `GarminCrc still computes the same checksum after the move`() {
-        // GFDI packet framing delegates to FitCrc; a drift here would corrupt
-        // every packet sent to a watch, so the delegation is pinned.
+        // GFDI packet framing delegates to FitCrc; a drift here would corrupt every packet sent to a watch.
         val data = ByteArray(64) { (it * 37 + 11).toByte() }
 
         assertEquals(FitCrc.compute(data), GarminCrc.compute(data))

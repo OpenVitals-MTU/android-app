@@ -14,9 +14,7 @@ class GarminSettingsServiceTest {
 
     private fun b(vararg xs: Int) = ByteArray(xs.size) { xs[it].toByte() }
 
-    // ------------------------------------------------------------------
-    // ChangeRequest — the only write in the stack.
-    // ------------------------------------------------------------------
+    // ChangeRequest, the only write in the stack.
 
     private fun valueOf(req: ByteArray, valueField: Int, inner: Int): Long? {
         val settings = protobufField(readProtobuf(req), 42)!!.bytes!!
@@ -43,9 +41,7 @@ class GarminSettingsServiceTest {
 
     @Test
     fun `each value kind lands in its OWN field`() {
-        // One generic setter could put a time in a switch's field, and the
-        // watch would apply whatever it read. Separate fields make that
-        // impossible.
+        // Separate fields make it impossible to put a time in a switch's field.
         assertEquals(
             1L,
             valueOf(
@@ -132,22 +128,15 @@ class GarminSettingsServiceTest {
 
         assertEquals(true, GarminSettingsService.changeSucceeded(reply(0)))
         assertEquals(false, GarminSettingsService.changeSucceeded(reply(1)))
-        // A response with no status at all is acceptance, as the find service
-        // taught us — but here zero means success, not "unset".
+        // A response with no status is acceptance; here zero means success.
         assertEquals(true, GarminSettingsService.changeSucceeded(reply(null)))
         // No change response at all is not an answer.
         assertNull(GarminSettingsService.changeSucceeded(null))
     }
 
-    // ------------------------------------------------------------------
     // Walking the tree.
-    // ------------------------------------------------------------------
 
-    /**
-     * Builds the reply shape the watch actually sends, from the captured
-     * bytes: Smart{42: SettingsService{2: definitionResponse{2:
-     * ScreenDefinition}}}.
-     */
+    /** The reply shape the watch sends: Smart{42: SettingsService{2: definitionResponse{2: ScreenDefinition}}}. */
     private fun definitionReply(entries: List<ByteArray>, screenId: Int = 36352): ByteArray {
         val def = ProtobufWriter().varint(1, screenId)
         for (e in entries) def.nested(5, e)
@@ -176,8 +165,7 @@ class GarminSettingsServiceTest {
 
     @Test
     fun `finds the screens an entry leads to`() {
-        // Shapes taken from a real vívoactive 5 root: Clocks → 204, and
-        // Garmin Pay whose target type 6 opens something ON the watch.
+        // From a real root: Clocks -> 204, and Garmin Pay whose target type 6 opens something on the watch.
         val reply = definitionReply(
             listOf(
                 entry(id = 4, title = "Clocks", targetType = 0, subscreen = 204),
@@ -191,8 +179,7 @@ class GarminSettingsServiceTest {
 
     @Test
     fun `follows a subscreen-WITH-OPTIONS which is what an alarm is`() {
-        // A populated alarm slot is target type 9, not 0. Following only 0
-        // meant the walk reached the Alarms list and stopped at it.
+        // A populated alarm slot is target type 9, not 0. Following only 0 stopped at the Alarms list.
         val reply = definitionReply(
             listOf(entry(id = 0, title = "7:00 am", targetType = 9, subscreen = 64)),
         )
@@ -204,9 +191,7 @@ class GarminSettingsServiceTest {
 
     @Test
     fun `an empty alarm slot points at screen zero and is skipped`() {
-        // The list reserves a row per slot; unused ones target nothing.
-        // Asking the watch for screen zero requests something that does not
-        // exist.
+        // Unused slots target screen zero, which does not exist.
         val reply = definitionReply(
             listOf(
                 entry(id = 1, targetType = 0, subscreen = 0),
@@ -218,9 +203,7 @@ class GarminSettingsServiceTest {
 
     @Test
     fun `does not try to walk into what it cannot open`() {
-        // Type 6 opens an activity on the watch and 7 is hidden; treating
-        // either as a screen would request an id that means something else
-        // entirely.
+        // Type 6 opens an activity on the watch and 7 is hidden; neither is a screen.
         val reply = definitionReply(
             listOf(
                 entry(id = 2, title = "Garmin Pay", targetType = 6, subscreen = 2),
@@ -247,9 +230,7 @@ class GarminSettingsServiceTest {
         assertTrue(GarminSettingsService.subscreens(reply).isEmpty())
     }
 
-    // ------------------------------------------------------------------
     // Requests.
-    // ------------------------------------------------------------------
 
     @Test
     fun `init carries the locale that translates the whole tree`() {
@@ -296,9 +277,7 @@ class GarminSettingsServiceTest {
 
     @Test
     fun `a reply for another service is not a settings reply`() {
-        // The watch narrates on services this app does not speak; mistaking
-        // one for a settings screen would render a menu out of unrelated
-        // bytes.
+        // The watch narrates on services this app does not speak; mistaking one for a settings screen renders nonsense.
         val other = ProtobufWriter().emptyMessage(12).toBytes()
         assertNull(GarminSettingsService.unwrap(other))
         assertFalse(GarminSettingsService.hasDefinition(other))

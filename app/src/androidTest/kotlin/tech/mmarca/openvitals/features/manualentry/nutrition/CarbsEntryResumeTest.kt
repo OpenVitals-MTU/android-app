@@ -24,14 +24,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of "re-checks the write permission when the screen resumes" from
- * Flutter's `test/features/manualentry/manual_entry_forms_test.dart`.
- *
- * Granting a Health Connect permission happens in another app. The user comes
- * back to a screen that has been alive the whole time, so nothing re-runs on its
- * own — and a form that keeps saying "permission needed" after the permission
- * was just granted looks broken in exactly the way that makes people stop
- * trying.
+ * Granting a permission happens in another app. A form that keeps saying "permission needed"
+ * after the user comes back looks broken.
  */
 class CarbsEntryResumeTest {
 
@@ -51,8 +45,7 @@ class CarbsEntryResumeTest {
                 }
             }
         }
-        // Started but not resumed: the screen is showing what it knew when it
-        // was built, which is that it cannot write.
+        // Started but not resumed: the screen shows what it knew when built.
         moveTo(owner, Lifecycle.State.STARTED)
         awaitText(string(R.string.carbs_entry_permission_needed))
 

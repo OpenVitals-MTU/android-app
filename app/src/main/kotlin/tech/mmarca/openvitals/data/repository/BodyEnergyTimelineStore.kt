@@ -20,42 +20,23 @@ import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelinePoint
 import tech.mmarca.openvitals.domain.insights.bodyEnergyReasonCodeForText
 
 /**
- * How long a past day stays eligible for recomputation.
- *
- * Watches sync late and Health Connect back-fills, so a recent day can still
- * gain data and is worth recomputing. A day beyond this window cannot: nothing
- * new will arrive for it, recomputing costs ~8 Health Connect reads to reproduce
- * what is already stored, and — for a user who declined the history grant, which
- * Android cannot offer from the in-app dialog — Health Connect serves only ~30
- * days, so the recompute can come back empty and take the stored day with it.
- *
- * Seven days rather than two or three because a Garmin watch is often synced
- * only once a week, and one sync back-fills every day it covers.
+ * How long a past day stays eligible for recomputation. Watches sync late
+ * and Health Connect back-fills. Seven days, because a Garmin watch is
+ * often synced once a week.
  */
 const val BodyEnergyChainSettlingDays = 7L
 
 /**
- * Room-backed storage for the Body Energy chain: the day summaries whose end
- * scores seed each following day, and the 5-minute buckets behind them.
- *
- * Replaces the SharedPreferences timeline cache. That store encoded a whole day
- * as one delimited string, so answering "what did yesterday end on" — the
- * question the chain asks constantly — meant decoding 288 points, and a range
- * query for a multi-day view was impossible.
- *
- * The [BodyEnergyTimelineDao] speaks rows; the repository speaks
- * [BodyEnergyTimeline]. That mapping lives here so the repository stays about
- * the chain rather than about columns.
+ * Room-backed storage for the Body Energy chain: day summaries and the
+ * 5-minute buckets behind them. Maps rows to [BodyEnergyTimeline] so the
+ * repository stays about the chain.
  */
 @Singleton
 open class BodyEnergyTimelineStore @Inject constructor(
     private val dao: BodyEnergyTimelineDao,
 ) {
 
-    /**
-     * The stored timeline for [date], or null when nothing is stored or the
-     * stored row was computed under a different [signature].
-     */
+    /** The stored timeline for [date], or null when absent or stored under another [signature]. */
     open suspend fun load(date: LocalDate, signature: String): BodyEnergyTimeline? {
         val day = dao.day(date.toEpochDay()) ?: return null
         if (day.signature != signature) return null
@@ -64,9 +45,7 @@ open class BodyEnergyTimelineStore @Inject constructor(
 
     /** Persists [timeline], replacing whatever was stored for its date. */
     open suspend fun save(timeline: BodyEnergyTimeline) {
-        // An unsigned timeline cannot be validated on read, so storing it would
-        // only produce a row every future read discards (the prefs store had the
-        // same guard).
+        // An unsigned timeline cannot be validated on read.
         if (timeline.signature.isBlank()) return
         val epochDay = timeline.date.toEpochDay()
         dao.upsertDay(
@@ -75,10 +54,7 @@ open class BodyEnergyTimelineStore @Inject constructor(
         )
     }
 
-    /**
-     * The chain-relevant facts for `[start, end]`, oldest first — one query, no
-     * bucket decoding. The walk-back reads its whole lookback window with this.
-     */
+    /** The chain facts for `[start, end]`, oldest first. One query, no bucket decoding. */
     open suspend fun storedDaysBetween(start: LocalDate, end: LocalDate): List<BodyEnergyStoredDay> =
         dao.daysBetween(start.toEpochDay(), end.toEpochDay()).map { row ->
             BodyEnergyStoredDay(
@@ -90,20 +66,11 @@ open class BodyEnergyTimelineStore @Inject constructor(
             )
         }
 
-    /**
-     * Whether a stored day still has buckets behind it.
-     *
-     * Signature-independent on purpose: the caller is protecting the *shape* of
-     * a day it may no longer be able to re-read, and a calibration edit is no
-     * reason to discard that.
-     */
+    /** Whether a stored day still has buckets. Signature-independent on purpose. */
     open suspend fun hasStoredPoints(date: LocalDate): Boolean =
         dao.countBucketsForDay(date.toEpochDay()) > 0
 
-    /**
-     * Forward ripple: every day in `[from, to]` was computed from a seed that no
-     * longer holds, so drop them and let them be recomputed.
-     */
+    /** Forward ripple: drop `[from, to]`, whose seeds no longer hold. */
     open suspend fun invalidateForward(from: LocalDate, to: LocalDate) {
         dao.deleteDays(from.toEpochDay(), to.toEpochDay())
     }
@@ -113,18 +80,12 @@ open class BodyEnergyTimelineStore @Inject constructor(
         dao.purgeAll()
     }
 
-    /**
-     * Drops buckets older than [BodyEnergyBucketRetentionDays], keeping the day
-     * summaries so the chain stays walkable.
-     */
+    /** Drops buckets older than [BodyEnergyBucketRetentionDays], keeping the summaries. */
     open suspend fun applyRetention(today: LocalDate) {
         dao.purgeBucketsBefore(today.minusDays(BodyEnergyBucketRetentionDays).toEpochDay())
     }
 
-    /**
-     * The global signature the stored chain was built under, or null when the
-     * chain has never been synced.
-     */
+    /** The global signature the stored chain was built under, or null. */
     open suspend fun storedGlobalSignature(): String? =
         dao.cursor(BodyEnergyChainCursorKey)?.changesToken
 
@@ -140,13 +101,7 @@ open class BodyEnergyTimelineStore @Inject constructor(
     }
 }
 
-/**
- * A stored day's chain-relevant facts.
- *
- * Deliberately not a [BodyEnergyTimeline]: the walk-back asks for a fortnight of
- * these on a cold screen open and must not pay a bucket read per day to learn an
- * end score.
- */
+/** A stored day's chain facts. Not a timeline: the walk-back must not pay a bucket read per day. */
 data class BodyEnergyStoredDay(
     val date: LocalDate,
     val signature: String,
@@ -167,9 +122,7 @@ private fun BodyEnergyDayEntity.toTimeline(
         points = buckets.map { it.toPoint() },
         confidence = confidence.toEnumOrNull<BodyEnergyConfidence>() ?: BodyEnergyConfidence.NO_DATA,
         confidenceReason = confidenceReason,
-        // Rows written before reason codes existed carry only the English
-        // sentence; the mapping back is exact, and anything unrecognised stays
-        // LEGACY and renders as stored.
+        // Rows from before reason codes carry only the sentence; unrecognised stays LEGACY.
         confidenceReasonCode = bodyEnergyReasonCodeForText(confidenceReason),
         inputSummary = BodyEnergyInputSummary(
             algorithmVersion = algorithmVersion,

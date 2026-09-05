@@ -21,9 +21,7 @@ class CoMapsNavigationTest {
 
     private val start: Instant = Instant.parse("2026-07-04T10:00:00Z")
 
-    // CoMaps sends the *enum name* of its own direction type, and it has
-    // spelled these differently across builds — TurnRight in one, TURN_RIGHT
-    // in another. These are the cases the original branch pinned.
+    // CoMaps sends the enum name of its direction type and has spelled it differently across builds.
     @Test fun `turn kinds read both spellings CoMaps has used`() {
         assertEquals(CoMapsTurnKind.RIGHT, coMapsTurnKindForDirection("TURN_RIGHT"))
         assertEquals(CoMapsTurnKind.LEFT, coMapsTurnKindForDirection("TurnLeft"))
@@ -36,8 +34,7 @@ class CoMapsNavigationTest {
     }
 
     @Test fun `a qualified turn beats the bare one it contains`() {
-        // "TurnSlightRight" contains "RIGHT". If the bare match ran first,
-        // every slight and sharp turn would draw the wrong arrow.
+        // "TurnSlightRight" contains "RIGHT"; if the bare match ran first, every slight turn drew the wrong arrow.
         assertEquals(CoMapsTurnKind.SLIGHT_RIGHT, coMapsTurnKindForDirection("TurnSlightRight"))
         assertEquals(CoMapsTurnKind.SHARP_RIGHT, coMapsTurnKindForDirection("TurnSharpRight"))
         assertEquals(CoMapsTurnKind.RIGHT, coMapsTurnKindForDirection("ExitHighwayToRight"))
@@ -108,9 +105,7 @@ class CoMapsNavigationTest {
         assertNotEquals(a.contentKey, c.contentKey)
     }
 
-    // The full vocabulary, from CoMaps' RoutingInfo.RoutingSessionState — kept
-    // here so a value added upstream shows up as a test that needs a decision
-    // rather than as a turn arrow drawn for a state nobody considered.
+    // The full vocabulary from CoMaps' RoutingSessionState, so a value added upstream shows up as a decision to make.
     @Test fun `only a live session counts as guidance`() {
         listOf("OnRoute", "OffRoute", "RouteNeedsRebuild", "RouteRebuilding").forEach { state ->
             assertTrue(state, isCoMapsGuiding(state))

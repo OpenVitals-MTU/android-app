@@ -4,11 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Ported from the Flutter `test/navigation/csv_import_route_test.dart`: the CSV
- * importer is reached by a pushed route rather than a settings card, and it must
- * stay under the data-import section it belongs to.
- */
+/** The CSV importer is reached by a pushed route and stays under the data-import section. */
 class CsvImportRouteTest {
 
     @Test

@@ -8,14 +8,10 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * GPS ephemeris: reading the files the user supplies, and handing them to the
- * watch. Nothing here reaches the network — the file arrives by the user's own
- * hand, as it does in Gadgetbridge.
- */
+/** GPS ephemeris: reading the files the user supplies and handing them to the watch. Nothing reaches the network. */
 class GarminAgpsTest {
 
-    // ── building the three file shapes ──────────────────────────────────────
+    // Building the three file shapes.
 
     private fun sonyCpe() = byteArrayOf(0x2a, 0x12, 0xa0.toByte(), 0x02) + ByteArray(64)
 
@@ -49,12 +45,11 @@ class GarminAgpsTest {
         return out.toByteArray()
     }
 
-    // ── reading them ────────────────────────────────────────────────────────
+    // Reading them.
 
     @Test
     fun `each file shape is recognised by its contents, not its name`() {
-        // The user downloads these from a third party; the filename tells us
-        // nothing we can trust.
+        // The filename tells us nothing we can trust.
         assertEquals(GarminAgpsKind.SONY_CPE, GarminAgpsFile.classify(sonyCpe()))
         assertEquals(GarminAgpsKind.RX_NETWORKS, GarminAgpsFile.classify(rxNetworks(3_600)))
         assertEquals(
@@ -76,8 +71,7 @@ class GarminAgpsTest {
         assertTrue(
             GarminAgpsFile.isValid(file, GarminAgpsKind.CONSTELLATION_TAR, listOf("GPS", "GLONASS")),
         )
-        // Half the constellations is not half a fix; the watch asked for
-        // Galileo and would come up short.
+        // Half the constellations is not half a fix.
         assertFalse(
             GarminAgpsFile.isValid(file, GarminAgpsKind.CONSTELLATION_TAR, listOf("GPS", "GALILEO")),
         )
@@ -88,9 +82,7 @@ class GarminAgpsTest {
 
     @Test
     fun `stale ephemeris is refused rather than sent`() {
-        // Ephemeris predicts where the satellites WILL be. A week-old
-        // prediction is not a smaller benefit, it is a wrong one, and the
-        // watch would be better off with the almanac it already has.
+        // A week-old prediction is wrong, not smaller; the almanac is better.
         assertTrue(
             GarminAgpsFile.isValid(
                 rxNetworks(ageSeconds = 2 * 86_400),
@@ -114,7 +106,7 @@ class GarminAgpsTest {
         )
     }
 
-    // ── serving them ────────────────────────────────────────────────────────
+    // Serving them.
 
     private class Recorder(private val held: Map<GarminAgpsKind, ByteArray> = emptyMap()) {
         val requested = mutableListOf<String>()
@@ -174,8 +166,7 @@ class GarminAgpsTest {
 
         val second = interceptor.handle(request(url, ifNoneMatch = etag))!!
 
-        // The watch asks often, and re-sending 60 KB it already holds is pure
-        // airtime over a link that is also carrying notifications.
+        // Re-sending 60 KB the watch already holds is pure airtime.
         assertEquals(304, second.status)
         assertEquals(0, second.body.size)
     }
@@ -213,8 +204,7 @@ class GarminAgpsTest {
         val recorder = Recorder(mapOf(GarminAgpsKind.SONY_CPE to sonyCpe()))
         val interceptor = GarminAgpsInterceptor(recorder.source)
 
-        // Claimed, since it is ephemeris, but answered with nothing: guessing
-        // a format would be worse than the watch falling back to its almanac.
+        // Claimed, but answered with nothing: guessing a format is worse than the almanac.
         val ask = request("https://api.gcs.garmin.com/ephemeris/something/new")
         assertTrue(interceptor.supports(ask))
         assertNull(interceptor.handle(ask))

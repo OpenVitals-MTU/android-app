@@ -21,14 +21,8 @@ import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
 /**
- * In-memory stand-in for [BeverageDao].
- *
- * The unit suite runs without Robolectric, so there is no SQLite to open — the
- * fake keeps the same map the table is, reimplementing each `@Query`'s SQL
- * (the `is_deleted = 0` filter, the `sort_order, name COLLATE NOCASE` ordering,
- * `COALESCE(MAX(sort_order), -1) + 1`, and the IGNORE/UPSERT conflict
- * strategies). The `@Transaction` default methods on the interface run for real
- * against it.
+ * In-memory stand-in for [BeverageDao]. There is no SQLite in the unit suite, so each
+ * `@Query`'s SQL is reimplemented over a map. The `@Transaction` default methods run for real.
  */
 private class FakeBeverageDao : BeverageDao {
     val rows = linkedMapOf<String, BeverageEntity>()
@@ -73,12 +67,7 @@ private class FakeBeverageDao : BeverageDao {
     }
 }
 
-/**
- * Port of the Flutter `beverage_store_test.dart` suite. The Dart tests run the
- * store over a real in-memory drift database; the Kotlin unit suite has no
- * SQLite, so the same store runs over [FakeBeverageDao] and a
- * [FakeSharedPreferences]-backed [PreferencesRepository].
- */
+/** The store over [FakeBeverageDao] and a [FakeSharedPreferences]-backed [PreferencesRepository]. */
 class BeverageStoreTest {
 
     private lateinit var dao: FakeBeverageDao

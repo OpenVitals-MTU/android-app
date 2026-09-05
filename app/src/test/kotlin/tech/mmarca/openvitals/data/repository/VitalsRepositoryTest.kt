@@ -210,7 +210,7 @@ class VitalsRepositoryTest {
         coVerify(exactly = 0) { hc.readDailySpO2(any(), any()) }
     }
 
-    // ── the range reads behind the health report ────────────────────────────
+    // The range reads behind the health report.
 
     @Test fun `loadDailyVitals serves the cache when the sync cursor covers the range`() = runTest {
         val hc = hc()
@@ -339,13 +339,8 @@ class VitalsRepositoryTest {
         coVerify(exactly = 0) { hc.readDailyBloodPressure(any(), any()) }
     }
 
-    // ── daily-cache write-through ───────────────────────────────────────────
-    //
-    // Dart counterpart: the "VitalsRepositoryImpl daily-cache write-through"
-    // group of test/data/repository/vitals_repository_impl_test.dart. Flutter's
-    // repository recomputes the affected days itself; here the recompute lives
-    // in VitalsHistorySyncService.patchDays, so the real service is wired behind
-    // the repository and the assertions land on the same cache rows.
+    // Daily-cache write-through. The recompute lives in VitalsHistorySyncService.patchDays,
+    // so the real service is wired behind the repository.
 
     private val anchor = LocalDate.of(2026, 7, 16)
 

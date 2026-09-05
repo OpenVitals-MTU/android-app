@@ -16,10 +16,7 @@ import tech.mmarca.openvitals.domain.model.HeartRateSample
 
 class HeartRateRecoveryTest {
 
-    /**
-     * The instant effort stops. Everything is expressed as an offset from it, in seconds,
-     * so a reader can see at a glance which side of the stop a sample is on.
-     */
+    /** The instant effort stops. Everything is an offset from it, in seconds. */
     private val stop: Instant = Instant.parse("2026-07-14T18:30:00Z")
 
     private fun at(seconds: Int): Instant = stop.plusSeconds(seconds.toLong())
@@ -27,11 +24,7 @@ class HeartRateRecoveryTest {
     private fun hr(atSeconds: Int, bpm: Long, source: String = "strap"): HeartRateSample =
         HeartRateSample(time = at(atSeconds), beatsPerMinute = bpm, source = source)
 
-    /**
-     * A hard effort that stops dead, sampled every second — a chest strap.
-     *
-     * Peak 180 five seconds before the stop, 178 at the stop, then a normal decay.
-     */
+    /** A hard effort that stops dead, sampled every second. Peak 180 at -5 s, 178 at the stop, then a normal decay. */
     private fun bpmAt(seconds: Int): Long {
         if (seconds <= 0) return if (seconds == -5 || seconds == -4) 180 else 178
         val anchors = mapOf(
@@ -108,7 +101,7 @@ class HeartRateRecoveryTest {
             repetitions = 0,
         )
 
-    // --- calculateHeartRateRecovery ---
+    // calculateHeartRateRecovery.
 
     @Test
     fun `the offsets are 30s to 5min, no 10s mark`() {
@@ -155,7 +148,7 @@ class HeartRateRecoveryTest {
 
         val reading = calculate(samples)
 
-        // The 30s mark cannot be produced from this data — and is never invented.
+        // The 30 s mark cannot be produced from this data and is never invented.
         assertNull(bpmMark(reading, Duration.ofSeconds(30)))
         assertNull(dropAt(reading, Duration.ofSeconds(30)))
 
@@ -203,9 +196,8 @@ class HeartRateRecoveryTest {
 
     @Test
     fun `nothing in the hard last-10s window means no peak, and noData`() {
-        // Effort ends early: nothing at all in the last 40 seconds before the stop. A wider
-        // peak window would draw the peak from when the effort was still going and inflate
-        // the recovery; the hard window instead refuses to measure.
+        // Nothing in the last 40 seconds before the stop. A wider peak window would inflate the recovery;
+        // the hard window refuses to measure.
         val samples = buildList {
             for (t in -60..-40 step 5) add(hr(t, if (t == -45) 180L else 176L))
             for (t in 60..300 step 60) add(hr(t, bpmAt(t)))
@@ -219,8 +211,7 @@ class HeartRateRecoveryTest {
 
     @Test
     fun `easing off before pressing stop is caught, not rewarded`() {
-        // Peak 180 at -45s, walked down to 160 by the stop. The fall from the last real
-        // high point (180) to the reading at the stop (160) is 20 bpm — well over the gate.
+        // Peak 180 at -45 s, walked down to 160 by the stop: a 20 bpm fall, well over the gate.
         val samples = buildList {
             for (t in -60..0) {
                 add(hr(t, if (t <= -45) 180L else (180 - (t + 45) * 20.0 / 45).roundToLong()))
@@ -240,8 +231,7 @@ class HeartRateRecoveryTest {
 
     @Test
     fun `a fall of just five bpm before the stop still counts as a cool-down`() {
-        // The gate is now 4 bpm, just above beat-to-beat noise. High of 176 in the last
-        // minute, 171 at the stop: a 5-bpm easing-off that the old 8-bpm gate would miss.
+        // The gate is 4 bpm, just above beat-to-beat noise. 176 to 171 is a 5 bpm easing-off the old 8 bpm gate missed.
         val samples = buildList {
             for (t in -60..0) add(hr(t, if (t <= -20) 176L else 171L))
             for (t in 1..300) add(hr(t, (171L - t / 6).coerceIn(120L, 171L)))
@@ -295,8 +285,7 @@ class HeartRateRecoveryTest {
 
     @Test
     fun `a submaximal effort is shown, flagged not-comparable, never hidden`() {
-        // Peak 152 against a stated max of 190: more than 10 bpm below a KNOWN maximum, so
-        // submaximal. The drop is still measured; it just cannot be compared across days.
+        // Peak 152 against a stated max of 190 is submaximal. The drop is still measured.
         val samples = (-60..300 step 5).map { t ->
             hr(t, if (t <= 0) 152L else (152L - t / 6).coerceIn(110L, 152L))
         }
@@ -312,8 +301,7 @@ class HeartRateRecoveryTest {
 
     @Test
     fun `near-max is an absolute band, wider for an ESTIMATED max`() {
-        // A 40-year-old's estimated max is 208 - 0.7*40 = 180. A peak of 160 is 20 below it
-        // — inside the 22-bpm confidence band, so NOT flagged submaximal.
+        // A 40-year-old's estimated max is 180. A peak of 160 is inside the 22 bpm band, so not submaximal.
         val samples = (-60..300 step 5).map { t -> hr(t, if (t <= 0) 160L else 150L) }
         val reading = calculate(samples, observedMax = null, age = 40)
 
@@ -324,8 +312,7 @@ class HeartRateRecoveryTest {
 
     @Test
     fun `the same peak against a KNOWN max is submaximal (tighter band)`() {
-        // Peak 160 against a MEASURED max of 180 is 20 below it — beyond the 10-bpm band
-        // that applies when the maximum is known rather than estimated.
+        // Peak 160 against a measured max of 180 is beyond the 10 bpm band for a known maximum.
         val samples = (-60..300 step 5).map { t -> hr(t, if (t <= 0) 160L else 150L) }
         val reading = calculate(samples, observedMax = 180, age = 40)
 
@@ -378,7 +365,7 @@ class HeartRateRecoveryTest {
         assertTrue(reading.maxHeartRateEstimated)
     }
 
-    // --- the explicit-max adaptation: BodyProfile.maxHeartRateBpm resolves first ---
+    // The explicit max: BodyProfile.maxHeartRateBpm resolves first.
 
     @Test
     fun `an explicit max wins over a trustworthy observed max`() {
@@ -397,8 +384,7 @@ class HeartRateRecoveryTest {
 
     @Test
     fun `an explicit max is used without the trustworthy check`() {
-        // 140 is below the 150-bpm trust bar an OBSERVED max must clear — but the user
-        // stated this one, so it is believed as-is.
+        // 140 is below the 150 bpm trust bar for an observed max, but the user stated it.
         val reading = calculate(
             strapSamples(),
             observedMax = null,
@@ -411,8 +397,7 @@ class HeartRateRecoveryTest {
 
     @Test
     fun `a peak 20 below an explicit max is submaximal (known band)`() {
-        // Peak 160 against a stated max of 180 is 20 below it — beyond the 10-bpm band
-        // for a known maximum, exactly as with a trustworthy observed one.
+        // Peak 160 against a stated max of 180 is beyond the 10 bpm band for a known maximum.
         val samples = (-60..300 step 5).map { t -> hr(t, if (t <= 0) 160L else 150L) }
         val reading = calculate(samples, observedMax = null, explicitMax = 180, age = 40)
 
@@ -430,8 +415,7 @@ class HeartRateRecoveryTest {
 
         val reading = calculate(samples)
 
-        // Higher of the two kept: the strap's 145, not the watch's 142. That reports the
-        // SMALLER drop, which is the conservative direction.
+        // The higher of the two is kept: the strap's 145. That reports the smaller drop.
         assertEquals(145L, bpmMark(reading, Duration.ofMinutes(1)))
     }
 
@@ -486,17 +470,15 @@ class HeartRateRecoveryTest {
 
         val reading = calculate(samples)
 
-        // 118 and 122 are both 2s from 120. The earlier wins: on a falling curve it is the
-        // higher reading, so it reports the smaller drop.
+        // 118 and 122 are both 2 s from 120. The earlier wins: on a falling curve it reports the smaller drop.
         assertEquals(133L, bpmMark(reading, Duration.ofMinutes(2)))
     }
 
-    // --- heartRateRecoveryWindowFor ---
+    // heartRateRecoveryWindowFor.
 
     @Test
     fun `a session with no rest segment has no recovery window`() {
-        // The core change: an ordinary workout gives no guarantee effort ceased, so its end
-        // is NOT taken as a stop. No cessation mark, no reading.
+        // An ordinary workout gives no guarantee effort ceased, so its end is not a stop.
         assertNull(heartRateRecoveryWindowFor(session()))
     }
 
@@ -515,8 +497,7 @@ class HeartRateRecoveryTest {
 
     @Test
     fun `the rest segment after the last set of a strength workout is NOT a recovery`() {
-        // The app writes a rest segment after every set. A 60s breather is too short to
-        // qualify, so there is no recovery window at all.
+        // A 60 s breather after a set is too short to qualify.
         assertNull(
             heartRateRecoveryWindowFor(
                 session(segments = listOf(rest(-600, -540), rest(-60, 0))),

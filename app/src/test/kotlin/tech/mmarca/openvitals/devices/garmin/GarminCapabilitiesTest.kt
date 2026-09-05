@@ -9,9 +9,7 @@ class GarminCapabilitiesTest {
 
     @Test
     fun `the enum order IS the wire order`() {
-        // Bit positions are declaration order, so a reorder silently remaps
-        // every watch's capabilities. These three are pinned against
-        // Gadgetbridge's enum.
+        // Bit positions are declaration order, so a reorder remaps every watch's capabilities.
         assertEquals(3, GarminCapability.SYNC.bit)
         assertEquals(9, GarminCapability.FIND_MY_WATCH.bit) // byte 1, bit 1
         assertEquals(92, GarminCapability.REALTIME_SETTINGS.bit) // byte 11, bit 4
@@ -38,8 +36,7 @@ class GarminCapabilitiesTest {
 
     @Test
     fun `a short buffer is not an error`() {
-        // A future watch may send fewer bytes than we know flags; everything
-        // past the end is absent rather than a crash mid-handshake.
+        // A future watch may send fewer bytes than we know flags; the rest is absent, not a crash.
         val bits = byteArrayOf(0xFF.toByte(), 0xFF.toByte())
         val decoded = GarminCapability.decode(bits)
         assertTrue(decoded.contains(GarminCapability.SYNC))

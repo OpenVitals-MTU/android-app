@@ -32,31 +32,10 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * The map half of Flutter's `test/features/activity/maps/route_map_view_test.dart`
- * — the cases that only exist once an offline pack is in play. The route-drawing
- * half lives in [tech.mmarca.openvitals.features.activity.RoutePreviewTest].
- *
- * [OfflineRouteMapOrPreview] chooses between a real tile renderer and the
- * canvas preview purely from [OfflineMapRepository.state], which is read back
- * from `filesDir/offline_maps/metadata.json`. That makes the branch reachable
- * from a test without a real map: this class moves the installed library aside,
- * writes its own metadata plus a stub pack file, and calls
- * [OfflineMapRepository.refresh] — then puts the real library back afterwards.
- *
- * What that buys and what it does not:
- *  - The branch itself, the recenter control and the recenter tap are real, and
- *    the assertions distinguish the two branches: `noPackDrawsNoMapView` asks
- *    for the control and asserts it is absent, while
- *    `anImportedPackRendersAMapView...` proves the very same request produces
- *    one once a pack exists. Neither can pass for the "no map was built at all"
- *    reason.
- *  - The pack file is a stub, so nothing is drawn from it. These tests say
- *    nothing about tile rendering, labels or the camera's resulting position —
- *    only that the code paths run and do not throw.
- *  - "Fetches no network tiles" is not pinned here. It is pinned where it is
- *    decidable: `LocalAppManifestPolicyTest` (the app removes INTERNET) and
- *    `OfflineMapNetworkPolicyTest` (every URL the style can carry is a local
- *    file). See the latter's KDoc.
+ * The map branch of the route view. [OfflineRouteMapOrPreview] chooses the renderer from
+ * [OfflineMapRepository.state], so this class moves the installed library aside, writes
+ * its own metadata plus a stub pack, and calls [OfflineMapRepository.refresh].
+ * The pack is a stub: these tests cover the branch and the recenter control, not rendering.
  */
 class OfflineRouteMapTest {
 
@@ -71,11 +50,7 @@ class OfflineRouteMapTest {
     private val mapsDirectory = File(context.filesDir, "offline_maps")
     private val stashDirectory = File(context.filesDir, "offline_maps-instrumentation-stash")
 
-    /**
-     * The repository is the app's real singleton over the app's real files, so
-     * whatever the device already has imported is moved aside rather than
-     * deleted — a developer running this on their own phone keeps their packs.
-     */
+    /** The repository is the app's real singleton, so installed packs are moved aside, not deleted. */
     @Before
     fun stashInstalledLibrary() {
         stashDirectory.deleteRecursively()
@@ -102,9 +77,7 @@ class OfflineRouteMapTest {
             repository.state.value.activeMapPacks.isEmpty(),
         )
 
-        // showRecenterControl is deliberately on: the control is a property of
-        // the map branch, so asking for it and still not getting one is what
-        // proves the preview was drawn instead.
+        // showRecenterControl is on: asking for the control and not getting one proves the preview was drawn.
         setRouteMap(points = BERLIN_ROUTE, showRecenterControl = true)
 
         composeRule.onNodeWithContentDescription(recenterDescription).assertDoesNotExist()
@@ -135,8 +108,7 @@ class OfflineRouteMapTest {
             currentPoint = BERLIN_ROUTE.last(),
             showRecenterControl = true,
         )
-        // Without a ready map the tap is a no-op, and "it did not throw" would
-        // mean nothing. Waiting for the map makes the tap reach fitCamera.
+        // Without a ready map the tap is a no-op. Waiting makes it reach fitCamera.
         awaitMapReady()
 
         composeRule.onNodeWithContentDescription(recenterDescription)
@@ -149,10 +121,8 @@ class OfflineRouteMapTest {
 
     @Test
     fun theRecenterControlHandlesASinglePointRoute() {
-        // One fix is a zero-area bounding box, and MapLibre's LatLngBounds
-        // refuses to be built from a single point — so recentering has to take
-        // the newLatLngZoom branch instead. Getting that wrong throws out of the
-        // FAB's onClick, which is a crash on the recording screen.
+        // One fix is a zero-area box, and LatLngBounds refuses a single point, so recentering
+        // must take the newLatLngZoom branch. Getting it wrong throws out of the FAB's onClick.
         installStubPmtilesPack()
 
         setRouteMap(points = BERLIN_ROUTE.take(1), showRecenterControl = true)
@@ -187,13 +157,7 @@ class OfflineRouteMapTest {
         composeRule.waitForIdle()
     }
 
-    /**
-     * A pack the repository will accept and the renderer will never draw from.
-     *
-     * Only the metadata decides the branch — [OfflineMapMetadataStore] reads the
-     * pack list back and keeps the entries whose file exists — so the file
-     * contents only have to be present, not to be a real archive.
-     */
+    /** A pack the repository accepts and the renderer never draws from. Only the metadata decides the branch. */
     private fun installStubPmtilesPack() {
         mapsDirectory.mkdirs()
         File(mapsDirectory, "$STUB_PACK_ID.pmtiles").writeBytes(ByteArray(STUB_PACK_BYTES))
@@ -221,12 +185,7 @@ class OfflineRouteMapTest {
         )
     }
 
-    /**
-     * Blocks until MapLibre has handed the composable its map.
-     *
-     * `getMapAsync` fires immediately once the map exists, so registering a
-     * second callback here is a readiness probe rather than a second map.
-     */
+    /** Blocks until MapLibre has handed the composable its map. `getMapAsync` fires immediately once it exists. */
     private fun awaitMapReady() {
         val mapView = requireNotNull(findMapLibreMapView()) {
             "No MapLibre map view was built, so there is nothing to recenter."
@@ -242,11 +201,7 @@ class OfflineRouteMapTest {
     private fun findMapsforgeMapView(): MapsforgeMapView? =
         findViewOfType(MapsforgeMapView::class.java)
 
-    /**
-     * The rendered Android views, which is where a tile renderer would be: an
-     * `AndroidView` leaves no trace in the semantics tree, so the composable's
-     * two branches are only distinguishable from the real view hierarchy.
-     */
+    /** The rendered Android views. An `AndroidView` leaves no trace in the semantics tree. */
     private fun <T : View> findViewOfType(type: Class<T>): T? {
         var found: T? = null
         instrumentation.runOnMainSync {

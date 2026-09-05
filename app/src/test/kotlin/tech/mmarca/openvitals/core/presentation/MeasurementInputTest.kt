@@ -11,11 +11,7 @@ import tech.mmarca.openvitals.features.manualentry.hydration.hydrationInputAmoun
 import tech.mmarca.openvitals.features.manualentry.hydration.hydrationInputMilliliters
 import tech.mmarca.openvitals.features.manualentry.vitals.canonicalVitalsValue
 
-/**
- * Ported from the Flutter `test/core/presentation/measurement_input_test.dart`.
- * Kotlin has no shared measurement-input module, so each case drives the entry
- * screen's own canonicalization helper.
- */
+/** Each case drives the entry screen's own canonicalization helper. */
 class MeasurementInputTest {
 
     @Test

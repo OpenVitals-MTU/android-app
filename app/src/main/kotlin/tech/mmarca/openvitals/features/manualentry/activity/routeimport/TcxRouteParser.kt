@@ -24,29 +24,13 @@ import tech.mmarca.openvitals.domain.model.BleSpeedSample
 import tech.mmarca.openvitals.domain.model.BleStepsCadenceSample
 
 /**
- * Training Center XML — what Strava and Garmin export an INDOOR activity as.
- *
- * The app could read GPX, KML and FIT, and a GPX cannot carry an indoor session
- * at all: it is a list of places, so a treadmill run has nothing to put in it,
- * and a routeless GPX is correctly refused for having no start, no duration and
- * no distance. TCX is the format that solves exactly that problem — its `Lap`
- * carries `TotalTimeSeconds`, `DistanceMeters` and `Calories`, and its
- * `Trackpoint` carries heart rate, cadence and speed with the `Position`
- * OPTIONAL. So a treadmill run is a first-class TCX document, and reporting one
- * as broken was the app's limitation, not the file's.
- *
- * The route is therefore built from whichever trackpoints HAVE a position, and
- * an activity with none is still a complete activity. This is the same shape as
- * the FIT parser, for the same reason.
+ * Training Center XML, what Strava and Garmin export an indoor activity as.
+ * `Position` is optional, so a treadmill run is a complete TCX document.
+ * The route is built from the trackpoints that have one.
  */
 internal object TcxRouteParser {
 
-    /**
-     * Roughly: is this a TCX? Matched on the ROOT element rather than the
-     * extension, because the dispatcher sniffs content — a `.tcx` renamed to
-     * `.gpx` is still a TCX, and would otherwise die in the GPX parser with a
-     * message about location points.
-     */
+    /** Matched on the root element, not the extension: the dispatcher sniffs content. */
     fun looksLikeTcx(text: String): Boolean = text.contains("TrainingCenterDatabase")
 
     fun parse(tcxText: String, fileName: String? = null): RouteFileImport {
@@ -54,8 +38,7 @@ internal object TcxRouteParser {
             .newDocumentBuilder()
             .parse(InputSource(StringReader(tcxText)))
 
-        // `Activity` is a recorded session; `Course` is a planned route. Both
-        // hold Laps and Tracks, and either may be what the user picked.
+        // `Activity` is a session; `Course` is a planned route.
         val activities = document.elementsByLocalName("Activity") +
             document.elementsByLocalName("Course")
         require(activities.isNotEmpty()) {
@@ -69,19 +52,13 @@ internal object TcxRouteParser {
         val speeds = mutableListOf<BleSpeedSample>()
 
         val sport = activity.getAttribute("Sport").takeIf { it.isNotBlank() }
-        // TCX names the sport on the Activity and nowhere else, and its
-        // vocabulary is three words wide: Running, Biking, Other. It cannot say
-        // "treadmill" — so an indoor run imports as a run, which is what the
-        // file actually claims. Better a true statement than a clever guess: a
-        // ride with no GPS is not necessarily a trainer ride, it may be a ride
-        // whose GPS failed.
+        // TCX's sport vocabulary is Running, Biking, Other. It cannot say treadmill.
         val isCycling = sport.orEmpty().lowercase().contains("bik")
 
         for (trackpoint in activity.descendantsByLocalName("Trackpoint")) {
             val time = trackpoint.directChildText("Time")?.trim()?.toInstantOrNull()
 
-            // Position is OPTIONAL, and its absence is the whole point of this
-            // parser.
+            // Position is optional.
             val position = trackpoint.firstDescendantByLocalName("Position")
             if (position != null) {
                 points += MutableRoutePoint(
@@ -94,8 +71,7 @@ internal object TcxRouteParser {
 
             if (time == null) continue
 
-            // `<HeartRateBpm><Value>128</Value></HeartRateBpm>` — the value is a
-            // child, not the text of the element.
+            // The value is a child element, not text.
             val heartRate = trackpoint.valueOf("HeartRateBpm")
             if (heartRate != null && heartRate > 0.0) {
                 heartRates += BleHeartRateSample(
@@ -106,8 +82,7 @@ internal object TcxRouteParser {
             val cadence = trackpoint.directChildText("Cadence")?.trim()?.toIntOrNull()
             if (cadence != null && cadence >= 0) cadences += time to cadence
 
-            // Speed and running cadence live in the vendor extension namespace
-            // (`ns3:TPX`), which is where every exporter in practice puts them.
+            // Speed and running cadence live in the `ns3:TPX` extension.
             val speed = trackpoint.extensionValue("Speed")
             if (speed != null && speed >= 0.0) {
                 speeds += BleSpeedSample(
@@ -143,10 +118,7 @@ internal object TcxRouteParser {
         val bleSamples = BleRecordingSampleBuffer(
             heartRateSamples = heartRates,
             speedSamples = speeds,
-            // Which record the cadence belongs in is decided by the sport,
-            // exactly as the FIT parser decides it: pedalling cadence and step
-            // cadence are different Health Connect record types, and `Cadence`
-            // is just "cadence".
+            // The sport decides which cadence record type, as in the FIT parser.
             cyclingCadenceSamples = if (isCycling) {
                 cadences.map { (time, rpm) -> BleCyclingCadenceSample(time = time, rpm = rpm.toLong()) }
             } else {
@@ -156,8 +128,7 @@ internal object TcxRouteParser {
                 emptyList()
             } else {
                 cadences.map { (time, rpm) ->
-                    // TCX writes RUNNING cadence as one foot: 85 means 170 steps
-                    // a minute, and every watch that reads it doubles it back.
+                    // TCX writes running cadence as one foot: 85 means 170 steps.
                     BleStepsCadenceSample(time = time, stepsPerMinute = rpm.toLong() * 2)
                 }
             },
@@ -192,10 +163,7 @@ internal object TcxRouteParser {
             points = emptyList(),
             distanceMeters = summary.distanceMeters ?: 0.0,
             elevationGainedMeters = 0.0,
-            // TCX `Calories` is the session TOTAL, and TCX has no active-calorie
-            // field — so active is left unknown rather than invented. Filling it
-            // with an estimate is exactly what made every routeless FIT file
-            // unsavable.
+            // TCX has no active-calorie field, so active stays unknown.
             totalCaloriesKcal = summary.caloriesKcal,
             startTime = startTime,
             endTime = endTime,
@@ -216,11 +184,7 @@ private data class TcxSummary(
     val caloriesKcal: Double?,
 )
 
-/**
- * The session totals, summed across the laps — a TCX writes one `Lap` per lap
- * and the activity's distance/duration/calories are their sums, not any one of
- * them.
- */
+/** The session totals, summed across the laps. */
 private fun Element.summarize(): TcxSummary {
     var startTime = directChildText("Id")?.trim()?.toInstantOrNull()
     var seconds = 0.0
@@ -253,8 +217,7 @@ private fun String?.tcxSportName(): String? {
         value.contains("bik") || value.contains("cycl") -> "cycling"
         value.contains("run") -> "running"
         value.contains("walk") -> "walking"
-        // "Other" says nothing, and saying nothing lets the file NAME speak —
-        // which for a TCX is usually the only thing that can.
+        // "Other" says nothing, and lets the file name speak.
         else -> null
     }
 }
@@ -276,10 +239,7 @@ private fun Element.valueOf(localName: String): Double? =
         ?.trim()
         ?.toDoubleOrNull()
 
-/**
- * A value inside the vendor `Extensions` block (`ns3:TPX` → `Speed`, `Watts`,
- * `RunCadence`), matched by local name so the namespace prefix does not matter.
- */
+/** A value inside the vendor `Extensions` block, matched by local name. */
 private fun Element.extensionValue(localName: String): Double? =
     firstDescendantByLocalName("Extensions")
         ?.firstDescendantByLocalName(localName)

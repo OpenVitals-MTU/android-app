@@ -44,9 +44,7 @@ class GarminScanClassifierTest {
         assertFalse(classifier.advertisesSyncService(emptyList()))
     }
 
-    // Regression guard: the classifier keys on the ADVERTISED member service
-    // (0xFE1F), never the GFDI transport UUID, which is GATT-only and never
-    // advertised — filtering on it would hide every watch from discovery.
+    // The classifier keys on the advertised member service (0xFE1F), never the GATT-only GFDI UUID.
     @Test
     fun `does not key on the connect-only GFDI service`() {
         assertFalse(

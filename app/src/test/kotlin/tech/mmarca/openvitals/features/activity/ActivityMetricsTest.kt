@@ -27,8 +27,7 @@ class ActivityMetricsTest {
             ),
         )
 
-        // The session splits into paused and moving time; the two halves must
-        // add back up to the whole.
+        // Paused and moving time must add back up to the whole.
         assertEquals(600_000L, workout.pausedDurationMs())
         assertEquals(3_000_000L, workout.movingDurationMs())
     }

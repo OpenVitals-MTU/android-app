@@ -46,12 +46,8 @@ data class ScrubTarget(
 )
 
 /**
- * The target nearest [fraction] by x, which is what a finger means.
- *
- * Snapping to the nearest SAMPLE rather than reading the curve at the finger's exact x
- * is deliberate: the curve between two samples is an interpolation the app invented, and
- * a tooltip must only ever report a number that was actually measured. Strict `<` keeps
- * the first of two equally near targets.
+ * The target nearest [fraction] by x. Snaps to a sample, never the
+ * interpolated curve: a tooltip only reports measured numbers.
  */
 fun nearestScrubTargetIndex(targets: List<ScrubTarget>, fraction: Float): Int? {
     if (targets.isEmpty()) return null
@@ -68,22 +64,9 @@ fun nearestScrubTargetIndex(targets: List<ScrubTarget>, fraction: Float): Int? {
 }
 
 /**
- * Drag across a chart to read it: a crosshair on the landed sample and a tooltip with
- * the value, drawn over the untouched [content].
- *
- * ## The gesture, which is the whole difficulty
- *
- * Every one of these charts lives inside a vertically scrolling screen. A detector that
- * claimed both axes the moment a drag starts inside it would freeze the page under the
- * thumb of a user trying to scroll — not a subtle regression, the app not working. So
- * this uses [detectHorizontalDragGestures] only (the same choice as the sleep
- * hypnogram): a vertical drag is left to the scrolling parent, a horizontal one comes
- * here.
- *
- * [multiTouch] is [ChartZoom]'s pinch flag. A pinch is a zoom, not a read: the finger
- * that started this scrub is already routed here and cannot be handed back, so when a
- * second finger lands the scrubber clears its crosshair and ignores further drags,
- * leaving the two-finger gesture to the zoom.
+ * Drag across a chart to read it: a crosshair on the landed sample and a
+ * tooltip. Horizontal drags only, so the page still scrolls. [multiTouch]
+ * is the zoom's pinch flag: a second finger clears the crosshair.
  */
 @Composable
 fun ChartScrubber(
@@ -107,7 +90,7 @@ fun ChartScrubber(
     val currentOnScrub by rememberUpdatedState(onScrub)
 
     fun land(x: Float, width: Int) {
-        // A pinch is in progress: the drag is the zoom's, not ours.
+        // A pinch is in progress.
         if (currentMultiTouch) return
         val targetList = currentTargets
         if (targetList.isEmpty() || width <= 0) return
@@ -115,8 +98,7 @@ fun ChartScrubber(
         val best = nearestScrubTargetIndex(targetList, fraction) ?: return
         if (best == index) return
         index = best
-        // Haptic ONLY when the landed sample changes, so a slow drag ticks per sample
-        // rather than buzzing continuously.
+        // Haptic only when the landed sample changes.
         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         currentOnScrub?.invoke(best)
     }
@@ -127,12 +109,8 @@ fun ChartScrubber(
         currentOnScrub?.invoke(null)
     }
 
-    // The index is ours, but the list it points into is the CALLER'S, and it can change
-    // underneath us: zooming the chart shortens it to the points still on screen. An
-    // index held over from the longer list reads off the end of the shorter one. So a
-    // scrub that no longer refers to anything is dropped — and so is one interrupted by
-    // a pinch. Everything that ever indexes another composable's list has this bug
-    // waiting in it.
+    // The list is the caller's and can shrink under a zoom, so a stale index
+    // or a pinch-interrupted scrub is dropped.
     LaunchedEffect(targets.size, multiTouch) {
         val held = index
         if (held != null && (multiTouch || held >= targets.size)) {
@@ -144,8 +122,7 @@ fun ChartScrubber(
 
     Box(
         modifier = modifier.pointerInput(Unit) {
-            // HORIZONTAL only. See the doc above: a pan detector would claim the
-            // vertical axis too and freeze the page this chart is sitting on.
+            // Horizontal only, or the page would freeze.
             detectHorizontalDragGestures(
                 onDragStart = { offset -> land(offset.x, size.width) },
                 onDragEnd = { lift() },
@@ -181,8 +158,7 @@ private fun BoxScope.ScrubCrosshair(
             end = Offset(x, size.height),
             strokeWidth = 1.dp.toPx(),
         )
-        // A ring, not a dot: a filled dot in the accent colour is indistinguishable
-        // from the sample dots the plot already draws.
+        // A ring, not a dot, so it differs from the sample dots.
         drawCircle(color = accentColor, radius = 5.dp.toPx(), center = Offset(x, y))
         drawCircle(
             color = Color.White,
@@ -203,9 +179,7 @@ private fun BoxScope.ScrubTooltip(target: ScrubTarget) {
         val plotWidthPx = constraints.maxWidth.toFloat()
         val tooltipWidthPx = with(LocalDensity.current) { TooltipWidth.toPx() }
         val x = target.xFraction.coerceIn(0f, 1f) * plotWidthPx
-        // Clamped to the plot: a tooltip that hangs off the card is a tooltip you
-        // cannot read, and the samples at the very start and end of a day are exactly
-        // the ones a user scrubs to first.
+        // Clamped to the plot: a tooltip off the card cannot be read.
         val left = (x - tooltipWidthPx / 2f)
             .coerceIn(0f, (plotWidthPx - tooltipWidthPx).coerceAtLeast(0f))
 

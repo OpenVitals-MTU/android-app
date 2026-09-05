@@ -39,11 +39,7 @@ private val PlanIconSurfaceSize = 40.dp
 /** The plan divider inset that lines up with the text, past the icon surface. */
 internal val WorkoutPlanRowDividerInset = 72.dp
 
-/**
- * One plan as a list row: icon surface, title, when, and a blocks/steps/minutes
- * summary. The list screen and the activity start hub share it and differ only
- * in [trailing] — an overflow menu there, a "Log" button here.
- */
+/** One plan as a list row. The list screen and the start hub differ only in [trailing]. */
 @Composable
 internal fun WorkoutPlanRow(
     plan: PlannedExerciseData,

@@ -91,11 +91,7 @@ class HydrationReminderNotificationService @Inject constructor(
             .build()
     }
 
-    /**
-     * The volumes the reminder offers as one-tap adds: the last two used cup
-     * sizes, padded with the last custom amount and then a glass and a bottle
-     * so there are always [QuickAddActionCount] distinct, valid sizes.
-     */
+    /** The one-tap volumes: the last two cup sizes, padded to [QuickAddActionCount]. */
     private fun quickAddAmountsMilliliters(): List<Double> =
         hydrationQuickAddAmountsMilliliters(
             recentAmountsMilliliters = preferencesRepository.recentHydrationAmountsMilliliters(),
@@ -144,11 +140,7 @@ class HydrationReminderNotificationService @Inject constructor(
     }
 }
 
-/**
- * The volumes the reminder offers as one-tap adds: the last two used cup
- * sizes, padded with the last custom amount and then a glass and a bottle
- * so there are always [QuickAddActionCount] distinct, valid sizes.
- */
+/** The one-tap volumes: the last two cup sizes, padded to [QuickAddActionCount] distinct sizes. */
 internal fun hydrationQuickAddAmountsMilliliters(
     recentAmountsMilliliters: List<Double>,
     lastCustomAmountMilliliters: Double?,
@@ -166,10 +158,7 @@ internal fun hydrationQuickAddAmountsMilliliters(
     return amounts
 }
 
-/**
- * Millilitres read better than "0.35 L" on a button, so metric formats as
- * whole ml; imperial keeps the formatter's fluid ounces.
- */
+/** Metric formats as whole ml, which reads better than "0.35 L" on a button. */
 internal fun hydrationQuickAddLabel(
     milliliters: Double,
     unitSystem: UnitSystem,

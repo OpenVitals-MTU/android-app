@@ -82,9 +82,7 @@ data class HeartPeriodLoadResult(
     val skinTemperature: List<SkinTemperatureEntry> = emptyList(),
     val previousSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
     val baselineSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
-    // Non-day overview loads: one aggregated point per day (the entry lists above
-    // then hold synthesised one-per-day entries), the window's true latest reading
-    // per metric, and any metric whose daily read blew its budget.
+    // Non-day loads: one point per day, the window's latest reading, and budget-blown metrics.
     val bloodPressureDaily: List<DailyBloodPressurePoint> = emptyList(),
     val spO2Daily: List<DailyVitalPoint> = emptyList(),
     val respiratoryRateDaily: List<DailyVitalPoint> = emptyList(),
@@ -122,8 +120,7 @@ fun HeartPeriodLoadResult.vitalsSummary(): HeartVitalsSummary =
             vo2Max.isNotEmpty() ||
             bloodGlucose.isNotEmpty() ||
             skinTemperature.isNotEmpty() ||
-            // A timed-out daily read leaves its list empty while the window's
-            // latest reading still proves the metric has data.
+            // A timed-out daily read leaves its list empty; the latest reading still proves data.
             latestBloodPressure != null ||
             latestSpO2 != null ||
             latestRespiratoryRate != null ||
@@ -131,8 +128,7 @@ fun HeartPeriodLoadResult.vitalsSummary(): HeartVitalsSummary =
             latestVo2Max != null ||
             latestBloodGlucose != null ||
             latestSkinTemperature != null,
-        // Prefer the window-latest reads: on non-day ranges the entry lists hold
-        // synthesised per-day aggregates whose newest member is not a reading.
+        // Prefer the window-latest reads: non-day entries are synthesised aggregates.
         latestBloodPressure = latestBloodPressure ?: bloodPressure.maxByOrNull { it.time },
         latestSpO2 = latestSpO2 ?: spO2.maxByOrNull { it.time },
         latestRespiratoryRate = latestRespiratoryRate ?: respiratoryRate.maxByOrNull { it.time },
@@ -220,9 +216,7 @@ private fun HeartPeriodData.toLoadResult(): HeartPeriodLoadResult =
 private fun VitalsPeriodData.toLoadResult(): HeartPeriodLoadResult =
     HeartPeriodLoadResult(
         missingVitalsPermissions = missingVitalsPermissions,
-        // On non-day overview loads the raw lists arrive empty and the daily
-        // points stand in for them, synthesised to one entry per day so every
-        // chart downstream keeps drawing without knowing the difference.
+        // On non-day loads the daily points stand in for the raw lists.
         bloodPressure = bloodPressure.ifEmpty { bloodPressureDaily.toBloodPressureEntries() },
         previousBloodPressure = previousBloodPressure,
         baselineBloodPressure = baselineBloodPressure,

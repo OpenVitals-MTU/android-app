@@ -18,14 +18,7 @@ import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Ports of the one- and two-case settings-card files: `reminder_test_card`,
- * `csv_import_card`, `metabolism_card` and `debug_diagnostics_card`.
- *
- * Each is small, and each is the only thing standing between a user and a
- * feature they cannot otherwise reach — a card that renders its title but loses
- * its button is a dead end with no error to report.
- */
+/** The one- and two-case settings cards. A card that loses its button is a dead end with no error. */
 class SettingsSmallCardsTest {
 
     @get:Rule
@@ -50,8 +43,7 @@ class SettingsSmallCardsTest {
 
         composeRule.onNodeWithText(string(R.string.settings_csv_import_title)).assertIsDisplayed()
         composeRule.onNodeWithText(string(R.string.settings_csv_import_body)).assertIsDisplayed()
-        // The card is not itself clickable — the action is its own button, so
-        // a user reads what the importer does before committing to a file picker.
+        // The action is its own button, so the user reads what the importer does before the picker opens.
         composeRule.onNodeWithText(string(R.string.settings_csv_import_action))
             .performScrollTo()
             .performClick()
@@ -77,9 +69,7 @@ class SettingsSmallCardsTest {
 
     @Test
     fun metabolismCard_surfacesHormonalStatus_whichUsedToBeBuriedUnderCaffeine() {
-        // Pregnancy roughly triples caffeine's half-life, so it belongs where
-        // someone would look for it rather than inside a caffeine-model editor
-        // most people never open.
+        // Pregnancy roughly triples caffeine's half-life, so it belongs where someone would look for it.
         var saved: CaffeinePreferences? = null
         setCard {
             MetabolismCard(
@@ -95,8 +85,7 @@ class SettingsSmallCardsTest {
 
         composeRule.onNodeWithText(string(R.string.action_save)).performScrollTo().performClick()
 
-        // Saving from this card is what marks the profile complete; without it
-        // the app keeps asking for details the user has already given.
+        // Saving marks the profile complete; without it the app keeps asking.
         assertTrue("saving marks the profile complete", saved?.profileCompleted == true)
     }
 

@@ -18,11 +18,7 @@ import tech.mmarca.openvitals.domain.model.OnboardingPermissionCatalog
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 
-/**
- * The wizard's steps. An enum rather than routes: the flow is one screen whose
- * content switches, so the lifecycle observer and permission launcher outlive
- * step changes. Steps that do not apply on this device are skipped entirely.
- */
+/** The wizard's steps. One screen whose content switches. Inapplicable steps are skipped. */
 enum class OnboardingStep {
     CATEGORIES,
     MINDFULNESS,
@@ -54,12 +50,7 @@ data class OnboardingUiState(
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val isCheckingPermissions: Boolean = true,
     val catalog: OnboardingPermissionCatalog? = null,
-    /**
-     * Bumped when a permission request achieved nothing — either the user
-     * refused or Health Connect silently stopped asking (it does after two
-     * cancels). Both look identical from the contract, and both are fixed the
-     * same way: the screen opens Health Connect's permission settings.
-     */
+    /** Bumped when a request achieved nothing: refused, or Health Connect stopped asking. The screen opens settings. */
     val openSettingsEvent: Long = 0L,
 ) {
     private fun row(id: OnboardingCategoryId): OnboardingRow? {
@@ -83,11 +74,7 @@ data class OnboardingUiState(
             OnboardingCategoryId.VITALS,
         ).mapNotNull(::row)
 
-    /**
-     * What step one's rows are still missing, as one set. Rows the device does
-     * not support are left out: their permissions cannot be requested at all,
-     * and including them would make Health Connect drop the whole dialog.
-     */
+    /** What step one is still missing. Unsupported rows are left out, or the dialog is dropped. */
     val categoriesMissingPermissions: Set<String>
         get() = categoryRows
             .filter { it.available }
@@ -212,10 +199,8 @@ class OnboardingViewModel @Inject constructor(
             val allGranted = repository.grantedPermissions()
             val requested = pendingRequest
             pendingRequest = null
-            // A refusal and a permission Health Connect will no longer ask for
-            // are indistinguishable from the contract; the before/after diff is
-            // the only signal. No gain and not already granted → the dialog
-            // achieved nothing, so send the user to the settings page instead.
+            // A refusal and a permission no longer asked for look the same; the
+            // before/after diff is the only signal.
             val gainedAny = (allGranted - grantedBeforeRequest).isNotEmpty()
             val alreadyGranted = requested != null && requested.all { it in grantedBeforeRequest }
             val needsManualGrant = requested != null && !gainedAny && !alreadyGranted
@@ -231,16 +216,11 @@ class OnboardingViewModel @Inject constructor(
     }
 
     fun setMindfulnessOptIn(enabled: Boolean) {
-        // Both keys: the legacy opt-in for older readers, and the settings
-        // toggle that now gates the whole mindfulness integration.
+        // Both keys: the legacy opt-in and the settings toggle.
         preferencesRepository.mindfulnessOptIn = enabled
         preferencesRepository.healthConnectMindfulnessEnabled = enabled
         _uiState.value = _uiState.value.copy(mindfulnessOptIn = enabled)
-        // The catalog derives the mindfulness permissions from this very
-        // preference, so the cached one is now stale: it still holds no
-        // mindfulness category, which would leave the row missing and the Grant
-        // button requesting an empty set. Rebuilding is one cheap round-trip on
-        // a deliberate toggle, and keeps the catalog the single source of truth.
+        // The catalog derives the mindfulness permissions from this preference; rebuild it.
         checkState()
     }
 

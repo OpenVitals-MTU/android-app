@@ -5,13 +5,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * In-memory stand-in for [VitalsDailyCacheDao].
- *
- * The unit suite runs without Robolectric, so there is no SQLite to open — the
- * fake keeps the same two maps the tables are, reimplementing each `@Query`'s
- * SQL, while the `@Transaction` default methods on the interface
- * ([VitalsDailyCacheDao.replaceMetric], [VitalsDailyCacheDao.writeToken]) run
- * for real against it.
+ * In-memory stand-in for [VitalsDailyCacheDao]: each `@Query`'s SQL reimplemented over two maps,
+ * while the `@Transaction` default methods run for real.
  */
 private class FakeVitalsDailyCacheDao : VitalsDailyCacheDao {
     val aggregates = linkedMapOf<Pair<String, Long>, VitalsDailyAggregateEntity>()
@@ -59,11 +54,7 @@ private class FakeVitalsDailyCacheDao : VitalsDailyCacheDao {
     }
 }
 
-/**
- * Port of the Flutter `vitals_daily_cache_dao_test.dart` suite, limited to the
- * cases whose behavior is real Kotlin code rather than Room-generated SQL: the
- * `@Transaction` default methods.
- */
+/** The cases whose behavior is real Kotlin code rather than Room-generated SQL. */
 class VitalsDailyCacheDaoTest {
 
     private val dao = FakeVitalsDailyCacheDao()

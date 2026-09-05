@@ -33,12 +33,7 @@ private fun weightMapping(): CsvImportMapping = CsvImportMapping(
     ),
 )
 
-/**
- * A hand-rolled double over the mocked repository: records every insert, can
- * refuse batches, refuse one record, rate-limit after N calls, and report a
- * pre-seeded set of existing ids — the same behaviours the Flutter test's fake
- * repository modelled.
- */
+/** A double over the repository: records inserts, refuses batches or one record, rate-limits, and reports existing ids. */
 private class RepositoryHarness(
     existingIds: Set<String> = emptySet(),
     failEveryBatch: Boolean = false,
@@ -132,8 +127,7 @@ class CsvImportServiceTest {
         )
 
         assertEquals(3, result.progress.alreadyPresent)
-        // Still inserted: the id excludes the value, so only a write can carry a
-        // correction through.
+        // Still inserted: the id excludes the value, so only a write carries a correction.
         assertEquals(3, harness.inserted.size)
         assertEquals(3, result.progress.written)
     }

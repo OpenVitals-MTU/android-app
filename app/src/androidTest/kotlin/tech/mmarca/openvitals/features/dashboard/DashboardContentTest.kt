@@ -17,15 +17,8 @@ import tech.mmarca.openvitals.testing.testUnitFormatter
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the rendering cases of Flutter's
- * `test/features/dashboard/dashboard_screen_test.dart` that Kotlin's dashboard
- * still has a shape for.
- *
- * Several of that file's cases do not apply. Kotlin's dashboard has no
- * permission prompt in its body and no sensor-status row — both were deliberate
- * divergences recorded in the matrix — so "missing permissions produce no
- * prompt" and "sensor status is never rendered in the body" are true here by
- * construction rather than by behaviour, and are pinned as such below.
+ * Kotlin's dashboard has no permission prompt in its body and no sensor-status row,
+ * so those cases are true by construction and pinned as such.
  */
 class DashboardContentTest {
 
@@ -41,9 +34,7 @@ class DashboardContentTest {
 
     @Test
     fun missingPermissionsProduceNoPromptJustTheDashboard() {
-        // Kotlin routes an access problem to the shell's gate rather than
-        // inlining a prompt among the tiles, so the body stays the dashboard.
-        // A prompt appearing here would mean a second, competing affordance.
+        // An access problem goes to the shell's gate, not a prompt among the tiles.
         setDashboard()
 
         composeRule.onAllNodesWithText("Steps").onFirst().assertIsDisplayed()
@@ -94,8 +85,7 @@ class DashboardContentTest {
         composeRule.waitForIdle()
 
         assertEquals(1, editToggles)
-        // The grid survives the mode change rather than emptying while the
-        // edit affordances are swapped in.
+        // The grid survives the mode change.
         composeRule.onAllNodesWithText("Steps").onFirst().assertIsDisplayed()
     }
 

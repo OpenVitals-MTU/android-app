@@ -12,22 +12,16 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The metrics file (type 44), Health Snapshot (type 70), intensity minutes and
- * the sleep extras, decoded from hand-built FIT bytes. Port of the Flutter
- * build's `fit_metrics_sleep_test.dart`.
- */
+/** The metrics file (type 44), Health Snapshot (type 70), intensity minutes and sleep extras, from hand-built FIT bytes. */
 class FitMetricsSleepTest {
 
     private val at: Instant = Instant.parse("2026-07-22T06:30:00Z")
 
-    // ── health snapshot ──────────────────────────────────────────────────────
+    // Health snapshot.
 
     @Test
     fun `unpacks an array field into one sample per interval`() {
-        // The capability the parser lacked: every other field is a scalar, and
-        // reading only the first element would have silently dropped a whole
-        // two-minute recording down to its opening reading.
+        // Array fields: reading only the first element dropped a two-minute recording to its opening reading.
         val snapshot = parseGarminWellness(
             hsaFile(at = at, globalMessage = 305, intervalSeconds = 5, samples = listOf(96, 97, 97, 98)),
         ).healthSnapshot!!
@@ -51,9 +45,7 @@ class FitMetricsSleepTest {
         val records = fitHealthSnapshotImportRecords(spo2)
         assertEquals(2, records.size)
         assertTrue(records.first() is OxygenSaturationRecord)
-        // Namespaced apart from the all-day series: a deliberate spot
-        // measurement must not overwrite the passive one taken at the same
-        // instant.
+        // Namespaced apart from the all-day series, so a spot measurement does not overwrite the passive one.
         assertTrue(
             records.first().metadata.clientRecordId!!.startsWith("garmin_fit_hsa_spo2_"),
         )
@@ -84,8 +76,7 @@ class FitMetricsSleepTest {
 
     @Test
     fun `a zero interval drops the record rather than stacking samples`() {
-        // Every sample would otherwise land on the same instant and the
-        // (metric, time) key would collapse the recording to one reading.
+        // Otherwise every sample lands on the same instant and the (metric, time) key collapses them.
         val wellness = parseGarminWellness(
             hsaFile(at = at, globalMessage = 305, intervalSeconds = 0, samples = listOf(96, 97, 98)),
         )
@@ -103,15 +94,13 @@ class FitMetricsSleepTest {
         assertEquals(at.plusSeconds(20), snapshot.spo2.last().first)
     }
 
-    // ── daily sleep, from the metrics file ───────────────────────────────────
+    // Daily sleep, from the metrics file.
 
     private val endTime: Instant = Instant.parse("2026-07-22T07:20:00Z")
 
     @Test
     fun `reads awake duration as SECONDS not the profile's minutes`() {
-        // The number from a real night: 1020 inside an 8.7-hour window. Read
-        // as minutes it would be 17 HOURS awake — longer than the night
-        // itself.
+        // From a real night: 1020 inside an 8.7-hour window. Read as minutes it would be 17 hours awake.
         val daily = parseGarminWellness(
             dailySleepFile(endTime = endTime, score = 71, awakeSeconds = 1020),
         ).dailySleep!!
@@ -126,8 +115,7 @@ class FitMetricsSleepTest {
         val daily = parseGarminWellness(
             dailySleepFile(endTime = endTime, pressure = -33),
         ).dailySleep!!
-        // Undocumented scale — inventing units would be worse than passing it
-        // on.
+        // Undocumented scale; passed on as is.
         assertEquals(-33, daily.pressure)
     }
 
@@ -143,9 +131,7 @@ class FitMetricsSleepTest {
 
     @Test
     fun `a metrics file of only sleep data is not empty`() {
-        // It was: this watch puts no training-load messages in the metrics
-        // file, so a parser that looked only for those saw nothing and the
-        // whole file was discarded as unusable.
+        // This watch puts no training-load messages in the metrics file, so the file used to be discarded.
         val wellness = parseGarminWellness(dailySleepFile(endTime = endTime, score = 71))
 
         assertFalse(wellness.isEmpty)
@@ -160,7 +146,7 @@ class FitMetricsSleepTest {
         assertNull(wellness.sleepDemand)
     }
 
-    // ── intensity minutes ────────────────────────────────────────────────────
+    // Intensity minutes.
 
     @Test
     fun `reads the running daily totals`() {
@@ -173,9 +159,7 @@ class FitMetricsSleepTest {
             ),
         ).monitoring!!
 
-        // Cumulative totals, not per-message increments — the mapper's
-        // problem, not the parser's, so they are kept exactly as the watch
-        // wrote them.
+        // Cumulative totals, kept as the watch wrote them. Differencing is the mapper's job.
         assertEquals(listOf(at to 12, at.plusSeconds(15 * 60) to 19), m.moderateMinutes)
         assertEquals(listOf(at to 4, at.plusSeconds(15 * 60) to 4), m.vigorousMinutes)
     }
@@ -191,8 +175,7 @@ class FitMetricsSleepTest {
 
     @Test
     fun `zero is a real total and is kept`() {
-        // The vívoactive 5 writes 0 all day until minutes are earned; dropping
-        // those would make "no data yet" indistinguishable from "not tracked".
+        // The vívoactive 5 writes 0 all day until minutes are earned; dropping those hides "no data yet".
         val m = parseGarminWellness(intensityFile(listOf(Triple(at, 0, 0)))).monitoring!!
         assertEquals(listOf(at to 0), m.moderateMinutes)
         assertEquals(listOf(at to 0), m.vigorousMinutes)
@@ -207,7 +190,7 @@ class FitMetricsSleepTest {
         assertTrue((m?.vigorousMinutes ?: emptyList()).isEmpty())
     }
 
-    // ── metrics file ─────────────────────────────────────────────────────────
+    // Metrics file.
 
     @Test
     fun `reads VO2 max, recovery, readiness and load from one file`() {
@@ -232,8 +215,7 @@ class FitMetricsSleepTest {
 
     @Test
     fun `a file carrying only training load still yields metrics`() {
-        // The case that used to read as a failed import: the watch re-offers
-        // metrics files constantly and most carry a subset.
+        // The watch re-offers metrics files constantly and most carry a subset.
         val wellness = parseGarminWellness(metricsFile(at = at, loadAcute = 300))
 
         assertNotNull(wellness.metrics)
@@ -249,8 +231,7 @@ class FitMetricsSleepTest {
         )
         val records = fitMetricsImportRecords(wellness.metrics!!)
 
-        // Recovery time and readiness have no Health Connect type; sending
-        // them anywhere near the import path would mean inventing one.
+        // Recovery time and readiness have no Health Connect type.
         assertEquals(1, records.size)
         val record = records.single() as Vo2MaxRecord
         assertEquals(50.1, record.vo2MillilitersPerMinuteKilogram, 0.001)
@@ -266,7 +247,7 @@ class FitMetricsSleepTest {
         assertTrue(fitMetricsImportRecords(wellness.metrics!!).isEmpty())
     }
 
-    // ── sleep extras ─────────────────────────────────────────────────────────
+    // Sleep extras.
 
     private val nightStart: Instant = Instant.parse("2026-07-22T00:10:00Z")
     private val nightEnd: Instant = Instant.parse("2026-07-22T07:20:00Z")
@@ -277,8 +258,7 @@ class FitMetricsSleepTest {
             sleepFile(start = nightStart, end = nightEnd, score = 74, awakenings = 3),
         ).sleep!!
 
-        // Both survive on purpose: the score is Garmin's verdict, the stages
-        // are ours, and a disagreement between them is the thing worth seeing.
+        // Both survive: the score is Garmin's verdict, the stages are ours.
         assertEquals(74, sleep.overallScore)
         assertEquals(3, sleep.awakeningsCount)
         assertTrue(sleep.stages.isNotEmpty())
@@ -305,9 +285,7 @@ class FitMetricsSleepTest {
         val nap = records.single() as SleepSessionRecord
         assertEquals(napStart, nap.startTime)
         assertEquals(napEnd, nap.endTime)
-        // The nap message carries no sleep_level breakdown, so the whole span is
-        // one light stage — as Gadgetbridge does — rather than a stage-less
-        // session that reads as "nothing recorded".
+        // The nap message has no stage breakdown, so the whole span is one light stage, as Gadgetbridge does.
         val stage = nap.stages.single()
         assertEquals(napStart, stage.startTime)
         assertEquals(napEnd, stage.endTime)
@@ -333,12 +311,9 @@ class FitMetricsSleepTest {
     }
 }
 
-// ── Builders ─────────────────────────────────────────────────────────────────
+// Builders.
 
-/**
- * A metrics file (type 44): VO2 max, recovery time, readiness and load, each
- * in its own message, exactly as the watch splits them.
- */
+/** A metrics file (type 44): VO2 max, recovery time, readiness and load, each in its own message. */
 private fun metricsFile(
     at: Instant,
     vo2MaxTenths: Int? = null,
@@ -376,10 +351,7 @@ private fun metricsFile(
     return fitWrap(d.toBytes())
 }
 
-/**
- * A sleep file (type 49): the event/74 bounds, one stage transition so a
- * session forms, plus the watch's own sleep_stats and any naps.
- */
+/** A sleep file (type 49): the event/74 bounds, one stage transition, sleep_stats and any naps. */
 private fun sleepFile(
     start: Instant,
     end: Instant,
@@ -398,9 +370,7 @@ private fun sleepFile(
         .u32(fitTimestamp(end))
         .u8(74)
         .u8(1) // stop
-    // sleep_level (275): one transition to light so a stage exists. Its
-    // timestamp is the stage's UPPER BOUND (its end), so it sits at the
-    // session stop and the light stage spans the night.
+    // sleep_level (275): one transition to light. Its timestamp is the stage's end, so it sits at the stop.
     d.def(2, 275, listOf(listOf(253, 4, 134), listOf(0, 1, 0)))
     d.u8(0x02)
         .u32(fitTimestamp(end))
@@ -422,12 +392,7 @@ private fun sleepFile(
     return fitWrap(d.toBytes())
 }
 
-/**
- * A monitoring file (type 32) carrying the intensity-minute totals.
- *
- * [alt] writes them into 33/34 instead of 37/38 — both name the same quantity
- * and which pair a device populates varies.
- */
+/** A monitoring file (type 32) with intensity-minute totals. [alt] writes them into 33/34 instead of 37/38. */
 private fun intensityFile(
     samples: List<Triple<Instant, Int, Int>>,
     alt: Boolean = false,
@@ -451,11 +416,7 @@ private fun intensityFile(
     return fitWrap(d.toBytes())
 }
 
-/**
- * A metrics file as a vívoactive 5 actually writes it: daily_sleep (384) and
- * sleep_demand (410), with none of the training-load messages other Garmins
- * put in this file type.
- */
+/** A metrics file as a vívoactive 5 writes it: daily_sleep (384) and sleep_demand (410), no training-load messages. */
 private fun dailySleepFile(
     endTime: Instant,
     score: Int? = null,
@@ -491,10 +452,7 @@ private fun dailySleepFile(
     return fitWrap(d.toBytes())
 }
 
-/**
- * A Health Snapshot file (type 70). Each message packs a whole recording into
- * one record: field 0 the seconds between samples, field 1 an ARRAY.
- */
+/** A Health Snapshot file (type 70). Field 0 is the seconds between samples, field 1 an array. */
 private fun hsaFile(
     at: Instant,
     globalMessage: Int,

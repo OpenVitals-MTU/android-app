@@ -65,12 +65,7 @@ internal fun MetricStatCard(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Row(
-                // fillMaxSize, not fillMaxWidth: the tile is given a fixed 82dp
-                // row height, and a wrap-height Row inside a fillMaxSize Box
-                // pins itself to the TOP — `CenterVertically` only centres the
-                // chip against the text, never the Row within the card. The
-                // result was a two-line tile sitting in the top third with
-                // 43dp of dead space under it.
+                // fillMaxSize: a wrap-height Row in a fixed-height Box pins to the top.
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -104,10 +99,7 @@ internal fun MetricStatCard(
                     }
                     AutoResizeText(
                         text = message ?: dashboardDisplayValue(value),
-                        // titleMedium, measured off the shipping app: the tile
-                        // value is 16sp there. The design system's reference
-                        // screenshot shows 22sp and is stale — the PNG predates
-                        // the product it documents, so the running app wins.
+                        // titleMedium, measured off the shipping app; the design screenshot is stale.
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = if (message == null) {

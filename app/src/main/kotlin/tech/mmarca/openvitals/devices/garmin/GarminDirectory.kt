@@ -3,12 +3,8 @@ package tech.mmarca.openvitals.devices.garmin
 import java.time.Instant
 
 /**
- * One file the watch is offering, as listed in the downloaded directory.
- *
- * Port of `FileTransferHandler.DirectoryEntry` + the old-sync-protocol parse
- * in `parseDirectoryEntries`. A directory is a flat array of 16-byte records
- * — no FIT decoding, no protobuf (that is the "new sync protocol", out of
- * scope).
+ * One file the watch is offering. A directory is a flat array of 16-byte
+ * records, no FIT decoding, no protobuf.
  */
 data class GarminDirectoryEntry(
     /** The handle to pass to a download request. */
@@ -18,48 +14,20 @@ data class GarminDirectoryEntry(
     val specificFlags: Int,
     val fileFlags: Int,
     val fileSize: Long,
-    /**
-     * When the watch recorded the file, or null for its "no date" sentinel
-     * (wire timestamp 0).
-     */
+    /** When the watch recorded the file, or null for its "no date" sentinel. */
     val fileDate: Instant?,
 ) {
     companion object {
-        /**
-         * The watch's "no file number" sentinel. Observed on a real
-         * vívoactive 5 for sleep and HRV files, where several DIFFERENT files
-         * all carry it.
-         */
+        /** The watch's "no file number" sentinel. Several different files carry it. */
         const val UNSET_FILE_NUMBER = 0xFFFF
     }
 
     /**
-     * A stable key for cross-sync dedup: type, file number, the watch's date
-     * for the file and its size identify the same recording across re-syncs,
-     * independent of the volatile file index.
-     *
-     * The date and size are in the key because the file number alone is NOT
-     * stable: a watch cycles its monitoring file numbers, and a key that was
-     * only `type/number` made a brand-new day's monitoring file look like one
-     * synced weeks earlier. Every sync then skipped it — and, worse, sent the
-     * archive flag for it, which told the watch the file was safe to drop. A
-     * day and a half of heart rate and steps went that way before the watch
-     * was forgotten and re-paired. A reused number carries a different date,
-     * and a file the watch is still writing to carries a growing size, so
-     * neither collides with what was synced before.
-     *
-     * **Null when the file number is [UNSET_FILE_NUMBER] or the date is the
-     * watch's zero sentinel**, because then the key identifies nothing: a real
-     * watch returned two distinct sleep files both numbered 65535, which
-     * collapsed to one key and would have made every future sleep file look
-     * already-synced — silent, permanent data loss.
-     *
-     * Declining to dedup those is safe in a way that guessing is not. The
-     * archive flag set on the watch is the PRIMARY mechanism and still
-     * applies, and Health Connect's `clientRecordId` makes any re-import
-     * idempotent, so the worst case is re-downloading a file. Keying on the
-     * volatile [fileIndex] instead was rejected for the opposite reason: an
-     * index the watch later reuses would skip a genuinely new file.
+     * A stable key for cross-sync dedup: type, number, date and size. The
+     * number alone cycles; a `type/number` key once made a new day's file
+     * look synced and sent the archive flag for it. Null when the number or
+     * the date is a sentinel: two distinct sleep files shared 65535. The
+     * archive flag and `clientRecordId` make a re-download safe.
      */
     val dedupKey: String?
         get() {
@@ -69,31 +37,17 @@ data class GarminDirectoryEntry(
         }
 }
 
-/**
- * What a directory parse found, including what it threw away.
- *
- * The rejects are carried, not just counted: "zero entries" has several very
- * different causes — an empty listing, a listing of types this app does not
- * map, a listing of types it maps but does not want — and only the raw
- * `(dataType, subType)` pairs tell them apart on a device.
- */
+/** What a directory parse found, rejects included: they tell the causes of "zero entries" apart. */
 data class GarminDirectoryListing(
     val entries: List<GarminDirectoryEntry>,
     /** Every 16-byte record read, before any filtering. */
     val totalRecords: Int,
     /**
-     * `index:dataType/subType` of each record that was dropped, and why.
-     *
-     * The INDEX matters as much as the type: the watch also announces files
-     * over the protobuf FileSyncService by index, and without it there is no
-     * way to tell whether an announced file is one the legacy directory
-     * already lists and we skip, or one it never mentions at all.
+     * `index:dataType/subType` of each dropped record. The index matters:
+     * the watch also announces files by index over protobuf.
      */
     val skipped: List<String>,
-    /**
-     * The indexes of every record read, kept or dropped, so a listing can be
-     * matched against what other channels claim exists.
-     */
+    /** The indexes of every record read, to match against other channels. */
     val allIndexes: List<Int> = emptyList(),
 ) {
     fun describe(): String = "records=$totalRecords kept=${entries.size} " +
@@ -102,15 +56,10 @@ data class GarminDirectoryListing(
 }
 
 /**
- * Parses a downloaded directory file into the entries worth pulling.
- *
- * Each record is 16 bytes, little-endian:
- * `u16 index, u8 dataType, u8 subType, u16 number, u8 specificFlags,
- *  u8 fileFlags, u32 size, u32 garminTimestamp`.
- *
- * Entries are dropped when: the type is unknown to this app, the type is not
- * [GarminFileType.wanted], or the record is the all-zero sentinel (which the
- * watch emits and which would otherwise loop the downloader forever).
+ * Parses a downloaded directory into the entries worth pulling. Each record
+ * is 16 bytes little-endian: `u16 index, u8 dataType, u8 subType, u16
+ * number, u8 specificFlags, u8 fileFlags, u32 size, u32 garminTimestamp`.
+ * Unknown, unwanted and all-zero sentinel records are dropped.
  */
 object GarminDirectory {
 
@@ -125,8 +74,7 @@ object GarminDirectory {
         val skipped = mutableListOf<String>()
         val allIndexes = mutableListOf<Int>()
         var totalRecords = 0
-        // A trailing partial record is truncated data, not an entry — stop
-        // before it rather than read past the buffer.
+        // A trailing partial record is truncated data; stop before it.
         val reader = GarminByteReader(data)
         while (reader.remaining >= ENTRY_SIZE) {
             totalRecords++
@@ -140,9 +88,7 @@ object GarminDirectory {
             val wireTimestamp = reader.readInt()
             allIndexes.add(fileIndex)
 
-            // The device's end-of-list padding: every field zero. Skipping it
-            // is what stops the caller re-requesting index 0 (the directory
-            // itself) forever.
+            // End-of-list padding. Skipping it stops the caller re-requesting index 0.
             if (fileIndex == 0 &&
                 dataType == 0 &&
                 subType == 0 &&

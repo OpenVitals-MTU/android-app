@@ -30,22 +30,14 @@ import tech.mmarca.openvitals.domain.model.OsPermissionCatalog
 import tech.mmarca.openvitals.domain.model.OsPermissionId
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 
-/**
- * What the last onboarding wants the list screen to say, after the sheet
- * closes. An unsupported transport outranks a missing association: a watch
- * that cannot sync at all makes the background-reliability note moot.
- */
+/** What the last onboarding wants the list screen to say. An unsupported transport outranks a missing association. */
 enum class WatchOnboardNotice { UNSUPPORTED_TRANSPORT, NO_COMPANION }
 
 @Immutable
 data class WatchesUiState(
     /** The paired watches — never sensors, never bike computers' sensor role. */
     val watches: List<BleSensorDevice> = emptyList(),
-    /**
-     * Scanned devices that classify as a watch or bike computer. The Sensors
-     * screen's scan shows everything; this one shows only what this screen
-     * can onboard.
-     */
+    /** Scanned devices that classify as a watch or bike computer. */
     val discoveredWatches: List<BleDiscoveredDevice> = emptyList(),
     val isScanning: Boolean = false,
     val showAddFlow: Boolean = false,
@@ -58,18 +50,9 @@ data class WatchesUiState(
     val errorMessage: String? = null,
     /** Android's own permissions for watch pairing and background sync. */
     val osPermissions: OsPermissionCatalog = OsPermissionCatalog(),
-    /**
-     * Shown instead of the scan when the user goes to add a watch with
-     * permissions still outstanding — in practice, the first watch. Scanning
-     * without Bluetooth finds nothing, and pairing without the background
-     * grants sets up a watch that quietly stops syncing later.
-     */
+    /** Shown instead of the scan while permissions are outstanding. */
     val showPermissionsGate: Boolean = false,
-    /**
-     * Settings-screen walks still queued. They cannot go in one dialog — each
-     * is its own screen — so they drain one per resume, and the queue is what
-     * survives leaving the app in between.
-     */
+    /** Settings-screen walks still queued, one per resume. Survives leaving the app. */
     val pendingSpecialPermissions: List<OsPermissionId> = emptyList(),
 ) {
     val addingIntegration: DeviceIntegration?
@@ -77,14 +60,9 @@ data class WatchesUiState(
 }
 
 /**
- * The Watches settings screen's state: the paired-watches list plus the scan →
- * classify → onboard add flow.
- *
- * Deliberately its own view-model rather than a mode on [tech.mmarca.openvitals
- * .features.settings.BleDevicesViewModel]: sensors and watches share the radio,
- * the registry and the add flow, and nothing else — the Flutter build tried a
- * shared screen and rejected it. Port of the watch half of
- * `ble_devices_view_model.dart` / `ble_devices_screen.dart (kind: watch)`.
+ * The Watches screen's state: the paired list plus the scan, classify,
+ * onboard flow. Its own view-model: sensors and watches share the radio and
+ * the registry, nothing else.
  */
 @HiltViewModel
 class WatchesViewModel @Inject constructor(
@@ -131,11 +109,7 @@ class WatchesViewModel @Inject constructor(
         localState.update { it.copy(osPermissions = osPermissionsService.watchSetupCatalog()) }
     }
 
-    /**
-     * The entry point for the add button. Outstanding permissions get the
-     * checklist first — asked here, where the reason for each is on screen,
-     * rather than during first-run onboarding where a watch is hypothetical.
-     */
+    /** The add button's entry point. Outstanding permissions get the checklist first. */
     fun startAdd() {
         val catalog = osPermissionsService.watchSetupCatalog()
         localState.update { it.copy(osPermissions = catalog) }
@@ -162,13 +136,8 @@ class WatchesViewModel @Inject constructor(
     }
 
     /**
-     * Opens the next queued settings screen, one per call — the app leaves the
-     * foreground to show it, so a second would land behind the first and be
-     * missed. Called on every resume, which turns the queue into a walkthrough:
-     * grant, come back, get handed the next one.
-     *
-     * Re-reads the catalog first, so a walk the user just finished is dropped
-     * rather than reopened.
+     * Opens the next queued settings screen, one per call, on every resume.
+     * Re-reads the catalog first, so a finished walk is dropped.
      */
     fun openNextSpecialPermission() {
         val queued = localState.value.pendingSpecialPermissions
@@ -191,8 +160,7 @@ class WatchesViewModel @Inject constructor(
                 selectedClassification = null,
                 addDisplayName = "",
                 errorMessage = null,
-                // Describes the LAST onboarding's outcome — cleared when a
-                // new flow starts, not when the old one closes.
+                // Describes the last onboarding; cleared when a new flow starts.
                 onboardNotice = null,
             )
         }
@@ -225,11 +193,7 @@ class WatchesViewModel @Inject constructor(
         localState.update { it.copy(isScanning = false) }
     }
 
-    /**
-     * A GFDI device answers a different question than a sensor: the sheet
-     * asks the user to bond it, not to pick capabilities. The scan competes
-     * with the connect that pairing needs, so choosing stops it.
-     */
+    /** A GFDI device is bonded, not given capabilities. Choosing stops the scan. */
     fun selectDiscoveredDevice(device: BleDiscoveredDevice) {
         val classification = sensorCoordinator.classifyDiscoveredDevice(device)
         localState.update {
@@ -247,12 +211,7 @@ class WatchesViewModel @Inject constructor(
         localState.update { it.copy(addDisplayName = value) }
     }
 
-    /**
-     * Bonds and registers the selected watch through whichever integration
-     * claimed it. [onDone] fires with `true` when the sheet should close; a
-     * refused pairing leaves it open so the user can retry without
-     * re-scanning.
-     */
+    /** Bonds and registers the selected watch. [onDone] gets `true` when the sheet should close. */
     fun onboardSelectedWatch(onDone: (Boolean) -> Unit = {}) {
         val state = localState.value
         val selected = state.selectedDevice
@@ -263,8 +222,7 @@ class WatchesViewModel @Inject constructor(
         val displayName = state.addDisplayName.trim()
             .ifBlank { selected.name ?: selected.address }
 
-        // A WearOS watch takes a different, shorter path: no bond, no GFDI
-        // probe — just the optional companion association, then register.
+        // WearOS: no bond, no GFDI probe, just the optional association.
         if (state.addingIntegration == DeviceIntegration.WEAROS) {
             localState.update {
                 it.copy(isOnboarding = true, errorMessage = null, onboardNotice = null)
@@ -300,8 +258,7 @@ class WatchesViewModel @Inject constructor(
             val outcome = onboardGarminWatch(
                 selected,
                 displayName = displayName,
-                // Register as the classified GFDI kind — watch, or
-                // BIKE_COMPUTER for an Edge.
+                // Register as the classified kind: watch, or BIKE_COMPUTER for an Edge.
                 kind = state.selectedClassification?.kind ?: BleDeviceKind.WATCH,
                 onStep = { step ->
                     localState.update { current ->
@@ -333,9 +290,7 @@ class WatchesViewModel @Inject constructor(
                             isOnboarding = false,
                             onboardStep = null,
                             onboardNotice = when {
-                                // An unsupported transport outranks a missing
-                                // association: a watch that cannot sync at
-                                // all makes the reliability note moot.
+                                // An unsupported transport outranks a missing association.
                                 outcome.transport.variant == GarminTransportVariant.UNKNOWN ||
                                     outcome.transport.variant == GarminTransportVariant.UNREACHABLE ->
                                     WatchOnboardNotice.UNSUPPORTED_TRANSPORT

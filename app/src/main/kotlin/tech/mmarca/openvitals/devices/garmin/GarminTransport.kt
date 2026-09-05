@@ -1,29 +1,17 @@
 package tech.mmarca.openvitals.devices.garmin
 
 /**
- * Which GFDI transport a Garmin device speaks, discovered by enumerating its
- * GATT services after bonding.
- *
- * Gadgetbridge picks between these at RUNTIME, not from a model table:
- * `GarminSupport.initializeDevice` tries V2's characteristics first and falls
- * back to V1 if they are absent. So this cannot be inferred from the device
- * name — it has to be asked.
+ * Which GFDI transport a device speaks, found by enumerating its GATT
+ * services after bonding. Gadgetbridge decides this at runtime too.
  */
 enum class GarminTransportVariant {
     /** Single send/receive characteristic pair under service `6A4E2401-…`. */
     V1,
 
-    /**
-     * Multi-link service `6A4E2800-…` with `0x2810`/`0x2820`-style pairs.
-     * Newer watches; carries several logical channels over one connection.
-     */
+    /** Multi-link service `6A4E2800-…`. Newer watches; several channels over one connection. */
     V2,
 
-    /**
-     * Connected and enumerated, but neither variant's characteristics were
-     * found. Either not a Garmin device, or a transport this app has never
-     * seen.
-     */
+    /** Enumerated, but neither variant found: not a Garmin, or an unseen transport. */
     UNKNOWN,
 
     /** Could not connect or enumerate at all — says nothing about the device. */
@@ -37,18 +25,11 @@ enum class GarminTransportVariant {
 /** One GATT service and the characteristics under it, as read off the device. */
 data class GarminGattService(
     val uuid: String,
-    /**
-     * Characteristic UUIDs, each with its property flags rendered for the log
-     * (`read`, `write`, `writeNoRsp`, `notify`, `indicate`).
-     */
+    /** Characteristic UUIDs with their property flags rendered for the log. */
     val characteristics: Map<String, List<String>>,
 )
 
-/**
- * What a probe found. Kept whole rather than reduced to the verdict: when the
- * verdict is [GarminTransportVariant.UNKNOWN] the raw map is the only thing
- * that explains why, and that is exactly the case worth reporting.
- */
+/** What a probe found, kept whole: the raw map explains an UNKNOWN verdict. */
 data class GarminGattReport(
     val address: String,
     val variant: GarminTransportVariant,

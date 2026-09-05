@@ -19,24 +19,13 @@ enum class CsvImportDiagnosticReason {
     /** The converted value is outside what a human body can be. That metric only. */
     OUT_OF_RANGE,
 
-    /**
-     * Body fat was mapped as a mass, but this row has no usable weight to
-     * divide by. That metric only.
-     */
+    /** Body fat was mapped as a mass but the row has no weight. That metric only. */
     DERIVATION_MISSING_WEIGHT,
 
-    /**
-     * The end-timestamp cell did not parse. Costs the interval metrics only —
-     * the instant metrics on the row never read it. (A BLANK end is not an
-     * error: the row falls back to a one-minute span.)
-     */
+    /** The end-timestamp cell did not parse. Interval metrics only. A blank end is not an error. */
     UNPARSABLE_END_TIMESTAMP,
 
-    /**
-     * The end resolves on or before the start, which no interval can survive —
-     * usually TimeFrom and TimeTo mapped the wrong way round. Interval metrics
-     * only.
-     */
+    /** The end is not after the start, usually TimeFrom and TimeTo swapped. Interval metrics only. */
     END_NOT_AFTER_START,
 
     /** Health Connect refused the record. */
@@ -59,11 +48,7 @@ data class CsvImportProgress(
     /** Records handed to Health Connect. Includes upserts over existing records. */
     val written: Int = 0,
 
-    /**
-     * Records whose id was already in Health Connect. They are still written —
-     * the id cannot say whether the value changed — so this is "you have
-     * imported this before", not "skipped".
-     */
+    /** Records whose id was already present. Still written: "imported before", not "skipped". */
     val alreadyPresent: Int = 0,
 
     /** Metrics or rows that produced no record. */
@@ -88,10 +73,7 @@ enum class CsvImportOutcome {
     /** The user cancelled. Everything written before that stays written. */
     CANCELLED,
 
-    /**
-     * Health Connect rate-limited us. Re-running later resumes from the top and
-     * re-dedupes, which is cheap at the sizes this importer targets.
-     */
+    /** Health Connect rate-limited us. Re-running resumes from the top and re-dedupes. */
     RATE_LIMITED,
 
     /** Something else failed; [CsvImportResult.error] says what. */
@@ -114,9 +96,5 @@ data class CsvImportResult(
     val wroteNothing: Boolean get() = progress.written == 0
 }
 
-/**
- * Matches the Apple importer's cap: grouped counts stay exact, the per-row log
- * stops growing so a re-import of an already-imported file cannot produce an
- * unbounded report.
- */
+/** Matches the Apple importer's cap, so a re-import cannot produce an unbounded report. */
 const val CSV_MAX_RETAINED_DIAGNOSTICS = 1000

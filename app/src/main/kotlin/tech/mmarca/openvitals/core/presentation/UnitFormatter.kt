@@ -13,12 +13,7 @@ class UnitFormatter(
 ) {
     fun unitSystem(): UnitSystem = unitSystemProvider()
 
-    /**
-     * The effective system for one quantity: its per-quantity override when
-     * set, otherwise whatever the base unit setting resolves to. Every
-     * formatting method routes through this, so overrides apply everywhere
-     * without per-screen changes.
-     */
+    /** The effective system for one quantity: its override, else the base setting. */
     fun unitSystem(quantity: UnitQuantity): UnitSystem =
         unitOverrideProvider(quantity) ?: unitSystem()
 
@@ -122,9 +117,7 @@ class UnitFormatter(
         } else {
             0.0
         }
-        // Speed and pace ride the distance override: they are distance-derived
-        // units, and mixed km-distance/mph-speed displays would contradict
-        // each other on the same screen.
+        // Speed and pace ride the distance override, or the two would contradict each other.
         return when (unitSystem(UnitQuantity.DISTANCE)) {
             UnitSystem.METRIC -> DisplayValue(decimal(metersPerHour / 1000.0, 1), "km/h")
             UnitSystem.IMPERIAL -> DisplayValue(decimal(metersPerHour / 1609.344, 1), "mph")

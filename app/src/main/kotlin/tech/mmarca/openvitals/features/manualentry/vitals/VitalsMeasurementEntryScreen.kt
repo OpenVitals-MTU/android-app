@@ -254,8 +254,7 @@ private fun VitalsMeasurementEntryCard(
                 )
             }
 
-            // A measurement is not always logged the moment it was taken — the
-            // date and clock are offered on a NEW entry too, defaulting to now.
+            // A measurement is not always logged when taken, so a new entry offers the time too.
             ManualEntryTimestampFields(
                 timestamp = state.editTime,
                 enabled = !state.isSavingEntry,
@@ -392,11 +391,7 @@ internal fun BpMealContext.labelRes(): Int = when (this) {
     BpMealContext.AFTER_DINNER -> R.string.bp_context_after_dinner
 }
 
-/**
- * The standard home-measurement protocol (AHA/ESH), collapsed by default so
- * the form stays a form — expanded it reads as the checklist a doctor hands
- * out with the monitor.
- */
+/** The standard home-measurement protocol (AHA/ESH), collapsed by default. */
 @Composable
 private fun BpMeasurementGuide() {
     var expanded by remember { mutableStateOf(false) }

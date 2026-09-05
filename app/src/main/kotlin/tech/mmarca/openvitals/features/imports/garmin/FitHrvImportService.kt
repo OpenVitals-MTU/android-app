@@ -22,10 +22,8 @@ internal data class FitHrvImportOutcome(
 )
 
 /**
- * Writes Garmin nightly HRV readings to Health Connect. The clientRecordId is
- * deterministic per reading time, so a re-imported wellness file dedups against
- * its earlier self instead of doubling the night — Health Connect's duplicate
- * rejection counts as success here.
+ * Writes Garmin nightly HRV readings to Health Connect. The id is
+ * deterministic per reading time, so a re-import dedups.
  */
 @Singleton
 class FitHrvImportService @Inject constructor(
@@ -36,10 +34,8 @@ class FitHrvImportService @Inject constructor(
         HealthPermission.getWritePermission(HeartRateVariabilityRmssdRecord::class)
 
     /**
-     * Writes each file's readings, all files batched into ONE insert call
-     * (Health Connect rate-limits per call). The batch is atomic, so a failed
-     * batch retries file by file; a rate limit stops the run without blaming
-     * the files it never attempted.
+     * Writes each file's readings in one insert call. A failed batch retries
+     * file by file; a rate limit stops the run without blaming the rest.
      */
     internal suspend fun writeFiles(files: List<List<FitHrvReading>>): FitHrvImportOutcome {
         if (files.isEmpty()) return FitHrvImportOutcome()

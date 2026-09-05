@@ -11,16 +11,8 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 
 /**
- * Port of `the shell offers the SHIPPED locales, not every ARB present` from
- * Flutter's `test/widget_test.dart`.
- *
- * Flutter pins `MaterialApp.supportedLocales`. This app has no such list: the
- * languages a user may pick come from `R.array.translation_picker_language_tags`,
- * generated at build time by `scripts/generate-translation-coverage.py`, which
- * admits a `values-xx` translation only once it clears a coverage floor. So the
- * same guard reads as: the picker offers exactly the generated set, and every
- * entry in it cleared the floor — an in-progress translation kept in the tree
- * for Weblate never reaches a user.
+ * The picker offers exactly the generated set in `R.array.translation_picker_language_tags`,
+ * and every entry cleared the coverage floor. An in-progress translation never reaches a user.
  */
 @RunWith(AndroidJUnit4::class)
 class ShippedLanguagesTest {

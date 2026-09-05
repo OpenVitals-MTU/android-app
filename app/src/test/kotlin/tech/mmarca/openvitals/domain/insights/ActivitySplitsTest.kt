@@ -21,10 +21,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseSegmentData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.SpeedSample
 
-/**
- * `buildActivitySplits` is arithmetic, so it is tested like arithmetic:
- * known geometry in, exact numbers out.
- */
+/** `buildActivitySplits` is arithmetic: known geometry in, exact numbers out. */
 class ActivitySplitsTest {
 
     private val start: Instant = Instant.parse("2026-07-10T08:00:00Z")
@@ -106,23 +103,18 @@ class ActivitySplitsTest {
     private fun elapsedSeconds(split: ActivitySplit): Double = split.elapsedMs / 1000.0
 
     /**
-     * Seconds since the workout start. Interpolated crossings land on
-     * sub-millisecond boundaries (the haversine of a "1000 m" fixture segment is
-     * 1000 m to about eleven decimal places, not exactly), so split times are
-     * asserted with a tolerance rather than by Instant equality.
+     * Seconds since the workout start. Interpolated crossings land on sub-millisecond
+     * boundaries, so split times are asserted with a tolerance.
      */
     private fun secondsFromStart(time: Instant): Double =
         Duration.between(start, time).toNanos() / 1_000_000_000.0
 
-    // --- an activity that does not travel has no splits ---
+    // An activity that does not travel has no splits.
 
     @Test
     fun `a strength session with GPS drift is not cut into laps`() {
-        // The bug, from a real session: a phone left on the bench picked up 1.2 km
-        // of GPS drift over 36 minutes. Health Connect recorded it faithfully, the
-        // old "does it have any distance?" gate said yes, and a lifting session was
-        // duly cut into a "1.0 km" split and a "181 m (partial)" one, both at a
-        // 30:29 min/km pace. The distance was real data; the splits were nonsense.
+        // A phone left on the bench picked up 1.2 km of GPS drift over 36 minutes,
+        // and a lifting session was cut into two splits at a 30:29 min/km pace.
         val splits = compute(
             workout(
                 exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING,
@@ -140,7 +132,7 @@ class ActivitySplitsTest {
         val splits = compute(
             workout(
                 exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING,
-                // ~1.2 km of "movement" — exactly the drift a bench-side phone logs.
+                // ~1.2 km of drift.
                 routePoints = listOf(point(0, 0.0), point(2160, 1200.0)),
             ),
         )
@@ -159,12 +151,11 @@ class ActivitySplitsTest {
         assertTrue(splits.splits.isNotEmpty())
     }
 
-    // --- the equator-line fixture ---
+    // The equator-line fixture.
 
     @Test
     fun `the fixture really does put the requested number of meters between fixes`() {
-        // Everything below reads distance off this; if the fixture lies, the
-        // whole file lies.
+        // Everything below reads distance off this fixture.
         val a = point(0, 0.0)
         val b = point(10, 1000.0)
         assertEquals(
@@ -174,13 +165,11 @@ class ActivitySplitsTest {
         )
     }
 
-    // --- source priority ---
+    // Source priority.
 
     @Test
     fun `device laps win over a route, and are NOT re-cut to the split distance`() {
-        // A track session: 400 m laps, recorded by the watch. A 1 km splitter
-        // would produce ~1.6 splits from the same route — the device's laps must
-        // survive untouched.
+        // A track session with 400 m laps from the watch. The device's laps must survive untouched.
         val workout = workout(
             totalDistanceMeters = 1600.0,
             endTime = at(480),
@@ -237,24 +226,13 @@ class ActivitySplitsTest {
         assertEquals(SplitSource.ROUTE, result.source)
     }
 
-    // --- route splits ---
+    // Route splits.
 
     @Test
     fun `cut at exactly the right distance, with the crossing time INTERPOLATED between fixes`() {
-        // A deliberately hostile sample rate: one fix every 200 s. The runner
-        // covers 900 m in the first 200 s, then slows hard — the 1 km boundary
-        // falls just 100 m into a 1000 m segment that takes 600 s.
-        //
-        //   fix 0:   t=0 s      0 m
-        //   fix 1:   t=200 s    900 m
-        //   fix 2:   t=800 s    1900 m
-        //
-        // The 1 km mark is 10% of the way along the second segment, so it is
-        // crossed at t = 200 + 0.10 * 600 = 260 s.
-        //
-        // SNAPPING to the next fix would call split 1 "1000 m in 800 s" — a
-        // 13:20 min/km pace for a kilometre actually run in 4:20. That is the
-        // whole reason for interpolating.
+        // One fix every 200 s. 900 m in the first 200 s, then a 1000 m segment that takes 600 s.
+        // The 1 km mark is 10% into the second segment: t = 200 + 0.10 * 600 = 260 s.
+        // Snapping to the next fix would call split 1 "1000 m in 800 s".
         val workout = workout(
             totalDistanceMeters = 1900.0,
             endTime = at(800),
@@ -283,8 +261,7 @@ class ActivitySplitsTest {
 
     @Test
     fun `several boundaries inside one long segment are each interpolated`() {
-        // Two fixes, 3 km apart, 300 s apart: constant 10 m/s. Splits must land
-        // at 100 s, 200 s, 300 s.
+        // Two fixes, 3 km and 300 s apart: constant 10 m/s. Splits land at 100, 200, 300 s.
         val workout = workout(
             totalDistanceMeters = 3000.0,
             endTime = at(300),
@@ -359,8 +336,8 @@ class ActivitySplitsTest {
 
     @Test
     fun `altitude at a mid-segment boundary is interpolated, and no interior fix is lost from the next split`() {
-        // Boundary at 1 km falls halfway between the 750 m fix (110 m) and the
-        // 1250 m fix (130 m) -> 120 m. Split 1 gains 20 m, split 2 gains 10 m.
+        // The 1 km boundary is halfway between the 750 m fix (110 m) and the 1250 m fix (130 m).
+        // Split 1 gains 20 m, split 2 gains 10 m.
         val workout = workout(
             totalDistanceMeters = 2000.0,
             endTime = at(600),
@@ -394,13 +371,11 @@ class ActivitySplitsTest {
         assertNull(result.splits.first().elevationLossMeters)
     }
 
-    // --- speed-sample splits (the treadmill case) ---
+    // Speed-sample splits (the treadmill case).
 
     @Test
     fun `integrate v dt to cut at the right times, with no route at all`() {
-        // A treadmill at a constant 4 m/s: the 1 km mark falls at 250 s, 2 km at
-        // 500 s. Samples every 100 s, so both boundaries are mid-sample and must
-        // be interpolated.
+        // Constant 4 m/s: 1 km at 250 s, 2 km at 500 s. Samples every 100 s, so both boundaries are mid-sample.
         val workout = workout(
             totalDistanceMeters = 2400.0,
             endTime = at(600),
@@ -426,8 +401,7 @@ class ActivitySplitsTest {
 
     @Test
     fun `a changing belt speed integrates trapezoidally`() {
-        // 0-200 s at 5 m/s (1000 m) then 200-400 s at 2.5 m/s (500 m).
-        // The 1 km boundary lands exactly on the 200 s sample.
+        // 0-200 s at 5 m/s (1000 m), then 200-400 s at 2.5 m/s (500 m). The boundary lands on the 200 s sample.
         val workout = workout(
             totalDistanceMeters = 1500.0,
             endTime = at(400),
@@ -453,7 +427,7 @@ class ActivitySplitsTest {
         assertTrue(result.splits[1].isPartial)
     }
 
-    // --- the estimated fallback ---
+    // The estimated fallback.
 
     @Test
     fun `every estimated split shares the activity average pace, and the source says so`() {
@@ -470,7 +444,7 @@ class ActivitySplitsTest {
         for (split in result.splits) {
             assertEquals(1000.0, split.distanceMeters, 0.001)
             assertEquals(300.0, elapsedSeconds(split), 0.001)
-            // Identical pace on every row: the honest, useless answer.
+            // Identical pace on every row.
             assertEquals(0.3, split.paceSecondsPerMeter!!, 1e-6)
             assertEquals(0.0, split.paceDeltaSeconds!!, 1e-6)
             assertNull(split.elevationGainMeters)
@@ -508,7 +482,7 @@ class ActivitySplitsTest {
         assertEquals(2, result.splits.size)
     }
 
-    // --- average heart rate ---
+    // Average heart rate.
 
     @Test
     fun `average heart rate covers only the samples inside the split window`() {
@@ -536,9 +510,7 @@ class ActivitySplitsTest {
 
     @Test
     fun `the split window is half-open - a sample exactly on the boundary belongs to the NEXT split, never to both`() {
-        // The estimated source cuts on exact times (300 s / 600 s), so the
-        // boundary can be probed precisely — unlike an interpolated GPS
-        // crossing, which lands a hair either side of the round number.
+        // The estimated source cuts on exact times (300 s / 600 s), so the boundary can be probed precisely.
         val workout = workout(
             totalDistanceMeters = 2000.0,
             endTime = at(600),
@@ -589,12 +561,11 @@ class ActivitySplitsTest {
         assertEquals(160.0, result.splits[1].averageHeartRateBpm!!, 1e-9) // (150+170)/2
     }
 
-    // --- paceDeltaSeconds ---
+    // paceDeltaSeconds.
 
     @Test
     fun `pace delta is negative for a faster split and positive for a slower one`() {
-        // 2 km in 600 s -> the activity averages 300 s/km. The first km takes
-        // 240 s (60 s faster), the second 360 s (60 s slower).
+        // 2 km in 600 s averages 300 s/km. The first km takes 240 s, the second 360 s.
         val workout = workout(
             totalDistanceMeters = 2000.0,
             endTime = at(600),
@@ -611,10 +582,8 @@ class ActivitySplitsTest {
 
     @Test
     fun `pace delta measures against the ACTIVITY average, not the mean of the split paces`() {
-        // 1 km at 300 s/km, then a 100 m sprint at 200 s/km. The mean of the two
-        // split paces is 250 s/km; the activity's real average is
-        // (300 + 20) s / 1.1 km = 290.9 s/km. A short partial cannot skew the
-        // baseline.
+        // 1 km at 300 s/km, then a 100 m sprint at 200 s/km. The real average is
+        // (300 + 20) s / 1.1 km = 290.9 s/km, not the mean of the two paces.
         val workout = workout(
             totalDistanceMeters = 1100.0,
             endTime = at(320),
@@ -627,7 +596,7 @@ class ActivitySplitsTest {
         assertEquals(-90.9, result.splits[1].paceDeltaSeconds!!, 0.5)
     }
 
-    // --- no distance ---
+    // No distance.
 
     @Test
     fun `a session with no distance, no route and no speed has no splits`() {
@@ -658,7 +627,7 @@ class ActivitySplitsTest {
         assertTrue(result.splits.isEmpty())
     }
 
-    // --- degenerate input does not crash or divide by zero ---
+    // Degenerate input does not crash or divide by zero.
 
     @Test
     fun `a single route point`() {
@@ -789,7 +758,7 @@ class ActivitySplitsTest {
 
         val result = compute(workout)
 
-        // The only lap was nonsense -> fall through to the next usable source.
+        // The only lap was nonsense, so fall through to the next source.
         assertEquals(SplitSource.ESTIMATED, result.source)
         assertEquals(1, result.splits.size)
     }
@@ -813,25 +782,19 @@ class ActivitySplitsTest {
         assertEquals(800.0, result.splits[1].distanceMeters, 0.5)
     }
 
-    // --- paused recordings ---
+    // Paused recordings.
 
     @Test
     fun `a pause inside a split does not count as time spent covering it`() {
-        // The ride this comes from: 21 minutes wall-clock with a 10½-minute pause
-        // in it, 1421 m ridden. It reported a 4.1 km/h first kilometre and a
-        // 4.9 km/h average, because the pause sat inside that kilometre's window.
-        // The rider was doing about 12.
-        //
-        // 1000 m covered in 900 s of window, 600 s of which was paused: five
-        // minutes of riding, not fifteen.
+        // A 21-minute ride with a 10.5-minute pause reported 4.1 km/h for its first kilometre.
+        // 1000 m in a 900 s window with 600 s paused is five minutes of riding.
         val workout = workout(
             totalDistanceMeters = 1000.0,
             endTime = at(900),
             routePoints = listOf(
                 point(0, 0.0),
                 point(60, 100.0),
-                // The pause: the recording logs nothing across it, so the next fix is
-                // ten minutes later and barely any further on.
+                // The pause: the next fix is ten minutes later and barely further on.
                 point(660, 120.0),
                 point(900, 1000.0),
             ),
@@ -867,9 +830,7 @@ class ActivitySplitsTest {
 
     @Test
     fun `a split cannot come out negative however the pauses overlap`() {
-        // A source app that writes overlapping pause segments, or one longer than
-        // the split it sits in, must not produce a negative time and an inverted
-        // pace.
+        // Overlapping pause segments, or one longer than its split, must not produce a negative time.
         val workout = workout(
             totalDistanceMeters = 1000.0,
             endTime = at(600),
@@ -884,13 +845,12 @@ class ActivitySplitsTest {
         assertNull(split.paceSecondsPerMeter)
     }
 
-    // --- estimated source is exempt from pause subtraction ---
+    // The estimated source is exempt from pause subtraction.
 
     @Test
     fun `estimated splits already spread over moving time do not subtract the pause again`() {
-        // 2 km with a 300 s pause in a 900 s session: moving time is 600 s, so
-        // each estimated kilometre claims 300 s — subtracting the pause from one
-        // of those fictional windows again would double-count it.
+        // 2 km with a 300 s pause in 900 s: moving time is 600 s, so each kilometre claims 300 s.
+        // Subtracting the pause again would double-count it.
         val workout = workout(
             totalDistanceMeters = 2000.0,
             endTime = at(900),
@@ -907,13 +867,8 @@ class ActivitySplitsTest {
 
     private companion object {
         /**
-         * A latitude line: at the equator, moving EAST by `meters` keeps latitude 0
-         * and makes the haversine distance exactly `meters`, so a route's geometry
-         * can be stated in meters directly.
-         *
-         * This must use the SAME earth radius as `haversineMeters` (6 371 000 m, a
-         * sphere) — the WGS84 equatorial radius would put the fixture 0.11% out and
-         * quietly turn every "1000 m" below into 998.9 m.
+         * Moving east at the equator by `meters` makes the haversine distance exactly `meters`.
+         * Uses the same earth radius as `haversineMeters`; WGS84 would put the fixture 0.11% out.
          */
         const val MetersPerDegreeAtEquator = 6371000.0 * PI / 180.0
     }

@@ -6,14 +6,9 @@ import java.time.ZoneId
 import kotlin.math.roundToInt
 
 /**
- * Non-day ranges load one aggregated point per local day instead of raw
- * entries. The overview charts, though, draw entry lists — so each point is
- * synthesised back into one entry stamped at its day's local midnight. The
- * charts' own per-day averaging then passes these through unchanged.
- *
- * Synthetic entries carry an empty [source]: a day's aggregate has no single
- * writer. Cards never read these — their latest value and source come from the
- * true window-latest reads.
+ * Non-day ranges load one point per day; the charts draw entry lists, so
+ * each point is synthesised into an entry at local midnight with an empty
+ * source. Cards never read these.
  */
 
 private fun LocalDate.atDayStart(): Instant = atStartOfDay(ZoneId.systemDefault()).toInstant()
@@ -74,13 +69,8 @@ internal fun List<DailyVitalPoint>.toSkinTemperatureEntries(): List<SkinTemperat
     }
 
 /**
- * Period mean with one vote per day, null with no days.
- *
- * Not count-weighted: each day's value is already the minute-bucketed mean of
- * its readings, and weighting days by their raw reading count would let one
- * night of continuous SpO2 monitoring (hundreds of readings) outvote a week
- * of spot checks — the same skew the per-sample heart rate mean had. The
- * heart rate overview averages its daily summaries the same way.
+ * Period mean with one vote per day. Not count-weighted: a night of
+ * continuous monitoring must not outvote a week of spot checks.
  */
 internal fun List<DailyVitalPoint>.dailyMeanOrNull(): Double? {
     if (isEmpty()) return null

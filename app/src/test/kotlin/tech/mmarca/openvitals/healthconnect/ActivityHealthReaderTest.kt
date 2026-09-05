@@ -185,11 +185,7 @@ class ActivityHealthReaderTest {
         )
     }
 
-    /**
-     * The Binder-parcel budget: no default chunk may cover more days than
-     * [DailyAggregateMaxQueryDays], the range must be covered exactly once, and
-     * the chunks must tile it in order with no gap or overlap.
-     */
+    /** No chunk may cover more than [DailyAggregateMaxQueryDays], and the chunks must tile the range with no gap or overlap. */
     @Test
     fun `dailyAggregateDateChunks never exceeds the parcel-safe slice by default`() {
         val start = LocalDate.of(2024, 8, 5)

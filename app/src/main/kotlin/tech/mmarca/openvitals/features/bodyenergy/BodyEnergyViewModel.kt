@@ -104,13 +104,7 @@ class BodyEnergyViewModel(
         }
     }
 
-    /**
-     * Commits the zone ladder, and the birth year when the card owns the field.
-     *
-     * The profile is written FIRST: automatic zones are derived from age, so a
-     * calibration saved before the year lands would be computed against the old
-     * profile and immediately recomputed against the new one.
-     */
+    /** Commits the zone ladder and the birth year. The profile is written first: zones derive from age. */
     fun completeSetup(calibration: BodyEnergyCalibration, birthYear: Int?) {
         if (birthYear != null) {
             preferencesRepository.setBodyProfile(
@@ -121,10 +115,7 @@ class BodyEnergyViewModel(
         load(RefreshMode.FORCE)
     }
 
-    /**
-     * Returns the four gains to neutral and forgets the watch readings behind
-     * them. The objective model is untouched — that is what a gain of 1.0 means.
-     */
+    /** Returns the gains to neutral and forgets the watch readings. */
     fun resetPersonalTuning() {
         val current = preferencesRepository.bodyEnergyCalibration()
         preferencesRepository.setBodyEnergyCalibration(
@@ -204,9 +195,7 @@ class BodyEnergyViewModel(
                     display = result.toBodyEnergyDisplayState(),
                     error = null,
                 )
-                // After the foreground load, never before: Health Connect
-                // serializes reads, so warming a fortnight beside the screen's
-                // own day would make both slower.
+                // After the foreground load: Health Connect serializes reads.
                 warmChain()
             }.onFailure { error ->
                 if (!isCurrent) return@load

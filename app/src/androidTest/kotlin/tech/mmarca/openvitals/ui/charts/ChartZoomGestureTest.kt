@@ -25,14 +25,8 @@ import org.junit.Test
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the `ChartZoom` cases of Flutter's `test/ui/charts/chart_zoom_test.dart`.
- *
- * The viewport arithmetic itself is covered on the JVM by `ChartViewportTest`.
- * What only a device can answer is whether the gestures reach it: whether two
- * fingers are recognised as a pinch, whether one finger is refused as one, and
- * whether either of those survives being inside a scrolling page — which is
- * where a chart actually lives, and where the gesture arena gets to have an
- * opinion.
+ * Whether the gestures reach the viewport: two fingers as a pinch, one finger refused,
+ * and both inside a scrolling page. The arithmetic is `ChartViewportTest`.
  */
 class ChartZoomGestureTest {
 
@@ -52,9 +46,7 @@ class ChartZoomGestureTest {
 
     @Test
     fun twoFingersZoom_evenInsideAScrollingPage() {
-        // A chart is always inside a scrollable. If the scroll container wins the
-        // arena on the first finger, the pinch never arrives and zoom is dead in
-        // the only place it is ever used.
+        // A chart is always inside a scrollable. If the scroll container wins the arena, zoom is dead.
         var viewport = ChartViewport.Full
         setChart(inScrollingPage = true) { viewport = it.viewport }
 
@@ -66,8 +58,7 @@ class ChartZoomGestureTest {
 
     @Test
     fun oneFingerDraggingHorizontally_doesNotZoom() {
-        // One finger across a chart is a scrub, not a zoom. Treating it as a pan
-        // would move the data out from under a reading the user is taking.
+        // One finger is a scrub, not a zoom.
         var viewport = ChartViewport.Full
         var sawMultiTouch = false
         setChart {
@@ -88,8 +79,7 @@ class ChartZoomGestureTest {
 
     @Test
     fun thePageStillScrolls_whenDraggedFromInsideAChart() {
-        // The chart claiming every vertical drag would trap the page: a user who
-        // starts a scroll with their thumb over a chart gets a stuck screen.
+        // The chart claiming every vertical drag would trap the page.
         val scrollState = androidx.compose.foundation.ScrollState(0)
         setChart(inScrollingPage = true, scrollState = scrollState) {}
 
@@ -123,9 +113,7 @@ class ChartZoomGestureTest {
 
     @Test
     fun aPinchStillLands_whenOneFingerMovesBeforeTheOther() {
-        // Real fingers do not land together. If the detector treats the first
-        // finger's movement as a committed one-finger gesture before the second
-        // arrives, pinching works in a test harness and fails on a phone.
+        // Real fingers do not land together. Committing to one finger before the second arrives fails on a phone.
         var viewport = ChartViewport.Full
         setChart { viewport = it.viewport }
 
@@ -150,9 +138,7 @@ class ChartZoomGestureTest {
 
     @Test
     fun changingTheChartsKey_resetsTheZoomRatherThanCarryingItOver() {
-        // Paging to another year hands the same chart a different set of data.
-        // Keeping the old viewport would show a window onto a range that no
-        // longer exists, framing an arbitrary slice of the new one.
+        // New data for the same chart must reset the viewport.
         var viewport = ChartViewport.Full
         var key by androidx.compose.runtime.mutableStateOf(2025)
 
@@ -181,8 +167,7 @@ class ChartZoomGestureTest {
         val right = center + Offset(40f, 0f)
         down(0, left)
         down(1, right)
-        // Several steps rather than one jump: the detector accumulates its scale
-        // across moves, and a single teleport is not what a real pinch looks like.
+        // Several steps rather than one jump: the detector accumulates its scale across moves.
         repeat(6) { step ->
             val spread = 40f * (step + 1)
             moveTo(0, left - Offset(spread, 0f))

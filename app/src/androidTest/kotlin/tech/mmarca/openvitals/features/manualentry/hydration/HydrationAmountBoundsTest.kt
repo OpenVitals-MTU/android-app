@@ -10,15 +10,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Port of the `volume > bounds are rendered in the field's unit` case of
- * Flutter's `test/core/presentation/measurement_input_test.dart`.
- *
- * The amount field is labelled in the user's own unit, so the rejection message
- * has to be too. Telling someone typing fluid ounces that the allowed range is
- * "1 to 100,000 ml" is an instruction they cannot act on without doing the
- * conversion the app exists to do for them.
- */
+/** The rejection message is in the field's own unit, so a user typing fluid ounces can act on it. */
 class HydrationAmountBoundsTest {
 
     @get:Rule

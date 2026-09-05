@@ -24,14 +24,7 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * Port of the rendering cases of Flutter's
- * `test/features/vitals/vitals_screens_test.dart`.
- *
- * Blood pressure stands in for the vitals metrics: they share one content
- * builder, and what differs between them is which entry list it is handed. The
- * access-gate case lives in `HealthConnectAccessGateTest`.
- */
+/** Blood pressure stands in for the vitals metrics: they share one content builder. */
 class VitalsContentTest {
 
     @get:Rule

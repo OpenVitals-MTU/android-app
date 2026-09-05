@@ -25,12 +25,7 @@ import tech.mmarca.openvitals.navigation.CYCLE_ENTRY_ID_ARG
 import tech.mmarca.openvitals.navigation.CYCLE_ENTRY_KIND_ARG
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
-/**
- * The day-log save semantics: exactly the filled sections are written, a
- * partial failure keeps the failed sections filled, and the edit mode is
- * scoped to one record. Ports the intent of VitalsMeasurementEntryViewModelTest
- * onto the multi-section shape.
- */
+/** Exactly the filled sections are written, a partial failure keeps the failed ones filled, and edit mode is scoped to one record. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CycleEntryViewModelTest {
 
@@ -84,8 +79,7 @@ class CycleEntryViewModelTest {
         vm.start()
         advanceUntilIdle()
 
-        // Flow is the selected category; the spotting toggle sits behind
-        // another tab and must not ride along.
+        // The spotting toggle sits behind another tab and must not ride along.
         vm.selectFlow(CycleRecordValues.FLOW_MEDIUM)
         vm.toggleSpotting()
         vm.save()
@@ -220,7 +214,7 @@ class CycleEntryViewModelTest {
         assertNull(vm.uiState.value.entryError)
     }
 
-    // ------------------------------------------------------------------- edit
+    // Edit.
 
     private fun editHandle(kind: CycleEntryKind, id: String) = SavedStateHandle(
         mapOf(CYCLE_ENTRY_KIND_ARG to kind.name, CYCLE_ENTRY_ID_ARG to id)

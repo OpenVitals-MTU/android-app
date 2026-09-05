@@ -75,9 +75,7 @@ class CaloriesViewModelTest {
                 query = any<PeriodLoadQuery>(),
                 includeSteps = true,
                 includeNutrition = true,
-                // This screen never renders the previous/baseline comparison, so
-                // it must not pay for those windows — on Year, four extra
-                // year-long aggregates.
+                // This screen never renders the comparison, so it must not pay for those windows.
                 includeComparisonWindows = false,
             )
         }
@@ -157,8 +155,7 @@ class CaloriesViewModelTest {
 
         CaloriesViewModel(activityRepository, bodyRepo(), caloriesSync = sync)
 
-        // The screen owns the cache's first full sync (the app-open drain is
-        // incremental-only), and one reload re-derives the period from it.
+        // The screen owns the cache's first full sync, and one reload re-derives the period.
         coVerify(exactly = 1) { sync.syncAll() }
         coVerify(exactly = 2) {
             activityRepository.loadActivityPeriod(any(), true, true, includeComparisonWindows = false)

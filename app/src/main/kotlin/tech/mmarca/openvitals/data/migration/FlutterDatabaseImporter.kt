@@ -12,30 +12,13 @@ import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
 import tech.mmarca.openvitals.data.local.garmin.GarminWellnessSampleEntity
 
 /**
- * Imports the beverage catalog from the Flutter build's drift database.
+ * Imports the beverage catalog from the Flutter drift database at
+ * `app_flutter/openvitals.db`. The tables are column-identical and the
+ * drift catalog is newer, so the Room table is replaced. Ids stay stable.
  *
- * The drift file lives at `app_flutter/openvitals.db` (Flutter's documents
- * directory; `Context.getDir("flutter")`). Its `beverages` table is
- * column-identical to the Room `beverages` table, and the drift catalog is
- * strictly newer than the Kotlin-era one, so the Room table is wholesale
- * replaced (delete all + insert). Beverage ids stay stable, which is what
- * keeps the migrated home-screen quick-beverage widget selections resolvable.
- *
- * ## Deliberately untouched tables
- *
- * * `garmin_wellness_samples` — imported by [importGarminWellness] into the
- *   Room table of the same shape (watch-only data with no Health Connect
- *   representation, so it cannot be re-synced from anywhere else). The drift
- *   rows are still PRESERVED IN PLACE afterwards, like every Flutter file.
- * * `vitals_daily_aggregates` / `vitals_sync_cursors` — derived caches; the
- *   supported path is a full Health Connect re-sync from empty cursors.
- * * `body_energy_days` / `body_energy_buckets` — owned by the body-energy
- *   workstream; skipped here and preserved in place for them (schema matches
- *   Room v5).
- *
- * The source is only ever opened read-only. When a read-only open cannot see
- * the data (a live `-wal` sidecar), the db + sidecars are copied to the cache
- * directory and the copy is opened instead; the copy is deleted afterwards.
+ * `garmin_wellness_samples` is imported by [importGarminWellness]. The
+ * derived caches and the body-energy tables are left alone. The source is
+ * opened read-only; a live WAL sidecar is handled via a cache copy.
  */
 class FlutterDatabaseImporter(private val context: Context) {
 
@@ -43,8 +26,7 @@ class FlutterDatabaseImporter(private val context: Context) {
     fun importBeverages(beverageDao: BeverageDao) {
         val beverages = readTable("beverages", ::queryBeverages) ?: return
         if (beverages.isEmpty()) {
-            // Drift always seeds preloaded defaults; an empty read means
-            // something is off. Never wipe the Room catalog over it.
+            // Drift always seeds defaults, so an empty read means something is off.
             Log.w(TAG, "Flutter beverages table is empty; keeping the Kotlin-era catalog.")
             return
         }
@@ -53,14 +35,8 @@ class FlutterDatabaseImporter(private val context: Context) {
     }
 
     /**
-     * Copies the Flutter era's watch-only wellness samples into the Room
-     * `garmin_wellness_samples` table — the honored half of the phase-7
-     * contract in the class KDoc. The tables are column-identical and both
-     * keyed on `(metric, time_millis)`, so an UPSERT is convergent: rows a
-     * watch sync has already re-pulled simply overwrite with the same values,
-     * and nothing existing is deleted (this is watch data with no Health
-     * Connect representation — the one table that cannot be re-synced from
-     * anywhere else).
+     * Copies the watch-only wellness samples into Room. Both tables are keyed
+     * on `(metric, time_millis)`, so the upsert converges and deletes nothing.
      */
     fun importGarminWellness(dao: GarminWellnessDao) {
         val samples = readTable("garmin_wellness_samples", ::queryGarminWellness) ?: return
@@ -99,10 +75,8 @@ class FlutterDatabaseImporter(private val context: Context) {
         }
 
     /**
-     * WAL fallback: a read-only connection can fail when the `-wal`/`-shm`
-     * sidecars are not readable in place. Copying db + sidecars into cache and
-     * opening the copy read-write lets SQLite recover the WAL into the copy —
-     * the original stays untouched.
+     * WAL fallback: copy db and sidecars into cache and open the copy
+     * read-write, so SQLite recovers the WAL into the copy.
      */
     private fun <T> readViaCacheCopy(source: File, query: (SQLiteDatabase) -> T): T? {
         val scratchDir = File(context.cacheDir, CACHE_COPY_DIR)
@@ -184,10 +158,7 @@ class FlutterDatabaseImporter(private val context: Context) {
     }
 
     companion object {
-        /**
-         * Flutter's `getApplicationDocumentsDirectory()` on Android is
-         * `Context.getDir("flutter")` = `/data/data/<pkg>/app_flutter`.
-         */
+        /** Flutter's documents directory on Android: `Context.getDir("flutter")`. */
         fun flutterDocumentsDir(context: Context): File =
             context.getDir("flutter", Context.MODE_PRIVATE)
 

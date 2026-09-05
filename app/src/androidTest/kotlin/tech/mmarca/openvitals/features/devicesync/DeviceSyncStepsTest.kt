@@ -17,13 +17,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Port of the rendering cases of Flutter's
- * `test/features/devicesync/device_sync_screen_test.dart`.
- *
- * Phone-to-phone sync has no second chance to explain itself: the two devices
- * are in the same room and the user is watching both. A step that shows a
- * spinner when it has stopped scanning, or a success tick over an aborted
- * session, sends someone away believing their data moved when it did not.
+ * Phone-to-phone sync has no second chance to explain itself. A spinner after scanning stopped,
+ * or a success tick over an aborted session, sends someone away believing their data moved.
  */
 class DeviceSyncStepsTest {
 
@@ -40,8 +35,7 @@ class DeviceSyncStepsTest {
 
     @Test
     fun theRoleStepBannersAnUnavailableRadio() {
-        // Both roles need Bluetooth. Letting the user pick one and fail later
-        // wastes the trip to the other phone.
+        // Both roles need Bluetooth.
         setContent {
             DeviceSyncRoleStep(
                 DeviceSyncState(bluetoothUnavailable = true),
@@ -55,8 +49,7 @@ class DeviceSyncStepsTest {
 
     @Test
     fun aFinishedScanWithNoDevicesOffersARescan() {
-        // Not a permanent empty state: scanning windows close, and the phones
-        // are often a second out of step with each other.
+        // Not a permanent empty state: scanning windows close.
         setContent {
             DeviceSyncScanStep(
                 state = DeviceSyncState(scanning = false, devices = emptyList()),
@@ -86,9 +79,7 @@ class DeviceSyncStepsTest {
 
     @Test
     fun theReportStepShowsAFailureNotASuccessCheckmark() {
-        // An aborted session still produces a report. Rendering the success
-        // path from it would tell the user their records merged when the
-        // transfer stopped halfway.
+        // An aborted session still produces a report; rendering the success path from it lies.
         var done = 0
         setContent {
             DeviceSyncReportStep(
@@ -120,11 +111,7 @@ class DeviceSyncStepsTest {
 
     @Test
     fun aFinishedSyncOffersToShareTheReportNotOnlyToCopyIt() {
-        // Copy alone puts the report on a clipboard the user then has to find
-        // somewhere to paste. Share is what actually gets it off the phone, to
-        // a messenger or an email, which is the whole point of producing one.
-        // (Flutter also offers "Save report"; Kotlin deliberately does not —
-        // saving on Android lands in app documents, out of reach.)
+        // Share is what gets the report off the phone. Kotlin has no "Save report": app documents are out of reach.
         setContent {
             DeviceSyncReportStep(
                 state = DeviceSyncState(
@@ -143,9 +130,7 @@ class DeviceSyncStepsTest {
 
     @Test
     fun aReportWithNothingToShareOffersNeitherAction() {
-        // The control for the case above: both actions hang off the report
-        // text, so a report that produced none must not leave two buttons that
-        // would copy and share an empty string.
+        // A report with no text must not leave two buttons that copy and share an empty string.
         setContent {
             DeviceSyncReportStep(
                 state = DeviceSyncState(report = report(completed = true, imported = 4)),
@@ -159,9 +144,7 @@ class DeviceSyncStepsTest {
 
     @Test
     fun aConnectTimeoutSaysTheConnectionFailedRatherThanSomethingGeneric() {
-        // "Something went wrong" sends the user looking for a problem with
-        // their data. "Could not connect, make sure it's nearby" sends them to
-        // the other phone, which is where the problem is.
+        // "Could not connect, make sure it's nearby" sends the user to the other phone, where the problem is.
         setContent {
             DeviceSyncReportStep(
                 state = DeviceSyncState(error = DeviceSyncError.CONNECT_TIMEOUT),

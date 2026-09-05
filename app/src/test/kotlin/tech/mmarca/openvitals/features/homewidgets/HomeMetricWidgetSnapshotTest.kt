@@ -159,7 +159,7 @@ class HomeMetricWidgetSnapshotTest {
         )
     }
 
-    // --- The Glance state the snapshot is written into -----------------------
+    // The Glance state the snapshot is written into.
 
     @Test
     fun `writing a snapshot caps the rows the widget can draw`() {
@@ -241,8 +241,7 @@ class HomeMetricWidgetSnapshotTest {
 
     @Test
     fun `an unparseable series value is dropped, not defaulted to zero`() {
-        // A zero is a legitimate score, so substituting one would draw a cliff
-        // to the floor the day never had.
+        // A zero is a legitimate score; substituting one would draw a cliff the day never had.
         val preferences = mutablePreferencesOf(
             HomeMetricWidgetState.titleKey to "Body Energy",
             HomeMetricWidgetState.seriesKey to "70,not-a-score, 72 ,",

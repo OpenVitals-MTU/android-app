@@ -17,12 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import tech.mmarca.openvitals.R
 
-/**
- * One compact optional-choice dropdown: the field shows the selection (or
- * "Not specified"), the menu lists "Not specified" first so a choice can
- * always be cleared. Chip rows showed every option at once and made forms a
- * wall; a closed dropdown costs one row.
- */
+/** A compact optional-choice dropdown. "Not specified" is listed first so a choice can be cleared. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T : Any> OptionDropdown(

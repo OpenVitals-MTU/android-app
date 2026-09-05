@@ -50,13 +50,8 @@ import tech.mmarca.openvitals.ui.theme.Spacing
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 
 /**
- * The Watches settings screen: the paired-watches list plus the scan →
- * classify → onboard add flow. Port of the Flutter build's
- * `BleDevicesScreen(kind: watch)`.
- *
- * A watch row identifies and opens — every action it has lives in the device
- * view, so that a control never exists in two places needing to be kept in
- * step.
+ * The Watches settings screen: the paired list plus the add flow. A watch
+ * row only identifies and opens; every action lives in the device view.
  */
 @Composable
 fun WatchesSettingsScreen(
@@ -64,8 +59,7 @@ fun WatchesSettingsScreen(
     onOpenWatch: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    // One batched dialog for every runtime permission the checklist is still
-    // missing; the settings-screen ones follow through the queue.
+    // One batched dialog for the runtime permissions; settings-screen ones follow through the queue.
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) {
@@ -107,9 +101,7 @@ fun WatchesSettingsScreen(
         )
 
         state.onboardNotice?.let { notice ->
-            // Told once, after the sheet closes: the user has already
-            // answered the OS dialogs by then. Inline rather than a snackbar
-            // — the scaffold here owns no snackbar host.
+            // Told once, after the sheet closes. Inline: this scaffold has no snackbar host.
             OpenVitalsCard(modifier = Modifier.padding(horizontal = Spacing.lg)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -195,8 +187,7 @@ fun WatchesSettingsScreen(
         WatchPermissionsDialog(
             state = state,
             onGrantAll = {
-                // Queue the settings walks BEFORE the dialog: its callback is
-                // what starts draining them.
+                // Queue the settings walks before the dialog: its callback drains them.
                 viewModel.queueAllSpecialPermissions()
                 requestOsPermissions(state.osPermissions.requestablePermissions)
             },
@@ -220,12 +211,7 @@ fun WatchesSettingsScreen(
 
 private val WatchPermissionIconSize = 18.dp
 
-/**
- * The permission checklist shown when adding a watch with grants outstanding.
- *
- * Continuing anyway stays available: only Bluetooth actually blocks pairing,
- * and a user who refuses notification forwarding should still get their watch.
- */
+/** The permission checklist shown when adding a watch. Continuing anyway stays available. */
 @Composable
 private fun WatchPermissionsDialog(
     state: WatchesUiState,
@@ -244,9 +230,7 @@ private fun WatchPermissionsDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                // Outstanding first, ordered once when the dialog opens rather
-                // than on every grant: a list that re-sorts live moves the next
-                // row out from under the finger that just tapped one.
+                // Ordered once when the dialog opens, so rows do not move under the finger.
                 val rowOrder = remember {
                     state.osPermissions.rows.sortedBy { it.granted }.map { it.id }
                 }
@@ -347,8 +331,7 @@ private fun WatchRow(
                     text = device.displayName,
                     style = MaterialTheme.typography.titleSmall,
                 )
-                // A watch is usually named after its Bluetooth name, so
-                // repeating it says nothing — its state does.
+                // A watch is named after its Bluetooth name; its state says more.
                 Text(
                     text = if (device.enabled) {
                         stringResource(R.string.settings_watch_connected)
@@ -359,9 +342,7 @@ private fun WatchRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    // A watch reports its battery over GFDI during a sync,
-                    // not over the standard battery service — its sync time
-                    // is the more useful line anyway.
+                    // A watch reports its battery over GFDI, not the standard service.
                     text = device.lastSyncedAt?.let {
                         stringResource(
                             R.string.settings_watch_last_synced,
@@ -386,8 +367,7 @@ private fun AddWatchDialog(
     state: WatchesUiState,
 ) {
     AlertDialog(
-        // Bonding puts system dialogs over this one and cannot be taken back
-        // halfway; cancelling underneath it would leave the watch half-paired.
+        // Bonding cannot be taken back halfway.
         onDismissRequest = { if (!state.isOnboarding) viewModel.closeAddFlow() },
         title = { Text(stringResource(R.string.settings_watches_add)) },
         text = {
@@ -437,11 +417,7 @@ private fun AddWatchDialog(
                         singleLine = true,
                         enabled = !state.isOnboarding,
                     )
-                    // A GFDI device picks no capabilities at add time — a
-                    // watch is a file source. What it needs now is the OS
-                    // dialogs, named before they appear. A WearOS watch has
-                    // no bond/probe steps, so the Garmin step list would be
-                    // misleading.
+                    // A GFDI device picks no capabilities. WearOS has no bond or probe steps.
                     if (state.addingIntegration != DeviceIntegration.WEAROS) {
                         WatchPairSteps(step = state.onboardStep)
                     }
@@ -459,9 +435,7 @@ private fun AddWatchDialog(
             if (state.selectedDevice != null) {
                 TextButton(
                     onClick = {
-                        // The dialog owns the close, not the view-model: a
-                        // refused pairing must leave the sheet open so the
-                        // user can retry without re-scanning.
+                        // The dialog owns the close: a refused pairing leaves the sheet open.
                         viewModel.onboardSelectedWatch()
                     },
                     enabled = !state.isOnboarding,
@@ -481,11 +455,7 @@ private fun AddWatchDialog(
     )
 }
 
-/**
- * The platform steps of watch onboarding, shown as a checklist so the user
- * knows which system dialog is theirs to answer. [step] is null before
- * pairing starts and again once it finishes.
- */
+/** The platform steps of onboarding, as a checklist. [step] is null outside pairing. */
 @Composable
 private fun WatchPairSteps(step: GarminOnboardStep?) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {

@@ -289,8 +289,7 @@ private fun ActivityFeelingNotesSection(
                         ) {
                             Icon(
                                 imageVector = feeling.icon,
-                                // The chip carries the label; a second
-                                // announcement of the same thing is noise.
+                                // The chip carries the label.
                                 contentDescription = null,
                             )
                         }

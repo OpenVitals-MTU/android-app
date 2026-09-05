@@ -13,10 +13,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorker.Companion.toData
 
-/**
- * Kotlin analogue of Flutter's `apple_health_import_background_test.dart` isolate-payload cases:
- * the worker's [Data] payloads must round-trip every counter the card and notification rely on.
- */
+/** The worker's [Data] payloads must round-trip every counter the card and notification rely on. */
 class AppleHealthImportWorkerDataTest {
 
     @Test
@@ -60,8 +57,7 @@ class AppleHealthImportWorkerDataTest {
         assertEquals(AppleHealthImportPhase.WRITING, decoded?.phase)
         assertEquals(40, decoded?.importedRecords)
         assertEquals(75, decoded?.expectedSelectedRecords)
-        // The scan denominator must survive the trip like every other counter,
-        // or the card can never show the scan percent variant.
+        // The scan denominator must survive the trip, or the card cannot show the scan percent.
         assertEquals(200, decoded?.expectedParsedElements)
         assertEquals(progress.percent, decoded?.percent)
         assertNull(AppleHealthImportWorker.progressFromData(Data.EMPTY))

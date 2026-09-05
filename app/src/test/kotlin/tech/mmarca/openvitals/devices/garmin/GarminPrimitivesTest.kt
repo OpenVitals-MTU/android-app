@@ -24,7 +24,7 @@ class GarminPrimitivesTest {
         return out
     }
 
-    // ── GarminCrc ────────────────────────────────────────────────────────────
+    // GarminCrc.
 
     @Test
     fun `crc of empty data is 0`() {
@@ -49,7 +49,7 @@ class GarminPrimitivesTest {
         )
     }
 
-    // ── GarminByteReader/Writer round-trip ───────────────────────────────────
+    // GarminByteReader/Writer round-trip.
 
     @Test
     fun `little-endian across every width`() {
@@ -92,9 +92,7 @@ class GarminPrimitivesTest {
 
     @Test
     fun `readNullTerminatedString consumes its terminator so the next field reads correctly`() {
-        // The notification control channel sends an app id this way — with no
-        // length byte — so leaving the NUL behind desynchronises everything
-        // after.
+        // The notification control channel sends an app id with no length byte, so a leftover NUL desynchronises everything after.
         val reader = GarminByteReader(b(0x61, 0x2E, 0x62, 0x00, 0x2A))
         assertEquals("a.b", reader.readNullTerminatedString())
         assertEquals(0x2A, reader.readByte())
@@ -114,7 +112,7 @@ class GarminPrimitivesTest {
         assertEquals(0x2A, reader.readByte())
     }
 
-    // ── GarminCobs round-trip ────────────────────────────────────────────────
+    // GarminCobs round-trip.
 
     private fun expectRoundTrip(payload: ByteArray) {
         val encoded = GarminCobs.encode(payload)
@@ -157,7 +155,7 @@ class GarminPrimitivesTest {
         expectRoundTrip(ByteArray(254) { 0x41 })
     }
 
-    // ── GarminCobsDecoder streaming ──────────────────────────────────────────
+    // GarminCobsDecoder streaming.
 
     @Test
     fun `reassembles a frame split across arbitrary chunks`() {
@@ -197,7 +195,7 @@ class GarminPrimitivesTest {
         assertArrayEquals(b(1, 2), decoder.pull())
     }
 
-    // ── GarminGfdiFrame ──────────────────────────────────────────────────────
+    // GarminGfdiFrame.
 
     @Test
     fun `build then parse preserves type and payload`() {

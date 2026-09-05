@@ -1,11 +1,8 @@
 package tech.mmarca.openvitals.domain.preferences
 
 /**
- * The stored unit-system choice. [SYSTEM] follows the OS measurement-system
- * regional preference and resolves to a concrete [UnitSystem] at display time;
- * [METRIC] and [IMPERIAL] are explicit overrides. The explicit storage values
- * match the [UnitSystem] names the app stored before [SYSTEM] existed, so a
- * previously saved choice keeps reading back as that explicit choice.
+ * The stored unit-system choice. [SYSTEM] follows the OS preference. The
+ * explicit values match the old [UnitSystem] names, so saved choices survive.
  */
 enum class UnitSystemPreference(val storageValue: String) {
     SYSTEM("SYSTEM"),

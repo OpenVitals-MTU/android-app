@@ -195,11 +195,7 @@ class HomeQuickBeverageLogAction : ActionCallback {
                     if (outcome.value.effectiveLiters > 0.0) {
                         runCatching { entryPoint.hydrationReminderController().hideReminderNotification() }
                     }
-                    // Re-anchor the reminder countdown to the drink just
-                    // logged, exactly as the in-app save and the notification
-                    // quick-add both do. Without it a tile tap dismisses the
-                    // notification but leaves the alarm armed from the previous
-                    // drink, so the nag arrives minutes after the user drank.
+                    // Re-anchor the reminder to the drink just logged, as the in-app save does.
                     runCatching { entryPoint.hydrationReminderController().applyConfig() }
                     updateQuickBeverageWidgetStatus(
                         context = context,
@@ -365,12 +361,7 @@ internal suspend fun writeQuickBeverageWidgetSnapshot(
     }
 }
 
-/**
- * Writes [snapshot] into the widget's Glance state.
- *
- * Split out of [writeQuickBeverageWidgetSnapshot] so the cached payload a
- * refresh re-pushes can be pinned without an app widget behind it.
- */
+/** Writes [snapshot] into Glance state. Split out so the payload can be pinned in tests. */
 internal fun MutablePreferences.putQuickBeverageSnapshot(snapshot: HomeQuickBeverageSnapshot) {
     this[HomeQuickBeverageWidgetState.drinkIdKey] = snapshot.drinkId
     this[HomeQuickBeverageWidgetState.titleKey] = snapshot.title

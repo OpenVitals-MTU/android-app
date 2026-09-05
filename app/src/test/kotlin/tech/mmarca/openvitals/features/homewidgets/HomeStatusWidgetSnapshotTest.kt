@@ -23,12 +23,7 @@ import tech.mmarca.openvitals.domain.model.DashboardWeeklyCardioLoadTargetSource
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.navigation.Screen
 
-/**
- * The three shared status widgets — Daily Readiness, Body Energy and Today.
- *
- * What they show is the whole product surface of a widget: there is no screen
- * behind it, so the snapshot IS the feature.
- */
+/** The three shared status widgets. There is no screen behind a widget, so the snapshot is the feature. */
 class HomeStatusWidgetSnapshotTest {
     private val context = stringResourceContext()
     private val date = LocalDate.of(2026, 7, 10)
@@ -43,7 +38,7 @@ class HomeStatusWidgetSnapshotTest {
         unmockUriCodec()
     }
 
-    // --- Daily Readiness -----------------------------------------------------
+    // Daily Readiness.
 
     @Test
     fun `daily readiness reports the score, status and recommendation`() {
@@ -68,7 +63,7 @@ class HomeStatusWidgetSnapshotTest {
 
     @Test
     fun `daily readiness falls back to dashes when no signal is loaded`() {
-        // Nothing loaded → availableSignals == 0 → ReadinessState.UNKNOWN.
+        // Nothing loaded: availableSignals == 0, so ReadinessState.UNKNOWN.
         val insight = calculateDailyReadiness(DashboardData(date = date))
 
         val snapshot = buildDailyReadinessSnapshot(context, insight, date)
@@ -117,7 +112,7 @@ class HomeStatusWidgetSnapshotTest {
         )
     }
 
-    // --- Body Energy ---------------------------------------------------------
+    // Body Energy.
 
     @Test
     fun `body energy reports the score with start, charged and drained rows`() {
@@ -199,7 +194,7 @@ class HomeStatusWidgetSnapshotTest {
         assertEquals(scores, homeWidgetSeries(scores))
     }
 
-    // --- Which snapshot the Body Energy tile keeps ---------------------------
+    // Which snapshot the Body Energy tile keeps.
 
     private fun carriedTimeline(currentScore: Int = 74): BodyEnergyTimeline =
         bodyEnergyTimeline(currentScore = currentScore).copy(
@@ -228,9 +223,8 @@ class HomeStatusWidgetSnapshotTest {
 
     @Test
     fun `a defaulted seed must not overwrite a chained snapshot of the same day`() {
-        // The shipped bug: a refresh that could not resolve the chain rendered
-        // "Start: 50" over a tile that had been showing the real carried start
-        // all morning. Stale-but-right wins; the tile keeps what it has.
+        // A refresh that could not resolve the chain used to render "Start: 50" over a real tile.
+        // Stale-but-right wins.
         val timeline = defaultedTimeline()
         val candidate = buildBodyEnergySnapshot(context, timeline, date)
         val previous = buildBodyEnergySnapshot(context, carriedTimeline(), date)
@@ -248,8 +242,7 @@ class HomeStatusWidgetSnapshotTest {
 
     @Test
     fun `a defaulted seed replaces yesterday's snapshot after the date rolls`() {
-        // The route carries the date, so yesterday's tile never blocks today's
-        // first render — a neutral start beats showing the wrong day forever.
+        // The route carries the date, so yesterday's tile never blocks today's first render.
         val timeline = defaultedTimeline()
         val candidate = buildBodyEnergySnapshot(context, timeline, date)
         val previous = buildBodyEnergySnapshot(context, carriedTimeline(), date.minusDays(1))
@@ -266,7 +259,7 @@ class HomeStatusWidgetSnapshotTest {
         assertEquals(candidate, bodyEnergySnapshotToWrite(candidate, timeline, previous))
     }
 
-    // --- Today ---------------------------------------------------------------
+    // Today.
 
     @Test
     fun `today lists the rows in order, values joined with their unit`() {
@@ -357,17 +350,13 @@ class HomeStatusWidgetSnapshotTest {
         assertEquals("--", sleep.value)
         assertEquals(context.getString(R.string.no_data), sleep.subtitle)
 
-        // Steps reads a real zero, so it is never "no data"; hydration is not
-        // stored as a zero reading, so it is.
+        // Steps reads a real zero, so it is never "no data"; hydration is.
         val rows = snapshot.rows.associateBy(HomeMetricWidgetRow::label)
         assertEquals("0", rows.getValue(context.getString(R.string.metric_steps)).value)
         assertEquals("--", rows.getValue(context.getString(R.string.metric_hydration)).value)
     }
 
-    /**
-     * Readiness reports UNKNOWN until at least one signal is loaded; a resting
-     * heart rate with a baseline is the cheapest way to get a real score.
-     */
+    /** Readiness is UNKNOWN until one signal loads; a resting heart rate with a baseline is the cheapest. */
     private fun dataWithReadiness(): DashboardData =
         DashboardData(
             date = date,

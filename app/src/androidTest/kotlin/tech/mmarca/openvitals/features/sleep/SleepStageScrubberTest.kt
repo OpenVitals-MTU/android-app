@@ -32,13 +32,8 @@ import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
- * Ports the two widget-level cases of Flutter's `sleep_stage_scrubber_test.dart`.
- * The fraction-to-clock-time arithmetic is already pinned on the JVM; what is only
- * observable on a device is when the readout appears at all, and whether the chart
- * hoards the gestures the page it sits on needs.
- *
- * The lane labels read "Light - 4h 10m", so a bare stage name on screen can only
- * have come from the scrub tooltip.
+ * When the scrub readout appears, and whether the chart hoards the page's gestures.
+ * The lane labels read "Light - 4h 10m", so a bare stage name can only come from the tooltip.
  */
 class SleepStageScrubberTest {
 
@@ -47,9 +42,7 @@ class SleepStageScrubberTest {
 
     @Test
     fun theHypnogramStaysSilentUntilAFingerIsOnIt() {
-        // A crosshair and a tooltip drawn before anyone touched the chart would sit
-        // permanently over the night, pointing at a moment the user never asked
-        // about, and would have to be worked around to read the chart underneath.
+        // A crosshair drawn before anyone touched the chart would sit permanently over the night.
         composeRule.setContent {
             OpenVitalsTheme {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -76,9 +69,7 @@ class SleepStageScrubberTest {
 
     @Test
     fun aVerticalDragStartingOnTheHypnogramStillScrollsThePage() {
-        // The chart is one card among many on a long screen. If it swallowed
-        // vertical drags, a user whose thumb happened to land on it would find the
-        // page stuck, with nothing on screen to explain why.
+        // If the chart swallowed vertical drags the page would be stuck.
         lateinit var scrollState: ScrollState
         composeRule.setContent {
             OpenVitalsTheme {

@@ -192,16 +192,9 @@ private fun datesInPeriod(period: DatePeriod): List<LocalDate> =
     }.toList()
 
 /**
- * One [SleepScheduleDay] per overview day for the time-aligned schedule chart: the night's
- * in-bed window (earliest start → latest end across that day's sessions) plus its stages.
- * Nights with no sessions produce null start/end and empty stages.
- *
- * Stages come through [combineNightStages], the same door the day view uses, so a night slept
- * in two goes shows its out-of-bed stretch here too. Flattening the raw stages left that
- * stretch bare, and the bar's translucent base showed through it — which reads as a stage this
- * chart happens to draw dark, and at a thumbnail's size reads as deep sleep. Bridging is
- * capped at the same 3 h that separates a night from a nap, so a genuine daytime nap is still
- * never joined to the night.
+ * One [SleepScheduleDay] per overview day: the in-bed window plus stages
+ * through [combineNightStages], so a night slept in two goes shows its
+ * out-of-bed stretch. Bridging is capped at the 3 h nap gap.
  */
 fun List<SleepOverviewDay>.toSleepScheduleDays(): List<SleepScheduleDay> = map { day ->
     val sessions = day.sessions.sortedBy { it.startTime }

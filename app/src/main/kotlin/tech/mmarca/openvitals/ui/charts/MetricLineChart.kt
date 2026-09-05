@@ -66,52 +66,26 @@ data class MetricLineSeries(
 data class MetricLinePlotPoint(
     val xFraction: Float,
     val value: Double,
-    /**
-     * A point the line is scaffolded with rather than a recorded sample — the
-     * midnight anchor and the trailing hold of a cumulative day line. It shapes
-     * the line but never gets a dot: a dot says "an entry happened here".
-     */
+    /** A scaffold point (midnight anchor, trailing hold), not a sample. Never gets a dot. */
     val synthetic: Boolean = false,
 )
 
-/**
- * A horizontal line the data is measured AGAINST, rather than data itself — the
- * caffeine sleep threshold, a goal, a clinical limit. Drawn dashed, because a solid
- * line of the same weight reads as another series.
- */
+/** A reference line the data is measured against: a threshold, a goal. Drawn dashed. */
 data class ChartGuideLine(val value: Double, val color: Color)
 
-/**
- * A tick along the bottom edge: something happened at this moment. The caffeine
- * card marks each drink, so the sawtooth in the curve can be read against the act
- * that caused it.
- */
+/** A tick along the bottom edge: something happened at this moment. */
 data class ChartMarker(val xFraction: Float, val color: Color)
 
-/**
- * One span of a min/max band: at [xFraction], the data ranged from [low] to
- * [high]. Drawn as a filled ribbon behind the (average) line in the aggregated
- * chart view.
- */
+/** One span of a min/max band, drawn as a ribbon behind the average line. */
 data class ChartBandSpan(val xFraction: Float, val low: Double, val high: Double)
 
-/**
- * Above this many visible points, per-sample dots are suppressed: at that density
- * they overlap into an illegible band and cost one `drawCircle` each, every frame.
- * The line itself still carries every point.
- */
+/** Above this many visible points, per-sample dots are suppressed. */
 private const val MaxDotPoints = 120
 
 /**
- * A line drawn against a normalized x axis, for series whose points are not evenly
- * spaced in time (the intraday and session charts).
- *
- * [viewport] is the slice of the axis on show — [ChartViewport.Full] unless a
- * [ChartZoom] above has been pinched; thread [ChartZoomState.viewport] and
- * [ChartZoomState.multiTouch] in together. [scrubLabel] turns a sample into the two
- * lines of a scrub tooltip: the VALUE, and what it is a value OF (usually the time
- * it was taken). Null leaves the chart inert — which is what a chart with nothing
- * to say about a single point should be.
+ * A line on a normalized x axis, for unevenly spaced series. [viewport] is
+ * the slice on show. [scrubLabel] turns a sample into the two tooltip lines;
+ * null leaves the chart inert.
  */
 @Composable
 fun MetricLinePlot(
@@ -133,19 +107,17 @@ fun MetricLinePlot(
     multiTouch: Boolean = false,
     scrubLabel: ((MetricLinePlotPoint) -> Pair<String, String?>)? = null,
 ) {
-    // Guard a flat series: a zero span would divide by zero when normalizing.
+    // A flat series would divide by zero when normalizing.
     val span = maxValue - minValue
     val safeMax = if (abs(span) < 1e-9) minValue + 1.0 else maxValue
     val safeSpan = safeMax - minValue
 
-    // Survives the per-frame recompositions of the entry animation and of a pinch:
-    // the cache — keyed by everything the geometry depends on EXCEPT reveal
-    // progress — turns the 550ms reveal from dozens of full path rebuilds into one
-    // build plus a cheap per-frame path segment extraction.
+    // Cached geometry, keyed on everything but reveal progress, so the reveal
+    // builds the path once.
     val cache = remember { PlotGeometryCache() }
     val fill = remember(accentColor) { ChartTokens.areaFill(accentColor) }
 
-    // Snapping targets: only the samples inside the slice on show, in PLOT space.
+    // Snapping targets: the samples on show, in plot space.
     val targets = if (scrubLabel == null || points.size < 2) {
         emptyList()
     } else {
@@ -163,11 +135,8 @@ fun MetricLinePlot(
     }
 
     YAxisChartSlot(
-        // `chartYAxisLabels`, not three hand-rolled calls to the formatter: the
-        // compact formatter rounds anything over 10 to a whole number, so a narrow
-        // range collides — a weight chart across 74.06–74.64 kg would show "74"
-        // twice at different heights. `chartYAxisLabels` notices the collision and
-        // steps up to a precision that separates them.
+        // chartYAxisLabels raises precision when the compact formatter would
+        // print the same label twice.
         labels = chartYAxisLabels(
             minValue = minValue,
             maxValue = safeMax,
@@ -209,14 +178,9 @@ fun MetricLinePlot(
 }
 
 /**
- * A raw (non-cumulative) day series as a zoomable, scrubbable plot with its hour
- * row — the shared body of the heart and body intraday cards.
- *
- * This is also where the "Aggregate charts" setting lands: when the user has
- * chosen a bucket width, the line becomes a per-bucket average with a min/max
- * band behind it instead of the raw polyline. Aggregation applies ONLY to raw
- * series — a running total is not something you average — which is why the
- * cumulative day card does not go through here.
+ * A raw day series as a zoomable, scrubbable plot with its hour row. When
+ * the user chose a bucket width the line becomes a per-bucket average with a
+ * min/max band. Only raw series aggregate; a running total is not averaged.
  */
 @Composable
 fun <T> DayTimelineLinePlot(
@@ -240,9 +204,8 @@ fun <T> DayTimelineLinePlot(
     val aggregationMode = LocalChartAggregationMode.current
     val bucketMinutes = aggregationMode.bucketMinutes
 
-    // Built once here, not inside the zoom content: the plotted points do not
-    // depend on the viewport (the plot applies it), so recomputing them per pinch
-    // frame would churn a fresh list and defeat the plot's geometry cache.
+    // Built outside the zoom content: the points do not depend on the viewport,
+    // and a fresh list per pinch frame would defeat the geometry cache.
     val (points, band) = remember(samples, dayStart, dayEnd, aggregationMode) {
         if (bucketMinutes != null) {
             val buckets = bucketedSeries(
@@ -269,9 +232,7 @@ fun <T> DayTimelineLinePlot(
     }
     val dayMillis = Duration.between(dayStart, dayEnd).toMillis().coerceAtLeast(1L)
 
-    // The plot and its hour row are BOTH inside the zoom, sharing the one
-    // viewport — a chart whose hours disagreed with its line would be worse than
-    // one that did not zoom at all.
+    // Plot and hour row share the one viewport.
     ChartZoom(zoomKey, samples, aggregationMode, modifier = modifier) { zoom ->
         Column {
             MetricLinePlot(
@@ -283,8 +244,7 @@ fun <T> DayTimelineLinePlot(
                 valueFormatter = valueFormatter,
                 lineStrokeWidth = lineStrokeWidth,
                 pointRadius = pointRadius,
-                // Dots on averaged points read as false precision; the band
-                // already shows the spread.
+                // Dots on averaged points read as false precision.
                 drawPoints = if (bucketMinutes != null) false else drawPoints,
                 band = band,
                 viewport = zoom.viewport,
@@ -404,12 +364,8 @@ fun MetricLineChart(
     val maxValue = allValues.maxOrNull() ?: return
     val (axisMin, axisMax) = paddedLineAxisRange(minValue, maxValue)
     val axisDates = remember(period) { datesInPeriod(period) }
-    // A year of DAYS gives the axis three hundred and sixty-five slots to fit
-    // twelve month names into, and a label is wider than thirty of them — they
-    // came out as slivers, and once allowed to overflow, as month names printed
-    // on top of each other. The bar chart never had this because a year of bars
-    // IS twelve buckets; the line's axis borrows the same twelve, which is
-    // within a day of where each month truly falls across the year.
+    // A year of days gives 365 slots for twelve month names. Borrow the bar
+    // chart's twelve buckets instead.
     val labelDates = remember(axisDates, selectedRange, period) {
         if (selectedRange == TimeRange.YEAR && axisDates.size > MonthsInYear) {
             monthStartsIn(period)
@@ -428,9 +384,7 @@ fun MetricLineChart(
     val gridColor = ChartTokens.grid(accentColor)
     val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
-    // The chart itself is a Canvas and publishes nothing, so without this a
-    // screen reader goes from the screen title straight past the chart as if it
-    // were not there. One line carrying what a glance carries.
+    // The Canvas publishes nothing to a screen reader; this one line does.
     val semanticSummary = chartSemanticSummary(title = title, summaryText = summaryText)
 
     OpenVitalsCard(
@@ -439,16 +393,8 @@ fun MetricLineChart(
         Column(modifier = Modifier.padding(16.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(12.dp))
-            // Keyed on the chart's data identity so a zoom does not carry over when
-            // the data underneath changes: switching range or period rebuilds a
-            // fresh, unzoomed viewport rather than stretching the old slice onto
-            // the new period.
-            //
-            // No scrubber here, deliberately: a scrub layer on the period charts
-            // broke the pinch (the drag detector claimed the first finger of the
-            // pinch) and was reverted in the Flutter app. The tap-to-select-day
-            // interaction below is untouched — the zoom claims nothing
-            // single-finger.
+            // Keyed on the data identity so a zoom does not carry over to new data.
+            // No scrubber: it broke the pinch. The tap-to-select-day is untouched.
             ChartZoom(selectedRange, period.start, period.end) { zoom ->
                 val viewport = zoom.viewport
                 val currentViewport by rememberUpdatedState(viewport)
@@ -459,9 +405,8 @@ fun MetricLineChart(
                 ) {
                     Modifier.pointerInput(axisDates, onDateSelected) {
                         detectTapGestures { offset ->
-                            // Map the tap back through the viewport so a zoomed
-                            // chart selects the date actually under the finger,
-                            // not the unzoomed slot.
+                            // Map the tap through the viewport so a zoomed chart
+                            // selects the date under the finger.
                             val visible = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
                             val index = (currentViewport.dataFraction(visible) * axisDates.size)
                                 .toInt()
@@ -496,10 +441,7 @@ fun MetricLineChart(
                             color = accentColor.copy(alpha = 0.16f),
                             viewport = viewport,
                         )
-                        // Zoomed, the line runs past the plot edges; clip so it
-                        // ends at the plot rather than spilling across the card.
-                        // Clip, never clamp: a point scrolled off the edge keeps
-                        // its real position so the line leaves at its true angle.
+                        // Zoomed, the line runs past the plot edges: clip, never clamp.
                         val drawSeries: DrawScope.() -> Unit = {
                             visibleSeries.forEach { lineSeries ->
                                 drawMetricLineSeries(
@@ -520,16 +462,12 @@ fun MetricLineChart(
                     }
                     Spacer(Modifier.height(8.dp))
                     if (selectedRange == TimeRange.DAY) {
-                        // Inside the zoom, sharing its viewport: an hour row that
-                        // disagreed with the line above it would be worse than one
-                        // that did not zoom at all.
+                        // Inside the zoom, sharing its viewport.
                         ChartXAxisWithYAxis {
                             DayAxisLabels(viewport = viewport)
                         }
                     } else {
-                        // Same viewport as the plot: zoomed, each date is positioned
-                        // over its own slot rather than evenly spaced, so the row
-                        // never drifts off the days it names.
+                        // Same viewport as the plot, so dates stay over their slots.
                         ChartXAxisWithYAxis {
                             PeriodChartXAxis(
                                 dates = labelDates,
@@ -569,13 +507,8 @@ fun <T> List<T>.mapLinePoints(
     }.sortedBy { it.time }
 
 /**
- * One point per date, minute-bucketed rather than a flat mean of the day's
- * points: continuous overnight monitoring (SpO2 every few seconds) must not
- * outvote the day's spot checks, and the statistics card beside the chart
- * already averages that way. A point without a time (a synthesised daily
- * value) sits at its day's midnight, so a day of those is still their mean.
- * groupBy never yields an empty group, so the null branch is only the type
- * saying so.
+ * One point per date, minute-bucketed so continuous overnight monitoring does
+ * not outvote the day's spot checks. A point without a time sits at midnight.
  */
 fun dailyAverageLinePoints(points: List<MetricLinePoint>): List<MetricLinePoint> {
     val zone = ZoneId.systemDefault()
@@ -593,10 +526,8 @@ fun dailyAverageLinePoints(points: List<MetricLinePoint>): List<MetricLinePoint>
 }
 
 /**
- * The geometry of a plotted line: the pixel positions, the smoothed [Path], its
- * measured length (for the reveal's partial extraction) and drawn end. All of it
- * depends only on the points, size, viewport and value range — never on the reveal
- * progress — so it is computed once per those and reused across frames.
+ * The geometry of a plotted line. Depends only on points, size, viewport and
+ * range, never on reveal progress, so it is computed once and reused.
  */
 internal class PlotGeometry(
     val offsets: List<Offset>,
@@ -606,10 +537,8 @@ internal class PlotGeometry(
 )
 
 /**
- * A single-slot memo for [PlotGeometry]. Rebuilds only when an input the geometry
- * actually depends on changes; a progress-only change (every reveal frame) is a
- * hit. Points are compared by IDENTITY — callers keep the list stable across
- * recompositions, and a fresh list is a legitimate "data changed" signal.
+ * A single-slot memo for [PlotGeometry]. Points are compared by identity:
+ * callers keep the list stable, and a fresh list means new data.
  */
 internal class PlotGeometryCache {
     private var cached: PlotGeometry? = null
@@ -638,11 +567,7 @@ internal class PlotGeometryCache {
             return hit
         }
 
-        // Cull to the visible window (keeping one point past each edge so the line
-        // reaches the border), then decimate to roughly one vertex per pixel — no
-        // point drawing more cubics than the chart is wide. Both depend on the
-        // viewport and size, which is exactly why they live behind this cache and
-        // not in the per-frame draw.
+        // Cull to the visible window, then decimate to about one vertex per pixel.
         val visible = cullPlotPoints(points, viewport)
         val offsets = decimateOffsets(visible.map(offsetFor), ceil(size.width).toInt())
         val path = smoothPath(offsets)
@@ -666,10 +591,8 @@ internal class PlotGeometryCache {
 }
 
 /**
- * The points inside the viewport, plus one on each side so the line runs to the
- * edges instead of stopping short. Points are sorted ascending by xFraction. The
- * full (unzoomed) viewport shows everything, so there is nothing to cull; a window
- * that falls entirely in a gap between samples yields nothing to draw.
+ * The points inside the viewport plus one past each edge, sorted by
+ * xFraction. A window inside a gap between samples yields nothing.
  */
 internal fun cullPlotPoints(
     points: List<MetricLinePlotPoint>,
@@ -713,7 +636,7 @@ private fun DrawScope.drawMetricLinePlot(
         Offset(viewport.visibleFraction(point.xFraction) * size.width, yFor(point.value))
 
     val body: DrawScope.() -> Unit = {
-        // The line a chart sits ON — under everything else.
+        // The baseline, under everything else.
         drawLine(
             color = ChartTokens.baseline(accentColor),
             start = Offset(0f, size.height),
@@ -721,7 +644,7 @@ private fun DrawScope.drawMetricLinePlot(
             strokeWidth = 1.dp.toPx(),
         )
 
-        // Guides first, so the data is drawn ON them and not under them.
+        // Guides first, so the data is drawn on them.
         val dash = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 6.dp.toPx()))
         guides.forEach { guide ->
             val y = yFor(guide.value)
@@ -743,13 +666,9 @@ private fun DrawScope.drawMetricLinePlot(
             offsetFor = ::offsetFor,
         )
         val offsets = geometry.offsets
-        // The visible window can fall entirely in a gap between samples (deep zoom
-        // on a stretch with no readings) — nothing more to draw then.
+        // A deep zoom on a gap has nothing to draw.
         if (offsets.size >= 2 && progress > 0f) {
-            // The line draws itself in, left to right — a segment of the real
-            // curve extracted by LENGTH, so the leading end is the line's own end
-            // and not a cut. Extracted from the CACHED measure: no path is
-            // re-measured per frame.
+            // The line draws itself in by length from the cached measure.
             val revealed = progress >= 1f
             val path: Path
             val drawnEnd: Offset
@@ -765,25 +684,19 @@ private fun DrawScope.drawMetricLinePlot(
                     .takeIf { it.isSpecified } ?: offsets.last()
             }
 
-            // Aggregated view: the min/max ribbon behind the average line takes
-            // the place of the under-line gradient — the spread IS the fill, and
-            // drawing both would double up.
+            // Aggregated: the ribbon replaces the under-line gradient.
             if (band.size >= 2) {
                 drawPlotBand(band, viewport, minValue, maxValue, accentColor)
             } else {
-                // Fill closed under the LAST DRAWN POINT, not at the plot's right
-                // edge: closing at the edge shades a region the line never went to
-                // — on `today` the trace stops at the current hour, and the fill
-                // would sweep a triangle across the hours that have not happened.
+                // Close the fill under the last drawn point, not the plot edge, or
+                // today's fill sweeps across hours that have not happened.
                 val fillPath = Path().apply {
                     addPath(path)
                     lineTo(drawnEnd.x, size.height)
                     lineTo(offsets.first().x, size.height)
                     close()
                 }
-                // Gradient, not a flat block: a solid wash under a line reads as a
-                // second object; a fade reads as the line and the space it
-                // encloses.
+                // A gradient reads as the line's own space; a solid wash reads as a second object.
                 drawPath(fillPath, fill)
             }
             drawPath(
@@ -796,8 +709,7 @@ private fun DrawScope.drawMetricLinePlot(
                 ),
             )
 
-            // Moments, on the baseline: each one is a thing that HAPPENED, sitting
-            // under the consequence it had.
+            // Moments on the baseline.
             markers.forEach { marker ->
                 drawCircle(
                     color = marker.color,
@@ -809,11 +721,8 @@ private fun DrawScope.drawMetricLinePlot(
                 )
             }
 
-            // A dot per SAMPLE when requested — never on a synthetic scaffold
-            // point, and only the dots the line has actually reached: a dot
-            // ahead of the trace is a sample the chart is claiming to have
-            // drawn and has not. Capped at [MaxDotPoints]: past that the dots
-            // merge into a solid band, so the loop is pure cost.
+            // A dot per sample, never on a scaffold point, only where the line has
+            // reached. Capped at [MaxDotPoints].
             if (pointRadius > 0f && points.size <= MaxDotPoints) {
                 points.forEach { point ->
                     if (point.synthetic) return@forEach
@@ -826,19 +735,11 @@ private fun DrawScope.drawMetricLinePlot(
         }
     }
 
-    // Painters CLIP; they do not clamp. A point scrolled off the left edge keeps
-    // its real position, so the line running off the plot carries on to where it
-    // actually is — clamping it to the edge would bend it into the corner and draw
-    // a value nobody ever recorded. The clip keeps that honest line inside the
-    // card.
+    // Painters clip, never clamp: a clamped point would draw a value nobody recorded.
     if (viewport.isZoomed) clipRect { body() } else body()
 }
 
-/**
- * The min/max ribbon: across the top by the maxima, back along the bottom by the
- * minima, closed and filled. Buckets are few, so a straight-segment ribbon behind
- * the smoothed average line is cheap and reads cleanly under a translucent fill.
- */
+/** The min/max ribbon: across the top by the maxima, back by the minima. */
 private fun DrawScope.drawPlotBand(
     band: List<ChartBandSpan>,
     viewport: ChartViewport,
@@ -918,18 +819,13 @@ private fun DrawScope.drawMetricLineSeries(
             (daysFromStart + 0.5f) / periodDayCount
         }
         Offset(
-            // Full viewport is a no-op (visibleFraction(f) == f), so an unzoomed
-            // chart positions exactly as before.
+            // Full viewport is a no-op.
             x = size.width * viewport.visibleFraction(xFraction),
             y = size.height * (1f - ((point.value - minValue) / range).toFloat().coerceIn(0f, 1f)),
         )
     }
 
-    // Cull to the visible window first, THEN decimate to ~one vertex per pixel.
-    // Culling is what lets a zoom restore detail: the narrower the pinch, the
-    // fewer points the window spans, until the decimation is a no-op and every raw
-    // point in view is drawn. A sparse period series (a handful of daily points)
-    // stays under target and is untouched.
+    // Cull first, then decimate. Culling is what lets a zoom restore detail.
     val drawn = visibleDecimatedOffsets(positioned, size.width)
 
     drawPath(
@@ -949,10 +845,8 @@ private fun DrawScope.drawMetricLineSeries(
 }
 
 /**
- * The visible slice of [positioned] (screen-space offsets, ascending in x), plus
- * one point past each edge so the line reaches the borders, decimated to ~one
- * vertex per pixel. When the window falls between two points (a gap, or a deep
- * zoom), the straddling pair is kept so the line still crosses the plot.
+ * The visible slice of [positioned], plus one point past each edge, decimated
+ * to about one vertex per pixel. A window between two points keeps the pair.
  */
 internal fun visibleDecimatedOffsets(positioned: List<Offset>, width: Float): List<Offset> {
     val n = positioned.size
@@ -996,8 +890,7 @@ private fun DrawScope.drawLineSelectedDateHighlight(
     val index = axisDates.indexOf(selectedDate)
     if (index < 0 || axisDates.isEmpty()) return
 
-    // Through the viewport, so the highlight stays glued to its day when the chart
-    // is pinched: the slot widens by exactly the factor the axis stretched.
+    // Through the viewport, so the highlight stays on its day when pinched.
     val left = size.width * viewport.visibleFraction(index.toFloat() / axisDates.size)
     val slotWidth = size.width / (axisDates.size * viewport.span)
     drawRect(
@@ -1008,9 +901,7 @@ private fun DrawScope.drawLineSelectedDateHighlight(
 }
 
 private fun paddedLineAxisRange(minValue: Double, maxValue: Double): Pair<Double, Double> {
-    // The line charts' own padding rule (predates ChartRange.padded and differs on
-    // a flat series: 5% of the magnitude with a 1.0 minimum, and no zero floor):
-    // kept as-is so every existing axis stays put.
+    // The line charts' own padding rule, kept so every existing axis stays put.
     val range = maxValue - minValue
     val padding = if (range == 0.0) {
         max(abs(maxValue) * 0.05, 1.0)

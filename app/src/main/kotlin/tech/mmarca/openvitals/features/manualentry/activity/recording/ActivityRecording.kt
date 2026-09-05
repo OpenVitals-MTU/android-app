@@ -101,17 +101,12 @@ enum class ActivityGpsStatus {
 }
 
 /**
- * Where a heart-rate-recovery test has got to.
- *
- * Deliberately NOT a new [ActivityRecordingStatus]. Throughout the test the
- * recording is one continuous RECORDING — the phase is a separate thing that
- * runs alongside it. In particular this must never borrow RESTING, whose
- * bookkeeping feeds restDuration(), movingDuration() and the recorded
- * repetition sets: the five minutes of recovery would be subtracted from the
- * session as though they were a rest between weightlifting sets.
+ * Where a heart-rate-recovery test has got to. Not a recording status: the
+ * recording stays RECORDING throughout. It must never borrow RESTING, whose
+ * bookkeeping would subtract the recovery as a rest between sets.
  */
 enum class ActivityRecordingHrrPhase {
-    /** Not an HRR test at all — an ordinary recording. */
+    /** An ordinary recording. */
     NONE,
 
     /** Warming up, counting down to the effort. */
@@ -120,10 +115,10 @@ enum class ActivityRecordingHrrPhase {
     /** Going hard, until the user says stop or the target heart rate is reached. */
     EFFORT,
 
-    /** The measurement. The clock that matters started the instant this began. */
+    /** The measurement. The clock started the instant this began. */
     RECOVERY,
 
-    /** Recovery time is up. The recording is still running — the user has to save it. */
+    /** Recovery time is up. The user still has to save. */
     COMPLETE,
 }
 
@@ -132,10 +127,7 @@ enum class ActivityRecordingHrrPhase {
 data class HeartRateRecoveryTestConfig(
     /** 0 to skip the warmup and go straight to the effort. */
     val warmupSeconds: Int = 180,
-    /**
-     * Ends the effort when the heart rate reaches this, if it is set. The user
-     * can always end it by hand instead.
-     */
+    /** Ends the effort when the heart rate reaches this. The user can always end it by hand. */
     val targetHeartRateBpm: Int? = null,
     val recoverySeconds: Int = 300,
 )
@@ -178,11 +170,11 @@ data class ActivityRecordingState(
     val currentSetStartedAt: Instant? = null,
     val restStartedAt: Instant? = null,
     val accumulatedRestMillis: Long = 0L,
-    /** The plan being walked through, if any: its steps and where the cursor is. */
+    /** The plan being walked through, if any. */
     val planId: String? = null,
     val planTitle: String? = null,
     val planSteps: List<ActivityPlanRunStep> = emptyList(),
-    /** Index of the step in progress (or resting before); == planSteps.size once every step is done. */
+    /** Index of the step in progress; == planSteps.size once every step is done. */
     val planStepIndex: Int = 0,
     val lastAccuracyMeters: Double? = null,
     val lastLocationTime: Instant? = null,
@@ -199,15 +191,9 @@ data class ActivityRecordingState(
     val hrrPhase: ActivityRecordingHrrPhase = ActivityRecordingHrrPhase.NONE,
     val hrrConfig: HeartRateRecoveryTestConfig = HeartRateRecoveryTestConfig(),
     /**
-     * The instant the effort stopped — the one the whole measurement hangs on.
-     *
-     * Deliberately NOT persisted to the draft store: the heart-rate samples
-     * live in memory, in the BLE coordinator, and do not survive the process
-     * being killed; a restored recording therefore comes back as an ordinary
-     * one, with no phase and no recovery mark. That loses the test, which is a
-     * pity — but the alternative is saving a session that carries a rest
-     * segment claiming a recovery with no heart rate behind it to measure. A
-     * lost measurement is recoverable. A fabricated one is not.
+     * The instant the effort stopped. Not persisted: the heart-rate samples do
+     * not survive the process, and a rest segment claiming a recovery with no
+     * heart rate behind it would be a fabricated measurement.
      */
     val hrrEffortEndedAt: Instant? = null,
 ) {
@@ -234,8 +220,7 @@ data class ActivityRecordingState(
                 remainingUntil(from.plusSeconds(hrrConfig.recoverySeconds.toLong()), now)
             }
         }
-        // The effort has no deadline: it ends when the user does, or when
-        // their heart rate says so. And COMPLETE is the end of the road.
+        // The effort has no deadline, and COMPLETE is the end.
         ActivityRecordingHrrPhase.NONE,
         ActivityRecordingHrrPhase.EFFORT,
         ActivityRecordingHrrPhase.COMPLETE,
@@ -253,12 +238,12 @@ data class ActivityRecordedRepetitionSet(
     val repetitions: Long,
     val restSeconds: Long,
     val activeMillis: Long,
-    /** The exercise, when it is not the session type's own (a plank inside a push-up plan). */
+    /** The exercise, when it is not the session type's own. */
     val segmentType: Int? = null,
     val label: String? = null,
-    /** A timed hold: [activeMillis] is the goal, not the time it took to do [repetitions]. */
+    /** A timed hold: [activeMillis] is the goal. */
     val isDuration: Boolean = false,
-    /** Which plan step produced this set, so Back knows whether the last set is the previous step's. */
+    /** Which plan step produced this set, for Back. */
     val planStepIndex: Int? = null,
 )
 
@@ -281,17 +266,9 @@ data class ActivityRecordingSnapshot(
     val planId: String? = null,
     val planTitle: String? = null,
     val bleSamples: BleRecordingSampleBuffer = BleRecordingSampleBuffer(),
-    /**
-     * When the effort stopped, for a heart-rate-recovery test. This is what
-     * gets written as a trailing rest segment, and it is the only thing that
-     * tells anyone reading the session back where the recovery began.
-     */
+    /** When the effort stopped in a recovery test. Written as a trailing rest segment. */
     val hrrEffortEndedAt: Instant? = null,
-    /**
-     * The CoMaps guidance banked during the recording, kept in app-local
-     * activity history and never written to Health Connect. Empty unless the
-     * user switched saving on.
-     */
+    /** CoMaps guidance banked during the recording. App-local only; empty unless enabled. */
     val coMapsNavigationSamples: List<CoMapsNavigationSnapshot> = emptyList(),
 )
 
@@ -354,7 +331,7 @@ class ActivityRecordingController @Inject constructor(
             .launchIn(bleMetricsScope)
     }
 
-    /** Re-reads guidance after a permission grant; the probe may answer differently now. */
+    /** Re-reads guidance after a permission grant. */
     fun refreshCoMapsGuidance() {
         coMapsWatch.refresh()
     }
@@ -368,11 +345,7 @@ class ActivityRecordingController @Inject constructor(
     /** The flavour-specific CoMaps permission to request, null without a CoMaps installed. */
     fun coMapsPermissionName(): String? = coMapsNavigationRepository.permissionName()
 
-    /**
-     * Armed by the pre-start recording screen and only ever by it: while set,
-     * the guidance watch runs for an idle session so a route being set in
-     * CoMaps can auto-start the recording.
-     */
+    /** Armed by the pre-start screen only. Lets a route set in CoMaps auto-start the recording. */
     fun setCoMapsPrestartWatch(active: Boolean) {
         coMapsPrestartWatchRequested.value = active
     }
@@ -384,9 +357,7 @@ class ActivityRecordingController @Inject constructor(
         activityType: ActivityEntryType,
         initialFix: Location?,
         repetitionRestSeconds: Long,
-        // Record a GPS-capable activity WITHOUT GPS: duration and heart rate,
-        // no route, no location permission, no waiting for a fix. A run is a
-        // run whether or not the phone was listening to satellites.
+        // Record a GPS-capable activity without GPS: duration and heart rate only.
         withoutGps: Boolean = false,
     ): Boolean =
         if (activityType.supportsGpsRoute && !withoutGps) {
@@ -509,11 +480,7 @@ class ActivityRecordingController @Inject constructor(
         return true
     }
 
-    /**
-     * Walks a plan step by step inside an ordinary repetition recording: the
-     * cursor and the step list ride in the state, so a killed process comes
-     * back mid-plank exactly where it was.
-     */
+    /** Walks a plan inside a repetition recording. The cursor rides in the state and survives a kill. */
     fun startPlanRecording(plan: PlannedExerciseData, activityType: ActivityEntryType): Boolean {
         val steps = plan.toPlanRunSteps(localizedTitle = { context.getString(it.labelRes) })
         if (steps.isEmpty()) {
@@ -560,8 +527,7 @@ class ActivityRecordingController @Inject constructor(
                 activityTypeId = activityType.id,
                 exerciseType = activityType.exerciseType,
                 startTime = now,
-                // A plan run is read from the floor between reps; a screen that
-                // goes dark mid-countdown leaves only the bell.
+                // A plan run is read from the floor; a dark screen leaves only the bell.
                 keepScreenOnDuringRecording = recordingPreferences.keepScreenOnDuringRecording || planSeed != null,
                 currentSetStartedAt = now,
                 repetitionRestSeconds = repetitionRestSeconds.coerceAtLeast(0L),
@@ -619,26 +585,15 @@ class ActivityRecordingController @Inject constructor(
         return true
     }
 
-    // ── Heart-rate recovery test ─────────────────────────────────────────────
-    //
-    // A timed recording underneath — same foreground service, same sensors,
-    // same write path — with a protocol laid over it: warm up, go hard, then
-    // stop DEAD. The abrupt, recorded stop is the whole point. It is what a
-    // workout read back from a watch can never give us, because nothing in the
-    // data says where the effort ended.
+    // Heart-rate recovery test: a timed recording with a protocol over it.
+    // Warm up, go hard, then stop dead. The recorded abrupt stop is the point.
 
     private var hrrPhaseJob: Job? = null
 
-    /**
-     * Consecutive samples at or above the target. One spurious reading must
-     * not end an effort the rider is still in the middle of.
-     */
+    /** Consecutive samples at or above the target. One spurious reading must not end the effort. */
     private var hrrTargetHits = 0
 
-    /**
-     * Starts a guided heart-rate-recovery test: warm up, go hard, then stop
-     * dead and let the app watch the heart rate come down.
-     */
+    /** Starts a guided recovery test: warm up, go hard, stop dead. */
     fun startHeartRateRecoveryTest(
         activityType: ActivityEntryType,
         config: HeartRateRecoveryTestConfig,
@@ -659,11 +614,7 @@ class ActivityRecordingController @Inject constructor(
         return true
     }
 
-    /**
-     * Ends the effort and starts the recovery, now. Always available during
-     * the effort — the heart-rate target is a convenience, not the only way
-     * out.
-     */
+    /** Ends the effort and starts the recovery now. Always available during the effort. */
     fun endHeartRateRecoveryEffort() {
         val current = _state.value
         if (current.hrrPhase != ActivityRecordingHrrPhase.WARMUP &&
@@ -674,12 +625,7 @@ class ActivityRecordingController @Inject constructor(
         enterHrrRecovery(current)
     }
 
-    /**
-     * The instant that matters. Everything the measurement says is relative to
-     * it, so it is stamped BEFORE the cue is fired rather than after: a
-     * text-to-speech engine taking half a second to warm up must not push the
-     * recovery clock half a second late.
-     */
+    /** Stamps the stop before the cue fires, so a slow speech engine cannot delay the clock. */
     private fun enterHrrRecovery(current: ActivityRecordingState) {
         hrrTargetHits = 0
         updateAndPersist(
@@ -701,8 +647,7 @@ class ActivityRecordingController @Inject constructor(
                 state.startTime?.plusSeconds(state.hrrConfig.warmupSeconds.toLong())
             ActivityRecordingHrrPhase.RECOVERY ->
                 state.hrrEffortEndedAt?.plusSeconds(state.hrrConfig.recoverySeconds.toLong())
-            // The effort has no deadline: it ends when the rider does, or when
-            // their heart rate says so. And COMPLETE is the end of the road.
+            // The effort has no deadline, and COMPLETE is the end.
             else -> null
         } ?: return
 
@@ -713,9 +658,7 @@ class ActivityRecordingController @Inject constructor(
         hrrPhaseJob = persistenceScope.launch {
             delay(delayMillis)
             val current = _state.value
-            // The state that scheduled this timer must still be the state we
-            // are in, or the timer belongs to a test that has already moved on
-            // (or been discarded).
+            // A timer for a test that has already moved on must do nothing.
             if (current.hrrPhase != scheduledPhase || current.hrrEffortEndedAt != scheduledEffortEnd) {
                 return@launch
             }
@@ -725,10 +668,8 @@ class ActivityRecordingController @Inject constructor(
                 updateAndPersist(current.copy(hrrPhase = ActivityRecordingHrrPhase.EFFORT))
                 cueHrr(context.getString(R.string.activity_recording_hrr_cue_effort))
             } else if (scheduledPhase == ActivityRecordingHrrPhase.RECOVERY) {
-                // NOT auto-finished. The recording keeps running and the rider
-                // saves it — and because the rest segment is written to the
-                // session's end rather than to a fixed five minutes, taking a
-                // while to press save cannot break the measurement.
+                // Not auto-finished: the rest segment runs to the session end, so a
+                // slow save cannot break the measurement.
                 updateAndPersist(current.copy(hrrPhase = ActivityRecordingHrrPhase.COMPLETE))
                 cueHrr(context.getString(R.string.activity_recording_hrr_cue_complete))
             }
@@ -754,13 +695,8 @@ class ActivityRecordingController @Inject constructor(
     }
 
     /**
-     * Bell, voice and a hard buzz, all at once.
-     *
-     * Not behind a preference. The phone is on a bike mount or in a pocket,
-     * the rider is at their limit and is not looking at the screen — and the
-     * cue IS the protocol. A heart-rate recovery test whose "stop now" went
-     * unheard has measured nothing. The pace announcer is optional because a
-     * ride works without it; this does not.
+     * Bell, voice and a hard buzz, not behind a preference. The cue is the
+     * protocol: a "stop now" that went unheard measured nothing.
      */
     private fun cueHrr(text: String) {
         playBell()
@@ -768,11 +704,7 @@ class ActivityRecordingController @Inject constructor(
         vibrate(HrrCueVibrationMillis)
     }
 
-    /**
-     * A step change in a plan run: the bell the user already chose for rest
-     * timers, a short buzz so a phone on the floor still registers, and the
-     * next step spoken only when voice announcements are on.
-     */
+    /** A plan step change: the rest bell, a short buzz, and the next step spoken if voice is on. */
     private fun cuePlanStep(step: ActivityPlanRunStep, withBell: Boolean) {
         if (withBell) playRestTimerBellIfEnabled()
         vibrate(PlanStepCueVibrationMillis)
@@ -780,8 +712,7 @@ class ActivityRecordingController @Inject constructor(
             speakCue(
                 listOfNotNull(
                     context.getString(R.string.activity_recording_plan_cue_next, step.spokenGoal(context)),
-                    // The pace announcer never speaks for repetition sessions, so a
-                    // strapped-on heart-rate sensor would otherwise stay silent.
+                    // The pace announcer never speaks for repetition sessions.
                     _state.value.currentHeartRateBpm?.let { context.getString(R.string.activity_recording_plan_cue_heart_rate, it) },
                 ).joinToString(". "),
             )
@@ -790,11 +721,7 @@ class ActivityRecordingController @Inject constructor(
 
     private var restCountdownJob: Job? = null
 
-    /**
-     * One short beep per second for the last [RestCountdownSeconds] of a rest, so the next step is not a surprise
-     * to someone lying on the floor with the phone out of reach. Same gate as
-     * the bell it precedes.
-     */
+    /** One beep per second for the last [RestCountdownSeconds] of a rest. Same gate as the bell. */
     private fun scheduleRestCountdown(state: ActivityRecordingState) {
         restCountdownJob?.cancel()
         restCountdownJob = null
@@ -897,7 +824,7 @@ class ActivityRecordingController @Inject constructor(
     fun acceptBleMetrics(metrics: BleRecordingMetrics) {
         val current = _state.value
         acceptBleMetricsInternal(current, metrics)
-        // Against the heart rate we just took, not the one before it.
+        // Against the heart rate just taken.
         maybeEndHrrEffortOnTarget(_state.value)
     }
 
@@ -912,8 +839,7 @@ class ActivityRecordingController @Inject constructor(
             bleHeartRateNoSignal = metrics.heartRateNoSignal && metrics.heartRateBpm == null,
             bleDeviceStatuses = metrics.deviceStatuses.ifEmpty { current.bleDeviceStatuses },
         )
-        // BLE sensors re-emit the same values continuously; an unchanged
-        // emission must not trigger a state update + full metadata re-serialize.
+        // BLE sensors re-emit unchanged values; do not re-serialize for them.
         if (next == current) return
         updateAndPersist(next, throttlePersist = true)
     }
@@ -944,8 +870,7 @@ class ActivityRecordingController @Inject constructor(
                 pausedStartedAt = null,
                 totalPausedMillis = current.totalPausedMillis + pausedMillis,
                 pauseIntervals = current.pauseIntervals + listOfNotNull(closedPause),
-                // A paused plank does not keep counting down: the step's clock
-                // moves forward by exactly the pause.
+                // A paused plank stops counting down.
                 currentSetStartedAt = if (current.isPlanRun) {
                     current.currentSetStartedAt?.plusMillis(pausedMillis)
                 } else {
@@ -1045,9 +970,7 @@ class ActivityRecordingController @Inject constructor(
         val manualLaps = current.closedManualLaps(end)
         val repetitionSets = current.recordedRepetitionSets(end)
         val bleSamples = bleSensorCoordinator.stopRecording()
-        // Taken BEFORE clearing: the moment the recording goes inactive the
-        // watch tears itself down and resets the recorder, and these samples
-        // are the only copy.
+        // Taken before clearing: going inactive resets the recorder.
         val coMapsSamples = coMapsWatch.samples()
         val snapshot = ActivityRecordingSnapshot(
             exerciseType = exerciseType,
@@ -1061,19 +984,14 @@ class ActivityRecordingController @Inject constructor(
             manualLaps = manualLaps,
             markers = current.markers,
             distanceMeters = current.distanceMeters,
-            // The filtered figure — the same one the dashboard showed — not the
-            // raw noisy running sum kept in state.
+            // The filtered figure the dashboard showed, not the raw running sum.
             elevationGainedMeters = current.displayElevationGainedMeters(),
             repetitionCount = current.repetitionCount,
             repetitionSets = repetitionSets,
             planId = current.planId,
             planTitle = current.planTitle,
             bleSamples = bleSamples,
-            // Only when there is heart rate to go with it. A rest segment
-            // saying "the recovery began here" with no heart-rate series
-            // behind it is a claim to a measurement that was never taken —
-            // and anything reading the session back later, this app included,
-            // would believe it.
+            // Only with heart rate behind it, or the rest segment claims a measurement never taken.
             hrrEffortEndedAt = if (bleSamples.heartRateSamples.isEmpty()) {
                 null
             } else {
@@ -1142,9 +1060,7 @@ class ActivityRecordingController @Inject constructor(
         updateAndPersist(
             next,
             routePointToAppend = point,
-            // The route grows every fix, so the full metadata re-serialize is
-            // throttled — the appended point above is incremental, and the
-            // live UI still updates every fix.
+            // The route grows every fix, so the full metadata re-serialize is throttled.
             throttlePersist = true,
         )
     }
@@ -1179,8 +1095,7 @@ class ActivityRecordingController @Inject constructor(
             repetitionCount = completedCount + nextCurrentSetCount,
             errorMessage = null,
         )
-        // Reaching the target IS the "done": counting past it on purpose is
-        // also done, and only ever happens via "+", never via "−".
+        // Reaching the target is "done"; counting past it via "+" is done too.
         val step = next.currentPlanStep
         if (delta > 0L && step != null && step.goalKind == ActivityPlanGoalKind.REPS && nextCurrentSetCount >= step.goalValue) {
             completePlanStep(next, Instant.now())
@@ -1189,18 +1104,14 @@ class ActivityRecordingController @Inject constructor(
         updateAndPersist(next)
     }
 
-    /** "Done" for the step in progress; a rep step with nothing counted is treated as skipped. */
+    /** "Done" for the step in progress. A rep step with nothing counted is skipped. */
     fun completeCurrentPlanStep() {
         val current = _state.value
         if (current.status != ActivityRecordingStatus.RECORDING || !current.isPlanRun || current.isPlanComplete) return
         completePlanStep(current, Instant.now())
     }
 
-    /**
-     * Back one step: the step just finished (or the one in progress) is undone
-     * and reopened with its count restored, so a rep the sensor imagined can be
-     * taken away with "−" and the set ended again.
-     */
+    /** Back one step: the step just finished is reopened with its count restored. */
     fun undoPlanStep() {
         val current = _state.value
         if (!current.isPlanRun || current.status == ActivityRecordingStatus.PAUSED || !current.isActive) return
@@ -1272,8 +1183,7 @@ class ActivityRecordingController @Inject constructor(
         val next = state.planSteps.getOrNull(nextIndex)
         when {
             next == null -> {
-                // The last step has nothing to rest for: a trailing rest would
-                // land in the saved session as a phantom.
+                // The last step has nothing to rest for.
                 updateAndPersist(
                     state.copy(
                         status = ActivityRecordingStatus.RECORDING,
@@ -1296,7 +1206,7 @@ class ActivityRecordingController @Inject constructor(
                         repetitionCount = completedCount,
                         currentSetRepetitionCount = 0L,
                         restStartedAt = now,
-                        // Read by restEndTime() and the rest bell: this step's rest, not the plan's first.
+                        // This step's rest, not the plan's first.
                         repetitionRestSeconds = restAfter,
                         currentSetStartedAt = null,
                         planStepIndex = nextIndex,
@@ -1498,13 +1408,9 @@ class ActivityRecordingController @Inject constructor(
     }
 
     /**
-     * Crash-recovery metadata is re-serialized (including the whole route) on
-     * every persist, so high-frequency sensor updates throttle it to at most
-     * once per [MetadataPersistThrottleMillis]. The live UI still updates every
-     * event via the state flow; the only cost of throttling is that a crash
-     * loses up to this much of the newest data from the RESTORED state — the
-     * finished workout's snapshot is built from the in-memory state, not the
-     * persisted metadata, so it is unaffected.
+     * Metadata is re-serialized on every persist, route included, so sensor
+     * updates throttle it to once per [MetadataPersistThrottleMillis]. A crash
+     * loses at most that much from the restored state.
      */
     private fun persistMetadata(state: ActivityRecordingState, throttle: Boolean) {
         val now = SystemClock.elapsedRealtime()
@@ -1540,15 +1446,8 @@ class ActivityRecordingController @Inject constructor(
     }
 
     /**
-     * The bell itself, with no preference in front of it — the
-     * heart-rate-recovery cue rings whatever the rest-timer setting says,
-     * because a cue nobody heard has cost the rider the measurement they went
-     * out to take.
-     *
-     * The bell asks the OS to DUCK other audio rather than take it outright:
-     * a runner listening to music or a podcast hears it dip for the bell and
-     * come straight back, instead of having playback stopped as full audio
-     * focus would do.
+     * The bell, with no preference in front of it. Ducks other audio rather
+     * than taking focus, so music dips and comes back.
      */
     private fun playBell() {
         val player = runCatching { MediaPlayer.create(context, R.raw.bowl_struck) }.getOrNull()
@@ -1594,7 +1493,7 @@ class ActivityRecordingController @Inject constructor(
             accumulatedRestMillis = state.accumulatedRestMillis + actualRestMillis,
             restStartedAt = null,
             currentSetStartedAt = now,
-            // The next step's own rest, ready for when it ends.
+            // The next step's own rest.
             repetitionRestSeconds = nextStep?.restSeconds ?: state.repetitionRestSeconds,
             errorMessage = null,
         )
@@ -1602,11 +1501,7 @@ class ActivityRecordingController @Inject constructor(
         if (nextStep != null) cuePlanStep(nextStep, withBell = cueBell)
     }
 
-    /**
-     * A timed step ends by itself. Like the recovery-test phases, the deadline
-     * is verified against the state it was scheduled for before it fires, so a
-     * step skipped or paused meanwhile leaves a stale timer with nothing to do.
-     */
+    /** A timed step ends by itself. The deadline is checked against the state it was scheduled for. */
     private fun schedulePlanStepCompletion(state: ActivityRecordingState) {
         planStepJob?.cancel()
         planStepJob = null
@@ -1748,8 +1643,7 @@ internal const val RestTimerBellVolume = 0.42f
 internal const val HrrTargetHitsToEndEffort = 2
 internal const val PlanStepCueVibrationMillis = 150L
 internal const val CountdownVibrationMillis = 60L
-// Five, not three: three beeps gave someone mid-rest barely enough time to get
-// back into position before the bell (#285).
+// Five, not three: three gave barely enough time to get back into position (#285).
 internal const val RestCountdownSeconds = 5L
 internal const val CountdownBeepMillis = 120
 internal const val CountdownBeepVolume = 70

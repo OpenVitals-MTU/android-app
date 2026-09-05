@@ -38,12 +38,7 @@ import tech.mmarca.openvitals.navigation.WATCH_DEVICE_ID_ARG
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
-/**
- * Port of the Flutter build's `watch_device_screen_test.dart` rename case and
- * of the forget branches of `ble_devices_view_model_test.dart`: renaming a
- * watch that has no capabilities at all, and what forgetting a device does —
- * and does NOT do — at the OS level.
- */
+/** Renaming a watch with no capabilities, and what forgetting a device does and does not do at the OS level. */
 class WatchDeviceViewModelTest {
 
     @get:Rule
@@ -82,11 +77,7 @@ class WatchDeviceViewModelTest {
     private lateinit var stateStore: GarminDeviceStateStore
     private lateinit var pairing: FakePairing
 
-    /**
-     * The scheduler owns both the stored interval and the `WorkManager` side,
-     * so it is stubbed as one thing that remembers what it was told. The
-     * view-model's whole job is to hand the choice over and read it back.
-     */
+    /** The scheduler owns the stored interval and the WorkManager side, so it is one stub that remembers. */
     private lateinit var autoSyncScheduler: WatchAutoSyncScheduler
     private val autoSyncIntervals = mutableMapOf<String, AutoSyncInterval>()
 
@@ -144,10 +135,7 @@ class WatchDeviceViewModelTest {
         autoSyncScheduler = autoSyncScheduler,
     )
 
-    /**
-     * The OS-level cleanup is deliberately fire-and-forget on a scope that
-     * outlives the screen, so the test waits for it rather than driving it.
-     */
+    /** The OS-level cleanup is fire-and-forget on a scope that outlives the screen. */
     private fun awaitPairingCalls(expected: Int) {
         val deadline = System.currentTimeMillis() + 5_000
         while (pairing.snapshot().size < expected && System.currentTimeMillis() < deadline) {
@@ -225,8 +213,7 @@ class WatchDeviceViewModelTest {
         val vm = viewModel(sensor.id)
 
         vm.removeDevice()
-        // Give a cleanup that must never happen the same chance to happen as
-        // the one that must.
+        // Give a cleanup that must never happen the same chance as the one that must.
         Thread.sleep(100)
 
         assertTrue(repo.devices.isEmpty())
@@ -242,9 +229,7 @@ class WatchDeviceViewModelTest {
 
         vm.setAutoSync(AutoSyncInterval.HOURLY)
 
-        // Read back through the scheduler, not held in the screen: the stored
-        // choice and the periodic work are the same fact, and the row must
-        // show the one that is actually scheduled.
+        // Read back through the scheduler: the row must show what is actually scheduled.
         assertEquals(AutoSyncInterval.HOURLY, vm.uiState.value.autoSync)
         verify { autoSyncScheduler.setInterval(watch.id, AutoSyncInterval.HOURLY) }
     }
@@ -258,8 +243,7 @@ class WatchDeviceViewModelTest {
         vm.removeDevice()
         awaitPairingCalls(expected = 2)
 
-        // A schedule outliving the watch would wake the radio to talk to
-        // something the registry no longer knows about.
+        // A schedule outliving the watch would wake the radio for nothing.
         verify { autoSyncScheduler.forget(watch.id) }
     }
 }

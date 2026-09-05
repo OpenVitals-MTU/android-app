@@ -39,16 +39,9 @@ internal class HealthConnectReaderSupport(
     ): T? = withRateLimitGuard(operation, null, block)
 
     /**
-     * Like [withLogging] but a failure that survives the rate-limit retry is
-     * RETHROWN instead of degraded to a fallback, and a backoff is WAITED OUT
-     * rather than declined. For callers whose silence would lie — a sync stream
-     * that quietly truncated on rate limiting let the session report
-     * "completed" for a transfer that wasn't.
-     *
-     * The waiting is the difference from [withLogging] and it is deliberate:
-     * this path is a long background transfer with no screen behind it, so a
-     * minute spent riding out a throttle costs nothing anyone is watching, and
-     * resuming beats restarting the transfer.
+     * Like [withLogging], but a failure that survives the retry is rethrown
+     * and a backoff is waited out. For a background transfer whose silence
+     * would lie: a truncated stream once reported "completed".
      */
     suspend fun <T> withLoggingOrThrow(
         operation: String,
@@ -89,22 +82,9 @@ internal class HealthConnectReaderSupport(
     }
 
     /**
-     * One attempt, with a hard bound on how long it may spend not making it.
-     *
-     * Everything on a screen comes through here, and the rate-limit backoff is
-     * process-global and armed a minute at a time — so one throttled call is
-     * seen by every read the screen fans out. Sitting that minute out per read
-     * is what turned a throttle into a dashboard that showed a spinner for
-     * several minutes and then came up blank anyway: the wait happened before
-     * [readSemaphore] so it did not even serialise, the retry waited a second
-     * minute, and a re-arm from any concurrent read pushed the deadline out
-     * again underneath all of them.
-     *
-     * So a read that would have to wait longer than [MaxRateLimitWaitMillis]
-     * returns its caller's fallback instead. The data is no worse than it would
-     * have been after the wait — the quota is spent either way — and the screen
-     * gets to say so while it is still true, rather than holding the UI hostage
-     * to a number the user is never shown.
+     * One attempt, bounded in how long it may wait. The backoff is process
+     * global, so a read that would wait longer than [MaxRateLimitWaitMillis]
+     * returns the fallback instead of holding the screen for minutes.
      */
     private suspend fun <T> withRateLimitGuard(
         operation: String,
@@ -160,13 +140,7 @@ internal class HealthConnectReaderSupport(
         private const val TAG = "HealthConnectManager"
         private const val MaxConcurrentReads = 2
 
-        /**
-         * The longest a single read may sit on the rate-limit backoff.
-         *
-         * Short enough that a whole screen's fan-out still settles inside one
-         * frame budget's worth of patience rather than the minute the backoff
-         * is armed for.
-         */
+        /** The longest a single read may sit on the rate-limit backoff. */
         private const val MaxRateLimitWaitMillis = 2_000L
     }
 }
@@ -175,19 +149,10 @@ private fun String.privacySafeOperationName(): String =
     substringBefore('[')
 
 /**
- * The local date a fixed-24h aggregate bucket belongs to.
- *
- * `Duration.ofDays(1)` slicing stays instant-aligned across DST transitions, so
- * bucket boundaries drift up to an hour off local midnight. Dating a bucket by
- * its *start* then puts two buckets on the fall-back date and none on the
- * spring-forward date — a doubled and a missing day on every year heatmap. The
- * bucket's midpoint always falls inside the one local day it covers, so every
- * date gets exactly one full bucket. (Period slicing would cut true local days,
- * but it resolves records against their stored zone offset and undercounts.)
- *
- * That one-bucket-per-date guarantee covers *full* buckets only — the range's
- * clipped tail bucket can share a date with the full bucket before it, so read
- * buckets through [byLocalDate] rather than dating them one by one.
+ * The local date a fixed-24h bucket belongs to. Buckets drift up to an hour
+ * off local midnight across DST, so the midpoint dates them: it always falls
+ * inside the one local day the bucket covers. Full buckets only; a clipped
+ * tail bucket can share a date, so read through [byLocalDate].
  */
 internal fun dayBucketDate(start: Instant, end: Instant, zone: ZoneId): LocalDate =
     Instant.ofEpochMilli((start.toEpochMilli() + end.toEpochMilli()) / 2)
@@ -195,16 +160,9 @@ internal fun dayBucketDate(start: Instant, end: Instant, zone: ZoneId): LocalDat
         .toLocalDate()
 
 /**
- * One local date and every aggregate bucket that landed on it.
- *
- * [dayBucketDate] gives each *full* bucket its own date, but Health Connect
- * clips the last bucket of a range to the requested end. A range spanning a
- * DST fall-back is an hour longer than a whole number of 24h slices, so that
- * leftover hour becomes a second, one-hour bucket covering the final day's
- * 23:00–24:00 — a date the preceding full bucket already owns. Keying those
- * into a map lets the sliver win and blanks the day; emitting one row each
- * leaves a duplicate date for the caller to trip over. Folding the day's
- * buckets together is what actually reconstructs the day.
+ * One local date and every bucket that landed on it. A DST fall-back leaves
+ * a one-hour tail bucket on a date the previous full bucket owns; folding
+ * the day's buckets together reconstructs the day.
  */
 internal class DayBuckets(
     val date: LocalDate,
@@ -217,10 +175,7 @@ internal class DayBuckets(
     fun totalLong(selector: (AggregationResult) -> Long?): Long =
         buckets.sumOf { selector(it.result) ?: 0L }
 
-    /**
-     * Total of an additive metric, or null when no bucket of the day carried
-     * one — for metrics where absent and zero mean different things.
-     */
+    /** Total of an additive metric, or null when no bucket carried one. */
     fun totalOrNull(selector: (AggregationResult) -> Double?): Double? {
         val values = buckets.mapNotNull { selector(it.result) }
         return if (values.isEmpty()) null else values.sum()
@@ -238,12 +193,8 @@ internal class DayBuckets(
         buckets.mapNotNull { selector(it.result) }.maxOrNull()
 
     /**
-     * Duration-weighted mean of an averaged metric.
-     *
-     * Health Connect reports a mean per bucket and no sample count, so the
-     * bucket's own span is the only weight available. It assumes samples fall
-     * evenly through the bucket, which is wrong in detail but keeps a clipped
-     * one-hour sliver from counting as much as the day it trails.
+     * Duration-weighted mean of an averaged metric. Health Connect gives no
+     * sample count, so the bucket span is the only weight available.
      */
     fun weightedAverage(selector: (AggregationResult) -> Long?): Long? {
         var weighted = 0.0
@@ -268,32 +219,17 @@ internal fun List<AggregationResultGroupedByDuration>.byLocalDate(
         .map { (date, buckets) -> DayBuckets(date, buckets) }
 
 /**
- * The widest date range a single day-bucketed aggregate request may cover.
- *
- * A grouped-by-day aggregate response is one Binder parcel: every bucket
- * carries its requested metrics plus their data origins, so the parcel grows
- * with days × metrics. A year-long six-metric request measured ~800KB on a
- * dense dataset — `TransactionTooLargeException: data parcel size 811824
- * bytes` — and the 1MB Binder buffer is shared across a process's in-flight
- * transactions, so two concurrent long reads can fail even when each alone
- * would squeak through. A quarter-year slice keeps the worst response around
- * a quarter of the budget.
+ * The widest range one day-bucketed aggregate request may cover. The
+ * response is one Binder parcel that grows with days times metrics; a
+ * year-long request hit TransactionTooLargeException. A quarter year stays
+ * around a quarter of the shared 1MB budget.
  */
 internal const val DailyAggregateMaxQueryDays = 122L
 
-/**
- * Chunk size for hour-bucketed aggregate reads (daily heart-rate summaries).
- * 21 days is ~504 buckets per request — roughly four times the bucket count of
- * a [DailyAggregateMaxQueryDays] daily read, still comfortably inside the
- * shared Binder budget, while a year stays under twenty sequential requests.
- */
+/** Chunk size for hour-bucketed reads: ~504 buckets per request, inside the Binder budget. */
 internal const val HourlyAggregateMaxQueryDays = 21L
 
-/**
- * Splits `[startDate, endDate]` (inclusive) into consecutive inclusive chunks
- * of at most [maxDays] days, for day-bucketed aggregate reads that must not
- * exceed [DailyAggregateMaxQueryDays] per request. Empty for inverted ranges.
- */
+/** Splits an inclusive date range into chunks of at most [maxDays]. Empty for inverted ranges. */
 internal fun dailyAggregateDateChunks(
     startDate: LocalDate,
     endDate: LocalDate,

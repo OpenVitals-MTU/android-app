@@ -22,10 +22,7 @@ class HydrationDrinkUsageTest {
         volumeMilliliters = 250.0,
     )
 
-    /**
-     * A hydration entry as the native writer emits it:
-     * `openvitals_hydration_<epochMs>_drink_<id>_<uuid>`.
-     */
+    /** A hydration entry as the native writer emits it: `openvitals_hydration_<epochMs>_drink_<id>_<uuid>`. */
     private fun hydration(drinkId: String, time: Instant, uuid: String = "u1") = HydrationEntry(
         startTime = time,
         endTime = time,
@@ -152,8 +149,7 @@ class HydrationDrinkUsageTest {
 
     @Test
     fun `frequentHydrationDrinkOptions counts a paired nutrition record whose hydration half never wrote`() {
-        // A zero-hydration drink writes nutrition only, so nothing counted the
-        // hydration client record id.
+        // A zero-hydration drink writes nutrition only, so nothing counted the hydration id.
         val orphanHydrationId = "openvitals_hydration_5_drink_a_u9"
         val result = frequentHydrationDrinkOptions(
             drinks = listOf(drink("a")),

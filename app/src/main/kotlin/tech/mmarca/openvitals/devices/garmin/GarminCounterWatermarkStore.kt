@@ -6,92 +6,44 @@ import androidx.core.content.edit
 import java.time.Instant
 import org.json.JSONArray
 
-/**
- * How far each day's Garmin monitoring counters have already been imported, as
- * of [time]. Consumed by the FIT wellness importer (sub-milestone 7c), which
- * differences each sync's cumulative counters against the reading before it.
- */
+/** How far each day's Garmin monitoring counters have been imported, as of [time]. */
 data class FitCounterWatermark(
     val time: Instant,
     val steps: Int = 0,
     val distance: Int = 0,
     val calories: Int = 0,
     /**
-     * The per-activity-type readings behind the sums, as of [time].
-     *
-     * This is what keeps the walk continuous across syncs. The watch counts
-     * each activity type separately and a sync's files restate only the types
-     * recently active — so a sum rebuilt from one sync's points starts without
-     * the others, dips below the watermark, reads as a counter rollover, and
-     * when the missing type is restated the whole day re-enters as fresh
-     * movement.
-     *
-     * Null on a watermark stored before these existed — the importer adopts
-     * such types silently instead of re-counting them. An empty map means "no
-     * types"; the two must never be flattened into each other.
+     * The per-type readings behind the sums. Keeps the walk continuous: a
+     * sync restates only the recently active types. Null on a watermark from
+     * before these existed; the importer then adopts types silently. An empty
+     * map means "no types"; never flatten the two.
      */
     val stepsByType: Map<Int, Int>? = null,
     val distanceByType: Map<Int, Int>? = null,
     val caloriesByType: Map<Int, Int>? = null,
     /**
-     * What has already been written into the grid bucket containing [time].
-     * The last bucket a sync touches is usually half-filled and still gets
-     * written; the next sync recomputes it IN FULL — these values plus the new
-     * deltas — and the upsert replaces the half with the whole. Zero on a
-     * watermark stored before these existed, which is exactly right: those
-     * syncs never wrote the open bucket.
+     * What is already written into the bucket containing [time]. The next
+     * sync recomputes that bucket in full. Zero on older watermarks.
      */
     val openBucketSteps: Int = 0,
     val openBucketDistance: Int = 0,
     val openBucketCalories: Int = 0,
     /**
-     * Where the record for that open bucket actually STARTS, which is not
-     * always its grid position: a bucket first entered part-way through — the
-     * one holding the instant a sync resumed from — begins at the resume point,
-     * so that it does not overlap the record the previous sync ended with.
-     *
-     * Persisted because the next sync re-writes that record in full under the
-     * same id, and re-deriving the start from the grid would widen it back over
-     * its predecessor — the overlap Health Connect discards when it aggregates.
-     *
-     * Null on a watermark stored before this existed, and on one whose open
-     * bucket begins exactly on the grid; both mean "the grid position".
+     * Where the open bucket's record starts, when not its grid position: a
+     * bucket entered mid-way begins at the resume point so it does not
+     * overlap the previous record. Null means the grid position.
      */
     val openBucketStart: Instant? = null,
-    /**
-     * Whether this day's pre-intraday whole-day record has been superseded —
-     * exactly one bucket per day is written under the legacy record id, which
-     * overwrites it; this records that it has happened so the next sync does
-     * not do it again to a different bucket.
-     */
+    /** Whether the legacy whole-day record has been overwritten by one bucket. */
     val legacyRetired: Boolean = false,
 )
 
 /**
- * How far each day's Garmin monitoring counters have already been imported.
+ * How far each day's counters have been imported: the last reading, keyed by local day,
+ * which the next sync differences from.
  *
- * The watch's step, distance and active-calorie counters run cumulatively from
- * local midnight, and every sync brings only the minutes since the last one.
- * To write those minutes as INTRADAY records — rather than one flat total per
- * day — each interval has to be differenced against the reading before it, and
- * for the first reading in a sync that predecessor is in a file this run does
- * not have. It was archived on the watch two syncs ago.
- *
- * So the last reading imported for a day is remembered here, and the next sync
- * differences from it. That is what keeps the day's total exact across any
- * number of syncs, and what makes re-importing a file already behind the
- * watermark write nothing instead of counting it twice.
- *
- * SharedPreferences-backed and fire-and-forget, like [GarminDeviceStateStore].
- * Keyed by local day (`yyyy-mm-dd`) and NOT by device: the counters belong to
- * the wearer's day, and a second watch reporting the same day's steps would be
- * describing the same walk.
- *
- * The KEY name and the pipe-delimited line format are exactly what the Flutter
- * build wrote — there the list lived in `FlutterSharedPreferences` under a
- * `flutter.` prefix; this store uses its OWN prefs file with the un-prefixed
- * key, and phase 5's migrator copies the Flutter lines across verbatim. Do NOT
- * read `FlutterSharedPreferences` here.
+ * The key and the pipe-delimited line format are the Flutter build's; the migrator copies
+ * the lines across. Do not read `FlutterSharedPreferences` here.
  */
 class GarminCounterWatermarkStore(private val prefs: SharedPreferences) {
 
@@ -103,21 +55,9 @@ class GarminCounterWatermarkStore(private val prefs: SharedPreferences) {
         val raw = readLines() ?: return emptyMap()
         val marks = mutableMapOf<String, FitCounterWatermark>()
         for (line in raw) {
-            // Anything unreadable is DROPPED, not guessed at. A watermark is a
-            // claim about what Health Connect already holds; half of one would
-            // either lose a day's steps or write them twice, and re-importing
-            // from the day's start is the safer of the two mistakes.
-            //
-            // Five/six/nine/twelve fields are the older forms, kept readable
-            // rather than dropped. Five predates
-            // [FitCounterWatermark.legacyRetired]; five and six predate the
-            // per-type maps, which load as null so the importer adopts their
-            // types silently instead of re-counting them. Nine predates the
-            // open-bucket seed values, which load as zero — correct, because
-            // those versions never wrote the open bucket. Twelve predates
-            // [FitCounterWatermark.openBucketStart], which loads as null: those
-            // versions started every bucket on the grid, which is what null
-            // means.
+            // Unreadable lines are dropped, not guessed at. Older field counts
+            // stay readable: missing fields load as null or zero, each with a
+            // defined meaning on [FitCounterWatermark].
             val parts = line.split('|')
             if (parts.size !in READABLE_FIELD_COUNTS) continue
             val timeMs = parts[1].toLongOrNull()
@@ -151,7 +91,7 @@ class GarminCounterWatermarkStore(private val prefs: SharedPreferences) {
             val openDistance = if (parts.size >= 12) parts[10].toIntOrNull() else 0
             val openCalories = if (parts.size >= 12) parts[11].toIntOrNull() else 0
             if (!readable || openSteps == null || openDistance == null || openCalories == null) continue
-            // '-' is "no start of its own", which reads as the grid position.
+            // '-' means no start of its own: the grid position.
             val openStartRaw = if (parts.size >= 13) parts[12] else "-"
             val openStart = if (openStartRaw == "-") {
                 null
@@ -177,20 +117,13 @@ class GarminCounterWatermarkStore(private val prefs: SharedPreferences) {
         return marks
     }
 
-    /**
-     * Merges [marks] over what is stored and prunes to [RETAINED_DAYS].
-     *
-     * Merged rather than replaced: one sync touches the days its files
-     * covered, and must not forget the others.
-     */
+    /** Merges [marks] over what is stored and prunes to [RETAINED_DAYS]. */
     fun save(marks: Map<String, FitCounterWatermark>) {
         if (marks.isEmpty()) return
         val merged = load() + marks
         val days = merged.keys.sorted()
         val kept = if (days.size > RETAINED_DAYS) days.subList(days.size - RETAINED_DAYS, days.size) else days
-        // '-' keeps a legacy mark's null maps null across a re-save: an empty
-        // map means "no types", null means "types unknowable", and flattening
-        // the two would turn silent adoption into a full re-count.
+        // '-' keeps a null map null: null means unknowable, empty means no types.
         fun encodeTypes(types: Map<Int, Int>?): String =
             types?.entries?.joinToString(",") { "${it.key}:${it.value}" } ?: "-"
         writeLines(
@@ -211,14 +144,7 @@ class GarminCounterWatermarkStore(private val prefs: SharedPreferences) {
         )
     }
 
-    /**
-     * Forgets every watermark, so the next import writes each day from its
-     * start.
-     *
-     * For a Health Connect wipe: the records the watermarks describe are gone,
-     * so the watermarks are lies, and a sync that trusted them would write
-     * only the minutes since — leaving the day short forever.
-     */
+    /** Forgets every watermark, for a Health Connect wipe. */
     fun clear() {
         prefs.edit { remove(PREFS_KEY) }
     }
@@ -239,20 +165,10 @@ class GarminCounterWatermarkStore(private val prefs: SharedPreferences) {
         const val PREFS_FILE = "garmin_counter_watermarks"
         private const val PREFS_KEY = "garmin_counter_watermarks"
 
-        /**
-         * Every line length this store has ever written, newest last. Older
-         * forms stay readable rather than being dropped — a dropped watermark
-         * re-imports its day from the start — and each missing field has a
-         * defined meaning for the versions that lacked it, documented on
-         * [FitCounterWatermark].
-         */
+        /** Every line length ever written, newest last. Older forms stay readable. */
         private val READABLE_FIELD_COUNTS = setOf(5, 6, 9, 12, 13)
 
-        /**
-         * Days kept. Long enough to cover a watch left in a drawer over a
-         * holiday and synced on return; short enough that the list cannot grow
-         * without bound.
-         */
+        /** Days kept: covers a watch left in a drawer over a holiday. */
         private const val RETAINED_DAYS = 60
     }
 }

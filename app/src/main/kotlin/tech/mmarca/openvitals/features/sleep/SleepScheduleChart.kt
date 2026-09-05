@@ -40,11 +40,9 @@ private val ScheduleChartHeight = 232.dp
 private val ScheduleAxisLabelWidth = 46.dp
 
 /**
- * Time-aligned, stage-colored sleep chart for the week/month period views. Each day is a vertical
- * bar spanning that night's in-bed window on a shared clock-time axis anchored at the current
- * [SleepWindow]'s start hour (earliest time at the top). The full in-bed span is drawn as a
- * translucent base block with stage segments overlaid via [stageColor]. Callers should gate on
- * [SleepScheduleAxis.range] being non-null and fall back to the duration bar chart otherwise.
+ * Time-aligned, stage-coloured sleep chart for the period views: one bar
+ * per night on a clock axis anchored at the window's start hour. Gate on
+ * [SleepScheduleAxis.range] being non-null.
  */
 @Composable
 internal fun SleepScheduleStageChart(

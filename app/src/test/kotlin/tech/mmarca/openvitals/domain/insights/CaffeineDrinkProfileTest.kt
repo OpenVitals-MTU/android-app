@@ -46,8 +46,7 @@ class CaffeineDrinkProfileTest {
         val profile = profileOf(100.0)
 
         assertTrue(profile.peakMg > 0.0)
-        // Absorption takes time and elimination starts before it finishes, so a 100mg coffee
-        // never puts 100mg in you at once.
+        // Elimination starts before absorption finishes, so a 100mg coffee never puts 100mg in you at once.
         assertTrue(profile.peakMg < 100.0)
         assertEquals(profile.curve.maxOf { it.valueMg }, profile.peakMg, 0.0001)
         assertEquals(profile.curve.first { it.valueMg == profile.peakMg }.time, profile.peakTime)
@@ -60,8 +59,7 @@ class CaffeineDrinkProfileTest {
 
         assertNotNull(profile.halfGoneTime)
         assertNotNull(profile.goneTime)
-        // The rise crosses both thresholds on its way up; those crossings are the drink
-        // arriving, not fading, so neither may be reported before the peak.
+        // The rise crosses both thresholds on its way up; neither may be reported before the peak.
         assertFalse(profile.halfGoneTime!!.isBefore(profile.peakTime))
         assertFalse(profile.goneTime!!.isBefore(profile.peakTime))
         assertTrue(profile.goneTime!!.isAfter(profile.halfGoneTime))

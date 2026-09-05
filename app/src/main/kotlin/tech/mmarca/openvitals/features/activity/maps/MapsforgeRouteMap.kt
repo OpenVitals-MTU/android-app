@@ -71,9 +71,7 @@ internal fun MapsforgeRouteMap(
     plannedRoute: CoMapsRoutePolyline? = null,
     modifier: Modifier = Modifier,
 ) {
-    // Same shift as the MapLibre renderer: the walk over a six-figure point
-    // buffer happens once per route revision on a worker dispatcher, and the
-    // view update only ever receives the finished geometry.
+    // Walk the point buffer once per route revision on a worker dispatcher.
     val plannedRouteDisplay by produceState<MapsforgePlannedRoute?>(null, plannedRoute) {
         value = plannedRoute?.takeUnless { it.isEmpty }?.let { route ->
             withContext(Dispatchers.Default) {
@@ -109,9 +107,7 @@ internal fun MapsforgeRouteMap(
     val recenterDescription = stringResource(R.string.cd_recenter_map)
     val resetRotationDescription = stringResource(R.string.cd_reset_map_rotation)
 
-    // Mapsforge has no compass widget of its own, so the reset control is
-    // hand-rolled: watch the position model (rotation lives there and every
-    // change notifies) and surface a button whenever the map is off north.
+    // Mapsforge has no compass widget, so the reset control watches the position model.
     var mapRotationDegrees by remember(mapView) { mutableFloatStateOf(mapView.mapRotation.degrees) }
     DisposableEffect(mapView) {
         val observer = Observer {
@@ -125,10 +121,8 @@ internal fun MapsforgeRouteMap(
 
     DisposableEffect(mapView) {
         onDispose {
-            // This map's own layers, caches and data stores only. The resource
-            // memory cache used to be cleared here too, but it is GLOBAL: a
-            // second map still on screen — the detail screen's, while a
-            // recording map goes away — lost its symbols and labels with it.
+            // This map's own layers and caches only. The resource cache is global
+            // and a second map on screen would lose its symbols.
             mapView.destroyAll()
         }
     }
@@ -196,20 +190,13 @@ private class MapsforgeRouteMapRenderState {
     private var didFitInitialCamera = false
 
     /**
-     * Whether the camera tracks the live fix. On from the first frame — a map
-     * with a current point is a recording in progress, and a recording map's
-     * job is to keep the user in the middle of it — and off the moment the
-     * user pans away, until the recenter button re-engages it. Maps without a
-     * live fix (a recorded activity's route) never enter the follow path.
+     * Whether the camera tracks the live fix. On from the first frame, off
+     * when the user pans, until the recenter button re-engages it.
      */
     private var followCurrentPoint = true
     private var followedPoint: LatLong? = null
 
-    /**
-     * The planned route's layers outlive the per-tick track rebuilds, and are
-     * rebuilt only when the producer hands over new geometry — one per route
-     * revision, compared by identity.
-     */
+    /** The planned route's layers, rebuilt only per route revision. */
     private var plannedLayers: List<Layer> = emptyList()
     private var builtPlannedRoute: MapsforgePlannedRoute? = null
 
@@ -270,8 +257,7 @@ private class MapsforgeRouteMapRenderState {
             layers.remove(layer)
             layer.onDestroy()
         }
-        // Re-adding the track after the planned layers keeps the record drawn
-        // over the plan it is following.
+        // Re-add the track after the planned layers so the record draws over the plan.
         plannedLayers.forEach { layer ->
             layers.remove(layer)
             layers.add(layer)
@@ -294,10 +280,7 @@ private class MapsforgeRouteMapRenderState {
         }
     }
 
-    /**
-     * Keeps the live fix in the middle of the viewport. Only the centre moves:
-     * the zoom and rotation the user chose ride along untouched.
-     */
+    /** Keeps the live fix centred. Zoom and rotation stay as the user chose. */
     private fun followCamera(map: MapsforgeMap, livePoint: ExerciseRoutePoint) {
         val target = livePoint.toLatLong()
         if (target == followedPoint) return
@@ -369,9 +352,7 @@ private fun createMapsforgeMap(
     mapView.getLayerManager().getLayers().add(tileRendererLayer)
     mapView.setCenter(mapDataStore.startPosition())
 
-    // What the packs themselves hold, rather than a fixed guess: a city extract
-    // carries detail a country one does not, and asking for a zoom outside the
-    // range renders blank.
+    // What the packs hold: a zoom outside the range renders blank.
     val zoomRange = MapsforgeZoomRange(
         min = mapFiles.minOf { it.mapFileInfo.zoomLevelMin },
         max = mapFiles.maxOf { it.mapFileInfo.zoomLevelMax },
@@ -385,10 +366,8 @@ private fun createMapsforgeMap(
 }
 
 /**
- * Besides keeping scrolling ancestors from stealing the map's touches, this is
- * where a pan is recognised: mapsforge has no gesture callbacks of its own, so
- * a single finger travelling past the touch slop is the signal. Two-finger
- * gestures — pinch and rotate — deliberately do not count as panning.
+ * Keeps scrolling ancestors from stealing touches, and recognises a pan:
+ * one finger past the touch slop. Two-finger gestures do not count.
  */
 @SuppressLint("ClickableViewAccessibility")
 private fun View.disallowAncestorInterceptDuringTouch(onUserPan: () -> Unit = {}) {
@@ -433,13 +412,9 @@ internal class MapsforgePlannedRoute(
     val destination: LatLong?,
 )
 
-/**
- * Every point CoMaps served, drawn the way CoMaps draws its own route: a wide
- * fill in a darker casing, with white arrows pointing out of every bend.
- */
+/** Every point CoMaps served, drawn CoMaps' way: a wide fill in a casing, arrows at bends. */
 private fun buildPlannedRouteLayers(route: MapsforgePlannedRoute): List<Layer> = buildList {
-    // Widths are density-scaled: mapsforge paints are raw pixels, and a
-    // "wide" line divided by a Pixel's density is a thin one.
+    // Density-scaled: mapsforge paints are raw pixels.
     val scale = DisplayModel.getDeviceScaleFactor()
     add(
         Polyline(
@@ -457,11 +432,7 @@ private fun buildPlannedRouteLayers(route: MapsforgePlannedRoute): List<Layer> =
     route.destination?.let { add(DestinationFlagLayer(it)) }
 }
 
-/**
- * The route's bend arrows, one layer for all of them: projected and drawn
- * only inside the viewport, and only at zooms where a bend is a bend and not
- * a pixel.
- */
+/** The route's bend arrows, one layer: drawn only in the viewport and at zooms where a bend shows. */
 private class PlannedRouteArrowsLayer(
     private val arrows: List<PlannedRouteArrow>,
 ) : Layer() {
@@ -498,8 +469,7 @@ private class PlannedRouteArrowsLayer(
 
             val cornerX = pixelX(cornerLon)
             val cornerY = pixelY(cornerLat)
-            // Poor man's collision detection: two bends of a switchback do
-            // not both need an arrow at this zoom.
+            // Two bends of a switchback do not both need an arrow.
             if (kotlin.math.hypot(cornerX - lastX, cornerY - lastY) < headSize * 2.5f) return@forEach
             lastX = cornerX
             lastY = cornerY
@@ -538,9 +508,7 @@ private class DestinationFlagLayer(private val position: LatLong) : Layer() {
         val x = (MercatorProjection.longitudeToPixelX(position.longitude, mapSize) - topLeftPoint.x).toFloat()
         val y = (MercatorProjection.latitudeToPixelY(position.latitude, mapSize) - topLeftPoint.y).toFloat()
         val height = DestinationFlagHeightPx * displayModel.scaleFactor
-        // A billboard, the way mapsforge's own Marker does it: the flag stays
-        // upright on a rotated map by counter-rotating the canvas around its
-        // base for the duration of the drawing.
+        // A billboard: counter-rotate the canvas so the flag stays upright.
         if (!Rotation.noRotation(rotation)) {
             canvas.rotate(Rotation(-rotation.degrees, x, y))
         }
@@ -614,10 +582,7 @@ private fun drawMapsforgeArrowHead(
     canvas.drawPath(path, fill)
 }
 
-/**
- * A chevron centred on (x, y), rotated to a bearing by rotating its model
- * points — no canvas transform, so nothing else on the frame is disturbed.
- */
+/** A chevron at (x, y) rotated by moving its model points, so nothing else on the frame moves. */
 private fun drawMapsforgeChevron(
     canvas: org.mapsforge.core.graphics.Canvas,
     centerX: Float,
@@ -670,8 +635,7 @@ private fun buildMapsforgeRouteLayers(
             add(markerCircle(point, EndMarkerColor, MarkerRadiusPx))
         }
         currentPoint?.takeIf { point -> point.hasFiniteCoordinates() }?.let { point ->
-            // A phone that knows which way it faces shows it; one that does
-            // not falls back to the dot.
+            // A phone without a heading falls back to the dot.
             if (headingDegrees != null) {
                 add(DeviceHeadingLayer(point.toLatLong(), headingDegrees))
             } else {
@@ -692,9 +656,7 @@ private fun fitMapsforgeCamera(
 
     val viewport = mapView.getModel().mapViewDimension.getDimension()
     if (viewport == null) {
-        // The view has not been measured yet, and a zoom chosen against a
-        // viewport of unknown size is the bug being fixed. Retry once the
-        // layout pass has run; the centre above is already correct.
+        // Not measured yet; retry once the layout pass has run.
         mapView.post { applyMapsforgeZoom(map, boundingBox) }
         return
     }
@@ -766,9 +728,7 @@ private fun ExerciseRoutePoint.hasFiniteCoordinates(): Boolean =
     latitude.isFinite() && longitude.isFinite()
 
 private const val RouteLineColor = "#D9462F"
-// Route blue, not guidance green: the green vanished into park and
-// land-use fills. Blue is the one family both base styles reserve for
-// water and little else along a street.
+// Route blue, not guidance green: green vanished into park fills.
 private const val PlannedRouteColor = "#1E88E5"
 private const val PlannedRouteCasingColor = "#1256A0"
 private const val TurnArrowFillColor = "#FFFFFF"

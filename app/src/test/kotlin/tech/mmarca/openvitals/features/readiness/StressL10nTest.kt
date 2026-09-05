@@ -10,11 +10,7 @@ import tech.mmarca.openvitals.domain.insights.PhysiologicalStressLevel
 import tech.mmarca.openvitals.domain.insights.StressItemTemplate
 import tech.mmarca.openvitals.domain.insights.StressListItem
 
-/**
- * The parts of the stress localizer that do not need a resource table: the
- * template→resource mapping (which must be total and collision-free) and the
- * NaN-as-absent argument handling the sentences depend on.
- */
+/** The template-to-resource mapping (total and collision-free) and the NaN-as-absent argument handling. */
 class StressL10nTest {
 
     @Test
@@ -24,8 +20,7 @@ class StressL10nTest {
         ids.forEach { (template, id) ->
             assertNotEquals("$template has no resource", 0, id)
         }
-        // MINDFULNESS_LOGGED deliberately reuses the readiness catalog's own
-        // sentence; everything else gets its own.
+        // MINDFULNESS_LOGGED reuses the readiness catalog's sentence; everything else gets its own.
         val reused = ids.values.groupBy { it }.filterValues { it.size > 1 }
         assertTrue("templates share a resource: $reused", reused.isEmpty())
     }
@@ -55,8 +50,7 @@ class StressL10nTest {
         ).map(::stressConfidenceReasonRes)
 
         assertEquals(known.size, known.toSet().size)
-        // `no_stress_signals` is a real token the domain writes and has no
-        // sentence of its own; so is anything a future version invents.
+        // `no_stress_signals` has no sentence of its own; nor does anything a future version invents.
         assertEquals(stressConfidenceReasonRes("anything else"), stressConfidenceReasonRes("no_stress_signals"))
         assertTrue(stressConfidenceReasonRes("no_stress_signals") !in known)
     }

@@ -68,13 +68,7 @@ class BleSensorCoordinator @Inject constructor(
     private var scanCallback: ScanCallback? = null
     private val scanResults = ConcurrentHashMap<String, BleDiscoveredDevice>()
 
-    /**
-     * The per-integration classifiers consulted to tell a file-sync watch from
-     * a live sensor. Advertisement-shaped ([DeviceScanClassifier]) for the
-     * scan-time `advertisesSyncService` evidence; device-shaped
-     * ([DeviceClassifier]) for the `(integration, kind)` verdict onboarding
-     * asks for via [classifyDiscoveredDevice].
-     */
+    /** Per-integration classifiers: scan-time evidence, and the `(integration, kind)` verdict. */
     private val scanClassifiers: List<DeviceScanClassifier> = listOf(GarminScanClassifier())
     private val deviceClassifiers: List<DeviceClassifier> = listOf(
         GarminDeviceClassifier(),
@@ -291,11 +285,8 @@ class BleSensorCoordinator @Inject constructor(
         val serviceCapabilities = advertisedUuids
             .flatMap { BleUuids.capabilitiesForService(it) }
             .toSet()
-        // Which integration (if any) claims this advertisement as a file-sync
-        // watch rather than a live sensor — asked per integration, so the
-        // generic scanner carries no protocol knowledge of its own. (A watch
-        // advertises its member service, e.g. Garmin's 0xFE1F; the GFDI
-        // transport is GATT-only and never advertised.)
+        // Which integration claims this advertisement as a sync watch. The
+        // scanner carries no protocol knowledge of its own.
         val advertisedUuidStrings = advertisedUuids.map { it.toString() }
         val advertisesSync =
             scanClassifiers.any { it.advertisesSyncService(advertisedUuidStrings) }
@@ -305,21 +296,15 @@ class BleSensorCoordinator @Inject constructor(
             name = device.name ?: existing?.name,
             rssi = result.rssi,
             suggestedCapabilities = (existing?.suggestedCapabilities.orEmpty() + serviceCapabilities).toSet(),
-            // Sticky across advertisements: a watch does not put every service
-            // in every packet, so one sighting of the member service settles
-            // it for this scan.
+            // Sticky across advertisements: one sighting of the member service settles it.
             advertisesSyncService = advertisesSync || (existing?.advertisesSyncService ?: false),
         )
         publishScanResults()
     }
 
     /**
-     * Maps a discovered device to how it should be registered: a Garmin watch
-     * family name → `(GARMIN, WATCH)`, an Edge → `(GARMIN, BIKE_COMPUTER)`, a
-     * WearOS-style smartwatch name → `(WEAROS, WATCH)`, anything else → a
-     * plain sensor. Order matters — Garmin's verdict (backed by its member
-     * service surfacing the device at all) beats the generic smartwatch name
-     * match.
+     * Maps a discovered device to how it registers: Garmin watch, Edge,
+     * WearOS watch, or a plain sensor. Garmin's verdict beats the name match.
      */
     fun classifyDiscoveredDevice(device: BleDiscoveredDevice): DeviceClassification =
         classifyDevice(device, deviceClassifiers)

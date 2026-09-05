@@ -16,11 +16,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * The stride field must be dead while the feature is off — an editable field
- * under a disabled toggle reads as "this does something", and the save
- * round-trip must land in meters whatever unit the field displays.
- */
+/** The stride field is dead while the feature is off, and the save lands in meters whatever the field displays. */
 class StepDistanceBackfillCardTest {
 
     @get:Rule

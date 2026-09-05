@@ -117,11 +117,7 @@ class ActivityOverviewViewModel @Inject constructor(
         load(initialDay ?: java.time.LocalDate.now())
     }
 
-    /**
-     * Kicks the calories history sync once per screen open, AFTER the first
-     * load settles (Health Connect serializes reads). One reload when it
-     * completes re-derives the overview from the now-populated cache.
-     */
+    /** Kicks the calories history sync once per open, after the first load; one reload when done. */
     private fun kickCaloriesHistorySyncOnce() {
         val sync = caloriesSync ?: return
         if (caloriesSyncKicked) return

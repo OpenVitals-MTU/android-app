@@ -145,9 +145,7 @@ internal fun DashboardSwipeToDeleteActivityCard(
             }
         },
         backgroundContent = {
-            // Painted only while the row is actually displaced, for the same
-            // reason as SwipeToDeleteEntryRow: composed at rest, the delete
-            // red bled through any content that is not fully opaque.
+            // Painted only while displaced, as in SwipeToDeleteEntryRow.
             if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
                 Box(
                     modifier = Modifier

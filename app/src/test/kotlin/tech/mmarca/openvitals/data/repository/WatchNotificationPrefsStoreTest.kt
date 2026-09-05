@@ -6,12 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
 
-/**
- * Port of the Flutter build's `watch_notification_prefs_store` behaviour, plus
- * the Kotlin-only adoption of values the phase-5 migrator left in the main
- * prefs file. The KEY names are load-bearing — the migrator copies the Flutter
- * values under exactly these names — so they are asserted literally.
- */
+/** The key names are load-bearing: the migrator copies the Flutter values under exactly these names. */
 class WatchNotificationPrefsStoreTest {
 
     private val prefs = FakeSharedPreferences()
@@ -29,8 +24,7 @@ class WatchNotificationPrefsStoreTest {
     @Test
     fun `enabled round-trips through storage`() {
         store().enabled = true
-        // A second store over the same prefs is the real round-trip — this is
-        // what proves the exact key/format survives a restart.
+        // A second store over the same prefs is the real round-trip.
         assertTrue(store().enabled)
     }
 
@@ -53,8 +47,7 @@ class WatchNotificationPrefsStoreTest {
 
     @Test
     fun `disclosure acceptance is remembered independently of enabled`() {
-        // Consent is given once; switching the feature off and on again must
-        // not re-prompt.
+        // Consent is given once; switching off and on must not re-prompt.
         val store = store()
         store.disclosureAccepted = true
         store.enabled = true
@@ -77,7 +70,7 @@ class WatchNotificationPrefsStoreTest {
         assertTrue(prefs.getBoolean("garmin_notifications_disclosure_accepted", false))
     }
 
-    // ── adoption of phase-5 migrated values ─────────────────────────────────
+    // Adoption of phase-5 migrated values.
 
     private fun legacyMain(): FakeSharedPreferences = FakeSharedPreferences().apply {
         edit()
@@ -114,8 +107,7 @@ class WatchNotificationPrefsStoreTest {
         val main = legacyMain()
         WatchNotificationPrefsStore(prefs, legacyMainPrefs = main).enabled = false
 
-        // The migrated copies are untouched — this store owns its own file and
-        // nothing else.
+        // The migrated copies are untouched; this store owns its own file.
         assertTrue(main.getBoolean("garmin_notifications_enabled", false))
     }
 

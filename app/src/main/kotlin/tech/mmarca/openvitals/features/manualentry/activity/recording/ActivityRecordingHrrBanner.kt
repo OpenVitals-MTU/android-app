@@ -23,19 +23,9 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 
 /**
- * What the rider has to do next, and how long for.
- *
- * During a recovery test this is the only thing on the screen that matters —
- * they are at their limit, the phone is on a bar mount or in a pocket, and
- * everything else is scenery. It leads with the phase, in words, and gives the
- * countdown underneath.
- *
- * The End effort button is there through the warmup and the effort, and gone
- * during the recovery. The heart-rate target is a convenience; on a day when
- * the legs are not there, the rider has to be able to say so, and the test
- * still works — the measurement only needs the stop to be abrupt. During the
- * recovery there is nothing to press: pressing it again would move the instant
- * the whole measurement hangs on.
+ * What the rider must do next, and for how long. End effort is available
+ * through the warmup and effort, gone during recovery: pressing it again
+ * would move the instant the measurement hangs on.
  */
 @Composable
 internal fun ActivityHeartRateRecoveryPhaseBanner(

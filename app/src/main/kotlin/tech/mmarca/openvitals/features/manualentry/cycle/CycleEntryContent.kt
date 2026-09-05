@@ -27,11 +27,7 @@ import tech.mmarca.openvitals.features.cycle.measurementLocationLabelRes
 import tech.mmarca.openvitals.ui.components.OptionDropdown
 import tech.mmarca.openvitals.ui.theme.Spacing
 
-/**
- * One labelled single-select section, rendered as a dropdown whose menu
- * offers "Not specified" first — the section returns to "not logged" the
- * same way a tapped-again chip used to.
- */
+/** One single-select section as a dropdown with "Not specified" first. */
 @Composable
 internal fun CycleChipSection(
     label: String,

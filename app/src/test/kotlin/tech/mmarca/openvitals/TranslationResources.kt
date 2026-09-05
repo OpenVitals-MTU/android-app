@@ -6,13 +6,8 @@ import org.w3c.dom.Element
 import org.w3c.dom.Node
 
 /**
- * Shared reader for the `strings.xml` under every `values` directory, so the
- * translation guards walk the tree once and agree on what a "resource" is.
- *
- * A resource is keyed by its `name`. A `<string>` has the single pseudo-quantity
- * [PLAIN]; a `<plurals>` has one entry per `<item quantity="...">`. That shape is
- * what lets a plural be compared branch by branch, including a branch a locale
- * adds that English does not have (Spanish `many`, Polish `few`, Arabic's six).
+ * Shared reader for the `strings.xml` under every values directory. A resource is keyed by `name`; a `<string>`
+ * has the pseudo-quantity [PLAIN], a `<plurals>` one entry per quantity.
  */
 internal object TranslationResources {
 
@@ -72,13 +67,8 @@ internal object TranslationResources {
     }
 
     /**
-     * Every `%`-thing in [text], split into the specifiers `String.format` will
-     * happily run and the ones it will choke on.
-     *
-     * `%%` is a literal percent and is skipped. A specifier whose flags contain
-     * a space is the shape a *bare* percent decays into — "%1$d% above" is lexed
-     * as `%1$d` followed by the conversion `% a` — so it is a problem, not a
-     * specifier.
+     * Every `%`-thing in [text], split into specifiers `String.format` runs and ones it chokes on.
+     * `%%` is skipped. A specifier with a space flag is a bare percent, so it is a problem.
      */
     fun scan(text: String): Scan {
         val specifiers = mutableListOf<String>()
@@ -109,25 +99,14 @@ internal object TranslationResources {
     }
 
     /**
-     * The resource names in `values/` that Android will actually run through
-     * `String.format`.
-     *
-     * Deciding this from the BASE file, not from each locale, is what makes the
-     * guard sound: "Counts as hydration (%)" carries a lone `%` and is never
-     * formatted, so its `%` is harmless in every language — while
-     * `activity_type_stats_activity_count` is "%d activity", is formatted, and
-     * therefore every translation of it has to survive `String.format`.
+     * The `values/` names Android runs through `String.format`.
+     * Decided from the base file: "Counts as hydration (%)" is never formatted, `%d activity` is.
      */
     fun formattedBaseNames(base: Map<String, Map<String, String>>): Set<String> =
         base.filterValues { values -> values.values.any { scan(it).specifiers.isNotEmpty() } }.keys
 
     internal data class Scan(val specifiers: List<String>, val problems: List<String>)
 
-    /**
-     * A full `java.util.Formatter` specifier: optional argument index, flags,
-     * width, precision, conversion. The precision arm is the one
-     * `scripts/verify-translations.py` is missing — its `%(?:\d+\$)?[a-zA-Z]`
-     * cannot see "%1$.1f" at all.
-     */
+    /** A full `java.util.Formatter` specifier. The precision arm is what `scripts/verify-translations.py` misses. */
     private val SPECIFIER = Regex("""%(\d+\$)?[-#+ 0,(]*\d*(\.\d+)?[a-zA-Z]""")
 }

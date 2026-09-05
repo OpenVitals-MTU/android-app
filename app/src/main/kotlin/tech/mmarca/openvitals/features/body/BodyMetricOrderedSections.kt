@@ -145,9 +145,7 @@ private fun BodyIntradayMetricChartCard(
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
-    // The x axis is the WHOLE day: a reading sits at its real hour under the
-    // 00:00…24:00 row, instead of being scaled against the time elapsed so far
-    // (which drew a 09:29 reading at 74% of the width on a chart opened at 12:49).
+    // The x axis is the whole day: a reading sits at its real hour.
     val dayStart = selectedDate.atStartOfDay(zone).toInstant()
     val dayEnd = selectedDate.plusDays(1).atStartOfDay(zone).toInstant()
     val isToday = selectedDate == LocalDate.now()

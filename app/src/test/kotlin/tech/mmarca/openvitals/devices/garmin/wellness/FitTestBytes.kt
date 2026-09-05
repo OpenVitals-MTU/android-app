@@ -8,12 +8,7 @@ internal const val GARMIN_EPOCH_OFFSET_SECONDS = 631_065_600L
 
 internal fun fitTimestamp(t: Instant): Long = t.epochSecond - GARMIN_EPOCH_OFFSET_SECONDS
 
-/**
- * Minimal FIT writer (little-endian), enough for hand-built wellness files.
- * The bytes are hand-built so no real health data is committed; the layout
- * mirrors what a vívoactive writes. Port of the `_W` helper the Flutter tests
- * used.
- */
+/** Minimal little-endian FIT writer for hand-built wellness files, so no real health data is committed. */
 internal class FitW {
     private val b = ByteArrayOutputStream()
 
@@ -54,10 +49,7 @@ internal class FitW {
     fun toBytes(): ByteArray = b.toByteArray()
 }
 
-/**
- * Wraps a data section in the 14-byte FIT header + trailing CRC (unchecked by
- * the decoder, which reads the declared data size).
- */
+/** Wraps a data section in the 14-byte FIT header plus trailing CRC. */
 internal fun fitWrap(data: ByteArray): ByteArray = FitW()
     .u8(14)
     .u8(16)

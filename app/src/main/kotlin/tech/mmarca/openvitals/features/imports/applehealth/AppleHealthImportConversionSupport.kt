@@ -77,8 +77,7 @@ internal fun appleMetadata(targetType: String, fingerprint: String): Metadata =
 internal fun buildStableClientRecordId(prefix: String, parts: Any): String {
     val bytes = MessageDigest.getInstance("SHA-256")
         .digest(parts.toString().toByteArray(Charsets.UTF_8))
-    // 16 bytes → 32 hex chars; manual hex encoding avoids a Formatter allocation per byte on
-    // this hot path (multiple digests per imported record).
+    // Manual hex encoding avoids a Formatter allocation per byte on this hot path.
     val digest = buildString(32) {
         for (index in 0 until 16) {
             val byte = bytes[index].toInt() and 0xFF

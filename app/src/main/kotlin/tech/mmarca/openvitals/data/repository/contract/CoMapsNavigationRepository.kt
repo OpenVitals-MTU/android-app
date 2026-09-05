@@ -6,23 +6,14 @@ import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
 import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
 
 /**
- * What OpenVitals can learn from a CoMaps that is navigating, and the samples
- * it keeps per saved activity.
- *
- * CoMaps plans and navigates; OpenVitals records. Everything here READS what
- * CoMaps is already doing — it cannot start, stop or steer a route. Nothing
- * read from CoMaps is written to Health Connect; the saved samples are
- * app-local activity history.
+ * What OpenVitals can learn from a navigating CoMaps, and the samples kept
+ * per activity. Read-only; nothing is written to Health Connect.
  */
 interface CoMapsNavigationRepository {
     /** One reading of the live row, never throwing — failures become [CoMapsNavigationState.Error]. */
     suspend fun readLive(): CoMapsNavigationState
 
-    /**
-     * The live feed: an initial reading, then one per CoMaps `notifyChange`.
-     * A row only counts as guidance while CoMaps is still saying things about
-     * it — see the implementation's liveness window.
-     */
+    /** The live feed: an initial reading, then one per `notifyChange`. */
     fun watchLive(): Flow<CoMapsNavigationState>
 
     /** The followed route's polyline, or null when there is none to read. */

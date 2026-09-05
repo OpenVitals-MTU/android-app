@@ -30,13 +30,8 @@ import tech.mmarca.openvitals.ui.theme.StepsColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
 
 /**
- * Port of Flutter's `test/goldens/charts/metric_day_chart_golden_test.dart`.
- *
- * Flutter has one `MetricDayChart` with a `shape` switch; Kotlin split the two shapes
- * apart, so these shoot both halves: [IntradayActivityChartCard] for a running total
- * (the six-feature card), and [DayTimelineLinePlot] for raw readings plotted where
- * they were taken. The three shapes are already unit-tested as pure maths; what was
- * never verified is that any of it reaches the screen.
+ * Kotlin split the day chart in two: [IntradayActivityChartCard] for a running total and
+ * [DayTimelineLinePlot] for raw readings. The maths is unit-tested; this proves it reaches the screen.
  */
 class MetricDayChartGoldenTest {
 
@@ -67,12 +62,8 @@ class MetricDayChartGoldenTest {
 
     @Test
     fun cumulative_aDayThatHasNotFinishedHappening() {
-        // Flutter photographs this through the card, with a `now` it injects. Kotlin's
-        // card reads the wall clock, so a "today" fixture would draw a different
-        // picture every hour the suite runs; the plot underneath takes the end
-        // fraction directly, and that is the thing worth pinning — the line stops at
-        // 14:30 instead of being held out to the right edge, because the rest of the
-        // day has not happened.
+        // The card reads the wall clock, so the plot takes the end fraction directly:
+        // the line stops at 14:30 because the rest of the day has not happened.
         val endFraction = (14 * 60 + 30) / (24f * 60f)
         val fractions = STEPS.take(4).map { (time, value) -> dayFraction(time) to value }
 
@@ -104,9 +95,7 @@ class MetricDayChartGoldenTest {
 
     @Test
     fun rawReadings_plottedWhereTheyWereTaken() {
-        // A weight at 06:00 says nothing about midnight, and nothing about tonight:
-        // no zero anchor, no trailing hold, and the axis is padded around the data
-        // rather than floored at zero.
+        // A weight at 06:00: no zero anchor, no trailing hold, axis padded around the data.
         val weights = listOf(
             goldenInstantAt(7) to 74.2,
             goldenInstantAt(13) to 74.6,

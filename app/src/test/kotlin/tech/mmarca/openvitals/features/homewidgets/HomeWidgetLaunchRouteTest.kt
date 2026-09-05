@@ -18,13 +18,7 @@ import tech.mmarca.openvitals.navigation.EXTRA_OPENVITALS_ROUTE
 import tech.mmarca.openvitals.navigation.Screen
 import tech.mmarca.openvitals.openVitalsRoute
 
-/**
- * The launch extra a home-screen widget carries into MainActivity.
- *
- * It crosses a process boundary and outlives the app version that wrote it, so
- * the allow-list is the contract: anything not explicitly allowed is dropped
- * rather than pushed onto the navigator.
- */
+/** The launch extra a widget carries into MainActivity. Anything not on the allow-list is dropped. */
 class HomeWidgetLaunchRouteTest {
     @Before
     fun setUp() {
@@ -48,8 +42,7 @@ class HomeWidgetLaunchRouteTest {
 
     @Test
     fun `every route the snapshot builders write is on the allow-list`() {
-        // The builders and the allow-list are written apart; if one drifts, the
-        // widget tap silently becomes a no-op.
+        // The builders and the allow-list are written apart; if one drifts, the tap is a no-op.
         val today = LocalDate.of(2026, 7, 10)
         DashboardWidgetId.entries.forEach { metricId ->
             val route = homeMetricWidgetRoute(metricId, today)
@@ -103,9 +96,7 @@ class HomeWidgetLaunchRouteTest {
 
     @Test
     fun `a readiness widget placed before the merge lands on Body Energy`() {
-        // The Daily Readiness screen merged into the Body Energy view. The
-        // stored route string on an existing widget cannot change, so the
-        // mapping retargets it — to today, which is what the widget shows.
+        // The Daily Readiness screen merged into Body Energy. The stored route cannot change, so it is retargeted to today.
         val expected = Screen.BodyEnergyDetails.createRoute(LocalDate.now().toString())
 
         assertEquals(expected, migratedOpenVitalsRoute("daily_readiness"))

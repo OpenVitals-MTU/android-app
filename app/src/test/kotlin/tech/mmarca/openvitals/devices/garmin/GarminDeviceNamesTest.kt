@@ -11,8 +11,7 @@ class GarminDeviceNamesTest {
 
     @Test
     fun `matches the accented names the watches actually advertise`() {
-        // The exact string a vívoactive 5 puts in its advertisement — the
-        // device this feature was built from.
+        // The exact string a vívoactive 5 advertises.
         assertTrue(isGarminSyncDeviceName("vívoactive 5"))
         assertTrue(isGarminSyncDeviceName("fēnix 7X Pro"))
     }
@@ -37,9 +36,7 @@ class GarminDeviceNamesTest {
 
     @Test
     fun `does NOT match HRM chest straps`() {
-        // These expose the standard Heart Rate service and belong to the live
-        // sensor path — classifying one as a watch would silently break heart
-        // rate recording for anyone using one.
+        // These expose the standard Heart Rate service; classifying one as a watch would break heart rate recording.
         assertFalse(isGarminSyncDeviceName("HRM 200"))
         assertFalse(isGarminSyncDeviceName("HRMPro+:123456"))
         assertFalse(isGarminSyncDeviceName("HRM600:998877"))

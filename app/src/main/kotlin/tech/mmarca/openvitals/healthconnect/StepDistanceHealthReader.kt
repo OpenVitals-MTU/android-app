@@ -12,12 +12,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * The Health Connect boundary of the step-derived distance backfill.
- *
- * Reads the window's DistanceRecords, partitions them into records this
- * feature wrote (client id prefix AND our data origin — OpenVitals' own
- * manual-workout distance and records synced from a paired phone count as
- * foreign) and everything else, then applies [stepDistanceReconcileActions].
+ * The Health Connect boundary of the step-derived distance backfill: reads
+ * the window's DistanceRecords, partitions ours from foreign, and applies
+ * [stepDistanceReconcileActions].
  */
 internal class StepDistanceHealthReader(
     private val support: HealthConnectReaderSupport,
@@ -112,8 +109,7 @@ internal class StepDistanceHealthReader(
     private fun StepDistanceUpsert.toRecord(zone: ZoneId, now: Instant): DistanceRecord {
         val startInstant = day.atStartOfDay(zone).toInstant()
         val nextMidnight = day.plusDays(1).atStartOfDay(zone).toInstant()
-        // Today's record must not end in the future; later runs upsert it as
-        // the day grows.
+        // Today's record must not end in the future.
         val endInstant = minOf(nextMidnight, now).coerceAtLeast(startInstant.plusSeconds(1))
         return DistanceRecord(
             startTime = startInstant,
@@ -121,10 +117,7 @@ internal class StepDistanceHealthReader(
             endTime = endInstant,
             endZoneOffset = zone.rules.getOffset(endInstant),
             distance = meters.meters,
-            // clientRecordVersion must strictly increase across runs: Health
-            // Connect replaces on clientRecordId only when the version is
-            // higher, and equal-version behavior is unspecified. Do not
-            // "simplify" to a constant.
+            // clientRecordVersion must strictly increase: equal-version behaviour is unspecified.
             metadata = Metadata.manualEntry(
                 device = Device(type = Device.TYPE_PHONE),
                 clientRecordId = "$StepDistanceClientRecordIdPrefix$day",

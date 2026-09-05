@@ -92,8 +92,7 @@ class HydrationReminderScheduleTest {
             lastIntake = lastIntake,
         )
 
-        // 06:00 is before the 07:00 window start, so the chain runs 08:00 (start
-        // plus interval) → 09:00 → 10:00 → 11:00, the first strictly after now.
+        // 06:00 is before the 07:00 window start, so the chain runs 08:00, 09:00, 10:00, 11:00.
         assertEquals(at(hour = 11, minute = 0), next)
     }
 

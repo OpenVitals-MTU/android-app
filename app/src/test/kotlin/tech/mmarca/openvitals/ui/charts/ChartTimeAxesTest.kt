@@ -24,7 +24,7 @@ import java.time.ZoneOffset
 
 class ChartTimeAxesTest {
 
-    // ── Day axis labels ─────────────────────────────────────────────────────
+    // Day axis labels.
 
     @Test
     fun `full viewport gives the classic five hour labels`() {
@@ -51,13 +51,8 @@ class ChartTimeAxesTest {
         assertEquals("21:36", labels.last())
     }
 
-    // ── The day axis itself ─────────────────────────────────────────────────
-    //
-    // The rule every intraday chart obeys, pinned in one place. This is the
-    // regression for a bug that shipped on five screens at once: each card scaled
-    // x by the time ELAPSED so far, then drew a fixed 00:00 / 06:00 / 12:00 /
-    // 18:00 row underneath. Opened at 12:49, a drink at 09:29 was drawn at 74% of
-    // the width — under the label that says quarter past five.
+    // The day axis itself. Five screens once scaled x by the time elapsed and drew a fixed
+    // 00:00 / 06:00 / 12:00 / 18:00 row underneath, so a 09:29 drink landed under 17:15.
 
     private val day = LocalDate.of(2026, 6, 22)
     private val dayStart = day.atStartOfDay(ZoneOffset.UTC).toInstant()
@@ -68,9 +63,7 @@ class ChartTimeAxesTest {
 
     @Test
     fun `places a time at its real hour, not at its share of the elapsed day`() {
-        // The chart is open at 12:49 — the exact case from the bug report. 09:29
-        // is 39.5% of the way through the DAY; the old maths made it 74% of the
-        // way through the part of the day that had happened.
+        // Open at 12:49: 09:29 is 39.5% of the day. The old maths made it 74%.
         assertEquals(0.395f, axisFractionOf(dayStart, dayEnd, at(9, 29)), 0.001f)
     }
 
@@ -105,8 +98,7 @@ class ChartTimeAxesTest {
 
     @Test
     fun `honours the injected clock rather than the wall clock`() {
-        // `now` in the future: the day under test is not today, whatever the
-        // machine running the test happens to think.
+        // `now` in the future, so the day under test is not today.
         val distantFuture = LocalDate.of(2030, 1, 1).atStartOfDay(ZoneOffset.UTC).toInstant()
         assertFalse(isDayToday(dayStart, dayEnd, distantFuture))
         assertTrue(isDayToday(dayStart, dayEnd, at(9)))
@@ -115,7 +107,7 @@ class ChartTimeAxesTest {
         assertFalse(isDayToday(dayStart, dayEnd, dayEnd))
     }
 
-    // ── Session axis ────────────────────────────────────────────────────────
+    // Session axis.
 
     private val start = Instant.parse("2026-08-01T10:00:00Z")
 
@@ -142,9 +134,7 @@ class ChartTimeAxesTest {
 
     @Test
     fun `spans the recorded session, not the samples that exist`() {
-        // A trace whose sensor died twenty minutes into an hour-long ride must
-        // stop a third of the way across. Normalizing against the samples instead
-        // would stretch it to the right edge and imply an hour of readings.
+        // A sensor that died twenty minutes into an hour must stop a third of the way across.
         val axis = SessionAxis(start = start, end = start.plusSeconds(3600))
         assertEquals(1f / 3f, axis.fractionOf(start.plusSeconds(1200)), 1e-6f)
     }
@@ -177,8 +167,7 @@ class ChartTimeAxesTest {
 
     @Test
     fun `the scrubber and the labels agree, both in moving time`() {
-        // 60 wall-clock minutes with a 30-minute pause in the middle: half the
-        // axis is 15 moving minutes, and the row underneath says so too.
+        // 60 wall-clock minutes with a 30-minute pause: half the axis is 15 moving minutes.
         val axis = SessionAxis(
             start = start,
             end = start.plusSeconds(3600),
@@ -272,7 +261,7 @@ class ChartTimeAxesTest {
         assertEquals("2:05:07", formatElapsedChartLabel(Duration.ofSeconds(7507)))
     }
 
-    // ── Clock axis ──────────────────────────────────────────────────────────
+    // Clock axis.
 
     @Test
     fun `time axis instants at full zoom are start, middle and end`() {
@@ -292,7 +281,7 @@ class ChartTimeAxesTest {
         )
     }
 
-    // ── Day fractions and the cumulative shape ──────────────────────────────
+    // Day fractions and the cumulative shape.
 
     @Test
     fun `axisFractionOf places a moment against the whole span and clamps outside it`() {
@@ -321,9 +310,7 @@ class ChartTimeAxesTest {
 
     @Test
     fun `only the real entries carry dots — the anchor and hold are synthetic`() {
-        // The dot at the end of the hydration day line read as an entry nobody
-        // made (#250): the trailing hold at "now" and the midnight anchor shape
-        // the line but must not be marked like the drinks are.
+        // The trailing hold at "now" and the midnight anchor shape the line but must not be marked as entries (#250).
         val points = cumulativeDayPlotPoints(
             fractions = listOf(0.2f to 1.0, 0.4f to 3.0),
             endFraction = 0.55f,
@@ -333,9 +320,7 @@ class ChartTimeAxesTest {
 
     @Test
     fun `cumulative on today stops at now, not at the right edge`() {
-        // 400 ml logged at 06:00, the chart open at noon. Held out to midday —
-        // the afternoon has not happened, and a line drawn across it would be a
-        // claim about the future.
+        // 400 ml at 06:00, open at noon. Held out to midday; a line across the afternoon claims the future.
         val points = cumulativeDayPlotPoints(
             fractions = listOf(axisFractionOf(dayStart, dayEnd, at(6)) to 400.0),
             endFraction = dayEndFraction(dayStart, dayEnd, at(12)),
@@ -354,8 +339,7 @@ class ChartTimeAxesTest {
             value = { it.second },
         )
 
-        // No midnight anchor, no trailing hold: a weight at 06:00 says nothing
-        // about midnight, and nothing about tonight.
+        // No midnight anchor, no trailing hold: a weight at 06:00 says nothing about midnight.
         assertEquals(2, points.size)
         assertEquals(0.25f, points.first().xFraction, 1e-6f)
         assertEquals(70.0, points.first().value, 0.0)
@@ -382,7 +366,7 @@ class ChartTimeAxesTest {
         assertTrue(cumulativeDayPlotPoints(emptyList(), 0.5f).isEmpty())
     }
 
-    // ── Viewport culling ────────────────────────────────────────────────────
+    // Viewport culling.
 
     private fun plotPoints(vararg fractions: Float) =
         fractions.map { MetricLinePlotPoint(it, 1.0) }
@@ -403,8 +387,7 @@ class ChartTimeAxesTest {
     @Test
     fun `a window inside a gap between samples culls to nothing`() {
         val points = plotPoints(0f, 0.1f, 0.9f, 1f)
-        // 0.4..0.5 falls entirely between 0.1 and 0.9: outside-left points fail
-        // the right test and vice versa, so the plot draws nothing there.
+        // 0.4..0.5 falls between 0.1 and 0.9, so the plot draws nothing.
         assertTrue(cullPlotPoints(points, ChartViewport(start = 0.4f, end = 0.5f)).isEmpty())
     }
 }

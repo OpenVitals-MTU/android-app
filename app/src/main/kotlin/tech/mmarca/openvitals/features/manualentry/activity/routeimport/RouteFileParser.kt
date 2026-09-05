@@ -25,18 +25,7 @@ data class RouteFileImport(
     val name: String? = null,
     val description: String? = null,
     val type: String? = null,
-    /**
-     * The per-second series the file recorded: heart rate, cadence, speed.
-     *
-     * A FIT import used to arrive with a route and NOTHING else — the parser
-     * read only lat/long/altitude off each `record` message and threw away the
-     * heart rate, the cadence and the speed sitting beside them. So an imported
-     * activity had no graphs at all, and an indoor ride (no GPS) had nothing
-     * whatsoever.
-     *
-     * Named for the BLE recorder because it is the same series and the same
-     * write path; the source is the file, not a sensor.
-     */
+    /** The per-second series the file recorded. Named for the BLE recorder: same series, same write path. */
     val bleSamples: BleRecordingSampleBuffer = BleRecordingSampleBuffer(),
     val hasRecordedTimestamps: Boolean = true,
     val hasImportedTimeRange: Boolean = true,
@@ -56,11 +45,7 @@ class RouteFileImporter @Inject constructor(
         RouteFileParser.parseFile(routeBytes, fileName = fileName)
     }
 
-    /**
-     * The nightly HRV readings a Garmin wellness FIT carries — the fallback for
-     * a FIT file that failed to parse as an activity. Empty for non-FIT files
-     * and for FIT files with no HRV summary.
-     */
+    /** The nightly HRV readings a wellness FIT carries: the fallback for a non-activity FIT. */
     internal suspend fun importFitWellnessHrv(uri: Uri): List<FitHrvReading> = withContext(Dispatchers.IO) {
         val bytes = context.contentResolver.openInputStream(uri)
             ?.use { it.readBytesBounded(MaxRouteFileBytes, "Activity file is too large.") }
@@ -89,12 +74,7 @@ internal object RouteFileParser {
                 fileName.hasExtension("kml") || routeText.contains("<kml", ignoreCase = true) -> {
                     KmlRouteParser.parse(routeText, fileName = fileName)
                 }
-                // Before the GPX fallback, and that ORDER is the fix. A TCX is
-                // XML, so it used to fall through to the GPX parser, which found
-                // no `trkpt` and threw "GPX route must contain at least 2
-                // timestamped location points" — the message users reported when
-                // importing an indoor activity, on a file that was never a GPX
-                // and carried a perfectly complete session.
+                // Before the GPX fallback: a TCX is XML and used to fall through to the GPX parser.
                 fileName.hasExtension("tcx") || TcxRouteParser.looksLikeTcx(routeText) -> {
                     TcxRouteParser.parse(routeText, fileName = fileName)
                 }

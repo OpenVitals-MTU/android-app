@@ -11,20 +11,9 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 
 /**
- * The outdoor half of Flutter's `the outdoor toggle applies the high-contrast
- * theme` (`test/features/manualentry/activity/recording/activity_recording_screen_test.dart`).
- *
- * That case does two things: it flips the toggle, and it then reads the
- * `ColorScheme` back out of the widget tree to prove the high-contrast scheme
- * is what the recording surface is actually painted with. The flip is pinned
- * through the screen in `ActivityRecordingScreenTest`; the scheme itself is
- * pinned here, where it is installed.
- *
- * It is worth pinning separately because outdoor mode is not decoration. It is
- * for reading a number in direct sunlight at arm's length, and the contrast
- * ratio is the whole feature — a theme that silently stopped being applied
- * would look perfectly fine indoors, on every device a developer holds, and be
- * unreadable exactly where it is needed.
+ * The high-contrast scheme the recording surface is painted with in outdoor mode.
+ * The flip is pinned in `ActivityRecordingScreenTest`; the scheme is pinned here.
+ * A theme that silently stopped applying would look fine indoors.
  */
 class ActivityRecordingThemeTest {
 
@@ -43,9 +32,7 @@ class ActivityRecordingThemeTest {
 
     @Test
     fun outdoorModeOnADarkThemeStaysDarkRatherThanFlashingWhite() {
-        // Someone who has asked for a dark app has usually asked for it because
-        // of when they use it. Answering "outdoor" with a white screen at night
-        // would be the wrong high contrast.
+        // Answering "outdoor" with a white screen at night would be the wrong high contrast.
         val (scheme, accent) = schemeUnder(outdoorMode = true, appThemeMode = AppThemeMode.DARK)
 
         assertEquals(RecordingOutdoorDarkColorScheme.primary, scheme.primary)
@@ -55,8 +42,7 @@ class ActivityRecordingThemeTest {
 
     @Test
     fun withoutOutdoorModeTheAppsOwnThemeIsLeftAlone() {
-        // The recording screen is the only place this scheme exists; leaking it
-        // into an ordinary session would repaint the app for everyone.
+        // The scheme must not leak into an ordinary session.
         val (scheme, accent) = schemeUnder(outdoorMode = false, appThemeMode = AppThemeMode.LIGHT)
 
         assertEquals(WorkoutColor, accent)

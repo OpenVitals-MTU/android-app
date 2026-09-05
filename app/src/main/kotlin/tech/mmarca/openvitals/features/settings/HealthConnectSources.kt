@@ -3,14 +3,8 @@ package tech.mmarca.openvitals.features.settings
 import java.time.Instant
 
 /**
- * One app or device contributing data to Health Connect, as seen across the
- * metrics OpenVitals reads. Pure attribution: [packageName] is the writing
- * app's package name from each record's dataOrigin.
- *
- * This is a diagnostic, not a registry device — a WearOS watch reaches the
- * phone through its vendor app (Samsung Health, …), so what shows up here is
- * the bridging app's package, not the watch itself. It is how we tell, after
- * pairing a watch, whether its data is actually landing in Health Connect.
+ * One app contributing to Health Connect. A diagnostic: a WearOS watch
+ * shows up as its vendor app's package.
  */
 data class HealthConnectSource(
     val packageName: String,
@@ -37,10 +31,7 @@ data class HealthConnectSource(
     }
 }
 
-/**
- * Folds (source, time) observations grouped per metric into a source list,
- * most-recent contribution first. Pure — the caller feeds it real reads.
- */
+/** Folds (source, time) observations per metric into a list, most recent first. */
 fun aggregateHealthConnectSources(
     byMetric: Map<String, List<Pair<String, Instant>>>,
 ): List<HealthConnectSource> {

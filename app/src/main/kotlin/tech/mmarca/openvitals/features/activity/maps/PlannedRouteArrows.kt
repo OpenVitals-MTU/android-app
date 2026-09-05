@@ -6,14 +6,7 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
 
-/**
- * A direction arrow on the planned route, shaped the way CoMaps shapes its
- * own: a short white shaft that FOLLOWS the line into the bend and out of it,
- * ending in a head that points the way on.
- *
- * A straight marker sitting on the corner reads as a label; an arrow bent
- * through the corner reads as the manoeuvre itself.
- */
+/** A direction arrow on the planned route, CoMaps-style: a shaft bent through the bend, a head pointing on. */
 internal class PlannedRouteArrow(
     /** Interleaved `lat, lon`: entry arm, the corner, exit arm. */
     val shaft: DoubleArray,
@@ -24,11 +17,7 @@ internal class PlannedRouteArrow(
     val bearingDegrees: Float,
 )
 
-/**
- * The bends of the route: one bent arrow wherever the polyline turns by
- * [minTurnDegrees] or more. Derived from geometry alone — the provider shares
- * geometry, not manoeuvres — which is exactly what a turn is geometrically.
- */
+/** The bends of the route: one arrow wherever the polyline turns by [minTurnDegrees] or more. */
 internal fun plannedRouteTurnArrows(
     polyline: CoMapsRoutePolyline?,
     minTurnDegrees: Double = 30.0,
@@ -50,8 +39,7 @@ internal fun plannedRouteTurnArrows(
         val turn = ((bearingOut - bearingIn + 540.0) % 360.0) - 180.0
         if (abs(turn) < minTurnDegrees) continue
 
-        // The arms reach back along the incoming segment and on along the
-        // outgoing one — at most [armMeters], never past the next corner.
+        // The arms reach at most [armMeters] each way, never past the next corner.
         val entry = interpolateTowards(
             fromLat = cornerLat, fromLon = cornerLon,
             toLat = polyline.latitudeAt(index - 1), toLon = polyline.longitudeAt(index - 1),
@@ -72,10 +60,7 @@ internal fun plannedRouteTurnArrows(
     return arrows
 }
 
-/**
- * The point [meters] from `from` towards `to`, capped at 80% of the way so
- * an arm never swallows the next corner.
- */
+/** The point [meters] from `from` towards `to`, capped at 80% so an arm never swallows the next corner. */
 private fun interpolateTowards(
     fromLat: Double,
     fromLon: Double,
@@ -106,11 +91,7 @@ private fun distanceMeters(
     return hypot(east, north) * MetersPerDegree
 }
 
-/**
- * Initial bearing from one point to the next, degrees clockwise from north,
- * or null for a degenerate pair. Equirectangular: exact enough for the
- * road-length segments this is fed.
- */
+/** Initial bearing, degrees clockwise from north, or null for a degenerate pair. */
 private fun bearingDegrees(
     latitudeA: Double,
     longitudeA: Double,

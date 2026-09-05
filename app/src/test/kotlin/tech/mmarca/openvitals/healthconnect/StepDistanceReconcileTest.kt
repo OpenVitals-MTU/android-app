@@ -5,12 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The per-day decision table of the step-derived distance backfill. A wrong
- * branch either double-counts distance (derived record beside real data) or
- * deletes records outside the readable window that the next run cannot
- * rebuild, so every branch is pinned.
- */
+/** The per-day decision table of the step-derived distance backfill. A wrong branch double-counts or deletes unrebuildable records. */
 class StepDistanceReconcileTest {
 
     private fun d(n: Int): LocalDate = LocalDate.of(2026, 8, 1).plusDays((n - 1).toLong())

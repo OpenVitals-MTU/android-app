@@ -76,13 +76,7 @@ import kotlin.reflect.KClass
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Facade over Health Connect services.
- *
- * Public methods stay feature-oriented for repositories and ViewModels, while
- * permissions, availability, paging, reading, and mapping live in focused
- * Health Connect boundary classes.
- */
+/** Facade over Health Connect. Feature-oriented methods; the boundary work lives in focused classes. */
 @Singleton
 class HealthConnectManager @Inject constructor(
     @param:ApplicationContext private val context: Context,
@@ -164,12 +158,7 @@ class HealthConnectManager @Inject constructor(
     fun availability(): HealthConnectAvailability =
         availabilityService.availability()
 
-    /**
-     * How much longer Health Connect is refusing this app's reads, or 0.
-     *
-     * Reads no longer sit out a long backoff (see [HealthConnectReaderSupport]),
-     * so a screen that came back thin needs this to say why.
-     */
+    /** How much longer Health Connect is refusing reads, or 0. Screens use it to say why they are thin. */
     fun rateLimitRetryAfterMillis(): Long =
         HealthConnectRateLimitBackoff.remainingMillis()
 
@@ -724,11 +713,7 @@ class HealthConnectManager @Inject constructor(
         withSyncEnabled { client().insertRecords(records) }
     }
 
-    /**
-     * Reads every record of [recordType] in `[start, end)` for the
-     * phone-to-phone sync feature. Type-agnostic by design — sync moves all
-     * negotiated record types through one paged read path.
-     */
+    /** Every record of [recordType] in `[start, end)`, for phone-to-phone sync. Type-agnostic. */
     suspend fun forEachSyncRecordPage(
         recordType: KClass<out Record>,
         start: Instant,
@@ -758,13 +743,8 @@ class HealthConnectManager @Inject constructor(
             )
             for (record in response.records) {
                 val clientRecordId = record.metadata.clientRecordId ?: continue
-                // No namespace filter: [wantedIds] is already the authority, and
-                // it is built from the caller's own batch. A hardcoded
-                // "apple_health_" prefix check used to sit here, which meant the
-                // CSV importer — whose ids are minted "csv_<slug>_<hex>" — had
-                // every candidate discarded before this line and could never
-                // find a duplicate. Re-importing the same file then reported
-                // "already present 0" for records Health Connect was holding.
+                // No namespace filter: [wantedIds] is the authority. A hardcoded
+                // "apple_health_" check here once hid every CSV duplicate.
                 if (clientRecordId in wantedIds) {
                     matches += clientRecordId
                 }

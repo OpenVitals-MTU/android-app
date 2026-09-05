@@ -6,22 +6,9 @@ import kotlin.math.pow
 import org.junit.Test
 
 /**
- * Every metric accent clears WCAG 1.4.11's 3:1 floor against both surfaces.
- *
- * This measures rather than pins. A test that asserted the hex values would
- * pass just as happily on a palette someone had brightened — and brightening is
- * precisely the regression this palette exists to fix. The accents are drawn as
- * chart strokes, icons and small indicators, so 3:1 for graphical objects is
- * the binding rule.
- *
- * The history, from the design system's audit: the stock Material-500 swatches
- * this app used to ship failed on **eight of seventeen**, with floors/amber at
- * **1.59:1**. There is very little headroom in the replacement — the worst case
- * is 3.09 — so a change of a few points in the wrong direction reintroduces the
- * defect silently. Hence this runs on every build.
- *
- * Only the two STATIC surfaces bind. Dynamic colour re-tints the chrome but
- * leaves these fixed, and AMOLED's near-black only ever increases contrast.
+ * Every metric accent clears WCAG 1.4.11's 3:1 floor against both static surfaces.
+ * This measures rather than pins hex values, because brightening is the regression.
+ * The stock Material-500 swatches failed on eight of seventeen; the worst case now is 3.09.
  */
 class MetricAccentContrastTest {
 
@@ -48,9 +35,7 @@ class MetricAccentContrastTest {
 
     @Test
     fun `the palette keeps the headroom the audit left it`() {
-        // The worst case is documented as 3.09:1. If this drops, someone has
-        // taken the last of the margin; if it climbs a lot, the palette has
-        // been changed wholesale and wants re-auditing rather than a nudge here.
+        // The worst case is 3.09:1. A drop takes the last of the margin; a big climb wants re-auditing.
         val worst = MetricAccents.minOf { (_, color) ->
             minOf(contrastRatio(color, LightSurface), contrastRatio(color, DarkSurface))
         }
@@ -62,8 +47,7 @@ class MetricAccentContrastTest {
 
     @Test
     fun `the contrast maths agrees with a known pair`() {
-        // Guards the guard: black on white is exactly 21:1 by definition, so a
-        // broken luminance function cannot quietly pass everything above.
+        // Guards the guard: black on white is exactly 21:1 by definition.
         assertWithMessage("black on white must be 21:1")
             .that(contrastRatio(Color(0xFF000000), Color(0xFFFFFFFF)))
             .isWithin(0.01)

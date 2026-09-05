@@ -32,19 +32,12 @@ import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.navigation.WATCH_DEVICE_ID_ARG
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
 
-/**
- * Everything the device view shows about one watch: the registry row, its
- * declared GFDI capabilities, and the shared sync/find state.
- */
+/** Everything the device view shows about one watch. */
 @Immutable
 data class WatchDeviceUiState(
     /** Null while loading and after removal — the screen shows its no-data state. */
     val device: BleSensorDevice? = null,
-    /**
-     * What the watch declared in its last handshake. Empty for a watch that
-     * has never synced — which the screen must read as "unknown", not "none":
-     * see [supports].
-     */
+    /** What the watch declared in its last handshake. Empty means unknown, not none; see [supports]. */
     val capabilities: Set<GarminCapability> = emptySet(),
     val sync: DeviceSyncUiState = DeviceSyncUiState(),
     val find: WatchFindUiState = WatchFindUiState(),
@@ -73,20 +66,12 @@ data class WatchDeviceUiState(
     /** The result of the last ephemeris import, until the next one. */
     @StringRes val agpsMessage: Int? = null,
 ) {
-    /**
-     * Whether the watch declared [capability]. Unknown means SHOW, not hide:
-     * capabilities arrive in a handshake, so a watch that has never synced
-     * would otherwise look feature-less.
-     */
+    /** Whether the watch declared [capability]. Unknown means show: a never-synced watch has no list. */
     fun supports(capability: GarminCapability): Boolean =
         capabilities.isEmpty() || capability in capabilities
 }
 
-/**
- * One watch, and everything about it. Port of the Flutter build's
- * `watch_device_screen.dart` state wiring (`ble_devices_view_model` +
- * `device_sync_view_model` + `garmin_watch_actions_view_model` slices).
- */
+/** One watch, and everything about it. */
 @HiltViewModel
 class WatchDeviceViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -110,11 +95,7 @@ class WatchDeviceViewModel @Inject constructor(
 
     val deviceId: String = savedStateHandle.get<String>(WATCH_DEVICE_ID_ARG).orEmpty()
 
-    /**
-     * Deliberately outlives the view-model (never cancelled in onCleared):
-     * the OS-level unbond after a removal is housekeeping that must not die
-     * with the screen that popped right after asking for it.
-     */
+    /** Outlives the view-model: the unbond after a removal must not die with the screen. */
     private val housekeepingScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val localState = MutableStateFlow(WatchDeviceUiState())
@@ -151,11 +132,7 @@ class WatchDeviceViewModel @Inject constructor(
         .combine(agpsStore.agps) { state, agps -> state.copy(agps = agps) }
         .stateInViewModel(initial = WatchDeviceUiState())
 
-    /**
-     * Takes in an ephemeris file the user downloaded. What it is comes from
-     * its contents, so there is nothing to ask them about — either it is
-     * usable or the message says why it is not.
-     */
+    /** Takes in an ephemeris file. Its contents say what it is; the message says why not. */
     fun importAgps(uri: android.net.Uri) {
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) { agpsStore.import(uri) }
@@ -177,30 +154,19 @@ class WatchDeviceViewModel @Inject constructor(
         localState.update { it.copy(agpsMessage = null) }
     }
 
-    /**
-     * Companion mode. The bridge owns the behaviour — the pref, presence
-     * observation and the held link all change together there.
-     */
+    /** Companion mode. The bridge owns the pref, presence observation and the held link together. */
     fun setLiveReadings(enabled: Boolean) {
         notificationBridge.onLiveReadingsChanged(deviceId, enabled)
         localState.update { it.copy(liveReadings = enabled) }
     }
 
-    /**
-     * Turns the calendar glance on or off. The screen asks for READ_CALENDAR
-     * first when it needs to; a toggle set with the permission denied still
-     * sticks, and the state shows the missing grant instead of lying.
-     */
+    /** Turns the calendar glance on or off. A toggle set with the permission denied still sticks. */
     fun setCalendarSync(enabled: Boolean) {
         stateStore.setCalendarSync(deviceId, enabled)
         localState.update { it.copy(calendarSync = enabled) }
     }
 
-    /**
-     * Shows or stops showing live CoMaps guidance on the watch. Nothing here
-     * asks about activity recording: this switch is the whole of the feature,
-     * and it works whether or not a session is running.
-     */
+    /** Shows live CoMaps guidance on the watch. Works whether or not a session is running. */
     fun setNavigationOnWatch(enabled: Boolean) {
         navigationRelay.onEnabledChanged(deviceId, enabled)
         localState.update {
@@ -214,11 +180,7 @@ class WatchDeviceViewModel @Inject constructor(
     /** The flavour-specific CoMaps permission to request, null without a CoMaps installed. */
     fun coMapsPermissionName(): String? = coMapsNavigationRepository.permissionName()
 
-    /**
-     * Re-checks CoMaps' grant after its dialog closes, and re-opens the feed
-     * with it: the observer registered before the grant was refused, and stays
-     * refused.
-     */
+    /** Re-checks CoMaps' grant after its dialog and re-opens the feed: a refused observer stays refused. */
     fun refreshCoMapsPermission() {
         coMapsGuidanceFeed.refresh()
         localState.update {
@@ -236,17 +198,11 @@ class WatchDeviceViewModel @Inject constructor(
 
     fun setStayConnected(enabled: Boolean) {
         notificationBridge.onStayConnectedChanged(deviceId, enabled)
-        // The combine re-reads the pref on its next emission; poke it so the
-        // switch reflects the change immediately rather than on the next
-        // device event.
+        // Poke the combine so the switch reflects the change immediately.
         localState.update { it.copy(stayConnected = enabled) }
     }
 
-    /**
-     * Picks how often the watch syncs on its own. The scheduler owns both
-     * halves — the stored choice and the periodic work — so this cannot leave
-     * one saying something the other does not.
-     */
+    /** Picks the auto-sync interval. The scheduler owns the stored choice and the periodic work. */
     fun setAutoSync(interval: AutoSyncInterval) {
         autoSyncScheduler.setInterval(deviceId, interval)
         localState.update { it.copy(autoSync = interval) }
@@ -272,11 +228,9 @@ class WatchDeviceViewModel @Inject constructor(
     }
 
     /**
-     * Probes a live-sensor-capable device (an Edge bike computer) for the
-     * standard GATT services it is broadcasting RIGHT NOW, and persists the
-     * result as its capabilities so the recording coordinator will connect to
-     * it. Run from the device card, not onboarding: broadcast mode is usually
-     * only on during a ride.
+     * Probes a bike computer for the GATT services it is broadcasting now and
+     * persists them as capabilities. From the device card: broadcast mode is
+     * usually only on during a ride.
      */
     fun detectBroadcastSensors() {
         val device = deviceRepository.devices.firstOrNull { it.id == deviceId } ?: return
@@ -284,9 +238,7 @@ class WatchDeviceViewModel @Inject constructor(
         localState.update { it.copy(isDetectingSensors = true, detectFoundNothing = false) }
         viewModelScope.launch {
             val found = sensorCoordinator.discoverCapabilities(device.address)
-            // The already-assigned capabilities are the fallback when the
-            // connect finds nothing (e.g. broadcast mode turned off
-            // mid-detect) — mirroring the Flutter discovery use case.
+            // The assigned capabilities are the fallback when the connect finds nothing.
             val capabilities = found.ifEmpty { device.capabilities }
             if (capabilities != device.capabilities) {
                 deviceRepository.updateDevice(deviceId = deviceId, capabilities = capabilities)
@@ -297,18 +249,12 @@ class WatchDeviceViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Removes the watch: registry row, Garmin per-device state, and — fire
-     * and forget — the OS-level bond/association through whichever
-     * integration owns it. Mirrors the Flutter `removeDevice` branches.
-     */
+    /** Removes the watch: registry row, Garmin state, and the OS-level bond, fire and forget. */
     fun removeDevice() {
-        // Read the device BEFORE forgetting it — the OS-level cleanup needs
-        // its address, which the registry is about to stop holding.
+        // Read the device before forgetting it: the OS cleanup needs its address.
         val device = deviceRepository.devices.firstOrNull { it.id == deviceId }
         deviceRepository.removeDevice(deviceId)
-        // Before the early return: a schedule left running against a watch the
-        // registry no longer knows would wake the radio for nothing.
+        // Before the early return: a schedule left running would wake the radio for nothing.
         autoSyncScheduler.forget(deviceId)
         if (device == null) return
         if (device.isGarminGfdi) {

@@ -8,11 +8,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * [sleepSessionHasReliableStages] — telling a fully-staged night from one a
- * device (or an in-progress sync) only staged part of, so a near-empty
- * hypnogram is replaced by a note instead of drawn.
- */
+/** [sleepSessionHasReliableStages]: a partly staged night gets a note instead of a near-empty hypnogram. */
 class SleepStageCoverageTest {
 
     private val start: Instant =
@@ -49,8 +45,7 @@ class SleepStageCoverageTest {
     }
 
     @Test fun `a tail-only session is not reliable`() {
-        // The real symptom: an 8h span with stages only in the last ~90 minutes,
-        // which draws as an empty chart with a fragment at the right edge.
+        // The real symptom: an 8h span with stages only in the last ~90 minutes.
         val partial = session(listOf(stage(SleepStage.STAGE_LIGHT, 384, 466))) // 06:44-08:06
         assertFalse(sleepSessionHasReliableStages(partial))
     }
