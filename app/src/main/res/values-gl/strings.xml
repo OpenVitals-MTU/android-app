@@ -1419,22 +1419,7 @@ Sincroniza unha báscula ou un wearable que envíe o peso a Health Connect.</str
 * Hidratación
 * Nutrición</string>
     <string name="onboarding_category_manual_entry_write">Acceso de escritura para entradas manuais</string>
-    <string name="onboarding_category_manual_entry_write_desc">Health Connect pedirá acceso de escritura a:
-* Exercicio
-* Distancia
-* Desnivel acumulado
-* Calorías activas queimadas
-* Calorías totais queimadas
-* Ruta de exercicio
-* Hidratación
-* Peso
-* Altura
-* Graxa corporal
-* Presión arterial
-* Saturación de osíxeno
-* Frecuencia respiratoria
-* Temperatura corporal
-* Atención plena, cando sexa compatible</string>
+    <string name="onboarding_category_manual_entry_write_desc">Health Connect pedirá acceso de escritura a: * Exercicio * Distancia * Desnivel acumulado * Calorías activas queimadas * Calorías totais queimadas * Ruta de exercicio * Hidratación * Peso * Altura * Graxa corporal * Presión arterial * Saturación de osíxeno * Frecuencia respiratoria * Temperatura corporal * Atención plena, cando sexa compatible</string>
     <string name="onboarding_category_data_import_write">Acceso de escritura para importación de datos</string>
     <string name="onboarding_category_data_import_write_desc">Health Connect pedirá acceso de escritura para rexistros importados:
 * Actividade, exercicio, calorías e distancia
