@@ -61,6 +61,12 @@ class HomeWidgetRefreshTriggerTest {
             .containsExactlyElementsIn(declared)
     }
 
+    @Test
+    fun `every receiver has an in-process refresher`() {
+        // The worker refreshes by this map, so a receiver missing here never refreshes in the background.
+        assertThat(HomeWidgetRefreshers.keys).containsExactlyElementsIn(HomeWidgetReceivers)
+    }
+
     private companion object {
         val MANIFEST_WIDGET_RECEIVER =
             Regex("""<receiver[^>]*android:name="([^"]+)"[^>]*>(.*?)</receiver>""", RegexOption.DOT_MATCHES_ALL)

@@ -142,6 +142,17 @@ class HomeMetricWidgetReceiver : GlanceAppWidgetReceiver() {
             }
         }
     }
+
+    // The schedule follows the placed widgets: see HomeWidgetRefreshScheduler.
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        homeWidgetRefreshScheduler(context).reconcile()
+    }
+
+    override fun onDisabled(context: Context) {
+        super.onDisabled(context)
+        homeWidgetRefreshScheduler(context).reconcile()
+    }
 }
 
 object HomeMetricWidgetState {
@@ -770,7 +781,13 @@ interface HomeMetricWidgetEntryPoint {
     fun preferencesRepository(): PreferencesRepository
     fun bodyEnergyRepository(): BodyEnergyRepository
     fun unitFormatter(): UnitFormatter
+    fun homeWidgetRefreshScheduler(): HomeWidgetRefreshScheduler
 }
+
+/** The background refresh schedule, reached from a receiver. */
+internal fun homeWidgetRefreshScheduler(context: Context): HomeWidgetRefreshScheduler =
+    EntryPointAccessors.fromApplication(context.applicationContext, HomeMetricWidgetEntryPoint::class.java)
+        .homeWidgetRefreshScheduler()
 
 internal val WidgetBackground = Color(0xFF101820)
 internal val WidgetPrimaryText = Color(0xFFF7FAFC)

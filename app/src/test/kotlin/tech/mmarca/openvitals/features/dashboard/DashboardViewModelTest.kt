@@ -31,6 +31,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.data.repository.dashboard.DashboardDataLoader
 import tech.mmarca.openvitals.data.sync.HistorySyncScheduler
+import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
@@ -1372,6 +1373,31 @@ class DashboardViewModelTest {
         assertNotNull(vm.uiState.value.data)
     }
 
+    @Test fun `a settled read of today redraws the home widgets`() = runTest {
+        val loader = mockDashboardDataLoader()
+        loader.answersEveryPassWith(DashboardData(date = today, steps = 8_000))
+        val widgetRefresh = mockk<HomeWidgetRefreshScheduler>(relaxed = true)
+
+        dashboardViewModel(loader = loader, prefs = prefs(), homeWidgetRefreshScheduler = widgetRefresh)
+        advanceUntilIdle()
+
+        verify(exactly = 1) { widgetRefresh.refreshNow() }
+    }
+
+    @Test fun `a read of a past day leaves the home widgets alone`() = runTest {
+        val loader = mockDashboardDataLoader()
+        loader.answersEveryPassWith(DashboardData(date = today, steps = 8_000))
+        val widgetRefresh = mockk<HomeWidgetRefreshScheduler>(relaxed = true)
+        val vm = dashboardViewModel(loader = loader, prefs = prefs(), homeWidgetRefreshScheduler = widgetRefresh)
+        advanceUntilIdle()
+
+        vm.load(today.minusDays(1))
+        advanceUntilIdle()
+
+        // Only the initial read of today.
+        verify(exactly = 1) { widgetRefresh.refreshNow() }
+    }
+
     @Test fun `deleteActivityEntry deletes OpenVitals dashboard activity and refreshes`() = runTest {
         val workout = dashboardWorkout(id = "activity-1", isOpenVitalsEntry = true)
         val loader = mockDashboardDataLoader()
@@ -1408,6 +1434,7 @@ class DashboardViewModelTest {
         bleDeviceRepository: BleDeviceRepository? = null,
         bleSensorCoordinator: BleSensorCoordinator? = null,
         historySyncScheduler: HistorySyncScheduler? = null,
+        homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler? = null,
     ): DashboardViewModel =
         DashboardViewModel(
             loadDashboardDayUseCase = LoadDashboardDayUseCase(loader),
@@ -1421,6 +1448,7 @@ class DashboardViewModelTest {
             bleDeviceRepository = bleDeviceRepository,
             bleSensorCoordinator = bleSensorCoordinator,
             historySyncScheduler = historySyncScheduler,
+            homeWidgetRefreshScheduler = homeWidgetRefreshScheduler,
         )
 
     private fun mockDashboardDataLoader(configure: DashboardDataLoader.() -> Unit = {}): DashboardDataLoader =

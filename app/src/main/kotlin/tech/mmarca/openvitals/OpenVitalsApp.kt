@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.data.migration.FlutterDataMigrator
 import tech.mmarca.openvitals.data.migration.FlutterMigrationEntryPoint
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.SyncedRecordOriginRepository
+import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.features.watches.WatchAutoSyncScheduler
 import javax.inject.Inject
 
@@ -26,6 +27,7 @@ class OpenVitalsApp : Application() {
     @Inject lateinit var garminNotificationBridge: tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge
     @Inject lateinit var garminNavigationRelay: tech.mmarca.openvitals.devices.garmin.GarminNavigationRelay
     @Inject lateinit var watchAutoSyncScheduler: WatchAutoSyncScheduler
+    @Inject lateinit var homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler
 
     override fun onCreate() {
         // The Flutter migration splits around super.onCreate(): preference writes
@@ -52,6 +54,8 @@ class OpenVitalsApp : Application() {
         garminNavigationRelay.start()
         // Re-plans the sync schedules after what WorkManager does not cover.
         watchAutoSyncScheduler.restoreAll()
+        // Widgets placed before this schedule existed, or a missed onEnabled.
+        homeWidgetRefreshScheduler.reconcile()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

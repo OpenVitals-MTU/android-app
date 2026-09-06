@@ -38,6 +38,7 @@ import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.sync.HistorySyncScheduler
+import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import java.time.LocalDate
 import tech.mmarca.openvitals.features.watches.DeviceSyncController
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
@@ -153,6 +154,7 @@ class DashboardViewModel @Inject constructor(
     private val historySyncScheduler: HistorySyncScheduler? = null,
     private val deviceSyncController: DeviceSyncController? = null,
     private val garminRealtimeStore: GarminRealtimeStore? = null,
+    private val homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler? = null,
 ) : ViewModel() {
 
     val minimumOnboardingPermissions get() = repository.minimumOnboardingPermissions
@@ -443,6 +445,8 @@ class DashboardViewModel @Inject constructor(
                 runCatching { scheduler.drainIncrementalOnce() }
             }
         }
+        // The home screen shows today, so a settled read of today is its cue.
+        if (clampedDate == LocalDate.now()) homeWidgetRefreshScheduler?.refreshNow()
     }
 
     /**

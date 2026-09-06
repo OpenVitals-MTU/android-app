@@ -161,6 +161,17 @@ abstract class UpdatingHomeWidgetReceiver : GlanceAppWidgetReceiver() {
             }
         }
     }
+
+    // The schedule follows the placed widgets: see HomeWidgetRefreshScheduler.
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        homeWidgetRefreshScheduler(context).reconcile()
+    }
+
+    override fun onDisabled(context: Context) {
+        super.onDisabled(context)
+        homeWidgetRefreshScheduler(context).reconcile()
+    }
 }
 
 /**
