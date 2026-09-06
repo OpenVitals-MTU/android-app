@@ -90,6 +90,14 @@ Written to Health Connect, and therefore visible on the usual dashboard and deta
 
 Kept in OpenVitals' own storage, because Health Connect has no record type for them: stress, Body Battery, intensity minutes, recovery time, training readiness, training load, and the watch's own verdict on a night's sleep.
 
+#### Estimated sleep stages
+
+Some older watches, the Venu SQ for one, never record sleep stages. Garmin works those out on its servers, which OpenVitals never talks to. What such a watch does hand over is a heart rate and a movement count for every minute. OpenVitals keeps those minutes in its own storage for 45 days and estimates the night on the phone: when sleep began and ended, and a light, deep, REM and awake timeline.
+
+- One session per night, written to Health Connect once the estimator finds at least three hours of sleep. It is rewritten in place as the night's files arrive over later syncs, so a night synced at 3am and again at 8am is one session, not two.
+- The session's notes say the stages are estimated. They show when heart rate was low and steady and when it was high and variable, not what a sleep lab would see. The session starts at sleep onset, not bed time. Its end can be off by twenty or thirty minutes on a restless morning.
+- Naps are not estimated. A watch that records its own stages is left alone; its stages always win.
+
 Syncing the same day twice does not double anything. Files already imported are not downloaded again, Health Connect records carry a stable identifier so a record that does arrive twice updates in place, and watch-only measurements are keyed on the measurement and its instant.
 
 #### The step, distance and calorie counters

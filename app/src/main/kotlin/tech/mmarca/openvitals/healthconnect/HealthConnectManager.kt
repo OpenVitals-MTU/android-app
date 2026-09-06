@@ -713,6 +713,18 @@ class HealthConnectManager @Inject constructor(
         withSyncEnabled { client().insertRecords(records) }
     }
 
+    /** Deletes this app's records of [recordType] by `clientRecordId`. Unknown ids are ignored. */
+    suspend fun deleteImportedRecordsByClientIds(recordType: KClass<out Record>, clientRecordIds: List<String>) {
+        if (clientRecordIds.isEmpty()) return
+        withSyncEnabled {
+            client().deleteRecords(
+                recordType = recordType,
+                recordIdsList = emptyList(),
+                clientRecordIdsList = clientRecordIds,
+            )
+        }
+    }
+
     /** Every record of [recordType] in `[start, end)`, for phone-to-phone sync. Type-agnostic. */
     suspend fun forEachSyncRecordPage(
         recordType: KClass<out Record>,

@@ -5,7 +5,7 @@
 .aider*
 .ai/
 *.claude
-
+2026/
 # Gradle
 .gradle/
 .kotlin/

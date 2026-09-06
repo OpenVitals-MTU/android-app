@@ -54,7 +54,8 @@ fun fitSleepImportRecords(session: FitSleepSession): List<Record> {
             stage = mapped,
         )
     }
-    if (stages.isEmpty()) return emptyList()
+    // A file that only ever said "awake" is not a night. Gadgetbridge guards the same way.
+    if (stages.none { it.stage in SleepingStageTypes }) return emptyList()
     return listOf(
         SleepSessionRecord(
             startTime = session.start,
@@ -642,6 +643,13 @@ private fun dayTypedPoints(
 /** Groups items into UTC-hour buckets keyed by the hour's epoch-ms. */
 private fun <T> bucketByHour(items: List<T>, timeOf: (T) -> Instant): Map<Long, List<T>> =
     items.groupBy { timeOf(it).truncatedTo(ChronoUnit.HOURS).toEpochMilli() }
+
+/** The stage types that mean the wearer slept. */
+private val SleepingStageTypes = setOf(
+    SleepSessionRecord.STAGE_TYPE_LIGHT,
+    SleepSessionRecord.STAGE_TYPE_DEEP,
+    SleepSessionRecord.STAGE_TYPE_REM,
+)
 
 /** Garmin `sleep_level` to Health Connect stage. `unmeasurable` is dropped. */
 private fun sleepStageFor(level: FitSleepLevel): Int? = when (level) {

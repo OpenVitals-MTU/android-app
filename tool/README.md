@@ -36,3 +36,21 @@ Nothing Dart survives in this repository. `tool/verify_l10n.dart` and its
 checks were superseded by `scripts/verify-translations.py` plus the JVM tests
 (`StringFormatSpecifierTest`, `TranslationCatalogTest`); `build.dart` was
 ported to `build.py` above.
+
+## `sleep_fixture/`
+
+`build.py` derives the committed sleep-minute fixture
+(`app/src/test/resources/fit/sleep/venu_sq_minutes.json`, read by
+`SleepStageEstimatorTest`) from a folder of raw `SLEEP_*.fit` files pulled off
+a Garmin watch that leaves sleep staging to Garmin's servers. The files are
+real nights of a real person and are gitignored, so the fixture is **derived,
+never copied**: heart rate is rounded to whole beats, movement and activity to
+two decimals, every timestamp moves by one whole-week shift into 2020, and
+serial numbers, file names and the other packed features are dropped. The
+script's header lists the rules. Needs only the Python 3 standard library.
+
+```sh
+python3 tool/sleep_fixture/build.py \
+  --in 2026 \
+  --out app/src/test/resources/fit/sleep/venu_sq_minutes.json
+```

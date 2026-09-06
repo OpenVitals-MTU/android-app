@@ -19,6 +19,8 @@ class FitMessage(
     val strings: Map<Int, String>,
     val arrays: Map<Int, List<Long>>,
     val timestamp: Long?,
+    /** Raw `byte` fields, untouched. Garmin packs float16 sleep features this way. */
+    val bytes: Map<Int, ByteArray> = emptyMap(),
 )
 
 /** One FIT file's decoded messages, and where the next chained file begins. */
@@ -161,12 +163,19 @@ private class FitFileReader(
         val values = mutableMapOf<Int, Long>()
         val strings = mutableMapOf<Int, String>()
         val arrays = mutableMapOf<Int, List<Long>>()
+        val bytes = mutableMapOf<Int, ByteArray>()
         definition.fields.forEach { field ->
             val fieldBytes = reader.readBytes(field.size)
             fieldBytes.fitLong(field, definition.littleEndian)?.let { values[field.number] = it }
             fieldBytes.fitString(field)?.let { strings[field.number] = it }
             val array = fieldBytes.fitLongArray(field, definition.littleEndian)
             if (array.isNotEmpty()) arrays[field.number] = array
+            // Kept whole: per-element sentinel dropping would corrupt packed values.
+            if (field.baseType and FitBaseTypeMask == FitBaseTypeByte &&
+                fieldBytes.any { it != FitInvalidByte }
+            ) {
+                bytes[field.number] = fieldBytes
+            }
         }
         definition.developerFieldSizes.forEach { size ->
             reader.skip(size)
@@ -183,6 +192,7 @@ private class FitFileReader(
                 strings = strings,
                 arrays = arrays,
                 timestamp = messageTimestamp,
+                bytes = bytes,
             ),
         )
     }
@@ -403,3 +413,4 @@ private const val FitInvalidUInt16 = 0xFFFF
 private const val FitInvalidSInt16 = 0x7FFF
 private const val FitInvalidUInt32 = 0xFFFFFFFFL
 private const val FitInvalidSInt32 = 0x7FFFFFFF
+private const val FitInvalidByte = 0xFF.toByte()

@@ -15,6 +15,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.local.OpenVitalsDatabase
 import tech.mmarca.openvitals.data.local.beverage.BeverageDao
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyTimelineDao
+import tech.mmarca.openvitals.data.local.garmin.GarminSleepMinuteDao
 import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
 import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginDao
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
@@ -45,6 +46,7 @@ object AppModule {
             OpenVitalsDatabase.MIGRATION_6_7,
             OpenVitalsDatabase.MIGRATION_7_8,
             OpenVitalsDatabase.MIGRATION_8_9,
+            OpenVitalsDatabase.MIGRATION_9_10,
         ).build()
 
     @Provides
@@ -66,6 +68,11 @@ object AppModule {
     @Singleton
     fun provideGarminWellnessDao(database: OpenVitalsDatabase): GarminWellnessDao =
         database.garminWellnessDao()
+
+    @Provides
+    @Singleton
+    fun provideGarminSleepMinuteDao(database: OpenVitalsDatabase): GarminSleepMinuteDao =
+        database.garminSleepMinuteDao()
 
     @Provides
     @Singleton

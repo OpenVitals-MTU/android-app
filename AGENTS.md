@@ -94,7 +94,7 @@ Do not break these without an explicit decision. They are app-wide, and each has
 - **A missing permission is `ScreenError.PermissionDenied`.** Use `isPermissionFailure()` / `toScreenError()`; never pattern-match exception messages. The screens render this as a grant affordance.
 - **Health Connect reads and record mapping live behind `healthconnect/*HealthReader`.** Writes go through `AppleHealthImportRepository.insertImportedRecords` with a deterministic `clientRecordId`.
 - **`values-*/strings.xml` are Weblate-owned.** Add new strings to `values/strings.xml` only. See the translation-gate note in [development.md](docs/engineering/development.md).
-- **Room is at version 9.** A new entity means a `MIGRATION_9_10` and a bump, not `fallbackToDestructiveMigration`.
+- **Room is at version 10.** A new entity means a `MIGRATION_10_11` and a bump, not `fallbackToDestructiveMigration`.
 
 ## Implementation Rules
 

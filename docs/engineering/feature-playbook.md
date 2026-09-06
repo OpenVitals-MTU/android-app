@@ -84,11 +84,11 @@ Sections hidden outside diagnostics builds are filtered in `SettingsScreenConten
 
 ### Add A Room Entity
 
-The database is at version 9. A new entity means:
+The database is at version 10. A new entity means:
 
 1. Add the `@Entity` and its DAO under `data/local/<area>/`.
-2. Add the entity to the `entities` array in `OpenVitalsDatabase`, add the abstract DAO accessor, and bump `version` to 10.
-3. Add a `MIGRATION_9_10` in the companion object that creates the table, and register it in the `addMigrations(...)` call in `di/AppModule.kt`.
+2. Add the entity to the `entities` array in `OpenVitalsDatabase`, add the abstract DAO accessor, and bump `version` to 11.
+3. Add a `MIGRATION_10_11` in the companion object that creates the table, and register it in the `addMigrations(...)` call in `di/AppModule.kt`.
 4. Give the migration a KDoc saying whether it copies data or only creates the table, and why. Every existing migration does.
 5. Prefer a natural composite primary key that makes a re-import idempotent, as `garmin_wellness_samples` does with `(metric, time_millis)`.
 

@@ -2,14 +2,21 @@ package tech.mmarca.openvitals.devices.garmin.wellness
 
 import androidx.health.connect.client.records.Record
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.days
 import kotlinx.coroutines.CancellationException
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
+import tech.mmarca.openvitals.data.repository.contract.GarminSleepMinuteRepository
 import tech.mmarca.openvitals.data.repository.contract.GarminWellnessRepository
 import tech.mmarca.openvitals.devices.garmin.GarminCounterWatermarkStore
 import tech.mmarca.openvitals.devices.garmin.GarminDownloadedFile
 import tech.mmarca.openvitals.devices.garmin.GarminLog
+import tech.mmarca.openvitals.domain.insights.SleepStageEstimator
+import tech.mmarca.openvitals.domain.model.GarminSleepMinute
 import tech.mmarca.openvitals.domain.model.GarminWellnessMetric
 import tech.mmarca.openvitals.domain.model.GarminWellnessSample
 import tech.mmarca.openvitals.features.imports.applehealth.isDuplicateClientRecordFailure
@@ -28,6 +35,8 @@ class FitWellnessImporter @Inject constructor(
     private val importRepository: AppleHealthImportRepository,
     private val wellnessRepository: GarminWellnessRepository,
     private val watermarkStore: GarminCounterWatermarkStore,
+    private val sleepMinuteRepository: GarminSleepMinuteRepository,
+    private val sleepEstimation: GarminSleepEstimationWriter,
 ) {
 
     suspend fun import(files: List<GarminDownloadedFile>) {
@@ -36,6 +45,8 @@ class FitWellnessImporter @Inject constructor(
         val records = mutableListOf<Record>()
         var counters = FitMonitoringCounters()
         val watchOnly = mutableListOf<GarminWellnessSample>()
+        val sleepMinutes = mutableListOf<GarminSleepMinute>()
+        val nightsWithRealStages = mutableSetOf<LocalDate>()
 
         for (file in files) {
             val wellness = try {
@@ -51,7 +62,12 @@ class FitWellnessImporter @Inject constructor(
                 continue
             }
 
-            wellness.sleep?.let { records += fitSleepImportRecords(it) }
+            wellness.sleep?.let { sleep ->
+                records += fitSleepImportRecords(sleep)
+                SleepStageEstimator.nightDateOf(sleep.start, ZoneId.systemDefault().rules.getOffset(sleep.start))
+                    ?.let(nightsWithRealStages::add)
+            }
+            sleepMinutes += wellness.sleepMinutes.map { it.toGarminSleepMinute() }
             wellness.hrv?.let { records += fitHrvImportRecords(it) }
             wellness.monitoring?.let { records += fitMonitoringImportRecords(it) }
             wellness.metrics?.let { records += fitMetricsImportRecords(it) }
@@ -72,6 +88,32 @@ class FitWellnessImporter @Inject constructor(
         if (watchOnly.isNotEmpty()) {
             GarminLog.log("[GARMIN-IMPORT] stored ${watchOnly.size} watch-only samples")
         }
+
+        estimateSleep(sleepMinutes, nightsWithRealStages)
+    }
+
+    /**
+     * Stores the minutes of a watch that does not stage sleep, then estimates
+     * every night they touch. Room first: if Health Connect fails, the next
+     * sync re-runs from what was stored.
+     */
+    private suspend fun estimateSleep(
+        minutes: List<GarminSleepMinute>,
+        nightsWithRealStages: Set<LocalDate>,
+    ) {
+        if (minutes.isEmpty()) return
+        sleepMinuteRepository.upsert(minutes)
+        GarminLog.log("[GARMIN-IMPORT] stored ${minutes.size} sleep minutes")
+
+        // The offset of a night's last minute keys its window; a DST change mid-night shifts it an hour at most.
+        val offsets = mutableMapOf<LocalDate, ZoneOffset>()
+        for (minute in minutes.sortedBy { it.time }) {
+            val night = SleepStageEstimator.nightDateOf(minute.time, minute.zoneOffset) ?: continue
+            offsets[night] = minute.zoneOffset
+        }
+        sleepEstimation.estimateNights(offsets.keys, offsets, nightsWithRealStages)
+
+        sleepMinuteRepository.pruneBefore(Instant.now().minusMillis(SleepMinuteRetention.inWholeMilliseconds))
     }
 
     /** One batched insert. Duplicate-id rejections are retried one by one and count as success. */
@@ -215,3 +257,6 @@ class FitWellnessImporter @Inject constructor(
         }
     }
 }
+
+/** How long stored sleep minutes are kept. Long enough for a late-synced night. */
+private val SleepMinuteRetention = 45.days

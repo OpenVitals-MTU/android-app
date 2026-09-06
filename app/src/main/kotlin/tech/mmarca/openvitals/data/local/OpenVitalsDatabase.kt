@@ -9,6 +9,8 @@ import tech.mmarca.openvitals.data.local.beverage.BeverageEntity
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyBucketEntity
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyDayEntity
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyTimelineDao
+import tech.mmarca.openvitals.data.local.garmin.GarminSleepMinuteDao
+import tech.mmarca.openvitals.data.local.garmin.GarminSleepMinuteEntity
 import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
 import tech.mmarca.openvitals.data.local.garmin.GarminWellnessSampleEntity
 import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginDao
@@ -26,8 +28,9 @@ import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
         BodyEnergyBucketEntity::class,
         GarminWellnessSampleEntity::class,
         SyncedRecordOriginEntity::class,
+        GarminSleepMinuteEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = false,
 )
 abstract class OpenVitalsDatabase : RoomDatabase() {
@@ -38,6 +41,8 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
     abstract fun bodyEnergyTimelineDao(): BodyEnergyTimelineDao
 
     abstract fun garminWellnessDao(): GarminWellnessDao
+
+    abstract fun garminSleepMinuteDao(): GarminSleepMinuteDao
 
     abstract fun syncedRecordOriginDao(): SyncedRecordOriginDao
 
@@ -82,6 +87,13 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 createGarminWellnessTable(db)
+            }
+        }
+
+        /** Per-minute input for estimated sleep stages. Creation only; it fills on the next sync. */
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                createGarminSleepMinutesTable(db)
             }
         }
 
@@ -192,6 +204,23 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                     `time_millis` INTEGER NOT NULL,
                     `value` INTEGER NOT NULL,
                     PRIMARY KEY(`metric`, `time_millis`)
+                )
+                """.trimIndent()
+            )
+        }
+
+        private fun createGarminSleepMinutesTable(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `garmin_sleep_minutes` (
+                    `time_millis` INTEGER NOT NULL,
+                    `kind` TEXT NOT NULL,
+                    `heart_rate` REAL,
+                    `movement` REAL,
+                    `activity` REAL,
+                    `offset_seconds` INTEGER NOT NULL,
+                    `features` BLOB,
+                    PRIMARY KEY(`time_millis`)
                 )
                 """.trimIndent()
             )

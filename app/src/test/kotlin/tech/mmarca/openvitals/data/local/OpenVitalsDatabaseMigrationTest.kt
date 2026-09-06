@@ -68,6 +68,27 @@ class OpenVitalsDatabaseMigrationTest {
     }
 
     @Test
+    fun `version nine adds the garmin sleep minutes table`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+
+        OpenVitalsDatabase.MIGRATION_9_10.migrate(db)
+
+        assertEquals(9, OpenVitalsDatabase.MIGRATION_9_10.startVersion)
+        assertEquals(10, OpenVitalsDatabase.MIGRATION_9_10.endVersion)
+        verify {
+            db.execSQL(
+                match {
+                    it.contains("CREATE TABLE IF NOT EXISTS `garmin_sleep_minutes`") &&
+                        it.contains("`time_millis` INTEGER NOT NULL") &&
+                        it.contains("`kind` TEXT NOT NULL") &&
+                        it.contains("`features` BLOB") &&
+                        it.contains("PRIMARY KEY(`time_millis`)")
+                },
+            )
+        }
+    }
+
+    @Test
     fun `version eight restores the garmin wellness table`() {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
 

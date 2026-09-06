@@ -2,8 +2,10 @@ package tech.mmarca.openvitals.devices.garmin.wellness
 
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneOffset
 import tech.mmarca.openvitals.core.fit.FitDecoder
 import tech.mmarca.openvitals.core.fit.FitMessage
+import tech.mmarca.openvitals.core.fit.fitFloat16Array
 import tech.mmarca.openvitals.core.fit.fitInstant
 import tech.mmarca.openvitals.devices.garmin.GarminLog
 
@@ -15,6 +17,29 @@ data class FitSleepStage(
     val start: Instant,
     val end: Instant,
     val level: FitSleepLevel,
+)
+
+/** What one minute of an unstaged sleep file says: a raw feature row, or a verdict the watch was sure of. */
+enum class FitSleepMinuteKind { RAW, AWAKE, UNMEASURABLE }
+
+/**
+ * One minute of a sleep file from a watch that does not stage sleep itself
+ * (`sleep_data_raw`, message 274, plus the 0/1 `sleep_stage` rows). Garmin
+ * classifies these on its servers; the app estimates instead.
+ */
+data class FitSleepMinute(
+    val time: Instant,
+    val kind: FitSleepMinuteKind,
+    /** Beats per minute, from feature 9. Null on AWAKE and UNMEASURABLE rows. */
+    val heartRate: Double?,
+    /** Movement count for the minute, from feature 8. Zero when still. */
+    val movement: Double?,
+    /** Activity magnitude, from feature 0. Stored for later; not used yet. */
+    val activity: Double?,
+    /** The watch's UTC offset, from `sleep_data_info.local_timestamp`. */
+    val zoneOffset: ZoneOffset,
+    /** All ten float16 values of a RAW row, in file order. Null otherwise. */
+    val features: FloatArray?,
 )
 
 /** A decoded sleep file (type 49): the night's bounds and stage timeline. */
@@ -178,6 +203,11 @@ data class FitWellness(
     val sleepDemand: FitSleepDemand? = null,
     /** From a Health Snapshot file (type 70). */
     val healthSnapshot: FitHealthSnapshot? = null,
+    /**
+     * Per-minute rows from a watch that does not stage sleep. Empty when the
+     * file carried real stages, in which case [sleep] is set instead.
+     */
+    val sleepMinutes: List<FitSleepMinute> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = sleep == null &&
@@ -187,7 +217,8 @@ data class FitWellness(
             naps.isEmpty() &&
             dailySleep == null &&
             sleepDemand == null &&
-            healthSnapshot == null
+            healthSnapshot == null &&
+            sleepMinutes.isEmpty()
 
     /** True for activity (4), workout (5) and course (6). */
     val isActivityType: Boolean
@@ -201,9 +232,14 @@ data class FitWellness(
  */
 fun parseGarminWellness(fitBytes: ByteArray, fileName: String? = null): FitWellness {
     val result = GarminWellnessDecoder(fitBytes).decode()
+    // A watch that leaves staging to Garmin's servers writes only 0/1 levels
+    // beside its raw rows. Those never make a session; the estimator does.
+    val needsEstimation = result.sleep.minutes.isNotEmpty() &&
+        result.sleep.levels.none { it.second >= FitSleepLevelLight }
     return FitWellness(
         fileType = result.fileType,
-        sleep = result.sleep.toSession(),
+        sleep = if (needsEstimation) null else result.sleep.toSession(),
+        sleepMinutes = if (needsEstimation) result.sleep.minutes else emptyList(),
         hrv = result.hrv.toReading(),
         monitoring = result.monitoring.toSummary(),
         metrics = result.metrics.toSummary(),
@@ -315,6 +351,8 @@ private class FitSleepRaw(
     val overallScore: Int? = null,
     val awakeningsCount: Int? = null,
     val naps: List<FitNap> = emptyList(),
+    /** The per-minute stream of an unstaged file, in file order. */
+    val minutes: List<FitSleepMinute> = emptyList(),
 ) {
     fun merge(other: FitSleepRaw): FitSleepRaw = FitSleepRaw(
         start = start ?: other.start,
@@ -323,6 +361,7 @@ private class FitSleepRaw(
         overallScore = overallScore ?: other.overallScore,
         awakeningsCount = awakeningsCount ?: other.awakeningsCount,
         naps = naps + other.naps,
+        minutes = minutes + other.minutes,
     )
 
     fun toSession(): FitSleepSession? {
@@ -532,6 +571,14 @@ private class GarminWellnessInterpreter {
     private var sleepAwakenings: Int? = null
     private val naps = mutableListOf<FitNap>()
 
+    // Unstaged sleep: raw rows carry no timestamp. Row i sits at start + i * sample length,
+    // counting the 0/1 stage rows too, since they share the one per-minute stream.
+    private var sleepDataStart: Instant? = null
+    private var sleepDataOffset: ZoneOffset = ZoneOffset.UTC
+    private var sleepDataSampleSeconds: Long = FitSleepDataDefaultSampleSeconds
+    private var sleepStreamIndex: Long = 0
+    private val sleepMinutes = mutableListOf<FitSleepMinute>()
+
     // Health Snapshot (file type 70): dense sample arrays, one recording.
     private val hsaSpo2 = mutableListOf<Pair<Instant, Int>>()
     private val hsaRespiration = mutableListOf<Pair<Instant, Double>>()
@@ -589,6 +636,7 @@ private class GarminWellnessInterpreter {
                 overallScore = sleepOverallScore,
                 awakeningsCount = sleepAwakenings,
                 naps = naps,
+                minutes = sleepMinutes,
             ),
             hrv = FitHrvRaw(time = hrvTime, rmssdMillis = hrvRmssdMillis),
             monitoring = FitMonitoringRaw(
@@ -628,6 +676,10 @@ private class GarminWellnessInterpreter {
         )
     }
 
+    /** Where the current raw-stream slot sits. Only meaningful after `sleep_data_info`. */
+    private fun sleepStreamTime(): Instant =
+        requireNotNull(sleepDataStart).plusSeconds(sleepDataSampleSeconds * sleepStreamIndex)
+
     private fun dispatch(message: FitMessage) {
         val values = message.values
         val arrays = message.arrays
@@ -656,6 +708,73 @@ private class GarminWellnessInterpreter {
                 if (level != null && messageTimestamp != null) {
                     sleepLevels.add(fitInstant(messageTimestamp) to level.toInt())
                 }
+                // In an unstaged file a 0/1 row takes one slot of the raw stream.
+                if (sleepDataStart != null) {
+                    val kind = when (level?.toInt()) {
+                        FitSleepLevelAwake -> FitSleepMinuteKind.AWAKE
+                        FitSleepLevelUnmeasurable -> FitSleepMinuteKind.UNMEASURABLE
+                        else -> null
+                    }
+                    if (kind != null) {
+                        val at = if (messageTimestamp != null) fitInstant(messageTimestamp) else sleepStreamTime()
+                        sleepMinutes.add(
+                            FitSleepMinute(
+                                time = at,
+                                kind = kind,
+                                heartRate = null,
+                                movement = null,
+                                activity = null,
+                                zoneOffset = sleepDataOffset,
+                                features = null,
+                            ),
+                        )
+                    }
+                    sleepStreamIndex += 1
+                }
+            }
+
+            FitSleepDataInfoMessageNumber -> {
+                if (messageTimestamp != null) {
+                    sleepDataStart = fitInstant(messageTimestamp)
+                    sleepStreamIndex = 0
+                    val local = values[FitSleepDataInfoLocalTimestampFieldNumber]
+                    val offsetSeconds = if (local != null) local - messageTimestamp else 0L
+                    sleepDataOffset = if (offsetSeconds in -MaxZoneOffsetSeconds..MaxZoneOffsetSeconds) {
+                        ZoneOffset.ofTotalSeconds(offsetSeconds.toInt())
+                    } else {
+                        ZoneOffset.UTC
+                    }
+                    val sample = values[FitSleepDataInfoSampleLengthFieldNumber]
+                    sleepDataSampleSeconds = if (sample != null && sample > 0 && sample != FitUint16Invalid) {
+                        sample
+                    } else {
+                        FitSleepDataDefaultSampleSeconds
+                    }
+                }
+            }
+
+            FitSleepDataRawMessageNumber -> {
+                val start = sleepDataStart
+                val packed = message.bytes[FitSleepDataRawBytesFieldNumber]
+                // A row before its info message still takes a slot, so later rows keep their place.
+                if (start != null && packed != null && packed.size == FitSleepDataRawByteCount) {
+                    val features = packed.fitFloat16Array()
+                    val bpm = features[FitSleepDataRawHeartRateIndex].toDouble()
+                    val movement = features[FitSleepDataRawMovementIndex].toDouble()
+                    val activity = features[FitSleepDataRawActivityIndex].toDouble()
+                    sleepMinutes.add(
+                        FitSleepMinute(
+                            time = sleepStreamTime(),
+                            kind = FitSleepMinuteKind.RAW,
+                            heartRate = bpm.takeIf { it.isFinite() && it in FitSleepHeartRateRange },
+                            movement = movement.takeIf { it.isFinite() && it >= 0.0 },
+                            activity = activity.takeIf { it.isFinite() },
+                            zoneOffset = sleepDataOffset,
+                            features = features,
+                        ),
+                    )
+                }
+                sleepStreamIndex += 1
             }
 
             FitHrvStatusSummaryMessageNumber -> {
@@ -954,6 +1073,25 @@ private const val FitSleepLevelFieldNumber = 0
 private const val FitSleepEventValue = 74 // `event` == sleep (Garmin-proprietary)
 private const val FitEventTypeStart = 0
 private const val FitEventTypeStop = 1
+private const val FitSleepLevelUnmeasurable = 0
+private const val FitSleepLevelAwake = 1
+private const val FitSleepLevelLight = 2
+
+// Unstaged sleep (Venu SQ and other watches without a sleep widget). Numbers
+// from Gadgetbridge's FIT profile (AGPLv3); the raw layout was worked out
+// from real files: ten little-endian float16 per minute, heart rate last.
+private const val FitSleepDataInfoMessageNumber = 273
+private const val FitSleepDataInfoSampleLengthFieldNumber = 1 // uint16, seconds
+private const val FitSleepDataInfoLocalTimestampFieldNumber = 2 // uint32, Garmin epoch, local
+private const val FitSleepDataRawMessageNumber = 274
+private const val FitSleepDataRawBytesFieldNumber = 0
+private const val FitSleepDataRawByteCount = 20
+private const val FitSleepDataRawActivityIndex = 0
+private const val FitSleepDataRawMovementIndex = 8
+private const val FitSleepDataRawHeartRateIndex = 9
+private const val FitSleepDataDefaultSampleSeconds = 60L
+private val FitSleepHeartRateRange = 25.0..250.0
+private const val MaxZoneOffsetSeconds = 18L * 60 * 60
 
 // HRV status (file type 68). last_night_average is RMSSD in ms, scale 128.
 private const val FitHrvStatusSummaryMessageNumber = 370
