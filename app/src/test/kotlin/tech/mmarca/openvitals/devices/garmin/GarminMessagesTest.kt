@@ -164,6 +164,7 @@ class GarminMessagesTest {
         // "0 entries" has several causes; the listing must say which.
         val empty = GarminDirectory.parseWithDiagnostics(ByteArray(0))
         assertEquals(0, empty.totalRecords)
+        assertTrue(empty.isStructurallyValid)
         assertTrue(empty.entries.isEmpty())
 
         val filtered = GarminDirectory.parseWithDiagnostics(
@@ -171,6 +172,7 @@ class GarminMessagesTest {
                 entry(index = 7, dataType = 8, subType = 255), // known but not wanted
         )
         assertEquals(2, filtered.totalRecords)
+        assertTrue(filtered.isStructurallyValid)
         assertTrue(filtered.entries.isEmpty())
         // The raw codes make an unmapped type diagnosable; the index matches an entry against announced files.
         assertTrue(filtered.skipped.contains("6:128/55?"))
@@ -182,7 +184,10 @@ class GarminMessagesTest {
     fun `a trailing partial record is ignored`() {
         val data = entry(index = 5, dataType = 128, subType = 4) +
             b(0x01, 0x02, 0x03) // 3 stray bytes — not a whole record
-        assertEquals(1, GarminDirectory.parse(data).size)
+        val listing = GarminDirectory.parseWithDiagnostics(data)
+
+        assertEquals(1, listing.entries.size)
+        assertFalse(listing.isStructurallyValid)
     }
 
     // Outbound messages round-trip through the frame layer.

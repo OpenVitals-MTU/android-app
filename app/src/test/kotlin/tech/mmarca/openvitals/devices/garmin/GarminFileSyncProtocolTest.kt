@@ -1,7 +1,10 @@
 package tech.mmarca.openvitals.devices.garmin
 
+import java.util.zip.Deflater
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -60,5 +63,37 @@ class GarminFileSyncProtocolTest {
         val fileSync = protobufField(smartFields, GarminSmartService.FILE_SYNC)!!.bytes!!
         val listRequest = protobufField(readProtobuf(fileSync), 9)!!.bytes!!
         assertEquals(33_737L, protobufField(readProtobuf(listRequest), 2)!!.varint)
+    }
+
+    @Test
+    fun `file payload inflation succeeds for ordinary zlib data`() {
+        val original = "garmin-file".repeat(100).toByteArray()
+
+        assertArrayEquals(original, GarminFileSyncProtocol.inflateFilePayload(deflate(original)))
+    }
+
+    @Test
+    fun `file payload inflation rejects streams that require a dictionary`() {
+        val dictionary = "garmin-dictionary".toByteArray()
+        val original = "garmin-dictionary-payload".repeat(20).toByteArray()
+
+        assertNull(
+            GarminFileSyncProtocol.inflateFilePayload(
+                deflate(original, dictionary = dictionary),
+            ),
+        )
+    }
+
+    private fun deflate(bytes: ByteArray, dictionary: ByteArray? = null): ByteArray {
+        val deflater = Deflater()
+        return try {
+            dictionary?.let(deflater::setDictionary)
+            deflater.setInput(bytes)
+            deflater.finish()
+            val output = ByteArray(bytes.size * 2)
+            output.copyOf(deflater.deflate(output))
+        } finally {
+            deflater.end()
+        }
     }
 }

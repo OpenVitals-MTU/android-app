@@ -1,5 +1,9 @@
 package tech.mmarca.openvitals.devices.garmin
 
+import java.io.ByteArrayOutputStream
+import java.util.zip.DataFormatException
+import java.util.zip.Inflater
+
 /** Pure protobuf codec for Garmin's newer Smart/FileSyncService protocol. */
 object GarminFileSyncProtocol {
     private const val ALREADY_SYNCED = 42405L
@@ -108,6 +112,31 @@ object GarminFileSyncProtocol {
     }
 
     fun isFileSyncMessage(payload: ByteArray): Boolean = service(payload) != null
+
+    /** Inflates a FileSync transfer, returning null for malformed or unsupported streams. */
+    fun inflateFilePayload(bytes: ByteArray): ByteArray? {
+        val inflater = Inflater()
+        return try {
+            inflater.setInput(bytes)
+            val output = ByteArrayOutputStream(bytes.size.coerceAtLeast(1024))
+            val buffer = ByteArray(8192)
+            while (!inflater.finished()) {
+                val count = inflater.inflate(buffer)
+                if (count == 0) {
+                    // A preset dictionary is not part of Garmin's wire
+                    // contract. Treat it, exhausted input, or any other
+                    // no-progress state as malformed instead of spinning.
+                    return null
+                }
+                output.write(buffer, 0, count)
+            }
+            output.toByteArray()
+        } catch (_: DataFormatException) {
+            null
+        } finally {
+            inflater.end()
+        }
+    }
 
     private fun smart(fileSyncService: ByteArray): ByteArray =
         ProtobufWriter().nested(GarminSmartService.FILE_SYNC, fileSyncService).toBytes()

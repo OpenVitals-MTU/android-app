@@ -5,6 +5,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.TestScope
@@ -20,6 +21,7 @@ import org.junit.Test
  * Sync happy path and resilience, against a fake watch that speaks the real wire format.
  * Notification-conversation tests live with the notifications handler.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class GarminSessionTest {
 
     /** A fake vívoactive 5. Every frame goes through [GarminGfdiFrame.build] and `parse`. */

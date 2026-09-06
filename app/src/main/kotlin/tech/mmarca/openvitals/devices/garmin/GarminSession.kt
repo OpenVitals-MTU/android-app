@@ -611,7 +611,7 @@ class GarminSession(
         if (finishedDownload.entry.type == GarminFileType.DIRECTORY) {
             directoryFetched = true
             val listing = GarminDirectory.parseWithDiagnostics(bytes)
-            hasValidDirectoryListing = true
+            hasValidDirectoryListing = listing.isStructurallyValid
             if (handoffAfterDirectory) {
                 GarminLog.log(
                     "[GARMIN-LISTEN] handoff directory ${bytes.size}B " +

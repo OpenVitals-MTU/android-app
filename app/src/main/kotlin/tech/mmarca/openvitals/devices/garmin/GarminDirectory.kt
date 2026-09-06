@@ -45,6 +45,8 @@ data class GarminDirectoryListing(
     val entries: List<GarminDirectoryEntry>,
     /** Every 16-byte record read, before any filtering. */
     val totalRecords: Int,
+    /** False when the payload ends in a truncated directory record. */
+    val isStructurallyValid: Boolean,
     /**
      * `index:dataType/subType` of each dropped record. The index matters:
      * the watch also announces files by index over protobuf.
@@ -131,6 +133,7 @@ object GarminDirectory {
         return GarminDirectoryListing(
             entries = entries,
             totalRecords = totalRecords,
+            isStructurallyValid = data.size % ENTRY_SIZE == 0,
             skipped = skipped,
             allIndexes = allIndexes,
         )

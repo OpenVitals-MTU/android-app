@@ -7,8 +7,6 @@ import java.io.File
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.zip.DataFormatException
-import java.util.zip.Inflater
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration
@@ -672,30 +670,11 @@ class GarminWatchSyncService @Inject constructor(
             if (withTimeoutOrNull(FILE_TRANSFER_TIMEOUT) { closed.await() } == null || !valid) {
                 null
             } else {
-                inflate(compressed.toByteArray())
+                GarminFileSyncProtocol.inflateFilePayload(compressed.toByteArray())
             }
         } finally {
             runCatching { transport.closeService(serviceCode) }
             transport.clearServiceHandler(serviceCode)
-        }
-    }
-
-    private fun inflate(bytes: ByteArray): ByteArray? {
-        val inflater = Inflater()
-        return try {
-            inflater.setInput(bytes)
-            val output = ByteArrayOutputStream(bytes.size.coerceAtLeast(1024))
-            val buffer = ByteArray(8192)
-            while (!inflater.finished()) {
-                val count = inflater.inflate(buffer)
-                if (count == 0 && inflater.needsInput()) return null
-                output.write(buffer, 0, count)
-            }
-            output.toByteArray()
-        } catch (_: DataFormatException) {
-            null
-        } finally {
-            inflater.end()
         }
     }
 
