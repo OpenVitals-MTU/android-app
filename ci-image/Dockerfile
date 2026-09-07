@@ -17,9 +17,6 @@
 # compileSdk in app/build.gradle.kts and scripts/ci-android-setup.sh.
 FROM ghcr.io/cirruslabs/android-sdk:tools
 
-LABEL org.opencontainers.image.title="OpenVitals Android builder" \
-      org.opencontainers.image.description="JDK 17 and Android SDK 37 environment for building OpenVitals APKs"
-
 # Minor-versioned platform directory: `android-37.0`, matching what
 # ci-android-setup.sh checks for.
 ARG ANDROID_PLATFORM=android-37.0
@@ -33,12 +30,3 @@ RUN yes | sdkmanager --licenses > /dev/null 2>&1 || true \
 RUN sdk_root="${ANDROID_SDK_ROOT:-$ANDROID_HOME}" \
  && test -d "$sdk_root/platforms/${ANDROID_PLATFORM}"      || { echo "platform ${ANDROID_PLATFORM} missing"    >&2; exit 1; } \
  && test -d "$sdk_root/build-tools/${ANDROID_BUILD_TOOLS}" || { echo "build-tools ${ANDROID_BUILD_TOOLS} missing" >&2; exit 1; }
-
-# A source checkout is mounted here by scripts/build-apk-in-docker.sh. Keeping
-# the build itself out of the image makes source edits immediately visible and
-# lets Docker's image cache hold only the slow, stable SDK installation.
-WORKDIR /workspace
-
-# Useful without the wrapper script too:
-#   docker run --rm -v "$PWD:/workspace" openvitals-android-builder
-CMD ["./gradlew", "--no-daemon", ":app:assembleDebug"]

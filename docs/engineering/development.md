@@ -10,24 +10,6 @@ The wrapper jar is intentionally tracked. `.gitignore` allows this file even tho
 
 ## Local Verification
 
-### Docker APK build
-
-To build an installable Debug APK on a machine with Docker but no local Android
-SDK, run:
-
-```bash
-scripts/build-apk-in-docker.sh
-```
-
-This builds the repository's [`ci-image`](../../ci-image/README.md), runs
-`:app:assembleDebug` inside it, and writes
-`dist/OpenVitals-debug.apk`. The Debug application ID is
-`tech.mmarca.openvitals.debug`, so it can be installed alongside the production
-app. The first run downloads the base image and dependencies; later runs reuse
-the ignored `.docker-cache/gradle` cache. The ignored `.docker-cache/android`
-directory also retains the debug signing key, so later builds can update an
-installed debug APK without a signature mismatch.
-
 Run the main checks before pushing architecture or feature changes:
 
 ```bash
