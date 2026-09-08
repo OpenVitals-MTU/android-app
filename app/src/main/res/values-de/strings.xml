@@ -1042,7 +1042,7 @@
     <string name="onboarding_category_nutrition_hydration">Ernährung &amp; Hydrierung</string>
     <string name="onboarding_category_nutrition_hydration_desc">Health Connect fragt nach:\n* Hydrierung\n* Ernährung</string>
     <string name="onboarding_category_manual_entry_write">Schreibzugriff für manuelle Einträge</string>
-    <string name="onboarding_category_manual_entry_write_desc">Health Connect fragt nach Schreibzugriff für:\n* Training\n* Distanz\n* Gewonnene Höhe\n* Verbrannte aktive Kalorien\n* Verbrannte Gesamtkalorien\n* Trainingsroute\n* Hydrierung\n* Gewicht\n* Größe\n* Körperfett\n* Blutdruck\n* Sauerstoffsättigung\n* Atemfrequenz\n* Körpertemperatur\n* Achtsamkeit, falls unterstützt</string>
+    <string name="onboarding_category_manual_entry_write_desc">Health Connect fragt nach Schreibzugriff für:\n* Training\n* Distanz\n* Gewonnene Höhe\n* Verbrannte aktive Kalorien\n* Verbrannte Gesamtkalorien\n* Trainingsroute\n* Hydrierung\n* Gewicht\n* Größe\n* Körperfett\n* Blutdruck\n* Sauerstoffsättigung\n* Atemfrequenz\n* Körpertemperatur\n* Herzfrequenzvariabilität\n* Achtsamkeit, falls unterstützt</string>
     <string name="onboarding_category_data_import_write">Schreibzugriff für Datenimporte</string>
     <string name="onboarding_category_data_import_write_desc">Health Connect fragt nach Schreibzugriff für importierte Datensätze:\n* Aktivität, Training, Kalorien und Distanz\n* Herzfrequenz, Ruheherzfrequenz und Herzfrequenzvariabilität\n* Körpermessungen\n* Hydrierung und Ernährung\n* Schlaf\n* Vitalwerte\n* Achtsamkeit, falls unterstützt\n* Zyklusverfolgungsdaten</string>
     <string name="onboarding_category_mindfulness">Achtsamkeit</string>
@@ -2716,4 +2716,16 @@
         <item quantity="one">≈ %1$s pro Tag für den verbleibenden Tag</item>
         <item quantity="other">≈ %1$s pro Tag für die verbleibenden %2$d Tage</item>
     </plurals>
+    <string name="activity_workout_export_tcx">TCX speichern</string>
+    <string name="activity_workout_export_csv">CSV speichern</string>
+    <string name="activity_workout_export_fit">FIT speichern</string>
+    <string name="activity_workout_share_tcx">TCX teilen</string>
+    <string name="activity_workout_share_csv">CSV teilen</string>
+    <string name="activity_workout_share_fit">FIT teilen</string>
+    <string name="activity_workout_export_failed">Workout konnte nicht gespeichert werden.</string>
+    <string name="activity_workout_share_chooser_title">Workout teilen mit</string>
+    <string name="settings_fit_import_folder_grant">Import-Berechtigungen erteilen</string>
+    <string name="settings_csv_import_metric_steps">Schritte</string>
+    <string name="settings_derived_metrics_reset_done">Metriken zurücksetzen. Neubrechung im Hintergrund aus Health Connect.</string>
+    <string name="settings_derived_metrics_reset_failed">Metriken konnten nicht zurückgesetzt werden</string>
 </resources>
