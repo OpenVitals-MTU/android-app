@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.devices.garmin
 
+import java.io.IOException
+import kotlin.time.Duration.Companion.milliseconds
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -239,6 +241,36 @@ class GarminProtobufTest {
         transport.abort()
         job.join()
         assertTrue(failure is IllegalStateException)
+    }
+
+    @Test
+    fun `a failed write removes its pending matcher`() = runTest {
+        var sends = 0
+        lateinit var transport: GarminProtobufTransport
+        transport = GarminProtobufTransport(send = { frame ->
+            sends += 1
+            if (sends == 1) throw IOException("BLE write failed")
+
+            val parsed = GarminGfdiFrame.parse(frame)
+            if (parsed.messageType == GarminMessageId.PROTOBUF_REQUEST) {
+                // FileSync replies can arrive under a watch-selected id and use the flexible matcher.
+                transport.handleInbound(reply(999, b(0x2A)))
+            }
+        })
+
+        try {
+            transport.request(b(0x01), acceptUnmatched = { true })
+            fail("expected IOException")
+        } catch (expected: IOException) {
+            // Expected.
+        }
+
+        val result = transport.request(
+            b(0x02),
+            timeout = 100.milliseconds,
+            acceptUnmatched = { true },
+        )
+        assertArrayEquals(b(0x2A), result)
     }
 
     @Test

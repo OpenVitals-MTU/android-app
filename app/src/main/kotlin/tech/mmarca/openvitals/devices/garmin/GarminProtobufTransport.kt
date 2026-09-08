@@ -62,9 +62,8 @@ class GarminProtobufTransport(
         GarminLog.log(
             "[GARMIN-PB] → ${label ?: "request"} #$requestId (${payload.size}B)",
         )
-        send(frame(GarminMessageId.PROTOBUF_REQUEST, requestId, payload))
-
         try {
+            send(frame(GarminMessageId.PROTOBUF_REQUEST, requestId, payload))
             val reply = withTimeoutOrNull(timeout ?: REPLY_TIMEOUT) { deferred.await() }
             if (reply == null) {
                 GarminLog.log(

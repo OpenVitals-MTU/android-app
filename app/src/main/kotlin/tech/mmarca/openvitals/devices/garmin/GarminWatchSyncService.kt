@@ -27,6 +27,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import tech.mmarca.openvitals.core.fit.FitDecoder
+import tech.mmarca.openvitals.core.fit.fitInstant
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.data.repository.BodyEnergyTimelineStore
 import tech.mmarca.openvitals.data.sync.BodyEnergyChainSyncService
@@ -212,7 +214,16 @@ class GarminWatchSyncService @Inject constructor(
         }
         val today = LocalDate.now()
 
-        if (earliest != null && !earliest.isAfter(today)) {
+        if (garminNeedsFullBodyEnergyInvalidation(downloaded)) {
+            try {
+                bodyEnergyTimelineStore.purgeAll()
+                GarminLog.log("[GARMIN-SYNC] body-energy chain invalidated: downloaded file date unavailable")
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                GarminLog.log("[GARMIN-SYNC] body-energy chain invalidate skipped: $error")
+            }
+        } else if (earliest != null && !earliest.isAfter(today)) {
             try {
                 bodyEnergyTimelineStore.invalidateForward(earliest, today)
                 GarminLog.log("[GARMIN-SYNC] body-energy chain invalidated from $earliest")
@@ -563,6 +574,14 @@ class GarminWatchSyncService @Inject constructor(
                 if (response.status != 0 || handle == null) continue
                 val bytes = downloadCompressedFile(transport, handle) ?: continue
                 val type = remoteFile.type ?: continue
+                val fileDate = try {
+                    garminFitFileDate(bytes)
+                } catch (error: Exception) {
+                    GarminLog.log(
+                        "[GARMIN-SYNC] could not derive ${remoteFile.typeName} file date: $error",
+                    )
+                    null
+                }
                 val file = GarminDownloadedFile(
                     entry = GarminDirectoryEntry(
                         fileIndex = handle,
@@ -571,7 +590,7 @@ class GarminWatchSyncService @Inject constructor(
                         specificFlags = 0,
                         fileFlags = 0,
                         fileSize = bytes.size.toLong(),
-                        fileDate = null,
+                        fileDate = fileDate,
                         remoteDedupKey = remoteFile.dedupKey,
                     ),
                     bytes = bytes,
@@ -704,3 +723,20 @@ fun garminEarliestAffectedDay(
     .minOrNull()
     ?.atZone(zone)
     ?.toLocalDate()
+
+fun garminNeedsFullBodyEnergyInvalidation(downloaded: List<GarminDownloadedFile>): Boolean =
+    downloaded.any { it.entry.fileDate == null }
+
+fun garminFitFileDate(bytes: ByteArray): Instant? {
+    var offset = 0
+    var earliest: Long? = null
+    while (offset < bytes.size && FitDecoder.isFitFileAt(bytes, offset)) {
+        val file = FitDecoder.readFile(bytes, offset)
+        file.messages.mapNotNull { it.timestamp }.minOrNull()?.let { timestamp ->
+            earliest = earliest?.coerceAtMost(timestamp) ?: timestamp
+        }
+        if (file.nextOffset <= offset) break
+        offset = file.nextOffset
+    }
+    return earliest?.let(::fitInstant)
+}
