@@ -254,14 +254,13 @@ object GarminSettingsService {
                 GarminLog.log("$indent${field.field}: ${field.varint}")
                 continue
             }
-            val text = asText(bytes)
-            if (text != null) {
-                GarminLog.log("$indent${field.field}: \"$text\"")
+            if (isPrintableText(bytes)) {
+                GarminLog.log("$indent${field.field}: (text ${bytes.size}B)")
                 continue
             }
             val nested = readProtobuf(bytes)
             if (nested.isEmpty()) {
-                GarminLog.log("$indent${field.field}: (${bytes.size}B) ${hex(bytes)}")
+                GarminLog.log("$indent${field.field}: (opaque ${bytes.size}B)")
                 continue
             }
             GarminLog.log("$indent${field.field}: {")
@@ -270,18 +269,19 @@ object GarminSettingsService {
         }
     }
 
-    /** Printable ASCII only; guessing text turns nested messages into mojibake. */
-    private fun asText(bytes: ByteArray): String? {
-        if (bytes.isEmpty()) return null
+    /**
+     * Printable ASCII only — the watch sends titles as UTF-8 strings, and
+     * guessing that arbitrary bytes are text turns a nested message into
+     * mojibake.
+     */
+    private fun isPrintableText(bytes: ByteArray): Boolean {
+        if (bytes.isEmpty()) return false
         for (byte in bytes) {
             val value = byte.toInt() and 0xFF
-            if (value < 0x20 || value > 0x7E) return null
+            if (value < 0x20 || value > 0x7E) return false
         }
-        return String(bytes, Charsets.ISO_8859_1)
+        return true
     }
-
-    private fun hex(bytes: ByteArray): String =
-        bytes.joinToString(" ") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
 
     private const val SECONDS_PER_DAY = 24L * 60L * 60L
 }

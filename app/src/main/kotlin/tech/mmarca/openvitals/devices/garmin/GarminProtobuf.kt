@@ -43,6 +43,12 @@ class ProtobufWriter {
         return this
     }
 
+    fun fixed64(field: Int, value: Long): ProtobufWriter {
+        key(field, 1)
+        for (i in 0 until 8) bytes.add(((value ushr (8 * i)) and 0xFF).toByte())
+        return this
+    }
+
     /** A sint32 field: zigzag-encoded varint, for values that can go negative. */
     fun sint32(field: Int, value: Int): ProtobufWriter {
         key(field, 0)
@@ -73,6 +79,7 @@ class ProtobufField(
     val field: Int,
     val wireType: Int,
     val varint: Long? = null,
+    val fixed64: Long? = null,
     val bytes: ByteArray? = null,
 )
 
@@ -122,7 +129,12 @@ fun readProtobuf(data: ByteArray): List<ProtobufField> {
             }
             1 -> {
                 if (i + 8 > data.size) return out
+                var value = 0L
+                for (shift in 0 until 8) {
+                    value = value or ((data[i + shift].toLong() and 0xFF) shl (8 * shift))
+                }
                 i += 8
+                out.add(ProtobufField(field = field, wireType = 1, fixed64 = value))
             }
             else ->
                 // An unknown wire type means the rest cannot be located.
@@ -146,4 +158,5 @@ object GarminSmartService {
     const val AUTHENTICATION = 27
     const val FIND_MY_WATCH = 12
     const val SETTINGS = 42
+    const val FILE_SYNC = 43
 }

@@ -18,7 +18,7 @@ Support differs sharply by make:
 Watch support is developed and verified against a single Garmin model. It is offered in the same spirit as [Bluetooth LE sensors](ble-sensors.md): useful, honest about its limits, and not a substitute for the vendor's own app.
 
 - The protocol is not model-specific, and OpenVitals asks each watch what it can do rather than assuming. A watch that does not report find-my-watch gets no Find button; one without a settings tree gets no settings row.
-- **Watches using the older single-link Garmin transport are not supported.** Pairing probes the watch and warns when it cannot recognize the connection at all. A watch that pairs but turns out to use the older transport reports an error the first time it is asked to sync.
+- Both Garmin transports are supported: current multi-link watches and the older direct-GFDI characteristic pair. Pairing probes the watch and warns when neither transport can be recognized.
 - A file type OpenVitals does not understand is skipped rather than failing the sync.
 - Sync happens by hand, or on a schedule the user chose per watch. Nothing syncs until one of those two says so.
 
@@ -43,9 +43,9 @@ A Garmin Edge bike computer is recognized as a bike computer rather than a watch
 
 Tapping a paired Garmin watch opens its device screen, which has a Sync action. The watches list itself shows each watch's last sync time.
 
-The watch hands over the files it recorded since last time and OpenVitals imports them. Each file is saved on the phone before the watch is told it may archive it, and a file is only marked as synced once its import succeeded, so a run that fails partway re-fetches rather than skipping data that never landed.
+The watch hands over the files it recorded since last time and OpenVitals imports them. Each file is saved on the phone before the watch is told it may archive it, and a file is only marked as synced once its import succeeded, so a run that fails partway re-fetches rather than skipping data that never landed. The first successful listing teaches OpenVitals whether that watch uses the legacy directory or the newer FileSync service; a timeout does not permanently disable either protocol.
 
-The device screen shows whether the watch has ever been synced and when it last was. A link dropped mid-sync is not treated as a failure: whatever arrived is kept.
+The device screen shows whether the watch has ever been synced and when it last was. If the link drops mid-sync, whatever arrived is still imported, but the run is reported as interrupted so a later sync retries the unfinished work.
 
 The dashboard carries a watch tile showing the most recently synced watch with its battery, last sync time, and a sync button, so a sync does not require a trip through Settings. While live readings are streaming (see below), the tile shows the current heart rate and step count instead of the last sync time.
 

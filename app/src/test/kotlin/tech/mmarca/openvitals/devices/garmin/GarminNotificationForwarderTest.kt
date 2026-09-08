@@ -26,6 +26,7 @@ class GarminNotificationForwarderTest {
         val pushed = mutableListOf<GarminNotification>()
         val withdrawn = mutableListOf<Long>()
         var closed = false
+        var synchronizing = false
 
         private val gone = MutableSharedFlow<Unit>(extraBufferCapacity = 4)
 
@@ -33,6 +34,8 @@ class GarminNotificationForwarderTest {
         override val handler = GarminGncsHandler(send = {})
 
         override val isOpen: Boolean get() = !closed
+
+        override val isSynchronizing: Boolean get() = synchronizing
 
         override val subscribed: Boolean get() = handler.enabled
 
@@ -396,6 +399,27 @@ class GarminNotificationForwarderTest {
         elapse(30_000)
 
         assertTrue(f.forwarder.isLinkOpen)
+    }
+
+    @Test
+    fun `an active filtered transfer finishes before yielding the radio`() = runTest {
+        val f = build()
+        f.forwarder.post(notification(1))
+        runCurrent()
+        elapse(2_000)
+        val link = f.links.single().also { it.synchronizing = true }
+
+        f.lease.requestedBy = GarminRadioOwners.SYNC
+        elapse(10_000)
+
+        assertTrue(f.forwarder.isLinkOpen)
+        assertEquals(GarminRadioOwners.NOTIFICATIONS, f.lease.holder)
+
+        link.synchronizing = false
+        elapse(10_000)
+
+        assertFalse(f.forwarder.isLinkOpen)
+        assertNull(f.lease.holder)
     }
 
     @Test

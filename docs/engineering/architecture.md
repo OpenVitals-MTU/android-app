@@ -349,11 +349,11 @@ The GFDI protocol stack, bottom to top. Everything above the GATT client is tran
 | Layer | Files |
 |---|---|
 | Byte primitives | `GarminByteReader/Writer`, `GarminCrc`, `GarminCobs`, `GarminProtobuf`, `GarminTime`, `GarminLog` |
-| BLE transport | `GarminUuids`, `GarminGattClient` (the only file touching `android.bluetooth`), `GarminGattProbe`, `GarminTransport`, `GarminTransportProbe`, `GarminMlTransport` |
+| BLE transport | `GarminUuids`, `GarminGattClient` (the only file touching `android.bluetooth`), `GarminGattProbe`, `GarminTransport`, `GarminTransportProbe`, `GarminFrameTransport`, `GarminV1Transport`, `GarminMlTransport`, `GarminMlrChannel` |
 | Framing | `GarminGfdiFrame` |
 | Message vocabulary | `GarminMessages`, `GarminCapabilities` |
 | Session | `GarminSession`, `GarminProtobufTransport` |
-| File sync | `GarminWatchSyncService`, `GarminDirectory`, `GarminFileTypes`, `GarminFileStore`, `GarminDeviceStateStore`, `GarminCounterWatermarkStore`, `GarminActivityImporter` |
+| File sync | `GarminWatchSyncService`, `GarminDirectory` (legacy listing), `GarminFileSyncProtocol` (protobuf listing fallback), `GarminFileTypes`, `GarminFileStore`, `GarminDeviceStateStore`, `GarminCounterWatermarkStore`, `GarminActivityImporter` |
 | Wellness import | `wellness/GarminFitWellness` (decode), `wellness/FitWellnessImport` (mapping), `wellness/FitWellnessImporter` (orchestration) |
 | Notifications | `GarminNotificationBridge`, `GarminNotificationForwarder`, `GarminNotificationLink`, `GarminGncsHandler`, `GarminNotificationMessages`, `GarminNotificationActions` |
 | Settings link | `GarminSettingsLink`, `GarminSettingsService`, `GarminSettingsModel` |
@@ -362,6 +362,13 @@ The GFDI protocol stack, bottom to top. Everything above the GATT client is tran
 Notes worth carrying:
 
 - `GarminWatchSyncService` is a `@Singleton` class, not an Android `Service`, despite the name. It implements `DeviceSyncPort`.
+- The GATT client prefers V2 multi-link but falls back to the direct V1 GFDI characteristic pair. V2 startup treats `CLOSE_ALL_RESP` as a barrier before registering GFDI; do not collapse those writes back into one batch.
+- A logical GFDI frame is one transport write operation even when BLE MTU 23 splits it into many characteristic writes. The V1 and V2 transports hold their send mutex across the complete COBS frame; narrowing that lock to individual BLE chunks lets concurrent battery, time, sync, and protobuf traffic interleave into corrupt frames.
+- Complete protobuf messages receive Garmin's three-byte generic ACK. Only chunked protobuf messages receive the extended offset/chunk ACK. Logs identify requests by type, ID, status, and byte count; never log raw protobuf, settings, or unknown-message payloads because they may contain notification text, location, or service credentials.
+- File pulls start with the legacy 16-byte directory. `FILTER` is sent only in response to `SYNCHRONIZATION`, and the directory is requested after its ACK. When the legacy listing is empty on a V2 watch whose protocol is not already proven legacy, the service probes Smart protobuf `FileSyncService`, follows both cursor and next-page IDs, and receives the selected compressed file over a temporary reliable-ML (`MLR`) file-transfer service. A valid result is remembered per device; a timeout remains `UNKNOWN` rather than becoming a long-lived unsupported cache entry.
+- A FileSync probe timeout does not invalidate a structurally valid legacy directory; it returns the legacy empty result and leaves protocol support `UNKNOWN` for a later probe. Once a session aborts, a kept-open listen link may still answer service traffic but must not re-enter directory/download handling or archive late files outside the already-sealed result.
+- Legacy FILTER/download-status responses time out after 10 seconds, directory generation after 30 seconds, and active transfers after 15 seconds of inactivity. The directory gets a wider window because an Instinct 2X can spend roughly 16 seconds completing startup protobuf conversations after accepting FILTER. The service's three-minute timeout is only a final whole-sync safety net. A partial pull is imported but reported as interrupted, so the retry policy does not mistake a dropped link for a successful empty sync.
+- Monitoring FIT records often carry only `timestamp_16`. Resolve those low 16 bits to the nearest rollover around the running full timestamp, in either direction; always rolling forward shifts a sample by 65,536 seconds and can put heart rate on the wrong local day.
 - A watch sync writes Health Connect records through `AppleHealthImportRepository.insertImportedRecords`, the same deterministic-`clientRecordId` path the Apple Health importer uses, so a re-import upserts instead of duplicating. Only the watch-only series go to `GarminWellnessRepository`.
 - The OS bond is the security boundary. GFDI's own auth challenge is answered with zeroes, so `OnboardGarminWatchUseCase` treats bonding as mandatory and the companion association as optional.
 

@@ -21,6 +21,8 @@ class GarminProtobufTransport(
     var onServiceRequest: ((requestId: Int, payload: ByteArray) -> Unit)? = null,
 ) {
 
+    class RejectedException(message: String) : Exception(message)
+
     companion object {
         /** The largest payload the watch accepts in one message, from Gadgetbridge. */
         const val MAX_CHUNK_SIZE = 375
@@ -28,12 +30,11 @@ class GarminProtobufTransport(
         /** How long to wait for a reply. An unanswered request must not leave a spinner forever. */
         val REPLY_TIMEOUT: Duration = 10.seconds
 
-        private fun hex(bytes: ByteArray): String =
-            bytes.joinToString(" ") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
     }
 
     private var lastRequestId = 0
     private val pending = mutableMapOf<Int, CompletableDeferred<ByteArray>>()
+    private val unmatchedMatchers = mutableMapOf<Int, (ByteArray) -> Boolean>()
 
     /**
      * Chunks in flight: request id to offset to bytes. Keyed by offset
@@ -46,6 +47,7 @@ class GarminProtobufTransport(
         payload: ByteArray,
         label: String? = null,
         timeout: Duration? = null,
+        acceptUnmatched: ((ByteArray) -> Boolean)? = null,
     ): ByteArray? {
         require(payload.size <= MAX_CHUNK_SIZE) {
             "Protobuf request is ${payload.size}B, over the $MAX_CHUNK_SIZE B " +
@@ -55,13 +57,13 @@ class GarminProtobufTransport(
         val requestId = nextRequestId()
         val deferred = CompletableDeferred<ByteArray>()
         pending[requestId] = deferred
+        if (acceptUnmatched != null) unmatchedMatchers[requestId] = acceptUnmatched
 
         GarminLog.log(
             "[GARMIN-PB] → ${label ?: "request"} #$requestId (${payload.size}B)",
         )
-        send(frame(GarminMessageId.PROTOBUF_REQUEST, requestId, payload))
-
         try {
+            send(frame(GarminMessageId.PROTOBUF_REQUEST, requestId, payload))
             val reply = withTimeoutOrNull(timeout ?: REPLY_TIMEOUT) { deferred.await() }
             if (reply == null) {
                 GarminLog.log(
@@ -72,8 +74,20 @@ class GarminProtobufTransport(
             return reply
         } finally {
             pending.remove(requestId)
+            unmatchedMatchers.remove(requestId)
             incoming.remove(requestId)
         }
+    }
+
+    suspend fun sendUnanswered(payload: ByteArray, label: String? = null) {
+        require(payload.size <= MAX_CHUNK_SIZE) {
+            "Protobuf request is ${payload.size}B, over the $MAX_CHUNK_SIZE B limit"
+        }
+        val requestId = nextRequestId()
+        GarminLog.log(
+            "[GARMIN-PB] → ${label ?: "request"} #$requestId (${payload.size}B, no wait)",
+        )
+        send(frame(GarminMessageId.PROTOBUF_REQUEST, requestId, payload))
     }
 
     /**
@@ -133,30 +147,52 @@ class GarminProtobufTransport(
             return true
         }
 
-        // Acked by request id, not just generically, or the watch retransmits
-        // every message every five seconds.
-        send(
-            buildProtobufAck(
-                originalMessageType = frame.messageType,
-                requestId = requestId,
-                dataOffset = dataOffset,
-            ),
-        )
+        // A COMPLETE protobuf message gets the ordinary three-byte GFDI ACK.
+        // The longer request-id/offset status is
+        // only valid for a chunked transfer. Sending that longer shape here
+        // makes the watch reject our RESPONSE with LENGTH_ERROR.
+        send(buildGenericAck(frame.messageType))
         deliver(requestId, bytes)
         return true
     }
 
-    /** Hands a complete message to its waiter, or to the unsolicited hook. */
+    fun handleStatus(status: GarminProtobufStatus) {
+        if (status.accepted) return
+        val detail = buildString {
+            append(status.status.name)
+            status.errorCode?.let { append(" protobufError=").append(it) }
+            status.dataOffset?.let { append(" offset=").append(it) }
+        }
+        GarminLog.log(
+            "[GARMIN-PB] rejected #${status.requestId ?: "?"}: $detail",
+        )
+        status.requestId?.let { requestId ->
+            pending[requestId]?.completeExceptionally(RejectedException(detail))
+        }
+    }
+
+    /**
+     * Hands a COMPLETE message to whoever is waiting for it, or to the
+     * unsolicited hook when nobody is.
+     */
     private fun deliver(requestId: Int, bytes: ByteArray) {
         val deferred = pending[requestId]
         if (deferred != null) {
-            GarminLog.log("[GARMIN-PB] ← #$requestId (${bytes.size}B) ${hex(bytes)}")
+            GarminLog.log("[GARMIN-PB] ← #$requestId (${bytes.size}B)")
             deferred.complete(bytes)
             return
         }
-        // Not an answer to anything outstanding.
+        val flexible = unmatchedMatchers.entries.firstOrNull { (_, matches) ->
+            runCatching { matches(bytes) }.getOrDefault(false)
+        }
+        if (flexible != null) {
+            pending[flexible.key]?.complete(bytes)
+            return
+        }
+        // Not an answer to anything outstanding — either the watch started
+        // this conversation, or it answered one of ours under its own id.
         GarminLog.log(
-            "[GARMIN-PB] ← unsolicited #$requestId (${bytes.size}B) ${hex(bytes)}",
+            "[GARMIN-PB] ← unsolicited #$requestId (${bytes.size}B)",
         )
         onServiceRequest?.invoke(requestId, bytes)
         onUnsolicited?.invoke(bytes)
@@ -174,6 +210,7 @@ class GarminProtobufTransport(
             deferred.completeExceptionally(IllegalStateException("link closed"))
         }
         pending.clear()
+        unmatchedMatchers.clear()
         incoming.clear()
     }
 

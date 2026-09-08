@@ -101,7 +101,24 @@ data class GarminGenericStatus(
     val status: GarminStatus,
 ) : GarminInboundMessage()
 
-/** Response to a download request. [maxFileSize] is the total byte length. */
+data class GarminProtobufStatus(
+    val originalMessageType: Int,
+    val status: GarminStatus,
+    val requestId: Int?,
+    val dataOffset: Long?,
+    val chunkStatus: Int?,
+    val errorCode: Int?,
+) : GarminInboundMessage() {
+    val accepted: Boolean
+        get() = status == GarminStatus.ACK &&
+            (chunkStatus == null || chunkStatus == 0) &&
+            (errorCode == null || errorCode == 0)
+}
+
+/**
+ * The response to a download request. When [canProceed], [maxFileSize] is the
+ * total byte length the watch will stream.
+ */
 data class GarminDownloadRequestStatus(
     val status: GarminStatus,
     val downloadStatus: GarminDownloadStatus,
@@ -495,6 +512,27 @@ private fun decodeStatus(payload: ByteArray): GarminInboundMessage {
         return GarminNotificationDataStatus(
             status = status,
             transferStatus = transferStatus,
+        )
+    }
+    if (originalType == GarminMessageId.PROTOBUF_REQUEST ||
+        originalType == GarminMessageId.PROTOBUF_RESPONSE
+    ) {
+        val status = if (reader.remaining > 0) {
+            GarminStatus.fromCode(reader.readByte())
+        } else {
+            GarminStatus.ACK
+        }
+        val requestId = if (reader.remaining >= 2) reader.readShort() else null
+        val dataOffset = if (reader.remaining >= 4) reader.readInt() else null
+        val chunkStatus = if (reader.remaining >= 1) reader.readByte() else null
+        val errorCode = if (reader.remaining >= 1) reader.readByte() else null
+        return GarminProtobufStatus(
+            originalMessageType = originalType,
+            status = status,
+            requestId = requestId,
+            dataOffset = dataOffset,
+            chunkStatus = chunkStatus,
+            errorCode = errorCode,
         )
     }
     // Generic ACK/NAK: a single status byte follows the original type.

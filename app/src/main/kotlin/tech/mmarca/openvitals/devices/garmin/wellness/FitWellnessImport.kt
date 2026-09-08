@@ -12,12 +12,14 @@ import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
+import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.units.Energy
 import androidx.health.connect.client.units.Length
 import androidx.health.connect.client.units.Percentage
 import androidx.health.connect.client.units.Power
+import androidx.health.connect.client.units.Mass
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -80,7 +82,21 @@ fun fitHrvImportRecords(reading: FitHrvReading): List<Record> = listOf(
     ),
 )
 
-/** Turns the metrics file's VO2 max into a record. The rest has no Health Connect type. */
+fun fitWeightImportRecords(reading: FitWeightReading): List<Record> = listOf(
+    WeightRecord(
+        time = reading.time,
+        zoneOffset = null,
+        weight = Mass.kilograms(reading.kilograms),
+        metadata = importMetadata("garmin_fit_weight_${reading.time.toEpochMilli()}"),
+    ),
+)
+
+/**
+ * Turns the metrics file's VO2 max into a `Vo2MaxRecord` import.
+ *
+ * Only VO2 max: recovery time, training readiness and training load have no
+ * Health Connect type and go to the app's own table instead.
+ */
 fun fitMetricsImportRecords(metrics: FitMetricsSummary): List<Record> {
     val time = metrics.time ?: return emptyList()
     val vo2Max = metrics.vo2Max ?: return emptyList()

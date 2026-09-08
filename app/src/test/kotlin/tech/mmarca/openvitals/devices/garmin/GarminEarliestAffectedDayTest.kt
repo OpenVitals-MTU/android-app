@@ -5,6 +5,9 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import org.junit.Test
+import tech.mmarca.openvitals.devices.garmin.wellness.FitW
+import tech.mmarca.openvitals.devices.garmin.wellness.fitTimestamp
+import tech.mmarca.openvitals.devices.garmin.wellness.fitWrap
 
 /**
  * The day a watch sync invalidates the Body Energy chain from. Too late leaves a back-filled
@@ -42,10 +45,29 @@ class GarminEarliestAffectedDayTest {
     }
 
     @Test
-    fun `a sync where nothing carries a date invalidates nothing`() {
-        // Null, not "today": the chain's settling window stays the only safety net.
+    fun `date helper returns null when no file carries a date`() {
+        // The date-only helper has no date; the invalidation policy handles this as a full purge.
         assertThat(garminEarliestAffectedDay(listOf(file(at = null)), zone = UTC)).isNull()
         assertThat(garminEarliestAffectedDay(emptyList(), zone = UTC)).isNull()
+    }
+
+    @Test
+    fun `an undated downloaded file requires full invalidation`() {
+        assertThat(
+            garminNeedsFullBodyEnergyInvalidation(
+                listOf(file(at = "2026-06-14T03:30:00Z"), file(at = null)),
+            ),
+        ).isTrue()
+        assertThat(garminNeedsFullBodyEnergyInvalidation(emptyList())).isFalse()
+    }
+
+    @Test
+    fun `file date is derived from the earliest timestamp across chained FIT files`() {
+        val later = timestampedFit("2026-06-18T09:15:00Z")
+        val earlier = timestampedFit("2026-06-14T03:30:00Z")
+
+        assertThat(garminFitFileDate(later + earlier))
+            .isEqualTo(Instant.parse("2026-06-14T03:30:00Z"))
     }
 
     @Test
@@ -71,6 +93,16 @@ class GarminEarliestAffectedDayTest {
         ),
         bytes = ByteArray(0),
     )
+
+    private fun timestampedFit(at: String): ByteArray {
+        val timestamp = fitTimestamp(Instant.parse(at))
+        val data = FitW()
+            .def(0, 20, listOf(listOf(253, 4, 0x86)))
+            .u8(0)
+            .u32(timestamp)
+            .toBytes()
+        return fitWrap(data)
+    }
 
     private companion object {
         val UTC: ZoneId = ZoneId.of("UTC")

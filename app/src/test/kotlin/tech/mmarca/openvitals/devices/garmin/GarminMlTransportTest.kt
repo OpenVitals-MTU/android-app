@@ -1,7 +1,9 @@
 package tech.mmarca.openvitals.devices.garmin
 
 import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -36,6 +38,7 @@ class GarminMlTransportTest {
             write = { packet -> written.add(packet) },
             onFrame = { frames.add(it) },
             onGfdiClosed = { gfdiClosedCount++ },
+            onControlPacket = { packet -> written.add(packet) },
             onLog = { logs.add(it) },
         )
     }
@@ -71,6 +74,13 @@ class GarminMlTransportTest {
         .writeByte(0)
         .toBytes()
 
+    private fun closeAllResponse(clientId: Long = CLIENT_ID.toLong()): ByteArray =
+        GarminByteWriter()
+            .writeByte(0)
+            .writeByte(6) // CLOSE_ALL_RESP
+            .writeLong(clientId)
+            .toBytes()
+
     /** Wraps [frame] as the watch would: COBS, then handle-prefixed packets. */
     private fun inboundPackets(frame: ByteArray, handle: Int, chunkSize: Int): List<ByteArray> {
         val encoded = GarminCobs.encode(frame)
@@ -91,6 +101,7 @@ class GarminMlTransportTest {
 
     private suspend fun openChannel(handle: Int = 3) {
         transport.open()
+        transport.handleInbound(closeAllResponse())
         transport.handleInbound(registerResponse(handle = handle))
         transport.ready.await()
     }
@@ -101,17 +112,18 @@ class GarminMlTransportTest {
     fun `closes stale handles before registering`() = runTest {
         transport.open()
 
-        assertEquals(2, written.size)
-        // Both are 13-byte control packets on handle 0.
-        assertTrue(written.all { it.size == 13 })
-        assertTrue(written.all { it[0].toInt() == 0 })
+        assertEquals(1, written.size)
+        assertEquals(13, written.single().size)
+        assertEquals(0, written.single()[0].toInt())
         assertEquals(5, written[0][1].toInt()) // CLOSE_ALL_REQ
-        assertEquals(0, written[1][1].toInt()) // REGISTER_ML_REQ
     }
 
     @Test
-    fun `the register request names GFDI and asks for plain ML`() = runTest {
+    fun `registers only after close-all response and asks for plain ML`() = runTest {
         transport.open()
+        assertEquals(1, written.size)
+
+        transport.handleInbound(closeAllResponse())
 
         val register = written[1]
         // [handle][req][u64 client][u16 service][trailing]
@@ -129,6 +141,7 @@ class GarminMlTransportTest {
         transport.open()
         assertFalse(transport.isReady)
 
+        transport.handleInbound(closeAllResponse())
         transport.handleInbound(registerResponse(handle = 3))
 
         transport.ready.await()
@@ -139,6 +152,7 @@ class GarminMlTransportTest {
     fun `a refused registration surfaces as an error not a hang`() = runTest {
         transport.open()
 
+        transport.handleInbound(closeAllResponse())
         transport.handleInbound(registerResponse(status = 1))
 
         try {
@@ -153,6 +167,7 @@ class GarminMlTransportTest {
     fun `ignores control traffic belonging to another client`() = runTest {
         transport.open()
 
+        transport.handleInbound(closeAllResponse())
         transport.handleInbound(registerResponse(clientId = 99))
 
         assertFalse(transport.isReady)
@@ -219,6 +234,35 @@ class GarminMlTransportTest {
         }
         val decoder = GarminCobsDecoder().apply { addBytes(joined.toByteArray()) }
         assertArrayEquals(frame, decoder.pull())
+    }
+
+    @Test
+    fun `concurrent multi-write GFDI frames never interleave`() = runTest {
+        val packets = mutableListOf<ByteArray>()
+        val serial = GarminMlTransport(
+            write = { packet -> packets += packet; yield() },
+            onFrame = {},
+            onControlPacket = { packets += it },
+        )
+        serial.open()
+        serial.handleInbound(closeAllResponse())
+        serial.handleInbound(registerResponse(handle = 3))
+        serial.ready.await()
+        packets.clear()
+        val first = GarminGfdiFrame.build(5004, ByteArray(120) { 0x11 })
+        val second = GarminGfdiFrame.build(5043, ByteArray(120) { 0x22 })
+
+        val a = async { serial.sendFrame(first) }
+        yield()
+        val b = async { serial.sendFrame(second) }
+        a.await()
+        b.await()
+
+        val decoder = GarminCobsDecoder().apply {
+            packets.forEach { addBytes(it.copyOfRange(1, it.size)) }
+        }
+        assertArrayEquals(first, decoder.pull())
+        assertArrayEquals(second, decoder.pull())
     }
 
     @Test

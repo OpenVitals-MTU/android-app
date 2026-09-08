@@ -26,6 +26,8 @@ interface GarminNotificationLink {
     /** Whether the link is still usable. A watch that walks away closes it. */
     val isOpen: Boolean
 
+    val isSynchronizing: Boolean get() = false
+
     /**
      * Whether the watch has subscribed. It asks about once a second, so
      * this flips soon after the handshake if notifications are on. False is
@@ -70,6 +72,9 @@ data class GarminNotificationLinkRequest(
     val calendarProvider: ((beginEpochSeconds: Long, endEpochSeconds: Long) -> List<GarminCalendarEvent>?)? = null,
     /** A finished recording announced over the held link — sync it now. */
     val onFileAnnounced: (() -> Unit)? = null,
+    val alreadySyncedFileKeys: Set<String> = emptySet(),
+    val onGarminFileDownloaded: (suspend (GarminDownloadedFile) -> Unit)? = null,
+    val onGarminFilesDownloaded: ((List<GarminDownloadedFile>) -> Unit)? = null,
     /** The phone's position, for the watch's location asks. */
     val locationProvider: (() -> GarminPhoneLocation?)? = null,
     /** Whether the phone's app is in the foreground right now. */
@@ -100,6 +105,9 @@ class GarminBleNotificationLink private constructor(
     private var closed = false
 
     override val isOpen: Boolean get() = !closed
+
+    override val isSynchronizing: Boolean
+        get() = session.isSynchronizationTransferActive
 
     override val subscribed: Boolean get() = handler.enabled
 
@@ -189,6 +197,10 @@ class GarminBleNotificationLink private constructor(
                 setupWizardPending = request.setupWizardPending?.invoke() == true,
                 onSetupWizardCompleted = request.onSetupWizardCompleted,
                 onFileAnnounced = { request.onFileAnnounced?.invoke() },
+                alreadySynced = request.alreadySyncedFileKeys,
+                onFileDownloaded = request.onGarminFileDownloaded,
+                onSynchronizationAnnounced = request.onFileAnnounced,
+                onSynchronizationFilesDownloaded = request.onGarminFilesDownloaded,
                 onHandshakeReady = {
                     if (!ready.isCompleted) ready.complete(Unit)
                 },
@@ -198,7 +210,10 @@ class GarminBleNotificationLink private constructor(
                 transport = gatt.connect(
                     onFrame = { frame -> scope.launch { session.handleFrame(frame) } },
                     onRealtime = { _, reading -> request.onRealtimeReading?.invoke(reading) },
-                )
+                ) as? GarminMlTransport
+                    ?: throw GarminGattClientException(
+                        "Realtime notifications require Garmin's V2 multi-link transport",
+                    )
                 session.start()
                 // Anything sent before the handshake finishes is dropped.
                 withTimeout(handshakeTimeout) { ready.await() }

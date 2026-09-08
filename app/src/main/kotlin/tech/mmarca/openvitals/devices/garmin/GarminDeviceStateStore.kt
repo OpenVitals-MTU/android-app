@@ -6,6 +6,12 @@ import androidx.core.content.edit
 import org.json.JSONArray
 import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
 
+enum class GarminSyncProtocol {
+    UNKNOWN,
+    LEGACY,
+    FILE_SYNC,
+}
+
 /**
  * Garmin's per-device state, kept out of the generic registry: the
  * capability bitmap from the last handshake, and which files a previous
@@ -116,6 +122,25 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
         prefs.edit { putInt(autoSyncPrefsKey(deviceId), interval.minutes) }
     }
 
+    fun syncProtocol(deviceId: String): GarminSyncProtocol {
+        val stored = prefs.getString(syncProtocolPrefsKey(deviceId), null)
+        GarminSyncProtocol.entries.firstOrNull { it.name == stored }?.let { return it }
+        return if (prefs.getBoolean(fileSyncSupportedPrefsKey(deviceId), false)) {
+            GarminSyncProtocol.FILE_SYNC
+        } else {
+            GarminSyncProtocol.UNKNOWN
+        }
+    }
+
+    fun recordSyncProtocol(deviceId: String, protocol: GarminSyncProtocol) {
+        if (protocol == GarminSyncProtocol.UNKNOWN) return
+        prefs.edit {
+            putString(syncProtocolPrefsKey(deviceId), protocol.name)
+            remove(fileSyncSupportedPrefsKey(deviceId))
+            remove(fileSyncProbeAfterPrefsKey(deviceId))
+        }
+    }
+
     fun clear(deviceId: String) {
         clearSyncedFileKeys(deviceId)
         prefs.edit {
@@ -125,6 +150,9 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
             remove(liveReadingsPrefsKey(deviceId))
             remove(calendarSyncPrefsKey(deviceId))
             remove(autoSyncPrefsKey(deviceId))
+            remove(fileSyncSupportedPrefsKey(deviceId))
+            remove(fileSyncProbeAfterPrefsKey(deviceId))
+            remove(syncProtocolPrefsKey(deviceId))
         }
     }
 
@@ -144,12 +172,20 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
 
     private fun autoSyncPrefsKey(deviceId: String) = "garmin_auto_sync_minutes_$deviceId"
 
+    private fun fileSyncSupportedPrefsKey(deviceId: String) =
+        "garmin_file_sync_supported_$deviceId"
+
+    private fun fileSyncProbeAfterPrefsKey(deviceId: String) =
+        "garmin_file_sync_probe_after_$deviceId"
+
+    private fun syncProtocolPrefsKey(deviceId: String) =
+        "garmin_sync_protocol_$deviceId"
+
     companion object {
         const val PREFS_FILE = "garmin_device_state"
 
         /** Cap on remembered file keys per watch, so the list cannot grow without bound. */
         private const val MAX_SYNCED_FILE_KEYS = 4000
-
         private fun SharedPreferences.readStringList(key: String): List<String>? {
             val raw = getString(key, null) ?: return null
             return runCatching {

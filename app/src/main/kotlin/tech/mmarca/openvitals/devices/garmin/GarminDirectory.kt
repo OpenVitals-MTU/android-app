@@ -16,6 +16,7 @@ data class GarminDirectoryEntry(
     val fileSize: Long,
     /** When the watch recorded the file, or null for its "no date" sentinel. */
     val fileDate: Instant?,
+    val remoteDedupKey: String? = null,
 ) {
     companion object {
         /** The watch's "no file number" sentinel. Several different files carry it. */
@@ -31,6 +32,7 @@ data class GarminDirectoryEntry(
      */
     val dedupKey: String?
         get() {
+            remoteDedupKey?.let { return it }
             val date = fileDate
             if (fileNumber == UNSET_FILE_NUMBER || date == null) return null
             return "${type.dataType}/${type.subType}/$fileNumber/${date.epochSecond}/$fileSize"
@@ -42,6 +44,7 @@ data class GarminDirectoryListing(
     val entries: List<GarminDirectoryEntry>,
     /** Every 16-byte record read, before any filtering. */
     val totalRecords: Int,
+    val isStructurallyValid: Boolean,
     /**
      * `index:dataType/subType` of each dropped record. The index matters:
      * the watch also announces files by index over protobuf.
@@ -128,6 +131,7 @@ object GarminDirectory {
         return GarminDirectoryListing(
             entries = entries,
             totalRecords = totalRecords,
+            isStructurallyValid = data.size % ENTRY_SIZE == 0,
             skipped = skipped,
             allIndexes = allIndexes,
         )
