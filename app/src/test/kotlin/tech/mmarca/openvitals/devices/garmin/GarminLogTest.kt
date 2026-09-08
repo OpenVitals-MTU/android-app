@@ -1,29 +1,36 @@
 package tech.mmarca.openvitals.devices.garmin
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GarminLogTest {
 
     @Test
-    fun `redacts named credentials bearer tokens and bare auth keys`() {
+    fun `redacts only credential values and preserves the rest of each log line`() {
         val lines = mutableListOf<String>()
         GarminLog.installSink(lines::add)
         try {
-            GarminLog.log("access_token=secret-value refreshToken:another-secret")
-            GarminLog.log("Authorization: Bearer abc.def.ghi")
-            GarminLog.log("ABCDEFGHIJKLMNOPQRSTUVWXYZ012345678")
+            GarminLog.log(
+                "[GARMIN-HTTP] request access_token=secret-value " +
+                    "refreshToken:another-secret completed",
+            )
+            GarminLog.log("[GARMIN-HTTP] Authorization: Bearer abc.def.ghi accepted")
+            GarminLog.log(
+                "[GARMIN-AUTH] key ABCDEFGHIJKLMNOPQRSTUVWXYZ012345678 issued",
+            )
         } finally {
             GarminLog.installSink(null)
         }
 
-        assertEquals(3, lines.size)
-        assertTrue(lines.all { "[redacted]" in it })
-        assertFalse(lines.joinToString().contains("secret-value"))
-        assertFalse(lines.joinToString().contains("abc.def.ghi"))
-        assertFalse(lines.joinToString().contains("ABCDEFGHIJKLMNOPQRSTUVWXYZ012345678"))
+        assertEquals(
+            listOf(
+                "[GARMIN-HTTP] request access_token=[redacted] " +
+                    "refreshToken:[redacted] completed",
+                "[GARMIN-HTTP] Authorization: [redacted] [redacted] accepted",
+                "[GARMIN-AUTH] key [redacted] issued",
+            ),
+            lines,
+        )
     }
 
     @Test
@@ -32,10 +39,23 @@ class GarminLogTest {
         GarminLog.installSink(lines::add)
         try {
             GarminLog.log("[GARMIN-PB] reply #42 (128B)")
+            GarminLog.log("[GARMIN-SYNC] complete: 27 files")
+            GarminLog.log("[GARMIN-NOTIFY] reconnecting in 15s")
+            GarminLog.log(
+                "[GARMIN-SYNC] downloaded 120 files and completed the import without errors",
+            )
         } finally {
             GarminLog.installSink(null)
         }
 
-        assertEquals(listOf("[GARMIN-PB] reply #42 (128B)"), lines)
+        assertEquals(
+            listOf(
+                "[GARMIN-PB] reply #42 (128B)",
+                "[GARMIN-SYNC] complete: 27 files",
+                "[GARMIN-NOTIFY] reconnecting in 15s",
+                "[GARMIN-SYNC] downloaded 120 files and completed the import without errors",
+            ),
+            lines,
+        )
     }
 }
