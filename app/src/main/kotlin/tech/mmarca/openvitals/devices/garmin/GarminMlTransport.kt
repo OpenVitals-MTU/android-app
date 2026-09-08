@@ -119,11 +119,7 @@ class GarminMlTransport(
     /** Whether [serviceCode] currently has a handle. */
     fun isServiceOpen(serviceCode: Int): Boolean = handleByService.containsKey(serviceCode)
 
-    /**
-     * Opens a non-GFDI service, so the watch starts streaming it. Idempotent:
-     * a second request for an open service would earn a second handle and
-     * double every reading.
-     */
+    /** Opens a non-GFDI service, so the watch starts streaming it.     */
     suspend fun openService(serviceCode: Int, reliable: Boolean = false) {
         if (handleByService.containsKey(serviceCode)) return
         val opened = CompletableDeferred<Unit>()
