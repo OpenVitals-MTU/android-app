@@ -148,8 +148,8 @@ class GarminProtobufTransport(
             return true
         }
 
-        // Gadgetbridge's wire contract: a COMPLETE protobuf message gets the
-        // ordinary three-byte GFDI ACK. The longer request-id/offset status is
+        // A COMPLETE protobuf message gets the ordinary three-byte GFDI ACK.
+        // The longer request-id/offset status is
         // only valid for a chunked transfer. Sending that longer shape here
         // makes the watch reject our RESPONSE with LENGTH_ERROR.
         send(buildGenericAck(frame.messageType))

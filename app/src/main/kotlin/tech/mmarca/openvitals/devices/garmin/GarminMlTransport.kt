@@ -14,8 +14,8 @@ import kotlin.time.Duration.Companion.seconds
  * Garmin's multi-link (ML) transport, the V2 layer that carries GFDI. Port of
  * Gadgetbridge's `CommunicatorV2` (AGPLv3). V1 is not implemented.
  *
- * Port of Gadgetbridge's `CommunicatorV2` (AGPLv3), narrowed to the one
- * channel a read-only sync needs. **This is the layer a vívoactive 5
+ * This implementation is narrowed to the one channel a read-only sync needs.
+ * **This is the layer a vívoactive 5
  * requires**: the on-device GATT probe found the multi-link service
  * `6a4e2800` with handle pairs `0x2810/0x2820`…, and no V1 service. Older
  * direct-GFDI devices use [GarminV1Transport] instead.
@@ -234,7 +234,7 @@ class GarminMlTransport(
                 return
             }
             // Some non-MLR handles legitimately use the high bit; fall through
-            // when no reliable channel claims it, matching Gadgetbridge #5476.
+            // when no reliable channel claims it.
         }
 
         if (leadingByte == CONTROL_HANDLE) {

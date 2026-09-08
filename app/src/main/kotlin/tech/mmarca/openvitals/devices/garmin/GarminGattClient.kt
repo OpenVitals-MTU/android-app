@@ -208,8 +208,8 @@ class GarminGattClient(
     /**
      * Connects, opens the GFDI channel and returns the transport to send on.
      *
-     * Prefers V2 multi-link when both variants exist, matching Gadgetbridge,
-     * and falls back to the direct V1 characteristic pair.
+     * Prefers V2 multi-link when both variants exist and falls back to the
+     * direct V1 characteristic pair.
      */
     @SuppressLint("MissingPermission")
     suspend fun connect(

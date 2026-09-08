@@ -351,8 +351,8 @@ class GarminSession(
                         },
                 )
                 send(buildSystemEvent(GarminSystemEventType.SYNC_READY))
-                // Gadgetbridge flushes current monitor/activity data by asking
-                // for directory index 0 directly. FILTER is not an initializer:
+                // Current monitor/activity data is flushed by asking for
+                // directory index 0 directly. FILTER is not an initializer:
                 // it is the reply to a later SYNCHRONIZATION announcement.
                 // Sending both back-to-back raced the watch's listing state.
                 if (!syncFiles) return

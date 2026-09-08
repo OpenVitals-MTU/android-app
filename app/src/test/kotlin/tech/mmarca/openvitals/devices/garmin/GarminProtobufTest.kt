@@ -190,8 +190,8 @@ class GarminProtobufTest {
         transport.handleInbound(reply(4242, b(0x62, 0x00)))
 
         val ack = acks.single().payload
-        // Gadgetbridge/firmware use the ordinary [u16 type][u8 ACK] shape for
-        // complete protobuf messages. The extended shape is chunk-only.
+        // Complete protobuf messages use the ordinary [u16 type][u8 ACK]
+        // shape. The extended shape is chunk-only.
         assertArrayEquals(
             b(GarminMessageId.PROTOBUF_RESPONSE and 0xFF,
                 GarminMessageId.PROTOBUF_RESPONSE ushr 8, 0),
