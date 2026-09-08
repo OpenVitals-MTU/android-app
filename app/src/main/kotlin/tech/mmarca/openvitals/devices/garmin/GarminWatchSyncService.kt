@@ -69,12 +69,6 @@ class GarminWatchSyncService @Inject constructor(
 
     private val phone = GarminPhoneIdentity()
 
-    /**
-     * The radio lease is keyed by owner tag, so two callers both using SYNC
-     * look re-entrant to it. Serialize them here before either opens GATT;
-     * otherwise a manual tap racing an announced-file sync gives two sessions
-     * the same watch frames and corrupts both protocol conversations.
-     */
     private val syncMutex = Mutex()
 
     /**
@@ -100,15 +94,10 @@ class GarminWatchSyncService @Inject constructor(
     internal fun syncedFileKeys(deviceId: String): Set<String> =
         stateStore.syncedFileKeys(deviceId)
 
-    /** Raw bytes must be durable before the held session archives the file. */
     internal suspend fun storeAnnouncedFile(file: GarminDownloadedFile) {
         fileStore.save(file, now = Instant.now())
     }
 
-    /**
-     * Imports files pulled by the companion link without reopening BLE. The
-     * link already persisted every file before archiving it.
-     */
     internal fun importAnnouncedFiles(
         device: BleSensorDevice,
         files: List<GarminDownloadedFile>,
@@ -193,10 +182,6 @@ class GarminWatchSyncService @Inject constructor(
             refreshBodyEnergy(downloaded)
         }
 
-        // A dropped or timed-out link may still have yielded useful files.
-        // Import those, but do not stamp the run as successful: otherwise a
-        // zero-file disconnect looks exactly like "nothing new" and hides the
-        // transport failure from both the user and auto-sync retry policy.
         val incompleteReason = pull.incompleteReason
         if (incompleteReason != null) {
             return DeviceSyncResult.Failed(
@@ -388,10 +373,6 @@ class GarminWatchSyncService @Inject constructor(
                 )
             },
             onFileDownloaded = { file -> fileStore.save(file, now = Instant.now()) },
-            // The legacy directory may finish empty before we try the newer
-            // protobuf FileSyncService on the same link. Keep dispatching
-            // frames until the GATT client closes so those replies are not
-            // discarded merely because the legacy result was sealed.
             keepAnsweringAfterSync = true,
             onFindPhone = { seconds -> findPhoneRinger.start(seconds) },
             onFindPhoneCancel = { findPhoneRinger.stop() },
@@ -473,13 +454,6 @@ class GarminWatchSyncService @Inject constructor(
                         throw error
                     } catch (error: Exception) {
                         GarminLog.log("[GARMIN-SYNC] new file sync interrupted: $error")
-                        // FileSync is an optional fallback on a watch whose
-                        // legacy directory was empty. A timeout proves
-                        // nothing about support and must not turn a valid
-                        // legacy empty listing into a user-visible failure.
-                        // Keep protocol UNKNOWN so a later sync may probe
-                        // again; only fail when no valid legacy listing was
-                        // received either.
                         if (!session.hasValidDirectoryListing) {
                             session.abort(
                                 "Garmin FileSyncService failed: " +
@@ -552,11 +526,6 @@ class GarminWatchSyncService @Inject constructor(
             }
             stateStore.recordSyncProtocol(device.id, GarminSyncProtocol.FILE_SYNC)
             remote += page.files
-            // cursor_id means there are more chunks in the current listing.
-            // Once that is exhausted, next_page_id advances to the next
-            // listing. Some watches only expose SPORTS files on those later
-            // pages, so stopping after the cursor chain silently loses every
-            // workout while still reporting a successful sync.
             if (page.cursorId != null) {
                 cursorId = page.cursorId
                 startPageId = null
@@ -704,7 +673,6 @@ class GarminWatchSyncService @Inject constructor(
         /** How long a watch gets to finish its handshake before a find gives up. */
         val HANDSHAKE_TIMEOUT = 15.seconds
 
-        /** Final safety net for a missing directory response or stalled file. */
         val SYNC_TIMEOUT = 3.minutes
         val FILE_SYNC_REPLY_TIMEOUT = 8.seconds
         val FILE_TRANSFER_TIMEOUT = 90.seconds

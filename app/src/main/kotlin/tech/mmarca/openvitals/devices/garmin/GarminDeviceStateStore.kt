@@ -6,7 +6,6 @@ import androidx.core.content.edit
 import org.json.JSONArray
 import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
 
-/** The file-list protocol that has produced a valid result for one watch. */
 enum class GarminSyncProtocol {
     UNKNOWN,
     LEGACY,
@@ -123,12 +122,6 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
         prefs.edit { putInt(autoSyncPrefsKey(deviceId), interval.minutes) }
     }
 
-    /**
-     * The protocol proven by an actual listing/download. Old `supported=true`
-     * values migrate to FILE_SYNC; old negative values are deliberately
-     * ignored because previous builds wrote them after any timeout, including
-     * corrupted/interleaved transport traffic.
-     */
     fun syncProtocol(deviceId: String): GarminSyncProtocol {
         val stored = prefs.getString(syncProtocolPrefsKey(deviceId), null)
         GarminSyncProtocol.entries.firstOrNull { it.name == stored }?.let { return it }

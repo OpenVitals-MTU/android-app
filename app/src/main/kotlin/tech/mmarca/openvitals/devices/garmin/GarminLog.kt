@@ -46,21 +46,11 @@ object GarminLog {
         if (enabled) log(message())
     }
 
-    /**
-     * Last-line protection for debug logging. Protocol payloads can contain
-     * fabricated OAuth values and, as the integration grows, may eventually
-     * carry real credentials. Call-site redaction remains useful for keeping
-     * logs readable, but the sink itself must never trust every caller to
-     * remember it.
-     */
     private fun redactSensitiveValues(message: String): String {
         var redacted = BearerCredential.replace(message, "Bearer [redacted]")
         redacted = SensitiveAssignment.replace(redacted) { match ->
             "${match.groupValues[1]}${match.groupValues[2]}[redacted]"
         }
-        // Covers a secret printed without a label, including the 35-character
-        // fake keys used by the Garmin authentication responder. UUIDs retain
-        // their dashes and are therefore not mistaken for opaque secrets.
         return OpaqueCredential.replace(redacted, "[redacted]")
     }
 

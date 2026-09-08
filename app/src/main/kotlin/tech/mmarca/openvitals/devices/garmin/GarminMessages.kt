@@ -101,7 +101,6 @@ data class GarminGenericStatus(
     val status: GarminStatus,
 ) : GarminInboundMessage()
 
-/** Status for a protobuf request/response, optionally naming a chunk. */
 data class GarminProtobufStatus(
     val originalMessageType: Int,
     val status: GarminStatus,
@@ -523,8 +522,6 @@ private fun decodeStatus(payload: ByteArray): GarminInboundMessage {
         } else {
             GarminStatus.ACK
         }
-        // Complete protobuf messages have only the generic status byte.
-        // Chunk statuses append request id, offset, kept/discarded and error.
         val requestId = if (reader.remaining >= 2) reader.readShort() else null
         val dataOffset = if (reader.remaining >= 4) reader.readInt() else null
         val chunkStatus = if (reader.remaining >= 1) reader.readByte() else null

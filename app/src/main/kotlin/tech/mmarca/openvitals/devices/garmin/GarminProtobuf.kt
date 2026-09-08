@@ -43,7 +43,6 @@ class ProtobufWriter {
         return this
     }
 
-    /** A fixed64 field (wire type 1), used by Garmin FileSyncService ids. */
     fun fixed64(field: Int, value: Long): ProtobufWriter {
         key(field, 1)
         for (i in 0 until 8) bytes.add(((value ushr (8 * i)) and 0xFF).toByte())

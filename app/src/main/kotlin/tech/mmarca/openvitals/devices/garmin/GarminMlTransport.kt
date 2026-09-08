@@ -45,13 +45,6 @@ class GarminMlTransport(
     private val onGfdiClosed: (() -> Unit)? = null,
     /** A packet on a non-GFDI service, by service code: live readings. Raw, unframed. */
     private val onServiceData: ((serviceCode: Int, payload: ByteArray) -> Unit)? = null,
-    /**
-     * Sends control traffic that is triggered by an inbound control response.
-     *
-     * In particular, Garmin requires registration to happen only after its
-     * CLOSE_ALL response. [handleInbound] is deliberately synchronous, so the
-     * Android owner supplies this small bridge into its serialised GATT writer.
-     */
     private val onControlPacket: ((ByteArray) -> Unit)? = null,
     private val onLog: ((String) -> Unit)? = null,
 ) : GarminFrameTransport {
@@ -121,10 +114,6 @@ class GarminMlTransport(
     suspend fun open() {
         // A watch mid-session still holds old handles; registering on top fails.
         write(controlPacket(CLOSE_ALL_REQ, serviceCode = 0))
-        // Do not register yet. Gadgetbridge and Garmin firmware both treat
-        // CLOSE_ALL as a request/response barrier: registering before the
-        // CLOSE_ALL_RESP races stale-handle cleanup and stricter watches drop
-        // or refuse the registration.
     }
 
     /** Whether [serviceCode] currently has a handle. */

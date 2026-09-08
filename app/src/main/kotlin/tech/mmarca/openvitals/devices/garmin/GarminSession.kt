@@ -52,15 +52,8 @@ class GarminSession(
     private val onFileDownloaded: (suspend (GarminDownloadedFile) -> Unit)? = null,
     /** How long an empty sync waits for a late SYNCHRONIZATION announcement. */
     private val emptyGrace: Duration = 6.seconds,
-    /** Maximum wait for a FILTER ACK or download-status response. */
     private val responseTimeout: Duration = 10.seconds,
-    /**
-     * Directory generation is slower than an ordinary response. An Instinct
-     * 2X spent about 16 seconds completing startup protobuf conversations
-     * after accepting FILTER before it served the listing.
-     */
     private val directoryResponseTimeout: Duration = 30.seconds,
-    /** Maximum silence between accepted chunks of an active file transfer. */
     private val transferInactivityTimeout: Duration = 15.seconds,
     /**
      * Diagnostic only: keep decoding and acknowledging what the watch sends
@@ -90,13 +83,7 @@ class GarminSession(
     private val onFindPhoneCancel: (() -> Unit)? = null,
     /** The watch announced a file this session cannot download. The owner decides. */
     private val onFileAnnounced: ((GarminDirectoryEntry) -> Unit)? = null,
-    /**
-     * The watch announced that one or more sync categories are ready on a
-     * held link that deliberately cannot transfer files. The owner starts a
-     * proper sync before that one-shot announcement is lost.
-     */
     private val onSynchronizationAnnounced: (() -> Unit)? = null,
-    /** A held link finished downloading one filtered synchronization batch. */
     private val onSynchronizationFilesDownloaded: ((List<GarminDownloadedFile>) -> Unit)? = null,
     /**
      * The weather to serve when the watch asks ([GarminWeatherRequest]), or
@@ -152,27 +139,17 @@ class GarminSession(
     /** True once the directory is fetched. */
     private var directoryFetched = false
 
-    /** A structurally valid legacy directory was received, even if it listed no new files. */
     var hasValidDirectoryListing = false
         private set
 
-    /** True while a FILTER-scoped companion transfer must keep its BLE link. */
     val isSynchronizationTransferActive: Boolean
         get() = handoffAfterDirectory
 
-    /** A synchronization announcement was answered; wait for FILTER's ACK before relisting. */
     private var awaitingFilterAck = false
 
-    /**
-     * A held companion link accepted FILTER and is fetching the resulting
-     * directory before yielding the radio. Garmin's filtered listing is
-     * connection-scoped on real watches: handing off immediately after the
-     * ACK reconnected into an empty placeholder directory.
-     */
     private var handoffAfterDirectory = false
 
     private var finished = false
-    /** Non-null when [done] contains only the files recovered before an abort. */
     var abortReason: String? = null
         private set
     private var filesTotal = 0
@@ -258,12 +235,6 @@ class GarminSession(
             }
             if (protobuf.handleInbound(frame)) return
             val message = decodeGarminMessage(frame)
-            // A kept-open diagnostic/listen link still answers time, auth,
-            // calendar and notification traffic after the sync result is
-            // sealed. It must never restart the file state machine after an
-            // abort: doing so downloaded and archived files after done had
-            // already completed with an empty snapshot, so those files were
-            // neither imported nor offered by the watch again.
             if (abortReason != null && message.drivesFileSync) return
             dispatch(message)
         } catch (error: CancellationException) {
@@ -636,18 +607,6 @@ class GarminSession(
                 }
                 return
             }
-            // Skip what a previous sync already imported — bandwidth only.
-            // A null dedup key means the file cannot be identified across
-            // syncs, so it is always fetched rather than guessed at — see
-            // [GarminDirectoryEntry.dedupKey].
-            //
-            // Skipped is ALL a held file gets. This used to also re-send the
-            // archive flag for it, on the theory that a watch still offering
-            // a held file had missed the flag the first time. But "held" only
-            // means its key is in a list; the copy is long pruned, and a key
-            // collision — which the old key had — turned that into telling
-            // the watch to drop a file nobody had downloaded. The archive
-            // flag follows a download in THIS session or it is not sent.
             val fresh = listing.entries.filter { entry ->
                 val key = entry.dedupKey
                 key == null || key !in alreadySynced
@@ -817,11 +776,6 @@ class GarminSession(
         )
     }
 
-    /**
-     * Keeps protocol-stage failures shorter and more descriptive than the
-     * service's three-minute whole-sync safety net. Only one legacy request
-     * or transfer is active at a time, so a new stage replaces the old timer.
-     */
     private fun armStageTimeout(duration: Duration, reason: String) {
         stageTimeoutJob?.cancel()
         stageTimeoutJob = scope.launch {
@@ -897,18 +851,10 @@ class GarminSession(
     fun abort(reason: Any? = null) {
         protobuf.abort()
         val message = reason?.toString() ?: "The Garmin session ended unexpectedly."
-        // The legacy directory can finish before WatchSyncService starts the
-        // protobuf FileSync fallback. A link drop in that second phase must
-        // still make the overall pull incomplete even though this session's
-        // original result has already been sealed.
         if (finished) {
             if (abortReason == null) abortReason = message
             return
         }
-        // Every item here was already persisted by onFileDownloaded before
-        // its archive flag was sent. Import that safe partial batch even when
-        // Android drops the held link; otherwise archived files disappear
-        // from the watch without ever reaching Health Connect.
         if (handoffAfterDirectory && downloaded.isNotEmpty()) {
             val partial = downloaded.toList()
             downloaded.clear()

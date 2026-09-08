@@ -16,7 +16,6 @@ data class GarminDirectoryEntry(
     val fileSize: Long,
     /** When the watch recorded the file, or null for its "no date" sentinel. */
     val fileDate: Instant?,
-    /** Stable id supplied by the protobuf FileSyncService, when used. */
     val remoteDedupKey: String? = null,
 ) {
     companion object {
@@ -45,7 +44,6 @@ data class GarminDirectoryListing(
     val entries: List<GarminDirectoryEntry>,
     /** Every 16-byte record read, before any filtering. */
     val totalRecords: Int,
-    /** False when the payload ends in a truncated directory record. */
     val isStructurallyValid: Boolean,
     /**
      * `index:dataType/subType` of each dropped record. The index matters:

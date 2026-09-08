@@ -46,7 +46,6 @@ class GarminMlrChannelTest {
         val data = byteArrayOf(7, 8, 9)
 
         channel.handlePacket(dataPacket(handle = 3, requestNumber = 0, sequence = 0, data = data))
-        // Duplicate sequence: ACK again, never deliver twice.
         channel.handlePacket(dataPacket(handle = 3, requestNumber = 0, sequence = 0, data = data))
         runCurrent()
 

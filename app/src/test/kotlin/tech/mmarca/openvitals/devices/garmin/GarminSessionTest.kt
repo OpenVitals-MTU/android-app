@@ -158,7 +158,6 @@ class GarminSessionTest {
         }
     }
 
-    /** Holds the root directory until the test releases it after session abort. */
     private class LateDirectoryWatch(files: Map<Int, ByteArray>) : FakeWatch(files) {
         private var released = false
 

@@ -80,7 +80,6 @@ class GarminProtobufTransport(
         }
     }
 
-    /** Sends a protobuf request whose application-level response is irrelevant. */
     suspend fun sendUnanswered(payload: ByteArray, label: String? = null) {
         require(payload.size <= MAX_CHUNK_SIZE) {
             "Protobuf request is ${payload.size}B, over the $MAX_CHUNK_SIZE B limit"
@@ -158,7 +157,6 @@ class GarminProtobufTransport(
         return true
     }
 
-    /** Applies a GFDI status to the matching protobuf exchange when it is rejected. */
     fun handleStatus(status: GarminProtobufStatus) {
         if (status.accepted) return
         val detail = buildString {
@@ -185,10 +183,6 @@ class GarminProtobufTransport(
             deferred.complete(bytes)
             return
         }
-        // Some Garmin services answer under a fresh request id instead of
-        // echoing ours. Allow the one caller that knows the service schema to
-        // claim such a reply without treating every unsolicited watch request
-        // as an answer to whichever operation happens to be pending.
         val flexible = unmatchedMatchers.entries.firstOrNull { (_, matches) ->
             runCatching { matches(bytes) }.getOrDefault(false)
         }

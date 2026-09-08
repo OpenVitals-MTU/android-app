@@ -9,14 +9,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 
-/**
- * Stop-and-wait implementation of Garmin's Multi-Link Reliable sub-protocol.
- *
- * Gadgetbridge pipelines up to 32 fragments; file sync does not need that
- * throughput to be correct. Keeping one fragment outstanding makes ordering,
- * wraparound and retransmission deterministic while retaining the wire format
- * and cumulative acknowledgements used by the watch.
- */
 internal class GarminMlrChannel(
     private val handle: Int,
     private var maxPacketSize: Int,
@@ -86,8 +78,6 @@ internal class GarminMlrChannel(
                 onData(packet.copyOfRange(2, packet.size))
                 nextReceiveSequence = (nextReceiveSequence + 1) and SEQUENCE_MASK
             }
-            // ACK promptly. Delayed/batched acknowledgements save packets but
-            // make Android process scheduling part of transfer correctness.
             scope.launchSafely {
                 write(packet(nextReceiveSequence, 0, ByteArray(0)))
             }

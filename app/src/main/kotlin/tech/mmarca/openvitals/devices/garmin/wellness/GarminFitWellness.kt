@@ -188,7 +188,6 @@ data class FitNap(
     val end: Instant,
 )
 
-/** One FIT weight-scale measurement. */
 data class FitWeightReading(val time: Instant, val kilograms: Double)
 
 /**
@@ -1095,10 +1094,6 @@ private class GarminWellnessInterpreter {
     }
 }
 
-/**
- * Resolves Garmin FIT `timestamp_16` around the closest 16-bit rollover.
- * Mirrors Gadgetbridge's `FitMonitoring.computeTimestamp`.
- */
 internal fun resolveMonitoringTimestamp16(anchor: Long, timestamp16: Long): Long {
     var delta = (timestamp16 and 0xFFFF) - (anchor and 0xFFFF)
     if (delta < -0x8000) {
