@@ -45,7 +45,7 @@ class GarminEarliestAffectedDayTest {
     }
 
     @Test
-    fun `date helper returns null when no file carries a date`() {
+    fun `no dated file means no earliest day`() {
         // The date-only helper has no date; the invalidation policy handles this as a full purge.
         assertThat(garminEarliestAffectedDay(listOf(file(at = null)), zone = UTC)).isNull()
         assertThat(garminEarliestAffectedDay(emptyList(), zone = UTC)).isNull()
@@ -59,6 +59,16 @@ class GarminEarliestAffectedDayTest {
             ),
         ).isTrue()
         assertThat(garminNeedsFullBodyEnergyInvalidation(emptyList())).isFalse()
+    }
+
+    @Test
+    fun `an undated listing entry is dated from its FIT content instead of purging everything`() {
+        // The legacy directory's "no date" sentinel is common; the bytes still say when.
+        val dated = file(at = null, bytes = timestampedFit("2026-06-14T03:30:00Z"))
+
+        assertThat(garminNeedsFullBodyEnergyInvalidation(listOf(dated))).isFalse()
+        assertThat(garminEarliestAffectedDay(listOf(dated), zone = UTC))
+            .isEqualTo(LocalDate.of(2026, 6, 14))
     }
 
     @Test
@@ -81,7 +91,7 @@ class GarminEarliestAffectedDayTest {
             .isEqualTo(LocalDate.of(2026, 6, 14))
     }
 
-    private fun file(at: String?) = GarminDownloadedFile(
+    private fun file(at: String?, bytes: ByteArray = ByteArray(0)) = GarminDownloadedFile(
         entry = GarminDirectoryEntry(
             fileIndex = 1,
             type = GarminFileType.SLEEP,
@@ -91,7 +101,7 @@ class GarminEarliestAffectedDayTest {
             fileSize = 128,
             fileDate = at?.let(Instant::parse),
         ),
-        bytes = ByteArray(0),
+        bytes = bytes,
     )
 
     private fun timestampedFit(at: String): ByteArray {

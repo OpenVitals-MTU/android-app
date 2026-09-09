@@ -78,7 +78,7 @@ class FitStressBodyEnergyTest {
 
     @Test
     fun `uses the message's own time field not the record header`() {
-        // stress_level carries its own timestamp; Gadgetbridge prefers it too.
+        // stress_level carries its own timestamp, which wins.
         val at = Instant.parse("2026-07-22T03:45:00Z")
         val m = parseGarminWellness(stressFile(listOf(Triple(at, 20, 90)))).monitoring!!
         assertEquals(at, m.stress.single().first)

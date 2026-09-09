@@ -366,12 +366,12 @@ class GarminSettingsLink private constructor(
                 // A file sync underneath would fight for the radio and die on close.
                 syncFiles = false,
                 // Any held link should answer the watch's weather fetches.
-                weatherProvider = weatherProvider,
-                agpsSource = agpsSource,
-                calendarProvider = calendarProvider,
-                onHandshakeReady = {
-                    if (!ready.isCompleted) ready.complete(Unit)
-                },
+                hooks = GarminSessionHooks(
+                    weatherProvider = weatherProvider,
+                    agpsSource = agpsSource,
+                    calendarProvider = calendarProvider,
+                    onHandshakeReady = { if (!ready.isCompleted) ready.complete(Unit) },
+                ),
             )
 
             // Frames land on the binder thread; a channel keeps their order.

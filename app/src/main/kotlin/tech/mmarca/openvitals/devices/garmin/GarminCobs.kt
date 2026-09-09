@@ -3,9 +3,9 @@ package tech.mmarca.openvitals.devices.garmin
 import java.io.ByteArrayOutputStream
 
 /**
- * Garmin's COBS variant, from Gadgetbridge's `CobsCoDec` (AGPLv3). Not
+ * Garmin's COBS variant. Not
  * textbook: a leading and a trailing `0x00`, and an extra `0x01` group when
- * the payload ends in a zero. Ported literally. [encode] is pure;
+ * the payload ends in a zero. [encode] is pure;
  * [GarminCobsDecoder] streams, since BLE delivers arbitrary chunks.
  */
 object GarminCobs {

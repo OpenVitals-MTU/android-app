@@ -16,7 +16,7 @@ class GarminMlrChannelTest {
         channel = GarminMlrChannel(
             handle = 3,
             maxPacketSize = 20,
-            scope = this,
+            scope = backgroundScope,
             write = { packet ->
                 writes += packet
                 val sequence = packet[1].toInt() and 0x3F
@@ -39,7 +39,7 @@ class GarminMlrChannelTest {
         val channel = GarminMlrChannel(
             handle = 3,
             maxPacketSize = 20,
-            scope = this,
+            scope = backgroundScope,
             write = { writes += it },
             onData = { delivered += it },
         )
@@ -51,8 +51,33 @@ class GarminMlrChannelTest {
 
         assertEquals(1, delivered.size)
         assertArrayEquals(data, delivered.single())
-        assertEquals(2, writes.size)
+        // ACKs are cumulative: a duplicate may share one write, but the newest goes out.
+        assertTrue(writes.isNotEmpty())
         assertEquals(1, requestNumber(writes.last()))
+    }
+
+    @Test
+    fun `a burst of inbound packets is acknowledged in order`() = runTest {
+        val writes = mutableListOf<ByteArray>()
+        val channel = GarminMlrChannel(
+            handle = 3,
+            maxPacketSize = 20,
+            scope = backgroundScope,
+            write = { writes += it },
+            onData = {},
+        )
+
+        for (sequence in 0 until 5) {
+            channel.handlePacket(
+                dataPacket(handle = 3, requestNumber = 0, sequence = sequence, data = byteArrayOf(sequence.toByte())),
+            )
+        }
+        runCurrent()
+
+        // An older cumulative ACK written after a newer one would roll the watch back.
+        val acks = writes.map(::requestNumber)
+        assertEquals(acks.sorted(), acks)
+        assertEquals(5, acks.last())
     }
 
     @Test
@@ -62,7 +87,7 @@ class GarminMlrChannelTest {
         channel = GarminMlrChannel(
             handle = 3,
             maxPacketSize = 20,
-            scope = this,
+            scope = backgroundScope,
             write = { packet ->
                 writes += packet
                 if (writes.size == 2) {
@@ -88,6 +113,7 @@ class GarminMlrChannelTest {
         data: ByteArray,
     ): ByteArray = header(handle, requestNumber, sequence) + data
 
+    /** A second, independent header encoder: sharing the channel's would hide a mistake in it. */
     private fun header(handle: Int, requestNumber: Int, sequence: Int): ByteArray = byteArrayOf(
         (0x80 or ((handle and 0x07) shl 4) or ((requestNumber ushr 2) and 0x0F)).toByte(),
         (((requestNumber and 0x03) shl 6) or (sequence and 0x3F)).toByte(),

@@ -285,7 +285,7 @@ class FitMetricsSleepTest {
         val nap = records.single() as SleepSessionRecord
         assertEquals(napStart, nap.startTime)
         assertEquals(napEnd, nap.endTime)
-        // The nap message has no stage breakdown, so the whole span is one light stage, as Gadgetbridge does.
+        // The nap message has no stage breakdown, so the whole span is one light stage.
         val stage = nap.stages.single()
         assertEquals(napStart, stage.startTime)
         assertEquals(napEnd, stage.endTime)

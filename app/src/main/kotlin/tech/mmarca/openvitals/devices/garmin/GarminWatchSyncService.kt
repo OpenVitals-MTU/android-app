@@ -2,7 +2,6 @@ package tech.mmarca.openvitals.devices.garmin
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.time.Instant
 import java.time.LocalDate
@@ -12,19 +11,20 @@ import javax.inject.Singleton
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import tech.mmarca.openvitals.core.fit.FitDecoder
@@ -32,8 +32,6 @@ import tech.mmarca.openvitals.core.fit.fitInstant
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.data.repository.BodyEnergyTimelineStore
 import tech.mmarca.openvitals.data.sync.BodyEnergyChainSyncService
-import tech.mmarca.openvitals.domain.usecase.FitBodyEnergyFromWatchUseCase
-import tech.mmarca.openvitals.features.homewidgets.refreshPlacedHomeWidgets
 import tech.mmarca.openvitals.devices.core.RadioLeaseBusyException
 import tech.mmarca.openvitals.devices.core.RadioLeaseOwner
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
@@ -44,6 +42,8 @@ import tech.mmarca.openvitals.devices.core.withRadioLease
 import tech.mmarca.openvitals.devices.garmin.wellness.FitWellnessImporter
 import tech.mmarca.openvitals.devices.weather.WeatherStore
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
+import tech.mmarca.openvitals.domain.usecase.FitBodyEnergyFromWatchUseCase
+import tech.mmarca.openvitals.features.homewidgets.refreshPlacedHomeWidgets
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingController
 
 /**
@@ -73,11 +73,7 @@ class GarminWatchSyncService @Inject constructor(
 
     private val syncMutex = Mutex()
 
-    /**
-     * Outlives one sync on purpose: the chain walk has its own time budget and
-     * a user who closes the sync screen the moment it says "done" must not
-     * cancel the rebuild their sync just made necessary.
-     */
+    /** Outlives one sync: closing the sync screen must not cancel the chain rebuild it started. */
     private val rebuildScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Keeps a copy of every download before the watch archives it. */
@@ -93,14 +89,26 @@ class GarminWatchSyncService @Inject constructor(
     /** A watch OR an Edge bike computer — both pull recorded FIT files over GFDI. */
     override fun canSync(device: BleSensorDevice): Boolean = device.isGarminGfdi
 
-    internal fun syncedFileKeys(deviceId: String): Set<String> =
-        stateStore.syncedFileKeys(deviceId)
+    /**
+     * The held link's owner for [device], backed by this service's stores.
+     * [onFullSyncNeeded] stays with the caller, which guards against overlapping syncs.
+     */
+    fun heldSyncOwner(device: BleSensorDevice, onFullSyncNeeded: () -> Unit): GarminHeldSyncOwner =
+        object : GarminHeldSyncOwner {
+            override fun alreadySyncedKeys(): Set<String> = stateStore.syncedFileKeys(device.id)
 
-    internal suspend fun storeAnnouncedFile(file: GarminDownloadedFile) {
-        fileStore.save(file, now = Instant.now())
-    }
+            override suspend fun keep(file: GarminDownloadedFile) {
+                fileStore.save(file, now = Instant.now())
+            }
 
-    internal fun importAnnouncedFiles(
+            override fun imported(files: List<GarminDownloadedFile>) {
+                if (files.isNotEmpty()) importAnnouncedFiles(device, files)
+            }
+
+            override fun needsFullSync() = onFullSyncNeeded()
+        }
+
+    private fun importAnnouncedFiles(
         device: BleSensorDevice,
         files: List<GarminDownloadedFile>,
     ) {
@@ -281,7 +289,7 @@ class GarminWatchSyncService @Inject constructor(
             model = phone.model,
             // A file sync would die mid-transfer when the link closes.
             syncFiles = false,
-            onHandshakeReady = { ready.complete(Unit) },
+            hooks = GarminSessionHooks(onHandshakeReady = { ready.complete(Unit) }),
         )
         session.protobuf.onUnsolicited = { payload ->
             if (GarminFindMyWatch.isFindMessage(payload)) {
@@ -351,16 +359,11 @@ class GarminWatchSyncService @Inject constructor(
      * [GarminGattClientException] when the watch cannot be reached. A dropped
      * link is not an error: the session returns what it already has.
      */
-    private data class GarminPullResult(
-        val files: List<GarminDownloadedFile>,
-        val incompleteReason: String? = null,
-    )
-
     private suspend fun pullFiles(
         device: BleSensorDevice,
         listenAfter: Duration,
         onProgress: ((DeviceSyncProgress) -> Unit)?,
-    ): GarminPullResult = coroutineScope {
+    ): PullResult = coroutineScope {
         val client = GarminGattClient(context, device.address)
         var transport: GarminFrameTransport? = null
         val handshakeReady = CompletableDeferred<Unit>()
@@ -385,21 +388,19 @@ class GarminWatchSyncService @Inject constructor(
             },
             onFileDownloaded = { file -> fileStore.save(file, now = Instant.now()) },
             keepAnsweringAfterSync = true,
-            onFindPhone = { seconds -> findPhoneRinger.start(seconds) },
-            onFindPhoneCancel = { findPhoneRinger.stop() },
-            weatherProvider = { weatherStore.freshSnapshot() },
-            locationProvider = { locationSource.lastKnown() },
-            agpsSource = agpsStore.source(),
-            calendarProvider = { begin, end ->
-                if (stateStore.calendarSync(device.id)) {
-                    calendarSource.events(begin, end)
-                } else {
-                    null
-                }
-            },
-            setupWizardPending = stateStore.setupWizardPending(device.id),
-            onSetupWizardCompleted = { stateStore.setSetupWizardPending(device.id, false) },
-            onHandshakeReady = { handshakeReady.complete(Unit) },
+            hooks = GarminSessionHooks(
+                onFindPhone = { seconds -> findPhoneRinger.start(seconds) },
+                onFindPhoneCancel = { findPhoneRinger.stop() },
+                weatherProvider = { weatherStore.freshSnapshot() },
+                locationProvider = { locationSource.lastKnown() },
+                agpsSource = agpsStore.source(),
+                calendarProvider = { begin, end ->
+                    if (stateStore.calendarSync(device.id)) calendarSource.events(begin, end) else null
+                },
+                setupWizardPending = stateStore.setupWizardPending(device.id),
+                onSetupWizardCompleted = { stateStore.setSetupWizardPending(device.id, false) },
+                onHandshakeReady = { handshakeReady.complete(Unit) },
+            ),
         )
 
         // Housekeeping before the link opens, so it cannot delay the sync.
@@ -416,13 +417,13 @@ class GarminWatchSyncService @Inject constructor(
             transport = client.connect(onFrame = { frame -> frames.trySend(frame) })
             session.start()
             if (withTimeoutOrNull(HANDSHAKE_TIMEOUT) { handshakeReady.await() } == null) {
-                session.abort("Watch did not complete the Garmin handshake within ${HANDSHAKE_TIMEOUT.inWholeSeconds}s")
+                session.abort(
+                    "Watch did not complete the Garmin handshake within " +
+                        "${HANDSHAKE_TIMEOUT.inWholeSeconds}s",
+                )
             }
-            // The battery percentage rides the same link, via the protobuf
-            // DeviceStatusService — the one place the watch reports a real
-            // percentage (the GFDI battery message is only good/ok/low).
-            // Fire-and-collect beside the file pull; a watch that never
-            // answers costs the timeout and nothing else.
+            // Battery percentage rides the same link via the protobuf DeviceStatusService.
+            // Collected beside the pull; bounded by a timeout.
             val batteryJob = launch {
                 runCatching {
                     if (withTimeoutOrNull(HANDSHAKE_TIMEOUT) { handshakeReady.await() } == null) {
@@ -439,41 +440,69 @@ class GarminWatchSyncService @Inject constructor(
                     }
                 }
             }
+            val started = TimeSource.Monotonic.markNow()
+            val timedOut = GarminSyncTimeout.whole(SYNC_TIMEOUT)
             var files = withTimeoutOrNull(SYNC_TIMEOUT) { session.done.await() }
                 ?: run {
-                    session.abort("Garmin file sync timed out after ${SYNC_TIMEOUT.inWholeMinutes} minutes")
+                    session.abort(timedOut)
                     session.done.await()
                 }
+            // Read now: a link drop after a finished sync must not fail it.
+            val legacyReason = session.abortReason
+            var fallbackReason: String? = null
             val knownProtocol = stateStore.syncProtocol(device.id)
-            if (files.isNotEmpty() && knownProtocol != GarminSyncProtocol.FILE_SYNC) {
+            // Any listed record proves the legacy directory works, even with nothing new.
+            if (session.directoryRecordCount > 0 && knownProtocol != GarminSyncProtocol.FILE_SYNC) {
                 stateStore.recordSyncProtocol(device.id, GarminSyncProtocol.LEGACY)
             }
             if (files.isEmpty() &&
-                session.abortReason == null &&
+                legacyReason == null &&
                 knownProtocol != GarminSyncProtocol.LEGACY
             ) {
                 val ml = transport as? GarminMlTransport
                 if (ml != null) {
+                    // The fallback shares the sync's time budget.
+                    val budget = SYNC_TIMEOUT - started.elapsedNow()
                     val newer = try {
-                        pullFileSyncServiceFiles(
-                            device = device,
-                            session = session,
-                            transport = ml,
-                            onProgress = onProgress,
-                        )
+                        withTimeoutOrNull(budget) {
+                            GarminFileSyncTransfer(
+                                protobuf = session.protobuf,
+                                transport = ml,
+                                keep = { file -> fileStore.save(file, now = Instant.now()) },
+                                onProtocolProven = {
+                                    stateStore.recordSyncProtocol(device.id, GarminSyncProtocol.FILE_SYNC)
+                                },
+                                onProgress = { total, done ->
+                                    onProgress?.invoke(
+                                        DeviceSyncProgress(
+                                            phase = DeviceSyncPhase.DOWNLOADING,
+                                            filesTotal = total,
+                                            filesDone = done,
+                                        ),
+                                    )
+                                },
+                            ).pull(stateStore.syncedFileKeys(device.id))
+                        } ?: run {
+                            fallbackReason = timedOut
+                            emptyList()
+                        }
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Exception) {
                         GarminLog.log("[GARMIN-SYNC] new file sync interrupted: $error")
+                        val failure = "Garmin FileSyncService failed: " +
+                            (error.message ?: error::class.java.simpleName)
                         if (!session.hasValidDirectoryListing) {
-                            session.abort(
-                                "Garmin FileSyncService failed: " +
-                                    (error.message ?: error::class.java.simpleName),
-                            )
+                            session.abort(failure)
+                        } else if (knownProtocol == GarminSyncProtocol.FILE_SYNC) {
+                            // A proven FileSync watch that fails is interrupted, not empty.
+                            fallbackReason = failure
                         }
                         emptyList()
                     }
                     if (newer.isNotEmpty()) files = newer
+                    // A drop during the fallback is a real interruption.
+                    if (fallbackReason == null) fallbackReason = session.abortReason
                 }
             }
             // Bounded: the sync result must not wait on a battery answer that
@@ -490,7 +519,7 @@ class GarminWatchSyncService @Inject constructor(
                 delay(listenAfter)
                 GarminLog.log("[GARMIN-LISTEN] window closed")
             }
-            GarminPullResult(files = files, incompleteReason = session.abortReason)
+            PullResult(files = files, incompleteReason = legacyReason ?: fallbackReason)
         } finally {
             dropWatch.cancel()
             pump.cancel()
@@ -500,171 +529,11 @@ class GarminWatchSyncService @Inject constructor(
         }
     }
 
-    private suspend fun pullFileSyncServiceFiles(
-        device: BleSensorDevice,
-        session: GarminSession,
-        transport: GarminMlTransport,
-        onProgress: ((DeviceSyncProgress) -> Unit)?,
-    ): List<GarminDownloadedFile> {
-        val remote = mutableListOf<GarminFileSyncProtocol.RemoteFile>()
-        var cursorId: Long? = null
-        var startPageId: Long? = null
-        var pageCount = 0
-        val seenPages = mutableSetOf<Pair<Long?, Long?>>()
-        do {
-            val pageToken = cursorId to startPageId
-            if (!seenPages.add(pageToken)) {
-                GarminLog.log("[GARMIN-SYNC] file list repeated page token $pageToken")
-                break
-            }
-            val reply = session.protobuf.request(
-                GarminFileSyncProtocol.listRequest(
-                    cursorId = cursorId,
-                    startPageId = startPageId,
-                ),
-                label = "file-sync list",
-                timeout = FILE_SYNC_REPLY_TIMEOUT,
-                acceptUnmatched = { GarminFileSyncProtocol.parseListResponse(it) != null },
-            )
-            if (reply == null) {
-                GarminLog.log("[GARMIN-SYNC] FileSyncService list timed out; support remains unknown")
-                throw GarminFileSyncException("file-list response timed out")
-            }
-            val page = GarminFileSyncProtocol.parseListResponse(reply)
-            if (page == null) {
-                GarminLog.log("[GARMIN-SYNC] FileSyncService returned an invalid list")
-                throw GarminFileSyncException("file-list response was invalid")
-            }
-            stateStore.recordSyncProtocol(device.id, GarminSyncProtocol.FILE_SYNC)
-            remote += page.files
-            if (page.cursorId != null) {
-                cursorId = page.cursorId
-                startPageId = null
-            } else {
-                cursorId = null
-                startPageId = page.nextPageId
-            }
-            pageCount += 1
-        } while ((cursorId != null || startPageId != null) && pageCount < MAX_FILE_SYNC_PAGES)
-
-        val already = stateStore.syncedFileKeys(device.id)
-        val wanted = remote.filter { file ->
-            file.type?.wanted == true && file.dedupKey !in already
-        }
-        if (wanted.isEmpty()) return emptyList()
-
-        val downloaded = mutableListOf<GarminDownloadedFile>()
-        for ((index, remoteFile) in wanted.withIndex()) {
-            try {
-                onProgress?.invoke(
-                    DeviceSyncProgress(
-                        phase = DeviceSyncPhase.DOWNLOADING,
-                        filesTotal = wanted.size,
-                        filesDone = index,
-                    ),
-                )
-                val reply = session.protobuf.request(
-                    GarminFileSyncProtocol.fileRequest(remoteFile),
-                    label = "file-sync file ${remoteFile.typeName}",
-                    timeout = FILE_SYNC_REPLY_TIMEOUT,
-                    acceptUnmatched = { GarminFileSyncProtocol.parseFileResponse(it) != null },
-                ) ?: continue
-                val response = GarminFileSyncProtocol.parseFileResponse(reply) ?: continue
-                val handle = response.handle
-                if (response.status != 0 || handle == null) continue
-                val bytes = downloadCompressedFile(transport, handle) ?: continue
-                val type = remoteFile.type ?: continue
-                val fileDate = try {
-                    garminFitFileDate(bytes)
-                } catch (error: Exception) {
-                    GarminLog.log(
-                        "[GARMIN-SYNC] could not derive ${remoteFile.typeName} file date: $error",
-                    )
-                    null
-                }
-                val file = GarminDownloadedFile(
-                    entry = GarminDirectoryEntry(
-                        fileIndex = handle,
-                        type = type,
-                        fileNumber = GarminDirectoryEntry.UNSET_FILE_NUMBER,
-                        specificFlags = 0,
-                        fileFlags = 0,
-                        fileSize = bytes.size.toLong(),
-                        fileDate = fileDate,
-                        remoteDedupKey = remoteFile.dedupKey,
-                    ),
-                    bytes = bytes,
-                )
-                fileStore.save(file, now = Instant.now())
-                downloaded += file
-                session.protobuf.sendUnanswered(
-                    GarminFileSyncProtocol.markSynced(remoteFile),
-                    label = "mark file synced",
-                )
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Exception) {
-                GarminLog.log("[GARMIN-SYNC] file transfer interrupted: $error")
-                break
-            }
-        }
-        return downloaded
-    }
-
-    private suspend fun downloadCompressedFile(
-        transport: GarminMlTransport,
-        fileHandle: Int,
-    ): ByteArray? {
-        val serviceCode = FILE_TRANSFER_SERVICES.firstOrNull {
-            !transport.isServiceOpen(it)
-        } ?: return null
-        val compressed = ByteArrayOutputStream()
-        val header = ByteArrayOutputStream(3)
-        val closed = CompletableDeferred<Unit>()
-        var receivedHeader = false
-        var valid = true
-        transport.setServiceHandler(
-            serviceCode = serviceCode,
-            onData = { payload ->
-                if (!receivedHeader) {
-                    val needed = 3 - header.size()
-                    val headerBytes = needed.coerceAtMost(payload.size)
-                    header.write(payload, 0, headerBytes)
-                    if (header.size() == 3) {
-                        receivedHeader = true
-                        valid = header.toByteArray().all { it == 0.toByte() }
-                        if (valid && headerBytes < payload.size) {
-                            compressed.write(payload, headerBytes, payload.size - headerBytes)
-                        }
-                    }
-                } else if (valid) {
-                    compressed.write(payload)
-                }
-            },
-            onClosed = { closed.complete(Unit) },
-        )
-        return try {
-            transport.openService(serviceCode, reliable = true)
-            transport.sendServiceData(
-                serviceCode,
-                GarminByteWriter(6)
-                    .writeByte(0)
-                    .writeByte(0)
-                    .writeShort(fileHandle)
-                    .writeByte(0)
-                    .writeByte(0)
-                    .toBytes(),
-            )
-            if (withTimeoutOrNull(FILE_TRANSFER_TIMEOUT) { closed.await() } == null || !valid) {
-                null
-            } else {
-                GarminFileSyncProtocol.inflateFilePayload(compressed.toByteArray())
-            }
-        } finally {
-            runCatching { transport.closeService(serviceCode) }
-            transport.clearServiceHandler(serviceCode)
-        }
-    }
+    /** What a pull landed, and why it stopped early if it did. */
+    private data class PullResult(
+        val files: List<GarminDownloadedFile>,
+        val incompleteReason: String? = null,
+    )
 
     private fun describe(error: Throwable): String {
         if (error is GarminGattClientException) {
@@ -673,8 +542,6 @@ class GarminWatchSyncService @Inject constructor(
         val text = error.message ?: error.toString()
         return text.ifBlank { "The watch could not be synced." }
     }
-
-    private class GarminFileSyncException(message: String) : Exception(message)
 
     /** Maps a Garmin protocol phase onto the generic [DeviceSyncPhase] (1:1 today). */
     private fun devicePhase(phase: GarminSyncPhase): DeviceSyncPhase = when (phase) {
@@ -692,18 +559,8 @@ class GarminWatchSyncService @Inject constructor(
         /** How long a watch gets to finish its handshake before a find gives up. */
         val HANDSHAKE_TIMEOUT = 15.seconds
 
+        /** A whole-sync safety net; the session's stage timers fail sooner. */
         val SYNC_TIMEOUT = 3.minutes
-        val FILE_SYNC_REPLY_TIMEOUT = 8.seconds
-        val FILE_TRANSFER_TIMEOUT = 90.seconds
-        const val MAX_FILE_SYNC_PAGES = 20
-        val FILE_TRANSFER_SERVICES = intArrayOf(
-            0x2018,
-            0x4018,
-            0x6018,
-            0xA018,
-            0xC018,
-            0xE018,
-        )
 
         /** A best-effort cancel must not hold the link hostage. */
         val FIND_CANCEL_TIMEOUT = 3.seconds
@@ -719,14 +576,20 @@ fun garminEarliestAffectedDay(
     downloaded: List<GarminDownloadedFile>,
     zone: ZoneId = ZoneId.systemDefault(),
 ): LocalDate? = downloaded
-    .mapNotNull { it.entry.fileDate }
+    .mapNotNull(::garminFileDate)
     .minOrNull()
     ?.atZone(zone)
     ?.toLocalDate()
 
+/** True when a wanted file cannot be dated at all, so no day is safe to keep. */
 fun garminNeedsFullBodyEnergyInvalidation(downloaded: List<GarminDownloadedFile>): Boolean =
-    downloaded.any { it.entry.fileDate == null }
+    downloaded.any { it.entry.type.wanted && garminFileDate(it) == null }
 
+/** The listing's date, or the earliest FIT timestamp when the listing has none. */
+fun garminFileDate(file: GarminDownloadedFile): Instant? =
+    file.entry.fileDate ?: runCatching { garminFitFileDate(file.bytes) }.getOrNull()
+
+/** The earliest timestamp across the chained FIT files in [bytes], or null when none carries one. */
 fun garminFitFileDate(bytes: ByteArray): Instant? {
     var offset = 0
     var earliest: Long? = null

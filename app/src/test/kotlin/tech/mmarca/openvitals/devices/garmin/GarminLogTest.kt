@@ -58,4 +58,32 @@ class GarminLogTest {
             lines,
         )
     }
+
+    @Test
+    fun `keeps GATT UUIDs and separator lines readable`() {
+        val lines = mutableListOf<String>()
+        GarminLog.installSink(lines::add)
+        try {
+            GarminLog.log(
+                "[GARMIN-BLE] using V1 receive=6a4ecd28-667b-11e3-949a-0800200c9a66 " +
+                    "send=6a4e4c80-667b-11e3-949a-0800200c9a66 mtu=515",
+            )
+            GarminLog.log("[GARMIN-GATT]   service 6a4e2800-667b-11e3-949a-0800200c9a66")
+            GarminLog.log("----------------------------------------")
+            GarminLog.log("[GARMIN-AUTH] token QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5 issued")
+        } finally {
+            GarminLog.installSink(null)
+        }
+
+        assertEquals(
+            listOf(
+                "[GARMIN-BLE] using V1 receive=6a4ecd28-667b-11e3-949a-0800200c9a66 " +
+                    "send=6a4e4c80-667b-11e3-949a-0800200c9a66 mtu=515",
+                "[GARMIN-GATT]   service 6a4e2800-667b-11e3-949a-0800200c9a66",
+                "----------------------------------------",
+                "[GARMIN-AUTH] token [redacted] issued",
+            ),
+            lines,
+        )
+    }
 }

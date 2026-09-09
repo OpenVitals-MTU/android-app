@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The broadcast schema: what Breezy Weather (via Gadgetbridge's contract) sends. */
+/** The broadcast schema: what Breezy Weather sends. */
 class WeatherSnapshotTest {
 
     @Test

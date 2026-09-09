@@ -4,7 +4,6 @@ package tech.mmarca.openvitals.devices.garmin
  * The capabilities a watch declares in the CONFIGURATION handshake: a
  * 15-byte bitmap, bit `n` in byte `n / 8`. Declaration order is the wire
  * format and the name is persisted, so never reorder, remove or rename.
- * From Gadgetbridge (AGPLv3).
  */
 enum class GarminCapability {
     CONNECT_MOBILE_FIT_LINK,

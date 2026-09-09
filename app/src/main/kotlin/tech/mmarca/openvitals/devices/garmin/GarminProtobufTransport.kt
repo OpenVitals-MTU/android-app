@@ -24,15 +24,22 @@ class GarminProtobufTransport(
     class RejectedException(message: String) : Exception(message)
 
     companion object {
-        /** The largest payload the watch accepts in one message, from Gadgetbridge. */
+        /** The largest payload the watch accepts in one message. */
         const val MAX_CHUNK_SIZE = 375
 
         /** How long to wait for a reply. An unanswered request must not leave a spinner forever. */
         val REPLY_TIMEOUT: Duration = 10.seconds
-
     }
 
     private var lastRequestId = 0
+
+    /**
+     * Whether complete messages get the extended request-id ACK. The
+     * vívoactive 5 retransmits without it. A watch that NAKs
+     * it with LENGTH_ERROR (Instinct 2X) gets the generic form from then on.
+     */
+    private var extendedAcks = true
+    val usesExtendedAcks: Boolean get() = extendedAcks
     private val pending = mutableMapOf<Int, CompletableDeferred<ByteArray>>()
     private val unmatchedMatchers = mutableMapOf<Int, (ByteArray) -> Boolean>()
 
@@ -147,13 +154,27 @@ class GarminProtobufTransport(
             return true
         }
 
-        // A COMPLETE protobuf message gets the ordinary three-byte GFDI ACK.
-        // The longer request-id/offset status is
-        // only valid for a chunked transfer. Sending that longer shape here
-        // makes the watch reject our RESPONSE with LENGTH_ERROR.
-        send(buildGenericAck(frame.messageType))
+        // A complete message: extended ACK unless this watch rejected it.
+        send(
+            if (extendedAcks) {
+                buildProtobufAck(
+                    originalMessageType = frame.messageType,
+                    requestId = requestId,
+                    dataOffset = 0,
+                )
+            } else {
+                buildGenericAck(frame.messageType)
+            },
+        )
         deliver(requestId, bytes)
         return true
+    }
+
+    /** The watch NAKed one of our RESPONSE frames. LENGTH_ERROR means it wants generic ACKs. */
+    fun handleAckRejected(status: GarminStatus) {
+        if (!extendedAcks || status != GarminStatus.LENGTH_ERROR) return
+        extendedAcks = false
+        GarminLog.log("[GARMIN-PB] watch rejects extended acks; using generic")
     }
 
     fun handleStatus(status: GarminProtobufStatus) {
@@ -171,10 +192,7 @@ class GarminProtobufTransport(
         }
     }
 
-    /**
-     * Hands a COMPLETE message to whoever is waiting for it, or to the
-     * unsolicited hook when nobody is.
-     */
+    /** Hands a complete message to its waiter, or to the unsolicited hook. */
     private fun deliver(requestId: Int, bytes: ByteArray) {
         val deferred = pending[requestId]
         if (deferred != null) {
@@ -189,10 +207,14 @@ class GarminProtobufTransport(
             pending[flexible.key]?.complete(bytes)
             return
         }
-        // Not an answer to anything outstanding — either the watch started
-        // this conversation, or it answered one of ours under its own id.
+        // Not an answer to anything outstanding: the watch started this, or answered under its own id.
+        // Service and message field numbers only: what the watch wants, never the payload.
+        val services = readProtobuf(bytes).map { service ->
+            val inner = service.bytes?.let { readProtobuf(it).map { field -> field.field }.distinct() }
+            if (inner == null) "${service.field}" else "${service.field}:$inner"
+        }.distinct()
         GarminLog.log(
-            "[GARMIN-PB] ← unsolicited #$requestId (${bytes.size}B)",
+            "[GARMIN-PB] ← unsolicited #$requestId (${bytes.size}B) services=$services",
         )
         onServiceRequest?.invoke(requestId, bytes)
         onUnsolicited?.invoke(bytes)
@@ -284,7 +306,7 @@ object GarminFindMyWatch {
     private const val TIMEOUT = 1
     private const val STATUS = 1
 
-    /** Gadgetbridge's value: long enough to find a watch, short enough to stop itself. */
+    /** Long enough to find a watch, short enough to stop itself. */
     val defaultTimeout: Duration = 60.seconds
 
     fun start(timeout: Duration = defaultTimeout): ByteArray {

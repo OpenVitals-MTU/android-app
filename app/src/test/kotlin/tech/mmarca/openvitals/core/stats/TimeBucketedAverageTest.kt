@@ -60,7 +60,7 @@ class TimeBucketedAverageTest {
         assertEquals(93.0, samples.bucketed()!!, 1e-9)
     }
 
-    /** The field report: per-minute background at 76 bpm plus a 1 Hz workout at 133. Gadgetbridge said 79; the per-sample mean said 115. */
+    /** The field report: per-minute background at 76 bpm plus a 1 Hz workout at 133. The time-weighted mean is 79; the per-sample mean is 115. */
     @Test
     fun `a 1 Hz workout does not outvote the per-minute background series`() {
         val background = (0L until 1390L).map { minute -> at(minute = minute, value = 76.0) }

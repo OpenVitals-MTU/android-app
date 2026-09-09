@@ -3,8 +3,7 @@ package tech.mmarca.openvitals.devices.garmin
 /**
  * A minimal protobuf writer and reader for the few Garmin messages this
  * app uses. Hand-rolled: a runtime and a protoc step for a nested field and
- * an integer is not worth it. Field numbers from Gadgetbridge's `.proto`
- * files (AGPLv3), named at each call site.
+ * an integer is not worth it. Field numbers are named at each call site.
  */
 
 /** Builds one protobuf message. */

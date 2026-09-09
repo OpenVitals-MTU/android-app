@@ -31,12 +31,13 @@ data class GarminDirectoryEntry(
      * archive flag and `clientRecordId` make a re-download safe.
      */
     val dedupKey: String?
-        get() {
-            remoteDedupKey?.let { return it }
-            val date = fileDate
-            if (fileNumber == UNSET_FILE_NUMBER || date == null) return null
-            return "${type.dataType}/${type.subType}/$fileNumber/${date.epochSecond}/$fileSize"
-        }
+        get() = remoteDedupKey ?: legacyDedupKey()
+
+    private fun legacyDedupKey(): String? {
+        val date = fileDate
+        if (fileNumber == UNSET_FILE_NUMBER || date == null) return null
+        return "${type.dataType}/${type.subType}/$fileNumber/${date.epochSecond}/$fileSize"
+    }
 }
 
 /** What a directory parse found, rejects included: they tell the causes of "zero entries" apart. */

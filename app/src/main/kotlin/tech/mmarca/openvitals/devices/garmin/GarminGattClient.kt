@@ -15,15 +15,16 @@ import android.os.Build
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
@@ -46,7 +47,7 @@ class GarminGattClient(
 ) {
 
     private companion object {
-        /** Gadgetbridge asks for 515. A bigger MTU is the largest factor in sync speed. */
+        /** A bigger MTU is the largest factor in sync speed. */
         const val DESIRED_MTU = 515
 
         /** Long, because a connect right after bonding may find the watch still settling. */
@@ -201,7 +202,8 @@ class GarminGattClient(
         value: ByteArray,
     ) {
         if (characteristic.uuid == receiveUuid) {
-            ml?.handleInbound(value) ?: v1?.handleInbound(value)
+            val ml = ml
+            if (ml != null) ml.handleInbound(value) else v1?.handleInbound(value)
         }
     }
 
@@ -217,37 +219,35 @@ class GarminGattClient(
         onRealtime: ((GarminRealtimeService, GarminRealtimeReading) -> Unit)? = null,
     ): GarminFrameTransport {
         val (services, mtu) = connectAndDiscover()
-        val pair = findMlPair(services)
-        if (pair == null) {
-            val v1Pair = findV1Pair(services)
-            if (v1Pair == null) {
-                close()
-                throw GarminGattClientException("No supported Garmin GFDI characteristics")
-            }
-            val (receive, send) = v1Pair
-            sendCharacteristic = send
-            receiveUuid = receive.uuid
-            log("[GARMIN-BLE] using V1 receive=${receive.uuid} send=${send.uuid} mtu=$mtu")
-            val transport = GarminV1Transport(
-                write = { packet -> writeToCharacteristic(packet) },
-                onFrame = onFrame,
-                onLog = ::log,
-            )
-            transport.onMtuChanged(mtu)
-            v1 = transport
-            try {
-                subscribe(receive)
-            } catch (error: Exception) {
-                close()
-                throw GarminGattClientException("Could not subscribe: ${error.message}")
-            }
-            return transport
-        }
-        val (receive, send) = pair
-        sendCharacteristic = send
-        receiveUuid = receive.uuid
-        log("[GARMIN-BLE] using receive=${receive.uuid} send=${send.uuid} mtu=$mtu")
+        findMlPair(services)?.let { (receive, send) -> return openV2(receive, send, mtu, onFrame, onRealtime) }
+        findV1Pair(services)?.let { (receive, send) -> return openV1(receive, send, mtu, onFrame) }
+        close()
+        throw GarminGattClientException("No supported Garmin GFDI characteristics")
+    }
 
+    private suspend fun openV1(
+        receive: BluetoothGattCharacteristic,
+        send: BluetoothGattCharacteristic,
+        mtu: Int,
+        onFrame: (GarminGfdiFrame) -> Unit,
+    ): GarminFrameTransport {
+        val transport = GarminV1Transport(
+            write = { packet -> writeToCharacteristic(packet) },
+            onFrame = onFrame,
+            onLog = ::log,
+        )
+        v1 = transport
+        bind(receive, send, mtu, transport, label = "V1")
+        return transport
+    }
+
+    private suspend fun openV2(
+        receive: BluetoothGattCharacteristic,
+        send: BluetoothGattCharacteristic,
+        mtu: Int,
+        onFrame: (GarminGfdiFrame) -> Unit,
+        onRealtime: ((GarminRealtimeService, GarminRealtimeReading) -> Unit)?,
+    ): GarminFrameTransport {
         val transport = GarminMlTransport(
             write = { packet -> writeToCharacteristic(packet) },
             onFrame = onFrame,
@@ -274,30 +274,50 @@ class GarminGattClient(
                     runCatching { writeToCharacteristic(packet) }
                         .onFailure { error ->
                             log("[GARMIN-BLE] control write failed: $error")
+                            // Fail the open now rather than at its timeout.
+                            ml?.failOpen(error)
                         }
                 }
             },
             onLog = ::log,
         )
-        transport.onMtuChanged(mtu)
         ml = transport
+        // Subscribed before the channel opens, or a fast response is missed.
+        bind(receive, send, mtu, transport, label = "V2")
+        try {
+            transport.open()
+            withTimeout(CHANNEL_OPEN_TIMEOUT) { transport.ready.await() }
+        } catch (error: TimeoutCancellationException) {
+            close()
+            throw GarminGattClientException("Watch did not open the GFDI channel")
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            // A refused registration or a failed write, not a timeout.
+            close()
+            throw GarminGattClientException("Could not open the GFDI channel: ${error.message}")
+        }
+        return transport
+    }
 
-        // Subscribe before opening the channel, or a fast response is missed.
+    /** Points the client at a characteristic pair, sizes [transport] to the MTU and subscribes. */
+    private suspend fun bind(
+        receive: BluetoothGattCharacteristic,
+        send: BluetoothGattCharacteristic,
+        mtu: Int,
+        transport: GarminFrameTransport,
+        label: String,
+    ) {
+        sendCharacteristic = send
+        receiveUuid = receive.uuid
+        log("[GARMIN-BLE] using $label receive=${receive.uuid} send=${send.uuid} mtu=$mtu")
+        transport.onMtuChanged(mtu)
         try {
             subscribe(receive)
         } catch (error: Exception) {
             close()
             throw GarminGattClientException("Could not subscribe: ${error.message}")
         }
-
-        transport.open()
-        try {
-            withTimeout(CHANNEL_OPEN_TIMEOUT) { transport.ready.await() }
-        } catch (error: TimeoutCancellationException) {
-            close()
-            throw GarminGattClientException("Watch did not open the GFDI channel")
-        }
-        return transport
     }
 
     private fun findV1Pair(
@@ -310,10 +330,7 @@ class GarminGattClient(
         return if (receive != null && send != null) receive to send else null
     }
 
-    /**
-     * Connects, enumerates the GATT table and hangs up — the probe path. No
-     * GFDI traffic, no writes.
-     */
+    /** Connects, enumerates the GATT table and hangs up. The probe path: no GFDI traffic, no writes. */
     suspend fun enumerateServices(): List<GarminGattService> {
         val (services, _) = connectAndDiscover(requestMtu = false)
         return services.map { service ->
@@ -461,9 +478,8 @@ class GarminGattClient(
                 writeCompleted = null
                 throw GarminGattClientException("Characteristic write failed")
             }
-            // Paced, not required: some stacks omit callbacks for
-            // write-without-response, but an explicit failure callback is a
-            // real transport error and must not be discarded.
+            // Paced, not required: some stacks omit the callback for a write without response.
+            // An explicit failure is still an error.
             val outcome = withTimeoutOrNull(WRITE_TIMEOUT) {
                 runCatching { completion.await() }
             }

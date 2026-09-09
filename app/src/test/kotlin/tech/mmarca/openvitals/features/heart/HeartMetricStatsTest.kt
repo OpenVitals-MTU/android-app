@@ -81,7 +81,7 @@ class HeartMetricStatsTest {
     }
 
     @Test fun `a 1 Hz workout burst does not outvote the per-minute background`() {
-        // Nine background minutes at 70 bpm, then one minute at 1 Hz at 130 bpm, as Gadgetbridge syncs a workout.
+        // Nine background minutes at 70 bpm, then one minute at 1 Hz at 130 bpm, as a watch sync writes a workout.
         val background = (0L until 9L).map { minute ->
             HeartRateSample(
                 time = Instant.parse("2026-03-02T08:00:00Z").plusSeconds(minute * 60),

@@ -1,7 +1,11 @@
 package tech.mmarca.openvitals.devices.garmin
 
 import java.io.ByteArrayOutputStream
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertArrayEquals
@@ -263,6 +267,22 @@ class GarminMlTransportTest {
         }
         assertArrayEquals(first, decoder.pull())
         assertArrayEquals(second, decoder.pull())
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `an unanswered service registration fails as an error not a cancellation`() = runTest {
+        openChannel()
+
+        val opening = async { runCatching { transport.openService(6) } }
+        // One second past SERVICE_OPEN_TIMEOUT.
+        advanceTimeBy(11.seconds)
+        runCurrent()
+
+        // A cancellation would make the caller's sync vanish without a message.
+        val failure = opening.await().exceptionOrNull()
+        assertTrue(failure is IllegalStateException)
+        assertFalse(transport.isServiceOpen(6))
     }
 
     @Test

@@ -33,4 +33,35 @@ class FitWeightImportTest {
         assertTrue(record is WeightRecord)
         assertEquals(74.25, (record as WeightRecord).weight.inKilograms, 0.001)
     }
+
+    @Test
+    fun `a calculating or invalid weight is skipped`() {
+        val at = Instant.parse("2026-08-27T06:30:00Z")
+        val data = FitW()
+            .fileId(9)
+            .def(
+                local = 0,
+                global = 30,
+                fields = listOf(listOf(253, 4, 134), listOf(0, 2, 132)),
+            )
+            .u8(0).u32(fitTimestamp(at)).u16(0xFFFE) // still calculating
+            .u8(0).u32(fitTimestamp(at)).u16(0xFFFF) // invalid
+
+        assertTrue(parseGarminWellness(fitWrap(data.toBytes())).weights.isEmpty())
+    }
+
+    @Test
+    fun `weight readings are only decoded from weight files`() {
+        val at = Instant.parse("2026-08-27T06:30:00Z")
+        val data = FitW()
+            .fileId(32) // a monitoring file carrying a stray weight_scale row
+            .def(
+                local = 0,
+                global = 30,
+                fields = listOf(listOf(253, 4, 134), listOf(0, 2, 132)),
+            )
+            .u8(0).u32(fitTimestamp(at)).u16(7_425)
+
+        assertTrue(parseGarminWellness(fitWrap(data.toBytes())).weights.isEmpty())
+    }
 }

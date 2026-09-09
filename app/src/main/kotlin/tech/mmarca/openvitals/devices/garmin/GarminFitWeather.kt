@@ -10,8 +10,8 @@ import tech.mmarca.openvitals.devices.weather.WeatherSnapshot
 /**
  * Encodes a [WeatherSnapshot] as the FIT weather messages the watch's glance
  * renders: a FIT_DEFINITION (5011) declaring three local layouts of global
- * message 128, then a FIT_DATA (5012) with the records. Mirrors
- * Gadgetbridge's `FitWeather` table, quirks included: temperature is
+ * message 128, then a FIT_DATA (5012) with the records. Quirks of the
+ * watch's format included: temperature is
  * Kelvin - 273 (not 273.15), wind is km/h scaled by 298, coordinates are
  * semicircles, and day_of_week counts Sunday as 0.
  */
@@ -46,7 +46,7 @@ object GarminFitWeather {
     /** One field of a record layout: `(number, size, baseType)`. */
     private data class Field(val number: Int, val size: Int, val baseType: Int)
 
-    // Field layouts per report type, as Gadgetbridge sends them, in field order.
+    // Field layouts per report type, in field order.
     // Data records must write exactly these fields in this order.
     private val currentFields = listOf(
         Field(0, 1, TYPE_ENUM), // weather_report
@@ -260,7 +260,7 @@ object GarminFitWeather {
     private fun semicircles(degrees: Double): Long =
         (degrees * SEMICIRCLES_PER_DEGREE).roundToInt().toLong() and 0xFFFFFFFFL
 
-    /** OpenWeatherMap condition code to FIT `weather_status`, Gadgetbridge's table. */
+    /** OpenWeatherMap condition code to FIT `weather_status`. */
     fun fitCondition(code: Int): Int? = when (code) {
         200, 201, 202, 210, 211, 212, 230, 231, 232, 901 -> 6 // THUNDERSTORMS
         221 -> 14 // SCATTERED_THUNDERSTORMS

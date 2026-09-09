@@ -182,7 +182,9 @@ class GarminProtobufTest {
     }
 
     @Test
-    fun `a COMPLETE message is acknowledged generically`() = runTest {
+    fun `a COMPLETE message is acknowledged by request id`() = runTest {
+        // Without it the vívoactive 5 retransmitted every
+        // message every five seconds.
         val acks = mutableListOf<GarminGfdiFrame>()
         val transport = GarminProtobufTransport(send = { frame ->
             val parsed = GarminGfdiFrame.parse(frame)
@@ -192,13 +194,46 @@ class GarminProtobufTest {
         transport.handleInbound(reply(4242, b(0x62, 0x00)))
 
         val ack = acks.single().payload
-        // Complete protobuf messages use the ordinary [u16 type][u8 ACK]
-        // shape. The extended shape is chunk-only.
+        // [u16 acked type][u8 ACK][u16 requestId][u32 offset][kept][no error]
+        assertEquals(11, ack.size)
+        assertEquals(4242, (ack[3].toInt() and 0xFF) or ((ack[4].toInt() and 0xFF) shl 8))
+        assertArrayEquals(b(0, 0, 0, 0), ack.copyOfRange(5, 9))
+        assertArrayEquals(b(0, 0), ack.copyOfRange(9, 11))
+        assertTrue(transport.usesExtendedAcks)
+    }
+
+    @Test
+    fun `after a LENGTH_ERROR on our RESPONSE complete messages get the generic ACK`() = runTest {
+        val acks = mutableListOf<GarminGfdiFrame>()
+        val transport = GarminProtobufTransport(send = { frame ->
+            val parsed = GarminGfdiFrame.parse(frame)
+            if (parsed.messageType == GarminMessageId.RESPONSE) acks.add(parsed)
+        })
+
+        transport.handleAckRejected(GarminStatus.LENGTH_ERROR)
+        transport.handleInbound(reply(4242, b(0x62, 0x00)))
+
+        // The Instinct 2X rejects the extended shape; it gets [u16 type][u8 ACK].
         assertArrayEquals(
-            b(GarminMessageId.PROTOBUF_RESPONSE and 0xFF,
-                GarminMessageId.PROTOBUF_RESPONSE ushr 8, 0),
-            ack,
+            b(GarminMessageId.PROTOBUF_RESPONSE and 0xFF, GarminMessageId.PROTOBUF_RESPONSE ushr 8, 0),
+            acks.single().payload,
         )
+        assertFalse(transport.usesExtendedAcks)
+    }
+
+    @Test
+    fun `a NAK other than LENGTH_ERROR keeps the extended ACK`() = runTest {
+        val acks = mutableListOf<GarminGfdiFrame>()
+        val transport = GarminProtobufTransport(send = { frame ->
+            val parsed = GarminGfdiFrame.parse(frame)
+            if (parsed.messageType == GarminMessageId.RESPONSE) acks.add(parsed)
+        })
+
+        transport.handleAckRejected(GarminStatus.NAK)
+        transport.handleInbound(reply(4242, b(0x62, 0x00)))
+
+        assertEquals(11, acks.single().payload.size)
+        assertTrue(transport.usesExtendedAcks)
     }
 
     @Test

@@ -5,7 +5,7 @@ import java.time.Instant
 /**
  * Garmin's live-streaming services by ML service code. Each is its own
  * channel: open it and the watch pushes small payloads. Not the FIT
- * stream. Codes from Gadgetbridge (AGPLv3); only the parsed ones are listed.
+ * stream. Only the parsed codes are listed.
  */
 enum class GarminRealtimeService(val code: Int) {
     HEART_RATE(6),

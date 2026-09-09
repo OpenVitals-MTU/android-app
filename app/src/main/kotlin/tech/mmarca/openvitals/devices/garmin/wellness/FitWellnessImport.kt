@@ -17,9 +17,9 @@ import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.units.Energy
 import androidx.health.connect.client.units.Length
+import androidx.health.connect.client.units.Mass
 import androidx.health.connect.client.units.Percentage
 import androidx.health.connect.client.units.Power
-import androidx.health.connect.client.units.Mass
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -56,7 +56,7 @@ fun fitSleepImportRecords(session: FitSleepSession): List<Record> {
             stage = mapped,
         )
     }
-    // A file that only ever said "awake" is not a night. Gadgetbridge guards the same way.
+    // A file that only ever said "awake" is not a night.
     if (stages.none { it.stage in SleepingStageTypes }) return emptyList()
     return listOf(
         SleepSessionRecord(
@@ -91,12 +91,7 @@ fun fitWeightImportRecords(reading: FitWeightReading): List<Record> = listOf(
     ),
 )
 
-/**
- * Turns the metrics file's VO2 max into a `Vo2MaxRecord` import.
- *
- * Only VO2 max: recovery time, training readiness and training load have no
- * Health Connect type and go to the app's own table instead.
- */
+/** Turns the metrics file's VO2 max into a record. The rest has no Health Connect type. */
 fun fitMetricsImportRecords(metrics: FitMetricsSummary): List<Record> {
     val time = metrics.time ?: return emptyList()
     val vo2Max = metrics.vo2Max ?: return emptyList()
@@ -140,7 +135,7 @@ fun fitHealthSnapshotImportRecords(snapshot: FitHealthSnapshot): List<Record> = 
 
 /**
  * Turns naps into `SleepSessionRecord` imports. A nap has no stages, so the
- * whole span is one light-sleep stage, as Gadgetbridge does.
+ * whole span is one light-sleep stage.
  */
 fun fitNapImportRecords(naps: List<FitNap>): List<Record> = buildList {
     for (nap in naps) {

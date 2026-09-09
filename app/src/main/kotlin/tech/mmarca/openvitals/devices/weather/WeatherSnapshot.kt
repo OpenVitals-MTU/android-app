@@ -3,8 +3,8 @@ package tech.mmarca.openvitals.devices.weather
 import org.json.JSONObject
 
 /**
- * One weather report in Gadgetbridge's generic-weather JSON schema, which
- * Breezy Weather already speaks. Units follow the schema: Kelvin integers,
+ * One weather report in the generic-weather JSON schema that Breezy
+ * Weather speaks. Units follow the schema: Kelvin integers,
  * km/h, unix seconds. Stored verbatim; the FIT encoder converts.
  */
 data class WeatherSnapshot(

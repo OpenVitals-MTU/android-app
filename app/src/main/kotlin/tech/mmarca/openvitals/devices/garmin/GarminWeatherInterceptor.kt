@@ -9,7 +9,7 @@ import tech.mmarca.openvitals.devices.weather.WeatherSnapshot
 /**
  * Serves the watch's weather requests. Modern watches ask through the HTTP
  * proxy with Garmin Connect API calls; this answers from the companion-app
- * snapshot. Mirrors Gadgetbridge's `WeatherInterceptor`, quirks included.
+ * snapshot, quirks of the watch's API included.
  */
 class GarminWeatherInterceptor(
     private val weatherProvider: () -> WeatherSnapshot?,

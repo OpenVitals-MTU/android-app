@@ -5,7 +5,7 @@ import org.json.JSONObject
 /**
  * Answers the watch's OAuth exchanges with fabricated tokens. A watch whose
  * exchange fails considers itself signed out and never fetches weather.
- * The tokens only ever reach this app. Mirrors Gadgetbridge.
+ * The tokens only ever reach this app.
  */
 class GarminOauthInterceptor : GarminHttpInterceptor {
 

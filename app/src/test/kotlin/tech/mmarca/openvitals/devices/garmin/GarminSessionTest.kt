@@ -40,10 +40,21 @@ class GarminSessionTest {
         /** Small on purpose, so multi-chunk reassembly is exercised. */
         var chunkSize = 8
 
+        /** How FILTER is answered: a status, or null for silence. */
+        var filterReply: GarminStatus? = GarminStatus.ACK
+
+        /** An Instinct 2X NAKs the 11-byte protobuf ACK with LENGTH_ERROR. */
+        var rejectExtendedAcks = false
+
         fun onFrame(frame: GarminGfdiFrame) {
             received.add(frame)
             when (frame.messageType) {
-                GarminMessageId.RESPONSE -> Unit // Our ACKs; nothing to say back.
+                GarminMessageId.RESPONSE -> {
+                    // Our ACKs; nothing to say back, unless the shape offends.
+                    if (rejectExtendedAcks && frame.payload.size == 11) {
+                        outbox.add(status(GarminMessageId.RESPONSE, GarminStatus.LENGTH_ERROR))
+                    }
+                }
                 GarminMessageId.SUPPORTED_FILE_TYPES_REQUEST ->
                     outbox.add(supportedTypes())
                 GarminMessageId.DOWNLOAD_REQUEST -> {
@@ -51,18 +62,19 @@ class GarminSessionTest {
                         ((frame.payload[1].toInt() and 0xFF) shl 8)
                     startServing(index)
                 }
-                GarminMessageId.FILTER -> outbox.add(
-                    GarminGfdiFrame.build(
-                        GarminMessageId.RESPONSE,
-                        GarminByteWriter()
-                            .writeShort(GarminMessageId.FILTER)
-                            .writeByte(GarminStatus.ACK.code)
-                            .toBytes(),
-                    ),
-                )
+                GarminMessageId.FILTER -> filterReply?.let { reply ->
+                    outbox.add(status(GarminMessageId.FILTER, reply))
+                }
                 GarminMessageId.SET_FILE_FLAGS, GarminMessageId.SYSTEM_EVENT -> Unit
             }
         }
+
+        /** A status for one of our messages: `[u16 original type][u8 status]`. */
+        private fun status(originalType: Int, status: GarminStatus): ByteArray =
+            GarminGfdiFrame.build(
+                GarminMessageId.RESPONSE,
+                GarminByteWriter().writeShort(originalType).writeByte(status.code).toBytes(),
+            )
 
         protected open fun startServing(index: Int) {
             if (index in refuseIndexes) {
@@ -231,6 +243,46 @@ class GarminSessionTest {
     }
 
     /** Builds a directory file listing entries as `(index, dataType, subType, number)`. */
+    /** Records what a held link hands over. */
+    private class FakeHeldSyncOwner(var alreadySynced: Set<String> = emptySet()) : GarminHeldSyncOwner {
+        val kept = mutableListOf<GarminDownloadedFile>()
+        val batches = mutableListOf<List<GarminDownloadedFile>>()
+        var fullSyncs = 0
+
+        override fun alreadySyncedKeys(): Set<String> = alreadySynced
+
+        override suspend fun keep(file: GarminDownloadedFile) {
+            kept += file
+        }
+
+        override fun imported(files: List<GarminDownloadedFile>) {
+            batches += files
+        }
+
+        override fun needsFullSync() {
+            fullSyncs++
+        }
+    }
+
+    /** A held (companion) session. A null [owner] is a settings or find session. */
+    private fun heldSession(
+        scope: CoroutineScope,
+        watch: FakeWatch,
+        owner: FakeHeldSyncOwner? = FakeHeldSyncOwner(),
+        directoryResponseTimeout: Duration = 30.seconds,
+        transferInactivityTimeout: Duration = 15.seconds,
+    ): GarminSession = GarminSession(
+        scope = scope,
+        send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
+        bluetoothName = "Pixel 6 Pro",
+        manufacturer = "Google",
+        model = "raven",
+        syncFiles = false,
+        directoryResponseTimeout = directoryResponseTimeout,
+        transferInactivityTimeout = transferInactivityTimeout,
+        heldSyncOwner = owner,
+    ).also { it.start() }
+
     private fun directory(vararg entries: IntArray): ByteArray {
         val w = GarminByteWriter()
         for ((index, dataType, subType, number) in entries.map {
@@ -654,7 +706,7 @@ class GarminSessionTest {
             bluetoothName = "Pixel 6 Pro",
             manufacturer = "Google",
             model = "raven",
-            weatherProvider = { weather },
+            hooks = GarminSessionHooks(weatherProvider = { weather }),
             keepAnsweringAfterSync = true,
         ).also { it.start() }
         pump(watch, session)
@@ -729,7 +781,7 @@ class GarminSessionTest {
             bluetoothName = "Pixel 6 Pro",
             manufacturer = "Google",
             model = "raven",
-            weatherProvider = {
+            hooks = GarminSessionHooks(weatherProvider = {
                 tech.mmarca.openvitals.devices.weather.WeatherSnapshot(
                     timestamp = 1_786_600_800L,
                     location = "Tallinn",
@@ -747,7 +799,7 @@ class GarminSessionTest {
                     latitude = 59.437,
                     longitude = 24.7536,
                 )
-            },
+            }),
             keepAnsweringAfterSync = true,
         ).also { it.start() }
         pump(watch, session)
@@ -776,7 +828,7 @@ class GarminSessionTest {
             bluetoothName = "Pixel 6 Pro",
             manufacturer = "Google",
             model = "raven",
-            weatherProvider = { error("must not even be consulted") },
+            hooks = GarminSessionHooks(weatherProvider = { error("must not even be consulted") }),
             keepAnsweringAfterSync = true,
         ).also { it.start() }
         pump(watch, session)
@@ -805,7 +857,7 @@ class GarminSessionTest {
             bluetoothName = "Pixel 6 Pro",
             manufacturer = "Google",
             model = "raven",
-            weatherProvider = { null },
+            hooks = GarminSessionHooks(weatherProvider = { null }),
             keepAnsweringAfterSync = true,
         ).also { it.start() }
         pump(watch, session)
@@ -828,7 +880,7 @@ class GarminSessionTest {
     @Test
     fun `a held link hands an announced file to its owner instead of downloading`() = runTest {
         val watch = FakeWatch(files = mapOf(9 to b(1, 2, 3)))
-        var announced = 0
+        val owner = FakeHeldSyncOwner()
         val session = GarminSession(
             scope = this,
             send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
@@ -837,7 +889,7 @@ class GarminSessionTest {
             model = "raven",
             // The held notification link: no file syncing of its own.
             syncFiles = false,
-            onFileAnnounced = { announced++ },
+            heldSyncOwner = owner,
         ).also { it.start() }
         pump(watch, session)
 
@@ -854,7 +906,7 @@ class GarminSessionTest {
 
         // A FILE_AVAILABLE message is only handed to the owner; the held link
         // does not invent a directory exchange for it.
-        assertEquals(1, announced)
+        assertEquals(1, owner.fullSyncs)
         val requested = watch.received
             .filter { it.messageType == GarminMessageId.DOWNLOAD_REQUEST }
             .map { payloadShort(it) }
@@ -864,7 +916,7 @@ class GarminSessionTest {
     @Test
     fun `a held link hands a synchronization announcement to its owner`() = runTest {
         val watch = FakeWatch(files = mapOf(0 to directory()))
-        var announced = 0
+        val owner = FakeHeldSyncOwner()
         val session = GarminSession(
             scope = this,
             send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
@@ -872,7 +924,7 @@ class GarminSessionTest {
             manufacturer = "Google",
             model = "raven",
             syncFiles = false,
-            onSynchronizationAnnounced = { announced++ },
+            heldSyncOwner = owner,
         ).also { it.start() }
         pump(watch, session)
 
@@ -889,7 +941,7 @@ class GarminSessionTest {
         drain(watch, session)
 
         assertEquals(1, watch.received.count { it.messageType == GarminMessageId.FILTER })
-        assertEquals(1, announced)
+        assertEquals(1, owner.fullSyncs)
         assertTrue(
             watch.received
                 .filter { it.messageType == GarminMessageId.DOWNLOAD_REQUEST }
@@ -906,8 +958,7 @@ class GarminSessionTest {
                 9 to file,
             ),
         )
-        val stored = mutableListOf<GarminDownloadedFile>()
-        var completed: List<GarminDownloadedFile>? = null
+        val owner = FakeHeldSyncOwner()
         val session = GarminSession(
             scope = this,
             send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
@@ -915,8 +966,7 @@ class GarminSessionTest {
             manufacturer = "Google",
             model = "raven",
             syncFiles = false,
-            onFileDownloaded = { stored.add(it) },
-            onSynchronizationFilesDownloaded = { completed = it },
+            heldSyncOwner = owner,
         ).also { it.start() }
         pump(watch, session)
 
@@ -932,8 +982,8 @@ class GarminSessionTest {
         )
         drain(watch, session)
 
-        assertEquals(listOf(file.toList()), stored.map { it.bytes.toList() })
-        assertEquals(listOf(file.toList()), completed?.map { it.bytes.toList() })
+        assertEquals(listOf(file.toList()), owner.kept.map { it.bytes.toList() })
+        assertEquals(listOf(file.toList()), owner.batches.lastOrNull()?.map { it.bytes.toList() })
         assertTrue(
             watch.received
                 .filter { it.messageType == GarminMessageId.DOWNLOAD_REQUEST }
@@ -976,7 +1026,7 @@ class GarminSessionTest {
         runCurrent()
 
         assertTrue(session.done.await().isEmpty())
-        assertTrue(session.abortReason.orEmpty().contains("directory response timed out"))
+        assertEquals(GarminSyncTimeout.directory(1.seconds), session.abortReason)
     }
 
     @Test
@@ -1035,7 +1085,7 @@ class GarminSessionTest {
         runCurrent()
 
         assertTrue(session.done.await().isEmpty())
-        assertTrue(session.abortReason.orEmpty().contains("transfer stalled"))
+        assertEquals(GarminSyncTimeout.transfer("sleep", 2.seconds), session.abortReason)
     }
 
     @Test
@@ -1131,7 +1181,7 @@ class GarminSessionTest {
     }
 
     @Test
-    fun `the initial directory flush is not preceded by an unsolicited FILTER`() = runTest {
+    fun `a FILTER is sent and acknowledged before the directory is requested`() = runTest {
         val watch = FakeWatch(files = mapOf(0 to directory()))
 
         runSync(watch)
@@ -1139,8 +1189,67 @@ class GarminSessionTest {
         val order = watch.received.map { it.messageType }
         val filterAt = order.indexOf(GarminMessageId.FILTER)
         val directoryAt = order.indexOf(GarminMessageId.DOWNLOAD_REQUEST)
-        assertEquals(-1, filterAt)
-        assertTrue(directoryAt >= 0)
+        assertTrue("the filter must be sent", filterAt >= 0)
+        // The listing waits for the filter's answer; it is requested exactly once.
+        assertTrue(filterAt < directoryAt)
+        assertEquals(
+            1,
+            watch.received.count {
+                it.messageType == GarminMessageId.DOWNLOAD_REQUEST && payloadShort(it) == 0
+            },
+        )
+    }
+
+    @Test
+    fun `a refused initial FILTER still lists the directory`() = runTest {
+        val file = b(1, 2, 3)
+        val watch = FakeWatch(
+            files = mapOf(0 to directory(intArrayOf(5, 128, 49, 1)), 5 to file),
+        ).apply { filterReply = GarminStatus.NAK }
+        val session = session(this, watch)
+
+        pump(watch, session)
+
+        assertEquals(listOf(file.toList()), session.done.await().map { it.bytes.toList() })
+        assertEquals(null, session.abortReason)
+    }
+
+    @Test
+    fun `an unanswered initial FILTER lists after the response timeout`() = runTest {
+        val file = b(1, 2, 3)
+        val watch = FakeWatch(
+            files = mapOf(0 to directory(intArrayOf(5, 128, 49, 1)), 5 to file),
+        ).apply { filterReply = null }
+        val session = session(this, watch, responseTimeout = 1.seconds)
+        pump(watch, session)
+        assertTrue(watch.received.none { it.messageType == GarminMessageId.DOWNLOAD_REQUEST })
+
+        advanceTimeBy(1.seconds)
+        runCurrent()
+        drain(watch, session)
+
+        assertEquals(listOf(file.toList()), session.done.await().map { it.bytes.toList() })
+        assertEquals(null, session.abortReason)
+    }
+
+    @Test
+    fun `a watch that NAKs an extended ack switches the session to generic acks`() = runTest {
+        val watch = FakeWatch(files = mapOf(0 to directory())).apply { rejectExtendedAcks = true }
+        val session = session(this, watch)
+        pump(watch, session)
+        assertTrue(session.protobuf.usesExtendedAcks)
+
+        watch.outbox.add(protobufRequest(requestId = 7, payload = b(0x2A)))
+        drain(watch, session)
+        watch.outbox.add(protobufRequest(requestId = 8, payload = b(0x2A)))
+        drain(watch, session)
+
+        // First ack extended and refused; the next one is generic.
+        val acks = watch.received
+            .filter { it.messageType == GarminMessageId.RESPONSE && payloadShort(it) == GarminMessageId.PROTOBUF_REQUEST }
+            .map { it.payload.size }
+        assertEquals(listOf(11, 3), acks)
+        assertFalse(session.protobuf.usesExtendedAcks)
     }
 
     @Test
@@ -1284,7 +1393,7 @@ class GarminSessionTest {
     }
 
     @Test
-    fun `drop after legacy completion is retained for a fallback transfer`() = runTest {
+    fun `a link drop after completion is still recorded as the abort reason`() = runTest {
         val watch = FakeWatch(files = mapOf(0 to directory()))
         val session = session(this, watch, keepAnsweringAfterSync = true)
         pump(watch, session)
@@ -1294,6 +1403,150 @@ class GarminSessionTest {
 
         assertEquals("link dropped during file-sync fallback", session.abortReason)
         assertTrue(session.done.await().isEmpty())
+    }
+
+    @Test
+    fun `a synchronization announcement after completion is ignored`() = runTest {
+        val watch = FakeWatch(
+            files = mapOf(0 to directory(intArrayOf(5, 128, 49, 1)), 5 to b(1, 2, 3)),
+        )
+        val session = session(this, watch, keepAnsweringAfterSync = true)
+        pump(watch, session)
+        assertEquals(1, session.done.await().size)
+        val filters = watch.received.count { it.messageType == GarminMessageId.FILTER }
+        val requests = watch.received.count { it.messageType == GarminMessageId.DOWNLOAD_REQUEST }
+        val archives = watch.received.count { it.messageType == GarminMessageId.SET_FILE_FLAGS }
+
+        watch.outbox.add(syncAnnouncement())
+        drain(watch, session)
+
+        // The result is sealed: no new filter, listing or download, nothing archived unseen.
+        assertEquals(filters, watch.received.count { it.messageType == GarminMessageId.FILTER })
+        assertEquals(requests, watch.received.count { it.messageType == GarminMessageId.DOWNLOAD_REQUEST })
+        assertEquals(archives, watch.received.count { it.messageType == GarminMessageId.SET_FILE_FLAGS })
+    }
+
+    @Test
+    fun `a held link directory timeout cancels the transfer and keeps listening`() = runTest {
+        val watch = object : FakeWatch(files = emptyMap()) {
+            override fun startServing(index: Int) = Unit
+        }
+        val session = heldSession(this, watch, directoryResponseTimeout = 1.seconds)
+        pump(watch, session)
+
+        watch.outbox.add(syncAnnouncement())
+        drain(watch, session)
+        assertTrue(session.isSynchronizationTransferActive)
+
+        advanceTimeBy(1.seconds)
+        runCurrent()
+
+        // The transfer is gone; the session is not.
+        assertFalse(session.isSynchronizationTransferActive)
+        assertEquals(null, session.abortReason)
+        val before = watch.received.size
+        session.handleFrame(GarminGfdiFrame.parse(watch.authNegotiation()))
+        assertTrue(watch.received.size > before)
+
+        // The next announcement starts over.
+        watch.outbox.add(syncAnnouncement())
+        drain(watch, session)
+        assertEquals(2, watch.received.count { it.messageType == GarminMessageId.FILTER })
+        assertTrue(session.isSynchronizationTransferActive)
+    }
+
+    @Test
+    fun `a FileSync new-file notice on a held link downloads the filtered batch`() = runTest {
+        val file = b(1, 2, 3)
+        val watch = FakeWatch(
+            files = mapOf(0 to directory(intArrayOf(9, 128, 32, 5)), 9 to file),
+        )
+        val owner = FakeHeldSyncOwner()
+        val session = heldSession(this, watch, owner = owner)
+        pump(watch, session)
+
+        // Three notices arrive within a second on a real watch; one handoff must result.
+        watch.outbox.add(fileSyncAnnouncement(requestId = 9))
+        watch.outbox.add(fileSyncAnnouncement(requestId = 10))
+        drain(watch, session)
+        runCurrent()
+        drain(watch, session)
+
+        assertEquals(1, watch.received.count { it.messageType == GarminMessageId.FILTER })
+        assertEquals(listOf(listOf(file.toList())), owner.batches.map { batch -> batch.map { it.bytes.toList() } })
+        assertEquals(1, watch.received.count { it.messageType == GarminMessageId.SET_FILE_FLAGS })
+    }
+
+    @Test
+    fun `an announced empty legacy listing is handed to the owner for a full sync`() = runTest {
+        val watch = FakeWatch(files = mapOf(0 to directory()))
+        val owner = FakeHeldSyncOwner()
+        val session = GarminSession(
+            scope = this,
+            send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
+            bluetoothName = "Pixel 6 Pro",
+            manufacturer = "Google",
+            model = "raven",
+            syncFiles = false,
+            heldSyncOwner = owner,
+        ).also { it.start() }
+        pump(watch, session)
+
+        watch.outbox.add(fileSyncAnnouncement())
+        drain(watch, session)
+        runCurrent()
+        drain(watch, session)
+
+        // A watch that lists nothing the legacy way gets the full sync, which can use FileSync.
+        assertEquals(1, owner.fullSyncs)
+        assertTrue(owner.batches.isEmpty())
+        assertFalse(session.isSynchronizationTransferActive)
+    }
+
+    @Test
+    fun `a held link with no owner ignores a synchronization announcement`() = runTest {
+        val watch = FakeWatch(files = mapOf(0 to directory()))
+        val session = heldSession(this, watch, owner = null)
+        pump(watch, session)
+
+        watch.outbox.add(syncAnnouncement())
+        drain(watch, session)
+
+        assertEquals(0, watch.received.count { it.messageType == GarminMessageId.FILTER })
+        assertFalse(session.isSynchronizationTransferActive)
+    }
+
+    @Test
+    fun `a held link imports the persisted part of a cancelled batch`() = runTest {
+        val watch = object : FakeWatch(
+            files = mapOf(
+                0 to directory(intArrayOf(9, 128, 32, 5), intArrayOf(10, 128, 32, 6)),
+                9 to b(1, 2, 3),
+                10 to b(4, 5, 6),
+            ),
+        ) {
+            override fun startServing(index: Int) {
+                // The second file stalls after its status.
+                if (index == 10) outbox.add(downloadStatus(ok = true, size = 3)) else super.startServing(index)
+            }
+        }
+        val owner = FakeHeldSyncOwner()
+        val session = heldSession(
+            this,
+            watch,
+            transferInactivityTimeout = 2.seconds,
+            owner = owner,
+        )
+        pump(watch, session)
+
+        watch.outbox.add(syncAnnouncement())
+        drain(watch, session)
+        advanceTimeBy(2.seconds)
+        runCurrent()
+
+        assertEquals(listOf(listOf(b(1, 2, 3).toList())), owner.batches.map { batch -> batch.map { it.bytes.toList() } })
+        assertFalse(session.isSynchronizationTransferActive)
+        assertEquals(null, session.abortReason)
     }
 
     @Test

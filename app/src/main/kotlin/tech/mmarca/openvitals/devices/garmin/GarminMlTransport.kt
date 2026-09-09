@@ -1,37 +1,27 @@
 package tech.mmarca.openvitals.devices.garmin
 
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.cancel
-import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Garmin's multi-link (ML) transport, the V2 layer that carries GFDI. Port of
- * Gadgetbridge's `CommunicatorV2` (AGPLv3). V1 is not implemented.
+ * Garmin's multi-link (ML) transport, the V2 layer that carries GFDI and
+ * multiplexes service channels over one characteristic pair. Watches with
+ * no V2 pair use [GarminV1Transport].
  *
- * This implementation is narrowed to the one channel a read-only sync needs.
- * **This is the layer a vívoactive 5
- * requires**: the on-device GATT probe found the multi-link service
- * `6a4e2800` with handle pairs `0x2810/0x2820`…, and no V1 service. Older
- * direct-GFDI devices use [GarminV1Transport] instead.
+ * Every packet's first byte is a handle: 0 is the control channel, any other
+ * belongs to a service opened earlier. Startup closes stale handles, asks for
+ * a GFDI handle, then prefixes every GFDI write with it and routes inbound
+ * packets by their leading byte.
  *
- * The protocol multiplexes several logical services over one characteristic
- * pair. Every packet's first byte is a handle:
- *   * handle 0 is the control channel (open/close services),
- *   * any other handle belongs to a service opened earlier.
- *
- * So the flow is: close everything stale, ask for a handle for the GFDI
- * service, then prefix every GFDI write with the handle we were given and
- * route inbound packets by their leading handle byte.
- *
- * Transport-agnostic by construction: it is handed a [write] callback and fed
- * bytes through [handleInbound], so the whole handshake is testable with no
- * Bluetooth.
+ * Transport-free: it is handed a [write] callback and fed bytes through
+ * [handleInbound], so the whole handshake is testable with no Bluetooth.
  */
 class GarminMlTransport(
     /** Writes one packet to the send characteristic. */
@@ -58,8 +48,7 @@ class GarminMlTransport(
 
         /**
          * Identifies this client; echoed on every control response.
-         * Gadgetbridge's value, the one known to be accepted. The two apps
-         * cannot hold ML sessions with one watch at once.
+         * The value known to be accepted.
          */
         const val CLIENT_ID = 2L
 
@@ -71,7 +60,7 @@ class GarminMlTransport(
         const val CLOSE_ALL_REQ = 5
         const val CLOSE_ALL_RESP = 6
 
-        /** Marks a reliable (MLR) packet. This transport registers non-reliable. */
+        /** Marks a reliable (MLR) packet. */
         const val MLR_FLAG_MASK = 0x80
         val SERVICE_OPEN_TIMEOUT = 10.seconds
     }
@@ -81,7 +70,14 @@ class GarminMlTransport(
     private val mlrScope = CoroutineScope(SupervisorJob())
 
     /** The handle the watch assigned to GFDI, or null before registration. */
+    @Volatile
     private var gfdiHandle: Int? = null
+
+    /**
+     * Guards the service tables. Inbound packets arrive on the Bluetooth
+     * binder thread while callers open and close services from coroutines.
+     */
+    private val lock = Any()
 
     /** Handles for the other open services, both ways. */
     private val handleByService = mutableMapOf<Int, Int>()
@@ -102,56 +98,72 @@ class GarminMlTransport(
     val isReady: Boolean get() = gfdiHandle != null
 
     /** Applies a negotiated MTU: clamp to 23..512, minus the 3-byte ATT header. */
-    fun onMtuChanged(mtu: Int) {
+    override fun onMtuChanged(mtu: Int) {
         val safeMtu = if (mtu < 23) 23 else mtu
         val chunk = safeMtu - 3
         maxWriteSize = if (chunk > 512) 512 else chunk
-        mlrByHandle.values.forEach { it.setMaxPacketSize(maxWriteSize) }
+        val channels = synchronized(lock) { mlrByHandle.values.toList() }
+        channels.forEach { it.setMaxPacketSize(maxWriteSize) }
         onLog?.invoke("[GARMIN-ML] mtu=$mtu maxWrite=$maxWriteSize")
     }
 
-    /** Opens the GFDI channel: clear stale handles, request one. Completes [ready]. */
+    /**
+     * Starts the GFDI handshake by closing stale handles. Registration is
+     * sent from the CLOSE_ALL response through [onControlPacket]; [ready]
+     * completes when the handle arrives.
+     */
     suspend fun open() {
         // A watch mid-session still holds old handles; registering on top fails.
         write(controlPacket(CLOSE_ALL_REQ, serviceCode = 0))
     }
 
     /** Whether [serviceCode] currently has a handle. */
-    fun isServiceOpen(serviceCode: Int): Boolean = handleByService.containsKey(serviceCode)
+    fun isServiceOpen(serviceCode: Int): Boolean =
+        synchronized(lock) { handleByService.containsKey(serviceCode) }
 
-    /** Opens a non-GFDI service, so the watch starts streaming it.     */
+    /** Opens a non-GFDI service, so the watch starts streaming it. */
     suspend fun openService(serviceCode: Int, reliable: Boolean = false) {
-        if (handleByService.containsKey(serviceCode)) return
         val opened = CompletableDeferred<Unit>()
-        serviceOpened[serviceCode] = opened
-        if (reliable) reliableRequested += serviceCode
-        write(controlPacket(REGISTER_ML_REQ, serviceCode = serviceCode, trailing = if (reliable) 2 else 0))
+        synchronized(lock) {
+            if (handleByService.containsKey(serviceCode)) return
+            serviceOpened[serviceCode] = opened
+            if (reliable) reliableRequested += serviceCode
+        }
+        val trailing = if (reliable) 2 else 0
+        write(controlPacket(REGISTER_ML_REQ, serviceCode = serviceCode, trailing = trailing))
         try {
-            withTimeout(SERVICE_OPEN_TIMEOUT) { opened.await() }
+            // A plain failure, not a cancellation: callers report it instead of vanishing.
+            withTimeoutOrNull(SERVICE_OPEN_TIMEOUT) { opened.await() }
+                ?: throw IllegalStateException("Watch did not open Garmin ML service $serviceCode")
         } finally {
-            serviceOpened.remove(serviceCode)
-            reliableRequested.remove(serviceCode)
+            synchronized(lock) {
+                serviceOpened.remove(serviceCode)
+                reliableRequested.remove(serviceCode)
+            }
         }
     }
 
-    fun setServiceHandler(
+    internal fun setServiceHandler(
         serviceCode: Int,
         onData: (ByteArray) -> Unit,
         onClosed: () -> Unit,
-    ) {
+    ): Unit = synchronized(lock) {
         serviceDataHandlers[serviceCode] = onData
         serviceClosedHandlers[serviceCode] = onClosed
     }
 
-    fun clearServiceHandler(serviceCode: Int) {
+    internal fun clearServiceHandler(serviceCode: Int): Unit = synchronized(lock) {
         serviceDataHandlers.remove(serviceCode)
         serviceClosedHandlers.remove(serviceCode)
     }
 
-    suspend fun sendServiceData(serviceCode: Int, payload: ByteArray) {
-        val handle = handleByService[serviceCode]
-            ?: throw IllegalStateException("Garmin ML service $serviceCode is not open")
-        mlrByHandle[handle]?.let { reliable ->
+    internal suspend fun sendServiceData(serviceCode: Int, payload: ByteArray) {
+        val (handle, reliable) = synchronized(lock) {
+            val handle = handleByService[serviceCode]
+                ?: throw IllegalStateException("Garmin ML service $serviceCode is not open")
+            handle to mlrByHandle[handle]
+        }
+        if (reliable != null) {
             reliable.sendMessage(payload)
             return
         }
@@ -166,7 +178,7 @@ class GarminMlTransport(
 
     /** Closes a service, so the watch stops streaming and stops spending on it. */
     suspend fun closeService(serviceCode: Int) {
-        val handle = handleByService[serviceCode] ?: return
+        val handle = synchronized(lock) { handleByService[serviceCode] } ?: return
         write(
             controlPacket(
                 CLOSE_HANDLE_REQ,
@@ -175,9 +187,12 @@ class GarminMlTransport(
             ),
         )
         // Dropped locally at once, so a reading racing the close is not routed.
-        handleByService.remove(serviceCode)
-        serviceByHandle.remove(handle)
-        mlrByHandle.remove(handle)?.close()
+        val reliable = synchronized(lock) {
+            handleByService.remove(serviceCode)
+            serviceByHandle.remove(handle)
+            mlrByHandle.remove(handle)
+        }
+        reliable?.close()
     }
 
     /** A 13-byte control packet: `[handle 0][request][u64 clientId][u16 serviceCode][trailing]`. */
@@ -193,10 +208,7 @@ class GarminMlTransport(
         .writeByte(trailing)
         .toBytes()
 
-    /**
-     * Sends one GFDI frame: COBS-wrap it, then split into handle-prefixed
-     * writes that each fit a single characteristic write.
-     */
+    /** Sends one GFDI frame: COBS-wrap, then split into handle-prefixed writes. */
     override suspend fun sendFrame(frame: ByteArray) = gfdiSendMutex.withLock {
         val handle = gfdiHandle
             ?: throw IllegalStateException("GFDI channel not open — call open() and await ready")
@@ -222,15 +234,14 @@ class GarminMlTransport(
 
         if ((leadingByte and MLR_FLAG_MASK) != 0) {
             val encodedHandle = (leadingByte and 0x70) ushr 4
-            val channel = mlrByHandle.entries.firstOrNull {
-                (it.key and 0x07) == encodedHandle
-            }?.value
+            val channel = synchronized(lock) {
+                mlrByHandle.entries.firstOrNull { (it.key and 0x07) == encodedHandle }?.value
+            }
             if (channel != null) {
                 channel.handlePacket(packet)
                 return
             }
-            // Some non-MLR handles legitimately use the high bit; fall through
-            // when no reliable channel claims it.
+            // Plain handles may use the high bit too: fall through when no reliable channel claims it.
         }
 
         if (leadingByte == CONTROL_HANDLE) {
@@ -239,14 +250,12 @@ class GarminMlTransport(
         }
 
         if (leadingByte != gfdiHandle) {
-            val serviceCode = serviceByHandle[leadingByte]
+            val serviceCode = synchronized(lock) { serviceByHandle[leadingByte] }
             if (serviceCode == null) {
                 onLog?.invoke("[GARMIN-ML] packet for unknown handle $leadingByte")
                 return
             }
-            val payload = packet.copyOfRange(1, packet.size)
-            serviceDataHandlers[serviceCode]?.invoke(payload)
-                ?: onServiceData?.invoke(serviceCode, payload)
+            deliverServiceData(serviceCode, packet.copyOfRange(1, packet.size))
             return
         }
 
@@ -262,6 +271,12 @@ class GarminMlTransport(
             }
             raw = decoder.pull()
         }
+    }
+
+    /** Routes a service payload to its transfer handler, else to the live-readings hook. */
+    private fun deliverServiceData(serviceCode: Int, payload: ByteArray) {
+        val handler = synchronized(lock) { serviceDataHandlers[serviceCode] }
+        if (handler != null) handler(payload) else onServiceData?.invoke(serviceCode, payload)
     }
 
     private fun handleControl(body: ByteArray) {
@@ -280,8 +295,10 @@ class GarminMlTransport(
         }
         if (requestType == CLOSE_ALL_RESP) {
             gfdiHandle = null
-            handleByService.clear()
-            serviceByHandle.clear()
+            synchronized(lock) {
+                handleByService.clear()
+                serviceByHandle.clear()
+            }
             onLog?.invoke("[GARMIN-ML] all stale handles closed; registering GFDI")
             val sender = onControlPacket
             if (sender == null) {
@@ -304,33 +321,38 @@ class GarminMlTransport(
         if (serviceCode != GFDI_SERVICE_CODE) {
             if (status != 0) {
                 onLog?.invoke("[GARMIN-ML] service $serviceCode refused, status=$status")
-                reliableRequested.remove(serviceCode)
-                serviceOpened.remove(serviceCode)?.completeExceptionally(
+                val waiter = synchronized(lock) {
+                    reliableRequested.remove(serviceCode)
+                    val opener = serviceOpened.remove(serviceCode)
+                    opener
+                }
+                waiter?.completeExceptionally(
                     IllegalStateException(
                         "Watch refused Garmin ML service $serviceCode (status $status)",
                     ),
                 )
                 return
             }
-            handleByService[serviceCode] = handle
-            serviceByHandle[handle] = serviceCode
-            if (reliable) {
-                mlrByHandle[handle] = GarminMlrChannel(
-                    handle = handle,
-                    maxPacketSize = maxWriteSize,
-                    scope = mlrScope,
-                    write = write,
-                    onData = { payload ->
-                        serviceDataHandlers[serviceCode]?.invoke(payload)
-                            ?: onServiceData?.invoke(serviceCode, payload)
-                    },
-                    onLog = onLog,
-                )
-            } else if (serviceCode in reliableRequested) {
-                onLog?.invoke("[GARMIN-ML] service $serviceCode declined reliable mode")
+            val waiter = synchronized(lock) {
+                handleByService[serviceCode] = handle
+                serviceByHandle[handle] = serviceCode
+                if (reliable) {
+                    mlrByHandle[handle] = GarminMlrChannel(
+                        handle = handle,
+                        maxPacketSize = maxWriteSize,
+                        scope = mlrScope,
+                        write = write,
+                        onData = { payload -> deliverServiceData(serviceCode, payload) },
+                        onLog = onLog,
+                    )
+                } else if (serviceCode in reliableRequested) {
+                    onLog?.invoke("[GARMIN-ML] service $serviceCode declined reliable mode")
+                }
+                reliableRequested.remove(serviceCode)
+                val opener = serviceOpened.remove(serviceCode)
+                opener
             }
-            reliableRequested.remove(serviceCode)
-            serviceOpened.remove(serviceCode)?.complete(Unit)
+            waiter?.complete(Unit)
             onLog?.invoke("[GARMIN-ML] service $serviceCode open on handle $handle")
             return
         }
@@ -359,10 +381,14 @@ class GarminMlTransport(
         val handle = reader.readByte()
         val status = reader.readByte()
         if (serviceCode != GFDI_SERVICE_CODE) {
-            handleByService.remove(serviceCode)
-            serviceByHandle.remove(handle)
-            mlrByHandle.remove(handle)?.close()
-            serviceClosedHandlers[serviceCode]?.invoke()
+            val (reliable, onClosed) = synchronized(lock) {
+                handleByService.remove(serviceCode)
+                serviceByHandle.remove(handle)
+                val closing = mlrByHandle.remove(handle) to serviceClosedHandlers[serviceCode]
+                closing
+            }
+            reliable?.close()
+            onClosed?.invoke()
             return
         }
         // A stale handle from a previous session; our own CLOSE_ALL provokes these.
@@ -378,34 +404,43 @@ class GarminMlTransport(
         write(registerGfdiPacket())
     }
 
+    /** The GFDI registration write failed: fail [ready] now instead of at its timeout. */
+    fun failOpen(error: Throwable) {
+        readyDeferred.completeExceptionally(
+            IllegalStateException("GFDI registration write failed: ${error.message}", error),
+        )
+    }
+
     private fun registerGfdiPacket(): ByteArray = controlPacket(
         REGISTER_ML_REQ,
         serviceCode = GFDI_SERVICE_CODE,
         trailing = 0,
     )
 
-    /**
-     * Drops the channel. The watch releases the handle itself when the link
-     * goes, so this only clears local state.
-     */
+    /** Clears local state. The watch releases the handle when the link goes. */
     fun close() {
         gfdiHandle = null
-        handleByService.clear()
-        serviceByHandle.clear()
-        serviceOpened.values.forEach {
-            it.completeExceptionally(IllegalStateException("ML transport closed"))
+        val waiters: List<CompletableDeferred<Unit>>
+        val channels: List<GarminMlrChannel>
+        val closedHandlers: List<() -> Unit>
+        synchronized(lock) {
+            handleByService.clear()
+            serviceByHandle.clear()
+            waiters = serviceOpened.values.toList()
+            serviceOpened.clear()
+            channels = mlrByHandle.values.toList()
+            mlrByHandle.clear()
+            reliableRequested.clear()
+            closedHandlers = serviceClosedHandlers.values.toList()
+            serviceDataHandlers.clear()
+            serviceClosedHandlers.clear()
         }
-        serviceOpened.clear()
-        mlrByHandle.values.forEach { it.close() }
-        mlrByHandle.clear()
-        reliableRequested.clear()
+        waiters.forEach { it.completeExceptionally(IllegalStateException("ML transport closed")) }
+        channels.forEach { it.close() }
         mlrScope.cancel()
-        serviceClosedHandlers.values.toList().forEach { it.invoke() }
-        serviceDataHandlers.clear()
-        serviceClosedHandlers.clear()
+        closedHandlers.forEach { it.invoke() }
         readyDeferred.completeExceptionally(
             IllegalStateException("ML transport closed before it opened"),
         )
     }
-
 }

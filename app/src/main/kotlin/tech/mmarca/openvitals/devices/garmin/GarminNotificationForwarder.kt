@@ -90,10 +90,8 @@ class GarminNotificationForwarder(
     private val weatherProvider: (() -> tech.mmarca.openvitals.devices.weather.WeatherSnapshot?)? = null,
     private val agpsSource: GarminAgpsSource? = null,
     private val calendarProvider: ((beginEpochSeconds: Long, endEpochSeconds: Long) -> List<GarminCalendarEvent>?)? = null,
-    private val onFileAnnounced: (() -> Unit)? = null,
-    private val alreadySyncedFileKeys: () -> Set<String> = { emptySet() },
-    private val onGarminFileDownloaded: (suspend (GarminDownloadedFile) -> Unit)? = null,
-    private val onGarminFilesDownloaded: ((List<GarminDownloadedFile>) -> Unit)? = null,
+    /** Where a held link hands recordings the watch announces. */
+    private val heldSyncOwner: GarminHeldSyncOwner? = null,
     private val locationProvider: (() -> GarminPhoneLocation?)? = null,
     private val hostForeground: (() -> Boolean)? = null,
     /** Live-streaming services to open on each link, and where readings go. */
@@ -108,6 +106,8 @@ class GarminNotificationForwarder(
     private val maxReconnectBackoff: Duration = 5.minutes,
     /** How long to stay off the radio after yielding it. */
     private val yieldRetryDelay: Duration = 20.seconds,
+    /** How long a held link may finish a file transfer before it yields the radio anyway. */
+    private val maxSyncHold: Duration = 2.minutes,
     /** How long to wait before retrying when the radio is held by something else. */
     private val busyRetry: Duration = 10.seconds,
     private val renewInterval: Duration = GarminRadioLease.renewInterval,
@@ -237,10 +237,7 @@ class GarminNotificationForwarder(
                     weatherProvider = weatherProvider,
                     agpsSource = agpsSource,
                     calendarProvider = calendarProvider,
-                    onFileAnnounced = onFileAnnounced,
-                    alreadySyncedFileKeys = alreadySyncedFileKeys(),
-                    onGarminFileDownloaded = onGarminFileDownloaded,
-                    onGarminFilesDownloaded = onGarminFilesDownloaded,
+                    heldSyncOwner = heldSyncOwner,
                     locationProvider = locationProvider,
                     hostForeground = hostForeground,
                     realtimeServices = realtimeServices(),
@@ -289,12 +286,19 @@ class GarminNotificationForwarder(
     private fun startRenewals() {
         renewJob?.cancel()
         renewJob = scope.launch {
+            // Renewals refused in a row. Bounds how long a transfer may hold the radio.
+            var refusedTicks = 0
             while (true) {
                 delay(renewInterval)
                 if (disposed || link == null) continue
-                if (lease.renew(address, GarminRadioOwners.NOTIFICATIONS)) continue
+                if (lease.renew(address, GarminRadioOwners.NOTIFICATIONS)) {
+                    refusedTicks = 0
+                    continue
+                }
+                refusedTicks += 1
                 val current = link
                 if (current?.isSynchronizing == true &&
+                    renewInterval * refusedTicks <= maxSyncHold &&
                     lease.acquire(address, GarminRadioOwners.NOTIFICATIONS)
                 ) {
                     GarminLog.log(

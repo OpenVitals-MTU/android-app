@@ -16,8 +16,8 @@ class GarminAgpsSource(
 
 /**
  * Serves user-supplied GPS ephemeris to the watch. This app has no
- * INTERNET permission, so the user fetches the file, as with Gadgetbridge.
- * Mirrors upstream's `AgpsInterceptor`, etag/304 handling included.
+ * INTERNET permission, so the user fetches the file. Etag/304 handling
+ * included.
  */
 class GarminAgpsInterceptor(private val source: GarminAgpsSource) : GarminHttpInterceptor {
 

@@ -1,9 +1,8 @@
 package tech.mmarca.openvitals.core.fit
 
 /**
- * The FIT CRC-16, over a file's header and over the whole file. A literal
- * port of Gadgetbridge's nibble-table CRC (AGPLv3), also used for GFDI
- * framing. Bytes are read unsigned, which gives the identical result.
+ * The FIT CRC-16, over a file's header and over the whole file. A
+ * nibble-table CRC, also used for GFDI framing. Bytes are read unsigned, which gives the identical result.
  */
 object FitCrc {
 

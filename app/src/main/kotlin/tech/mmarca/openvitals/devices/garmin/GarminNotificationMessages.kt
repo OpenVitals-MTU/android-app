@@ -10,7 +10,6 @@ import java.time.format.DateTimeFormatter
  * across (5035). If the watch never asks, nothing is wrong.
  *
  * I/O-free. Framing and inbound decoders live in `GarminMessages.kt`.
- * Ported from Gadgetbridge (AGPLv3) via the Flutter build.
  */
 
 /** Add, update or withdraw a notification. Ordinal is the wire value; do not reorder. */
@@ -59,8 +58,8 @@ enum class GarminNotificationPhoneFlag {
 }
 
 /**
- * The category-flags byte. FOREGROUND and ACTION_DECLINE always, verbatim
- * from Gadgetbridge: background notifications "were generating bug reports".
+ * The category-flags byte. FOREGROUND and ACTION_DECLINE always: watches
+ * misbehave with background notifications.
  */
 fun garminNotificationCategoryFlags(): Int =
     GarminNotificationFlag.FOREGROUND.bit or GarminNotificationFlag.ACTION_DECLINE.bit
@@ -91,7 +90,7 @@ enum class GarminNotificationAttribute(
     val code: Int,
     /** A `u16` maximum length follows this attribute's id in a request. */
     val hasLengthParam: Boolean = false,
-    /** A `u16` follows, then one unidentified byte. Gadgetbridge reads it too. */
+    /** A `u16` follows, then one unidentified byte. */
     val hasAdditionalParams: Boolean = false,
 ) {
     APP_IDENTIFIER(0),
@@ -159,7 +158,7 @@ enum class GarminNotificationActionKind(
 
 /**
  * Where the watch draws an action's control. Bit is `1 shl ordinal`.
- * Gadgetbridge's "educated guesses"; nobody has the documentation.
+ * Educated guesses; nobody has the documentation.
  */
 enum class GarminActionIconPosition {
     BOTTOM,
@@ -243,7 +242,7 @@ fun garminNotificationDate(whenPosted: LocalDateTime): String =
 
 /**
  * The text sent for [attribute], before truncation. MESSAGE_SIZE is the
- * UTF-16 length, as Gadgetbridge sends it.
+ * UTF-16 length.
  */
 fun garminNotificationAttributeText(
     notification: GarminNotification,
@@ -265,7 +264,7 @@ fun garminNotificationAttributeText(
 
 /**
  * The bytes sent for [attribute], cut to [maxLength] characters before UTF-8
- * encoding, as Gadgetbridge does. The cut avoids splitting a surrogate pair,
+ * encoding. The cut avoids splitting a surrogate pair,
  * which would make the attribute undecodable.
  */
 fun garminNotificationAttributeBytes(

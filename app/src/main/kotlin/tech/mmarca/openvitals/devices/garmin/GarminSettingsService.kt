@@ -6,8 +6,8 @@ import kotlin.time.Duration.Companion.seconds
 /**
  * The watch's settings tree over the protobuf settings service. The watch
  * sends the menu, translated; this layer asks for a screen and reports it.
- * Field numbers from Gadgetbridge's `gdi_settings_service.proto` (AGPLv3),
- * which is older than this firmware, so unknown fields are carried, not dropped.
+ * The known field numbers predate this firmware, so unknown fields are
+ * carried, not dropped.
  */
 object GarminSettingsService {
 
@@ -53,7 +53,7 @@ object GarminSettingsService {
     private const val INIT_LANGUAGE = 1
     private const val INIT_REGION = 2
 
-    /** The tree's root, from Gadgetbridge's `GarminRealtimeSettingsFragment`. */
+    /** The tree's root. */
     const val ROOT_SCREEN_ID = 36352
 
     /**
@@ -269,11 +269,7 @@ object GarminSettingsService {
         }
     }
 
-    /**
-     * Printable ASCII only — the watch sends titles as UTF-8 strings, and
-     * guessing that arbitrary bytes are text turns a nested message into
-     * mojibake.
-     */
+    /** Printable ASCII only; guessing text turns nested messages into mojibake. */
     private fun isPrintableText(bytes: ByteArray): Boolean {
         if (bytes.isEmpty()) return false
         for (byte in bytes) {

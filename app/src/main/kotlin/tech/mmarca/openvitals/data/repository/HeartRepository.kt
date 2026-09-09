@@ -38,7 +38,7 @@ class HeartRepositoryImpl @Inject constructor(
     companion object {
         private const val TAG = "HeartRepository"
 
-        // Health Connect filters series records by record boundary; Gadgetbridge groups an hour per record.
+        // Health Connect filters series records by record boundary; a watch sync groups an hour per record.
         private val HeartRateSeriesLookback = Duration.ofHours(1)
     }
 

@@ -11,7 +11,7 @@ import org.json.JSONObject
 import tech.mmarca.openvitals.devices.garmin.GarminLog
 
 /**
- * Receives weather from a companion app (Breezy Weather) over Gadgetbridge's
+ * Receives weather from a companion app (Breezy Weather) over the
  * generic-weather broadcast. This is the only weather source. Exported on
  * purpose: the payload is public weather, and freshness is capped.
  */
@@ -54,7 +54,7 @@ class GenericWeatherReceiver : BroadcastReceiver() {
         }
 
     companion object {
-        /** Gadgetbridge's action, plus a native alias. */
+        /** The generic-weather action, plus a native alias. */
         val ACCEPTED_ACTIONS = setOf(
             "nodomain.freeyourgadget.gadgetbridge.ACTION_GENERIC_WEATHER",
             "tech.mmarca.openvitals.ACTION_GENERIC_WEATHER",

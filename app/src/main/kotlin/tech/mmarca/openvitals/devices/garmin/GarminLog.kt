@@ -20,11 +20,7 @@ object GarminLog {
 
     /** Routes logs to logcat. A no-op in a release build: that is the whole redaction policy. */
     fun installLogcatSink() {
-        // Guarded because a log line must never be able to take down the
-        // protocol stack that emitted it. On a device Log.d does not throw; in
-        // a JVM unit test the android.util.Log stub does, and this sink is
-        // global — one test constructing a service that installs it would
-        // otherwise fail every later test in the same fork.
+        // Guarded: the JVM `Log` stub throws, and this sink is global across tests.
         if (BuildConfig.DEBUG) sink = { message ->
             runCatching { Log.d(TAG, redactSensitiveValues(message)) }
         }
@@ -51,8 +47,14 @@ object GarminLog {
         redacted = SensitiveAssignment.replace(redacted) { match ->
             "${match.groupValues[1]}${match.groupValues[2]}[redacted]"
         }
-        return OpaqueCredential.replace(redacted, "[redacted]")
+        return OpaqueCredential.replace(redacted) { match ->
+            val token = match.value
+            // GATT UUIDs and separator lines are diagnostics, not secrets.
+            if (GattUuid.containsMatchIn(token) || token.none { it.isLetterOrDigit() }) token else "[redacted]"
+        }
     }
+
+    private val GattUuid = Regex("""[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}""")
 
     private val SensitiveAssignment = Regex(
         pattern = """(?i)\b(authorization|access[_-]?token|refresh[_-]?token|client[_-]?secret|auth(?:entication)?[_-]?key|password|credentials?)\b(\s*[:=]\s*)(?:\"[^\"]*\"|'[^']*'|[^\s,;&}]+)""",

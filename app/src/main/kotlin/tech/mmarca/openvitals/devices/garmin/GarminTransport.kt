@@ -2,7 +2,7 @@ package tech.mmarca.openvitals.devices.garmin
 
 /**
  * Which GFDI transport a device speaks, found by enumerating its GATT
- * services after bonding. Gadgetbridge decides this at runtime too.
+ * services after bonding.
  */
 enum class GarminTransportVariant {
     /** Single send/receive characteristic pair under service `6A4E2401-…`. */

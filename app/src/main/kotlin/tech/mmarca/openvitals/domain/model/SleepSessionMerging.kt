@@ -7,7 +7,7 @@ import java.util.Base64
 private const val MERGED_SLEEP_SESSION_ID_PREFIX = "merged:"
 private const val MERGED_SLEEP_SESSION_ID_SEPARATOR = "."
 private const val DUPLICATE_SLEEP_OVERLAP_RATIO = 0.85
-// Mirrors Gadgetbridge's sleep-session analysis: short quiet wake/no-data gaps keep one night together.
+// Short quiet wake/no-data gaps keep one night together.
 private val DEFAULT_SLEEP_SESSION_MERGE_GAP: Duration = Duration.ofMinutes(60)
 
 internal fun mergeSleepSessions(

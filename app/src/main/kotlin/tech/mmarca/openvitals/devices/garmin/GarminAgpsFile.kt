@@ -30,8 +30,8 @@ enum class GarminAgpsConstellation(val fileName: String) {
 }
 
 /**
- * Reads and sanity-checks user-supplied ephemeris. From Gadgetbridge's
- * `GarminAgpsFile` (AGPLv3), including the seven-day rxNetworks rule.
+ * Reads and sanity-checks user-supplied ephemeris, including the seven-day
+ * rxNetworks rule.
  */
 object GarminAgpsFile {
 

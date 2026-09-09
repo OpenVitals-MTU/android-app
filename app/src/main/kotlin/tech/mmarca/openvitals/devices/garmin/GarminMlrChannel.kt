@@ -4,11 +4,19 @@ import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 
+/**
+ * One reliable multi-link (MLR) service channel: the watch's own stop-and-wait
+ * layer over an ML handle, used for file transfers. Sequence numbers are
+ * 6 bits and ACKs are cumulative. One fragment is in flight at a time, with
+ * five retransmits on a doubling timeout before [sendMessage] throws. Internal because only [GarminMlTransport] may create one: a channel
+ * outliving its handle would ACK into a closed link.
+ */
 internal class GarminMlrChannel(
     private val handle: Int,
     private var maxPacketSize: Int,
@@ -19,10 +27,30 @@ internal class GarminMlrChannel(
 ) {
     private val sendMutex = Mutex()
     private var nextSendSequence = 0
+
+    @Volatile
     private var nextReceiveSequence = 0
+
+    @Volatile
     private var pendingAck: CompletableDeferred<Unit>? = null
+
+    @Volatile
     private var expectedAck = 0
+
+    @Volatile
     private var closed = false
+
+    /**
+     * ACKs are cumulative, so only the newest matters. One writer keeps them
+     * in order; a conflated channel drops the ones a burst made stale.
+     */
+    private val ackRequests = Channel<Int>(Channel.CONFLATED)
+    private val ackWriter = scope.launch {
+        for (requestNumber in ackRequests) {
+            runCatching { write(packet(requestNumber, 0, ByteArray(0))) }
+                .onFailure { onLog?.invoke("[GARMIN-MLR] ACK write failed: $it") }
+        }
+    }
 
     fun setMaxPacketSize(size: Int) {
         maxPacketSize = size
@@ -49,7 +77,8 @@ internal class GarminMlrChannel(
                     break
                 } catch (_: TimeoutCancellationException) {
                     onLog?.invoke(
-                        "[GARMIN-MLR] retransmitting handle=$handle seq=$sequence attempt=${attempt + 2}",
+                        "[GARMIN-MLR] retransmitting handle=$handle seq=$sequence " +
+                            "attempt=${attempt + 2}",
                     )
                     timeout *= 2
                 } finally {
@@ -78,14 +107,14 @@ internal class GarminMlrChannel(
                 onData(packet.copyOfRange(2, packet.size))
                 nextReceiveSequence = (nextReceiveSequence + 1) and SEQUENCE_MASK
             }
-            scope.launchSafely {
-                write(packet(nextReceiveSequence, 0, ByteArray(0)))
-            }
+            ackRequests.trySend(nextReceiveSequence)
         }
     }
 
     fun close() {
         closed = true
+        ackRequests.close()
+        ackWriter.cancel()
         pendingAck?.completeExceptionally(IllegalStateException("MLR channel closed"))
         pendingAck = null
     }
@@ -98,13 +127,6 @@ internal class GarminMlrChannel(
         out[1] = (((requestNumber and 0x03) shl 6) or (sequence and SEQUENCE_MASK)).toByte()
         data.copyInto(out, 2)
         return out
-    }
-
-    private fun CoroutineScope.launchSafely(block: suspend () -> Unit) {
-        launch {
-            runCatching { block() }
-                .onFailure { onLog?.invoke("[GARMIN-MLR] ACK write failed: $it") }
-        }
     }
 
     private companion object {

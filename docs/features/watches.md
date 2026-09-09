@@ -18,7 +18,7 @@ Support differs sharply by make:
 Watch support is developed and verified against a single Garmin model. It is offered in the same spirit as [Bluetooth LE sensors](ble-sensors.md): useful, honest about its limits, and not a substitute for the vendor's own app.
 
 - The protocol is not model-specific, and OpenVitals asks each watch what it can do rather than assuming. A watch that does not report find-my-watch gets no Find button; one without a settings tree gets no settings row.
-- Both Garmin transports are supported: current multi-link watches and the older direct-GFDI characteristic pair. Pairing probes the watch and warns when neither transport can be recognized.
+- Both Garmin transports sync and forward notifications: current multi-link watches and the older direct-GFDI characteristic pair. Live heart-rate and step streaming, and the newer FileSync listing, need the multi-link transport, so an older watch pairs and syncs but has no live readings. Pairing probes the watch and warns when neither transport can be recognized.
 - A file type OpenVitals does not understand is skipped rather than failing the sync.
 - Sync happens by hand, or on a schedule the user chose per watch. Nothing syncs until one of those two says so.
 
@@ -43,7 +43,7 @@ A Garmin Edge bike computer is recognized as a bike computer rather than a watch
 
 Tapping a paired Garmin watch opens its device screen, which has a Sync action. The watches list itself shows each watch's last sync time.
 
-The watch hands over the files it recorded since last time and OpenVitals imports them. Each file is saved on the phone before the watch is told it may archive it, and a file is only marked as synced once its import succeeded, so a run that fails partway re-fetches rather than skipping data that never landed. The first successful listing teaches OpenVitals whether that watch uses the legacy directory or the newer FileSync service; a timeout does not permanently disable either protocol.
+The watch hands over the files it recorded since last time and OpenVitals imports them. Each file is saved on the phone before the watch is told it may archive it, and a file is only marked as synced once its import succeeded, so a run that fails partway re-fetches rather than skipping data that never landed. A watch that lists nothing on the first try is asked a second way, so a slow watch is not written off.
 
 The device screen shows whether the watch has ever been synced and when it last was. If the link drops mid-sync, whatever arrived is still imported, but the run is reported as interrupted so a later sync retries the unfinished work.
 
@@ -87,6 +87,7 @@ Written to Health Connect, and therefore visible on the usual dashboard and deta
 - Blood oxygen and respiratory rate from a Health Snapshot recording.
 - Basal metabolic rate.
 - Steps, distance, and active calories through the day.
+- Body weight, when the watch relays readings from a paired Garmin scale.
 
 Kept in OpenVitals' own storage, because Health Connect has no record type for them: stress, Body Battery, intensity minutes, recovery time, training readiness, training load, and the watch's own verdict on a night's sleep.
 
@@ -192,7 +193,7 @@ The watch's weather glance asks the phone for weather, and OpenVitals answers fr
 
 The location the watch shows is the weather app's location. OpenVitals also answers the watch's own position asks from the phone's last known location, which is what arms the glance in the first place.
 
-Known limitation: on the model verified against, the glance arms (it stops saying "Reconnect to phone") but does not always fetch. Gadgetbridge is at the same wall with the same watch generation.
+Known limitation: on the model verified against, the glance arms (it stops saying "Reconnect to phone") but does not always fetch.
 
 ## Find My Phone
 
@@ -202,7 +203,7 @@ Works in both directions. The Find action on the device screen makes the watch a
 
 "CoMaps guidance on watch", on the watch's device screen, puts the turn-by-turn guidance CoMaps is giving (see [CoMaps navigation context](comaps-navigation-context.md)) on the wrist. Off by default, and complete in itself: no recording has to be running, and the activity-recording CoMaps integration does not have to be on. Switching it on asks for CoMaps' own permission, and the card says so if that grant is declined or later revoked. Ride with a route set in CoMaps and nothing else switched on, and the turns still reach the watch; record a GPS activity at the same time and the wrist and the phone's turn strip show the same guidance.
 
-Garmin watches have no turn-by-turn channel a phone can drive, and Gadgetbridge's Garmin support has none either, so the guidance travels as a notification: the next manoeuvre as the title ("Turn left", "Roundabout, exit 3", "Arrive at destination"), the distance to it as the subtitle, and the street, the distance left and the time left as the body. One notification is added when guidance starts and updated in place from then on, so the watch does not buzz at every fix; it is withdrawn the moment guidance stops — the route ended, the toggle went off, the watch was forgotten — so a finished route never lingers on the wrist.
+Garmin watches have no turn-by-turn channel a phone can drive, so the guidance travels as a notification: the next manoeuvre as the title ("Turn left", "Roundabout, exit 3", "Arrive at destination"), the distance to it as the subtitle, and the street, the distance left and the time left as the body. One notification is added when guidance starts and updated in place from then on, so the watch does not buzz at every fix; it is withdrawn the moment guidance stops — the route ended, the toggle went off, the watch was forgotten — so a finished route never lingers on the wrist.
 
 A new manoeuvre or street reaches the watch at once. A countdown that merely ticked down is refreshed at most every five seconds, and a reading that says nothing new is not sent at all. Distances and times are shown as CoMaps formatted them, so the wrist and the phone always agree on units. The notification rides the same link forwarded phone notifications use and needs nothing more than a paired Garmin watch: no notification access, no Stay connected.
 
@@ -216,7 +217,7 @@ If the calendar permission is later revoked in system settings, the row says so,
 
 ## GPS Ephemeris
 
-Ephemeris, a few days of predicted satellite orbits, is what turns a minutes-long cold GPS fix into a seconds-long one. Garmin's own app downloads it from Garmin silently; OpenVitals has no internet access and does not grow any for this. Instead, the same arrangement Gadgetbridge offers: the user downloads the file, imports it on the watch's device screen, and the phone hands it over when the watch asks.
+Ephemeris, a few days of predicted satellite orbits, is what turns a minutes-long cold GPS fix into a seconds-long one. Garmin's own app downloads it from Garmin silently; OpenVitals has no internet access and does not grow any for this. Instead, the user downloads the file, imports it on the watch's device screen, and the phone hands it over when the watch asks.
 
 The imported file is recognized by its contents (a constellation archive, an rxNetworks blob, or a Sony CPE blob; which one a watch wants is decided by its GPS chipset), and the URL the watch asked for is shown on the screen, since that URL is the only way to know which format to fetch. A stale file is refused rather than served: an out-of-date orbit prediction is worse for the watch than the almanac it already has.
 

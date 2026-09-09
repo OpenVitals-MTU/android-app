@@ -5,8 +5,7 @@ package tech.mmarca.openvitals.devices.garmin
  * serves the attribute blobs it requests. Transport-free, like
  * [GarminSession]. GNCS is a pull protocol: [post] only announces; the text
  * leaves the phone if and when the watch asks, which may be never.
- * Ported from Gadgetbridge's `NotificationsHandler` (AGPLv3); deviations
- * are noted at [handleDataStatus].
+ * The chunk-status rules are at [handleDataStatus].
  */
 class GarminGncsHandler(
     /** Hands one built GFDI frame to the transport below. */
@@ -14,7 +13,7 @@ class GarminGncsHandler(
     /** Invoked when the wearer acts on a notification. The handler stays platform-free. */
     private val onAction: (suspend (GarminNotificationActionRequest) -> Unit)? = null,
     /**
-     * How many notifications stay answerable. Gadgetbridge's number: a wrist
+     * How many notifications stay answerable. A wrist
      * shows about ten, and the watch asks by id long after the announcement.
      */
     private val maxQueued: Int = 10,
@@ -145,7 +144,7 @@ class GarminGncsHandler(
                 return
             }
             GarminNotificationCommand.GET_APP_ATTRIBUTES -> {
-                // Untested in Gadgetbridge; no watch here has sent one. Logged.
+                // No watch here has sent one. Logged.
                 GarminLog.log(
                     "[GARMIN-NOTIFY] app attributes requested for " +
                         "${message.appIdentifier}; not implemented",
@@ -228,8 +227,8 @@ class GarminGncsHandler(
     }
 
     /**
-     * Drives the chunked upload from the watch's per-chunk verdict. Unlike
-     * Gadgetbridge, RESEND is honoured once, and OFFSET_MISMATCH abandons
+     * Drives the chunked upload from the watch's per-chunk verdict.
+     * RESEND is honoured once, and OFFSET_MISMATCH abandons
      * rather than guesses: the status carries no offset.
      */
     override suspend fun handleDataStatus(message: GarminNotificationDataStatus) {
@@ -306,7 +305,7 @@ class GarminGncsHandler(
         return queue.size != before
     }
 
-    /** Drops the oldest until the queue fits. No REMOVE is sent, as in Gadgetbridge. */
+    /** Drops the oldest until the queue fits. No REMOVE is sent. */
     private fun evict() {
         while (queue.size > maxQueued) {
             queue.removeFirst()

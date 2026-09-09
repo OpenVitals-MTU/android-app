@@ -310,7 +310,7 @@ private class FitActivityInterpreter {
     private val cadenceSamples = mutableListOf<Pair<Instant, Int>>()
     private var fileType: Int? = null
     private var metadataName: String? = null
-    /** The `activity` message's name. Wins over the workout name, as in Gadgetbridge. */
+    /** The `activity` message's name. Wins over the workout name. */
     private var activityName: String? = null
     private var sport: Int? = null
     private var subSport: Int? = null

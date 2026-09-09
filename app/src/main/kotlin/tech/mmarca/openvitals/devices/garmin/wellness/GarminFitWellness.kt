@@ -61,7 +61,7 @@ data class FitHrvReading(
 
 /**
  * [FitMonitoringPoint.activityType] for a counter whose message named no
- * activity. Message-local, as in Gadgetbridge: inheriting the previous type
+ * activity. Message-local: inheriting the previous type
  * minted whole-day restatements as fresh steps. Outside the FIT enum on purpose.
  */
 const val UNKNOWN_FIT_ACTIVITY_TYPE: Int = -1
@@ -188,13 +188,10 @@ data class FitNap(
     val end: Instant,
 )
 
+/** One scale reading from a weight file (type 9). */
 data class FitWeightReading(val time: Instant, val kilograms: Double)
 
-/**
- * The wellness data a FIT file carried, from one decode pass. Each Garmin file
- * is a single type, so at most one of these is populated (activities have
- * none).
- */
+/** The wellness data one FIT file carried. At most one carrier is populated. */
 data class FitWellness(
     /** `file_id.type`. Tells an unmappable wellness file from an activity file. */
     val fileType: Int? = null,
@@ -255,7 +252,8 @@ fun parseGarminWellness(fitBytes: ByteArray, fileName: String? = null): FitWelln
         dailySleep = result.metrics.toDailySleep(),
         sleepDemand = result.metrics.toSleepDemand(),
         healthSnapshot = result.metrics.toHealthSnapshot(),
-        weights = parseWeightReadings(fitBytes),
+        // Only weight files carry scale readings; skip a second decode elsewhere.
+        weights = if (result.fileType == FitFileTypeWeight) parseWeightReadings(fitBytes) else emptyList(),
     )
 }
 
@@ -268,7 +266,8 @@ private fun parseWeightReadings(bytes: ByteArray): List<FitWeightReading> {
             if (message.globalMessageNumber != FitWeightScaleMessageNumber) continue
             val timestamp = message.timestamp ?: continue
             val raw = message.values[FitWeightFieldNumber] ?: continue
-            if (raw == FitUint16Invalid || raw <= 0) continue
+            // 0xFFFE is "calculating", 0xFFFF is invalid.
+            if (raw >= FitWeightCalculating || raw <= 0) continue
             readings += FitWeightReading(
                 time = fitInstant(timestamp),
                 kilograms = raw / FitWeightScale,
@@ -406,7 +405,7 @@ private class FitSleepRaw(
         if (!sessionStart.isBefore(sessionEnd)) return null
         val stages = mutableListOf<FitSleepStage>()
         // Each `sleep_level` timestamp is the END of the stage it names.
-        // Reading it as a start tripled REM. Gadgetbridge uses UPPER_BOUND too.
+        // Reading it as a start tripled REM.
         var boundary = sessionStart
         for ((transition, rawLevel) in sorted) {
             // Clamp into the session so a stray transition cannot widen a stage.
@@ -839,7 +838,7 @@ private class GarminWellnessInterpreter {
             FitMonitoringMessageNumber -> readMonitoring(values, messageTimestamp)
 
             FitStressLevelMessageNumber -> {
-                // Carries both stress and Body Battery. Its own timestamp wins, as in Gadgetbridge.
+                // Carries both stress and Body Battery. Its own timestamp wins.
                 val stressTimeRaw = values[FitStressLevelTimeFieldNumber] ?: messageTimestamp
                 if (stressTimeRaw != null) {
                     val at = fitInstant(stressTimeRaw)
@@ -1037,11 +1036,8 @@ private class GarminWellnessInterpreter {
             val ts16 = values[FitMonitoringTimestamp16FieldNumber]
             val anchor = monLastTimestampRaw
             tsRaw = if (ts16 != null && anchor != null) {
-                // timestamp_16 is the nearest matching low-16-bit timestamp,
-                // not necessarily the next one. Monitoring records can be
-                // written just before their full timestamp anchor; forcing a
-                // negative delta forward adds 65,536 seconds (18h12m16s) and
-                // moves heart-rate samples across a day boundary.
+                // Nearest rollover, not the next: a record can precede its anchor, and
+                // rolling forward would add 65,536 s and move it a day.
                 val rolled = resolveMonitoringTimestamp16(anchor, ts16)
                 monLastTimestampRaw = rolled
                 rolled
@@ -1114,18 +1110,19 @@ private const val FitEventFieldNumber = 0
 private const val FitEventTypeFieldNumber = 1
 private const val FitSleepLevelFieldNumber = 0
 private const val FitSleepEventValue = 74 // `event` == sleep (Garmin-proprietary)
+private const val FitFileTypeWeight = 9
 private const val FitWeightScaleMessageNumber = 30
 private const val FitWeightFieldNumber = 0
 private const val FitWeightScale = 100.0
+private const val FitWeightCalculating = 0xFFFEL
 private const val FitEventTypeStart = 0
 private const val FitEventTypeStop = 1
 private const val FitSleepLevelUnmeasurable = 0
 private const val FitSleepLevelAwake = 1
 private const val FitSleepLevelLight = 2
 
-// Unstaged sleep (Venu SQ and other watches without a sleep widget). Numbers
-// from Gadgetbridge's FIT profile (AGPLv3); the raw layout was worked out
-// from real files: ten little-endian float16 per minute, heart rate last.
+// Unstaged sleep (Venu SQ and other watches without a sleep widget). The raw
+// layout was worked out from real files: ten little-endian float16 per minute, heart rate last.
 private const val FitSleepDataInfoMessageNumber = 273
 private const val FitSleepDataInfoSampleLengthFieldNumber = 1 // uint16, seconds
 private const val FitSleepDataInfoLocalTimestampFieldNumber = 2 // uint32, Garmin epoch, local
@@ -1157,7 +1154,7 @@ private const val FitUint8Invalid = 0xFFL
 private const val FitMonitoringMessageNumber = 55
 private const val FitRespirationRateMessageNumber = 297
 
-// stress_level (227) carries stress and Body Battery. Field numbers from Gadgetbridge (AGPLv3).
+// stress_level (227) carries stress and Body Battery.
 private const val FitStressLevelMessageNumber = 227
 private const val FitStressLevelValueFieldNumber = 0 // sint8, 0..100 (negative = n/a)
 private const val FitStressLevelTimeFieldNumber = 1 // uint32, Garmin epoch seconds

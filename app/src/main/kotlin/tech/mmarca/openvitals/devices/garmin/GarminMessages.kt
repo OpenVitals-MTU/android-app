@@ -115,10 +115,7 @@ data class GarminProtobufStatus(
             (errorCode == null || errorCode == 0)
 }
 
-/**
- * The response to a download request. When [canProceed], [maxFileSize] is the
- * total byte length the watch will stream.
- */
+/** Response to a download request. When [canProceed], [maxFileSize] is the total length. */
 data class GarminDownloadRequestStatus(
     val status: GarminStatus,
     val downloadStatus: GarminDownloadStatus,
@@ -146,7 +143,7 @@ data class GarminDeviceInformation(
     val deviceName: String,
     val deviceModel: String,
 ) : GarminInboundMessage() {
-    /** e.g. `19.15` — major/minor split at 100, as Gadgetbridge renders it. */
+    /** e.g. `19.15` — major/minor split at 100. */
     val softwareVersionText: String
         get() = "${softwareVersion / 100}." +
             (softwareVersion % 100).toString().padStart(2, '0')
@@ -576,8 +573,8 @@ fun buildDownloadRequest(
 }
 
 /**
- * Acknowledges an inbound message. Gadgetbridge acks every message; without
- * it the watch retransmits and never moves on.
+ * Acknowledges an inbound message. Every message needs one; without it the
+ * watch retransmits and never moves on.
  */
 fun buildGenericAck(originalMessageType: Int): ByteArray {
     val writer = GarminByteWriter()
@@ -621,7 +618,7 @@ fun buildCurrentTimeResponse(
     val rules = zone.rules
     val offsetSeconds = rules.getOffset(now).totalSeconds
 
-    // Guarded like Gadgetbridge's (#5914): some zone databases throw here.
+    // Guarded: some zone databases throw here.
     val nextTransition = runCatching { rules.nextTransition(now) }.getOrNull()
     val transitionStarts = nextTransition?.let { GarminTime.fromInstant(it.instant) } ?: 0L
     val transitionEnds = nextTransition
@@ -716,7 +713,7 @@ fun buildSupportedFileTypesRequest(): ByteArray =
 
 /**
  * Our half of the device-information exchange: ACK plus a description of
- * this phone. The sentinel values are Gadgetbridge's and known to be accepted.
+ * this phone. The sentinel values are known to be accepted.
  */
 fun buildDeviceInformationResponse(
     incoming: GarminDeviceInformation,
@@ -745,7 +742,7 @@ fun buildDeviceInformationResponse(
 }
 
 /**
- * This app's capability bitmap, Gadgetbridge's OUR_CAPABILITIES. Claiming
+ * This app's capability bitmap. Claiming
  * unimplemented capabilities is deliberate: a narrower claim makes watches
  * withhold data.
  */
@@ -852,8 +849,8 @@ fun buildNotificationDataFinalAck(): ByteArray {
 }
 
 /**
- * Answers a [GarminSynchronization]. The byte is Gadgetbridge's
- * FilterType.UNK_3, the value a real watch accepts.
+ * Answers a [GarminSynchronization]. The byte is the filter type a real
+ * watch accepts.
  */
 fun buildFilterMessage(): ByteArray {
     val filterTypeUnk3 = 3

@@ -23,7 +23,7 @@ object GarminServiceResponders {
         return null
     }
 
-    /** Fabricated OAuth credentials, as Gadgetbridge makes them. Never used against a real service. */
+    /** Fabricated OAuth credentials. Never used against a real service. */
     private fun oauthResponse(): ByteArray {
         GarminLog.log("[GARMIN-AUTH] watch asked for credentials; issuing fake ones")
         val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"

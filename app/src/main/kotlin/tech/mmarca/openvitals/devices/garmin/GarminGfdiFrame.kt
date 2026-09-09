@@ -4,7 +4,7 @@ package tech.mmarca.openvitals.devices.garmin
  * A decoded GFDI frame: `[u16 length][u16 messageType][payload][u16 crc]`,
  * little-endian; `length` covers the whole frame, `crc` everything before
  * it. An incoming type with `0x8000` set is a status and is remapped to
- * `(type and 0xff) + 5000`, as Gadgetbridge does.
+ * `(type and 0xff) + 5000`.
  */
 class GarminGfdiFrame(val messageType: Int, val payload: ByteArray) {
 

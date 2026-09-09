@@ -4,8 +4,17 @@ import java.io.ByteArrayOutputStream
 import java.util.zip.DataFormatException
 import java.util.zip.Inflater
 
+/**
+ * Garmin's protobuf `FileSyncService`: the listing, download and mark-synced
+ * conversation newer firmware uses instead of the legacy 16-byte directory.
+ */
 object GarminFileSyncProtocol {
+    /** The "already synced" flag id, sent as both fixed64 halves of a file id. */
     private const val ALREADY_SYNCED = 42405L
+
+    /** `FileRequest.unk2` and `unk5`: fixed values the watch accepts; their meaning is unknown. */
+    private const val FILE_REQUEST_UNK2 = 24L
+    private const val FILE_REQUEST_UNK5 = 15L
 
     data class FileId(val first: Long, val second: Long)
 
@@ -52,10 +61,10 @@ object GarminFileSyncProtocol {
             .toBytes()
         val request = ProtobufWriter()
             .nested(1, remote)
-            .varint(2, 24)
+            .varint(2, FILE_REQUEST_UNK2)
             .varint(3, 0)
             .varint(4, 0)
-            .varint(5, 15)
+            .varint(5, FILE_REQUEST_UNK5)
             .toBytes()
         return smart(ProtobufWriter().nested(1, request).toBytes())
     }
@@ -112,6 +121,19 @@ object GarminFileSyncProtocol {
 
     fun isFileSyncMessage(payload: ByteArray): Boolean = service(payload) != null
 
+    /**
+     * True for the watch's own "new files" or "start sync" notice. Newer
+     * firmware announces this way instead of the legacy SYNCHRONIZATION.
+     */
+    fun isSyncAnnouncement(payload: ByteArray): Boolean {
+        val fields = service(payload)?.let(::readProtobuf) ?: return false
+        return protobufField(fields, NEW_FILE_NOTIFICATION) != null ||
+            protobufField(fields, START_SYNC_NOTIFICATION) != null
+    }
+
+    private const val NEW_FILE_NOTIFICATION = 12
+    private const val START_SYNC_NOTIFICATION = 22
+
     fun inflateFilePayload(bytes: ByteArray): ByteArray? {
         val inflater = Inflater()
         return try {
@@ -133,7 +155,8 @@ object GarminFileSyncProtocol {
         }
     }
 
-    private fun smart(fileSyncService: ByteArray): ByteArray =
+    /** Wraps a FileSyncService message in its Smart envelope. Internal for tests. */
+    internal fun smart(fileSyncService: ByteArray): ByteArray =
         ProtobufWriter().nested(GarminSmartService.FILE_SYNC, fileSyncService).toBytes()
 
     private fun service(payload: ByteArray): ByteArray? =

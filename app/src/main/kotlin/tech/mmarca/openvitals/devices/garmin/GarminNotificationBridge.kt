@@ -20,6 +20,7 @@ import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.devices.notifications.NotificationMsg
 import tech.mmarca.openvitals.devices.notifications.NotificationStore
 import tech.mmarca.openvitals.devices.notifications.OpenVitalsNotificationListenerService
+import tech.mmarca.openvitals.domain.model.BleSensorDevice
 
 /**
  * The seam between Android's notification listener and the Garmin stack:
@@ -120,6 +121,10 @@ class GarminNotificationBridge @Inject constructor(
         }
     }
 
+    /** The registered watch at [address], or null. */
+    private fun deviceFor(address: String): BleSensorDevice? =
+        deviceRepository.devices.firstOrNull { it.address.equals(address, ignoreCase = true) }
+
     /** The paired Garmin watch's address, or null. */
     private fun pairedWatchAddress(): String? =
         deviceRepository.devices.firstOrNull { it.isGarminGfdi }?.address
@@ -139,7 +144,10 @@ class GarminNotificationBridge @Inject constructor(
     ): GarminNotificationForwarder? {
         if (address == null) return null
         val current = forwarder
-        if (current != null && forwarderAddress == address && forwarderCompanion == companion) {
+        // A companion forwarder serves plain notifications too. Only a plain one is replaced
+        // when the companion link is wanted, because it idles away. Anything else
+        // reconnects per notification.
+        if (current != null && forwarderAddress == address && (forwarderCompanion || !companion)) {
             return current
         }
         // The watch changed under a live forwarder.
@@ -158,34 +166,20 @@ class GarminNotificationBridge @Inject constructor(
             weatherProvider = { weatherStore.freshSnapshot() },
             agpsSource = agpsStore.source(),
             calendarProvider = { begin, end ->
-                val device = deviceRepository.devices
-                    .firstOrNull { it.address.equals(address, ignoreCase = true) }
+                val device = deviceFor(address)
                 if (device != null && stateStore.calendarSync(device.id)) {
                     calendarSource.events(begin, end)
                 } else {
                     null
                 }
             },
-            onFileAnnounced = { syncAnnouncedFile(address) },
-            alreadySyncedFileKeys = {
-                deviceRepository.devices
-                    .firstOrNull { it.address.equals(address, ignoreCase = true) }
-                    ?.let { syncService.syncedFileKeys(it.id) }
-                    .orEmpty()
-            },
-            onGarminFileDownloaded = { file -> syncService.storeAnnouncedFile(file) },
-            onGarminFilesDownloaded = { files ->
-                val device = deviceRepository.devices
-                    .firstOrNull { it.address.equals(address, ignoreCase = true) }
-                if (device != null && files.isNotEmpty()) {
-                    syncService.importAnnouncedFiles(device, files)
-                }
+            heldSyncOwner = deviceFor(address)?.let { device ->
+                syncService.heldSyncOwner(device) { syncAnnouncedFile(address) }
             },
             locationProvider = { locationSource.lastKnown() },
             hostForeground = { foregroundGate.isForeground },
             realtimeServices = {
-                val device = deviceRepository.devices
-                    .firstOrNull { it.address.equals(address, ignoreCase = true) }
+                val device = deviceFor(address)
                 if (device != null && stateStore.liveReadings(device.id)) {
                     LIVE_SERVICES
                 } else {
@@ -194,13 +188,11 @@ class GarminNotificationBridge @Inject constructor(
             },
             onRealtimeReading = { reading -> realtimeStore.record(reading) },
             setupWizardPending = {
-                deviceRepository.devices
-                    .firstOrNull { it.address.equals(address, ignoreCase = true) }
+                deviceFor(address)
                     ?.let { stateStore.setupWizardPending(it.id) } == true
             },
             onSetupWizardCompleted = {
-                deviceRepository.devices
-                    .firstOrNull { it.address.equals(address, ignoreCase = true) }
+                deviceFor(address)
                     ?.let { stateStore.setSetupWizardPending(it.id, false) }
             },
             // A companion forwarder never idles away: its link is the feature.
@@ -225,7 +217,8 @@ class GarminNotificationBridge @Inject constructor(
         // Garmin watches hold their online errands until the companion is active.
         scope.launch {
             foregroundGate.foregroundFlow.collect { foreground ->
-                GarminLog.log("[GARMIN-COMPANION] app is in the ${if (foreground) "foreground" else "background"}")
+                val where = if (foreground) "foreground" else "background"
+                GarminLog.log("[GARMIN-COMPANION] app is in the $where")
                 forwarder?.setHostForeground(foreground)
             }
         }
@@ -318,8 +311,7 @@ class GarminNotificationBridge @Inject constructor(
     private fun syncAnnouncedFile(address: String) {
         scope.launch {
             if (announcedSyncRunning) return@launch
-            val device = deviceRepository.devices
-                .firstOrNull { it.address.equals(address, ignoreCase = true) }
+            val device = deviceFor(address)
                 ?: return@launch
             announcedSyncRunning = true
             try {

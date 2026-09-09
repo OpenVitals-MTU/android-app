@@ -26,6 +26,7 @@ interface GarminNotificationLink {
     /** Whether the link is still usable. A watch that walks away closes it. */
     val isOpen: Boolean
 
+    /** Whether a file transfer is running on this link. Only a BLE link ever transfers. */
     val isSynchronizing: Boolean get() = false
 
     /**
@@ -69,12 +70,11 @@ data class GarminNotificationLinkRequest(
     /** GPS ephemeris to serve while the link is held. */
     val agpsSource: GarminAgpsSource? = null,
     /** Calendar events for the watch's glance; null while sync is off. */
-    val calendarProvider: ((beginEpochSeconds: Long, endEpochSeconds: Long) -> List<GarminCalendarEvent>?)? = null,
-    /** A finished recording announced over the held link — sync it now. */
-    val onFileAnnounced: (() -> Unit)? = null,
-    val alreadySyncedFileKeys: Set<String> = emptySet(),
-    val onGarminFileDownloaded: (suspend (GarminDownloadedFile) -> Unit)? = null,
-    val onGarminFilesDownloaded: ((List<GarminDownloadedFile>) -> Unit)? = null,
+    val calendarProvider: (
+        (beginEpochSeconds: Long, endEpochSeconds: Long) -> List<GarminCalendarEvent>?
+    )? = null,
+    /** Where a recording announced over the held link goes. Null links only forward. */
+    val heldSyncOwner: GarminHeldSyncOwner? = null,
     /** The phone's position, for the watch's location asks. */
     val locationProvider: (() -> GarminPhoneLocation?)? = null,
     /** Whether the phone's app is in the foreground right now. */
@@ -95,7 +95,7 @@ class GarminBleNotificationLink private constructor(
     private val gatt: GarminGattClient,
     private val session: GarminSession,
     /** Held so live-streaming services can be opened and closed after setup. */
-    private val transport: GarminMlTransport,
+    private val transport: GarminFrameTransport,
     override val handler: GarminGncsHandler,
     private val dropJob: Job,
     private val gone: MutableSharedFlow<Unit>,
@@ -128,8 +128,14 @@ class GarminBleNotificationLink private constructor(
         enabled: Boolean,
     ) {
         if (closed) return
+        // Live services are multiplexed over V2 only; a V1 link still forwards notifications.
+        val ml = transport as? GarminMlTransport
+        if (ml == null) {
+            GarminLog.log("[GARMIN-LIVE] live readings need the V2 transport")
+            return
+        }
         runCatching {
-            if (enabled) transport.openService(service.code) else transport.closeService(service.code)
+            if (enabled) ml.openService(service.code) else ml.closeService(service.code)
         }.onFailure { GarminLog.log("[GARMIN-LIVE] could not toggle ${service.name}: $it") }
     }
 
@@ -168,7 +174,7 @@ class GarminBleNotificationLink private constructor(
             val ready = CompletableDeferred<Unit>()
 
             // The transport exists only after connect; the send callback goes through a holder.
-            var transport: GarminMlTransport? = null
+            var transport: GarminFrameTransport? = null
             val sendFrame: suspend (ByteArray) -> Unit = { frame ->
                 (transport ?: throw GarminGattClientException("Transport is not open"))
                     .sendFrame(frame)
@@ -187,39 +193,40 @@ class GarminBleNotificationLink private constructor(
                 // Mandatory: a file transfer on a held link dies when the radio is yielded.
                 syncFiles = false,
                 notifications = handler,
-                onFindPhone = request.onFindPhone,
-                onFindPhoneCancel = request.onFindPhoneCancel,
-                weatherProvider = request.weatherProvider,
-                agpsSource = request.agpsSource,
-                calendarProvider = request.calendarProvider,
-                locationProvider = request.locationProvider,
-                hostForeground = request.hostForeground,
-                setupWizardPending = request.setupWizardPending?.invoke() == true,
-                onSetupWizardCompleted = request.onSetupWizardCompleted,
-                onFileAnnounced = { request.onFileAnnounced?.invoke() },
-                alreadySynced = request.alreadySyncedFileKeys,
-                onFileDownloaded = request.onGarminFileDownloaded,
-                onSynchronizationAnnounced = request.onFileAnnounced,
-                onSynchronizationFilesDownloaded = request.onGarminFilesDownloaded,
-                onHandshakeReady = {
-                    if (!ready.isCompleted) ready.complete(Unit)
-                },
+                heldSyncOwner = request.heldSyncOwner,
+                hooks = GarminSessionHooks(
+                    onFindPhone = request.onFindPhone,
+                    onFindPhoneCancel = request.onFindPhoneCancel,
+                    weatherProvider = request.weatherProvider,
+                    agpsSource = request.agpsSource,
+                    calendarProvider = request.calendarProvider,
+                    locationProvider = request.locationProvider,
+                    hostForeground = request.hostForeground,
+                    setupWizardPending = request.setupWizardPending?.invoke() == true,
+                    onSetupWizardCompleted = request.onSetupWizardCompleted,
+                    onHandshakeReady = { if (!ready.isCompleted) ready.complete(Unit) },
+                ),
             )
 
+            val opened: GarminFrameTransport
             try {
-                transport = gatt.connect(
+                opened = gatt.connect(
                     onFrame = { frame -> scope.launch { session.handleFrame(frame) } },
                     onRealtime = { _, reading -> request.onRealtimeReading?.invoke(reading) },
-                ) as? GarminMlTransport
-                    ?: throw GarminGattClientException(
-                        "Realtime notifications require Garmin's V2 multi-link transport",
-                    )
+                )
+                transport = opened
                 session.start()
                 // Anything sent before the handshake finishes is dropped.
                 withTimeout(handshakeTimeout) { ready.await() }
                 // After the handshake: the watch ignores control traffic before it.
-                for (service in request.realtimeServices) {
-                    transport.openService(service.code)
+                // Live services exist on V2 only; a V1 link forwards notifications alone.
+                val ml = opened as? GarminMlTransport
+                if (ml != null) {
+                    for (service in request.realtimeServices) {
+                        ml.openService(service.code)
+                    }
+                } else if (request.realtimeServices.isNotEmpty()) {
+                    GarminLog.log("[GARMIN-LIVE] live readings need the V2 transport")
                 }
             } catch (error: Throwable) {
                 // Nothing is listening yet; only the transport needs undoing.
@@ -237,7 +244,7 @@ class GarminBleNotificationLink private constructor(
                 link.markClosed()
                 gone.tryEmit(Unit)
             }
-            link = GarminBleNotificationLink(gatt, session, transport, handler, dropJob, gone)
+            link = GarminBleNotificationLink(gatt, session, opened, handler, dropJob, gone)
             return link
         }
     }

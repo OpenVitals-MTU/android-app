@@ -3,7 +3,7 @@ package tech.mmarca.openvitals.devices.garmin
 /**
  * Recognises a Garmin device family from its advertised name: a watch
  * family is a GFDI watch, an Edge a bike computer, anything else a sensor.
- * Families, not Gadgetbridge's exact models, so a future model matches.
+ * Families, not exact models, so a future model matches.
  * The member service UUID only surfaces a device in the scan; the name
  * decides. HRM chest straps are absent: they are live sensors.
  */

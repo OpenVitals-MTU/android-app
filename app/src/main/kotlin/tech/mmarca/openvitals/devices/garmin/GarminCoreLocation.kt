@@ -67,7 +67,7 @@ class GarminPhoneLocationSource @Inject constructor(
 
 /**
  * Answers the watch's `CoreService` location conversation, the
- * prerequisite for its weather fetch. Mirrors Gadgetbridge.
+ * prerequisite for its weather fetch.
  */
 class GarminCoreLocation(
     private val locationProvider: () -> GarminPhoneLocation?,

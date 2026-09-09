@@ -241,7 +241,7 @@ private fun statesById(reply: ByteArray?): Map<Int, EntryState> {
         val number = summaryFields?.let { protobufField(it, SUMMARY_VALUE_NUMBER)?.bytes }
 
         out[id] = EntryState(
-            // Presence is the whole signal. Not in Gadgetbridge's schema.
+            // Presence is the whole signal. Not in the known schema.
             removable = protobufField(fields, STATE_REMOVABLE) != null,
             selectedIndex = list?.let {
                 protobufField(readProtobuf(it), VALUE_INDEX)?.varint?.toInt()
@@ -314,7 +314,7 @@ private const val ENTRY_STATE = 4
 private const val STATE_SWITCH = 3
 private const val STATE_SUMMARY = 4
 
-/** Present but empty on an alarm's delete row. Not in Gadgetbridge's schema. */
+/** Present but empty on an alarm's delete row. Not in the known schema. */
 private const val STATE_REMOVABLE = 9
 
 // Inside a Summary: the value behind a row, shaped by the kind of control.

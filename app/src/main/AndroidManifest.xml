@@ -479,7 +479,7 @@
 
         <!--
             Weather from a companion app (Breezy Weather et al.) over
-            Gadgetbridge's generic-weather broadcast contract. Exported because
+            the generic-weather broadcast contract. Exported because
             an external app must reach it; the payload is public weather.
         -->
         <!--

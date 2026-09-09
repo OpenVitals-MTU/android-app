@@ -1,6 +1,9 @@
 package tech.mmarca.openvitals.devices.garmin
 
 import java.time.LocalDateTime
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.TestScope
@@ -126,6 +129,7 @@ class GarminNotificationForwarderTest {
         lease: FakeLease = FakeLease(),
         openOverride: (suspend () -> GarminNotificationLink)? = null,
         onIdle: (() -> Unit)? = null,
+        maxSyncHold: Duration = 2.minutes,
     ): Fixture {
         val links = mutableListOf<FakeLink>()
         val forwarder = GarminNotificationForwarder(
@@ -143,6 +147,7 @@ class GarminNotificationForwarderTest {
                 }
             },
             onIdle = onIdle,
+            maxSyncHold = maxSyncHold,
         )
         return Fixture(forwarder, links, lease)
     }
@@ -418,6 +423,24 @@ class GarminNotificationForwarderTest {
         link.synchronizing = false
         elapse(10_000)
 
+        assertFalse(f.forwarder.isLinkOpen)
+        assertNull(f.lease.holder)
+    }
+
+    @Test
+    fun `a transfer that never ends yields the radio after the hold limit`() = runTest {
+        val f = build(maxSyncHold = 30.seconds)
+        f.forwarder.post(notification(1))
+        runCurrent()
+        elapse(2_000)
+        f.links.single().synchronizing = true
+
+        f.lease.requestedBy = GarminRadioOwners.SYNC
+        elapse(20_000)
+        assertTrue(f.forwarder.isLinkOpen)
+
+        // The hold limit is the most a stuck transfer may keep a user's sync waiting.
+        elapse(20_000)
         assertFalse(f.forwarder.isLinkOpen)
         assertNull(f.lease.holder)
     }

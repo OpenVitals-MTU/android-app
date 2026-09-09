@@ -24,7 +24,7 @@ class GarminDeviceNamesTest {
 
     @Test
     fun `matches by family so an unreleased model still onboards`() {
-        // The point of family matching over Gadgetbridge's exact-match table.
+        // The point of family matching over an exact-match table.
         assertTrue(isGarminSyncDeviceName("vívoactive 9"))
         assertTrue(isGarminSyncDeviceName("Forerunner 1055"))
     }
