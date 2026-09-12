@@ -774,18 +774,21 @@ class ActivityRecordingController @Inject constructor(
     }
 
     private var hrrCueTts: TextToSpeech? = null
+    private val cueAudioFocus = SpeechAudioFocus(context)
 
     private fun speakCue(text: String) {
         runCatching {
+            // A shut-down engine reports nothing back, so drop its focus here.
+            cueAudioFocus.release()
             hrrCueTts?.shutdown()
             var tts: TextToSpeech? = null
             tts = TextToSpeech(context.applicationContext) { status ->
                 if (status == TextToSpeech.SUCCESS) {
                     tts?.language = Locale.getDefault()
-                    tts?.speak(
+                    tts?.speakDucking(
+                        cueAudioFocus,
                         text,
                         TextToSpeech.QUEUE_FLUSH,
-                        null,
                         "openvitals_hrr_${System.nanoTime()}",
                     )
                 }
