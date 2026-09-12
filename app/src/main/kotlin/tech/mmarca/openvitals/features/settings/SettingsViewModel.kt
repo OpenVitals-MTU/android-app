@@ -30,6 +30,7 @@ import tech.mmarca.openvitals.domain.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.HeartRateThresholds
 import tech.mmarca.openvitals.BuildConfig
+import tech.mmarca.openvitals.core.geo.HgtTileKey
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
@@ -47,6 +48,8 @@ import tech.mmarca.openvitals.features.manualentry.activity.initialActivityEntry
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileImporter
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFolderScanner
 import tech.mmarca.openvitals.features.manualentry.activity.withRouteImport
+import tech.mmarca.openvitals.features.activity.elevation.ElevationTile
+import tech.mmarca.openvitals.features.activity.elevation.ElevationTileRepository
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportPhase
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportProgress
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportResult
@@ -119,6 +122,11 @@ data class SettingsUiState(
     val offlineMapImportProgress: OfflineMapImportProgress? = null,
     val offlineMapImportResult: OfflineMapImportResult? = null,
     val offlineMapImportError: String? = null,
+    val elevationTiles: List<ElevationTile> = emptyList(),
+    val elevationCorrectionEnabled: Boolean = true,
+    val isImportingElevationTile: Boolean = false,
+    val elevationTileImportResult: ElevationTile? = null,
+    val elevationTileImportError: String? = null,
     val unitSystemPreference: UnitSystemPreference = UnitSystemPreference.SYSTEM,
     /** Already resolved — never carries the SYSTEM preference itself. */
     val unitSystem: UnitSystem = UnitSystem.METRIC,
@@ -226,6 +234,7 @@ class SettingsViewModel @Inject constructor(
     private val routeFolderScanner: RouteFolderScanner,
     private val offlineMapRepository: OfflineMapRepository,
     private val offlineMapImportWorkController: OfflineMapImportWorkController,
+    private val elevationTileRepository: ElevationTileRepository,
     private val permissionUxState: HealthConnectPermissionUxState,
     private val coMapsNavigationRepository: CoMapsNavigationRepository,
     private val derivedMetricsResetService: DerivedMetricsResetService,
@@ -249,6 +258,7 @@ class SettingsViewModel @Inject constructor(
     init {
         refresh()
         observeOfflineMaps()
+        observeElevationTiles()
         observeAppleHealthImportWork()
         observeOfflineMapImportWork()
     }
@@ -280,6 +290,7 @@ class SettingsViewModel @Inject constructor(
                 homeWidgetRefreshInterval = preferencesRepository.homeWidgetRefreshInterval,
                 dashboardSortEmptyTilesLast = preferencesRepository.dashboardSortEmptyTilesLast,
                 stepDistanceBackfillEnabled = preferencesRepository.stepDistanceBackfillEnabled,
+                elevationCorrectionEnabled = preferencesRepository.elevationCorrectionEnabled,
                 strideLengthMeters = preferencesRepository.strideLengthMeters,
                 nightStartHour = preferencesRepository.nightStartHour,
                 nightEndHour = preferencesRepository.nightEndHour,
@@ -729,6 +740,58 @@ class SettingsViewModel @Inject constructor(
                         offlineMapImportResult = null,
                         offlineMapImportError = error.localizedMessage
                             ?: "Offline map import failed.",
+                    )
+                }
+        }
+    }
+
+    private fun observeElevationTiles() {
+        viewModelScope.launch {
+            elevationTileRepository.state.collect { libraryState ->
+                _uiState.value = _uiState.value.copy(elevationTiles = libraryState.tiles)
+            }
+        }
+    }
+
+    fun setElevationCorrectionEnabled(enabled: Boolean) {
+        preferencesRepository.elevationCorrectionEnabled = enabled
+        _uiState.value = _uiState.value.copy(elevationCorrectionEnabled = enabled)
+    }
+
+    fun importElevationTile(uri: Uri) {
+        if (_uiState.value.isImportingElevationTile) return
+        _uiState.value = _uiState.value.copy(
+            isImportingElevationTile = true,
+            elevationTileImportResult = null,
+            elevationTileImportError = null,
+        )
+        viewModelScope.launch {
+            runCatching { elevationTileRepository.importTile(uri) }
+                .onSuccess { tile ->
+                    Log.d(TAG, "Elevation tile import completed tile=${tile.displayName}")
+                    _uiState.value = _uiState.value.copy(
+                        isImportingElevationTile = false,
+                        elevationTileImportResult = tile,
+                    )
+                }
+                .onFailure { error ->
+                    Log.e(TAG, "Elevation tile import failed type=${error::class.java.simpleName}")
+                    _uiState.value = _uiState.value.copy(
+                        isImportingElevationTile = false,
+                        elevationTileImportError = error.localizedMessage
+                            ?: "Elevation tile import failed.",
+                    )
+                }
+        }
+    }
+
+    fun deleteElevationTile(key: HgtTileKey) {
+        viewModelScope.launch {
+            runCatching { elevationTileRepository.deleteTile(key) }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        elevationTileImportError = error.localizedMessage
+                            ?: "Unable to delete elevation tile.",
                     )
                 }
         }

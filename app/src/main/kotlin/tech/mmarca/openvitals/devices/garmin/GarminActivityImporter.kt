@@ -12,6 +12,7 @@ import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntry
 import tech.mmarca.openvitals.features.manualentry.activity.buildWriteRequest
 import tech.mmarca.openvitals.features.manualentry.activity.initialActivityEntryState
 import tech.mmarca.openvitals.features.manualentry.activity.withRouteImport
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteElevationCorrector
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileParser
 
 /**
@@ -23,6 +24,7 @@ import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFil
 class GarminActivityImporter @Inject constructor(
     private val activityRepository: ActivityRepository,
     private val preferencesRepository: PreferencesRepository,
+    private val elevationCorrector: RouteElevationCorrector,
 ) {
 
     private val clock: Clock = Clock.systemDefaultZone()
@@ -93,9 +95,11 @@ class GarminActivityImporter @Inject constructor(
 
     private suspend fun buildRequest(file: GarminDownloadedFile): ActivityWriteRequest? {
         // Indexed, not numbered: several files share the 65535 "unset" number.
-        val routeImport = RouteFileParser.parseFile(
-            file.bytes,
-            fileName = "${file.entry.type.label}_${file.entry.fileIndex}.fit",
+        val routeImport = elevationCorrector.correct(
+            RouteFileParser.parseFile(
+                file.bytes,
+                fileName = "${file.entry.type.label}_${file.entry.fileIndex}.fit",
+            ),
         )
         val units = ActivityEntryUnits.uniform(preferencesRepository.unitSystem)
         val state = initialActivityEntryState(

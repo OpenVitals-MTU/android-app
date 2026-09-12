@@ -18,6 +18,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import tech.mmarca.openvitals.core.geo.haversineMeters
+import tech.mmarca.openvitals.domain.insights.RouteElevation
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 
 internal data class RouteFileMetadata(
@@ -171,16 +172,9 @@ internal fun routeDistanceMeters(points: List<ExerciseRoutePoint>): Double =
         )
     }
 
+/** Through the smoothing filter, as a recording is; a raw sum banks GPS noise. */
 internal fun routeElevationGainMeters(points: List<ExerciseRoutePoint>): Double =
-    points.zipWithNext().sumOf { (start, end) ->
-        val startAltitude = start.altitudeMeters
-        val endAltitude = end.altitudeMeters
-        if (startAltitude != null && endAltitude != null) {
-            (endAltitude - startAltitude).coerceAtLeast(0.0)
-        } else {
-            0.0
-        }
-    }
+    RouteElevation.routeElevationGain(points)
 
 private fun simplifyRoutePoints(points: List<ExerciseRoutePoint>): List<ExerciseRoutePoint> {
     if (points.size <= MaxImportedRoutePoints) return points

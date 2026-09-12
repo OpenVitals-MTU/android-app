@@ -15,6 +15,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.theme.LayoutMetrics
 import tech.mmarca.openvitals.ui.theme.Spacing
 
 internal fun LazyListScope.settingsScreenContent(
@@ -44,7 +45,7 @@ internal fun LazyListScope.settingsScreenContent(
                     onOpenIssues = actions.onOpenIssues,
                     onOpenDiscussion = actions.onOpenDiscussion,
                     onOpenSupport = actions.onOpenSupport,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
 
@@ -53,7 +54,7 @@ internal fun LazyListScope.settingsScreenContent(
             item {
                 PrivacyInfoCard(
                     onOpenPrivacyPolicy = actions.onOpenPrivacyPolicy,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
 
@@ -67,7 +68,7 @@ internal fun LazyListScope.settingsScreenContent(
                 LanguageCard(
                     selected = state.appLanguage,
                     onSelect = viewModel::selectAppLanguage,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -76,7 +77,7 @@ internal fun LazyListScope.settingsScreenContent(
                     selected = state.unitSystemPreference,
                     resolvedUnitSystem = state.unitSystem,
                     onSelect = viewModel::selectUnitSystem,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -95,7 +96,7 @@ internal fun LazyListScope.settingsScreenContent(
                     onSelect = viewModel::selectAppThemeMode,
                     dynamicColor = state.dynamicColor,
                     onDynamicColorChange = viewModel::setDynamicColor,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -103,7 +104,7 @@ internal fun LazyListScope.settingsScreenContent(
                 ChartAggregationCard(
                     selected = state.chartAggregationMode,
                     onSelect = viewModel::setChartAggregationMode,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -111,7 +112,7 @@ internal fun LazyListScope.settingsScreenContent(
                 DashboardSortEmptyTilesCard(
                     enabled = state.dashboardSortEmptyTilesLast,
                     onEnabledChange = viewModel::setDashboardSortEmptyTilesLast,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -119,7 +120,7 @@ internal fun LazyListScope.settingsScreenContent(
                 HomeWidgetRefreshCard(
                     selected = state.homeWidgetRefreshInterval,
                     onSelect = viewModel::setHomeWidgetRefreshInterval,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -127,7 +128,7 @@ internal fun LazyListScope.settingsScreenContent(
                 ActivityWeekModeCard(
                     selected = state.activityWeekMode,
                     onSelect = viewModel::selectActivityWeekMode,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
         }
@@ -137,7 +138,7 @@ internal fun LazyListScope.settingsScreenContent(
                 FavoriteActivityCard(
                     selectedExerciseType = state.favoriteActivityExerciseType,
                     onSelect = viewModel::selectFavoriteActivity,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -146,7 +147,7 @@ internal fun LazyListScope.settingsScreenContent(
                     selectedMeters = state.activitySplitDistanceMeters,
                     unitSystem = state.effectiveUnitSystem(UnitQuantity.DISTANCE),
                     onSelect = viewModel::setActivitySplitDistance,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -156,7 +157,7 @@ internal fun LazyListScope.settingsScreenContent(
                     strideLengthMeters = state.strideLengthMeters,
                     unitSystem = state.effectiveUnitSystem(UnitQuantity.DISTANCE),
                     onSave = viewModel::saveStepDistanceBackfill,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -164,7 +165,7 @@ internal fun LazyListScope.settingsScreenContent(
                 ActivityRecordingPreferencesCard(
                     preferences = state.activityRecordingPreferences,
                     onChange = viewModel::updateActivityRecordingPreferences,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                     coMapsPermissionName = viewModel::coMapsPermissionName,
                     onCoMapsPermissionResult = viewModel::onCoMapsPermissionChanged,
                 )
@@ -181,7 +182,21 @@ internal fun LazyListScope.settingsScreenContent(
                     onImport = actions.onImportOfflineMap,
                     onSelectActiveFormat = viewModel::selectOfflineMapFormat,
                     onDeleteMap = viewModel::deleteOfflineMap,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
+                )
+            }
+            item { SettingsCardSpacer() }
+            item {
+                ElevationCorrectionCard(
+                    enabled = state.elevationCorrectionEnabled,
+                    tiles = state.elevationTiles,
+                    isImporting = state.isImportingElevationTile,
+                    result = state.elevationTileImportResult,
+                    error = state.elevationTileImportError,
+                    onEnabledChange = viewModel::setElevationCorrectionEnabled,
+                    onImport = actions.onImportElevationTile,
+                    onDeleteTile = viewModel::deleteElevationTile,
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
         }
@@ -198,7 +213,7 @@ internal fun LazyListScope.settingsScreenContent(
                 CalorieDataSourceCard(
                     enabled = state.showOpenVitalsCalculatedCalories,
                     onEnabledChange = viewModel::setShowOpenVitalsCalculatedCalories,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -215,7 +230,7 @@ internal fun LazyListScope.settingsScreenContent(
                     goalLiters = state.hydrationDailyGoalLiters,
                     unitSystem = state.effectiveUnitSystem(UnitQuantity.HYDRATION),
                     onGoalChange = viewModel::setHydrationDailyGoalLiters,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -224,7 +239,7 @@ internal fun LazyListScope.settingsScreenContent(
                     preferences = state.caffeinePreferences,
                     bodyProfile = state.bodyProfile,
                     onSave = viewModel::updateCaffeinePreferences,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
         }
@@ -238,7 +253,7 @@ internal fun LazyListScope.settingsScreenContent(
                     onSave = viewModel::updateBodyProfile,
                     weightMeasured = state.bodyProfileWeightMeasured,
                     heightMeasured = state.bodyProfileHeightMeasured,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -246,7 +261,7 @@ internal fun LazyListScope.settingsScreenContent(
                 MetabolismCard(
                     preferences = state.caffeinePreferences,
                     onSave = viewModel::updateCaffeinePreferences,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
         }
@@ -258,7 +273,7 @@ internal fun LazyListScope.settingsScreenContent(
                     body = stringResource(R.string.settings_sleep_night_start_body),
                     hour = state.nightStartHour,
                     onHourChange = viewModel::setNightStartHour,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -268,7 +283,7 @@ internal fun LazyListScope.settingsScreenContent(
                     body = stringResource(R.string.settings_sleep_night_end_body),
                     hour = state.nightEndHour,
                     onHourChange = viewModel::setNightEndHour,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -290,7 +305,7 @@ internal fun LazyListScope.settingsScreenContent(
                             state.highHeartRateThresholdBpm - HeartRateThresholds.STEP_BPM,
                         )
                     },
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -312,7 +327,7 @@ internal fun LazyListScope.settingsScreenContent(
                             state.lowHeartRateThresholdBpm - HeartRateThresholds.STEP_BPM,
                         )
                     },
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -324,7 +339,7 @@ internal fun LazyListScope.settingsScreenContent(
                     showBirthYear = false,
                     onSave = actions.onSaveBodyEnergyCalibration,
                     onResetPersonalTuning = actions.onResetBodyEnergyPersonalTuning,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -332,7 +347,7 @@ internal fun LazyListScope.settingsScreenContent(
                 DerivedMetricsResetCard(
                     isResetting = state.isResettingDerivedMetrics,
                     onReset = actions.onResetDerivedMetrics,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
         }
@@ -359,7 +374,7 @@ internal fun LazyListScope.settingsScreenContent(
 	                    onCopyReport = actions.onCopyAppleHealthReport,
                     onCopyError = actions.onCopyAppleHealthError,
                     onSaveReport = actions.onSaveAppleHealthReport,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -376,7 +391,7 @@ internal fun LazyListScope.settingsScreenContent(
                     onGrantPermissions = actions.onGrantRouteImportPermissions,
                     onImportSingle = actions.onImportRouteFile,
                     onImportBulk = actions.onImportRouteFiles,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -396,21 +411,21 @@ internal fun LazyListScope.settingsScreenContent(
                     onGrantPermissions = actions.onGrantRouteImportPermissions,
                     onImport = actions.onImportFitFile,
                     onImportFolder = actions.onImportFitFolder,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
             item {
                 CsvImportCard(
                     onOpenCsvImport = actions.onOpenCsvImport,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
             item {
                 ReportExportCard(
                     onOpenReportExport = actions.onOpenReportExport,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
         }
@@ -424,7 +439,7 @@ internal fun LazyListScope.settingsScreenContent(
                     availability = state.availability,
                     onSyncEnabledChange = viewModel::setHealthConnectSyncEnabled,
                     onManageAccess = actions.onOpenManualPermissionSettings,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -432,7 +447,7 @@ internal fun LazyListScope.settingsScreenContent(
                 MindfulnessIntegrationCard(
                     enabled = state.healthConnectMindfulnessEnabled,
                     onEnabledChange = viewModel::setHealthConnectMindfulnessEnabled,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -461,7 +476,7 @@ internal fun LazyListScope.settingsScreenContent(
             if (state.permissionCategories.isEmpty()) {
                 item {
                     OpenVitalsCard(
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                     ) {
                         Text(
                             text = stringResource(R.string.settings_all_requestable_granted),
@@ -489,7 +504,7 @@ internal fun LazyListScope.settingsScreenContent(
                 AppLockCard(
                     enabled = state.appLockEnabled,
                     onEnabledChange = viewModel::setAppLockEnabled,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                 )
             }
             item { SettingsCardSpacer() }
@@ -501,21 +516,21 @@ internal fun LazyListScope.settingsScreenContent(
                     DebugDiagnosticsCard(
                         onSaveLogs = actions.onSaveDebugLogs,
                         onShareLogs = actions.onShareDebugLogs,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                     )
                 }
                 item { SettingsCardSpacer() }
                 item {
                     ReminderTestCard(
                         onShowTestReminder = viewModel::showTestHydrationReminder,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                     )
                 }
                 item { SettingsCardSpacer() }
                 item {
                     HealthConnectSourcesCard(
                         sources = state.healthConnectSources,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                     )
                 }
             }

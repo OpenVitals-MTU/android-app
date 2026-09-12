@@ -4,7 +4,7 @@
 > **Audience:** Users and contributors.
 > **Implementation:** `features/manualentry/activity/routeimport`, `features/activity`.
 > **Navigation:** `Screen.SettingsDataImport`, `Screen.ActivityEntry`.
-> **Related:** [Feature map](feature-map.md), [FIT files import](fit-files-import.md), [Offline maps support](offline-maps-support.md), [Recording of activity](activity-recording.md).
+> **Related:** [Feature map](feature-map.md), [FIT files import](fit-files-import.md), [Offline maps support](offline-maps-support.md), [Elevation correction](elevation-correction.md), [Recording of activity](activity-recording.md).
 
 OpenVitals can import GPX, KML, KMZ, and TCX activity files from Settings, Data Importers, preview one file in Activity Entry, and save supported activities to Health Connect. It can also bulk import multiple route files directly into Health Connect.
 
@@ -56,6 +56,8 @@ The review can include:
 When saved, OpenVitals writes supported Health Connect exercise session data and related records such as route, distance, elevation, heart rate, cadence, speed, active calories, and total calories where permissions and data allow.
 
 Elevation gain from route points is smoothed before it is saved, using the same filter activity recording uses, so GPS noise does not inflate the figure. See [Recording of activity](activity-recording.md).
+
+When elevation correction is on and imported tiles cover the whole route, the file's altitudes are replaced by tile heights before that smoothing runs. See [Elevation correction](elevation-correction.md).
 
 ## Export
 

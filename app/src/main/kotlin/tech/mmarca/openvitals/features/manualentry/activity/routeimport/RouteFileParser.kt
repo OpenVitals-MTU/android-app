@@ -35,6 +35,7 @@ data class RouteFileImport(
 @Singleton
 class RouteFileImporter @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    private val elevationCorrector: RouteElevationCorrector,
 ) {
     suspend fun import(uri: Uri): RouteFileImport = withContext(Dispatchers.IO) {
         val fileName = uri.displayName(context)
@@ -42,7 +43,7 @@ class RouteFileImporter @Inject constructor(
             ?.use { it.readBytesBounded(MaxRouteFileBytes, "Activity file is too large.") }
             ?: throw IllegalArgumentException("Unable to read activity file.")
 
-        RouteFileParser.parseFile(routeBytes, fileName = fileName)
+        elevationCorrector.correct(RouteFileParser.parseFile(routeBytes, fileName = fileName))
     }
 
     /** The nightly HRV readings a wellness FIT carries: the fallback for a non-activity FIT. */

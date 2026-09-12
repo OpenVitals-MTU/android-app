@@ -17,6 +17,7 @@ import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -53,6 +54,11 @@ import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
 import tech.mmarca.openvitals.domain.preferences.StrideLength
+import tech.mmarca.openvitals.core.geo.HgtResolution
+import tech.mmarca.openvitals.core.geo.HgtTileKey
+import tech.mmarca.openvitals.features.activity.elevation.ElevationTile
+import tech.mmarca.openvitals.features.activity.elevation.ElevationTileLibraryState
+import tech.mmarca.openvitals.features.activity.elevation.ElevationTileRepository
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkController
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapLibraryState
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
@@ -898,6 +904,90 @@ class SettingsViewModelTest {
         verify(exactly = 1) { reminders.showTestReminder(any()) }
     }
 
+    @Test fun `refresh reads the elevation correction preference`() = runTest {
+        val prefs = prefs()
+        every { prefs.elevationCorrectionEnabled } returns false
+        val vm = viewModel(preferencesRepository = prefs)
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.elevationCorrectionEnabled)
+    }
+
+    @Test fun `toggling elevation correction writes the preference and the state`() = runTest {
+        val prefs = prefs()
+        val vm = viewModel(preferencesRepository = prefs)
+
+        vm.setElevationCorrectionEnabled(false)
+
+        verify { prefs.elevationCorrectionEnabled = false }
+        assertFalse(vm.uiState.value.elevationCorrectionEnabled)
+    }
+
+    @Test fun `importing an elevation tile reports the result and clears the busy flag`() = runTest {
+        val repository = elevationTileRepository()
+        val tile = elevationTile()
+        coEvery { repository.importTile(any()) } returns tile
+        val vm = viewModel(elevationTileRepository = repository)
+
+        vm.importElevationTile(mockk<Uri>())
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isImportingElevationTile)
+        assertEquals(tile, vm.uiState.value.elevationTileImportResult)
+        assertNull(vm.uiState.value.elevationTileImportError)
+    }
+
+    @Test fun `a failed tile import surfaces the message`() = runTest {
+        val repository = elevationTileRepository()
+        coEvery { repository.importTile(any()) } throws IllegalArgumentException("Not an SRTM tile")
+        val vm = viewModel(elevationTileRepository = repository)
+
+        vm.importElevationTile(mockk<Uri>())
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isImportingElevationTile)
+        assertEquals("Not an SRTM tile", vm.uiState.value.elevationTileImportError)
+        assertNull(vm.uiState.value.elevationTileImportResult)
+    }
+
+    @Test fun `a second tile import while one runs is ignored`() = runTest {
+        val repository = elevationTileRepository()
+        coEvery { repository.importTile(any()) } coAnswers {
+            delay(1_000)
+            elevationTile()
+        }
+        val vm = viewModel(elevationTileRepository = repository)
+
+        vm.importElevationTile(mockk<Uri>())
+        vm.importElevationTile(mockk<Uri>())
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { repository.importTile(any()) }
+    }
+
+    @Test fun `deleting a tile delegates to the repository and reports a failure`() = runTest {
+        val repository = elevationTileRepository()
+        val key = HgtTileKey(45, 7)
+        val vm = viewModel(elevationTileRepository = repository)
+
+        vm.deleteElevationTile(key)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { repository.deleteTile(key) }
+
+        coEvery { repository.deleteTile(key) } throws IllegalStateException("locked")
+        vm.deleteElevationTile(key)
+        advanceUntilIdle()
+        assertEquals("locked", vm.uiState.value.elevationTileImportError)
+    }
+
+    private fun elevationTile() = ElevationTile(
+        key = HgtTileKey(45, 7),
+        resolution = HgtResolution.THREE_ARC_SECOND,
+        sizeBytes = HgtResolution.THREE_ARC_SECOND.byteSize,
+        importedAtMillis = 0L,
+        path = "/tiles/N45E007.hgt",
+    )
+
     private fun viewModel(
         repository: HealthRepository = repo(),
         activityRepository: ActivityRepository = activityRepo(),
@@ -913,6 +1003,7 @@ class SettingsViewModelTest {
         fitHrvImportService: FitHrvImportService = mockk(relaxed = true),
         offlineMapRepository: OfflineMapRepository = offlineMapRepository(),
         offlineMapImportWorkController: OfflineMapImportWorkController = offlineMapImportController(),
+        elevationTileRepository: ElevationTileRepository = elevationTileRepository(),
         permissionUxState: HealthConnectPermissionUxState = permissionUxState(),
         homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler = mockk(relaxed = true),
     ): SettingsViewModel =
@@ -932,6 +1023,7 @@ class SettingsViewModelTest {
             routeFolderScanner = mockk(relaxed = true),
             offlineMapRepository = offlineMapRepository,
             offlineMapImportWorkController = offlineMapImportWorkController,
+            elevationTileRepository = elevationTileRepository,
             permissionUxState = permissionUxState,
             coMapsNavigationRepository = mockk(relaxed = true),
             derivedMetricsResetService = mockk(relaxed = true),
@@ -996,6 +1088,8 @@ class SettingsViewModelTest {
             every { prefs.unitSystemPreference } returns UnitSystemPreference.SYSTEM
             every { prefs.unitSystemPreference = any() } just runs
             every { prefs.unitSystem } returns UnitSystem.METRIC
+            every { prefs.elevationCorrectionEnabled } returns true
+            every { prefs.elevationCorrectionEnabled = any() } just runs
             var unitOverrides = mapOf<UnitQuantity, UnitSystem>()
             every { prefs.unitOverridesFlow } answers { MutableStateFlow(unitOverrides) }
             every { prefs.unitOverride(any()) } answers { unitOverrides[firstArg()] }
@@ -1143,6 +1237,11 @@ class SettingsViewModelTest {
     private fun offlineMapRepository(): OfflineMapRepository =
         mockk<OfflineMapRepository>(relaxed = true).also { repository ->
             every { repository.state } returns MutableStateFlow(OfflineMapLibraryState())
+        }
+
+    private fun elevationTileRepository(): ElevationTileRepository =
+        mockk<ElevationTileRepository>(relaxed = true).also { repository ->
+            every { repository.state } returns MutableStateFlow(ElevationTileLibraryState())
         }
 
     private fun offlineMapImportController(): OfflineMapImportWorkController =

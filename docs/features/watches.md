@@ -69,7 +69,7 @@ If "Stay connected" is also on, the held link is given up for the duration of th
 
 ### Recorded Activities
 
-Activity files go through the same importer a hand-picked folder of FIT files uses, so imports are batched and a single bad file does not stop the rest. See [FIT files import](fit-files-import.md).
+Activity files go through the same importer a hand-picked folder of FIT files uses, so imports are batched and a single bad file does not stop the rest. See [FIT files import](fit-files-import.md). The same path applies [elevation correction](elevation-correction.md), so a watch with a drifting barometer gets its altitude from imported tiles.
 
 Activities are written to Health Connect as exercise sessions with their routes and series, and appear on the normal activity screens alongside data from any other source. A file is skipped when the Health Connect write permission it needs is missing.
 

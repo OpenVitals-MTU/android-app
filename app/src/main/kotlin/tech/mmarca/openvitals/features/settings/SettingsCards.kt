@@ -232,6 +232,13 @@ internal val OfflineMapMimeTypes = arrayOf(
     "*/*",
 )
 
+/** `.hgt` has no registered MIME type, so the picker must allow anything. */
+internal val ElevationTileMimeTypes = arrayOf(
+    "application/zip",
+    "application/octet-stream",
+    "*/*",
+)
+
 private val OfflineMapPackFormat.settingsLabelRes: Int
     @StringRes
     get() = when (this) {
@@ -1174,7 +1181,7 @@ private fun OfflineMapPackRow(
     }
 }
 
-private fun formatOfflineMapSize(bytes: Long): String {
+internal fun formatOfflineMapSize(bytes: Long): String {
     if (bytes < 1_000L) return "$bytes B"
     val units = listOf("KB", "MB", "GB")
     var value = bytes / 1_000.0

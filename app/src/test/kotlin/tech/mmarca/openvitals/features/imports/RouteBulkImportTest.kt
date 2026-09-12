@@ -52,6 +52,8 @@ import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
+import tech.mmarca.openvitals.features.activity.elevation.ElevationTileLibraryState
+import tech.mmarca.openvitals.features.activity.elevation.ElevationTileRepository
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkController
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapLibraryState
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
@@ -447,6 +449,7 @@ class RouteBulkImportTest {
             routeFolderScanner = mockk(relaxed = true),
             offlineMapRepository = offlineMapRepository(),
             offlineMapImportWorkController = offlineMapImportController(),
+            elevationTileRepository = elevationTileRepository(),
             permissionUxState = mockk<HealthConnectPermissionUxState>(relaxed = true),
             coMapsNavigationRepository = mockk(relaxed = true),
             derivedMetricsResetService = mockk(relaxed = true),
@@ -544,6 +547,11 @@ class RouteBulkImportTest {
             every { repository.state } returns MutableStateFlow(OfflineMapLibraryState())
         }
 
+    private fun elevationTileRepository(): ElevationTileRepository =
+        mockk<ElevationTileRepository>(relaxed = true).also { repository ->
+            every { repository.state } returns MutableStateFlow(ElevationTileLibraryState())
+        }
+
     private fun offlineMapImportController(): OfflineMapImportWorkController =
         mockk<OfflineMapImportWorkController>(relaxed = true).also { controller ->
             every { controller.workInfos } returns emptyFlow()
@@ -561,6 +569,7 @@ class RouteBulkImportTest {
             every { prefs.homeWidgetRefreshInterval } returns HomeWidgetRefreshInterval.DEFAULT
             every { prefs.dashboardSortEmptyTilesLast } returns true
             every { prefs.stepDistanceBackfillEnabled } returns false
+            every { prefs.elevationCorrectionEnabled } returns true
             every { prefs.strideLengthMeters } returns 0.7
             every { prefs.nightStartHour } returns SleepWindow.Default.startHour
             every { prefs.nightEndHour } returns SleepWindow.Default.endHour

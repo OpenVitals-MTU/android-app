@@ -4,7 +4,7 @@
 > **Audience:** Users and contributors.
 > **Implementation:** `features/manualentry/activity/routeimport`.
 > **Navigation:** `Screen.SettingsDataImport`, then `Screen.ActivityEntry` for review.
-> **Related:** [Feature map](feature-map.md), [GPX/KML/KMZ/TCX route import](route-file-import.md), [Recording of activity](activity-recording.md), [Watches](watches.md), [Apple Health import](apple-health-import.md).
+> **Related:** [Feature map](feature-map.md), [GPX/KML/KMZ/TCX route import](route-file-import.md), [Recording of activity](activity-recording.md), [Watches](watches.md), [Elevation correction](elevation-correction.md), [Apple Health import](apple-health-import.md).
 
 FIT import lives in Settings, Data Importers. It lets users bring supported activity, course, and workout files into OpenVitals for review before saving to Health Connect.
 
@@ -17,6 +17,8 @@ FIT files commonly come from fitness devices and activity platforms. OpenVitals 
 An imported activity carries the per-second series the file recorded, not only its route: heart rate, cadence, and speed. This is what gives an imported FIT activity the same charts a recorded one has.
 
 It also means an indoor session, which has no positions at all, still imports as a complete activity with usable data rather than as an empty one.
+
+When an activity file has positions and elevation correction is on, its altitudes and ascent are replaced from the imported elevation tiles. See [Elevation correction](elevation-correction.md).
 
 ## Review Before Save
 

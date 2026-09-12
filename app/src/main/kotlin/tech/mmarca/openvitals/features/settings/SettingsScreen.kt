@@ -173,6 +173,14 @@ fun SettingsScreen(
         }
     }
 
+    val elevationTilePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            viewModel.importElevationTile(uri)
+        }
+    }
+
     val appleHealthReportSaver = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/plain"),
     ) { uri ->
@@ -261,6 +269,9 @@ fun SettingsScreen(
         onOpenReportExport = onOpenReportExport,
         onImportOfflineMap = {
             offlineMapPicker.launch(OfflineMapMimeTypes)
+        },
+        onImportElevationTile = {
+            elevationTilePicker.launch(ElevationTileMimeTypes)
         },
         onCopyAppleHealthReport = { reportText ->
             copyAppleHealthImportText(reportText, reportCopied)
