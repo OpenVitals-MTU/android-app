@@ -278,7 +278,7 @@
     <string name="activity_recording_error_waiting_for_gps">Warte auf eine genaue GPS-Position, bevor du startest.</string>
     <string name="activity_recording_error_provider">Aktiviere GPS, um eine Route aufzuzeichnen.</string>
     <string name="activity_recording_error_unsupported_type">Dieser Aktivitätstyp kann nicht live aufgezeichnet werden.</string>
-    <string name="activity_recording_error_proximity_sensor">Dieses Gerät stellt keinen Näherungssensor zum Zählen von Liegestützen bereit.</string>
+    <string name="activity_recording_error_proximity_sensor">Dieses Gerät stellt keinen Näherungssensor zum Zählen von Wiederholungen bereit.</string>
     <string name="activity_recording_error_accelerometer">Dieses Gerät stellt keinen Beschleunigungssensor für diese Aufzeichnung bereit.</string>
     <string name="activity_recording_error_step_detector">Dieses Gerät stellt keine Android-Schrittzählerereignisse bereit.</string>
     <string name="activity_recording_how_it_works">So funktioniert die Aufzeichnung</string>
@@ -2734,4 +2734,10 @@
     <string name="settings_csv_import_metric_steps">Schritte</string>
     <string name="settings_derived_metrics_reset_done">Metriken zurücksetzen. Neubrechung im Hintergrund aus Health Connect.</string>
     <string name="settings_derived_metrics_reset_failed">Metriken konnten nicht zurückgesetzt werden</string>
+    <string name="activity_workout_export_description">Workout Metriken als Datei speichern. Die GPS Route ist nicht eingeschlossen.</string>
+    <string name="activity_workout_export_saved">Workout gespeichert.</string>
+    <string name="settings_fit_import_folder_action">Order mit FIT-Dateien importieren</string>
+    <string name="settings_fit_import_folder_scanning">Suche FIT-Dateien …</string>
+    <string name="settings_derived_metrics_reset_action">Von vorne beginnen</string>
+    <string name="settings_derived_metrics_reset_confirm_title">Diese Metriken von vorne beginnen?</string>
 </resources>
