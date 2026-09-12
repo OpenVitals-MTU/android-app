@@ -14,6 +14,12 @@ enum class WorkoutPlanGoalType {
     DURATION,
 }
 
+/** How a duration field is typed; the plan always stores seconds. */
+enum class WorkoutPlanDurationUnit {
+    SECONDS,
+    MINUTES,
+}
+
 /** How the builder treats a step. [UNSUPPORTED] keeps a step it cannot edit, so nothing is dropped. */
 enum class WorkoutPlanStepKind {
     ACTIVE,
@@ -30,19 +36,31 @@ data class WorkoutPlanStepInput(
     val descriptionText: String = "",
     val goalType: WorkoutPlanGoalType = WorkoutPlanGoalType.REPETITIONS,
     val goalValueText: String = "",
+    /** Unit of [goalValueText] for a duration goal or a rest. */
+    val durationUnit: WorkoutPlanDurationUnit = WorkoutPlanDurationUnit.SECONDS,
+    /** Copies of an active step written one after another. */
+    val setsText: String = "1",
+    /** Rest after every set; blank or 0 for none. */
+    val setRestText: String = "",
+    val setRestUnit: WorkoutPlanDurationUnit = WorkoutPlanDurationUnit.SECONDS,
+    /** Load for an active step, kg; blank for none. Stored as a weight target. */
+    val weightKgText: String = "",
     val raw: PlannedExerciseStepData? = null,
     /** Targets another app attached (pace, heart rate, …): shown, never edited, written back as they came. */
     val performanceTargets: List<PlannedExercisePerformanceTarget> = emptyList(),
 ) {
     companion object {
-        fun rest(seconds: Long = DefaultRestSeconds): WorkoutPlanStepInput =
-            WorkoutPlanStepInput(
+        fun rest(seconds: Long = DefaultRestSeconds): WorkoutPlanStepInput {
+            val (text, unit) = secondsToDurationInput(seconds)
+            return WorkoutPlanStepInput(
                 kind = WorkoutPlanStepKind.REST,
                 segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST,
                 exercisePhase = PlannedExerciseStep.EXERCISE_PHASE_REST,
                 goalType = WorkoutPlanGoalType.DURATION,
-                goalValueText = seconds.toString(),
+                goalValueText = text,
+                durationUnit = unit,
             )
+        }
 
         fun active(choice: WorkoutPlanStepChoice): WorkoutPlanStepInput =
             WorkoutPlanStepInput(
@@ -95,6 +113,9 @@ enum class WorkoutPlanValidationErrorKind {
     BLOCK_ROUNDS_INVALID,
     BLOCK_EMPTY,
     STEP_GOAL_INVALID,
+    STEP_SETS_INVALID,
+    STEP_SET_REST_INVALID,
+    STEP_WEIGHT_INVALID,
     NO_ACTIVE_STEP,
 }
 
@@ -132,6 +153,10 @@ data class WorkoutPlanBuilderUiState(
 
     fun stepError(stepId: String): WorkoutPlanValidationError? =
         validationErrors.firstOrNull { it.stepId == stepId }
+
+    /** Every error on a step, so each field can flag its own. */
+    fun stepErrors(stepId: String): List<WorkoutPlanValidationError> =
+        validationErrors.filter { it.stepId == stepId }
 }
 
 internal fun newWorkoutPlanInputId(): String = UUID.randomUUID().toString()

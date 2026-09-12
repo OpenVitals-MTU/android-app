@@ -14,11 +14,146 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.model.PlannedExerciseBlockData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseCompletion
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
+import tech.mmarca.openvitals.domain.model.PlannedExercisePerformanceTarget
 import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
+import tech.mmarca.openvitals.domain.model.restPlanStep
 
 class WorkoutPlanBuilderMapperTest {
 
     private val zone: ZoneId = ZoneId.of("Europe/Madrid")
+
+    private val squat = WorkoutPlanStepChoice(ExerciseSegment.EXERCISE_SEGMENT_TYPE_SQUAT)
+
+    private fun squatStep(weightKg: Double? = null) = PlannedExerciseStepData(
+        exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_SQUAT,
+        exercisePhase = PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
+        description = null,
+        completion = PlannedExerciseCompletion.Repetitions(12),
+        performanceTargets = listOfNotNull(weightKg?.let { PlannedExercisePerformanceTarget.Weight(it) }),
+    )
+
+    private fun plankStep(seconds: Long) = PlannedExerciseStepData(
+        exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK,
+        exercisePhase = PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
+        description = null,
+        completion = PlannedExerciseCompletion.DurationSeconds(seconds),
+    )
+
+    private fun form(steps: List<WorkoutPlanStepInput>) = WorkoutPlanFormInput(
+        titleText = "Legs",
+        startDateText = "2026-08-27",
+        startTimeText = "7:30",
+        durationMinutesText = "20",
+        blocks = listOf(WorkoutPlanBlockInput(steps = steps)),
+    )
+
+    private fun stepsOf(form: WorkoutPlanFormInput): List<PlannedExerciseStepData> =
+        requireNotNull(form.toWriteRequest(zone, existingId = null)).blocks.single().steps
+
+    private fun rowsOf(steps: List<PlannedExerciseStepData>): List<WorkoutPlanStepInput> =
+        plan(blocks = listOf(PlannedExerciseBlockData(1, null, steps))).toWorkoutPlanForm(zone).blocks.single().steps
+
+    @Test
+    fun `a set group writes a copy and a rest per set and reads back as one row`() {
+        val row = WorkoutPlanStepInput.active(squat).copy(
+            goalValueText = "12",
+            setsText = "3",
+            setRestText = "2",
+            setRestUnit = WorkoutPlanDurationUnit.MINUTES,
+            weightKgText = "50",
+        )
+
+        val written = stepsOf(form(listOf(row)))
+
+        assertEquals(List(3) { listOf(squatStep(50.0), restPlanStep(120)) }.flatten(), written)
+        val rows = rowsOf(written)
+        assertEquals(1, rows.size)
+        assertEquals("3", rows[0].setsText)
+        assertEquals("2", rows[0].setRestText)
+        assertEquals(WorkoutPlanDurationUnit.MINUTES, rows[0].setRestUnit)
+        assertEquals("50", rows[0].weightKgText)
+        assertTrue(rows[0].performanceTargets.isEmpty())
+        assertEquals(written, stepsOf(form(rows)))
+    }
+
+    @Test
+    fun `identical steps without rests collapse with a blank set rest`() {
+        val steps = List(3) { squatStep() }
+
+        val rows = rowsOf(steps)
+
+        assertEquals(1, rows.size)
+        assertEquals("3", rows[0].setsText)
+        assertEquals("", rows[0].setRestText)
+        assertEquals(steps, stepsOf(form(rows)))
+    }
+
+    @Test
+    fun `a run without a trailing rest keeps the odd step as its own row`() {
+        val steps = listOf(squatStep(), restPlanStep(120), squatStep(), restPlanStep(120), squatStep())
+
+        val rows = rowsOf(steps)
+
+        assertEquals(listOf("2", "1"), rows.map { it.setsText })
+        assertEquals(listOf("2", ""), rows.map { it.setRestText })
+        assertEquals(WorkoutPlanDurationUnit.MINUTES, rows[0].setRestUnit)
+        assertEquals(steps, stepsOf(form(rows)))
+    }
+
+    @Test
+    fun `a rest after a rest or an unsupported step stays a standalone row`() {
+        val unsupported = PlannedExerciseStepData(
+            exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING,
+            exercisePhase = PlannedExerciseStep.EXERCISE_PHASE_WARMUP,
+            description = "Easy jog",
+            completion = PlannedExerciseCompletion.Unknown,
+        )
+        val steps = listOf(squatStep(), restPlanStep(60), restPlanStep(180), unsupported, restPlanStep(60))
+
+        val rows = rowsOf(steps)
+
+        assertEquals(
+            listOf(WorkoutPlanStepKind.ACTIVE, WorkoutPlanStepKind.REST, WorkoutPlanStepKind.UNSUPPORTED, WorkoutPlanStepKind.REST),
+            rows.map { it.kind },
+        )
+        assertEquals("1", rows[0].setRestText)
+        assertEquals(WorkoutPlanDurationUnit.MINUTES, rows[0].setRestUnit)
+        assertEquals("3", rows[1].goalValueText)
+        assertEquals(WorkoutPlanDurationUnit.MINUTES, rows[1].durationUnit)
+        assertEquals(steps, stepsOf(form(rows)))
+    }
+
+    @Test
+    fun `a weight target fills the weight field and is written back beside the other targets`() {
+        val heartRate = PlannedExercisePerformanceTarget.HeartRate(140.0, 160.0)
+        val step = squatStep().copy(performanceTargets = listOf(heartRate, PlannedExercisePerformanceTarget.Weight(50.0)))
+
+        val rows = rowsOf(listOf(step))
+
+        assertEquals("50", rows.single().weightKgText)
+        assertEquals(listOf(heartRate), rows.single().performanceTargets)
+        assertEquals(
+            listOf(heartRate, PlannedExercisePerformanceTarget.Weight(50.0)),
+            stepsOf(form(rows)).single().performanceTargets,
+        )
+    }
+
+    @Test
+    fun `durations read as minutes when whole and seconds otherwise`() {
+        val rows = rowsOf(listOf(plankStep(120), restPlanStep(90)))
+
+        val plank = rows.single()
+        assertEquals("2", plank.goalValueText)
+        assertEquals(WorkoutPlanDurationUnit.MINUTES, plank.durationUnit)
+        assertEquals("90", plank.setRestText)
+        assertEquals(WorkoutPlanDurationUnit.SECONDS, plank.setRestUnit)
+        assertEquals(listOf(plankStep(120), restPlanStep(90)), stepsOf(form(rows)))
+
+        val rest = WorkoutPlanStepInput.rest()
+        assertEquals("1", rest.goalValueText)
+        assertEquals(WorkoutPlanDurationUnit.MINUTES, rest.durationUnit)
+        assertEquals(60L, rest.goalValueOrNull())
+    }
 
     @Test
     fun `push-ups and planks map to blocks with rep and duration goals`() {
@@ -141,19 +276,21 @@ class WorkoutPlanBuilderMapperTest {
         assertEquals("Main", block.nameText)
         assertEquals("2", block.roundsText)
         val kinds = block.steps.map { it.kind }
+        // The rest after the plank is the plank's set rest, so it is not a row of its own.
         assertEquals(
             listOf(
                 WorkoutPlanStepKind.UNSUPPORTED,
                 WorkoutPlanStepKind.ACTIVE,
-                WorkoutPlanStepKind.REST,
                 WorkoutPlanStepKind.ACTIVE,
             ),
             kinds,
         )
         assertEquals(WorkoutPlanGoalType.DURATION, block.steps[1].goalType)
         assertEquals("45", block.steps[1].goalValueText)
-        assertEquals("30", block.steps[2].goalValueText)
-        assertEquals(PlannedExerciseStep.EXERCISE_PHASE_COOLDOWN, block.steps[3].exercisePhase)
+        assertEquals("1", block.steps[1].setsText)
+        assertEquals("30", block.steps[1].setRestText)
+        assertEquals(WorkoutPlanDurationUnit.SECONDS, block.steps[1].setRestUnit)
+        assertEquals(PlannedExerciseStep.EXERCISE_PHASE_COOLDOWN, block.steps[2].exercisePhase)
 
         // Round-trip: the unsupported step and the foreign phases survive untouched.
         val request = requireNotNull(form.toWriteRequest(zone, existingId = plan.id))

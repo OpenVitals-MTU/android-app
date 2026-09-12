@@ -180,6 +180,22 @@
     <string name="activity_recording_plan_cue_rest">Rest %1$d seconds. Next: %2$s</string>
     <string name="activity_recording_plan_cue_rest_last">Rest %1$d seconds.</string>
     <string name="activity_recording_plan_cue_complete">Plan complete. Finish when you are ready.</string>
+    <string name="activity_recording_plan_set_progress">Set %1$d of %2$d</string>
+    <string name="activity_recording_plan_weight">%1$s kg</string>
+    <string name="activity_recording_plan_setup_rest_minutes">rest %1$d min</string>
+    <string name="activity_recording_plan_spoken_reps_weight">%1$s, %2$d reps, %3$s kilograms</string>
+    <plurals name="activity_recording_plan_spoken_minutes">
+        <item quantity="one">%1$s, %2$d minute</item>
+        <item quantity="other">%1$s, %2$d minutes</item>
+    </plurals>
+    <plurals name="activity_recording_plan_cue_rest_minutes">
+        <item quantity="one">Rest %1$d minute. Next: %2$s</item>
+        <item quantity="other">Rest %1$d minutes. Next: %2$s</item>
+    </plurals>
+    <plurals name="activity_recording_plan_cue_rest_last_minutes">
+        <item quantity="one">Rest %1$d minute.</item>
+        <item quantity="other">Rest %1$d minutes.</item>
+    </plurals>
     <string name="activity_recording_error_plan_empty">This plan has no steps the recording can walk through.</string>
     <string name="activity_recording_notification_plan_reps">Step %1$d/%2$d · %3$s · %4$s/%5$s</string>
     <string name="activity_recording_notification_plan_timed">Step %1$d/%2$d · %3$s · %4$s left</string>
@@ -209,6 +225,7 @@
     <string name="activity_entry_set_rest_label">Rest time</string>
     <string name="activity_entry_set_seconds_label">Set %1$d seconds</string>
     <string name="activity_entry_add_set">Add set</string>
+    <string name="activity_entry_set_weight_label">Weight (kg)</string>
     <string name="activity_entry_plan_preview_reps">%1$d reps</string>
     <string name="activity_entry_distance_label">Distance %1$s</string>
     <string name="activity_entry_elevation_label">Climb %1$s</string>
@@ -726,6 +743,15 @@
     <string name="workout_plans_exported">Plans exported</string>
     <string name="workout_plans_imported">%1$d plans imported</string>
     <string name="workout_plans_nothing_to_export">No plans to export</string>
+    <string name="workout_plan_goal_seconds_short">sec</string>
+    <string name="workout_plan_goal_minutes_short">min</string>
+    <string name="workout_plan_preview_minutes">%1$d min</string>
+    <string name="workout_plan_step_sets_label">Sets</string>
+    <string name="workout_plan_step_set_rest_label">Rest after each set</string>
+    <string name="workout_plan_step_weight_label">Weight (kg)</string>
+    <string name="workout_plan_error_step_sets">Sets must be between 1 and 99</string>
+    <string name="workout_plan_error_step_set_rest">Rest after each set must be 0 or more, up to 24 hours</string>
+    <string name="workout_plan_error_step_weight">Enter a weight above 0 and up to 1000 kg</string>
     <!-- Health Connect exercise session types -->
     <string name="hc_exercise_type_badminton">Badminton</string>
     <string name="hc_exercise_type_baseball">Baseball</string>
@@ -2153,6 +2179,7 @@
     <string name="detail_time">Time</string>
     <string name="detail_repetitions">Repetitions</string>
     <string name="detail_set">Set</string>
+    <string name="detail_weight">Weight</string>
     <string name="detail_length">Length</string>
     <string name="detail_segments">Segments</string>
     <string name="detail_laps">Laps</string>

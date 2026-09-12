@@ -14,8 +14,11 @@ The builder (`WorkoutPlanBuilderScreen`) edits one plan:
 
 - Session fields: title (required), session type (calisthenics, strength, HIIT, …), date, start time, estimated duration, notes.
 - Blocks: each block has an optional name, a number of rounds (`PlannedExerciseBlock.repetitions`), and an ordered list of steps.
-- Steps: any Health Connect `ExerciseSegment` type from a searchable picker, with a **repetitions** or **duration (seconds)** goal, plus rest steps with a duration. Planks default to a duration goal; most strength moves default to repetitions. A "Push-ups" preset rides on `EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT` with a stored description because Health Connect has no push-up constant.
-- Steps the builder cannot express (distance goals, calorie goals, manual completion, unknown goals, usually from other apps) are shown read-only and written back unchanged, so editing a foreign plan never drops part of it. Performance targets (pace, power, heart-rate zones) are not read or written by OpenVitals today.
+- Steps: any Health Connect `ExerciseSegment` type from a searchable picker, with a **repetitions** or **duration** goal, plus rest steps with a duration. Planks default to a duration goal; most strength moves default to repetitions. A "Push-ups" preset rides on `EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT` with a stored description because Health Connect has no push-up constant.
+- Durations are typed in seconds or minutes (`Reps | sec | min` on an exercise, `sec | min` on a rest). The plan always stores seconds; on load, a whole number of minutes reads back as minutes.
+- Sets: an exercise row has a **Sets** count, an optional **Weight (kg)**, and a **Rest after each set**. "Lat pulldown, 12 reps, 3 sets, 50 kg, rest 2 min" is one row. Health Connect has no set count on a step, so saving writes the exercise three times, each copy followed by its rest (`A R A R A R`), and the weight becomes a `WeightTarget` on every copy. Other apps see plain steps; the guided run walks them one set at a time.
+- On load the builder folds such runs back into one row: consecutive copies of one exercise, each followed by the same rest (or by nothing), read as one row with that many sets. The scan is greedy from the left, so a plan from another app with `A R A R A` (no rest after the last set) reads as "A ×2 with rest" followed by "A ×1", and writes back unchanged. A rest right after an exercise is always that exercise's set rest, so "Add rest" rows survive only where no exercise precedes them (block start, after another rest, after a read-only step).
+- Steps the builder cannot express (distance goals, calorie goals, manual completion, unknown goals, usually from other apps) are shown read-only and written back unchanged, so editing a foreign plan never drops part of it. Of the performance targets, only the weight target is edited (the Weight field); pace, power and heart-rate targets are shown under the step and written back as they came.
 
 Saving writes a `PlannedExerciseSessionRecord`. Updating an existing plan is a delete-then-insert, so the record id changes on every save.
 
@@ -37,12 +40,13 @@ A plan's **Start** (on the start hub, the Activities plan rows, and the plan lis
 
 - Rep steps count with the phone's sensors where a recognizer exists (push-ups by proximity; pull-ups and jump rope by accelerometer) and end by themselves at the target; the ± buttons and **Done** always work, and **Skip** moves on without recording the step.
 - Timed steps (a plank) and rests count down and move on by themselves. **Skip rest** and **Start next** are on screen and in the notification.
-- Cues at every change: the rest-timer bell (its existing preference), a short vibration, and — only when voice announcements are on — the next step spoken ("Next: Plank, 45 seconds"), with the current heart rate when a sensor is connected. The last three seconds of a rest beep and buzz, and the banner reads "Get ready"; the screen stays on for the whole run. Exercise names come from string resources (`hc_segment_*`, `hc_exercise_type_*`), so the picker, the banner and the voice all speak the app language.
+- The banner reads "Step 4 of 12 · Set 2 of 3" when consecutive identical steps form a set group, and shows the planned weight under the exercise name. Whole minutes read as "2 min", anything else as seconds.
+- Cues at every change: the rest-timer bell (its existing preference), a short vibration, and — only when voice announcements are on — the next step spoken ("Next: Plank, 45 seconds"; "Next: Lat pulldown, 12 reps, 50 kilograms"; "Rest 2 minutes"), with the current heart rate when a sensor is connected. The last three seconds of a rest beep and buzz, and the banner reads "Get ready"; the screen stays on for the whole run. Exercise names come from string resources (`hc_segment_*`, `hc_exercise_type_*`), so the picker, the banner and the voice all speak the app language.
 - The notification shows step, exercise and count or countdown, with a Done / Skip rest action.
 
 - **Back a step** reopens the step just finished with its count restored (a rep the sensor imagined can be taken away with − and the set ended again); a skipped step recorded nothing, so Back past it pops nothing.
 
-Finishing lands in the review form with the steps as actually done (real reps and seconds), linked to the plan; saving completes it in Health Connect. **Log** remains the manual alternative for any plan, and is what Start falls back to for plans the recorder cannot walk through (a running plan, for instance).
+Finishing lands in the review form with the steps as actually done (real reps and seconds), each set prefilled with the plan's weight so a lighter or heavier set can be corrected before saving, linked to the plan; saving completes it in Health Connect. **Log** remains the manual alternative for any plan, and is what Start falls back to for plans the recorder cannot walk through (a running plan, for instance).
 
 ## Repeating A Plan
 
@@ -50,7 +54,7 @@ The hub lists the plans completed in the last 30 days (one per title) under **Re
 
 ## Steps In The Form
 
-A set is a *step*: an exercise, a Reps or Seconds goal, and a rest. For the generic **Calisthenics** / **Strength sets** types every step names its own exercise (searchable picker from the plan catalog) and "Add exercise" appends one; push-ups, pull-ups and the other single-exercise types keep the plain rows. A plan's push-ups become rep steps and its planks timed steps, and the saved session carries one segment per step (`PLANK` segments last exactly their seconds; rest segments sit between). The plan ↔ steps conversion lives in one place, `features/workoutplans/WorkoutPlanStepMapping.kt`, shared by the form and the builder.
+A set is a *step*: an exercise, a Reps or Seconds goal, a rest, and an optional weight in kg. For the generic **Calisthenics** / **Strength sets** types every step names its own exercise (searchable picker from the plan catalog) and "Add exercise" appends one; push-ups, pull-ups and the other single-exercise types keep the plain rows. A plan's push-ups become rep steps and its planks timed steps, and the saved session carries one segment per step (`PLANK` segments last exactly their seconds; rest segments sit between). A set's weight is written as the segment's `weight` (`ExerciseSegment` carries a mass and a set index), read back into the row when the session is edited, and shown as a Weight row on the session detail in the preferred unit. Input is kg only for now. The plan ↔ steps conversion lives in one place, `features/workoutplans/WorkoutPlanStepMapping.kt`, shared by the form and the builder.
 
 ## Activity Defaults
 
@@ -66,8 +70,11 @@ Manual, imported, and recorded activities are reviewed before saving. This keeps
 
 ## Fidelity, Backup And Time Zones
 
-Every completion goal Health Connect defines (reps, duration, distance, distance + duration, steps, calories, manual) and every performance target (heart rate, power, speed, cadence, weight, RPE, AMRAP) is read into the domain model and written back unchanged; the builder shows targets under a step ("Targets: HR 140–160 bpm") but does not edit them, and steps with goals it cannot express stay read-only. "Save as plan" from the activity form collapses consecutive identical rows into blocks with rounds, so "push-ups ×3, plank ×2" comes back as two blocks. Plans can be exported to and imported from a JSON file (plan list → Export / Import), which is the backup for a store that otherwise lives only in Health Connect; the file carries goals and targets. A plan's day is read in the zone offset it was written with, so a plan built before travelling stays on its date.
+Every completion goal Health Connect defines (reps, duration, distance, distance + duration, steps, calories, manual) and every performance target (heart rate, power, speed, cadence, weight, RPE, AMRAP) is read into the domain model and written back unchanged; the builder edits the weight target through its Weight field, shows the other targets under a step ("Targets: HR 140–160 bpm") without editing them, and steps with goals it cannot express stay read-only. "Save as plan" from the activity form collapses consecutive identical rows into blocks with rounds, so "push-ups ×3, plank ×2" comes back as two blocks. Plans can be exported to and imported from a JSON file (plan list → Export / Import), which is the backup for a store that otherwise lives only in Health Connect; the file carries goals and targets. A plan's day is read in the zone offset it was written with, so a plan built before travelling stays on its date.
 
 ## Follow-ups
 
 - On devices whose Health Connect lacks planned exercise there is no local plan store; export/import is the workaround.
+- Weight is typed in kg in the builder and the form; the session detail shows it in the preferred unit. A pound input is not offered yet.
+- The plan list's "steps" count is the stored (unrolled) list, so "3 sets" counts as six steps. The review form accepts at most 99 set rows, which rounds × sets can exceed; the save then reports an invalid value rather than warning in the builder.
+- The entry form's rest field is seconds only; the seconds/minutes choice exists in the builder.

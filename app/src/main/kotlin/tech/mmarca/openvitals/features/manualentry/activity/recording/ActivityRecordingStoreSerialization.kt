@@ -168,10 +168,11 @@ private fun List<ActivityRecordedRepetitionSet>.encodeRecordedRepetitionSets(): 
             if (set.isDuration) "1" else "0",
             set.label.orEmpty().encodeCompactText(),
             set.planStepIndex?.toString().orEmpty(),
+            set.weightKg?.toString().orEmpty(),
         ).joinToString(separator = ",")
     }
 
-// Parts 4-6 arrived with plan runs; a draft written before them still decodes.
+// Parts 4-6 arrived with plan runs and part 7 with weights; a draft written before them still decodes.
 private fun String.decodeRecordedRepetitionSets(): List<ActivityRecordedRepetitionSet> =
     lineSequence()
         .mapNotNull { line ->
@@ -185,6 +186,7 @@ private fun String.decodeRecordedRepetitionSets(): List<ActivityRecordedRepetiti
                 isDuration = parts.getOrNull(4) == "1",
                 label = parts.getOrNull(5)?.decodeCompactText()?.takeIf { it.isNotBlank() },
                 planStepIndex = parts.getOrNull(6)?.toIntOrNull(),
+                weightKg = parts.getOrNull(7)?.toDoubleOrNull(),
             )
         }
         .toList()
@@ -201,9 +203,13 @@ private fun List<ActivityPlanRunStep>.encodePlanRunSteps(): String =
             step.rounds.toString(),
             step.sensorTypeId.orEmpty(),
             step.label.orEmpty().encodeCompactText(),
+            step.weightKg?.toString().orEmpty(),
+            step.setIndex.toString(),
+            step.sets.toString(),
         ).joinToString(separator = ",")
     }
 
+// Parts 9-11 arrived with weights and set numbering; a draft written before them still decodes.
 private fun String.decodePlanRunSteps(): List<ActivityPlanRunStep> =
     lineSequence()
         .mapNotNull { line ->
@@ -219,6 +225,9 @@ private fun String.decodePlanRunSteps(): List<ActivityPlanRunStep> =
                 rounds = parts[6].toIntOrNull() ?: 1,
                 sensorTypeId = parts[7].takeIf { it.isNotBlank() },
                 label = parts[8].decodeCompactText().takeIf { it.isNotBlank() },
+                weightKg = parts.getOrNull(9)?.toDoubleOrNull(),
+                setIndex = parts.getOrNull(10)?.toIntOrNull() ?: 1,
+                sets = parts.getOrNull(11)?.toIntOrNull() ?: 1,
             )
         }
         .toList()

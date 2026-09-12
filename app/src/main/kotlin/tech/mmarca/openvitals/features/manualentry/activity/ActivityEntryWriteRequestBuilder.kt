@@ -36,6 +36,7 @@ internal const val WalkingKcalPerKgKm = 0.55
 internal const val MaxActivityRepetitions = 100_000
 internal const val MaxActivityRepetitionSets = 99
 internal const val MaxActivityRestSeconds = 24 * 60 * 60L
+internal const val MaxActivityWeightKg = 1_000.0
 internal const val MaxActivityStepCount = 1_000_000L
 
 internal fun buildWriteRequest(
@@ -325,6 +326,7 @@ internal fun buildSetExerciseSegments(
                 restSeconds = input.restMinutesText.toOptionalNonNegativeLongOrNull(MaxActivityRestSeconds) ?: return null,
                 segmentType = input.segmentType ?: segmentType,
                 fixedActiveSeconds = if (input.isDuration) input.repetitionsText.toPositiveLongOrNull(MaxActivityRestSeconds) ?: return null else null,
+                weightKg = if (input.weightKgText.isBlank()) null else input.weightKgText.toWeightKgOrNull() ?: return null,
             )
         }
         ?: return null
@@ -355,6 +357,7 @@ internal fun buildSetExerciseSegments(
                     segmentType = set.segmentType,
                     repetitions = set.repetitions,
                     setIndex = index,
+                    weightKg = set.weightKg,
                 )
             )
             val restSeconds = set.restSeconds
@@ -389,7 +392,11 @@ internal data class ParsedRepetitionSet(
     val segmentType: Int = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT,
     /** Set for a timed set (a plank): its active length is fixed rather than shared out. */
     val fixedActiveSeconds: Long? = null,
+    val weightKg: Double? = null,
 )
+
+/** A positive load up to [MaxActivityWeightKg]; null for anything else. */
+internal fun String.toWeightKgOrNull(): Double? = toPositiveDoubleOrNull()?.takeIf { it <= MaxActivityWeightKg }
 
 internal fun activityEntrySessionRange(state: ActivityEntryUiState): Pair<Instant, Instant>? {
     val startDate = state.startDateText.trim().let { runCatching { LocalDate.parse(it) }.getOrNull() }

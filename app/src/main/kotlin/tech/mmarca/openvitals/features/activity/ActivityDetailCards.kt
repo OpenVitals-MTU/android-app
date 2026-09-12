@@ -431,6 +431,9 @@ private fun SegmentBlock(
         stringResource(R.string.detail_repetitions),
         if (segment.repetitions > 0) unitFormatter.count(segment.repetitions) else stringResource(R.string.not_recorded),
     )
+    segment.weightKg?.let { weightKg ->
+        DetailRow(stringResource(R.string.detail_weight), unitFormatter.weight(weightKg).text)
+    }
 }
 
 @Composable

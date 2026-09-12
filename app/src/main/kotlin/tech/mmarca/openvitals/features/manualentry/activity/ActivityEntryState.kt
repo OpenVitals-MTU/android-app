@@ -140,6 +140,8 @@ data class ActivityRepetitionSetInput(
     /** A stored step label ("Push-ups"); null falls back to the segment type's name. */
     val label: String? = null,
     val isDuration: Boolean = false,
+    /** Load lifted, kg; blank for none. */
+    val weightKgText: String = "",
 )
 
 @Immutable

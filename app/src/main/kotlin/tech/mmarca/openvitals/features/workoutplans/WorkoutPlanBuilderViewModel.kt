@@ -140,6 +140,21 @@ class WorkoutPlanBuilderViewModel(
     fun updateStepDescription(blockId: String, stepId: String, text: String) =
         updateStep(blockId, stepId) { copy(descriptionText = text) }
 
+    fun updateStepDurationUnit(blockId: String, stepId: String, unit: WorkoutPlanDurationUnit) =
+        updateStep(blockId, stepId) { copy(durationUnit = unit) }
+
+    fun updateStepSets(blockId: String, stepId: String, text: String) =
+        updateStep(blockId, stepId) { copy(setsText = text) }
+
+    fun updateStepSetRest(blockId: String, stepId: String, text: String) =
+        updateStep(blockId, stepId) { copy(setRestText = text) }
+
+    fun updateStepSetRestUnit(blockId: String, stepId: String, unit: WorkoutPlanDurationUnit) =
+        updateStep(blockId, stepId) { copy(setRestUnit = unit) }
+
+    fun updateStepWeight(blockId: String, stepId: String, text: String) =
+        updateStep(blockId, stepId) { copy(weightKgText = text) }
+
     // Save.
 
     fun save() {

@@ -26,6 +26,7 @@ import tech.mmarca.openvitals.domain.model.PlannedExerciseCompletion
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
+import tech.mmarca.openvitals.domain.model.restPlanStep
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 class WorkoutPlanBuilderViewModelTest {
@@ -180,6 +181,47 @@ class WorkoutPlanBuilderViewModelTest {
 
         vm.removeBlock(secondId)
         assertEquals(listOf(blockId), vm.uiState.value.form.blocks.map { it.id })
+    }
+
+    @Test
+    fun `set, rest, unit and weight edits reach the step`() = runTest {
+        val vm = viewModel(repo())
+        advanceUntilIdle()
+        val blockId = vm.uiState.value.form.blocks.single().id
+        vm.addStep(blockId, WorkoutPlanStepChoice(ExerciseSegment.EXERCISE_SEGMENT_TYPE_SQUAT))
+        val stepId = vm.uiState.value.form.blocks.single().steps.single().id
+
+        vm.updateStepSets(blockId, stepId, "3")
+        vm.updateStepSetRest(blockId, stepId, "2")
+        vm.updateStepSetRestUnit(blockId, stepId, WorkoutPlanDurationUnit.MINUTES)
+        vm.updateStepWeight(blockId, stepId, "50")
+        vm.updateStepGoalType(blockId, stepId, WorkoutPlanGoalType.DURATION)
+        vm.updateStepDurationUnit(blockId, stepId, WorkoutPlanDurationUnit.MINUTES)
+
+        val step = vm.uiState.value.form.blocks.single().steps.single()
+        assertEquals("3", step.setsText)
+        assertEquals("2", step.setRestText)
+        assertEquals(WorkoutPlanDurationUnit.MINUTES, step.setRestUnit)
+        assertEquals("50", step.weightKgText)
+        assertEquals(WorkoutPlanGoalType.DURATION, step.goalType)
+        assertEquals(WorkoutPlanDurationUnit.MINUTES, step.durationUnit)
+        assertTrue(vm.uiState.value.isDirty)
+    }
+
+    @Test
+    fun `a plan whose steps collapse into sets loads clean`() = runTest {
+        val pullUp = plan().blocks.single().steps.single()
+        val collapsing = plan().copy(
+            blocks = listOf(PlannedExerciseBlockData(1, null, listOf(pullUp, restPlanStep(60), pullUp, restPlanStep(60)))),
+        )
+        val vm = viewModel(repo(plan = collapsing), planId = "planned-id")
+        advanceUntilIdle()
+
+        val step = vm.uiState.value.form.blocks.single().steps.single()
+        assertEquals("2", step.setsText)
+        assertEquals("1", step.setRestText)
+        assertEquals(WorkoutPlanDurationUnit.MINUTES, step.setRestUnit)
+        assertFalse(vm.uiState.value.isDirty)
     }
 
     private fun plan(source: String = "tech.mmarca.openvitals"): PlannedExerciseData = PlannedExerciseData(

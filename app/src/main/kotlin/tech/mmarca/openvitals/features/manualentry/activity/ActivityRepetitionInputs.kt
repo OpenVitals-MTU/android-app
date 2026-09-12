@@ -62,6 +62,7 @@ internal fun ActivityRepetitionInputs(
     onTotalChanged: (String) -> Unit,
     onSetRepetitionsChanged: (Int, String) -> Unit,
     onSetRestChanged: (Int, String) -> Unit,
+    onSetWeightChanged: (Int, String) -> Unit,
     onSetGoalTypeChanged: (Int, Boolean) -> Unit,
     onSetExerciseChanged: (Int, WorkoutPlanStepChoice) -> Unit,
     onAddExercise: (WorkoutPlanStepChoice) -> Unit,
@@ -135,6 +136,7 @@ internal fun ActivityRepetitionInputs(
                             onGoalTypeChanged = { onSetGoalTypeChanged(index, it) },
                             onValueChanged = { onSetRepetitionsChanged(index, it) },
                             onRestChanged = { onSetRestChanged(index, it) },
+                            onWeightChanged = { onSetWeightChanged(index, it) },
                             onRemove = { onRemoveSet(index) },
                         )
                     }
@@ -199,6 +201,7 @@ private fun StepRow(
     onGoalTypeChanged: (Boolean) -> Unit,
     onValueChanged: (String) -> Unit,
     onRestChanged: (String) -> Unit,
+    onWeightChanged: (String) -> Unit,
     onRemove: () -> Unit,
 ) {
     val exerciseLabel = set.label
@@ -276,6 +279,16 @@ private fun StepRow(
                 isError = isError,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                value = set.weightKgText,
+                onValueChange = onWeightChanged,
+                enabled = enabled,
+                singleLine = true,
+                label = { Text(stringResource(R.string.activity_entry_set_weight_label)) },
+                isError = isError,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.width(GoalFieldWidth),
             )
             OpenVitalsIconButton(onClick = onRemove, enabled = enabled && canRemove) {
                 Icon(

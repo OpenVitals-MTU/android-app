@@ -1604,6 +1604,7 @@ private fun ActivityExerciseSegmentWrite.toExerciseSegment(): ExerciseSegment =
         endTime = endTime,
         segmentType = segmentType,
         repetitions = repetitions,
+        weight = weightKg?.let(Mass::kilograms),
         setIndex = setIndex,
     )
 

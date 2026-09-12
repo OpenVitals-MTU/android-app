@@ -120,14 +120,37 @@ class ActivityRepetitionInputsTest {
             onSetRepetitionsChanged = { index, value -> reported += index to value },
         )
 
-        // Field order is set 1 reps, set 1 rest, set 2 reps, set 2 rest.
+        // Field order is set 1 reps, rest, weight, then set 2 reps, rest, weight.
         val fields = composeRule.onAllNodes(hasSetTextAction())
         fields[0].assertTextContains("12")
-        fields[2].assertTextContains("8")
+        fields[3].assertTextContains("8")
 
-        fields[2].performScrollTo().performTextReplacement("9")
+        fields[3].performScrollTo().performTextReplacement("9")
 
         assertEquals("only set two is touched", listOf(1 to "9"), reported)
+    }
+
+    @Test
+    fun aSetRowHasAWeightBoxBoundToItsOwnIndex() {
+        val reported = mutableListOf<Pair<Int, String>>()
+        setInputs(
+            state = ActivityEntryUiState(
+                selectedActivityType = pushUpsEntryType,
+                repetitionMode = ActivityRepetitionEntryMode.SETS,
+                repetitionSets = listOf(
+                    ActivityRepetitionSetInput(repetitionsText = "12"),
+                    ActivityRepetitionSetInput(repetitionsText = "8", weightKgText = "20"),
+                ),
+            ),
+            onSetWeightChanged = { index, value -> reported += index to value },
+        )
+
+        val fields = composeRule.onAllNodes(hasSetTextAction())
+        fields[5].assertTextContains("20")
+
+        fields[5].performScrollTo().performTextReplacement("22.5")
+
+        assertEquals(listOf(1 to "22.5"), reported)
     }
 
     @Test
@@ -186,6 +209,7 @@ class ActivityRepetitionInputsTest {
         onAddSet: () -> Unit = {},
         onRemoveSet: (Int) -> Unit = {},
         onSetRepetitionsChanged: (Int, String) -> Unit = { _, _ -> },
+        onSetWeightChanged: (Int, String) -> Unit = { _, _ -> },
     ) {
         composeRule.setContent {
             OpenVitalsTheme {
@@ -197,6 +221,7 @@ class ActivityRepetitionInputsTest {
                         onTotalChanged = {},
                         onSetRepetitionsChanged = onSetRepetitionsChanged,
                         onSetRestChanged = { _, _ -> },
+                        onSetWeightChanged = onSetWeightChanged,
                         onSetGoalTypeChanged = { _, _ -> },
                         onSetExerciseChanged = { _, _ -> },
                         onAddExercise = {},

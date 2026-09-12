@@ -7,11 +7,15 @@ import tech.mmarca.openvitals.domain.model.PlannedExerciseCompletion
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
+import tech.mmarca.openvitals.domain.model.PlannedExercisePerformanceTarget
 import tech.mmarca.openvitals.domain.model.isRestStep
+import tech.mmarca.openvitals.domain.model.plannedWeightKg
 import tech.mmarca.openvitals.domain.model.restPlanStep
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryType
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityRepetitionSetInput
 import tech.mmarca.openvitals.features.manualentry.activity.isRepetitionLike
+import tech.mmarca.openvitals.features.manualentry.activity.toInputText
+import tech.mmarca.openvitals.features.manualentry.activity.toWeightKgOrNull
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityPlanGoalKind
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityPlanRunStep
 import tech.mmarca.openvitals.features.manualentry.activity.recording.planStepSensorTypeId
@@ -38,12 +42,14 @@ fun PlannedExerciseData.toRepetitionSetInputs(ownSegmentType: Int?): List<Activi
         val isRest = step.isRestStep()
         val segmentType = step.exerciseType.takeIf { it != ownSegmentType }
         val label = step.description?.trim()?.takeIf { it.isNotEmpty() && !it.startsWith("Set ") }
+        val weightKgText = step.plannedWeightKg()?.toInputText(1).orEmpty()
         when (val completion = step.completion) {
             is PlannedExerciseCompletion.Repetitions -> if (!isRest) {
                 rows += ActivityRepetitionSetInput(
                     repetitionsText = completion.repetitions.toString(),
                     segmentType = segmentType,
                     label = label,
+                    weightKgText = weightKgText,
                 )
             }
             is PlannedExerciseCompletion.DurationSeconds -> if (isRest) {
@@ -55,6 +61,7 @@ fun PlannedExerciseData.toRepetitionSetInputs(ownSegmentType: Int?): List<Activi
                     segmentType = segmentType,
                     label = label,
                     isDuration = true,
+                    weightKgText = weightKgText,
                 )
             }
             else -> Unit
@@ -88,6 +95,7 @@ fun PlannedExerciseData.toPlanRunSteps(
                     round = round,
                     rounds = rounds,
                     sensorTypeId = planStepSensorTypeId(step.exerciseType, label, localizedTitle),
+                    weightKg = step.plannedWeightKg(),
                 )
             }
             is PlannedExerciseCompletion.DurationSeconds -> if (isRest) {
@@ -103,13 +111,36 @@ fun PlannedExerciseData.toPlanRunSteps(
                     blockIndex = blockIndex,
                     round = round,
                     rounds = rounds,
+                    weightKg = step.plannedWeightKg(),
                 )
             }
             else -> Unit
         }
     }
-    return steps
+    return steps.numberSets()
 }
+
+/** Consecutive identical steps of one round are one set group: "Set 2 of 3". Rest is not compared. */
+private fun List<ActivityPlanRunStep>.numberSets(): List<ActivityPlanRunStep> {
+    val numbered = ArrayList<ActivityPlanRunStep>(size)
+    var start = 0
+    while (start < size) {
+        var end = start + 1
+        while (end < size && this[end].sameSetAs(this[start])) end += 1
+        for (index in start until end) numbered += this[index].copy(setIndex = index - start + 1, sets = end - start)
+        start = end
+    }
+    return numbered
+}
+
+private fun ActivityPlanRunStep.sameSetAs(other: ActivityPlanRunStep): Boolean =
+    blockIndex == other.blockIndex &&
+        round == other.round &&
+        segmentType == other.segmentType &&
+        label == other.label &&
+        goalKind == other.goalKind &&
+        goalValue == other.goalValue &&
+        weightKg == other.weightKg
 
 /** A plan the live recording can walk through: a set-based type with at least one countable step. */
 fun PlannedExerciseData.isGuidedRunnable(): Boolean =
@@ -119,6 +150,7 @@ fun PlannedExerciseData.isGuidedRunnable(): Boolean =
 fun List<ActivityRepetitionSetInput>.toPlannedSteps(ownSegmentType: Int): List<PlannedExerciseStepData>? =
     flatMapIndexed { index, row ->
         val goal = row.repetitionsText.trim().toLongOrNull()?.takeIf { it > 0L } ?: return null
+        val weightKg = if (row.weightKgText.isBlank()) null else row.weightKgText.toWeightKgOrNull() ?: return null
         buildList {
             add(
                 PlannedExerciseStepData(
@@ -130,6 +162,7 @@ fun List<ActivityRepetitionSetInput>.toPlannedSteps(ownSegmentType: Int): List<P
                     } else {
                         PlannedExerciseCompletion.Repetitions(goal.toInt())
                     },
+                    performanceTargets = listOfNotNull(weightKg?.let { PlannedExercisePerformanceTarget.Weight(it) }),
                 ),
             )
             row.restMinutesText.trim().toLongOrNull()?.takeIf { it > 0L }?.let { add(restPlanStep(it)) }
@@ -165,7 +198,8 @@ private fun ActivityRepetitionSetInput.sameStepAs(other: ActivityRepetitionSetIn
         label == other.label &&
         isDuration == other.isDuration &&
         repetitionsText.trim() == other.repetitionsText.trim() &&
-        restMinutesText.trim() == other.restMinutesText.trim()
+        restMinutesText.trim() == other.restMinutesText.trim() &&
+        weightKgText.trim() == other.weightKgText.trim()
 
 /** The plan the entry form hands to the builder for refinement. */
 fun planRequestFromRows(

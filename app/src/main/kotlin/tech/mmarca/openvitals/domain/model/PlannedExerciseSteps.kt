@@ -17,6 +17,10 @@ fun restPlanStep(seconds: Long): PlannedExerciseStepData =
         completion = PlannedExerciseCompletion.DurationSeconds(seconds),
     )
 
+/** The step's weight target, kg, when it has one. */
+fun PlannedExerciseStepData.plannedWeightKg(): Double? =
+    performanceTargets.firstNotNullOfOrNull { (it as? PlannedExercisePerformanceTarget.Weight)?.kilograms }
+
 /** Every non-rest step across all blocks, in plan order, rounds not unrolled. */
 fun PlannedExerciseData.activeSteps(): List<PlannedExerciseStepData> =
     blocks.flatMap { block -> block.steps.filterNot { it.isRestStep() } }

@@ -394,6 +394,26 @@ class ActivityEntryViewModelTest {
         assertEquals(1, request.exerciseSegments[2].setIndex)
     }
 
+    @Test fun `buildWriteRequest puts a set's weight on its active segment only`() {
+        val state = ActivityEntryUiState(
+            selectedActivityType = DefaultActivityEntryTypes.first { it.id == "pull_ups" },
+            startDateText = "2026-05-26",
+            startTimeText = "8:30",
+            durationMinutesText = "5",
+            repetitionMode = ActivityRepetitionEntryMode.SETS,
+            repetitionSets = listOf(
+                ActivityRepetitionSetInput(repetitionsText = "8", restMinutesText = "60", weightKgText = "12,5"),
+                ActivityRepetitionSetInput(repetitionsText = "6"),
+            ),
+        )
+
+        val request = requireNotNull(buildWriteRequest(state, ActivityEntryUnits.uniform(UnitSystem.METRIC)))
+
+        assertEquals(listOf(12.5, null, null), request.exerciseSegments.map { it.weightKg })
+        val invalid = state.copy(repetitionSets = listOf(ActivityRepetitionSetInput(repetitionsText = "8", weightKgText = "abc")))
+        assertNull(buildWriteRequest(invalid, ActivityEntryUnits.uniform(UnitSystem.METRIC)))
+    }
+
     @Test fun `buildWriteRequest keeps BLE heart rate samples for repetition recordings`() {
         val repetitionType = DefaultActivityEntryTypes.first { it.id == "pull_ups" }
         val sampleTime = Instant.parse("2026-05-26T08:35:00Z")

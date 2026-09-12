@@ -80,6 +80,7 @@ internal fun ActivityEntryFormContent(
                     onRepetitionTotalChanged = viewModel::updateRepetitionTotal,
                     onRepetitionSetRepetitionsChanged = viewModel::updateRepetitionSetRepetitions,
                     onRepetitionSetRestChanged = viewModel::updateRepetitionSetRest,
+                    onRepetitionSetWeightChanged = viewModel::updateRepetitionSetWeight,
                     onRepetitionSetGoalTypeChanged = viewModel::updateRepetitionSetGoalType,
                     onRepetitionSetExerciseChanged = viewModel::updateRepetitionSetExercise,
                     onAddExerciseStep = viewModel::addExerciseStep,

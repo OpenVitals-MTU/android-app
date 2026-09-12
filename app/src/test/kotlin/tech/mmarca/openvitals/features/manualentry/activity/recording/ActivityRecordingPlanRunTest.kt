@@ -35,6 +35,7 @@ import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.model.PlannedExerciseBlockData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseCompletion
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
+import tech.mmarca.openvitals.domain.model.PlannedExercisePerformanceTarget
 import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
 import tech.mmarca.openvitals.domain.model.restPlanStep
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
@@ -174,6 +175,29 @@ class ActivityRecordingPlanRunTest {
         assertEquals(1, next.planStepIndex)
         assertEquals(0L, next.currentSetRepetitionCount)
         assertNotNull(next.currentSetStartedAt)
+    }
+
+    @Test fun `a completed step records the plan's weight on its set`() {
+        val pushUps = plan().blocks.first()
+        val weighted = plan().copy(
+            blocks = listOf(
+                pushUps.copy(
+                    steps = listOf(
+                        pushUps.steps.first().copy(performanceTargets = listOf(PlannedExercisePerformanceTarget.Weight(50.0))),
+                        restPlanStep(30),
+                    ),
+                ),
+            ),
+        )
+        val recorder = controller()
+        assertTrue(recorder.startPlanRecording(weighted, calisthenics))
+        assertEquals(50.0, recorder.state.value.currentPlanStep!!.weightKg!!, 0.0)
+
+        repeat(3) { recorder.acceptRecognizedRepetition() }
+
+        assertEquals(50.0, recorder.state.value.repetitionSets.single().weightKg!!, 0.0)
+        // Finish, or the rest timer outlives the test and fires into another one.
+        recorder.finishRecording()
     }
 
     @Test fun `a timed step ends on its deadline and the last step rests for nothing`() {

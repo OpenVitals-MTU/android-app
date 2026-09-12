@@ -58,6 +58,8 @@ data class ExerciseSegmentData(
     val segmentType: Int,
     val repetitions: Int,
     val setIndex: Int? = null,
+    /** Load lifted in this set, when recorded. */
+    val weightKg: Double? = null,
 ) {
     val durationMs: Long get() = endTime.toEpochMilli() - startTime.toEpochMilli()
 }
@@ -124,6 +126,7 @@ data class ActivityExerciseSegmentWrite(
     val segmentType: Int,
     val repetitions: Int = 0,
     val setIndex: Int? = null,
+    val weightKg: Double? = null,
 )
 
 data class ActivityWriteRequest(

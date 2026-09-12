@@ -245,6 +245,8 @@ data class ActivityRecordedRepetitionSet(
     val isDuration: Boolean = false,
     /** Which plan step produced this set, for Back. */
     val planStepIndex: Int? = null,
+    /** The plan's load for the step, kg; the review form can change it. */
+    val weightKg: Double? = null,
 )
 
 @Immutable
@@ -756,10 +758,21 @@ class ActivityRecordingController @Inject constructor(
         if (withBell) playRestTimerBellIfEnabled()
         vibrate(PlanStepCueVibrationMillis)
         if (preferencesRepository.activityRecordingPreferences().voiceAnnouncementsEnabled) {
-            val text = if (next != null) {
-                context.getString(R.string.activity_recording_plan_cue_rest, restSeconds, next.spokenGoal(context))
-            } else {
-                context.getString(R.string.activity_recording_plan_cue_rest_last, restSeconds)
+            val minutes = wholeMinutesOrNull(restSeconds)
+            val text = when {
+                next != null && minutes != null -> context.resources.getQuantityString(
+                    R.plurals.activity_recording_plan_cue_rest_minutes,
+                    minutes.toInt(),
+                    minutes,
+                    next.spokenGoal(context),
+                )
+                next != null -> context.getString(R.string.activity_recording_plan_cue_rest, restSeconds, next.spokenGoal(context))
+                minutes != null -> context.resources.getQuantityString(
+                    R.plurals.activity_recording_plan_cue_rest_last_minutes,
+                    minutes.toInt(),
+                    minutes,
+                )
+                else -> context.getString(R.string.activity_recording_plan_cue_rest_last, restSeconds)
             }
             speakCue(text)
         }
@@ -1170,6 +1183,7 @@ class ActivityRecordingController @Inject constructor(
             label = step.label,
             isDuration = isTimed,
             planStepIndex = state.planStepIndex,
+            weightKg = step.weightKg,
         )
         advancePlanStep(state, completedSet, now, restAfter = step.restSeconds)
     }

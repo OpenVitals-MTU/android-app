@@ -154,6 +154,9 @@ class ActivityRecordingSerializationTest {
                     round = 1,
                     rounds = 2,
                     sensorTypeId = "push_ups",
+                    weightKg = 12.5,
+                    setIndex = 2,
+                    sets = 3,
                 ),
                 ActivityPlanRunStep(
                     segmentType = 44,
@@ -174,6 +177,7 @@ class ActivityRecordingSerializationTest {
                     activeMillis = 25_000L,
                     segmentType = 1,
                     label = "Push-ups, wide",
+                    weightKg = 12.5,
                 ),
                 ActivityRecordedRepetitionSet(
                     repetitions = 0L,
@@ -194,6 +198,52 @@ class ActivityRecordingSerializationTest {
         assertEquals(state.planStepIndex, restored.planStepIndex)
         assertEquals(state.planSteps, restored.planSteps)
         assertEquals(state.repetitionSets, restored.repetitionSets)
+    }
+
+    @Test fun `plan steps and sets written before weights still decode`() {
+        store.storeMetadata(
+            ActivityRecordingState(
+                status = ActivityRecordingStatus.RECORDING,
+                recordingKind = ActivityRecordingKind.REPETITION,
+                startTime = Instant.parse("2026-08-26T17:00:00Z"),
+                planId = "plan-1",
+            ),
+        )
+        preferences.edit()
+            .putString(KeyPlanSteps, "1,REPS,10,30,0,1,2,push_ups,")
+            .putString(KeyRepetitionSets, "10,30,25000,1,0,,0")
+            .apply()
+
+        val restored = store.restore()
+
+        assertEquals(
+            listOf(
+                ActivityPlanRunStep(
+                    segmentType = 1,
+                    label = null,
+                    goalKind = ActivityPlanGoalKind.REPS,
+                    goalValue = 10L,
+                    restSeconds = 30L,
+                    blockIndex = 0,
+                    round = 1,
+                    rounds = 2,
+                    sensorTypeId = "push_ups",
+                ),
+            ),
+            restored.planSteps,
+        )
+        assertEquals(
+            listOf(
+                ActivityRecordedRepetitionSet(
+                    repetitions = 10L,
+                    restSeconds = 30L,
+                    activeMillis = 25_000L,
+                    segmentType = 1,
+                    planStepIndex = 0,
+                ),
+            ),
+            restored.repetitionSets,
+        )
     }
 
     @Test fun `repetition sets written before plan runs still decode`() {

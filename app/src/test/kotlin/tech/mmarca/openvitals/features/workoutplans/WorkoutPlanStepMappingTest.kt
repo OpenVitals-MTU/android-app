@@ -10,6 +10,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.model.PlannedExerciseBlockData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseCompletion
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
+import tech.mmarca.openvitals.domain.model.PlannedExercisePerformanceTarget
 import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
 import tech.mmarca.openvitals.domain.model.restPlanStep
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityRepetitionSetInput
@@ -161,6 +162,61 @@ class WorkoutPlanStepMappingTest {
         assertEquals(0L, steps[2].restSeconds)
         assertNull(steps[2].sensorTypeId)
         assertTrue(plan.isGuidedRunnable())
+    }
+
+    private val weightedSquat = active(ExerciseSegment.EXERCISE_SEGMENT_TYPE_SQUAT, PlannedExerciseCompletion.Repetitions(12))
+        .copy(performanceTargets = listOf(PlannedExercisePerformanceTarget.Weight(50.0)))
+
+    @Test
+    fun `plan run steps carry the weight and number their sets`() {
+        val run = plan.copy(
+            blocks = listOf(
+                PlannedExerciseBlockData(1, null, listOf(weightedSquat, restPlanStep(120), weightedSquat, restPlanStep(120), weightedSquat)),
+                PlannedExerciseBlockData(1, null, listOf(active(ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK, PlannedExerciseCompletion.DurationSeconds(45)))),
+            ),
+        )
+
+        val steps = run.toPlanRunSteps()
+
+        assertEquals(listOf(50.0, 50.0, 50.0, null), steps.map { it.weightKg })
+        assertEquals(listOf(1, 2, 3, 1), steps.map { it.setIndex })
+        assertEquals(listOf(3, 3, 3, 1), steps.map { it.sets })
+        assertEquals(listOf(120L, 120L, 0L, 0L), steps.map { it.restSeconds })
+    }
+
+    @Test
+    fun `sets restart per round`() {
+        val squat = active(ExerciseSegment.EXERCISE_SEGMENT_TYPE_SQUAT, PlannedExerciseCompletion.Repetitions(12))
+        val run = plan.copy(blocks = listOf(PlannedExerciseBlockData(2, null, listOf(squat, squat))))
+
+        val steps = run.toPlanRunSteps()
+
+        assertEquals(listOf(1, 2, 1, 2), steps.map { it.setIndex })
+        assertEquals(listOf(2, 2, 2, 2), steps.map { it.sets })
+    }
+
+    @Test
+    fun `plan rows and saved rows carry the weight`() {
+        val own = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT
+        val rows = plan.copy(blocks = listOf(PlannedExerciseBlockData(1, null, listOf(weightedSquat, restPlanStep(60)))))
+            .toRepetitionSetInputs(ownSegmentType = own)
+
+        assertEquals(
+            listOf(
+                ActivityRepetitionSetInput(
+                    repetitionsText = "12",
+                    restMinutesText = "60",
+                    segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_SQUAT,
+                    weightKgText = "50",
+                ),
+            ),
+            rows,
+        )
+        val blocks = requireNotNull(listOf(rows.single(), rows.single()).toPlannedBlocks(own))
+        assertEquals(1, blocks.size)
+        assertEquals(2, blocks.single().repetitions)
+        assertEquals(listOf(PlannedExercisePerformanceTarget.Weight(50.0)), blocks.single().steps.first().performanceTargets)
+        assertNull(listOf(rows.single().copy(weightKgText = "abc")).toPlannedSteps(own))
     }
 
     @Test

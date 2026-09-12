@@ -5,6 +5,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.PlannedExerciseBlock
 import androidx.health.connect.client.records.PlannedExerciseStep
 import androidx.health.connect.client.records.ExerciseCompletionGoal
+import androidx.health.connect.client.units.Mass
 import java.time.Instant
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
@@ -89,6 +90,7 @@ class ActivityHealthReaderTest {
                     segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PULL_UP,
                     repetitions = 8,
                     setIndex = 0,
+                    weightKg = 50.0,
                 ),
                 ActivityExerciseSegmentWrite(
                     startTime = firstSetEnd,
@@ -110,7 +112,9 @@ class ActivityHealthReaderTest {
         assertEquals(3, segments.size)
         assertEquals(8, segments[0].repetitions)
         assertEquals(0, segments[0].setIndex)
+        assertEquals(Mass.kilograms(50.0), segments[0].weight)
         assertEquals(ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST, segments[1].segmentType)
+        assertNull(segments[1].weight)
         assertEquals(6, segments[2].repetitions)
         assertEquals(1, segments[2].setIndex)
     }

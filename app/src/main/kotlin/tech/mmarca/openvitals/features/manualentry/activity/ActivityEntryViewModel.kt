@@ -636,6 +636,18 @@ class ActivityEntryViewModel(
         }
     }
 
+    fun updateRepetitionSetWeight(index: Int, text: String) {
+        updateState(clearFields = setOf(ActivityEntryField.REPETITIONS)) {
+            copy(
+                repetitionSets = repetitionSets.mapIndexed { itemIndex, item ->
+                    if (itemIndex == index) item.copy(weightKgText = text) else item
+                },
+                entryError = null,
+                detailError = null,
+            )
+        }
+    }
+
     /** "Add set": another round of whatever the last row was doing. */
     fun addRepetitionSet() {
         updateState(clearFields = setOf(ActivityEntryField.REPETITIONS)) {
@@ -1332,6 +1344,7 @@ class ActivityEntryViewModel(
                 segmentType = set.segmentType?.takeIf { it != selectedActivityType.segmentType },
                 label = set.label,
                 isDuration = set.isDuration,
+                weightKgText = set.weightKg?.toInputText(1).orEmpty(),
             )
         }
         val linkedPlan = snapshot.planId?.let { ActivityLinkedPlan(it, snapshot.planTitle) } ?: currentState.linkedPlan

@@ -35,6 +35,7 @@ internal fun TestActivityEntryCard(
         onRepetitionTotalChanged = {},
         onRepetitionSetRepetitionsChanged = { _, _ -> },
         onRepetitionSetRestChanged = { _, _ -> },
+        onRepetitionSetWeightChanged = { _, _ -> },
         onRepetitionSetGoalTypeChanged = { _, _ -> },
         onRepetitionSetExerciseChanged = { _, _ -> },
         onAddExerciseStep = {},

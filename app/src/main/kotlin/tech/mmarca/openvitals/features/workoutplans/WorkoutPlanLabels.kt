@@ -8,6 +8,7 @@ import tech.mmarca.openvitals.domain.model.PlannedExercisePerformanceTarget
 import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
 import tech.mmarca.openvitals.features.activity.exerciseSegmentLabel
 import tech.mmarca.openvitals.features.activity.exerciseTypeLabel
+import tech.mmarca.openvitals.features.manualentry.activity.recording.wholeMinutesOrNull
 
 /** A step reads as its stored label when it has one, else as the segment type's name. */
 @Composable
@@ -24,7 +25,18 @@ internal fun sessionTypeLabel(exerciseType: Int): String = exerciseTypeLabel(exe
 @Composable
 internal fun goalText(goalType: WorkoutPlanGoalType, value: Long): String = when (goalType) {
     WorkoutPlanGoalType.REPETITIONS -> stringResource(R.string.activity_entry_plan_preview_reps, value.toInt())
-    WorkoutPlanGoalType.DURATION -> stringResource(R.string.workout_plan_preview_seconds, value)
+    WorkoutPlanGoalType.DURATION -> durationText(value)
+}
+
+/** "2 min" for whole minutes, "90 s" otherwise. */
+@Composable
+internal fun durationText(seconds: Long): String {
+    val minutes = wholeMinutesOrNull(seconds)
+    return if (minutes != null) {
+        stringResource(R.string.workout_plan_preview_minutes, minutes)
+    } else {
+        stringResource(R.string.workout_plan_preview_seconds, seconds)
+    }
 }
 
 @Composable
@@ -79,6 +91,9 @@ internal fun WorkoutPlanValidationError.message(): String = stringResource(
         WorkoutPlanValidationErrorKind.BLOCK_ROUNDS_INVALID -> R.string.workout_plan_error_block_rounds
         WorkoutPlanValidationErrorKind.BLOCK_EMPTY -> R.string.workout_plan_error_block_empty
         WorkoutPlanValidationErrorKind.STEP_GOAL_INVALID -> R.string.workout_plan_error_step_goal
+        WorkoutPlanValidationErrorKind.STEP_SETS_INVALID -> R.string.workout_plan_error_step_sets
+        WorkoutPlanValidationErrorKind.STEP_SET_REST_INVALID -> R.string.workout_plan_error_step_set_rest
+        WorkoutPlanValidationErrorKind.STEP_WEIGHT_INVALID -> R.string.workout_plan_error_step_weight
         WorkoutPlanValidationErrorKind.NO_ACTIVE_STEP -> R.string.workout_plan_error_no_active_step
     },
 )

@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.workoutplans
 
 import androidx.health.connect.client.records.ExerciseSegment
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -79,5 +80,39 @@ class WorkoutPlanValidationTest {
             ),
             errors,
         )
+    }
+
+    @Test
+    fun `sets, set rest and weight are checked on active rows and point at the step`() {
+        val block = validForm().blocks.single()
+        val step = block.steps.first()
+        fun errorsFor(edited: WorkoutPlanStepInput) =
+            validateWorkoutPlan(validForm().copy(blocks = listOf(block.copy(steps = listOf(edited, WorkoutPlanStepInput.rest())))))
+        fun only(kind: WorkoutPlanValidationErrorKind) =
+            setOf(WorkoutPlanValidationError(kind, blockId = block.id, stepId = step.id))
+
+        assertEquals(only(WorkoutPlanValidationErrorKind.STEP_SETS_INVALID), errorsFor(step.copy(setsText = "0")))
+        assertEquals(only(WorkoutPlanValidationErrorKind.STEP_SETS_INVALID), errorsFor(step.copy(setsText = "100")))
+        assertEquals(only(WorkoutPlanValidationErrorKind.STEP_SET_REST_INVALID), errorsFor(step.copy(setRestText = "-1")))
+        assertEquals(
+            only(WorkoutPlanValidationErrorKind.STEP_SET_REST_INVALID),
+            errorsFor(step.copy(setRestText = "1441", setRestUnit = WorkoutPlanDurationUnit.MINUTES)),
+        )
+        assertEquals(only(WorkoutPlanValidationErrorKind.STEP_WEIGHT_INVALID), errorsFor(step.copy(weightKgText = "abc")))
+        assertEquals(only(WorkoutPlanValidationErrorKind.STEP_WEIGHT_INVALID), errorsFor(step.copy(weightKgText = "0")))
+        assertEquals(only(WorkoutPlanValidationErrorKind.STEP_WEIGHT_INVALID), errorsFor(step.copy(weightKgText = "1001")))
+        val clean = step.copy(setsText = "3", setRestText = "2", setRestUnit = WorkoutPlanDurationUnit.MINUTES, weightKgText = "12,5")
+        assertTrue(errorsFor(clean).isEmpty())
+    }
+
+    @Test
+    fun `minute goals count sixty times and a reps goal ignores the unit`() {
+        val step = validForm().blocks.single().steps.first()
+
+        assertEquals(12L, step.copy(goalValueText = "12", durationUnit = WorkoutPlanDurationUnit.MINUTES).goalValueOrNull())
+        val timed = step.copy(goalType = WorkoutPlanGoalType.DURATION, goalValueText = "2", durationUnit = WorkoutPlanDurationUnit.MINUTES)
+        assertEquals(120L, timed.goalValueOrNull())
+        assertNull(timed.copy(goalValueText = "1441").goalValueOrNull())
+        assertEquals(60L, WorkoutPlanStepInput.rest().goalValueOrNull())
     }
 }

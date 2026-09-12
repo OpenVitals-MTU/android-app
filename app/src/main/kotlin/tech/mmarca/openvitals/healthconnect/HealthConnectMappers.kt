@@ -83,6 +83,7 @@ internal fun ExerciseSessionRecord.toExerciseData(
             segmentType = segment.segmentType,
             repetitions = segment.repetitions,
             setIndex = segment.setIndex,
+            weightKg = segment.weight?.inKilograms,
         )
     },
     laps = laps.map { lap ->

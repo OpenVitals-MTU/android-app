@@ -71,6 +71,7 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
 import androidx.compose.foundation.layout.PaddingValues
 import tech.mmarca.openvitals.ui.theme.Spacing
+import tech.mmarca.openvitals.features.workoutplans.durationText
 import tech.mmarca.openvitals.features.workoutplans.isGuidedRunnable
 
 @Composable
@@ -746,15 +747,21 @@ internal fun ActivityPlanRunSetupCard(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 guidedPlan.steps.forEachIndexed { index, step ->
+                    val rest = step.restSeconds.takeIf { it > 0L }?.let { restSeconds ->
+                        val minutes = wholeMinutesOrNull(restSeconds)
+                        if (minutes != null) {
+                            stringResource(R.string.activity_recording_plan_setup_rest_minutes, minutes)
+                        } else {
+                            stringResource(R.string.activity_recording_plan_setup_rest, restSeconds)
+                        }
+                    }
                     val goal = when (step.goalKind) {
                         ActivityPlanGoalKind.REPS -> stringResource(R.string.activity_entry_plan_preview_reps, step.goalValue.toInt())
-                        ActivityPlanGoalKind.SECONDS -> stringResource(R.string.workout_plan_preview_seconds, step.goalValue)
+                        ActivityPlanGoalKind.SECONDS -> durationText(step.goalValue)
                     }
-                    val rest = step.restSeconds.takeIf { it > 0L }?.let {
-                        stringResource(R.string.activity_recording_plan_setup_rest, it)
-                    }
+                    val weight = step.weightKg?.let { stringResource(R.string.activity_recording_plan_weight, it.toInputText(1)) }
                     Text(
-                        text = "${index + 1}. ${step.displayLabel()} · $goal" + (rest?.let { " · $it" } ?: ""),
+                        text = "${index + 1}. " + listOfNotNull(step.displayLabel(), goal, weight, rest).joinToString(" · "),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }

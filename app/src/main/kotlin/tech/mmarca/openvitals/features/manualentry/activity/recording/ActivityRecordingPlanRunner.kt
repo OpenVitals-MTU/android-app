@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import java.time.Instant
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.features.manualentry.activity.toInputText
+import tech.mmarca.openvitals.features.workoutplans.durationText
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.CountdownRing
 import tech.mmarca.openvitals.ui.components.CountdownRingDefaults
@@ -69,6 +71,9 @@ internal fun ActivityPlanStepBanner(
                     stringResource(R.string.activity_recording_plan_step_progress, stepNumber, state.planSteps.size),
                     step?.takeIf { it.rounds > 1 }?.let {
                         stringResource(R.string.activity_recording_plan_round_progress, it.round, it.rounds)
+                    },
+                    step?.takeIf { it.sets > 1 }?.let {
+                        stringResource(R.string.activity_recording_plan_set_progress, it.setIndex, it.sets)
                     },
                 ).joinToString(" · "),
                 style = MaterialTheme.typography.labelLarge,
@@ -128,6 +133,13 @@ internal fun ActivityPlanStepBanner(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                     )
+                    step.weightKg?.let { weightKg ->
+                        Text(
+                            text = stringResource(R.string.activity_recording_plan_weight, weightKg.toInputText(1)),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     when (step.goalKind) {
                         ActivityPlanGoalKind.REPS -> Text(
                             text = stringResource(
@@ -171,13 +183,17 @@ internal fun ActivityPlanStepBanner(
     }
 }
 
-/** "Push-ups · 10 reps" / "Plank · 45 s". */
+/** "Push-ups · 10 reps" / "Plank · 45 s" / "Squat · 12 reps · 50 kg". */
 @Composable
 internal fun planStepGoalText(step: ActivityPlanRunStep, unitFormatter: UnitFormatter): String =
-    step.displayLabel() + " · " + when (step.goalKind) {
-        ActivityPlanGoalKind.REPS -> stringResource(R.string.activity_entry_plan_preview_reps, step.goalValue.toInt())
-        ActivityPlanGoalKind.SECONDS -> stringResource(R.string.workout_plan_preview_seconds, step.goalValue)
-    }
+    listOfNotNull(
+        step.displayLabel(),
+        when (step.goalKind) {
+            ActivityPlanGoalKind.REPS -> stringResource(R.string.activity_entry_plan_preview_reps, step.goalValue.toInt())
+            ActivityPlanGoalKind.SECONDS -> durationText(step.goalValue)
+        },
+        step.weightKg?.let { stringResource(R.string.activity_recording_plan_weight, it.toInputText(1)) },
+    ).joinToString(" · ")
 
 @Composable
 internal fun PlanRunControls(

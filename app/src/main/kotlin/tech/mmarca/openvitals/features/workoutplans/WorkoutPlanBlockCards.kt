@@ -54,6 +54,11 @@ internal fun WorkoutPlanBlockCard(
     onAddRest: () -> Unit,
     onStepGoalTypeChanged: (String, WorkoutPlanGoalType) -> Unit,
     onStepGoalValueChanged: (String, String) -> Unit,
+    onStepDurationUnitChanged: (String, WorkoutPlanDurationUnit) -> Unit,
+    onStepSetsChanged: (String, String) -> Unit,
+    onStepSetRestChanged: (String, String) -> Unit,
+    onStepSetRestUnitChanged: (String, WorkoutPlanDurationUnit) -> Unit,
+    onStepWeightChanged: (String, String) -> Unit,
     onStepDescriptionChanged: (String, String) -> Unit,
     onMoveStep: (Int, Int) -> Unit,
     onRemoveStep: (String) -> Unit,
@@ -111,12 +116,17 @@ internal fun WorkoutPlanBlockCard(
                 }
                 WorkoutPlanStepRow(
                     step = step,
-                    error = state.stepError(step.id),
+                    errors = state.stepErrors(step.id),
                     enabled = enabled,
                     canMoveUp = stepIndex > 0,
                     canMoveDown = stepIndex < block.steps.lastIndex,
                     onGoalTypeChanged = { onStepGoalTypeChanged(step.id, it) },
                     onGoalValueChanged = { onStepGoalValueChanged(step.id, it) },
+                    onDurationUnitChanged = { onStepDurationUnitChanged(step.id, it) },
+                    onSetsChanged = { onStepSetsChanged(step.id, it) },
+                    onSetRestChanged = { onStepSetRestChanged(step.id, it) },
+                    onSetRestUnitChanged = { onStepSetRestUnitChanged(step.id, it) },
+                    onWeightChanged = { onStepWeightChanged(step.id, it) },
                     onDescriptionChanged = { onStepDescriptionChanged(step.id, it) },
                     onMoveUp = { onMoveStep(stepIndex, stepIndex - 1) },
                     onMoveDown = { onMoveStep(stepIndex, stepIndex + 1) },
@@ -152,20 +162,43 @@ internal fun WorkoutPlanBlockCard(
     }
 }
 
+/** What the goal control offers: reps, or a duration typed in seconds or minutes. */
+private enum class GoalChoice(val labelRes: Int) {
+    REPS(R.string.workout_plan_goal_reps),
+    SECONDS(R.string.workout_plan_goal_seconds_short),
+    MINUTES(R.string.workout_plan_goal_minutes_short),
+}
+
+private fun WorkoutPlanStepInput.goalChoice(): GoalChoice = when {
+    goalType == WorkoutPlanGoalType.REPETITIONS -> GoalChoice.REPS
+    durationUnit == WorkoutPlanDurationUnit.MINUTES -> GoalChoice.MINUTES
+    else -> GoalChoice.SECONDS
+}
+
 @Composable
 private fun WorkoutPlanStepRow(
     step: WorkoutPlanStepInput,
-    error: WorkoutPlanValidationError?,
+    errors: List<WorkoutPlanValidationError>,
     enabled: Boolean,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
     onGoalTypeChanged: (WorkoutPlanGoalType) -> Unit,
     onGoalValueChanged: (String) -> Unit,
+    onDurationUnitChanged: (WorkoutPlanDurationUnit) -> Unit,
+    onSetsChanged: (String) -> Unit,
+    onSetRestChanged: (String) -> Unit,
+    onSetRestUnitChanged: (WorkoutPlanDurationUnit) -> Unit,
+    onWeightChanged: (String) -> Unit,
     onDescriptionChanged: (String) -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onRemove: () -> Unit,
 ) {
+    fun error(kind: WorkoutPlanValidationErrorKind): WorkoutPlanValidationError? = errors.firstOrNull { it.kind == kind }
+    val goalError = error(WorkoutPlanValidationErrorKind.STEP_GOAL_INVALID)
+    val setsError = error(WorkoutPlanValidationErrorKind.STEP_SETS_INVALID)
+    val setRestError = error(WorkoutPlanValidationErrorKind.STEP_SET_REST_INVALID)
+    val weightError = error(WorkoutPlanValidationErrorKind.STEP_WEIGHT_INVALID)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -219,30 +252,36 @@ private fun WorkoutPlanStepRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (step.kind == WorkoutPlanStepKind.ACTIVE) {
+                val selected = step.goalChoice()
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.weight(1f)) {
-                    WorkoutPlanGoalType.entries.forEachIndexed { index, goalType ->
+                    GoalChoice.entries.forEachIndexed { index, choice ->
                         SegmentedButton(
-                            selected = step.goalType == goalType,
-                            onClick = { onGoalTypeChanged(goalType) },
+                            selected = selected == choice,
+                            onClick = {
+                                when (choice) {
+                                    GoalChoice.REPS -> onGoalTypeChanged(WorkoutPlanGoalType.REPETITIONS)
+                                    GoalChoice.SECONDS -> {
+                                        onGoalTypeChanged(WorkoutPlanGoalType.DURATION)
+                                        onDurationUnitChanged(WorkoutPlanDurationUnit.SECONDS)
+                                    }
+                                    GoalChoice.MINUTES -> {
+                                        onGoalTypeChanged(WorkoutPlanGoalType.DURATION)
+                                        onDurationUnitChanged(WorkoutPlanDurationUnit.MINUTES)
+                                    }
+                                }
+                            },
                             enabled = enabled,
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = WorkoutPlanGoalType.entries.size),
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = GoalChoice.entries.size),
                         ) {
-                            Text(
-                                stringResource(
-                                    when (goalType) {
-                                        WorkoutPlanGoalType.REPETITIONS -> R.string.workout_plan_goal_reps
-                                        WorkoutPlanGoalType.DURATION -> R.string.workout_plan_goal_seconds
-                                    },
-                                ),
-                            )
+                            Text(stringResource(choice.labelRes))
                         }
                     }
                 }
             } else {
-                Text(
-                    text = stringResource(R.string.workout_plan_goal_seconds),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                DurationUnitButtons(
+                    unit = step.durationUnit,
+                    enabled = enabled,
+                    onUnitChanged = onDurationUnitChanged,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -251,14 +290,59 @@ private fun WorkoutPlanStepRow(
                 onValueChange = onGoalValueChanged,
                 enabled = enabled,
                 singleLine = true,
-                isError = error != null,
+                isError = goalError != null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.width(GoalFieldWidth),
             )
         }
-        FieldErrorText(error?.message())
+        FieldErrorText(goalError?.message())
 
         if (step.kind == WorkoutPlanStepKind.ACTIVE) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                OutlinedTextField(
+                    value = step.setsText,
+                    onValueChange = onSetsChanged,
+                    enabled = enabled,
+                    singleLine = true,
+                    isError = setsError != null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    label = { Text(stringResource(R.string.workout_plan_step_sets_label)) },
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedTextField(
+                    value = step.weightKgText,
+                    onValueChange = onWeightChanged,
+                    enabled = enabled,
+                    singleLine = true,
+                    isError = weightError != null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    label = { Text(stringResource(R.string.workout_plan_step_weight_label)) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            FieldErrorText(setsError?.message())
+            FieldErrorText(weightError?.message())
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = step.setRestText,
+                    onValueChange = onSetRestChanged,
+                    enabled = enabled,
+                    singleLine = true,
+                    isError = setRestError != null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    label = { Text(stringResource(R.string.workout_plan_step_set_rest_label)) },
+                    modifier = Modifier.weight(1f),
+                )
+                DurationUnitButtons(
+                    unit = step.setRestUnit,
+                    enabled = enabled,
+                    onUnitChanged = onSetRestUnitChanged,
+                )
+            }
+            FieldErrorText(setRestError?.message())
             OutlinedTextField(
                 value = step.descriptionText,
                 onValueChange = onDescriptionChanged,
@@ -267,6 +351,35 @@ private fun WorkoutPlanStepRow(
                 label = { Text(stringResource(R.string.workout_plan_step_description_label)) },
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
+    }
+}
+
+/** "sec | min" for a duration field. */
+@Composable
+private fun DurationUnitButtons(
+    unit: WorkoutPlanDurationUnit,
+    enabled: Boolean,
+    onUnitChanged: (WorkoutPlanDurationUnit) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    SingleChoiceSegmentedButtonRow(modifier = modifier) {
+        WorkoutPlanDurationUnit.entries.forEachIndexed { index, choice ->
+            SegmentedButton(
+                selected = unit == choice,
+                onClick = { onUnitChanged(choice) },
+                enabled = enabled,
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = WorkoutPlanDurationUnit.entries.size),
+            ) {
+                Text(
+                    stringResource(
+                        when (choice) {
+                            WorkoutPlanDurationUnit.SECONDS -> R.string.workout_plan_goal_seconds_short
+                            WorkoutPlanDurationUnit.MINUTES -> R.string.workout_plan_goal_minutes_short
+                        },
+                    ),
+                )
+            }
         }
     }
 }
