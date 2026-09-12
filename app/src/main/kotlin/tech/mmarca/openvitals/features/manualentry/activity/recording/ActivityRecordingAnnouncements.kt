@@ -59,11 +59,17 @@ internal class SpeechAudioFocus(context: Context) {
     private var request: AudioFocusRequest? = null
     private val pending = mutableSetOf<String>()
 
-    /** Speech attributes: routed like navigation prompts, so headphones hear it over music. */
-    val attributes: AudioAttributes = AudioAttributes.Builder()
-        .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
-        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-        .build()
+    /**
+     * Speech attributes: routed like navigation prompts, so headphones hear it over music.
+     * Built on first use: the framework builder is a stub on the JVM, and a
+     * controller is constructed in unit tests that never speak.
+     */
+    val attributes: AudioAttributes by lazy {
+        AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build()
+    }
 
     /** Engine callbacks arrive on a binder thread; each one drops its utterance from [pending]. */
     val listener: UtteranceProgressListener = object : UtteranceProgressListener() {

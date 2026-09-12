@@ -94,7 +94,8 @@ class TokenDisciplineTest {
         // Ceilings, measured 2026-08-04 with named definitions excluded. These may only go down.
         // 2026-09-05: DerivedMetricsResetCard migrated (1941 -> 1933).
         // 2026-09-05: FitImportCard migrated (1933 -> 1925).
-        const val MaxBareDp = 1925
+        // 2026-09-12: SettingsScreenContent gutters migrated (1925 -> 1892).
+        const val MaxBareDp = 1892
         const val MaxBareAlpha = 92
         const val MaxBareCorner = 16
     }
