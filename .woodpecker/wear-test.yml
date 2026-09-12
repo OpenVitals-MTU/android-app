@@ -1,0 +1,43 @@
+# Wear OS module gate. Runs only when the watch app or the build plumbing it
+# shares with the phone app changes. Phone-only changes never trigger it, and
+# a failure here never blocks a phone PR: test.yml is the phone gate.
+#
+# Keep the include list in sync with what wear/build.gradle.kts actually
+# depends on. If a shared Kotlin module appears later, add it here.
+when:
+  - event: pull_request
+    path:
+      include: &wear_paths
+        - "wear/**"
+        - "build.gradle.kts"
+        - "settings.gradle.kts"
+        - "settings-gradle.lockfile"
+        - "gradle/**"
+        - "gradlew"
+        - "scripts/ci-*"
+        - "ci-image/**"
+        - ".woodpecker/wear-test.yml"
+  - event: push
+    branch: main
+    path:
+      include: *wear_paths
+
+# Same runner as the phone pipeline: it mounts the persistent Gradle caches.
+labels:
+  runner: openvitals
+
+variables:
+  # Same prebaked image as test.yml. Bump both tags together when compileSdk
+  # moves; the wear module compiles against the same platform.
+  - &android_image ghcr.io/mmarca-tech/openvitals-android-ci:android-37
+
+steps:
+  # verifyWearCi is the root-project aggregate of :wear:testDebugUnitTest,
+  # :wear:lintDebug, :wear:assembleDebug and :wear:compileDebugAndroidTestKotlin.
+  # One Gradle invocation, for the same reason test.yml uses one.
+  - name: verify-wear
+    image: *android_image
+    commands:
+      - set -eu
+      - scripts/ci-android-gradle.sh verifyWearCi
+      - git diff --check

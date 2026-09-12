@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "OpenVitals"
 include(":app")
+include(":wear")

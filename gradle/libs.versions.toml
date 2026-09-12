@@ -31,6 +31,7 @@ appcompat = "1.7.1"
 maplibre = "13.3.1"
 mapsforge = "0.25.0"
 reorderable = "3.1.0"
+wear-compose = "1.6.2"
 
 [libraries]
 # AndroidX Core
@@ -103,6 +104,9 @@ androidx-test-core = { group = "androidx.test", name = "core", version.ref = "an
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidx-test" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext-junit" }
 androidx-test-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "androidx-test-espresso" }
+
+# Wear Compose (used only by :wear)
+androidx-wear-compose-material3 = { group = "androidx.wear.compose", name = "compose-material3", version.ref = "wear-compose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

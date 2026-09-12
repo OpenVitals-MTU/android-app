@@ -45,7 +45,7 @@ tasks.register("verifyAndroidTest") {
 
 tasks.register("verifyCiUnitTest") {
     group = "verification"
-    description = "Runs app unit tests against the CI build type."
+    description = "Runs the phone app unit tests against the CI build type."
     dependsOn(":app:testCiUnitTest")
 }
 
@@ -57,7 +57,7 @@ tasks.register<Exec>("verifyTranslations") {
 
 tasks.register("verifyCiPreflight") {
     group = "verification"
-    description = "Runs Android app build, lint, and android-test compile checks for CI."
+    description = "Runs phone app build, lint, and android-test compile checks for CI."
     dependsOn(
         "verifyTranslations",
         ":app:lintCi",
@@ -66,12 +66,27 @@ tasks.register("verifyCiPreflight") {
     )
 }
 
+// Phone app only. The wear module has its own gate (verifyWearCi) and its own
+// pipeline (.woodpecker/wear-test.yml), so a watch failure never blocks a phone PR.
 tasks.register("verifyCi") {
     group = "verification"
-    description = "Runs CI verification without connected-device instrumentation tests."
+    description = "Runs phone app CI verification without connected-device instrumentation tests."
     dependsOn(
         "verifyCiUnitTest",
         "verifyCiPreflight",
+    )
+}
+
+// Wear OS module only. Same shape as verifyCi: unit tests, lint, build,
+// android-test compile. No translation gate yet; the module has no locales.
+tasks.register("verifyWearCi") {
+    group = "verification"
+    description = "Runs Wear OS module unit tests, lint, build, and android-test compile checks for CI."
+    dependsOn(
+        ":wear:testDebugUnitTest",
+        ":wear:lintDebug",
+        ":wear:assembleDebug",
+        ":wear:compileDebugAndroidTestKotlin",
     )
 }
 

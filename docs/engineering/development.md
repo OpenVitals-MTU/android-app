@@ -34,6 +34,34 @@ To run a single test class:
 `verifyAndroidTest` runs `:app:connectedCiAndroidTest`, but only locally and only
 when `ANDROID_SERIAL` is set; it is disabled in CI.
 
+### Wear OS Gate
+
+The watch app in `wear/` has its own gate, separate from `verifyCi`:
+
+```bash
+./gradlew verifyWearCi
+```
+
+It runs `:wear:testDebugUnitTest`, `:wear:lintDebug`, `:wear:assembleDebug`,
+and `:wear:compileDebugAndroidTestKotlin`. The wear module uses the standard
+`debug` build type; it has no `ci` variant.
+
+CI mirrors the split. `.woodpecker/test.yml` runs `verifyCi` and skips changes
+that only touch `wear/`. `.woodpecker/wear-test.yml` runs `verifyWearCi` and
+triggers only on `wear/` and the shared build files it depends on. A change to
+the root Gradle files runs both.
+
+The watch app shares the phone app's `applicationId`, `tech.mmarca.openvitals`,
+so Play lists it as a form factor of OpenVitals rather than a second app. The
+Kotlin namespace stays `tech.mmarca.openvitals.wear`. The debug build type adds
+the same `.debug` suffix as the phone app.
+
+One listing means one versionCode space. The watch owns the range
+`2000000001` to `2099999999`; phone codes stay below it. `wear/build.gradle.kts`
+reads `OPENVITALS_WEAR_VERSION_CODE` and `OPENVITALS_WEAR_VERSION_NAME` the way
+the phone build reads its own overrides, and fails the build when the code is
+outside the watch range.
+
 ### Translation Gate
 
 For translation-only changes, the fast local check is:
