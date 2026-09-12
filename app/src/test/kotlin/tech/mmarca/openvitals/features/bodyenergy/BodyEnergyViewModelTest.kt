@@ -1,12 +1,15 @@
 package tech.mmarca.openvitals.features.bodyenergy
 
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -26,6 +29,7 @@ import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelinePoint
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
+import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 /** The view model's own behaviour: the display precompute, the failure mapping, the staleness guard. */
@@ -136,6 +140,47 @@ class BodyEnergyViewModelTest {
             ScreenError.Message("the timeline blew up"),
             vm.uiState.value.error,
         )
+    }
+
+    @Test
+    fun `a chain rebuild reloads the day`() = runTest {
+        val repo = mockk<BodyEnergyRepository>()
+        coEvery { repo.loadTimeline(any()) } coAnswers {
+            BodyEnergyTimelineResult(firstArg(), listOf(timeline(today)))
+        }
+        val rebuilt = MutableSharedFlow<Unit>()
+        BodyEnergyViewModel(repository = repo, preferencesRepository = prefs(), chainRebuilt = rebuilt)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { repo.loadTimeline(any()) }
+
+        rebuilt.emit(Unit)
+        advanceUntilIdle()
+
+        // Today's row went with the rebuild; the screen must not keep the pre-rebuild score.
+        coVerify(exactly = 2) { repo.loadTimeline(any()) }
+    }
+
+    @Test
+    fun `a zone edit reloads the day, a gain nudge does not`() = runTest {
+        val repo = mockk<BodyEnergyRepository>()
+        coEvery { repo.loadTimeline(any()) } coAnswers {
+            BodyEnergyTimelineResult(firstArg(), listOf(timeline(today)))
+        }
+        val calibration = MutableStateFlow(BodyEnergyCalibration.Automatic)
+        BodyEnergyViewModel(repository = repo, preferencesRepository = prefs(), calibrationChanges = calibration)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { repo.loadTimeline(any()) }
+
+        calibration.value = BodyEnergyCalibration.Automatic.copy(stressDrainGain = 1.04)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { repo.loadTimeline(any()) }
+
+        calibration.value = BodyEnergyCalibration(
+            useManualZones = true,
+            manualZoneThresholdsBpm = HeartZoneThresholds(95, 115, 135, 155, 175),
+        )
+        advanceUntilIdle()
+        coVerify(exactly = 2) { repo.loadTimeline(any()) }
     }
 
     @Test

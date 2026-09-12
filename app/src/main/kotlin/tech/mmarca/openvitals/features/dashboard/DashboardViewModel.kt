@@ -37,6 +37,7 @@ import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.sync.BodyEnergyChainSyncService
 import tech.mmarca.openvitals.data.sync.HistorySyncScheduler
 import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import java.time.LocalDate
@@ -155,6 +156,7 @@ class DashboardViewModel @Inject constructor(
     private val deviceSyncController: DeviceSyncController? = null,
     private val garminRealtimeStore: GarminRealtimeStore? = null,
     private val homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler? = null,
+    private val chainSyncService: BodyEnergyChainSyncService? = null,
 ) : ViewModel() {
 
     val minimumOnboardingPermissions get() = repository.minimumOnboardingPermissions
@@ -196,7 +198,18 @@ class DashboardViewModel @Inject constructor(
 
     init {
         observeSensorStatus()
+        observeBodyEnergyRebuild()
         load(_uiState.value.selectedDate)
+    }
+
+    private fun observeBodyEnergyRebuild() {
+        val service = chainSyncService ?: return
+        viewModelScope.launch {
+            // The rebuild dropped today's Body Energy row; reload so the card re-chains.
+            service.chainRebuilt.collect {
+                forceLoad(_uiState.value.selectedDate, RefreshMode.NORMAL)
+            }
+        }
     }
 
     fun refresh() {

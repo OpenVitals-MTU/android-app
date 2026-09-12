@@ -1,10 +1,13 @@
 package tech.mmarca.openvitals.data.repository
 
+import io.mockk.coEvery
 import io.mockk.coVerify
 import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.core.period.DatePeriod
@@ -13,7 +16,10 @@ import tech.mmarca.openvitals.data.local.bodyenergy.FakeBodyEnergyTimelineDao
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
+import tech.mmarca.openvitals.data.repository.contract.VitalsRepository
+import tech.mmarca.openvitals.domain.model.DailyVitalPoint
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
 
 /** The cache tiers and the input fan-out, one day at a time. */
 class BodyEnergyRepositoryTest {
@@ -25,6 +31,7 @@ class BodyEnergyRepositoryTest {
     private lateinit var timelines: BodyEnergyTimelineStore
     private lateinit var activity: ActivityRepository
     private lateinit var body: BodyRepository
+    private lateinit var vitals: VitalsRepository
 
     @Before
     fun setUp() {
@@ -33,13 +40,14 @@ class BodyEnergyRepositoryTest {
         timelines = BodyEnergyTimelineStore(FakeBodyEnergyTimelineDao())
         activity = emptyActivityRepository()
         body = emptyBodyRepository()
+        vitals = emptyVitalsRepository()
     }
 
     private fun repo() = BodyEnergyRepositoryImpl(
         heartRepository = heart.repository,
         sleepRepository = emptySleepRepository(),
         activityRepository = activity,
-        vitalsRepository = emptyVitalsRepository(),
+        vitalsRepository = vitals,
         bodyRepository = body,
         healthRepository = grantedHealthRepository(),
         preferencesRepository = inMemoryPreferences(),
@@ -72,6 +80,40 @@ class BodyEnergyRepositoryTest {
 
         coVerify(exactly = 1) { activity.loadActivityProgress(today) }
         coVerify(exactly = 1) { body.loadLatestBMR() }
+    }
+
+    @Test
+    fun `the respiratory baseline is the median daily rate over the window`() = runTest {
+        // It used to be copied from a cache entry that never held one, so it was always null.
+        coEvery { vitals.loadDailyVitals(VitalsPeriodMetric.RESPIRATORY_RATE, any(), any()) } returns listOf(
+            DailyVitalPoint(today.minusDays(3), 13.0, 4),
+            DailyVitalPoint(today.minusDays(2), 15.0, 4),
+            DailyVitalPoint(today.minusDays(1), 14.0, 4),
+        )
+
+        val day = repo().loadTimeline(query).days.single()
+
+        assertTrue(day.inputSummary.hasRespiratoryBaseline)
+        coVerify(exactly = 1) {
+            vitals.loadDailyVitals(VitalsPeriodMetric.RESPIRATORY_RATE, today.minusDays(28), today.minusDays(1))
+        }
+    }
+
+    @Test
+    fun `the day's respiratory records are read without a baseline`() = runTest {
+        // A manual entry showed as "0 records": the read was gated on a baseline that never existed.
+        coEvery { vitals.loadRespiratoryRate(today, today) } returns listOf(
+            RespiratoryRateEntry(
+                time = today.atStartOfDay(TestZone).plusHours(5).toInstant(),
+                breathsPerMinute = 14.0,
+                source = "test",
+            )
+        )
+
+        val day = repo().loadTimeline(query).days.single()
+
+        assertEquals(1, day.inputSummary.respiratorySampleCount)
+        assertFalse(day.inputSummary.hasRespiratoryBaseline)
     }
 
     @Test

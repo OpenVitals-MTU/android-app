@@ -199,6 +199,8 @@ class BodyEnergyChainTest {
         val stored = timelines.storedDaysBetween(yesterday, yesterday).single()
         val cached = timelines.load(yesterday, stored.signature)!!
         timelines.save(cached.copy(signature = "v11|not-this-calibration|0|0"))
+        // Without the mirror, nothing else can seed today.
+        prefs.bodyEnergyChainSeedMirror = null
 
         val day = load(r, today)
 
@@ -207,6 +209,23 @@ class BodyEnergyChainTest {
             BodyEnergySeedSource.NEUTRAL,
             day.inputSummary.seedSource,
         )
+    }
+
+    @Test
+    fun `a foreign row still lets the mirror seed today`() = runTest {
+        // The chain is being rebuilt under new inputs. Opening on 50 in the meantime
+        // showed a score that flipped back once the rebuild landed.
+        val r = repo()
+        val yesterday = today.minusDays(1)
+        val yesterdayEnd = seedStoredDay(r, yesterday)
+        val stored = timelines.storedDaysBetween(yesterday, yesterday).single()
+        val cached = timelines.load(yesterday, stored.signature)!!
+        timelines.save(cached.copy(signature = "v11|not-this-calibration|0|0"))
+
+        val day = load(r, today)
+
+        assertEquals(BodyEnergySeedSource.CARRIED_OVER, day.inputSummary.seedSource)
+        assertEquals(bodyEnergySeedScore(yesterdayEnd), day.startScore)
     }
 
     @Test
@@ -227,10 +246,11 @@ class BodyEnergyChainTest {
     }
 
     @Test
-    fun `but editing the heart zones does break the chain`() = runTest {
-        // Zones change what a bucket means and only change when a setting is edited.
+    fun `editing the heart zones invalidates yesterday's row but keeps today continuous`() = runTest {
+        // Zones change what a bucket means, so the stored row no longer anchors. The
+        // mirror carries the score until the chain sync has rebuilt the days.
         val r = repo()
-        seedStoredDay(r, today.minusDays(1))
+        val yesterdayEnd = seedStoredDay(r, today.minusDays(1))
 
         prefs.setBodyEnergyCalibration(
             prefs.bodyEnergyCalibration().copy(
@@ -241,7 +261,8 @@ class BodyEnergyChainTest {
 
         val day = load(repo(), today)
 
-        assertEquals(BodyEnergySeedSource.NEUTRAL, day.inputSummary.seedSource)
+        assertEquals(BodyEnergySeedSource.CARRIED_OVER, day.inputSummary.seedSource)
+        assertEquals(bodyEnergySeedScore(yesterdayEnd), day.startScore)
     }
 
     // endregion

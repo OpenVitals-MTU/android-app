@@ -1028,6 +1028,7 @@ class SettingsViewModelTest {
             coMapsNavigationRepository = mockk(relaxed = true),
             derivedMetricsResetService = mockk(relaxed = true),
             homeWidgetRefreshScheduler = homeWidgetRefreshScheduler,
+            bodyEnergyChainSyncService = mockk(relaxed = true),
         )
 
     private fun bodyRepo(): BodyRepository =

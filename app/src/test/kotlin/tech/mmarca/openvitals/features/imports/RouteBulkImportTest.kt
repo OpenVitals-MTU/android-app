@@ -454,6 +454,7 @@ class RouteBulkImportTest {
             coMapsNavigationRepository = mockk(relaxed = true),
             derivedMetricsResetService = mockk(relaxed = true),
             homeWidgetRefreshScheduler = mockk(relaxed = true),
+            bodyEnergyChainSyncService = mockk(relaxed = true),
         )
 
     private fun routeFileImporter(): RouteFileImporter =

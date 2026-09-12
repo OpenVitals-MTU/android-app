@@ -50,6 +50,7 @@ class BodyEnergyViewModel(
     private val calibrationChanges: Flow<BodyEnergyCalibration> = emptyFlow(),
     private val bodyProfileChanges: Flow<BodyProfile> = emptyFlow(),
     private val chainSyncService: BodyEnergyChainSyncService? = null,
+    private val chainRebuilt: Flow<Unit> = emptyFlow(),
 ) : ViewModel() {
 
     @Inject
@@ -63,6 +64,7 @@ class BodyEnergyViewModel(
         calibrationChanges = preferencesRepository.bodyEnergyCalibrationFlow,
         bodyProfileChanges = preferencesRepository.bodyProfileFlow,
         chainSyncService = chainSyncService,
+        chainRebuilt = chainSyncService.chainRebuilt,
     )
 
     private val periodDriver = PeriodSelectionDriver(
@@ -84,14 +86,26 @@ class BodyEnergyViewModel(
     init {
         observeCalibration()
         observeBodyProfile()
+        observeChainRebuilt()
         load()
     }
 
     private fun observeCalibration() {
         viewModelScope.launch {
             calibrationChanges.drop(1).collect { calibration ->
+                // Zones change what a bucket means. The gains the watch learner nudges do not.
+                val zonesChanged =
+                    calibration.zoneSignature() != _uiState.value.calibration.zoneSignature()
                 _uiState.value = _uiState.value.copy(calibration = calibration)
+                if (zonesChanged) load()
             }
+        }
+    }
+
+    private fun observeChainRebuilt() {
+        viewModelScope.launch {
+            // The rebuild dropped today's row; a normal load recomputes it on the new chain.
+            chainRebuilt.collect { load() }
         }
     }
 

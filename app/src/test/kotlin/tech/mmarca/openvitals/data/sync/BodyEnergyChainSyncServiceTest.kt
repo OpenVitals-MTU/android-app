@@ -11,13 +11,17 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -45,6 +49,7 @@ import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelineAlgorithmVersion
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelinePoint
 import tech.mmarca.openvitals.domain.insights.bodyEnergySeedScore
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 
 /** Records which days it was asked for, and persists each one so the "already stored" skip is real. */
@@ -55,16 +60,29 @@ private class RecordingRepository(
     val requested = mutableListOf<LocalDate>()
     var throwOnLoad = false
 
+    /** A day the foreground stores during the walk, on the first requested day. */
+    var foregroundDayDuringWalk: LocalDate? = null
+
     override suspend fun loadTimeline(query: BodyEnergyTimelineQuery): BodyEnergyTimelineResult {
         if (throwOnLoad) error("health connect exploded")
         val date = query.period.start
         requested += date
+        foregroundDayDuringWalk?.let { foreground ->
+            foregroundDayDuringWalk = null
+            store.save(timelineFor(foreground))
+        }
 
+        val timeline = timelineFor(date)
+        store.save(timeline)
+        return BodyEnergyTimelineResult(query = query, days = listOf(timeline))
+    }
+
+    private suspend fun timelineFor(date: LocalDate): BodyEnergyTimeline {
         // Chain the stored predecessor, as the real repository does.
         val previous = store.storedDaysBetween(date.minusDays(1), date.minusDays(1))
         val seed = previous.firstOrNull()?.endScore
         val start = bodyEnergySeedScore(seed)
-        val timeline = BodyEnergyTimeline(
+        return BodyEnergyTimeline(
             date = date,
             startScore = start,
             currentScore = (start - 7).coerceIn(0, 100),
@@ -77,8 +95,6 @@ private class RecordingRepository(
             generatedAt = now(),
             signature = "v$BodyEnergyTimelineAlgorithmVersion|test|0",
         )
-        store.save(timeline)
-        return BodyEnergyTimelineResult(query = query, days = listOf(timeline))
     }
 }
 
@@ -187,6 +203,10 @@ class BodyEnergyChainSyncServiceTest {
         val service = service()
         service.syncAll()
         assertEquals(4, dao.countDays())
+        val rebuilds = mutableListOf<Unit>()
+        val collector = launch(start = CoroutineStart.UNDISPATCHED) {
+            service.chainRebuilt.collect { rebuilds += it }
+        }
 
         // Rows computed under retired zones are wrong, not stale.
         prefs.setBodyEnergyCalibration(
@@ -195,11 +215,53 @@ class BodyEnergyChainSyncServiceTest {
                 manualZoneThresholdsBpm = HeartZoneThresholds(95, 115, 135, 155, 175),
             )
         )
-        now = now.plusSeconds(2 * 3600)
+        // Inside the throttle: a purge must not wait it out with an empty chain.
+        now = now.plusSeconds(2 * 60)
+        repository.requested.clear()
+        // The dashboard computes today while the walk runs, seeded from a stale chain.
+        repository.foregroundDayDuringWalk = today
+        service.syncAll()
+        runCurrent()
+
+        assertEquals("the purge must force a full rebuild", 4, repository.requested.size)
+        assertNull(
+            "a today seeded mid-rebuild must be dropped for the foreground to re-chain",
+            dao.day(today.toEpochDay()),
+        )
+        assertEquals("screens showing today are told once", 1, rebuilds.size)
+        collector.cancel()
+    }
+
+    @Test
+    fun `a body profile edit purges the chain too`() = runTest {
+        val service = service()
+        service.syncAll()
+        assertEquals(4, dao.countDays())
+
+        // The automatic zone ladder derives from age: the profile is a chain input like the zones.
+        prefs.setBodyProfile(BodyProfile(birthYear = 1980))
+        now = now.plusSeconds(2 * 60)
         repository.requested.clear()
         service.syncAll()
 
-        assertEquals("the purge must force a full rebuild", 4, repository.requested.size)
+        assertEquals(4, repository.requested.size)
+    }
+
+    @Test
+    fun `an unchanged signature does not announce a rebuild`() = runTest {
+        val service = service()
+        service.syncAll()
+        val rebuilds = mutableListOf<Unit>()
+        val collector = launch(start = CoroutineStart.UNDISPATCHED) {
+            service.chainRebuilt.collect { rebuilds += it }
+        }
+
+        now = now.plusSeconds(2 * 3600)
+        service.syncAll()
+        runCurrent()
+
+        assertTrue("an ordinary pass must not make every screen reload", rebuilds.isEmpty())
+        collector.cancel()
     }
 
     @Test

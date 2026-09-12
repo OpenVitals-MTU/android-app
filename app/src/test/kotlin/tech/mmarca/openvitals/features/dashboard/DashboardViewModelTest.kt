@@ -30,6 +30,7 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.data.repository.dashboard.DashboardDataLoader
+import tech.mmarca.openvitals.data.sync.BodyEnergyChainSyncService
 import tech.mmarca.openvitals.data.sync.HistorySyncScheduler
 import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
@@ -47,6 +48,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -1295,6 +1297,37 @@ class DashboardViewModelTest {
         coVerify(exactly = 1) { bodyEnergyRepo.loadTimeline(any()) }
     }
 
+    @Test fun `a body energy chain rebuild reloads the day`() = runTest {
+        val loader = mockDashboardDataLoader()
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
+        val bodyEnergyRepo = mockk<BodyEnergyRepository>()
+        coEvery { bodyEnergyRepo.loadTimeline(any()) } returns BodyEnergyTimelineResult(
+            query = BodyEnergyTimelineQuery(
+                period = DatePeriod(today, today),
+                range = TimeRange.DAY,
+            ),
+            days = listOf(bodyEnergyTimeline()),
+        )
+        val rebuilt = MutableSharedFlow<Unit>()
+        val chainSync = mockk<BodyEnergyChainSyncService> { every { chainRebuilt } returns rebuilt }
+
+        val vm = dashboardViewModel(
+            loader,
+            prefs(),
+            bodyEnergyRepository = bodyEnergyRepo,
+            chainSyncService = chainSync,
+        )
+        advanceUntilIdle()
+        coVerify(exactly = 1) { bodyEnergyRepo.loadTimeline(any()) }
+
+        rebuilt.emit(Unit)
+        advanceUntilIdle()
+
+        // The rebuild dropped today's row; the card must re-chain, not keep the stale score.
+        assertNotNull(vm.uiState.value.data?.bodyEnergyTimeline)
+        coVerify(exactly = 2) { bodyEnergyRepo.loadTimeline(any()) }
+    }
+
     @Test fun `body energy skips the load when the widget is not on the dashboard`() = runTest {
         val loader = mockDashboardDataLoader()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
@@ -1435,6 +1468,7 @@ class DashboardViewModelTest {
         bleSensorCoordinator: BleSensorCoordinator? = null,
         historySyncScheduler: HistorySyncScheduler? = null,
         homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler? = null,
+        chainSyncService: BodyEnergyChainSyncService? = null,
     ): DashboardViewModel =
         DashboardViewModel(
             loadDashboardDayUseCase = LoadDashboardDayUseCase(loader),
@@ -1449,6 +1483,7 @@ class DashboardViewModelTest {
             bleSensorCoordinator = bleSensorCoordinator,
             historySyncScheduler = historySyncScheduler,
             homeWidgetRefreshScheduler = homeWidgetRefreshScheduler,
+            chainSyncService = chainSyncService,
         )
 
     private fun mockDashboardDataLoader(configure: DashboardDataLoader.() -> Unit = {}): DashboardDataLoader =

@@ -89,6 +89,7 @@ fun emptyActivityRepository(): ActivityRepository = mockk<ActivityRepository>().
 
 fun emptyVitalsRepository(): VitalsRepository = mockk<VitalsRepository>().also {
     coEvery { it.loadRespiratoryRate(any(), any()) } returns emptyList()
+    coEvery { it.loadDailyVitals(any(), any(), any()) } returns emptyList()
 }
 
 fun emptyBodyRepository(): BodyRepository = mockk<BodyRepository>().also {
@@ -133,6 +134,7 @@ fun inMemoryPreferences(
     bodyProfile: BodyProfile = BodyProfile(),
 ): PreferencesRepository = mockk<PreferencesRepository>().also { prefs ->
     var storedCalibration = calibration.normalized()
+    var storedProfile = bodyProfile
     var gainsAlgorithmVersion = 0
     var watchFitEpoch = 0
     var watermarkMillis = 0L
@@ -143,7 +145,8 @@ fun inMemoryPreferences(
     every { prefs.setBodyEnergyCalibration(any()) } answers {
         storedCalibration = firstArg<BodyEnergyCalibration>().normalized()
     }
-    every { prefs.bodyProfile() } returns bodyProfile
+    every { prefs.bodyProfile() } answers { storedProfile }
+    every { prefs.setBodyProfile(any()) } answers { storedProfile = firstArg() }
 
     every { prefs.bodyEnergyGainsAlgorithmVersion } answers { gainsAlgorithmVersion }
     every { prefs.bodyEnergyGainsAlgorithmVersion = any() } answers {

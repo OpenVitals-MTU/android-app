@@ -7,7 +7,6 @@ import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
@@ -32,7 +31,6 @@ import tech.mmarca.openvitals.domain.insights.BodyEnergyWatchFitEpoch
 import tech.mmarca.openvitals.domain.insights.calculateBodyEnergyTimeline
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
-import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 
@@ -149,8 +147,7 @@ class BodyEnergyRepositoryImpl(
             date.minusDays(ChainLookbackDays),
             date.minusDays(1),
         )
-        // No history at all degrades to the prefs mirror. Distinct from anchor == null
-        // below, which is a deliberate chain break the mirror must not undo.
+        // No history at all degrades to the prefs mirror.
         if (window.isEmpty()) return seedFromMirror(date)
         val byEpochDay = window.associateBy { it.date.toEpochDay() }
 
@@ -168,8 +165,9 @@ class BodyEnergyRepositoryImpl(
             }
         }
 
-        // Rows exist but none validates: a deliberate chain break. Seed neutral.
-        if (anchor == null) return ChainSeed.Neutral
+        // Rows exist but none validates: the chain is being rebuilt under new
+        // inputs. The mirror keeps today continuous until the rebuild lands.
+        if (anchor == null) return seedFromMirror(date)
 
         val gap = date.toEpochDay() - anchor.date.toEpochDay() - 1
         if (gap == 0L) return ChainSeed.carried(anchor.endScore)
@@ -295,7 +293,7 @@ class BodyEnergyRepositoryImpl(
         val baselineStart = date.minusDays(BaselineDays)
         val baselineEnd = date.minusDays(1)
 
-        // Independent reads run concurrently. Only respiratory depends on the baseline.
+        // Independent reads run concurrently.
         val baselinesJob = async {
             loadBaselines(
                 date = date,
@@ -307,6 +305,7 @@ class BodyEnergyRepositoryImpl(
         }
         val heartRateJob = async { heartRepository.loadRawHeartRateSamplesForDayGraph(date) }
         val hrvJob = async { heartRepository.loadHrvSamples(dayStart, dayEnd) }
+        val respiratoryJob = async { vitalsRepository.loadRespiratoryRate(date, date) }
         val sleepJob = async { sleepRepository.loadSleepSessions(date.minusDays(1), date) }
         val workoutsJob = async { activityRepository.loadWorkouts(date, date) }
         // Energy-balance inputs the heart-rate-zone model alone was missing.
@@ -315,14 +314,6 @@ class BodyEnergyRepositoryImpl(
         val restingJob = async { heartRepository.loadRestingHeartRate(date) }
 
         val baselines = baselinesJob.await()
-        // Respiratory is only loaded when a respiratory baseline exists.
-        val respiratoryJob: Deferred<List<RespiratoryRateEntry>>? =
-            if (baselines.respiratoryRateBaseline != null) {
-                async { vitalsRepository.loadRespiratoryRate(date, date) }
-            } else {
-                null
-            }
-
         val heartRateSamples = heartRateJob.await()
         val hrvSamples = hrvJob.await()
         val sleepSessions = sleepJob.await()
@@ -330,7 +321,7 @@ class BodyEnergyRepositoryImpl(
         val activityProgress = activityProgressJob.await()
         val basalMetabolicRate = basalMetabolicRateJob.await()
         val restingHr = restingJob.await()
-        val respiratory = respiratoryJob?.await().orEmpty()
+        val respiratory = respiratoryJob.await()
 
         val timeline = withContext(dispatchers.default) {
             calculateBodyEnergyTimeline(
@@ -422,11 +413,17 @@ class BodyEnergyRepositoryImpl(
                 .filter { it > 0.0 }
                 .medianDoubleOrNull()
         }
+        val respiratoryBaseline = async {
+            vitalsRepository.loadDailyVitals(VitalsPeriodMetric.RESPIRATORY_RATE, baselineStart, baselineEnd)
+                .map { it.value }
+                .filter { it > 0.0 }
+                .medianDoubleOrNull()
+        }
         val baseline = BodyEnergyBaselineCacheEntry(
             baselineRestingHeartRateBpm = baselineResting.await(),
             observedMaxHeartRateBpm = observedMax.await(),
             hrvBaselineRmssdMs = hrvBaseline.await(),
-            respiratoryRateBaseline = reusable?.respiratoryRateBaseline,
+            respiratoryRateBaseline = respiratoryBaseline.await(),
             generatedAt = now(),
         )
         baselineCacheStore.saveBaseline(date, signature, baseline)

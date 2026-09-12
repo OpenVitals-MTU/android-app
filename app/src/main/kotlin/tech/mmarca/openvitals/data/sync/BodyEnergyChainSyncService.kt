@@ -16,6 +16,10 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import tech.mmarca.openvitals.core.period.DatePeriod
@@ -71,6 +75,14 @@ class BodyEnergyChainSyncService(
     private val lock = Mutex()
     private var inFlight: Deferred<Unit>? = null
 
+    private val _chainRebuilt = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+
+    /** Fires once a purged chain is rebuilt. Today's row is gone; screens showing it should reload. */
+    val chainRebuilt: SharedFlow<Unit> = _chainRebuilt.asSharedFlow()
+
     /**
      * Warms the chain. Concurrent calls share one run. [force] bypasses the
      * throttle for a caller that just made the stored chain wrong.
@@ -103,18 +115,21 @@ class BodyEnergyChainSyncService(
             val granted = healthRepository.grantedPermissions()
             if (ReadHeartRatePermission !in granted) return
 
-            // Rows under a retired calibration are wrong, not stale: purge them.
-            val signature = globalSignature(granted)
-            if (store.storedGlobalSignature() != signature) {
+            val now = clock()
+            val today = now.atZone(zone).toLocalDate()
+
+            // Rows under retired zones or a retired profile are wrong, not stale: purge them.
+            val signature = globalSignature(granted, today)
+            val purged = store.storedGlobalSignature() != signature
+            if (purged) {
                 store.purgeAll()
                 store.writeGlobalSignature(signature)
             }
 
-            val now = clock()
+            // A purge just emptied the chain; the throttle must not leave it that way.
             val lastPass = store.lastPassAt()
-            if (!force && lastPass != null && Duration.between(lastPass, now) < Throttle) return
+            if (!force && !purged && lastPass != null && Duration.between(lastPass, now) < Throttle) return
 
-            val today = now.atZone(zone).toLocalDate()
             store.applyRetention(today)
 
             // Skip days the repository would serve from storage. The rule must
@@ -150,7 +165,14 @@ class BodyEnergyChainSyncService(
             }
 
             // Only a completed pass resets the throttle.
-            if (completed) store.writeLastPassAt(now)
+            if (!completed) return
+            store.writeLastPassAt(now)
+            if (purged) {
+                // A today computed mid-rebuild opened on a stale seed. Drop it, so the
+                // next foreground load chains it from the rebuilt yesterday.
+                store.invalidateForward(today, today)
+                _chainRebuilt.tryEmit(Unit)
+            }
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (t: Throwable) {
@@ -160,13 +182,15 @@ class BodyEnergyChainSyncService(
 
     /**
      * The chain-wide validity stamp: algorithm version plus the shared
-     * inputs. The learned gains are left out: a mismatch purges every stored
-     * day, and the watch fit nudges gains on every sync.
+     * inputs. The zone ladder derives from the profile, so the profile is
+     * one of them. The learned gains are left out: a mismatch purges every
+     * stored day, and the watch fit nudges gains on every sync.
      */
-    private fun globalSignature(granted: Set<String>): String {
+    private fun globalSignature(granted: Set<String>, today: LocalDate): String {
         val permissions = granted.sorted().joinToString(",")
-        val configured = preferencesRepository.bodyEnergyCalibration().zoneSignature()
-        return "v$BodyEnergyTimelineAlgorithmVersion|${configured.hashCode()}|${permissions.hashCode()}"
+        val zones = preferencesRepository.bodyEnergyCalibration().zoneSignature()
+        val profile = preferencesRepository.bodyProfile().signature(today)
+        return "v$BodyEnergyTimelineAlgorithmVersion|${zones.hashCode()}|${profile.hashCode()}|${permissions.hashCode()}"
     }
 
     private companion object {

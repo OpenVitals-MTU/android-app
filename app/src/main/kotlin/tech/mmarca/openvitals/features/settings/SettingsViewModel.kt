@@ -39,6 +39,7 @@ import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.sync.BodyEnergyChainSyncService
 import tech.mmarca.openvitals.data.sync.DerivedMetricsResetService
 import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryUnits
@@ -239,6 +240,7 @@ class SettingsViewModel @Inject constructor(
     private val coMapsNavigationRepository: CoMapsNavigationRepository,
     private val derivedMetricsResetService: DerivedMetricsResetService,
     private val homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler,
+    private val bodyEnergyChainSyncService: BodyEnergyChainSyncService,
 ) : ViewModel() {
     companion object {
         private const val TAG = "SettingsViewModel"
@@ -1148,8 +1150,19 @@ class SettingsViewModel @Inject constructor(
         if (birthYear != null) {
             updateBodyProfile(preferencesRepository.bodyProfile().copy(birthYear = birthYear))
         }
+        val zonesChanged =
+            preferencesRepository.bodyEnergyCalibration().zoneSignature() != calibration.zoneSignature()
         preferencesRepository.setBodyEnergyCalibration(calibration.copy(setupCompleted = true))
         _uiState.value = _uiState.value.copy(bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration())
+        if (zonesChanged) rebuildBodyEnergyChain()
+    }
+
+    /** Zones and the profile are chain inputs: every stored Body Energy day is wrong now. */
+    private fun rebuildBodyEnergyChain() {
+        viewModelScope.launch {
+            runCatching { bodyEnergyChainSyncService.syncAll(force = true) }
+                .onFailure { error -> Log.w(TAG, "Body Energy chain rebuild failed", error) }
+        }
     }
 
     fun updateCaffeinePreferences(preferences: CaffeinePreferences) {
@@ -1159,9 +1172,11 @@ class SettingsViewModel @Inject constructor(
 
     fun updateBodyProfile(profile: BodyProfile) {
         val previous = _uiState.value.bodyProfile
+        val declared = preferencesRepository.bodyProfile()
         preferencesRepository.setBodyProfile(profile)
         val saved = preferencesRepository.bodyProfile()
         _uiState.value = _uiState.value.copy(bodyProfile = saved)
+        if (saved.signature() != declared.signature()) rebuildBodyEnergyChain()
         if (!_uiState.value.canWriteBodyMeasurements) return
         // A changed weight or height is written to Health Connect as a real
         // measurement. Only on a real change, or every save adds a duplicate.
