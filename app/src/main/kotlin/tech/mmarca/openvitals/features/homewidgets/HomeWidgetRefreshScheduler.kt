@@ -13,25 +13,39 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.domain.preferences.HomeWidgetRefreshInterval
 
 /**
  * Owns the home widgets' background refresh: one `WorkManager` periodic work
- * while any widget is placed, none otherwise. The widget's own
- * `updatePeriodMillis` tick is not honoured in Doze; this one is. Mirrors
+ * at the interval the user chose, while any widget is placed; none
+ * otherwise. The widget's own `updatePeriodMillis` tick is not honoured in
+ * Doze; this one is. Mirrors
  * [tech.mmarca.openvitals.features.watches.WatchAutoSyncScheduler].
  */
 @Singleton
 class HomeWidgetRefreshScheduler @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    private val preferencesRepository: PreferencesRepository,
 ) {
 
     private val workManager: WorkManager get() = WorkManager.getInstance(context)
 
-    /** Schedules when a widget is placed, cancels when none is. Idempotent. */
+    val interval: HomeWidgetRefreshInterval get() = preferencesRepository.homeWidgetRefreshInterval
+
+    /** Stores the choice and re-plans from now, so a shorter interval runs sooner. */
+    fun setInterval(interval: HomeWidgetRefreshInterval) {
+        preferencesRepository.homeWidgetRefreshInterval = interval
+        runCatching {
+            if (anyHomeWidgetPlaced(context)) enqueue(interval, ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE)
+        }.onFailure { Log.w(HomeWidgetLogTag, "Could not re-plan the widget refresh schedule", it) }
+    }
+
+    /** Schedules when a widget is placed, cancels when none is. Idempotent; KEEP leaves a live schedule alone. */
     fun reconcile() {
         // Runs from Application.onCreate and widget receivers. Not worth failing either over.
         runCatching {
-            if (anyHomeWidgetPlaced(context)) ensureScheduled() else cancel()
+            if (anyHomeWidgetPlaced(context)) enqueue(interval, ExistingPeriodicWorkPolicy.KEEP) else cancel()
         }.onFailure { Log.w(HomeWidgetLogTag, "Could not reconcile the widget refresh schedule", it) }
     }
 
@@ -50,19 +64,18 @@ class HomeWidgetRefreshScheduler @Inject constructor(
         }.onFailure { Log.w(HomeWidgetLogTag, "Could not enqueue the widget refresh", it) }
     }
 
-    private fun ensureScheduled() {
-        val request = PeriodicWorkRequestBuilder<HomeWidgetRefreshWorker>(REFRESH_MINUTES, TimeUnit.MINUTES)
+    private fun enqueue(interval: HomeWidgetRefreshInterval, policy: ExistingPeriodicWorkPolicy) {
+        val request = PeriodicWorkRequestBuilder<HomeWidgetRefreshWorker>(interval.minutes.toLong(), TimeUnit.MINUTES)
             // Battery only: Health Connect is local, and the app has no internet permission.
             .setConstraints(Constraints.Builder().setRequiresBatteryNotLow(true).build())
             .setBackoffCriteria(BackoffPolicy.LINEAR, RETRY_BACKOFF_MINUTES, TimeUnit.MINUTES)
             .build()
-        workManager.enqueueUniquePeriodicWork(PERIODIC_WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
+        workManager.enqueueUniquePeriodicWork(PERIODIC_WORK_NAME, policy, request)
     }
 
     companion object {
         const val PERIODIC_WORK_NAME = "home-widget-refresh"
         const val NOW_WORK_NAME = "home-widget-refresh-now"
-        const val REFRESH_MINUTES = 30L
         private const val RETRY_BACKOFF_MINUTES = 10L
     }
 }

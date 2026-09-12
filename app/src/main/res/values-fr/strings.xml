@@ -494,6 +494,12 @@
     <string name="settings_watch_auto_sync_30m">30 min</string>
     <string name="settings_watch_auto_sync_1h">1 h</string>
     <string name="settings_watch_auto_sync_2h">2 h</string>
+    <string name="settings_home_widget_refresh_title">Actualisation des widgets d\'accueil</string>
+    <string name="settings_home_widget_refresh_body">À quelle fréquence les widgets de l\'écran d\'accueil relisent vos données en arrière-plan. Android décide du moment exact, donc une actualisation peut arriver avec un peu de retard. Les intervalles plus courts consomment plus de batterie.</string>
+    <string name="settings_home_widget_refresh_15m">15 min</string>
+    <string name="settings_home_widget_refresh_30m">30 min</string>
+    <string name="settings_home_widget_refresh_1h">1 h</string>
+    <string name="settings_home_widget_refresh_2h">2 h</string>
     <string name="settings_watch_stay_connected">Rester connecté</string>
     <string name="settings_watch_stay_connected_body">Maintient une liaison avec la montre dès qu\'elle est à portée. La montre peut alors récupérer la météo, retrouver ce téléphone et transmettre les nouveaux enregistrements dès qu\'ils se terminent — au prix d\'une consommation de batterie accrue sur la montre et le téléphone.</string>
     <string name="garmin_find_phone_channel">Localiser mon téléphone</string>

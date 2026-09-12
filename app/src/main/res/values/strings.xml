@@ -106,6 +106,12 @@
     <string name="home_widget_body_energy_steady">Steady</string>
     <string name="home_widget_body_energy_limited">Limited</string>
     <string name="home_widget_body_energy_low">Low</string>
+    <string name="settings_home_widget_refresh_title">Home widget refresh</string>
+    <string name="settings_home_widget_refresh_body">How often the home screen widgets re-read your data in the background. Android decides the exact moment, so a run can be a little late. Shorter intervals use more battery.</string>
+    <string name="settings_home_widget_refresh_15m">15 min</string>
+    <string name="settings_home_widget_refresh_30m">30 min</string>
+    <string name="settings_home_widget_refresh_1h">1 h</string>
+    <string name="settings_home_widget_refresh_2h">2 h</string>
 
     <string name="screen_steps">Steps</string>
     <string name="screen_activities">Activities</string>

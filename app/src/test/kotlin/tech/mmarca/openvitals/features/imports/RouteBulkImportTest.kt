@@ -47,6 +47,7 @@ import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
+import tech.mmarca.openvitals.domain.preferences.HomeWidgetRefreshInterval
 import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
@@ -449,6 +450,7 @@ class RouteBulkImportTest {
             permissionUxState = mockk<HealthConnectPermissionUxState>(relaxed = true),
             coMapsNavigationRepository = mockk(relaxed = true),
             derivedMetricsResetService = mockk(relaxed = true),
+            homeWidgetRefreshScheduler = mockk(relaxed = true),
         )
 
     private fun routeFileImporter(): RouteFileImporter =
@@ -556,6 +558,7 @@ class RouteBulkImportTest {
             every { prefs.appThemeMode } returns AppThemeMode.SYSTEM
             every { prefs.dynamicColor } returns false
             every { prefs.chartAggregationMode } returns ChartAggregationMode.OFF
+            every { prefs.homeWidgetRefreshInterval } returns HomeWidgetRefreshInterval.DEFAULT
             every { prefs.dashboardSortEmptyTilesLast } returns true
             every { prefs.stepDistanceBackfillEnabled } returns false
             every { prefs.strideLengthMeters } returns 0.7

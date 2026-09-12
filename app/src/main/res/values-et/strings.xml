@@ -449,6 +449,12 @@
     <string name="settings_watch_auto_sync_30m">30 min</string>
     <string name="settings_watch_auto_sync_1h">1 h</string>
     <string name="settings_watch_auto_sync_2h">2 h</string>
+    <string name="settings_home_widget_refresh_title">Avakuva vidinate värskendamine</string>
+    <string name="settings_home_widget_refresh_body">Kui tihti avakuva vidinad sinu andmeid taustal uuesti loevad. Täpse hetke otsustab Android, seega üks ring võib pisut hilineda. Lühemad intervallid kulutavad rohkem akut.</string>
+    <string name="settings_home_widget_refresh_15m">15 min</string>
+    <string name="settings_home_widget_refresh_30m">30 min</string>
+    <string name="settings_home_widget_refresh_1h">1 h</string>
+    <string name="settings_home_widget_refresh_2h">2 h</string>
     <string name="settings_watch_stay_connected">Püsi ühenduses</string>
     <string name="settings_watch_stay_connected_body">Hoiab kellaga ühendust alati, kui see on levialas. Nii saab kell tuua ilmateate, leida selle telefoni ja anda uued salvestused üle kohe, kui need valmivad. See kulutab veidi kella ja telefoni akut.</string>
     <string name="garmin_find_phone_channel">Leia mu telefon</string>

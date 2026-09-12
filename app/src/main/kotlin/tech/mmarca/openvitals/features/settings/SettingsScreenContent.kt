@@ -116,6 +116,14 @@ internal fun LazyListScope.settingsScreenContent(
             }
             item { SettingsCardSpacer() }
             item {
+                HomeWidgetRefreshCard(
+                    selected = state.homeWidgetRefreshInterval,
+                    onSelect = viewModel::setHomeWidgetRefreshInterval,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+            item { SettingsCardSpacer() }
+            item {
                 ActivityWeekModeCard(
                     selected = state.activityWeekMode,
                     onSelect = viewModel::selectActivityWeekMode,

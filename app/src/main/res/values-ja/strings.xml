@@ -563,6 +563,12 @@
     <string name="settings_watch_auto_sync_30m">30 分</string>
     <string name="settings_watch_auto_sync_1h">1 時間</string>
     <string name="settings_watch_auto_sync_2h">2 時間</string>
+    <string name="settings_home_widget_refresh_title">ホーム画面ウィジェットの更新</string>
+    <string name="settings_home_widget_refresh_body">ホーム画面のウィジェットがバックグラウンドでデータを読み直す頻度です。正確なタイミングは Android が決めるため、少し遅れることがあります。間隔が短いほどバッテリーを多く使います。</string>
+    <string name="settings_home_widget_refresh_15m">15 分</string>
+    <string name="settings_home_widget_refresh_30m">30 分</string>
+    <string name="settings_home_widget_refresh_1h">1 時間</string>
+    <string name="settings_home_widget_refresh_2h">2 時間</string>
     <string name="settings_watch_stay_connected">接続を維持</string>
     <string name="settings_watch_stay_connected_body">ウォッチが範囲内にある間は常に接続を保ちます。ウォッチは天気の取得、このスマートフォンの検索、新しい記録の即時引き渡しができますが、ウォッチとスマートフォンのバッテリーを多少消費します。</string>
     <string name="garmin_find_phone_channel">スマートフォンを探す</string>

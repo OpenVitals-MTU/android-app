@@ -488,6 +488,12 @@
     <string name="settings_watch_auto_sync_30m">30 min</string>
     <string name="settings_watch_auto_sync_1h">1 h</string>
     <string name="settings_watch_auto_sync_2h">2 h</string>
+    <string name="settings_home_widget_refresh_title">Obnovování widgetů na ploše</string>
+    <string name="settings_home_widget_refresh_body">Jak často widgety na ploše znovu načítají vaše data na pozadí. Přesný okamžik určuje Android, takže se běh může trochu opozdit. Kratší intervaly spotřebují více baterie.</string>
+    <string name="settings_home_widget_refresh_15m">15 min</string>
+    <string name="settings_home_widget_refresh_30m">30 min</string>
+    <string name="settings_home_widget_refresh_1h">1 h</string>
+    <string name="settings_home_widget_refresh_2h">2 h</string>
     <string name="settings_watch_stay_connected">Zůstat připojeno</string>
     <string name="settings_watch_stay_connected_body">Udržuje spojení s hodinkami, kdykoli jsou v dosahu. Hodinky pak mohou stahovat počasí, najít tento telefon a předat nové záznamy hned, jak skončí — za cenu vyšší spotřeby baterie hodinek i telefonu.</string>
     <string name="garmin_find_phone_channel">Najít můj telefon</string>

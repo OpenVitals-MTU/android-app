@@ -35,6 +35,7 @@ import tech.mmarca.openvitals.domain.preferences.CaffeineHormonalStatus
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.CaffeineSleepSensitivity
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
+import tech.mmarca.openvitals.domain.preferences.HomeWidgetRefreshInterval
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
@@ -364,6 +365,22 @@ class PreferencesRepositoryTest {
         assertEquals(AppThemeMode.AMOLED, reloaded.appThemeMode)
         assertEquals(20, reloaded.sleepWindow.startHour)
         assertEquals(9, reloaded.sleepWindow.endHour)
+    }
+
+    @Test fun `home widget refresh interval defaults to 30 minutes and round-trips as minutes`() {
+        val (repo, prefs) = newRepo()
+        assertEquals(HomeWidgetRefreshInterval.EVERY_30_MINUTES, repo.homeWidgetRefreshInterval)
+
+        repo.homeWidgetRefreshInterval = HomeWidgetRefreshInterval.EVERY_15_MINUTES
+
+        assertEquals(15, prefs.getInt("home_widget_refresh_minutes", 0))
+        assertEquals(HomeWidgetRefreshInterval.EVERY_15_MINUTES, reload(prefs).homeWidgetRefreshInterval)
+    }
+
+    @Test fun `a stored interval this build no longer offers falls back to the default`() {
+        val prefs = seededPrefs(mapOf("home_widget_refresh_minutes" to 45))
+        val repo = PreferencesRepository(contextFor(prefs))
+        assertEquals(HomeWidgetRefreshInterval.DEFAULT, repo.homeWidgetRefreshInterval)
     }
 
     @Test fun `sleep window defaults to 18 to 10 and clamps out-of-range hours`() {

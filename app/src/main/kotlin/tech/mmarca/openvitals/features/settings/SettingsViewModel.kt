@@ -16,6 +16,8 @@ import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
+import tech.mmarca.openvitals.domain.preferences.HomeWidgetRefreshInterval
+import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.preferences.StrideLength
@@ -126,6 +128,7 @@ data class SettingsUiState(
     val appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val dynamicColor: Boolean = false,
     val chartAggregationMode: ChartAggregationMode = ChartAggregationMode.OFF,
+    val homeWidgetRefreshInterval: HomeWidgetRefreshInterval = HomeWidgetRefreshInterval.DEFAULT,
     val dashboardSortEmptyTilesLast: Boolean = true,
     val stepDistanceBackfillEnabled: Boolean = false,
     val strideLengthMeters: Double = StrideLength.defaultMeters,
@@ -226,6 +229,7 @@ class SettingsViewModel @Inject constructor(
     private val permissionUxState: HealthConnectPermissionUxState,
     private val coMapsNavigationRepository: CoMapsNavigationRepository,
     private val derivedMetricsResetService: DerivedMetricsResetService,
+    private val homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler,
 ) : ViewModel() {
     companion object {
         private const val TAG = "SettingsViewModel"
@@ -273,6 +277,7 @@ class SettingsViewModel @Inject constructor(
                 appThemeMode = preferencesRepository.appThemeMode,
                 dynamicColor = preferencesRepository.dynamicColor,
                 chartAggregationMode = preferencesRepository.chartAggregationMode,
+                homeWidgetRefreshInterval = preferencesRepository.homeWidgetRefreshInterval,
                 dashboardSortEmptyTilesLast = preferencesRepository.dashboardSortEmptyTilesLast,
                 stepDistanceBackfillEnabled = preferencesRepository.stepDistanceBackfillEnabled,
                 strideLengthMeters = preferencesRepository.strideLengthMeters,
@@ -919,6 +924,12 @@ class SettingsViewModel @Inject constructor(
     fun setChartAggregationMode(mode: ChartAggregationMode) {
         preferencesRepository.chartAggregationMode = mode
         _uiState.value = _uiState.value.copy(chartAggregationMode = mode)
+    }
+
+    /** The scheduler stores the choice: it also re-plans the running work. */
+    fun setHomeWidgetRefreshInterval(interval: HomeWidgetRefreshInterval) {
+        homeWidgetRefreshScheduler.setInterval(interval)
+        _uiState.value = _uiState.value.copy(homeWidgetRefreshInterval = interval)
     }
 
     fun setNightStartHour(value: Int) {

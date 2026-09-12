@@ -494,6 +494,12 @@
     <string name="settings_watch_auto_sync_30m">30 分钟</string>
     <string name="settings_watch_auto_sync_1h">1 小时</string>
     <string name="settings_watch_auto_sync_2h">2 小时</string>
+    <string name="settings_home_widget_refresh_title">主屏幕小组件刷新</string>
+    <string name="settings_home_widget_refresh_body">主屏幕小组件在后台重新读取数据的频率。由 Android 决定确切时机，因此一次刷新可能会稍晚。间隔越短，耗电越多。</string>
+    <string name="settings_home_widget_refresh_15m">15 分钟</string>
+    <string name="settings_home_widget_refresh_30m">30 分钟</string>
+    <string name="settings_home_widget_refresh_1h">1 小时</string>
+    <string name="settings_home_widget_refresh_2h">2 小时</string>
     <string name="settings_watch_stay_connected">保持连接</string>
     <string name="settings_watch_stay_connected_body">只要手表在范围内就保持连接。手表因此可以获取天气、寻找本手机，并在新记录完成时立即传递 — 但会增加手表和手机耗电。</string>
     <string name="garmin_find_phone_channel">查找手机</string>

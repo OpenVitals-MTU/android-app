@@ -34,6 +34,7 @@ import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
+import tech.mmarca.openvitals.domain.preferences.HomeWidgetRefreshInterval
 import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
@@ -48,6 +49,7 @@ import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
+import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
 import tech.mmarca.openvitals.domain.preferences.StrideLength
@@ -266,6 +268,25 @@ class SettingsViewModelTest {
 
         verify { prefs.chartAggregationMode = ChartAggregationMode.MIN10 }
         assertEquals(ChartAggregationMode.MIN10, vm.uiState.value.chartAggregationMode)
+    }
+
+    @Test fun `setHomeWidgetRefreshInterval hands the choice to the scheduler and updates ui state`() = runTest {
+        val scheduler = mockk<HomeWidgetRefreshScheduler>(relaxed = true)
+        val vm = viewModel(
+            repository = repo(),
+            preferencesRepository = prefs(),
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
+            appleHealthImportWorkController = importController(),
+            permissionUxState = permissionUxState(),
+            homeWidgetRefreshScheduler = scheduler,
+        )
+        assertEquals(HomeWidgetRefreshInterval.DEFAULT, vm.uiState.value.homeWidgetRefreshInterval)
+
+        vm.setHomeWidgetRefreshInterval(HomeWidgetRefreshInterval.EVERY_15_MINUTES)
+
+        // The scheduler stores the preference; the view model must not write it a second time.
+        verify(exactly = 1) { scheduler.setInterval(HomeWidgetRefreshInterval.EVERY_15_MINUTES) }
+        assertEquals(HomeWidgetRefreshInterval.EVERY_15_MINUTES, vm.uiState.value.homeWidgetRefreshInterval)
     }
 
     @Test fun `setNightStartHour persists preference and updates ui state`() = runTest {
@@ -893,6 +914,7 @@ class SettingsViewModelTest {
         offlineMapRepository: OfflineMapRepository = offlineMapRepository(),
         offlineMapImportWorkController: OfflineMapImportWorkController = offlineMapImportController(),
         permissionUxState: HealthConnectPermissionUxState = permissionUxState(),
+        homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler = mockk(relaxed = true),
     ): SettingsViewModel =
         SettingsViewModel(
             repository = repository,
@@ -913,6 +935,7 @@ class SettingsViewModelTest {
             permissionUxState = permissionUxState,
             coMapsNavigationRepository = mockk(relaxed = true),
             derivedMetricsResetService = mockk(relaxed = true),
+            homeWidgetRefreshScheduler = homeWidgetRefreshScheduler,
         )
 
     private fun bodyRepo(): BodyRepository =
@@ -986,6 +1009,7 @@ class SettingsViewModelTest {
             every { prefs.appThemeMode } returns AppThemeMode.SYSTEM
             every { prefs.dynamicColor } returns false
             every { prefs.chartAggregationMode } returns ChartAggregationMode.OFF
+            every { prefs.homeWidgetRefreshInterval } returns HomeWidgetRefreshInterval.DEFAULT
             every { prefs.dashboardSortEmptyTilesLast } returns true
             every { prefs.stepDistanceBackfillEnabled } returns false
             every { prefs.strideLengthMeters } returns 0.7

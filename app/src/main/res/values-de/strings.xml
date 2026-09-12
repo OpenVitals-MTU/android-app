@@ -447,6 +447,12 @@
     <string name="settings_watch_auto_sync_30m">30 Min.</string>
     <string name="settings_watch_auto_sync_1h">1 Std.</string>
     <string name="settings_watch_auto_sync_2h">2 Std.</string>
+    <string name="settings_home_widget_refresh_title">Aktualisierung der Startbildschirm-Widgets</string>
+    <string name="settings_home_widget_refresh_body">Wie oft die Widgets auf dem Startbildschirm deine Daten im Hintergrund neu einlesen. Android bestimmt den genauen Zeitpunkt, deshalb kann ein Durchlauf etwas später kommen. Kürzere Intervalle verbrauchen mehr Akku.</string>
+    <string name="settings_home_widget_refresh_15m">15 Min.</string>
+    <string name="settings_home_widget_refresh_30m">30 Min.</string>
+    <string name="settings_home_widget_refresh_1h">1 Std.</string>
+    <string name="settings_home_widget_refresh_2h">2 Std.</string>
     <string name="settings_watch_stay_connected">Verbunden bleiben</string>
     <string name="settings_watch_stay_connected_body">Hält die Verbindung zur Uhr, wann immer sie in Reichweite ist. Die Uhr kann dann Wetter abrufen, dieses Telefon finden und neue Aufzeichnungen sofort übergeben, sobald sie fertig sind. Das kostet etwas Uhren- und Telefonakku.</string>
     <string name="garmin_find_phone_channel">Mein Telefon finden</string>

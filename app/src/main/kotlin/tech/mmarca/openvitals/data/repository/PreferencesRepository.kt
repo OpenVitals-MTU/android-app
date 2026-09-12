@@ -26,6 +26,7 @@ import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.CaffeineSleepSensitivity
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
+import tech.mmarca.openvitals.domain.preferences.HomeWidgetRefreshInterval
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.preferences.StrideLength
 import tech.mmarca.openvitals.domain.preferences.SystemUnitSystemProvider
@@ -67,6 +68,7 @@ class PreferencesRepository @Inject constructor(
     private val _appThemeMode = MutableStateFlow(readAppThemeMode())
     private val _dynamicColor = MutableStateFlow(readDynamicColor())
     private val _chartAggregationMode = MutableStateFlow(readChartAggregationMode())
+    private val _homeWidgetRefreshInterval = MutableStateFlow(readHomeWidgetRefreshInterval())
     private val _sleepWindow = MutableStateFlow(readSleepWindow())
     private val _activityWeekMode = MutableStateFlow(readActivityWeekMode())
     private val _activitySplitDistanceMeters = MutableStateFlow(readActivitySplitDistanceMeters())
@@ -176,6 +178,16 @@ class PreferencesRepository @Inject constructor(
         set(value) {
             prefs.edit { putString(KEY_CHART_AGGREGATION_MODE, value.name) }
             _chartAggregationMode.value = value
+        }
+
+    val homeWidgetRefreshIntervalFlow: StateFlow<HomeWidgetRefreshInterval> = _homeWidgetRefreshInterval.asStateFlow()
+
+    /** Stored as minutes, so a dropped enum entry falls back instead of failing to parse. */
+    var homeWidgetRefreshInterval: HomeWidgetRefreshInterval
+        get() = _homeWidgetRefreshInterval.value
+        set(value) {
+            prefs.edit { putInt(KEY_HOME_WIDGET_REFRESH_MINUTES, value.minutes) }
+            _homeWidgetRefreshInterval.value = value
         }
 
     var nightStartHour: Int
@@ -914,6 +926,11 @@ class PreferencesRepository @Inject constructor(
             ?.let { value -> runCatching { ChartAggregationMode.valueOf(value) }.getOrNull() }
             ?: ChartAggregationMode.OFF
 
+    private fun readHomeWidgetRefreshInterval(): HomeWidgetRefreshInterval =
+        HomeWidgetRefreshInterval.fromMinutes(
+            prefs.getInt(KEY_HOME_WIDGET_REFRESH_MINUTES, HomeWidgetRefreshInterval.DEFAULT.minutes),
+        )
+
     private fun readSleepWindow(): SleepWindow =
         SleepWindow(
             startHour = prefs.getInt(KEY_SLEEP_NIGHT_START_HOUR, SleepWindow.Default.startHour)
@@ -1200,6 +1217,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_APP_THEME_MODE = "app_theme_mode"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color"
         private const val KEY_CHART_AGGREGATION_MODE = "chart_aggregation_mode"
+        private const val KEY_HOME_WIDGET_REFRESH_MINUTES = "home_widget_refresh_minutes"
         private const val KEY_SLEEP_NIGHT_START_HOUR = "sleep_night_start_hour"
         private const val KEY_SLEEP_NIGHT_END_HOUR = "sleep_night_end_hour"
         private const val KEY_ACTIVITY_WEEK_MODE = "activity_week_mode"

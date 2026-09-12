@@ -102,6 +102,7 @@ import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
+import tech.mmarca.openvitals.domain.preferences.HomeWidgetRefreshInterval
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.ActivitySplitDistance
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
@@ -594,6 +595,66 @@ internal fun ChartAggregationCard(
                                     ChartAggregationMode.MIN10 -> stringResource(R.string.settings_chart_aggregation_min10)
                                     ChartAggregationMode.MIN30 -> stringResource(R.string.settings_chart_aggregation_min30)
                                 }
+                            )
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * How often the home widgets refresh in the background. A segmented row,
+ * like the watch auto-sync, so the choice in force is visible at a glance.
+ */
+@Composable
+internal fun HomeWidgetRefreshCard(
+    selected: HomeWidgetRefreshInterval,
+    onSelect: (HomeWidgetRefreshInterval) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.settings_home_widget_refresh_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = stringResource(R.string.settings_home_widget_refresh_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            ) {
+                HomeWidgetRefreshInterval.entries.forEachIndexed { index, interval ->
+                    SegmentedButton(
+                        selected = selected == interval,
+                        onClick = { onSelect(interval) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = HomeWidgetRefreshInterval.entries.size,
+                        ),
+                        label = {
+                            Text(
+                                text = stringResource(
+                                    when (interval) {
+                                        HomeWidgetRefreshInterval.EVERY_15_MINUTES ->
+                                            R.string.settings_home_widget_refresh_15m
+                                        HomeWidgetRefreshInterval.EVERY_30_MINUTES ->
+                                            R.string.settings_home_widget_refresh_30m
+                                        HomeWidgetRefreshInterval.HOURLY ->
+                                            R.string.settings_home_widget_refresh_1h
+                                        HomeWidgetRefreshInterval.EVERY_2_HOURS ->
+                                            R.string.settings_home_widget_refresh_2h
+                                    },
+                                ),
                             )
                         },
                     )
