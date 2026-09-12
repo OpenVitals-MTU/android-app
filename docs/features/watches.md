@@ -167,9 +167,15 @@ Phone notifications can be forwarded to a paired Garmin watch that supports it. 
 
 Some notifications never reach the watch regardless: ongoing and foreground-service notifications, group summaries, notifications an app marks as local to the phone, notifications with neither a title nor a body, minimum-importance channels, anything at all while the phone's own Do Not Disturb is on, and OpenVitals' own notifications.
 
+### Calls
+
+A ringing call is the one ongoing notification that is forwarded. It arrives as the dialer's own notification, so no phone permission is needed and nothing reads the call log. The watch shows it as an incoming call with the caller as the title. Once the call is answered, or when it was placed from the phone, it leaves the wrist; only ringing is shown. A dialer that uses Android's call-style notification hands over its answer and decline buttons, and the watch draws them in its fixed places. An older dialer's buttons arrive as ordinary labelled actions.
+
 ### Acting From The Wrist
 
 Dismissing on the watch clears the notification from the phone. Where the posting app publishes them, a reply action and up to five of the app's own buttons are offered. Actions that would merely open a screen on the phone are not offered, because Android does not let a background app launch them; the button would report success and do nothing.
+
+A watch that does not recognise the posting app asks the phone what it is called, and the phone answers with the app's name. Left unanswered, such a notification never appears.
 
 ### The Link
 

@@ -22,6 +22,9 @@ data class NotificationMsg(
     val dismissable: Boolean = true,
 )
 
+/** What a call's system action does. Every other action is [NONE]. */
+enum class NotificationActionRole { NONE, ANSWER_CALL, DECLINE_CALL }
+
 /** One action the posting app attached to a notification. */
 data class NotificationActionMsg(
     /** Position in the Android action list, carried to the watch and back verbatim. */
@@ -35,4 +38,6 @@ data class NotificationActionMsg(
      * an activity `PendingIntent`, which Android blocks silently.
      */
     val fireableFromBackground: Boolean,
+    /** Answer or decline on a call, which the watch draws in fixed places. */
+    val role: NotificationActionRole = NotificationActionRole.NONE,
 )

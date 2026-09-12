@@ -13,10 +13,16 @@ class GarminGncsHandler(
     /** Invoked when the wearer acts on a notification. The handler stays platform-free. */
     private val onAction: (suspend (GarminNotificationActionRequest) -> Unit)? = null,
     /**
-     * How many notifications stay answerable. A wrist
-     * shows about ten, and the watch asks by id long after the announcement.
+     * Resolves a package name to the app's display name, for a watch that
+     * asks. Null falls back to the package name.
      */
-    private val maxQueued: Int = 10,
+    private val appLabel: ((String) -> String?)? = null,
+    /**
+     * How many notifications stay answerable. Deep, because the watch asks by
+     * id long after the announcement, and an evicted one can no longer be
+     * withdrawn properly. Ten was too few on a held link.
+     */
+    private val maxQueued: Int = 64,
 ) : GarminNotificationsHandler {
 
     /** Whether the watch has subscribed. Until then everything here is a no-op. */
@@ -106,7 +112,11 @@ class GarminGncsHandler(
         )
     }
 
-    /** Withdraws a dismissed notification. Silent for an id no longer queued. */
+    /**
+     * Withdraws a dismissed notification. An id no longer queued is still
+     * withdrawn: the watch may hold it, and a phantom entry there eventually
+     * stops new notifications from rendering until the link is rebuilt.
+     */
     suspend fun remove(id: Long) {
         if (!enabled) {
             // Withdraw it from the held list too. Logged, or a run of silent
@@ -119,7 +129,19 @@ class GarminGncsHandler(
             }
             return
         }
-        val notification = find(id) ?: return
+        val notification = find(id)
+        if (notification == null) {
+            GarminLog.log("[GARMIN-NOTIFY] withdrawing $id, which is no longer queued")
+            send(
+                buildNotificationUpdate(
+                    updateType = GarminNotificationUpdateType.REMOVE,
+                    category = GarminNotificationCategory.OTHER,
+                    count = 0,
+                    notificationId = id,
+                ),
+            )
+            return
+        }
         removeQueued(id)
         send(
             buildNotificationUpdate(
@@ -144,11 +166,7 @@ class GarminGncsHandler(
                 return
             }
             GarminNotificationCommand.GET_APP_ATTRIBUTES -> {
-                // No watch here has sent one. Logged.
-                GarminLog.log(
-                    "[GARMIN-NOTIFY] app attributes requested for " +
-                        "${message.appIdentifier}; not implemented",
-                )
+                answerAppAttributes(message)
                 return
             }
         }
@@ -171,6 +189,29 @@ class GarminGncsHandler(
         GarminLog.log(
             "[GARMIN-NOTIFY] answering ${message.notificationId} with " +
                 "${message.attributes.size} attributes (${blob.size}B)",
+        )
+        val newUpload = NotificationUpload(blob)
+        upload = newUpload
+        sendNext(newUpload)
+    }
+
+    /**
+     * Answers a watch asking what an app is called. Left unanswered, the
+     * watch waits for a transfer that never starts and shows nothing.
+     */
+    private suspend fun answerAppAttributes(message: GarminNotificationControl) {
+        val packageName = message.appIdentifier ?: return
+        // The queue first: a label captured with the notification needs no lookup.
+        val name = queue.lastOrNull { it.packageName == packageName }?.appLabel
+            ?: appLabel?.invoke(packageName)
+            ?: packageName
+        val blob = encodeGarminAppAttributes(
+            appIdentifier = packageName,
+            requested = message.appAttributes,
+            appName = name,
+        )
+        GarminLog.log(
+            "[GARMIN-NOTIFY] answering app attributes for $packageName (${blob.size}B)",
         )
         val newUpload = NotificationUpload(blob)
         upload = newUpload
@@ -305,7 +346,10 @@ class GarminGncsHandler(
         return queue.size != before
     }
 
-    /** Drops the oldest until the queue fits. No REMOVE is sent. */
+    /**
+     * Drops the oldest until the queue fits. No REMOVE is sent here; a later
+     * dismissal of an evicted id still withdraws it, see [remove].
+     */
     private fun evict() {
         while (queue.size > maxQueued) {
             queue.removeFirst()

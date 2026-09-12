@@ -6,6 +6,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.devices.notifications.NotificationActionMsg
+import tech.mmarca.openvitals.devices.notifications.NotificationActionRole
 import tech.mmarca.openvitals.devices.notifications.NotificationMsg
 
 /** Mapping an Android notification's actions onto GNCS's fixed slots, and encoding the ACTIONS attribute. */
@@ -32,14 +33,50 @@ class GarminNotificationActionsTest {
         title: String,
         reply: Boolean = false,
         fireable: Boolean = true,
+        role: NotificationActionRole = NotificationActionRole.NONE,
     ) = NotificationActionMsg(
         index = index,
         title = title,
         isReply = reply,
         fireableFromBackground = fireable,
+        role = role,
     )
 
     // Mapping Android actions onto the watch.
+
+    @Test
+    fun `a call's answer and decline take the accept and reject slots, which the watch draws as icons`() {
+        val actions = garminActionsFor(
+            message(
+                actions = listOf(
+                    action(0, "Answer", role = NotificationActionRole.ANSWER_CALL),
+                    action(1, "Decline", role = NotificationActionRole.DECLINE_CALL),
+                ),
+                dismissable = false,
+            ),
+        )
+
+        assertEquals(
+            listOf(GarminNotificationActionKind.ACCEPT_CALL, GarminNotificationActionKind.REJECT_CALL),
+            actions.map { it.kind },
+        )
+        assertEquals(listOf(0, 1), actions.map { it.androidIndex })
+    }
+
+    @Test
+    fun `a call action that only opens the dialer is not offered, like any other dead button`() {
+        val actions = garminActionsFor(
+            message(
+                actions = listOf(
+                    action(0, "Answer", fireable = false, role = NotificationActionRole.ANSWER_CALL),
+                    action(1, "Decline", role = NotificationActionRole.DECLINE_CALL),
+                ),
+                dismissable = false,
+            ),
+        )
+
+        assertEquals(listOf(GarminNotificationActionKind.REJECT_CALL), actions.map { it.kind })
+    }
 
     @Test
     fun `every dismissable notification gets a dismiss the app did not provide`() {

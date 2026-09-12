@@ -65,8 +65,8 @@ fun garminNotificationCategoryFlags(): Int =
     GarminNotificationFlag.FOREGROUND.bit or GarminNotificationFlag.ACTION_DECLINE.bit
 
 /**
- * Commands on the notification control channel (5034). [GET_APP_ATTRIBUTES]
- * is untested and not acted on. Both action commands are honoured.
+ * Commands on the notification control channel (5034). All four are
+ * answered; [GET_APP_ATTRIBUTES] is how a watch learns an app's display name.
  */
 enum class GarminNotificationCommand(val code: Int) {
     GET_NOTIFICATION_ATTRIBUTES(0),
@@ -108,6 +108,48 @@ enum class GarminNotificationAttribute(
         fun fromCode(code: Int): GarminNotificationAttribute? =
             entries.firstOrNull { it.code == code }
     }
+}
+
+/**
+ * One field the watch can ask about an app (GET_APP_ATTRIBUTES). Only the
+ * name is known; a watch asks for it when the package is not in its own list.
+ */
+enum class GarminAppAttribute(val code: Int) {
+    APP_NAME(0),
+    ;
+
+    companion object {
+        fun fromCode(code: Int): GarminAppAttribute? =
+            entries.firstOrNull { it.code == code }
+    }
+}
+
+/**
+ * Builds the blob answering one GET_APP_ATTRIBUTES request: the command
+ * byte, the NUL-terminated package name, then each requested attribute as
+ * `{u8 code, u16 length, bytes}`. An unknown code is answered empty rather
+ * than skipped, so the watch's walk stays in step.
+ */
+fun encodeGarminAppAttributes(
+    appIdentifier: String,
+    requested: List<Int>,
+    appName: String,
+): ByteArray {
+    val writer = GarminByteWriter()
+        .writeByte(GarminNotificationCommand.GET_APP_ATTRIBUTES.code)
+        .writeBytes(appIdentifier.toByteArray(Charsets.UTF_8))
+        .writeByte(0)
+    for (code in requested) {
+        val value = when (GarminAppAttribute.fromCode(code)) {
+            GarminAppAttribute.APP_NAME -> appName.toByteArray(Charsets.UTF_8)
+            null -> ByteArray(0)
+        }
+        writer
+            .writeByte(code)
+            .writeShort(value.size)
+            .writeBytes(value)
+    }
+    return writer.toBytes()
 }
 
 /** The watch's verdict on one chunk. Ordinal is the wire value; do not reorder. */
@@ -222,6 +264,8 @@ data class GarminNotification(
     val id: Long,
     /** The posting app's package, sent as APP_IDENTIFIER. Some faces resolve an icon from it. */
     val packageName: String,
+    /** The posting app's display name, for a watch that asks. Null when unknown. */
+    val appLabel: String? = null,
     val title: String = "",
     val subtitle: String = "",
     val body: String = "",

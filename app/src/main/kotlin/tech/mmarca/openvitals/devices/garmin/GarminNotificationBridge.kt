@@ -161,6 +161,7 @@ class GarminNotificationBridge @Inject constructor(
             lease = SharedGarminRadioLease,
             openLink = { request -> GarminBleNotificationLink.open(context, scope, request) },
             onAction = ::performAction,
+            appLabel = ::appLabel,
             onFindPhone = { seconds -> findPhoneRinger.start(seconds) },
             onFindPhoneCancel = { findPhoneRinger.stop() },
             weatherProvider = { weatherStore.freshSnapshot() },
@@ -326,10 +327,19 @@ class GarminNotificationBridge @Inject constructor(
         }
     }
 
+    /** An app's display name, via the manifest `<queries>`. Null for an app it cannot see. */
+    private fun appLabel(packageName: String): String? = try {
+        val manager = context.packageManager
+        manager.getApplicationLabel(manager.getApplicationInfo(packageName, 0)).toString()
+    } catch (error: Throwable) {
+        null
+    }
+
     private fun toNotification(message: NotificationMsg): GarminNotification =
         GarminNotification(
             id = message.id,
             packageName = message.packageName,
+            appLabel = message.appLabel,
             title = message.title ?: message.appLabel ?: message.packageName,
             subtitle = message.subtitle ?: "",
             body = message.body ?: "",

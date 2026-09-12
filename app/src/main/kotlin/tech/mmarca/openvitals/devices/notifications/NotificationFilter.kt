@@ -14,6 +14,9 @@ object NotificationFilter {
     const val IMPORTANCE_MIN = 1
     const val IMPORTANCE_UNSPECIFIED = -1000
 
+    /** Android's `Notification.CATEGORY_CALL`, kept local. */
+    const val CATEGORY_CALL = "call"
+
     /** Android's `NotificationManager.INTERRUPTION_FILTER_*` values. */
     const val INTERRUPTION_FILTER_ALL = 1
     const val INTERRUPTION_FILTER_PRIORITY = 2
@@ -43,6 +46,8 @@ object NotificationFilter {
         val groupSummary: Boolean,
         val localOnly: Boolean,
         val channelImportance: Int,
+        /** Android's `Notification.category`, or null. A call is ongoing yet still wanted. */
+        val category: String? = null,
     )
 
     /** Why a notification was dropped. [KEEP] means it was not. */
@@ -80,7 +85,9 @@ object NotificationFilter {
         }
 
         // Media players and downloads repaint ongoing notifications constantly.
-        if (candidate.ongoing || candidate.foregroundService) return Verdict.ONGOING
+        // A ringing call is ongoing too, and the one worth a buzz.
+        val call = candidate.category == CATEGORY_CALL
+        if (!call && (candidate.ongoing || candidate.foregroundService)) return Verdict.ONGOING
 
         // The parent of a bundle: keeping it delivers every thread twice.
         if (candidate.groupSummary) return Verdict.GROUP_SUMMARY
@@ -124,7 +131,7 @@ object NotificationFilter {
 
     /** Android's `Notification.category` as a GNCS category. Unrecognised is OTHER, not a guess. */
     fun categoryOrdinal(androidCategory: String?): Int = when (androidCategory) {
-        "call" -> Category.INCOMING_CALL
+        CATEGORY_CALL -> Category.INCOMING_CALL
         "missed_call" -> Category.MISSED_CALL
         "voicemail" -> Category.VOICEMAIL
         "msg" -> Category.SMS

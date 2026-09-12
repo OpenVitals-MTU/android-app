@@ -62,6 +62,8 @@ data class GarminNotificationLinkRequest(
     val model: String,
     /** Invoked when the wearer acts on a notification from the wrist. */
     val onAction: (suspend (GarminNotificationActionRequest) -> Unit)? = null,
+    /** An app's display name by package, for the watch's app-attribute asks. */
+    val appLabel: ((String) -> String?)? = null,
     /** The watch asking the phone to ring, and to stop. Mostly arrives on the held link. */
     val onFindPhone: ((durationSeconds: Int) -> Unit)? = null,
     val onFindPhoneCancel: (() -> Unit)? = null,
@@ -183,6 +185,7 @@ class GarminBleNotificationLink private constructor(
             val handler = GarminGncsHandler(
                 send = sendFrame,
                 onAction = request.onAction,
+                appLabel = request.appLabel,
             )
             val session = GarminSession(
                 scope = scope,

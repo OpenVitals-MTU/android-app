@@ -115,6 +115,8 @@ class GarminNotificationForwarder(
     private val onIdle: (() -> Unit)? = null,
     /** Invoked when the wearer acts on a notification. Handed to every link. */
     private val onAction: (suspend (GarminNotificationActionRequest) -> Unit)? = null,
+    /** An app's display name by package, handed to every link. */
+    private val appLabel: ((String) -> String?)? = null,
 ) {
 
     /** Announcements waiting for a link. Bounded by the native buffer upstream. */
@@ -232,6 +234,7 @@ class GarminNotificationForwarder(
                     manufacturer = manufacturer,
                     model = model,
                     onAction = onAction,
+                    appLabel = appLabel,
                     onFindPhone = onFindPhone,
                     onFindPhoneCancel = onFindPhoneCancel,
                     weatherProvider = weatherProvider,

@@ -82,10 +82,14 @@ class GarminGncsHandlerTest {
     private fun announcedId(frame: GarminGfdiFrame): Int =
         (frame.payload[4].toInt() and 0xFF) or ((frame.payload[5].toInt() and 0xFF) shl 8)
 
-    /** Builds a handler the watch has already subscribed to. */
-    private fun enabledHandler(maxQueued: Int = 10): Pair<GarminGncsHandler, Wire> {
+    /** Builds a handler the watch has already subscribed to. Null keeps the handler's own queue depth. */
+    private fun enabledHandler(maxQueued: Int? = null): Pair<GarminGncsHandler, Wire> {
         val wire = Wire()
-        val handler = GarminGncsHandler(send = wire::send, maxQueued = maxQueued)
+        val handler = if (maxQueued == null) {
+            GarminGncsHandler(send = wire::send)
+        } else {
+            GarminGncsHandler(send = wire::send, maxQueued = maxQueued)
+        }
         handler.setEnabled(enabled = true)
         return handler to wire
     }
@@ -217,15 +221,33 @@ class GarminGncsHandlerTest {
     }
 
     @Test
-    fun `dismissing an id the queue no longer holds sends nothing`() = runTest {
-        val (handler, wire) = enabledHandler()
-        handler.remove(999)
-        assertTrue(wire.frames.isEmpty())
-    }
+    fun `dismissing an id the queue no longer holds still sends REMOVE, so the watch drops its copy`() =
+        runTest {
+            // Left unsent, the watch keeps a phantom entry and eventually shows nothing new.
+            val (handler, wire) = enabledHandler()
+            handler.remove(999)
+
+            val withdrawal = wire.ofType(GarminMessageId.NOTIFICATION_UPDATE).single()
+            assertEquals(GarminNotificationUpdateType.REMOVE.ordinal, withdrawal.payload[0].toInt())
+            assertEquals(GarminNotificationCategory.OTHER.ordinal, withdrawal.payload[2].toInt())
+            assertEquals(0, withdrawal.payload[3].toInt())
+            assertEquals(999, announcedId(withdrawal))
+        }
 
     @Test
-    fun `the eleventh notification evicts the oldest`() = runTest {
-        val (handler, _) = enabledHandler()
+    fun `the queue holds sixty-four, because a held link sees far more than a wrist shows`() =
+        runTest {
+            val (handler, _) = enabledHandler()
+            for (id in 1L..65L) {
+                handler.post(notification(id))
+            }
+            assertEquals(64, handler.queued.size)
+            assertEquals(2L, handler.queued.first().id)
+        }
+
+    @Test
+    fun `a full queue evicts the oldest`() = runTest {
+        val (handler, _) = enabledHandler(maxQueued = 10)
         for (id in 1L..11L) {
             handler.post(notification(id))
         }
@@ -233,6 +255,90 @@ class GarminGncsHandlerTest {
             listOf(2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L, 11L),
             handler.queued.map { it.id },
         )
+    }
+
+    @Test
+    fun `an evicted notification dismissed later is still withdrawn from the watch`() = runTest {
+        val (handler, wire) = enabledHandler(maxQueued = 1)
+        handler.post(notification(1))
+        handler.post(notification(2)) // evicts 1
+        wire.clear()
+
+        handler.remove(1)
+
+        val withdrawal = wire.ofType(GarminMessageId.NOTIFICATION_UPDATE).single()
+        assertEquals(GarminNotificationUpdateType.REMOVE.ordinal, withdrawal.payload[0].toInt())
+        assertEquals(1, announcedId(withdrawal))
+    }
+
+    // Answering an app-attributes request.
+
+    /** The watch asking what a package is called. */
+    private fun appAttributesRequest(
+        packageName: String = "com.example.chat",
+        attributes: List<Int> = listOf(GarminAppAttribute.APP_NAME.code),
+    ) = GarminNotificationControl(
+        command = GarminNotificationCommand.GET_APP_ATTRIBUTES,
+        appIdentifier = packageName,
+        appAttributes = attributes,
+    )
+
+    /** The one NOTIFICATION_DATA chunk sent, reassembled. */
+    private fun sentBlob(wire: Wire): ByteArray =
+        wire.ofType(GarminMessageId.NOTIFICATION_DATA)
+            .flatMap { it.payload.copyOfRange(6, it.payload.size).toList() }
+            .toByteArray()
+
+    @Test
+    fun `an app-attributes request is answered with the app's name, so the watch stops waiting`() =
+        runTest {
+            val wire = Wire()
+            val handler = GarminGncsHandler(
+                send = wire::send,
+                appLabel = { if (it == "com.example.chat") "Chat" else null },
+            )
+            handler.setEnabled(enabled = true)
+
+            handler.handleControl(appAttributesRequest())
+
+            val expected = byteArrayOf(1) +
+                "com.example.chat".toByteArray() + byteArrayOf(0) +
+                byteArrayOf(0, 4, 0) + "Chat".toByteArray()
+            assertArrayEquals(expected, sentBlob(wire))
+        }
+
+    @Test
+    fun `a label captured with the notification answers without a lookup`() = runTest {
+        val wire = Wire()
+        val handler = GarminGncsHandler(send = wire::send, appLabel = { error("looked up") })
+        handler.setEnabled(enabled = true)
+        handler.post(notification(1).copy(appLabel = "Chat"))
+        wire.clear()
+
+        handler.handleControl(appAttributesRequest())
+
+        assertTrue(String(sentBlob(wire)).endsWith("Chat"))
+    }
+
+    @Test
+    fun `an app nobody can name is answered with its package, not left hanging`() = runTest {
+        val (handler, wire) = enabledHandler()
+
+        handler.handleControl(appAttributesRequest(packageName = "com.example.unknown"))
+
+        assertTrue(String(sentBlob(wire)).endsWith("com.example.unknown"))
+    }
+
+    @Test
+    fun `the app-attributes answer completes like any other transfer`() = runTest {
+        val (handler, wire) = enabledHandler()
+        handler.handleControl(appAttributesRequest())
+        wire.clear()
+
+        handler.handleDataStatus(ok)
+
+        // The final ack is a RESPONSE naming NOTIFICATION_DATA.
+        assertEquals(GarminMessageId.RESPONSE, wire.last.messageType)
     }
 
     // Answering an attribute request.

@@ -3,11 +3,13 @@ package tech.mmarca.openvitals.devices.notifications
 import android.app.Notification
 import android.app.PendingIntent
 import android.os.Build
+import android.os.Bundle
 import android.content.pm.PackageManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.os.BundleCompat
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge
@@ -39,19 +41,74 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
             private set
 
         /**
-         * The actions a watch should be offered, wearable ones first. The
-         * wearable extender's list is the one built for a remote device, and the
-         * only one whose reply reliably works: the phone's is usually an
-         * immutable PendingIntent that discards the reply extras.
-         * Must be the only way actions are enumerated; see [actionsOf].
+         * Keys `Notification.CallStyle` files its system actions under. Hidden
+         * from the SDK but fixed since API 31. Answer and decline are not in
+         * the action list, so they have to be read from here.
+         */
+        private const val EXTRA_CALL_TYPE = "android.callType"
+        private const val EXTRA_ANSWER_INTENT = "android.answerIntent"
+        private const val EXTRA_DECLINE_INTENT = "android.declineIntent"
+        private const val CALL_TYPE_INCOMING = 1
+
+        /**
+         * The actions a watch should be offered: the app's own, then a call's
+         * answer and decline. Must be the only way actions are enumerated,
+         * because the index travels to the watch and back; see [actionsOf].
          */
         fun wristActions(
             notification: Notification,
-        ): List<NotificationCompat.Action> {
+        ): List<NotificationCompat.Action> =
+            ownActions(notification) + callActions(notification).map { it.action }
+
+        /**
+         * The app's own actions, wearable ones first. The wearable extender's
+         * list is the one built for a remote device, and the only one whose
+         * reply reliably works: the phone's is usually an immutable
+         * PendingIntent that discards the reply extras.
+         */
+        private fun ownActions(notification: Notification): List<NotificationCompat.Action> {
             val wearable = NotificationCompat.WearableExtender(notification).actions
             if (wearable.isNotEmpty()) return wearable
             return (0 until NotificationCompat.getActionCount(notification))
                 .mapNotNull { NotificationCompat.getAction(notification, it) }
+        }
+
+        /** One of CallStyle's system actions and what it does. */
+        private class CallAction(
+            val role: NotificationActionRole,
+            val action: NotificationCompat.Action,
+        )
+
+        /** Answer then decline, when the notification carries them. The labels are for the log. */
+        private fun callActions(notification: Notification): List<CallAction> {
+            val extras = notification.extras ?: return emptyList()
+            return listOfNotNull(
+                callAction(extras, EXTRA_ANSWER_INTENT, NotificationActionRole.ANSWER_CALL, "Answer"),
+                callAction(extras, EXTRA_DECLINE_INTENT, NotificationActionRole.DECLINE_CALL, "Decline"),
+            )
+        }
+
+        private fun callAction(
+            extras: Bundle,
+            key: String,
+            role: NotificationActionRole,
+            label: String,
+        ): CallAction? {
+            val intent = BundleCompat.getParcelable(extras, key, PendingIntent::class.java)
+                ?: return null
+            return CallAction(role, NotificationCompat.Action.Builder(0, label, intent).build())
+        }
+
+        /**
+         * Whether a call notification is ringing. CallStyle says so. An older
+         * dialer is read as ringing unless it shows a call timer, which only
+         * a connected call does.
+         */
+        fun isRingingCall(notification: Notification): Boolean {
+            val extras = notification.extras ?: return true
+            val type = extras.getInt(EXTRA_CALL_TYPE, 0)
+            if (type != 0) return type == CALL_TYPE_INCOMING
+            return !extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER, false)
         }
     }
 
@@ -99,6 +156,10 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
             val config = NotificationStore.readConfig(this)
             val extras = notification.extras
 
+            // A call that was answered, or placed, leaves the wrist: only a ringing one shows.
+            val call = notification.category == Notification.CATEGORY_CALL
+            val gone = removed || (call && !isRingingCall(notification))
+
             val candidate = NotificationFilter.Candidate(
                 packageName = sbn.packageName,
                 title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString(),
@@ -109,11 +170,12 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
                 groupSummary = notification.flags and Notification.FLAG_GROUP_SUMMARY != 0,
                 localOnly = notification.flags and Notification.FLAG_LOCAL_ONLY != 0,
                 channelImportance = importanceOf(sbn),
+                category = notification.category,
             )
 
             // Same rules minus the content ones, so blocked apps do not leak.
             val verdict = NotificationFilter.verdict(
-                candidate = if (removed) candidate.copy(title = "-", body = "-") else candidate,
+                candidate = if (gone) candidate.copy(title = "-", body = "-") else candidate,
                 config = config,
                 ownPackage = packageName,
                 interruptionFilter = interruptionFilterOrUnknown(),
@@ -125,7 +187,7 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
             }
 
             val id = stableId(sbn)
-            if (removed) {
+            if (gone) {
                 // Gone from the phone, so its actions cannot be fired.
                 NotificationStore.forget(id)
             } else {
@@ -147,8 +209,8 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
                         sbn.postTime
                     },
                     categoryOrdinal = NotificationFilter.categoryOrdinal(notification.category),
-                    removed = removed,
-                    actions = if (removed) emptyList() else actionsOf(notification),
+                    removed = gone,
+                    actions = if (gone) emptyList() else actionsOf(notification),
                     dismissable = sbn.isClearable,
                 ),
             )
@@ -167,6 +229,9 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
      */
     private fun actionsOf(notification: Notification): List<NotificationActionMsg> {
         describeActions(notification)
+        // The call actions sit past the app's own, in [callActions] order.
+        val ownCount = ownActions(notification).size
+        val calls = callActions(notification)
         return wristActions(notification).mapIndexedNotNull { index, action ->
             val title = action.title?.toString()
             if (title.isNullOrBlank()) return@mapIndexedNotNull null
@@ -178,6 +243,7 @@ class OpenVitalsNotificationListenerService : NotificationListenerService() {
                 isReply = !action.remoteInputs.isNullOrEmpty(),
                 // An activity intent cannot be fired from here. Reported, not filtered.
                 fireableFromBackground = action.actionIntent!!.isFireableFromBackground(),
+                role = calls.getOrNull(index - ownCount)?.role ?: NotificationActionRole.NONE,
             )
         }
     }

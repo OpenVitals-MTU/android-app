@@ -115,6 +115,31 @@ class GarminNotificationMessagesTest {
     // encodeGarminNotificationAttributes.
 
     @Test
+    fun `an app-attributes answer is the command, the NUL-terminated package, then each field`() {
+        val blob = encodeGarminAppAttributes(
+            appIdentifier = "com.example.chat",
+            requested = listOf(GarminAppAttribute.APP_NAME.code),
+            appName = "Chat",
+        )
+
+        val expected = b(1) + "com.example.chat".toByteArray() + b(0) +
+            b(0, 4, 0) + "Chat".toByteArray()
+        assertArrayEquals(expected, blob)
+    }
+
+    @Test
+    fun `an unknown app attribute is answered empty, so the watch's walk stays in step`() {
+        val blob = encodeGarminAppAttributes(
+            appIdentifier = "a",
+            requested = listOf(9, GarminAppAttribute.APP_NAME.code),
+            appName = "A",
+        )
+
+        // "a" NUL, then {9, len 0}, then {0, len 1, "A"}.
+        assertArrayEquals(b(1, 'a'.code, 0, 9, 0, 0, 0, 1, 0, 'A'.code), blob)
+    }
+
+    @Test
     fun `writes the command byte and the notification id first`() {
         val blob = encodeGarminNotificationAttributes(
             notification = notification(id = 0x11223344L),

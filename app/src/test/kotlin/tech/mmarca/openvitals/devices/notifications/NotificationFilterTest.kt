@@ -23,6 +23,7 @@ class NotificationFilterTest {
         groupSummary: Boolean = false,
         localOnly: Boolean = false,
         channelImportance: Int = 3,
+        category: String? = null,
     ) = NotificationFilter.Candidate(
         packageName = packageName,
         title = title,
@@ -32,6 +33,7 @@ class NotificationFilterTest {
         groupSummary = groupSummary,
         localOnly = localOnly,
         channelImportance = channelImportance,
+        category = category,
     )
 
     private fun verdict(
@@ -80,6 +82,26 @@ class NotificationFilterTest {
     fun `a foreground-service notification is dropped for the same reason`() {
         assertThat(verdict(candidate(foregroundService = true)))
             .isEqualTo(NotificationFilter.Verdict.ONGOING)
+    }
+
+    @Test
+    fun `a ringing call is kept even though the dialer posts it as ongoing`() {
+        val call = candidate(
+            packageName = "com.android.dialer",
+            title = "Ada",
+            body = "Mobile",
+            ongoing = true,
+            foregroundService = true,
+            category = NotificationFilter.CATEGORY_CALL,
+        )
+        assertThat(verdict(call)).isEqualTo(NotificationFilter.Verdict.KEEP)
+    }
+
+    @Test
+    fun `a call from a blocked app is still dropped`() {
+        val call = candidate(ongoing = true, category = NotificationFilter.CATEGORY_CALL)
+        assertThat(verdict(call, config = enabled.copy(blockedPackages = setOf(call.packageName))))
+            .isEqualTo(NotificationFilter.Verdict.BLOCKED)
     }
 
     @Test

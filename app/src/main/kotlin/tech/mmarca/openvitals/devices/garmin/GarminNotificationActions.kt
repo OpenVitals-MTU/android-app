@@ -1,11 +1,13 @@
 package tech.mmarca.openvitals.devices.garmin
 
+import tech.mmarca.openvitals.devices.notifications.NotificationActionRole
 import tech.mmarca.openvitals.devices.notifications.NotificationMsg
 
 /**
  * Turns a notification's Android actions into the ones a watch can offer.
- * GNCS has fixed slots: a reply, a dismiss and five custom ones. Dismiss is
- * synthesised here and marked [GarminNotificationAction.isSynthetic].
+ * GNCS has fixed slots: a reply, a dismiss, five custom ones, and for a call
+ * an accept and a reject. Dismiss is synthesised here and marked
+ * [GarminNotificationAction.isSynthetic].
  * Kept out of the protocol file, which knows nothing of Android.
  */
 
@@ -34,6 +36,22 @@ fun garminActionsFor(message: NotificationMsg): List<GarminNotificationAction> {
     for (action in message.actions) {
         if (!action.fireableFromBackground) {
             // An activity intent does nothing from the wrist: a dead button.
+            continue
+        }
+        // A call's answer and decline have their own slots; the watch draws them as icons.
+        val callKind = when (action.role) {
+            NotificationActionRole.ANSWER_CALL -> GarminNotificationActionKind.ACCEPT_CALL
+            NotificationActionRole.DECLINE_CALL -> GarminNotificationActionKind.REJECT_CALL
+            NotificationActionRole.NONE -> null
+        }
+        if (callKind != null) {
+            actions.add(
+                GarminNotificationAction(
+                    kind = callKind,
+                    label = action.title,
+                    androidIndex = action.index,
+                ),
+            )
             continue
         }
         if (action.isReply && !replyTaken) {
