@@ -2759,4 +2759,13 @@
     <string name="settings_fit_import_folder_truncated">Esa carpeta es muy grande: solo se importaron los primeros %1$d archivos FIT.</string>
     <string name="settings_fit_import_folder_grant">Permitir la importación</string>
     <string name="settings_fit_import_error">Advertencia de importación FIT: %1$s</string>
+    <string name="activity_recording_plan_set_progress">Establecer %1$d de %2$d</string>
+    <string name="activity_recording_plan_weight">%1$s kg</string>
+    <string name="activity_recording_plan_setup_rest_minutes">resto %1$d min</string>
+    <string name="activity_recording_plan_spoken_reps_weight">%1$s , %2$d repeticiones, %3$s kilogramos</string>
+    <plurals name="activity_recording_plan_spoken_minutes">
+        <item quantity="one">%1$s, %2$d minuto</item>
+        <item quantity="many">%1$s, %2$d minutos</item>
+        <item quantity="other">%1$s, %2$d minutos</item>
+    </plurals>
 </resources>
