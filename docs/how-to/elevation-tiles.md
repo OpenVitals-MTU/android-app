@@ -1,6 +1,6 @@
 # Add Elevation Tiles
 
-OpenVitals can replace the altitude in imported activity files with values from elevation tiles stored on the phone. This fixes routes from a drifting barometric altimeter or from noisy GPS altitude.
+OpenVitals can replace the altitude in imported activity files and in activities recorded on the phone with values from elevation tiles stored on the phone. This fixes routes from a drifting barometric altimeter or from noisy GPS altitude.
 
 For the short feature overview, see [Elevation Correction](../features/elevation-correction.md).
 
@@ -73,14 +73,14 @@ Licence and attribution are the user's responsibility.
 2. Open OpenVitals.
 3. Go to Settings, Activities, Elevation correction.
 4. Tap Import elevation tile and pick a file. Repeat for each tile.
-5. Leave Correct altitude on import switched on.
-6. Import a route file or sync a watch. The review screen and the activity's elevation profile now come from the tile.
+5. Leave Correct altitude from tiles switched on.
+6. Import a route file, sync a watch, or finish a GPS recording. The review screen and the activity's elevation profile now come from the tile.
 
 The import copies the file into app storage and validates its size. It takes about a second.
 
 ## Coverage And Skipped Routes
 
-A route is corrected only when every point is inside an imported tile. A route with one point outside, or on a void sample, keeps the altitudes from the file. If a route's gain did not change after import, check that tiles for every cell it crosses are listed.
+A route is corrected only when every point is inside an imported tile. A route with one point outside, or on a void sample, keeps the altitudes it came with, from the file or from the phone's sensors. If a route's gain did not change after import or recording, check that tiles for every cell it crosses are listed.
 
 ## Manage Tiles
 
@@ -101,7 +101,7 @@ If import fails:
 - Confirm the file is exactly 2,884,802 or 25,934,402 bytes. Any other size means a truncated download or a different format.
 - A zip must hold exactly one `.hgt`. Unzip a regional archive first and import the tiles one by one.
 
-If altitude did not change after an import:
+If altitude did not change after an import or a recording:
 
 - Confirm the toggle is on.
 - Confirm a tile is listed for every cell the route crosses.

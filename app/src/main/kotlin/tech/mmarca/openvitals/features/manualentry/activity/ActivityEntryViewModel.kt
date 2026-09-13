@@ -74,6 +74,7 @@ class ActivityEntryViewModel(
     private val repository: ActivityRepository,
     private val heartRepository: HeartRepository? = null,
     private val routeFileImporter: RouteFileImporter? = null,
+    private val elevationCorrector: RouteElevationCorrector? = null,
     private val activityRecorder: ActivityRecordingController? = null,
     private val recordingDraftStore: ActivityRecordingDraftStore? = null,
     private val preferencesRepository: PreferencesRepository? = null,
@@ -92,6 +93,7 @@ class ActivityEntryViewModel(
         repository: ActivityRepository,
         heartRepository: HeartRepository,
         routeFileImporter: RouteFileImporter,
+        elevationCorrector: RouteElevationCorrector,
         activityRecorder: ActivityRecordingController,
         recordingDraftStore: ActivityRecordingDraftStore,
         preferencesRepository: PreferencesRepository,
@@ -103,6 +105,7 @@ class ActivityEntryViewModel(
         repository = repository,
         heartRepository = heartRepository,
         routeFileImporter = routeFileImporter,
+        elevationCorrector = elevationCorrector,
         activityRecorder = activityRecorder,
         recordingDraftStore = recordingDraftStore,
         preferencesRepository = preferencesRepository,
@@ -1107,20 +1110,19 @@ class ActivityEntryViewModel(
         rememberLastActivityType(snapshot.exerciseType)
 
         if (snapshot.recordingKind == ActivityRecordingKind.GPS_ROUTE && snapshot.points.size >= MinRecordedRoutePoints) {
-            applyRouteImport(
-                RouteFileImport(
-                    fileName = null,
-                    points = snapshot.points,
-                    distanceMeters = snapshot.distanceMeters,
-                    elevationGainedMeters = snapshot.elevationGainedMeters,
-                    startTime = snapshot.startTime,
-                    endTime = snapshot.endTime,
-                    hasRecordedTimestamps = true,
-                    hasImportedTimeRange = true,
-                    originalPointCount = snapshot.points.size,
-                ),
-                units,
+            val recordedRoute = RouteFileImport(
+                fileName = null,
+                points = snapshot.points,
+                distanceMeters = snapshot.distanceMeters,
+                elevationGainedMeters = snapshot.elevationGainedMeters,
+                startTime = snapshot.startTime,
+                endTime = snapshot.endTime,
+                hasRecordedTimestamps = true,
+                hasImportedTimeRange = true,
+                originalPointCount = snapshot.points.size,
             )
+            // Same DEM rule as an imported file: the phone's sensors drift too.
+            applyRouteImport(elevationCorrector?.correct(recordedRoute) ?: recordedRoute, units)
             _uiState.value = _uiState.value.copy(
                 recordedPauseIntervals = snapshot.pauseIntervals,
                 recordedLaps = snapshot.manualLaps.map { it.toExerciseLapData() },

@@ -2114,9 +2114,9 @@
     <string name="settings_offline_maps_help_link">Open offline maps guide</string>
     <string name="settings_offline_maps_help_url" translatable="false">https://docs.openvitals.health/how-to/offline-maps</string>
     <string name="settings_elevation_title">Elevation correction</string>
-    <string name="settings_elevation_body">Replace the altitude in imported GPX, TCX, KML and FIT files, and in watch activities, with values from elevation tiles stored on this phone. Phone recordings are not changed.</string>
-    <string name="settings_elevation_toggle_title">Correct altitude on import</string>
-    <string name="settings_elevation_toggle_body">A route that is not fully covered by your tiles keeps its file altitudes.</string>
+    <string name="settings_elevation_body">Replace the altitude in imported GPX, TCX, KML and FIT files, in watch activities, and in activities recorded on this phone with values from elevation tiles stored here.</string>
+    <string name="settings_elevation_toggle_title">Correct altitude from tiles</string>
+    <string name="settings_elevation_toggle_body">A route that is not fully covered by your tiles keeps its own altitudes.</string>
     <string name="settings_elevation_tiles_empty">No elevation tiles yet. OpenVitals has no internet access. Download the tiles for your area on a computer and import them here.</string>
     <string name="settings_elevation_tile_detail">%1$s • %2$s</string>
     <string name="settings_elevation_tile_resolution_1">1 arc-second (30 m)</string>

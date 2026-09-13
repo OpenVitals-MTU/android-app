@@ -2,11 +2,11 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/activity/elevation`, `features/manualentry/activity/routeimport`, `core/geo`, `features/settings`.
+> **Implementation:** `features/activity/elevation`, `features/manualentry/activity/routeimport`, `features/manualentry/activity/ActivityEntryViewModel.kt`, `core/geo`, `features/settings`.
 > **Navigation:** Settings, Activities, Elevation correction.
 > **Related:** [Feature map](feature-map.md), [Add elevation tiles](../how-to/elevation-tiles.md), [GPX/KML/KMZ/TCX route import](route-file-import.md), [FIT files import](fit-files-import.md), [Watches](watches.md), [Offline maps support](offline-maps-support.md).
 
-A barometric altimeter drifts with the weather, sweat, and age; a watch or phone without one reports noisy GPS altitude. Both inflate elevation gain. Elevation correction replaces the altitude of every point in an imported route with the height from a digital elevation model (DEM) tile stored on the phone, then recomputes the gain from that profile.
+A barometric altimeter drifts with the weather, sweat, and age; a watch or phone without one reports noisy GPS altitude. Both inflate elevation gain. Elevation correction replaces the altitude of every point in an imported or recorded route with the height from a digital elevation model (DEM) tile stored on the phone, then recomputes the gain from that profile.
 
 For where to get tiles and how to import them, see [Add elevation tiles](../how-to/elevation-tiles.md).
 
@@ -14,9 +14,9 @@ For where to get tiles and how to import them, see [Add elevation tiles](../how-
 
 Correction runs when a file is imported: GPX, TCX, KML, KMZ, and FIT files from Settings, Data Importers and Activity Entry, a folder of FIT files, and the activity files a paired watch hands over during sync. All of these go through one importer, so they cannot differ.
 
-Activities recorded on the phone are not changed. They already filter their own barometer and GPS altitude; see [Recording of activity](activity-recording.md).
+It also runs when a GPS recording on the phone is finished. The route the review form shows, and the elevation gain saved with the activity, come from the tile. The figure shown while recording is still the phone's own barometer or GPS reading; see [Recording of activity](activity-recording.md).
 
-Activities already saved in Health Connect are never rewritten. Only new imports are corrected.
+Activities already saved in Health Connect are never rewritten. Only new imports and new recordings are corrected.
 
 ## Coverage And Skip Rule
 

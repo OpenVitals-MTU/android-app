@@ -35,8 +35,8 @@ internal fun RouteFileImport.withDemElevation(correctedPoints: List<ExerciseRout
     )
 
 /**
- * Replaces an imported route's altitudes with offline DEM values. Off, no
- * tiles, or incomplete coverage all return the input unchanged.
+ * Replaces an imported or recorded route's altitudes with offline DEM values.
+ * Off, no tiles, or incomplete coverage all return the input unchanged.
  */
 @Singleton
 class RouteElevationCorrector @Inject constructor(
@@ -48,15 +48,16 @@ class RouteElevationCorrector @Inject constructor(
         if (routeImport.points.isEmpty()) return routeImport
         if (!preferences.elevationCorrectionEnabled || !tiles.hasTiles) return routeImport
 
+        val source = routeImport.fileName ?: "recording"
         val corrected = try {
             correctRouteAltitudes(routeImport.points, tiles::elevationAt)
         } catch (error: IOException) {
-            // A tile that vanished under a mapping: keep what the file said.
-            log("${routeImport.fileName}: tile read failed, kept file altitudes: $error")
+            // A tile that vanished under a mapping: keep what the source said.
+            log("$source: tile read failed, kept source altitudes: $error")
             return routeImport
         }
         if (corrected == null) {
-            log("${routeImport.fileName}: no DEM coverage for every point, kept file altitudes")
+            log("$source: no DEM coverage for every point, kept source altitudes")
             return routeImport
         }
         return routeImport.withDemElevation(corrected)

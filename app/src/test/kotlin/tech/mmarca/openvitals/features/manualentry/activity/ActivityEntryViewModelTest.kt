@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 
 
+import android.content.Context
 import android.net.Uri
 import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
@@ -21,6 +22,9 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -35,7 +39,11 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import tech.mmarca.openvitals.core.geo.HgtResolution
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.features.activity.elevation.ElevationTileRepository
 import tech.mmarca.openvitals.features.workoutplans.toRepetitionSetInputs
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
@@ -62,6 +70,9 @@ class ActivityEntryViewModelTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    @get:Rule
+    val temporaryFolder = TemporaryFolder()
 
     @Test fun `buildWriteRequest converts metric distance and trims text`() {
         val state = ActivityEntryUiState(
@@ -1235,6 +1246,48 @@ class ActivityEntryViewModelTest {
         assertEquals("1.2", vm.uiState.value.distanceText)
     }
 
+    @Test fun `a finished recording takes its altitudes and gain from an imported tile`() = runTest {
+        // Rises 10 m per grid row to the north: 100 m at 59.0 N, 220 m at 59.01 N.
+        writeTile("N59E024.hgt") { row, _ -> 100 + (1200 - row) * 10 }
+        val prefs = activityPrefs()
+        every { prefs.elevationCorrectionEnabled } returns true
+        val recorder = mockk<ActivityRecordingController>()
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
+        every { recorder.coMapsNavigation } returns
+            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
+        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
+        every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
+            startTime = start,
+            endTime = start.plusSeconds(30 * 60),
+            points = listOf(routePoint(start), routePoint(start.plusSeconds(30 * 60), latitude = 59.01)),
+            pauseIntervals = emptyList(),
+            distanceMeters = 1200.0,
+            // The barometer's figure, which the tile must replace.
+            elevationGainedMeters = 999.0,
+        )
+        val context = mockk<Context>()
+        every { context.filesDir } returns temporaryFolder.root
+        val tiles = ElevationTileRepository(context, DefaultDispatcherProvider)
+        val vm = ActivityEntryViewModel(
+            repository = activityRepo(canWrite = true),
+            elevationCorrector = RouteElevationCorrector(tiles, prefs),
+            activityRecorder = recorder,
+            preferencesRepository = prefs,
+            clock = Clock.fixed(start, ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.finishGpsRecording(ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        advanceUntilIdle()
+
+        val route = vm.uiState.value.importedRoute!!
+        assertEquals(listOf(100.0, 220.0), route.points.map { Math.round(it.altitudeMeters!!).toDouble() })
+        assertEquals(120.0, route.elevationGainedMeters, 0.05)
+        assertEquals("120", vm.uiState.value.elevationText)
+    }
+
     @Test fun `saving a restored recording draft clears it`() = runTest {
         val repo = activityRepo(canWrite = true)
         val draftStore = ActivityRecordingDraftStore()
@@ -1884,6 +1937,20 @@ class ActivityEntryViewModelTest {
             // Integration off: the CoMaps start gate stays out of these tests' way.
             every { prefs.activityRecordingPreferences() } returns ActivityRecordingPreferences()
         }
+
+    /** A 3 arc-second tile in the app's tile folder, one value per grid node. */
+    private fun writeTile(name: String, value: (row: Int, col: Int) -> Int) {
+        val resolution = HgtResolution.THREE_ARC_SECOND
+        val n = resolution.samplesPerSide
+        val buffer = ByteBuffer.allocate(resolution.byteSize.toInt()).order(ByteOrder.BIG_ENDIAN)
+        for (row in 0 until n) {
+            for (col in 0 until n) {
+                buffer.putShort(value(row, col).toShort())
+            }
+        }
+        val directory = File(temporaryFolder.root, "elevation_tiles").apply { mkdirs() }
+        File(directory, name).writeBytes(buffer.array())
+    }
 
     private fun routePoint(
         time: Instant,

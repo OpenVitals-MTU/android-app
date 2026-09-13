@@ -57,6 +57,8 @@ GPS vertical readings are noisy, and adding up every small rise between points i
 
 Barometer readings were already filtered and are preferred when the device has one. The same filter is applied to imported route files, so a recorded and an imported version of the same outing agree.
 
+When elevation tiles are imported and correction is on, a finished recording takes its altitudes from the tiles and its gain is recomputed from them, the same way an imported file is. The live figure on the recording screen is still the sensor's; the corrected one appears on the review form. See [Elevation correction](elevation-correction.md).
+
 ## Entry Point
 
 Recording starts from the activity **start hub** (`ActivityStartHub`, the first screen of `Screen.ActivityEntry`) via *Record activity*; the dashboard's Start opens recording setup directly (`mode=record`). "Choose another method" on the setup and recording screens returns to the hub. A finished recording lands in the manual form for review, as before.
