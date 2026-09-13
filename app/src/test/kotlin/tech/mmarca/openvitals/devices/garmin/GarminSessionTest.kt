@@ -46,7 +46,7 @@ class GarminSessionTest {
         /** An Instinct 2X NAKs the 11-byte protobuf ACK with LENGTH_ERROR. */
         var rejectExtendedAcks = false
 
-        fun onFrame(frame: GarminGfdiFrame) {
+        open fun onFrame(frame: GarminGfdiFrame) {
             received.add(frame)
             when (frame.messageType) {
                 GarminMessageId.RESPONSE -> {
@@ -118,6 +118,14 @@ class GarminSessionTest {
                 .writeByte(0x07)
                 .writeInt(0x000000FF)
             return GarminGfdiFrame.build(GarminMessageId.AUTH_NEGOTIATION, w.toBytes())
+        }
+
+        /** The capability exchange: a length byte, then the bitmap. SYNC is bit 3. */
+        fun configuration(): ByteArray {
+            val w = GarminByteWriter()
+                .writeByte(1)
+                .writeByte(1 shl GarminCapability.SYNC.bit)
+            return GarminGfdiFrame.build(GarminMessageId.CONFIGURATION, w.toBytes())
         }
 
         private fun supportedTypes(): ByteArray {
@@ -360,10 +368,11 @@ class GarminSessionTest {
         }
     }
 
-    /** The watch speaks first; then the pipe is pumped until it settles. */
+    /** The watch speaks first: introduction, auth, capabilities; then the pipe is pumped until it settles. */
     private suspend fun pump(watch: FakeWatch, session: GarminSession) {
         watch.outbox.add(watch.deviceInformation())
         watch.outbox.add(watch.authNegotiation())
+        watch.outbox.add(watch.configuration())
         var guard = 0
         while (watch.outbox.isNotEmpty()) {
             if (guard++ > 10000) fail("sync did not settle")
@@ -453,8 +462,56 @@ class GarminSessionTest {
         val events = watch.received
             .filter { it.messageType == GarminMessageId.SYSTEM_EVENT }
             .map { it.payload[0].toInt() }
-        assertEquals(GarminSystemEventType.SYNC_READY.ordinal, events.first())
+        val ready = events.indexOf(GarminSystemEventType.SYNC_READY.ordinal)
+        assertTrue("SYNC_READY sent", ready >= 0)
         assertEquals(GarminSystemEventType.SYNC_COMPLETE.ordinal, events.last())
+        assertTrue(ready < events.lastIndex)
+    }
+
+    @Test
+    fun `the file-types ask and SYNC_READY wait for the capability exchange, as the companion does`() =
+        runTest {
+            // Older firmware ignores requests sent before it has declared its capabilities.
+            val watch = happyWatch()
+            val session = session(this, watch)
+            watch.outbox.add(watch.deviceInformation())
+            watch.outbox.add(watch.authNegotiation())
+            drain(watch, session)
+
+            assertTrue(watch.received.none { it.messageType == GarminMessageId.SUPPORTED_FILE_TYPES_REQUEST })
+            assertTrue(watch.received.none { it.messageType == GarminMessageId.SYSTEM_EVENT })
+
+            watch.outbox.add(watch.configuration())
+            drain(watch, session)
+
+            val types = watch.received.indexOfFirst { it.messageType == GarminMessageId.SUPPORTED_FILE_TYPES_REQUEST }
+            val ready = watch.received.indexOfFirst {
+                it.messageType == GarminMessageId.SYSTEM_EVENT &&
+                    it.payload[0].toInt() == GarminSystemEventType.SYNC_READY.ordinal
+            }
+            assertTrue(types >= 0)
+            assertTrue("SYNC_READY follows the file-types ask", ready > types)
+        }
+
+    @Test
+    fun `SYNC_READY goes out even when the watch never answers the file-types ask`() = runTest {
+        val watch = object : FakeWatch(files = mapOf(0 to directory())) {
+            override fun onFrame(frame: GarminGfdiFrame) {
+                // A watch that stays silent about file types.
+                if (frame.messageType == GarminMessageId.SUPPORTED_FILE_TYPES_REQUEST) {
+                    received.add(frame)
+                    return
+                }
+                super.onFrame(frame)
+            }
+        }
+        val session = session(this, watch)
+        pump(watch, session)
+
+        val events = watch.received
+            .filter { it.messageType == GarminMessageId.SYSTEM_EVENT }
+            .map { it.payload[0].toInt() }
+        assertTrue(GarminSystemEventType.SYNC_READY.ordinal in events)
     }
 
     @Test
@@ -752,7 +809,9 @@ class GarminSessionTest {
     fun `the capabilities exchange turns the watch's weather feature on`() = runTest {
         val watch = FakeWatch(files = mapOf(0 to directory()))
         val session = session(this, watch, keepAnsweringAfterSync = true)
-        pump(watch, session)
+        // Introduce the watch by hand: this test sends its own capability bitmap.
+        watch.outbox.add(watch.deviceInformation())
+        watch.outbox.add(watch.authNegotiation())
         watch.outbox.add(
             GarminGfdiFrame.build(
                 GarminMessageId.CONFIGURATION,
@@ -1116,12 +1175,19 @@ class GarminSessionTest {
         runSync(watch)
 
         // The watch waits for our CONFIGURATION; without it a real device listed nothing.
+        // This watch sends its bitmap twice, once at the handshake and once mid-listing;
+        // each exchange is answered.
         val config = watch.received
             .filter { it.messageType == GarminMessageId.CONFIGURATION }
-        assertEquals(1, config.size)
+        assertEquals(2, config.size)
         // [byte length][bitmap] — 15 bytes, matching what the watch sends.
-        assertEquals(15, config.single().payload.first().toInt())
-        assertEquals(16, config.single().payload.size)
+        for (frame in config) {
+            assertEquals(15, frame.payload.first().toInt())
+            assertEquals(16, frame.payload.size)
+        }
+        // The start-up sequence, though, goes out once.
+        val typeAsks = watch.received.count { it.messageType == GarminMessageId.SUPPORTED_FILE_TYPES_REQUEST }
+        assertEquals(1, typeAsks)
     }
 
     @Test

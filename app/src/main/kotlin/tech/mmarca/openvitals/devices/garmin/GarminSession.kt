@@ -81,6 +81,22 @@ class GarminSession(
     var capabilities: Set<GarminCapability> = emptySet()
         private set
 
+    /** Whether the post-capabilities start-up sequence has gone out. */
+    private var initialised = false
+
+    /** Whether weather has been pushed this session. */
+    private var weatherPushed = false
+
+    /**
+     * Pushes weather on the first capability exchange that declares it. The
+     * watch only asks while connected, links are short, and it caches the push.
+     */
+    private suspend fun pushWeatherOnce() {
+        if (weatherPushed || GarminCapability.WEATHER_CONDITIONS !in capabilities) return
+        weatherPushed = true
+        responders.pushWeatherIfSupported(capabilities)
+    }
+
     /** Protobuf exchanges on the same link. Lazy, so unused sessions pay nothing. */
     val protobuf: GarminProtobufTransport by lazy { GarminProtobufTransport(send = send) }
 
@@ -223,8 +239,8 @@ class GarminSession(
                         model = model,
                     ),
                 )
-                // The watch serves no files until it knows what we support.
-                send(buildSupportedFileTypesRequest())
+                // Nothing else yet: older firmware ignores requests sent before
+                // the capability exchange. The rest goes out on CONFIGURATION.
             }
 
             is GarminAuthNegotiation -> send(buildAuthNegotiationResponse(message))
@@ -242,6 +258,17 @@ class GarminSession(
                     "[GARMIN-CAPS] ${capabilities.joinToString(", ") { it.wireName }}",
                 )
                 send(buildConfigurationResponse())
+                // Some watches send CONFIGURATION again mid-session. Every one is
+                // answered; the start-up sequence below runs once.
+                if (initialised) {
+                    pushWeatherOnce()
+                    return
+                }
+                initialised = true
+                // The companion's post-capabilities sequence, in its order: the file
+                // types ask, the settings, the clock, then SYNC_READY. The watch
+                // serves no files until it knows what we support.
+                send(buildSupportedFileTypesRequest())
                 // Sent on every connection. The weather flag enables the watch's weather feature.
                 send(
                     buildDeviceSettings(
@@ -262,14 +289,15 @@ class GarminSession(
                 }
                 // The clock nudge a companion sends on every connection.
                 send(buildSystemEvent(GarminSystemEventType.TIME_UPDATED))
+                // Unconditional: older firmware waits for it before it subscribes
+                // for notifications or lists files, whatever it said about file types.
+                send(buildSystemEvent(GarminSystemEventType.SYNC_READY))
                 if (hooks.hostForeground?.invoke() == true) {
                     GarminLog.log("[GARMIN-SYNC] telling the watch the app is in the foreground")
                     notifyHostForeground(true)
                 }
                 hooks.onHandshakeReady?.invoke()
-                // Push weather now: the watch only asks while connected, and links are short.
-                // The watch caches what is pushed.
-                responders.pushWeatherIfSupported(capabilities)
+                pushWeatherOnce()
             }
 
             is GarminNotificationSubscription -> {
@@ -307,7 +335,6 @@ class GarminSession(
                             "${it.dataType}/${it.subType}:${it.name}"
                         },
                 )
-                send(buildSystemEvent(GarminSystemEventType.SYNC_READY))
                 // FILTER first: without it a vívoactive 5 listed nothing while holding sleep data.
                 // The listing waits for the answer, so the two cannot race.
                 if (!syncFiles) return
