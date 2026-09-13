@@ -120,6 +120,48 @@ class SleepDayAttributionTest {
         )
     }
 
+    @Test fun `an early bedtime before the night start hour is still the wake-up date's night`() {
+        // Night starts at 23:00, but bed was 22:35. Most of the session lies in the window,
+        // so it is the 9th's night. Start-only attribution dropped it to a nap on the 8th.
+        val window = SleepWindow(startHour = 23, endHour = 10)
+        val early = session("e", t(8, 22, 35), t(9, 6, 42))
+        assertEquals(
+            listOf("e"),
+            sleepSessionsForRange(listOf(early), LocalDate.of(2026, 7, 9), window, zone).map { it.id },
+        )
+        assertEquals("e", dailySleepSummary(listOf(early), LocalDate.of(2026, 7, 9), window, zone)?.id)
+        assertEquals(
+            "not a nap on the evening before",
+            emptyList<String>(),
+            dailyNaps(listOf(early), LocalDate.of(2026, 7, 8), window, zone).map { it.id },
+        )
+    }
+
+    @Test fun `an evening nap that crosses the night start stays a nap on its date`() {
+        // 17:30 to 18:20: more of it lies before 18:00 than after, so it is the 18th's nap.
+        val nap = session("nap", t(18, 17, 30), t(18, 18, 20))
+        assertEquals(
+            emptyList<String>(),
+            sleepSessionsForRange(listOf(nap), LocalDate.of(2026, 7, 19), SleepWindow.Default, zone)
+                .map { it.id },
+        )
+        assertEquals(
+            listOf("nap"),
+            dailyNaps(listOf(nap), LocalDate.of(2026, 7, 18), zone = zone).map { it.id },
+        )
+    }
+
+    @Test fun `a same-day window claims a night that begins the evening before`() {
+        // A 00:00 to 12:00 window. Bed at 23:00 on the 6th is mostly inside the 7th's window.
+        val window = SleepWindow(startHour = 0, endHour = 12)
+        val night = session("n", t(6, 23, 0), t(7, 7, 0))
+        assertEquals("n", dailySleepSummary(listOf(night), LocalDate.of(2026, 7, 7), window, zone)?.id)
+        assertEquals(
+            emptyList<String>(),
+            dailyNaps(listOf(night), LocalDate.of(2026, 7, 6), window, zone).map { it.id },
+        )
+    }
+
     @Test fun `custom window hours move the night boundary`() {
         // 20:00 -> 09:00. A session begun at 09:30 now falls in the daytime gap.
         val window = SleepWindow(startHour = 20, endHour = 9)

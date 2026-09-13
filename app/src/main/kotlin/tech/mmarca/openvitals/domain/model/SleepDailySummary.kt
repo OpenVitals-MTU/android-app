@@ -46,7 +46,7 @@ internal fun sleepRangeWindowFor(
     end = sleepRangeEndFor(selectedDate, sleepWindow).atZone(zone).toInstant(),
 )
 
-/** The sessions of [selectedDate]'s night, by start time, so a sleep-in stays with its night. */
+/** The sessions of [selectedDate]'s night: those its window [claims], so a sleep-in stays with its night. */
 internal fun sleepSessionsForRange(
     sessions: List<SleepData>,
     selectedDate: LocalDate,
@@ -55,7 +55,7 @@ internal fun sleepSessionsForRange(
 ): List<SleepData> {
     val window = sleepRangeWindowFor(selectedDate, sleepWindow, zone)
     return sessions
-        .filter { session -> window.containsStart(session) }
+        .filter { session -> window.claims(session) }
         .sortedWith(sleepSessionOrder)
 }
 
@@ -120,8 +120,12 @@ internal fun dailyNaps(
     val daytimeStart = selectedDate.atTime(sleepWindow.endHour.coerceIn(0, 23), 0).atZone(zone).toInstant()
     // The gap runs to where the next date's night begins.
     val daytimeEnd = sleepRangeStartFor(selectedDate.plusDays(1), sleepWindow).atZone(zone).toInstant()
+    // A session the next night claims is that night, not a nap here.
+    val nextNight = sleepRangeWindowFor(selectedDate.plusDays(1), sleepWindow, zone)
     val daytimeNaps = sessions.filter { session ->
-        !session.startTime.isBefore(daytimeStart) && session.startTime.isBefore(daytimeEnd)
+        !session.startTime.isBefore(daytimeStart) &&
+            session.startTime.isBefore(daytimeEnd) &&
+            !nextNight.claims(session)
     }
     return (nightNaps + daytimeNaps).sortedWith(sleepSessionOrder)
 }
@@ -181,6 +185,20 @@ internal fun dailySleepSummary(
 
 private val sleepSessionOrder =
     compareBy<SleepData> { it.startTime }.thenBy { it.endTime }
+
+/**
+ * A night claims a session that begins inside its window. It also claims one
+ * that begins before the window and spends most of its span inside it: an
+ * early bedtime is still that night, not a nap on the evening before.
+ */
+private fun SleepRangeWindow.claims(session: SleepData): Boolean {
+    if (containsStart(session)) return true
+    if (!session.startTime.isBefore(start)) return false
+    val spanMs = session.endTime.toEpochMilli() - session.startTime.toEpochMilli()
+    if (spanMs <= 0L) return false
+    val overlapMs = minOf(session.endTime, end).toEpochMilli() - start.toEpochMilli()
+    return overlapMs * 2 > spanMs
+}
 
 private fun SleepRangeWindow.containsStart(session: SleepData): Boolean =
     !session.startTime.isBefore(start) && session.startTime.isBefore(end)
