@@ -2768,4 +2768,39 @@
         <item quantity="many">%1$s, %2$d minutos</item>
         <item quantity="other">%1$s, %2$d minutos</item>
     </plurals>
+    <plurals name="activity_recording_plan_cue_rest_minutes">
+        <item quantity="one">Descanso %1$d minuto. Siguiente: %2$s</item>
+        <item quantity="many">Descanso %1$d minutos. Siguiente: %2$s</item>
+        <item quantity="other">Descanso %1$d minutos. Siguiente: %2$s</item>
+    </plurals>
+    <plurals name="activity_recording_plan_cue_rest_last_minutes">
+        <item quantity="one">Descanso %1$d minuto.</item>
+        <item quantity="many">Descanso %1$d minutos.</item>
+        <item quantity="other">Descanso %1$d minutos.</item>
+    </plurals>
+    <string name="activity_entry_set_weight_label">Peso (kg)</string>
+    <string name="workout_plan_goal_seconds_short">segundo</string>
+    <string name="workout_plan_goal_minutes_short">min</string>
+    <string name="workout_plan_preview_minutes">%1$d min</string>
+    <string name="workout_plan_step_sets_label">Conjuntos</string>
+    <string name="workout_plan_step_set_rest_label">Descansa después de cada serie</string>
+    <string name="workout_plan_step_weight_label">Peso (kg)</string>
+    <string name="workout_plan_error_step_sets">Los conjuntos deben estar entre 1 y 99</string>
+    <string name="settings_elevation_tile_import_action">Importar mosaico de elevación</string>
+    <string name="settings_elevation_tile_importing">Importando…</string>
+    <string name="settings_elevation_tile_import_result">Importado %1$s (%2$s).</string>
+    <string name="settings_elevation_tile_import_error">Error al importar el mosaico: %1$s</string>
+    <string name="settings_elevation_help_prompt">¿Quieres aprender dónde obtener mosaicos de elevación? Dirígete a:</string>
+    <string name="settings_elevation_help_link">Abrir la guía de mosaicos de elevación</string>
+    <string name="detail_weight">Peso</string>
+    <string name="workout_plan_error_step_set_rest">El descanso después de cada serie debe ser de 0 o más, hasta 24 horas</string>
+    <string name="workout_plan_error_step_weight">Introduce un peso superior a 0 y hasta 1000 kg</string>
+    <string name="settings_elevation_title">Corrección de elevación</string>
+    <string name="settings_elevation_body">Reemplaza la altitud en los archivos GPX, TCX, KML y FIT importados, en las actividades del reloj y en las actividades registradas en este teléfono con los valores de los mosaicos de elevación guardadas aquí.</string>
+    <string name="settings_elevation_toggle_title">Corrección de altitud con teselas</string>
+    <string name="settings_elevation_toggle_body">Una ruta que no esté totalmente cubierta por tus teselas conservará sus propias altitudes.</string>
+    <string name="settings_elevation_tiles_empty">Aún no hay teselas de elevación. OpenVitals no tiene acceso a internet. Descarga las teselas de tu zona en un ordenador e impórtalas aquí.</string>
+    <string name="settings_elevation_tile_detail">%1$s • %2$s</string>
+    <string name="settings_elevation_tile_resolution_1">Resolución de 30 metros (1 segundo de arco)</string>
+    <string name="settings_elevation_tile_resolution_3">Resolución de 90 metros (3 segundo de arco)</string>
 </resources>
