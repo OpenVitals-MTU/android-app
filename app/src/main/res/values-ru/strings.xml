@@ -181,20 +181,20 @@
     <string name="activity_recording_plan_setup_rest_minutes">отдых %1$d мин</string>
     <string name="activity_recording_plan_spoken_reps_weight">%1$s, %2$d повторений, %3$s килограммов</string>
     <plurals name="activity_recording_plan_spoken_minutes">
-        <item quantity="one">%1$s, %2$d минут</item>
-        <item quantity="few">%1$s, %2$d минут</item>
+        <item quantity="one">%1$s, %2$d минута</item>
+        <item quantity="few">%1$s, %2$d минуты</item>
         <item quantity="many">%1$s, %2$d минут</item>
         <item quantity="other">%1$s, %2$d минут</item>
     </plurals>
     <plurals name="activity_recording_plan_cue_rest_minutes">
-        <item quantity="one">Отдых %1$d минут. Далее: %2$s</item>
-        <item quantity="few">Отдых %1$d минут. Далее: %2$s</item>
+        <item quantity="one">Отдых %1$d минута. Далее: %2$s</item>
+        <item quantity="few">Отдых %1$d минуты. Далее: %2$s</item>
         <item quantity="many">Отдых %1$d минут. Далее: %2$s</item>
         <item quantity="other">Отдых %1$d минут. Далее: %2$s</item>
     </plurals>
     <plurals name="activity_recording_plan_cue_rest_last_minutes">
-        <item quantity="one">Отдых %1$d минут.</item>
-        <item quantity="few">Отдых %1$d минут.</item>
+        <item quantity="one">Отдых %1$d минута.</item>
+        <item quantity="few">Отдых %1$d минуты.</item>
         <item quantity="many">Отдых %1$d минут.</item>
         <item quantity="other">Отдых %1$d минут.</item>
     </plurals>
@@ -285,7 +285,7 @@
     <string name="activity_entry_recording_average_speed">Средняя скорость</string>
     <string name="activity_entry_recording_average_moving_speed">Средняя скорость в движении</string>
     <string name="activity_entry_recording_elevation_gain">Набор высоты</string>
-    <string name="activity_entry_recording_points">Баллы</string>
+    <string name="activity_entry_recording_points">Точки</string>
     <string name="activity_entry_recording_rest_seconds_label">Секунды отдыха</string>
     <string name="activity_entry_recording_end_set">Завершить подход</string>
     <string name="activity_entry_recording_start_next_set">Начать следующий подход</string>
@@ -300,7 +300,7 @@
     <string name="activity_entry_recording_dashboard_layout_three_by_four">3×4</string>
     <string name="activity_entry_recording_dashboard_layout_large_top">Большой верхний виджет</string>
     <string name="activity_entry_recording_dashboard_add_field">Добавить виджет</string>
-    <string name="activity_entry_route_summary">%1$s • %2$s • набор %3$s • %4$d баллов</string>
+    <string name="activity_entry_route_summary">%1$s • %2$s • набор %3$s • %4$d точек</string>
     <string name="activity_entry_route_average_metrics">Средний темп %1$s • средняя скорость %2$s</string>
     <string name="activity_entry_add">Сохранить активность</string>
     <string name="activity_entry_invalid_value">Перед сохранением исправьте выделенные поля.</string>
@@ -1204,8 +1204,8 @@
     <string name="goal_balance_over">Перебор: %1$s</string>
     <string name="goal_balance_on_track">Идёте по плану</string>
     <plurals name="goal_catch_up_per_day">
-        <item quantity="one">≈ %1$s в день в течение оставшихся %2$d дней</item>
-        <item quantity="few">≈ %1$s в день в течение оставшихся %2$d дней</item>
+        <item quantity="one">≈ %1$s в день в течение оставшегося дня</item>
+        <item quantity="few">≈ %1$s в день в течение оставшихся %2$d дня</item>
         <item quantity="many">≈ %1$s в день в течение оставшихся %2$d дней</item>
         <item quantity="other">≈ %1$s в день в течение оставшихся %2$d дней</item>
     </plurals>
@@ -1362,7 +1362,7 @@
     <string name="dashboard_cardio_load_percent">Нагрузка: %1$d%%</string>
     <string name="dashboard_caffeine_today_subtitle">%1$d мг сегодня</string>
     <string name="dashboard_body_energy_subtitle">Начало %1$d +%2$d / −%3$d</string>
-    <string name="dashboard_cardio_load_today_delta">=+%1$d%% сегодня</string>
+    <string name="dashboard_cardio_load_today_delta">+%1$d%% сегодня</string>
     <string name="message_no_activities_period">За выбранный период активности отсутствуют.</string>
     <string name="planned_workout_completed">Завершено</string>
     <string name="planned_workout_blocks">Блоков: %1$d</string>
@@ -1423,7 +1423,7 @@
     <string name="onboarding_category_heart_recovery">Сердце и показатели здоровья</string>
     <string name="onboarding_category_heart_recovery_desc">Health Connect запросит доступ к:\n* Частоте сердечных сокращений\n* Пульсу в покое\n* Вариабельности сердечного ритма</string>
     <string name="onboarding_category_body">Показатели тела</string>
-    <string name="onboarding_category_body_desc">Health Connect запросит доступ к:\n* Весy\n* Росту\n* Жировой массе\n* Безжировой массе тела\n* Базальному обмену веществ\n* Костной массе\n* Массе воды в организме</string>
+    <string name="onboarding_category_body_desc">Health Connect запросит доступ к:\n* Весу\n* Росту\n* Жировой массе\n* Безжировой массе тела\n* Базальному обмену веществ\n* Костной массе\n* Массе воды в организме</string>
     <string name="onboarding_category_activity_extras">Дополнительные данные об активности</string>
     <string name="onboarding_category_activity_extras_desc">Health Connect запросит доступ к:\n* Общему расходу калорий\n* Расходу активных калорий\n* Пройденным этажам\n* Набору высоты\n* Толчкам инвалидной коляски\n* Скорости\n* Мощности\n* Частоте шагов\n* Частоте вращения педалей при езде на велосипеде\n* Запланированным тренировкам, если поддерживаются</string>
     <string name="onboarding_category_nutrition_hydration">Питание и гидратация</string>
@@ -1643,7 +1643,7 @@
     <string name="bp_guide_technique">Выполните 3 измерения с интервалом 30 секунд: первое отбросьте, а в журнал внесите среднее значение второго и третьего.</string>
     <string name="bp_guide_target">Целевой показатель для измерений дома: ниже 135/85 мм рт. ст.</string>
     <string name="report_pdf_bp_position">Положение</string>
-    <string name="report_pdf_stat_change">Изменить</string>
+    <string name="report_pdf_stat_change">Изменение</string>
     <string name="report_pdf_glucose_context">Контекст</string>
     <string name="report_pdf_glucose_fasting">Натощак</string>
     <string name="report_pdf_glucose_before_meal">До еды</string>
@@ -2209,7 +2209,7 @@
     <string name="activity_detail_comaps_to_turn">До поворота: %1$s</string>
     <string name="activity_detail_comaps_to_destination">До пункта назначения: %1$s</string>
     <string name="activity_detail_comaps_to_next_stop">До следующей остановки: %1$s</string>
-    <string name="recording_actively_recorded">Записано автоматически в реальном времени</string>
+    <string name="recording_actively_recorded">Записано в реальном времени</string>
     <string name="recording_automatically_recorded">Записано автоматически</string>
     <string name="recording_manual_entry">Введено вручную</string>
     <string name="recording_unknown">Неизвестно</string>
@@ -2337,11 +2337,11 @@
     <string name="meal_dinner">Ужин</string>
     <string name="meal_snack">Перекус</string>
     <string name="meal_generic">Приём пищи</string>
-    <string name="macro_protein_short">Б %1$sg</string>
-    <string name="macro_carbs_short">У %1$sg</string>
-    <string name="macro_fat_short">Ж %1$sg</string>
-    <string name="macro_fiber">Клетчатка %1$sg</string>
-    <string name="macro_sugar">Сахар %1$sg</string>
+    <string name="macro_protein_short">Б %1$s г</string>
+    <string name="macro_carbs_short">У %1$s г</string>
+    <string name="macro_fat_short">Ж %1$s г</string>
+    <string name="macro_fiber">Клетчатка %1$s г</string>
+    <string name="macro_sugar">Сахар %1$s г</string>
     <string name="caffeine_section_overview">Обзор</string>
     <string name="caffeine_section_dashboard">Панель</string>
     <string name="caffeine_section_analytics">Аналитика</string>
