@@ -2867,4 +2867,22 @@
     <string name="settings_elevation_tile_resolution_1">Resolución de 30 metros (1 segundo de arco)</string>
     <string name="settings_elevation_tile_resolution_3">Resolución de 90 metros (3 segundo de arco)</string>
     <string name="settings_apple_health_import_error_truncated">Este es solo el principio del error. Puedes copiarlo o descargar el informe completo para ver el resto.</string>
+    <string name="interpretation_bp_optimal">Óptimo</string>
+    <string name="interpretation_bp_non_elevated">No elevado</string>
+    <string name="interpretation_bp_high_normal">Normal alta</string>
+    <string name="interpretation_bp_grade_1">Hipertensión de grado 1</string>
+    <string name="interpretation_bp_grade_2">Hipertensión de grado 2</string>
+    <string name="interpretation_bp_grade_3">Hipertensión de grado 3</string>
+    <string name="interpretation_bp_hypertension">Hipertensión</string>
+    <string name="interpretation_bp_source_esh">Fuente: Categorías de presión arterial en consulta de la Sociedad Europea de Hipertensión 2023.</string>
+    <string name="interpretation_bp_source_esc">Fuente: Categorías de presión arterial en consulta de la Sociedad Europea de Cardiología 2024.</string>
+    <string name="interpretation_bp_source_ish">Fuente: Categorías de presión arterial en consulta de la Sociedad Internacional de Hipertensión 2020.</string>
+    <string name="interpretation_bp_explanation_title">Cómo está clasificado</string>
+    <string name="interpretation_bp_explanation_summary">OpenVitals clasifica tu última lectura según las categorías de %1$s. La lectura toma la categoría más alta que alcance cualquiera de los dos valores. Puedes cambiar la guía en Ajustes, dentro de Constantes vitales.</string>
+    <string name="interpretation_bp_explanation_note">Los valores están en mmHg y corresponden a lecturas de adultos tomadas en consulta. Las lecturas en casa suelen ser más bajas. OpenVitals alerta sobre cualquier lectura superior a 180 o 120, independientemente de la guía que elijas.</string>
+    <string name="interpretation_bp_show_categories">Mostrar las categorías</string>
+    <string name="interpretation_bp_hide_categories">Ocultar categorías</string>
+    <string name="interpretation_bp_bounds_lowest">Sistólica por debajo de %1$d y diastólica por debajo de %2$d</string>
+    <string name="interpretation_bp_bounds_either">Sistólica de %1$d o más, o diastólica de %2$d o más</string>
+    <string name="interpretation_bp_bounds_systolic">Sistólica mayor o igual a %1$d</string>
 </resources>
