@@ -16,6 +16,7 @@ import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.MaxInsightAggregateBuckets
 import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
+import tech.mmarca.openvitals.domain.model.exceedsRawHeartRateReadRange
 import tech.mmarca.openvitals.domain.model.heartRateSampleFromAggregateBucket
 import tech.mmarca.openvitals.domain.model.shouldUseAggregatedHeartRateSamples
 import java.time.Duration
@@ -115,10 +116,28 @@ internal class HeartHealthReader(
      * Every sample in `[start, end)`, however grouped. Aggregation is the
      * last resort for a record so long the widened read misses it.
      */
-    suspend fun readRawHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> =
-        support.withLogging("readRawHeartRateSamples[$start..$end]", emptyList()) {
+    suspend fun readRawHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> {
+        if (exceedsRawHeartRateReadRange(Duration.between(start, end))) {
+            // Too long to hold sample by sample. Five-minute buckets, read in chunks.
+            return readHeartRateSamplesForInsights(start, end)
+        }
+        return support.withLogging("readRawHeartRateSamples[$start..$end]", emptyList()) {
             readRawOrAggregatedFallback(start, end)
         }
+    }
+
+    /** The highest bpm in `[start, end)`. Health Connect computes it, so no sample is loaded. */
+    suspend fun readMaxHeartRate(start: Instant, end: Instant): Long? {
+        if (!end.isAfter(start)) return null
+        return support.withNullableLogging("readMaxHeartRate[$start..$end]") {
+            support.client().aggregate(
+                AggregateRequest(
+                    metrics = setOf(HeartRateRecord.BPM_MAX),
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                )
+            )[HeartRateRecord.BPM_MAX]
+        }
+    }
 
     private suspend fun readRawOrAggregatedFallback(start: Instant, end: Instant): List<HeartRateSample> {
         val samples = support.client()

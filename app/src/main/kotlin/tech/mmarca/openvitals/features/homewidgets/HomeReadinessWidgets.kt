@@ -41,11 +41,6 @@ import androidx.glance.unit.ColorProvider
 import dagger.hilt.android.EntryPointAccessors
 import java.time.LocalDate
 import kotlin.math.roundToInt
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
@@ -80,10 +75,6 @@ class HomeDailyReadinessWidget : GlanceAppWidget() {
 
 class HomeDailyReadinessWidgetReceiver : UpdatingHomeWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = HomeDailyReadinessWidget()
-
-    override suspend fun refreshWidget(context: Context, appWidgetId: Int) {
-        refreshDailyReadinessWidget(context, appWidgetId)
-    }
 }
 
 class HomeBodyEnergyWidget : GlanceAppWidget() {
@@ -102,10 +93,6 @@ class HomeBodyEnergyWidget : GlanceAppWidget() {
 
 class HomeBodyEnergyWidgetReceiver : UpdatingHomeWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = HomeBodyEnergyWidget()
-
-    override suspend fun refreshWidget(context: Context, appWidgetId: Int) {
-        refreshBodyEnergyWidget(context, appWidgetId)
-    }
 }
 
 class HomeTodayVitalsWidget : GlanceAppWidget() {
@@ -121,45 +108,22 @@ class HomeTodayVitalsWidget : GlanceAppWidget() {
 
 class HomeTodayVitalsWidgetReceiver : UpdatingHomeWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = HomeTodayVitalsWidget()
-
-    override suspend fun refreshWidget(context: Context, appWidgetId: Int) {
-        refreshTodayVitalsWidget(context, appWidgetId)
-    }
 }
 
 abstract class UpdatingHomeWidgetReceiver : GlanceAppWidgetReceiver() {
-    abstract suspend fun refreshWidget(context: Context, appWidgetId: Int)
-
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
+        // Glance redraws from stored state and owns this broadcast's goAsync.
         super.onUpdate(context, appWidgetManager, appWidgetIds)
-        val pendingResult = goAsync()
-        suspend fun refreshWidgets() {
-            try {
-                appWidgetIds.forEach { appWidgetId ->
-                    if (!hasAppWidgetInfo(context, appWidgetId)) return@forEach
-                    refreshWidget(context, appWidgetId)
-                }
-            } catch (throwable: Throwable) {
-                Log.e(HomeWidgetLogTag, "Home status widget update failed", throwable)
-            }
-        }
-        if (pendingResult == null) {
-            runBlocking(Dispatchers.Default) {
-                refreshWidgets()
-            }
-            return
-        }
-        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
-            try {
-                refreshWidgets()
-            } finally {
-                pendingResult.finish()
-            }
-        }
+        requestRefresh(context.applicationContext, appWidgetIds)
+    }
+
+    /** Health Connect reads go to WorkManager: a receiver has seconds, a worker has minutes. */
+    internal open fun requestRefresh(context: Context, appWidgetIds: IntArray) {
+        homeWidgetRefreshScheduler(context).refreshNow()
     }
 
     // The schedule follows the placed widgets: see HomeWidgetRefreshScheduler.

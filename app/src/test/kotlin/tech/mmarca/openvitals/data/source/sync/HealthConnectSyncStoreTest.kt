@@ -85,7 +85,14 @@ class HealthConnectSyncStoreTest {
     private class FakeOriginDao : SyncedRecordOriginDao {
         val rows = linkedMapOf<String, SyncedRecordOriginEntity>()
 
-        override suspend fun all(): List<SyncedRecordOriginEntity> = rows.values.toList()
+        override suspend fun count(): Int = rows.size
+
+        override suspend fun pageAfter(after: String, limit: Int): List<SyncedRecordOriginEntity> {
+            pageReads++
+            return rows.values.filter { it.clientRecordId > after }.sortedBy { it.clientRecordId }.take(limit)
+        }
+
+        var pageReads = 0
 
         override suspend fun upsertAll(origins: List<SyncedRecordOriginEntity>) {
             origins.forEach { rows[it.clientRecordId] = it }

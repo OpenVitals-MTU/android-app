@@ -50,10 +50,11 @@ internal fun ActivityHeartRateChartCard(
 ) {
     if (samples.isEmpty()) return
 
-    val sorted = samples.sortedBy { it.time }
-    val minBpm = sorted.minOf { it.beatsPerMinute }
-    val maxBpm = sorted.maxOf { it.beatsPerMinute }
-    val avgBpm = sorted.map { it.beatsPerMinute }.average().roundToInt()
+    // Workout samples arrive at 1 Hz. Sort and scan once per list, not per recomposition.
+    val sorted = remember(samples) { samples.sortedBy { it.time } }
+    val minBpm = remember(sorted) { sorted.minOf { it.beatsPerMinute } }
+    val maxBpm = remember(sorted) { sorted.maxOf { it.beatsPerMinute } }
+    val avgBpm = remember(sorted) { sorted.map { it.beatsPerMinute }.average().roundToInt() }
     val paddedMin = (minBpm - 5L).coerceAtLeast(30L)
     val paddedMax = maxBpm + 5L
     // The axis counts only moving time. Samples taken during a pause stack at its start.

@@ -43,6 +43,7 @@ internal object CrashReportEmail {
         reportDetails: CrashReportDetails?,
         savedCrashReport: String,
         diagnosticsLog: String,
+        anrReports: String = "",
     ): CrashReportEmailDraft {
         val hasCrash = reportDetails != null || savedCrashReport.isNotBlank()
         val subject = if (hasCrash) {
@@ -80,6 +81,9 @@ internal object CrashReportEmail {
                     appendLine("Last saved OpenVitals crash report:")
                     appendLine(savedCrashReport.emailSection())
                 }
+                appendLine()
+                appendLine("Recent \"not responding\" records (stack traces only):")
+                appendLine(anrReports.ifBlank { "none" }.emailSection())
                 appendLine()
                 appendLine("Current diagnostics log:")
                 appendLine(diagnosticsLog.ifBlank { "No diagnostics log available." }.emailSection())

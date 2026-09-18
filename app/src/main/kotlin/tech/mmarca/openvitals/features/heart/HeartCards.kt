@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.heart
 
+import androidx.compose.runtime.remember
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 
 import androidx.compose.foundation.layout.Arrangement
@@ -74,7 +75,8 @@ internal fun HeartRateTimelineCard(
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
-    val stats = heartRateTimelineStats(samples)
+    // A day at 1 Hz is about 86k samples. Scan them once per load, not per recomposition.
+    val stats = remember(samples) { heartRateTimelineStats(samples) }
     val sorted = stats.sorted
     val minBpm = stats.minBpm
     val maxBpm = stats.maxBpm

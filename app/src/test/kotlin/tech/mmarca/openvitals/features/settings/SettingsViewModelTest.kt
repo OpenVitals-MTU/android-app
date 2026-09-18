@@ -613,7 +613,7 @@ class SettingsViewModelTest {
         advanceUntilIdle()
 
         assertNull(vm.uiState.value.appleHealthImportError)
-        verify(exactly = 0) { importController.errorFor(staleFailure) }
+        coVerify(exactly = 0) { importController.errorFor(staleFailure) }
     }
 
     @Test fun `apple import observer uses current import work over older failures`() = runTest {
@@ -632,7 +632,7 @@ class SettingsViewModelTest {
                 expectedParsedElements = 1,
             )
         } returns currentWorkId
-        every { importController.errorFor(currentFailure) } returns "current failure"
+        coEvery { importController.errorFor(currentFailure) } returns "current failure"
 
         val vm = viewModel(
             repository = repo(),
@@ -651,7 +651,7 @@ class SettingsViewModelTest {
         advanceUntilIdle()
 
         assertEquals("current failure", vm.uiState.value.appleHealthImportError)
-        verify(exactly = 0) { importController.errorFor(staleFailure) }
+        coVerify(exactly = 0) { importController.errorFor(staleFailure) }
         verify {
             Log.e(
                 AppleHealthImportWorker.LogTag,

@@ -62,23 +62,23 @@ class HydrationRepositoryImpl @Inject constructor(
         preferencesRepository?.recordRecentHydrationAmountMilliliters(milliliters)
     }
 
-    override fun customHydrationDrinks(): List<CustomHydrationDrink> =
+    override suspend fun customHydrationDrinks(): List<CustomHydrationDrink> =
         beverageStore?.beverages()
             ?: preferencesRepository?.customHydrationDrinks().orEmpty()
 
-    override fun saveCustomHydrationDrink(drink: CustomHydrationDrink) {
+    override suspend fun saveCustomHydrationDrink(drink: CustomHydrationDrink) {
         beverageStore?.save(drink) ?: preferencesRepository?.saveCustomHydrationDrink(drink)
     }
 
-    override fun deleteCustomHydrationDrink(drinkId: String) {
+    override suspend fun deleteCustomHydrationDrink(drinkId: String) {
         beverageStore?.delete(drinkId) ?: preferencesRepository?.deleteCustomHydrationDrink(drinkId)
     }
 
-    override fun reorderCustomHydrationDrinks(drinkIds: List<String>) {
+    override suspend fun reorderCustomHydrationDrinks(drinkIds: List<String>) {
         beverageStore?.reorder(drinkIds) ?: preferencesRepository?.reorderCustomHydrationDrinks(drinkIds)
     }
 
-    override fun moveCustomHydrationDrinkToCategory(
+    override suspend fun moveCustomHydrationDrinkToCategory(
         drinkId: String,
         category: BeverageCategory?,
     ) {

@@ -218,8 +218,8 @@ class HealthConnectSyncStore(
 internal fun resolveOriginalSource(
     clientRecordId: String?,
     dataOriginPackage: String,
-    preservedOrigins: Map<String, String>,
-): String = clientRecordId?.let(preservedOrigins::get) ?: dataOriginPackage
+    preservedOrigins: (String) -> String?,
+): String = clientRecordId?.let(preservedOrigins) ?: dataOriginPackage
 
 /** The origin worth persisting, or null for absent, blank, or [localPackageName]. */
 internal fun persistableOrigin(originPackage: String?, localPackageName: String): String? =

@@ -1942,6 +1942,7 @@
     <string name="settings_apple_health_import_report_saved">Import report saved.</string>
     <string name="settings_apple_health_import_report_save_failed">Unable to save import report.</string>
     <string name="settings_apple_health_import_error">Import failed: %1$s</string>
+    <string name="settings_apple_health_import_error_truncated">This is the start of the error. Use Copy error or Download full report for the rest.</string>
     <string name="settings_apple_health_import_permission_denied">Access to the selected file was lost, so the import couldn\'t continue. Select the same Apple Health export again to pick up right where it left off.</string>
     <string name="settings_route_import_title">GPX/KML/KMZ/TCX importer</string>
     <string name="settings_route_import_body">Import GPX, KML, KMZ, or TCX activity files. TCX carries indoor activities that have no GPS. Review one file before saving, or bulk import multiple files directly into Health Connect.</string>

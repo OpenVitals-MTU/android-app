@@ -10,6 +10,8 @@ import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.domain.insights.calculateCardioLoad
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
@@ -43,6 +45,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Immutable
 data class ActivitiesUiState(
@@ -76,6 +79,7 @@ class ActivitiesViewModel(
     private val activityWeekModeChanges: Flow<ActivityWeekMode> = emptyFlow(),
     private val onRangeSelected: (TimeRange) -> Unit = {},
     private val onDailyGoalChanged: (Double) -> Unit = {},
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
 ) : ViewModel() {
 
     @Inject
@@ -264,16 +268,19 @@ class ActivitiesViewModel(
                         plannedWorkouts = plannedWorkouts.await(),
                         previousWorkouts = previousWorkouts.await(),
                         baselineWorkouts = baselineWorkouts.await(),
-                        overviewDays = activityOverviewDays(
-                            start = windows.current.start,
-                            end = windows.current.end,
-                            steps = dailySteps.await(),
-                            nutrition = nutrition.await(),
-                            workouts = loadedWorkouts,
-                            heartRateSamples = heartRateSamples.await(),
-                            restingHeartRate = loadedRestingHeartRate,
-                            hrv = hrv.await(),
-                        ),
+                        // Sorts and groups every heart rate sample in the period. Keep it off Main.
+                        overviewDays = withContext(dispatchers.default) {
+                            activityOverviewDays(
+                                start = windows.current.start,
+                                end = windows.current.end,
+                                steps = dailySteps.await(),
+                                nutrition = nutrition.await(),
+                                workouts = loadedWorkouts,
+                                heartRateSamples = heartRateSamples.await(),
+                                restingHeartRate = loadedRestingHeartRate,
+                                hrv = hrv.await(),
+                            )
+                        },
                         crossDailyRestingHR = loadedRestingHeartRate,
                     )
                 }

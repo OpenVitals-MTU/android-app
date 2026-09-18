@@ -2,8 +2,11 @@ package tech.mmarca.openvitals.data.local.beverage
 
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
@@ -12,15 +15,17 @@ import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 class BeverageStore @Inject constructor(
     private val dao: BeverageDao,
     private val preferencesRepository: PreferencesRepository,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
 ) {
     @Volatile
     private var initialized = false
+    private val initMutex = Mutex()
 
-    fun beverages(): List<CustomHydrationDrink> = withDatabase {
+    suspend fun beverages(): List<CustomHydrationDrink> = withDatabase {
         dao.activeBeverages().map(BeverageEntity::toDomain)
     }
 
-    fun save(drink: CustomHydrationDrink) = withDatabase {
+    suspend fun save(drink: CustomHydrationDrink) = withDatabase {
         val existing = dao.beverageById(drink.id)
         val entity = BeverageEntity.fromDomain(
             drink = drink,
@@ -31,15 +36,15 @@ class BeverageStore @Inject constructor(
         dao.upsert(entity.copy(isDeleted = false))
     }
 
-    fun delete(drinkId: String) = withDatabase {
+    suspend fun delete(drinkId: String) = withDatabase {
         dao.softDelete(drinkId)
     }
 
-    fun moveToCategory(drinkId: String, category: BeverageCategory?) = withDatabase {
+    suspend fun moveToCategory(drinkId: String, category: BeverageCategory?) = withDatabase {
         dao.updateCategory(drinkId, category?.name)
     }
 
-    fun reorder(drinkIds: List<String>) = withDatabase {
+    suspend fun reorder(drinkIds: List<String>) = withDatabase {
         val current = dao.activeBeverages()
         val currentIds = current.map { it.id }.toSet()
         val orderedIds = drinkIds
@@ -49,33 +54,33 @@ class BeverageStore @Inject constructor(
         dao.updateSortOrder(orderedIds + current.map { it.id }.filterNot { it in orderedIdSet })
     }
 
-    private fun ensureInitialized() {
+    // Runs on the IO context. The mutex makes concurrent first calls seed once.
+    private suspend fun ensureInitialized() {
         if (initialized) return
-        synchronized(this) {
+        initMutex.withLock {
             if (initialized) return
-            runBlocking(Dispatchers.IO) {
-                dao.insertDefaults(BeverageEntity.preloadedDefaults())
-                if (!preferencesRepository.hasMigratedHydrationBeveragesToRoom()) {
-                    val nextSortOrder = dao.nextSortOrder()
-                    preferencesRepository.customHydrationDrinks().forEachIndexed { index, drink ->
-                        dao.upsert(
-                            BeverageEntity.fromDomain(
-                                drink = drink,
-                                sortOrder = nextSortOrder + index,
-                                isPreloaded = false,
-                                category = drink.category,
-                            )
+            dao.insertDefaults(BeverageEntity.preloadedDefaults())
+            if (!preferencesRepository.hasMigratedHydrationBeveragesToRoom()) {
+                val nextSortOrder = dao.nextSortOrder()
+                preferencesRepository.customHydrationDrinks().forEachIndexed { index, drink ->
+                    dao.upsert(
+                        BeverageEntity.fromDomain(
+                            drink = drink,
+                            sortOrder = nextSortOrder + index,
+                            isPreloaded = false,
+                            category = drink.category,
                         )
-                    }
-                    preferencesRepository.setMigratedHydrationBeveragesToRoom()
+                    )
                 }
+                preferencesRepository.setMigratedHydrationBeveragesToRoom()
             }
             initialized = true
         }
     }
 
-    private fun <T> withDatabase(block: suspend () -> T): T {
-        ensureInitialized()
-        return runBlocking(Dispatchers.IO) { block() }
-    }
+    private suspend fun <T> withDatabase(block: suspend () -> T): T =
+        withContext(dispatchers.io) {
+            ensureInitialized()
+            block()
+        }
 }

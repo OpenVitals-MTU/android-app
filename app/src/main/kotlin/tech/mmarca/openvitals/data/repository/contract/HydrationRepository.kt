@@ -26,15 +26,15 @@ interface HydrationRepository {
 
     fun recordRecentHydrationAmountMilliliters(milliliters: Double)
 
-    fun customHydrationDrinks(): List<CustomHydrationDrink>
+    suspend fun customHydrationDrinks(): List<CustomHydrationDrink>
 
-    fun saveCustomHydrationDrink(drink: CustomHydrationDrink)
+    suspend fun saveCustomHydrationDrink(drink: CustomHydrationDrink)
 
-    fun deleteCustomHydrationDrink(drinkId: String)
+    suspend fun deleteCustomHydrationDrink(drinkId: String)
 
-    fun reorderCustomHydrationDrinks(drinkIds: List<String>)
+    suspend fun reorderCustomHydrationDrinks(drinkIds: List<String>)
 
-    fun moveCustomHydrationDrinkToCategory(drinkId: String, category: BeverageCategory?)
+    suspend fun moveCustomHydrationDrinkToCategory(drinkId: String, category: BeverageCategory?)
 
     fun hydrationDailyGoalLiters(): Double
 

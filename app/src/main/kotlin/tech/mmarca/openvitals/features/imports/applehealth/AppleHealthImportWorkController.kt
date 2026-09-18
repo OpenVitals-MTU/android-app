@@ -10,7 +10,9 @@ import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 @Singleton
@@ -59,11 +61,12 @@ class AppleHealthImportWorkController @Inject constructor(
         return AppleHealthImportWorker.resultFromData(workInfo.outputData, reportText)
     }
 
-    fun errorFor(workInfo: WorkInfo): String? {
+    /** The full failure report when one was written. A file read, so it runs on IO. */
+    suspend fun errorFor(workInfo: WorkInfo): String? = withContext(Dispatchers.IO) {
         val reportError = AppleHealthImportReportStore.read(
             AppleHealthImportWorker.errorReportPathFromData(workInfo.outputData),
         )
-        return reportError.ifBlank {
+        reportError.ifBlank {
             workInfo.outputData.getString(AppleHealthImportWorker.KeyError)
         }
     }

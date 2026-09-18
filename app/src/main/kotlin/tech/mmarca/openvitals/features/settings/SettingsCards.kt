@@ -117,6 +117,7 @@ import tech.mmarca.openvitals.features.activity.maps.OfflineMapPackFormat
 import tech.mmarca.openvitals.features.activity.maps.labelRes
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportAnalysisResult
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportCategory
+import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportErrorFormatter
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportProgress
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResult
 import tech.mmarca.openvitals.features.imports.applehealth.labelRes
@@ -1967,11 +1968,15 @@ internal fun AppleHealthImportCard(
             }
 
             if (!error.isNullOrBlank()) {
+                // The full text is for copy. The card draws a short preview.
                 val errorText = stringResource(R.string.settings_apple_health_import_error, error)
-                val displayText = if (permissionDenied) {
-                    stringResource(R.string.settings_apple_health_import_permission_denied)
-                } else {
-                    errorText
+                val preview = remember(error) { AppleHealthImportErrorFormatter.preview(error) }
+                val displayText = when {
+                    permissionDenied -> stringResource(R.string.settings_apple_health_import_permission_denied)
+                    preview.truncated ->
+                        stringResource(R.string.settings_apple_health_import_error, preview.text) +
+                            "\n\n" + stringResource(R.string.settings_apple_health_import_error_truncated)
+                    else -> errorText
                 }
                 Column(modifier = Modifier.padding(top = 8.dp)) {
                     OpenVitalsOutlinedButton(

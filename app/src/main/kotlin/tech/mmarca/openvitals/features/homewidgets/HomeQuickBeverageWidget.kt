@@ -26,7 +26,6 @@ import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.AppWidgetId
 import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
@@ -54,7 +53,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlin.math.roundToInt
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
@@ -62,10 +62,7 @@ import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
-import tech.mmarca.openvitals.features.manualentry.hydration.HydrationDrinkLogOutcome
-import tech.mmarca.openvitals.features.manualentry.hydration.HydrationEntryError
 import tech.mmarca.openvitals.features.manualentry.hydration.isValidCustomHydrationDrink
-import tech.mmarca.openvitals.features.manualentry.hydration.logCustomHydrationDrinkEntry
 import tech.mmarca.openvitals.navigation.Screen
 
 class HomeQuickBeverageWidget : GlanceAppWidget() {
@@ -131,16 +128,31 @@ class HomeQuickBeverageOneTapWidget : GlanceAppWidget() {
 class HomeQuickBeverageWidgetReceiver : UpdatingHomeWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = HomeQuickBeverageWidget()
 
-    override suspend fun refreshWidget(context: Context, appWidgetId: Int) {
-        refreshHomeQuickBeverageWidget(context, appWidgetId)
+    override fun requestRefresh(context: Context, appWidgetIds: IntArray) {
+        refreshQuickBeverageWidgets(context, appWidgetIds)
     }
 }
 
 class HomeQuickBeverageOneTapWidgetReceiver : UpdatingHomeWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = HomeQuickBeverageOneTapWidget()
 
-    override suspend fun refreshWidget(context: Context, appWidgetId: Int) {
-        refreshHomeQuickBeverageWidget(context, appWidgetId)
+    override fun requestRefresh(context: Context, appWidgetIds: IntArray) {
+        refreshQuickBeverageWidgets(context, appWidgetIds)
+    }
+}
+
+// These tiles read Room only, so they skip WorkManager and its queue delay.
+private fun refreshQuickBeverageWidgets(context: Context, appWidgetIds: IntArray) {
+    HomeWidgetScope.launch {
+        for (appWidgetId in appWidgetIds) {
+            try {
+                refreshHomeQuickBeverageWidget(context, appWidgetId)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (throwable: Throwable) {
+                Log.e(HomeWidgetLogTag, "Quick beverage widget $appWidgetId refresh failed", throwable)
+            }
+        }
     }
 }
 
@@ -154,80 +166,25 @@ class HomeQuickBeverageLogAction : ActionCallback {
             ?: homeQuickBeverageWidgetSelection(context).drinkIdFor(glanceId)
             ?: getAppWidgetState(context, HomeQuickBeverageWidgetState.definition, glanceId)[HomeQuickBeverageWidgetState.drinkIdKey]
             ?: return
+        val appContext = context.applicationContext
         val entryPoint = EntryPointAccessors.fromApplication(
-            context.applicationContext,
+            appContext,
             HomeQuickBeverageWidgetEntryPoint::class.java,
         )
-        val repository = entryPoint.hydrationRepository()
-        val drink = repository.customHydrationDrinks()
-            .firstOrNull { it.id == drinkId && it.isValidCustomHydrationDrink() }
-        if (drink == null) {
-            updateQuickBeverageWidgetStatus(
-                context = context,
-                glanceId = glanceId,
-                drinkId = drinkId,
-                subtitle = context.getString(R.string.home_quick_beverage_widget_not_configured),
-            )
-            return
-        }
-
-        runCatching {
-            repository.setLastCustomHydrationAmountMilliliters(drink.volumeMilliliters)
-            repository.recordRecentHydrationAmountMilliliters(drink.volumeMilliliters)
-            logCustomHydrationDrinkEntry(
-                repository = repository,
-                nutritionRepository = entryPoint.nutritionRepository(),
-                drink = drink,
-                canWriteHydration = repository.hasHydrationWritePermission(),
-                canWriteNutrition = entryPoint.nutritionRepository().hasNutritionWritePermission(),
-            )
-        }.onSuccess { outcome ->
-            when (outcome) {
-                is HydrationDrinkLogOutcome.Invalid -> {
-                    updateQuickBeverageWidgetStatus(
-                        context = context,
-                        glanceId = glanceId,
-                        drinkId = drinkId,
-                        subtitle = outcome.error.quickBeverageWidgetMessage(context),
-                    )
-                }
-                is HydrationDrinkLogOutcome.Success -> {
-                    if (outcome.value.effectiveLiters > 0.0) {
-                        runCatching { entryPoint.hydrationReminderController().hideReminderNotification() }
-                    }
-                    // Re-anchor the reminder to the drink just logged, as the in-app save does.
-                    runCatching { entryPoint.hydrationReminderController().applyConfig() }
-                    updateQuickBeverageWidgetStatus(
-                        context = context,
-                        glanceId = glanceId,
-                        drinkId = drinkId,
-                        subtitle = context.getString(
-                            if (outcome.value.wroteHydration) {
-                                R.string.home_quick_beverage_widget_saved
-                            } else {
-                                R.string.home_quick_beverage_widget_saved_nutrition
-                            }
-                        ),
-                    )
-                    // Briefly confirm the tap, then revert to the normal widget text.
-                    delay(SavedConfirmationDurationMillis)
-                    updateQuickBeverageWidgetStatus(
-                        context = context,
-                        glanceId = glanceId,
-                        drinkId = drinkId,
-                        subtitle = context.getString(R.string.home_quick_beverage_widget_tap_to_log),
-                    )
-                }
-            }
-        }.onFailure { throwable ->
-            Log.e(HomeWidgetLogTag, "Quick beverage widget log failed", throwable)
-            updateQuickBeverageWidgetStatus(
-                context = context,
-                glanceId = glanceId,
-                drinkId = drinkId,
-                subtitle = context.getString(R.string.home_metric_widget_update_failed),
-            )
-        }
+        val deps = QuickBeverageLogDeps(
+            hydrationRepository = entryPoint.hydrationRepository(),
+            nutritionRepository = entryPoint.nutritionRepository(),
+            onLogged = { logged ->
+                val reminders = entryPoint.hydrationReminderController()
+                if (logged.effectiveLiters > 0.0) reminders.hideReminderNotification()
+                // Re-anchor the reminder to the drink just logged, as the in-app save does.
+                reminders.applyConfig()
+            },
+            showStatus = { drink, status ->
+                showQuickBeverageWidgetStatus(appContext, glanceId, drinkId, drink, status)
+            },
+        )
+        runQuickBeverageTap(drinkId, deps, HomeWidgetScope)
     }
 }
 
@@ -258,7 +215,8 @@ class HomeQuickBeverageWidgetSelection(private val context: Context) {
             ?.takeIf(String::isNotBlank)
         val sharedDrinkId = preferences.getString(drinkKey(appWidgetId), null)
             ?.takeIf(String::isNotBlank)
-            ?.also { drinkId -> updateDrinkOptions(appWidgetId, drinkId) }
+            // An options write makes the system send OPTIONS_CHANGED; skip it when nothing changes.
+            ?.also { drinkId -> if (drinkId != optionDrinkId) updateDrinkOptions(appWidgetId, drinkId) }
         val pendingDrinkId = if (optionDrinkId == null && sharedDrinkId == null) {
             adoptPendingDrink(appWidgetId)
         } else {
@@ -538,6 +496,17 @@ internal suspend fun loadQuickBeverageSnapshot(
     val drink = entryPoint.hydrationRepository()
         .customHydrationDrinks()
         .firstOrNull { it.id == drinkId && it.isValidCustomHydrationDrink() }
+    return quickBeverageSnapshot(context, drinkId, drink, entryPoint.unitFormatter(), subtitleOverride)
+}
+
+/** The tile for a drink already in hand. No storage read. */
+internal fun quickBeverageSnapshot(
+    context: Context,
+    drinkId: String,
+    drink: CustomHydrationDrink?,
+    unitFormatter: UnitFormatter,
+    subtitleOverride: String? = null,
+): HomeQuickBeverageSnapshot {
     val route = Screen.HydrationEntryLogDrink.createRoute(drinkId)
     return if (drink == null) {
         HomeQuickBeverageSnapshot(
@@ -551,7 +520,7 @@ internal suspend fun loadQuickBeverageSnapshot(
         HomeQuickBeverageSnapshot(
             drinkId = drink.id,
             title = drink.name,
-            amount = quickBeverageAmountLabel(drink, entryPoint.unitFormatter()),
+            amount = quickBeverageAmountLabel(drink, unitFormatter),
             subtitle = subtitleOverride ?: context.getString(R.string.home_quick_beverage_widget_tap_to_log),
             route = route,
         )
@@ -568,13 +537,24 @@ internal fun quickBeverageAmountLabel(
         unitFormatter.hydration(drink.volumeLiters).text
     }
 
-private suspend fun updateQuickBeverageWidgetStatus(
+private suspend fun showQuickBeverageWidgetStatus(
     context: Context,
     glanceId: GlanceId,
     drinkId: String,
-    subtitle: String,
+    drink: CustomHydrationDrink?,
+    status: QuickBeverageStatus,
 ) {
-    val snapshot = loadQuickBeverageSnapshot(context, drinkId, subtitle)
+    val subtitle = context.getString(status.labelRes())
+    val snapshot = if (drink == null) {
+        // Rare path: the drink is gone or the read failed. Look again.
+        loadQuickBeverageSnapshot(context, drinkId, subtitle)
+    } else {
+        val entryPoint = EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            HomeQuickBeverageWidgetEntryPoint::class.java,
+        )
+        quickBeverageSnapshot(context, drinkId, drink, entryPoint.unitFormatter(), subtitle)
+    }
     writeQuickBeverageWidgetSnapshot(context, glanceId, snapshot)
     val appWidgetId = glanceId.appWidgetIdOrNull()
     val widget = if (appWidgetId == null) {
@@ -585,16 +565,15 @@ private suspend fun updateQuickBeverageWidgetStatus(
     widget.update(context, glanceId)
 }
 
-private fun HydrationEntryError.quickBeverageWidgetMessage(context: Context): String =
+private fun QuickBeverageStatus.labelRes(): Int =
     when (this) {
-        HydrationEntryError.MISSING_WRITE_PERMISSION,
-        HydrationEntryError.MISSING_NUTRITION_WRITE_PERMISSION -> context.getString(R.string.home_metric_widget_permission_needed)
-        HydrationEntryError.INVALID_AMOUNT,
-        HydrationEntryError.INVALID_CUSTOM_DRINK,
-        HydrationEntryError.WRITE_FAILED -> context.getString(R.string.home_metric_widget_update_failed)
+        QuickBeverageStatus.NOT_CONFIGURED -> R.string.home_quick_beverage_widget_not_configured
+        QuickBeverageStatus.SAVED -> R.string.home_quick_beverage_widget_saved
+        QuickBeverageStatus.SAVED_NUTRITION -> R.string.home_quick_beverage_widget_saved_nutrition
+        QuickBeverageStatus.PERMISSION_NEEDED -> R.string.home_metric_widget_permission_needed
+        QuickBeverageStatus.FAILED -> R.string.home_metric_widget_update_failed
+        QuickBeverageStatus.TAP_TO_LOG -> R.string.home_quick_beverage_widget_tap_to_log
     }
-
-private const val SavedConfirmationDurationMillis = 1_200L
 
 private val QuickBeverageDrinkIdParameterKey =
     ActionParameters.Key<String>("quick_beverage_drink_id")

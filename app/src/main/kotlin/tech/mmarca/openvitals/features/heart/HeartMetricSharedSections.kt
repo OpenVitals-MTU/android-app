@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.heart
 
+import androidx.compose.runtime.remember
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -169,14 +170,18 @@ internal fun <T> HeartRawDataConfidenceContent(
     accentColor: Color,
 ) {
     val zone = ZoneId.systemDefault()
-    DataConfidenceCard(
-        confidence = dataConfidence(
+    // Two passes over every sample. Once per list, not per recomposition.
+    val confidence = remember(period, entries) {
+        dataConfidence(
             period = period,
             trackedDates = entries.map { time(it).atZone(zone).toLocalDate() },
             sampleCount = entries.size,
             sources = entries.map(source),
             valueKind = DataValueKind.MEASURED,
-        ),
+        )
+    }
+    DataConfidenceCard(
+        confidence = confidence,
         accentColor = accentColor,
         modifier = metricModifier(),
     )
@@ -372,15 +377,16 @@ internal fun HeartRateSampleStatisticsContent(
     selectedRange: TimeRange,
     unitFormatter: UnitFormatter,
 ) {
-    val stats = heartRateSampleStats(samples) ?: return
+    val stats = remember(samples) { heartRateSampleStats(samples) } ?: return
     val average = stats.average
+    val previousAverage = remember(previousSamples) { heartRateSampleAverage(previousSamples) }
     HeartNumericStatisticsContent(
         unitFormatter = unitFormatter,
         average = unitFormatter.heartRate(average.roundToInt().toLong()),
         low = unitFormatter.heartRate(stats.low),
         high = unitFormatter.heartRate(stats.high),
         readings = stats.readings,
-        comparison = heartRateSampleAverage(previousSamples)?.let { periodComparison(average, it) },
+        comparison = previousAverage?.let { periodComparison(average, it) },
         selectedRange = selectedRange,
         comparisonValueFormatter = { unitFormatter.heartRate(it.roundToInt().toLong()) },
         icon = Icons.Outlined.Favorite,
@@ -1211,7 +1217,7 @@ internal fun <T> HeartEntryListContent(
 ) {
     PaginatedEntryList(
         title = entryListTitle(titleDate, dateTimeFormatterProvider),
-        entries = entries.sortedByDescending(time),
+        entries = remember(entries) { entries.sortedByDescending(time) },
     ) { entry, rowModifier ->
         VitalsReadingRow(
             label = value(entry),

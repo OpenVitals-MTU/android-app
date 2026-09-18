@@ -437,6 +437,9 @@ class HealthConnectManager @Inject constructor(
     suspend fun readRawHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> =
         heartReader.readRawHeartRateSamples(start, end)
 
+    suspend fun readMaxHeartRate(start: Instant, end: Instant): Long? =
+        heartReader.readMaxHeartRate(start, end)
+
     suspend fun readDailyHeartRateSummaries(
         startDate: LocalDate,
         endDate: LocalDate,

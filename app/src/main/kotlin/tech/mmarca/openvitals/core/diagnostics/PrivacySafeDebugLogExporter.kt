@@ -27,7 +27,7 @@ object PrivacySafeDebugLogExporter {
         context: Context,
         outputStream: OutputStream,
     ): DebugLogExportResult = withContext(Dispatchers.IO) {
-        val payload = currentProcessLogcatPayload(context)
+        val payload = currentProcessLogcatPayload(context, includeAnrRecords = true)
         outputStream.writer(Charsets.UTF_8).use { writer ->
             writer.append(payload.text)
         }
@@ -41,7 +41,11 @@ object PrivacySafeDebugLogExporter {
     internal fun currentProcessLogcatTextBlocking(context: Context): String =
         currentProcessLogcatPayload(context).text
 
-    private fun currentProcessLogcatPayload(context: Context): DebugLogExportPayload {
+    // The email draft has its own section for the records, so it leaves them out here.
+    private fun currentProcessLogcatPayload(
+        context: Context,
+        includeAnrRecords: Boolean = false,
+    ): DebugLogExportPayload {
         check(BuildConfig.OPENVITALS_DIAGNOSTICS) {
             "Debug log export is only available in diagnostics builds."
         }
@@ -60,6 +64,12 @@ object PrivacySafeDebugLogExporter {
             appendLine("droppedLines=${exported.droppedLines}")
             appendLine()
             exported.lines.forEach(::appendLine)
+            if (includeAnrRecords) {
+                // This logcat is the live process only. A frozen, killed process left its trace with the system.
+                appendLine()
+                appendLine("Recent \"not responding\" records (stack traces only):")
+                appendLine(AnrExitInfo.recent(context).ifBlank { "none" })
+            }
         }
         return DebugLogExportPayload(
             text = text,

@@ -129,7 +129,7 @@ class SyncRecordOriginTest {
             resolveOriginalSource(
                 clientRecordId = fingerprint,
                 dataOriginPackage = openVitals,
-                preservedOrigins = mapOf(fingerprint to gadgetbridge),
+                preservedOrigins = mapOf(fingerprint to gadgetbridge)::get,
             ),
         )
     }
@@ -141,7 +141,7 @@ class SyncRecordOriginTest {
             resolveOriginalSource(
                 clientRecordId = null,
                 dataOriginPackage = gadgetbridge,
-                preservedOrigins = emptyMap(),
+                preservedOrigins = { null },
             ),
         )
         // A synced record with no preserved origin still announces the local attribution.
@@ -150,7 +150,7 @@ class SyncRecordOriginTest {
             resolveOriginalSource(
                 clientRecordId = "sync_abc",
                 dataOriginPackage = openVitals,
-                preservedOrigins = emptyMap(),
+                preservedOrigins = { null },
             ),
         )
     }

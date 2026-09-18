@@ -402,10 +402,9 @@ class BodyEnergyRepositoryImpl(
                 .filter { it > 0L }
                 .medianLongOrNull()
         }
-        // Observed max is taken over the whole baseline window.
+        // Observed max is taken over the whole baseline window. An aggregate: loading 28 days of samples ran out of memory.
         val observedMax = async {
-            heartRepository.loadHeartRateSamples(baselineStartInstant, dayStart)
-                .maxOfOrNull { it.beatsPerMinute }
+            heartRepository.loadMaxHeartRate(baselineStartInstant, dayStart)
         }
         val hrvBaseline = async {
             heartRepository.loadDailyHRV(baselineStart, baselineEnd)

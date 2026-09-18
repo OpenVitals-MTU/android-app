@@ -125,7 +125,16 @@ class VitalsHistorySyncService @Inject constructor(
         val earliest = today.minusDays(HistoryLookbackDays)
         // Register the token before the slow read, so records written meanwhile are caught.
         val token = hc.getChangesToken(spec.recordType)
-        val rows = spec.read(earliest, today)
+        // These reads load raw records. A per-minute metric is a million of them over the
+        // full history, so read a chunk at a time and keep only its daily rows.
+        val rows = mutableListOf<VitalsDailyAggregateEntity>()
+        var chunkEnd = today
+        while (!chunkEnd.isBefore(earliest)) {
+            val chunkStart = maxOf(chunkEnd.minusDays(FullSyncChunkDays - 1), earliest)
+            rows += spec.read(chunkStart, chunkEnd)
+            chunkEnd = chunkStart.minusDays(1)
+        }
+        // One swap at the end, so a reader never sees half a history.
         dao.replaceMetric(spec.key, rows)
         dao.writeFullSync(
             VitalsSyncCursorEntity(
@@ -179,8 +188,11 @@ class VitalsHistorySyncService @Inject constructor(
         }
     }
 
-    private companion object {
+    internal companion object {
         private const val TAG = "VitalsHistorySync"
+
+        /** Days of raw records held at once per metric. Chunks end on local days, so no day is split. */
+        const val FullSyncChunkDays = 30L
     }
 }
 

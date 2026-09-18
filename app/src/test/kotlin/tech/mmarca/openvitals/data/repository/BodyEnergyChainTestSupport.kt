@@ -74,6 +74,7 @@ class FakeHeartRepository(
         }
         coEvery { heart.loadDailyHRV(any(), any()) } returns emptyList()
         coEvery { heart.loadHeartRateSamples(any<Instant>(), any<Instant>()) } returns emptyList()
+        coEvery { heart.loadMaxHeartRate(any(), any()) } returns null
     }
 }
 

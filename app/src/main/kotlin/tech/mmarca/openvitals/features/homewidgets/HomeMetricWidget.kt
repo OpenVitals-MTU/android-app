@@ -5,7 +5,6 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
@@ -22,7 +21,6 @@ import androidx.glance.LocalContext
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.AppWidgetId
 import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
@@ -49,11 +47,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import java.time.LocalDate
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import tech.mmarca.openvitals.MainActivity
 import tech.mmarca.openvitals.R
@@ -109,50 +102,8 @@ class HomeMetricWidget : GlanceAppWidget() {
     }
 }
 
-class HomeMetricWidgetReceiver : GlanceAppWidgetReceiver() {
+class HomeMetricWidgetReceiver : UpdatingHomeWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = HomeMetricWidget()
-
-    override fun onUpdate(
-        context: Context,
-        appWidgetManager: AppWidgetManager,
-        appWidgetIds: IntArray,
-    ) {
-        super.onUpdate(context, appWidgetManager, appWidgetIds)
-        val pendingResult = goAsync()
-        suspend fun refreshWidgets() {
-            try {
-                appWidgetIds.forEach { appWidgetId ->
-                    refreshHomeMetricWidget(context, appWidgetId)
-                }
-            } catch (throwable: Throwable) {
-                Log.e(HomeWidgetLogTag, "Home metric widget update failed", throwable)
-            }
-        }
-        if (pendingResult == null) {
-            runBlocking(Dispatchers.Default) {
-                refreshWidgets()
-            }
-            return
-        }
-        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
-            try {
-                refreshWidgets()
-            } finally {
-                pendingResult.finish()
-            }
-        }
-    }
-
-    // The schedule follows the placed widgets: see HomeWidgetRefreshScheduler.
-    override fun onEnabled(context: Context) {
-        super.onEnabled(context)
-        homeWidgetRefreshScheduler(context).reconcile()
-    }
-
-    override fun onDisabled(context: Context) {
-        super.onDisabled(context)
-        homeWidgetRefreshScheduler(context).reconcile()
-    }
 }
 
 object HomeMetricWidgetState {
