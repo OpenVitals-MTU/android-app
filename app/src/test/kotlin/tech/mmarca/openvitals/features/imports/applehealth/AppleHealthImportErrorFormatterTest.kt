@@ -62,4 +62,38 @@ class AppleHealthImportErrorFormatterTest {
         assertEquals("hello report", AppleHealthImportReportStore.read(reportPath))
         assertEquals("boom", AppleHealthImportReportStore.read(failurePath))
     }
+
+    @Test
+    fun `a short error is shown whole`() {
+        val preview = AppleHealthImportErrorFormatter.preview("java.io.IOException: disk full\r\n  at Foo.bar(Foo.kt:1)")
+
+        assertFalse(preview.truncated)
+        assertTrue(preview.text.startsWith("java.io.IOException: disk full"))
+    }
+
+    @Test
+    fun `an hour of worker log lines is cut to a card-sized preview`() {
+        // A failure report: header, a heartbeat line every 30 seconds, then a stack trace.
+        val report = buildString {
+            appendLine("OpenVitals Apple Health import report")
+            appendLine("Error: java.lang.IllegalStateException: rate limited")
+            repeat(5_000) { appendLine("2026-09-18T17:00:00Z [WORKER] Progress heartbeat phase=IMPORTING scanned=$it/900000") }
+        }
+
+        val preview = AppleHealthImportErrorFormatter.preview(report)
+
+        assertTrue(preview.truncated)
+        assertTrue(preview.text.length <= AppleHealthImportErrorFormatter.MaxPreviewCharacters)
+        assertTrue(preview.text.lines().size <= AppleHealthImportErrorFormatter.MaxPreviewLines)
+        // The summary is at the top of a report, so the preview keeps it.
+        assertTrue(preview.text.contains("rate limited"))
+    }
+
+    @Test
+    fun `one very long line is cut too`() {
+        val preview = AppleHealthImportErrorFormatter.preview("x".repeat(100_000))
+
+        assertTrue(preview.truncated)
+        assertEquals(AppleHealthImportErrorFormatter.MaxPreviewCharacters, preview.text.length)
+    }
 }
