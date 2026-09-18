@@ -355,6 +355,110 @@ class GarminWatchSyncService @Inject constructor(
     }
 
     /**
+     * Writes [bytes] to the watch as a new [type] file, on a link opened for
+     * this one send. Never throws for a watch that is busy, away or unwilling:
+     * the result says which.
+     */
+    suspend fun uploadFile(
+        device: BleSensorDevice,
+        type: GarminUploadFileType,
+        bytes: ByteArray,
+        onStage: (GarminSendStage) -> Unit = {},
+    ): GarminSendFileResult {
+        // As for a sync: the recording owns the radio.
+        if (recordingController.state.value.isActive) return GarminSendFileResult.RecordingActive
+        // The SYNC lease is shared with a sync, so the mutex is what keeps the two apart.
+        if (!syncMutex.tryLock()) return GarminSendFileResult.SyncRunning
+        return try {
+            onStage(GarminSendStage.CONNECTING)
+            withTimeoutOrNull(SEND_TIMEOUT) {
+                withRadioLease(device.address, RadioLeaseOwner.SYNC) {
+                    runUpload(device, type, bytes, onStage)
+                }
+            } ?: GarminSendFileResult.NoAnswer
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: RadioLeaseBusyException) {
+            GarminSendFileResult.Busy(error.holder)
+        } catch (error: Exception) {
+            GarminLog.log("[GARMIN-SEND] could not reach the watch: $error")
+            GarminSendFileResult.Unreachable
+        } finally {
+            syncMutex.unlock()
+        }
+    }
+
+    private suspend fun runUpload(
+        device: BleSensorDevice,
+        type: GarminUploadFileType,
+        bytes: ByteArray,
+        onStage: (GarminSendStage) -> Unit,
+    ): GarminSendFileResult {
+        val result = withOneShotSession(device.address, tag = "[GARMIN-SEND]") { session ->
+            // Free here, and a watch that never synced has no list yet.
+            stateStore.recordCapabilities(device.id, session.capabilities)
+            onStage(GarminSendStage.SENDING)
+            session.uploads.upload(type, bytes, session.deviceInformation?.maxPacketSize).also {
+                // Closing at once could cut off the closing system event.
+                if (it == GarminUploadResult.Sent) delay(SEND_FLUSH_DELAY)
+            }
+        }
+        return when (result) {
+            null -> GarminSendFileResult.HandshakeTimeout
+            GarminUploadResult.Sent -> GarminSendFileResult.Sent
+            is GarminUploadResult.Refused -> GarminSendFileResult.Refused(result.reason)
+            is GarminUploadResult.NoAnswer -> GarminSendFileResult.NoAnswer
+            GarminUploadResult.LinkLost -> GarminSendFileResult.LinkLost
+            GarminUploadResult.Busy -> GarminSendFileResult.SyncRunning
+        }
+    }
+
+    /**
+     * Opens a link for one short exchange and always closes it. [body] runs
+     * once the handshake is done. Null when the watch never finished it.
+     */
+    private suspend fun <T : Any> withOneShotSession(
+        address: String,
+        tag: String,
+        body: suspend (GarminSession) -> T,
+    ): T? = coroutineScope {
+        val client = GarminGattClient(context, address)
+        var transport: GarminFrameTransport? = null
+        val ready = CompletableDeferred<Unit>()
+        val session = GarminSession(
+            scope = this,
+            send = { frame ->
+                (transport ?: throw GarminGattClientException("Not connected")).sendFrame(frame)
+            },
+            bluetoothName = phone.bluetoothName,
+            manufacturer = phone.manufacturer,
+            model = phone.model,
+            // A file sync would die mid-transfer when the link closes.
+            syncFiles = false,
+            hooks = GarminSessionHooks(onHandshakeReady = { ready.complete(Unit) }),
+        )
+        val frames = Channel<GarminGfdiFrame>(Channel.UNLIMITED)
+        val pump = launch { for (frame in frames) session.handleFrame(frame) }
+        val dropWatch = launch { client.onDisconnected.collect { session.abort(it) } }
+        try {
+            transport = client.connect(onFrame = { frame -> frames.trySend(frame) })
+            session.start()
+            // The watch ignores anything sent before the handshake finishes.
+            if (withTimeoutOrNull(HANDSHAKE_TIMEOUT) { ready.await() } == null) {
+                GarminLog.log("$tag the watch never finished its handshake")
+                return@coroutineScope null
+            }
+            body(session)
+        } finally {
+            dropWatch.cancel()
+            pump.cancel()
+            frames.close()
+            client.close()
+            GarminLog.log("$tag link closed")
+        }
+    }
+
+    /**
      * Connect, run the GFDI session, return what it downloaded. Throws
      * [GarminGattClientException] when the watch cannot be reached. A dropped
      * link is not an error: the session returns what it already has.
@@ -564,6 +668,12 @@ class GarminWatchSyncService @Inject constructor(
 
         /** A best-effort cancel must not hold the link hostage. */
         val FIND_CANCEL_TIMEOUT = 3.seconds
+
+        /** A whole-send safety net: handover, handshake and a small file fit well inside. */
+        val SEND_TIMEOUT = 45.seconds
+
+        /** Lets the last frame leave before the link closes. */
+        val SEND_FLUSH_DELAY = 1.seconds
         val BATTERY_TIMEOUT = 5.seconds
     }
 }

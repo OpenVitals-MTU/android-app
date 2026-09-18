@@ -100,6 +100,9 @@ class GarminSession(
     /** Protobuf exchanges on the same link. Lazy, so unused sessions pay nothing. */
     val protobuf: GarminProtobufTransport by lazy { GarminProtobufTransport(send = send) }
 
+    /** Phone-to-watch file uploads on the same link. */
+    val uploads: GarminFileUploader by lazy { GarminFileUploader(send = send) }
+
     private val doneDeferred = CompletableDeferred<List<GarminDownloadedFile>>()
 
     /** Files fetched this run, handed to the importer when the sync completes. */
@@ -348,6 +351,12 @@ class GarminSession(
             is GarminDownloadRequestStatus -> onDownloadStatus(message)
 
             is GarminFileTransferData -> onFileChunk(message)
+
+            is GarminCreateFileStatus -> uploads.onCreateFileStatus(message)
+
+            is GarminUploadRequestStatus -> uploads.onUploadRequestStatus(message)
+
+            is GarminFileTransferDataStatus -> uploads.onDataStatus(message)
 
             is GarminSynchronization -> {
                 // The watch announcing what it holds. Filter, then list.
@@ -814,6 +823,7 @@ class GarminSession(
     /** Ends the sync early. What was already downloaded is still returned. */
     fun abort(reason: Any? = null) {
         protobuf.abort()
+        uploads.abort()
         val message = reason?.toString() ?: "The Garmin session ended unexpectedly."
         if (finished) {
             if (abortReason == null) abortReason = message

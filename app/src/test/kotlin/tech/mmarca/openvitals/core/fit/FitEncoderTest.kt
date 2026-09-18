@@ -109,6 +109,46 @@ class FitEncoderTest {
         assertEquals("A ver", message.strings[8])
     }
 
+    @Test fun `a string is never cut inside a character`() {
+        val encoder = FitEncoder()
+        encoder.defineMessage(0, 29, listOf(FitEncoderField(0, FitBaseType.STRING, size = 6)))
+        // Five bytes fit. The second "é" would straddle the cut.
+        encoder.writeMessage(0, strings = mapOf(0 to "abcdéé"))
+        val bytes = ByteArrayOutputStream().also(encoder::writeTo).toByteArray()
+
+        val message = FitDecoder.readFile(bytes, startOffset = 0).messages.single()
+
+        assertEquals("abcd", message.strings[0])
+    }
+
+    @Test fun `a uint32z round-trips and its absent value is zero`() {
+        val encoder = FitEncoder()
+        encoder.defineMessage(
+            0, 0,
+            listOf(
+                FitEncoderField(3, FitBaseType.UINT32Z),
+                FitEncoderField(4, FitBaseType.UINT32Z),
+            ),
+        )
+        encoder.writeMessage(0, values = mapOf(3 to 3_000_000_000L))
+        val bytes = ByteArrayOutputStream().also(encoder::writeTo).toByteArray()
+
+        val message = FitDecoder.readFile(bytes, startOffset = 0).messages.single()
+
+        assertEquals(3_000_000_000L, message.values[3])
+        assertNull(message.values[4])
+    }
+
+    @Test fun `semicircles round and never produce the invalid value`() {
+        assertEquals(0L, fitSemicircles(0.0))
+        assertEquals(1_073_741_824L, fitSemicircles(90.0))
+        assertEquals(-1_073_741_824L, fitSemicircles(-90.0))
+        assertEquals(582_903_417L, fitSemicircles(48.8584))
+        assertEquals(-2_147_483_648L, fitSemicircles(-180.0))
+        // +180 is the same meridian, and 0x7FFFFFFF would read as "no value".
+        assertEquals(-2_147_483_648L, fitSemicircles(180.0))
+    }
+
     @Test fun `fit timestamps invert fitInstant`() {
         val time = Instant.parse("2026-05-26T08:30:00Z")
 

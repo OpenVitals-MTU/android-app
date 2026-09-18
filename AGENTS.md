@@ -90,7 +90,7 @@ Do not break these without an explicit decision. They are app-wide, and each has
 
 - **No `INTERNET` permission.** The manifest removes `INTERNET`, `ACCESS_NETWORK_STATE`, and `ACCESS_WIFI_STATE`. Phone-to-phone sync is Bluetooth Classic specifically so this stays true. Never add a dependency that needs a socket.
 - **One foreground service at a time.** Activity recording, the Apple Health import, and phone sync contend for the single foreground slot and refuse rather than queue.
-- **One BLE radio, leased per address.** Everything that opens a BLE link takes a lease from `devices/core/RadioLease.kt` under one of the four owner tags: `SYNC`, `FIND`, `SETTINGS`, `NOTIFICATIONS`.
+- **One BLE radio, leased per address.** Everything that opens a BLE link takes a lease from `devices/core/RadioLease.kt` under one of the four owner tags: `SYNC`, `FIND`, `SETTINGS`, `NOTIFICATIONS`. A lease is re-entrant per tag, so `SYNC` work (a sync, a file upload) also serialises on `GarminWatchSyncService.syncMutex`.
 - **A missing permission is `ScreenError.PermissionDenied`.** Use `isPermissionFailure()` / `toScreenError()`; never pattern-match exception messages. The screens render this as a grant affordance.
 - **Health Connect reads and record mapping live behind `healthconnect/*HealthReader`.** Writes go through `AppleHealthImportRepository.insertImportedRecords` with a deterministic `clientRecordId`.
 - **Nothing waits on the main thread.** No `runBlocking` in `app/src/main` (`NoRunBlockingRatchetTest` holds the allow-list). A receiver never holds a broadcast for a Health Connect read. Composables `remember` any pass over samples.

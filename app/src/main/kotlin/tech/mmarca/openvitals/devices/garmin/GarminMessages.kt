@@ -11,7 +11,9 @@ import java.time.ZoneId
 object GarminMessageId {
     const val RESPONSE = 5000 // status/ack envelope
     const val DOWNLOAD_REQUEST = 5002
+    const val UPLOAD_REQUEST = 5003
     const val FILE_TRANSFER_DATA = 5004
+    const val CREATE_FILE = 5005
     const val FILE_AVAILABLE = 5009
     const val FILTER = 5007
     const val FIT_DEFINITION = 5011
@@ -71,6 +73,68 @@ enum class GarminDownloadStatus {
     }
 }
 
+/**
+ * File types the phone writes to the watch. Kept apart from [GarminFileType]:
+ * a type listed there is downloaded when the watch announces it.
+ */
+enum class GarminUploadFileType(val dataType: Int, val subType: Int) {
+    /** Saved locations, from `FileType.java` (AGPLv3). */
+    LOCATION(128, 8),
+}
+
+/** The watch's answer to a create-file request (`CreateFileStatusMessage.CreateStatus`). */
+enum class GarminCreateFileResult {
+    OK,
+    DUPLICATE,
+    NO_SPACE,
+    UNSUPPORTED,
+    NO_SLOTS,
+    NO_SPACE_FOR_TYPE,
+
+    /** Not on the wire: the reply was a NAK, too short, or an unknown code. */
+    INVALID,
+    ;
+
+    companion object {
+        fun fromOrdinal(ordinal: Int): GarminCreateFileResult =
+            if (ordinal in 0 until INVALID.ordinal) entries[ordinal] else INVALID
+    }
+}
+
+/** The watch's answer to an upload request (`UploadRequestStatusMessage.UploadStatus`). */
+enum class GarminUploadStatus {
+    OK,
+    INDEX_UNKNOWN,
+    INDEX_NOT_WRITEABLE,
+    NO_SPACE_LEFT,
+    INVALID,
+    NOT_READY,
+    CRC_INCORRECT,
+    ;
+
+    companion object {
+        fun fromOrdinal(ordinal: Int): GarminUploadStatus =
+            if (ordinal in entries.indices) entries[ordinal] else INVALID
+    }
+}
+
+/** The watch's verdict on an uploaded chunk (`FileTransferDataStatusMessage.TransferStatus`). */
+enum class GarminFileTransferStatus {
+    OK,
+    RESEND,
+    ABORT,
+    CRC_MISMATCH,
+    OFFSET_MISMATCH,
+    SYNC_PAUSED,
+    ;
+
+    companion object {
+        /** An unknown code stops the upload. */
+        fun fromOrdinal(ordinal: Int): GarminFileTransferStatus =
+            if (ordinal in entries.indices) entries[ordinal] else ABORT
+    }
+}
+
 /** System events the sync sends. Ordinal is the wire value; do not reorder. */
 enum class GarminSystemEventType {
     SYNC_COMPLETE, // 0
@@ -124,6 +188,34 @@ data class GarminDownloadRequestStatus(
     val canProceed: Boolean
         get() = status == GarminStatus.ACK && downloadStatus == GarminDownloadStatus.OK
 }
+
+/** Response to a create-file request. When [canProceed], [fileIndex] is the slot to upload into. */
+data class GarminCreateFileStatus(
+    val status: GarminStatus,
+    val result: GarminCreateFileResult,
+    val fileIndex: Int,
+) : GarminInboundMessage() {
+    val canProceed: Boolean
+        get() = status == GarminStatus.ACK && result == GarminCreateFileResult.OK
+}
+
+/** Response to an upload request. [dataOffset] is where the watch wants the data to start. */
+data class GarminUploadRequestStatus(
+    val status: GarminStatus,
+    val uploadStatus: GarminUploadStatus,
+    val dataOffset: Long,
+    val maxFileSize: Long,
+) : GarminInboundMessage() {
+    val canProceed: Boolean
+        get() = status == GarminStatus.ACK && uploadStatus == GarminUploadStatus.OK
+}
+
+/** The watch's answer to an uploaded chunk. [nextOffset] is how much it now holds. */
+data class GarminFileTransferDataStatus(
+    val status: GarminStatus,
+    val transferStatus: GarminFileTransferStatus,
+    val nextOffset: Long,
+) : GarminInboundMessage()
 
 /** One chunk of a download (type 5004). [crc] is the running CRC up to this chunk. */
 class GarminFileTransferData(
@@ -497,6 +589,51 @@ private fun decodeStatus(payload: ByteArray): GarminInboundMessage {
             maxFileSize = maxFileSize,
         )
     }
+    // The upload replies never throw on a short payload: a throw would leave
+    // the upload waiting for its timeout.
+    if (originalType == GarminMessageId.CREATE_FILE) {
+        val status = GarminStatus.fromCode(reader.readByteOr(GarminStatus.NAK.code))
+        if (status != GarminStatus.ACK || reader.remaining < 1) {
+            return GarminCreateFileStatus(status, GarminCreateFileResult.INVALID, fileIndex = 0)
+        }
+        val result = GarminCreateFileResult.fromOrdinal(reader.readByte())
+        // A refusal may stop after its reason. An OK needs the index.
+        if (reader.remaining < 2) {
+            val reason = if (result == GarminCreateFileResult.OK) GarminCreateFileResult.INVALID else result
+            return GarminCreateFileStatus(status, reason, fileIndex = 0)
+        }
+        return GarminCreateFileStatus(status, result, fileIndex = reader.readShort())
+    }
+    if (originalType == GarminMessageId.UPLOAD_REQUEST) {
+        val status = GarminStatus.fromCode(reader.readByteOr(GarminStatus.NAK.code))
+        if (status != GarminStatus.ACK || reader.remaining < 1) {
+            return GarminUploadRequestStatus(status, GarminUploadStatus.INVALID, dataOffset = 0, maxFileSize = 0)
+        }
+        val uploadStatus = GarminUploadStatus.fromOrdinal(reader.readByte())
+        if (reader.remaining < 8) {
+            val reason = if (uploadStatus == GarminUploadStatus.OK) GarminUploadStatus.INVALID else uploadStatus
+            return GarminUploadRequestStatus(status, reason, dataOffset = 0, maxFileSize = 0)
+        }
+        return GarminUploadRequestStatus(
+            status = status,
+            uploadStatus = uploadStatus,
+            dataOffset = reader.readInt(),
+            maxFileSize = reader.readInt(),
+        )
+    }
+    if (originalType == GarminMessageId.FILE_TRANSFER_DATA) {
+        val status = GarminStatus.fromCode(reader.readByteOr(GarminStatus.NAK.code))
+        if (status != GarminStatus.ACK || reader.remaining < 1) {
+            return GarminFileTransferDataStatus(status, GarminFileTransferStatus.ABORT, nextOffset = 0)
+        }
+        val transferStatus = GarminFileTransferStatus.fromOrdinal(reader.readByte())
+        if (reader.remaining < 4) {
+            // An OK that does not say how far it got cannot be trusted.
+            val verdict = if (transferStatus == GarminFileTransferStatus.OK) GarminFileTransferStatus.ABORT else transferStatus
+            return GarminFileTransferDataStatus(status, verdict, nextOffset = 0)
+        }
+        return GarminFileTransferDataStatus(status, transferStatus, nextOffset = reader.readInt())
+    }
     if (originalType == GarminMessageId.NOTIFICATION_DATA) {
         val status = GarminStatus.fromCode(reader.readByte())
         // RESEND is recoverable, a CRC mismatch is not. No transfer byte means OK:
@@ -541,6 +678,9 @@ private fun decodeStatus(payload: ByteArray): GarminInboundMessage {
     return GarminGenericStatus(originalMessageType = originalType, status = status)
 }
 
+private fun GarminByteReader.readByteOr(fallback: Int): Int =
+    if (remaining > 0) readByte() else fallback
+
 private fun decodeFileTransferData(payload: ByteArray): GarminInboundMessage {
     val reader = GarminByteReader(payload)
     reader.readByte() // flags — unused on the read path
@@ -570,6 +710,44 @@ fun buildDownloadRequest(
         .writeShort(crcSeed)
         .writeInt(dataSize)
     return GarminGfdiFrame.build(GarminMessageId.DOWNLOAD_REQUEST, writer.toBytes())
+}
+
+/**
+ * Asks the watch for a slot to write a [size]-byte file into, as upstream's
+ * `CreateFileMessage` does. The watch picks the index and number.
+ */
+fun buildCreateFile(size: Int, type: GarminUploadFileType, fileId: Long): ByteArray {
+    val writer = GarminByteWriter()
+        .writeInt(size)
+        .writeByte(type.dataType)
+        .writeByte(type.subType)
+        .writeShort(0) // file index: the watch assigns it
+        .writeByte(0) // reserved
+        .writeByte(0) // sub-type mask
+        .writeShort(0xFFFF) // number mask: any
+        .writeShort(0) // no path
+        .writeLong(fileId)
+    return GarminGfdiFrame.build(GarminMessageId.CREATE_FILE, writer.toBytes())
+}
+
+/** Announces a fresh [size]-byte upload into [fileIndex]. Offset and CRC seed stay 0. */
+fun buildUploadRequest(fileIndex: Int, size: Int): ByteArray {
+    val writer = GarminByteWriter()
+        .writeShort(fileIndex)
+        .writeInt(size)
+        .writeInt(0) // data offset
+        .writeShort(0) // CRC seed
+    return GarminGfdiFrame.build(GarminMessageId.UPLOAD_REQUEST, writer.toBytes())
+}
+
+/** One chunk of an upload (5004). [runningCrc] covers everything sent so far, this chunk included. */
+fun buildFileTransferData(chunk: ByteArray, dataOffset: Int, runningCrc: Int): ByteArray {
+    val writer = GarminByteWriter()
+        .writeByte(0) // flags
+        .writeShort(runningCrc)
+        .writeInt(dataOffset)
+        .writeBytes(chunk)
+    return GarminGfdiFrame.build(GarminMessageId.FILE_TRANSFER_DATA, writer.toBytes())
 }
 
 /**

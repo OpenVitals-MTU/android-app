@@ -302,6 +302,10 @@ fun AppNavigation(
             currentRoute != Screen.Onboarding.route
         ) {
             navController.navigate(externalNavigationRoute) {
+                // A second shared place replaces the first form; it does not stack on it.
+                if (externalNavigationRoute.startsWith(Screen.WatchSendPoint.basePath)) {
+                    popUpTo(Screen.WatchSendPoint.route) { inclusive = true }
+                }
                 // singleTop only for argument-less destinations: a parameterized
                 // route would reuse the top entry's ViewModel with old arguments.
                 launchSingleTop = externalNavigationRoute == Screen.Dashboard.route ||
@@ -379,6 +383,7 @@ fun AppNavigation(
         Screen.WatchData.route -> stringResource(R.string.settings_watch_data_title)
         Screen.WatchNotifications.route -> stringResource(R.string.screen_watch_notifications)
         Screen.WatchSettings.route -> stringResource(R.string.settings_watch_on_device_settings)
+        Screen.WatchSendPoint.basePath -> stringResource(R.string.settings_watch_point_title)
         Screen.Achievements.route -> stringResource(R.string.screen_achievements)
         else -> ""
     }

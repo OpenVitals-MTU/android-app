@@ -394,6 +394,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Show weather on the watch from a weather app on the phone that broadcasts it (such as Breezy Weather); no network access.
 - Feed the watch's calendar glance from the phone's calendar, off by default behind its own permission.
 - Hand the watch a GPS ephemeris file the user imported, for fast GPS fixes without any download.
+- Send a named point to the watch's saved locations by typing its coordinates, in decimal degrees or the degrees and minutes geocaching uses, or by sharing a place from a maps app.
 - Rename, disable, or remove a paired watch.
 - File syncs are always user-initiated; there is no background or scheduled watch sync.
 

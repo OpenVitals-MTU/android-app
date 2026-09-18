@@ -3,10 +3,20 @@ package tech.mmarca.openvitals.core.fit
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.time.Instant
+import kotlin.math.roundToLong
 
 /** A UTC [Instant] as a FIT timestamp, the inverse of [fitInstant]. Pre-1990 clamps to 0. */
 fun fitTimestamp(time: Instant): Long =
     (time.epochSecond - FitEpochUnixSeconds).coerceAtLeast(0L)
+
+/**
+ * Degrees as FIT semicircles, rounded. +180 becomes -180: it would round to
+ * the sint32 invalid value.
+ */
+fun fitSemicircles(degrees: Double): Long {
+    val semicircles = (degrees * FitSemicirclesPerDegree).roundToLong()
+    return if (semicircles >= FitSemicircleHalfTurn) -FitSemicircleHalfTurn else semicircles
+}
 
 /**
  * FIT base types as they appear on the wire, high bit set on multi-byte
@@ -21,6 +31,9 @@ object FitBaseType {
     const val UINT16 = 0x84
     const val SINT32 = 0x85
     const val UINT32 = 0x86
+
+    /** A uint32 whose invalid value is 0, as serial numbers use. */
+    const val UINT32Z = 0x8C
 }
 
 /** One field of a definition. Only a STRING needs its size spelled out. */
@@ -111,14 +124,20 @@ private fun ByteArrayOutputStream.writeScalar(value: Long?, baseType: Int) {
         FitBaseType.SINT16 -> writeUInt16(value ?: 0x7FFFL)
         FitBaseType.UINT32 -> writeUInt32(value ?: 0xFFFFFFFFL)
         FitBaseType.SINT32 -> writeUInt32(value ?: 0x7FFFFFFFL)
+        FitBaseType.UINT32Z -> writeUInt32(value ?: 0L)
         else -> error("Unsupported FIT base type for encoding: $baseType")
     }
 }
 
-/** UTF-8 bytes, truncated to leave room for at least one NUL, then NUL-padded. */
+/**
+ * UTF-8 bytes, truncated to leave room for at least one NUL, then NUL-padded.
+ * The cut never splits a character.
+ */
 private fun ByteArrayOutputStream.writeFitString(value: String?, size: Int) {
     val bytes = value.orEmpty().toByteArray(Charsets.UTF_8)
-    val written = minOf(bytes.size, size - 1)
+    var written = minOf(bytes.size, size - 1)
+    // A continuation byte at the cut means the character started before it.
+    while (written in 1 until bytes.size && (bytes[written].toInt() and 0xC0) == 0x80) written--
     write(bytes, 0, written)
     repeat(size - written) { write(0) }
 }
@@ -150,7 +169,7 @@ private fun ByteArray.setUInt32(offset: Int, value: Long) {
 private fun fitEncoderBaseTypeSize(baseType: Int): Int = when (baseType) {
     FitBaseType.ENUM, FitBaseType.SINT8, FitBaseType.UINT8, FitBaseType.STRING -> 1
     FitBaseType.SINT16, FitBaseType.UINT16 -> 2
-    FitBaseType.SINT32, FitBaseType.UINT32 -> 4
+    FitBaseType.SINT32, FitBaseType.UINT32, FitBaseType.UINT32Z -> 4
     else -> error("Unsupported FIT base type for encoding: $baseType")
 }
 
@@ -160,3 +179,5 @@ private const val FitEncoderProfileVersion = 2132
 private const val FitEncoderMagic = ".FIT"
 private const val FitEncoderDefinitionFlag = 0x40
 private const val FitEncoderLittleEndian = 0
+private const val FitSemicircleHalfTurn = 2_147_483_648L
+private const val FitSemicirclesPerDegree = FitSemicircleHalfTurn / 180.0

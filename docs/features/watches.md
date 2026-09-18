@@ -3,7 +3,7 @@
 > **Status:** Current implemented behavior. Experimental.
 > **Audience:** Users and contributors.
 > **Implementation:** `devices/core`, `devices/garmin`, `devices/wearos`, `devices/notifications`, `features/watches`.
-> **Navigation:** `Screen.SettingsWatches`, `Screen.WatchDevice`, `Screen.WatchData`, `Screen.WatchNotifications`, `Screen.WatchSettings`; settings section `WATCHES`.
+> **Navigation:** `Screen.SettingsWatches`, `Screen.WatchDevice`, `Screen.WatchData`, `Screen.WatchNotifications`, `Screen.WatchSettings`, `Screen.WatchSendPoint`; settings section `WATCHES`.
 > **Related:** [Feature map](feature-map.md), [Bluetooth LE sensors](ble-sensors.md), [FIT files import](fit-files-import.md), [Body Energy](body-energy.md), [Permissions](../app/permissions.md), [Privacy](../app/privacy.md).
 
 OpenVitals has experimental support for wrist devices. Settings, Watches pairs a watch and copies what it recorded onto the phone over Bluetooth. There is no watch-vendor account and no network step; the app declares no internet permission.
@@ -227,6 +227,22 @@ Ephemeris, a few days of predicted satellite orbits, is what turns a minutes-lon
 
 The imported file is recognized by its contents (a constellation archive, an rxNetworks blob, or a Sony CPE blob; which one a watch wants is decided by its GPS chipset), and the URL the watch asked for is shown on the screen, since that URL is the only way to know which format to fetch. A stale file is refused rather than served: an out-of-date orbit prediction is worse for the watch than the almanac it already has.
 
+## Send A Point
+
+A Garmin watch that can store locations gets a "Send a point" row. The form takes a name and a position, and the watch keeps the point in its saved locations, where it can be picked as a navigation target. It is meant for a position found on the phone that is wanted on the wrist: a geocache, a trailhead, a parked car.
+
+The coordinates field reads what people actually paste:
+
+- decimal degrees, such as `48.8584, 2.2945`, with a point or a decimal comma;
+- degrees and decimal minutes, the geocaching format, such as `N 48° 51.504 E 002° 17.670`;
+- degrees, minutes, and seconds.
+
+South and west are a minus sign or a hemisphere letter, never both. Only N, S, E, and W are letters: `O` is west in Spanish and east in German, so it is refused. The field shows the position it read, or says what is wrong, before anything is sent.
+
+A maps app can hand a place over instead. OpenVitals appears as "Send to watch" for a `geo:` link and in the text share sheet, and reads `geo:` links, Google Maps, OpenStreetMap, and OsmAnd URLs, and bare coordinates in the text. A short link such as `maps.app.goo.gl` holds no position, and the app has no internet access to resolve it; the form opens with the name filled in and says the coordinates are missing. A shared place only fills the form. Nothing goes to the watch until Send is tapped.
+
+The point travels as a small FIT location file over a link opened for that one send. Each way it can fail has its own message: the watch already has the point, has no room, does not accept points, or stopped answering. A point with no name is named by its position.
+
 ## Settings On The Watch
 
 A Garmin watch that reports a settings tree gets a "Settings on the watch" row, plus a direct Alarms action.
@@ -243,12 +259,12 @@ A watch that reports the capability gets a Find action. It makes the watch alert
 
 ## One Radio At A Time
 
-Sync, find, settings on the watch, and notification forwarding all speak to the same watch over the same Bluetooth link, and only one of them can hold it.
+Sync, find, sending a point, settings on the watch, and notification forwarding all speak to the same watch over the same Bluetooth link, and only one of them can hold it.
 
 - A user-initiated action asks for the link and waits a few seconds for whatever holds it to let go. Notification forwarding, the usual holder, gives it up on its next check and resumes afterwards.
 - If the link cannot be taken in time, the action reports that the watch is busy and suggests trying again in a moment.
-- Sync, Alarms, and Find are disabled while a sync or a find is already running.
-- A live activity recording blocks a watch sync outright. The recording has to be finished or discarded first.
+- Sync, Alarms, Find, and sending a point are disabled while a sync, a find, or a send is already running.
+- A live activity recording blocks a watch sync and a point send outright. The recording has to be finished or discarded first.
 
 Different devices do not contend with each other, so a Bluetooth LE sensor is unaffected by what a watch is doing.
 
@@ -268,7 +284,8 @@ See [Privacy](../app/privacy.md) and [Permissions](../app/permissions.md) for th
 - Older single-link transport watches cannot sync.
 - There is no background sync. Every sync is one the user asked for.
 - The Connected and Not connected labels reflect whether the watch is switched on in OpenVitals, not whether a Bluetooth link is open right now.
-- WearOS watches are registered only. Sync, watch data, notification forwarding, watch settings, and find are Garmin-only.
+- WearOS watches are registered only. Sync, watch data, notification forwarding, watch settings, find, and sending a point are Garmin-only.
+- Sending a point has not yet been confirmed on a watch. Only one point is sent at a time, and points already on the watch cannot be listed, edited, or removed from the phone.
 - Health Snapshot values only exist if a Health Snapshot has been recorded on the watch.
 - Battery percentage is read during a sync and shown on the device screen and the dashboard tile; charging state is not read.
 - The weather glance on the verified model arms but does not always fetch; see Weather On The Watch.

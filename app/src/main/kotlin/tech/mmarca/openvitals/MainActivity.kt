@@ -21,6 +21,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
+import tech.mmarca.openvitals.core.geo.GeoUri
+import tech.mmarca.openvitals.core.geo.SharedGeoPoint
+import tech.mmarca.openvitals.core.geo.SharedLocationText
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
@@ -58,7 +61,8 @@ class MainActivity : AppCompatActivity() {
         }
         enableEdgeToEdge()
         updateRouteImportRequest(intent)
-        updateExternalNavigationRoute(intent)
+        // A recreated activity still holds the old intent. A shared place must not reopen on rotation.
+        updateExternalNavigationRoute(intent, acceptSharedPlace = savedInstanceState == null)
 
         setContent {
             val appThemeMode by preferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle()
@@ -169,8 +173,9 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun updateExternalNavigationRoute(intent: Intent?) {
+    private fun updateExternalNavigationRoute(intent: Intent?, acceptSharedPlace: Boolean = true) {
         externalNavigationRoute = intent?.openVitalsRoute()
+            ?: intent?.takeIf { acceptSharedPlace }?.sendPointRoute()
     }
 }
 
@@ -184,6 +189,39 @@ internal fun Intent.openVitalsRoute(): String? =
     getStringExtra(EXTRA_OPENVITALS_ROUTE)
         ?.let(::migratedOpenVitalsRoute)
         ?.takeIf(::isSupportedOpenVitalsRoute)
+
+/**
+ * The send-a-point route for a place another app shared: a `geo:` link, or
+ * text holding one, a maps URL or bare coordinates. Built here from parsed
+ * numbers, so nothing from the intent reaches the navigator as a route.
+ */
+internal fun Intent.sendPointRoute(): String? = when (action) {
+    Intent.ACTION_VIEW -> sharedPlaceRoute(geoLink = dataString, text = null)
+    Intent.ACTION_SEND -> sharedPlaceRoute(
+        geoLink = null,
+        text = getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
+            .takeIf { type?.startsWith("text/") == true },
+    )
+    else -> null
+}
+
+/** Null when there is nothing place-like at all. A share with no position still opens the form, which says so. */
+internal fun sharedPlaceRoute(geoLink: String?, text: String?): String? {
+    val point = when {
+        geoLink != null -> GeoUri.parse(geoLink) ?: return null
+        text != null -> SharedLocationText.parse(text) ?: SharedGeoPoint()
+        else -> return null
+    }
+    return Screen.WatchSendPoint.createRoute(
+        latitude = point.latitude,
+        longitude = point.longitude,
+        name = point.name?.take(SharedPlaceNameLimit),
+        unreadable = !point.hasPosition,
+    )
+}
+
+/** The watch keeps 31 bytes. This only stops a whole shared page becoming a route. */
+private const val SharedPlaceNameLimit = 64
 
 /**
  * The route a stored intent should open. A widget placed before the

@@ -47,6 +47,12 @@ const val CYCLE_ENTRY_ID_ARG = "cycleEntryId"
 const val STRESS_DATE_ARG = "stressDate"
 const val WATCH_DEVICE_ID_ARG = "watchDeviceId"
 const val WATCH_SETTINGS_SCREEN_ID_ARG = "screenId"
+const val WATCH_POINT_LATITUDE_ARG = "lat"
+const val WATCH_POINT_LONGITUDE_ARG = "lon"
+const val WATCH_POINT_NAME_ARG = "name"
+
+/** Set when another app shared something that held no position. */
+const val WATCH_POINT_UNREADABLE_ARG = "unreadable"
 const val BODY_ENERGY_DATE_ARG = "bodyEnergyDate"
 const val TRAINING_READINESS_DATE_ARG = "trainingReadinessDate"
 
@@ -202,6 +208,37 @@ sealed class Screen(val route: String) {
         Screen("watch/{$WATCH_DEVICE_ID_ARG}/settings/{$WATCH_SETTINGS_SCREEN_ID_ARG}") {
         fun createRoute(watchDeviceId: String, screenId: Int): String =
             "watch/${Uri.encode(watchDeviceId)}/settings/$screenId"
+    }
+
+    /**
+     * Send a point to a watch. Every argument is optional: a shared location
+     * arrives with a position and no watch, the watch screen with a watch only.
+     */
+    data object WatchSendPoint : Screen(
+        "watch_send_point?$WATCH_DEVICE_ID_ARG={$WATCH_DEVICE_ID_ARG}" +
+            "&$WATCH_POINT_LATITUDE_ARG={$WATCH_POINT_LATITUDE_ARG}" +
+            "&$WATCH_POINT_LONGITUDE_ARG={$WATCH_POINT_LONGITUDE_ARG}" +
+            "&$WATCH_POINT_NAME_ARG={$WATCH_POINT_NAME_ARG}" +
+            "&$WATCH_POINT_UNREADABLE_ARG={$WATCH_POINT_UNREADABLE_ARG}",
+    ) {
+        fun createRoute(
+            watchDeviceId: String? = null,
+            latitude: Double? = null,
+            longitude: Double? = null,
+            name: String? = null,
+            unreadable: Boolean = false,
+        ): String {
+            val query = buildList {
+                watchDeviceId?.let { add("$WATCH_DEVICE_ID_ARG=${Uri.encode(it)}") }
+                if (latitude != null && longitude != null) {
+                    add("$WATCH_POINT_LATITUDE_ARG=$latitude")
+                    add("$WATCH_POINT_LONGITUDE_ARG=$longitude")
+                }
+                name?.let { add("$WATCH_POINT_NAME_ARG=${Uri.encode(it)}") }
+                if (unreadable) add("$WATCH_POINT_UNREADABLE_ARG=true")
+            }
+            return if (query.isEmpty()) basePath else "$basePath?${query.joinToString("&")}"
+        }
     }
     data object Achievements : Screen("achievements")
 }

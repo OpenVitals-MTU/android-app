@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.outlined.DirectionsBike
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.WifiTethering
@@ -88,6 +89,7 @@ fun WatchDeviceScreen(
     onOpenData: (String) -> Unit,
     onOpenNotifications: (String) -> Unit,
     onOpenWatchSettings: (String, Int) -> Unit,
+    onOpenSendPoint: (String) -> Unit,
     onRemoved: () -> Unit,
     onTitleChanged: (String?) -> Unit,
 ) {
@@ -199,6 +201,11 @@ fun WatchDeviceScreen(
         if (isGarmin && state.supports(GarminCapability.GNCS)) {
             SectionHeader(stringResource(R.string.settings_watch_notifications_section))
             NotificationsRow(onOpen = { onOpenNotifications(device.id) })
+        }
+
+        // The watch's answer to the upload is the real gate; this only hides the obvious no.
+        if (isGarmin && state.supports(GarminCapability.WAYPOINT_TRANSFER)) {
+            SendPointRow(onOpen = { onOpenSendPoint(device.id) })
         }
 
         // A bike computer can broadcast BLE sensors. Opt-in here, since broadcast
@@ -768,6 +775,42 @@ internal fun OnDeviceSettingsRow(onOpen: () -> Unit) {
                 )
                 Text(
                     text = stringResource(R.string.settings_watch_on_device_settings_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = null,
+            )
+        }
+    }
+}
+
+/** The way to the send-a-point form. */
+@Composable
+private fun SendPointRow(onOpen: () -> Unit) {
+    OpenVitalsCard {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onOpen)
+                .padding(Spacing.lg),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Place,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.width(Spacing.lg))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.settings_watch_point_row),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    text = stringResource(R.string.settings_watch_point_row_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

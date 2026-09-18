@@ -6,6 +6,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.TestScope
@@ -1663,6 +1664,126 @@ class GarminSessionTest {
             // The status byte: 0 is ENABLED, 1 is DISABLED.
             assertEquals(1, replies.single().payload[3].toInt())
         }
+
+    // Uploads: the watch's replies reach the uploader as real frames.
+
+    /** Stores what is uploaded and answers each step on the wire. */
+    private class UploadingWatch : FakeWatch(files = emptyMap()) {
+        val stored = mutableListOf<Byte>()
+
+        /** Extra frames the watch slips in before its first data reply. */
+        val interruptions = mutableListOf<ByteArray>()
+
+        override fun onFrame(frame: GarminGfdiFrame) {
+            when (frame.messageType) {
+                GarminMessageId.CREATE_FILE -> {
+                    received.add(frame)
+                    // ACK, OK, index 3, type 128/8, number 1.
+                    outbox.add(reply(GarminMessageId.CREATE_FILE, 0, 0, 3, 0, 128, 8, 1, 0))
+                }
+                GarminMessageId.UPLOAD_REQUEST -> {
+                    received.add(frame)
+                    // ACK, OK, offset 0, room 4096, seed 0.
+                    outbox.add(reply(GarminMessageId.UPLOAD_REQUEST, 0, 0, 0, 0, 0, 0, 0, 0x10, 0, 0, 0, 0))
+                }
+                GarminMessageId.FILE_TRANSFER_DATA -> {
+                    received.add(frame)
+                    outbox.addAll(interruptions)
+                    interruptions.clear()
+                    stored += frame.payload.drop(7)
+                    outbox.add(buildFileTransferDataAck(stored.size))
+                }
+                else -> super.onFrame(frame)
+            }
+        }
+
+        private fun reply(originalType: Int, vararg rest: Int): ByteArray =
+            GarminGfdiFrame.build(
+                GarminMessageId.RESPONSE,
+                GarminByteWriter().writeShort(originalType).writeBytes(b(*rest)).toBytes(),
+            )
+    }
+
+    /** Runs an upload to its end, pumping the watch's replies in between. */
+    private suspend fun TestScope.uploadThrough(
+        watch: FakeWatch,
+        session: GarminSession,
+        bytes: ByteArray,
+    ): GarminUploadResult {
+        val result = async { session.uploads.upload(GarminUploadFileType.LOCATION, bytes, maxPacketSize = 13 + 8) }
+        var guard = 0
+        while (!result.isCompleted) {
+            if (guard++ > 1000) fail("upload did not settle")
+            runCurrent()
+            drain(watch, session)
+        }
+        return result.await()
+    }
+
+    @Test
+    fun `an upload runs over a session that does not sync files`() = runTest {
+        val watch = UploadingWatch()
+        val session = heldSession(this, watch, owner = null)
+        pump(watch, session)
+        val file = ByteArray(21) { it.toByte() }
+
+        val result = uploadThrough(watch, session, file)
+
+        assertEquals(GarminUploadResult.Sent, result)
+        assertArrayEquals(file, watch.stored.toByteArray())
+        assertEquals(3, watch.received.count { it.messageType == GarminMessageId.FILE_TRANSFER_DATA })
+        // The handshake sends system events too, so look at the last frame.
+        val last = watch.received.last()
+        assertEquals(GarminMessageId.SYSTEM_EVENT, last.messageType)
+        assertEquals(GarminSystemEventType.SYNC_COMPLETE.ordinal, last.payload[0].toInt())
+    }
+
+    @Test
+    fun `announcements in the middle of an upload start no download`() = runTest {
+        val watch = UploadingWatch()
+        val session = heldSession(this, watch, owner = null)
+        pump(watch, session)
+        watch.interruptions += syncAnnouncement()
+        watch.interruptions += GarminGfdiFrame.build(
+            GarminMessageId.FILE_AVAILABLE,
+            GarminByteWriter()
+                .writeShort(9).writeByte(128).writeByte(4).writeShort(1)
+                .writeByte(0).writeByte(0).writeInt(64).writeInt(1000)
+                .toBytes(),
+        )
+
+        val result = uploadThrough(watch, session, ByteArray(21) { it.toByte() })
+
+        assertEquals(GarminUploadResult.Sent, result)
+        assertEquals(0, watch.received.count { it.messageType == GarminMessageId.FILTER })
+        assertEquals(0, watch.received.count { it.messageType == GarminMessageId.DOWNLOAD_REQUEST })
+    }
+
+    @Test
+    fun `a dropped link ends a waiting upload at once`() = runTest {
+        val watch = object : FakeWatch(files = emptyMap()) {} // never answers CREATE_FILE
+        val session = heldSession(this, watch, owner = null)
+        pump(watch, session)
+
+        val result = async { session.uploads.upload(GarminUploadFileType.LOCATION, b(1, 2, 3), maxPacketSize = null) }
+        runCurrent()
+        session.abort("link lost")
+
+        assertEquals(GarminUploadResult.LinkLost, result.await())
+        assertEquals(0L, testScheduler.currentTime)
+    }
+
+    @Test
+    fun `a chunk reply with no upload waiting is ignored`() = runTest {
+        val watch = FakeWatch(files = emptyMap())
+        val session = heldSession(this, watch, owner = null)
+        pump(watch, session)
+
+        // The phone's own download ack has this shape.
+        session.handleFrame(GarminGfdiFrame.parse(buildFileTransferDataAck(64)))
+
+        assertFalse(session.uploads.isActive)
+    }
 }
 
 private fun b(vararg xs: Int) = ByteArray(xs.size) { xs[it].toByte() }
