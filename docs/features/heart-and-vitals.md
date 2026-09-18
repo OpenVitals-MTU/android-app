@@ -46,6 +46,15 @@ Heart and vitals detail screens use the shared metric detail scaffold:
 
 OpenVitals-created vitals entries can be edited or deleted when the app has write permission and ownership can be verified. External records stay read-only.
 
+## Blood Pressure Categories
+
+The latest reading is named with the categories of one guideline. Settings > Vitals holds the choice: ACC/AHA 2017 (the default), ESH 2023, ESC 2024, or ISH 2020. ACC/AHA counts 130/80 mmHg as high; the other three count 140/90.
+
+- A reading takes the highest category that either number reaches.
+- Every guideline flags a reading above 180 systolic or above 120 diastolic.
+- The "How it is classified" card on the blood pressure screen names the guideline, lists its thresholds, and links its sources.
+- The thresholds are for adult readings taken in a clinic. Home readings often run lower.
+
 ## Today Vitals
 
 Each heart and vitals dashboard tile opens its own focused metric screen directly - tapping Blood pressure opens the blood pressure detail, not an intermediate overview.

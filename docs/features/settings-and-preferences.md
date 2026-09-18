@@ -18,6 +18,7 @@ Settings is a list of section cards. Tapping one opens it:
 - Watches.
 - Nutrition.
 - Body profile.
+- Vitals, for the blood pressure guideline.
 - Recovery.
 - Data Importers.
 - Sync with another phone.
