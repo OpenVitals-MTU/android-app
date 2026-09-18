@@ -6,6 +6,12 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+
+/** Outlives a broadcast. For widget work that must not hold a receiver. */
+internal val HomeWidgetScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
 /** Every receiver that draws a tile from stored data. Listed, so an omission is visible. */
 internal val HomeWidgetReceivers: List<Class<*>> = listOf(

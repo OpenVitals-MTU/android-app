@@ -93,6 +93,7 @@ Do not break these without an explicit decision. They are app-wide, and each has
 - **One BLE radio, leased per address.** Everything that opens a BLE link takes a lease from `devices/core/RadioLease.kt` under one of the four owner tags: `SYNC`, `FIND`, `SETTINGS`, `NOTIFICATIONS`.
 - **A missing permission is `ScreenError.PermissionDenied`.** Use `isPermissionFailure()` / `toScreenError()`; never pattern-match exception messages. The screens render this as a grant affordance.
 - **Health Connect reads and record mapping live behind `healthconnect/*HealthReader`.** Writes go through `AppleHealthImportRepository.insertImportedRecords` with a deterministic `clientRecordId`.
+- **Nothing waits on the main thread.** No `runBlocking` in `app/src/main` (`NoRunBlockingRatchetTest` holds the allow-list). A receiver never holds a broadcast for a Health Connect read. Composables `remember` any pass over samples.
 - **`values-*/strings.xml` are Weblate-owned.** Add new strings to `values/strings.xml` only. See the translation-gate note in [development.md](docs/engineering/development.md).
 - **Room is at version 10.** A new entity means a `MIGRATION_10_11` and a bump, not `fallbackToDestructiveMigration`.
 

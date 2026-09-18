@@ -13,6 +13,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.PeriodSelection
@@ -51,6 +54,7 @@ class BodyEnergyViewModel(
     private val bodyProfileChanges: Flow<BodyProfile> = emptyFlow(),
     private val chainSyncService: BodyEnergyChainSyncService? = null,
     private val chainRebuilt: Flow<Unit> = emptyFlow(),
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
 ) : ViewModel() {
 
     @Inject
@@ -203,10 +207,13 @@ class BodyEnergyViewModel(
                 )
             }.onSuccess { result ->
                 if (!isCurrent) return@load
+                // The mapper walks the whole day's timeline. Keep it off Main.
+                val display = withContext(dispatchers.default) { result.toBodyEnergyDisplayState() }
+                if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     result = result,
-                    display = result.toBodyEnergyDisplayState(),
+                    display = display,
                     error = null,
                 )
                 // After the foreground load: Health Connect serializes reads.

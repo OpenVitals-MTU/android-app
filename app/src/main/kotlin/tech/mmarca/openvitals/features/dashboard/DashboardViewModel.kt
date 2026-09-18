@@ -455,7 +455,8 @@ class DashboardViewModel @Inject constructor(
         // Once per app open, after the load settles: drain the caches' change tokens.
         historySyncScheduler?.let { scheduler ->
             viewModelScope.launch {
-                runCatching { scheduler.drainIncrementalOnce() }
+                // Four sync services in a row. Their bookkeeping stays off Main.
+                runCatching { withContext(dispatchers.default) { scheduler.drainIncrementalOnce() } }
             }
         }
         // The home screen shows today, so a settled read of today is its cue.

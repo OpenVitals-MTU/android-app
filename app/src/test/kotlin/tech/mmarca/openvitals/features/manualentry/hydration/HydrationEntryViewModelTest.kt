@@ -21,6 +21,7 @@ import io.mockk.verify
 import java.time.Instant
 import java.time.LocalDate
 import kotlin.math.abs
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -67,16 +68,16 @@ class HydrationEntryViewModelTest {
         every { repo.hydrationWritePermissions } returns setOf("write_hydration")
         every { repo.hydrationContainerVolumeMilliliters() } returns containerVolumeMilliliters
         every { repo.lastCustomHydrationAmountMilliliters() } returns lastCustomAmountMilliliters
-        every { repo.customHydrationDrinks() } returns customDrinks
+        coEvery { repo.customHydrationDrinks() } returns customDrinks
         every { repo.hydrationDailyGoalLiters() } returns dailyGoalLiters
         every { repo.setHydrationContainerVolumeMilliliters(any(), any()) } returns Unit
         every { repo.setLastCustomHydrationAmountMilliliters(any()) } returns Unit
         every { repo.recordRecentHydrationAmountMilliliters(any()) } returns Unit
         every { repo.recentHydrationAmountsMilliliters() } returns emptyList()
-        every { repo.saveCustomHydrationDrink(any()) } returns Unit
-        every { repo.deleteCustomHydrationDrink(any()) } returns Unit
-        every { repo.reorderCustomHydrationDrinks(any()) } returns Unit
-        every { repo.moveCustomHydrationDrinkToCategory(any(), any()) } returns Unit
+        coEvery { repo.saveCustomHydrationDrink(any()) } returns Unit
+        coEvery { repo.deleteCustomHydrationDrink(any()) } returns Unit
+        coEvery { repo.reorderCustomHydrationDrinks(any()) } returns Unit
+        coEvery { repo.moveCustomHydrationDrinkToCategory(any(), any()) } returns Unit
         coEvery { repo.hasHydrationWritePermission() } returns canWrite
         coEvery { repo.writeHydrationEntry(any()) } returns "record-id"
         coEvery { repo.loadDailyHydration(any(), any()) } returns dailyHydration
@@ -338,8 +339,8 @@ class HydrationEntryViewModelTest {
     @Test fun `saving custom drink creates reusable drink without writing entry`() = runTest {
         var savedDrinks = emptyList<CustomHydrationDrink>()
         val repo = entryRepo()
-        every { repo.customHydrationDrinks() } answers { savedDrinks }
-        every { repo.saveCustomHydrationDrink(any()) } answers {
+        coEvery { repo.customHydrationDrinks() } answers { savedDrinks }
+        coEvery { repo.saveCustomHydrationDrink(any()) } answers {
             val savedDrink = firstArg<CustomHydrationDrink>()
             savedDrinks = listOf(savedDrink)
         }
@@ -360,7 +361,7 @@ class HydrationEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        verify {
+        coVerify {
             repo.saveCustomHydrationDrink(match<CustomHydrationDrink> { drink ->
                 drink.name == "Coffee" &&
                     drink.volumeMilliliters == 150.0 &&
@@ -408,7 +409,7 @@ class HydrationEntryViewModelTest {
                     request.nutrientValues[NutritionNutrient.VITAMIN_C] == 2.0
             })
         }
-        verify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
+        coVerify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
         assertEquals(0.15, vm.uiState.value.todayHydrationLiters, 0.0001)
         assertTrue(vm.uiState.value.saveCompleted)
         assertNull(vm.uiState.value.entryNotice)
@@ -481,7 +482,7 @@ class HydrationEntryViewModelTest {
                     request.nutrientValues[NutritionNutrient.ENERGY] == 120.0
             })
         }
-        verify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
+        coVerify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
         assertEquals(0.0, vm.uiState.value.todayHydrationLiters, 0.0001)
         assertTrue(vm.uiState.value.saveCompleted)
         assertEquals(
@@ -493,8 +494,8 @@ class HydrationEntryViewModelTest {
     @Test fun `zero impact custom drink without nutrients saves reusable drink only`() = runTest {
         var savedDrinks = emptyList<CustomHydrationDrink>()
         val repo = entryRepo()
-        every { repo.customHydrationDrinks() } answers { savedDrinks }
-        every { repo.saveCustomHydrationDrink(any()) } answers {
+        coEvery { repo.customHydrationDrinks() } answers { savedDrinks }
+        coEvery { repo.saveCustomHydrationDrink(any()) } answers {
             val savedDrink = firstArg<CustomHydrationDrink>()
             savedDrinks = listOf(savedDrink)
         }
@@ -511,7 +512,7 @@ class HydrationEntryViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 0) { repo.writeHydrationEntry(any()) }
-        verify {
+        coVerify {
             repo.saveCustomHydrationDrink(match<CustomHydrationDrink> { drink ->
                 drink.name == "Whiskey" &&
                     drink.volumeMilliliters == 45.0 &&
@@ -545,7 +546,7 @@ class HydrationEntryViewModelTest {
                     request.nutrientValues[NutritionNutrient.CAFFEINE] == 10.0
             })
         }
-        verify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
+        coVerify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
     }
 
     @Test fun `saving custom drink edit updates saved drink without writing hydration entry`() = runTest {
@@ -559,8 +560,8 @@ class HydrationEntryViewModelTest {
             )
         )
         val repo = entryRepo()
-        every { repo.customHydrationDrinks() } answers { savedDrinks }
-        every { repo.saveCustomHydrationDrink(any()) } answers {
+        coEvery { repo.customHydrationDrinks() } answers { savedDrinks }
+        coEvery { repo.saveCustomHydrationDrink(any()) } answers {
             val savedDrink = firstArg<CustomHydrationDrink>()
             savedDrinks = listOf(savedDrink)
         }
@@ -577,7 +578,7 @@ class HydrationEntryViewModelTest {
             "coffee",
         )
 
-        verify {
+        coVerify {
             repo.saveCustomHydrationDrink(match<CustomHydrationDrink> { drink ->
                 drink.id == "coffee" &&
                     drink.name == "Latte" &&
@@ -603,15 +604,38 @@ class HydrationEntryViewModelTest {
             volumeMilliliters = 200.0,
         )
         val repo = entryRepo(customDrinks = listOf(coffee, tea))
-        every { repo.customHydrationDrinks() } returnsMany listOf(listOf(coffee, tea), listOf(tea))
+        coEvery { repo.customHydrationDrinks() } returnsMany listOf(listOf(coffee, tea), listOf(tea))
         val vm = HydrationEntryViewModel(repo)
         advanceUntilIdle()
 
         vm.deleteCustomDrink(coffee)
 
-        verify { repo.deleteCustomHydrationDrink("coffee") }
+        coVerify { repo.deleteCustomHydrationDrink("coffee") }
         assertEquals(listOf("tea"), vm.uiState.value.customDrinkOptions.map { it.id })
         assertFalse(vm.uiState.value.saveCompleted)
+    }
+
+    @Test fun `a delete waits for the save before it`() = runTest {
+        val coffee = CustomHydrationDrink(id = "coffee", name = "Coffee", volumeMilliliters = 150.0)
+        val repo = entryRepo(customDrinks = listOf(coffee))
+        val saveMayFinish = CompletableDeferred<Unit>()
+        val calls = mutableListOf<String>()
+        coEvery { repo.saveCustomHydrationDrink(any()) } coAnswers {
+            saveMayFinish.await()
+            calls += "save"
+        }
+        coEvery { repo.deleteCustomHydrationDrink(any()) } coAnswers { calls += "delete" }
+        val vm = HydrationEntryViewModel(repo)
+        advanceUntilIdle()
+
+        vm.saveCustomDrink(CustomHydrationDrinkInput(name = "Tea", volumeMilliliters = 200.0))
+        vm.deleteCustomDrink(coffee)
+        advanceUntilIdle()
+        assertEquals(emptyList<String>(), calls)
+
+        saveMayFinish.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(listOf("save", "delete"), calls)
     }
 
     @Test fun `move custom drink to target reorders and persists`() = runTest {
@@ -637,7 +661,7 @@ class HydrationEntryViewModelTest {
         vm.moveCustomDrinkToTarget("juice", "coffee")
 
         val expectedOrder = listOf("juice", "coffee", "tea")
-        verify { repo.reorderCustomHydrationDrinks(expectedOrder) }
+        coVerify { repo.reorderCustomHydrationDrinks(expectedOrder) }
         assertEquals(expectedOrder, vm.uiState.value.customDrinkOptions.map { it.id })
         assertFalse(vm.uiState.value.saveCompleted)
     }
@@ -661,7 +685,7 @@ class HydrationEntryViewModelTest {
         assertEquals(HydrationEntryError.MISSING_NUTRITION_WRITE_PERMISSION, vm.uiState.value.entryError)
         coVerify(exactly = 0) { repo.writeHydrationEntry(any()) }
         coVerify(exactly = 0) { nutritionRepo.writeNutritionEntry(any()) }
-        verify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
+        coVerify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
     }
 
     @Test fun `invalid custom hydration entry keeps last custom amount`() = runTest {
@@ -760,7 +784,7 @@ class HydrationEntryViewModelTest {
         vm.saveCustomDrink(CustomHydrationDrinkInput(name = "  ", volumeMilliliters = 330.0))
         advanceUntilIdle()
 
-        verify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
+        coVerify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
         assertEquals(HydrationEntryError.INVALID_CUSTOM_DRINK, vm.uiState.value.entryError)
     }
 
@@ -772,7 +796,7 @@ class HydrationEntryViewModelTest {
         vm.saveCustomDrink(CustomHydrationDrinkInput(name = "Vat", volumeMilliliters = 0.0))
         advanceUntilIdle()
 
-        verify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
+        coVerify(exactly = 0) { repo.saveCustomHydrationDrink(any()) }
         assertEquals(HydrationEntryError.INVALID_CUSTOM_DRINK, vm.uiState.value.entryError)
         assertTrue(vm.uiState.value.customDrinkOptions.isEmpty())
     }
@@ -787,8 +811,8 @@ class HydrationEntryViewModelTest {
             )
         )
         val repo = entryRepo()
-        every { repo.customHydrationDrinks() } answers { savedDrinks }
-        every { repo.saveCustomHydrationDrink(any()) } answers {
+        coEvery { repo.customHydrationDrinks() } answers { savedDrinks }
+        coEvery { repo.saveCustomHydrationDrink(any()) } answers {
             savedDrinks = listOf(firstArg<CustomHydrationDrink>())
         }
         val vm = HydrationEntryViewModel(repo)
@@ -800,7 +824,7 @@ class HydrationEntryViewModelTest {
         )
         advanceUntilIdle()
 
-        verify {
+        coVerify {
             repo.saveCustomHydrationDrink(match<CustomHydrationDrink> { drink ->
                 drink.id == "preset-1" &&
                     drink.name == "Double espresso" &&
@@ -828,7 +852,7 @@ class HydrationEntryViewModelTest {
         vm.moveCustomDrinkToTarget("a", "missing")
         advanceUntilIdle()
 
-        verify(exactly = 0) { repo.reorderCustomHydrationDrinks(any()) }
+        coVerify(exactly = 0) { repo.reorderCustomHydrationDrinks(any()) }
         assertEquals(listOf("a"), vm.uiState.value.customDrinkOptions.map { it.id })
     }
 
@@ -837,8 +861,8 @@ class HydrationEntryViewModelTest {
             CustomHydrationDrink(id = "d1", name = "Cola", volumeMilliliters = 330.0),
         )
         val repo = entryRepo()
-        every { repo.customHydrationDrinks() } answers { savedDrinks }
-        every { repo.moveCustomHydrationDrinkToCategory(any(), any()) } answers {
+        coEvery { repo.customHydrationDrinks() } answers { savedDrinks }
+        coEvery { repo.moveCustomHydrationDrinkToCategory(any(), any()) } answers {
             val drinkId = firstArg<String>()
             val category = secondArg<BeverageCategory?>()
             savedDrinks = savedDrinks.map { drink ->
@@ -851,7 +875,7 @@ class HydrationEntryViewModelTest {
         vm.moveCustomDrinkToCategory("d1", BeverageCategory.SODA)
         advanceUntilIdle()
 
-        verify { repo.moveCustomHydrationDrinkToCategory("d1", BeverageCategory.SODA) }
+        coVerify { repo.moveCustomHydrationDrinkToCategory("d1", BeverageCategory.SODA) }
         assertEquals(
             BeverageCategory.SODA,
             vm.uiState.value.customDrinkOptions.single().category,

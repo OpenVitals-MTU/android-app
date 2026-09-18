@@ -53,7 +53,7 @@ internal fun ActivitySpeedChartCard(
 
     ActivitySessionMetricChartCard(
         title = stringResource(R.string.activity_recording_live_speed),
-        sortedValues = samples.sortedBy { it.time }.map { it.time to it.metersPerSecond },
+        sortedValues = remember(samples) { samples.sortedBy { it.time }.map { it.time to it.metersPerSecond } },
         sessionStart = sessionStart,
         sessionEnd = sessionEnd,
         unitFormatter = unitFormatter,
@@ -101,7 +101,7 @@ internal fun ActivitySplitSpeedChartCard(
 
     ActivitySessionMetricChartCard(
         title = title,
-        sortedValues = trace.samples.map { it.time to it.metersPerSecond },
+        sortedValues = remember(trace) { trace.samples.map { it.time to it.metersPerSecond } },
         sessionStart = sessionStart,
         sessionEnd = sessionEnd,
         unitFormatter = unitFormatter,
@@ -132,7 +132,7 @@ internal fun ActivityElevationChartCard(
 
     ActivitySessionMetricChartCard(
         title = stringResource(R.string.metric_elevation),
-        sortedValues = samples.map { it.time to it.meters },
+        sortedValues = remember(samples) { samples.map { it.time to it.meters } },
         sessionStart = sessionStart,
         sessionEnd = sessionEnd,
         unitFormatter = unitFormatter,
@@ -154,7 +154,7 @@ internal fun ActivityCadenceChartCard(
     modifier: Modifier = Modifier,
     pauses: List<SessionPause> = emptyList(),
 ) {
-    val filtered = samples.filter { it.kind == kind }
+    val filtered = remember(samples, kind) { samples.filter { it.kind == kind } }
     if (filtered.isEmpty()) return
 
     val title = when (kind) {
@@ -168,7 +168,7 @@ internal fun ActivityCadenceChartCard(
 
     ActivitySessionMetricChartCard(
         title = title,
-        sortedValues = filtered.sortedBy { it.time }.map { it.time to it.rate },
+        sortedValues = remember(filtered) { filtered.sortedBy { it.time }.map { it.time to it.rate } },
         sessionStart = sessionStart,
         sessionEnd = sessionEnd,
         unitFormatter = unitFormatter,
@@ -200,9 +200,10 @@ private fun ActivitySessionMetricChartCard(
 ) {
     if (sortedValues.isEmpty()) return
 
-    val minValue = sortedValues.minOf { it.second }
-    val maxValue = sortedValues.maxOf { it.second }
-    val avgValue = averageOverride ?: sortedValues.map { it.second }.average()
+    // One pass each per list, not per recomposition.
+    val minValue = remember(sortedValues) { sortedValues.minOf { it.second } }
+    val maxValue = remember(sortedValues) { sortedValues.maxOf { it.second } }
+    val avgValue = averageOverride ?: remember(sortedValues) { sortedValues.map { it.second }.average() }
     val valueRange = (maxValue - minValue).coerceAtLeast(0.001)
     val paddedMin = (minValue - valueRange * 0.1).let { if (floorAtZero) it.coerceAtLeast(0.0) else it }
     val paddedMax = maxValue + valueRange * 0.1

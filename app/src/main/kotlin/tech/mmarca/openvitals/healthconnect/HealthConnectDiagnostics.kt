@@ -10,7 +10,11 @@ internal class HealthConnectDiagnostics(private val context: Context) {
     fun summary(): String =
         "pkg=${context.packageName}, uid=${Process.myUid()}, sdk=${Build.VERSION.SDK_INT}, profile=${isRunningInUnsupportedProfile()}"
 
-    fun isRunningInUnsupportedProfile(): Boolean =
+    // A process never changes user profile, so one binder call is enough.
+    private val unsupportedProfile: Boolean by lazy {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             context.getSystemService(UserManager::class.java)?.isProfile == true
+    }
+
+    fun isRunningInUnsupportedProfile(): Boolean = unsupportedProfile
 }

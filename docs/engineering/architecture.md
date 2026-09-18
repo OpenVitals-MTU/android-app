@@ -509,7 +509,7 @@ Metric detail screens pass `syncPaused` from the shell state into `MetricDetailS
 
 ## Cross-Cutting Rules
 
-These four rules hold app-wide. Breaking one is not a local decision.
+These five rules hold app-wide. Breaking one is not a local decision.
 
 ### 1. Exactly one foreground service at a time
 
@@ -551,6 +551,19 @@ Two bounded exceptions exist today and should stay bounded:
 `ScreenErrorHandler.handle` checks that predicate first and returns `ScreenError.PermissionDenied` before it ever considers `throwable.message`. That matters because the screens turn this case into a grant affordance: `ScreenErrorContent` and `MetricDetailScaffold` render `PermissionDenied` as `HealthConnectPermissionDeniedCallout` rather than red error text. Collapsing it into `ScreenError.Message` would silently downgrade a recoverable state into a dead end.
 
 `AppleHealthImportErrorFormatter.isPermissionDenied` delegates to the same predicate so the import card and the screen error path cannot drift apart. Reuse it; do not pattern-match on exception messages.
+
+### 5. Nothing waits on the main thread
+
+A blocked main thread is an "app isn't responding" dialog. A broadcast receiver has about 10 seconds; a touch has 5.
+
+- **Loads start and publish on Main.** `LoadCoordinator.launch(viewModelScope)` runs there, and `_uiState.value = _uiState.value.copy(...)` is only safe there. Move the heavy part with `withContext`, not the whole load.
+- **Health Connect and Room calls are `suspend` and run on `dispatchers.io`.** Mappers that walk samples run on `dispatchers.default`. Inject [`DispatcherProvider`](../../app/src/main/kotlin/tech/mmarca/openvitals/core/performance/DispatcherProvider.kt) with the `= DefaultDispatcherProvider` default so tests can swap it.
+- **No `runBlocking` in `app/src/main`.** `NoRunBlockingRatchetTest` holds the allow-list.
+- **A receiver never holds a broadcast for a Health Connect read.** `UpdatingHomeWidgetReceiver` lets Glance redraw from stored state and hands the read to `HomeWidgetRefreshScheduler.refreshNow()`. Do not call `goAsync()` in a Glance receiver: Glance already took the pending result, so a second call returns null.
+- **A widget tap writes first.** `runQuickBeverageTap` does the write, then the tile update. The label revert runs on `HomeWidgetScope`, after the broadcast ends. Its time budget stops the wait, never the write.
+- **Composables `remember` any pass over samples.** A day of 1 Hz heart rate is about 86,000 samples. Sort, min, max and average belong in `remember(samples)` or in the mapper.
+
+When the dialog does appear, Android keeps the trace. `AnrExitInfo` reads it into the report email and the debug log export. On a device: `adb shell dumpsys activity exit-info tech.mmarca.openvitals`.
 
 ## Canonical Detail Feature Pattern
 

@@ -56,6 +56,26 @@ class CrashReportEmailTest {
     }
 
     @Test
+    fun `draft carries the not-responding records, or says there are none`() {
+        val withRecords = CrashReportEmail.buildDraft(
+            appInfo = testAppInfo(),
+            reportDetails = null,
+            savedCrashReport = "",
+            diagnosticsLog = "log",
+            anrReports = "- At: 2026-09-18T19:51:02Z",
+        )
+        val without = CrashReportEmail.buildDraft(
+            appInfo = testAppInfo(),
+            reportDetails = null,
+            savedCrashReport = "",
+            diagnosticsLog = "log",
+        )
+
+        assertTrue(withRecords.body.contains("- At: 2026-09-18T19:51:02Z"))
+        assertTrue(without.body.contains("records (stack traces only):\nnone"))
+    }
+
+    @Test
     fun `share text includes recipient subject and body`() {
         val draft = CrashReportEmail.buildDraft(
             appInfo = testAppInfo(),

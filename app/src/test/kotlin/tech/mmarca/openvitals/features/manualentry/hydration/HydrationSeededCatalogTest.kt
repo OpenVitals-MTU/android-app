@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.manualentry.hydration
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -91,14 +92,14 @@ class HydrationSeededCatalogTest {
                 getSharedPreferences(PreferencesRepository.PREFS_FILE, Context.MODE_PRIVATE)
             } returns prefs as SharedPreferences
         }
-        store = BeverageStore(InMemoryBeverageDao(), PreferencesRepository(context))
+        store = BeverageStore(InMemoryBeverageDao(), PreferencesRepository(context), mainDispatcherRule.dispatcherProvider)
     }
 
     @After fun tearDown() {
         unmockkStatic(Log::class)
     }
 
-    @Test fun `supplements and servingless items are excluded from the seed`() {
+    @Test fun `supplements and servingless items are excluded from the seed`() = runTest {
         val ids = store.beverages().map { it.id }.toSet()
 
         CaffeineHealthDrinkCatalog.items.forEach { item ->
@@ -109,7 +110,7 @@ class HydrationSeededCatalogTest {
         }
     }
 
-    @Test fun `a user drink is saved to the store and read back with the seed`() {
+    @Test fun `a user drink is saved to the store and read back with the seed`() = runTest {
         store.save(
             CustomHydrationDrink(
                 id = "mine",
@@ -126,7 +127,7 @@ class HydrationSeededCatalogTest {
         assertTrue(drinks.any { it.name == "Drip coffee" })
     }
 
-    @Test fun `deleting and recategorizing round-trip through the store`() {
+    @Test fun `deleting and recategorizing round-trip through the store`() = runTest {
         store.save(
             CustomHydrationDrink(
                 id = "mine",
@@ -153,7 +154,7 @@ class HydrationSeededCatalogTest {
         every { repository.recentHydrationAmountsMilliliters() } returns emptyList()
         every { repository.hydrationDailyGoalLiters() } returns 2.0
         // The one call under test: the catalog comes off the real seeded store.
-        every { repository.customHydrationDrinks() } answers { store.beverages() }
+        coEvery { repository.customHydrationDrinks() } coAnswers { store.beverages() }
 
         val viewModel = HydrationEntryViewModel(repository)
         advanceUntilIdle()

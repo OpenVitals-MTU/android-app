@@ -7,18 +7,24 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
 import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
+import tech.mmarca.openvitals.util.MainDispatcherRule
 
 /**
  * In-memory stand-in for [BeverageDao]. There is no SQLite in the unit suite, so each
@@ -37,7 +43,12 @@ private class FakeBeverageDao : BeverageDao {
     override suspend fun nextSortOrder(): Int =
         (rows.values.maxOfOrNull { it.sortOrder } ?: -1) + 1
 
+    var insertDefaultsCalls = 0
+
     override suspend fun insertDefaults(beverages: List<BeverageEntity>) {
+        insertDefaultsCalls++
+        // Suspends like Room does, so concurrent callers can interleave.
+        delay(1)
         // OnConflictStrategy.IGNORE: an existing id keeps its stored row.
         beverages.forEach { entity -> rows.putIfAbsent(entity.id, entity) }
     }
@@ -70,6 +81,9 @@ private class FakeBeverageDao : BeverageDao {
 /** The store over [FakeBeverageDao] and a [FakeSharedPreferences]-backed [PreferencesRepository]. */
 class BeverageStoreTest {
 
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private lateinit var dao: FakeBeverageDao
     private lateinit var prefs: FakeSharedPreferences
     private lateinit var preferencesRepository: PreferencesRepository
@@ -88,7 +102,7 @@ class BeverageStoreTest {
             } returns prefs as SharedPreferences
         }
         preferencesRepository = PreferencesRepository(context)
-        store = BeverageStore(dao, preferencesRepository)
+        store = BeverageStore(dao, preferencesRepository, mainDispatcherRule.dispatcherProvider)
     }
 
     @After
@@ -97,7 +111,7 @@ class BeverageStoreTest {
     }
 
     @Test
-    fun `beverages seeds preloaded defaults on first access`() {
+    fun `beverages seeds preloaded defaults on first access`() = runTest {
         val beverages = store.beverages()
 
         assertEquals(BeverageEntity.preloadedDefaults().size, beverages.size)
@@ -108,7 +122,15 @@ class BeverageStoreTest {
     }
 
     @Test
-    fun `save inserts a new active drink with the next sort order`() {
+    fun `concurrent first calls seed the defaults once`() = runTest {
+        val reads = List(8) { async { store.beverages() } }.awaitAll()
+
+        assertEquals(1, dao.insertDefaultsCalls)
+        assertTrue(reads.all { it.size == BeverageEntity.preloadedDefaults().size })
+    }
+
+    @Test
+    fun `save inserts a new active drink with the next sort order`() = runTest {
         store.beverages() // force seeding
         val drink = CustomHydrationDrink(
             id = "my-smoothie",
@@ -133,7 +155,7 @@ class BeverageStoreTest {
     }
 
     @Test
-    fun `delete soft-deletes and hides the drink from active listing`() {
+    fun `delete soft-deletes and hides the drink from active listing`() = runTest {
         store.beverages()
         store.delete("openvitals-still-water")
 
@@ -146,7 +168,7 @@ class BeverageStoreTest {
     }
 
     @Test
-    fun `moveToCategory updates the persisted category`() {
+    fun `moveToCategory updates the persisted category`() = runTest {
         store.beverages()
         store.moveToCategory("openvitals-still-water", BeverageCategory.TEA)
 
@@ -154,7 +176,7 @@ class BeverageStoreTest {
     }
 
     @Test
-    fun `reorder reindexes provided ids first, keeping the rest after`() {
+    fun `reorder reindexes provided ids first, keeping the rest after`() = runTest {
         store.beverages()
         store.reorder(listOf("openvitals-gasified-water", "openvitals-still-water"))
 

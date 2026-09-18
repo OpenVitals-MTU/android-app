@@ -67,7 +67,7 @@ class ActivitiesViewModelTest {
         coEvery { repo.deleteActivityEntry("activity-id") } coAnswers {
             workouts = emptyList()
         }
-        val vm = ActivitiesViewModel(repo)
+        val vm = ActivitiesViewModel(repo, dispatchers = mainDispatcherRule.dispatcherProvider)
 
         vm.deleteActivityEntry("activity-id")
         advanceUntilIdle()
@@ -87,7 +87,7 @@ class ActivitiesViewModelTest {
         )
         val repo = emptyRepo()
         coEvery { repo.loadWorkouts(any(), any()) } returns workouts
-        val vm = ActivitiesViewModel(repo)
+        val vm = ActivitiesViewModel(repo, dispatchers = mainDispatcherRule.dispatcherProvider)
 
         vm.deleteActivityEntry("external-activity-id")
         advanceUntilIdle()
@@ -102,6 +102,7 @@ class ActivitiesViewModelTest {
         val vm = ActivitiesViewModel(
             repository = repo,
             initialActivityWeekMode = ActivityWeekMode.LAST_7_DAYS,
+            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
 
         advanceUntilIdle()
@@ -121,6 +122,7 @@ class ActivitiesViewModelTest {
         val vm = ActivitiesViewModel(
             repository = repo,
             initialActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
+            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
 
         advanceUntilIdle()
@@ -152,7 +154,7 @@ class ActivitiesViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadWorkouts(any(), any()) } returns listOf(walk, bike)
         coEvery { repo.loadPlannedWorkouts(any(), any()) } returns listOf(bikePlan)
-        val vm = ActivitiesViewModel(repo)
+        val vm = ActivitiesViewModel(repo, dispatchers = mainDispatcherRule.dispatcherProvider)
         val initialRange = vm.uiState.value.selectedRange
         val initialDate = vm.uiState.value.selectedDate
 
@@ -191,7 +193,7 @@ class ActivitiesViewModelTest {
         )
         val repo = emptyRepo()
         coEvery { repo.loadWorkouts(any(), any()) } returns listOf(walk, bike)
-        val vm = ActivitiesViewModel(repo)
+        val vm = ActivitiesViewModel(repo, dispatchers = mainDispatcherRule.dispatcherProvider)
 
         vm.selectActivityType(ExerciseSessionRecord.EXERCISE_TYPE_BIKING)
         vm.selectActivityType(null)
@@ -221,7 +223,7 @@ class ActivitiesViewModelTest {
         )
         val repo = emptyRepo()
         coEvery { repo.loadWorkouts(any(), any()) } returns listOf(walk, bike)
-        val vm = ActivitiesViewModel(repo)
+        val vm = ActivitiesViewModel(repo, dispatchers = mainDispatcherRule.dispatcherProvider)
 
         advanceUntilIdle()
 
@@ -238,7 +240,7 @@ class ActivitiesViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadWorkoutsWithMetrics(any(), any()) } throws
             SecurityException("exercise read")
-        val vm = ActivitiesViewModel(repo)
+        val vm = ActivitiesViewModel(repo, dispatchers = mainDispatcherRule.dispatcherProvider)
 
         advanceUntilIdle()
 
@@ -252,7 +254,7 @@ class ActivitiesViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadWorkoutsWithMetrics(any(), any()) } throws
             IllegalStateException("the provider hung up")
-        val vm = ActivitiesViewModel(repo)
+        val vm = ActivitiesViewModel(repo, dispatchers = mainDispatcherRule.dispatcherProvider)
 
         advanceUntilIdle()
 
@@ -278,7 +280,7 @@ class ActivitiesViewModelTest {
         )
         val repo = emptyRepo()
         coEvery { repo.loadWorkouts(any(), any()) } returns listOf(run, ride)
-        val vm = ActivitiesViewModel(repo)
+        val vm = ActivitiesViewModel(repo, dispatchers = mainDispatcherRule.dispatcherProvider)
         advanceUntilIdle()
         assertEquals(2, workoutStatisticsValues(vm.uiState.value.workouts, emptyList()).workoutCount)
 
@@ -315,7 +317,7 @@ class ActivitiesViewModelTest {
             )
         )
         val persisted = mutableListOf<Double>()
-        val vm = ActivitiesViewModel(repo, onDailyGoalChanged = { persisted += it })
+        val vm = ActivitiesViewModel(repo, onDailyGoalChanged = { persisted += it }, dispatchers = mainDispatcherRule.dispatcherProvider)
         advanceUntilIdle()
 
         val period = DatePeriod(today, today)
@@ -348,6 +350,7 @@ class ActivitiesViewModelTest {
             repo,
             initialDailyGoalMinutes = 10.0,
             onDailyGoalChanged = { persisted += it },
+            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
         advanceUntilIdle()
 
@@ -363,7 +366,7 @@ class ActivitiesViewModelTest {
         coEvery { repo.loadWorkoutsWithMetrics(any(), any()) } coAnswers {
             CompletableDeferred<List<ExerciseData>>().also { gates += it }.await()
         }
-        val vm = ActivitiesViewModel(repo)
+        val vm = ActivitiesViewModel(repo, dispatchers = mainDispatcherRule.dispatcherProvider)
         advanceUntilIdle()
         assertEquals(1, gates.size)
 
@@ -414,7 +417,7 @@ class ActivitiesViewModelTest {
             coEvery { mock.loadDailyNutrition(any(), any()) } returns emptyList()
         }
         val today = LocalDate.now()
-        ActivitiesViewModel(repo, initialActivityWeekMode = ActivityWeekMode.LAST_7_DAYS)
+        ActivitiesViewModel(repo, initialActivityWeekMode = ActivityWeekMode.LAST_7_DAYS, dispatchers = mainDispatcherRule.dispatcherProvider)
 
         advanceUntilIdle()
 
@@ -469,7 +472,7 @@ class ActivitiesViewModelTest {
 
     @Test fun `an initial date pins the screen to that day's period`() = runTest {
         val yesterday = java.time.LocalDate.now().minusDays(1)
-        val vm = ActivitiesViewModel(emptyRepo(), initialDate = yesterday)
+        val vm = ActivitiesViewModel(emptyRepo(), initialDate = yesterday, dispatchers = mainDispatcherRule.dispatcherProvider)
         advanceUntilIdle()
 
         assertEquals(yesterday, vm.uiState.value.selectedDate)

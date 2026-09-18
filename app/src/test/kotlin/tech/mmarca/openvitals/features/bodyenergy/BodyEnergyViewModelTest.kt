@@ -76,6 +76,7 @@ class BodyEnergyViewModelTest {
         BodyEnergyViewModel(
             repository = repository,
             preferencesRepository = prefs(),
+            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
 
     @Test
@@ -149,7 +150,7 @@ class BodyEnergyViewModelTest {
             BodyEnergyTimelineResult(firstArg(), listOf(timeline(today)))
         }
         val rebuilt = MutableSharedFlow<Unit>()
-        BodyEnergyViewModel(repository = repo, preferencesRepository = prefs(), chainRebuilt = rebuilt)
+        BodyEnergyViewModel(repository = repo, preferencesRepository = prefs(), chainRebuilt = rebuilt, dispatchers = mainDispatcherRule.dispatcherProvider)
         advanceUntilIdle()
         coVerify(exactly = 1) { repo.loadTimeline(any()) }
 
@@ -167,7 +168,7 @@ class BodyEnergyViewModelTest {
             BodyEnergyTimelineResult(firstArg(), listOf(timeline(today)))
         }
         val calibration = MutableStateFlow(BodyEnergyCalibration.Automatic)
-        BodyEnergyViewModel(repository = repo, preferencesRepository = prefs(), calibrationChanges = calibration)
+        BodyEnergyViewModel(repository = repo, preferencesRepository = prefs(), calibrationChanges = calibration, dispatchers = mainDispatcherRule.dispatcherProvider)
         advanceUntilIdle()
         coVerify(exactly = 1) { repo.loadTimeline(any()) }
 

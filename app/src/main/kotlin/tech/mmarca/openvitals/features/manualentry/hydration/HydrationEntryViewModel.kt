@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
@@ -137,8 +139,15 @@ class HydrationEntryViewModel @Inject constructor(
     )
     val uiState: StateFlow<HydrationEntryUiState> = _uiState.asStateFlow()
 
+    // Drink edits reach Room in the order the user made them.
+    private val drinkEditMutex = Mutex()
+
     init {
-        refresh()
+        // Drinks come from Room, so they load after construction. The frequent drinks follow them.
+        viewModelScope.launch { refreshDrinkOptions() }
+        refreshPermission()
+        refreshDailyGoal()
+        refreshTodayHydration()
         loadEditEntry()
     }
 
@@ -303,27 +312,11 @@ class HydrationEntryViewModel @Inject constructor(
             )
             return
         }
-        repository.saveCustomHydrationDrink(drink)
-        refreshDrinkOptions {
-            copy(
-                entryError = null,
-                entryNotice = null,
-                writeError = null,
-                saveCompleted = false,
-            )
-        }
+        editDrinks { repository.saveCustomHydrationDrink(drink) }
     }
 
     fun deleteCustomDrink(drink: CustomHydrationDrink) {
-        repository.deleteCustomHydrationDrink(drink.id)
-        refreshDrinkOptions {
-            copy(
-                entryError = null,
-                entryNotice = null,
-                writeError = null,
-                saveCompleted = false,
-            )
-        }
+        editDrinks { repository.deleteCustomHydrationDrink(drink.id) }
     }
 
     fun moveCustomDrinkToTarget(
@@ -339,7 +332,10 @@ class HydrationEntryViewModel @Inject constructor(
             val drink = removeAt(fromIndex)
             add(targetIndex.coerceIn(0, size), drink)
         }
-        repository.reorderCustomHydrationDrinks(updated.map { it.id })
+        // The list moves at once; Room follows.
+        viewModelScope.launch {
+            drinkEditMutex.withLock { repository.reorderCustomHydrationDrinks(updated.map { it.id }) }
+        }
         _uiState.value = _uiState.value.copy(
             customDrinkOptions = updated,
             entryError = null,
@@ -353,15 +349,7 @@ class HydrationEntryViewModel @Inject constructor(
         drinkId: String,
         category: BeverageCategory?,
     ) {
-        repository.moveCustomHydrationDrinkToCategory(drinkId, category)
-        refreshDrinkOptions {
-            copy(
-                entryError = null,
-                entryNotice = null,
-                writeError = null,
-                saveCompleted = false,
-            )
-        }
+        editDrinks { repository.moveCustomHydrationDrinkToCategory(drinkId, category) }
     }
 
     fun addSavedCustomDrinkEntry(
@@ -460,7 +448,24 @@ class HydrationEntryViewModel @Inject constructor(
         }
     }
 
-    private fun refreshDrinkOptions(
+    /** One drink edit, then the list as Room now has it. */
+    private fun editDrinks(edit: suspend () -> Unit) {
+        viewModelScope.launch {
+            drinkEditMutex.withLock {
+                edit()
+                refreshDrinkOptions {
+                    copy(
+                        entryError = null,
+                        entryNotice = null,
+                        writeError = null,
+                        saveCompleted = false,
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun refreshDrinkOptions(
         transform: HydrationEntryUiState.() -> HydrationEntryUiState = { this },
     ) {
         val drinkOptions = repository.customHydrationDrinks()
@@ -587,8 +592,6 @@ private fun initialHydrationEntryState(
         dailyGoalLiters = repository.hydrationDailyGoalLiters(),
         lastCustomAmountMilliliters = repository.lastCustomHydrationAmountMilliliters()
             ?.takeIf(::isValidHydrationContainerMilliliters),
-        customDrinkOptions = repository.customHydrationDrinks()
-            .filter(CustomHydrationDrink::isValidCustomHydrationDrink),
         editRecordId = editRecordId,
     )
 }

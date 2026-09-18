@@ -2,6 +2,7 @@ package tech.mmarca.openvitals
 
 import android.app.Application
 import android.content.res.Configuration
+import android.os.StrictMode
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.ProcessLifecycleOwner
 import dagger.hilt.android.EntryPointAccessors
@@ -30,6 +31,7 @@ class OpenVitalsApp : Application() {
     @Inject lateinit var homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler
 
     override fun onCreate() {
+        if (BuildConfig.DEBUG) logMainThreadStalls()
         // The Flutter migration splits around super.onCreate(): preference writes
         // must land before Hilt constructs PreferencesRepository, and the database
         // import needs the Hilt-provided Room. See FlutterDataMigrator.
@@ -63,4 +65,15 @@ class OpenVitalsApp : Application() {
         // Locale and regional-preference changes arrive here first.
         preferencesRepository.refreshSystemUnitSystem()
     }
+}
+
+// Debug builds only: log disk reads and flagged slow calls on the main thread. Never crashes the app.
+private fun logMainThreadStalls() {
+    StrictMode.setThreadPolicy(
+        StrictMode.ThreadPolicy.Builder()
+            .detectDiskReads()
+            .detectCustomSlowCalls()
+            .penaltyLog()
+            .build(),
+    )
 }
