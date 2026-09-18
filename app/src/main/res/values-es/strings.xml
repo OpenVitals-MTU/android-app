@@ -2293,8 +2293,9 @@
     <string name="settings_watch_notifications_apps">Apps que silenciar</string>
     <string name="settings_watch_notifications_apps_none">Todas las apps envían al reloj</string>
     <plurals name="settings_watch_notifications_apps_blocked">
-        <item quantity="one">%1$d app silenciada</item>
-        <item quantity="other">%1$d apps silenciadas</item>
+        <item quantity="one">%1$d aplicación silenciada</item>
+        <item quantity="many">%1$d aplicaciones silenciadas</item>
+        <item quantity="other">%1$d aplicaciones silenciadas</item>
     </plurals>
     <string name="settings_watch_notifications_apps_title">Apps</string>
     <string name="settings_watch_notifications_apps_intro">Desactiva una app para que sus notificaciones dejen de llegar al reloj. Todo lo demás sigue pasando.</string>
@@ -2325,6 +2326,7 @@
     <string name="settings_watch_last_synced">Última sincronización %1$s</string>
     <plurals name="settings_watch_synced_files">
         <item quantity="one">%1$d archivo</item>
+        <item quantity="many">%1$d archivos</item>
         <item quantity="other">%1$d archivos</item>
     </plurals>
     <string name="settings_watch_action_data">Datos</string>
