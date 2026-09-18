@@ -68,8 +68,9 @@ class BodyEnergyRepositoryTest {
         repo().loadTimeline(query)
 
         coVerify(exactly = 1) { heart.repository.loadRawHeartRateSamplesForDayGraph(today) }
-        // The only baseline-window instant read is the observed-max scan over the 28 days before today.
-        coVerify(exactly = 1) {
+        // The 28-day observed max is one aggregate. Loading the window's samples ran out of memory.
+        coVerify(exactly = 1) { heart.repository.loadMaxHeartRate(any(), any()) }
+        coVerify(exactly = 0) {
             heart.repository.loadHeartRateSamples(any<Instant>(), any<Instant>())
         }
     }

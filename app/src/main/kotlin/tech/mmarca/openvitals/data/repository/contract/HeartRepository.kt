@@ -27,6 +27,9 @@ interface HeartRepository {
 
     suspend fun loadHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample>
 
+    /** The highest bpm in the window, without loading its samples. Any window length is safe. */
+    suspend fun loadMaxHeartRate(start: Instant, end: Instant): Long?
+
     suspend fun loadDailyHeartRateSummaries(start: LocalDate, end: LocalDate): List<HeartRateSummary>
 
     suspend fun loadRestingHeartRate(date: LocalDate): Long?

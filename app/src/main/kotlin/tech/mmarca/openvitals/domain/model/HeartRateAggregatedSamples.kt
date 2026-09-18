@@ -23,6 +23,16 @@ const val MaxInsightAggregateBuckets = 144L
 /** Workout-length ranges keep raw samples for finer chart resolution. */
 val HeartRateRawSampleMaxRange: Duration = Duration.ofHours(4)
 
+/**
+ * The longest window read sample by sample: a day plus its lookback, or a
+ * very long workout. A 1 Hz source is 86,400 samples a day, and 28 days of
+ * them ran the app out of memory. Longer windows read as buckets.
+ */
+val HeartRateRawReadMaxRange: Duration = Duration.ofHours(36)
+
+internal fun exceedsRawHeartRateReadRange(range: Duration): Boolean =
+    range > HeartRateRawReadMaxRange
+
 internal fun shouldUseAggregatedHeartRateSamples(range: Duration): Boolean =
     range > HeartRateRawSampleMaxRange
 
