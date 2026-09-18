@@ -2803,4 +2803,5 @@
     <string name="settings_elevation_tile_detail">%1$s • %2$s</string>
     <string name="settings_elevation_tile_resolution_1">Resolución de 30 metros (1 segundo de arco)</string>
     <string name="settings_elevation_tile_resolution_3">Resolución de 90 metros (3 segundo de arco)</string>
+    <string name="settings_apple_health_import_error_truncated">Este es solo el principio del error. Puedes copiarlo o descargar el informe completo para ver el resto.</string>
 </resources>
