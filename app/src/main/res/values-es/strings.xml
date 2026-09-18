@@ -1862,8 +1862,9 @@
     <string name="body_energy_confidence_no_data">Sin datos</string>
     <string name="body_energy_personalization_watch_none">Sincroniza un reloj que mida su propia energía corporal para empezar a personalizar esto.</string>
     <plurals name="body_energy_personalization_watch_body">
-        <item quantity="one">Aprendido de %1$d lectura del reloj. Cada una es un simple multiplicador que puedes ver abajo.</item>
-        <item quantity="other">Aprendido de %1$d lecturas del reloj. Cada una es un simple multiplicador que puedes ver abajo.</item>
+        <item quantity="one">Calculado a partir de %1$d lectura del reloj. Cada una es un multiplicador simple que puedes ver abajo.</item>
+        <item quantity="many">Calculado a partir de %1$d lecturas del reloj. Cada una es un multiplicador simple que puedes ver abajo.</item>
+        <item quantity="other">Calculado a partir de %1$d lecturas del reloj. Cada una es un multiplicador simple que puedes ver abajo.</item>
     </plurals>
     <string name="activity_route_share_gpx">Compartir GPX</string>
     <string name="activity_route_share_kmz">Compartir KMZ</string>
@@ -2404,7 +2405,7 @@
     <string name="settings_watch_metric_sleep_score">Puntuación de sueño</string>
     <string name="settings_watch_metric_awake">Despierto</string>
     <string name="settings_watch_metric_awakenings">Despertares</string>
-    <string name="settings_watch_metric_sleep_coach">Sleep Coach</string>
+    <string name="settings_watch_metric_sleep_coach">Asesor de sueño</string>
     <string name="settings_watch_metric_sleep_coach_body">%1$s más que tus %2$s habituales</string>
     <string name="settings_watch_metric_sleep_coach_equal">Igual que tu %1$s habitual</string>
     <string name="settings_watch_metric_recovery_time">Tiempo de recuperación</string>
