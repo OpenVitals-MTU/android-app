@@ -23,4 +23,18 @@ class DataSourceAttributionTest {
     @Test fun `truncatedDataSourceLabel trims whitespace before limiting`() {
         assertEquals("Samsung Health", truncatedDataSourceLabel("  Samsung Health  "))
     }
+
+    @Test fun `chip content resolves once per package`() {
+        var lookups = 0
+        val resolve = { name: String ->
+            lookups++
+            DataSourceChipContent(label = name, icon = null)
+        }
+
+        val first = DataSourceChipCache.get("com.example.resolved.once", resolve)
+        val second = DataSourceChipCache.get("com.example.resolved.once", resolve)
+
+        assertEquals(1, lookups)
+        assertTrue(first === second)
+    }
 }

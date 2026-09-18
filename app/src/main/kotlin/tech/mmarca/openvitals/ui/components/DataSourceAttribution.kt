@@ -2,7 +2,6 @@ package tech.mmarca.openvitals.ui.components
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -22,9 +21,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,10 +31,27 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.HealthConnectSourceResolver
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
+import java.util.concurrent.ConcurrentHashMap
 
 private const val DataSourceLabelMaxCharacters = 24
 private const val DataSourceLabelOverflow = "..."
 private val DataSourceLabelMaxWidth = 168.dp
+
+// The chip draws 16 dp; 64 px covers the densest screen.
+private const val DataSourceIconPx = 64
+
+internal class DataSourceChipContent(val label: String, val icon: ImageBitmap?)
+
+/**
+ * Chip content per package, held for the process. Every row used to ask the
+ * PackageManager and redraw the app icon on the main thread, which froze long lists.
+ */
+internal object DataSourceChipCache {
+    private val contents = ConcurrentHashMap<String, DataSourceChipContent>()
+
+    fun get(packageName: String, resolve: (String) -> DataSourceChipContent): DataSourceChipContent =
+        contents.getOrPut(packageName) { resolve(packageName) }
+}
 
 @Composable
 fun DataSourceAttribution(
@@ -45,16 +61,18 @@ fun DataSourceAttribution(
     /** True for a synced record showing its original source; the label gains "(synced)". */
     synced: Boolean = false,
 ) {
-    val context = LocalContext.current
-    val source = remember(packageName) {
-        HealthConnectSourceResolver(context).resolve(packageName)
+    val context = LocalContext.current.applicationContext
+    val content = remember(packageName) {
+        DataSourceChipCache.get(packageName) {
+            val source = HealthConnectSourceResolver(context).resolve(it)
+            DataSourceChipContent(
+                label = truncatedDataSourceLabel(source.label),
+                icon = source.icon?.toChipIcon(),
+            )
+        }
     }
-    val iconPainter = remember(source.icon) {
-        source.icon?.toPainter()
-    }
-    val truncatedLabel = remember(source.label) {
-        truncatedDataSourceLabel(source.label)
-    }
+    val iconPainter = remember(content) { content.icon?.let(::BitmapPainter) }
+    val truncatedLabel = content.label
     val label = if (synced) {
         stringResource(R.string.data_source_synced_label, truncatedLabel)
     } else {
@@ -146,17 +164,8 @@ internal fun truncatedDataSourceLabel(label: String): String {
         .trimEnd() + DataSourceLabelOverflow
 }
 
-private fun Drawable.toPainter(): Painter {
-    val bitmap = when (this) {
-        is BitmapDrawable -> bitmap
-        else -> {
-            val width = intrinsicWidth.coerceAtLeast(1)
-            val height = intrinsicHeight.coerceAtLeast(1)
-            Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { created ->
-                setBounds(0, 0, width, height)
-                draw(Canvas(created))
-            }
-        }
-    }
-    return BitmapPainter(bitmap.asImageBitmap())
-}
+private fun Drawable.toChipIcon(): ImageBitmap =
+    Bitmap.createBitmap(DataSourceIconPx, DataSourceIconPx, Bitmap.Config.ARGB_8888).also { created ->
+        setBounds(0, 0, DataSourceIconPx, DataSourceIconPx)
+        draw(Canvas(created))
+    }.asImageBitmap()
