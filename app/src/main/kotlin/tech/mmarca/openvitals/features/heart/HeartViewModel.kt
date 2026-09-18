@@ -40,6 +40,7 @@ import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
 import tech.mmarca.openvitals.data.repository.contract.VitalsRepository
 import tech.mmarca.openvitals.data.sync.VitalsHistorySyncService
+import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
 import tech.mmarca.openvitals.domain.usecase.HeartPeriodLoadRequest
 import tech.mmarca.openvitals.domain.usecase.HeartPeriodLoadResult
 import tech.mmarca.openvitals.domain.usecase.LoadHeartPeriodUseCase
@@ -96,6 +97,7 @@ data class HeartUiState(
     val bloodPressure: List<BloodPressureEntry> = emptyList(),
     val previousBloodPressure: List<BloodPressureEntry> = emptyList(),
     val baselineBloodPressure: List<BloodPressureEntry> = emptyList(),
+    val bloodPressureGuideline: BloodPressureGuideline = BloodPressureGuideline.ACC_AHA_2017,
     val spO2: List<SpO2Entry> = emptyList(),
     val previousSpO2: List<SpO2Entry> = emptyList(),
     val baselineSpO2: List<SpO2Entry> = emptyList(),
@@ -160,6 +162,8 @@ class HeartViewModel(
     private val onHighHeartRateThresholdChanged: (Int) -> Unit = {},
     private val onLowHeartRateThresholdChanged: (Int) -> Unit = {},
     private val vitalsSync: VitalsHistorySyncService? = null,
+    initialBloodPressureGuideline: BloodPressureGuideline = BloodPressureGuideline.ACC_AHA_2017,
+    private val bloodPressureGuidelineChanges: Flow<BloodPressureGuideline> = emptyFlow(),
 ) : ViewModel() {
 
     @Inject
@@ -191,6 +195,8 @@ class HeartViewModel(
         onLowHeartRateThresholdChanged = { threshold ->
             preferencesRepository.lowHeartRateThresholdBpm = threshold
         },
+        initialBloodPressureGuideline = preferencesRepository.bloodPressureGuideline,
+        bloodPressureGuidelineChanges = preferencesRepository.bloodPressureGuidelineFlow,
     )
 
     private val periodDriver = PeriodSelectionDriver(
@@ -203,6 +209,7 @@ class HeartViewModel(
         HeartUiState(
             selectedRange = initialRange,
             weekPeriodMode = initialWeekPeriodMode,
+            bloodPressureGuideline = initialBloodPressureGuideline,
             highHeartRateCheck = HeartRateThresholdCheck(
                 type = HeartRateThresholdCheckType.HIGH,
                 thresholdBpm = initialHighHeartRateThresholdBpm,
@@ -219,7 +226,16 @@ class HeartViewModel(
 
     init {
         observeWeekPeriodMode()
+        observeBloodPressureGuideline()
         load()
+    }
+
+    private fun observeBloodPressureGuideline() {
+        viewModelScope.launch {
+            bloodPressureGuidelineChanges.collect { guideline ->
+                _uiState.value = _uiState.value.copy(bloodPressureGuideline = guideline)
+            }
+        }
     }
 
     private fun observeWeekPeriodMode() {

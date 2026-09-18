@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.domain.insights
 
+import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
 import kotlin.math.max
 
 enum class InterpretationSeverity {
@@ -9,11 +10,19 @@ enum class InterpretationSeverity {
     ALERT,
 }
 
+/** Every category a supported guideline can name. Each guideline uses a subset. */
 enum class BloodPressureCategory {
+    OPTIMAL,
     NORMAL,
+    NON_ELEVATED,
+    HIGH_NORMAL,
     ELEVATED,
     STAGE_1,
     STAGE_2,
+    GRADE_1,
+    GRADE_2,
+    GRADE_3,
+    HYPERTENSION,
     SEVERE_REFERENCE,
 }
 
@@ -118,24 +127,114 @@ data class VitalContextInterpretation(
 fun bloodPressureInterpretation(
     systolicMmHg: Int,
     diastolicMmHg: Int,
+    guideline: BloodPressureGuideline = BloodPressureGuideline.ACC_AHA_2017,
 ): BloodPressureInterpretation? {
     if (systolicMmHg <= 0 || diastolicMmHg <= 0) return null
-    val category = when {
-        systolicMmHg > 180 || diastolicMmHg > 120 -> BloodPressureCategory.SEVERE_REFERENCE
-        systolicMmHg >= 140 || diastolicMmHg >= 90 -> BloodPressureCategory.STAGE_2
-        systolicMmHg >= 130 || diastolicMmHg >= 80 -> BloodPressureCategory.STAGE_1
-        systolicMmHg >= 120 && diastolicMmHg < 80 -> BloodPressureCategory.ELEVATED
-        else -> BloodPressureCategory.NORMAL
-    }
+    val scale = guideline.scale()
+    val category = scale.bands
+        .firstOrNull { it.matches(systolicMmHg, diastolicMmHg) }
+        ?.category
+        ?: scale.lowest
     return BloodPressureInterpretation(
         category = category,
         severity = when (category) {
-            BloodPressureCategory.NORMAL -> InterpretationSeverity.POSITIVE
+            BloodPressureCategory.OPTIMAL,
+            BloodPressureCategory.NORMAL,
+            BloodPressureCategory.NON_ELEVATED -> InterpretationSeverity.POSITIVE
+            BloodPressureCategory.HIGH_NORMAL,
             BloodPressureCategory.ELEVATED -> InterpretationSeverity.INFO
             BloodPressureCategory.STAGE_1,
-            BloodPressureCategory.STAGE_2 -> InterpretationSeverity.CAUTION
+            BloodPressureCategory.STAGE_2,
+            BloodPressureCategory.GRADE_1,
+            BloodPressureCategory.GRADE_2,
+            BloodPressureCategory.HYPERTENSION -> InterpretationSeverity.CAUTION
+            BloodPressureCategory.GRADE_3,
             BloodPressureCategory.SEVERE_REFERENCE -> InterpretationSeverity.ALERT
         },
+    )
+}
+
+/**
+ * One row of a guideline's table, for display. The lowest row holds ceilings:
+ * both values must stay below them. Every other row holds floors: either value reaching its floor is enough.
+ */
+data class BloodPressureCategoryBounds(
+    val category: BloodPressureCategory,
+    val systolicMmHg: Int,
+    val diastolicMmHg: Int?,
+    val isLowest: Boolean,
+)
+
+/** The guideline's table, lowest category first. Built from the bands the classifier uses. */
+fun bloodPressureCategoryBounds(guideline: BloodPressureGuideline): List<BloodPressureCategoryBounds> {
+    val scale = guideline.scale()
+    val lowest = BloodPressureCategoryBounds(
+        category = scale.lowest,
+        systolicMmHg = scale.bands.minOf { it.systolicFrom },
+        diastolicMmHg = scale.bands.mapNotNull { it.diastolicFrom }.minOrNull(),
+        isLowest = true,
+    )
+    return listOf(lowest) + scale.bands.reversed().map { band ->
+        BloodPressureCategoryBounds(band.category, band.systolicFrom, band.diastolicFrom, isLowest = false)
+    }
+}
+
+/** A reading is in the band when either value reaches its floor. A null floor never matches. */
+private class BloodPressureBand(
+    val category: BloodPressureCategory,
+    val systolicFrom: Int,
+    val diastolicFrom: Int?,
+) {
+    fun matches(systolicMmHg: Int, diastolicMmHg: Int): Boolean =
+        systolicMmHg >= systolicFrom || (diastolicFrom != null && diastolicMmHg >= diastolicFrom)
+}
+
+/** Bands run highest first; the first match wins. [lowest] is the category below every band. */
+private class BloodPressureScale(
+    val bands: List<BloodPressureBand>,
+    val lowest: BloodPressureCategory,
+)
+
+/** The app's own reference, above 180 or above 120. Guidelines without a top band of their own use it. */
+private val SevereReferenceBand = BloodPressureBand(BloodPressureCategory.SEVERE_REFERENCE, 181, 121)
+
+private fun BloodPressureGuideline.scale(): BloodPressureScale = when (this) {
+    BloodPressureGuideline.ACC_AHA_2017 -> BloodPressureScale(
+        bands = listOf(
+            SevereReferenceBand,
+            BloodPressureBand(BloodPressureCategory.STAGE_2, 140, 90),
+            BloodPressureBand(BloodPressureCategory.STAGE_1, 130, 80),
+            // Elevated is systolic only; a diastolic of 80 or more is already stage 1.
+            BloodPressureBand(BloodPressureCategory.ELEVATED, 120, null),
+        ),
+        lowest = BloodPressureCategory.NORMAL,
+    )
+    BloodPressureGuideline.ESH_2023 -> BloodPressureScale(
+        bands = listOf(
+            BloodPressureBand(BloodPressureCategory.GRADE_3, 180, 110),
+            BloodPressureBand(BloodPressureCategory.GRADE_2, 160, 100),
+            BloodPressureBand(BloodPressureCategory.GRADE_1, 140, 90),
+            BloodPressureBand(BloodPressureCategory.HIGH_NORMAL, 130, 85),
+            BloodPressureBand(BloodPressureCategory.NORMAL, 120, 80),
+        ),
+        lowest = BloodPressureCategory.OPTIMAL,
+    )
+    BloodPressureGuideline.ESC_2024 -> BloodPressureScale(
+        bands = listOf(
+            SevereReferenceBand,
+            BloodPressureBand(BloodPressureCategory.HYPERTENSION, 140, 90),
+            BloodPressureBand(BloodPressureCategory.ELEVATED, 120, 70),
+        ),
+        lowest = BloodPressureCategory.NON_ELEVATED,
+    )
+    BloodPressureGuideline.ISH_2020 -> BloodPressureScale(
+        bands = listOf(
+            SevereReferenceBand,
+            BloodPressureBand(BloodPressureCategory.GRADE_2, 160, 100),
+            BloodPressureBand(BloodPressureCategory.GRADE_1, 140, 90),
+            BloodPressureBand(BloodPressureCategory.HIGH_NORMAL, 130, 85),
+        ),
+        lowest = BloodPressureCategory.NORMAL,
     )
 }
 

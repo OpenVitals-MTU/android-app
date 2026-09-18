@@ -70,7 +70,10 @@ internal fun LazyListScope.bloodPressureContent(
                 )
             },
             contextInsight = {
-                BloodPressureContextCardContent(state.bloodPressure.maxByOrNull { it.time })
+                BloodPressureContextCardContent(
+                    entry = state.bloodPressure.maxByOrNull { it.time },
+                    guideline = state.bloodPressureGuideline,
+                )
             },
             statistics = {
                 BloodPressureStatisticsContent(

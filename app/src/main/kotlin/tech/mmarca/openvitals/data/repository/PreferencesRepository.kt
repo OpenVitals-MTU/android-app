@@ -16,6 +16,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.ActivitySplitDistance
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeineAlcoholUse
@@ -68,6 +69,7 @@ class PreferencesRepository @Inject constructor(
     private val _appThemeMode = MutableStateFlow(readAppThemeMode())
     private val _dynamicColor = MutableStateFlow(readDynamicColor())
     private val _chartAggregationMode = MutableStateFlow(readChartAggregationMode())
+    private val _bloodPressureGuideline = MutableStateFlow(readBloodPressureGuideline())
     private val _homeWidgetRefreshInterval = MutableStateFlow(readHomeWidgetRefreshInterval())
     private val _sleepWindow = MutableStateFlow(readSleepWindow())
     private val _activityWeekMode = MutableStateFlow(readActivityWeekMode())
@@ -89,6 +91,7 @@ class PreferencesRepository @Inject constructor(
     val appThemeModeFlow: StateFlow<AppThemeMode> = _appThemeMode.asStateFlow()
     val dynamicColorFlow: StateFlow<Boolean> = _dynamicColor.asStateFlow()
     val chartAggregationModeFlow: StateFlow<ChartAggregationMode> = _chartAggregationMode.asStateFlow()
+    val bloodPressureGuidelineFlow: StateFlow<BloodPressureGuideline> = _bloodPressureGuideline.asStateFlow()
     val sleepWindowFlow: StateFlow<SleepWindow> = _sleepWindow.asStateFlow()
     val activityWeekModeFlow: StateFlow<ActivityWeekMode> = _activityWeekMode.asStateFlow()
     val activitySplitDistanceMetersFlow: StateFlow<Double> = _activitySplitDistanceMeters.asStateFlow()
@@ -178,6 +181,13 @@ class PreferencesRepository @Inject constructor(
         set(value) {
             prefs.edit { putString(KEY_CHART_AGGREGATION_MODE, value.name) }
             _chartAggregationMode.value = value
+        }
+
+    var bloodPressureGuideline: BloodPressureGuideline
+        get() = _bloodPressureGuideline.value
+        set(value) {
+            prefs.edit { putString(KEY_BLOOD_PRESSURE_GUIDELINE, value.name) }
+            _bloodPressureGuideline.value = value
         }
 
     val homeWidgetRefreshIntervalFlow: StateFlow<HomeWidgetRefreshInterval> = _homeWidgetRefreshInterval.asStateFlow()
@@ -933,6 +943,11 @@ class PreferencesRepository @Inject constructor(
             ?.let { value -> runCatching { ChartAggregationMode.valueOf(value) }.getOrNull() }
             ?: ChartAggregationMode.OFF
 
+    private fun readBloodPressureGuideline(): BloodPressureGuideline =
+        prefs.getString(KEY_BLOOD_PRESSURE_GUIDELINE, null)
+            ?.let { value -> runCatching { BloodPressureGuideline.valueOf(value) }.getOrNull() }
+            ?: BloodPressureGuideline.ACC_AHA_2017
+
     private fun readHomeWidgetRefreshInterval(): HomeWidgetRefreshInterval =
         HomeWidgetRefreshInterval.fromMinutes(
             prefs.getInt(KEY_HOME_WIDGET_REFRESH_MINUTES, HomeWidgetRefreshInterval.DEFAULT.minutes),
@@ -1224,6 +1239,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_APP_THEME_MODE = "app_theme_mode"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color"
         private const val KEY_CHART_AGGREGATION_MODE = "chart_aggregation_mode"
+        private const val KEY_BLOOD_PRESSURE_GUIDELINE = "blood_pressure_guideline"
         private const val KEY_HOME_WIDGET_REFRESH_MINUTES = "home_widget_refresh_minutes"
         private const val KEY_SLEEP_NIGHT_START_HOUR = "sleep_night_start_hour"
         private const val KEY_SLEEP_NIGHT_END_HOUR = "sleep_night_end_hour"

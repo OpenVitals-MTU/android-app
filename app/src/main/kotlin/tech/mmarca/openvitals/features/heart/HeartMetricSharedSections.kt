@@ -45,6 +45,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.insights.BaselineValue
 import tech.mmarca.openvitals.domain.insights.BloodPressureCategory
 import tech.mmarca.openvitals.domain.insights.DataValueKind
+import tech.mmarca.openvitals.domain.insights.InterpretationSeverity
 import tech.mmarca.openvitals.domain.insights.PeriodComparison
 import tech.mmarca.openvitals.domain.insights.VitalContextInterpretation
 import tech.mmarca.openvitals.domain.insights.VitalContextStatus
@@ -56,6 +57,7 @@ import tech.mmarca.openvitals.domain.insights.periodComparison
 import tech.mmarca.openvitals.domain.insights.personalBaselineInsight
 import tech.mmarca.openvitals.domain.insights.respiratoryRateContext
 import tech.mmarca.openvitals.domain.insights.restingHeartRateContext
+import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -188,9 +190,12 @@ internal fun <T> HeartRawDataConfidenceContent(
 }
 
 @Composable
-internal fun BloodPressureContextCardContent(entry: BloodPressureEntry?) {
+internal fun BloodPressureContextCardContent(
+    entry: BloodPressureEntry?,
+    guideline: BloodPressureGuideline,
+) {
     val interpretation = entry
-        ?.let { bloodPressureInterpretation(it.systolicMmHg, it.diastolicMmHg) }
+        ?.let { bloodPressureInterpretation(it.systolicMmHg, it.diastolicMmHg, guideline) }
         ?: return
     Column(modifier = metricModifier()) {
         SectionHeader(stringResource(R.string.section_metric_context))
@@ -198,16 +203,17 @@ internal fun BloodPressureContextCardContent(entry: BloodPressureEntry?) {
         MetricInterpretationCard(
             title = stringResource(R.string.interpretation_bp_title),
             status = status,
-            body = if (interpretation.category == BloodPressureCategory.SEVERE_REFERENCE) {
+            body = if (interpretation.severity == InterpretationSeverity.ALERT) {
                 stringResource(R.string.interpretation_bp_severe_body)
             } else {
                 stringResource(R.string.interpretation_bp_body, status)
             },
-            source = stringResource(R.string.interpretation_bp_source),
+            source = stringResource(bloodPressureGuidelineSourceRes(guideline)),
             icon = Icons.Outlined.Favorite,
             accentColor = VitalsColor,
             severity = interpretation.severity,
         )
+        BloodPressureGuidelineExplanation(guideline)
     }
 }
 
@@ -281,9 +287,12 @@ internal fun VitalContextCardContent(
     }
 }
 
-internal fun LazyListScope.bloodPressureContextCard(entry: BloodPressureEntry?) {
-    if (entry?.let { bloodPressureInterpretation(it.systolicMmHg, it.diastolicMmHg) } == null) return
-    item { BloodPressureContextCardContent(entry) }
+internal fun LazyListScope.bloodPressureContextCard(
+    entry: BloodPressureEntry?,
+    guideline: BloodPressureGuideline,
+) {
+    if (entry?.let { bloodPressureInterpretation(it.systolicMmHg, it.diastolicMmHg, guideline) } == null) return
+    item { BloodPressureContextCardContent(entry, guideline) }
 }
 
 internal fun LazyListScope.restingHeartRateContextCard(bpm: Long) {
@@ -327,11 +336,26 @@ internal fun LazyListScope.vitalContextCard(
 @Composable
 internal fun bloodPressureCategoryText(category: BloodPressureCategory): String =
     when (category) {
+        BloodPressureCategory.OPTIMAL -> stringResource(R.string.interpretation_bp_optimal)
         BloodPressureCategory.NORMAL -> stringResource(R.string.interpretation_bp_normal)
+        BloodPressureCategory.NON_ELEVATED -> stringResource(R.string.interpretation_bp_non_elevated)
+        BloodPressureCategory.HIGH_NORMAL -> stringResource(R.string.interpretation_bp_high_normal)
         BloodPressureCategory.ELEVATED -> stringResource(R.string.interpretation_bp_elevated)
         BloodPressureCategory.STAGE_1 -> stringResource(R.string.interpretation_bp_stage_1)
         BloodPressureCategory.STAGE_2 -> stringResource(R.string.interpretation_bp_stage_2)
+        BloodPressureCategory.GRADE_1 -> stringResource(R.string.interpretation_bp_grade_1)
+        BloodPressureCategory.GRADE_2 -> stringResource(R.string.interpretation_bp_grade_2)
+        BloodPressureCategory.GRADE_3 -> stringResource(R.string.interpretation_bp_grade_3)
+        BloodPressureCategory.HYPERTENSION -> stringResource(R.string.interpretation_bp_hypertension)
         BloodPressureCategory.SEVERE_REFERENCE -> stringResource(R.string.interpretation_bp_severe)
+    }
+
+internal fun bloodPressureGuidelineSourceRes(guideline: BloodPressureGuideline): Int =
+    when (guideline) {
+        BloodPressureGuideline.ACC_AHA_2017 -> R.string.interpretation_bp_source
+        BloodPressureGuideline.ESH_2023 -> R.string.interpretation_bp_source_esh
+        BloodPressureGuideline.ESC_2024 -> R.string.interpretation_bp_source_esc
+        BloodPressureGuideline.ISH_2020 -> R.string.interpretation_bp_source_ish
     }
 
 @Composable

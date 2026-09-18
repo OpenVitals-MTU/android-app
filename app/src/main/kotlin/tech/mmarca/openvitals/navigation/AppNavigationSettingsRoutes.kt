@@ -76,6 +76,10 @@ internal fun NavGraphBuilder.settingsRoutes(
         SettingsSectionScreen(SettingsSection.BODY_PROFILE, onImportRouteFile, onImportFitFile, onRouteFilesImported)
     }
 
+    composable(Screen.SettingsVitals.route) {
+        SettingsSectionScreen(SettingsSection.VITALS, onImportRouteFile, onImportFitFile, onRouteFilesImported)
+    }
+
     composable(Screen.SettingsRecovery.route) {
         SettingsSectionScreen(SettingsSection.RECOVERY, onImportRouteFile, onImportFitFile, onRouteFilesImported)
     }
@@ -143,6 +147,7 @@ private fun settingsSectionRoute(section: SettingsSection): String =
         SettingsSection.WATCHES -> Screen.SettingsWatches.route
         SettingsSection.NUTRITION -> Screen.SettingsNutrition.route
         SettingsSection.BODY_PROFILE -> Screen.SettingsBodyProfile.route
+        SettingsSection.VITALS -> Screen.SettingsVitals.route
         SettingsSection.RECOVERY -> Screen.SettingsRecovery.route
         SettingsSection.DATA_IMPORT -> Screen.SettingsDataImport.route
         SettingsSection.DEVICE_SYNC -> Screen.SettingsDeviceSync.route

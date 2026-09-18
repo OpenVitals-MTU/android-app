@@ -45,6 +45,7 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.RemoveCircleOutline
 import androidx.compose.material.icons.outlined.Person
@@ -99,6 +100,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
@@ -123,6 +125,7 @@ import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResu
 import tech.mmarca.openvitals.features.imports.applehealth.labelRes
 import tech.mmarca.openvitals.features.caffeine.CaffeineModelEditor
 import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
+import tech.mmarca.openvitals.features.heart.bloodPressureGuidelineLabelRes
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import tech.mmarca.openvitals.ui.components.AppLanguageDropdown
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
@@ -211,6 +214,7 @@ internal val SettingsSection.icon: ImageVector
         SettingsSection.WATCHES -> Icons.Outlined.Watch
         SettingsSection.NUTRITION -> Icons.Outlined.Restaurant
         SettingsSection.BODY_PROFILE -> Icons.Outlined.Person
+        SettingsSection.VITALS -> Icons.Outlined.MonitorHeart
         SettingsSection.RECOVERY -> Icons.Outlined.FavoriteBorder
         SettingsSection.DATA_IMPORT -> Icons.Outlined.FolderOpen
         SettingsSection.DEVICE_SYNC -> Icons.Outlined.Devices
@@ -604,6 +608,47 @@ internal fun ChartAggregationCard(
                                     ChartAggregationMode.MIN30 -> stringResource(R.string.settings_chart_aggregation_min30)
                                 }
                             )
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Which guideline names the blood pressure categories. Chips, since four labels do not fit one line. */
+@Composable
+internal fun BloodPressureGuidelineCard(
+    selected: BloodPressureGuideline,
+    onSelect: (BloodPressureGuideline) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
+            Text(
+                text = stringResource(R.string.settings_bp_guideline_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = stringResource(R.string.settings_bp_guideline_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = Spacing.xs),
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = Spacing.sm),
+            ) {
+                BloodPressureGuideline.entries.forEach { guideline ->
+                    FilterChip(
+                        selected = selected == guideline,
+                        onClick = { onSelect(guideline) },
+                        label = {
+                            Text(stringResource(bloodPressureGuidelineLabelRes(guideline)))
                         },
                     )
                 }

@@ -33,6 +33,10 @@ enum class SettingsSection(
         titleRes = R.string.settings_body_profile_group_title,
         summaryRes = R.string.settings_body_profile_group_body,
     ),
+    VITALS(
+        titleRes = R.string.settings_vitals_group_title,
+        summaryRes = R.string.settings_vitals_group_body,
+    ),
     RECOVERY(
         titleRes = R.string.settings_recovery_group_title,
         summaryRes = R.string.settings_recovery_group_body,

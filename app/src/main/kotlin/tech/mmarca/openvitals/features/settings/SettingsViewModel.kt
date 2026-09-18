@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
+import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
@@ -137,6 +138,7 @@ data class SettingsUiState(
     val appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val dynamicColor: Boolean = false,
     val chartAggregationMode: ChartAggregationMode = ChartAggregationMode.OFF,
+    val bloodPressureGuideline: BloodPressureGuideline = BloodPressureGuideline.ACC_AHA_2017,
     val homeWidgetRefreshInterval: HomeWidgetRefreshInterval = HomeWidgetRefreshInterval.DEFAULT,
     val dashboardSortEmptyTilesLast: Boolean = true,
     val stepDistanceBackfillEnabled: Boolean = false,
@@ -289,6 +291,7 @@ class SettingsViewModel @Inject constructor(
                 appThemeMode = preferencesRepository.appThemeMode,
                 dynamicColor = preferencesRepository.dynamicColor,
                 chartAggregationMode = preferencesRepository.chartAggregationMode,
+                bloodPressureGuideline = preferencesRepository.bloodPressureGuideline,
                 homeWidgetRefreshInterval = preferencesRepository.homeWidgetRefreshInterval,
                 dashboardSortEmptyTilesLast = preferencesRepository.dashboardSortEmptyTilesLast,
                 stepDistanceBackfillEnabled = preferencesRepository.stepDistanceBackfillEnabled,
@@ -989,6 +992,11 @@ class SettingsViewModel @Inject constructor(
     fun setChartAggregationMode(mode: ChartAggregationMode) {
         preferencesRepository.chartAggregationMode = mode
         _uiState.value = _uiState.value.copy(chartAggregationMode = mode)
+    }
+
+    fun setBloodPressureGuideline(guideline: BloodPressureGuideline) {
+        preferencesRepository.bloodPressureGuideline = guideline
+        _uiState.value = _uiState.value.copy(bloodPressureGuideline = guideline)
     }
 
     /** The scheduler stores the choice: it also re-plans the running work. */

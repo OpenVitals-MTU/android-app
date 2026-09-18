@@ -43,6 +43,7 @@ import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
@@ -567,6 +568,7 @@ class RouteBulkImportTest {
             every { prefs.appThemeMode } returns AppThemeMode.SYSTEM
             every { prefs.dynamicColor } returns false
             every { prefs.chartAggregationMode } returns ChartAggregationMode.OFF
+            every { prefs.bloodPressureGuideline } returns BloodPressureGuideline.ACC_AHA_2017
             every { prefs.homeWidgetRefreshInterval } returns HomeWidgetRefreshInterval.DEFAULT
             every { prefs.dashboardSortEmptyTilesLast } returns true
             every { prefs.stepDistanceBackfillEnabled } returns false

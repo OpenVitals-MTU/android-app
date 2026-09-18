@@ -31,6 +31,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
@@ -274,6 +275,22 @@ class SettingsViewModelTest {
 
         verify { prefs.chartAggregationMode = ChartAggregationMode.MIN10 }
         assertEquals(ChartAggregationMode.MIN10, vm.uiState.value.chartAggregationMode)
+    }
+
+    @Test fun `setBloodPressureGuideline persists preference and updates ui state`() = runTest {
+        val prefs = prefs()
+        val vm = viewModel(
+            repository = repo(),
+            preferencesRepository = prefs,
+            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
+            appleHealthImportWorkController = importController(),
+            permissionUxState = permissionUxState(),
+        )
+
+        vm.setBloodPressureGuideline(BloodPressureGuideline.ESH_2023)
+
+        verify { prefs.bloodPressureGuideline = BloodPressureGuideline.ESH_2023 }
+        assertEquals(BloodPressureGuideline.ESH_2023, vm.uiState.value.bloodPressureGuideline)
     }
 
     @Test fun `setHomeWidgetRefreshInterval hands the choice to the scheduler and updates ui state`() = runTest {
@@ -1104,6 +1121,7 @@ class SettingsViewModelTest {
             every { prefs.appThemeMode } returns AppThemeMode.SYSTEM
             every { prefs.dynamicColor } returns false
             every { prefs.chartAggregationMode } returns ChartAggregationMode.OFF
+            every { prefs.bloodPressureGuideline } returns BloodPressureGuideline.ACC_AHA_2017
             every { prefs.homeWidgetRefreshInterval } returns HomeWidgetRefreshInterval.DEFAULT
             every { prefs.dashboardSortEmptyTilesLast } returns true
             every { prefs.stepDistanceBackfillEnabled } returns false
@@ -1149,6 +1167,7 @@ class SettingsViewModelTest {
             every { prefs.appThemeMode = any() } just runs
             every { prefs.dynamicColor = any() } just runs
             every { prefs.chartAggregationMode = any() } just runs
+            every { prefs.bloodPressureGuideline = any() } just runs
             every { prefs.nightStartHour = any() } just runs
             every { prefs.nightEndHour = any() } just runs
             every { prefs.activityWeekMode = any() } just runs

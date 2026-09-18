@@ -265,6 +265,16 @@ internal fun LazyListScope.settingsScreenContent(
                 )
             }
         }
+        SettingsSection.VITALS -> {
+            item { SectionHeader(stringResource(section.titleRes)) }
+            item {
+                BloodPressureGuidelineCard(
+                    selected = state.bloodPressureGuideline,
+                    onSelect = viewModel::setBloodPressureGuideline,
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
+                )
+            }
+        }
         SettingsSection.RECOVERY -> {
             item { SectionHeader(stringResource(section.titleRes)) }
             item {

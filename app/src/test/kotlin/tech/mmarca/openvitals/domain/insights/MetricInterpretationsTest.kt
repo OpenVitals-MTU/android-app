@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
 
 class MetricInterpretationsTest {
 
@@ -31,6 +32,105 @@ class MetricInterpretationsTest {
             bloodPressureInterpretation(181, 82)?.category,
         )
     }
+
+    @Test
+    fun accAhaBoundariesMatchTheGuideline() {
+        val guideline = BloodPressureGuideline.ACC_AHA_2017
+        assertEquals(BloodPressureCategory.NORMAL, category(119, 79, guideline))
+        assertEquals(BloodPressureCategory.ELEVATED, category(120, 79, guideline))
+        assertEquals(BloodPressureCategory.STAGE_1, category(119, 80, guideline))
+        assertEquals(BloodPressureCategory.STAGE_1, category(130, 70, guideline))
+        assertEquals(BloodPressureCategory.STAGE_2, category(140, 70, guideline))
+        assertEquals(BloodPressureCategory.STAGE_2, category(180, 120, guideline))
+        assertEquals(BloodPressureCategory.SEVERE_REFERENCE, category(120, 121, guideline))
+    }
+
+    @Test
+    fun eshGradesStartAt140Over90() {
+        val guideline = BloodPressureGuideline.ESH_2023
+        assertEquals(BloodPressureCategory.OPTIMAL, category(119, 79, guideline))
+        assertEquals(BloodPressureCategory.NORMAL, category(120, 70, guideline))
+        assertEquals(BloodPressureCategory.NORMAL, category(110, 84, guideline))
+        assertEquals(BloodPressureCategory.HIGH_NORMAL, category(135, 82, guideline))
+        assertEquals(BloodPressureCategory.HIGH_NORMAL, category(110, 85, guideline))
+        assertEquals(BloodPressureCategory.GRADE_1, category(140, 70, guideline))
+        assertEquals(BloodPressureCategory.GRADE_1, category(110, 90, guideline))
+        assertEquals(BloodPressureCategory.GRADE_2, category(160, 70, guideline))
+        assertEquals(BloodPressureCategory.GRADE_2, category(110, 100, guideline))
+        assertEquals(BloodPressureCategory.GRADE_3, category(180, 70, guideline))
+        assertEquals(BloodPressureCategory.GRADE_3, category(110, 110, guideline))
+    }
+
+    @Test
+    fun escUsesThreeCategoriesPlusTheSevereReference() {
+        val guideline = BloodPressureGuideline.ESC_2024
+        assertEquals(BloodPressureCategory.NON_ELEVATED, category(119, 69, guideline))
+        assertEquals(BloodPressureCategory.ELEVATED, category(110, 70, guideline))
+        assertEquals(BloodPressureCategory.ELEVATED, category(139, 89, guideline))
+        assertEquals(BloodPressureCategory.HYPERTENSION, category(140, 60, guideline))
+        assertEquals(BloodPressureCategory.HYPERTENSION, category(110, 90, guideline))
+        assertEquals(BloodPressureCategory.SEVERE_REFERENCE, category(181, 60, guideline))
+    }
+
+    @Test
+    fun ishTreatsBelow130Over85AsNormal() {
+        val guideline = BloodPressureGuideline.ISH_2020
+        assertEquals(BloodPressureCategory.NORMAL, category(129, 84, guideline))
+        assertEquals(BloodPressureCategory.HIGH_NORMAL, category(130, 70, guideline))
+        assertEquals(BloodPressureCategory.HIGH_NORMAL, category(110, 85, guideline))
+        assertEquals(BloodPressureCategory.GRADE_1, category(159, 99, guideline))
+        assertEquals(BloodPressureCategory.GRADE_2, category(160, 70, guideline))
+        assertEquals(BloodPressureCategory.GRADE_2, category(110, 100, guideline))
+        assertEquals(BloodPressureCategory.SEVERE_REFERENCE, category(150, 121, guideline))
+    }
+
+    @Test
+    fun theSameReadingChangesNameAcrossGuidelines() {
+        // 134/82 is the case behind the setting: high in the US, not in Europe.
+        assertEquals(InterpretationSeverity.CAUTION, severity(134, 82, BloodPressureGuideline.ACC_AHA_2017))
+        assertEquals(InterpretationSeverity.INFO, severity(134, 82, BloodPressureGuideline.ESH_2023))
+        assertEquals(InterpretationSeverity.INFO, severity(134, 82, BloodPressureGuideline.ESC_2024))
+        assertEquals(InterpretationSeverity.INFO, severity(134, 82, BloodPressureGuideline.ISH_2020))
+    }
+
+    @Test
+    fun everyGuidelineAlertsOnAVeryHighReading() {
+        BloodPressureGuideline.entries.forEach { guideline ->
+            assertEquals(guideline.name, InterpretationSeverity.ALERT, severity(190, 125, guideline))
+        }
+    }
+
+    @Test
+    fun boundsListTheTableLowestFirst() {
+        val bounds = bloodPressureCategoryBounds(BloodPressureGuideline.ACC_AHA_2017)
+
+        assertEquals(
+            listOf(
+                BloodPressureCategoryBounds(BloodPressureCategory.NORMAL, 120, 80, isLowest = true),
+                BloodPressureCategoryBounds(BloodPressureCategory.ELEVATED, 120, null, isLowest = false),
+                BloodPressureCategoryBounds(BloodPressureCategory.STAGE_1, 130, 80, isLowest = false),
+                BloodPressureCategoryBounds(BloodPressureCategory.STAGE_2, 140, 90, isLowest = false),
+                BloodPressureCategoryBounds(BloodPressureCategory.SEVERE_REFERENCE, 181, 121, isLowest = false),
+            ),
+            bounds,
+        )
+    }
+
+    @Test
+    fun boundsAgreeWithTheClassifier() {
+        BloodPressureGuideline.entries.forEach { guideline ->
+            bloodPressureCategoryBounds(guideline).filterNot { it.isLowest }.forEach { row ->
+                // A systolic floor alone, with a low diastolic, must land in that row.
+                assertEquals("${guideline.name} ${row.category}", row.category, category(row.systolicMmHg, 50, guideline))
+            }
+        }
+    }
+
+    private fun category(systolic: Int, diastolic: Int, guideline: BloodPressureGuideline) =
+        bloodPressureInterpretation(systolic, diastolic, guideline)?.category
+
+    private fun severity(systolic: Int, diastolic: Int, guideline: BloodPressureGuideline) =
+        bloodPressureInterpretation(systolic, diastolic, guideline)?.severity
 
     @Test
     fun classifiesAdultBmiBoundaries() {
