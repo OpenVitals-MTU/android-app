@@ -12,11 +12,14 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.unmockkStatic
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyAggregateEntity
@@ -76,7 +79,7 @@ class VitalsHistorySyncServiceTest {
     @Test fun `first sync registers the token before the read and replaces the metric`() = runTest {
         val hc = hc()
         val point = DailyVitalPoint(date = today.minusDays(2), value = 97.0, count = 4)
-        coEvery { hc.readDailySpO2(any(), any()) } returns listOf(point)
+        coEvery { hc.readDailySpO2(any(), any()) } answers { listOf(point).within(firstArg(), secondArg()) }
         val dao = dao(cursorToken = null)
         val written = slot<List<VitalsDailyAggregateEntity>>()
         coEvery { dao.replaceMetric(VitalsCacheKeys.SPO2, capture(written)) } just Runs
@@ -89,6 +92,37 @@ class VitalsHistorySyncServiceTest {
         assertEquals(4L, row.sampleCount)
         assertNull(row.secondarySum)
         coVerify { dao.writeFullSync(match { it.metric == VitalsCacheKeys.SPO2 && it.changesToken == "token-1" }) }
+    }
+
+    @Test fun `the full history is read a chunk at a time and swapped in once`() = runTest {
+        // One request for 730 days of raw records ran the app out of memory.
+        val hc = hc()
+        val recent = DailyVitalPoint(date = today.minusDays(1), value = 97.0, count = 4)
+        val old = DailyVitalPoint(date = today.minusDays(700), value = 95.0, count = 2)
+        val requests = mutableListOf<Pair<Instant, Instant>>()
+        coEvery { hc.readDailySpO2(any(), any()) } answers {
+            requests += firstArg<Instant>() to secondArg<Instant>()
+            listOf(recent, old).within(firstArg(), secondArg())
+        }
+        val dao = dao(cursorToken = null)
+        val written = slot<List<VitalsDailyAggregateEntity>>()
+        coEvery { dao.replaceMetric(VitalsCacheKeys.SPO2, capture(written)) } just Runs
+
+        VitalsHistorySyncService(hc, dao).syncAll()
+
+        val maxChunk = Duration.ofDays(VitalsHistorySyncService.FullSyncChunkDays).plusHours(1) // a DST day is 25 h
+        assertTrue(requests.size > 1)
+        requests.forEach { (start, end) -> assertTrue(Duration.between(start, end) <= maxChunk) }
+        // Newest first, back to back: no gap and no day read twice.
+        requests.zipWithNext().forEach { (newer, older) -> assertEquals(newer.first, older.second) }
+        assertEquals(today.minusDays(HistoryLookbackDays).dayStart(), requests.last().first)
+        assertEquals(today.dayEndExclusive(), requests.first().second)
+        coVerify(exactly = 1) { dao.replaceMetric(VitalsCacheKeys.SPO2, any()) }
+        assertEquals(
+            setOf(recent.date.toEpochDay(), old.date.toEpochDay()),
+            written.captured.map { it.epochDay }.toSet(),
+        )
+        assertEquals(2, written.captured.size)
     }
 
     @Test fun `incremental sync recomputes only the upserted days`() = runTest {
@@ -185,3 +219,7 @@ class VitalsHistorySyncServiceTest {
         coVerify { dao.upsertDay(match { it.epochDay == today.toEpochDay() && it.valueSum == 95.0 }) }
     }
 }
+
+/** What a real read returns: only the days inside the requested window. */
+private fun List<DailyVitalPoint>.within(start: Instant, end: Instant): List<DailyVitalPoint> =
+    filter { point -> !point.date.dayStart().isBefore(start) && point.date.dayStart().isBefore(end) }

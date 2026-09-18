@@ -11,19 +11,29 @@ import androidx.health.connect.client.records.metadata.Metadata
  */
 object SyncedSourceOverlay {
 
-    @Volatile private var originsByClientRecordId: Map<String, String> = emptyMap()
+    @Volatile private var index = SyncedOriginIndex()
 
-    /** Replaces the snapshot; the single writer is the origin repository. */
+    /** Replaces everything; the single writer is the origin repository. */
     fun update(origins: Map<String, String>) {
-        originsByClientRecordId = origins
+        replace(SyncedOriginIndex(origins.size).also { it.putAll(origins) })
     }
 
-    /** The current snapshot (used when re-syncing to pass origins through). */
-    fun snapshot(): Map<String, String> = originsByClientRecordId
+    /** Swaps in an index built elsewhere, so a reload never shows a half-filled one. */
+    internal fun replace(newIndex: SyncedOriginIndex) {
+        index = newIndex
+    }
+
+    /** Adds rows that just landed. No reload: the table can hold a million rows. */
+    fun add(origins: Map<String, String>) {
+        index.putAll(origins)
+    }
+
+    /** How many origins are held. */
+    val size: Int get() = index.size
 
     /** The preserved original source package for [clientRecordId], if any. */
     fun originFor(clientRecordId: String?): String? =
-        clientRecordId?.let { originsByClientRecordId[it] }
+        clientRecordId?.let { index[it] }
 
     /** True when [clientRecordId] belongs to a record with a preserved origin. */
     fun isSyncedRecord(clientRecordId: String?): Boolean = originFor(clientRecordId) != null
