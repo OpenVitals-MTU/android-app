@@ -185,6 +185,8 @@ Play listing (`scripts/announce-mastodon.sh`), and posts the full release notes
 to the Zulip `releases` channel under a `vX.Y.Z` topic
 (`scripts/announce-zulip.sh`). Both announcement steps check for an existing
 post for the tag first, so re-running a deployment never announces twice.
+The Mastodon step is disabled for now: it is commented out in
+`.woodpecker/release.yml`.
 
 Configure the Woodpecker cron named `nightly` to run at `00:00 UTC` on the
 default branch. The cron-triggered release workflow and the manual release
