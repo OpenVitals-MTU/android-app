@@ -65,6 +65,7 @@ import tech.mmarca.openvitals.devices.garmin.GarminAgpsFileState
 import tech.mmarca.openvitals.devices.garmin.GarminAgpsKind
 import tech.mmarca.openvitals.devices.garmin.GarminCapability
 import tech.mmarca.openvitals.devices.garmin.GarminSettingsService
+import tech.mmarca.openvitals.devices.garmin.canStorePoints
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.theme.Spacing
@@ -204,7 +205,7 @@ fun WatchDeviceScreen(
         }
 
         // The watch's answer to the upload is the real gate; this only hides the obvious no.
-        if (isGarmin && state.supports(GarminCapability.WAYPOINT_TRANSFER)) {
+        if (isGarmin && state.capabilities.canStorePoints()) {
             SendPointRow(onOpen = { onOpenSendPoint(device.id) })
         }
 

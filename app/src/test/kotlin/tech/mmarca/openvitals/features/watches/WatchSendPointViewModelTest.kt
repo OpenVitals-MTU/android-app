@@ -143,8 +143,11 @@ class WatchSendPointViewModelTest {
         val unable = addGarmin("vívosmart 5", "E0:48:24:D5:F7:10")
         val able = addGarmin("fēnix 7", "E0:48:24:D5:F7:11")
         val unknown = addGarmin("Instinct 2", "E0:48:24:D5:F7:12")
+        val explore = addGarmin("Instinct", "E0:48:24:D5:F7:13")
         stateStore.recordCapabilities(unable.id, setOf(GarminCapability.SYNC))
         stateStore.recordCapabilities(able.id, setOf(GarminCapability.SYNC, GarminCapability.WAYPOINT_TRANSFER))
+        // EXPLORE_SYNC alone is enough, as in Gadgetbridge.
+        stateStore.recordCapabilities(explore.id, setOf(GarminCapability.SYNC, GarminCapability.EXPLORE_SYNC))
         repo.addDevice(
             displayName = "Galaxy Watch",
             address = "A8:D1:62:BE:3A:3B",
@@ -156,7 +159,7 @@ class WatchSendPointViewModelTest {
 
         val state = viewModel().uiState.value
 
-        assertEquals(setOf(able.id, unknown.id), state.watches.map { it.id }.toSet())
+        assertEquals(setOf(able.id, unknown.id, explore.id), state.watches.map { it.id }.toSet())
     }
 
     @Test

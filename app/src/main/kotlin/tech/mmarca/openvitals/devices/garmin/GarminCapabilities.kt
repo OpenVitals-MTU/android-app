@@ -149,3 +149,11 @@ enum class GarminCapability {
         }
     }
 }
+
+/**
+ * Whether the watch takes a location file. Either capability will do, after
+ * Gadgetbridge's supportsSendWaypoint. An empty set counts as able: a
+ * never-synced watch has no list.
+ */
+fun Set<GarminCapability>.canStorePoints(): Boolean =
+    isEmpty() || GarminCapability.WAYPOINT_TRANSFER in this || GarminCapability.EXPLORE_SYNC in this

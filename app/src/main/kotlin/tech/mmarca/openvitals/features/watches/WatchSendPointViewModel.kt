@@ -15,11 +15,11 @@ import kotlinx.coroutines.flow.update
 import tech.mmarca.openvitals.core.geo.GeoCoordinateParseResult
 import tech.mmarca.openvitals.core.geo.GeoCoordinateParser
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
-import tech.mmarca.openvitals.devices.garmin.GarminCapability
 import tech.mmarca.openvitals.devices.garmin.GarminDeviceStateStore
 import tech.mmarca.openvitals.devices.garmin.GarminSendFileResult
 import tech.mmarca.openvitals.devices.garmin.GarminSendStage
 import tech.mmarca.openvitals.devices.garmin.GarminWaypoint
+import tech.mmarca.openvitals.devices.garmin.canStorePoints
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.navigation.WATCH_DEVICE_ID_ARG
 import tech.mmarca.openvitals.navigation.WATCH_POINT_LATITUDE_ARG
@@ -130,12 +130,8 @@ class WatchSendPointViewModel @Inject constructor(
         actionsController.sendPoint(deviceId, GarminWaypoint(name, position.latitude, position.longitude))
     }
 
-    /** Unknown capabilities count as able: a watch that never synced has no list. */
-    private fun BleSensorDevice.canStorePoints(): Boolean {
-        if (!enabled || !isGarminGfdi) return false
-        val capabilities = stateStore.capabilities(id)
-        return capabilities.isEmpty() || GarminCapability.WAYPOINT_TRANSFER in capabilities
-    }
+    private fun BleSensorDevice.canStorePoints(): Boolean =
+        enabled && isGarminGfdi && stateStore.capabilities(id).canStorePoints()
 
     private fun sharedCoordinates(latitude: Double?, longitude: Double?): String =
         if (latitude == null || longitude == null) "" else coordinatesText(latitude, longitude)
