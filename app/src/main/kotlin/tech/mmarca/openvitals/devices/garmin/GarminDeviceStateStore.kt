@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.devices.garmin
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import java.time.DayOfWeek
 import org.json.JSONArray
 import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
 
@@ -128,6 +129,22 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
         prefs.edit { putString(syncProtocolPrefsKey(deviceId), protocol.name) }
     }
 
+    /** The alarms set here for a watch with no settings tree. The watch's own are never read. */
+    fun alarms(deviceId: String): List<GarminAlarm> =
+        prefs.readStringList(alarmsPrefsKey(deviceId)).orEmpty().mapNotNull(::decodeAlarm)
+
+    fun setAlarms(deviceId: String, alarms: List<GarminAlarm>) {
+        prefs.writeStringList(alarmsPrefsKey(deviceId), alarms.map(::encodeAlarm))
+    }
+
+    /** The list the watch last accepted, or null when none was sent. */
+    fun sentAlarms(deviceId: String): List<GarminAlarm>? =
+        prefs.readStringList(sentAlarmsPrefsKey(deviceId))?.mapNotNull(::decodeAlarm)
+
+    fun recordSentAlarms(deviceId: String, alarms: List<GarminAlarm>) {
+        prefs.writeStringList(sentAlarmsPrefsKey(deviceId), alarms.map(::encodeAlarm))
+    }
+
     fun clear(deviceId: String) {
         clearSyncedFileKeys(deviceId)
         prefs.edit {
@@ -138,6 +155,8 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
             remove(calendarSyncPrefsKey(deviceId))
             remove(autoSyncPrefsKey(deviceId))
             remove(syncProtocolPrefsKey(deviceId))
+            remove(alarmsPrefsKey(deviceId))
+            remove(sentAlarmsPrefsKey(deviceId))
         }
     }
 
@@ -160,6 +179,10 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
     private fun syncProtocolPrefsKey(deviceId: String) =
         "garmin_sync_protocol_$deviceId"
 
+    private fun alarmsPrefsKey(deviceId: String) = "garmin_alarms_$deviceId"
+
+    private fun sentAlarmsPrefsKey(deviceId: String) = "garmin_alarms_sent_$deviceId"
+
     companion object {
         const val PREFS_FILE = "garmin_device_state"
 
@@ -177,4 +200,31 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
             edit { putString(key, JSONArray(values).toString()) }
         }
     }
+}
+
+/** One alarm as `minuteOfDay,repeatMask,enabled,sound,backlight,label`. Enums go by name. */
+private fun encodeAlarm(alarm: GarminAlarm): String = listOf(
+    alarm.minuteOfDay,
+    alarm.repeatMask,
+    alarm.enabled,
+    alarm.sound.name,
+    alarm.backlight,
+    alarm.label.name,
+).joinToString(",")
+
+/** Null for a line this build cannot read, so one bad entry does not lose the rest. */
+private fun decodeAlarm(line: String): GarminAlarm? {
+    val parts = line.split(",")
+    if (parts.size != 6) return null
+    val minuteOfDay = parts[0].toIntOrNull()?.takeIf { it in 0 until 24 * 60 } ?: return null
+    val mask = parts[1].toLongOrNull() ?: return null
+    return GarminAlarm(
+        hour = minuteOfDay / 60,
+        minute = minuteOfDay % 60,
+        days = DayOfWeek.entries.filter { mask and (1L shl (it.value - 1)) != 0L }.toSet(),
+        enabled = parts[2].toBoolean(),
+        sound = GarminAlarmSound.entries.firstOrNull { it.name == parts[3] } ?: return null,
+        backlight = parts[4].toBoolean(),
+        label = GarminAlarmLabel.entries.firstOrNull { it.name == parts[5] } ?: return null,
+    )
 }

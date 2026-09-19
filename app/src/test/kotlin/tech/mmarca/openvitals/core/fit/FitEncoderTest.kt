@@ -5,6 +5,7 @@ import java.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.devices.garmin.GarminCrc
@@ -78,6 +79,19 @@ class FitEncoderTest {
         assertNull(message.values[1])
         assertNull(message.values[2])
         assertNull(message.strings[3])
+    }
+
+    @Test fun `an array field round-trips and must fill its size`() {
+        val encoder = FitEncoder()
+        encoder.defineMessage(0, 2, listOf(FitEncoderField(8, FitBaseType.UINT16, size = 4)))
+        encoder.writeMessage(0, arrays = mapOf(8 to listOf(390L, 1325L)))
+        val bytes = ByteArrayOutputStream().also(encoder::writeTo).toByteArray()
+
+        assertEquals(listOf(390L, 1325L), FitDecoder.readFile(bytes, startOffset = 0).messages[0].arrays[8])
+        // A short array would shift every field after it.
+        assertThrows(IllegalArgumentException::class.java) {
+            encoder.writeMessage(0, arrays = mapOf(8 to listOf(390L)))
+        }
     }
 
     @Test fun `the container carries real CRCs`() {

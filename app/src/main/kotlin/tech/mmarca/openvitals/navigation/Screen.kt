@@ -203,6 +203,12 @@ sealed class Screen(val route: String) {
             "watch/${Uri.encode(watchDeviceId)}/notifications"
     }
 
+    /** Alarms kept on the phone, for a watch with no settings tree. */
+    data object WatchAlarms : Screen("watch/{$WATCH_DEVICE_ID_ARG}/alarms") {
+        fun createRoute(watchDeviceId: String): String =
+            "watch/${Uri.encode(watchDeviceId)}/alarms"
+    }
+
     /** The watch's own settings tree. */
     data object WatchSettings :
         Screen("watch/{$WATCH_DEVICE_ID_ARG}/settings/{$WATCH_SETTINGS_SCREEN_ID_ARG}") {

@@ -80,6 +80,9 @@ enum class GarminDownloadStatus {
 enum class GarminUploadFileType(val dataType: Int, val subType: Int) {
     /** Saved locations, from `FileType.java` (AGPLv3). */
     LOCATION(128, 8),
+
+    /** A settings file. The alarms of a watch with no settings tree travel in one. */
+    SETTINGS(128, 2),
 }
 
 /** The watch's answer to a create-file request (`CreateFileStatusMessage.CreateStatus`). */

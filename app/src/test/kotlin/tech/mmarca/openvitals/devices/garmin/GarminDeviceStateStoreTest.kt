@@ -1,7 +1,9 @@
 package tech.mmarca.openvitals.devices.garmin
 
+import java.time.DayOfWeek
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -180,5 +182,47 @@ class GarminDeviceStateStoreTest {
         store.clear(deviceId)
 
         assertEquals(GarminSyncProtocol.UNKNOWN, store.syncProtocol(deviceId))
+    }
+
+    @Test
+    fun `alarms round-trip through storage in order`() {
+        val alarms = listOf(
+            GarminAlarm(
+                hour = 6,
+                minute = 30,
+                days = setOf(DayOfWeek.MONDAY, DayOfWeek.SUNDAY),
+                enabled = false,
+                sound = GarminAlarmSound.VIBRATION,
+                backlight = false,
+                label = GarminAlarmLabel.WAKE_UP,
+            ),
+            GarminAlarm(hour = 22, minute = 5),
+        )
+        assertTrue(store.alarms(deviceId).isEmpty())
+
+        store.setAlarms(deviceId, alarms)
+
+        assertEquals(alarms, GarminDeviceStateStore(prefs).alarms(deviceId))
+    }
+
+    @Test
+    fun `sent alarms are unknown until a send is recorded`() {
+        assertNull(store.sentAlarms(deviceId))
+
+        store.recordSentAlarms(deviceId, emptyList())
+
+        // An empty list that was sent is not the same as nothing sent.
+        assertEquals(emptyList<GarminAlarm>(), store.sentAlarms(deviceId))
+    }
+
+    @Test
+    fun `forgetting the watch forgets its alarms`() {
+        store.setAlarms(deviceId, listOf(GarminAlarm(hour = 7, minute = 0)))
+        store.recordSentAlarms(deviceId, listOf(GarminAlarm(hour = 7, minute = 0)))
+
+        store.clear(deviceId)
+
+        assertTrue(store.alarms(deviceId).isEmpty())
+        assertNull(store.sentAlarms(deviceId))
     }
 }

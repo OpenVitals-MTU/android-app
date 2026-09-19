@@ -383,6 +383,7 @@ fun AppNavigation(
         Screen.WatchData.route -> stringResource(R.string.settings_watch_data_title)
         Screen.WatchNotifications.route -> stringResource(R.string.screen_watch_notifications)
         Screen.WatchSettings.route -> stringResource(R.string.settings_watch_on_device_settings)
+        Screen.WatchAlarms.route -> stringResource(R.string.settings_watch_action_alarms)
         Screen.WatchSendPoint.basePath -> stringResource(R.string.settings_watch_point_title)
         Screen.Achievements.route -> stringResource(R.string.screen_achievements)
         else -> ""

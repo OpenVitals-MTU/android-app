@@ -69,6 +69,10 @@ data class WatchDeviceUiState(
     /** Whether the watch declared [capability]. Unknown means show: a never-synced watch has no list. */
     fun supports(capability: GarminCapability): Boolean =
         capabilities.isEmpty() || capability in capabilities
+
+    /** Whether the watch serves its settings, alarms included, as a tree of screens. */
+    val hasSettingsTree: Boolean
+        get() = WatchSettingsTreeAvailable && supports(GarminCapability.REALTIME_SETTINGS)
 }
 
 /** One watch, and everything about it. */

@@ -88,6 +88,7 @@ class WatchSendPointViewModelTest {
                 sent += device.id to point
                 sendGate.await()
             },
+            sendAlarms = { _, _, _ -> GarminSendFileResult.Sent },
             scope = backgroundScope,
         )
         return WatchSendPointViewModel(

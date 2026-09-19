@@ -6,6 +6,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import tech.mmarca.openvitals.features.watches.WatchAlarmsScreen
 import tech.mmarca.openvitals.features.watches.WatchDataScreen
 import tech.mmarca.openvitals.features.watches.WatchDeviceScreen
 import tech.mmarca.openvitals.features.watches.WatchNotificationAppsScreen
@@ -40,6 +41,11 @@ internal fun NavGraphBuilder.watchRoutes(
                     launchSingleTop = true
                 }
             },
+            onOpenAlarms = { deviceId ->
+                navController.navigate(Screen.WatchAlarms.createRoute(deviceId)) {
+                    launchSingleTop = true
+                }
+            },
             onRemoved = { navController.popBackStack() },
             onTitleChanged = onWatchDeviceTitleChanged,
         )
@@ -51,6 +57,10 @@ internal fun NavGraphBuilder.watchRoutes(
 
     composable(Screen.WatchNotifications.route) {
         WatchNotificationAppsScreen(viewModel = hiltViewModel())
+    }
+
+    composable(Screen.WatchAlarms.route) {
+        WatchAlarmsScreen(viewModel = hiltViewModel())
     }
 
     // Strings, so an absent position stays absent: a number argument cannot be null.

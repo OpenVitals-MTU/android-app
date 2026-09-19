@@ -91,6 +91,7 @@ fun WatchDeviceScreen(
     onOpenNotifications: (String) -> Unit,
     onOpenWatchSettings: (String, Int) -> Unit,
     onOpenSendPoint: (String) -> Unit,
+    onOpenAlarms: (String) -> Unit,
     onRemoved: () -> Unit,
     onTitleChanged: (String?) -> Unit,
 ) {
@@ -157,7 +158,11 @@ fun WatchDeviceScreen(
                 onOpenData = { onOpenData(device.id) },
                 onSync = viewModel::syncNow,
                 onOpenAlarms = {
-                    onOpenWatchSettings(device.id, WatchSettingsAlarmsScreenId)
+                    if (state.hasSettingsTree) {
+                        onOpenWatchSettings(device.id, WatchSettingsAlarmsScreenId)
+                    } else {
+                        onOpenAlarms(device.id)
+                    }
                 },
                 onToggleFind = viewModel::toggleFind,
             )
@@ -189,9 +194,7 @@ fun WatchDeviceScreen(
         }
 
         // Only for a watch that has a settings tree.
-        if (WatchSettingsTreeAvailable && isGarmin &&
-            state.supports(GarminCapability.REALTIME_SETTINGS)
-        ) {
+        if (isGarmin && state.hasSettingsTree) {
             SectionHeader(stringResource(R.string.settings_watch_settings_section))
             OnDeviceSettingsRow(
                 onOpen = { onOpenWatchSettings(device.id, WatchSettingsRootScreenId) },
@@ -480,8 +483,9 @@ internal fun ActionsRow(
             enabled = !busy && !finding && !state.sync.isSyncing,
             onClick = onSync,
         )
-        // Alarms are a screen in the settings tree at a well-known id.
-        if (WatchSettingsTreeAvailable && state.supports(GarminCapability.REALTIME_SETTINGS)) {
+        // A screen in the settings tree at a well-known id. A watch with no tree keeps
+        // its alarms on the phone; a bike computer has none.
+        if (state.hasSettingsTree || !isBikeComputer) {
             WatchAction(
                 icon = Icons.Outlined.Alarm,
                 label = stringResource(R.string.settings_watch_action_alarms),

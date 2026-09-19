@@ -19,6 +19,7 @@ import tech.mmarca.openvitals.devices.FakeSharedPreferences
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPort
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncProgress
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncResult
+import tech.mmarca.openvitals.devices.garmin.GarminAlarm
 import tech.mmarca.openvitals.devices.garmin.GarminSendFileResult
 import tech.mmarca.openvitals.devices.garmin.GarminSendStage
 import tech.mmarca.openvitals.devices.garmin.GarminUploadRefusal
@@ -40,6 +41,7 @@ class GarminWatchActionsControllerTest {
 
     /** Records a send, and holds it until released so its running state can be seen. */
     private var seenPoint: GarminWaypoint? = null
+    private var seenAlarms: List<GarminAlarm>? = null
     private val sendGate = CompletableDeferred<GarminSendFileResult>()
 
     /** Blocks the sync until released, so a find can be attempted mid-sync. */
@@ -87,6 +89,11 @@ class GarminWatchActionsControllerTest {
             },
             sendPoint = { _, point, onStage ->
                 seenPoint = point
+                onStage(GarminSendStage.CONNECTING)
+                sendGate.await()
+            },
+            sendAlarms = { _, alarms, onStage ->
+                seenAlarms = alarms
                 onStage(GarminSendStage.CONNECTING)
                 sendGate.await()
             },
@@ -202,13 +209,13 @@ class GarminWatchActionsControllerTest {
 
         assertEquals(point, seenPoint)
         assertEquals(
-            WatchPointSendUiState(sendingDeviceId = watch.id, stage = GarminSendStage.CONNECTING),
+            WatchFileSendUiState(sendingDeviceId = watch.id, stage = GarminSendStage.CONNECTING),
             controller.pointState.value,
         )
 
         sendGate.complete(GarminSendFileResult.Sent)
         running!!.join()
-        assertEquals(WatchPointSendUiState(result = GarminSendFileResult.Sent), controller.pointState.value)
+        assertEquals(WatchFileSendUiState(result = GarminSendFileResult.Sent), controller.pointState.value)
     }
 
     @Test
@@ -271,7 +278,7 @@ class GarminWatchActionsControllerTest {
 
         assertNull(controller.sendPoint(wearos.id, point))
         assertNull(controller.sendPoint("no such device", point))
-        assertEquals(WatchPointSendUiState(), controller.pointState.value)
+        assertEquals(WatchFileSendUiState(), controller.pointState.value)
     }
 
     @Test
@@ -287,6 +294,46 @@ class GarminWatchActionsControllerTest {
         sendGate.complete(GarminSendFileResult.NoAnswer)
         running!!.join()
         controller.clearPointResult()
-        assertEquals(WatchPointSendUiState(), controller.pointState.value)
+        assertEquals(WatchFileSendUiState(), controller.pointState.value)
+    }
+
+    // Sending the alarm list.
+
+    private val alarms = listOf(GarminAlarm(hour = 6, minute = 30))
+
+    @Test
+    fun `an alarms send shows its stage while it runs and its result after`() = runTest {
+        val watch = addWatch()
+        val (controller, _) = harness()
+
+        val running = controller.sendAlarms(watch.id, alarms)
+        runCurrent()
+
+        assertEquals(alarms, seenAlarms)
+        assertEquals(
+            WatchFileSendUiState(sendingDeviceId = watch.id, stage = GarminSendStage.CONNECTING),
+            controller.alarmsState.value,
+        )
+        // The point screen has its own state.
+        assertEquals(WatchFileSendUiState(), controller.pointState.value)
+
+        sendGate.complete(GarminSendFileResult.Sent)
+        running!!.join()
+        assertEquals(WatchFileSendUiState(result = GarminSendFileResult.Sent), controller.alarmsState.value)
+    }
+
+    @Test
+    fun `an alarms send and a point send cannot overlap`() = runTest {
+        val watch = addWatch()
+        val (controller, _) = harness()
+
+        val running = controller.sendAlarms(watch.id, alarms)
+        runCurrent()
+
+        assertNull(controller.sendPoint(watch.id, point))
+        assertNull(controller.toggleFind(watch.id))
+
+        sendGate.complete(GarminSendFileResult.Sent)
+        running!!.join()
     }
 }

@@ -36,7 +36,7 @@ object FitBaseType {
     const val UINT32Z = 0x8C
 }
 
-/** One field of a definition. Only a STRING needs its size spelled out. */
+/** One field of a definition. A STRING or an array needs its size spelled out. */
 class FitEncoderField(
     val number: Int,
     val baseType: Int,
@@ -79,11 +79,15 @@ class FitEncoder {
         definitions[localMessageType] = fields
     }
 
-    /** Writes one data record for a previously defined local message type. */
+    /**
+     * Writes one data record for a previously defined local message type.
+     * A field in [arrays] must fill its defined size exactly.
+     */
     fun writeMessage(
         localMessageType: Int,
         values: Map<Int, Long?> = emptyMap(),
         strings: Map<Int, String> = emptyMap(),
+        arrays: Map<Int, List<Long>> = emptyMap(),
     ) {
         val fields = checkNotNull(definitions[localMessageType]) {
             "Local message type $localMessageType has no definition."
@@ -92,9 +96,15 @@ class FitEncoder {
         fields.forEach { field ->
             if (field.baseType == FitBaseType.STRING) {
                 records.writeFitString(strings[field.number], field.size)
-            } else {
-                records.writeScalar(values[field.number], field.baseType)
+                return@forEach
             }
+            // A scalar is an array of one, so a short array cannot misalign the record.
+            val elements = arrays[field.number] ?: listOf(values[field.number])
+            val elementSize = fitEncoderBaseTypeSize(field.baseType)
+            require(elements.size * elementSize == field.size) {
+                "Field ${field.number} holds ${field.size / elementSize} values, not ${elements.size}."
+            }
+            elements.forEach { records.writeScalar(it, field.baseType) }
         }
     }
 
