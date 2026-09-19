@@ -50,6 +50,9 @@ interface GarminNotificationLink {
     /** Opens or closes a live-streaming service on this link. */
     suspend fun setRealtimeService(service: GarminRealtimeService, enabled: Boolean)
 
+    /** Shows [state] on the watch's music controls. Only a BLE link has any. */
+    suspend fun pushMusic(state: GarminMusicState) = Unit
+
     /** Closes the link and releases everything. Idempotent. */
     suspend fun close()
 }
@@ -87,6 +90,8 @@ data class GarminNotificationLinkRequest(
     /** The watch was just onboarded and needs the pair-flow completion. */
     val setupWizardPending: (() -> Boolean)? = null,
     val onSetupWizardCompleted: (() -> Unit)? = null,
+    /** The phone's player, for the watch's music controls. */
+    val music: GarminMusicPort? = null,
 )
 
 /**
@@ -139,6 +144,12 @@ class GarminBleNotificationLink private constructor(
         runCatching {
             if (enabled) ml.openService(service.code) else ml.closeService(service.code)
         }.onFailure { GarminLog.log("[GARMIN-LIVE] could not toggle ${service.name}: $it") }
+    }
+
+    override suspend fun pushMusic(state: GarminMusicState) {
+        if (closed) return
+        runCatching { session.pushMusic(state) }
+            .onFailure { GarminLog.log("[GARMIN-MUSIC] could not send the player state: $it") }
     }
 
     override suspend fun setHostForeground(foreground: Boolean) {
@@ -208,6 +219,7 @@ class GarminBleNotificationLink private constructor(
                     setupWizardPending = request.setupWizardPending?.invoke() == true,
                     onSetupWizardCompleted = request.onSetupWizardCompleted,
                     onHandshakeReady = { if (!ready.isCompleted) ready.complete(Unit) },
+                    music = request.music,
                 ),
             )
 

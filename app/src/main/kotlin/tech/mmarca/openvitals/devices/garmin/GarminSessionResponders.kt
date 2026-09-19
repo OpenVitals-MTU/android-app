@@ -31,6 +31,8 @@ data class GarminSessionHooks(
     val onSetupWizardCompleted: (() -> Unit)? = null,
     /** Called after the capabilities exchange, when the watch accepts requests. */
     val onHandshakeReady: (() -> Unit)? = null,
+    /** The phone's player, for the watch's music controls. Null offers no controls. */
+    val music: GarminMusicPort? = null,
 )
 
 /**
@@ -140,6 +142,22 @@ internal class GarminSessionResponders(
     fun handleFindPhone(message: GarminFindMyPhoneRequest) {
         GarminLog.log("[GARMIN-SYNC] find-my-phone for ${message.durationSeconds}s")
         hooks.onFindPhone?.invoke(message.durationSeconds)
+    }
+
+    /** The command list, then what is playing: the watch asks once, as its controls come up. */
+    suspend fun handleMusicCapabilities() {
+        val music = hooks.music?.takeIf { it.enabled }
+        send(buildMusicCapabilitiesResponse(if (music == null) emptyList() else GarminMusicCommand.entries))
+        if (music == null) return
+        GarminLog.log("[GARMIN-MUSIC] the watch asked for the music controls")
+        music.state()?.let { send(buildMusicEntityUpdate(it)) }
+    }
+
+    fun handleMusicControl(message: GarminMusicControl) {
+        val music = hooks.music?.takeIf { it.enabled } ?: return
+        val command = message.command ?: return
+        GarminLog.log("[GARMIN-MUSIC] ${command.name} from the watch")
+        music.perform(command)
     }
 
     fun handleFindPhoneCancel() {

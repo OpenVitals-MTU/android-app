@@ -290,10 +290,10 @@ class GarminMessagesTest {
 
     @Test
     fun `an out-of-vocabulary message decodes to unhandled not an error`() {
-        // Music control (5041): a message a read-only sync ignores.
-        val msg = roundTrip(GarminGfdiFrame.build(5041, b(1, 2, 3)))
+        // An id no build has met. A newer firmware may send one at any time.
+        val msg = roundTrip(GarminGfdiFrame.build(5999, b(1, 2, 3)))
         assertTrue(msg is GarminUnhandledMessage)
-        assertEquals(5041, (msg as GarminUnhandledMessage).messageType)
+        assertEquals(5999, (msg as GarminUnhandledMessage).messageType)
     }
 
     // The watch asking for the time (5052).

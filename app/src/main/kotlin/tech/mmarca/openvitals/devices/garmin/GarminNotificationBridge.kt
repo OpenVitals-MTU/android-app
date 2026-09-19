@@ -41,6 +41,7 @@ class GarminNotificationBridge @Inject constructor(
     private val locationSource: GarminPhoneLocationSource,
     private val foregroundGate: tech.mmarca.openvitals.core.performance.AppForegroundGate,
     private val realtimeStore: GarminRealtimeStore,
+    private val musicRelay: GarminMusicRelay,
 ) {
 
     private companion object {
@@ -67,6 +68,11 @@ class GarminNotificationBridge @Inject constructor(
     private var forwarderCompanion: Boolean = false
 
     private val identity = GarminPhoneIdentity()
+
+    init {
+        // The relay follows the player; the link is here.
+        musicRelay.onState = { state -> scope.launch { forwarder?.pushMusic(state) } }
+    }
 
     /** Called by the listener service after it buffered something. Thread-safe. */
     fun onNotificationsPending() {
@@ -188,6 +194,7 @@ class GarminNotificationBridge @Inject constructor(
                 }
             },
             onRealtimeReading = { reading -> realtimeStore.record(reading) },
+            music = musicRelay,
             setupWizardPending = {
                 deviceFor(address)
                     ?.let { stateStore.setupWizardPending(it.id) } == true
@@ -284,6 +291,21 @@ class GarminNotificationBridge @Inject constructor(
                 GarminLog.log("[GARMIN-COMPANION] released; link no longer held")
                 dropForwarder()
             }
+        }
+    }
+
+    /**
+     * Called when the music switch changes. The watch asks for the commands
+     * once per link, so an open link is replaced for the change to show.
+     */
+    fun onMusicControlsChanged(deviceId: String, enabled: Boolean) {
+        musicRelay.onEnabledChanged(deviceId, enabled)
+        scope.launch {
+            if (forwarder?.isLinkOpen != true) return@launch
+            GarminLog.log("[GARMIN-MUSIC] music controls ${if (enabled) "on" else "off"}; reconnecting")
+            val companion = forwarderCompanion
+            dropForwarder()
+            if (companion) ensureCompanionLink()
         }
     }
 

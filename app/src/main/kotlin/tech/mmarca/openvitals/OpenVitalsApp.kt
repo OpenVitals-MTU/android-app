@@ -27,6 +27,7 @@ class OpenVitalsApp : Application() {
     @Inject lateinit var syncedRecordOriginRepository: SyncedRecordOriginRepository
     @Inject lateinit var garminNotificationBridge: tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge
     @Inject lateinit var garminNavigationRelay: tech.mmarca.openvitals.devices.garmin.GarminNavigationRelay
+    @Inject lateinit var garminMusicRelay: tech.mmarca.openvitals.devices.garmin.GarminMusicRelay
     @Inject lateinit var watchAutoSyncScheduler: WatchAutoSyncScheduler
     @Inject lateinit var homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler
 
@@ -54,6 +55,7 @@ class OpenVitalsApp : Application() {
         // Companion mode must be re-armed on every start.
         garminNotificationBridge.onAppStart()
         garminNavigationRelay.start()
+        garminMusicRelay.start()
         // Re-plans the sync schedules after what WorkManager does not cover.
         watchAutoSyncScheduler.restoreAll()
         // Widgets placed before this schedule existed, or a missed onEnabled.

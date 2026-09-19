@@ -140,13 +140,14 @@ The app declares two companion services Android binds while an associated watch 
 
 ## Notification Access
 
-Notification access is optional and used for exactly one thing: forwarding phone notifications to a paired Garmin watch.
+Notification access is optional and used for two things: forwarding phone notifications to a paired Garmin watch, and showing the phone's music player on that watch. Each is its own switch, off by default.
 
 - The app declares `.devices.notifications.OpenVitalsNotificationListenerService`, protected by the system-only `android.permission.BIND_NOTIFICATION_LISTENER_SERVICE`.
-- There is no runtime prompt. Android grants notification access from its own settings screen, and OpenVitals shows a prominent disclosure before sending you there.
+- There is no runtime prompt. Android grants notification access from its own settings screen, and OpenVitals shows a prominent disclosure before sending you there. Each feature's disclosure says what that feature reads.
 - The feature stays dormant until the user grants access, and it can be turned off in OpenVitals or revoked in Android settings at any time.
 - Notification content is read on the device, held in a bounded in-memory buffer, and sent only to the paired watch over Bluetooth. It is not written to a file or a database, and the app has no internet permission.
 - Settings, Watches, Notifications includes a per-app list so individual apps can be stopped from reaching the watch.
+- Music controls read the phone's media sessions, which Android shows only to an app with this grant: the player's name, the track, artist and album, and the playback position. They go only to the paired watch and are never stored. Granting access for music alone forwards no notifications: forwarding stays off until its own switch is on.
 
 ## Foreground Service Permissions
 

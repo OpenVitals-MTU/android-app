@@ -94,6 +94,14 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
         prefs.edit { putBoolean(navigationOnWatchPrefsKey(deviceId), enabled) }
     }
 
+    /** Whether the watch's music controls drive the phone's player. Off by default. */
+    fun musicControls(deviceId: String): Boolean =
+        prefs.getBoolean(musicControlsPrefsKey(deviceId), false)
+
+    fun setMusicControls(deviceId: String, enabled: Boolean) {
+        prefs.edit { putBoolean(musicControlsPrefsKey(deviceId), enabled) }
+    }
+
     /**
      * Whether the link is held open whenever the watch is in range. On by
      * default: weather, find-my-phone, live readings and guidance all ride it.
@@ -155,6 +163,7 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
             remove(calendarSyncPrefsKey(deviceId))
             remove(autoSyncPrefsKey(deviceId))
             remove(syncProtocolPrefsKey(deviceId))
+            remove(musicControlsPrefsKey(deviceId))
             remove(alarmsPrefsKey(deviceId))
             remove(sentAlarmsPrefsKey(deviceId))
         }
@@ -173,6 +182,8 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
     private fun calendarSyncPrefsKey(deviceId: String) = "garmin_calendar_sync_$deviceId"
 
     private fun navigationOnWatchPrefsKey(deviceId: String) = "garmin_navigation_on_watch_$deviceId"
+
+    private fun musicControlsPrefsKey(deviceId: String) = "garmin_music_controls_$deviceId"
 
     private fun autoSyncPrefsKey(deviceId: String) = "garmin_auto_sync_minutes_$deviceId"
 

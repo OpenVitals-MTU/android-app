@@ -551,6 +551,11 @@
     <string name="metric_vo2_max">VO2 max</string>
     <string name="metric_mindfulness">Mindfulness</string>
     <string name="metric_total_mindfulness">Total mindfulness</string>
+    <string name="settings_watch_music">Music controls on watch</string>
+    <string name="settings_watch_music_body">Show what the phone is playing on the watch, and play, pause, skip and change the volume from the wrist. Works while the watch stays connected.</string>
+    <string name="settings_watch_music_no_access">Notification access is off. Android only shows the phone\'s players to an app that has it. Grant it in system settings.</string>
+    <string name="settings_watch_music_disclosure_title">OpenVitals will read what your phone is playing</string>
+    <string name="settings_watch_music_disclosure_body">To show music controls on your watch, OpenVitals reads the phone\'s media players: the app that is playing, the track, artist and album, and how far into the track it is.\n\nAndroid shows players only to an app with notification access, so the next screen asks for that. While notification forwarding is off, OpenVitals does not keep or forward your notifications.\n\nTrack details are read on this device and sent only to the watch you paired, over Bluetooth. They are never stored.\n\nYou can switch this off at any time.</string>
     <string name="settings_watch_calendar">Calendar on watch</string>
     <string name="settings_watch_calendar_body">Show the phone\'s upcoming events in the watch\'s calendar glance. Events go to the watch over Bluetooth and nowhere else.</string>
     <string name="settings_watch_calendar_no_permission">Calendar access was declined. Grant it in system settings to sync events.</string>

@@ -58,6 +58,8 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
@@ -100,6 +102,17 @@ fun WatchDeviceScreen(
 
     LaunchedEffect(device?.displayName) { onTitleChanged(device?.displayName) }
     DisposableEffect(Unit) { onDispose { onTitleChanged(null) } }
+    // Notification access is granted in Android's settings, so it is re-read on the way back.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshMusicAccess() }
+
+    if (state.showMusicDisclosure) {
+        NotificationAccessDisclosureDialog(
+            title = stringResource(R.string.settings_watch_music_disclosure_title),
+            body = stringResource(R.string.settings_watch_music_disclosure_body),
+            onAccept = viewModel::acceptMusicDisclosure,
+            onDecline = viewModel::declineMusicDisclosure,
+        )
+    }
 
     if (device == null) {
         // Removed while this screen was open, or opened from a stale entry.
@@ -294,6 +307,7 @@ fun WatchDeviceScreen(
                     }
                 },
             )
+            MusicControlsCard(state = state, onToggle = viewModel::setMusicControls)
             NavigationOnWatchCard(
                 state = state,
                 onToggle = { enabled ->
@@ -565,6 +579,45 @@ private fun AutoSyncCard(
                         },
                     )
                 }
+            }
+        }
+    }
+}
+
+/** The watch's music controls. Off by default; they need Android's notification access. */
+@Composable
+private fun MusicControlsCard(
+    state: WatchDeviceUiState,
+    onToggle: (Boolean) -> Unit,
+) {
+    OpenVitalsCard {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.settings_watch_music),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = state.musicControls,
+                    onCheckedChange = onToggle,
+                )
+            }
+            Text(
+                text = stringResource(R.string.settings_watch_music_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (state.musicAccessMissing) {
+                Text(
+                    text = stringResource(R.string.settings_watch_music_no_access),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
         }
     }

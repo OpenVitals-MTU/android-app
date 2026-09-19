@@ -99,6 +99,7 @@ class GarminNotificationForwarder(
     private val onRealtimeReading: ((GarminRealtimeReading) -> Unit)? = null,
     private val setupWizardPending: (() -> Boolean)? = null,
     private val onSetupWizardCompleted: (() -> Unit)? = null,
+    private val music: GarminMusicPort? = null,
     private val coalesceWindow: Duration = 1500.milliseconds,
     private val maxCoalesceWait: Duration = 4.seconds,
     /** First delay after the watch goes out of range. Doubles up to [maxReconnectBackoff]. */
@@ -150,6 +151,15 @@ class GarminNotificationForwarder(
             val current = link ?: return@launch
             if (!current.isOpen) return@launch
             current.setHostForeground(foreground)
+        }
+    }
+
+    /** Relays the player state when a link is up. The next link sends it when the watch asks. */
+    fun pushMusic(state: GarminMusicState) {
+        scope.launch {
+            val current = link ?: return@launch
+            if (!current.isOpen) return@launch
+            current.pushMusic(state)
         }
     }
 
@@ -247,6 +257,7 @@ class GarminNotificationForwarder(
                     onRealtimeReading = onRealtimeReading,
                     setupWizardPending = setupWizardPending,
                     onSetupWizardCompleted = onSetupWizardCompleted,
+                    music = music,
                 ),
             )
             if (disposed) {

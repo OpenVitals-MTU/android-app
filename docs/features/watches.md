@@ -205,6 +205,14 @@ Known limitation: on the model verified against, the glance arms (it stops sayin
 
 Works in both directions. The Find action on the device screen makes the watch alert; the watch's own find-my-phone feature makes the phone ring at alarm volume, with a notification to stop it. The phone rings even when silenced, because a phone lost in a couch cushion is the whole point.
 
+## Music Controls On The Watch
+
+"Music controls on watch", on the watch's device screen, puts the phone's player on the watch's music controls. Off by default. The watch shows the player's name, the track, artist and album, and how far into the track playback is. From the wrist the wearer can play, pause, skip to the next or previous track, skip forward or back within one, and change the media volume.
+
+Android shows the phone's players only to an app with notification access, the same grant notification forwarding uses. Switching the feature on without it opens Android's settings, and the card says so while the grant is missing. The player followed is the one Android ranks foremost: the one that is playing, when any is. With no player running, a play button on the wrist acts as a headset button does and wakes the last one.
+
+Everything rides the held link, so it needs "Stay connected". The watch asks which commands the phone takes once per connection, so switching the feature reconnects the watch. Track details go to the watch over Bluetooth and nowhere else, and are never stored. A player's steady position reports are not forwarded: the watch runs its own clock, and only a change, a pause or a seek is sent.
+
 ## CoMaps Guidance On The Watch
 
 "CoMaps guidance on watch", on the watch's device screen, puts the turn-by-turn guidance CoMaps is giving (see [CoMaps navigation context](comaps-navigation-context.md)) on the wrist. Off by default, and complete in itself: no recording has to be running, and the activity-recording CoMaps integration does not have to be on. Switching it on asks for CoMaps' own permission, and the card says so if that grant is declined or later revoked. Ride with a route set in CoMaps and nothing else switched on, and the turns still reach the watch; record a GPS activity at the same time and the wrist and the phone's turn strip show the same guidance.
@@ -267,7 +275,7 @@ A watch that reports the capability gets a Find action. It makes the watch alert
 
 ## One Radio At A Time
 
-Sync, find, sending a point or the alarm list, settings on the watch, and notification forwarding all speak to the same watch over the same Bluetooth link, and only one of them can hold it.
+Sync, find, sending a point or the alarm list, settings on the watch, music controls, and notification forwarding all speak to the same watch over the same Bluetooth link, and only one of them can hold it.
 
 - A user-initiated action asks for the link and waits a few seconds for whatever holds it to let go. Notification forwarding, the usual holder, gives it up on its next check and resumes afterwards.
 - If the link cannot be taken in time, the action reports that the watch is busy and suggests trying again in a moment.
@@ -282,7 +290,7 @@ Nothing leaves the phone. The watch is read over Bluetooth, the files are parsed
 
 Notification text is read on the device, held in memory only while it is needed, and sent only to the paired watch. It is never written to a file or a database. Turning the feature off, or revoking notification access in Android settings, stops it immediately.
 
-Calendar events follow the same rule: read only while answering a watch that asked, held in memory only, sent only to the watch, never stored. Weather comes from a weather app on the phone and goes only to the watch; OpenVitals itself never talks to a weather service.
+Calendar events follow the same rule: read only while answering a watch that asked, held in memory only, sent only to the watch, never stored. Weather comes from a weather app on the phone and goes only to the watch; OpenVitals itself never talks to a weather service. What the phone is playing is read only while music controls are on for a paired watch, goes only to that watch, and is never stored.
 
 See [Privacy](../app/privacy.md) and [Permissions](../app/permissions.md) for the full boundary, including why the companion association is asked for and why it is optional.
 
@@ -293,6 +301,7 @@ See [Privacy](../app/privacy.md) and [Permissions](../app/permissions.md) for th
 - There is no background sync. Every sync is one the user asked for.
 - The Connected and Not connected labels reflect whether the watch is switched on in OpenVitals, not whether a Bluetooth link is open right now.
 - WearOS watches are registered only. Sync, watch data, notification forwarding, watch settings, find, and sending a point are Garmin-only.
+- Music controls are confirmed on one Garmin model. A volume change made on the phone reaches the watch only with the next player change.
 - Sending the alarm list has not yet been confirmed on a watch. Whether an empty list clears the watch's alarms is unknown.
 - Sending a point has not yet been confirmed on a watch. Only one point is sent at a time, and points already on the watch cannot be listed, edited, or removed from the phone.
 - Health Snapshot values only exist if a Health Snapshot has been recorded on the watch.

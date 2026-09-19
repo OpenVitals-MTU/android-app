@@ -42,6 +42,14 @@ If, and only if, the user grants Android notification access, OpenVitals reads i
 - It is sent to nothing but the paired watch, over Bluetooth. The app has no internet permission, so there is no other route out.
 - Individual apps can be blocked from reaching the watch, the feature can be switched off in OpenVitals, and access can be revoked from Android settings at any time.
 
+### Music Controls On The Watch
+
+With "Music controls on watch" switched on, OpenVitals reads what the phone is playing so the paired watch can show and control it. Android shows media players only to an app with notification access, so the same grant is used, behind its own prominent disclosure.
+
+- What is read: the player app's name, the track, artist and album, the track length and the playback position.
+- It is read only while the switch is on and a Garmin watch is paired. It is sent to nothing but that watch, over Bluetooth, and is never stored.
+- Granting access for music does not switch notification forwarding on. While forwarding is off, notifications are not kept or forwarded.
+
 ### Calendar On The Watch
 
 If, and only if, the per-watch "Calendar on watch" toggle is switched on (off by default; enabling it asks for Android's calendar permission), OpenVitals reads the phone's calendar to answer the watch's calendar glance.

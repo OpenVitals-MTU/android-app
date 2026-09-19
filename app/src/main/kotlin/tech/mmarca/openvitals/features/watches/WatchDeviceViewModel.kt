@@ -49,6 +49,12 @@ data class WatchDeviceUiState(
     val autoSync: AutoSyncInterval = AutoSyncInterval.OFF,
     /** Live readings streamed over that link. */
     val liveReadings: Boolean = false,
+    /** The watch's music controls drive the phone's player. Off by default. */
+    val musicControls: Boolean = false,
+    /** Music controls are on but Android's notification access is off. */
+    val musicAccessMissing: Boolean = false,
+    /** The disclosure that comes before the trip to Android's settings. */
+    val showMusicDisclosure: Boolean = false,
     /** The watch may read the phone's calendar. Off by default. */
     val calendarSync: Boolean = false,
     /** Calendar sync is on but the OS permission has been revoked. */
@@ -95,6 +101,8 @@ class WatchDeviceViewModel @Inject constructor(
     private val coMapsNavigationRepository:
         tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository,
     private val coMapsGuidanceFeed: tech.mmarca.openvitals.comaps.CoMapsGuidanceFeed,
+    private val musicRelay: tech.mmarca.openvitals.devices.garmin.GarminMusicRelay,
+    private val notificationsGateway: WatchNotificationsGateway,
 ) : ViewModel() {
 
     val deviceId: String = savedStateHandle.get<String>(WATCH_DEVICE_ID_ARG).orEmpty()
@@ -124,6 +132,9 @@ class WatchDeviceViewModel @Inject constructor(
             stayConnected = stateStore.stayConnected(deviceId),
             autoSync = autoSyncScheduler.interval(deviceId),
             liveReadings = stateStore.liveReadings(deviceId),
+            musicControls = stateStore.musicControls(deviceId),
+            musicAccessMissing = stateStore.musicControls(deviceId) &&
+                !notificationsGateway.isNotificationAccessGranted(),
             calendarSync = stateStore.calendarSync(deviceId),
             calendarPermissionMissing = stateStore.calendarSync(deviceId) &&
                 !calendarSource.hasPermission(),
@@ -162,6 +173,43 @@ class WatchDeviceViewModel @Inject constructor(
     fun setLiveReadings(enabled: Boolean) {
         notificationBridge.onLiveReadingsChanged(deviceId, enabled)
         localState.update { it.copy(liveReadings = enabled) }
+    }
+
+    /**
+     * Turns the watch's music controls on or off. Without notification
+     * access, switching on shows the disclosure first and changes nothing yet.
+     */
+    fun setMusicControls(enabled: Boolean) {
+        if (enabled && !notificationsGateway.isNotificationAccessGranted()) {
+            localState.update { it.copy(showMusicDisclosure = true) }
+            return
+        }
+        applyMusicControls(enabled)
+    }
+
+    /**
+     * The user accepted the disclosure. The switch goes on and Android's
+     * settings open; until access is granted the card says it is missing.
+     */
+    fun acceptMusicDisclosure() {
+        localState.update { it.copy(showMusicDisclosure = false) }
+        applyMusicControls(true)
+        notificationsGateway.openNotificationAccessSettings()
+    }
+
+    fun declineMusicDisclosure() {
+        localState.update { it.copy(showMusicDisclosure = false) }
+    }
+
+    private fun applyMusicControls(enabled: Boolean) {
+        notificationBridge.onMusicControlsChanged(deviceId, enabled)
+        localState.update { it.copy(musicControls = enabled) }
+    }
+
+    /** Re-checks notification access on the way back from Android's settings. */
+    fun refreshMusicAccess() {
+        musicRelay.refreshAccess()
+        localState.update { it.copy(musicControls = stateStore.musicControls(deviceId)) }
     }
 
     /** Turns the calendar glance on or off. A toggle set with the permission denied still sticks. */

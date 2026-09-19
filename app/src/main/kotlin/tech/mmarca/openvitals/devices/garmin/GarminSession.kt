@@ -438,6 +438,10 @@ class GarminSession(
 
             is GarminFindMyPhoneCancel -> responders.handleFindPhoneCancel()
 
+            is GarminMusicCapabilitiesRequest -> responders.handleMusicCapabilities()
+
+            is GarminMusicControl -> responders.handleMusicControl(message)
+
             is GarminFileAvailable -> onFileAvailable(message.entry)
 
             is GarminUnhandledMessage -> {
@@ -601,6 +605,12 @@ class GarminSession(
             send(buildSetFileFlags(finishedDownload.entry.fileIndex, GarminFileFlag.ARCHIVE))
         }
         next()
+    }
+
+    /** Sends what the phone is playing. Dropped before the handshake: the watch ignores it. */
+    suspend fun pushMusic(state: GarminMusicState) {
+        if (!initialised) return
+        send(buildMusicEntityUpdate(state))
     }
 
     /**

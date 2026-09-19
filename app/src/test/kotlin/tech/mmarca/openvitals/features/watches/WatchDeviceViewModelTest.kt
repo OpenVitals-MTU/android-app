@@ -8,8 +8,11 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -76,6 +79,8 @@ class WatchDeviceViewModelTest {
     private lateinit var repo: BleDeviceRepository
     private lateinit var stateStore: GarminDeviceStateStore
     private lateinit var pairing: FakePairing
+    private val notificationsGateway = mockk<WatchNotificationsGateway>(relaxed = true)
+    private val notificationBridge = mockk<tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge>(relaxed = true)
 
     /** The scheduler owns the stored interval and the WorkManager side, so it is one stub that remembers. */
     private lateinit var autoSyncScheduler: WatchAutoSyncScheduler
@@ -122,7 +127,7 @@ class WatchDeviceViewModelTest {
             every { it.stopScan() } just runs
         },
         onboardGarminWatch = OnboardGarminWatchUseCase(pairing, repo, FakeProbe()),
-        notificationBridge = mockk(relaxed = true),
+        notificationBridge = notificationBridge,
         realtimeStore = GarminRealtimeStore(),
         calendarSource = mockk(relaxed = true),
         navigationRelay = mockk(relaxed = true),
@@ -133,6 +138,8 @@ class WatchDeviceViewModelTest {
         },
         onboardWearOsWatch = mockk<OnboardWearOsWatchUseCase>(relaxed = true),
         autoSyncScheduler = autoSyncScheduler,
+        musicRelay = mockk(relaxed = true),
+        notificationsGateway = notificationsGateway,
     )
 
     /** The OS-level cleanup is fire-and-forget on a scope that outlives the screen. */
@@ -141,6 +148,57 @@ class WatchDeviceViewModelTest {
         while (pairing.snapshot().size < expected && System.currentTimeMillis() < deadline) {
             Thread.sleep(5)
         }
+    }
+
+    @Test
+    fun `switching music controls on without notification access shows the disclosure first`() = runTest {
+        val watch = addWatch()
+        every { notificationsGateway.isNotificationAccessGranted() } returns false
+        val vm = viewModel(watch.id)
+        backgroundScope.launch { vm.uiState.collect { } }
+
+        vm.setMusicControls(true)
+        runCurrent()
+
+        assertTrue(vm.uiState.value.showMusicDisclosure)
+        verify(exactly = 0) { notificationBridge.onMusicControlsChanged(any(), any()) }
+        verify(exactly = 0) { notificationsGateway.openNotificationAccessSettings() }
+    }
+
+    @Test
+    fun `accepting the disclosure switches on and opens Android's settings, declining does neither`() = runTest {
+        val watch = addWatch()
+        every { notificationsGateway.isNotificationAccessGranted() } returns false
+        val vm = viewModel(watch.id)
+        backgroundScope.launch { vm.uiState.collect { } }
+
+        vm.setMusicControls(true)
+        vm.declineMusicDisclosure()
+        runCurrent()
+        assertFalse(vm.uiState.value.showMusicDisclosure)
+        verify(exactly = 0) { notificationBridge.onMusicControlsChanged(any(), any()) }
+
+        vm.setMusicControls(true)
+        vm.acceptMusicDisclosure()
+        runCurrent()
+        assertFalse(vm.uiState.value.showMusicDisclosure)
+        verify(exactly = 1) { notificationBridge.onMusicControlsChanged(watch.id, true) }
+        verify(exactly = 1) { notificationsGateway.openNotificationAccessSettings() }
+    }
+
+    @Test
+    fun `with access granted the switch applies at once, and off never asks`() = runTest {
+        val watch = addWatch()
+        every { notificationsGateway.isNotificationAccessGranted() } returns true
+        val vm = viewModel(watch.id)
+
+        vm.setMusicControls(true)
+        every { notificationsGateway.isNotificationAccessGranted() } returns false
+        vm.setMusicControls(false)
+
+        verify(exactly = 1) { notificationBridge.onMusicControlsChanged(watch.id, true) }
+        verify(exactly = 1) { notificationBridge.onMusicControlsChanged(watch.id, false) }
+        verify(exactly = 0) { notificationsGateway.openNotificationAccessSettings() }
     }
 
     @Test

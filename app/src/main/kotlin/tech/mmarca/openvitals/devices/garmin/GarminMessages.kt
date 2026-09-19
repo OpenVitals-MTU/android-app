@@ -33,6 +33,11 @@ object GarminMessageId {
     const val SYNCHRONIZATION = 5037
     const val FIND_MY_PHONE_REQUEST = 5039
     const val FIND_MY_PHONE_CANCEL = 5040
+
+    // Music controls. See GarminMusicMessages.kt.
+    const val MUSIC_CONTROL = 5041
+    const val MUSIC_CONTROL_CAPABILITIES = 5042
+    const val MUSIC_CONTROL_ENTITY_UPDATE = 5049
     const val PROTOBUF_REQUEST = 5043
     const val PROTOBUF_RESPONSE = 5044
     const val CONFIGURATION = 5050
@@ -387,6 +392,8 @@ fun decodeGarminMessage(frame: GarminGfdiFrame): GarminInboundMessage =
         GarminMessageId.WEATHER_REQUEST -> decodeWeatherRequest(frame.payload)
         GarminMessageId.FIND_MY_PHONE_REQUEST -> decodeFindMyPhoneRequest(frame.payload)
         GarminMessageId.FIND_MY_PHONE_CANCEL -> GarminFindMyPhoneCancel()
+        GarminMessageId.MUSIC_CONTROL -> decodeMusicControl(frame.payload)
+        GarminMessageId.MUSIC_CONTROL_CAPABILITIES -> GarminMusicCapabilitiesRequest()
         GarminMessageId.FILE_AVAILABLE -> decodeFileAvailable(frame.payload)
         else -> GarminUnhandledMessage(frame.messageType, frame.payload)
     }
@@ -851,6 +858,8 @@ val garminSelfAcknowledgedTypes: Set<Int> = setOf(
     GarminMessageId.FILE_TRANSFER_DATA,
     GarminMessageId.NOTIFICATION_SUBSCRIPTION,
     GarminMessageId.NOTIFICATION_CONTROL,
+    // Its ACK carries the command list.
+    GarminMessageId.MUSIC_CONTROL_CAPABILITIES,
     // Acked by the protobuf transport, which knows the request id and offset.
     GarminMessageId.PROTOBUF_REQUEST,
     GarminMessageId.PROTOBUF_RESPONSE,

@@ -12,21 +12,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.NotificationsActive
-import androidx.compose.material.icons.outlined.PrivacyTip
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,7 +54,9 @@ fun WatchNotificationAppsScreen(viewModel: WatchNotificationAppsViewModel) {
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
 
     if (state.showDisclosure) {
-        DisclosureDialog(
+        NotificationAccessDisclosureDialog(
+            title = stringResource(R.string.settings_watch_notifications_disclosure_title),
+            body = stringResource(R.string.settings_watch_notifications_disclosure_body),
             onAccept = viewModel::acceptDisclosure,
             onDecline = viewModel::declineDisclosure,
         )
@@ -240,34 +237,4 @@ private fun AppRow(
             )
         }
     }
-}
-
-/** The prominent disclosure Google Play requires before notification access. Dismissing declines. */
-@Composable
-private fun DisclosureDialog(
-    onAccept: () -> Unit,
-    onDecline: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDecline,
-        icon = { Icon(imageVector = Icons.Outlined.PrivacyTip, contentDescription = null) },
-        title = {
-            Text(stringResource(R.string.settings_watch_notifications_disclosure_title))
-        },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Text(stringResource(R.string.settings_watch_notifications_disclosure_body))
-            }
-        },
-        confirmButton = {
-            FilledTonalButton(onClick = onAccept) {
-                Text(stringResource(R.string.settings_watch_notifications_disclosure_accept))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDecline) {
-                Text(stringResource(R.string.settings_watch_notifications_disclosure_decline))
-            }
-        },
-    )
 }
