@@ -15,6 +15,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -69,6 +70,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -131,7 +137,7 @@ private val HydrationSavedDrinkGridSpacing = 8.dp
 private val HydrationCatalogRowHeight = 76.dp
 private val HydrationCatalogRowSpacing = 6.dp
 private const val HydrationCatalogMaxVisibleRows = 4
-private val HydrationDrinkDialogContentMaxHeight = 340.dp
+private val HydrationDrinkDialogScrollFadeHeight = Spacing.xxxl
 private const val HydrationCatalogSavedRowPrefix = "saved:"
 private const val HydrationCatalogPresetRowPrefix = "preset:"
 internal val HydrationCatalogSections = listOf(
@@ -1530,8 +1536,7 @@ private fun HydrationSavedDrinkEntryDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = HydrationDrinkDialogContentMaxHeight)
-                    .verticalScroll(rememberScrollState()),
+                    .hydrationDialogScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 OutlinedTextField(
@@ -1716,8 +1721,7 @@ internal fun HydrationCustomDrinkDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = HydrationDrinkDialogContentMaxHeight)
-                    .verticalScroll(rememberScrollState()),
+                    .hydrationDialogScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 OutlinedTextField(
@@ -1843,6 +1847,24 @@ internal fun HydrationCustomDrinkDialog(
         )
     }
 }
+
+// The dialog sizes to the window. The bottom fade shows that more content sits below.
+private fun Modifier.hydrationDialogScroll(scrollState: ScrollState): Modifier = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        if (scrollState.canScrollForward) {
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color.Black, Color.Transparent),
+                    startY = size.height - HydrationDrinkDialogScrollFadeHeight.toPx(),
+                    endY = size.height,
+                ),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+    }
+    .verticalScroll(scrollState)
 
 @Composable
 private fun HydrationDrinkCategorySelector(
@@ -1992,6 +2014,8 @@ private fun HydrationImpactSelector(
     onPartialPercentChanged: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -2001,16 +2025,60 @@ private fun HydrationImpactSelector(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            HydrationImpactOption.entries.forEach { option ->
-                HydrationImpactChoiceRow(
-                    option = option,
-                    selected = selectedOption == option,
-                    onClick = { onOptionSelected(option) },
-                )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OpenVitalsOutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(selectedOption.labelRes()),
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                        contentDescription = null,
+                        modifier = Modifier.padding(start = Spacing.sm),
+                    )
+                }
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                HydrationImpactOption.entries.forEach { option ->
+                    DropdownMenuItem(
+                        text = {
+                            Column(
+                                modifier = Modifier.padding(vertical = Spacing.xs),
+                            ) {
+                                Text(stringResource(option.labelRes()))
+                                Text(
+                                    text = stringResource(option.bodyRes()),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        },
+                        trailingIcon = if (option == selectedOption) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Outlined.Check,
+                                    contentDescription = null,
+                                )
+                            }
+                        } else {
+                            null
+                        },
+                        onClick = {
+                            onOptionSelected(option)
+                            expanded = false
+                        },
+                    )
+                }
             }
         }
         if (selectedOption == HydrationImpactOption.PARTIAL) {
@@ -2030,80 +2098,6 @@ private fun HydrationImpactSelector(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
             )
-        }
-    }
-}
-
-@Composable
-private fun HydrationImpactChoiceRow(
-    option: HydrationImpactOption,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val containerColor = if (selected) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerHighest
-    }
-    val contentColor = if (selected) {
-        MaterialTheme.colorScheme.onPrimary
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
-    val supportingTextColor = if (selected) {
-        contentColor.copy(alpha = 0.82f)
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    val borderColor = if (selected) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.outlineVariant
-    }
-
-    OpenVitalsSurface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 64.dp)
-            .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.medium,
-        containerColor = containerColor,
-        contentColor = contentColor,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-        border = BorderStroke(1.dp, borderColor),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier.size(24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (selected) {
-                    Icon(
-                        imageVector = Icons.Outlined.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-            }
-            Column(
-                modifier = Modifier
-                    .padding(start = 10.dp)
-                    .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = stringResource(option.labelRes()),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-                Text(
-                    text = stringResource(option.bodyRes()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = supportingTextColor,
-                )
-            }
         }
     }
 }
