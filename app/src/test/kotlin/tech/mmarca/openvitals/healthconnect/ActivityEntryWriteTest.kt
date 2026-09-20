@@ -9,6 +9,7 @@ import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.testing.FakeHealthConnectClient
+import androidx.health.connect.client.testing.stubs.MutableStub
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
@@ -28,6 +29,8 @@ import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 
 /** Write, edit and delete of an activity entry, on Google's fake client. */
 class ActivityEntryWriteTest {
+
+    private val fake = FakeHealthConnectClient().apply { setPackageName(APP_PACKAGE) }
 
     @Before
     fun setUp() {
@@ -125,6 +128,26 @@ class ActivityEntryWriteTest {
             .containsExactly(160L)
     }
 
+    @Test
+    fun `a failed write leaves the workout as it was`() = onARealClock {
+        val client = client()
+        val reader = reader(client)
+        reader.writeActivityEntry(request(T10_00, T11_00, distanceMeters = 5_000.0, title = "Run"))
+        fake.overrides.insertRecords = MutableStub { throw IllegalStateException("rate limited") }
+
+        val failure = runCatching {
+            reader.updateActivityEntry(
+                client.sessionIdAt(T10_00),
+                request(T10_00, T11_00, distanceMeters = 5_500.0, title = "Morning run"),
+            )
+        }.exceptionOrNull()
+
+        assertThat(failure).hasMessageThat().contains("rate limited")
+        // The old order updated the session and deleted the distance before this insert ran.
+        assertThat(client.all(DistanceRecord::class).map { it.distance.inMeters }).containsExactly(5_000.0)
+        assertThat(client.all(ExerciseSessionRecord::class).single().title).isEqualTo("Run")
+    }
+
     private fun onARealClock(body: suspend CoroutineScope.() -> Unit) = runBlocking(block = body)
 
     private fun request(
@@ -154,10 +177,7 @@ class ActivityEntryWriteTest {
 
     /** The wrapper reads by record id and matches ranges on start time, as Health Connect does. */
     private fun client(): HealthConnectClient =
-        AggregatingFakeHealthConnectClient(
-            FakeHealthConnectClient().apply { setPackageName(APP_PACKAGE) },
-            platformTimeRange = true,
-        )
+        AggregatingFakeHealthConnectClient(fake, platformTimeRange = true)
 
     private fun reader(client: HealthConnectClient): ActivityHealthReader {
         val diagnostics = mockk<HealthConnectDiagnostics>()

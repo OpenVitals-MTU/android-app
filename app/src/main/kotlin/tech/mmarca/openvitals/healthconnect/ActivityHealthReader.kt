@@ -37,6 +37,7 @@ import androidx.health.connect.client.units.Velocity
 import androidx.health.connect.client.units.kilocalories
 import androidx.health.connect.client.units.meters
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import tech.mmarca.openvitals.domain.model.ActivityExerciseSegmentWrite
@@ -1074,14 +1075,30 @@ internal class ActivityHealthReader(
             emptyList()
         }
 
-        updateShrinkingRoutes(listOf(session))
-        deleteManualActivityMetricRecords(FormOwnedMetricKinds, existing.startTime, existing.endTime)
-        if (carriesSeries || windowMoved) {
-            deleteManualActivityMetricRecords(SensorSeriesMetricKinds, existing.startTime, existing.endTime)
+        val staleKinds = if (carriesSeries || windowMoved) {
+            FormOwnedMetricKinds + SensorSeriesMetricKinds
+        } else {
+            FormOwnedMetricKinds
+        }
+        // Read before the insert, or the new records would be on the list too.
+        val staleRecordIds = staleKinds.map { metric ->
+            metric.recordType to ownManualActivityMetricRecords(
+                metric.recordType,
+                metric.kind,
+                existing.startTime,
+                existing.endTime,
+            ).map { it.metadata.id }
         }
         val inserts = extraRecords + movedSeries
-        if (inserts.isNotEmpty()) {
-            support.client().insertRecords(inserts)
+
+        // Replacements first, deletes last. A failure then leaves a duplicate at worst, never a
+        // workout without its metrics. Not cancellable: Back during a save must not split it.
+        withContext(NonCancellable) {
+            if (inserts.isNotEmpty()) {
+                support.client().insertRecords(inserts)
+            }
+            updateShrinkingRoutes(listOf(session))
+            staleRecordIds.forEach { (recordType, ids) -> deleteRecordsById(recordType, ids) }
         }
     }
 
@@ -1090,16 +1107,15 @@ internal class ActivityHealthReader(
         existing.requireOpenVitalsOrigin(appPackageName)
 
         Log.d(TAG, "Deleting activity entry ${support.diagnosticsSummary()}")
-        deleteManualActivityMetricRecords(
-            FormOwnedMetricKinds + SensorSeriesMetricKinds,
-            existing.startTime,
-            existing.endTime,
-        )
-        support.client().deleteRecords(
-            recordType = ExerciseSessionRecord::class,
-            recordIdsList = listOf(existing.metadata.id),
-            clientRecordIdsList = emptyList(),
-        )
+        // Metrics first: a failure leaves a session the user can delete again, not orphans.
+        withContext(NonCancellable) {
+            deleteManualActivityMetricRecords(
+                FormOwnedMetricKinds + SensorSeriesMetricKinds,
+                existing.startTime,
+                existing.endTime,
+            )
+            deleteRecordsById(ExerciseSessionRecord::class, listOf(existing.metadata.id))
+        }
     }
 
     /** `insertRecords`, retried with a smaller route when the platform rejects a record's size. */
@@ -1365,16 +1381,19 @@ internal class ActivityHealthReader(
         start: Instant,
         end: Instant,
     ) {
-        val recordIds = ownManualActivityMetricRecords(recordType, kind, start, end)
-            .map { record -> record.metadata.id }
+        deleteRecordsById(
+            recordType,
+            ownManualActivityMetricRecords(recordType, kind, start, end).map { record -> record.metadata.id },
+        )
+    }
 
-        if (recordIds.isNotEmpty()) {
-            support.client().deleteRecords(
-                recordType = recordType,
-                recordIdsList = recordIds,
-                clientRecordIdsList = emptyList(),
-            )
-        }
+    private suspend fun deleteRecordsById(recordType: KClass<out Record>, recordIds: List<String>) {
+        if (recordIds.isEmpty()) return
+        support.client().deleteRecords(
+            recordType = recordType,
+            recordIdsList = recordIds,
+            clientRecordIdsList = emptyList(),
+        )
     }
 
     private suspend fun <T : Record> ownManualActivityMetricRecords(
