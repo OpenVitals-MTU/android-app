@@ -106,6 +106,51 @@ class RadioLeasesTest {
     }
 
     @Test
+    fun `a waiter that gave up expires, so the holder can renew again`() {
+        assertTrue(RadioLeases.acquire(ADDRESS, "notifications", 15_000))
+        RadioLeases.request(ADDRESS, "sync")
+        assertFalse(RadioLeases.renew(ADDRESS, "notifications", 15_000))
+
+        // The sync timed out after 8 s and never took the lease. Its request used to stay for
+        // ever, and every later renew on this address failed.
+        nowMillis += 10_000
+        assertTrue(RadioLeases.renew(ADDRESS, "notifications", 15_000))
+    }
+
+    @Test
+    fun `withdraw takes a request back at once`() {
+        assertTrue(RadioLeases.acquire(ADDRESS, "notifications", 15_000))
+        RadioLeases.request(ADDRESS, "sync")
+
+        RadioLeases.withdraw(ADDRESS, "sync")
+
+        assertTrue(RadioLeases.renew(ADDRESS, "notifications", 15_000))
+    }
+
+    @Test
+    fun `withdraw by someone else leaves the request in place`() {
+        assertTrue(RadioLeases.acquire(ADDRESS, "notifications", 15_000))
+        RadioLeases.request(ADDRESS, "sync")
+
+        RadioLeases.withdraw(ADDRESS, "find")
+
+        assertFalse(RadioLeases.renew(ADDRESS, "notifications", 15_000))
+    }
+
+    @Test
+    fun `work with an end keeps the radio while someone waits`() {
+        assertTrue(RadioLeases.acquire(ADDRESS, "sync", 15_000))
+        RadioLeases.request(ADDRESS, "notifications")
+
+        // Yielding here let the lease lapse mid-sync, and the waiter opened a second link.
+        nowMillis += 5_000
+        assertTrue(RadioLeases.renew(ADDRESS, "sync", 15_000, yieldToWaiter = false))
+        nowMillis += 14_000
+        assertFalse(RadioLeases.acquire(ADDRESS, "notifications", 15_000))
+        assertEquals("sync", RadioLeases.owner(ADDRESS))
+    }
+
+    @Test
     fun `release keeps the address unavailable for the settle window`() {
         // Android closes a BluetoothGatt asynchronously; a connect inside that window is the collision the lease prevents.
         assertTrue(RadioLeases.acquire(ADDRESS, "sync", 10_000))

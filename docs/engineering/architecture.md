@@ -530,8 +530,9 @@ Every subsystem that opens a BLE link to a device goes through `RadioLeases`. Th
 
 The lease is not just a mutex. Three properties matter:
 
-- Leases expire, so a crashed holder cannot wedge the radio permanently.
-- `request()` registers a waiter; the current holder's next renew then fails, which is its cue to drop the link. That is how the indefinitely-held notification forwarder and settings link yield to a sync.
+- Leases expire, so a crashed holder cannot wedge the radio permanently. A fresh lease lasts 30 s, because its holder opens the link before it starts renewing and a connect may take 20 s. A renewed one lasts 15 s.
+- `request()` registers a waiter; the current holder's next renew then fails, which is its cue to drop the link. That is how the indefinitely-held notification forwarder and settings link yield to a sync. A waiter expires after 10 s, and `withRadioLease` withdraws its own when the wait ends without the lease.
+- Work with an end (`withRadioLease`: a sync, a find, an upload) renews with `yieldToWaiter = false` and keeps the radio until it is done. The waiter gets `RadioLeaseBusyException`.
 - `release()` leaves a short settle window rather than clearing the entry, so a new GATT open cannot race the previous teardown.
 
 Live BLE sensor streaming during activity recording lives in `sensors/ble` and targets sensors, not watches; it is excluded from watch work by rule 1 rather than by the lease. New device work must take a lease, and must pick one of the existing owner tags rather than inventing a fifth without a reason.

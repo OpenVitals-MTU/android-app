@@ -38,6 +38,13 @@ interface GarminRadioLease {
         /** Lease lifetime without renewal. Short, so a killed holder cannot wedge the radio. */
         val ttl: Duration = 15.seconds
         val renewInterval: Duration = 5.seconds
+
+        /**
+         * Lifetime of a fresh lease. The holder opens its link next and renews only once that
+         * is up, and a connect may take the GATT client's 20 s timeout. With [ttl] the lease
+         * lapsed during a slow connect and another owner opened a second link.
+         */
+        val acquireTtl: Duration = 30.seconds
     }
 }
 
@@ -52,7 +59,7 @@ object GarminRadioOwners {
 /** The real lease: [RadioLeases], with this interface's TTL. */
 object SharedGarminRadioLease : GarminRadioLease {
     override fun acquire(address: String, owner: String): Boolean =
-        RadioLeases.acquire(address, owner, GarminRadioLease.ttl.inWholeMilliseconds)
+        RadioLeases.acquire(address, owner, GarminRadioLease.acquireTtl.inWholeMilliseconds)
 
     override fun request(address: String, owner: String) =
         RadioLeases.request(address, owner)

@@ -41,15 +41,20 @@ suspend fun <T> withRadioLease(address: String, owner: String, body: suspend () 
         // Ask, then wait: the likely holder is notification forwarding, which
         // yields on its next renew tick.
         RadioLeases.request(address, owner)
-        var waited = 0L
-        while (waited < HANDOVER_WAIT_MILLIS) {
-            delay(RETRY_STEP_MILLIS)
-            waited += RETRY_STEP_MILLIS
-            if (RadioLeases.acquire(address, owner, LEASE_TTL_MILLIS)) {
-                return runHolding(address, owner, body)
+        var acquired = false
+        try {
+            var waited = 0L
+            while (!acquired && waited < HANDOVER_WAIT_MILLIS) {
+                delay(RETRY_STEP_MILLIS)
+                waited += RETRY_STEP_MILLIS
+                acquired = RadioLeases.acquire(address, owner, LEASE_TTL_MILLIS)
             }
+        } finally {
+            // A timeout or a cancel must not leave the request behind: it would fail
+            // the holder's every renew from then on.
+            if (!acquired) RadioLeases.withdraw(address, owner)
         }
-        throw RadioLeaseBusyException(RadioLeases.owner(address) ?: "another task")
+        if (!acquired) throw RadioLeaseBusyException(RadioLeases.owner(address) ?: "another task")
     }
     return runHolding(address, owner, body)
 }
@@ -60,7 +65,12 @@ private suspend fun <T> runHolding(address: String, owner: String, body: suspend
         val renewals = launch {
             while (isActive) {
                 delay(RENEW_INTERVAL_MILLIS)
-                RadioLeases.renew(address, owner, LEASE_TTL_MILLIS)
+                // This work has an end, so it keeps the radio until then. Yielding to a waiter
+                // here let the lease lapse mid-sync, and a second GATT client opened on the watch.
+                if (!RadioLeases.renew(address, owner, LEASE_TTL_MILLIS, yieldToWaiter = false)) {
+                    // Expired under a starved timer. Take it back if it is still free.
+                    RadioLeases.acquire(address, owner, LEASE_TTL_MILLIS)
+                }
             }
         }
         try {
