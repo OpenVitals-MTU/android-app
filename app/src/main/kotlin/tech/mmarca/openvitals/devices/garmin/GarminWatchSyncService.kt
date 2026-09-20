@@ -115,10 +115,11 @@ class GarminWatchSyncService @Inject constructor(
         rebuildScope.launch {
             try {
                 importer.import(files)
-                activityImporter.import(files)
+                val activities = activityImporter.import(files)
+                // A workout that did not reach Health Connect keeps no key, so it is fetched again.
                 stateStore.recordSyncedFileKeys(
                     device.id,
-                    files.mapNotNull { it.entry.dedupKey },
+                    (files - activities.retry.toSet()).mapNotNull { it.entry.dedupKey },
                 )
                 refreshBodyEnergy(files)
                 bleDeviceRepository.markSynced(device.id, Instant.now())
@@ -167,12 +168,13 @@ class GarminWatchSyncService @Inject constructor(
         }
 
         val downloaded = pull.files
+        var activities = GarminActivityImportResult()
         if (downloaded.isNotEmpty()) {
             try {
                 importer.import(downloaded)
-                // Same path as a hand-picked FIT folder. Per-file failures are
-                // tolerated inside the importer.
-                activityImporter.import(downloaded)
+                // Same path as a hand-picked FIT folder. Per-file failures come back
+                // in the result.
+                activities = activityImporter.import(downloaded)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -183,10 +185,12 @@ class GarminWatchSyncService @Inject constructor(
             }
 
             // Recorded after the import, so a run that died mid-import re-downloads.
-            // Files with no stable key are re-fetched every sync by design.
+            // Files with no stable key are re-fetched every sync by design. A workout that
+            // did not reach Health Connect keeps no key either: the watch has already
+            // archived it, so the key is the only thing that brings it back.
             stateStore.recordSyncedFileKeys(
                 device.id,
-                downloaded.mapNotNull { it.entry.dedupKey },
+                (downloaded - activities.retry.toSet()).mapNotNull { it.entry.dedupKey },
             )
 
             refreshBodyEnergy(downloaded)
@@ -203,6 +207,8 @@ class GarminWatchSyncService @Inject constructor(
         bleDeviceRepository.markSynced(device.id, Instant.now())
         // A sync that landed a night of sleep must not leave the widgets stale.
         refreshPlacedHomeWidgets(context)
+        // Saying "synced" here hid workouts that never reached Health Connect.
+        notImportedMessage(activities)?.let { return DeviceSyncResult.Failed(it) }
         return DeviceSyncResult.Succeeded(downloaded.size)
     }
 
@@ -638,6 +644,16 @@ class GarminWatchSyncService @Inject constructor(
         val files: List<GarminDownloadedFile>,
         val incompleteReason: String? = null,
     )
+
+    private fun notImportedMessage(activities: GarminActivityImportResult): String? = when {
+        activities.missingPermission.isNotEmpty() ->
+            "${activities.missingPermission.size} workout(s) were not imported. Allow OpenVitals to " +
+                "write exercise data in Health Connect, then sync again."
+        activities.failedWrites.isNotEmpty() ->
+            "${activities.failedWrites.size} workout(s) could not be saved to Health Connect. " +
+                "The next sync fetches them again."
+        else -> null
+    }
 
     private fun describe(error: Throwable): String {
         if (error is GarminGattClientException) {

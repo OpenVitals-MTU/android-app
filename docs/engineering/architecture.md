@@ -372,6 +372,7 @@ Notes worth carrying:
 - Stage timeouts are named on `GarminSession`'s constructor with their reasons; the service's three-minute limit is only a whole-sync safety net. A partial pull is imported but reported as interrupted, so a dropped link is not mistaken for an empty sync.
 - Monitoring FIT records often carry only `timestamp_16`; resolve it to the nearest rollover in either direction (`resolveMonitoringTimestamp16`), or samples shift by 65,536 seconds.
 - Logs identify protobuf traffic by type, request id, status and byte count. Never log raw protobuf, settings or unknown-message payloads: they can carry notification text, locations or credentials.
+- A downloaded file's key is recorded only once the file is dealt with. The watch archives a file as it downloads, so the key is the only thing that brings it back. A workout that did not reach Health Connect (no write access, or a failed write) keeps no key, the sync reports it as a failure, and the next sync fetches it again. A file that does not convert is done with.
 - A watch sync writes Health Connect records through `AppleHealthImportRepository.insertImportedRecords`, the same deterministic-`clientRecordId` path the Apple Health importer uses, so a re-import upserts instead of duplicating. Only the watch-only series go to `GarminWellnessRepository`.
 - The OS bond is the security boundary. GFDI's own auth challenge is answered with zeroes, so `OnboardGarminWatchUseCase` treats bonding as mandatory and the companion association as optional.
 

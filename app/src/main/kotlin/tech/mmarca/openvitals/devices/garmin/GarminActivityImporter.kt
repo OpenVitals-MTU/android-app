@@ -16,9 +16,24 @@ import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteEle
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileParser
 
 /**
+ * What an activity import did with the files it was given. A file that did not convert is
+ * done with: parsing is deterministic, so a retry cannot help.
+ */
+data class GarminActivityImportResult(
+    val written: Int = 0,
+    /** Skipped because Health Connect write access is missing. */
+    val missingPermission: List<GarminDownloadedFile> = emptyList(),
+    /** Converted, but the Health Connect write failed. */
+    val failedWrites: List<GarminDownloadedFile> = emptyList(),
+) {
+    /** Files the next sync must fetch again, so their keys must not be recorded. */
+    val retry: List<GarminDownloadedFile> get() = missingPermission + failedWrites
+}
+
+/**
  * Imports the activity FIT files a sync pulled, down the same path a folder
  * import uses, so the two cannot differ. Never throws except cancellation:
- * per-file failures are tolerated, and the raw bytes stay in [GarminFileStore].
+ * per-file failures are reported in the result, not thrown.
  */
 @Singleton
 class GarminActivityImporter @Inject constructor(
@@ -27,12 +42,14 @@ class GarminActivityImporter @Inject constructor(
     private val elevationCorrector: RouteElevationCorrector,
 ) {
 
-    /** Imports the activity files in [files]; returns how many were written. */
-    suspend fun import(files: List<GarminDownloadedFile>): Int {
+    /** Imports the activity files in [files] and says which ones must be fetched again. */
+    suspend fun import(files: List<GarminDownloadedFile>): GarminActivityImportResult {
         val activityFiles = files.filter { it.entry.type == GarminFileType.ACTIVITY }
-        if (activityFiles.isEmpty()) return 0
+        if (activityFiles.isEmpty()) return GarminActivityImportResult()
 
-        val requests = mutableListOf<ActivityWriteRequest>()
+        val pending = mutableListOf<Pair<GarminDownloadedFile, ActivityWriteRequest>>()
+        val missingPermission = mutableListOf<GarminDownloadedFile>()
+        val failedWrites = mutableListOf<GarminDownloadedFile>()
         for (file in activityFiles) {
             val request = try {
                 buildRequest(file)
@@ -51,44 +68,48 @@ class GarminActivityImporter @Inject constructor(
                         "[GARMIN-IMPORT] activity index=${file.entry.fileIndex} " +
                             "skipped: write permissions are missing",
                     )
+                    missingPermission += file
                     continue
                 }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
                 GarminLog.log("[GARMIN-IMPORT] permission check failed: $error")
+                failedWrites += file
                 continue
             }
-            requests += request
+            pending += file to request
         }
-        if (requests.isEmpty()) return 0
 
         var written = 0
-        try {
-            activityRepository.writeActivityEntries(requests)
-            written = requests.size
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            // The batch is atomic; retry file by file so only the bad one fails.
-            GarminLog.log("[GARMIN-IMPORT] activity batch failed, retrying singly: $error")
-            for (request in requests) {
-                try {
-                    activityRepository.writeActivityEntry(request)
-                    written += 1
-                } catch (retryError: CancellationException) {
-                    throw retryError
-                } catch (retryError: Exception) {
-                    GarminLog.log("[GARMIN-IMPORT] activity write failed: $retryError")
+        if (pending.isNotEmpty()) {
+            try {
+                activityRepository.writeActivityEntries(pending.map { it.second })
+                written = pending.size
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                // The batch is atomic; retry file by file so only the bad one fails.
+                GarminLog.log("[GARMIN-IMPORT] activity batch failed, retrying singly: $error")
+                for ((file, request) in pending) {
+                    try {
+                        activityRepository.writeActivityEntry(request)
+                        written += 1
+                    } catch (retryError: CancellationException) {
+                        throw retryError
+                    } catch (retryError: Exception) {
+                        GarminLog.log("[GARMIN-IMPORT] activity write failed: $retryError")
+                        failedWrites += file
+                    }
                 }
             }
         }
         if (written > 0) {
             // The last imported type seeds the next manual entry's default.
-            preferencesRepository.lastActivityExerciseType = requests.last().exerciseType
+            preferencesRepository.lastActivityExerciseType = pending.last().second.exerciseType
             GarminLog.log("[GARMIN-IMPORT] wrote $written watch activities")
         }
-        return written
+        return GarminActivityImportResult(written, missingPermission, failedWrites)
     }
 
     private suspend fun buildRequest(file: GarminDownloadedFile): ActivityWriteRequest? {

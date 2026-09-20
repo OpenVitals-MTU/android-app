@@ -55,11 +55,11 @@ class GarminActivityImporterTest {
 
     @Test
     fun `nothing to do without activity files`() = runTest {
-        val written = importer().import(
+        val result = importer().import(
             listOf(file(GarminFileType.SLEEP), file(GarminFileType.MONITOR)),
         )
 
-        assertEquals(0, written)
+        assertEquals(GarminActivityImportResult(), result)
         coVerify(exactly = 0) { activityRepository.writeActivityEntries(any()) }
         coVerify(exactly = 0) { activityRepository.writeActivityEntry(any()) }
     }
@@ -67,15 +67,16 @@ class GarminActivityImporterTest {
     @Test
     fun `an undecodable activity file is skipped, never thrown`() = runTest {
         // Three junk bytes are not a FIT file; the import must swallow that per file.
-        val written = importer().import(listOf(file(GarminFileType.ACTIVITY)))
+        val result = importer().import(listOf(file(GarminFileType.ACTIVITY)))
 
-        assertEquals(0, written)
+        // Done with, not queued for a retry: parsing the same bytes again cannot help.
+        assertEquals(GarminActivityImportResult(), result)
         coVerify(exactly = 0) { activityRepository.writeActivityEntries(any()) }
     }
 
     @Test
     fun `an empty download list is a no-op`() = runTest {
-        assertEquals(0, importer().import(emptyList()))
+        assertEquals(GarminActivityImportResult(), importer().import(emptyList()))
     }
 
     @Test
@@ -85,9 +86,9 @@ class GarminActivityImporterTest {
         val written = slot<List<ActivityWriteRequest>>()
         coEvery { activityRepository.writeActivityEntries(capture(written)) } returns emptyList()
 
-        val count = importer().import(listOf(file(GarminFileType.ACTIVITY, rideWithAscent(totalAscentMeters = 999))))
+        val result = importer().import(listOf(file(GarminFileType.ACTIVITY, rideWithAscent(totalAscentMeters = 999))))
 
-        assertEquals(1, count)
+        assertEquals(1, result.written)
         val request = written.captured.single()
         val altitudes = request.routePoints.map { it.altitudeMeters!! }
         assertEquals(6100.0, altitudes[0], 0.05)
@@ -117,13 +118,41 @@ class GarminActivityImporterTest {
             val written = slot<List<ActivityWriteRequest>>()
             coEvery { activityRepository.writeActivityEntries(capture(written)) } returns emptyList()
 
-            val count = importer.import(listOf(file(GarminFileType.ACTIVITY, rideWithAscent(totalAscentMeters = 12))))
+            val result = importer.import(listOf(file(GarminFileType.ACTIVITY, rideWithAscent(totalAscentMeters = 12))))
 
-            assertEquals(1, count)
+            assertEquals(1, result.written)
             assertEquals(Instant.parse("2026-05-26T08:30:00Z"), written.captured.single().startTime)
         } finally {
             TimeZone.setDefault(systemZone)
         }
+    }
+
+    @Test
+    fun `a workout skipped for a missing permission is reported for a retry`() = runTest {
+        val importer = importer()
+        coEvery { activityRepository.hasActivityWritePermission(any<ActivityWriteRequest>()) } returns false
+        val ride = file(GarminFileType.ACTIVITY, rideWithAscent(totalAscentMeters = 12))
+
+        val result = importer.import(listOf(ride))
+
+        assertEquals(0, result.written)
+        assertEquals(listOf(ride), result.missingPermission)
+        assertEquals(listOf(ride), result.retry)
+        coVerify(exactly = 0) { activityRepository.writeActivityEntries(any()) }
+    }
+
+    @Test
+    fun `a workout whose write failed is reported for a retry`() = runTest {
+        val importer = importer()
+        coEvery { activityRepository.writeActivityEntries(any()) } throws IllegalStateException("rate limited")
+        coEvery { activityRepository.writeActivityEntry(any()) } throws IllegalStateException("rate limited")
+        val ride = file(GarminFileType.ACTIVITY, rideWithAscent(totalAscentMeters = 12))
+
+        val result = importer.import(listOf(ride))
+
+        assertEquals(0, result.written)
+        assertEquals(listOf(ride), result.failedWrites)
+        assertEquals(listOf(ride), result.retry)
     }
 
     private fun importer(): GarminActivityImporter {
