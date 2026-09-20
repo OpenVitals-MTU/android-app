@@ -1328,6 +1328,11 @@ internal class ActivityHealthReader(
             else -> this
         }
 
+    /**
+     * Deletes the metric records of the session that starts at [start]. A range read matches
+     * on start time, so another activity that starts inside this window matches too. The
+     * session start in each client id is what tells them apart.
+     */
     private suspend fun deleteManualActivityMetricRecords(start: Instant, end: Instant) {
         deleteManualActivityMetricRecords(StepsRecord::class, "steps", start, end)
         deleteManualActivityMetricRecords(DistanceRecord::class, "distance", start, end)
@@ -1354,7 +1359,7 @@ internal class ActivityHealthReader(
             ascendingOrder = true,
         ).filter { record ->
             record.metadata.dataOrigin.packageName == appPackageName &&
-                record.metadata.clientRecordId?.startsWith("openvitals_activity_${kind}_") == true
+                record.metadata.clientRecordId?.startsWith(manualActivityMetricIdPrefix(kind, start)) == true
         }.map { record -> record.metadata.id }
 
         if (recordIds.isNotEmpty()) {
@@ -1366,9 +1371,12 @@ internal class ActivityHealthReader(
         }
     }
 
+    private fun manualActivityMetricIdPrefix(kind: String, sessionStart: Instant): String =
+        "openvitals_activity_${kind}_${sessionStart.toEpochMilli()}_"
+
     private fun manualActivityMetricMetadata(kind: String, startTime: Instant): Metadata =
         Metadata.manualEntry(
-            clientRecordId = "openvitals_activity_${kind}_${startTime.toEpochMilli()}_${UUID.randomUUID()}",
+            clientRecordId = manualActivityMetricIdPrefix(kind, startTime) + UUID.randomUUID(),
             device = Device(type = Device.TYPE_PHONE),
         )
 

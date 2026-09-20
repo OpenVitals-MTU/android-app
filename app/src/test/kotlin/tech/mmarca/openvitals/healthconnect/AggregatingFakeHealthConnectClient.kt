@@ -24,6 +24,7 @@ import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.response.ReadRecordResponse
+import androidx.health.connect.client.response.ReadRecordsResponse
 import androidx.health.connect.client.testing.AggregationResult
 import androidx.health.connect.client.testing.FakeHealthConnectClient
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -48,7 +49,57 @@ import kotlin.reflect.KClass
  */
 class AggregatingFakeHealthConnectClient(
     private val inner: FakeHealthConnectClient,
+    /**
+     * Health Connect matches a time range on a record's START time, in `[start, end)`
+     * (AOSP `RecordHelper.getReadTableWhereClause`). Google's fake wants the whole record
+     * inside the range, so a read of a session's own window misses the session's records.
+     * Opt in where a test depends on which records a range read returns.
+     */
+    private val platformTimeRange: Boolean = false,
 ) : HealthConnectClient by inner {
+
+    /** With [platformTimeRange]: one page, start time in range. */
+    override suspend fun <T : Record> readRecords(request: ReadRecordsRequest<T>): ReadRecordsResponse<T> {
+        if (!platformTimeRange) return inner.readRecords(request)
+        val (start, end) = bounds(request.timeRangeFilter)
+        val origins = request.dataOriginFilter
+        val matched = readAll(request.recordType)
+            .filter { record -> record.startInstant().let { !it.isBefore(start) && it.isBefore(end) } }
+            .filter { origins.isEmpty() || it.metadata.dataOrigin in origins }
+            .sortedBy { it.startInstant() }
+        return ReadRecordsResponse(if (request.ascendingOrder) matched else matched.reversed(), null)
+    }
+
+    /**
+     * Health Connect ignores the origin on an update. The fake refuses a record whose origin
+     * is not its own package, and an update is built without one, so stamp the stored origin.
+     */
+    override suspend fun updateRecords(records: List<Record>) {
+        inner.updateRecords(records.map { it.withStoredOrigin() })
+    }
+
+    /** The proto classes are runtime-only here, so the round trip the fake itself makes is reflective. */
+    private suspend fun Record.withStoredOrigin(): Record {
+        if (metadata.dataOrigin.packageName.isNotEmpty()) return this
+        val stored = readAll(this::class).firstOrNull { it.metadata.id == metadata.id } ?: return this
+        val converters = "androidx.health.connect.client.impl.converters.records"
+        val originBuilder = Class.forName("androidx.health.platform.client.proto.DataProto\$DataOrigin")
+            .getMethod("newBuilder").invoke(null)
+        originBuilder.call("setApplicationId", stored.metadata.dataOrigin.packageName)
+        val point = Class.forName("$converters.RecordToProtoConvertersKt")
+            .getMethod("toProto", Record::class.java).invoke(null, this)
+        val stamped = point.call("toBuilder").call("setDataOrigin", originBuilder.call("build")).call("build")
+        return Class.forName("$converters.ProtoToRecordConvertersKt")
+            .methods.single { it.name == "toRecord" }.invoke(null, stamped) as Record
+    }
+
+    private fun Any.call(name: String, vararg args: Any): Any =
+        javaClass.methods.first { it.name == name && it.parameterCount == args.size }.invoke(this, *args)
+
+    /** `IntervalRecord` and `InstantaneousRecord` are internal, so read the getter by name. */
+    private fun Record.startInstant(): Instant =
+        runCatching { javaClass.getMethod("getStartTime").invoke(this) as Instant }
+            .getOrElse { javaClass.getMethod("getTime").invoke(this) as Instant }
 
     override suspend fun aggregate(request: AggregateRequest): AggregationResult {
         val (start, end) = bounds(request.internalTimeRange())
