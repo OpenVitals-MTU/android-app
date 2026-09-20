@@ -15,6 +15,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -112,14 +113,16 @@ private fun StrideLengthField(
     enabled: Boolean,
     onValue: (Double?) -> Unit,
 ) {
-    var text by remember(value, enabled) {
-        mutableStateOf(value?.let { "%.1f".format(it) }.orEmpty())
+    // Keyed on the unit, not on the value: a value key rewrote the text on every keystroke.
+    var text by remember(suffix) { mutableStateOf(decimalFieldText(value)) }
+    LaunchedEffect(value) {
+        if (decimalFieldTextIsStale(text, value)) text = decimalFieldText(value)
     }
     OutlinedTextField(
         value = text,
         onValueChange = { next ->
-            text = next.filter { it.isDigit() || it == '.' }.take(5)
-            onValue(text.toDoubleOrNull())
+            text = filterDecimalFieldInput(next)
+            onValue(parseDecimalFieldText(text))
         },
         label = { Text(stringResource(R.string.settings_step_distance_stride_label)) },
         suffix = { Text(suffix) },
