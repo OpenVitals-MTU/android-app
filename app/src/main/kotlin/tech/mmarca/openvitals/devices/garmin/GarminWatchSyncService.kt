@@ -98,7 +98,7 @@ class GarminWatchSyncService @Inject constructor(
             override fun alreadySyncedKeys(): Set<String> = stateStore.syncedFileKeys(device.id)
 
             override suspend fun keep(file: GarminDownloadedFile) {
-                fileStore.save(file, now = Instant.now())
+                fileStore.save(file, now = Instant.now(), deviceId = device.id)
             }
 
             override fun imported(files: List<GarminDownloadedFile>) {
@@ -121,6 +121,7 @@ class GarminWatchSyncService @Inject constructor(
                     device.id,
                     (files - activities.retry.toSet()).mapNotNull { it.entry.dedupKey },
                 )
+                fileStore.markImported(files)
                 refreshBodyEnergy(files)
                 bleDeviceRepository.markSynced(device.id, Instant.now())
                 refreshPlacedHomeWidgets(context)
@@ -152,6 +153,19 @@ class GarminWatchSyncService @Inject constructor(
                 "An activity recording is in progress. Finish or discard it " +
                     "before syncing the watch.",
             )
+        }
+
+        // Files a run saved but never imported: a crash, or an import that threw. The watch
+        // has archived them, so this is their only way in. Before the pull, so their keys are
+        // recorded before the listing is filtered and they are not fetched twice.
+        try {
+            importPendingFiles(device)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            // The write path is down. Pulling more now would only queue more behind it.
+            GarminLog.log("[GARMIN-SYNC] pending import failed: $error")
+            return DeviceSyncResult.Failed(describe(error))
         }
 
         val pull = try {
@@ -192,6 +206,7 @@ class GarminWatchSyncService @Inject constructor(
                 device.id,
                 (downloaded - activities.retry.toSet()).mapNotNull { it.entry.dedupKey },
             )
+            fileStore.markImported(downloaded)
 
             refreshBodyEnergy(downloaded)
         }
@@ -496,7 +511,7 @@ class GarminWatchSyncService @Inject constructor(
                     ),
                 )
             },
-            onFileDownloaded = { file -> fileStore.save(file, now = Instant.now()) },
+            onFileDownloaded = { file -> fileStore.save(file, now = Instant.now(), deviceId = device.id) },
             keepAnsweringAfterSync = true,
             hooks = GarminSessionHooks(
                 onFindPhone = { seconds -> findPhoneRinger.start(seconds) },
@@ -578,7 +593,7 @@ class GarminWatchSyncService @Inject constructor(
                             GarminFileSyncTransfer(
                                 protobuf = session.protobuf,
                                 transport = ml,
-                                keep = { file -> fileStore.save(file, now = Instant.now()) },
+                                keep = { file -> fileStore.save(file, now = Instant.now(), deviceId = device.id) },
                                 onProtocolProven = {
                                     stateStore.recordSyncProtocol(device.id, GarminSyncProtocol.FILE_SYNC)
                                 },
@@ -644,6 +659,21 @@ class GarminWatchSyncService @Inject constructor(
         val files: List<GarminDownloadedFile>,
         val incompleteReason: String? = null,
     )
+
+    /** Imports what [GarminFileStore.pending] holds for [device]. Throws when the write path is down. */
+    private suspend fun importPendingFiles(device: BleSensorDevice) {
+        val pending = fileStore.pending(device.id)
+        if (pending.isEmpty()) return
+        GarminLog.log("[GARMIN-SYNC] importing ${pending.size} file(s) an earlier run saved but never imported")
+        importer.import(pending)
+        val activities = activityImporter.import(pending)
+        stateStore.recordSyncedFileKeys(
+            device.id,
+            (pending - activities.retry.toSet()).mapNotNull { it.entry.dedupKey },
+        )
+        fileStore.markImported(pending)
+        refreshBodyEnergy(pending)
+    }
 
     private fun notImportedMessage(activities: GarminActivityImportResult): String? = when {
         activities.missingPermission.isNotEmpty() ->
