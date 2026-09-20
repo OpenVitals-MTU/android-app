@@ -1271,7 +1271,12 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_ACCEPTED_PRIVACY_POLICY_VERSION = "accepted_privacy_policy_version"
         private const val KEY_PRIVACY_POLICY_ACCEPTED_AT = "privacy_policy_accepted_at"
         private const val KEY_APP_LOCK_ENABLED = "app_lock_enabled"
-        const val CURRENT_PRIVACY_POLICY_VERSION = "1.0"
+
+        /**
+         * The "Last updated" date of PRIVACY.md. A user who accepted another value is asked
+         * again. Change both together; PrivacyPolicyVersionTest fails when they differ.
+         */
+        const val CURRENT_PRIVACY_POLICY_VERSION = "2026-09-20"
         private const val KEY_LAST_ACTIVITY_EXERCISE_TYPE = "last_activity_exercise_type"
         private const val KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE = "favorite_activity_exercise_type"
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"

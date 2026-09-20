@@ -4,6 +4,8 @@ OpenVitals is designed as a local-first app. The local Android app is intentiona
 
 The formal policy users see is [PRIVACY.md](../../PRIVACY.md): Settings and the re-consent dialog link to it. This page explains the engineering behind it. Keep the two in step. A change here that touches what is read, stored or sent needs the same change there, with a new "Last updated" date.
 
+The app asks every user to accept the policy again when that date changes. `PreferencesRepository.CURRENT_PRIVACY_POLICY_VERSION` holds the date, and `PrivacyPolicyVersionTest` fails when the constant and `PRIVACY.md` differ. So a new date always reaches users, and a typo fix that keeps the date does not.
+
 The local app:
 
 - Does not ship app-level internet permission.

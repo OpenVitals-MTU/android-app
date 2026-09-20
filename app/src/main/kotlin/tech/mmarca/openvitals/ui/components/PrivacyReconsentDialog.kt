@@ -1,7 +1,9 @@
 package tech.mmarca.openvitals.ui.components
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -72,7 +74,16 @@ fun PrivacyReconsentPrompt() {
         PrivacyReconsentDialog(
             onDismissRequest = { showDialog = false },
             onReviewPolicy = {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(privacyPolicyUrl)))
+                try {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(privacyPolicyUrl)))
+                } catch (_: ActivityNotFoundException) {
+                    // This app needs no browser, so some phones that run it have none.
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.privacy_reconsent_no_browser, privacyPolicyUrl),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
             },
             onAccept = {
                 prefs.acceptedPrivacyPolicyVersion = PreferencesRepository.CURRENT_PRIVACY_POLICY_VERSION
