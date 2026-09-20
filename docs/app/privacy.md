@@ -2,6 +2,8 @@
 
 OpenVitals is designed as a local-first app. The local Android app is intentionally separate from any connected app work.
 
+The formal policy users see is [PRIVACY.md](../../PRIVACY.md): Settings and the re-consent dialog link to it. This page explains the engineering behind it. Keep the two in step. A change here that touches what is read, stored or sent needs the same change there, with a new "Last updated" date.
+
 The local app:
 
 - Does not ship app-level internet permission.
