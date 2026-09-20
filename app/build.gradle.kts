@@ -211,6 +211,34 @@ tasks.configureEach {
     }
 }
 
+// Nothing runs the minified build before it ships, so every R8 task is followed by a check
+// that it kept what is reached by name: manifest components, Glance action callbacks and the
+// record names phone sync puts on the wire. R8 once stripped a callback's no-arg constructor
+// and widget taps were dead from 2.7.0 to 2.7.1. A failure here fails the build.
+listOf("debug", "ci", "release", "nightly").forEach { variant ->
+    val variantName = variant.replaceFirstChar { it.uppercase() }
+    val verifyR8Keeps = tasks.register<Exec>("verify${variantName}R8Keeps") {
+        group = "verification"
+        description = "Checks that R8 kept what the $variant build reaches by name."
+        workingDir(rootProject.projectDir)
+        commandLine(
+            "python3",
+            rootProject.file("scripts/verify-r8-keeps.py"),
+            "--mapping",
+            layout.buildDirectory.file("outputs/mapping/$variant/mapping.txt").get().asFile,
+            "--manifest",
+            layout.buildDirectory
+                .file("intermediates/merged_manifest/$variant/process${variantName}MainManifest/AndroidManifest.xml")
+                .get().asFile,
+            "--sources",
+            file("src/main/kotlin"),
+        )
+    }
+    tasks.matching { it.name == "minify${variantName}WithR8" }.configureEach {
+        finalizedBy(verifyR8Keeps)
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
