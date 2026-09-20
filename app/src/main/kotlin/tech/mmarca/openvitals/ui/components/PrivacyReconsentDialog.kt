@@ -59,6 +59,7 @@ fun PrivacyReconsentPrompt() {
     var showDialog by rememberSaveable { mutableStateOf(false) }
     var resumeTick by remember { mutableIntStateOf(0) }
     val privacyPolicyUrl = stringResource(R.string.settings_privacy_policy_url)
+    val noBrowserMessage = stringResource(R.string.privacy_reconsent_no_browser, privacyPolicyUrl)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         resumeTick++
@@ -78,11 +79,7 @@ fun PrivacyReconsentPrompt() {
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(privacyPolicyUrl)))
                 } catch (_: ActivityNotFoundException) {
                     // This app needs no browser, so some phones that run it have none.
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.privacy_reconsent_no_browser, privacyPolicyUrl),
-                        Toast.LENGTH_LONG,
-                    ).show()
+                    Toast.makeText(context, noBrowserMessage, Toast.LENGTH_LONG).show()
                 }
             },
             onAccept = {
