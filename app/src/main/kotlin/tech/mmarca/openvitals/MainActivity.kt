@@ -37,6 +37,7 @@ import tech.mmarca.openvitals.navigation.AppNavigation
 import tech.mmarca.openvitals.navigation.ExternalRouteImportRequest
 import tech.mmarca.openvitals.navigation.EXTRA_OPENVITALS_ROUTE
 import java.time.LocalDate
+import tech.mmarca.openvitals.devices.core.pairing.CompanionDevicePairing
 import tech.mmarca.openvitals.navigation.Screen
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 import java.util.Locale
@@ -48,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var healthRepository: HealthRepository
     @Inject lateinit var unitFormatter: UnitFormatter
     @Inject lateinit var dateTimeFormatterProvider: DateTimeFormatterProvider
+    @Inject lateinit var companionDevicePairing: CompanionDevicePairing
 
     private var nextRouteImportRequestId = 0L
     private var routeImportRequest by mutableStateOf<ExternalRouteImportRequest?>(null)
@@ -60,6 +62,9 @@ class MainActivity : AppCompatActivity() {
             return
         }
         enableEdgeToEdge()
+        // The companion association dialog needs an Activity launcher. Nothing attached one
+        // after the native rewrite, so no new watch was ever associated.
+        companionDevicePairing.attachToActivity(this)
         updateRouteImportRequest(intent)
         // A recreated activity still holds the old intent. A shared place must not reopen on rotation.
         updateExternalNavigationRoute(intent, acceptSharedPlace = savedInstanceState == null)
@@ -140,6 +145,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        companionDevicePairing.detachFromActivity(this)
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
