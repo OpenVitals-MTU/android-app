@@ -22,6 +22,29 @@ class MeasurementInputTest {
     }
 
     @Test
+    fun `a prefilled amount of a litre or more reads back as the same amount in every locale`() {
+        // Grouping made "1,500" (en), "1.500" (de) and "1 500" (fr) out of 1500 ml.
+        // The first two parsed as 1.5 ml, and the third did not parse at all.
+        listOf(Locale.US, Locale.GERMANY, Locale.FRANCE).forEach { locale ->
+            listOf(1_000.0, 1_500.0, 12_345.0).forEach { milliliters ->
+                val text = hydrationInputAmountText(milliliters, formatter(UnitSystem.METRIC, locale))
+
+                assertEquals("$locale $milliliters", milliliters, hydrationInputMilliliters(text, UnitSystem.METRIC)!!, 0.0)
+            }
+        }
+    }
+
+    @Test
+    fun `a prefilled imperial amount reads back in a decimal-comma locale`() {
+        val milliliters = hydrationInputMilliliters("40.5", UnitSystem.IMPERIAL)!!
+
+        val text = hydrationInputAmountText(milliliters, formatter(UnitSystem.IMPERIAL, Locale.GERMANY))
+
+        assertEquals("40.5", text)
+        assertEquals(milliliters, hydrationInputMilliliters(text, UnitSystem.IMPERIAL)!!, 1e-9)
+    }
+
+    @Test
     fun `body weight pounds convert to kilograms`() {
         assertEquals(
             70.0,
@@ -80,9 +103,9 @@ class MeasurementInputTest {
         )
     }
 
-    private fun formatter(unitSystem: UnitSystem): UnitFormatter =
+    private fun formatter(unitSystem: UnitSystem, locale: Locale = Locale.US): UnitFormatter =
         UnitFormatter(
             unitSystemProvider = { unitSystem },
-            localeProvider = { Locale.US },
+            localeProvider = { locale },
         )
 }
