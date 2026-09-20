@@ -16,9 +16,10 @@ It is reached from Settings, Sync with another phone, which opens its own wizard
 2. **Connect.** The host waits. The guest scans and picks the host from the list of nearby phones. Already-paired phones appear in the list before the scan finishes.
 3. **Choose how far back.** The last 30 days, the last 6 months, the last year, or everything. The last year is the default.
 4. **Choose what to sync.** The picker lists data categories such as activity, workouts, heart, sleep, body measurements, vitals, nutrition, hydration, mindfulness, and cycle tracking. A category appears only when this phone can both read and write at least one of its record types, and everything supported is selected by default.
-5. **Compare the codes.** After both phones press Start sync, each shows six digits. The user checks that they are the same and says so on both phones. No record moves before that.
-6. **Sync.** Progress shows the current phase and live sent, received, and written counts.
-7. **Read the report.** The report shows how many records were merged, how many were already present, and a per-record-type breakdown of what arrived. It can be copied or shared as text.
+5. **Start.** Each phone presses Start sync when its user is ready. The first one waits up to ten minutes for the other, and says so. If the other phone leaves the wizard, the wait ends at once.
+6. **Compare the codes.** Each phone then shows six digits. The user checks that they are the same and says so on both phones. No record moves before that.
+7. **Sync.** Progress shows the current phase and live sent, received, and written counts.
+8. **Read the report.** The report shows how many records were merged, how many were already present, and a per-record-type breakdown of what arrived. It can be copied or shared as text.
 
 Both phones choose their own range and their own categories. The exchange uses the record types both phones support.
 

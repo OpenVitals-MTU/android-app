@@ -2767,6 +2767,7 @@
     <string name="device_sync_progress_heading">Syncing</string>
     <string name="device_sync_phase_handshake">Handshake and dedup check</string>
     <string name="device_sync_phase_confirming">Waiting for the other phone to confirm the code</string>
+    <string name="device_sync_phase_waiting_for_peer">Waiting for the other phone to start the sync</string>
     <string name="device_sync_phase_exchanging">Exchanging records</string>
     <string name="device_sync_phase_writing">Writing to Health Connect</string>
     <string name="device_sync_sent">Sent</string>

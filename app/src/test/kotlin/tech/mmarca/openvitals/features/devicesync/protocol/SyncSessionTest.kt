@@ -6,6 +6,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
@@ -412,6 +413,37 @@ class SyncSessionTest {
         assertFalse(reports[1].completed)
         assertTrue(reports[1].abortReason.orEmpty().contains("integrity"))
         assertEquals(emptySet<String>(), guestStore.keys)
+    }
+
+    // Two users, two taps.
+
+    @Test
+    fun `the phone that starts first waits for the other user`() = runTest {
+        // Each session starts on its own user's tap. The second user takes two minutes over the pickers.
+        val hostStore = FakeRecordStore(listOf(item("a")))
+        val guestStore = FakeRecordStore(listOf(item("b")))
+        val (hostPipe, guestPipe) = SyncPipe.create()
+        val host = SyncSession(hostPipe, hostStore, configFor(SyncRole.HOST))
+        val guest = SyncSession(guestPipe, guestStore, configFor(SyncRole.GUEST))
+
+        val reports = listOf(
+            async { host.run() },
+            async {
+                delay(120_000)
+                guest.run()
+            },
+        ).awaitAll()
+
+        assertTrue(reports.all { it.completed })
+        assertEquals(setOf("a", "b"), guestStore.keys)
+    }
+
+    @Test
+    fun `a phone whose peer never starts gives up and says so`() = runTest {
+        val report = runAgainstAttacker { }
+
+        assertFalse(report.completed)
+        assertTrue(report.abortReason.orEmpty().contains("did not start the sync in time"))
     }
 
     // Link failure.

@@ -67,6 +67,13 @@ class SyncSessionConfig(
     val hcProviderVersion: Long? = null,
     /** Records per batch (stop-and-wait unit). */
     val batchSize: Int = 200,
+    /**
+     * How long the other user may take to press Start sync. Each phone starts its
+     * session on its own tap, so this waits for a person, not for a radio. A phone
+     * that leaves the wizard drops the link, which ends the wait at once.
+     */
+    val peerStartTimeoutMillis: Long = 600_000,
+    /** How long the other phone may take to answer a handshake frame. */
     val handshakeTimeoutMillis: Long = 30_000,
     /** How long a user may take to compare the codes. */
     val confirmTimeoutMillis: Long = 120_000,
@@ -181,7 +188,7 @@ class SyncSession(
         ).encode()
         ownHelloBytes = hello
         send(SyncFrameType.HELLO, hello)
-        val peer = await(peerHello, config.handshakeTimeoutMillis, "timed out waiting for peer hello")
+        val peer = await(peerHello, config.peerStartTimeoutMillis, "the other phone did not start the sync in time")
         if (peer.protocolVersion != SYNC_PROTOCOL_VERSION) {
             throw SyncAborted(
                 "incompatible protocol version ${peer.protocolVersion} " +
