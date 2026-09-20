@@ -65,9 +65,14 @@ class MainActivity : AppCompatActivity() {
         // The companion association dialog needs an Activity launcher. Nothing attached one
         // after the native rewrite, so no new watch was ever associated.
         companionDevicePairing.attachToActivity(this)
-        updateRouteImportRequest(intent)
-        // A recreated activity still holds the old intent. A shared place must not reopen on rotation.
-        updateExternalNavigationRoute(intent, acceptSharedPlace = savedInstanceState == null)
+        // A recreated Activity (rotation, language change, process restore) still holds the
+        // launch intent, and its back stack comes back on its own. Applying the intent again
+        // pushed a second copy of a widget's screen, and re-ran a file import over the user's
+        // edits and their unsaved recording draft.
+        if (savedInstanceState == null) {
+            updateRouteImportRequest(intent)
+            updateExternalNavigationRoute(intent)
+        }
 
         setContent {
             val appThemeMode by preferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle()
@@ -183,9 +188,8 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun updateExternalNavigationRoute(intent: Intent?, acceptSharedPlace: Boolean = true) {
-        externalNavigationRoute = intent?.openVitalsRoute()
-            ?: intent?.takeIf { acceptSharedPlace }?.sendPointRoute()
+    private fun updateExternalNavigationRoute(intent: Intent?) {
+        externalNavigationRoute = intent?.openVitalsRoute() ?: intent?.sendPointRoute()
     }
 }
 
