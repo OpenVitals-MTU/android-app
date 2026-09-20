@@ -131,6 +131,18 @@ class StepDistanceBackfillServiceTest {
     }
 
     @Test
+    fun `a step read that fails skips the reconcile`() = runTest {
+        val hc = hc()
+        coEvery { hc.readDailySteps(any(), any(), any(), any(), any(), any(), any(), any()) } throws
+            IllegalStateException("rate limited")
+
+        StepDistanceBackfillService(hc, prefs()).syncNow()
+
+        // An empty step map reads as 0 steps every day, and the reconcile deletes every record.
+        coVerify(exactly = 0) { hc.reconcileStepDerivedDistance(any(), any(), any()) }
+    }
+
+    @Test
     fun `a reconcile failure is swallowed`() = runTest {
         val hc = hc()
         coEvery { hc.reconcileStepDerivedDistance(any(), any(), any()) } throws IllegalStateException("hc down")

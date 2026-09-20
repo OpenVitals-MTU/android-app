@@ -17,12 +17,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.reflect.KClass
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyAggregateEntity
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
 
 /**
  * Keeps the vitals daily-aggregate cache current via the Changes API, one
@@ -92,7 +92,8 @@ class VitalsHistorySyncService @Inject constructor(
             if (hc.availability() != HealthConnectAvailability.AVAILABLE) return
             val granted = hc.grantedPermissions()
             val skinTemperatureAvailable = hc.isSkinTemperatureAvailable()
-            coroutineScope {
+            // Strict: a failed read must abort the metric, not be cached as "no data".
+            withStrictHealthConnectReads {
                 specs().map { spec ->
                     async {
                         try {
@@ -172,13 +173,14 @@ class VitalsHistorySyncService @Inject constructor(
         try {
             val spec = specs().firstOrNull { it.key == key } ?: return
             dao.cursor(key) ?: return
-            days.forEach { recomputeDay(spec, it) }
+            withStrictHealthConnectReads { days.forEach { recomputeDay(spec, it) } }
         } catch (t: Throwable) {
             if (t is kotlinx.coroutines.CancellationException) throw t
             Log.w(TAG, "Vitals cache patch failed metric=$key", t)
         }
     }
 
+    /** An empty read deletes the day, so the read must be a strict one: see [sync] and [patchDays]. */
     private suspend fun recomputeDay(spec: MetricSpec, day: LocalDate) {
         val row = spec.read(day, day).firstOrNull { it.epochDay == day.toEpochDay() }
         if (row == null) {

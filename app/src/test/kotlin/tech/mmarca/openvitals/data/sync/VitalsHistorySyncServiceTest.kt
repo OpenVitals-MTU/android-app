@@ -162,6 +162,38 @@ class VitalsHistorySyncServiceTest {
         coVerify { dao.deleteDay(VitalsCacheKeys.SPO2, day.toEpochDay()) }
     }
 
+    @Test fun `a full sync whose read fails leaves the cache and the cursor as they were`() = runTest {
+        val hc = hc()
+        coEvery { hc.readDailySpO2(any(), any()) } throws IllegalStateException("rate limited")
+        val dao = dao(cursorToken = null)
+
+        VitalsHistorySyncService(hc, dao).syncAll()
+
+        // A swallowed failure used to replace 730 days with nothing and stamp the sync done.
+        coVerify(exactly = 0) { dao.replaceMetric(VitalsCacheKeys.SPO2, any()) }
+        coVerify(exactly = 0) { dao.writeFullSync(match { it.metric == VitalsCacheKeys.SPO2 }) }
+    }
+
+    @Test fun `a changed day whose read fails is kept, and the token stays`() = runTest {
+        val hc = hc()
+        val day = today.minusDays(3)
+        coEvery { hc.getChanges("old-token") } returns HealthConnectChanges(
+            upsertedDays = listOf(day),
+            hasDeletions = false,
+            nextToken = "new-token",
+            tokenExpired = false,
+            hasMore = false,
+        )
+        coEvery { hc.readDailySpO2(any(), any()) } throws IllegalStateException("rate limited")
+        val dao = dao(cursorToken = "old-token")
+
+        VitalsHistorySyncService(hc, dao).syncIncremental()
+
+        // Deleting the day and moving the token on meant the day was never looked at again.
+        coVerify(exactly = 0) { dao.deleteDay(VitalsCacheKeys.SPO2, any()) }
+        coVerify(exactly = 0) { dao.writeToken(VitalsCacheKeys.SPO2, any()) }
+    }
+
     @Test fun `deletions force a full rebuild because they carry no date`() = runTest {
         val hc = hc()
         coEvery { hc.getChanges("old-token") } returns HealthConnectChanges(

@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
 
 /**
  * Keeps the daily calories-burned cache current, like
@@ -34,11 +35,14 @@ class CaloriesHistorySyncService @Inject constructor(
             if (hc.availability() != HealthConnectAvailability.AVAILABLE) return
             if (readPermission(TotalCaloriesBurnedRecord::class) !in hc.grantedPermissions()) return
             val token = dao.cursor(VitalsCacheKeys.CALORIES_BURNED)?.changesToken
-            if (token.isNullOrEmpty()) {
-                if (!incrementalOnly) fullSync()
-                return
+            // Strict: a failed read must abort the pass, not be cached as "no data".
+            withStrictHealthConnectReads {
+                if (token.isNullOrEmpty()) {
+                    if (!incrementalOnly) fullSync()
+                } else {
+                    incrementalSync(token)
+                }
             }
-            incrementalSync(token)
         } catch (t: Throwable) {
             if (t is kotlinx.coroutines.CancellationException) throw t
             Log.w(TAG, "Calories cache sync failed", t)
@@ -54,6 +58,9 @@ class CaloriesHistorySyncService @Inject constructor(
         val today = LocalDate.now()
         val earliest = today.minusDays(HistoryLookbackDays)
         val token = hc.getChangesToken(TotalCaloriesBurnedRecord::class)
+        // This rebuild writes chunk by chunk. Readers trust the cache while a cursor row exists,
+        // so drop it first: a pass that fails halfway leaves "not synced", not half a history.
+        dao.deleteCursor(VitalsCacheKeys.CALORIES_BURNED)
 
         var chunkEnd = today
         var isNewestChunk = true
@@ -98,7 +105,7 @@ class CaloriesHistorySyncService @Inject constructor(
     suspend fun patchDays(days: Set<LocalDate>) {
         try {
             dao.cursor(VitalsCacheKeys.CALORIES_BURNED) ?: return
-            days.forEach { recomputeDay(it) }
+            withStrictHealthConnectReads { days.forEach { recomputeDay(it) } }
         } catch (t: Throwable) {
             if (t is kotlinx.coroutines.CancellationException) throw t
             Log.w(TAG, "Calories cache patch failed", t)

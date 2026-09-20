@@ -6,6 +6,7 @@ import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -59,6 +60,7 @@ class CaloriesHistorySyncServiceTest {
             cursorToken?.let { VitalsSyncCursorEntity(VitalsCacheKeys.CALORIES_BURNED, it, null) }
         }
         coEvery { dao.purgeMetric(any()) } just Runs
+        coEvery { dao.deleteCursor(any()) } just Runs
         coEvery { dao.replaceMetric(any(), any()) } just Runs
         coEvery { dao.writeFullSync(any()) } just Runs
         coEvery { dao.writeToken(any(), any()) } just Runs
@@ -181,6 +183,25 @@ class CaloriesHistorySyncServiceTest {
         readRanges.zipWithNext().forEach { (newer, older) ->
             assertEquals(newer.first.minusDays(1), older.second)
         }
+    }
+
+    @Test fun `a rebuild that fails halfway leaves no cursor, so readers stop trusting the cache`() = runTest {
+        val hc = hc()
+        var reads = 0
+        coEvery { hc.readDailyNutrition(any(), any(), any(), any(), any()) } answers {
+            reads += 1
+            if (reads == 1) emptyList() else throw IllegalStateException("rate limited")
+        }
+        val dao = dao(cursorToken = null)
+
+        CaloriesHistorySyncService(hc, dao).syncAll()
+
+        // The rebuild writes chunk by chunk, so the cursor goes first and comes back last.
+        coVerifyOrder {
+            dao.deleteCursor(VitalsCacheKeys.CALORIES_BURNED)
+            dao.replaceMetric(VitalsCacheKeys.CALORIES_BURNED, any())
+        }
+        coVerify(exactly = 0) { dao.writeFullSync(any()) }
     }
 
     @Test fun `ungranted permission is a no-op`() = runTest {
