@@ -33,6 +33,8 @@ class CaloriesHistorySyncService @Inject constructor(
         if (!running.compareAndSet(false, true)) return
         try {
             if (hc.availability() != HealthConnectAvailability.AVAILABLE) return
+            // In the background without the grant, a read returns this app's own records only.
+            if (!hc.readsOtherAppsDataNow()) return
             if (readPermission(TotalCaloriesBurnedRecord::class) !in hc.grantedPermissions()) return
             val token = dao.cursor(VitalsCacheKeys.CALORIES_BURNED)?.changesToken
             // Strict: a failed read must abort the pass, not be cached as "no data".

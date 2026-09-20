@@ -2,11 +2,13 @@ package tech.mmarca.openvitals.healthconnect
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.records.Record
 import dagger.hilt.android.qualifiers.ApplicationContext
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.performance.AppForegroundGate
 import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
 import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
@@ -82,6 +84,7 @@ class HealthConnectManager @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val syncGate: HealthConnectSyncGate,
     mindfulnessGate: MindfulnessIntegrationGate,
+    private val foregroundGate: AppForegroundGate,
 ) {
     private val diagnostics = HealthConnectDiagnostics(context)
     private val availabilityService = HealthConnectAvailabilityService(context, diagnostics)
@@ -170,6 +173,19 @@ class HealthConnectManager @Inject constructor(
 
     fun isPlannedExerciseAvailable(): Boolean =
         permissionService.isPlannedExerciseAvailable()
+
+    /**
+     * False in the background without the background-read grant. Health Connect then answers
+     * a read with this app's own records only, and says nothing (AOSP enforces a self read).
+     * A cache or a widget built from that is wrong, so a caller that saves or shows what it
+     * read checks this first and skips the pass. The foreground here is a started Activity,
+     * which is stricter than Health Connect's own test: a foreground service does not count.
+     */
+    suspend fun readsOtherAppsDataNow(): Boolean {
+        if (foregroundGate.isForeground) return true
+        if (!permissionService.isBackgroundHealthDataReadAvailable()) return false
+        return HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND in grantedPermissions()
+    }
 
     suspend fun grantedPermissions(): Set<String> =
         permissionService.grantedPermissions()

@@ -58,6 +58,8 @@ class StepDistanceBackfillService @Inject constructor(
             val last = lastPass
             if (!force && last != null && Duration.between(last, now) < Throttle) return
             if (hc.availability() != HealthConnectAvailability.AVAILABLE) return
+            // Own records only would hide another app's distance, and this pass would write over it.
+            if (!hc.readsOtherAppsDataNow()) return
 
             val granted = hc.grantedPermissions()
             val required = setOf(

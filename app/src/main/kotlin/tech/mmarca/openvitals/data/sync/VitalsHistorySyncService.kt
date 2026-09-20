@@ -90,6 +90,8 @@ class VitalsHistorySyncService @Inject constructor(
         if (!running.compareAndSet(false, true)) return
         try {
             if (hc.availability() != HealthConnectAvailability.AVAILABLE) return
+            // In the background without the grant, a read returns this app's own records only.
+            if (!hc.readsOtherAppsDataNow()) return
             val granted = hc.grantedPermissions()
             val skinTemperatureAvailable = hc.isSkinTemperatureAvailable()
             // Strict: a failed read must abort the metric, not be cached as "no data".

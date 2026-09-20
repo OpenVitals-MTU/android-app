@@ -47,6 +47,7 @@ class StepDistanceBackfillServiceTest {
     ): HealthConnectManager = mockk(relaxed = true) {
         every { availability() } returns HealthConnectAvailability.AVAILABLE
         coEvery { grantedPermissions() } returns granted
+        coEvery { readsOtherAppsDataNow() } returns true
         every { additionalDataAccessPermissions } returns if (historyPermissionDefined) {
             setOf(HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY)
         } else {
@@ -128,6 +129,17 @@ class StepDistanceBackfillServiceTest {
         val window = slot<ClosedRange<LocalDate>>()
         coVerify(exactly = 1) { hc.purgeStepDerivedDistance(capture(window)) }
         assertEquals(LocalDate.now().minusDays(HistoryLookbackDays), window.captured.start)
+    }
+
+    @Test
+    fun `nothing is reconciled in the background without the background-read grant`() = runTest {
+        val hc = hc()
+        coEvery { hc.readsOtherAppsDataNow() } returns false
+
+        StepDistanceBackfillService(hc, prefs()).syncNow()
+
+        // Own records only would hide another app's distance, and the pass would write over it.
+        coVerify(exactly = 0) { hc.reconcileStepDerivedDistance(any(), any(), any()) }
     }
 
     @Test

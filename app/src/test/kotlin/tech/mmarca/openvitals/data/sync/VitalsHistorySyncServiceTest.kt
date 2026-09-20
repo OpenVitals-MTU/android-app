@@ -51,6 +51,7 @@ class VitalsHistorySyncServiceTest {
         val hc = mockk<HealthConnectManager>()
         coEvery { hc.availability() } returns HealthConnectAvailability.AVAILABLE
         coEvery { hc.grantedPermissions() } returns granted
+        coEvery { hc.readsOtherAppsDataNow() } returns true
         coEvery { hc.isSkinTemperatureAvailable() } returns false
         coEvery { hc.getChangesToken(any()) } returns "token-1"
         coEvery { hc.readDailyBloodPressure(any(), any()) } returns emptyList()
@@ -160,6 +161,18 @@ class VitalsHistorySyncServiceTest {
         VitalsHistorySyncService(hc, dao).syncIncremental()
 
         coVerify { dao.deleteDay(VitalsCacheKeys.SPO2, day.toEpochDay()) }
+    }
+
+    @Test fun `nothing is read in the background without the background-read grant`() = runTest {
+        val hc = hc()
+        coEvery { hc.readsOtherAppsDataNow() } returns false
+        val dao = dao(cursorToken = null)
+
+        VitalsHistorySyncService(hc, dao).syncAll()
+
+        // Health Connect would hand back this app's own records only, and the cache would keep them.
+        coVerify(exactly = 0) { hc.readDailySpO2(any(), any()) }
+        coVerify(exactly = 0) { dao.replaceMetric(any(), any()) }
     }
 
     @Test fun `a full sync whose read fails leaves the cache and the cursor as they were`() = runTest {
