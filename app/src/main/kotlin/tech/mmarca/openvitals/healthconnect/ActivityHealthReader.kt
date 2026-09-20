@@ -45,6 +45,7 @@ import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
 import tech.mmarca.openvitals.domain.model.ActivityCadenceKind
 import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
+import tech.mmarca.openvitals.domain.model.ActivityRecordSource
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
@@ -985,11 +986,8 @@ internal class ActivityHealthReader(
         validateActivityWriteRequest(request)
 
         val zone = ZoneId.systemDefault()
-        val sessionClientRecordId = "openvitals_activity_${request.startTime.toEpochMilli()}_${UUID.randomUUID()}"
-        val sessionMetadata = Metadata.manualEntry(
-            clientRecordId = sessionClientRecordId,
-            device = Device(type = Device.TYPE_PHONE),
-        )
+        val sessionClientRecordId = request.sessionClientRecordId()
+        val sessionMetadata = request.recordMetadata(sessionClientRecordId)
         val exerciseSegments = request.toExerciseSegments()
         val exerciseLaps = request.toExerciseLaps()
         val session = request.toExerciseSessionRecord(sessionMetadata, exerciseSegments, zone)
@@ -1020,11 +1018,8 @@ internal class ActivityHealthReader(
         val records = ArrayList<androidx.health.connect.client.records.Record>(requests.size * 2)
         val clientRecordIds = ArrayList<String>(requests.size)
         for (request in requests) {
-            val sessionClientRecordId = "openvitals_activity_${request.startTime.toEpochMilli()}_${UUID.randomUUID()}"
-            val sessionMetadata = Metadata.manualEntry(
-                clientRecordId = sessionClientRecordId,
-                device = Device(type = Device.TYPE_PHONE),
-            )
+            val sessionClientRecordId = request.sessionClientRecordId()
+            val sessionMetadata = request.recordMetadata(sessionClientRecordId)
             clientRecordIds.add(sessionClientRecordId)
             records.add(request.toExerciseSessionRecord(sessionMetadata, request.toExerciseSegments(), zone))
             records.addAll(request.toManualActivityMetricRecords(zone))
@@ -1183,7 +1178,7 @@ internal class ActivityHealthReader(
                         endTime = endTime,
                         endZoneOffset = endOffset,
                         distance = meters.meters,
-                        metadata = manualActivityMetricMetadata("distance", startTime),
+                        metadata = metricMetadata("distance", startTime),
                     )
                 )
             }
@@ -1195,7 +1190,7 @@ internal class ActivityHealthReader(
                         endTime = endTime,
                         endZoneOffset = endOffset,
                         elevation = meters.meters,
-                        metadata = manualActivityMetricMetadata("elevation", startTime),
+                        metadata = metricMetadata("elevation", startTime),
                     )
                 )
             }
@@ -1207,7 +1202,7 @@ internal class ActivityHealthReader(
                         endTime = endTime,
                         endZoneOffset = endOffset,
                         energy = kcal.kilocalories,
-                        metadata = manualActivityMetricMetadata("active_calories", startTime),
+                        metadata = metricMetadata("active_calories", startTime),
                     )
                 )
             }
@@ -1219,7 +1214,7 @@ internal class ActivityHealthReader(
                         endTime = endTime,
                         endZoneOffset = endOffset,
                         energy = kcal.kilocalories,
-                        metadata = manualActivityMetricMetadata("total_calories", startTime),
+                        metadata = metricMetadata("total_calories", startTime),
                     )
                 )
             }
@@ -1231,11 +1226,15 @@ internal class ActivityHealthReader(
                         endTime = endTime,
                         endZoneOffset = endOffset,
                         count = steps,
-                        metadata = manualActivityMetricMetadata("steps", startTime),
+                        metadata = metricMetadata("steps", startTime),
                     )
                 )
             }
-            addAll(bleSamples.toManualActivitySensorRecords(startTime, endTime, zone))
+            addAll(
+                bleSamples.toManualActivitySensorRecords(startTime, endTime, zone) { kind, start ->
+                    metricMetadata(kind, start)
+                },
+            )
         }
     }
 
@@ -1243,6 +1242,7 @@ internal class ActivityHealthReader(
         startTime: Instant,
         endTime: Instant,
         zone: ZoneId,
+        metricMetadata: (kind: String, startTime: Instant) -> Metadata,
     ): List<Record> {
         if (isEmpty()) return emptyList()
         val startOffset = zone.rules.getOffset(startTime)
@@ -1261,7 +1261,7 @@ internal class ActivityHealthReader(
                                 beatsPerMinute = it.beatsPerMinute,
                             )
                         },
-                        metadata = manualActivityMetricMetadata("heart_rate", startTime),
+                        metadata = metricMetadata("heart_rate", startTime),
                     )
                 )
             }
@@ -1278,7 +1278,7 @@ internal class ActivityHealthReader(
                                 power = Power.watts(sample.watts),
                             )
                         },
-                        metadata = manualActivityMetricMetadata("power", startTime),
+                        metadata = metricMetadata("power", startTime),
                     )
                 )
             }
@@ -1295,7 +1295,7 @@ internal class ActivityHealthReader(
                                 revolutionsPerMinute = it.rpm.toDouble(),
                             )
                         },
-                        metadata = manualActivityMetricMetadata("cycling_cadence", startTime),
+                        metadata = metricMetadata("cycling_cadence", startTime),
                     )
                 )
             }
@@ -1313,7 +1313,7 @@ internal class ActivityHealthReader(
                                 speed = Velocity.metersPerSecond(sample.metersPerSecond),
                             )
                         },
-                        metadata = manualActivityMetricMetadata("speed", startTime),
+                        metadata = metricMetadata("speed", startTime),
                     )
                 )
             }
@@ -1331,7 +1331,7 @@ internal class ActivityHealthReader(
                                 speed = Velocity.metersPerSecond(sample.metersPerSecond),
                             )
                         },
-                        metadata = manualActivityMetricMetadata("running_speed", startTime),
+                        metadata = metricMetadata("running_speed", startTime),
                     )
                 )
             }
@@ -1348,7 +1348,7 @@ internal class ActivityHealthReader(
                                 rate = it.stepsPerMinute.toDouble(),
                             )
                         },
-                        metadata = manualActivityMetricMetadata("steps_cadence", startTime),
+                        metadata = metricMetadata("steps_cadence", startTime),
                     )
                 )
             }
@@ -1449,6 +1449,23 @@ internal class ActivityHealthReader(
 
     private fun manualActivityMetricIdPrefix(kind: String, sessionStart: Instant): String =
         "openvitals_activity_${kind}_${sessionStart.toEpochMilli()}_"
+
+    /** Random for an entry, a function of the file for an import: see [ActivityWriteRequest.importKey]. */
+    private fun ActivityWriteRequest.sessionClientRecordId(): String =
+        "openvitals_activity_${startTime.toEpochMilli()}_${importKey ?: UUID.randomUUID()}"
+
+    private fun ActivityWriteRequest.metricMetadata(kind: String, startTime: Instant): Metadata =
+        recordMetadata(manualActivityMetricIdPrefix(kind, startTime) + (importKey ?: UUID.randomUUID()))
+
+    /** A watch file is not a manual phone entry, and storing it as one misled every reader. */
+    private fun ActivityWriteRequest.recordMetadata(clientRecordId: String): Metadata = when (source) {
+        ActivityRecordSource.MANUAL_ENTRY ->
+            Metadata.manualEntry(clientRecordId = clientRecordId, device = Device(type = Device.TYPE_PHONE))
+        ActivityRecordSource.WATCH ->
+            Metadata.activelyRecorded(device = Device(type = Device.TYPE_WATCH), clientRecordId = clientRecordId)
+        ActivityRecordSource.FILE ->
+            Metadata.unknownRecordingMethod(clientRecordId = clientRecordId, device = null)
+    }
 
     private fun manualActivityMetricMetadata(kind: String, startTime: Instant): Metadata =
         Metadata.manualEntry(

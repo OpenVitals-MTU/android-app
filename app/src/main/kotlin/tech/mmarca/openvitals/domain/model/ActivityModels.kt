@@ -129,6 +129,18 @@ data class ActivityExerciseSegmentWrite(
     val weightKg: Double? = null,
 )
 
+/** Where an activity's data came from. Decides the recording method Health Connect stores. */
+enum class ActivityRecordSource {
+    /** Typed in, or recorded by this app on the phone. */
+    MANUAL_ENTRY,
+
+    /** A file a paired watch recorded. */
+    WATCH,
+
+    /** A file the user picked. Some device recorded it; which one is unknown. */
+    FILE,
+}
+
 data class ActivityWriteRequest(
     val exerciseType: Int,
     val startTime: Instant,
@@ -146,6 +158,12 @@ data class ActivityWriteRequest(
     val activeCaloriesKcal: Double? = null,
     val totalCaloriesKcal: Double? = null,
     val bleSamples: BleRecordingSampleBuffer = BleRecordingSampleBuffer(),
+    val source: ActivityRecordSource = ActivityRecordSource.MANUAL_ENTRY,
+    /**
+     * A stable key for an imported file. With it every client record id is a function of the
+     * file, so importing the file again updates the records instead of adding a second set.
+     */
+    val importKey: String? = null,
 )
 
 data class PlannedExerciseData(

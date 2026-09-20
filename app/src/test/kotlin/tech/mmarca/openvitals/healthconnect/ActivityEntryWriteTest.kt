@@ -7,6 +7,8 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.metadata.Device
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.testing.FakeHealthConnectClient
 import androidx.health.connect.client.testing.stubs.MutableStub
@@ -23,6 +25,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.domain.model.ActivityRecordSource
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.BleHeartRateSample
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
@@ -146,6 +149,54 @@ class ActivityEntryWriteTest {
         // The old order updated the session and deleted the distance before this insert ran.
         assertThat(client.all(DistanceRecord::class).map { it.distance.inMeters }).containsExactly(5_000.0)
         assertThat(client.all(ExerciseSessionRecord::class).single().title).isEqualTo("Run")
+    }
+
+    @Test
+    fun `importing the same file twice stores the workout once`() = onARealClock {
+        val client = client()
+        val reader = reader(client)
+        val imported = request(T10_00, T11_00, distanceMeters = 5_000.0, heartRate = listOf(T10_10 to 140L))
+            .copy(importKey = "9f2c1a7b3e5d4f60a1b2c3d4", source = ActivityRecordSource.WATCH)
+
+        reader.writeActivityEntries(listOf(imported))
+        reader.writeActivityEntries(listOf(imported))
+
+        // A random client id stored a second session, distance and heart rate each time.
+        assertThat(client.all(ExerciseSessionRecord::class)).hasSize(1)
+        assertThat(client.all(DistanceRecord::class)).hasSize(1)
+        assertThat(client.all(HeartRateRecord::class)).hasSize(1)
+    }
+
+    @Test
+    fun `a watch file is stored as recorded by a watch, not typed in on a phone`() = onARealClock {
+        val client = client()
+        val reader = reader(client)
+
+        reader.writeActivityEntry(
+            request(T10_00, T11_00, distanceMeters = 5_000.0).copy(importKey = "k1", source = ActivityRecordSource.WATCH),
+        )
+        reader.writeActivityEntry(request(T10_00.plusSeconds(7_200), T11_00.plusSeconds(7_200)))
+
+        val (watch, typed) = client.all(ExerciseSessionRecord::class).sortedBy { it.startTime }
+        assertThat(watch.metadata.recordingMethod).isEqualTo(Metadata.RECORDING_METHOD_ACTIVELY_RECORDED)
+        assertThat(watch.metadata.device?.type).isEqualTo(Device.TYPE_WATCH)
+        assertThat(typed.metadata.recordingMethod).isEqualTo(Metadata.RECORDING_METHOD_MANUAL_ENTRY)
+    }
+
+    @Test
+    fun `an imported workout can still be deleted with all its records`() = onARealClock {
+        val client = client()
+        val reader = reader(client)
+        reader.writeActivityEntry(
+            request(T10_00, T11_00, distanceMeters = 5_000.0, heartRate = listOf(T10_10 to 140L))
+                .copy(importKey = "k1", source = ActivityRecordSource.WATCH),
+        )
+
+        reader.deleteActivityEntry(client.sessionIdAt(T10_00))
+
+        assertThat(client.all(ExerciseSessionRecord::class)).isEmpty()
+        assertThat(client.all(DistanceRecord::class)).isEmpty()
+        assertThat(client.all(HeartRateRecord::class)).isEmpty()
     }
 
     private fun onARealClock(body: suspend CoroutineScope.() -> Unit) = runBlocking(block = body)

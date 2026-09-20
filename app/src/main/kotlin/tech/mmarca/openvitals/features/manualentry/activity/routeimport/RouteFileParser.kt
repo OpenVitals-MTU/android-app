@@ -30,6 +30,8 @@ data class RouteFileImport(
     val hasRecordedTimestamps: Boolean = true,
     val hasImportedTimeRange: Boolean = true,
     val originalPointCount: Int = points.size,
+    /** A hash of the file's bytes. The same file always gives the same key, whatever its name. */
+    val contentKey: String? = null,
 )
 
 @Singleton
@@ -57,7 +59,18 @@ class RouteFileImporter @Inject constructor(
 }
 
 internal object RouteFileParser {
-    fun parseFile(fileBytes: ByteArray, fileName: String? = null): RouteFileImport {
+    /** 96 bits of the digest: far past any collision among one person's files, and short in a client id. */
+    private const val ContentKeyBytes = 12
+
+    fun parseFile(fileBytes: ByteArray, fileName: String? = null): RouteFileImport =
+        parseFileContent(fileBytes, fileName).copy(contentKey = fileBytes.contentKey())
+
+    private fun ByteArray.contentKey(): String =
+        java.security.MessageDigest.getInstance("SHA-256").digest(this)
+            .take(ContentKeyBytes)
+            .joinToString("") { "%02x".format(it) }
+
+    private fun parseFileContent(fileBytes: ByteArray, fileName: String?): RouteFileImport {
         require(fileBytes.size <= MaxRouteFileBytes) {
             "Activity file is too large."
         }

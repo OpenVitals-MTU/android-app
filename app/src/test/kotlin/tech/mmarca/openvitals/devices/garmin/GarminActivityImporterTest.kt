@@ -20,6 +20,7 @@ import tech.mmarca.openvitals.core.geo.HgtResolution
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
+import tech.mmarca.openvitals.domain.model.ActivityRecordSource
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.activity.elevation.ElevationTileRepository
@@ -125,6 +126,23 @@ class GarminActivityImporterTest {
         } finally {
             TimeZone.setDefault(systemZone)
         }
+    }
+
+    @Test
+    fun `a watch activity is written as the watch recorded it, under a key of the file`() = runTest {
+        val written = slot<List<ActivityWriteRequest>>()
+        coEvery { activityRepository.writeActivityEntries(capture(written)) } returns emptyList()
+        val bytes = rideWithAscent(totalAscentMeters = 12)
+
+        importer().import(listOf(file(GarminFileType.ACTIVITY, bytes)))
+        val first = written.captured.single()
+        importer().import(listOf(file(GarminFileType.ACTIVITY, bytes)))
+
+        assertEquals(ActivityRecordSource.WATCH, first.source)
+        // The second sync of the same file must address the same records.
+        assertEquals(first.importKey, written.captured.single().importKey)
+        // Through the entry form the end was rounded up to 08:32:00.
+        assertEquals(Instant.parse("2026-05-26T08:31:01Z"), first.endTime)
     }
 
     @Test

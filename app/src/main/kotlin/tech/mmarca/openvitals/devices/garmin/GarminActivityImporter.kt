@@ -1,19 +1,16 @@
 package tech.mmarca.openvitals.devices.garmin
 
-import java.time.Clock
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
+import tech.mmarca.openvitals.domain.model.ActivityRecordSource
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
-import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryUnits
 import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
-import tech.mmarca.openvitals.features.manualentry.activity.buildWriteRequest
-import tech.mmarca.openvitals.features.manualentry.activity.initialActivityEntryState
-import tech.mmarca.openvitals.features.manualentry.activity.withRouteImport
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteElevationCorrector
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileParser
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.toImportWriteRequest
 
 /**
  * What an activity import did with the files it was given. A file that did not convert is
@@ -32,7 +29,7 @@ data class GarminActivityImportResult(
 
 /**
  * Imports the activity FIT files a sync pulled, down the same path a folder
- * import uses, so the two cannot differ. Never throws except cancellation:
+ * import uses ([toImportWriteRequest]), so the two cannot differ. Never throws except cancellation:
  * per-file failures are reported in the result, not thrown.
  */
 @Singleton
@@ -113,10 +110,6 @@ class GarminActivityImporter @Inject constructor(
     }
 
     private suspend fun buildRequest(file: GarminDownloadedFile): ActivityWriteRequest? {
-        // Read per file. This singleton lives as long as the process, and the entry form parses
-        // its text back in the live zone. A zone kept from start-up shifted or dropped the
-        // activity after a time zone change.
-        val clock = Clock.systemDefaultZone()
         // Indexed, not numbered: several files share the 65535 "unset" number.
         val routeImport = elevationCorrector.correct(
             RouteFileParser.parseFile(
@@ -124,19 +117,12 @@ class GarminActivityImporter @Inject constructor(
                 fileName = "${file.entry.type.label}_${file.entry.fileIndex}.fit",
             ),
         )
-        val units = ActivityEntryUnits.uniform(preferencesRepository.unitSystem)
-        val state = initialActivityEntryState(
-            clock = clock,
-            repository = activityRepository,
-            selectedActivityType = preferredActivityType(
-                requireGpsRoute = routeImport.points.isNotEmpty(),
-            ),
-        ).withRouteImport(
-            routeImport = routeImport,
-            units = units,
-            clock = clock,
+        // Straight from the file, not through the entry form: exact times, a client id
+        // that is a function of the file, and a record that says a watch made it.
+        return routeImport.toImportWriteRequest(
+            fallbackType = preferredActivityType(requireGpsRoute = routeImport.points.isNotEmpty()),
+            source = ActivityRecordSource.WATCH,
         )
-        return buildWriteRequest(state, units)
     }
 
     /** Mirror of the settings importer's preferred-type resolution. */
