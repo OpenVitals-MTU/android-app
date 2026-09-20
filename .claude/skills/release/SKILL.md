@@ -75,14 +75,15 @@ before anyone pulls.
 
 CI (Woodpecker) takes it from the tag: signed APK, signed debug APK, and AAB
 on the Codeberg release; Play production upload from the approved deployment,
-which also toots the release from `@openvitals@techhub.social`
-(`scripts/announce-mastodon.sh`). The toot's body is the narrative paragraph
-of `docs/releases/X.Y.Z.md` - the paragraph right after `Released YYYY-MM-DD.` -
-so write it to read well on its own; to fit 500 characters together with the
-Codeberg and Play links it gets cut at a sentence end when that wastes little
-room, and otherwise at a clause boundary with an ellipsis (front-load the
-paragraph - the last clauses are what an overlong narrative loses). The same deployment
-posts the full notes to the Zulip `releases` channel (`scripts/announce-zulip.sh`).
+which also posts the full notes to the Zulip `releases` channel
+(`scripts/announce-zulip.sh`).
+
+The Mastodon toot is disabled since 2.9.1: the `announce-mastodon` step is
+commented out in `.woodpecker/release.yml`. If it comes back, the toot's body
+is the narrative paragraph of `docs/releases/X.Y.Z.md` - the paragraph right
+after `Released YYYY-MM-DD.` - cut to fit 500 characters with the Codeberg and
+Play links. Write that paragraph to read well on its own and front-load it
+either way: Zulip readers see it first too.
 
 ## 4. Companion repos (after the tag is pushed)
 
@@ -91,18 +92,26 @@ posts the full notes to the Zulip `releases` channel (`scripts/announce-zulip.sh
   app-repo-only details); add or update `docs/features/*.md` pages for new
   features and register new pages in `docs/features/_meta.ts`; fix any pages
   the release made stale. Commit `docs: X.Y.Z - <headline>` and push.
-- **`../landing-page`**: update `app/page.tsx` copy (the `featureCards` grid
-  and any card the release touches) when a headline feature warrants it.
-  Commit and push.
+- **`../landing-page`**: update the copy in `lib/messages.ts` (the
+  `features.cards` grid and any card the release touches) when a headline
+  feature warrants it. Edit both locales, `en` and `es`. The repo has no git
+  identity: commit with `-c user.name=Manuel -c user.email=manuel@mmarca.tech`.
+  Commit `content: <what changed>, for X.Y.Z` and push.
 
 ## 5. Gotchas that have actually happened
 
 - Unescaped `&` in a translated string breaks `verifyTranslations` (XML parse).
-- `values-gl` (Galician) is Weblate-owned and below the 70% picker threshold -
-  do not add keys there or count it against coverage.
+- `values-fi` and `values-pl` are below the 70% picker threshold - do not add
+  keys there or count them against coverage. Galician cleared it in 2.9.0 and
+  gets new keys like any other offered locale.
 - The fastlane changelog is per-versionCode, not per-versionName: a release
   whose code raced a nightly ships the wrong changelog silently if step 3's
   verification is skipped.
 - Release notes and changelog entries are user-facing: name what the user
   sees, not the implementation ("the planned route drawn on the offline map",
   not "MapLibre LineLayer").
+- New strings land English-only and `verifyTranslations` still passes, since
+  its floor is 70%. Before writing the notes, count the keys each locale above
+  70% is missing, and translate them or say so in the notes (2.9.1 had 35).
+- `scripts/generate-translation-coverage.py` takes its first argument as an
+  output directory. `--help` creates a `--help/` folder in the repo root.
