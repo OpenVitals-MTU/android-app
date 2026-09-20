@@ -27,8 +27,6 @@ class GarminActivityImporter @Inject constructor(
     private val elevationCorrector: RouteElevationCorrector,
 ) {
 
-    private val clock: Clock = Clock.systemDefaultZone()
-
     /** Imports the activity files in [files]; returns how many were written. */
     suspend fun import(files: List<GarminDownloadedFile>): Int {
         val activityFiles = files.filter { it.entry.type == GarminFileType.ACTIVITY }
@@ -94,6 +92,10 @@ class GarminActivityImporter @Inject constructor(
     }
 
     private suspend fun buildRequest(file: GarminDownloadedFile): ActivityWriteRequest? {
+        // Read per file. This singleton lives as long as the process, and the entry form parses
+        // its text back in the live zone. A zone kept from start-up shifted or dropped the
+        // activity after a time zone change.
+        val clock = Clock.systemDefaultZone()
         // Indexed, not numbered: several files share the 65535 "unset" number.
         val routeImport = elevationCorrector.correct(
             RouteFileParser.parseFile(

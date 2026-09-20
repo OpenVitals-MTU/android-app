@@ -10,6 +10,7 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.time.Instant
+import java.util.TimeZone
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -104,6 +105,25 @@ class GarminActivityImporterTest {
         val request = written.captured.single()
         assertEquals(listOf(10.0, 22.0), request.routePoints.map { it.altitudeMeters!! })
         assertEquals(999.0, request.elevationGainedMeters!!, 0.01)
+    }
+
+    @Test
+    fun `a time zone change after start-up neither shifts nor drops the activity`() = runTest {
+        val systemZone = TimeZone.getDefault()
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("Europe/Madrid"))
+            val importer = importer() // Built once, at process start.
+            TimeZone.setDefault(TimeZone.getTimeZone("America/New_York")) // The user flew west.
+            val written = slot<List<ActivityWriteRequest>>()
+            coEvery { activityRepository.writeActivityEntries(capture(written)) } returns emptyList()
+
+            val count = importer.import(listOf(file(GarminFileType.ACTIVITY, rideWithAscent(totalAscentMeters = 12))))
+
+            assertEquals(1, count)
+            assertEquals(Instant.parse("2026-05-26T08:30:00Z"), written.captured.single().startTime)
+        } finally {
+            TimeZone.setDefault(systemZone)
+        }
     }
 
     private fun importer(): GarminActivityImporter {
