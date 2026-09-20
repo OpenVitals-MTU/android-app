@@ -95,7 +95,6 @@ fun DeviceSyncScreen(
                 onChooseGuest = { chooseRole(SyncRole.GUEST) },
             )
             DeviceSyncStep.HOST_WAITING -> DeviceSyncHostStep(
-                state = state,
                 onCancel = { viewModel.cancel(); onDone() },
             )
             DeviceSyncStep.GUEST_SCANNING -> DeviceSyncScanStep(
@@ -103,12 +102,6 @@ fun DeviceSyncScreen(
                 onSelectDevice = viewModel::selectDevice,
                 onRescan = viewModel::rescan,
                 onCancel = { viewModel.cancel(); onDone() },
-            )
-            DeviceSyncStep.GUEST_CODE -> DeviceSyncCodeStep(
-                state = state,
-                onDigit = viewModel::enterDigit,
-                onDelete = viewModel::deleteDigit,
-                onSubmit = viewModel::submitCode,
             )
             DeviceSyncStep.RANGE -> DeviceSyncRangeStep(
                 state = state,
@@ -123,6 +116,11 @@ fun DeviceSyncScreen(
             DeviceSyncStep.SYNCING -> DeviceSyncProgressStep(
                 state = state,
                 onCancel = { viewModel.cancel(); onDone() },
+            )
+            DeviceSyncStep.COMPARE_CODE -> DeviceSyncCompareStep(
+                state = state,
+                onMatch = { viewModel.answerCodeComparison(matches = true) },
+                onMismatch = { viewModel.answerCodeComparison(matches = false) },
             )
             DeviceSyncStep.REPORT -> DeviceSyncReportStep(
                 state = state,
@@ -233,5 +231,6 @@ internal fun deviceSyncErrorText(error: DeviceSyncError): String = stringResourc
         DeviceSyncError.DISCOVERABLE_DECLINED -> R.string.device_sync_error_discoverable
         DeviceSyncError.RECORDING_ACTIVE -> R.string.device_sync_error_recording
         DeviceSyncError.SYNC_FAILED -> R.string.device_sync_error_generic
+        DeviceSyncError.CODES_DIFFER -> R.string.device_sync_error_codes_differ
     },
 )

@@ -1,13 +1,20 @@
 package tech.mmarca.openvitals.features.devicesync.protocol
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -67,27 +74,28 @@ class SyncSessionTest {
 
     private fun configFor(
         role: SyncRole,
-        code: String = "424242",
+        confirmCode: suspend (String) -> Boolean = { true },
         types: List<String> = listOf("StepsRecord", "HeartRateRecord"),
         selected: List<String>? = null,
     ) = SyncSessionConfig(
         role = role,
-        code = code,
+        confirmCode = confirmCode,
         deviceName = if (role == SyncRole.HOST) "Host phone" else "Guest phone",
         supportedTypes = types,
         selectedTypes = selected,
         // Fixed, distinct nonces keep the test deterministic.
         nonce = ByteArray(SYNC_NONCE_BYTES) { if (role == SyncRole.HOST) 0x11 else 0x22 },
         handshakeTimeoutMillis = 5_000,
+        confirmTimeoutMillis = 5_000,
         batchTimeoutMillis = 5_000,
         batchSize = 2,
     )
 
-    private suspend fun kotlinx.coroutines.CoroutineScope.runPair(
+    private suspend fun CoroutineScope.runPair(
         hostStore: SyncRecordStore,
         guestStore: SyncRecordStore,
-        hostCode: String = "424242",
-        guestCode: String = "424242",
+        hostConfirms: suspend (String) -> Boolean = { true },
+        guestConfirms: suspend (String) -> Boolean = { true },
         hostSelected: List<String>? = null,
         guestSelected: List<String>? = null,
     ): Pair<SyncReport, SyncReport> {
@@ -95,30 +103,86 @@ class SyncSessionTest {
         val host = SyncSession(
             transport = hostPipe,
             store = hostStore,
-            config = configFor(SyncRole.HOST, code = hostCode, selected = hostSelected),
+            config = configFor(SyncRole.HOST, confirmCode = hostConfirms, selected = hostSelected),
         )
         val guest = SyncSession(
             transport = guestPipe,
             store = guestStore,
-            config = configFor(SyncRole.GUEST, code = guestCode, selected = guestSelected),
+            config = configFor(SyncRole.GUEST, confirmCode = guestConfirms, selected = guestSelected),
         )
         val reports = awaitAll(async { host.run() }, async { guest.run() })
         return reports[0] to reports[1]
     }
 
     /** Drives one real session against a manual endpoint sending whatever raw frames [attack] dictates. */
-    private suspend fun kotlinx.coroutines.CoroutineScope.runAgainstAttacker(
-        attack: suspend (SyncByteTransport) -> Unit,
+    private suspend fun CoroutineScope.runAgainstAttacker(
+        role: SyncRole = SyncRole.HOST,
+        confirmCode: suspend (String) -> Boolean = { true },
+        attack: suspend (ManualPeer) -> Unit,
     ): SyncReport {
-        val (hostPipe, attackerPipe) = SyncPipe.create()
-        val host = SyncSession(
-            transport = hostPipe,
+        val (pipe, attackerPipe) = SyncPipe.create()
+        val session = SyncSession(
+            transport = pipe,
             store = FakeRecordStore(listOf(item("a"))),
-            config = configFor(SyncRole.HOST),
+            config = configFor(role, confirmCode = confirmCode),
         )
-        val report = async { host.run() }
-        attack(attackerPipe)
+        val report = async { session.run() }
+        attack(ManualPeer(attackerPipe))
         return report.await()
+    }
+
+    /** A peer driven by hand, one frame at a time. */
+    private class ManualPeer(private val transport: SyncByteTransport) {
+        private val reader = SyncFrameReader()
+        private val frames = ArrayDeque<SyncFrame>()
+        val hello: ByteArray = SyncHello(
+            protocolVersion = SYNC_PROTOCOL_VERSION,
+            deviceName = "Attacker",
+            hcProviderVersion = null,
+            supportedTypes = listOf("StepsRecord"),
+            nonce = ByteArray(SYNC_NONCE_BYTES) { 0x33 },
+        ).encode()
+
+        suspend fun send(type: SyncFrameType, payload: ByteArray) =
+            transport.send(SyncFrame(type, payload).encode())
+
+        suspend fun next(): SyncFrame {
+            while (frames.isEmpty()) frames += reader.addChunk(transport.inbound.receive())
+            return frames.removeFirst()
+        }
+
+        suspend fun next(type: SyncFrameType): SyncFrame =
+            next().also { assertEquals(type, it.type) }
+
+        /** Every frame that has arrived and was not read yet. Does not wait. */
+        fun arrived(): List<SyncFrame> {
+            while (true) frames += reader.addChunk(transport.inbound.tryReceive().getOrNull() ?: break)
+            return frames.toList()
+        }
+
+        /** Plays an honest guest up to the point where both sides hold the keys. */
+        suspend fun exchangeKeysAsGuest(): SyncFrameCipher {
+            val own = generateSyncKeyPair()
+            send(SyncFrameType.HELLO, hello)
+            val hostHello = next(SyncFrameType.HELLO).payload
+            next(SyncFrameType.KEY_COMMIT) // An honest guest would keep it.
+            send(SyncFrameType.KEY_SHARE, SyncKeyShare(own.publicKey).encode())
+            val reveal = SyncKeyReveal.decode(next(SyncFrameType.KEY_REVEAL).payload)
+            val transcript = syncTranscriptHash(hostHello, hello, reveal.publicKey, own.publicKey, reveal.salt)
+            return SyncFrameCipher.forRole(SyncRole.GUEST, deriveSyncSessionKeys(own, reveal.publicKey, transcript))
+        }
+    }
+
+    /** Passes frames from [from] to [to], letting [change] rewrite each one. */
+    private fun CoroutineScope.relay(
+        from: SyncByteTransport,
+        to: SyncByteTransport,
+        change: (SyncFrame) -> SyncFrame = { it },
+    ) = launch {
+        val reader = SyncFrameReader()
+        for (chunk in from.inbound) {
+            reader.addChunk(chunk).forEach { to.send(change(it).encode()) }
+        }
     }
 
     // Bidirectional merge.
@@ -202,26 +266,152 @@ class SyncSessionTest {
         assertTrue(hostReport.completed)
     }
 
-    // Authentication.
+    // The compared code.
 
     @Test
-    fun `mismatched codes abort both sides before any data moves`() = runTest {
+    fun `both phones show the same six digits`() = runTest {
+        var hostCode = ""
+        var guestCode = ""
+
+        val (hostReport, guestReport) = runPair(
+            FakeRecordStore(listOf(item("a"))),
+            FakeRecordStore(),
+            hostConfirms = { hostCode = it; true },
+            guestConfirms = { guestCode = it; true },
+        )
+
+        assertTrue(hostReport.completed)
+        assertTrue(guestReport.completed)
+        assertTrue(hostCode, Regex("^\\d{6}$").matches(hostCode))
+        assertEquals(hostCode, guestCode)
+    }
+
+    @Test
+    fun `a user who says the codes differ ends both sides before any data moves`() = runTest {
         val hostStore = FakeRecordStore(listOf(item("a")))
         val guestStore = FakeRecordStore(listOf(item("b")))
 
-        val (hostReport, guestReport) = runPair(
-            hostStore,
-            guestStore,
-            hostCode = "111111",
-            guestCode = "222222",
-        )
+        val (hostReport, guestReport) = runPair(hostStore, guestStore, guestConfirms = { false })
 
         assertFalse(hostReport.completed)
         assertFalse(guestReport.completed)
-        assertTrue(hostReport.abortReason.orEmpty().contains("code"))
+        assertEquals(CODES_DIFFER_REASON, guestReport.abortReason)
+        assertTrue(hostReport.abortReason.orEmpty().contains(CODES_DIFFER_REASON))
         // No records crossed.
         assertEquals(setOf("a"), hostStore.keys)
         assertEquals(setOf("b"), guestStore.keys)
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `no record moves until both users confirmed`() = runTest {
+        val hostStore = FakeRecordStore(listOf(item("a")))
+        val guestStore = FakeRecordStore(listOf(item("b")))
+        val hostAnswer = CompletableDeferred<Boolean>()
+        val (hostPipe, guestPipe) = SyncPipe.create()
+        val host = SyncSession(hostPipe, hostStore, configFor(SyncRole.HOST, confirmCode = { hostAnswer.await() }))
+        val guest = SyncSession(guestPipe, guestStore, configFor(SyncRole.GUEST))
+
+        val runs = listOf(async { host.run() }, async { guest.run() })
+        // The guest has confirmed. The host's user is still looking at the code.
+        runCurrent()
+
+        assertEquals(setOf("a"), hostStore.keys)
+        assertEquals(setOf("b"), guestStore.keys)
+
+        hostAnswer.complete(true)
+        val reports = runs.awaitAll()
+
+        assertTrue(reports.all { it.completed })
+        assertEquals(setOf("a", "b"), hostStore.keys)
+        assertEquals(setOf("a", "b"), guestStore.keys)
+    }
+
+    @Test
+    fun `a user who never answers ends the session`() = runTest {
+        val (hostReport, _) = runPair(
+            FakeRecordStore(listOf(item("a"))),
+            FakeRecordStore(),
+            hostConfirms = { awaitCancellation() },
+        )
+
+        assertFalse(hostReport.completed)
+        assertTrue(hostReport.abortReason.orEmpty().contains("in time"))
+    }
+
+    @Test
+    fun `someone in the middle makes the two phones show different codes`() = runTest {
+        // The attacker runs a full, honest-looking session with each phone.
+        var hostCode = ""
+        var guestCode = ""
+        val (hostPipe, attackerAsGuestPipe) = SyncPipe.create()
+        val (attackerAsHostPipe, guestPipe) = SyncPipe.create()
+        val sessions = listOf(
+            SyncSession(hostPipe, FakeRecordStore(), configFor(SyncRole.HOST, confirmCode = { hostCode = it; false })),
+            SyncSession(attackerAsGuestPipe, FakeRecordStore(), configFor(SyncRole.GUEST)),
+            SyncSession(attackerAsHostPipe, FakeRecordStore(), configFor(SyncRole.HOST)),
+            SyncSession(guestPipe, FakeRecordStore(), configFor(SyncRole.GUEST, confirmCode = { guestCode = it; false })),
+        )
+
+        sessions.map { async { it.run() } }.awaitAll()
+
+        // The attacker cannot steer either code. They agree by chance once in a million runs.
+        assertTrue(hostCode.isNotEmpty() && guestCode.isNotEmpty())
+        assertNotEquals(hostCode, guestCode)
+    }
+
+    @Test
+    fun `a changed hello makes the two phones show different keys`() = runTest {
+        // Someone on the link rewrites the guest's hello but passes the key frames through.
+        val hostStore = FakeRecordStore(listOf(item("a")))
+        val guestStore = FakeRecordStore(listOf(item("b")))
+        val (hostPipe, towardsHost) = SyncPipe.create()
+        val (towardsGuest, guestPipe) = SyncPipe.create()
+        val relays = listOf(
+            relay(towardsHost, towardsGuest),
+            relay(towardsGuest, towardsHost) { frame ->
+                if (frame.type != SyncFrameType.HELLO) return@relay frame
+                val hello = SyncHello.decode(frame.payload)
+                SyncFrame(
+                    SyncFrameType.HELLO,
+                    SyncHello(hello.protocolVersion, hello.deviceName, null, listOf("StepsRecord"), hello.nonce).encode(),
+                )
+            },
+        )
+        val host = SyncSession(hostPipe, hostStore, configFor(SyncRole.HOST))
+        val guest = SyncSession(guestPipe, guestStore, configFor(SyncRole.GUEST))
+
+        // Both users tap "match" without looking. The keys still differ, so the first sealed frame fails.
+        val reports = listOf(async { host.run() }, async { guest.run() }).awaitAll()
+        relays.forEach { it.cancel() }
+
+        assertTrue(reports.none { it.completed })
+        assertEquals(setOf("a"), hostStore.keys)
+        assertEquals(setOf("b"), guestStore.keys)
+    }
+
+    @Test
+    fun `a changed record frame ends the session and is not written`() = runTest {
+        val hostStore = FakeRecordStore(listOf(item("a")))
+        val guestStore = FakeRecordStore()
+        val (hostPipe, towardsHost) = SyncPipe.create()
+        val (towardsGuest, guestPipe) = SyncPipe.create()
+        val relays = listOf(
+            relay(towardsGuest, towardsHost),
+            relay(towardsHost, towardsGuest) { frame ->
+                if (frame.type != SyncFrameType.BATCH) return@relay frame
+                SyncFrame(frame.type, frame.payload.copyOf().also { it[0] = (it[0] + 1).toByte() })
+            },
+        )
+        val host = SyncSession(hostPipe, hostStore, configFor(SyncRole.HOST))
+        val guest = SyncSession(guestPipe, guestStore, configFor(SyncRole.GUEST))
+
+        val reports = listOf(async { host.run() }, async { guest.run() }).awaitAll()
+        relays.forEach { it.cancel() }
+
+        assertFalse(reports[1].completed)
+        assertTrue(reports[1].abortReason.orEmpty().contains("integrity"))
+        assertEquals(emptySet<String>(), guestStore.keys)
     }
 
     // Link failure.
@@ -319,17 +509,162 @@ class SyncSessionTest {
     // Hostile peer.
 
     @Test
-    fun `a record frame before authentication aborts the session`() = runTest {
+    fun `a record frame before the key exchange aborts the session`() = runTest {
         val report = runAgainstAttacker { attacker ->
-            // No handshake/auth — just push a batch straight away.
-            attacker.send(
-                SyncFrame(SyncFrameType.BATCH, SyncBatch(seq = 1, items = emptyList()).encode())
-                    .encode(),
-            )
+            // No handshake at all: just push a batch straight away.
+            attacker.send(SyncFrameType.BATCH, SyncBatch(seq = 1, items = emptyList()).encode())
+        }
+
+        assertFalse(report.completed)
+        assertTrue(report.abortReason.orEmpty().contains("before the key exchange"))
+    }
+
+    @Test
+    fun `a record frame before authentication aborts the session`() = runTest {
+        // The peer holds real keys, but this phone's user has not confirmed the code yet.
+        val report = runAgainstAttacker(confirmCode = { awaitCancellation() }) { attacker ->
+            val cipher = attacker.exchangeKeysAsGuest()
+            attacker.send(SyncFrameType.CONFIRM, cipher.seal(SyncFrameType.CONFIRM, ByteArray(0)))
+            val batch = SyncBatch(seq = 1, items = listOf(item("evil"))).encode()
+            attacker.send(SyncFrameType.BATCH, cipher.seal(SyncFrameType.BATCH, batch))
         }
 
         assertFalse(report.completed)
         assertTrue(report.abortReason.orEmpty().contains("before authentication"))
+    }
+
+    @Test
+    fun `a host key that does not match its commitment aborts the session`() = runTest {
+        val report = runAgainstAttacker(role = SyncRole.GUEST) { attacker ->
+            attacker.send(SyncFrameType.HELLO, attacker.hello)
+            val committed = generateSyncKeyPair()
+            val salt = ByteArray(SYNC_NONCE_BYTES) { 0x44 }
+            attacker.send(
+                SyncFrameType.KEY_COMMIT,
+                SyncKeyCommit(commitToHostKey(committed.publicKey, salt)).encode(),
+            )
+            // Wait for the guest's key, then reveal a key picked after seeing it.
+            while (attacker.next().type != SyncFrameType.KEY_SHARE) Unit
+            attacker.send(
+                SyncFrameType.KEY_REVEAL,
+                SyncKeyReveal(generateSyncKeyPair().publicKey, salt).encode(),
+            )
+        }
+
+        assertFalse(report.completed)
+        assertTrue(report.abortReason.orEmpty().contains("commitment"))
+    }
+
+    @Test
+    fun `a host that commits twice aborts the session`() = runTest {
+        // A second commitment, made after seeing the guest's key, would let a fake host pick the code.
+        val report = runAgainstAttacker(role = SyncRole.GUEST) { attacker ->
+            attacker.send(SyncFrameType.HELLO, attacker.hello)
+            val salt = ByteArray(SYNC_NONCE_BYTES) { 0x44 }
+            val first = generateSyncKeyPair()
+            attacker.send(SyncFrameType.KEY_COMMIT, SyncKeyCommit(commitToHostKey(first.publicKey, salt)).encode())
+            while (attacker.next().type != SyncFrameType.KEY_SHARE) Unit
+            val steered = generateSyncKeyPair()
+            attacker.send(SyncFrameType.KEY_COMMIT, SyncKeyCommit(commitToHostKey(steered.publicKey, salt)).encode())
+            attacker.send(SyncFrameType.KEY_REVEAL, SyncKeyReveal(steered.publicKey, salt).encode())
+        }
+
+        assertFalse(report.completed)
+        assertTrue(report.abortReason.orEmpty().contains("unexpected keyCommit"))
+    }
+
+    @Test
+    fun `a commitment before the hello aborts the session`() = runTest {
+        val report = runAgainstAttacker(role = SyncRole.GUEST) { attacker ->
+            attacker.send(
+                SyncFrameType.KEY_COMMIT,
+                SyncKeyCommit(commitToHostKey(generateSyncKeyPair().publicKey, ByteArray(SYNC_NONCE_BYTES))).encode(),
+            )
+        }
+
+        assertFalse(report.completed)
+        assertTrue(report.abortReason.orEmpty().contains("unexpected keyCommit"))
+    }
+
+    @Test
+    fun `a guest that sends a second key aborts the session`() = runTest {
+        val report = runAgainstAttacker(confirmCode = { awaitCancellation() }) { attacker ->
+            attacker.send(SyncFrameType.HELLO, attacker.hello)
+            attacker.next(SyncFrameType.HELLO)
+            attacker.next(SyncFrameType.KEY_COMMIT)
+            attacker.send(SyncFrameType.KEY_SHARE, SyncKeyShare(generateSyncKeyPair().publicKey).encode())
+            attacker.send(SyncFrameType.KEY_SHARE, SyncKeyShare(generateSyncKeyPair().publicKey).encode())
+        }
+
+        assertFalse(report.completed)
+        assertTrue(report.abortReason.orEmpty().contains("unexpected keyShare"))
+    }
+
+    @Test
+    fun `the host keeps its key back until the guest has sent one`() = runTest {
+        // Revealing early would let a fake guest choose its key after seeing the host's.
+        var seen = emptyList<SyncFrame>()
+        val report = runAgainstAttacker { attacker ->
+            attacker.send(SyncFrameType.HELLO, attacker.hello)
+            attacker.next(SyncFrameType.HELLO)
+            attacker.next(SyncFrameType.KEY_COMMIT)
+            // Send nothing more. The host must give up without revealing.
+            seen = attacker.arrived()
+        }
+
+        assertFalse(report.completed)
+        assertTrue(report.abortReason.orEmpty().contains("timed out waiting for the peer key"))
+        assertTrue(seen.none { it.type == SyncFrameType.KEY_REVEAL })
+    }
+
+    @Test
+    fun `a second confirm aborts the session`() = runTest {
+        val report = runAgainstAttacker(confirmCode = { awaitCancellation() }) { attacker ->
+            val cipher = attacker.exchangeKeysAsGuest()
+            attacker.send(SyncFrameType.CONFIRM, cipher.seal(SyncFrameType.CONFIRM, ByteArray(0)))
+            attacker.send(SyncFrameType.CONFIRM, cipher.seal(SyncFrameType.CONFIRM, ByteArray(0)))
+        }
+
+        assertFalse(report.completed)
+        assertTrue(report.abortReason.orEmpty().contains("confirm sent twice"))
+    }
+
+    @Test
+    fun `a long abort reason from the peer is cut`() = runTest {
+        // An abort is not sealed, so its text is whatever the sender likes.
+        val report = runAgainstAttacker { attacker ->
+            attacker.send(SyncFrameType.ABORT, SyncAbort("x".repeat(100_000)).encode())
+        }
+
+        assertFalse(report.completed)
+        assertTrue(report.abortReason.orEmpty().length < SyncAbort.MAX_REASON_CHARS + 50)
+    }
+
+    @Test
+    fun `a host that reveals before it committed aborts the session`() = runTest {
+        val report = runAgainstAttacker(role = SyncRole.GUEST) { attacker ->
+            attacker.send(SyncFrameType.HELLO, attacker.hello)
+            attacker.send(
+                SyncFrameType.KEY_REVEAL,
+                SyncKeyReveal(generateSyncKeyPair().publicKey, ByteArray(SYNC_NONCE_BYTES)).encode(),
+            )
+        }
+
+        assertFalse(report.completed)
+        assertTrue(report.abortReason.orEmpty().contains("unexpected keyReveal"))
+    }
+
+    @Test
+    fun `a peer on the old protocol is refused`() = runTest {
+        val report = runAgainstAttacker { attacker ->
+            attacker.send(
+                SyncFrameType.HELLO,
+                SyncHello(1, "Old phone", null, listOf("StepsRecord"), ByteArray(SYNC_NONCE_BYTES) { 0x33 }).encode(),
+            )
+        }
+
+        assertFalse(report.completed)
+        assertTrue(report.abortReason.orEmpty().contains("incompatible protocol version 1"))
     }
 
     @Test
@@ -338,7 +673,7 @@ class SyncSessionTest {
         val badHello = "{\"v\":\"not-an-int\"}".toByteArray(Charsets.UTF_8)
 
         val report = runAgainstAttacker { attacker ->
-            attacker.send(SyncFrame(SyncFrameType.HELLO, badHello).encode())
+            attacker.send(SyncFrameType.HELLO, badHello)
         }
 
         assertFalse(report.completed)

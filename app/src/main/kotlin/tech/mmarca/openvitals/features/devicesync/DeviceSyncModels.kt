@@ -26,10 +26,12 @@ enum class DeviceSyncStep {
     ROLE,
     HOST_WAITING,
     GUEST_SCANNING,
-    GUEST_CODE,
     RANGE,
     TYPES,
     SYNCING,
+
+    /** Both phones show the same six digits; the user says whether they match. */
+    COMPARE_CODE,
     REPORT,
 }
 
@@ -41,6 +43,9 @@ enum class DeviceSyncError {
     CONNECT_TIMEOUT,
     SYNC_FAILED,
     RECORDING_ACTIVE,
+
+    /** This phone's user said the two codes differ. Nothing was exchanged. */
+    CODES_DIFFER,
 }
 
 /**
@@ -166,12 +171,12 @@ enum class DeviceSyncCategory(val types: List<String>) {
 data class DeviceSyncState(
     val step: DeviceSyncStep = DeviceSyncStep.ROLE,
     val role: SyncRole? = null,
-    /** The pairing code: generated on the host, typed on the guest. */
+    /** The digits this session derived, shown on the compare step. Never typed. */
     val code: String = "",
     val devices: List<DiscoveredSyncDevice> = emptyList(),
     val selectedDevice: DiscoveredSyncDevice? = null,
-    val codeEntry: String = "",
-    val codeError: Boolean = false,
+    /** True while the guest connects to [selectedDevice]. */
+    val connecting: Boolean = false,
     val range: SyncRange = SyncRange.YEAR_1,
     /** The syncable types this device can read and write. The picker offers only these. */
     val availableTypes: Set<String> = emptySet(),

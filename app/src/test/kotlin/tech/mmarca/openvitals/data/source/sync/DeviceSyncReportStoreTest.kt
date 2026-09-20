@@ -66,13 +66,13 @@ class DeviceSyncReportStoreTest {
             imported = 0,
             duplicateSkipped = 0,
             typeSummaries = emptyList(),
-            abortReason = "pairing code did not match",
+            abortReason = "the codes did not match",
         )
 
         val text = buildSyncReportText(report, generatedAt = at)
 
         assertTrue(text.contains("Status: aborted"))
-        assertTrue(text.contains("Reason: pairing code did not match"))
+        assertTrue(text.contains("Reason: the codes did not match"))
         assertTrue(text.contains("(none)"))
     }
 

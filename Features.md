@@ -366,7 +366,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 
 - Copy Health Connect records between two nearby phones over Bluetooth, with no account and no network.
 - Choose whether this phone is the host or the guest.
-- Confirm a six-digit pairing code before any health data moves.
+- Compare a six-digit code shown on both phones before any health data moves. The records then travel encrypted between the two phones.
 - Choose how far back to sync: 30 days, 6 months, a year, or everything.
 - Choose which data categories to sync from those both phones support.
 - Exchange records in both directions in a single session.

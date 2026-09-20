@@ -12,6 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.features.devicesync.bluetooth.DiscoveredSyncDevice
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncReport
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
@@ -75,6 +76,43 @@ class DeviceSyncStepsTest {
         }
 
         composeRule.onNodeWithText(string(R.string.device_sync_no_devices)).assertDoesNotExist()
+    }
+
+    @Test
+    fun theCompareStepShowsTheCodeAndTakesEitherAnswer() {
+        // The whole check is the user's eyes. The digits and both answers must be on screen.
+        val answers = mutableListOf<Boolean>()
+        setContent {
+            DeviceSyncCompareStep(
+                state = DeviceSyncState(step = DeviceSyncStep.COMPARE_CODE, code = "042913"),
+                onMatch = { answers += true },
+                onMismatch = { answers += false },
+            )
+        }
+
+        composeRule.onNodeWithText("042 913").assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.device_sync_compare_match)).performClick()
+        composeRule.onNodeWithText(string(R.string.device_sync_compare_mismatch)).performClick()
+
+        assertEquals(listOf(true, false), answers)
+    }
+
+    @Test
+    fun aGuestThatIsConnectingSaysSo() {
+        // A tap connects at once now. Without this line the list just sits there for seconds.
+        setContent {
+            DeviceSyncScanStep(
+                state = DeviceSyncState(
+                    connecting = true,
+                    selectedDevice = DiscoveredSyncDevice(address = "AA:BB", name = "Pixel", bonded = false),
+                ),
+                onSelectDevice = {},
+                onRescan = {},
+                onCancel = {},
+            )
+        }
+
+        composeRule.onNodeWithText(string(R.string.device_sync_connecting, "Pixel")).assertIsDisplayed()
     }
 
     @Test

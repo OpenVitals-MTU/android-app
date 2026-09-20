@@ -8,6 +8,9 @@ import java.time.Instant
 enum class SyncPhase {
     HANDSHAKE,
     AUTHENTICATING,
+
+    /** This phone's user confirmed the code; the other phone's has not yet. */
+    CONFIRMING,
     EXCHANGING,
     WRITING,
     COMPLETE,

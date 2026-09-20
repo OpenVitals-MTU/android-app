@@ -1041,14 +1041,14 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/devicesy
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/devicesync/protocol/SyncPairingTest.kt
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
-| generatePairingCode > is always six digits, zero-padded | PORTED | SyncPairingTest.kt: `pairing code is always six digits, zero-padded` | — |
+| generatePairingCode > is always six digits, zero-padded | DIVERGED | SyncPairingTest.kt: `the code is always six digits, zero-padded` | protocol v2 derives the code from the key exchange; nothing generates or types one |
 | generateSyncNonce > returns 32 bytes | PORTED | SyncPairingTest.kt: `nonce is 32 bytes` | — |
-| deriveSessionKey > both phones derive the same key from the same inputs | PORTED | SyncPairingTest.kt: `both phones derive the same key from the same inputs` | — |
-| deriveSessionKey > a different code yields a different key | PORTED | SyncPairingTest.kt: `a different code yields a different key` | — |
-| deriveSessionKey > nonce order is fixed, so host/guest roles agree | PORTED | SyncPairingTest.kt: `nonce order is fixed, so host and guest roles agree` | — |
-| auth proof exchange > matching codes: each side verifies the peer proof | PORTED | SyncPairingTest.kt: `matching codes - each side verifies the peer proof` | — |
-| auth proof exchange > a reflected proof does not validate (role binding) | PORTED | SyncPairingTest.kt: `a reflected proof does not validate (role binding)` | — |
-| auth proof exchange > wrong code on the guest fails verification | PORTED | SyncPairingTest.kt: `wrong code on the guest fails verification` | — |
+| deriveSessionKey > both phones derive the same key from the same inputs | DIVERGED | SyncPairingTest.kt: `both phones derive the same keys and the same code` | v2: ECDH and HKDF replace HMAC(code, nonces) |
+| deriveSessionKey > a different code yields a different key | DIVERGED | SyncPairingTest.kt: `a changed hello changes the keys` | v2: the keys depend on the handshake transcript, not on a code |
+| deriveSessionKey > nonce order is fixed, so host/guest roles agree | DIVERGED | SyncPairingTest.kt: `each direction has its own key` | v2: the transcript fixes host and guest order |
+| auth proof exchange > matching codes: each side verifies the peer proof | DIVERGED | SyncSessionTest.kt: `both phones show the same six digits` | v2 has no proof frame; a sealed CONFIRM that opens proves the key |
+| auth proof exchange > a reflected proof does not validate (role binding) | DIVERGED | SyncPairingTest.kt: `a frame sent back to its sender does not open` | v2: one key per direction stops reflection |
+| auth proof exchange > wrong code on the guest fails verification | DIVERGED | SyncSessionTest.kt: `a user who says the codes differ ends both sides before any data moves` | v2: the code is compared, never typed |
 | constantTimeEquals > true only for identical byte lists | PORTED | SyncPairingTest.kt: `constantTimeEquals is true only for identical byte arrays` | — |
 
 ## test/data/source/sync/sync_session_test.dart
@@ -1059,7 +1059,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/devicesy
 | bidirectional merge > per-type summaries split the tallies correctly | PORTED | SyncSessionTest.kt: `per-type summaries split the tallies correctly` | — |
 | idempotency > a second sync writes nothing new | PORTED | SyncSessionTest.kt: `a second sync writes nothing new` | — |
 | within-session dedup > a key sent twice in one direction is written once | PORTED | SyncSessionTest.kt: `a key sent twice in one direction is written once` | — |
-| authentication > mismatched codes abort both sides before any data moves | PORTED | SyncSessionTest.kt: `mismatched codes abort both sides before any data moves` | — |
+| authentication > mismatched codes abort both sides before any data moves | DIVERGED | SyncSessionTest.kt: `a user who says the codes differ ends both sides before any data moves` | v2: the code is compared, never typed |
 | link failure > a dropped transport ends the session as an abort | PORTED | SyncSessionTest.kt: `a dropped transport ends the session as an abort` | — |
 | type negotiation > only the intersection of supported+selected types syncs | PORTED | SyncSessionTest.kt: `only the intersection of supported+selected types syncs` | — |
 | write accounting > a received record whose write fails is not counted as imported | PORTED | SyncSessionTest.kt: `a received record whose write fails is not counted as imported` | — |

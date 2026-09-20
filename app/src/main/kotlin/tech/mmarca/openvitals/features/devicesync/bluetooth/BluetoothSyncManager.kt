@@ -12,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -158,8 +159,14 @@ class BluetoothSyncManager @Inject constructor(
             return
         }
         Log.i(SyncBluetooth.TAG, "connect: dialing $address")
+        // connect() blocks and cannot be interrupted. If the wizard is left meanwhile,
+        // it may still open a socket, which must not stay open with nobody holding it.
+        var opened: BluetoothSocket? = null
         val socket = try {
-            withContext(Dispatchers.IO) { RfcommClient(adapter).connect(address) }
+            withContext(Dispatchers.IO) { RfcommClient(adapter).connect(address).also { opened = it } }
+        } catch (e: CancellationException) {
+            runCatching { opened?.close() }
+            throw e
         } catch (e: Exception) {
             Log.w(SyncBluetooth.TAG, "connect: failed: ${e.message}")
             emitState(SyncConnectionState.CONNECT_FAILED)

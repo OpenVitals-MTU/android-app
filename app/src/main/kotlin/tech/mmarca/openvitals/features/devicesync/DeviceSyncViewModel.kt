@@ -11,6 +11,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import tech.mmarca.openvitals.features.homewidgets.refreshPlacedHomeWidgets
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,13 +25,12 @@ import tech.mmarca.openvitals.data.repository.SyncedRecordOriginRepository
 import tech.mmarca.openvitals.features.devicesync.bluetooth.BluetoothSyncManager
 import tech.mmarca.openvitals.features.devicesync.bluetooth.DiscoveredSyncDevice
 import tech.mmarca.openvitals.features.devicesync.bluetooth.SyncConnectionState
-import tech.mmarca.openvitals.features.devicesync.protocol.PAIRING_CODE_DIGITS
+import tech.mmarca.openvitals.features.devicesync.protocol.CODES_DIFFER_REASON
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncReport
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncRole
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncSession
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncSessionConfig
 import tech.mmarca.openvitals.features.devicesync.protocol.buildSyncReportText
-import tech.mmarca.openvitals.features.devicesync.protocol.generatePairingCode
 import tech.mmarca.openvitals.features.devicesync.store.DeviceSyncReportStore
 import tech.mmarca.openvitals.features.devicesync.store.HealthConnectSyncStore
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingController
@@ -58,7 +58,11 @@ class DeviceSyncViewModel @Inject constructor(
 
     private var discoveryJob: Job? = null
     private var connectionJob: Job? = null
+    private var dialJob: Job? = null
     private var syncJob: Job? = null
+
+    // The session waits on this while the compare step is up.
+    private var codeAnswer: CompletableDeferred<Boolean>? = null
 
     // Bumped on reset so a session tearing down cannot write over a fresh wizard.
     private var generation = 0
@@ -139,7 +143,6 @@ class DeviceSyncViewModel @Inject constructor(
             _uiState.update { it.copy(error = DeviceSyncError.DISCOVERABLE_DECLINED) }
             return
         }
-        val code = generatePairingCode()
         observeConnection()
         viewModelScope.launch {
             try {
@@ -155,7 +158,6 @@ class DeviceSyncViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     role = SyncRole.HOST,
-                    code = code,
                     step = DeviceSyncStep.HOST_WAITING,
                     error = null,
                     bluetoothUnavailable = false,
@@ -216,52 +218,30 @@ class DeviceSyncViewModel @Inject constructor(
         }
     }
 
-    // Step 2 (guest): select and code.
+    // Step 2 (guest): pick the host and connect.
 
     fun selectDevice(device: DiscoveredSyncDevice) {
+        if (_uiState.value.connecting) return
         discoveryJob?.cancel()
         _uiState.update {
-            it.copy(
-                selectedDevice = device,
-                step = DeviceSyncStep.GUEST_CODE,
-                codeEntry = "",
-                codeError = false,
-                scanning = false,
-            )
+            it.copy(selectedDevice = device, connecting = true, scanning = false, error = null)
         }
-    }
-
-    fun enterDigit(digit: Char) {
-        _uiState.update { state ->
-            if (state.codeEntry.length >= PAIRING_CODE_DIGITS) state
-            else state.copy(codeEntry = state.codeEntry + digit, codeError = false)
-        }
-    }
-
-    fun deleteDigit() {
-        _uiState.update { state ->
-            if (state.codeEntry.isEmpty()) state
-            else state.copy(codeEntry = state.codeEntry.dropLast(1))
-        }
-    }
-
-    fun submitCode() {
-        val state = _uiState.value
-        val device = state.selectedDevice ?: return
-        if (state.codeEntry.length != PAIRING_CODE_DIGITS) return
-        viewModelScope.launch {
+        val gen = generation
+        dialJob = viewModelScope.launch {
             try {
                 Log.i(TAG, "guest: connecting to ${device.address}")
                 bluetooth.connect(device.address)
+                if (gen != generation) return@launch
                 Log.i(TAG, "guest: connected, advancing to range")
-                _uiState.update {
-                    it.copy(code = it.codeEntry, step = DeviceSyncStep.RANGE, error = null)
-                }
+                _uiState.update { it.copy(step = DeviceSyncStep.RANGE, connecting = false) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "guest: connect failed: ${e.message}")
-                _uiState.update { it.copy(error = DeviceSyncError.CONNECT_FAILED) }
+                if (gen != generation) return@launch
+                _uiState.update {
+                    it.copy(connecting = false, error = DeviceSyncError.CONNECT_FAILED)
+                }
             }
         }
     }
@@ -322,7 +302,7 @@ class DeviceSyncViewModel @Inject constructor(
                 store = store,
                 config = SyncSessionConfig(
                     role = role,
-                    code = state.code,
+                    confirmCode = { code -> askUserToCompare(code, gen) },
                     deviceName = deviceName(),
                     supportedTypes = state.availableTypes.toList(),
                     selectedTypes = state.selectedTypes.toList(),
@@ -348,18 +328,19 @@ class DeviceSyncViewModel @Inject constructor(
                         "abort=${report.abortReason}",
                 )
                 if (gen != generation) return@launch
-                if (!report.completed && report.abortReason?.contains("code") == true) {
-                    // Wrong code — back to code entry with an error.
-                    _uiState.update {
-                        it.copy(step = DeviceSyncStep.GUEST_CODE, codeError = true, codeEntry = "")
-                    }
-                    return@launch
-                }
                 persistReport(report)
                 // Records just arrived; the widgets must not stay on pre-sync numbers.
                 runCatching { refreshPlacedHomeWidgets(context) }
                 if (gen != generation) return@launch
-                _uiState.update { it.copy(step = DeviceSyncStep.REPORT, report = report) }
+                // Our own constant, set by our own session. Never match on the peer's text.
+                val codesDiffer = report.abortReason == CODES_DIFFER_REASON
+                _uiState.update {
+                    it.copy(
+                        step = DeviceSyncStep.REPORT,
+                        report = report,
+                        error = if (codesDiffer) DeviceSyncError.CODES_DIFFER else it.error,
+                    )
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -381,6 +362,34 @@ class DeviceSyncViewModel @Inject constructor(
                 stopForegroundIfOurs()
             }
         }
+    }
+
+    /** The session calls this once both phones hold the same keys. Suspends until the user answers. */
+    private suspend fun askUserToCompare(code: String, gen: Int): Boolean {
+        if (gen != generation) return false
+        val answer = CompletableDeferred<Boolean>()
+        codeAnswer = answer
+        _uiState.update { it.copy(step = DeviceSyncStep.COMPARE_CODE, code = code) }
+        try {
+            return answer.await()
+        } finally {
+            codeAnswer = null
+            // Back to the progress step, also when the session ended while we asked.
+            if (gen == generation) {
+                _uiState.update { state ->
+                    if (state.step == DeviceSyncStep.COMPARE_CODE) {
+                        state.copy(step = DeviceSyncStep.SYNCING)
+                    } else {
+                        state
+                    }
+                }
+            }
+        }
+    }
+
+    /** The user's answer on the compare step. */
+    fun answerCodeComparison(matches: Boolean) {
+        codeAnswer?.complete(matches)
     }
 
     private suspend fun persistReport(report: SyncReport) {
@@ -441,8 +450,11 @@ class DeviceSyncViewModel @Inject constructor(
         discoveryJob = null
         connectionJob?.cancel()
         connectionJob = null
+        dialJob?.cancel()
+        dialJob = null
         syncJob?.cancel()
         syncJob = null
+        codeAnswer = null
         bluetooth.reset()
         stopForegroundIfOurs()
     }

@@ -1,23 +1,15 @@
 package tech.mmarca.openvitals.features.devicesync.protocol
 
+import java.math.BigInteger
 import java.util.Random
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SyncPairingTest {
-
-    // generatePairingCode.
-
-    @Test
-    fun `pairing code is always six digits, zero-padded`() {
-        val code = generatePairingCode(Random(0))
-
-        assertEquals(PAIRING_CODE_DIGITS, code.length)
-        assertTrue(Regex("^\\d{6}$").matches(code))
-    }
 
     // generateSyncNonce.
 
@@ -26,80 +18,227 @@ class SyncPairingTest {
         assertEquals(SYNC_NONCE_BYTES, generateSyncNonce(Random(1)).size)
     }
 
-    // deriveSessionKey.
-
-    private val hostNonce = ByteArray(SYNC_NONCE_BYTES) { 0xA1.toByte() }
-    private val guestNonce = ByteArray(SYNC_NONCE_BYTES) { 0xB2.toByte() }
+    // Key pairs.
 
     @Test
-    fun `both phones derive the same key from the same inputs`() {
-        val onHost = deriveSessionKey("042913", hostNonce, guestNonce)
-        val onGuest = deriveSessionKey("042913", hostNonce, guestNonce)
+    fun `a public key has the 65-byte wire form`() {
+        val key = generateSyncKeyPair().publicKey
 
-        assertArrayEquals(onHost, onGuest)
-        assertEquals(32, onHost.size)
+        assertEquals(SYNC_PUBLIC_KEY_BYTES, key.size)
+        assertEquals(0x04, key[0].toInt())
     }
 
     @Test
-    fun `a different code yields a different key`() {
-        val right = deriveSessionKey("042913", hostNonce, guestNonce)
-        val wrong = deriveSessionKey("999999", hostNonce, guestNonce)
+    fun `every session gets a new key pair`() {
+        assertFalse(generateSyncKeyPair().publicKey.contentEquals(generateSyncKeyPair().publicKey))
+    }
 
-        assertFalse(constantTimeEquals(right, wrong))
+    // The host's commitment.
+
+    private val salt = ByteArray(SYNC_NONCE_BYTES) { 0x5A }
+
+    @Test
+    fun `a commitment opens with the key and salt it was made from`() {
+        val hostKey = generateSyncKeyPair().publicKey
+
+        assertTrue(hostKeyMatchesCommitment(commitToHostKey(hostKey, salt), hostKey, salt))
     }
 
     @Test
-    fun `nonce order is fixed, so host and guest roles agree`() {
-        // Swapping which arg is "host" changes the key, so both sides must agree on who is host.
-        val ab = deriveSessionKey("111111", hostNonce, guestNonce)
-        val ba = deriveSessionKey("111111", guestNonce, hostNonce)
+    fun `a commitment does not open with another key or another salt`() {
+        val hostKey = generateSyncKeyPair().publicKey
+        val commitment = commitToHostKey(hostKey, salt)
 
-        assertFalse(constantTimeEquals(ab, ba))
+        assertFalse(hostKeyMatchesCommitment(commitment, generateSyncKeyPair().publicKey, salt))
+        assertFalse(hostKeyMatchesCommitment(commitment, hostKey, ByteArray(SYNC_NONCE_BYTES) { 0x5B }))
     }
 
-    // Auth proof exchange.
+    // Session keys.
 
-    private val exchangeHostNonce = generateSyncNonce(Random(2))
-    private val exchangeGuestNonce = generateSyncNonce(Random(3))
-
-    private fun keyFor(code: String): ByteArray =
-        deriveSessionKey(code, exchangeHostNonce, exchangeGuestNonce)
-
-    @Test
-    fun `matching codes - each side verifies the peer proof`() {
-        val hostKey = keyFor("424242")
-        val guestKey = keyFor("424242")
-
-        // Host authenticates over the guest's nonce with the host role; guest verifies the same.
-        val hostProof = computeAuthProof(hostKey, exchangeGuestNonce, AUTH_ROLE_HOST)
-        val guestExpectsHost = computeAuthProof(guestKey, exchangeGuestNonce, AUTH_ROLE_HOST)
-        assertTrue(constantTimeEquals(hostProof, guestExpectsHost))
-
-        // And symmetrically, with the guest role.
-        val guestProof = computeAuthProof(guestKey, exchangeHostNonce, AUTH_ROLE_GUEST)
-        val hostExpectsGuest = computeAuthProof(hostKey, exchangeHostNonce, AUTH_ROLE_GUEST)
-        assertTrue(constantTimeEquals(guestProof, hostExpectsGuest))
-    }
+    private val host = generateSyncKeyPair()
+    private val guest = generateSyncKeyPair()
+    private val transcript = syncTranscriptHash(
+        hostHello = "host hello".toByteArray(),
+        guestHello = "guest hello".toByteArray(),
+        hostPublicKey = host.publicKey,
+        guestPublicKey = guest.publicKey,
+        hostSalt = salt,
+    )
 
     @Test
-    fun `a reflected proof does not validate (role binding)`() {
-        val key = keyFor("424242")
-        // The attacker echoes the host's proof back. The host now expects a guest-role proof over its nonce.
-        val hostProof = computeAuthProof(key, exchangeGuestNonce, AUTH_ROLE_HOST)
-        val hostExpectsGuest = computeAuthProof(key, exchangeHostNonce, AUTH_ROLE_GUEST)
+    fun `both phones derive the same keys and the same code`() {
+        val onHost = deriveSyncSessionKeys(host, guest.publicKey, transcript)
+        val onGuest = deriveSyncSessionKeys(guest, host.publicKey, transcript)
 
-        assertFalse(constantTimeEquals(hostProof, hostExpectsGuest))
+        assertArrayEquals(onHost.hostToGuest, onGuest.hostToGuest)
+        assertArrayEquals(onHost.guestToHost, onGuest.guestToHost)
+        assertEquals(onHost.code, onGuest.code)
+        assertEquals(32, onHost.hostToGuest.size)
     }
 
     @Test
-    fun `wrong code on the guest fails verification`() {
-        val hostKey = keyFor("424242")
-        val guestKey = keyFor("000000") // user mistyped
+    fun `the code is always six digits, zero-padded`() {
+        repeat(20) {
+            val code = deriveSyncSessionKeys(generateSyncKeyPair(), guest.publicKey, transcript).code
 
-        val hostProof = computeAuthProof(hostKey, exchangeGuestNonce, AUTH_ROLE_HOST)
-        val guestExpectsHost = computeAuthProof(guestKey, exchangeGuestNonce, AUTH_ROLE_HOST)
+            assertTrue(code, Regex("^\\d{6}$").matches(code))
+        }
+    }
 
-        assertFalse(constantTimeEquals(hostProof, guestExpectsHost))
+    @Test
+    fun `each direction has its own key`() {
+        val keys = deriveSyncSessionKeys(host, guest.publicKey, transcript)
+
+        assertFalse(constantTimeEquals(keys.hostToGuest, keys.guestToHost))
+    }
+
+    @Test
+    fun `a changed hello changes the keys`() {
+        val tampered = syncTranscriptHash(
+            hostHello = "host hello".toByteArray(),
+            guestHello = "guest hellp".toByteArray(),
+            hostPublicKey = host.publicKey,
+            guestPublicKey = guest.publicKey,
+            hostSalt = salt,
+        )
+
+        val honest = deriveSyncSessionKeys(host, guest.publicKey, transcript)
+        val changed = deriveSyncSessionKeys(host, guest.publicKey, tampered)
+
+        assertFalse(constantTimeEquals(honest.hostToGuest, changed.hostToGuest))
+    }
+
+    @Test
+    fun `transcript parts cannot slide into each other`() {
+        val a = syncTranscriptHash("ab".toByteArray(), "c".toByteArray(), host.publicKey, guest.publicKey, salt)
+        val b = syncTranscriptHash("a".toByteArray(), "bc".toByteArray(), host.publicKey, guest.publicKey, salt)
+
+        assertFalse(constantTimeEquals(a, b))
+    }
+
+    @Test
+    fun `someone in the middle ends up with two different secrets`() {
+        // The attacker runs one exchange with each phone. Neither phone shares a key with the other.
+        val attacker = generateSyncKeyPair()
+
+        val hostSide = deriveSyncSessionKeys(host, attacker.publicKey, transcript)
+        val guestSide = deriveSyncSessionKeys(guest, attacker.publicKey, transcript)
+
+        assertFalse(constantTimeEquals(hostSide.hostToGuest, guestSide.hostToGuest))
+    }
+
+    // Hostile keys.
+
+    @Test
+    fun `a key that is not on the curve is rejected`() {
+        val offCurve = host.publicKey.copyOf().also { it[SYNC_PUBLIC_KEY_BYTES - 1] = (it.last() + 1).toByte() }
+
+        val error = assertThrows(SyncPairingException::class.java) {
+            deriveSyncSessionKeys(guest, offCurve, transcript)
+        }
+        // Our own check said no, not the provider further down.
+        assertTrue(error.message.orEmpty().contains("not on the curve"))
+    }
+
+    @Test
+    fun `a coordinate that is not reduced is rejected`() {
+        // X = p is 0 mod p, and (0, sqrt(b)) is a real point. Only the range check tells them apart.
+        val p = BigInteger("ffffffff00000001000000000000000000000000ffffffffffffffffffffffff", 16)
+        val b = BigInteger("5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b", 16)
+        val y = b.modPow(p.add(BigInteger.ONE).shiftRight(2), p)
+        assertEquals("b must be a square for this test to mean anything", b, y.multiply(y).mod(p))
+        val unreduced = byteArrayOf(0x04) + fixed32(p) + fixed32(y)
+
+        val error = assertThrows(SyncPairingException::class.java) {
+            deriveSyncSessionKeys(guest, unreduced, transcript)
+        }
+        assertTrue(error.message.orEmpty().contains("not on the curve"))
+    }
+
+    @Test
+    fun `a key of the wrong form is rejected`() {
+        assertThrows(SyncPairingException::class.java) {
+            deriveSyncSessionKeys(guest, host.publicKey.copyOf(SYNC_PUBLIC_KEY_BYTES - 1), transcript)
+        }
+        assertThrows(SyncPairingException::class.java) {
+            deriveSyncSessionKeys(guest, host.publicKey.copyOf().also { it[0] = 0x02 }, transcript)
+        }
+        assertThrows(SyncPairingException::class.java) {
+            deriveSyncSessionKeys(guest, ByteArray(SYNC_PUBLIC_KEY_BYTES).also { it[0] = 0x04 }, transcript)
+        }
+    }
+
+    // HKDF.
+
+    @Test
+    fun `hkdf matches RFC 5869 test case 1`() {
+        val okm = hkdfSha256(
+            salt = hex("000102030405060708090a0b0c"),
+            ikm = hex("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b"),
+            info = hex("f0f1f2f3f4f5f6f7f8f9"),
+            length = 42,
+        )
+
+        assertArrayEquals(
+            hex("3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865"),
+            okm,
+        )
+    }
+
+    // Sealed frames.
+
+    private val keys = deriveSyncSessionKeys(host, guest.publicKey, transcript)
+    private val payload = "forty-two steps".toByteArray()
+
+    @Test
+    fun `a sealed frame opens on the other phone and hides its content`() {
+        val sealed = SyncFrameCipher.forRole(SyncRole.HOST, keys).seal(SyncFrameType.BATCH, payload)
+
+        assertFalse(String(sealed, Charsets.ISO_8859_1).contains("steps"))
+        assertArrayEquals(payload, SyncFrameCipher.forRole(SyncRole.GUEST, keys).open(SyncFrameType.BATCH, sealed))
+    }
+
+    @Test
+    fun `a changed frame does not open`() {
+        val sealed = SyncFrameCipher.forRole(SyncRole.HOST, keys).seal(SyncFrameType.BATCH, payload)
+        sealed[0] = (sealed[0] + 1).toByte()
+
+        assertThrows(SyncPairingException::class.java) {
+            SyncFrameCipher.forRole(SyncRole.GUEST, keys).open(SyncFrameType.BATCH, sealed)
+        }
+    }
+
+    @Test
+    fun `a replayed frame does not open`() {
+        val sealed = SyncFrameCipher.forRole(SyncRole.HOST, keys).seal(SyncFrameType.BATCH, payload)
+        val guestCipher = SyncFrameCipher.forRole(SyncRole.GUEST, keys)
+        guestCipher.open(SyncFrameType.BATCH, sealed)
+
+        assertThrows(SyncPairingException::class.java) { guestCipher.open(SyncFrameType.BATCH, sealed) }
+    }
+
+    @Test
+    fun `a frame passed off as another type does not open`() {
+        val sealed = SyncFrameCipher.forRole(SyncRole.HOST, keys).seal(SyncFrameType.BATCH_ACK, payload)
+
+        assertThrows(SyncPairingException::class.java) {
+            SyncFrameCipher.forRole(SyncRole.GUEST, keys).open(SyncFrameType.CONFIRM, sealed)
+        }
+    }
+
+    @Test
+    fun `a frame sent back to its sender does not open`() {
+        val hostCipher = SyncFrameCipher.forRole(SyncRole.HOST, keys)
+        val sealed = hostCipher.seal(SyncFrameType.CONFIRM, ByteArray(0))
+
+        assertThrows(SyncPairingException::class.java) { hostCipher.open(SyncFrameType.CONFIRM, sealed) }
+    }
+
+    @Test
+    fun `a plain frame does not open`() {
+        assertThrows(SyncPairingException::class.java) {
+            SyncFrameCipher.forRole(SyncRole.GUEST, keys).open(SyncFrameType.BATCH, payload)
+        }
     }
 
     // constantTimeEquals.
@@ -110,4 +249,13 @@ class SyncPairingTest {
         assertFalse(constantTimeEquals(byteArrayOf(1, 2, 3), byteArrayOf(1, 2, 4)))
         assertFalse(constantTimeEquals(byteArrayOf(1, 2), byteArrayOf(1, 2, 3)))
     }
+
+    /** Big-endian, exactly 32 bytes: no sign byte, leading zeros kept. */
+    private fun fixed32(value: BigInteger): ByteArray {
+        val raw = value.toByteArray().takeLast(32).toByteArray()
+        return ByteArray(32 - raw.size) + raw
+    }
+
+    private fun hex(text: String): ByteArray =
+        text.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 }

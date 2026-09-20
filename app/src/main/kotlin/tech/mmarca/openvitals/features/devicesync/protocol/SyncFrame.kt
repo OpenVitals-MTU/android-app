@@ -11,7 +11,7 @@ enum class SyncFrameType {
     /** Capability + nonce exchange that opens a session. */
     HELLO,
 
-    /** Authentication proof derived from the 6-digit code + both nonces. */
+    /** Protocol version 1 only. Kept because the ordinal is the wire byte. */
     AUTH,
 
     /** A gzipped batch of records flowing one direction. */
@@ -23,8 +23,25 @@ enum class SyncFrameType {
     /** The sender has no more batches to send this session. */
     SEND_DONE,
 
-    /** Cooperative abort (user cancel, or a fatal protocol error). */
+    /** Cooperative abort (user cancel, or a fatal protocol error). Never sealed. */
     ABORT,
+
+    /** The host's commitment to its key, sent before it sees the guest's. */
+    KEY_COMMIT,
+
+    /** The guest's public key. */
+    KEY_SHARE,
+
+    /** The host's public key and the salt that open its commitment. */
+    KEY_REVEAL,
+
+    /** This phone's user said the two codes match. Sealed and empty. */
+    CONFIRM,
+    ;
+
+    /** Sealed with the session key: every frame after the key exchange except [ABORT]. */
+    val isSealed: Boolean
+        get() = this == CONFIRM || this == BATCH || this == BATCH_ACK || this == SEND_DONE
 }
 
 /** The largest payload one frame may carry, against a hostile length prefix. */

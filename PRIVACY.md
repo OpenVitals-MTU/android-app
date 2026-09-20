@@ -97,7 +97,7 @@ A paired watch is reached over Bluetooth only. Nothing about a watch is sent off
 
 ## Phone-To-Phone Sync
 
-Sync copies Health Connect records from one phone to another over a paired, encrypted Bluetooth link. One phone shows a six-digit code and the other types it in, so you confirm the connection is the one you meant. You choose how far back to sync and which categories to send. No server or account is involved. Each phone keeps a plain-text report of its last sync in the app's private storage.
+Sync copies Health Connect records from one phone to another over a paired Bluetooth link. Before any record moves, both phones show the same six-digit code, and you confirm on both that they match. That tells you no other device sits in between. The records are then encrypted between the two phones with a key made for that one sync, on top of Bluetooth's own encryption. You choose how far back to sync and which categories to send. No server or account is involved. Each phone keeps a plain-text report of its last sync in the app's private storage.
 
 ## Imports, Exports And Reports
 
