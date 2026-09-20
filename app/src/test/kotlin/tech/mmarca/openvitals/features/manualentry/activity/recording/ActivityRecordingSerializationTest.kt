@@ -15,6 +15,12 @@ import org.junit.Test
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
+import tech.mmarca.openvitals.domain.model.BleCyclingCadenceSample
+import tech.mmarca.openvitals.domain.model.BleHeartRateSample
+import tech.mmarca.openvitals.domain.model.BlePowerSample
+import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
+import tech.mmarca.openvitals.domain.model.BleSpeedSample
+import tech.mmarca.openvitals.domain.model.BleStepsCadenceSample
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 
 /** Metadata goes to SharedPreferences and route points to a file, so the round-trip drives both halves of [ActivityRecordingStore]. */
@@ -35,6 +41,26 @@ class ActivityRecordingSerializationTest {
 
     @After fun tearDown() {
         filesDir.deleteRecursively()
+    }
+
+    @Test fun `sensor samples survive their text round-trip`() {
+        val at = Instant.parse("2026-05-26T08:31:00Z")
+        val samples = BleRecordingSampleBuffer(
+            heartRateSamples = listOf(BleHeartRateSample(at, 142L)),
+            powerSamples = listOf(BlePowerSample(at, 231.5)),
+            cyclingCadenceSamples = listOf(BleCyclingCadenceSample(at, 88L)),
+            speedSamples = listOf(BleSpeedSample(at, 7.25, isRunning = false), BleSpeedSample(at, 3.1, isRunning = true)),
+            stepsCadenceSamples = listOf(BleStepsCadenceSample(at, 172L)),
+        )
+
+        assertEquals(samples, samples.encodeSamples().decodeSamples())
+    }
+
+    @Test fun `a sample line that does not parse is skipped, the rest are kept`() {
+        val decoded = "H,1769413860000,142\nH,not-a-time,150\nX,1,2\n\nP,1769413860000,200.0\n".decodeSamples()
+
+        assertEquals(listOf(142L), decoded.heartRateSamples.map { it.beatsPerMinute })
+        assertEquals(listOf(200.0), decoded.powerSamples.map { it.watts })
     }
 
     @Test fun `recording state survives a SharedPreferences round-trip`() {

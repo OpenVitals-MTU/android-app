@@ -9,6 +9,12 @@ import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarkerType
+import tech.mmarca.openvitals.domain.model.BleCyclingCadenceSample
+import tech.mmarca.openvitals.domain.model.BleHeartRateSample
+import tech.mmarca.openvitals.domain.model.BlePowerSample
+import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
+import tech.mmarca.openvitals.domain.model.BleSpeedSample
+import tech.mmarca.openvitals.domain.model.BleStepsCadenceSample
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardField
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardItemSize
@@ -341,6 +347,37 @@ private fun String.decodeDashboardItems(): List<Pair<ActivityRecordingDashboardF
                 }
             field to size
         }
+
+/** One sample per line: kind, epoch millis, value. Plain text, like the route points beside it. */
+internal fun BleRecordingSampleBuffer.encodeSamples(): String = buildString {
+    heartRateSamples.forEach { append("H,${it.time.toEpochMilli()},${it.beatsPerMinute}\n") }
+    powerSamples.forEach { append("P,${it.time.toEpochMilli()},${it.watts}\n") }
+    cyclingCadenceSamples.forEach { append("C,${it.time.toEpochMilli()},${it.rpm}\n") }
+    speedSamples.forEach { append("S,${it.time.toEpochMilli()},${it.metersPerSecond},${if (it.isRunning) 1 else 0}\n") }
+    stepsCadenceSamples.forEach { append("K,${it.time.toEpochMilli()},${it.stepsPerMinute}\n") }
+}
+
+/** A line that does not parse is skipped: one bad sample must not cost the rest. */
+internal fun String.decodeSamples(): BleRecordingSampleBuffer {
+    val heartRate = mutableListOf<BleHeartRateSample>()
+    val power = mutableListOf<BlePowerSample>()
+    val cyclingCadence = mutableListOf<BleCyclingCadenceSample>()
+    val speed = mutableListOf<BleSpeedSample>()
+    val stepsCadence = mutableListOf<BleStepsCadenceSample>()
+    lineSequence().forEach { line ->
+        val parts = line.split(',')
+        val time = parts.getOrNull(1)?.toLongOrNull()?.let(Instant::ofEpochMilli) ?: return@forEach
+        val value = parts.getOrNull(2) ?: return@forEach
+        when (parts[0]) {
+            "H" -> value.toLongOrNull()?.let { heartRate += BleHeartRateSample(time, it) }
+            "P" -> value.toDoubleOrNull()?.let { power += BlePowerSample(time, it) }
+            "C" -> value.toLongOrNull()?.let { cyclingCadence += BleCyclingCadenceSample(time, it) }
+            "S" -> value.toDoubleOrNull()?.let { speed += BleSpeedSample(time, it, isRunning = parts.getOrNull(3) == "1") }
+            "K" -> value.toLongOrNull()?.let { stepsCadence += BleStepsCadenceSample(time, it) }
+        }
+    }
+    return BleRecordingSampleBuffer(heartRate, power, cyclingCadence, speed, stepsCadence)
+}
 
 internal fun List<ExerciseRoutePoint>.encodeRoutePoints(): String =
     joinToString(separator = "\n") { point -> point.encodeRoutePoint() }

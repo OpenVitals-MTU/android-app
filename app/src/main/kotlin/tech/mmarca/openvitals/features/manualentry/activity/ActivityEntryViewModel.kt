@@ -161,6 +161,7 @@ class ActivityEntryViewModel(
                 }
             }
             ?.launchIn(viewModelScope)
+        restoreFinishedRecording()
         applyLaunchIntent()
     }
 
@@ -185,7 +186,7 @@ class ActivityEntryViewModel(
 
     /** Opens the plan into the prefilled form. A missing plan falls back to the hub. */
     fun startWithPlan(planId: String) {
-        recordingDraftStore?.clear()
+        clearRecordingDraft()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 mode = ActivityEntryMode.START_HUB,
@@ -217,7 +218,7 @@ class ActivityEntryViewModel(
     /** The start hub: today's and upcoming plans, then record / log manually. */
     fun showStartHub() {
         if (_uiState.value.isEditMode) return
-        recordingDraftStore?.clear()
+        clearRecordingDraft()
         activityRecorder?.stopBlePreview()
         activityRecorder?.clearPreparedRecording()
         _uiState.value = initialActivityEntryState(clock, repository, preferredActivityType()).copy(
@@ -301,11 +302,11 @@ class ActivityEntryViewModel(
         val activityType = plan.toActivityEntryType()
         val steps = plan.toPlanRunSteps(localizedTitle = { appContext?.getString(it.labelRes) })
         if (activityType == null || !activityType.isRepetitionLike || steps.isEmpty()) {
-            recordingDraftStore?.clear()
+            clearRecordingDraft()
             applyPlannedWorkout(plan)
             return
         }
-        recordingDraftStore?.clear()
+        clearRecordingDraft()
         _uiState.value = _uiState.value.copy(
             mode = ActivityEntryMode.RECORDING,
             guidedPlan = ActivityGuidedPlan(plan, activityType, steps),
@@ -342,7 +343,7 @@ class ActivityEntryViewModel(
             )
             return
         }
-        recordingDraftStore?.clear()
+        clearRecordingDraft()
         val now = LocalDateTime.now(clock).withSecond(0).withNano(0)
         _uiState.value = _uiState.value.copy(
             mode = ActivityEntryMode.RECORDING,
@@ -404,7 +405,7 @@ class ActivityEntryViewModel(
     /** A hub row: log the session from that plan. */
     fun logFromPlan(planId: String) {
         val plan = _uiState.value.hubPlans.firstOrNull { it.id == planId } ?: return
-        recordingDraftStore?.clear()
+        clearRecordingDraft()
         applyPlannedWorkout(plan)
     }
 
@@ -528,7 +529,7 @@ class ActivityEntryViewModel(
     }
 
     fun startManualEntry() {
-        recordingDraftStore?.clear()
+        clearRecordingDraft()
         _uiState.value = _uiState.value.copy(
             mode = ActivityEntryMode.MANUAL,
             linkedPlan = null,
@@ -729,7 +730,7 @@ class ActivityEntryViewModel(
             )
             return
         }
-        recordingDraftStore?.clear()
+        clearRecordingDraft()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isImportingRoute = true,
@@ -859,7 +860,7 @@ class ActivityEntryViewModel(
     fun prepareGpsRecording() {
         val currentState = _uiState.value
 
-        recordingDraftStore?.clear()
+        clearRecordingDraft()
         // The setup screen offers today's plan as a shortcut.
         if (currentState.hubPlans.isEmpty()) loadHubPlans()
         _uiState.value = currentState.copy(
@@ -905,7 +906,7 @@ class ActivityEntryViewModel(
             return
         }
 
-        recordingDraftStore?.clear()
+        clearRecordingDraft()
         _uiState.value = currentState.copy(
             mode = ActivityEntryMode.RECORDING,
             importedRoute = null,
@@ -954,7 +955,7 @@ class ActivityEntryViewModel(
             preferencesRepository?.activityRecordingPreferences()
                 ?.coMapsNavigationContextEnabled == true
         ) {
-            recordingDraftStore?.clear()
+            clearRecordingDraft()
             _uiState.value = currentState.copy(
                 mode = ActivityEntryMode.RECORDING,
                 entryError = null,
@@ -965,7 +966,7 @@ class ActivityEntryViewModel(
             return
         }
 
-        recordingDraftStore?.clear()
+        clearRecordingDraft()
         val now = LocalDateTime.now(clock).withSecond(0).withNano(0)
         _uiState.value = currentState.copy(
             mode = ActivityEntryMode.RECORDING,
@@ -1012,7 +1013,7 @@ class ActivityEntryViewModel(
             return
         }
         val currentState = _uiState.value
-        recordingDraftStore?.clear()
+        clearRecordingDraft()
         val now = LocalDateTime.now(clock).withSecond(0).withNano(0)
         _uiState.value = currentState.copy(
             mode = ActivityEntryMode.RECORDING,
@@ -1087,13 +1088,13 @@ class ActivityEntryViewModel(
     fun discardGpsRecording() {
         activityRecorder?.discardRecording()
         activityRecorder?.stopBlePreview()
-        recordingDraftStore?.clear()
+        clearRecordingDraft()
         showStartHub()
     }
 
     fun discardRecordingDraft() {
         if (!_uiState.value.isRecordingDraft || _uiState.value.isEditMode) return
-        recordingDraftStore?.clear()
+        clearRecordingDraft()
         showStartHub()
     }
 
@@ -1107,6 +1108,34 @@ class ActivityEntryViewModel(
             )
             return
         }
+        applyFinishedRecording(snapshot, units)
+    }
+
+    /** The in-memory draft and the finished recording kept on disk go together. */
+    private fun clearRecordingDraft() {
+        recordingDraftStore?.clear()
+        activityRecorder?.clearFinishedRecording()
+    }
+
+    /**
+     * After a process death the in-memory draft is gone, but the finished recording is still
+     * on disk. Rebuilds the review form from it, before the launch intent can start
+     * something else and clear it.
+     */
+    private fun restoreFinishedRecording() {
+        if (editActivityId != null || _uiState.value.isRecordingDraft) return
+        val snapshot = activityRecorder?.finishedRecording() ?: return
+        val unitSystem = preferencesRepository?.unitSystem ?: UnitSystem.METRIC
+        applyFinishedRecording(
+            snapshot,
+            ActivityEntryUnits(
+                distance = preferencesRepository?.unitOverride(UnitQuantity.DISTANCE) ?: unitSystem,
+                elevation = preferencesRepository?.unitOverride(UnitQuantity.ELEVATION) ?: unitSystem,
+            ),
+        )
+    }
+
+    private fun applyFinishedRecording(snapshot: ActivityRecordingSnapshot, units: ActivityEntryUnits) {
         rememberLastActivityType(snapshot.exerciseType)
 
         if (snapshot.recordingKind == ActivityRecordingKind.GPS_ROUTE && snapshot.points.size >= MinRecordedRoutePoints) {
@@ -1259,7 +1288,7 @@ class ActivityEntryViewModel(
                 if (coMapsSamplesToSave.isNotEmpty()) {
                     coMapsNavigationRepository?.saveSamples(savedActivityId, coMapsSamplesToSave)
                 }
-                recordingDraftStore?.clear()
+                clearRecordingDraft()
                 if (wasRecordingDraft) {
                     rememberLastActivityType(request.exerciseType)
                 }

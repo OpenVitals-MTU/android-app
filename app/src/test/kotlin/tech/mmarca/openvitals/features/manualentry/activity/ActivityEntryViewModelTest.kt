@@ -18,6 +18,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.Runs
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
@@ -1129,6 +1130,8 @@ class ActivityEntryViewModelTest {
         val repo = activityRepo(canWrite = true)
         val prefs = activityPrefs()
         val recorder = mockk<ActivityRecordingController>()
+        every { recorder.finishedRecording() } returns null
+        every { recorder.clearFinishedRecording() } just Runs
         val start = Instant.parse("2026-05-26T08:30:00Z")
         every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
         every { recorder.coMapsNavigation } returns
@@ -1164,6 +1167,8 @@ class ActivityEntryViewModelTest {
         val repo = activityRepo(canWrite = true)
         val draftStore = ActivityRecordingDraftStore()
         val recorder = mockk<ActivityRecordingController>()
+        every { recorder.finishedRecording() } returns null
+        every { recorder.clearFinishedRecording() } just Runs
         val start = Instant.parse("2026-05-26T08:30:00Z")
         every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
         every { recorder.coMapsNavigation } returns
@@ -1205,9 +1210,44 @@ class ActivityEntryViewModelTest {
         assertTrue(restoredVm.uiState.value.isRecordingDraft)
     }
 
+    @Test fun `after the process is killed the review form comes back from the recording kept on disk`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        val recorder = mockk<ActivityRecordingController>()
+        every { recorder.clearFinishedRecording() } just Runs
+        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
+        every { recorder.coMapsNavigation } returns
+            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
+        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
+        every { recorder.finishedRecording() } returns ActivityRecordingSnapshot(
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+            startTime = start,
+            endTime = start.plusSeconds(45 * 60),
+            points = listOf(routePoint(start), routePoint(start.plusSeconds(45 * 60), latitude = 59.01)),
+            pauseIntervals = emptyList(),
+            distanceMeters = 1200.0,
+            elevationGainedMeters = 12.0,
+        )
+
+        // A fresh process: the in-memory draft store is empty.
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            activityRecorder = recorder,
+            recordingDraftStore = ActivityRecordingDraftStore(),
+            clock = Clock.fixed(start.plusSeconds(3_600), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.isRecordingDraft)
+        assertEquals(ActivityEntryMode.ROUTE_IMPORT, vm.uiState.value.mode)
+        assertEquals("1.2", vm.uiState.value.distanceText)
+    }
+
     @Test fun `finished walking route recording keeps recorded steps`() = runTest {
         val repo = activityRepo(canWrite = true)
         val recorder = mockk<ActivityRecordingController>()
+        every { recorder.finishedRecording() } returns null
+        every { recorder.clearFinishedRecording() } just Runs
         val start = Instant.parse("2026-05-26T08:30:00Z")
         every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
         every { recorder.coMapsNavigation } returns
@@ -1252,6 +1292,8 @@ class ActivityEntryViewModelTest {
         val prefs = activityPrefs()
         every { prefs.elevationCorrectionEnabled } returns true
         val recorder = mockk<ActivityRecordingController>()
+        every { recorder.finishedRecording() } returns null
+        every { recorder.clearFinishedRecording() } just Runs
         val start = Instant.parse("2026-05-26T08:30:00Z")
         every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
         every { recorder.coMapsNavigation } returns
@@ -1292,6 +1334,8 @@ class ActivityEntryViewModelTest {
         val repo = activityRepo(canWrite = true)
         val draftStore = ActivityRecordingDraftStore()
         val recorder = mockk<ActivityRecordingController>()
+        every { recorder.finishedRecording() } returns null
+        every { recorder.clearFinishedRecording() } just Runs
         val start = Instant.parse("2026-05-26T08:30:00Z")
         every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
         every { recorder.coMapsNavigation } returns
@@ -1334,6 +1378,8 @@ class ActivityEntryViewModelTest {
         val repo = activityRepo(canWrite = true)
         val draftStore = ActivityRecordingDraftStore()
         val recorder = mockk<ActivityRecordingController>()
+        every { recorder.finishedRecording() } returns null
+        every { recorder.clearFinishedRecording() } just Runs
         val start = Instant.parse("2026-05-26T08:30:00Z")
         every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
         every { recorder.coMapsNavigation } returns
@@ -1743,6 +1789,8 @@ class ActivityEntryViewModelTest {
         errorMessage: String? = null,
         state: MutableStateFlow<ActivityRecordingState> = MutableStateFlow(ActivityRecordingState()),
     ) = mockk<ActivityRecordingController>().also { recorder ->
+        every { recorder.finishedRecording() } returns null
+        every { recorder.clearFinishedRecording() } just Runs
         every { recorder.state } returns state
         every { recorder.coMapsNavigation } returns
             MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
