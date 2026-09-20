@@ -5,10 +5,12 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
 
 /** Outlives a broadcast. For widget work that must not hold a receiver. */
 internal val HomeWidgetScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -32,6 +34,25 @@ internal val HomeWidgetRefreshers: Map<Class<*>, suspend (Context, Int) -> Unit>
     HomeQuickBeverageWidgetReceiver::class.java to { context, id -> refreshHomeQuickBeverageWidget(context, id) },
     HomeQuickBeverageOneTapWidgetReceiver::class.java to { context, id -> refreshHomeQuickBeverageWidget(context, id) },
 )
+
+/** Receivers whose tile comes from a Health Connect read. The beverage tiles come from preferences. */
+internal val HealthConnectBackedWidgetReceivers: Set<Class<*>> = setOf(
+    HomeMetricWidgetReceiver::class.java,
+    HomeDailyReadinessWidgetReceiver::class.java,
+    HomeBodyEnergyWidgetReceiver::class.java,
+    HomeTodayVitalsWidgetReceiver::class.java,
+)
+
+/**
+ * The tiles a background refresh may redraw. When Health Connect would only show this app's
+ * own records, a Health Connect tile keeps what it shows: a fresh "0 steps" is worse than an
+ * hour-old number.
+ */
+internal fun homeWidgetsToRefresh(
+    placed: Map<Class<*>, IntArray>,
+    readsOtherAppsData: Boolean,
+): Map<Class<*>, IntArray> =
+    if (readsOtherAppsData) placed else placed.filterKeys { it !in HealthConnectBackedWidgetReceivers }
 
 /** The placed widget ids per receiver. Receivers with no placed widget are absent. */
 internal fun placedHomeWidgetIds(context: Context): Map<Class<*>, IntArray> {
@@ -75,11 +96,20 @@ fun refreshPlacedHomeWidgets(context: Context) {
  */
 suspend fun refreshPlacedHomeWidgetsInProcess(context: Context) {
     val appContext = context.applicationContext
-    for ((receiver, ids) in placedHomeWidgetIds(appContext)) {
+    val readsOtherAppsData = EntryPointAccessors
+        .fromApplication(appContext, HomeWidgetRefreshWorkerEntryPoint::class.java)
+        .healthConnectManager()
+        .readsOtherAppsDataNow()
+    if (!readsOtherAppsData) {
+        Log.i(HomeWidgetLogTag, "Health Connect tiles kept: background read is not granted")
+    }
+    for ((receiver, ids) in homeWidgetsToRefresh(placedHomeWidgetIds(appContext), readsOtherAppsData)) {
         val refresh = HomeWidgetRefreshers[receiver] ?: continue
         for (id in ids) {
             try {
-                refresh(appContext, id)
+                // Strict: a read that fails must throw, so the tile keeps its last snapshot.
+                // A swallowed failure used to redraw it as "0" and "No data".
+                withStrictHealthConnectReads { refresh(appContext, id) }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (t: Throwable) {
