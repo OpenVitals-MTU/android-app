@@ -9,7 +9,9 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
+import android.bluetooth.BluetoothStatusCodes
 import android.content.Context
+import android.os.Build
 import android.os.Handler
 import android.util.Log
 import java.util.UUID
@@ -58,6 +60,10 @@ internal class BleGattConnection(
     val runningAggregator = BleRunningSpeedCadenceAggregator()
 
     private val subscribedCharacteristics = mutableSetOf<UUID>()
+
+    // One descriptor write at a time. A second one while the first is in flight is refused,
+    // so a sensor with two notifying characteristics used to deliver only the first.
+    private val notificationWrites = BleGattWriteQueue(::writeNotificationDescriptor)
     private var pendingNotificationCharacteristics: List<BluetoothGattCharacteristic> = emptyList()
     var heartRateNoSignal: Boolean = false
         private set
@@ -90,6 +96,7 @@ internal class BleGattConnection(
         closed = true
         subscribedCharacteristics.clear()
         pendingNotificationCharacteristics = emptyList()
+        notificationWrites.clear()
         resetAggregators()
         gatt?.let { currentGatt ->
             runCatching { currentGatt.disconnect() }
@@ -123,25 +130,35 @@ internal class BleGattConnection(
         return runCatching { gatt.readCharacteristic(characteristic) }.getOrDefault(false)
     }
 
+    /** Starts the descriptor write that turns notifications on. False when the stack refuses it. */
     @SuppressLint("MissingPermission")
-    private fun enableNotifications(
-        gatt: BluetoothGatt,
-        characteristic: BluetoothGattCharacteristic,
-    ) {
-        if (!subscribedCharacteristics.add(characteristic.uuid)) return
-        gatt.setCharacteristicNotification(characteristic, true)
-        val descriptor = characteristic.getDescriptor(BleUuids.CLIENT_CHARACTERISTIC_CONFIG) ?: return
-        descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-        gatt.writeDescriptor(descriptor)
+    private fun writeNotificationDescriptor(characteristic: BluetoothGattCharacteristic): Boolean {
+        val gatt = gatt ?: return false
+        val descriptor = characteristic.getDescriptor(BleUuids.CLIENT_CHARACTERISTIC_CONFIG) ?: return false
+        if (!gatt.setCharacteristicNotification(characteristic, true)) return false
+        val started = runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                gatt.writeDescriptor(
+                    descriptor,
+                    BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE,
+                ) == BluetoothStatusCodes.SUCCESS
+            } else {
+                @Suppress("DEPRECATION")
+                run {
+                    descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                    gatt.writeDescriptor(descriptor)
+                }
+            }
+        }.getOrDefault(false)
+        if (!started) Log.w(TAG, "Notification descriptor write refused for ${characteristic.uuid}")
+        return started
     }
 
-    @SuppressLint("MissingPermission")
-    private fun enablePendingNotifications(gatt: BluetoothGatt) {
+    private fun enablePendingNotifications() {
         val characteristics = pendingNotificationCharacteristics
+            .filterNot { it.uuid in subscribedCharacteristics }
         pendingNotificationCharacteristics = emptyList()
-        characteristics.forEach { characteristic ->
-            enableNotifications(gatt, characteristic)
-        }
+        notificationWrites.enqueue(characteristics)
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
@@ -156,6 +173,7 @@ internal class BleGattConnection(
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     subscribedCharacteristics.clear()
+                    notificationWrites.clear()
                     resetAggregators()
                     if (!closed) {
                         updateStatus(BleConnectionStatus.RECONNECTING)
@@ -187,7 +205,23 @@ internal class BleGattConnection(
             }
             pendingNotificationCharacteristics = notificationCharacteristics
             if (!readBatteryLevel(gatt)) {
-                enablePendingNotifications(gatt)
+                enablePendingNotifications()
+            }
+        }
+
+        override fun onDescriptorWrite(
+            gatt: BluetoothGatt,
+            descriptor: BluetoothGattDescriptor,
+            status: Int,
+        ) {
+            if (descriptor.uuid != BleUuids.CLIENT_CHARACTERISTIC_CONFIG) return
+            // Subscribed only once the sensor confirms, so a failed write is tried again
+            // on the next connection.
+            val characteristic = notificationWrites.onWriteFinished() ?: return
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                subscribedCharacteristics += characteristic.uuid
+            } else {
+                Log.w(TAG, "Notification descriptor write failed status=$status for ${characteristic.uuid}")
             }
         }
 
@@ -224,7 +258,7 @@ internal class BleGattConnection(
             if (characteristic.uuid == BleUuids.BATTERY_LEVEL && status == BluetoothGatt.GATT_SUCCESS) {
                 updateBatteryLevel(value)
             }
-            enablePendingNotifications(gatt)
+            enablePendingNotifications()
         }
 
         private fun updateBatteryLevel(value: ByteArray) {
