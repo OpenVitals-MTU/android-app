@@ -122,6 +122,7 @@ OpenVitals uses Bluetooth for three separate things: Bluetooth LE sensors during
 - `android.permission.BLUETOOTH_SCAN`: used to find Bluetooth LE sensors, to find a Garmin watch during pairing, and to discover a nearby phone for sync. It is declared with `neverForLocation`, so OpenVitals does not derive location from Bluetooth scan results.
 - `android.permission.BLUETOOTH_CONNECT`: used to connect to a Bluetooth LE sensor, to talk to a paired watch, and to open the sync connection to another phone.
 - `android.permission.BLUETOOTH_ADVERTISE`: used only by phone-to-phone sync on Android 12 and newer, so this phone can be made discoverable while the other phone looks for it.
+- `android.permission.BLUETOOTH` and `android.permission.BLUETOOTH_ADMIN`: declared for Android 11 and older only (`maxSdkVersion="30"`). Those versions need them to scan, to connect and to list bonded devices. There, a Bluetooth LE scan also needs the location permission, so the add-sensor and add-watch flows ask for it.
 
 Nearby-device Bluetooth permissions never add internet access. Phone-to-phone sync uses Bluetooth Classic (RFCOMM) rather than Wi-Fi precisely because any Wi-Fi or TCP socket on Android would require the `INTERNET` permission, which OpenVitals does not declare.
 
