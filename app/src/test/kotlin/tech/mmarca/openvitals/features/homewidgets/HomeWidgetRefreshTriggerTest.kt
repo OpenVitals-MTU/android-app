@@ -67,6 +67,32 @@ class HomeWidgetRefreshTriggerTest {
         assertThat(HomeWidgetRefreshers.keys).containsExactlyElementsIn(HomeWidgetReceivers)
     }
 
+    @Test
+    fun `every receiver is sorted into Health Connect backed or not`() {
+        // A new Health Connect widget left out of the set would be redrawn from own-records-only reads.
+        val preferenceBacked = setOf(
+            HomeQuickBeverageWidgetReceiver::class.java,
+            HomeQuickBeverageOneTapWidgetReceiver::class.java,
+        )
+
+        assertThat(HealthConnectBackedWidgetReceivers + preferenceBacked).containsExactlyElementsIn(HomeWidgetReceivers)
+        assertThat(HealthConnectBackedWidgetReceivers.intersect(preferenceBacked)).isEmpty()
+    }
+
+    @Test
+    fun `without a full read only the preference tiles are redrawn`() {
+        val placed = mapOf<Class<*>, IntArray>(
+            HomeMetricWidgetReceiver::class.java to intArrayOf(1, 2),
+            HomeQuickBeverageWidgetReceiver::class.java to intArrayOf(3),
+        )
+
+        // The worker used to redraw a metric tile as "0" and "Today" here.
+        assertThat(homeWidgetsToRefresh(placed, readsOtherAppsData = false).keys)
+            .containsExactly(HomeQuickBeverageWidgetReceiver::class.java)
+        assertThat(homeWidgetsToRefresh(placed, readsOtherAppsData = true).keys)
+            .containsExactlyElementsIn(placed.keys)
+    }
+
     private companion object {
         val MANIFEST_WIDGET_RECEIVER =
             Regex("""<receiver[^>]*android:name="([^"]+)"[^>]*>(.*?)</receiver>""", RegexOption.DOT_MATCHES_ALL)

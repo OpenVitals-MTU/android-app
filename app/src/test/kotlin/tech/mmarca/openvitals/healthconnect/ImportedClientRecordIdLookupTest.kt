@@ -22,6 +22,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.core.performance.AppForegroundGate
 import tech.mmarca.openvitals.features.imports.csv.buildCsvClientRecordId
 
 /**
@@ -112,6 +113,7 @@ class ImportedClientRecordIdLookupTest {
             context = context,
             syncGate = mockk(relaxed = true),
             mindfulnessGate = mockk(relaxed = true),
+            foregroundGate = AppForegroundGate(),
         )
     }
 

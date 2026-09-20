@@ -35,6 +35,7 @@ class CompanionDevicePairing @Inject constructor(
 ) {
     /** Launcher + pending continuation for the association dialog's result. */
     private var launcher: ActivityResultLauncher<IntentSenderRequest>? = null
+    private var attachedActivityId: Int? = null
     private var pendingContinuation: CancellableContinuation<Boolean>? = null
 
     /** The address being associated, so a success can start presence observation. */
@@ -45,6 +46,7 @@ class CompanionDevicePairing @Inject constructor(
 
     // Activity lifecycle.
 
+    /** MainActivity attaches in onCreate. Without it [associate] can never show its dialog. */
     fun attachToActivity(activity: Activity) {
         val componentActivity = activity as? ComponentActivity
         if (componentActivity == null) {
@@ -52,6 +54,7 @@ class CompanionDevicePairing @Inject constructor(
             return
         }
         detachFromActivity()
+        attachedActivityId = System.identityHashCode(activity)
         launcher =
             componentActivity.activityResultRegistry.register(
                 "tech.mmarca.openvitals.devices.core.pairing.companion",
@@ -65,7 +68,13 @@ class CompanionDevicePairing @Inject constructor(
             }
     }
 
+    /** Detaches only the Activity that is attached, so a late onDestroy cannot unhook a newer one. */
+    fun detachFromActivity(activity: Activity) {
+        if (attachedActivityId == System.identityHashCode(activity)) detachFromActivity()
+    }
+
     fun detachFromActivity() {
+        attachedActivityId = null
         launcher?.unregister()
         launcher = null
         // A dialog in flight when the Activity goes away can never report back.

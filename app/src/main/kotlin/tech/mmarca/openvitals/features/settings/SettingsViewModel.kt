@@ -25,6 +25,7 @@ import tech.mmarca.openvitals.domain.preferences.StrideLength
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
+import tech.mmarca.openvitals.domain.model.ActivityRecordSource
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.BodyMeasurementWriteRequest
@@ -43,12 +44,15 @@ import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.sync.BodyEnergyChainSyncService
 import tech.mmarca.openvitals.data.sync.DerivedMetricsResetService
 import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
+import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryType
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryUnits
 import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
 import tech.mmarca.openvitals.features.manualentry.activity.buildWriteRequest
 import tech.mmarca.openvitals.features.manualentry.activity.initialActivityEntryState
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileImport
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileImporter
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFolderScanner
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.toImportWriteRequest
 import tech.mmarca.openvitals.features.manualentry.activity.withRouteImport
 import tech.mmarca.openvitals.features.activity.elevation.ElevationTile
 import tech.mmarca.openvitals.features.activity.elevation.ElevationTileRepository
@@ -670,18 +674,11 @@ class SettingsViewModel @Inject constructor(
 
             runCatching {
                 val routeImport = routeFileImporter.import(uri)
-                // Headless import: any consistent unit pair works.
-                val importUnits = ActivityEntryUnits.uniform(_uiState.value.unitSystem)
-                val routeState = initialActivityEntryState(
-                    clock = clock,
-                    repository = activityRepository,
-                    selectedActivityType = preferredActivityType(requireGpsRoute = routeImport.points.isNotEmpty()),
-                ).withRouteImport(
-                    routeImport = routeImport,
-                    units = importUnits,
-                    clock = clock,
-                )
-                val request = buildWriteRequest(routeState, importUnits)
+                val preferredType = preferredActivityType(requireGpsRoute = routeImport.points.isNotEmpty())
+                // Straight from the file: exact times, and a client id that is a function of
+                // the file, so picking the same folder twice does not store each workout twice.
+                val request = routeImport.toImportWriteRequest(preferredType, ActivityRecordSource.FILE)
+                    ?: formWriteRequest(routeImport, preferredType)
                     ?: throw IllegalArgumentException("Imported route could not be converted into an activity.")
                 val hasPermission = activityRepository.hasActivityWritePermission(request)
                 if (!hasPermission) {
@@ -1097,6 +1094,22 @@ class SettingsViewModel @Inject constructor(
     fun selectFavoriteActivity(exerciseType: Int?) {
         preferencesRepository.favoriteActivityExerciseType = exerciseType
         _uiState.value = _uiState.value.copy(favoriteActivityExerciseType = exerciseType)
+    }
+
+    /** A route with no timestamps has no time of its own. The entry form's defaults supply one, as before. */
+    private fun formWriteRequest(routeImport: RouteFileImport, preferredType: ActivityEntryType): ActivityWriteRequest? {
+        // Any consistent unit pair works: nobody reads the text.
+        val importUnits = ActivityEntryUnits.uniform(_uiState.value.unitSystem)
+        val routeState = initialActivityEntryState(
+            clock = clock,
+            repository = activityRepository,
+            selectedActivityType = preferredType,
+        ).withRouteImport(
+            routeImport = routeImport,
+            units = importUnits,
+            clock = clock,
+        )
+        return buildWriteRequest(routeState, importUnits)
     }
 
     private fun preferredActivityType(requireGpsRoute: Boolean = false) =

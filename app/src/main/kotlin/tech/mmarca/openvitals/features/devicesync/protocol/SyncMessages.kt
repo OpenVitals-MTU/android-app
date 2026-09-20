@@ -23,8 +23,11 @@ import kotlinx.serialization.json.put
  * record batches are JSON then gzipped.
  */
 
-/** The protocol version in [SyncHello]. Bump on any wire change. */
-const val SYNC_PROTOCOL_VERSION: Int = 1
+/**
+ * The protocol version in [SyncHello]. Bump on any wire change.
+ * Version 2 replaced the typed code with a key exchange and sealed frames.
+ */
+const val SYNC_PROTOCOL_VERSION: Int = 2
 
 /** The largest a decompressed batch may be. Turns a gzip bomb into a bounded exception. */
 const val MAX_DECOMPRESSED_BATCH_BYTES: Int = 64 * 1024 * 1024
@@ -105,15 +108,48 @@ class SyncHello(
     }
 }
 
-/** The authentication proof (HMAC over the peer's nonce). One per peer. */
-class SyncAuthProof(val proof: ByteArray) {
+/** The host's commitment to its public key. See [commitToHostKey]. */
+class SyncKeyCommit(val commitment: ByteArray) {
     fun encode(): ByteArray = jsonToBytes(
-        buildJsonObject { put("proof", Base64.getEncoder().encodeToString(proof)) },
+        buildJsonObject { put("commit", Base64.getEncoder().encodeToString(commitment)) },
     )
 
     companion object {
-        fun decode(bytes: ByteArray): SyncAuthProof = decoding("auth") {
-            SyncAuthProof(Base64.getDecoder().decode(bytesToJson(bytes).string("proof")))
+        fun decode(bytes: ByteArray): SyncKeyCommit = decoding("keyCommit") {
+            SyncKeyCommit(Base64.getDecoder().decode(bytesToJson(bytes).string("commit")))
+        }
+    }
+}
+
+/** The guest's public key, in the [SYNC_PUBLIC_KEY_BYTES] wire form. */
+class SyncKeyShare(val publicKey: ByteArray) {
+    fun encode(): ByteArray = jsonToBytes(
+        buildJsonObject { put("key", Base64.getEncoder().encodeToString(publicKey)) },
+    )
+
+    companion object {
+        fun decode(bytes: ByteArray): SyncKeyShare = decoding("keyShare") {
+            SyncKeyShare(Base64.getDecoder().decode(bytesToJson(bytes).string("key")))
+        }
+    }
+}
+
+/** The host's public key and the salt that open its [SyncKeyCommit]. */
+class SyncKeyReveal(val publicKey: ByteArray, val salt: ByteArray) {
+    fun encode(): ByteArray = jsonToBytes(
+        buildJsonObject {
+            put("key", Base64.getEncoder().encodeToString(publicKey))
+            put("salt", Base64.getEncoder().encodeToString(salt))
+        },
+    )
+
+    companion object {
+        fun decode(bytes: ByteArray): SyncKeyReveal = decoding("keyReveal") {
+            val json = bytesToJson(bytes)
+            SyncKeyReveal(
+                publicKey = Base64.getDecoder().decode(json.string("key")),
+                salt = Base64.getDecoder().decode(json.string("salt")),
+            )
         }
     }
 }
@@ -172,8 +208,12 @@ class SyncAbort(val reason: String) {
     fun encode(): ByteArray = jsonToBytes(buildJsonObject { put("reason", reason) })
 
     companion object {
+        /** An abort is never sealed, so anyone on the link can send one. Keep what it can put in the report short. */
+        const val MAX_REASON_CHARS: Int = 200
+
         fun decode(bytes: ByteArray): SyncAbort = SyncAbort(
-            runCatching { bytesToJson(bytes).string("reason") }.getOrDefault("unknown"),
+            runCatching { bytesToJson(bytes).string("reason").take(MAX_REASON_CHARS) }
+                .getOrDefault("unknown"),
         )
     }
 }

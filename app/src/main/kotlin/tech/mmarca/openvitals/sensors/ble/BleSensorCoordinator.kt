@@ -15,6 +15,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.ParcelUuid
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -169,13 +170,20 @@ class BleSensorCoordinator @Inject constructor(
             }
         }
         scanCallback = callback
-        adapter.bluetoothLeScanner?.startScan(
-            filters,
-            ScanSettings.Builder()
-                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-                .build(),
-            callback,
-        )
+        try {
+            adapter.bluetoothLeScanner?.startScan(
+                filters,
+                ScanSettings.Builder()
+                    .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                    .build(),
+                callback,
+            )
+        } catch (error: SecurityException) {
+            // A revoked grant must not crash the add-device flow.
+            Log.w(TAG, "BLE scan refused: ${error.message}")
+            scanCallback = null
+            return
+        }
         bondedDevices().forEach { device ->
             scanResults.putIfAbsent(
                 device.address.uppercase(),
@@ -272,10 +280,15 @@ class BleSensorCoordinator @Inject constructor(
 
     @SuppressLint("MissingPermission")
     private fun bondedDevices(): List<BluetoothDevice> =
-        bluetoothAdapter?.bondedDevices?.filter {
-            it.type == BluetoothDevice.DEVICE_TYPE_LE ||
-                it.type == BluetoothDevice.DEVICE_TYPE_DUAL
-        }.orEmpty()
+        try {
+            bluetoothAdapter?.bondedDevices?.filter {
+                it.type == BluetoothDevice.DEVICE_TYPE_LE ||
+                    it.type == BluetoothDevice.DEVICE_TYPE_DUAL
+            }.orEmpty()
+        } catch (error: SecurityException) {
+            Log.w(TAG, "Bonded devices refused: ${error.message}")
+            emptyList()
+        }
 
     @SuppressLint("MissingPermission")
     private fun addScanResult(result: ScanResult) {
@@ -413,6 +426,7 @@ class BleSensorCoordinator @Inject constructor(
         name?.ifBlank { address } ?: address
 
     companion object {
+        private const val TAG = "BleSensorCoordinator"
         private const val CAPABILITY_DISCOVERY_TIMEOUT_MS = 8_000L
         private const val METRICS_TIMEOUT_PUBLISH_INTERVAL_MS = 1_000L
     }

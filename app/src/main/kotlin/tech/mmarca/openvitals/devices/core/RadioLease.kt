@@ -14,21 +14,29 @@ object RadioLeases {
 
     private val leases = HashMap<String, Lease>()
 
+    private data class Waiter(val owner: String, val expiresAtMillis: Long)
+
     /**
      * Who is waiting for a held lease. A waiter makes the holder's next
      * [renew] fail, which is how an indefinitely held lease is given up.
+     * A waiter expires too: one that gave up or was cancelled used to stay
+     * for ever, and every later renew on that address failed.
      */
-    private val waiters = HashMap<String, String>()
+    private val waiters = HashMap<String, Waiter>()
+
+    /** A little longer than any caller waits for a handover. */
+    private const val WAITER_TTL_MILLIS = 10_000L
 
     /** How long after a release the address stays unavailable: GATT closes asynchronously. */
     private const val SETTLE_MILLIS = 300L
 
     private fun now(): Long = SystemClock.elapsedRealtime()
 
-    /** Drops expired leases so a stale holder cannot block a new one. */
+    /** Drops expired leases and waiters so a stale one cannot block anybody. */
     private fun prune() {
         val cutoff = now()
         leases.entries.removeAll { it.value.expiresAtMillis <= cutoff }
+        waiters.entries.removeAll { it.value.expiresAtMillis <= cutoff }
     }
 
     /** Takes the lease, or false when someone else holds it. Re-acquiring by [owner] extends it. */
@@ -38,7 +46,7 @@ object RadioLeases {
         val held = leases[address]
         if (held != null && held.owner != owner) return false
         // Taking the lease satisfies this owner's own request, if it made one.
-        if (waiters[address] == owner) waiters.remove(address)
+        if (waiters[address]?.owner == owner) waiters.remove(address)
         leases[address] = Lease(owner, now() + ttlMillis)
         return true
     }
@@ -49,17 +57,28 @@ object RadioLeases {
         prune()
         val held = leases[address]
         if (held == null || held.owner == owner) return
-        waiters[address] = owner
+        waiters[address] = Waiter(owner, now() + WAITER_TTL_MILLIS)
     }
 
-    /** Extends a held lease. False once expired, taken, or requested by someone else. */
+    /** Takes back a [request]. Call it when the wait ends without the lease. */
     @Synchronized
-    fun renew(address: String, owner: String, ttlMillis: Long): Boolean {
+    fun withdraw(address: String, owner: String) {
+        if (waiters[address]?.owner == owner) waiters.remove(address)
+    }
+
+    /**
+     * Extends a held lease. False once expired or taken. With [yieldToWaiter], also false
+     * once someone else asked: that is the cue for a holder with no natural end (the
+     * notification forwarder, the settings link) to let go. Work with an end, such as a
+     * sync, passes false and keeps the radio until it is done. The waiter gets "busy".
+     */
+    @Synchronized
+    fun renew(address: String, owner: String, ttlMillis: Long, yieldToWaiter: Boolean = true): Boolean {
         prune()
         val held = leases[address] ?: return false
         if (held.owner != owner) return false
         val waiter = waiters[address]
-        if (waiter != null && waiter != owner) return false
+        if (yieldToWaiter && waiter != null && waiter.owner != owner) return false
         leases[address] = Lease(owner, now() + ttlMillis)
         return true
     }

@@ -129,13 +129,66 @@ class HealthConnectReaderSupportTest {
         assertTrue(maxActiveReads.get() <= 4)
     }
 
-    private fun support(): HealthConnectReaderSupport {
+    @Test fun `a strict read rethrows the failure a screen read swallows`() = runTest {
+        val support = support()
+
+        assertEquals(7, support.withLogging("read", fallback = 7) { throw IllegalStateException("binder died") })
+        val thrown = runCatching {
+            withStrictHealthConnectReads {
+                support.withLogging("read", fallback = 7) { throw IllegalStateException("binder died") }
+            }
+        }.exceptionOrNull()
+
+        // A writer that got 7 here would save it as the truth.
+        assertTrue(thrown is IllegalStateException)
+        assertEquals("binder died", thrown?.message)
+    }
+
+    @Test fun `a strict read throws while the backoff is armed, without trying`() = runTest {
+        val support = support()
+        support.withLogging("read", fallback = 0) { throw RuntimeException("Rate limited request quota has been exceeded.") }
+        var attempts = 0
+
+        val thrown = runCatching {
+            withStrictHealthConnectReads { support.withLogging("read", fallback = 0) { attempts += 1; 1 } }
+        }.exceptionOrNull()
+
+        // After one rate-limit hit every later chunk of a 730-day sync came back empty at once.
+        assertTrue(thrown is HealthConnectRateLimitException)
+        assertEquals(0, attempts)
+    }
+
+    @Test fun `a strict read throws while Health Connect access is paused`() = runTest {
+        val support = support(syncEnabled = { false })
+
+        assertEquals(7, support.withLogging("read", fallback = 7) { 1 })
+        val thrown = runCatching {
+            withStrictHealthConnectReads { support.withNullableLogging("read") { 1 } }
+        }.exceptionOrNull()
+
+        assertTrue(thrown is IllegalStateException)
+    }
+
+    @Test fun `strictness reaches the child coroutines a sync fans out to`() = runTest {
+        val support = support()
+
+        val thrown = runCatching {
+            withStrictHealthConnectReads {
+                async { support.withLogging("read", fallback = emptyList<Int>()) { error("ipc failed") } }.await()
+            }
+        }.exceptionOrNull()
+
+        assertEquals("ipc failed", thrown?.message)
+    }
+
+    private fun support(syncEnabled: () -> Boolean = { true }): HealthConnectReaderSupport {
         val diagnostics = mockk<HealthConnectDiagnostics>()
         every { diagnostics.summary() } returns "diagnostics"
         return HealthConnectReaderSupport(
             clientProvider = { mockk<HealthConnectClient>() },
             diagnostics = diagnostics,
             rateLimitMessage = { "rate limited" },
+            syncEnabled = syncEnabled,
         )
     }
 }

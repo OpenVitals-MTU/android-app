@@ -16,15 +16,18 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The sync session state machine: handshake, authenticate, bidirectional
- * record exchange, report. Pure Kotlin over a [SyncByteTransport].
+ * The sync session state machine: handshake, key exchange, code check,
+ * bidirectional record exchange, report. Pure Kotlin over a [SyncByteTransport].
  *
- * Symmetric: both phones run the same code, differing only in [SyncRole].
+ * Both phones run the same code, differing only in [SyncRole]. No record moves
+ * until both users said the codes match. From the key exchange on, every frame
+ * but an abort is sealed; see [SyncFrameCipher].
+ *
  * A sender loop pushes records with stop-and-wait acks while a receiver
  * loop dedups, writes and acks the peer's.
  */
 
-/** Which side of the pairing this phone is. Fixes the nonce order for the shared key. */
+/** Which side of the pairing this phone is. The host commits to its key first. */
 enum class SyncRole { HOST, GUEST }
 
 /** Thrown when a session ends early. */
@@ -51,8 +54,11 @@ interface SyncRecordStore {
 /** Static configuration for a session. */
 class SyncSessionConfig(
     val role: SyncRole,
-    /** The 6-digit pairing code (host shows it, guest types it). Both feed it in. */
-    val code: String,
+    /**
+     * Shows the six digits and returns whether the user said they match the other
+     * phone's. Cancelled when the session ends first.
+     */
+    val confirmCode: suspend (code: String) -> Boolean,
     val deviceName: String,
     /** Record types this device supports. */
     val supportedTypes: List<String>,
@@ -61,7 +67,16 @@ class SyncSessionConfig(
     val hcProviderVersion: Long? = null,
     /** Records per batch (stop-and-wait unit). */
     val batchSize: Int = 200,
+    /**
+     * How long the other user may take to press Start sync. Each phone starts its
+     * session on its own tap, so this waits for a person, not for a radio. A phone
+     * that leaves the wizard drops the link, which ends the wait at once.
+     */
+    val peerStartTimeoutMillis: Long = 600_000,
+    /** How long the other phone may take to answer a handshake frame. */
     val handshakeTimeoutMillis: Long = 30_000,
+    /** How long a user may take to compare the codes. */
+    val confirmTimeoutMillis: Long = 120_000,
     val batchTimeoutMillis: Long = 60_000,
     /** Pre-seeded nonce for deterministic tests; production generates one. */
     val nonce: ByteArray? = null,
@@ -90,14 +105,35 @@ class SyncSession(
 
     // Handshake deferreds + exchange plumbing, driven by [dispatch].
     private val peerHello = CompletableDeferred<SyncHello>()
-    private val peerAuth = CompletableDeferred<SyncAuthProof>()
+    private val peerCommit = CompletableDeferred<Unit>()
+    private val sessionKeys = CompletableDeferred<SyncSessionKeys>()
+    private val peerConfirmed = CompletableDeferred<Unit>()
+    private val failure = CompletableDeferred<SyncAborted>()
     private val incomingBatches = Channel<SyncBatch>(Channel.UNLIMITED)
 
     @Volatile private var pendingAck: CompletableDeferred<Int>? = null
 
     @Volatile private var receivedHello: SyncHello? = null
 
-    @Volatile private var authenticated = false
+    // Key exchange state. The reader derives the keys itself, so the cipher is
+    // in place before the next frame is read.
+    private lateinit var keyPair: SyncKeyPair
+    private val hostSalt: ByteArray = generateSyncNonce(random)
+
+    @Volatile private var ownHelloBytes: ByteArray? = null
+
+    @Volatile private var peerHelloBytes: ByteArray? = null
+
+    @Volatile private var commitment: ByteArray? = null
+
+    @Volatile private var commitSent = false
+
+    @Volatile private var shareSent = false
+
+    @Volatile private var cipher: SyncFrameCipher? = null
+
+    // Set before our CONFIRM leaves, so it is true before the peer can answer with records.
+    @Volatile private var localConfirmed = false
     private var abortSent = false
     private var abortReason: String? = null
 
@@ -108,12 +144,14 @@ class SyncSession(
 
     /** Runs the session and resolves with the report. Cancellation propagates. */
     suspend fun run(): SyncReport = coroutineScope {
+        // Fresh for every session, and made before the reader can need it.
+        keyPair = generateSyncKeyPair()
         val readerJob = launch { readLoop() }
         try {
             val peer = handshake()
-            authenticate(peer)
-            // Record frames before this are a protocol violation; see [dispatch].
-            authenticated = true
+            val keys = exchangeKeys(peer)
+            // Record frames before both users agreed are a protocol violation; see [dispatch].
+            confirmCode(keys.code)
             val negotiated = negotiateTypes(peer)
             exchange(negotiated)
             emit(phase = SyncPhase.COMPLETE)
@@ -141,17 +179,16 @@ class SyncSession(
 
     private suspend fun handshake(): SyncHello {
         emit(phase = SyncPhase.HANDSHAKE)
-        send(
-            SyncFrameType.HELLO,
-            SyncHello(
-                protocolVersion = SYNC_PROTOCOL_VERSION,
-                deviceName = config.deviceName,
-                hcProviderVersion = config.hcProviderVersion,
-                supportedTypes = config.supportedTypes,
-                nonce = nonce,
-            ).encode(),
-        )
-        val peer = await(peerHello, config.handshakeTimeoutMillis, "timed out waiting for peer hello")
+        val hello = SyncHello(
+            protocolVersion = SYNC_PROTOCOL_VERSION,
+            deviceName = config.deviceName,
+            hcProviderVersion = config.hcProviderVersion,
+            supportedTypes = config.supportedTypes,
+            nonce = nonce,
+        ).encode()
+        ownHelloBytes = hello
+        send(SyncFrameType.HELLO, hello)
+        val peer = await(peerHello, config.peerStartTimeoutMillis, "the other phone did not start the sync in time")
         if (peer.protocolVersion != SYNC_PROTOCOL_VERSION) {
             throw SyncAborted(
                 "incompatible protocol version ${peer.protocolVersion} " +
@@ -161,27 +198,48 @@ class SyncSession(
         return peer
     }
 
-    private suspend fun authenticate(peer: SyncHello) {
+    private suspend fun exchangeKeys(peer: SyncHello): SyncSessionKeys {
         emit(phase = SyncPhase.AUTHENTICATING)
-        // A peer echoing our nonce could reflect our own proof. Two 256-bit
-        // nonces are never equal by chance.
+        // An echo of our own hello is not a second phone.
         if (constantTimeEquals(peer.nonce, nonce)) {
             throw SyncAborted("peer reflected our nonce")
         }
-        // Fix nonce order by role so both phones derive the same key.
-        val hostNonce = if (config.role == SyncRole.HOST) nonce else peer.nonce
-        val guestNonce = if (config.role == SyncRole.HOST) peer.nonce else nonce
-        val sessionKey = deriveSessionKey(config.code, hostNonce, guestNonce)
-        val myRole = if (config.role == SyncRole.HOST) AUTH_ROLE_HOST else AUTH_ROLE_GUEST
-        val peerRole = if (config.role == SyncRole.HOST) AUTH_ROLE_GUEST else AUTH_ROLE_HOST
-        // Prove over the peer's nonce with our role, verify theirs with their role.
-        val myProof = computeAuthProof(sessionKey, challengeNonce = peer.nonce, roleByte = myRole)
-        send(SyncFrameType.AUTH, SyncAuthProof(myProof).encode())
-        val peerProof = await(peerAuth, config.handshakeTimeoutMillis, "timed out waiting for auth")
-        val expected = computeAuthProof(sessionKey, challengeNonce = nonce, roleByte = peerRole)
-        if (!constantTimeEquals(peerProof.proof, expected)) {
-            throw SyncAborted("pairing code did not match")
+        when (config.role) {
+            SyncRole.HOST -> {
+                // Set first: the guest may answer before send returns.
+                commitSent = true
+                send(
+                    SyncFrameType.KEY_COMMIT,
+                    SyncKeyCommit(commitToHostKey(keyPair.publicKey, hostSalt)).encode(),
+                )
+                // The reader derives the keys when the guest's key arrives.
+                val keys = await(sessionKeys, config.handshakeTimeoutMillis, "timed out waiting for the peer key")
+                send(SyncFrameType.KEY_REVEAL, SyncKeyReveal(keyPair.publicKey, hostSalt).encode())
+                return keys
+            }
+            SyncRole.GUEST -> {
+                await(peerCommit, config.handshakeTimeoutMillis, "timed out waiting for the host commitment")
+                shareSent = true
+                send(SyncFrameType.KEY_SHARE, SyncKeyShare(keyPair.publicKey).encode())
+                return await(sessionKeys, config.handshakeTimeoutMillis, "timed out waiting for the host key")
+            }
         }
+    }
+
+    private suspend fun confirmCode(code: String) {
+        if (!askUser(code)) throw SyncAborted(CODES_DIFFER_REASON)
+        localConfirmed = true
+        emit(phase = SyncPhase.CONFIRMING)
+        send(SyncFrameType.CONFIRM, ByteArray(0))
+        await(peerConfirmed, config.confirmTimeoutMillis, "timed out waiting for the other phone to confirm")
+    }
+
+    /** Asks the user, but gives up as soon as the link or the peer ends the session. */
+    private suspend fun askUser(code: String): Boolean = coroutineScope {
+        val watchdog = launch { throw failure.await() }
+        val answer = withTimeoutOrNull(config.confirmTimeoutMillis) { config.confirmCode(code) }
+        watchdog.cancel()
+        answer ?: throw SyncAborted("nobody confirmed the code in time")
     }
 
     private fun negotiateTypes(peer: SyncHello): List<String> {
@@ -296,31 +354,44 @@ class SyncSession(
                     if (!peerHello.isCompleted) {
                         val hello = SyncHello.decode(frame.payload)
                         receivedHello = hello
+                        peerHelloBytes = frame.payload
                         peerHello.complete(hello)
                     }
                 }
-                SyncFrameType.AUTH -> {
-                    if (!peerAuth.isCompleted) {
-                        peerAuth.complete(SyncAuthProof.decode(frame.payload))
-                    }
-                }
+                // Only a version 1 peer sends this. The hello check ends that session.
+                SyncFrameType.AUTH -> Unit
+                SyncFrameType.KEY_COMMIT -> onKeyCommit(frame.payload)
+                SyncFrameType.KEY_SHARE -> onKeyShare(frame.payload)
+                SyncFrameType.KEY_REVEAL -> onKeyReveal(frame.payload)
+                SyncFrameType.CONFIRM,
                 SyncFrameType.BATCH,
                 SyncFrameType.BATCH_ACK,
                 SyncFrameType.SEND_DONE,
                 -> {
-                    // Record frames before auth are rejected without decoding, so an
-                    // unauthenticated peer cannot trigger a gzip inflate.
-                    if (!authenticated) {
+                    val opener = cipher
+                    if (opener == null) {
+                        failPending("${frame.type.wireName} before the key exchange")
+                        return
+                    }
+                    // Opened in arrival order, even when rejected below: the counter must advance.
+                    val payload = opener.open(frame.type, frame.payload)
+                    if (frame.type == SyncFrameType.CONFIRM) {
+                        if (!peerConfirmed.complete(Unit)) failPending("confirm sent twice")
+                        return
+                    }
+                    // Records before both users agreed are rejected without decoding, so
+                    // an unconfirmed peer cannot trigger a gzip inflate.
+                    if (!localConfirmed || !peerConfirmed.isCompleted) {
                         failPending("${frame.type.wireName} before authentication")
                         return
                     }
                     when (frame.type) {
                         SyncFrameType.BATCH ->
-                            incomingBatches.trySend(SyncBatch.decode(frame.payload))
+                            incomingBatches.trySend(SyncBatch.decode(payload))
                         SyncFrameType.BATCH_ACK -> {
                             val ack = pendingAck
                             pendingAck = null
-                            ack?.complete(SyncBatchAck.decode(frame.payload).seq)
+                            ack?.complete(SyncBatchAck.decode(payload).seq)
                         }
                         SyncFrameType.SEND_DONE -> incomingBatches.close()
                         else -> Unit
@@ -334,6 +405,54 @@ class SyncSession(
         }
     }
 
+    private fun onKeyCommit(payload: ByteArray) {
+        if (config.role != SyncRole.GUEST || peerHelloBytes == null || commitment != null) {
+            failPending("unexpected keyCommit")
+            return
+        }
+        commitment = SyncKeyCommit.decode(payload).commitment
+        peerCommit.complete(Unit)
+    }
+
+    private fun onKeyShare(payload: ByteArray) {
+        if (config.role != SyncRole.HOST || !commitSent || sessionKeys.isCompleted) {
+            failPending("unexpected keyShare")
+            return
+        }
+        val guestKey = SyncKeyShare.decode(payload).publicKey
+        useKeys(hostKey = keyPair.publicKey, guestKey = guestKey, salt = hostSalt, peerKey = guestKey)
+    }
+
+    private fun onKeyReveal(payload: ByteArray) {
+        val committed = commitment
+        if (config.role != SyncRole.GUEST || committed == null || !shareSent || sessionKeys.isCompleted) {
+            failPending("unexpected keyReveal")
+            return
+        }
+        val reveal = SyncKeyReveal.decode(payload)
+        if (!hostKeyMatchesCommitment(committed, reveal.publicKey, reveal.salt)) {
+            failPending("the host key does not match its commitment")
+            return
+        }
+        useKeys(hostKey = reveal.publicKey, guestKey = keyPair.publicKey, salt = reveal.salt, peerKey = reveal.publicKey)
+    }
+
+    private fun useKeys(hostKey: ByteArray, guestKey: ByteArray, salt: ByteArray, peerKey: ByteArray) {
+        val own = checkNotNull(ownHelloBytes)
+        val peer = checkNotNull(peerHelloBytes)
+        val isHost = config.role == SyncRole.HOST
+        val transcript = syncTranscriptHash(
+            hostHello = if (isHost) own else peer,
+            guestHello = if (isHost) peer else own,
+            hostPublicKey = hostKey,
+            guestPublicKey = guestKey,
+            hostSalt = salt,
+        )
+        val keys = deriveSyncSessionKeys(keyPair, peerKey, transcript)
+        cipher = SyncFrameCipher.forRole(config.role, keys)
+        sessionKeys.complete(keys)
+    }
+
     private fun handleAbort(reason: String) {
         if (abortReason == null) abortReason = reason
         failPending("peer aborted: $reason")
@@ -342,8 +461,11 @@ class SyncSession(
     /** Propagates a fatal condition to whichever awaiter is live so [run] unwinds. */
     private fun failPending(reason: String) {
         val error = SyncAborted(reason)
+        failure.complete(error)
         peerHello.completeExceptionally(error)
-        peerAuth.completeExceptionally(error)
+        peerCommit.completeExceptionally(error)
+        sessionKeys.completeExceptionally(error)
+        peerConfirmed.completeExceptionally(error)
         val ack = pendingAck
         pendingAck = null
         ack?.completeExceptionally(error)
@@ -356,7 +478,9 @@ class SyncSession(
     private suspend fun send(type: SyncFrameType, payload: ByteArray) {
         sendMutex.withLock {
             try {
-                transport.send(SyncFrame(type, payload).encode())
+                // Sealed under the lock: the cipher counts frames in send order.
+                val body = if (type.isSealed) checkNotNull(cipher).seal(type, payload) else payload
+                transport.send(SyncFrame(type, body).encode())
             } catch (e: CancellationException) {
                 throw e
             } catch (e: SyncAborted) {
@@ -412,4 +536,11 @@ private val SyncFrameType.wireName: String
         SyncFrameType.BATCH_ACK -> "batchAck"
         SyncFrameType.SEND_DONE -> "sendDone"
         SyncFrameType.ABORT -> "abort"
+        SyncFrameType.KEY_COMMIT -> "keyCommit"
+        SyncFrameType.KEY_SHARE -> "keyShare"
+        SyncFrameType.KEY_REVEAL -> "keyReveal"
+        SyncFrameType.CONFIRM -> "confirm"
     }
+
+/** The abort reason when this phone's user said the codes differ. */
+const val CODES_DIFFER_REASON: String = "the codes did not match"

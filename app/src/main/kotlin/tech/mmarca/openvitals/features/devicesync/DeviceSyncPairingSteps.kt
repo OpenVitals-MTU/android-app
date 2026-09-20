@@ -13,12 +13,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Backspace
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.BluetoothSearching
 import androidx.compose.material.icons.outlined.Devices
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Password
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.WifiTethering
@@ -66,7 +64,7 @@ internal fun DeviceSyncRoleStep(
             DeviceSyncRoleCard(
                 icon = Icons.Outlined.WifiTethering,
                 title = stringResource(R.string.device_sync_host_option),
-                body = stringResource(R.string.device_sync_host_option_body),
+                body = stringResource(R.string.device_sync_host_option_body_compare),
                 onClick = onChooseHost,
             )
         }
@@ -74,7 +72,7 @@ internal fun DeviceSyncRoleStep(
             DeviceSyncRoleCard(
                 icon = Icons.Outlined.Smartphone,
                 title = stringResource(R.string.device_sync_guest_option),
-                body = stringResource(R.string.device_sync_guest_option_body),
+                body = stringResource(R.string.device_sync_guest_option_body_compare),
                 onClick = onChooseGuest,
             )
         }
@@ -144,13 +142,13 @@ private fun DeviceSyncRoleCard(
 
 /** Step 2 (host) — show the code and wait for the guest to connect. */
 @Composable
-internal fun DeviceSyncHostStep(state: DeviceSyncState, onCancel: () -> Unit) {
+internal fun DeviceSyncHostStep(onCancel: () -> Unit) {
     LazyColumn {
         item {
             DeviceSyncHero(
                 icon = Icons.Outlined.WifiTethering,
                 title = stringResource(R.string.device_sync_host_heading),
-                body = stringResource(R.string.device_sync_host_body),
+                body = stringResource(R.string.device_sync_host_body_compare),
             )
         }
         item {
@@ -165,16 +163,6 @@ internal fun DeviceSyncHostStep(state: DeviceSyncState, onCancel: () -> Unit) {
                         .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(
-                        text = stringResource(R.string.device_sync_code_label),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = state.code,
-                        style = MaterialTheme.typography.displaySmall.copy(letterSpacing = 8.sp),
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(
                             strokeWidth = 2.dp,
@@ -203,11 +191,15 @@ internal fun DeviceSyncScanStep(
             DeviceSyncHero(
                 icon = Icons.Outlined.BluetoothSearching,
                 title = stringResource(R.string.device_sync_scan_heading),
-                body = stringResource(R.string.device_sync_scan_body),
+                body = stringResource(R.string.device_sync_scan_body_compare),
             )
+        }
+        state.error?.let { error ->
+            item { DeviceSyncBanner(deviceSyncErrorText(error), isError = true) }
         }
         items(state.devices, key = { it.address }) { device ->
             OpenVitalsCard(
+                // The view model ignores a tap while it connects.
                 onClick = { onSelectDevice(device) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -239,7 +231,25 @@ internal fun DeviceSyncScanStep(
                 }
             }
         }
-        if (state.scanning) {
+        if (state.connecting) {
+            item {
+                val deviceLabel = state.selectedDevice?.let { it.name ?: it.address }.orEmpty()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(Spacing.xxl),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        strokeWidth = SpinnerStroke,
+                        modifier = Modifier.size(Spacing.xl),
+                    )
+                    Spacer(modifier = Modifier.width(Spacing.sm))
+                    Text(stringResource(R.string.device_sync_connecting, deviceLabel))
+                }
+            }
+        } else if (state.scanning) {
             item {
                 Box(
                     modifier = Modifier
@@ -282,131 +292,67 @@ internal fun DeviceSyncScanStep(
     }
 }
 
-/** Step 3 (guest) — type the code shown on the host. */
+/** Both phones show the same six digits. The user says whether they match. */
 @Composable
-internal fun DeviceSyncCodeStep(
+internal fun DeviceSyncCompareStep(
     state: DeviceSyncState,
-    onDigit: (Char) -> Unit,
-    onDelete: () -> Unit,
-    onSubmit: () -> Unit,
+    onMatch: () -> Unit,
+    onMismatch: () -> Unit,
 ) {
-    val deviceLabel = state.selectedDevice?.let { it.name ?: it.address }.orEmpty()
     LazyColumn {
         item {
             DeviceSyncHero(
-                icon = Icons.Outlined.Password,
-                title = stringResource(R.string.device_sync_code_heading, deviceLabel),
-                body = stringResource(R.string.device_sync_code_body),
+                icon = Icons.Outlined.Lock,
+                title = stringResource(R.string.device_sync_compare_heading),
+                body = stringResource(R.string.device_sync_compare_body),
             )
         }
         item {
-            Row(
+            OpenVitalsCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.Center,
+                    .padding(Spacing.lg),
             ) {
-                repeat(PAIRING_CODE_DIGITS) { index ->
-                    val filled = index < state.codeEntry.length
-                    val active = index == state.codeEntry.length
-                    OpenVitalsCard(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        modifier = Modifier.padding(4.dp),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(52.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = if (filled) state.codeEntry[index].toString() else "",
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = if (active) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
-                            )
-                        }
-                    }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(Spacing.xl),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = stringResource(R.string.device_sync_code_label),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.md))
+                    Text(
+                        // Two groups of three are easier to compare than six in a row.
+                        text = state.code.chunked(PAIRING_CODE_DIGITS / 2).joinToString(" "),
+                        style = MaterialTheme.typography.displaySmall.copy(letterSpacing = 8.sp),
+                    )
                 }
             }
-        }
-        if (state.codeError) {
-            item {
-                DeviceSyncBanner(stringResource(R.string.device_sync_wrong_code), isError = true)
-            }
-        }
-        state.error?.let { error ->
-            item { DeviceSyncBanner(deviceSyncErrorText(error), isError = true) }
-        }
-        item {
-            DeviceSyncKeypad(
-                onDigit = onDigit,
-                onDelete = onDelete,
-                modifier = Modifier.padding(16.dp),
-            )
         }
         item {
             OpenVitalsFilledButton(
-                onClick = onSubmit,
-                enabled = state.codeEntry.length == PAIRING_CODE_DIGITS,
+                onClick = onMatch,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    .padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.sm),
             ) {
-                Text(stringResource(R.string.device_sync_connect))
+                Text(stringResource(R.string.device_sync_compare_match))
+            }
+        }
+        item {
+            OpenVitalsOutlinedButton(
+                onClick = onMismatch,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.lg),
+            ) {
+                Text(stringResource(R.string.device_sync_compare_mismatch))
             }
         }
     }
 }
 
-@Composable
-private fun DeviceSyncKeypad(
-    onDigit: (Char) -> Unit,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val rows = listOf(
-        listOf('1', '2', '3'),
-        listOf('4', '5', '6'),
-        listOf('7', '8', '9'),
-        listOf(null, '0', DELETE_KEY),
-    )
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        rows.forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                row.forEach { key ->
-                    if (key == null) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    } else {
-                        OpenVitalsOutlinedButton(
-                            onClick = { if (key == DELETE_KEY) onDelete() else onDigit(key) },
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            if (key == DELETE_KEY) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.Backspace,
-                                    contentDescription = stringResource(
-                                        R.string.device_sync_keypad_delete,
-                                    ),
-                                )
-                            } else {
-                                Text(
-                                    text = key.toString(),
-                                    style = MaterialTheme.typography.titleLarge,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-private const val DELETE_KEY = '\b'
+private val SpinnerStroke = 2.dp

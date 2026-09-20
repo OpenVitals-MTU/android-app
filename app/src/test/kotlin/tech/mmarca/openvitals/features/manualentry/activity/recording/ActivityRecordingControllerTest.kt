@@ -14,6 +14,7 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import java.io.File
 import java.nio.file.Files
+import java.time.Instant
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
 import tech.mmarca.openvitals.domain.model.BleRecordingMetrics
+import tech.mmarca.openvitals.domain.model.BleHeartRateSample
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
@@ -121,6 +123,63 @@ class ActivityRecordingControllerTest {
 
         recorder.discardRecording()
         assertFalse(recorder.state.value.isActive)
+    }
+
+    @Test fun `a finished recording is still there after the process is killed`() {
+        val heartRate = BleRecordingSampleBuffer(
+            heartRateSamples = listOf(BleHeartRateSample(Instant.parse("2026-05-26T08:31:00Z"), 142L)),
+        )
+        every { ble.stopRecording() } returns heartRate
+        val recorder = controller()
+        recorder.startRecording(stationaryBike, null)
+        Thread.sleep(5)
+
+        val finished = recorder.finishRecording()
+
+        // Finish used to wipe the store. The workout then lived in memory until Save, and a
+        // process killed on the way to the permission screen took it along.
+        val afterRestart = controller()
+        assertFalse(afterRestart.state.value.isActive)
+        val restored = afterRestart.finishedRecording()
+        assertNotNull(restored)
+        // The store keeps milliseconds.
+        assertEquals(finished!!.startTime.toEpochMilli(), restored!!.startTime.toEpochMilli())
+        assertEquals(finished.endTime.toEpochMilli(), restored.endTime.toEpochMilli())
+        assertEquals(finished.exerciseType, restored.exerciseType)
+        assertEquals(listOf(142L), restored.bleSamples.heartRateSamples.map { it.beatsPerMinute })
+    }
+
+    @Test fun `saving or discarding the entry drops the finished recording`() {
+        val recorder = controller()
+        recorder.startRecording(stationaryBike, null)
+        Thread.sleep(5)
+        recorder.finishRecording()
+
+        recorder.clearFinishedRecording()
+
+        assertNull(controller().finishedRecording())
+    }
+
+    @Test fun `clearing a finished recording leaves a live one alone`() {
+        val recorder = controller()
+        recorder.startRecording(stationaryBike, null)
+
+        // The entry form clears its draft on many user actions, some while a recording runs.
+        recorder.clearFinishedRecording()
+
+        assertTrue(ActivityRecordingStore(context).restore().isActive)
+    }
+
+    @Test fun `a new recording replaces a finished one that was never saved`() {
+        val recorder = controller()
+        recorder.startRecording(stationaryBike, null)
+        Thread.sleep(5)
+        recorder.finishRecording()
+
+        recorder.startRecording(stationaryBike, null)
+
+        assertNull(recorder.finishedRecording())
+        assertTrue(ActivityRecordingStore(context).restore().isActive)
     }
 
     @Test fun `discard clears the persisted draft, so a restart stays idle`() {

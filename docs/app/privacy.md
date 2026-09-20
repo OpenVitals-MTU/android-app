@@ -2,6 +2,10 @@
 
 OpenVitals is designed as a local-first app. The local Android app is intentionally separate from any connected app work.
 
+The formal policy users see is [PRIVACY.md](../../PRIVACY.md): Settings and the re-consent dialog link to it. This page explains the engineering behind it. Keep the two in step. A change here that touches what is read, stored or sent needs the same change there, with a new "Last updated" date.
+
+The app asks every user to accept the policy again when that date changes. `PreferencesRepository.CURRENT_PRIVACY_POLICY_VERSION` holds the date, and `PrivacyPolicyVersionTest` fails when the constant and `PRIVACY.md` differ. So a new date always reaches users, and a typo fix that keeps the date does not.
+
 The local app:
 
 - Does not ship app-level internet permission.
@@ -65,7 +69,7 @@ Weather shown on the watch comes from a weather app on the phone that broadcasts
 
 ### Phone-To-Phone Sync
 
-Sync copies Health Connect records from one phone to another over a paired, encrypted Bluetooth Classic link. One phone is made discoverable and shows a six-digit code, the other scans for it and types that code in, so the connection is confirmed as the intended device. The user then chooses how far back to sync and which data categories to accept. No server or account is involved at any point.
+Sync copies Health Connect records from one phone to another over a paired Bluetooth Classic link. One phone is made discoverable and the other scans for it. The user chooses how far back to sync and which data categories to accept. Before any record moves, the phones agree on a fresh key and both show the same six digits; the user confirms on both that they match, which rules out a device in between. The records then travel encrypted with that key (AES-256-GCM), on top of Bluetooth's own encryption. The key is never stored. No server or account is involved at any point. See [Sync with another phone](../features/device-sync.md).
 
 ## Health Records
 

@@ -67,9 +67,10 @@ Forwarding phone notifications to the watch is optional and off until it is turn
 
 Settings, Sync with another phone copies Health Connect records between two nearby phones over Bluetooth, with no cloud involved. The exchange is two-way: each phone sends what the other does not already have, and duplicates are skipped.
 
-1. On one phone, choose Make this phone discoverable and note the six-digit code.
-2. On the other phone, choose Find a phone, pick the first phone from the scan, and type that code.
-3. Choose how far back to sync and which data categories to include.
+1. On one phone, choose Make this phone discoverable.
+2. On the other phone, choose Find a phone and pick the first phone from the scan.
+3. On both phones, choose how far back to sync and which data categories to include, then start the sync.
+4. Both phones show a six-digit code. Check that the two codes are the same and confirm on both. If they differ, choose They do not match: nothing is synced.
 
 Bluetooth must be on, and an activity recording must be finished or discarded first, because recording and sync cannot hold the foreground at the same time.
 

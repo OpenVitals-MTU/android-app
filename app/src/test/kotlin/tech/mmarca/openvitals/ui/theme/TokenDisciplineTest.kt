@@ -96,7 +96,8 @@ class TokenDisciplineTest {
         // 2026-09-05: FitImportCard migrated (1933 -> 1925).
         // 2026-09-12: SettingsScreenContent gutters migrated (1925 -> 1892).
         // 2026-09-19: hydration impact rows became a dropdown (1892 -> 1883, alpha 92 -> 91).
-        const val MaxBareDp = 1883
+        // 2026-09-20: phone sync dropped its code keypad (1883 -> 1871).
+        const val MaxBareDp = 1871
         const val MaxBareAlpha = 91
         const val MaxBareCorner = 16
     }

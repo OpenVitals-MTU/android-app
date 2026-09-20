@@ -25,6 +25,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.performance.AppForegroundGate
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -261,6 +262,7 @@ class CsvImportFlowTest {
             context = context,
             syncGate = HealthConnectSyncGate(preferences),
             mindfulnessGate = MindfulnessIntegrationGate(preferences),
+            foregroundGate = AppForegroundGate(),
         )
         return CsvImportViewModel(
             context = context,

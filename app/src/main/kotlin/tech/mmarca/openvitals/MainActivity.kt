@@ -37,6 +37,7 @@ import tech.mmarca.openvitals.navigation.AppNavigation
 import tech.mmarca.openvitals.navigation.ExternalRouteImportRequest
 import tech.mmarca.openvitals.navigation.EXTRA_OPENVITALS_ROUTE
 import java.time.LocalDate
+import tech.mmarca.openvitals.devices.core.pairing.CompanionDevicePairing
 import tech.mmarca.openvitals.navigation.Screen
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 import java.util.Locale
@@ -48,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var healthRepository: HealthRepository
     @Inject lateinit var unitFormatter: UnitFormatter
     @Inject lateinit var dateTimeFormatterProvider: DateTimeFormatterProvider
+    @Inject lateinit var companionDevicePairing: CompanionDevicePairing
 
     private var nextRouteImportRequestId = 0L
     private var routeImportRequest by mutableStateOf<ExternalRouteImportRequest?>(null)
@@ -60,9 +62,17 @@ class MainActivity : AppCompatActivity() {
             return
         }
         enableEdgeToEdge()
-        updateRouteImportRequest(intent)
-        // A recreated activity still holds the old intent. A shared place must not reopen on rotation.
-        updateExternalNavigationRoute(intent, acceptSharedPlace = savedInstanceState == null)
+        // The companion association dialog needs an Activity launcher. Nothing attached one
+        // after the native rewrite, so no new watch was ever associated.
+        companionDevicePairing.attachToActivity(this)
+        // A recreated Activity (rotation, language change, process restore) still holds the
+        // launch intent, and its back stack comes back on its own. Applying the intent again
+        // pushed a second copy of a widget's screen, and re-ran a file import over the user's
+        // edits and their unsaved recording draft.
+        if (savedInstanceState == null) {
+            updateRouteImportRequest(intent)
+            updateExternalNavigationRoute(intent)
+        }
 
         setContent {
             val appThemeMode by preferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle()
@@ -142,6 +152,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onDestroy() {
+        companionDevicePairing.detachFromActivity(this)
+        super.onDestroy()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -173,9 +188,8 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun updateExternalNavigationRoute(intent: Intent?, acceptSharedPlace: Boolean = true) {
-        externalNavigationRoute = intent?.openVitalsRoute()
-            ?: intent?.takeIf { acceptSharedPlace }?.sendPointRoute()
+    private fun updateExternalNavigationRoute(intent: Intent?) {
+        externalNavigationRoute = intent?.openVitalsRoute() ?: intent?.sendPointRoute()
     }
 }
 

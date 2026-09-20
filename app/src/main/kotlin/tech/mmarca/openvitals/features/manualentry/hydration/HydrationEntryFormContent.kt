@@ -2265,9 +2265,11 @@ internal fun hydrationInputAmountText(
     unitFormatter: UnitFormatter,
 ): String {
     if (milliliters == null) return ""
+    // Input text, not display text: no grouping and a '.' decimal, so hydrationInputMilliliters
+    // reads back what this wrote. A grouped "1,500" was read as 1.5 ml.
     return when (unitFormatter.unitSystem(UnitQuantity.HYDRATION)) {
-        UnitSystem.METRIC -> unitFormatter.count(milliliters.roundToInt())
-        UnitSystem.IMPERIAL -> unitFormatter.decimal(milliliters / MillilitersPerFluidOunce, 1)
+        UnitSystem.METRIC -> milliliters.roundToInt().toString()
+        UnitSystem.IMPERIAL -> "%.1f".format(Locale.US, milliliters / MillilitersPerFluidOunce)
     }
 }
 

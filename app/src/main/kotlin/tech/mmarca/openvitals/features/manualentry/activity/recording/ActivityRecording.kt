@@ -976,48 +976,60 @@ class ActivityRecordingController @Inject constructor(
 
     fun finishRecording(): ActivityRecordingSnapshot? {
         val current = _state.value
-        val start = current.startTime ?: return null
-        val exerciseType = current.exerciseType ?: return null
         if (!current.isActive) return null
-
+        val start = current.startTime ?: return null
         val end = Instant.now().takeIf { it.isAfter(start) } ?: start.plusSeconds(1)
-        val pauseIntervals = current.pauseIntervals +
-            listOfNotNull(current.pausedStartedAt?.toPauseInterval(end))
-        val manualLaps = current.closedManualLaps(end)
-        val repetitionSets = current.recordedRepetitionSets(end)
         val bleSamples = bleSensorCoordinator.stopRecording()
         // Taken before clearing: going inactive resets the recorder.
         val coMapsSamples = coMapsWatch.samples()
-        val snapshot = ActivityRecordingSnapshot(
-            exerciseType = exerciseType,
-            recordingKind = current.recordingKind,
-            activityTypeId = current.activityTypeId,
-            startTime = start,
-            endTime = end,
-            points = current.points,
-            pauseIntervals = pauseIntervals,
-            routeBreakIndexes = current.routeBreakIndexes,
-            manualLaps = manualLaps,
-            markers = current.markers,
-            distanceMeters = current.distanceMeters,
-            // The filtered figure the dashboard showed, not the raw running sum.
-            elevationGainedMeters = current.displayElevationGainedMeters(),
-            repetitionCount = current.repetitionCount,
-            repetitionSets = repetitionSets,
-            planId = current.planId,
-            planTitle = current.planTitle,
-            bleSamples = bleSamples,
-            // Only with heart rate behind it, or the rest segment claims a measurement never taken.
-            hrrEffortEndedAt = if (bleSamples.heartRateSamples.isEmpty()) {
-                null
-            } else {
-                current.hrrEffortEndedAt
-            },
-            coMapsNavigationSamples = coMapsSamples,
-        )
-        clearRecording()
+        val snapshot = current.toSnapshot(end, bleSamples, coMapsSamples) ?: return null
+        resetRecording()
+        // Kept on disk until the entry is saved or discarded. One write, at a user action.
+        recordingStore.storeFinished(current, end, bleSamples)
         stopRecordingService()
         return snapshot
+    }
+
+    /**
+     * A recording that was finished but whose entry was never saved or discarded. It comes
+     * from disk, so it is still there after the process was killed. CoMaps guidance is not
+     * kept: it is app-local context, not part of the workout.
+     */
+    fun finishedRecording(): ActivityRecordingSnapshot? =
+        recordingStore.restoreFinished()?.let { it.state.toSnapshot(it.finishedAt, it.bleSamples, emptyList()) }
+
+    /** The entry was saved or the draft given up. */
+    fun clearFinishedRecording() = recordingStore.clearFinished()
+
+    private fun ActivityRecordingState.toSnapshot(
+        end: Instant,
+        bleSamples: BleRecordingSampleBuffer,
+        coMapsSamples: List<CoMapsNavigationSnapshot>,
+    ): ActivityRecordingSnapshot? {
+        val start = startTime ?: return null
+        return ActivityRecordingSnapshot(
+            exerciseType = exerciseType ?: return null,
+            recordingKind = recordingKind,
+            activityTypeId = activityTypeId,
+            startTime = start,
+            endTime = end,
+            points = points,
+            pauseIntervals = pauseIntervals + listOfNotNull(pausedStartedAt?.toPauseInterval(end)),
+            routeBreakIndexes = routeBreakIndexes,
+            manualLaps = closedManualLaps(end),
+            markers = markers,
+            distanceMeters = distanceMeters,
+            // The filtered figure the dashboard showed, not the raw running sum.
+            elevationGainedMeters = displayElevationGainedMeters(),
+            repetitionCount = repetitionCount,
+            repetitionSets = recordedRepetitionSets(end),
+            planId = planId,
+            planTitle = planTitle,
+            bleSamples = bleSamples,
+            // Only with heart rate behind it, or the rest segment claims a measurement never taken.
+            hrrEffortEndedAt = if (bleSamples.heartRateSamples.isEmpty()) null else hrrEffortEndedAt,
+            coMapsNavigationSamples = coMapsSamples,
+        )
     }
 
     fun acceptLocation(location: Location) {
@@ -1385,6 +1397,12 @@ class ActivityRecordingController @Inject constructor(
     }
 
     private fun clearRecording() {
+        resetRecording()
+        recordingStore.clear()
+    }
+
+    /** Back to idle in memory. The store is the caller's business. */
+    private fun resetRecording() {
         persistenceScope.coroutineContext.cancelChildren()
         restCompletionJob?.cancel()
         planStepJob?.cancel()
@@ -1396,7 +1414,6 @@ class ActivityRecordingController @Inject constructor(
         hrrTargetHits = 0
         recordingGeneration += 1
         _state.value = ActivityRecordingState()
-        recordingStore.clear()
     }
 
     private var lastMetadataPersistMillis = 0L
@@ -1593,8 +1610,43 @@ class ActivityRecordingStore @Inject constructor(
     private val preferences: SharedPreferences =
         context.getSharedPreferences(RecordingPreferencesName, Context.MODE_PRIVATE)
     private val routePointsFile = File(context.filesDir, RecordingRoutePointsFileName)
+    private val finishedSamplesFile = File(context.filesDir, FinishedRecordingSamplesFileName)
 
-    fun restore(): ActivityRecordingState {
+    /** The live recording to resume. A finished one is not live: see [restoreFinished]. */
+    fun restore(): ActivityRecordingState =
+        if (preferences.contains(KeyFinishedAt)) ActivityRecordingState() else restoreState()
+
+    /**
+     * Keeps a finished recording until its entry is saved or discarded. Finish used to wipe
+     * the store, and the workout then lived in memory alone. A process killed before Save,
+     * on the way to the Health Connect permission screen for one, took the route, the laps
+     * and the heart rate with it.
+     */
+    fun storeFinished(state: ActivityRecordingState, finishedAt: Instant, bleSamples: BleRecordingSampleBuffer) {
+        preferences.storeRecordingMetadata(state)
+        replaceRoutePoints(state.points)
+        if (bleSamples.isEmpty()) finishedSamplesFile.delete() else finishedSamplesFile.writeText(bleSamples.encodeSamples())
+        // Last, so the flag never marks a half-written set.
+        preferences.edit { putLong(KeyFinishedAt, finishedAt.toEpochMilli()) }
+    }
+
+    /** The recording [storeFinished] kept, or null. */
+    fun restoreFinished(): FinishedRecording? {
+        if (!preferences.contains(KeyFinishedAt)) return null
+        val samples = finishedSamplesFile.takeIf { it.exists() }?.readText().orEmpty().decodeSamples()
+        return FinishedRecording(
+            state = restoreState(),
+            finishedAt = Instant.ofEpochMilli(preferences.getLong(KeyFinishedAt, 0L)),
+            bleSamples = samples,
+        )
+    }
+
+    /** Drops a finished recording. A live one is left alone. */
+    fun clearFinished() {
+        if (preferences.contains(KeyFinishedAt)) clear()
+    }
+
+    private fun restoreState(): ActivityRecordingState {
         val restored = preferences.restoreRecordingState()
         val filePoints = routePointsFile
             .takeIf { it.exists() }
@@ -1612,6 +1664,11 @@ class ActivityRecordingStore @Inject constructor(
         if (state.status == ActivityRecordingStatus.IDLE) {
             clear()
         } else {
+            // A new recording replaces a finished one that was never saved.
+            if (preferences.contains(KeyFinishedAt)) {
+                preferences.edit { remove(KeyFinishedAt) }
+                finishedSamplesFile.delete()
+            }
             preferences.storeRecordingMetadata(state)
         }
     }
@@ -1637,8 +1694,16 @@ class ActivityRecordingStore @Inject constructor(
             clear()
         }
         routePointsFile.delete()
+        finishedSamplesFile.delete()
     }
 }
+
+/** What [ActivityRecordingStore.storeFinished] kept: the last live state, when it ended, and its samples. */
+class FinishedRecording(
+    val state: ActivityRecordingState,
+    val finishedAt: Instant,
+    val bleSamples: BleRecordingSampleBuffer,
+)
 
 internal fun ActivityEntryType.recordingKind(): ActivityRecordingKind =
     when {
@@ -1649,6 +1714,8 @@ internal fun ActivityEntryType.recordingKind(): ActivityRecordingKind =
 
 internal const val RecordingPreferencesName = "activity_recording"
 internal const val RecordingRoutePointsFileName = "activity_recording_points.csv"
+internal const val FinishedRecordingSamplesFileName = "activity_recording_finished_samples.csv"
+internal const val KeyFinishedAt = "finished_at"
 internal const val MaxLocationAgeMillis = 10_000L
 internal const val MaxLocationFutureSkewSeconds = 5L
 internal const val MaxPlausibleSpeedMetersPerSecond = 55.0

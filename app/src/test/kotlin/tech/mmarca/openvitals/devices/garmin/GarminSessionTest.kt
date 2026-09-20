@@ -421,6 +421,55 @@ class GarminSessionTest {
     }
 
     @Test
+    fun `a send that throws after a download still hands that file on`() = runTest {
+        val watch = happyWatch()
+        var archived = 0
+        val session = session(
+            this,
+            watch,
+            send = { bytes ->
+                val frame = GarminGfdiFrame.parse(bytes)
+                if (frame.messageType == GarminMessageId.SET_FILE_FLAGS) archived += 1
+                // The link drops as the second download is asked for.
+                if (archived == 1 && frame.messageType == GarminMessageId.DOWNLOAD_REQUEST) {
+                    throw IllegalStateException("link dropped")
+                }
+                watch.onFrame(frame)
+            },
+        )
+        pump(watch, session)
+
+        val files = session.done.await()
+
+        // The watch has archived the sleep file and will not offer it again. Failing the
+        // whole result here used to drop it before the import ran.
+        assertEquals(listOf(GarminFileType.SLEEP), files.map { it.entry.type })
+        assertEquals("link dropped", session.abortReason)
+    }
+
+    @Test
+    fun `a closing send that throws still settles the result`() = runTest {
+        val watch = happyWatch()
+        val session = session(
+            this,
+            watch,
+            send = { bytes ->
+                val frame = GarminGfdiFrame.parse(bytes)
+                if (frame.messageType == GarminMessageId.SYSTEM_EVENT &&
+                    frame.payload.firstOrNull()?.toInt() == GarminSystemEventType.SYNC_COMPLETE.ordinal
+                ) {
+                    throw IllegalStateException("link dropped")
+                }
+                watch.onFrame(frame)
+            },
+        )
+        pump(watch, session)
+
+        // This await never returned: finished was set, so nothing else could settle it.
+        assertEquals(2, session.done.await().size)
+    }
+
+    @Test
     fun `answers the introduction and the auth challenge`() = runTest {
         val watch = happyWatch()
         runSync(watch)

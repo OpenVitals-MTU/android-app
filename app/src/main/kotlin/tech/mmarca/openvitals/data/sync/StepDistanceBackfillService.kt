@@ -14,6 +14,7 @@ import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.preferences.StrideLength
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
 
 /**
  * The opt-in "distance from steps" backfill: one daily DistanceRecord for
@@ -57,6 +58,8 @@ class StepDistanceBackfillService @Inject constructor(
             val last = lastPass
             if (!force && last != null && Duration.between(last, now) < Throttle) return
             if (hc.availability() != HealthConnectAvailability.AVAILABLE) return
+            // Own records only would hide another app's distance, and this pass would write over it.
+            if (!hc.readsOtherAppsDataNow()) return
 
             val granted = hc.grantedPermissions()
             val required = setOf(
@@ -68,18 +71,22 @@ class StepDistanceBackfillService @Inject constructor(
 
             val today = LocalDate.now()
             val start = backfillStart(today, granted)
-            val stepsByDay = hc.readDailySteps(
-                startDate = start,
-                endDate = today,
-                includeSteps = true,
-                includeDistance = false,
-            ).associate { it.date to it.steps }
+            // Strict: an empty step map reads as "0 steps every day", and the reconcile then
+            // deletes every derived distance record. A failed read must abort the pass.
+            withStrictHealthConnectReads {
+                val stepsByDay = hc.readDailySteps(
+                    startDate = start,
+                    endDate = today,
+                    includeSteps = true,
+                    includeDistance = false,
+                ).associate { it.date to it.steps }
 
-            hc.reconcileStepDerivedDistance(
-                window = start..today,
-                stepsByDay = stepsByDay,
-                strideMeters = StrideLength.normalize(preferences.strideLengthMeters),
-            )
+                hc.reconcileStepDerivedDistance(
+                    window = start..today,
+                    stepsByDay = stepsByDay,
+                    strideMeters = StrideLength.normalize(preferences.strideLengthMeters),
+                )
+            }
             lastPass = now
         } catch (t: Throwable) {
             if (t is kotlinx.coroutines.CancellationException) throw t

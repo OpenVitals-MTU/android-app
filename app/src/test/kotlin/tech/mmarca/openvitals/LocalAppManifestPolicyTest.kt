@@ -34,6 +34,22 @@ class LocalAppManifestPolicyTest {
         )
     }
 
+    @Test
+    fun `legacy Bluetooth permissions are declared for Android 11 and older`() {
+        val manifest = File("src/main/AndroidManifest.xml").readText()
+        val permissionTags = manifestTags(manifest, "uses-permission")
+
+        listOf(
+            "android.permission.BLUETOOTH",
+            "android.permission.BLUETOOTH_ADMIN",
+        ).forEach { permission ->
+            assertTrue(
+                "$permission must be declared with maxSdkVersion 30, or Bluetooth throws below API 31.",
+                permissionTags.any { it.names(permission) && it.contains("""android:maxSdkVersion="30"""") },
+            )
+        }
+    }
+
     private fun manifestTags(manifest: String, tagName: String): List<String> =
         Regex("""<$tagName\b[^>]*>""").findAll(manifest).map { it.value }.toList()
 

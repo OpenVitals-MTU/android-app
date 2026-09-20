@@ -808,13 +808,18 @@ class GarminSession(
         if (finished) return
         finished = true
         timers.cancelAll()
-        send(buildSystemEvent(GarminSystemEventType.SYNC_COMPLETE))
-        report(GarminSyncPhase.COMPLETE)
-        GarminLog.log("[GARMIN-SYNC] complete: ${downloaded.size} files")
-        if (keepAnsweringAfterSync) {
-            GarminLog.log("[GARMIN-LISTEN] sync done; still answering the watch")
+        try {
+            send(buildSystemEvent(GarminSystemEventType.SYNC_COMPLETE))
+        } finally {
+            // Settled even when this send throws on a dropped link. `finished` is already
+            // set, so nothing else would: the result stayed pending and the radio with it.
+            report(GarminSyncPhase.COMPLETE)
+            GarminLog.log("[GARMIN-SYNC] complete: ${downloaded.size} files")
+            if (keepAnsweringAfterSync) {
+                GarminLog.log("[GARMIN-LISTEN] sync done; still answering the watch")
+            }
+            doneDeferred.complete(downloaded.toList())
         }
-        doneDeferred.complete(downloaded.toList())
     }
 
     private fun fail(error: Exception) {
@@ -827,7 +832,15 @@ class GarminSession(
         cancelStageTimeout()
         report(GarminSyncPhase.FAILED)
         GarminLog.log("[GARMIN-SYNC] failed: $error")
-        doneDeferred.completeExceptionally(error)
+        if (downloaded.isEmpty()) {
+            doneDeferred.completeExceptionally(error)
+            return
+        }
+        // The watch archived each of these as it arrived and will not offer them again.
+        // Hand them on, as abort() does, so they are still imported.
+        abortReason = error.message ?: error.toString()
+        queue.clear()
+        doneDeferred.complete(downloaded.toList())
     }
 
     /** Ends the sync early. What was already downloaded is still returned. */

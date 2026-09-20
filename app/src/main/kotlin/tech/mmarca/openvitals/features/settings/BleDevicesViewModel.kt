@@ -72,7 +72,8 @@ class BleDevicesViewModel @Inject constructor(
                 Manifest.permission.BLUETOOTH_CONNECT,
             )
         } else {
-            emptyArray()
+            // Below API 31 a BLE scan finds nothing without fine location.
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
         }
 
     fun refresh() {

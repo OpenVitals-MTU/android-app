@@ -1,7 +1,9 @@
 package tech.mmarca.openvitals.ui.components
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -57,6 +59,7 @@ fun PrivacyReconsentPrompt() {
     var showDialog by rememberSaveable { mutableStateOf(false) }
     var resumeTick by remember { mutableIntStateOf(0) }
     val privacyPolicyUrl = stringResource(R.string.settings_privacy_policy_url)
+    val noBrowserMessage = stringResource(R.string.privacy_reconsent_no_browser, privacyPolicyUrl)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         resumeTick++
@@ -72,7 +75,12 @@ fun PrivacyReconsentPrompt() {
         PrivacyReconsentDialog(
             onDismissRequest = { showDialog = false },
             onReviewPolicy = {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(privacyPolicyUrl)))
+                try {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(privacyPolicyUrl)))
+                } catch (_: ActivityNotFoundException) {
+                    // This app needs no browser, so some phones that run it have none.
+                    Toast.makeText(context, noBrowserMessage, Toast.LENGTH_LONG).show()
+                }
             },
             onAccept = {
                 prefs.acceptedPrivacyPolicyVersion = PreferencesRepository.CURRENT_PRIVACY_POLICY_VERSION

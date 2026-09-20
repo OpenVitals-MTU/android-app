@@ -7,13 +7,35 @@ import androidx.health.connect.client.aggregate.AggregationResultGroupedByDurati
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlin.math.roundToLong
 import kotlinx.coroutines.withContext
+
+/**
+ * Marks a block whose Health Connect reads must fail loudly.
+ *
+ * A screen wants an empty state when a read fails, so the readers return a fallback. A
+ * writer must not take "the read failed" for "there is no data" and save it: a rate limit
+ * once emptied 730 days of cached history and stamped the sync complete. Inside
+ * [withStrictHealthConnectReads] every guarded read throws instead.
+ */
+internal class StrictHealthConnectReads private constructor() :
+    AbstractCoroutineContextElement(StrictHealthConnectReads) {
+    companion object Key : CoroutineContext.Key<StrictHealthConnectReads> {
+        val Element = StrictHealthConnectReads()
+    }
+}
+
+internal suspend fun <T> withStrictHealthConnectReads(block: suspend CoroutineScope.() -> T): T =
+    withContext(StrictHealthConnectReads.Element, block)
 
 internal class HealthConnectReaderSupport(
     private val clientProvider: () -> HealthConnectClient,
@@ -92,13 +114,17 @@ internal class HealthConnectReaderSupport(
         block: suspend () -> T,
     ): T {
         val safeOperation = operation.privacySafeOperationName()
+        // A writer's read must not pass a failure off as "no data".
+        val strict = currentCoroutineContext()[StrictHealthConnectReads] != null
         if (!syncEnabled()) {
             Log.d(TAG, "Skipping $safeOperation - Health Connect sync paused")
+            check(!strict) { "Health Connect access is paused" }
             return fallback
         }
         val backoffMillis = HealthConnectRateLimitBackoff.remainingMillis()
         if (backoffMillis > MaxRateLimitWaitMillis) {
             Log.w(TAG, "Skipping $safeOperation - Health Connect rate limited for ${backoffMillis}ms more")
+            if (strict) HealthConnectRateLimitBackoff.throwIfActive(rateLimitMessage)
             return fallback
         }
         if (backoffMillis > 0L) {
@@ -116,10 +142,12 @@ internal class HealthConnectReaderSupport(
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             if (HealthConnectRateLimitBackoff.isRateLimitFailure(t)) {
-                HealthConnectRateLimitBackoff.markRateLimited(t, rateLimitMessage)
+                val rateLimit = HealthConnectRateLimitBackoff.markRateLimited(t, rateLimitMessage)
                 Log.w(TAG, "Rate limited $safeOperation ${diagnosticsSummary()}", t)
+                if (strict) throw rateLimit
             } else {
                 Log.e(TAG, "Failed $safeOperation ${diagnosticsSummary()}", t)
+                if (strict) throw t
             }
             fallback
         }

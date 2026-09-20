@@ -6,8 +6,12 @@ import java.time.Instant
 
 /** Coarse phase of a session, for the progress label. */
 enum class SyncPhase {
+    /** Our hello is out. The peer sends its own when its user presses Start sync. */
     HANDSHAKE,
     AUTHENTICATING,
+
+    /** This phone's user confirmed the code; the other phone's has not yet. */
+    CONFIRMING,
     EXCHANGING,
     WRITING,
     COMPLETE,

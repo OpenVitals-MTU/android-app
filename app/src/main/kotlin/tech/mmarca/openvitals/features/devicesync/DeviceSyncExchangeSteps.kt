@@ -167,6 +167,8 @@ internal fun DeviceSyncProgressStep(state: DeviceSyncState, onCancel: () -> Unit
         when (progress?.phase) {
             SyncPhase.WRITING, SyncPhase.COMPLETE -> R.string.device_sync_phase_writing
             SyncPhase.EXCHANGING -> R.string.device_sync_phase_exchanging
+            SyncPhase.CONFIRMING -> R.string.device_sync_phase_confirming
+            SyncPhase.HANDSHAKE -> R.string.device_sync_phase_waiting_for_peer
             else -> R.string.device_sync_phase_handshake
         },
     )

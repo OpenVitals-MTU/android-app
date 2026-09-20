@@ -110,6 +110,16 @@ On Windows, use `gradlew.bat`:
 git diff --check
 ```
 
+### R8 Keep Check
+
+Unit tests run on the unminified `ci` variant, and no pipeline installs an APK, so nothing runs the R8 build before it ships. Every `minify<Variant>WithR8` task is therefore followed by `verify<Variant>R8Keeps`, which runs [`scripts/verify-r8-keeps.py`](../../scripts/verify-r8-keeps.py) against that build's `mapping.txt`. It fails the build when R8 removed or renamed something that is only reached by name at run time:
+
+- a manifest component of ours, or its no-arg constructor
+- a Glance `ActionCallback` subclass, or its no-arg constructor (R8 once stripped one; widget taps were dead from 2.7.0 to 2.7.1)
+- a Health Connect record class named in `SyncRecordCodec.kt`, whose simple name is the phone-sync wire format
+
+It needs no device, so it runs in the release pipeline as part of the build. To run it by hand: `./gradlew :app:minifyReleaseWithR8`. When it fails, add a keep rule to `app/proguard-rules.pro` and say why. A new kind of by-name lookup needs a new check in the script.
+
 ## Hilt And KSP
 
 The local app uses Hilt in the `:app` module:
