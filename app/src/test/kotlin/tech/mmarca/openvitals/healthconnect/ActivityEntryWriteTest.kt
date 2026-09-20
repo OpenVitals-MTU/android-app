@@ -73,6 +73,58 @@ class ActivityEntryWriteTest {
         assertThat(client.all(HeartRateRecord::class)).hasSize(1)
     }
 
+    @Test
+    fun `editing the title keeps the recorded heart rate`() = onARealClock {
+        val client = client()
+        val reader = reader(client)
+        reader.writeActivityEntry(
+            request(T10_00, T11_00, distanceMeters = 5_000.0, heartRate = listOf(T10_10 to 140L, T10_40 to 150L)),
+        )
+
+        // The edit form never carries the stored series.
+        reader.updateActivityEntry(
+            client.sessionIdAt(T10_00),
+            request(T10_00, T11_00, distanceMeters = 5_200.0, title = "Morning run"),
+        )
+
+        val heartRate = client.all(HeartRateRecord::class).single()
+        assertThat(heartRate.samples.map { it.beatsPerMinute }).containsExactly(140L, 150L).inOrder()
+        assertThat(client.all(DistanceRecord::class).map { it.distance.inMeters }).containsExactly(5_200.0)
+        assertThat(client.all(ExerciseSessionRecord::class).single().title).isEqualTo("Morning run")
+    }
+
+    @Test
+    fun `moving the window rebuilds the series inside it and a delete still finds it`() = onARealClock {
+        val client = client()
+        val reader = reader(client)
+        reader.writeActivityEntry(request(T10_00, T11_00, heartRate = listOf(T10_10 to 140L, T10_40 to 150L)))
+
+        reader.updateActivityEntry(client.sessionIdAt(T10_00), request(T10_05, T10_30))
+
+        val heartRate = client.all(HeartRateRecord::class).single()
+        assertThat(heartRate.startTime).isEqualTo(T10_05)
+        assertThat(heartRate.endTime).isEqualTo(T10_30)
+        assertThat(heartRate.samples.map { it.beatsPerMinute }).containsExactly(140L)
+
+        reader.deleteActivityEntry(client.sessionIdAt(T10_05))
+        assertThat(client.all(HeartRateRecord::class)).isEmpty()
+    }
+
+    @Test
+    fun `an edit that carries samples replaces the series`() = onARealClock {
+        val client = client()
+        val reader = reader(client)
+        reader.writeActivityEntry(request(T10_00, T11_00, heartRate = listOf(T10_10 to 140L)))
+
+        reader.updateActivityEntry(
+            client.sessionIdAt(T10_00),
+            request(T10_00, T11_00, heartRate = listOf(T10_40 to 160L)),
+        )
+
+        assertThat(client.all(HeartRateRecord::class).single().samples.map { it.beatsPerMinute })
+            .containsExactly(160L)
+    }
+
     private fun onARealClock(body: suspend CoroutineScope.() -> Unit) = runBlocking(block = body)
 
     private fun request(
@@ -123,6 +175,8 @@ class ActivityEntryWriteTest {
         val DAY_START: Instant = Instant.parse("2026-03-10T00:00:00Z")
         val DAY_END: Instant = Instant.parse("2026-03-11T00:00:00Z")
         val T10_00: Instant = Instant.parse("2026-03-10T10:00:00Z")
+        val T10_05: Instant = Instant.parse("2026-03-10T10:05:00Z")
+        val T10_10: Instant = Instant.parse("2026-03-10T10:10:00Z")
         val T10_30: Instant = Instant.parse("2026-03-10T10:30:00Z")
         val T10_31: Instant = Instant.parse("2026-03-10T10:31:00Z")
         val T10_40: Instant = Instant.parse("2026-03-10T10:40:00Z")

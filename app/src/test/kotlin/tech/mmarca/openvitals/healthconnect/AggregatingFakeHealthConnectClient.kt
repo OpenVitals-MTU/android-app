@@ -93,8 +93,13 @@ class AggregatingFakeHealthConnectClient(
             .methods.single { it.name == "toRecord" }.invoke(null, stamped) as Record
     }
 
+    /** Picks the overload by argument type: `setDataOrigin` also takes a builder. */
     private fun Any.call(name: String, vararg args: Any): Any =
-        javaClass.methods.first { it.name == name && it.parameterCount == args.size }.invoke(this, *args)
+        javaClass.methods.first { method ->
+            method.name == name &&
+                method.parameterCount == args.size &&
+                method.parameterTypes.zip(args).all { (type, arg) -> type.isInstance(arg) }
+        }.invoke(this, *args)
 
     /** `IntervalRecord` and `InstantaneousRecord` are internal, so read the getter by name. */
     private fun Record.startInstant(): Instant =
