@@ -1,93 +1,27 @@
 package tech.mmarca.openvitals.features.settings
 
-import android.net.Uri
 import android.util.Log
 import androidx.annotation.StringRes
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
-import tech.mmarca.openvitals.domain.preferences.ActivitySplitDistance
-import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
-import tech.mmarca.openvitals.domain.preferences.AppLanguage
-import tech.mmarca.openvitals.domain.preferences.AppThemeMode
-import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
-import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
-import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
-import tech.mmarca.openvitals.domain.preferences.BodyProfile
-import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
-import tech.mmarca.openvitals.domain.preferences.HomeWidgetRefreshInterval
-import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
-import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
-import tech.mmarca.openvitals.domain.preferences.SleepWindow
-import tech.mmarca.openvitals.domain.preferences.StrideLength
-import tech.mmarca.openvitals.domain.preferences.UnitQuantity
-import tech.mmarca.openvitals.domain.preferences.UnitSystem
-import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
-import tech.mmarca.openvitals.domain.model.ActivityRecordSource
-import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
-import tech.mmarca.openvitals.domain.model.BodyMeasurementType
-import tech.mmarca.openvitals.domain.model.BodyMeasurementWriteRequest
-import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
-import tech.mmarca.openvitals.domain.model.HeartRateThresholds
-import tech.mmarca.openvitals.BuildConfig
-import tech.mmarca.openvitals.core.geo.HgtTileKey
-import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
-import tech.mmarca.openvitals.data.repository.contract.BodyRepository
-import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
-import tech.mmarca.openvitals.data.repository.contract.HealthRepository
-import tech.mmarca.openvitals.data.repository.contract.HeartRepository
-import tech.mmarca.openvitals.data.repository.contract.SleepRepository
-import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.data.sync.BodyEnergyChainSyncService
-import tech.mmarca.openvitals.data.sync.DerivedMetricsResetService
-import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
-import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryType
-import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryUnits
-import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
-import tech.mmarca.openvitals.features.manualentry.activity.buildWriteRequest
-import tech.mmarca.openvitals.features.manualentry.activity.initialActivityEntryState
-import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileImport
-import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileImporter
-import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFolderScanner
-import tech.mmarca.openvitals.features.manualentry.activity.routeimport.toImportWriteRequest
-import tech.mmarca.openvitals.features.manualentry.activity.withRouteImport
-import tech.mmarca.openvitals.features.activity.elevation.ElevationTile
-import tech.mmarca.openvitals.features.activity.elevation.ElevationTileRepository
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportPhase
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportProgress
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportResult
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkController
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapPack
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapPackFormat
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
-import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportPhase
-import tech.mmarca.openvitals.features.imports.garmin.FitHrvImportService
-import tech.mmarca.openvitals.features.manualentry.activity.routeimport.FitHrvReading
-import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthExportFingerprint
-import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportAnalysisResult
-import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportCategory
-import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportErrorFormatter
-import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportProgress
-import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResult
-import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportService
-import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
-import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorker
-import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
-import tech.mmarca.openvitals.healthconnect.HealthConnectRateLimitBackoff
-import java.util.UUID
+import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import androidx.work.WorkInfo
-import androidx.compose.runtime.Immutable
-import java.time.Clock
-import java.time.Instant
-import java.time.LocalDate
+import tech.mmarca.openvitals.BuildConfig
+import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.HealthRepository
+import tech.mmarca.openvitals.data.repository.contract.HeartRepository
+import tech.mmarca.openvitals.data.repository.contract.SleepRepository
+import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
+import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
+import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 
 @Immutable
 data class SettingsUiState(
@@ -97,52 +31,10 @@ data class SettingsUiState(
     val permissionCategories: List<SettingsPermissionCategory> = emptyList(),
     val allPermissions: Set<String> = emptySet(),
     val manualOnlyPermissions: Set<String> = emptySet(),
-    val offlineMapPacks: List<OfflineMapPack> = emptyList(),
-    val activeOfflineMapFormat: OfflineMapPackFormat? = null,
-    val isImportingOfflineMap: Boolean = false,
-    val offlineMapImportProgress: OfflineMapImportProgress? = null,
-    val offlineMapImportResult: OfflineMapImportResult? = null,
-    val offlineMapImportError: String? = null,
-    val elevationTiles: List<ElevationTile> = emptyList(),
-    val elevationCorrectionEnabled: Boolean = true,
-    val isImportingElevationTile: Boolean = false,
-    val elevationTileImportResult: ElevationTile? = null,
-    val elevationTileImportError: String? = null,
-    val unitSystemPreference: UnitSystemPreference = UnitSystemPreference.SYSTEM,
-    /** Already resolved — never carries the SYSTEM preference itself. */
-    val unitSystem: UnitSystem = UnitSystem.METRIC,
-    /** Per-quantity display overrides; an absent quantity follows [unitSystem]. */
-    val unitOverrides: Map<UnitQuantity, UnitSystem> = emptyMap(),
-    val appLanguage: AppLanguage = AppLanguage.SYSTEM,
-    val appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
-    val dynamicColor: Boolean = false,
-    val chartAggregationMode: ChartAggregationMode = ChartAggregationMode.OFF,
     val bloodPressureGuideline: BloodPressureGuideline = BloodPressureGuideline.ACC_AHA_2017,
-    val homeWidgetRefreshInterval: HomeWidgetRefreshInterval = HomeWidgetRefreshInterval.DEFAULT,
-    val dashboardSortEmptyTilesLast: Boolean = true,
-    val stepDistanceBackfillEnabled: Boolean = false,
-    val strideLengthMeters: Double = StrideLength.defaultMeters,
-    val nightStartHour: Int = SleepWindow.Default.startHour,
-    val nightEndHour: Int = SleepWindow.Default.endHour,
-    val highHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM,
-    val lowHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM,
-    val hydrationDailyGoalLiters: Double = PreferencesRepository.DEFAULT_HYDRATION_DAILY_GOAL_LITERS,
-    val activityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
-    val activitySplitDistanceMeters: Double = ActivitySplitDistance.defaultMeters,
-    val activityRecordingPreferences: ActivityRecordingPreferences = ActivityRecordingPreferences(),
-    val showOpenVitalsCalculatedCalories: Boolean = false,
-    val nutritionAverageLoggedDaysOnly: Boolean = true,
-    val favoriteActivityExerciseType: Int? = null,
     val healthConnectSyncEnabled: Boolean = true,
     val healthConnectMindfulnessEnabled: Boolean = false,
     val appLockEnabled: Boolean = false,
-    val bodyEnergyCalibration: BodyEnergyCalibration = BodyEnergyCalibration.Automatic,
-    val isResettingDerivedMetrics: Boolean = false,
-    val caffeinePreferences: CaffeinePreferences = CaffeinePreferences(),
-    val bodyProfile: BodyProfile = BodyProfile(),
-    val bodyProfileWeightMeasured: Boolean = false,
-    val bodyProfileHeightMeasured: Boolean = false,
-    val canWriteBodyMeasurements: Boolean = false,
     val healthConnectSources: List<HealthConnectSource> = emptyList(),
 ) {
     val visiblePermissions: Set<String>
@@ -153,35 +45,7 @@ data class SettingsUiState(
 
     val missingManualVisiblePermissions: Set<String>
         get() = missingVisiblePermissions.intersect(manualOnlyPermissions)
-
-    /** What one quantity displays in: its override, else the resolved base. */
-    fun effectiveUnitSystem(quantity: UnitQuantity): UnitSystem =
-        unitOverrides[quantity] ?: unitSystem
 }
-
-/** Which Settings card started the running (or last finished) bulk import. */
-enum class RouteBulkImportSource {
-    /** The GPX/KML/KMZ/TCX card's multi-select picker. */
-    ROUTE_FILES,
-
-    /** The FIT card's folder import. */
-    FIT_FOLDER,
-}
-
-@Immutable
-data class RouteBulkImportProgress(
-    val totalFiles: Int,
-    val importedFiles: Int = 0,
-    val failedFiles: Int = 0,
-    val currentFileIndex: Int = 0,
-)
-
-@Immutable
-data class RouteBulkImportResult(
-    val totalFiles: Int,
-    val importedFiles: Int,
-    val failedFiles: Int,
-)
 
 data class SettingsPermissionCategory(
     val id: String,
@@ -193,38 +57,31 @@ data class SettingsPermissionCategory(
     @param:StringRes val unavailableReasonRes: Int? = null,
 )
 
+/**
+ * The Settings root and the sections without a ViewModel of their own: Health Connect,
+ * Vitals and Diagnostics.
+ *
+ * Display, Activities, Nutrition, Body profile, Recovery, Data transfer, Watches and Sync
+ * with another phone each have one, so a section route builds only what it shows.
+ */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repository: HealthRepository,
-    private val bodyRepository: BodyRepository,
     private val heartRepository: HeartRepository,
     private val sleepRepository: SleepRepository,
     private val hydrationReminderController: HydrationReminderController,
     private val preferencesRepository: PreferencesRepository,
-    private val stepDistanceBackfillService: StepDistanceBackfillService,
-    private val offlineMapRepository: OfflineMapRepository,
-    private val offlineMapImportWorkController: OfflineMapImportWorkController,
-    private val elevationTileRepository: ElevationTileRepository,
     private val permissionUxState: HealthConnectPermissionUxState,
-    private val coMapsNavigationRepository: CoMapsNavigationRepository,
-    private val derivedMetricsResetService: DerivedMetricsResetService,
-    private val homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler,
-    private val bodyEnergyChainSyncService: BodyEnergyChainSyncService,
 ) : ViewModel() {
     companion object {
         private const val TAG = "SettingsViewModel"
-
     }
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
-    private val clock: Clock = Clock.systemDefaultZone()
 
     init {
         refresh()
-        observeOfflineMaps()
-        observeElevationTiles()
-        observeOfflineMapImportWork()
     }
 
     fun refresh() {
@@ -242,39 +99,11 @@ class SettingsViewModel @Inject constructor(
                 permissionCategories = permissionCategories(avail),
                 allPermissions = repository.allPermissions,
                 manualOnlyPermissions = repository.manualOnlyPermissions,
-                unitSystemPreference = preferencesRepository.unitSystemPreference,
-                unitSystem = preferencesRepository.unitSystem,
-                unitOverrides = preferencesRepository.unitOverridesFlow.value,
-                appLanguage = preferencesRepository.appLanguage,
-                appThemeMode = preferencesRepository.appThemeMode,
-                dynamicColor = preferencesRepository.dynamicColor,
-                chartAggregationMode = preferencesRepository.chartAggregationMode,
                 bloodPressureGuideline = preferencesRepository.bloodPressureGuideline,
-                homeWidgetRefreshInterval = preferencesRepository.homeWidgetRefreshInterval,
-                dashboardSortEmptyTilesLast = preferencesRepository.dashboardSortEmptyTilesLast,
-                stepDistanceBackfillEnabled = preferencesRepository.stepDistanceBackfillEnabled,
-                elevationCorrectionEnabled = preferencesRepository.elevationCorrectionEnabled,
-                strideLengthMeters = preferencesRepository.strideLengthMeters,
-                nightStartHour = preferencesRepository.nightStartHour,
-                nightEndHour = preferencesRepository.nightEndHour,
-                highHeartRateThresholdBpm = preferencesRepository.highHeartRateThresholdBpm,
-                lowHeartRateThresholdBpm = preferencesRepository.lowHeartRateThresholdBpm,
-                hydrationDailyGoalLiters = preferencesRepository.hydrationDailyGoalLiters,
-                activityWeekMode = preferencesRepository.activityWeekMode,
-                activitySplitDistanceMeters = preferencesRepository.activitySplitDistanceMeters,
-                activityRecordingPreferences = preferencesRepository.activityRecordingPreferences(),
-                showOpenVitalsCalculatedCalories = preferencesRepository.showOpenVitalsCalculatedCalories,
-                nutritionAverageLoggedDaysOnly =
-                    preferencesRepository.nutritionAverageBasis == NutritionAverageBasis.LOGGED_DAYS,
-                favoriteActivityExerciseType = preferencesRepository.favoriteActivityExerciseType,
                 healthConnectSyncEnabled = preferencesRepository.healthConnectSyncEnabled,
                 healthConnectMindfulnessEnabled = preferencesRepository.healthConnectMindfulnessEnabled,
                 appLockEnabled = preferencesRepository.appLockEnabled,
-                bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration(),
-                caffeinePreferences = preferencesRepository.caffeinePreferences(),
-                bodyProfile = preferencesRepository.bodyProfile(),
             )
-            resolveBodyProfileFromHealthConnect()
             loadHealthConnectSources()
         }
     }
@@ -298,254 +127,9 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
-    /** Folds the latest Health Connect weight and height into the card state. */
-    private suspend fun resolveBodyProfileFromHealthConnect() {
-        val declared = preferencesRepository.bodyProfile()
-        val resolved = runCatching { bodyRepository.resolveBodyProfile(declared) }
-            .getOrElse { error ->
-                Log.w(TAG, "resolveBodyProfile failed", error)
-                return
-            }
-        val canWrite = runCatching {
-            bodyRepository.hasBodyWritePermission(BodyMeasurementType.WEIGHT)
-        }.getOrDefault(false)
-        _uiState.value = _uiState.value.copy(
-            bodyProfile = resolved,
-            bodyProfileWeightMeasured = resolved.weightKg != null && resolved.weightKg != declared.weightKg,
-            bodyProfileHeightMeasured = resolved.heightCm != null && resolved.heightCm != declared.heightCm,
-            canWriteBodyMeasurements = canWrite,
-        )
-    }
-
-
-
-
-
-
-
-
-
-    fun importOfflineMap(uri: Uri) {
-        if (_uiState.value.isImportingOfflineMap) return
-
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isImportingOfflineMap = true,
-                offlineMapImportProgress = OfflineMapImportProgress(phase = OfflineMapImportPhase.QUEUED),
-                offlineMapImportResult = null,
-                offlineMapImportError = null,
-            )
-
-            runCatching { offlineMapImportWorkController.enqueue(uri) }
-                .onFailure { error ->
-                    Log.e(TAG, "Offline map import enqueue failed type=${error::class.java.simpleName}")
-                    _uiState.value = _uiState.value.copy(
-                        isImportingOfflineMap = false,
-                        offlineMapImportProgress = null,
-                        offlineMapImportResult = null,
-                        offlineMapImportError = error.localizedMessage
-                            ?: "Offline map import failed.",
-                    )
-                }
-        }
-    }
-
-    private fun observeElevationTiles() {
-        viewModelScope.launch {
-            elevationTileRepository.state.collect { libraryState ->
-                _uiState.value = _uiState.value.copy(elevationTiles = libraryState.tiles)
-            }
-        }
-    }
-
-    fun setElevationCorrectionEnabled(enabled: Boolean) {
-        preferencesRepository.elevationCorrectionEnabled = enabled
-        _uiState.value = _uiState.value.copy(elevationCorrectionEnabled = enabled)
-    }
-
-    fun importElevationTile(uri: Uri) {
-        if (_uiState.value.isImportingElevationTile) return
-        _uiState.value = _uiState.value.copy(
-            isImportingElevationTile = true,
-            elevationTileImportResult = null,
-            elevationTileImportError = null,
-        )
-        viewModelScope.launch {
-            runCatching { elevationTileRepository.importTile(uri) }
-                .onSuccess { tile ->
-                    Log.d(TAG, "Elevation tile import completed tile=${tile.displayName}")
-                    _uiState.value = _uiState.value.copy(
-                        isImportingElevationTile = false,
-                        elevationTileImportResult = tile,
-                    )
-                }
-                .onFailure { error ->
-                    Log.e(TAG, "Elevation tile import failed type=${error::class.java.simpleName}")
-                    _uiState.value = _uiState.value.copy(
-                        isImportingElevationTile = false,
-                        elevationTileImportError = error.localizedMessage
-                            ?: "Elevation tile import failed.",
-                    )
-                }
-        }
-    }
-
-    fun deleteElevationTile(key: HgtTileKey) {
-        viewModelScope.launch {
-            runCatching { elevationTileRepository.deleteTile(key) }
-                .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        elevationTileImportError = error.localizedMessage
-                            ?: "Unable to delete elevation tile.",
-                    )
-                }
-        }
-    }
-
-    private fun observeOfflineMaps() {
-        viewModelScope.launch {
-            offlineMapRepository.state.collect { libraryState ->
-                _uiState.value = _uiState.value.copy(
-                    offlineMapPacks = libraryState.mapPacks,
-                    activeOfflineMapFormat = libraryState.activeFormat,
-                )
-            }
-        }
-    }
-
-
-    private fun observeOfflineMapImportWork() {
-        viewModelScope.launch {
-            offlineMapImportWorkController.workInfos.collect { workInfos ->
-                val workInfo = workInfos.firstOrNull() ?: return@collect
-                when (workInfo.state) {
-                    WorkInfo.State.ENQUEUED,
-                    WorkInfo.State.BLOCKED,
-                    WorkInfo.State.RUNNING,
-                    -> {
-                        _uiState.value = _uiState.value.copy(
-                            isImportingOfflineMap = true,
-                            offlineMapImportProgress = offlineMapImportWorkController.progressFor(workInfo)
-                                ?: OfflineMapImportProgress(phase = OfflineMapImportPhase.QUEUED),
-                            offlineMapImportResult = null,
-                            offlineMapImportError = null,
-                        )
-                    }
-                    WorkInfo.State.SUCCEEDED -> {
-                        val result = offlineMapImportWorkController.resultFor(workInfo)
-                        offlineMapRepository.refresh()
-                        Log.d(TAG, "Offline map import completed mapId=${result?.mapId.orEmpty()}")
-                        _uiState.value = _uiState.value.copy(
-                            isImportingOfflineMap = false,
-                            offlineMapImportProgress = null,
-                            offlineMapImportResult = result,
-                            offlineMapImportError = null,
-                        )
-                    }
-                    WorkInfo.State.FAILED -> {
-                        val error = offlineMapImportWorkController.errorFor(workInfo)
-                            ?: "Offline map import failed."
-                        Log.e(TAG, "Offline map import failed")
-                        offlineMapRepository.refresh()
-                        _uiState.value = _uiState.value.copy(
-                            isImportingOfflineMap = false,
-                            offlineMapImportProgress = null,
-                            offlineMapImportResult = null,
-                            offlineMapImportError = error,
-                        )
-                    }
-                    WorkInfo.State.CANCELLED -> {
-                        if (_uiState.value.isImportingOfflineMap) {
-                            _uiState.value = _uiState.value.copy(
-                                isImportingOfflineMap = false,
-                                offlineMapImportProgress = null,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fun selectUnitSystem(preference: UnitSystemPreference) {
-        preferencesRepository.unitSystemPreference = preference
-        _uiState.value = _uiState.value.copy(
-            unitSystemPreference = preference,
-            unitSystem = preferencesRepository.unitSystem,
-        )
-    }
-
-    fun selectUnitOverride(quantity: UnitQuantity, override: UnitSystem?) {
-        preferencesRepository.setUnitOverride(quantity, override)
-        _uiState.value = _uiState.value.copy(
-            unitOverrides = preferencesRepository.unitOverridesFlow.value,
-        )
-    }
-
-    fun selectAppLanguage(appLanguage: AppLanguage) {
-        preferencesRepository.appLanguage = appLanguage
-        _uiState.value = _uiState.value.copy(appLanguage = appLanguage)
-    }
-
-    fun selectAppThemeMode(appThemeMode: AppThemeMode) {
-        preferencesRepository.appThemeMode = appThemeMode
-        _uiState.value = _uiState.value.copy(appThemeMode = appThemeMode)
-    }
-
-    fun setDynamicColor(enabled: Boolean) {
-        preferencesRepository.dynamicColor = enabled
-        _uiState.value = _uiState.value.copy(dynamicColor = enabled)
-    }
-
-    fun saveStepDistanceBackfill(enabled: Boolean, strideMeters: Double) {
-        val normalized = StrideLength.normalize(strideMeters)
-        val wasEnabled = preferencesRepository.stepDistanceBackfillEnabled
-        preferencesRepository.strideLengthMeters = normalized
-        preferencesRepository.stepDistanceBackfillEnabled = enabled
-        _uiState.value = _uiState.value.copy(
-            stepDistanceBackfillEnabled = enabled,
-            strideLengthMeters = normalized,
-        )
-        viewModelScope.launch {
-            if (enabled) {
-                stepDistanceBackfillService.syncNow()
-            } else if (wasEnabled) {
-                stepDistanceBackfillService.purgeDerivedRecords()
-            }
-        }
-    }
-
-    fun setDashboardSortEmptyTilesLast(enabled: Boolean) {
-        preferencesRepository.dashboardSortEmptyTilesLast = enabled
-        _uiState.value = _uiState.value.copy(dashboardSortEmptyTilesLast = enabled)
-    }
-
-    fun setChartAggregationMode(mode: ChartAggregationMode) {
-        preferencesRepository.chartAggregationMode = mode
-        _uiState.value = _uiState.value.copy(chartAggregationMode = mode)
-    }
-
     fun setBloodPressureGuideline(guideline: BloodPressureGuideline) {
         preferencesRepository.bloodPressureGuideline = guideline
         _uiState.value = _uiState.value.copy(bloodPressureGuideline = guideline)
-    }
-
-    /** The scheduler stores the choice: it also re-plans the running work. */
-    fun setHomeWidgetRefreshInterval(interval: HomeWidgetRefreshInterval) {
-        homeWidgetRefreshScheduler.setInterval(interval)
-        _uiState.value = _uiState.value.copy(homeWidgetRefreshInterval = interval)
-    }
-
-    fun setNightStartHour(value: Int) {
-        val hour = Math.floorMod(value, 24)
-        preferencesRepository.nightStartHour = hour
-        _uiState.value = _uiState.value.copy(nightStartHour = hour)
-    }
-
-    fun setNightEndHour(value: Int) {
-        val hour = Math.floorMod(value, 24)
-        preferencesRepository.nightEndHour = hour
-        _uiState.value = _uiState.value.copy(nightEndHour = hour)
     }
 
     /** Diagnostics: posts the hydration reminder immediately via the real path. */
@@ -558,98 +142,6 @@ class SettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(healthConnectMindfulnessEnabled = enabled)
         // The declared mindfulness permission sets changed shape; re-read everything.
         refresh()
-    }
-
-    fun setHighHeartRateThresholdBpm(value: Int) {
-        val current = _uiState.value
-        val normalized = value
-            .coerceAtLeast(current.lowHeartRateThresholdBpm + HeartRateThresholds.MINIMUM_GAP_BPM)
-        preferencesRepository.highHeartRateThresholdBpm = normalized
-        _uiState.value = current.copy(
-            highHeartRateThresholdBpm = preferencesRepository.highHeartRateThresholdBpm,
-        )
-    }
-
-    fun setLowHeartRateThresholdBpm(value: Int) {
-        val current = _uiState.value
-        val normalized = value
-            .coerceAtMost(current.highHeartRateThresholdBpm - HeartRateThresholds.MINIMUM_GAP_BPM)
-        preferencesRepository.lowHeartRateThresholdBpm = normalized
-        _uiState.value = current.copy(
-            lowHeartRateThresholdBpm = preferencesRepository.lowHeartRateThresholdBpm,
-        )
-    }
-
-    fun setHydrationDailyGoalLiters(liters: Double) {
-        preferencesRepository.hydrationDailyGoalLiters = liters
-        _uiState.value = _uiState.value.copy(
-            hydrationDailyGoalLiters = preferencesRepository.hydrationDailyGoalLiters,
-        )
-    }
-
-    fun selectActivityWeekMode(activityWeekMode: ActivityWeekMode) {
-        preferencesRepository.activityWeekMode = activityWeekMode
-        _uiState.value = _uiState.value.copy(activityWeekMode = activityWeekMode)
-    }
-
-    fun setActivitySplitDistance(meters: Double) {
-        val normalized = ActivitySplitDistance.normalize(meters)
-        preferencesRepository.activitySplitDistanceMeters = normalized
-        _uiState.value = _uiState.value.copy(activitySplitDistanceMeters = normalized)
-    }
-
-    fun updateActivityRecordingPreferences(preferences: ActivityRecordingPreferences) {
-        val normalized = preferences.normalized()
-        preferencesRepository.setActivityRecordingPreferences(normalized)
-        _uiState.value = _uiState.value.copy(activityRecordingPreferences = normalized)
-    }
-
-    /** The flavour-specific CoMaps permission to request, null without a CoMaps installed. */
-    fun coMapsPermissionName(): String? = coMapsNavigationRepository.permissionName()
-
-    fun onCoMapsPermissionChanged() {
-        coMapsNavigationRepository.onPermissionChanged()
-    }
-
-    fun setShowOpenVitalsCalculatedCalories(enabled: Boolean) {
-        preferencesRepository.showOpenVitalsCalculatedCalories = enabled
-        _uiState.value = _uiState.value.copy(showOpenVitalsCalculatedCalories = enabled)
-    }
-
-    fun setNutritionAverageLoggedDaysOnly(enabled: Boolean) {
-        preferencesRepository.nutritionAverageBasis = if (enabled) {
-            NutritionAverageBasis.LOGGED_DAYS
-        } else {
-            NutritionAverageBasis.EVERY_DAY
-        }
-        _uiState.value = _uiState.value.copy(nutritionAverageLoggedDaysOnly = enabled)
-    }
-
-    fun selectFavoriteActivity(exerciseType: Int?) {
-        preferencesRepository.favoriteActivityExerciseType = exerciseType
-        _uiState.value = _uiState.value.copy(favoriteActivityExerciseType = exerciseType)
-    }
-
-
-    fun selectOfflineMapFormat(format: OfflineMapPackFormat?) {
-        offlineMapRepository.setActiveFormat(format)
-        val libraryState = offlineMapRepository.state.value
-        _uiState.value = _uiState.value.copy(
-            offlineMapPacks = libraryState.mapPacks,
-            activeOfflineMapFormat = libraryState.activeFormat,
-        )
-    }
-
-    fun deleteOfflineMap(id: String) {
-        viewModelScope.launch {
-            runCatching { offlineMapRepository.deleteMap(id) }
-                .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        offlineMapImportError = error.localizedMessage
-                            ?: "Unable to delete offline map.",
-                    )
-                }
-        }
     }
 
     fun onPermissionsResult(granted: Set<String>) {
@@ -670,106 +162,6 @@ class SettingsViewModel @Inject constructor(
     fun setAppLockEnabled(enabled: Boolean) {
         preferencesRepository.appLockEnabled = enabled
         _uiState.value = _uiState.value.copy(appLockEnabled = enabled)
-    }
-
-    /** Commits the zone ladder. [birthYear] is normally null: the Body profile card owns it. */
-    fun updateBodyEnergyCalibration(calibration: BodyEnergyCalibration, birthYear: Int? = null) {
-        if (birthYear != null) {
-            updateBodyProfile(preferencesRepository.bodyProfile().copy(birthYear = birthYear))
-        }
-        val zonesChanged =
-            preferencesRepository.bodyEnergyCalibration().zoneSignature() != calibration.zoneSignature()
-        preferencesRepository.setBodyEnergyCalibration(calibration.copy(setupCompleted = true))
-        _uiState.value = _uiState.value.copy(bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration())
-        if (zonesChanged) rebuildBodyEnergyChain()
-    }
-
-    /** Zones and the profile are chain inputs: every stored Body Energy day is wrong now. */
-    private fun rebuildBodyEnergyChain() {
-        viewModelScope.launch {
-            runCatching { bodyEnergyChainSyncService.syncAll(force = true) }
-                .onFailure { error -> Log.w(TAG, "Body Energy chain rebuild failed", error) }
-        }
-    }
-
-    fun updateCaffeinePreferences(preferences: CaffeinePreferences) {
-        preferencesRepository.setCaffeinePreferences(preferences)
-        _uiState.value = _uiState.value.copy(caffeinePreferences = preferencesRepository.caffeinePreferences())
-    }
-
-    fun updateBodyProfile(profile: BodyProfile) {
-        val previous = _uiState.value.bodyProfile
-        val declared = preferencesRepository.bodyProfile()
-        preferencesRepository.setBodyProfile(profile)
-        val saved = preferencesRepository.bodyProfile()
-        _uiState.value = _uiState.value.copy(bodyProfile = saved)
-        if (saved.signature() != declared.signature()) rebuildBodyEnergyChain()
-        if (!_uiState.value.canWriteBodyMeasurements) return
-        // A changed weight or height is written to Health Connect as a real
-        // measurement. Only on a real change, or every save adds a duplicate.
-        viewModelScope.launch {
-            val now = Instant.now()
-            suspend fun write(type: BodyMeasurementType, value: Double?) {
-                if (value == null) return
-                runCatching {
-                    bodyRepository.writeBodyMeasurementEntry(
-                        BodyMeasurementWriteRequest(type = type, time = now, value = value),
-                    )
-                }.onFailure { error ->
-                    Log.w(TAG, "Body measurement write failed type=$type", error)
-                }
-            }
-            if (saved.weightKg != previous.weightKg) {
-                write(BodyMeasurementType.WEIGHT, saved.weightKg)
-            }
-            if (saved.heightCm != previous.heightCm) {
-                write(BodyMeasurementType.HEIGHT, saved.heightCm)
-            }
-        }
-    }
-
-    /** Returns the learned gains to neutral and forgets the watch readings. Zone settings stay. */
-    fun resetBodyEnergyPersonalTuning() {
-        val current = preferencesRepository.bodyEnergyCalibration()
-        updateBodyEnergyCalibration(
-            current.copy(
-                sleepChargeGain = 1.0,
-                activityDrainGain = 1.0,
-                basalDrainGain = 1.0,
-                stressDrainGain = 1.0,
-                watchObservationCount = 0,
-            )
-        )
-    }
-
-    /**
-     * Wipes every derived metric kept outside Health Connect and kicks their
-     * rebuild. [onComplete] fires once the wipe has landed.
-     */
-    fun resetDerivedMetrics(onComplete: (Boolean) -> Unit) {
-        if (_uiState.value.isResettingDerivedMetrics) return
-        _uiState.value = _uiState.value.copy(isResettingDerivedMetrics = true)
-        viewModelScope.launch {
-            val succeeded = try {
-                derivedMetricsResetService.reset()
-                true
-            } catch (cancellation: kotlinx.coroutines.CancellationException) {
-                throw cancellation
-            } catch (t: Throwable) {
-                Log.w(TAG, "Derived metrics reset failed", t)
-                false
-            }
-            _uiState.value = _uiState.value.copy(
-                isResettingDerivedMetrics = false,
-                bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration(),
-            )
-            onComplete(succeeded)
-        }
-    }
-
-    fun acceptPrivacyPolicy() {
-        preferencesRepository.acceptedPrivacyPolicyVersion = PreferencesRepository.CURRENT_PRIVACY_POLICY_VERSION
-        preferencesRepository.privacyPolicyAcceptedAtMillis = System.currentTimeMillis()
     }
 
     private fun permissionCategories(availability: HealthConnectAvailability): List<SettingsPermissionCategory> {
@@ -841,11 +233,4 @@ class SettingsViewModel @Inject constructor(
             ),
         ).filter { it.permissions.isNotEmpty() }
     }
-}
-
-internal fun List<WorkInfo>.currentAppleHealthImportWork(currentWorkId: UUID?): WorkInfo? {
-    if (currentWorkId != null) {
-        firstOrNull { workInfo -> workInfo.id == currentWorkId }?.let { return it }
-    }
-    return firstOrNull { workInfo -> !workInfo.state.isFinished }
 }
