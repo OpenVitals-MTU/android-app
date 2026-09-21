@@ -338,29 +338,16 @@ class FitFolderImportTest {
         routeFileImporter: RouteFileImporter = routeFileImporter(),
         fitHrvImportService: FitHrvImportService = mockk(relaxed = true),
         routeFolderScanner: RouteFolderScanner = mockk(relaxed = true),
-    ): SettingsViewModel =
-        SettingsViewModel(
+    ): DataImportViewModel =
+        DataImportViewModel(
             repository = repository,
             activityRepository = activityRepository,
-            bodyRepository = bodyRepo(),
-            heartRepository = heartRepo(),
-            sleepRepository = sleepRepo(),
-            hydrationReminderController = mockk<HydrationReminderController>(relaxed = true),
             preferencesRepository = preferencesRepository,
-            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportService = mockk<AppleHealthImportService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             routeFileImporter = routeFileImporter,
             fitHrvImportService = fitHrvImportService,
             routeFolderScanner = routeFolderScanner,
-            offlineMapRepository = offlineMapRepository(),
-            offlineMapImportWorkController = offlineMapImportController(),
-            elevationTileRepository = elevationTileRepository(),
-            permissionUxState = mockk<HealthConnectPermissionUxState>(relaxed = true),
-            coMapsNavigationRepository = mockk(relaxed = true),
-            derivedMetricsResetService = mockk(relaxed = true),
-            homeWidgetRefreshScheduler = mockk(relaxed = true),
-            bodyEnergyChainSyncService = mockk(relaxed = true),
         )
 
     private fun routeFileImporter(): RouteFileImporter =

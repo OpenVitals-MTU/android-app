@@ -10,6 +10,7 @@ import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.features.devicesync.DeviceSyncScreen
 import tech.mmarca.openvitals.features.imports.csv.CsvImportScreen
 import tech.mmarca.openvitals.features.reports.ReportBuilderScreen
+import tech.mmarca.openvitals.features.settings.DataImportScreen
 import tech.mmarca.openvitals.features.settings.SettingsScreen
 import tech.mmarca.openvitals.features.settings.SettingsSection
 import tech.mmarca.openvitals.features.settings.SettingsViewModel
@@ -92,12 +93,13 @@ internal fun NavGraphBuilder.settingsRoutes(
         SettingsSectionScreen(SettingsSection.RECOVERY, onImportRouteFile, onImportFitFile, onRouteFilesImported)
     }
 
+    // Its own screen and ViewModel, as the watch and phone-sync sections are.
     composable(Screen.SettingsDataImport.route) {
-        SettingsSectionScreen(
-            SettingsSection.DATA_IMPORT,
-            onImportRouteFile,
-            onImportFitFile,
-            onRouteFilesImported,
+        DataImportScreen(
+            viewModel = hiltViewModel(),
+            onImportRouteFileSelected = onImportRouteFile,
+            onImportFitFileSelected = onImportFitFile,
+            onRouteFilesImported = onRouteFilesImported,
             onOpenCsvImport = {
                 navController.navigate(Screen.SettingsCsvImport.route) {
                     launchSingleTop = true

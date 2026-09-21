@@ -137,7 +137,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs(),
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -149,7 +148,6 @@ class SettingsViewModelTest {
             repository = repo(grantedPermissions = setOf("steps")),
             preferencesRepository = prefs(),
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -162,7 +160,6 @@ class SettingsViewModelTest {
             repository = repo(grantedPermissions = setOf("steps", "write", "route", "cycle")),
             preferencesRepository = prefs(),
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -176,7 +173,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -192,7 +188,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -208,7 +203,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -226,7 +220,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -251,7 +244,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -267,7 +259,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -283,7 +274,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -299,7 +289,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs(),
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
             homeWidgetRefreshScheduler = scheduler,
         )
@@ -318,7 +307,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -334,7 +322,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -350,7 +337,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -484,7 +470,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -500,7 +485,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
         val recordingPreferences = ActivityRecordingPreferences(
@@ -524,7 +508,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -540,7 +523,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
         val caffeinePreferences = CaffeinePreferences(
@@ -588,7 +570,6 @@ class SettingsViewModelTest {
             repository = repo(),
             preferencesRepository = prefs,
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -605,7 +586,6 @@ class SettingsViewModelTest {
             repository = repository,
             preferencesRepository = prefs(),
             stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController(),
             permissionUxState = permissionUxState(),
         )
 
@@ -614,302 +594,15 @@ class SettingsViewModelTest {
         coVerify(exactly = 0) { repository.grantedPermissions() }
     }
 
-    @Test fun `apple import observer ignores stale finished failures without current work`() = runTest {
-        val staleFailure = workInfo(state = WorkInfo.State.FAILED)
-        val importController = importController(
-            workInfos = MutableStateFlow(listOf(staleFailure)),
-        )
 
-        val vm = viewModel(
-            repository = repo(),
-            preferencesRepository = prefs(),
-            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportWorkController = importController,
-            permissionUxState = permissionUxState(),
-        )
-        advanceUntilIdle()
 
-        assertNull(vm.uiState.value.appleHealthImportError)
-        coVerify(exactly = 0) { importController.errorFor(staleFailure) }
-    }
 
-    @Test fun `apple import observer uses current import work over older failures`() = runTest {
-        val workInfos = MutableStateFlow<List<WorkInfo>>(emptyList())
-        val staleFailure = workInfo(state = WorkInfo.State.FAILED)
-        val currentWorkId = UUID.randomUUID()
-        val currentFailure = workInfo(id = currentWorkId, state = WorkInfo.State.FAILED)
-        val importController = importController(workInfos = workInfos)
-        val importService = importService()
-        val uri = mockk<Uri>()
-        every {
-            importController.enqueue(
-                uri = uri,
-                selectedCategories = setOf(AppleHealthImportCategory.ACTIVITY),
-                expectedSelectedRecords = 1,
-                expectedParsedElements = 1,
-            )
-        } returns currentWorkId
-        coEvery { importController.errorFor(currentFailure) } returns "current failure"
 
-        val vm = viewModel(
-            repository = repo(),
-            preferencesRepository = prefs(),
-            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportService = importService,
-            appleHealthImportWorkController = importController,
-            permissionUxState = permissionUxState(),
-        )
 
-        vm.analyzeAppleHealthExport(uri)
-        advanceUntilIdle()
-        vm.importSelectedAppleHealthExport()
-        advanceUntilIdle()
-        workInfos.value = listOf(staleFailure, currentFailure)
-        advanceUntilIdle()
 
-        assertEquals("current failure", vm.uiState.value.appleHealthImportError)
-        coVerify(exactly = 0) { importController.errorFor(staleFailure) }
-        verify {
-            Log.e(
-                AppleHealthImportWorker.LogTag,
-                match { message -> message.contains("current failure") && message.contains(currentWorkId.toString()) },
-            )
-        }
-    }
 
-    @Test fun `re-selecting the same file reuses the previous analysis`() = runTest {
-        val importService = importService()
-        val importController = importController()
-        val firstUri = mockk<Uri>()
-        val secondUri = mockk<Uri>()
 
-        val vm = viewModel(
-            repository = repo(),
-            preferencesRepository = prefs(),
-            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportService = importService,
-            appleHealthImportWorkController = importController,
-            permissionUxState = permissionUxState(),
-        )
 
-        vm.analyzeAppleHealthExport(firstUri)
-        advanceUntilIdle()
-        val firstAnalysis = vm.uiState.value.appleHealthImportAnalysis
-        assertEquals(setOf(AppleHealthImportCategory.ACTIVITY), vm.uiState.value.selectedAppleHealthImportCategories)
-
-        vm.analyzeAppleHealthExport(secondUri)
-        advanceUntilIdle()
-
-        coVerify(exactly = 1) { importService.analyzeStagedAppleHealthExport(any(), any(), any()) }
-        assertEquals(firstAnalysis, vm.uiState.value.appleHealthImportAnalysis)
-        assertEquals(setOf(AppleHealthImportCategory.ACTIVITY), vm.uiState.value.selectedAppleHealthImportCategories)
-        verify { importController.persistReadPermission(firstUri) }
-        verify { importController.persistReadPermission(secondUri) }
-    }
-
-    @Test fun `a failed analysis reports the error and forgets the staged pick`() = runTest {
-        val importService = importService()
-        val importController = importController()
-        coEvery {
-            importService.analyzeStagedAppleHealthExport(any(), any(), any())
-        } throws SecurityException("no read access")
-
-        val vm = viewModel(
-            repository = repo(),
-            preferencesRepository = prefs(),
-            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportService = importService,
-            appleHealthImportWorkController = importController,
-            permissionUxState = permissionUxState(),
-        )
-
-        vm.analyzeAppleHealthExport(mockk<Uri>())
-        advanceUntilIdle()
-
-        assertNull(vm.uiState.value.appleHealthImportAnalysis)
-        assertTrue(vm.uiState.value.appleHealthImportError!!.contains("no read access"))
-        assertTrue(vm.uiState.value.appleHealthImportPermissionDenied)
-        assertFalse(vm.uiState.value.isAnalyzingAppleHealth)
-
-        // The pending source is gone, so importing cannot reuse a bad staged copy.
-        vm.importSelectedAppleHealthExport()
-        advanceUntilIdle()
-
-        assertNull(vm.uiState.value.appleHealthImportResult)
-        verify(exactly = 0) { importController.enqueue(any(), any(), any(), any()) }
-    }
-
-    @Test fun `importing without an analysis does nothing`() = runTest {
-        val importController = importController()
-        val vm = viewModel(
-            repository = repo(),
-            preferencesRepository = prefs(),
-            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportService = importService(),
-            appleHealthImportWorkController = importController,
-            permissionUxState = permissionUxState(),
-        )
-        advanceUntilIdle()
-        // Without these the comparison below would pass vacuously on isBusy.
-        assertFalse(vm.uiState.value.isAnalyzingAppleHealth)
-        assertFalse(vm.uiState.value.isImportingAppleHealth)
-        assertNull(vm.uiState.value.appleHealthImportAnalysis)
-        val before = vm.uiState.value
-
-        vm.importSelectedAppleHealthExport()
-        advanceUntilIdle()
-
-        // Asserting nothing changed.
-        assertEquals(before, vm.uiState.value)
-        verify(exactly = 0) { importController.enqueue(any(), any(), any(), any()) }
-    }
-
-    @Test fun `re-selecting a different file re-analyzes it`() = runTest {
-        val importService = importService()
-        val firstUri = mockk<Uri>()
-        val secondUri = mockk<Uri>()
-        coEvery { importService.fingerprintOf(firstUri) } returns AppleHealthExportFingerprint(
-            displayName = "export-1.zip",
-            size = 1L,
-        )
-        coEvery { importService.fingerprintOf(secondUri) } returns AppleHealthExportFingerprint(
-            displayName = "export-2.zip",
-            size = 2L,
-        )
-
-        val vm = viewModel(
-            repository = repo(),
-            preferencesRepository = prefs(),
-            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            appleHealthImportService = importService,
-            appleHealthImportWorkController = importController(),
-            permissionUxState = permissionUxState(),
-        )
-
-        vm.analyzeAppleHealthExport(firstUri)
-        advanceUntilIdle()
-        vm.analyzeAppleHealthExport(secondUri)
-        advanceUntilIdle()
-
-        coVerify(exactly = 2) { importService.analyzeStagedAppleHealthExport(any(), any(), any()) }
-    }
-
-    @Test fun `bulk route import writes all selected files in one batched call`() = runTest {
-        val activityRepository = activityRepo()
-        val routeFileImporter = routeFileImporter()
-        val firstUri = mockk<Uri>()
-        val secondUri = mockk<Uri>()
-        val start = Instant.parse("2024-01-01T10:00:00Z")
-        coEvery { routeFileImporter.import(firstUri) } returns routeImport("morning-run.gpx", start)
-        coEvery { routeFileImporter.import(secondUri) } returns routeImport("evening-walk.kml", start.plusSeconds(3600))
-        coEvery { activityRepository.hasActivityWritePermission(any<ActivityWriteRequest>()) } returns true
-        coEvery { activityRepository.writeActivityEntries(any()) } returns listOf("first", "second")
-
-        val vm = viewModel(
-            repository = repo(grantedPermissions = setOf("write", "route")),
-            activityRepository = activityRepository,
-            preferencesRepository = prefs(),
-            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            routeFileImporter = routeFileImporter,
-        )
-
-        vm.importRouteFiles(listOf(firstUri, secondUri))
-        advanceUntilIdle()
-
-        assertEquals(2, vm.uiState.value.routeImportResult?.importedFiles)
-        assertEquals(0, vm.uiState.value.routeImportResult?.failedFiles)
-        assertNull(vm.uiState.value.routeImportError)
-        coVerify(exactly = 1) { activityRepository.writeActivityEntries(match { it.size == 2 }) }
-        coVerify(exactly = 0) { activityRepository.writeActivityEntry(any()) }
-    }
-
-    @Test fun `a failed batch retries file by file so only the guilty file fails`() = runTest {
-        val activityRepository = activityRepo()
-        val routeFileImporter = routeFileImporter()
-        val firstUri = mockk<Uri>()
-        val secondUri = mockk<Uri>()
-        val start = Instant.parse("2024-01-01T10:00:00Z")
-        coEvery { routeFileImporter.import(firstUri) } returns routeImport("good.gpx", start)
-        coEvery { routeFileImporter.import(secondUri) } returns routeImport("bad.gpx", start.plusSeconds(3600))
-        coEvery { activityRepository.hasActivityWritePermission(any<ActivityWriteRequest>()) } returns true
-        coEvery { activityRepository.writeActivityEntries(any()) } throws IllegalStateException("batch failed")
-        coEvery { activityRepository.writeActivityEntry(any()) } returns "first" andThenThrows
-            IllegalStateException("record invalid")
-
-        val vm = viewModel(
-            repository = repo(grantedPermissions = setOf("write", "route")),
-            activityRepository = activityRepository,
-            preferencesRepository = prefs(),
-            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            routeFileImporter = routeFileImporter,
-        )
-
-        vm.importRouteFiles(listOf(firstUri, secondUri))
-        advanceUntilIdle()
-
-        assertEquals(1, vm.uiState.value.routeImportResult?.importedFiles)
-        assertEquals(1, vm.uiState.value.routeImportResult?.failedFiles)
-        coVerify(exactly = 2) { activityRepository.writeActivityEntry(any()) }
-    }
-
-    @Test fun `a rate-limited batch stops the run without blaming the files`() = runTest {
-        val activityRepository = activityRepo()
-        val routeFileImporter = routeFileImporter()
-        val firstUri = mockk<Uri>()
-        val start = Instant.parse("2024-01-01T10:00:00Z")
-        coEvery { routeFileImporter.import(firstUri) } returns routeImport("run.gpx", start)
-        coEvery { activityRepository.hasActivityWritePermission(any<ActivityWriteRequest>()) } returns true
-        coEvery { activityRepository.writeActivityEntries(any()) } throws
-            IllegalStateException("Quota has been exceeded")
-
-        val vm = viewModel(
-            repository = repo(grantedPermissions = setOf("write", "route")),
-            activityRepository = activityRepository,
-            preferencesRepository = prefs(),
-            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            routeFileImporter = routeFileImporter,
-        )
-
-        vm.importRouteFiles(listOf(firstUri))
-        advanceUntilIdle()
-
-        assertEquals(0, vm.uiState.value.routeImportResult?.importedFiles)
-        assertEquals(0, vm.uiState.value.routeImportResult?.failedFiles)
-        assertTrue(vm.uiState.value.routeImportError != null)
-        coVerify(exactly = 0) { activityRepository.writeActivityEntry(any()) }
-    }
-
-    @Test fun `a wellness FIT that is not an activity falls back to the HRV import`() = runTest {
-        val activityRepository = activityRepo()
-        val routeFileImporter = routeFileImporter()
-        val fitHrvImportService = mockk<FitHrvImportService>()
-        val wellnessUri = mockk<Uri>()
-        val reading = tech.mmarca.openvitals.features.manualentry.activity.routeimport.FitHrvReading(
-            time = Instant.parse("2024-01-01T02:00:00Z"),
-            rmssdMillis = 62.5,
-        )
-        coEvery { routeFileImporter.import(wellnessUri) } throws
-            IllegalArgumentException("FIT file does not contain an activity session or timestamped activity records.")
-        coEvery { routeFileImporter.importFitWellnessHrv(wellnessUri) } returns listOf(reading)
-        coEvery { fitHrvImportService.writeFiles(listOf(listOf(reading))) } returns
-            tech.mmarca.openvitals.features.imports.garmin.FitHrvImportOutcome(importedFiles = 1)
-
-        val vm = viewModel(
-            repository = repo(grantedPermissions = setOf("write", "route")),
-            activityRepository = activityRepository,
-            preferencesRepository = prefs(),
-            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
-            routeFileImporter = routeFileImporter,
-            fitHrvImportService = fitHrvImportService,
-        )
-
-        vm.importRouteFiles(listOf(wellnessUri))
-        advanceUntilIdle()
-
-        assertEquals(1, vm.uiState.value.routeImportResult?.importedFiles)
-        assertEquals(0, vm.uiState.value.routeImportResult?.failedFiles)
-        assertNull(vm.uiState.value.routeImportError)
-    }
 
     @Test fun `the test reminder is posted through the hydration reminder controller`() = runTest {
         val reminders = mockk<HydrationReminderController>(relaxed = true)
@@ -1026,18 +719,12 @@ class SettingsViewModelTest {
     ): SettingsViewModel =
         SettingsViewModel(
             repository = repository,
-            activityRepository = activityRepository,
             bodyRepository = bodyRepository,
             heartRepository = heartRepository,
             sleepRepository = sleepRepository,
             hydrationReminderController = hydrationReminderController,
             preferencesRepository = preferencesRepository,
             stepDistanceBackfillService = stepDistanceBackfillService,
-            appleHealthImportService = appleHealthImportService,
-            appleHealthImportWorkController = appleHealthImportWorkController,
-            routeFileImporter = routeFileImporter,
-            fitHrvImportService = fitHrvImportService,
-            routeFolderScanner = mockk(relaxed = true),
             offlineMapRepository = offlineMapRepository,
             offlineMapImportWorkController = offlineMapImportWorkController,
             elevationTileRepository = elevationTileRepository,

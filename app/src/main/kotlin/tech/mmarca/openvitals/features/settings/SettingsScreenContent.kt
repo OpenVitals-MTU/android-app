@@ -361,84 +361,8 @@ internal fun LazyListScope.settingsScreenContent(
                 )
             }
         }
-        SettingsSection.DATA_IMPORT -> {
-            item { SectionHeader(stringResource(section.titleRes)) }
-            item {
-                AppleHealthImportCard(
-                    availability = state.availability,
-	                    importPermissions = state.dataImportWritePermissions,
-	                    grantedPermissions = state.grantedPermissions,
-	                    isAnalyzing = state.isAnalyzingAppleHealth,
-	                    isImporting = state.isImportingAppleHealth,
-	                    analysisProgress = state.appleHealthAnalysisProgress,
-	                    analysis = state.appleHealthImportAnalysis,
-	                    selectedCategories = state.selectedAppleHealthImportCategories,
-	                    progress = state.appleHealthImportProgress,
-	                    result = state.appleHealthImportResult,
-	                    error = state.appleHealthImportError,
-	                    permissionDenied = state.appleHealthImportPermissionDenied,
-	                    onGrantPermissions = actions.onGrantDataImportPermissions,
-	                    onImport = actions.onImportAppleHealth,
-	                    onToggleCategory = actions.onToggleAppleHealthImportCategory,
-	                    onImportSelected = actions.onImportSelectedAppleHealth,
-	                    onCopyReport = actions.onCopyAppleHealthReport,
-                    onCopyError = actions.onCopyAppleHealthError,
-                    onSaveReport = actions.onSaveAppleHealthReport,
-                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
-                )
-            }
-            item { SettingsCardSpacer() }
-            item {
-                RouteImportCard(
-                    availability = state.availability,
-                    importPermissions = state.routeImportWritePermissions,
-                    grantedPermissions = state.grantedPermissions,
-                    // One bulk importer serves both cards; each shows only its own run.
-                    isImporting = state.isImportingRouteFiles,
-                    progress = state.routeImportProgress.takeIf { state.routeImportSource == RouteBulkImportSource.ROUTE_FILES },
-                    result = state.routeImportResult.takeIf { state.routeImportSource == RouteBulkImportSource.ROUTE_FILES },
-                    error = state.routeImportError.takeIf { state.routeImportSource == RouteBulkImportSource.ROUTE_FILES },
-                    onGrantPermissions = actions.onGrantRouteImportPermissions,
-                    onImportSingle = actions.onImportRouteFile,
-                    onImportBulk = actions.onImportRouteFiles,
-                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
-                )
-            }
-            item { SettingsCardSpacer() }
-            item {
-                FitImportCard(
-                    availability = state.availability,
-                    importPermissions = state.routeImportWritePermissions,
-                    grantedPermissions = state.grantedPermissions,
-                    isScanning = state.isScanningFitFolder,
-                    folderHadNoFitFiles = state.fitFolderHadNoFitFiles,
-                    truncatedAt = state.fitFolderTruncatedAt,
-                    scanError = state.fitFolderScanError,
-                    isImporting = state.isImportingRouteFiles,
-                    progress = state.routeImportProgress.takeIf { state.routeImportSource == RouteBulkImportSource.FIT_FOLDER },
-                    result = state.routeImportResult.takeIf { state.routeImportSource == RouteBulkImportSource.FIT_FOLDER },
-                    error = state.routeImportError.takeIf { state.routeImportSource == RouteBulkImportSource.FIT_FOLDER },
-                    onGrantPermissions = actions.onGrantRouteImportPermissions,
-                    onImport = actions.onImportFitFile,
-                    onImportFolder = actions.onImportFitFolder,
-                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
-                )
-            }
-            item { SettingsCardSpacer() }
-            item {
-                CsvImportCard(
-                    onOpenCsvImport = actions.onOpenCsvImport,
-                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
-                )
-            }
-            item { SettingsCardSpacer() }
-            item {
-                ReportExportCard(
-                    onOpenReportExport = actions.onOpenReportExport,
-                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
-                )
-            }
-        }
+        // DATA_IMPORT routes to its own screen; the branch keeps the `when` exhaustive.
+        SettingsSection.DATA_IMPORT -> Unit
         // DEVICE_SYNC routes to its own screen; the branch keeps the `when` exhaustive.
         SettingsSection.DEVICE_SYNC -> Unit
         SettingsSection.HEALTH_CONNECT -> {

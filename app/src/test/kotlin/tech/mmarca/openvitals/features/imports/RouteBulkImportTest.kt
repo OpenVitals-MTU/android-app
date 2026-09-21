@@ -65,13 +65,13 @@ import tech.mmarca.openvitals.features.imports.garmin.FitHrvImportService
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileImport
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileImporter
 import tech.mmarca.openvitals.features.settings.RouteBulkImportProgress
-import tech.mmarca.openvitals.features.settings.SettingsViewModel
+import tech.mmarca.openvitals.features.settings.DataImportViewModel
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 /**
- * Bulk route/activity file import. The behaviour lives in [SettingsViewModel.importRouteFiles],
- * so this drives a [SettingsViewModel] and asserts only on the bulk-import surface.
+ * Bulk route/activity file import. The behaviour lives in [DataImportViewModel.importRouteFiles],
+ * so this drives a [DataImportViewModel] and asserts only on the bulk-import surface.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RouteBulkImportTest {
@@ -102,7 +102,7 @@ class RouteBulkImportTest {
         val last = mockk<Uri>()
         // Snapshotted as each file is reached. `uiState` is conflated, so a collector would only see the last value.
         val progress = mutableListOf<RouteBulkImportProgress?>()
-        lateinit var vm: SettingsViewModel
+        lateinit var vm: DataImportViewModel
         coEvery { routeFileImporter.import(first) } answers {
             progress += vm.uiState.value.routeImportProgress
             routeImport("a.gpx", BaseStart)
@@ -433,29 +433,16 @@ class RouteBulkImportTest {
         preferencesRepository: PreferencesRepository = prefs(),
         routeFileImporter: RouteFileImporter = routeFileImporter(),
         fitHrvImportService: FitHrvImportService = mockk(relaxed = true),
-    ): SettingsViewModel =
-        SettingsViewModel(
+    ): DataImportViewModel =
+        DataImportViewModel(
             repository = repository,
             activityRepository = activityRepository,
-            bodyRepository = bodyRepo(),
-            heartRepository = heartRepo(),
-            sleepRepository = sleepRepo(),
-            hydrationReminderController = mockk<HydrationReminderController>(relaxed = true),
             preferencesRepository = preferencesRepository,
-            stepDistanceBackfillService = mockk<StepDistanceBackfillService>(relaxed = true),
             appleHealthImportService = mockk<AppleHealthImportService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             routeFileImporter = routeFileImporter,
             fitHrvImportService = fitHrvImportService,
             routeFolderScanner = mockk(relaxed = true),
-            offlineMapRepository = offlineMapRepository(),
-            offlineMapImportWorkController = offlineMapImportController(),
-            elevationTileRepository = elevationTileRepository(),
-            permissionUxState = mockk<HealthConnectPermissionUxState>(relaxed = true),
-            coMapsNavigationRepository = mockk(relaxed = true),
-            derivedMetricsResetService = mockk(relaxed = true),
-            homeWidgetRefreshScheduler = mockk(relaxed = true),
-            bodyEnergyChainSyncService = mockk(relaxed = true),
         )
 
     private fun routeFileImporter(): RouteFileImporter =

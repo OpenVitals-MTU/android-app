@@ -52,7 +52,6 @@ fun SettingsScreen(
     onOpenReportExport: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ConfirmLeaveWhileImporting(importing = state.isImportingRouteFiles || state.isScanningFitFolder)
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
@@ -80,14 +79,6 @@ fun SettingsScreen(
             ).show()
         }
     }
-    fun copyAppleHealthImportText(text: String, message: String) {
-        coroutineScope.launch {
-            clipboard.setClipEntry(
-                ClipData.newPlainText("OpenVitals", text).toClipEntry()
-            )
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-        }
-    }
     fun openExternalUrl(url: String) {
         runCatching {
             context.startActivity(
@@ -102,70 +93,10 @@ fun SettingsScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refresh()
     }
-    LaunchedEffect(state.routeImportResult) {
-        if ((state.routeImportResult?.importedFiles ?: 0) > 0) {
-            onRouteFilesImported()
-        }
-    }
-
     val requestAllPermissions = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
     ) { granted ->
         viewModel.onPermissionsResult(granted)
-    }
-
-    val requestDataImportPermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract()
-    ) { granted ->
-        viewModel.onPermissionsResult(granted)
-    }
-
-    val requestRouteImportPermissions = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract()
-    ) { granted ->
-        viewModel.onPermissionsResult(granted)
-    }
-
-    val appleHealthExportPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri != null) {
-            viewModel.analyzeAppleHealthExport(uri)
-        }
-    }
-
-    val fitFilePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri != null) {
-            onImportFitFileSelected(uri)
-        }
-    }
-
-    // A folder: `OpenDocumentTree` grants the whole tree, walked for FIT files.
-    val fitFolderPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree(),
-    ) { treeUri ->
-        // Null is the user backing out.
-        if (treeUri != null) {
-            viewModel.importFitFolder(treeUri)
-        }
-    }
-
-    val routeFilePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri != null) {
-            onImportRouteFileSelected(uri)
-        }
-    }
-
-    val routeFilesPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenMultipleDocuments(),
-    ) { uris ->
-        if (uris.isNotEmpty()) {
-            viewModel.importRouteFiles(uris)
-        }
     }
 
     val offlineMapPicker = rememberLauncherForActivityResult(
@@ -181,29 +112,6 @@ fun SettingsScreen(
     ) { uri ->
         if (uri != null) {
             viewModel.importElevationTile(uri)
-        }
-    }
-
-    val appleHealthReportSaver = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("text/plain"),
-    ) { uri ->
-        if (uri != null) {
-            val reportText = state.appleHealthImportResult?.shareableReportText
-                ?: state.appleHealthImportError.orEmpty()
-            coroutineScope.launch {
-                offMainIo {
-                    context.contentResolver.openOutputStream(uri)?.use { output ->
-                        output.write(reportText.toByteArray())
-                    } ?: error("Unable to open destination.")
-                }.fold(
-                    onSuccess = {
-                        Toast.makeText(context, reportSaved, Toast.LENGTH_SHORT).show()
-                    },
-                    onFailure = {
-                        Toast.makeText(context, reportSaveFailed, Toast.LENGTH_SHORT).show()
-                    },
-                )
-            }
         }
     }
 
@@ -247,45 +155,11 @@ fun SettingsScreen(
         onOpenSupport = {
             openExternalUrl(supportUrl)
         },
-        onGrantDataImportPermissions = {
-            requestDataImportPermissions.launch(state.missingDataImportWritePermissions)
-        },
-        onGrantRouteImportPermissions = {
-            requestRouteImportPermissions.launch(state.missingRouteImportWritePermissions)
-        },
-        onImportAppleHealth = {
-            appleHealthExportPicker.launch(AppleHealthExportMimeTypes)
-        },
-        onToggleAppleHealthImportCategory = viewModel::setAppleHealthImportCategorySelected,
-        onImportSelectedAppleHealth = viewModel::importSelectedAppleHealthExport,
-        onImportRouteFile = {
-            routeFilePicker.launch(RouteImportMimeTypes)
-        },
-        onImportRouteFiles = {
-            routeFilesPicker.launch(RouteImportMimeTypes)
-        },
-        onImportFitFile = {
-            fitFilePicker.launch(FitImportMimeTypes)
-        },
-        onImportFitFolder = {
-            fitFolderPicker.launch(null)
-        },
-        onOpenCsvImport = onOpenCsvImport,
-        onOpenReportExport = onOpenReportExport,
         onImportOfflineMap = {
             offlineMapPicker.launch(OfflineMapMimeTypes)
         },
         onImportElevationTile = {
             elevationTilePicker.launch(ElevationTileMimeTypes)
-        },
-        onCopyAppleHealthReport = { reportText ->
-            copyAppleHealthImportText(reportText, reportCopied)
-        },
-        onCopyAppleHealthError = { errorText ->
-            copyAppleHealthImportText(errorText, errorCopied)
-        },
-        onSaveAppleHealthReport = {
-            appleHealthReportSaver.launch("openvitals-apple-health-import-report.txt")
         },
         onSaveDebugLogs = {
             debugLogSaver.launch("openvitals-diagnostics-logs.txt")
