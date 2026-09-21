@@ -67,13 +67,12 @@ class FunctionLengthRatchetTest {
         const val MaxLines = 150
         const val GiantLines = 450
 
-        /** The count on 2026-09-21, after the readiness split. */
-        const val MaxLongFunctions = 57
+        /** The count on 2026-09-21, after the Settings split. */
+        const val MaxLongFunctions = 55
 
         /** Each ceiling is the length on 2026-09-21 plus about 20 lines. */
         val GiantCeilings = mapOf(
             "navigation/AppNavigation.kt#AppNavigation" to 830,
-            "features/settings/SettingsScreenContent.kt#settingsScreenContent" to 550,
             "data/repository/dashboard/DashboardDataLoader.kt#loadDashboardUncached" to 490,
         )
 

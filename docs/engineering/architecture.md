@@ -10,7 +10,7 @@ The repo now has one Android app module for the local app. The goal is to keep b
 
 - App namespace: `tech.mmarca.openvitals`
 - Project shape: two Gradle modules. The phone app is `:app`, under `app/`. `:wear` is a Wear OS placeholder with its own CI gate. The rest of this document is about `:app`
-- Dependency wiring: Hilt in `:app`, rooted at [`OpenVitalsApp`](../../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt); modules are `di/AppModule.kt`, `di/RepositoryModule.kt`, and `di/DevicesModule.kt`
+- Dependency wiring: Hilt in `:app`, rooted at [`OpenVitalsApp`](../../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt); modules are `di/AppModule.kt`, `di/RepositoryModule.kt`, `di/PreferencesModule.kt`, and `di/DevicesModule.kt`
 - UI stack: Jetpack Compose + Material 3 app shell + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
 - Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
 - App-local domain code: pure models, insight calculations, and preference enums under [`domain`](../../app/src/main/kotlin/tech/mmarca/openvitals/domain)
@@ -34,7 +34,7 @@ Most importantly, body and entry/session browsing now live in metric-owned detai
 | `core/` | app-wide primitives: `period`, `presentation`, `stats`, `geo`, `fit`, `performance`, `diagnostics`, `export` (share staging), `permissions` (OS runtime permissions) |
 | `data/` | `local` (Room), `repository` (feature-facing repositories + `contract` interfaces), `sync` (history/backfill services), `migration` (one-time Flutter import) |
 | `devices/` | device integration: `core` (ports, radio lease, pairing), `garmin` (GFDI stack), `wearos`, `notifications` (notification listener), `media` (the phone's players, for music controls), `weather` (the weather a watch asks for) |
-| `di/` | `AppModule`, `RepositoryModule`, `DevicesModule` |
+| `di/` | `AppModule`, `RepositoryModule`, `PreferencesModule`, `DevicesModule` |
 | `domain/` | pure code: `model`, `insights`, `preferences`, `query`, `usecase`, `cycle`, `dashboard` (the aggregator), `report` (report roll-ups) |
 | `features/` | one package per user-facing feature area |
 | `healthconnect/` | the Health Connect integration boundary: manager, per-area readers, permission/UX services |
@@ -502,7 +502,7 @@ Current files:
 
 For availability and permission state these screens should keep using `HealthRepository`, not feature repositories.
 
-Settings has since grown past that: because it also hosts the import, offline map, and reminder workflows, `SettingsViewModel` legitimately injects a handful of feature repositories and import services alongside `HealthRepository`. Its section screens are still routed one section at a time, and bespoke sections such as Watches and Sync with another phone have their own ViewModels rather than growing this one. Prefer that split for anything new.
+Settings is one route per section, and each section builds only its own ViewModel: `DisplaySettingsViewModel`, `ActivitiesSettingsViewModel` (recording, offline maps, elevation tiles), `NutritionSettingsViewModel`, `BodySettingsViewModel` (shared by Body profile and Recovery, because the profile, the zones and the night window all feed the Body Energy chain), `DataImportViewModel`, and the bespoke Watches and Sync with another phone screens. `SettingsViewModel` keeps only the root, Health Connect, Vitals and Diagnostics: availability, permissions, and a few switches. A new section gets its own ViewModel and screen; do not grow `SettingsViewModel`.
 
 ### Health Connect screen shell
 

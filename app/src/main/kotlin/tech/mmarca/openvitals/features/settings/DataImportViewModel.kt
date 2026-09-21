@@ -2,48 +2,15 @@ package tech.mmarca.openvitals.features.settings
 
 import android.net.Uri
 import android.util.Log
-import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
-import tech.mmarca.openvitals.domain.preferences.ActivitySplitDistance
-import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
-import tech.mmarca.openvitals.domain.preferences.AppLanguage
-import tech.mmarca.openvitals.domain.preferences.AppThemeMode
-import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
-import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
-import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
-import tech.mmarca.openvitals.domain.preferences.BodyProfile
-import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
-import tech.mmarca.openvitals.domain.preferences.HomeWidgetRefreshInterval
-import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
-import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
-import tech.mmarca.openvitals.domain.preferences.SleepWindow
-import tech.mmarca.openvitals.domain.preferences.StrideLength
-import tech.mmarca.openvitals.domain.preferences.UnitQuantity
-import tech.mmarca.openvitals.domain.preferences.UnitSystem
-import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
 import tech.mmarca.openvitals.domain.model.ActivityRecordSource
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
-import tech.mmarca.openvitals.domain.model.BodyMeasurementType
-import tech.mmarca.openvitals.domain.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
-import tech.mmarca.openvitals.domain.model.HeartRateThresholds
-import tech.mmarca.openvitals.BuildConfig
-import tech.mmarca.openvitals.core.geo.HgtTileKey
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
-import tech.mmarca.openvitals.data.repository.contract.BodyRepository
-import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
-import tech.mmarca.openvitals.data.repository.contract.HeartRepository
-import tech.mmarca.openvitals.data.repository.contract.SleepRepository
-import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.data.sync.BodyEnergyChainSyncService
-import tech.mmarca.openvitals.data.sync.DerivedMetricsResetService
-import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryType
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryUnits
 import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
@@ -54,15 +21,6 @@ import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFil
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFolderScanner
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.toImportWriteRequest
 import tech.mmarca.openvitals.features.manualentry.activity.withRouteImport
-import tech.mmarca.openvitals.features.activity.elevation.ElevationTile
-import tech.mmarca.openvitals.features.activity.elevation.ElevationTileRepository
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportPhase
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportProgress
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportResult
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkController
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapPack
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapPackFormat
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportPhase
 import tech.mmarca.openvitals.features.imports.garmin.FitHrvImportService
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.FitHrvReading
@@ -75,7 +33,6 @@ import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportResu
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportService
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorker
-import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 import tech.mmarca.openvitals.healthconnect.HealthConnectRateLimitBackoff
 import java.util.UUID
 import javax.inject.Inject
@@ -86,8 +43,6 @@ import kotlinx.coroutines.launch
 import androidx.work.WorkInfo
 import androidx.compose.runtime.Immutable
 import java.time.Clock
-import java.time.Instant
-import java.time.LocalDate
 
 /**
  * What the Data transfer screen shows: the Apple Health export, and the bulk route
@@ -96,6 +51,30 @@ import java.time.LocalDate
  * Its own ViewModel, as the Watches and Sync with another phone sections already are,
  * so Settings does not carry the import workflows as well. See architecture.md.
  */
+/** Which Data transfer card started the running (or last finished) bulk import. */
+enum class RouteBulkImportSource {
+    /** The GPX/KML/KMZ/TCX card's multi-select picker. */
+    ROUTE_FILES,
+
+    /** The FIT card's folder import. */
+    FIT_FOLDER,
+}
+
+@Immutable
+data class RouteBulkImportProgress(
+    val totalFiles: Int,
+    val importedFiles: Int = 0,
+    val failedFiles: Int = 0,
+    val currentFileIndex: Int = 0,
+)
+
+@Immutable
+data class RouteBulkImportResult(
+    val totalFiles: Int,
+    val importedFiles: Int,
+    val failedFiles: Int,
+)
+
 @Immutable
 data class DataImportUiState(
     val isLoading: Boolean = true,
@@ -646,4 +625,11 @@ class DataImportViewModel @Inject constructor(
                 activityTypes.firstOrNull { it.exerciseType == preferredExerciseType }
                     ?: activityTypes.first()
             }
+}
+
+internal fun List<WorkInfo>.currentAppleHealthImportWork(currentWorkId: UUID?): WorkInfo? {
+    if (currentWorkId != null) {
+        firstOrNull { workInfo -> workInfo.id == currentWorkId }?.let { return it }
+    }
+    return firstOrNull { workInfo -> !workInfo.state.isFinished }
 }
