@@ -1,9 +1,12 @@
 package tech.mmarca.openvitals.core.performance
 
 import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.domain.model.DashboardQuery
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
@@ -60,21 +63,29 @@ class DashboardLoadCoalescer {
         val pending = (lookup as CoalesceLookup.Owner).deferred
         return try {
             val value = loader()
-            mutex.withLock {
-                if (inFlight[key] === pending) {
-                    inFlight.remove(key)
-                }
-            }
             pending.complete(value)
             value
         } catch (t: Throwable) {
-            mutex.withLock {
-                if (inFlight[key] === pending) {
-                    inFlight.remove(key)
-                }
-            }
             pending.completeExceptionally(t)
             throw t
+        } finally {
+            // The owner can be cancelled mid-load, and releasing the slot needs the
+            // mutex. Taking a contended lock on a cancelled coroutine throws, which
+            // used to leave the key in flight with a result nobody would ever
+            // complete: every later load of that key waited for good, and its tile
+            // sat on "Loading..." until the app was restarted.
+            withContext(NonCancellable) {
+                mutex.withLock {
+                    if (inFlight[key] === pending) {
+                        inFlight.remove(key)
+                    }
+                }
+                // A cancelled owner completes nothing above, so say so here. The
+                // callers retry, and the key is free for them.
+                pending.completeExceptionally(
+                    CancellationException("dashboard load was cancelled before it finished"),
+                )
+            }
         }
     }
 

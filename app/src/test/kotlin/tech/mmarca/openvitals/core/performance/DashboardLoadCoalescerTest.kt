@@ -3,7 +3,9 @@ package tech.mmarca.openvitals.core.performance
 import java.time.LocalDate
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import tech.mmarca.openvitals.domain.model.DashboardData
@@ -52,4 +54,40 @@ class DashboardLoadCoalescerTest {
         assertEquals(1L, first.await().steps)
         assertEquals(1L, second.await().steps)
     }
+
+    @Test fun `a cancelled load does not wedge the key for every later caller`() = runTest {
+        // A dashboard tile that stayed on "Loading..." for good: the owner of the shared
+        // load was cancelled, its slot was never released, and every later caller waited
+        // on a result nobody would ever produce.
+        val coalescer = DashboardLoadCoalescer()
+        val key = key(DashboardMetric.HYDRATION)
+        val started = CompletableDeferred<Unit>()
+
+        val cancelled = async {
+            coalescer.getOrPut(key) {
+                started.complete(Unit)
+                CompletableDeferred<DashboardData>().await()
+            }
+        }
+        started.await()
+        cancelled.cancelAndJoin()
+
+        // The next load must run, not wait on the dead one.
+        val second = withTimeoutOrNull(1_000) {
+            coalescer.getOrPut(key) { DashboardData(date = key.date, steps = 7) }
+        }
+
+        assertEquals(7L, second?.steps)
+    }
+
+    private fun key(metric: DashboardMetric) = DashboardLoadCoalesceKey.from(
+        query = DashboardQuery(
+            date = LocalDate.of(2026, 6, 27),
+            sleepWindow = SleepWindow.Default,
+            activityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
+            visibleMetrics = setOf(metric),
+        ),
+        granted = setOf("steps"),
+        showOpenVitalsCalculatedCalories = false,
+    )
 }
