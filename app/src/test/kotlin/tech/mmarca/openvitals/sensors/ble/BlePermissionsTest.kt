@@ -11,11 +11,13 @@ class BlePermissionsTest {
         sdkInt: Int = 34,
         notifications: Boolean = true,
         bluetooth: Boolean = true,
+        scan: Boolean = true,
         sensors: Boolean = true,
     ) = recordingRuntimePermissionsToRequest(
         sdkInt = sdkInt,
         hasNotificationPermission = notifications,
         hasBluetoothConnectPermission = bluetooth,
+        hasBluetoothScanPermission = scan,
         hasSavedBleSensors = sensors,
     )
 
@@ -28,6 +30,18 @@ class BlePermissionsTest {
     fun `the bluetooth grant is asked for only when a sensor is saved`() {
         assertEquals(listOf(Manifest.permission.BLUETOOTH_CONNECT), missing(bluetooth = false))
         assertEquals(emptyList<String>(), missing(bluetooth = false, sensors = false))
+    }
+
+    /** After a reboot only a scan finds a sensor. Without the grant it stayed on "Connecting". */
+    @Test
+    fun `the scan grant is asked for with the connect grant`() {
+        assertEquals(listOf(Manifest.permission.BLUETOOTH_SCAN), missing(scan = false))
+        assertEquals(
+            listOf(Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN),
+            missing(bluetooth = false, scan = false),
+        )
+        assertEquals(emptyList<String>(), missing(scan = false, sensors = false))
+        assertEquals(emptyList<String>(), missing(sdkInt = 30, scan = false))
     }
 
     @Test

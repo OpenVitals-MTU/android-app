@@ -67,6 +67,20 @@ class BleSensorCoordinator @Inject constructor(
     private var sampleBuffer = BleRecordingSampleBuffer()
     private var recordingActive = false
 
+    /** Addresses of the sensors the phone forgot. Each connects once [connectScanCallback] sees it. */
+    private val awaitingScan = mutableSetOf<String>()
+    private var connectScanCallback: ScanCallback? = null
+
+    // A fast scan drains the battery, and Android mutes any scan after 30 minutes.
+    // So the scan drops to low power, and starts over before Android mutes it.
+    private val connectScanRestart = Runnable {
+        synchronized(stateLock) {
+            if (connectScanCallback == null) return@synchronized
+            stopConnectScan()
+            startConnectScan(ScanSettings.SCAN_MODE_LOW_POWER)
+        }
+    }
+
     private val _metrics = MutableStateFlow(BleRecordingMetrics())
     val metrics: StateFlow<BleRecordingMetrics> = _metrics.asStateFlow()
 
@@ -139,18 +153,97 @@ class BleSensorCoordinator @Inject constructor(
                 callbackHandler = bleHandler,
             )
             connections[address] = connection
-            connection.connect()
+            if (connection.needsScan()) {
+                connection.awaitScan()
+                awaitingScan += address
+            } else {
+                connection.connect()
+            }
         }
+        startConnectScan(ScanSettings.SCAN_MODE_LOW_LATENCY)
         publishMetrics()
         scheduleMetricsTimeoutTicker()
     }
 
     fun disconnectAll() = synchronized(stateLock) {
         stopMetricsTimeoutTicker()
+        stopConnectScan()
+        awaitingScan.clear()
         connections.values.forEach { it.disconnect() }
         connections.clear()
         capabilityOwners.clear()
         publishMetrics()
+    }
+
+    /**
+     * Scans for the sensors in [awaitingScan]. The device in a scan result carries the
+     * address type, so its connect gets through where a connect by address does not.
+     * Without a scan the sensors connect by address, as before.
+     */
+    @SuppressLint("MissingPermission")
+    private fun startConnectScan(scanMode: Int) {
+        if (awaitingScan.isEmpty()) return
+        val callback = object : ScanCallback() {
+            override fun onScanResult(callbackType: Int, result: ScanResult) {
+                connectScanned(result)
+            }
+
+            override fun onBatchScanResults(results: MutableList<ScanResult>) {
+                results.forEach { connectScanned(it) }
+            }
+
+            override fun onScanFailed(errorCode: Int) {
+                Log.w(TAG, "Sensor scan failed: $errorCode")
+                synchronized(stateLock) {
+                    if (connectScanCallback !== this) return@synchronized
+                    stopConnectScan()
+                    connectAwaitingByAddress()
+                }
+            }
+        }
+        val scanner = bluetoothAdapter?.bluetoothLeScanner
+        val started = scanner != null && hasBluetoothScanPermission(context) && runCatching {
+            scanner.startScan(
+                awaitingScan.map { ScanFilter.Builder().setDeviceAddress(it).build() },
+                ScanSettings.Builder().setScanMode(scanMode).build(),
+                callback,
+            )
+        }.onFailure { Log.w(TAG, "Sensor scan refused: ${it.message}") }.isSuccess
+        if (!started) {
+            connectAwaitingByAddress()
+            return
+        }
+        connectScanCallback = callback
+        val restartDelayMs = if (scanMode == ScanSettings.SCAN_MODE_LOW_LATENCY) {
+            CONNECT_SCAN_FAST_MS
+        } else {
+            CONNECT_SCAN_RESTART_MS
+        }
+        bleHandler.postDelayed(connectScanRestart, restartDelayMs)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun stopConnectScan() {
+        bleHandler.removeCallbacks(connectScanRestart)
+        connectScanCallback?.let { callback ->
+            runCatching { bluetoothAdapter?.bluetoothLeScanner?.stopScan(callback) }
+        }
+        connectScanCallback = null
+    }
+
+    private fun connectScanned(result: ScanResult) {
+        synchronized(stateLock) {
+            val device = result.device ?: return
+            val address = device.address.uppercase()
+            if (!awaitingScan.remove(address)) return
+            connections[address]?.connect(device)
+            if (awaitingScan.isEmpty()) stopConnectScan()
+        }
+    }
+
+    private fun connectAwaitingByAddress() {
+        awaitingScan.forEach { connections[it]?.connect() }
+        awaitingScan.clear()
     }
 
     @SuppressLint("MissingPermission")
@@ -439,5 +532,7 @@ class BleSensorCoordinator @Inject constructor(
         private const val TAG = "BleSensorCoordinator"
         private const val CAPABILITY_DISCOVERY_TIMEOUT_MS = 8_000L
         private const val METRICS_TIMEOUT_PUBLISH_INTERVAL_MS = 1_000L
+        private const val CONNECT_SCAN_FAST_MS = 30_000L
+        private const val CONNECT_SCAN_RESTART_MS = 20 * 60_000L
     }
 }

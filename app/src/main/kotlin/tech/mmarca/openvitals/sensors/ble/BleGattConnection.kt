@@ -70,8 +70,27 @@ internal class BleGattConnection(
     var batteryPercent: Int? = null
         private set
 
+    /**
+     * True when the phone does not know the sensor. It forgets unpaired devices on every
+     * reboot. A connect by address then assumes a public address and never gets through.
+     */
     @SuppressLint("MissingPermission")
-    fun connect() {
+    fun needsScan(): Boolean {
+        val adapter = bluetoothAdapter ?: return false
+        if (!adapter.isEnabled || !hasBluetoothConnectPermission(context)) return false
+        return runCatching {
+            adapter.getRemoteDevice(address).type == BluetoothDevice.DEVICE_TYPE_UNKNOWN
+        }.getOrDefault(false)
+    }
+
+    /** Shows "Connecting" while the coordinator scans for the sensor. */
+    fun awaitScan() {
+        if (!closed) updateStatus(BleConnectionStatus.CONNECTING)
+    }
+
+    /** [scanned] comes from a scan result and carries the address type the saved address lacks. */
+    @SuppressLint("MissingPermission")
+    fun connect(scanned: BluetoothDevice? = null) {
         if (closed) return
         val adapter = bluetoothAdapter
         if (adapter == null || !adapter.isEnabled) {
@@ -85,7 +104,9 @@ internal class BleGattConnection(
             return
         }
         updateStatus(BleConnectionStatus.CONNECTING)
-        val device = runCatching { adapter.getRemoteDevice(address) }.getOrNull() ?: return
+        val device = scanned
+            ?: runCatching { adapter.getRemoteDevice(address) }.getOrNull()
+            ?: return
         gatt = try {
             device.connectGatt(
                 context,

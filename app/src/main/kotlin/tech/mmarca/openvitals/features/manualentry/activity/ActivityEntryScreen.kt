@@ -37,6 +37,7 @@ import tech.mmarca.openvitals.domain.preferences.isDarkTheme
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
 import tech.mmarca.openvitals.features.manualentry.rememberManualEntryWritePermissionRequester
 import tech.mmarca.openvitals.sensors.ble.hasBluetoothConnectPermission
+import tech.mmarca.openvitals.sensors.ble.hasBluetoothScanPermission
 import tech.mmarca.openvitals.sensors.ble.recordingRuntimePermissionsToRequest
 import tech.mmarca.openvitals.ui.components.AppBarAction
 import tech.mmarca.openvitals.ui.components.DeclareAppBar
@@ -115,6 +116,7 @@ fun ActivityEntryScreen(
                 sdkInt = Build.VERSION.SDK_INT,
                 hasNotificationPermission = hasActivityRecordingNotificationPermission(context),
                 hasBluetoothConnectPermission = hasBluetoothConnectPermission(context),
+                hasBluetoothScanPermission = hasBluetoothScanPermission(context),
                 hasSavedBleSensors = viewModel.hasSavedBleSensors,
             )
         } else {
