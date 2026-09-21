@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.recovery
 
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -20,7 +21,6 @@ import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -44,22 +44,19 @@ class RecoveryViewModelTest {
             coEvery { repo.loadHrvSamples(any(), any()) } returns emptyList()
         }
 
-    private fun preferencesRepo(ageYears: Int? = null) =
-        mockk<PreferencesRepository>().also { repo ->
-            every { repo.bodyProfile() } returns BodyProfile(
-                birthYear = ageYears?.let { today.year - it },
-            )
-        }
+    private fun preferences(ageYears: Int? = null) = FakePreferences(
+        initialProfile = BodyProfile(birthYear = ageYears?.let { today.year - it }),
+    )
 
     private fun viewModel(
         sessions: List<SleepData> = emptyList(),
         sleepRepository: SleepRepository = sleepRepo(sessions),
         heartRepository: HeartRepository = heartRepo(),
-        preferencesRepository: PreferencesRepository = preferencesRepo(),
+        bodyProfilePreferences: FakePreferences = preferences(),
     ) = RecoveryViewModel(
         sleepRepository = sleepRepository,
         heartRepository = heartRepository,
-        preferencesRepository = preferencesRepository,
+        bodyProfilePreferences = bodyProfilePreferences,
         dispatchers = mainDispatcherRule.dispatcherProvider,
     )
 

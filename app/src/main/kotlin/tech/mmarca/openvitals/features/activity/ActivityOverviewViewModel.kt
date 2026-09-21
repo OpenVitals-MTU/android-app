@@ -26,7 +26,8 @@ import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.CalorieDisplayPreferences
+import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
 import tech.mmarca.openvitals.data.sync.CaloriesHistorySyncService
 import tech.mmarca.openvitals.navigation.selectedDayOrNull
 import java.time.LocalDate
@@ -94,8 +95,9 @@ data class ActivityOverviewUiState(
 class ActivityOverviewViewModel @Inject constructor(
     private val activityRepository: ActivityRepository,
     private val heartRepository: HeartRepository,
+    private val periodPreferences: PeriodPreferences,
+    private val calorieDisplayPreferences: CalorieDisplayPreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    private val preferencesRepository: PreferencesRepository? = null,
     private val caloriesSync: CaloriesHistorySyncService? = null,
     savedStateHandle: androidx.lifecycle.SavedStateHandle? = null,
 ) : ViewModel() {
@@ -106,7 +108,7 @@ class ActivityOverviewViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(
         ActivityOverviewUiState(
-            activityWeekMode = preferencesRepository?.activityWeekMode ?: ActivityWeekMode.MONDAY_TO_SUNDAY,
+            activityWeekMode = periodPreferences.activityWeekMode,
         )
     )
     val uiState: StateFlow<ActivityOverviewUiState> = _uiState.asStateFlow()
@@ -129,15 +131,14 @@ class ActivityOverviewViewModel @Inject constructor(
     }
 
     private fun observePreferences() {
-        val preferences = preferencesRepository ?: return
         viewModelScope.launch {
-            preferences.activityWeekModeFlow.collect { mode ->
+            periodPreferences.activityWeekModeFlow.collect { mode ->
                 _uiState.value = _uiState.value.copy(activityWeekMode = mode)
             }
         }
         viewModelScope.launch {
             var skipInitial = true
-            preferences.showOpenVitalsCalculatedCaloriesFlow.collect {
+            calorieDisplayPreferences.showOpenVitalsCalculatedCaloriesFlow.collect {
                 if (skipInitial) {
                     skipInitial = false
                 } else {

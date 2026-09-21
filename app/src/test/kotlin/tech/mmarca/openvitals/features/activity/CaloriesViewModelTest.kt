@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -31,6 +32,19 @@ class CaloriesViewModelTest {
 
     private val today = LocalDate.now()
 
+    private fun caloriesViewModel(
+        activityRepository: ActivityRepository,
+        bodyRepository: BodyRepository,
+        preferences: FakePreferences = FakePreferences(),
+        caloriesSync: CaloriesHistorySyncService? = null,
+    ) = CaloriesViewModel(
+        activityRepository = activityRepository,
+        bodyRepository = bodyRepository,
+        periodPreferences = preferences,
+        calorieDisplayPreferences = preferences,
+        caloriesSync = caloriesSync,
+    )
+
     private fun activityRepo(data: ActivityPeriodData = ActivityPeriodData()) =
         mockk<ActivityRepository>().also { repo ->
             coEvery {
@@ -60,7 +74,7 @@ class CaloriesViewModelTest {
         )
         val bodyRepository = bodyRepo(bmrEntries = bmr, latestBmrKcal = 1_715.0)
 
-        val vm = CaloriesViewModel(activityRepository, bodyRepository)
+        val vm = caloriesViewModel(activityRepository, bodyRepository)
 
         val state = vm.uiState.value
         assertFalse(state.isLoading)
@@ -87,7 +101,7 @@ class CaloriesViewModelTest {
     fun `latest BMR is used when selected period has no BMR readings`() = runTest {
         val bodyRepository = bodyRepo(latestBmrKcal = 1_715.0)
 
-        val vm = CaloriesViewModel(activityRepo(), bodyRepository)
+        val vm = caloriesViewModel(activityRepo(), bodyRepository)
 
         assertEquals(1_715.0, vm.uiState.value.latestBmrKcal ?: 0.0, 0.01)
         assertEquals(1_715.0, vm.uiState.value.displayBmrKcal ?: 0.0, 0.01)
@@ -97,17 +111,13 @@ class CaloriesViewModelTest {
     fun `selectRange saves range and reloads`() = runTest {
         val activityRepository = activityRepo()
         val bodyRepository = bodyRepo()
-        var savedRange: TimeRange? = null
-        val vm = CaloriesViewModel(
-            activityRepository = activityRepository,
-            bodyRepository = bodyRepository,
-            onRangeSelected = { savedRange = it },
-        )
+        val preferences = FakePreferences()
+        val vm = caloriesViewModel(activityRepository, bodyRepository, preferences)
 
         vm.selectRange(TimeRange.MONTH)
 
         assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
-        assertEquals(TimeRange.MONTH, savedRange)
+        assertEquals(listOf(TimeRange.MONTH), preferences.storedRanges)
         coVerify(atLeast = 2) {
             activityRepository.loadActivityPeriod(any(), true, true, includeComparisonWindows = false)
         }
@@ -118,14 +128,10 @@ class CaloriesViewModelTest {
     fun `calorie calculation preference changes reload the period`() = runTest {
         val activityRepository = activityRepo()
         val bodyRepository = bodyRepo()
-        val calorieDataMode = MutableStateFlow(false)
-        CaloriesViewModel(
-            activityRepository = activityRepository,
-            bodyRepository = bodyRepository,
-            calorieDataModeChanges = calorieDataMode,
-        )
+        val preferences = FakePreferences(initialShowCalculatedCalories = false)
+        caloriesViewModel(activityRepository, bodyRepository, preferences)
 
-        calorieDataMode.value = true
+        preferences.showOpenVitalsCalculatedCalories = true
 
         coVerify(exactly = 2) {
             activityRepository.loadActivityPeriod(any(), true, true, includeComparisonWindows = false)
@@ -141,7 +147,7 @@ class CaloriesViewModelTest {
         } throws RuntimeException("timeout")
         val bodyRepository = bodyRepo()
 
-        val vm = CaloriesViewModel(activityRepository, bodyRepository)
+        val vm = caloriesViewModel(activityRepository, bodyRepository)
 
         assertFalse(vm.uiState.value.isLoading)
         assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
@@ -153,7 +159,7 @@ class CaloriesViewModelTest {
         val sync = mockk<CaloriesHistorySyncService>()
         coEvery { sync.syncAll() } returns Unit
 
-        CaloriesViewModel(activityRepository, bodyRepo(), caloriesSync = sync)
+        caloriesViewModel(activityRepository, bodyRepo(), caloriesSync = sync)
 
         // The screen owns the cache's first full sync, and one reload re-derives the period.
         coVerify(exactly = 1) { sync.syncAll() }
@@ -167,7 +173,7 @@ class CaloriesViewModelTest {
         val activityRepository = activityRepo()
         val sync = mockk<CaloriesHistorySyncService>()
         coEvery { sync.syncAll() } returns Unit
-        val vm = CaloriesViewModel(activityRepository, bodyRepo(), caloriesSync = sync)
+        val vm = caloriesViewModel(activityRepository, bodyRepo(), caloriesSync = sync)
 
         vm.selectRange(TimeRange.YEAR)
 
@@ -183,7 +189,7 @@ class CaloriesViewModelTest {
         val sync = mockk<CaloriesHistorySyncService>()
         coEvery { sync.syncAll() } returns Unit
 
-        CaloriesViewModel(activityRepository, bodyRepo(), caloriesSync = sync)
+        caloriesViewModel(activityRepository, bodyRepo(), caloriesSync = sync)
 
         coVerify(exactly = 0) { sync.syncAll() }
     }

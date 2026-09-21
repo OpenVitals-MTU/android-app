@@ -9,12 +9,10 @@ import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
@@ -32,7 +30,8 @@ import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.CalorieDisplayPreferences
+import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
 import tech.mmarca.openvitals.data.sync.CaloriesHistorySyncService
 
 @Immutable
@@ -58,46 +57,26 @@ data class CaloriesUiState(
 }
 
 @HiltViewModel
-class CaloriesViewModel(
+class CaloriesViewModel @Inject constructor(
     private val activityRepository: ActivityRepository,
     private val bodyRepository: BodyRepository,
-    initialRange: TimeRange = TimeRange.WEEK,
-    initialDate: java.time.LocalDate? = null,
-    initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-    private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
-    private val calorieDataModeChanges: Flow<Boolean> = emptyFlow(),
-    private val onRangeSelected: (TimeRange) -> Unit = {},
+    private val periodPreferences: PeriodPreferences,
+    private val calorieDisplayPreferences: CalorieDisplayPreferences,
     private val caloriesSync: CaloriesHistorySyncService? = null,
+    savedStateHandle: androidx.lifecycle.SavedStateHandle? = null,
 ) : ViewModel() {
-
-    @Inject
-    constructor(
-        activityRepository: ActivityRepository,
-        bodyRepository: BodyRepository,
-        preferencesRepository: PreferencesRepository,
-        savedStateHandle: androidx.lifecycle.SavedStateHandle,
-        caloriesSync: CaloriesHistorySyncService,
-    ) : this(
-        activityRepository = activityRepository,
-        bodyRepository = bodyRepository,
-        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.CALORIES),
-        initialDate = savedStateHandle.selectedDayOrNull(),
-        initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
-        weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
-        calorieDataModeChanges = preferencesRepository.showOpenVitalsCalculatedCaloriesFlow,
-        onRangeSelected = { range ->
-            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.CALORIES, range)
-        },
-        caloriesSync = caloriesSync,
-    )
 
     private var caloriesSyncKicked = false
 
+    private val initialRange = periodPreferences.timeRangeFor(PeriodRangePreferenceKey.CALORIES)
+    private val initialWeekPeriodMode = periodPreferences.weekPeriodMode
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
-        initialDate = initialDate ?: java.time.LocalDate.now(),
+        initialDate = savedStateHandle?.selectedDayOrNull() ?: java.time.LocalDate.now(),
         initialWeekPeriodMode = initialWeekPeriodMode,
-        onRangeSelected = onRangeSelected,
+        onRangeSelected = { range ->
+            periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.CALORIES, range)
+        },
     )
     private val _uiState = MutableStateFlow(
         CaloriesUiState(
@@ -116,7 +95,7 @@ class CaloriesViewModel(
 
     private fun observeWeekPeriodMode() {
         viewModelScope.launch {
-            weekPeriodModeChanges.drop(1).collect { mode ->
+            periodPreferences.weekPeriodModeFlow.drop(1).collect { mode ->
                 periodDriver.weekPeriodMode = mode
                 _uiState.value = _uiState.value.copy(weekPeriodMode = mode)
                 if (_uiState.value.selectedRange == TimeRange.WEEK) {
@@ -128,7 +107,7 @@ class CaloriesViewModel(
 
     private fun observeCalorieDataMode() {
         viewModelScope.launch {
-            calorieDataModeChanges.drop(1).collect {
+            calorieDisplayPreferences.showOpenVitalsCalculatedCaloriesFlow.drop(1).collect {
                 load()
             }
         }

@@ -24,12 +24,10 @@ import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.contract.CycleRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
 import java.time.LocalDate
 import javax.inject.Inject
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -47,39 +45,24 @@ data class CycleUiState(
 )
 
 @HiltViewModel
-class CycleViewModel(
+class CycleViewModel @Inject constructor(
     private val repository: CycleRepository,
+    private val periodPreferences: PeriodPreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    initialRange: TimeRange = TimeRange.MONTH,
-    initialDate: java.time.LocalDate? = null,
-    initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-    private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
-    private val onRangeSelected: (TimeRange) -> Unit = {},
+    savedStateHandle: androidx.lifecycle.SavedStateHandle? = null,
 ) : ViewModel() {
 
-    @Inject
-    constructor(
-        repository: CycleRepository,
-        preferencesRepository: PreferencesRepository,
-        dispatchers: DispatcherProvider,
-        savedStateHandle: androidx.lifecycle.SavedStateHandle,
-    ) : this(
-        repository = repository,
-        dispatchers = dispatchers,
-        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.CYCLE),
-        initialDate = savedStateHandle.selectedDayOrNull(),
-        initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
-        weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
-        onRangeSelected = { range ->
-            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.CYCLE, range)
-        },
-    )
+    private val initialRange = periodPreferences.timeRangeFor(PeriodRangePreferenceKey.CYCLE)
+    private val initialDate = savedStateHandle?.selectedDayOrNull()
+    private val initialWeekPeriodMode = periodPreferences.weekPeriodMode
 
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
         initialDate = initialDate ?: java.time.LocalDate.now(),
         initialWeekPeriodMode = initialWeekPeriodMode,
-        onRangeSelected = onRangeSelected,
+        onRangeSelected = { range ->
+            periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.CYCLE, range)
+        },
     )
     private val _uiState = MutableStateFlow(
         CycleUiState(
@@ -99,7 +82,7 @@ class CycleViewModel(
 
     private fun observeWeekPeriodMode() {
         viewModelScope.launch {
-            weekPeriodModeChanges.drop(1).collect { mode ->
+            periodPreferences.weekPeriodModeFlow.drop(1).collect { mode ->
                 periodDriver.weekPeriodMode = mode
                 _uiState.value = _uiState.value.copy(weekPeriodMode = mode)
                 if (_uiState.value.selectedRange == TimeRange.WEEK) {

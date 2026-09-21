@@ -11,12 +11,10 @@ import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.R
@@ -31,9 +29,10 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
+import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
 import tech.mmarca.openvitals.domain.insights.HeartRateRecoveryReading
 import tech.mmarca.openvitals.domain.insights.calculateHeartRateRecovery
 import tech.mmarca.openvitals.domain.insights.heartRateRecoveryWindowFor
@@ -87,40 +86,24 @@ data class HeartRateRecoveryUiState(
  * single-workout card uses.
  */
 @HiltViewModel
-class HeartRateRecoveryViewModel(
+class HeartRateRecoveryViewModel @Inject constructor(
     private val activityRepository: ActivityRepository,
     private val heartRepository: HeartRepository,
-    private val bodyProfileProvider: () -> BodyProfile = { BodyProfile() },
+    private val bodyProfilePreferences: BodyProfilePreferences,
+    private val periodPreferences: PeriodPreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    initialRange: TimeRange = TimeRange.MONTH,
-    initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-    private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
-    private val onRangeSelected: (TimeRange) -> Unit = {},
 ) : ViewModel() {
 
-    @Inject
-    constructor(
-        activityRepository: ActivityRepository,
-        heartRepository: HeartRepository,
-        preferencesRepository: PreferencesRepository,
-        dispatchers: DispatcherProvider,
-    ) : this(
-        activityRepository = activityRepository,
-        heartRepository = heartRepository,
-        bodyProfileProvider = preferencesRepository::bodyProfile,
-        dispatchers = dispatchers,
-        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HEART_RATE_RECOVERY),
-        initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
-        weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
-        onRangeSelected = { range ->
-            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.HEART_RATE_RECOVERY, range)
-        },
-    )
+    private val initialRange =
+        periodPreferences.timeRangeFor(PeriodRangePreferenceKey.HEART_RATE_RECOVERY)
+    private val initialWeekPeriodMode = periodPreferences.weekPeriodMode
 
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
         initialWeekPeriodMode = initialWeekPeriodMode,
-        onRangeSelected = onRangeSelected,
+        onRangeSelected = { range ->
+            periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.HEART_RATE_RECOVERY, range)
+        },
     )
     private val _uiState = MutableStateFlow(
         HeartRateRecoveryUiState(
@@ -138,7 +121,7 @@ class HeartRateRecoveryViewModel(
 
     private fun observeWeekPeriodMode() {
         viewModelScope.launch {
-            weekPeriodModeChanges.drop(1).collect { mode ->
+            periodPreferences.weekPeriodModeFlow.drop(1).collect { mode ->
                 periodDriver.weekPeriodMode = mode
                 _uiState.value = _uiState.value.copy(weekPeriodMode = mode)
                 if (_uiState.value.selectedRange == TimeRange.WEEK) {
@@ -240,7 +223,7 @@ class HeartRateRecoveryViewModel(
         }
 
         // Asked once for the whole period: the observed maximum covers the trailing 90 days.
-        val profile = bodyProfileProvider()
+        val profile = bodyProfilePreferences.bodyProfile()
         val observedMaxHeartRateBpm = observedMaxHeartRate(window.end)
         val restingHeartRateBpm = profile.restingHeartRateBpm
             ?: heartRepository.loadRestingHeartRate(window.end)?.toInt()

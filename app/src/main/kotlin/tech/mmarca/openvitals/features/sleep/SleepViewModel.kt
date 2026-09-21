@@ -21,13 +21,13 @@ import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
-import tech.mmarca.openvitals.data.repository.contract.HeartRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.data.repository.contract.SleepRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
+import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
+import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
+import tech.mmarca.openvitals.data.repository.contract.SleepWindowPreferences
 import tech.mmarca.openvitals.domain.usecase.LoadSleepPeriodUseCase
 import java.time.LocalDate
 import javax.inject.Inject
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,95 +53,42 @@ data class SleepUiState(
 )
 
 @HiltViewModel
-class SleepViewModel(
+class SleepViewModel @Inject constructor(
     private val loadSleepPeriodUseCase: LoadSleepPeriodUseCase,
+    private val periodPreferences: PeriodPreferences,
+    private val dailyGoalPreferences: DailyGoalPreferences,
+    private val sleepWindowPreferences: SleepWindowPreferences,
+    private val bodyProfilePreferences: BodyProfilePreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    initialRange: TimeRange = TimeRange.WEEK,
-    initialDate: java.time.LocalDate? = null,
-    initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-    initialSleepWindow: SleepWindow = SleepWindow.Default,
-    initialDailyGoalHours: Double = MetricDailyGoalKey.SLEEP_HOURS.defaultValue,
-    weekPeriodModeFlow: Flow<WeekPeriodMode>? = null,
-    sleepWindowFlow: Flow<SleepWindow>? = null,
-    private val onRangeSelected: (TimeRange) -> Unit = {},
-    private val onDailyGoalChanged: (Double) -> Unit = {},
-    private val ageYearsForDate: (LocalDate) -> Int? = { null },
+    savedStateHandle: androidx.lifecycle.SavedStateHandle? = null,
 ) : ViewModel() {
 
-    @Inject
-    constructor(
-        repository: SleepRepository,
-        heartRepository: HeartRepository,
-        loadSleepPeriodUseCase: LoadSleepPeriodUseCase,
-        preferencesRepository: PreferencesRepository,
-        savedStateHandle: androidx.lifecycle.SavedStateHandle,
-    ) : this(
-        loadSleepPeriodUseCase = loadSleepPeriodUseCase,
-        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.SLEEP),
-        initialDate = savedStateHandle.selectedDayOrNull(),
-        initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
-        initialSleepWindow = preferencesRepository.sleepWindow,
-        initialDailyGoalHours = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS),
-        weekPeriodModeFlow = preferencesRepository.weekPeriodModeFlow,
-        sleepWindowFlow = preferencesRepository.sleepWindowFlow,
-        onRangeSelected = { range ->
-            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.SLEEP, range)
-        },
-        onDailyGoalChanged = { goal ->
-            preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.SLEEP_HOURS, goal)
-        },
-        ageYearsForDate = { date -> preferencesRepository.bodyProfile().ageYears(date) },
-    )
-
-    constructor(
-        repository: SleepRepository,
-        heartRepository: HeartRepository? = null,
-        dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-        initialRange: TimeRange = TimeRange.WEEK,
-        initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-        initialSleepWindow: SleepWindow = SleepWindow.Default,
-        initialDailyGoalHours: Double = MetricDailyGoalKey.SLEEP_HOURS.defaultValue,
-        weekPeriodModeFlow: Flow<WeekPeriodMode>? = null,
-        sleepWindowFlow: Flow<SleepWindow>? = null,
-        onRangeSelected: (TimeRange) -> Unit = {},
-        onDailyGoalChanged: (Double) -> Unit = {},
-        ageYearsForDate: (LocalDate) -> Int? = { null },
-    ) : this(
-        loadSleepPeriodUseCase = LoadSleepPeriodUseCase(repository, heartRepository),
-        dispatchers = dispatchers,
-        initialRange = initialRange,
-        initialWeekPeriodMode = initialWeekPeriodMode,
-        initialSleepWindow = initialSleepWindow,
-        initialDailyGoalHours = initialDailyGoalHours,
-        weekPeriodModeFlow = weekPeriodModeFlow,
-        sleepWindowFlow = sleepWindowFlow,
-        onRangeSelected = onRangeSelected,
-        onDailyGoalChanged = onDailyGoalChanged,
-        ageYearsForDate = ageYearsForDate,
-    )
-
     private val goalKey = MetricDailyGoalKey.SLEEP_HOURS
+    private val initialRange = periodPreferences.timeRangeFor(PeriodRangePreferenceKey.SLEEP)
+    private val initialWeekPeriodMode = periodPreferences.weekPeriodMode
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
-        initialDate = initialDate ?: java.time.LocalDate.now(),
+        initialDate = savedStateHandle?.selectedDayOrNull() ?: java.time.LocalDate.now(),
         initialWeekPeriodMode = initialWeekPeriodMode,
-        onRangeSelected = onRangeSelected,
+        onRangeSelected = { range ->
+            periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.SLEEP, range)
+        },
     )
     private val _uiState = MutableStateFlow(
         SleepUiState(
             selectedRange = initialRange,
             weekPeriodMode = initialWeekPeriodMode,
-            sleepWindow = initialSleepWindow,
-            dailyGoalHours = goalKey.normalize(initialDailyGoalHours),
+            sleepWindow = sleepWindowPreferences.sleepWindow,
+            dailyGoalHours = goalKey.normalize(dailyGoalPreferences.dailyGoalFor(goalKey)),
         )
     )
     val uiState: StateFlow<SleepUiState> = _uiState.asStateFlow()
     private val loadCoordinator = LoadCoordinator()
 
     init {
-        weekPeriodModeFlow
-            ?.distinctUntilChanged()
-            ?.onEach { mode ->
+        periodPreferences.weekPeriodModeFlow
+            .distinctUntilChanged()
+            .onEach { mode ->
                 if (_uiState.value.weekPeriodMode != mode) {
                     periodDriver.weekPeriodMode = mode
                     _uiState.value = _uiState.value.copy(weekPeriodMode = mode)
@@ -150,16 +97,16 @@ class SleepViewModel(
                     }
                 }
             }
-            ?.launchIn(viewModelScope)
-        sleepWindowFlow
-            ?.distinctUntilChanged()
-            ?.onEach { mode ->
-                if (_uiState.value.sleepWindow != mode) {
-                    _uiState.value = _uiState.value.copy(sleepWindow = mode)
+            .launchIn(viewModelScope)
+        sleepWindowPreferences.sleepWindowFlow
+            .distinctUntilChanged()
+            .onEach { window ->
+                if (_uiState.value.sleepWindow != window) {
+                    _uiState.value = _uiState.value.copy(sleepWindow = window)
                     load()
                 }
             }
-            ?.launchIn(viewModelScope)
+            .launchIn(viewModelScope)
         load()
     }
 
@@ -210,7 +157,7 @@ class SleepViewModel(
 
     fun setDailyGoalHours(hours: Double) {
         val goal = goalKey.normalize(hours)
-        onDailyGoalChanged(goal)
+        dailyGoalPreferences.setDailyGoalFor(goalKey, goal)
         _uiState.value = _uiState.value.copy(dailyGoalHours = goal)
     }
 
@@ -240,7 +187,7 @@ class SleepViewModel(
                             previousDailyDurations = result.previousDailyDurations,
                             baselineDailyDurations = result.baselineDailyDurations,
                             crossDailyHrv = result.crossDailyHrv,
-                            ageYears = ageYearsForDate(date),
+                            ageYears = bodyProfilePreferences.bodyProfile().ageYears(date),
                         )
                     }
                     if (!isCurrent) return@load

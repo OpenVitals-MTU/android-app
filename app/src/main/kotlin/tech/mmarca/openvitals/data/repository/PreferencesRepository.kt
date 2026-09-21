@@ -3,6 +3,11 @@ package tech.mmarca.openvitals.data.repository
 import android.content.Context
 import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
+import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
+import tech.mmarca.openvitals.data.repository.contract.CalorieDisplayPreferences
+import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
+import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
+import tech.mmarca.openvitals.data.repository.contract.SleepWindowPreferences
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -50,6 +55,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,7 +65,11 @@ import kotlinx.coroutines.flow.map
 class PreferencesRepository @Inject constructor(
     @ApplicationContext context: Context,
     private val systemUnitSystem: SystemUnitSystemProvider = SystemUnitSystemProvider.Default,
-) {
+) : PeriodPreferences,
+    DailyGoalPreferences,
+    BodyProfilePreferences,
+    CalorieDisplayPreferences,
+    SleepWindowPreferences {
 
     private val prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
     private val _unitSystemPreference = MutableStateFlow(readUnitSystemPreference())
@@ -92,16 +102,17 @@ class PreferencesRepository @Inject constructor(
     val dynamicColorFlow: StateFlow<Boolean> = _dynamicColor.asStateFlow()
     val chartAggregationModeFlow: StateFlow<ChartAggregationMode> = _chartAggregationMode.asStateFlow()
     val bloodPressureGuidelineFlow: StateFlow<BloodPressureGuideline> = _bloodPressureGuideline.asStateFlow()
-    val sleepWindowFlow: StateFlow<SleepWindow> = _sleepWindow.asStateFlow()
-    val activityWeekModeFlow: StateFlow<ActivityWeekMode> = _activityWeekMode.asStateFlow()
+    override val sleepWindowFlow: StateFlow<SleepWindow> = _sleepWindow.asStateFlow()
+    override val activityWeekModeFlow: StateFlow<ActivityWeekMode> = _activityWeekMode.asStateFlow()
     val activitySplitDistanceMetersFlow: StateFlow<Double> = _activitySplitDistanceMeters.asStateFlow()
-    val weekPeriodModeFlow = activityWeekModeFlow.map { it.toWeekPeriodMode() }
-    val showOpenVitalsCalculatedCaloriesFlow: StateFlow<Boolean> = _showOpenVitalsCalculatedCalories.asStateFlow()
+    override val weekPeriodModeFlow: Flow<WeekPeriodMode> =
+        activityWeekModeFlow.map { it.toWeekPeriodMode() }
+    override val showOpenVitalsCalculatedCaloriesFlow: StateFlow<Boolean> = _showOpenVitalsCalculatedCalories.asStateFlow()
     val nutritionAverageBasisFlow: StateFlow<NutritionAverageBasis> = _nutritionAverageBasis.asStateFlow()
     val healthConnectSyncEnabledFlow: StateFlow<Boolean> = _healthConnectSyncEnabled.asStateFlow()
     val bodyEnergyCalibrationFlow: StateFlow<BodyEnergyCalibration> = _bodyEnergyCalibration.asStateFlow()
     val caffeinePreferencesFlow: StateFlow<CaffeinePreferences> = _caffeinePreferences.asStateFlow()
-    val bodyProfileFlow: StateFlow<BodyProfile> = _bodyProfile.asStateFlow()
+    override val bodyProfileFlow: StateFlow<BodyProfile> = _bodyProfile.asStateFlow()
 
     var onboardingDone: Boolean
         get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
@@ -216,17 +227,17 @@ class PreferencesRepository @Inject constructor(
             _sleepWindow.value = _sleepWindow.value.copy(endHour = clamped)
         }
 
-    val sleepWindow: SleepWindow
+    override val sleepWindow: SleepWindow
         get() = _sleepWindow.value
 
-    var activityWeekMode: ActivityWeekMode
+    override var activityWeekMode: ActivityWeekMode
         get() = _activityWeekMode.value
         set(value) {
             prefs.edit { putString(KEY_ACTIVITY_WEEK_MODE, value.name) }
             _activityWeekMode.value = value
         }
 
-    val weekPeriodMode: WeekPeriodMode
+    override val weekPeriodMode: WeekPeriodMode
         get() = activityWeekMode.toWeekPeriodMode()
 
     /** Split distance in meters, normalized on read and write so a bad value never reaches the engine. */
@@ -238,7 +249,7 @@ class PreferencesRepository @Inject constructor(
             _activitySplitDistanceMeters.value = normalized
         }
 
-    var showOpenVitalsCalculatedCalories: Boolean
+    override var showOpenVitalsCalculatedCalories: Boolean
         get() = _showOpenVitalsCalculatedCalories.value
         set(value) {
             prefs.edit { putBoolean(KEY_SHOW_OPENVITALS_CALCULATED_CALORIES, value) }
@@ -470,9 +481,9 @@ class PreferencesRepository @Inject constructor(
             }
         }
 
-    fun bodyProfile(): BodyProfile = _bodyProfile.value
+    override fun bodyProfile(): BodyProfile = _bodyProfile.value
 
-    fun setBodyProfile(profile: BodyProfile) {
+    override fun setBodyProfile(profile: BodyProfile) {
         val normalized = profile.normalized()
         prefs.edit {
             normalized.birthYear?.let { putInt(KEY_BODY_PROFILE_BIRTH_YEAR, it) }
@@ -512,12 +523,12 @@ class PreferencesRepository @Inject constructor(
         _caffeinePreferences.value = normalized
     }
 
-    fun timeRangeFor(key: PeriodRangePreferenceKey): TimeRange =
+    override fun timeRangeFor(key: PeriodRangePreferenceKey): TimeRange =
         prefs.getString(key.storageKey, null)
             ?.let { value -> runCatching { TimeRange.valueOf(value) }.getOrNull() }
             ?: key.defaultRange
 
-    fun setTimeRangeFor(key: PeriodRangePreferenceKey, range: TimeRange) {
+    override fun setTimeRangeFor(key: PeriodRangePreferenceKey, range: TimeRange) {
         prefs.edit { putString(key.storageKey, range.name) }
     }
 
@@ -638,11 +649,11 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
-    fun dailyGoalFor(key: MetricDailyGoalKey): Double =
+    override fun dailyGoalFor(key: MetricDailyGoalKey): Double =
         prefs.getFloat(key.storageKey, key.defaultValue.toFloat()).toDouble()
             .let(key::normalize)
 
-    fun setDailyGoalFor(key: MetricDailyGoalKey, value: Double) {
+    override fun setDailyGoalFor(key: MetricDailyGoalKey, value: Double) {
         prefs.edit {
             putFloat(key.storageKey, key.normalize(value).toFloat())
         }

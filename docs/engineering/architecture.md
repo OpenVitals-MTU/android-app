@@ -624,7 +624,7 @@ The content lambda should render:
 - `Week / Month / Year` content
 - optional list/breakdown sections
 
-When registering a new period-based screen, add a `PeriodRangePreferenceKey` and inject `PreferencesRepository` into the screen ViewModel so the saved range is owned with the rest of the feature state. Persist only range changes; selected dates remain screen state.
+When registering a new period-based screen, add a `PeriodRangePreferenceKey` and inject `PeriodPreferences` into the screen ViewModel so the saved range is owned with the rest of the feature state. Persist only range changes; selected dates remain screen state.
 
 ### 5. Keep visuals local to the feature
 
@@ -666,6 +666,12 @@ Each repository should:
 - return app models ready for the ViewModel
 
 Not every repository is a Health Connect facade. `GarminWellnessRepository` is a thin seam over a Room DAO for series Health Connect has no type for, and `BleDeviceRepository` and `PreferencesRepository` own app-local device and preference state. Those are the exception. If a new repository is not backed by Health Connect, say in its KDoc why Health Connect cannot own the data.
+
+### Ask for the preferences you use, not the repository
+
+`PreferencesRepository` holds every setting in the app and needs a `Context`, so a ViewModel that injects it cannot be built in a JVM test. Narrow contracts in `data/repository/contract` carve it into the groups screens actually use — `PeriodPreferences`, `DailyGoalPreferences`, `BodyProfilePreferences`, `CalorieDisplayPreferences`, `SleepWindowPreferences` — and `PreferencesModule` binds each to the repository.
+
+Inject the contract. The ViewModel then needs one constructor, and its test passes `FakePreferences` instead of mocking a hundred members. Add a contract for a new group rather than widening an existing one.
 
 ### Keep queries period-oriented
 

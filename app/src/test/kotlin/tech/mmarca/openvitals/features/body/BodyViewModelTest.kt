@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.body
 
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.BodyFatEntry
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
@@ -45,12 +46,11 @@ class BodyViewModelTest {
     private fun bodyViewModel(
         repository: BodyRepository,
         initialRange: TimeRange = TimeRange.MONTH,
-        onRangeSelected: (TimeRange) -> Unit = {},
+        preferences: FakePreferences = FakePreferences(initialRange = initialRange),
     ) = BodyViewModel(
         repository = repository,
+        periodPreferences = preferences,
         dispatchers = mainDispatcherRule.dispatcherProvider,
-        initialRange = initialRange,
-        onRangeSelected = onRangeSelected,
     )
 
 
@@ -500,15 +500,12 @@ class BodyViewModelTest {
     }
 
     @Test fun `selectRange saves selected range`() = runTest {
-        var savedRange: TimeRange? = null
-        val vm = bodyViewModel(
-            repository = emptyRepo(),
-            onRangeSelected = { range -> savedRange = range },
-        )
+        val preferences = FakePreferences()
+        val vm = bodyViewModel(repository = emptyRepo(), preferences = preferences)
 
         vm.selectRange(TimeRange.WEEK)
 
-        assertEquals(TimeRange.WEEK, savedRange)
+        assertEquals(listOf(TimeRange.WEEK), preferences.storedRanges)
     }
 
     @Test fun `selectRange triggers reload`() = runTest {

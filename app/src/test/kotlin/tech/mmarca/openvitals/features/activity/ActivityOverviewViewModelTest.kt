@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.domain.insights.CardioLoadMethod
@@ -32,6 +33,18 @@ class ActivityOverviewViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val today = LocalDate.now()
+
+    private fun overviewViewModel(
+        activityRepository: ActivityRepository,
+        heartRepository: HeartRepository,
+        preferences: FakePreferences = FakePreferences(),
+    ) = ActivityOverviewViewModel(
+        activityRepository = activityRepository,
+        heartRepository = heartRepository,
+        periodPreferences = preferences,
+        calorieDisplayPreferences = preferences,
+        dispatchers = mainDispatcherRule.dispatcherProvider,
+    )
 
     private fun activityRepo(
         steps: List<DailySteps> = emptyList(),
@@ -76,7 +89,7 @@ class ActivityOverviewViewModelTest {
             hrv = listOf(DailyHrv(today, rmssdMs = 42.5)),
         )
 
-        val vm = ActivityOverviewViewModel(activityRepo, heartRepo, mainDispatcherRule.dispatcherProvider)
+        val vm = overviewViewModel(activityRepo, heartRepo)
 
         val state = vm.uiState.value
         assertFalse(state.isLoading)
@@ -97,10 +110,9 @@ class ActivityOverviewViewModelTest {
     fun `load maps workouts into overview days`() = runTest {
         val start = Instant.parse("${today}T10:00:00Z")
         val workout = workout(start, start.plusSeconds(45 * 60L))
-        val vm = ActivityOverviewViewModel(
+        val vm = overviewViewModel(
             activityRepository = activityRepo(workouts = listOf(workout)),
             heartRepository = heartRepo(),
-            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
 
         assertEquals(listOf(workout.id), vm.uiState.value.today.workouts.map { it.id })
@@ -117,7 +129,7 @@ class ActivityOverviewViewModelTest {
                 source = "watch",
             )
         }
-        val vm = ActivityOverviewViewModel(
+        val vm = overviewViewModel(
             activityRepository = activityRepo(
                 workouts = listOf(workout(start, start.plusSeconds(30 * 60L))),
             ),
@@ -125,7 +137,6 @@ class ActivityOverviewViewModelTest {
                 heartRateSamples = heartRateSamples,
                 restingHeartRate = listOf(DailyRestingHR(today, 60L)),
             ),
-            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
 
         assertTrue(vm.uiState.value.today.cardioLoad > 0)
@@ -149,7 +160,7 @@ class ActivityOverviewViewModelTest {
                 source = "watch",
             )
         }
-        val vm = ActivityOverviewViewModel(
+        val vm = overviewViewModel(
             activityRepository = activityRepo(
                 workouts = listOf(workout(start, start.plusSeconds(30 * 60L))),
             ),
@@ -157,7 +168,6 @@ class ActivityOverviewViewModelTest {
                 heartRateSamples = heartRateSamples,
                 restingHeartRate = listOf(DailyRestingHR(today, 60L)),
             ),
-            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
 
         assertTrue(vm.uiState.value.today.cardioLoad > 0)
@@ -166,10 +176,9 @@ class ActivityOverviewViewModelTest {
 
     @Test
     fun `cardio load has no data when heart rate and movement are insufficient`() = runTest {
-        val vm = ActivityOverviewViewModel(
+        val vm = overviewViewModel(
             activityRepository = activityRepo(),
             heartRepository = heartRepo(),
-            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
 
         assertEquals(0, vm.uiState.value.today.cardioLoad)
@@ -178,7 +187,7 @@ class ActivityOverviewViewModelTest {
 
     @Test
     fun `cardio load uses low confidence fallback for meaningful movement without heart rate`() = runTest {
-        val vm = ActivityOverviewViewModel(
+        val vm = overviewViewModel(
             activityRepository = activityRepo(
                 steps = listOf(
                     DailySteps(
@@ -189,7 +198,6 @@ class ActivityOverviewViewModelTest {
                 ),
             ),
             heartRepository = heartRepo(),
-            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
 
         assertEquals(1, vm.uiState.value.today.cardioLoad)
@@ -251,7 +259,7 @@ class ActivityOverviewViewModelTest {
         val activityRepo = activityRepo()
         val heartRepo = heartRepo()
 
-        ActivityOverviewViewModel(activityRepo, heartRepo, mainDispatcherRule.dispatcherProvider)
+        overviewViewModel(activityRepo, heartRepo)
 
         coVerify {
             activityRepo.loadDailySteps(today.minusDays(29), today)
@@ -267,10 +275,9 @@ class ActivityOverviewViewModelTest {
     fun `load failure sets error and clears loading`() = runTest {
         val activityRepo = mockk<ActivityRepository>()
         coEvery { activityRepo.loadDailySteps(any(), any()) } throws RuntimeException("timeout")
-        val vm = ActivityOverviewViewModel(
+        val vm = overviewViewModel(
             activityRepository = activityRepo,
             heartRepository = heartRepo(),
-            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
 
         val state = vm.uiState.value

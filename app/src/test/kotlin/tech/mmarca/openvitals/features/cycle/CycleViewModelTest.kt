@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.cycle
 
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -65,6 +66,7 @@ class CycleViewModelTest {
         repository: CycleRepository,
     ) = CycleViewModel(
         repository = repository,
+        periodPreferences = FakePreferences(),
         dispatchers = mainDispatcherRule.dispatcherProvider,
     )
 

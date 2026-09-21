@@ -32,18 +32,17 @@ import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
+import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -69,53 +68,31 @@ data class ActivitiesUiState(
 )
 
 @HiltViewModel
-class ActivitiesViewModel(
+class ActivitiesViewModel @Inject constructor(
     private val repository: ActivityRepository,
+    private val periodPreferences: PeriodPreferences,
+    private val dailyGoalPreferences: DailyGoalPreferences,
     private val heartRepository: HeartRepository? = null,
-    initialRange: TimeRange = TimeRange.WEEK,
-    initialDate: java.time.LocalDate? = null,
-    initialActivityWeekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
-    initialDailyGoalMinutes: Double = MetricDailyGoalKey.WORKOUT_MINUTES.defaultValue,
-    private val activityWeekModeChanges: Flow<ActivityWeekMode> = emptyFlow(),
-    private val onRangeSelected: (TimeRange) -> Unit = {},
-    private val onDailyGoalChanged: (Double) -> Unit = {},
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
+    savedStateHandle: androidx.lifecycle.SavedStateHandle? = null,
 ) : ViewModel() {
 
-    @Inject
-    constructor(
-        repository: ActivityRepository,
-        heartRepository: HeartRepository,
-        preferencesRepository: PreferencesRepository,
-        savedStateHandle: androidx.lifecycle.SavedStateHandle,
-    ) : this(
-        repository = repository,
-        heartRepository = heartRepository,
-        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.ACTIVITIES),
-        initialDate = savedStateHandle.selectedDayOrNull(),
-        initialActivityWeekMode = preferencesRepository.activityWeekMode,
-        initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.WORKOUT_MINUTES),
-        activityWeekModeChanges = preferencesRepository.activityWeekModeFlow,
-        onRangeSelected = { range ->
-            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.ACTIVITIES, range)
-        },
-        onDailyGoalChanged = { goal ->
-            preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.WORKOUT_MINUTES, goal)
-        },
-    )
-
     private val goalKey = MetricDailyGoalKey.WORKOUT_MINUTES
+    private val initialRange = periodPreferences.timeRangeFor(PeriodRangePreferenceKey.ACTIVITIES)
+    private val initialActivityWeekMode = periodPreferences.activityWeekMode
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
-        initialDate = initialDate ?: java.time.LocalDate.now(),
+        initialDate = savedStateHandle?.selectedDayOrNull() ?: java.time.LocalDate.now(),
         initialWeekPeriodMode = initialActivityWeekMode.toWeekPeriodMode(),
-        onRangeSelected = onRangeSelected,
+        onRangeSelected = { range ->
+            periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.ACTIVITIES, range)
+        },
     )
     private val _uiState = MutableStateFlow(
         ActivitiesUiState(
             selectedRange = initialRange,
             activityWeekMode = initialActivityWeekMode,
-            dailyGoalMinutes = goalKey.normalize(initialDailyGoalMinutes),
+            dailyGoalMinutes = goalKey.normalize(dailyGoalPreferences.dailyGoalFor(goalKey)),
         )
     )
     val uiState: StateFlow<ActivitiesUiState> = _uiState.asStateFlow()
@@ -129,7 +106,7 @@ class ActivitiesViewModel(
 
     private fun observeActivityWeekMode() {
         viewModelScope.launch {
-            activityWeekModeChanges.drop(1).collect { mode ->
+            periodPreferences.activityWeekModeFlow.drop(1).collect { mode ->
                 periodDriver.weekPeriodMode = mode.toWeekPeriodMode()
                 _uiState.value = _uiState.value.copy(activityWeekMode = mode)
                 if (_uiState.value.selectedRange == TimeRange.WEEK) {
@@ -186,7 +163,7 @@ class ActivitiesViewModel(
 
     fun setDailyGoalMinutes(minutes: Double) {
         val goal = goalKey.normalize(minutes)
-        onDailyGoalChanged(goal)
+        dailyGoalPreferences.setDailyGoalFor(goalKey, goal)
         _uiState.value = _uiState.value.copy(dailyGoalMinutes = goal)
     }
 

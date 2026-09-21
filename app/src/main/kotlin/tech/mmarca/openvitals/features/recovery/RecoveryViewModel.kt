@@ -25,7 +25,7 @@ import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.SleepStage
 import tech.mmarca.openvitals.domain.model.sleepDurationMsFromStages
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 
@@ -68,7 +68,7 @@ data class RecoveryUiState(
 class RecoveryViewModel @Inject constructor(
     private val sleepRepository: SleepRepository,
     private val heartRepository: HeartRepository,
-    private val preferencesRepository: PreferencesRepository,
+    private val bodyProfilePreferences: BodyProfilePreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
 ) : ViewModel() {
 
@@ -102,7 +102,7 @@ class RecoveryViewModel @Inject constructor(
                     LoadedRecoveryInputs(
                         sessions = sessionsDeferred.await(),
                         hrvSamples = hrvDeferred.await(),
-                        ageYears = preferencesRepository.bodyProfile().ageYears(today),
+                        ageYears = bodyProfilePreferences.bodyProfile().ageYears(today),
                     )
                 }
             }.onSuccess { inputs ->

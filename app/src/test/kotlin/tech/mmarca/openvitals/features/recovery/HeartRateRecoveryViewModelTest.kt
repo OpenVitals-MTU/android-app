@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.recovery
 
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import android.util.Log
 import androidx.health.connect.client.records.ExerciseSegment
 import io.mockk.coEvery
@@ -74,12 +75,15 @@ class HeartRateRecoveryViewModelTest {
         activityRepository: ActivityRepository,
         heartRepository: HeartRepository,
         profile: BodyProfile = BodyProfile(),
-    ) = HeartRateRecoveryViewModel(
-        activityRepository = activityRepository,
-        heartRepository = heartRepository,
-        bodyProfileProvider = { profile },
-        dispatchers = mainDispatcherRule.dispatcherProvider,
-    )
+    ) = FakePreferences(initialProfile = profile).let { preferences ->
+        HeartRateRecoveryViewModel(
+            activityRepository = activityRepository,
+            heartRepository = heartRepository,
+            bodyProfilePreferences = preferences,
+            periodPreferences = preferences,
+            dispatchers = mainDispatcherRule.dispatcherProvider,
+        )
+    }
 
     @Test
     fun `only sessions of five minutes or more with a stop mark cost a heart rate read`() = runTest {
