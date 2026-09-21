@@ -20,18 +20,17 @@ import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.RefreshMode
-import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
+import tech.mmarca.openvitals.data.repository.contract.NutritionDisplayPreferences
+import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
 import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -51,64 +50,34 @@ data class NutritionUiState(
 )
 
 @HiltViewModel
-class NutritionViewModel(
+class NutritionViewModel @Inject constructor(
     private val repository: NutritionRepository,
+    private val periodPreferences: PeriodPreferences,
+    private val dailyGoalPreferences: DailyGoalPreferences,
+    private val nutritionDisplayPreferences: NutritionDisplayPreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    initialRange: TimeRange = TimeRange.WEEK,
-    initialDate: java.time.LocalDate? = null,
-    initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-    private val selectedMetric: NutritionMetric = NutritionMetric.CALORIES_IN,
-    initialDailyGoal: Double = selectedMetric.dailyGoalKey.defaultValue,
-    private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
-    initialAverageBasis: NutritionAverageBasis = NutritionAverageBasis.LOGGED_DAYS,
-    private val averageBasisChanges: Flow<NutritionAverageBasis> = emptyFlow(),
-    private val onRangeSelected: (TimeRange) -> Unit = {},
-    private val onDailyGoalChanged: (Double) -> Unit = {},
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    @Inject
-    constructor(
-        repository: NutritionRepository,
-        preferencesRepository: PreferencesRepository,
-        savedStateHandle: SavedStateHandle,
-        dispatchers: DispatcherProvider,
-    ) : this(
-        repository = repository,
-        dispatchers = dispatchers,
-        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.NUTRITION),
-        initialDate = savedStateHandle.selectedDayOrNull(),
-        initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
-        selectedMetric = nutritionMetricFromRoute(savedStateHandle[METRIC_ID_ARG]),
-        initialDailyGoal = preferencesRepository.dailyGoalFor(
-            nutritionMetricFromRoute(savedStateHandle[METRIC_ID_ARG]).dailyGoalKey
-        ),
-        onRangeSelected = { range ->
-            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.NUTRITION, range)
-        },
-        onDailyGoalChanged = { goal ->
-            preferencesRepository.setDailyGoalFor(
-                nutritionMetricFromRoute(savedStateHandle[METRIC_ID_ARG]).dailyGoalKey,
-                goal,
-            )
-        },
-        weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
-        initialAverageBasis = preferencesRepository.nutritionAverageBasis,
-        averageBasisChanges = preferencesRepository.nutritionAverageBasisFlow,
-    )
-
+    /** The metric the route named; calories in when it named none. */
+    private val selectedMetric = nutritionMetricFromRoute(savedStateHandle[METRIC_ID_ARG])
+    private val initialRange = periodPreferences.timeRangeFor(PeriodRangePreferenceKey.NUTRITION)
+    private val initialWeekPeriodMode = periodPreferences.weekPeriodMode
     private val goalKey = selectedMetric.dailyGoalKey
-    private var averageBasis = initialAverageBasis
+    private var averageBasis = nutritionDisplayPreferences.nutritionAverageBasis
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
-        initialDate = initialDate ?: java.time.LocalDate.now(),
+        initialDate = savedStateHandle.selectedDayOrNull() ?: java.time.LocalDate.now(),
         initialWeekPeriodMode = initialWeekPeriodMode,
-        onRangeSelected = onRangeSelected,
+        onRangeSelected = { range ->
+            periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.NUTRITION, range)
+        },
     )
     private val _uiState = MutableStateFlow(
         NutritionUiState(
             selectedRange = initialRange,
             weekPeriodMode = initialWeekPeriodMode,
-            dailyGoal = goalKey.normalize(initialDailyGoal),
+            dailyGoal = goalKey.normalize(dailyGoalPreferences.dailyGoalFor(goalKey)),
         )
     )
     val uiState: StateFlow<NutritionUiState> = _uiState.asStateFlow()
@@ -123,7 +92,7 @@ class NutritionViewModel(
     /** The basis only changes the divisor, so a change re-maps without re-reading. */
     private fun observeAverageBasis() {
         viewModelScope.launch {
-            averageBasisChanges.drop(1).collect { basis ->
+            nutritionDisplayPreferences.nutritionAverageBasisFlow.drop(1).collect { basis ->
                 averageBasis = basis
                 _uiState.value = _uiState.value.withDisplay()
             }
@@ -132,7 +101,7 @@ class NutritionViewModel(
 
     private fun observeWeekPeriodMode() {
         viewModelScope.launch {
-            weekPeriodModeChanges.drop(1).collect { mode ->
+            periodPreferences.weekPeriodModeFlow.drop(1).collect { mode ->
                 periodDriver.weekPeriodMode = mode
                 _uiState.value = _uiState.value.copy(weekPeriodMode = mode)
                 if (_uiState.value.selectedRange == TimeRange.WEEK) {
@@ -189,7 +158,7 @@ class NutritionViewModel(
 
     fun setDailyGoal(goal: Double) {
         val normalized = goalKey.normalize(goal)
-        onDailyGoalChanged(normalized)
+        dailyGoalPreferences.setDailyGoalFor(goalKey, normalized)
         _uiState.value = _uiState.value.copy(dailyGoal = normalized).withDisplay()
     }
 
@@ -296,5 +265,9 @@ class NutritionViewModel(
     }
 }
 
-private fun nutritionMetricFromRoute(metricId: String?): NutritionMetric =
+/** The route argument that names [this]; the inverse of [nutritionMetricFromRoute]. */
+internal fun NutritionMetric.routeId(): String = name
+
+/** The metric a route argument names. The ids are [tech.mmarca.openvitals.domain.dashboard.DashboardWidgetId] names. */
+internal fun nutritionMetricFromRoute(metricId: String?): NutritionMetric =
     runCatching { metricId?.let(NutritionMetric::valueOf) }.getOrNull() ?: NutritionMetric.CALORIES_IN

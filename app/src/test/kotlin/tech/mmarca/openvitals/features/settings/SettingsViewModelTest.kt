@@ -1,13 +1,12 @@
 package tech.mmarca.openvitals.features.settings
 
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import android.util.Log
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkStatic
-import io.mockk.runs
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -19,7 +18,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
@@ -71,24 +69,24 @@ class SettingsViewModelTest {
     }
 
     @Test fun `setBloodPressureGuideline persists preference and updates ui state`() = runTest {
-        val prefs = prefs()
-        val vm = viewModel(preferencesRepository = prefs)
+        val prefs = FakePreferences()
+        val vm = viewModel(preferences = prefs)
 
         vm.setBloodPressureGuideline(BloodPressureGuideline.ESH_2023)
 
-        verify { prefs.bloodPressureGuideline = BloodPressureGuideline.ESH_2023 }
+        assertEquals(BloodPressureGuideline.ESH_2023, prefs.bloodPressureGuideline)
         assertEquals(BloodPressureGuideline.ESH_2023, vm.uiState.value.bloodPressureGuideline)
     }
 
     @Test fun `mindfulness toggle persists and triggers a refresh`() = runTest {
-        val prefs = prefs()
+        val prefs = FakePreferences()
         val repository = repo()
-        val vm = viewModel(repository = repository, preferencesRepository = prefs)
+        val vm = viewModel(repository = repository, preferences = prefs)
 
         vm.setHealthConnectMindfulnessEnabled(true)
         advanceUntilIdle()
 
-        verify { prefs.healthConnectMindfulnessEnabled = true }
+        assertTrue(prefs.healthConnectMindfulnessEnabled)
         assertTrue(vm.uiState.value.healthConnectMindfulnessEnabled)
         // The initial load plus the toggle-triggered reload.
         verify(atLeast = 2) { repository.availability() }
@@ -119,7 +117,7 @@ class SettingsViewModelTest {
         heartRepository: HeartRepository = heartRepo(),
         sleepRepository: SleepRepository = sleepRepo(),
         hydrationReminderController: HydrationReminderController = mockk(relaxed = true),
-        preferencesRepository: PreferencesRepository = prefs(),
+        preferences: FakePreferences = FakePreferences(),
         permissionUxState: HealthConnectPermissionUxState = mockk(relaxed = true),
     ): SettingsViewModel =
         SettingsViewModel(
@@ -127,7 +125,8 @@ class SettingsViewModelTest {
             heartRepository = heartRepository,
             sleepRepository = sleepRepository,
             hydrationReminderController = hydrationReminderController,
-            preferencesRepository = preferencesRepository,
+            healthConnectPreferences = preferences,
+            heartThresholdPreferences = preferences,
             permissionUxState = permissionUxState,
         )
 
@@ -168,16 +167,4 @@ class SettingsViewModelTest {
             coEvery { repo.grantedPermissions() } returns grantedPermissions
         }
 
-    private fun prefs(): PreferencesRepository =
-        mockk<PreferencesRepository>().also { prefs ->
-            every { prefs.bloodPressureGuideline } returns BloodPressureGuideline.ACC_AHA_2017
-            every { prefs.bloodPressureGuideline = any() } just runs
-            every { prefs.healthConnectSyncEnabled } returns true
-            var mindfulnessEnabled = false
-            every { prefs.healthConnectMindfulnessEnabled } answers { mindfulnessEnabled }
-            every { prefs.healthConnectMindfulnessEnabled = any() } answers {
-                mindfulnessEnabled = firstArg()
-            }
-            every { prefs.appLockEnabled } returns false
-        }
 }

@@ -2,7 +2,6 @@ package tech.mmarca.openvitals.features.settings
 
 import android.net.Uri
 import android.util.Log
-import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.work.Data
 import androidx.work.WorkInfo
 import io.mockk.coEvery
@@ -16,8 +15,6 @@ import io.mockk.unmockkStatic
 import io.mockk.verify
 import java.time.Instant
 import java.util.UUID
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -30,14 +27,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import tech.mmarca.openvitals.core.geo.HgtResolution
-import tech.mmarca.openvitals.core.geo.HgtTileKey
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
-import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
-import tech.mmarca.openvitals.data.repository.contract.HeartRepository
-import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
@@ -54,18 +46,11 @@ import tech.mmarca.openvitals.domain.preferences.ChartAggregationMode
 import tech.mmarca.openvitals.domain.preferences.HomeWidgetRefreshInterval
 import tech.mmarca.openvitals.domain.preferences.NutritionAverageBasis
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
-import tech.mmarca.openvitals.domain.preferences.StrideLength
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
-import tech.mmarca.openvitals.features.activity.elevation.ElevationTile
-import tech.mmarca.openvitals.features.activity.elevation.ElevationTileLibraryState
-import tech.mmarca.openvitals.features.activity.elevation.ElevationTileRepository
-import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkController
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapLibraryState
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
-import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
-import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthExportFingerprint
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportAnalysisResult
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportCategory
@@ -298,7 +283,8 @@ class DataImportViewModelTest {
     ) = DataImportViewModel(
         repository = repository,
         activityRepository = activityRepository,
-        preferencesRepository = preferencesRepository,
+        recordingPreferences = preferencesRepository,
+        unitPreferences = preferencesRepository,
         appleHealthImportService = appleHealthImportService,
         appleHealthImportWorkController = appleHealthImportWorkController,
         routeFileImporter = routeFileImporter,

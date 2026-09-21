@@ -33,7 +33,6 @@ import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
-import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
@@ -56,7 +55,6 @@ import tech.mmarca.openvitals.features.activity.elevation.ElevationTileRepositor
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkController
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapLibraryState
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
-import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportService
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
 import tech.mmarca.openvitals.features.imports.garmin.FitHrvImportService
@@ -65,7 +63,6 @@ import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFil
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFolderFile
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFolderScan
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFolderScanner
-import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 /**
@@ -342,7 +339,8 @@ class FitFolderImportTest {
         DataImportViewModel(
             repository = repository,
             activityRepository = activityRepository,
-            preferencesRepository = preferencesRepository,
+            recordingPreferences = preferencesRepository,
+            unitPreferences = preferencesRepository,
             appleHealthImportService = mockk<AppleHealthImportService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             routeFileImporter = routeFileImporter,

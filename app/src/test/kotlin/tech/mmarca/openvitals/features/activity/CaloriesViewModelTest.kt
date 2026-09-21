@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
+import androidx.lifecycle.SavedStateHandle
 import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import io.mockk.coEvery
@@ -7,7 +8,6 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import java.time.Instant
 import java.time.LocalDate
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -36,13 +36,14 @@ class CaloriesViewModelTest {
         activityRepository: ActivityRepository,
         bodyRepository: BodyRepository,
         preferences: FakePreferences = FakePreferences(),
-        caloriesSync: CaloriesHistorySyncService? = null,
+        caloriesSync: CaloriesHistorySyncService = mockk(relaxed = true),
     ) = CaloriesViewModel(
         activityRepository = activityRepository,
         bodyRepository = bodyRepository,
         periodPreferences = preferences,
         calorieDisplayPreferences = preferences,
         caloriesSync = caloriesSync,
+        savedStateHandle = SavedStateHandle(),
     )
 
     private fun activityRepo(data: ActivityPeriodData = ActivityPeriodData()) =
@@ -133,10 +134,11 @@ class CaloriesViewModelTest {
 
         preferences.showOpenVitalsCalculatedCalories = true
 
-        coVerify(exactly = 2) {
+        // The first load kicks the history sync, which reloads once; the toggle reloads again.
+        coVerify(exactly = 3) {
             activityRepository.loadActivityPeriod(any(), true, true, includeComparisonWindows = false)
         }
-        coVerify(exactly = 2) { bodyRepository.loadBmrEntries(any(), any()) }
+        coVerify(exactly = 3) { bodyRepository.loadBmrEntries(any(), any()) }
     }
 
     @Test

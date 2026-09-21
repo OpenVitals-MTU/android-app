@@ -23,18 +23,18 @@ import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
+import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
+import tech.mmarca.openvitals.data.repository.contract.SleepWindowPreferences
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
-import tech.mmarca.openvitals.features.mindfulness.reminders.MindfulnessReminderController
+import tech.mmarca.openvitals.features.mindfulness.reminders.MindfulnessReminderSettings
 import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -56,67 +56,35 @@ data class MindfulnessUiState(
 )
 
 @HiltViewModel
-class MindfulnessViewModel(
+class MindfulnessViewModel @Inject constructor(
     private val repository: MindfulnessRepository,
+    private val sleepRepository: SleepRepository,
+    private val periodPreferences: PeriodPreferences,
+    private val dailyGoalPreferences: DailyGoalPreferences,
+    private val sleepWindowPreferences: SleepWindowPreferences,
+    private val reminders: MindfulnessReminderSettings,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    private val sleepRepository: SleepRepository? = null,
-    initialRange: TimeRange = TimeRange.WEEK,
-    initialDate: java.time.LocalDate? = null,
-    initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-    initialSleepWindow: SleepWindow = SleepWindow.Default,
-    initialDailyGoalMinutes: Double = MetricDailyGoalKey.MINDFULNESS_MINUTES.defaultValue,
-    initialReminderConfig: MindfulnessReminderConfig = MindfulnessReminderConfig(),
-    private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
-    private val onRangeSelected: (TimeRange) -> Unit = {},
-    private val onDailyGoalChanged: (Double) -> Unit = {},
-    private val onReminderConfigChanged: (MindfulnessReminderConfig) -> Unit = {},
+    savedStateHandle: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
 
-    @Inject
-    constructor(
-        repository: MindfulnessRepository,
-        sleepRepository: SleepRepository,
-        preferencesRepository: PreferencesRepository,
-        reminderController: MindfulnessReminderController,
-        dispatchers: DispatcherProvider,
-        savedStateHandle: androidx.lifecycle.SavedStateHandle,
-    ) : this(
-        repository = repository,
-        dispatchers = dispatchers,
-        sleepRepository = sleepRepository,
-        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.MINDFULNESS),
-        initialDate = savedStateHandle.selectedDayOrNull(),
-        initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
-        initialSleepWindow = preferencesRepository.sleepWindow,
-        initialDailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES),
-        initialReminderConfig = reminderController.config(),
-        weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
-        onRangeSelected = { range ->
-            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.MINDFULNESS, range)
-        },
-        onDailyGoalChanged = { goal ->
-            preferencesRepository.setDailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES, goal)
-            reminderController.applyConfig()
-        },
-        onReminderConfigChanged = { config ->
-            reminderController.updateConfig(config)
-        },
-    )
-
+    private val initialRange = periodPreferences.timeRangeFor(PeriodRangePreferenceKey.MINDFULNESS)
+    private val initialWeekPeriodMode = periodPreferences.weekPeriodMode
     private val goalKey = MetricDailyGoalKey.MINDFULNESS_MINUTES
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
-        initialDate = initialDate ?: java.time.LocalDate.now(),
+        initialDate = savedStateHandle.selectedDayOrNull() ?: java.time.LocalDate.now(),
         initialWeekPeriodMode = initialWeekPeriodMode,
-        onRangeSelected = onRangeSelected,
+        onRangeSelected = { range ->
+            periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.MINDFULNESS, range)
+        },
     )
     private val _uiState = MutableStateFlow(
         MindfulnessUiState(
             selectedRange = initialRange,
             weekPeriodMode = initialWeekPeriodMode,
-            sleepWindow = initialSleepWindow,
-            dailyGoalMinutes = goalKey.normalize(initialDailyGoalMinutes),
-            reminderConfig = initialReminderConfig.normalized(),
+            sleepWindow = sleepWindowPreferences.sleepWindow,
+            dailyGoalMinutes = goalKey.normalize(dailyGoalPreferences.dailyGoalFor(goalKey)),
+            reminderConfig = reminders.config().normalized(),
         )
     )
     val uiState: StateFlow<MindfulnessUiState> = _uiState.asStateFlow()
@@ -129,7 +97,7 @@ class MindfulnessViewModel(
 
     private fun observeWeekPeriodMode() {
         viewModelScope.launch {
-            weekPeriodModeChanges.drop(1).collect { mode ->
+            periodPreferences.weekPeriodModeFlow.drop(1).collect { mode ->
                 periodDriver.weekPeriodMode = mode
                 _uiState.value = _uiState.value.copy(weekPeriodMode = mode)
                 if (_uiState.value.selectedRange == TimeRange.WEEK) {
@@ -186,7 +154,9 @@ class MindfulnessViewModel(
 
     fun setDailyGoalMinutes(minutes: Double) {
         val goal = goalKey.normalize(minutes)
-        onDailyGoalChanged(goal)
+        dailyGoalPreferences.setDailyGoalFor(goalKey, goal)
+        // The reminder text quotes the goal, so the alarm is re-planned.
+        reminders.applyStoredConfig()
         _uiState.value = _uiState.value.copy(dailyGoalMinutes = goal).withDisplay()
     }
 
@@ -237,7 +207,7 @@ class MindfulnessViewModel(
                     sessions = periodData.sessions,
                     previousSessions = periodData.previousSessions,
                     baselineSessions = periodData.baselineSessions,
-                    crossSleepSessions = sleepRepository?.loadSleepSessions(sleepQueryStart, period.end).orEmpty(),
+                    crossSleepSessions = sleepRepository.loadSleepSessions(sleepQueryStart, period.end),
                 )
             }
                 .onSuccess { result ->
@@ -292,7 +262,7 @@ class MindfulnessViewModel(
     private fun updateReminderConfig(update: (MindfulnessReminderConfig) -> MindfulnessReminderConfig) {
         val normalized = update(_uiState.value.reminderConfig).normalized()
         _uiState.value = _uiState.value.copy(reminderConfig = normalized)
-        onReminderConfigChanged(normalized)
+        reminders.updateConfig(normalized)
     }
 }
 

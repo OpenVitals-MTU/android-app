@@ -2,7 +2,7 @@ package tech.mmarca.openvitals.core.presentation
 
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.WidgetOrderPreferences
 import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
 import tech.mmarca.openvitals.domain.preferences.metricDetailSectionOrderFromStored
 import javax.inject.Inject
@@ -12,11 +12,11 @@ import kotlinx.coroutines.flow.asStateFlow
 
 @HiltViewModel
 class MetricDetailSectionOrderViewModel @Inject constructor(
-    private val preferencesRepository: PreferencesRepository,
+    private val widgetOrder: WidgetOrderPreferences,
 ) : ViewModel() {
 
     private val _sectionOrder = MutableStateFlow(
-        metricDetailSectionOrderFromStored(preferencesRepository.metricDetailSectionOrder()),
+        metricDetailSectionOrderFromStored(widgetOrder.metricDetailSectionOrder()),
     )
     val sectionOrder: StateFlow<List<MetricDetailSectionId>> = _sectionOrder.asStateFlow()
 
@@ -58,7 +58,7 @@ class MetricDetailSectionOrderViewModel @Inject constructor(
     }
 
     private fun updateSectionOrder(order: List<MetricDetailSectionId>) {
-        preferencesRepository.setMetricDetailSectionOrder(order.map { it.name })
+        widgetOrder.setMetricDetailSectionOrder(order.map { it.name })
         _sectionOrder.value = order
     }
 }

@@ -134,7 +134,7 @@ class HydrationReminderControllerTest {
         coEvery { hydrationRepository.loadHydrationEntries(any(), any()) } returns emptyList()
         val controller = controller()
 
-        controller.applyConfig()
+        controller.applyStoredConfig()
         mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
 
         verify(exactly = 1) { alarmManager.schedule(any()) }

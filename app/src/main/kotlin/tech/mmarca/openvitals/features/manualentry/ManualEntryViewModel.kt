@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.WidgetOrderPreferences
 
 /**
  * The log grid. A tile only opens its entry screen: Health Connect can
@@ -41,12 +41,12 @@ data class ManualEntryUiState(
 
 @HiltViewModel
 class ManualEntryViewModel @Inject constructor(
-    private val preferencesRepository: PreferencesRepository,
+    private val widgetOrder: WidgetOrderPreferences,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
         ManualEntryUiState(
-            widgets = manualEntryWidgetIdsFromStored(preferencesRepository.manualEntryWidgetOrder()),
+            widgets = manualEntryWidgetIdsFromStored(widgetOrder.manualEntryWidgetOrder()),
         )
     )
     val uiState: StateFlow<ManualEntryUiState> = _uiState.asStateFlow()
@@ -142,7 +142,7 @@ class ManualEntryViewModel @Inject constructor(
 
     private fun updateWidgets(widgets: List<ManualEntryWidgetId>) {
         val customizableWidgets = customizableManualEntryWidgetIds(widgets)
-        preferencesRepository.setManualEntryWidgetOrder(customizableWidgets.map { it.name })
+        widgetOrder.setManualEntryWidgetOrder(customizableWidgets.map { it.name })
         _uiState.value = _uiState.value.copy(widgets = customizableWidgets)
     }
 }

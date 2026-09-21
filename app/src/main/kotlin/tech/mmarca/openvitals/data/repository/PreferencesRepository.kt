@@ -3,11 +3,23 @@ package tech.mmarca.openvitals.data.repository
 import android.content.Context
 import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
+import tech.mmarca.openvitals.data.repository.contract.ActivitySplitPreferences
+import tech.mmarca.openvitals.data.repository.contract.BodyEnergyCalibrationPreferences
 import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
+import tech.mmarca.openvitals.data.repository.contract.CaffeineModelPreferences
 import tech.mmarca.openvitals.data.repository.contract.CalorieDisplayPreferences
 import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
+import tech.mmarca.openvitals.data.repository.contract.HealthConnectPreferences
+import tech.mmarca.openvitals.data.repository.contract.HeartThresholdPreferences
+import tech.mmarca.openvitals.data.repository.contract.HydrationGoalPreferences
+import tech.mmarca.openvitals.data.repository.contract.MindfulnessTimerPreferences
+import tech.mmarca.openvitals.data.repository.contract.NutritionDisplayPreferences
+import tech.mmarca.openvitals.data.repository.contract.OnboardingPreferences
+import tech.mmarca.openvitals.data.repository.contract.RecordingPreferences
 import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
 import tech.mmarca.openvitals.data.repository.contract.SleepWindowPreferences
+import tech.mmarca.openvitals.data.repository.contract.UnitPreferences
+import tech.mmarca.openvitals.data.repository.contract.WidgetOrderPreferences
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -41,6 +53,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.preferences.UnitSystemPreference
 import tech.mmarca.openvitals.domain.preferences.toWeekPeriodMode
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
+import tech.mmarca.openvitals.domain.model.HeartRateThresholds
 import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
 import tech.mmarca.openvitals.domain.model.MindfulnessBackgroundSound
 import tech.mmarca.openvitals.domain.model.MindfulnessBellSound
@@ -69,7 +82,19 @@ class PreferencesRepository @Inject constructor(
     DailyGoalPreferences,
     BodyProfilePreferences,
     CalorieDisplayPreferences,
-    SleepWindowPreferences {
+    SleepWindowPreferences,
+    NutritionDisplayPreferences,
+    HeartThresholdPreferences,
+    HydrationGoalPreferences,
+    BodyEnergyCalibrationPreferences,
+    CaffeineModelPreferences,
+    MindfulnessTimerPreferences,
+    ActivitySplitPreferences,
+    WidgetOrderPreferences,
+    RecordingPreferences,
+    UnitPreferences,
+    OnboardingPreferences,
+    HealthConnectPreferences {
 
     private val prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
     private val _unitSystemPreference = MutableStateFlow(readUnitSystemPreference())
@@ -101,30 +126,30 @@ class PreferencesRepository @Inject constructor(
     val appThemeModeFlow: StateFlow<AppThemeMode> = _appThemeMode.asStateFlow()
     val dynamicColorFlow: StateFlow<Boolean> = _dynamicColor.asStateFlow()
     val chartAggregationModeFlow: StateFlow<ChartAggregationMode> = _chartAggregationMode.asStateFlow()
-    val bloodPressureGuidelineFlow: StateFlow<BloodPressureGuideline> = _bloodPressureGuideline.asStateFlow()
+    override val bloodPressureGuidelineFlow: StateFlow<BloodPressureGuideline> = _bloodPressureGuideline.asStateFlow()
     override val sleepWindowFlow: StateFlow<SleepWindow> = _sleepWindow.asStateFlow()
     override val activityWeekModeFlow: StateFlow<ActivityWeekMode> = _activityWeekMode.asStateFlow()
-    val activitySplitDistanceMetersFlow: StateFlow<Double> = _activitySplitDistanceMeters.asStateFlow()
+    override val activitySplitDistanceMetersFlow: StateFlow<Double> = _activitySplitDistanceMeters.asStateFlow()
     override val weekPeriodModeFlow: Flow<WeekPeriodMode> =
         activityWeekModeFlow.map { it.toWeekPeriodMode() }
     override val showOpenVitalsCalculatedCaloriesFlow: StateFlow<Boolean> = _showOpenVitalsCalculatedCalories.asStateFlow()
-    val nutritionAverageBasisFlow: StateFlow<NutritionAverageBasis> = _nutritionAverageBasis.asStateFlow()
+    override val nutritionAverageBasisFlow: StateFlow<NutritionAverageBasis> = _nutritionAverageBasis.asStateFlow()
     val healthConnectSyncEnabledFlow: StateFlow<Boolean> = _healthConnectSyncEnabled.asStateFlow()
-    val bodyEnergyCalibrationFlow: StateFlow<BodyEnergyCalibration> = _bodyEnergyCalibration.asStateFlow()
-    val caffeinePreferencesFlow: StateFlow<CaffeinePreferences> = _caffeinePreferences.asStateFlow()
+    override val bodyEnergyCalibrationFlow: StateFlow<BodyEnergyCalibration> = _bodyEnergyCalibration.asStateFlow()
+    override val caffeinePreferencesFlow: StateFlow<CaffeinePreferences> = _caffeinePreferences.asStateFlow()
     override val bodyProfileFlow: StateFlow<BodyProfile> = _bodyProfile.asStateFlow()
 
-    var onboardingDone: Boolean
+    override var onboardingDone: Boolean
         get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
         set(value) { prefs.edit { putBoolean(KEY_ONBOARDING_DONE, value) } }
 
     /** Off by default: asking for the mindfulness permission crashes Health Connect on some devices. */
-    var mindfulnessOptIn: Boolean
+    override var mindfulnessOptIn: Boolean
         get() = prefs.getBoolean(KEY_MINDFULNESS_OPT_IN, false)
         set(value) { prefs.edit { putBoolean(KEY_MINDFULNESS_OPT_IN, value) } }
 
     /** Gates the Health Connect mindfulness integration. Defaults to the legacy opt-in. */
-    var healthConnectMindfulnessEnabled: Boolean
+    override var healthConnectMindfulnessEnabled: Boolean
         get() = prefs.getBoolean(
             KEY_HEALTH_CONNECT_MINDFULNESS_ENABLED,
             prefs.getBoolean(KEY_MINDFULNESS_OPT_IN, false),
@@ -132,7 +157,7 @@ class PreferencesRepository @Inject constructor(
         set(value) { prefs.edit { putBoolean(KEY_HEALTH_CONNECT_MINDFULNESS_ENABLED, value) } }
 
     /** The unit system to display, with a SYSTEM preference already resolved. */
-    val unitSystem: UnitSystem
+    override val unitSystem: UnitSystem
         get() = _unitSystem.value
 
     var unitSystemPreference: UnitSystemPreference
@@ -149,7 +174,7 @@ class PreferencesRepository @Inject constructor(
     }
 
     /** The stored override for one quantity, or null to follow the base setting. */
-    fun unitOverride(quantity: UnitQuantity): UnitSystem? = _unitOverrides.value[quantity]
+    override fun unitOverride(quantity: UnitQuantity): UnitSystem? = _unitOverrides.value[quantity]
 
     fun setUnitOverride(quantity: UnitQuantity, override: UnitSystem?) {
         prefs.edit {
@@ -166,7 +191,7 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
-    var appLanguage: AppLanguage
+    override var appLanguage: AppLanguage
         get() = _appLanguage.value
         set(value) {
             prefs.edit { putString(KEY_APP_LANGUAGE, value.storageValue) }
@@ -194,7 +219,7 @@ class PreferencesRepository @Inject constructor(
             _chartAggregationMode.value = value
         }
 
-    var bloodPressureGuideline: BloodPressureGuideline
+    override var bloodPressureGuideline: BloodPressureGuideline
         get() = _bloodPressureGuideline.value
         set(value) {
             prefs.edit { putString(KEY_BLOOD_PRESSURE_GUIDELINE, value.name) }
@@ -241,7 +266,7 @@ class PreferencesRepository @Inject constructor(
         get() = activityWeekMode.toWeekPeriodMode()
 
     /** Split distance in meters, normalized on read and write so a bad value never reaches the engine. */
-    var activitySplitDistanceMeters: Double
+    override var activitySplitDistanceMeters: Double
         get() = _activitySplitDistanceMeters.value
         set(value) {
             val normalized = ActivitySplitDistance.normalize(value)
@@ -257,7 +282,7 @@ class PreferencesRepository @Inject constructor(
         }
 
     /** What the nutrition screens divide a period total by. Defaults to logged days only. */
-    var nutritionAverageBasis: NutritionAverageBasis
+    override var nutritionAverageBasis: NutritionAverageBasis
         get() = _nutritionAverageBasis.value
         set(value) {
             prefs.edit {
@@ -308,7 +333,7 @@ class PreferencesRepository @Inject constructor(
             prefs.edit { putFloat(KEY_STRIDE_LENGTH_METERS, normalized.toFloat()) }
         }
 
-    var healthConnectSyncEnabled: Boolean
+    override var healthConnectSyncEnabled: Boolean
         get() = _healthConnectSyncEnabled.value
         set(value) {
             prefs.edit { putBoolean(KEY_HEALTH_CONNECT_SYNC_ENABLED, value) }
@@ -339,13 +364,19 @@ class PreferencesRepository @Inject constructor(
             prefs.edit { putLong(KEY_PRIVACY_POLICY_ACCEPTED_AT, value) }
         }
 
-    var appLockEnabled: Boolean
+    /** The current policy, and now, as the moment of consent. */
+    override fun acceptCurrentPrivacyPolicy() {
+        acceptedPrivacyPolicyVersion = CURRENT_PRIVACY_POLICY_VERSION
+        privacyPolicyAcceptedAtMillis = System.currentTimeMillis()
+    }
+
+    override var appLockEnabled: Boolean
         get() = prefs.getBoolean(KEY_APP_LOCK_ENABLED, false)
         set(value) {
             prefs.edit { putBoolean(KEY_APP_LOCK_ENABLED, value) }
         }
 
-    var lastActivityExerciseType: Int?
+    override var lastActivityExerciseType: Int?
         get() = prefs.getInt(KEY_LAST_ACTIVITY_EXERCISE_TYPE, MISSING_EXERCISE_TYPE)
             .takeIf { it != MISSING_EXERCISE_TYPE }
         set(value) {
@@ -358,7 +389,7 @@ class PreferencesRepository @Inject constructor(
             }
         }
 
-    var favoriteActivityExerciseType: Int?
+    override var favoriteActivityExerciseType: Int?
         get() = prefs.getInt(KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE, MISSING_EXERCISE_TYPE)
             .takeIf { it != MISSING_EXERCISE_TYPE }
         set(value) {
@@ -371,7 +402,7 @@ class PreferencesRepository @Inject constructor(
             }
         }
 
-    var hydrationDailyGoalLiters: Double
+    override var hydrationDailyGoalLiters: Double
         get() = prefs.getFloat(
             KEY_HYDRATION_DAILY_GOAL_LITERS,
             DEFAULT_HYDRATION_DAILY_GOAL_LITERS.toFloat(),
@@ -385,7 +416,7 @@ class PreferencesRepository @Inject constructor(
             }
         }
 
-    var highHeartRateThresholdBpm: Int
+    override var highHeartRateThresholdBpm: Int
         get() = prefs.getInt(
             KEY_HIGH_HEART_RATE_THRESHOLD_BPM,
             DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM,
@@ -399,7 +430,7 @@ class PreferencesRepository @Inject constructor(
             }
         }
 
-    var lowHeartRateThresholdBpm: Int
+    override var lowHeartRateThresholdBpm: Int
         get() = prefs.getInt(
             KEY_LOW_HEART_RATE_THRESHOLD_BPM,
             DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM,
@@ -413,9 +444,9 @@ class PreferencesRepository @Inject constructor(
             }
         }
 
-    fun bodyEnergyCalibration(): BodyEnergyCalibration = _bodyEnergyCalibration.value
+    override fun bodyEnergyCalibration(): BodyEnergyCalibration = _bodyEnergyCalibration.value
 
-    fun setBodyEnergyCalibration(calibration: BodyEnergyCalibration) {
+    override fun setBodyEnergyCalibration(calibration: BodyEnergyCalibration) {
         val normalized = calibration.normalized()
         prefs.edit {
             putBoolean(KEY_BODY_ENERGY_USE_MANUAL_ZONES, normalized.useManualZones)
@@ -500,9 +531,9 @@ class PreferencesRepository @Inject constructor(
         _bodyProfile.value = normalized
     }
 
-    fun caffeinePreferences(): CaffeinePreferences = _caffeinePreferences.value
+    override fun caffeinePreferences(): CaffeinePreferences = _caffeinePreferences.value
 
-    fun setCaffeinePreferences(preferences: CaffeinePreferences) {
+    override fun setCaffeinePreferences(preferences: CaffeinePreferences) {
         val normalized = preferences.normalized()
         prefs.edit {
             putBoolean(KEY_CAFFEINE_PROFILE_COMPLETED, normalized.profileCompleted)
@@ -532,7 +563,7 @@ class PreferencesRepository @Inject constructor(
         prefs.edit { putString(key.storageKey, range.name) }
     }
 
-    fun activityRecordingPreferences(): ActivityRecordingPreferences =
+    override fun activityRecordingPreferences(): ActivityRecordingPreferences =
         ActivityRecordingPreferences(
             autoIdleEnabled = prefs.getBoolean(
                 KEY_ACTIVITY_RECORDING_AUTO_IDLE_ENABLED,
@@ -600,7 +631,7 @@ class PreferencesRepository @Inject constructor(
             ),
         ).normalized()
 
-    fun setActivityRecordingPreferences(preferences: ActivityRecordingPreferences) {
+    override fun setActivityRecordingPreferences(preferences: ActivityRecordingPreferences) {
         val normalized = preferences.normalized()
         prefs.edit {
             putBoolean(KEY_ACTIVITY_RECORDING_AUTO_IDLE_ENABLED, normalized.autoIdleEnabled)
@@ -852,23 +883,23 @@ class PreferencesRepository @Inject constructor(
         }
     }
 
-    fun manualEntryWidgetOrder(): List<String>? =
+    override fun manualEntryWidgetOrder(): List<String>? =
         prefs.getString(KEY_MANUAL_ENTRY_WIDGET_ORDER, null)
             ?.split(KEY_VALUE_SEPARATOR)
             ?.filter { it.isNotBlank() }
 
-    fun setManualEntryWidgetOrder(widgetIds: List<String>) {
+    override fun setManualEntryWidgetOrder(widgetIds: List<String>) {
         prefs.edit {
             putString(KEY_MANUAL_ENTRY_WIDGET_ORDER, widgetIds.joinToString(KEY_VALUE_SEPARATOR))
         }
     }
 
-    fun metricDetailSectionOrder(): List<String>? =
+    override fun metricDetailSectionOrder(): List<String>? =
         prefs.getString(KEY_METRIC_DETAIL_SECTION_ORDER, null)
             ?.split(KEY_VALUE_SEPARATOR)
             ?.filter { it.isNotBlank() }
 
-    fun setMetricDetailSectionOrder(sectionIds: List<String>) {
+    override fun setMetricDetailSectionOrder(sectionIds: List<String>) {
         prefs.edit {
             putString(KEY_METRIC_DETAIL_SECTION_ORDER, sectionIds.joinToString(KEY_VALUE_SEPARATOR))
         }
@@ -899,7 +930,7 @@ class PreferencesRepository @Inject constructor(
     private fun acknowledgedFeatureKey(feature: HealthConnectFeature): String =
         "$KEY_ACKNOWLEDGED_FEATURE_PREFIX${feature.name}"
 
-    fun mindfulnessTimerConfig(): MindfulnessTimerConfig =
+    override fun mindfulnessTimerConfig(): MindfulnessTimerConfig =
         MindfulnessTimerConfig(
             durationMinutes = prefs.getInt(
                 KEY_MINDFULNESS_TIMER_DURATION_MINUTES,
@@ -918,7 +949,7 @@ class PreferencesRepository @Inject constructor(
             config.copy(intervalMinutes = config.intervalMinutes?.takeIf { it < config.durationMinutes })
         }
 
-    fun setMindfulnessTimerConfig(config: MindfulnessTimerConfig) {
+    override fun setMindfulnessTimerConfig(config: MindfulnessTimerConfig) {
         val duration = config.durationMinutes.coerceIn(
             MIN_MINDFULNESS_TIMER_MINUTES,
             MAX_MINDFULNESS_TIMER_MINUTES,
@@ -1375,12 +1406,12 @@ class PreferencesRepository @Inject constructor(
         const val DEFAULT_HYDRATION_DAILY_GOAL_LITERS = 2.0
         private const val MIN_HYDRATION_DAILY_GOAL_LITERS = 0.25
         private const val MAX_HYDRATION_DAILY_GOAL_LITERS = 10.0
-        const val DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM = 120
-        const val DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM = 50
-        const val MIN_HIGH_HEART_RATE_THRESHOLD_BPM = 80
-        const val MAX_HIGH_HEART_RATE_THRESHOLD_BPM = 220
-        const val MIN_LOW_HEART_RATE_THRESHOLD_BPM = 30
-        const val MAX_LOW_HEART_RATE_THRESHOLD_BPM = 100
+        const val DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM = HeartRateThresholds.DEFAULT_HIGH_BPM
+        const val DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM = HeartRateThresholds.DEFAULT_LOW_BPM
+        const val MIN_HIGH_HEART_RATE_THRESHOLD_BPM = HeartRateThresholds.MIN_HIGH_BPM
+        const val MAX_HIGH_HEART_RATE_THRESHOLD_BPM = HeartRateThresholds.MAX_HIGH_BPM
+        const val MIN_LOW_HEART_RATE_THRESHOLD_BPM = HeartRateThresholds.MIN_LOW_BPM
+        const val MAX_LOW_HEART_RATE_THRESHOLD_BPM = HeartRateThresholds.MAX_LOW_BPM
         private const val DEFAULT_MINDFULNESS_TIMER_DURATION_MINUTES = 10
         private const val MIN_MINDFULNESS_TIMER_MINUTES = 1
         private const val MAX_MINDFULNESS_TIMER_MINUTES = 24 * 60

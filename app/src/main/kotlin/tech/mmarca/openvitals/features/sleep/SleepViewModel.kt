@@ -60,7 +60,7 @@ class SleepViewModel @Inject constructor(
     private val sleepWindowPreferences: SleepWindowPreferences,
     private val bodyProfilePreferences: BodyProfilePreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    savedStateHandle: androidx.lifecycle.SavedStateHandle? = null,
+    savedStateHandle: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
 
     private val goalKey = MetricDailyGoalKey.SLEEP_HOURS
@@ -68,7 +68,7 @@ class SleepViewModel @Inject constructor(
     private val initialWeekPeriodMode = periodPreferences.weekPeriodMode
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
-        initialDate = savedStateHandle?.selectedDayOrNull() ?: java.time.LocalDate.now(),
+        initialDate = savedStateHandle.selectedDayOrNull() ?: java.time.LocalDate.now(),
         initialWeekPeriodMode = initialWeekPeriodMode,
         onRangeSelected = { range ->
             periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.SLEEP, range)

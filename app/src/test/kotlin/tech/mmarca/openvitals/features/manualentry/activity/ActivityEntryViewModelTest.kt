@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry.activity
 
+import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.ActivityFormMetric
 import tech.mmarca.openvitals.features.manualentry.*
@@ -54,7 +56,6 @@ import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
 import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
-import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
@@ -65,7 +66,6 @@ import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseStepData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -877,7 +877,7 @@ class ActivityEntryViewModelTest {
             repository = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPushUpPlan())),
             activityRecorder = recorder,
             recordingDraftStore = ActivityRecordingDraftStore(),
-            preferencesRepository = activityPrefs(),
+            recordingPreferences = activityPrefs(),
             clock = Clock.fixed(Instant.parse("2026-05-27T09:45:00Z"), ZoneId.of("UTC")),
         )
         advanceUntilIdle()
@@ -902,7 +902,7 @@ class ActivityEntryViewModelTest {
             repository = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPushUpPlan())),
             activityRecorder = recorderMock(),
             recordingDraftStore = ActivityRecordingDraftStore(),
-            preferencesRepository = activityPrefs(),
+            recordingPreferences = activityPrefs(),
             clock = Clock.fixed(Instant.parse("2026-05-27T09:45:00Z"), ZoneId.of("UTC")),
             launchMode = tech.mmarca.openvitals.navigation.Screen.ActivityEntryMode.RECORD,
             launchPlanId = "planned-push-id",
@@ -936,7 +936,7 @@ class ActivityEntryViewModelTest {
             repository = activityRepo(canWrite = true, plannedWorkouts = listOf(runPlan)),
             activityRecorder = recorderMock(),
             recordingDraftStore = ActivityRecordingDraftStore(),
-            preferencesRepository = activityPrefs(),
+            recordingPreferences = activityPrefs(),
             clock = Clock.fixed(Instant.parse("2026-05-27T09:45:00Z"), ZoneId.of("UTC")),
         )
         advanceUntilIdle()
@@ -987,7 +987,7 @@ class ActivityEntryViewModelTest {
             repository = activityRepo(canWrite = true),
             activityRecorder = recorder,
             recordingDraftStore = ActivityRecordingDraftStore(),
-            preferencesRepository = activityPrefs(),
+            recordingPreferences = activityPrefs(),
             clock = Clock.fixed(start, ZoneId.of("UTC")),
         )
         advanceUntilIdle()
@@ -1030,7 +1030,7 @@ class ActivityEntryViewModelTest {
             repository = repo,
             activityRecorder = recorderMock(),
             recordingDraftStore = ActivityRecordingDraftStore(),
-            preferencesRepository = activityPrefs(),
+            recordingPreferences = activityPrefs(),
             clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
         )
         advanceUntilIdle()
@@ -1088,7 +1088,7 @@ class ActivityEntryViewModelTest {
         val repo = activityRepo(canWrite = true)
         val vm = ActivityEntryViewModel(
             repository = repo,
-            preferencesRepository = activityPrefs(
+            recordingPreferences = activityPrefs(
                 lastActivityExerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
             ),
             clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
@@ -1102,7 +1102,7 @@ class ActivityEntryViewModelTest {
         val repo = activityRepo(canWrite = true)
         val vm = ActivityEntryViewModel(
             repository = repo,
-            preferencesRepository = activityPrefs(
+            recordingPreferences = activityPrefs(
                 favoriteActivityExerciseType = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
                 lastActivityExerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
             ),
@@ -1151,7 +1151,7 @@ class ActivityEntryViewModelTest {
         val vm = ActivityEntryViewModel(
             repository = repo,
             activityRecorder = recorder,
-            preferencesRepository = prefs,
+            recordingPreferences = prefs,
             clock = Clock.fixed(start, ZoneId.of("UTC")),
         )
         advanceUntilIdle()
@@ -1162,7 +1162,7 @@ class ActivityEntryViewModelTest {
         assertEquals(ActivityEntryMode.MANUAL, vm.uiState.value.mode)
         assertEquals("308", vm.uiState.value.activeCaloriesText)
         assertEquals("343", vm.uiState.value.totalCaloriesText)
-        verify { prefs.lastActivityExerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING }
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING, prefs.lastActivityExerciseType)
     }
 
     @Test fun `finished recording draft is restored by a new activity entry view model`() = runTest {
@@ -1292,7 +1292,8 @@ class ActivityEntryViewModelTest {
         // Rises 10 m per grid row to the north: 100 m at 59.0 N, 220 m at 59.01 N.
         writeTile("N59E024.hgt") { row, _ -> 100 + (1200 - row) * 10 }
         val prefs = activityPrefs()
-        every { prefs.elevationCorrectionEnabled } returns true
+        // The corrector reads the repository itself; only the switch matters here.
+        val elevationPrefs = mockk<PreferencesRepository> { every { elevationCorrectionEnabled } returns true }
         val recorder = mockk<ActivityRecordingController>()
         every { recorder.finishedRecording() } returns null
         every { recorder.clearFinishedRecording() } just Runs
@@ -1316,9 +1317,9 @@ class ActivityEntryViewModelTest {
         val tiles = ElevationTileRepository(context, DefaultDispatcherProvider)
         val vm = ActivityEntryViewModel(
             repository = activityRepo(canWrite = true),
-            elevationCorrector = RouteElevationCorrector(tiles, prefs),
+            elevationCorrector = RouteElevationCorrector(tiles, elevationPrefs),
             activityRecorder = recorder,
-            preferencesRepository = prefs,
+            recordingPreferences = prefs,
             clock = Clock.fixed(start, ZoneId.of("UTC")),
         )
         advanceUntilIdle()
@@ -2093,7 +2094,7 @@ class ActivityEntryViewModelTest {
         ActivityEntryViewModel(
             repository = activityRepo(canWrite = true),
             activityRecorder = recorder,
-            preferencesRepository = activityPrefs(),
+            recordingPreferences = activityPrefs(),
             clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
         )
 
@@ -2165,7 +2166,7 @@ class ActivityEntryViewModelTest {
             repository = activityRepo(canWrite = true),
             activityRecorder = recorder,
             recordingDraftStore = draftStore,
-            preferencesRepository = activityPrefs(),
+            recordingPreferences = activityPrefs(),
             clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
         )
         advanceUntilIdle()
@@ -2249,14 +2250,12 @@ class ActivityEntryViewModelTest {
     private fun activityPrefs(
         favoriteActivityExerciseType: Int? = null,
         lastActivityExerciseType: Int? = null,
-    ): PreferencesRepository =
-        mockk<PreferencesRepository>().also { prefs ->
-            every { prefs.favoriteActivityExerciseType } returns favoriteActivityExerciseType
-            every { prefs.lastActivityExerciseType } returns lastActivityExerciseType
-            every { prefs.lastActivityExerciseType = any() } just runs
-            // Integration off: the CoMaps start gate stays out of these tests' way.
-            every { prefs.activityRecordingPreferences() } returns ActivityRecordingPreferences()
-        }
+    ): FakePreferences =
+        // Integration off: the CoMaps start gate stays out of these tests' way.
+        FakePreferences(
+            initialFavoriteExerciseType = favoriteActivityExerciseType,
+            initialLastExerciseType = lastActivityExerciseType,
+        )
 
     /** A 3 arc-second tile in the app's tile folder, one value per grid node. */
     private fun writeTile(name: String, value: (row: Int, col: Int) -> Int) {

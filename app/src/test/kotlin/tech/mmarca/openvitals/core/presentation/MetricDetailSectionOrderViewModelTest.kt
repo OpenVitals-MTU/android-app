@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.core.presentation
 
+import tech.mmarca.openvitals.data.repository.contract.WidgetOrderPreferences
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -7,7 +8,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.domain.preferences.DefaultMetricDetailSectionOrder
 import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
 
@@ -15,7 +15,7 @@ class MetricDetailSectionOrderViewModelTest {
 
     @Test
     fun moveSectionToTarget_reordersAndPersists() {
-        val prefs = mockk<PreferencesRepository>(relaxed = true) {
+        val prefs = mockk<WidgetOrderPreferences>(relaxed = true) {
             every { metricDetailSectionOrder() } returns listOf(
                 MetricDetailSectionId.DAILY_GOAL.name,
                 MetricDetailSectionId.STATISTICS.name,
@@ -52,7 +52,7 @@ class MetricDetailSectionOrderViewModelTest {
 
     @Test
     fun toggleSectionEdit_switchesEditingState() {
-        val prefs = mockk<PreferencesRepository>(relaxed = true) {
+        val prefs = mockk<WidgetOrderPreferences>(relaxed = true) {
             every { metricDetailSectionOrder() } returns null
         }
         val viewModel = MetricDetailSectionOrderViewModel(prefs)
@@ -64,7 +64,7 @@ class MetricDetailSectionOrderViewModelTest {
 
     @Test
     fun moveSection_nudgesOnePlaceInTheFullOrder() {
-        val prefs = mockk<PreferencesRepository>(relaxed = true) {
+        val prefs = mockk<WidgetOrderPreferences>(relaxed = true) {
             every { metricDetailSectionOrder() } returns null
         }
         val viewModel = MetricDetailSectionOrderViewModel(prefs)
@@ -81,7 +81,7 @@ class MetricDetailSectionOrderViewModelTest {
 
     @Test
     fun moveSection_cannotPushASectionPastEitherEnd() {
-        val prefs = mockk<PreferencesRepository>(relaxed = true) {
+        val prefs = mockk<WidgetOrderPreferences>(relaxed = true) {
             every { metricDetailSectionOrder() } returns null
         }
         val viewModel = MetricDetailSectionOrderViewModel(prefs)
@@ -98,7 +98,7 @@ class MetricDetailSectionOrderViewModelTest {
 
     @Test
     fun initialOrder_usesDefaultWhenPreferencesMissing() {
-        val prefs = mockk<PreferencesRepository>(relaxed = true) {
+        val prefs = mockk<WidgetOrderPreferences>(relaxed = true) {
             every { metricDetailSectionOrder() } returns null
         }
         val viewModel = MetricDetailSectionOrderViewModel(prefs)

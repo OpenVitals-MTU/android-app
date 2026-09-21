@@ -72,9 +72,9 @@ class ActivitiesViewModel @Inject constructor(
     private val repository: ActivityRepository,
     private val periodPreferences: PeriodPreferences,
     private val dailyGoalPreferences: DailyGoalPreferences,
-    private val heartRepository: HeartRepository? = null,
+    private val heartRepository: HeartRepository,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    savedStateHandle: androidx.lifecycle.SavedStateHandle? = null,
+    savedStateHandle: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
 
     private val goalKey = MetricDailyGoalKey.WORKOUT_MINUTES
@@ -82,7 +82,7 @@ class ActivitiesViewModel @Inject constructor(
     private val initialActivityWeekMode = periodPreferences.activityWeekMode
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
-        initialDate = savedStateHandle?.selectedDayOrNull() ?: java.time.LocalDate.now(),
+        initialDate = savedStateHandle.selectedDayOrNull() ?: java.time.LocalDate.now(),
         initialWeekPeriodMode = initialActivityWeekMode.toWeekPeriodMode(),
         onRangeSelected = { range ->
             periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.ACTIVITIES, range)
@@ -226,16 +226,16 @@ class ActivitiesViewModel @Inject constructor(
                     val dailySteps = async { repository.loadDailySteps(windows.current.start, currentDataEnd) }
                     val nutrition = async { repository.loadDailyNutrition(windows.current.start, currentDataEnd) }
                     val restingHeartRate = async {
-                        heartRepository?.loadDailyRestingHR(windows.current.start, currentDataEnd).orEmpty()
+                        heartRepository.loadDailyRestingHR(windows.current.start, currentDataEnd)
                     }
                     val hrv = async {
-                        heartRepository?.loadDailyHRV(windows.current.start, currentDataEnd).orEmpty()
+                        heartRepository.loadDailyHRV(windows.current.start, currentDataEnd)
                     }
                     val heartRateSamples = async {
                         if (query.range == TimeRange.YEAR) {
                             emptyList()
                         } else {
-                            heartRepository?.loadHeartRateSamples(windows.current.start, currentDataEnd).orEmpty()
+                            heartRepository.loadHeartRateSamples(windows.current.start, currentDataEnd)
                         }
                     }
                     val loadedRestingHeartRate = restingHeartRate.await()

@@ -22,7 +22,9 @@ import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.CalorieDisplayPreferences
+import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
+import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
 import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
 import java.time.LocalDate
 import javax.inject.Inject
@@ -52,61 +54,33 @@ data class ActivityUiState(
 )
 
 @HiltViewModel
-class ActivityViewModel(
+class ActivityViewModel @Inject constructor(
     private val repository: ActivityRepository,
+    private val periodPreferences: PeriodPreferences,
+    private val dailyGoalPreferences: DailyGoalPreferences,
+    private val calorieDisplayPreferences: CalorieDisplayPreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    initialRange: TimeRange = TimeRange.WEEK,
-    initialDate: java.time.LocalDate? = null,
-    initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-    private val selectedMetric: ActivityMetric = ActivityMetric.STEPS,
-    initialDailyGoal: Double = selectedMetric.dailyGoalKey.defaultValue,
-    private val weekPeriodModeChanges: kotlinx.coroutines.flow.Flow<WeekPeriodMode> = kotlinx.coroutines.flow.emptyFlow(),
-    private val onRangeSelected: (TimeRange) -> Unit = {},
-    private val onDailyGoalChanged: (Double) -> Unit = {},
-    private val showOpenVitalsCalculatedCaloriesFlow: StateFlow<Boolean>? = null,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    @Inject
-    constructor(
-        repository: ActivityRepository,
-        preferencesRepository: PreferencesRepository,
-        savedStateHandle: SavedStateHandle,
-        dispatchers: DispatcherProvider,
-    ) : this(
-        repository = repository,
-        dispatchers = dispatchers,
-        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.STEPS),
-        initialDate = savedStateHandle.selectedDayOrNull(),
-        initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
-        selectedMetric = activityMetricFromRoute(savedStateHandle[METRIC_ID_ARG]),
-        initialDailyGoal = preferencesRepository.dailyGoalFor(
-            activityMetricFromRoute(savedStateHandle[METRIC_ID_ARG]).dailyGoalKey
-        ),
-        onRangeSelected = { range ->
-            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.STEPS, range)
-        },
-        onDailyGoalChanged = { goal ->
-            preferencesRepository.setDailyGoalFor(
-                activityMetricFromRoute(savedStateHandle[METRIC_ID_ARG]).dailyGoalKey,
-                goal,
-            )
-        },
-        showOpenVitalsCalculatedCaloriesFlow = preferencesRepository.showOpenVitalsCalculatedCaloriesFlow,
-        weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
-    )
-
+    /** The metric the route named; steps when it named none. */
+    private val selectedMetric = activityMetricFromRoute(savedStateHandle[METRIC_ID_ARG])
+    private val initialRange = periodPreferences.timeRangeFor(PeriodRangePreferenceKey.STEPS)
+    private val initialWeekPeriodMode = periodPreferences.weekPeriodMode
     private val goalKey = selectedMetric.dailyGoalKey
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
-        initialDate = initialDate ?: java.time.LocalDate.now(),
+        initialDate = savedStateHandle.selectedDayOrNull() ?: java.time.LocalDate.now(),
         initialWeekPeriodMode = initialWeekPeriodMode,
-        onRangeSelected = onRangeSelected,
+        onRangeSelected = { range ->
+            periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.STEPS, range)
+        },
     )
     private val _uiState = MutableStateFlow(
         ActivityUiState(
             selectedRange = initialRange,
             weekPeriodMode = initialWeekPeriodMode,
-            dailyGoal = goalKey.normalize(initialDailyGoal),
+            dailyGoal = goalKey.normalize(dailyGoalPreferences.dailyGoalFor(goalKey)),
         )
     )
     val uiState: StateFlow<ActivityUiState> = _uiState.asStateFlow()
@@ -120,7 +94,7 @@ class ActivityViewModel(
 
     private fun observeWeekPeriodMode() {
         viewModelScope.launch {
-            weekPeriodModeChanges.drop(1).collect { mode ->
+            periodPreferences.weekPeriodModeFlow.drop(1).collect { mode ->
                 periodDriver.weekPeriodMode = mode
                 _uiState.value = _uiState.value.copy(weekPeriodMode = mode)
                 if (_uiState.value.selectedRange == TimeRange.WEEK) {
@@ -131,11 +105,10 @@ class ActivityViewModel(
     }
 
     private fun observeCalorieDataMode() {
-        val flow = showOpenVitalsCalculatedCaloriesFlow ?: return
         if (selectedMetric != ActivityMetric.CALORIES_BURNED) return
         viewModelScope.launch {
             var skipInitial = true
-            flow.collect {
+            calorieDisplayPreferences.showOpenVitalsCalculatedCaloriesFlow.collect {
                 if (skipInitial) {
                     skipInitial = false
                 } else {
@@ -192,7 +165,7 @@ class ActivityViewModel(
 
     fun setDailyGoal(goal: Double) {
         val normalized = goalKey.normalize(goal)
-        onDailyGoalChanged(normalized)
+        dailyGoalPreferences.setDailyGoalFor(goalKey, normalized)
         _uiState.value = _uiState.value.copy(dailyGoal = normalized).withDisplay(selectedMetric)
     }
 
@@ -302,7 +275,14 @@ private val ActivityMetric.usesDailyNutrition: Boolean
 private val ActivityMetric.usesWheelchairPushes: Boolean
     get() = this == ActivityMetric.WHEELCHAIR_PUSHES
 
-private fun activityMetricFromRoute(metricId: String?): ActivityMetric =
+/** The route argument that names [this]; the inverse of [activityMetricFromRoute]. */
+internal fun ActivityMetric.routeId(): String = when (this) {
+    ActivityMetric.CALORIES_BURNED -> "CALORIES_OUT"
+    else -> name
+}
+
+/** The metric a route argument names. The ids are [tech.mmarca.openvitals.domain.dashboard.DashboardWidgetId] names. */
+internal fun activityMetricFromRoute(metricId: String?): ActivityMetric =
     when (metricId) {
         "DISTANCE" -> ActivityMetric.DISTANCE
         "CALORIES_OUT" -> ActivityMetric.CALORIES_BURNED

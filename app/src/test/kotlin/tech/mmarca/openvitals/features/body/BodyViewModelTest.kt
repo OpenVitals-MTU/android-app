@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.body
 
+import androidx.lifecycle.SavedStateHandle
 import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.BodyFatEntry
@@ -51,6 +52,7 @@ class BodyViewModelTest {
         repository = repository,
         periodPreferences = preferences,
         dispatchers = mainDispatcherRule.dispatcherProvider,
+        savedStateHandle = SavedStateHandle(),
     )
 
 

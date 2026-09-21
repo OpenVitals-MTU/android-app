@@ -10,7 +10,7 @@ The repo now has one Android app module for the local app. The goal is to keep b
 
 - App namespace: `tech.mmarca.openvitals`
 - Project shape: two Gradle modules. The phone app is `:app`, under `app/`. `:wear` is a Wear OS placeholder with its own CI gate. The rest of this document is about `:app`
-- Dependency wiring: Hilt in `:app`, rooted at [`OpenVitalsApp`](../../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt); modules are `di/AppModule.kt`, `di/RepositoryModule.kt`, `di/PreferencesModule.kt`, and `di/DevicesModule.kt`
+- Dependency wiring: Hilt in `:app`, rooted at [`OpenVitalsApp`](../../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt); modules are `di/AppModule.kt`, `di/RepositoryModule.kt`, `di/PreferencesModule.kt`, `di/RemindersModule.kt`, and `di/DevicesModule.kt`
 - UI stack: Jetpack Compose + Material 3 app shell + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
 - Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
 - App-local domain code: pure models, insight calculations, and preference enums under [`domain`](../../app/src/main/kotlin/tech/mmarca/openvitals/domain)
@@ -34,7 +34,7 @@ Most importantly, body and entry/session browsing now live in metric-owned detai
 | `core/` | app-wide primitives: `period`, `presentation`, `stats`, `geo`, `fit`, `performance`, `diagnostics`, `export` (share staging), `permissions` (OS runtime permissions) |
 | `data/` | `local` (Room), `repository` (feature-facing repositories + `contract` interfaces), `sync` (history/backfill services), `migration` (one-time Flutter import) |
 | `devices/` | device integration: `core` (ports, radio lease, pairing), `garmin` (GFDI stack), `wearos`, `notifications` (notification listener), `media` (the phone's players, for music controls), `weather` (the weather a watch asks for) |
-| `di/` | `AppModule`, `RepositoryModule`, `PreferencesModule`, `DevicesModule` |
+| `di/` | `AppModule`, `RepositoryModule`, `PreferencesModule`, `RemindersModule`, `DevicesModule` |
 | `domain/` | pure code: `model`, `insights`, `preferences`, `query`, `usecase`, `cycle`, `dashboard` (the aggregator), `report` (report roll-ups) |
 | `features/` | one package per user-facing feature area |
 | `healthconnect/` | the Health Connect integration boundary: manager, per-area readers, permission/UX services |
@@ -669,9 +669,9 @@ Not every repository is a Health Connect facade. `GarminWellnessRepository` is a
 
 ### Ask for the preferences you use, not the repository
 
-`PreferencesRepository` holds every setting in the app and needs a `Context`, so a ViewModel that injects it cannot be built in a JVM test. Narrow contracts in `data/repository/contract` carve it into the groups screens actually use — `PeriodPreferences`, `DailyGoalPreferences`, `BodyProfilePreferences`, `CalorieDisplayPreferences`, `SleepWindowPreferences` — and `PreferencesModule` binds each to the repository.
+`PreferencesRepository` holds every setting in the app and needs a `Context`, so a ViewModel that injects it cannot be built in a JVM test. Narrow contracts in `data/repository/contract` carve it into the groups screens actually use — `PeriodPreferences`, `DailyGoalPreferences`, `BodyProfilePreferences`, `CalorieDisplayPreferences`, `SleepWindowPreferences`, `NutritionDisplayPreferences`, `HeartThresholdPreferences`, `HydrationGoalPreferences`, `BodyEnergyCalibrationPreferences`, `CaffeineModelPreferences`, `MindfulnessTimerPreferences`, `ActivitySplitPreferences`, `WidgetOrderPreferences`, `RecordingPreferences`, `UnitPreferences`, `OnboardingPreferences`, `HealthConnectPreferences` — and `PreferencesModule` binds each to the repository. The Settings screens and the dashboard read too wide a set to fit one, and take the repository. The reminder controllers need a `Context` for the same reason; `HydrationReminderSettings` and `MindfulnessReminderSettings` are the three-method slice a screen uses, bound in `RemindersModule`.
 
-Inject the contract. The ViewModel then needs one constructor, and its test passes `FakePreferences` instead of mocking a hundred members. Add a contract for a new group rather than widening an existing one.
+Inject the contract. The ViewModel then needs one constructor, and its test passes `FakePreferences` instead of mocking a hundred members. A route argument is read from the injected `SavedStateHandle` in that same constructor; a test builds the handle with the real argument, so `activityMetricFromRoute` and its `routeId()` inverse are the contract. Add a contract for a new group rather than widening an existing one.
 
 ### Keep queries period-oriented
 

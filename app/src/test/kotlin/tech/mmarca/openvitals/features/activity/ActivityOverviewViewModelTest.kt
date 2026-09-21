@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
+import androidx.lifecycle.SavedStateHandle
 import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
@@ -44,6 +45,8 @@ class ActivityOverviewViewModelTest {
         periodPreferences = preferences,
         calorieDisplayPreferences = preferences,
         dispatchers = mainDispatcherRule.dispatcherProvider,
+        caloriesSync = mockk(relaxed = true),
+        savedStateHandle = SavedStateHandle(),
     )
 
     private fun activityRepo(

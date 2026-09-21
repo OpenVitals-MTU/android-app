@@ -178,7 +178,7 @@ class HomeQuickBeverageLogAction : ActionCallback {
                 val reminders = entryPoint.hydrationReminderController()
                 if (logged.effectiveLiters > 0.0) reminders.hideReminderNotification()
                 // Re-anchor the reminder to the drink just logged, as the in-app save does.
-                reminders.applyConfig()
+                reminders.applyStoredConfig()
             },
             showStatus = { drink, status ->
                 showQuickBeverageWidgetStatus(appContext, glanceId, drinkId, drink, status)

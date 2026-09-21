@@ -37,8 +37,8 @@ data class BodySettingsUiState(
     val caffeinePreferences: CaffeinePreferences = CaffeinePreferences(),
     val nightStartHour: Int = SleepWindow.Default.startHour,
     val nightEndHour: Int = SleepWindow.Default.endHour,
-    val highHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM,
-    val lowHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM,
+    val highHeartRateThresholdBpm: Int = HeartRateThresholds.DEFAULT_HIGH_BPM,
+    val lowHeartRateThresholdBpm: Int = HeartRateThresholds.DEFAULT_LOW_BPM,
     val bodyEnergyCalibration: BodyEnergyCalibration = BodyEnergyCalibration.Automatic,
     val isResettingDerivedMetrics: Boolean = false,
 )

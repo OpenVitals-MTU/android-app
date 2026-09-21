@@ -1,14 +1,13 @@
 package tech.mmarca.openvitals.features.caffeine
 
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -18,14 +17,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.core.period.DatePeriod
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.data.repository.contract.CaffeineRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.model.CaffeineEntry
 import tech.mmarca.openvitals.domain.model.CaffeinePeriodData
 import tech.mmarca.openvitals.domain.model.RefreshMode
-import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
@@ -62,8 +59,8 @@ class CaffeineViewModelTest {
         vm.skipSetup()
         advanceUntilIdle()
 
-        assertTrue(preferences.flow.value.profileCompleted)
-        assertEquals(CaffeinePreferences.DefaultHalfLifeMinutes, preferences.flow.value.halfLifeMinutes)
+        assertTrue(preferences.caffeinePreferences().profileCompleted)
+        assertEquals(CaffeinePreferences.DefaultHalfLifeMinutes, preferences.caffeinePreferences().halfLifeMinutes)
         assertFalse(vm.uiState.value.showSetup)
     }
 
@@ -76,7 +73,7 @@ class CaffeineViewModelTest {
             initialAnalyticsRange = CaffeineAnalyticsRange.TODAY,
         )
 
-        preferences.flow.value = preferences.flow.value.copy(sleepThresholdMg = 35)
+        preferences.setCaffeinePreferences(preferences.caffeinePreferences().copy(sleepThresholdMg = 35))
         advanceUntilIdle()
 
         assertEquals(35, vm.uiState.value.preferences.sleepThresholdMg)
@@ -278,35 +275,28 @@ class CaffeineViewModelTest {
 
     private fun viewModel(
         repository: CaffeineRepository,
-        preferences: PreferencesFixture,
+        preferences: FakePreferences,
         initialAnalyticsRange: CaffeineAnalyticsRange = CaffeineAnalyticsRange.LAST_30_DAYS,
-        nutritionRepository: NutritionRepository? = null,
+        nutritionRepository: NutritionRepository = mockk(),
     ): CaffeineViewModel =
         CaffeineViewModel(
             repository = repository,
-            preferencesRepository = preferences.repository,
-            dispatchers = mainDispatcherRule.dispatcherProvider,
+            caffeineModel = preferences,
+            bodyProfilePreferences = preferences,
             nutritionRepository = nutritionRepository,
-            initialAnalyticsRange = initialAnalyticsRange,
-            preferenceChanges = preferences.flow,
-        )
+            dispatchers = mainDispatcherRule.dispatcherProvider,
+        ).also { vm ->
+            // The screen opens on 30 days. A test that wants another range moves it, as the user would.
+            if (initialAnalyticsRange != CaffeineAnalyticsRange.LAST_30_DAYS) vm.selectAnalyticsRange(initialAnalyticsRange)
+        }
 
     private fun repo(entries: List<CaffeineEntry> = emptyList()): CaffeineRepository =
         mockk<CaffeineRepository>().also { repository ->
             coEvery { repository.loadCaffeineData(any(), any()) } returns CaffeinePeriodData(entries)
         }
 
-    private fun prefs(initial: CaffeinePreferences): PreferencesFixture {
-        val flow = MutableStateFlow(initial)
-        val repository = mockk<PreferencesRepository>().also { prefs ->
-            every { prefs.caffeinePreferences() } answers { flow.value }
-            every { prefs.setCaffeinePreferences(any()) } answers {
-                flow.value = firstArg<CaffeinePreferences>()
-            }
-            every { prefs.bodyProfile() } returns BodyProfile()
-        }
-        return PreferencesFixture(repository = repository, flow = flow)
-    }
+    private fun prefs(initial: CaffeinePreferences): FakePreferences =
+        FakePreferences(initialCaffeine = initial)
 
     private fun entryAt(
         date: LocalDate,
@@ -326,9 +316,4 @@ class CaffeineViewModelTest {
             isOpenVitalsEntry = isOpenVitalsEntry,
         )
     }
-
-    private data class PreferencesFixture(
-        val repository: PreferencesRepository,
-        val flow: MutableStateFlow<CaffeinePreferences>,
-    )
 }

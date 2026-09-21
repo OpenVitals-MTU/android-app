@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
+import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.navigation.SELECTED_DAY_ARG
 import androidx.lifecycle.SavedStateHandle
 import tech.mmarca.openvitals.data.repository.contract.FakePreferences
@@ -41,14 +42,21 @@ class ActivitiesViewModelTest {
     private fun activitiesViewModel(
         repository: ActivityRepository,
         preferences: FakePreferences = FakePreferences(),
-        savedStateHandle: SavedStateHandle? = null,
+        savedStateHandle: SavedStateHandle = SavedStateHandle(),
     ) = ActivitiesViewModel(
         repository = repository,
+        heartRepository = heartRepo(),
         periodPreferences = preferences,
         dailyGoalPreferences = preferences,
         dispatchers = mainDispatcherRule.dispatcherProvider,
         savedStateHandle = savedStateHandle,
     )
+
+    private fun heartRepo(): HeartRepository = mockk<HeartRepository>().also { repo ->
+        coEvery { repo.loadDailyRestingHR(any(), any()) } returns emptyList()
+        coEvery { repo.loadDailyHRV(any(), any()) } returns emptyList()
+        coEvery { repo.loadHeartRateSamples(any<LocalDate>(), any<LocalDate>()) } returns emptyList()
+    }
 
     private fun emptyRepo() = mockk<ActivityRepository>().also { repo ->
         coEvery { repo.loadWorkouts(any(), any()) } returns emptyList()

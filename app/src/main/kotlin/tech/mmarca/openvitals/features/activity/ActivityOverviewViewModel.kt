@@ -98,11 +98,11 @@ class ActivityOverviewViewModel @Inject constructor(
     private val periodPreferences: PeriodPreferences,
     private val calorieDisplayPreferences: CalorieDisplayPreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    private val caloriesSync: CaloriesHistorySyncService? = null,
-    savedStateHandle: androidx.lifecycle.SavedStateHandle? = null,
+    private val caloriesSync: CaloriesHistorySyncService,
+    savedStateHandle: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
 
-    private val initialDay: java.time.LocalDate? = savedStateHandle?.selectedDayOrNull()
+    private val initialDay: java.time.LocalDate? = savedStateHandle.selectedDayOrNull()
 
     private var caloriesSyncKicked = false
 
@@ -121,11 +121,10 @@ class ActivityOverviewViewModel @Inject constructor(
 
     /** Kicks the calories history sync once per open, after the first load; one reload when done. */
     private fun kickCaloriesHistorySyncOnce() {
-        val sync = caloriesSync ?: return
         if (caloriesSyncKicked) return
         caloriesSyncKicked = true
         viewModelScope.launch {
-            runCatching { sync.syncAll() }
+            runCatching { caloriesSync.syncAll() }
             load()
         }
     }

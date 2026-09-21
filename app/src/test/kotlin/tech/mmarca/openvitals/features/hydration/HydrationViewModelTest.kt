@@ -1,5 +1,9 @@
 package tech.mmarca.openvitals.features.hydration
 
+import tech.mmarca.openvitals.features.hydration.reminders.FakeHydrationReminderSettings
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
+import tech.mmarca.openvitals.data.repository.contract.BodyRepository
+import androidx.lifecycle.SavedStateHandle
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
@@ -75,24 +79,28 @@ class HydrationViewModelTest {
 
     private fun hydrationViewModel(
         repository: HydrationRepository,
-        nutritionRepository: NutritionRepository? = null,
+        nutritionRepository: NutritionRepository = emptyNutritionRepo(),
         initialRange: TimeRange = TimeRange.WEEK,
         initialDailyGoalLiters: Double = 2.0,
-        initialReminderConfig: HydrationReminderConfig = HydrationReminderConfig(),
-        onRangeSelected: (TimeRange) -> Unit = {},
-        onDailyGoalChanged: (Double) -> Unit = {},
-        onReminderConfigChanged: (HydrationReminderConfig) -> Unit = {},
+        reminders: FakeHydrationReminderSettings = FakeHydrationReminderSettings(),
+        preferences: FakePreferences = FakePreferences(
+            initialRange = initialRange,
+            hydrationDailyGoalLiters = initialDailyGoalLiters,
+        ),
     ) = HydrationViewModel(
         repository = repository,
-        dispatchers = mainDispatcherRule.dispatcherProvider,
         nutritionRepository = nutritionRepository,
-        initialRange = initialRange,
-        initialDailyGoalLiters = initialDailyGoalLiters,
-        initialReminderConfig = initialReminderConfig,
-        onRangeSelected = onRangeSelected,
-        onDailyGoalChanged = onDailyGoalChanged,
-        onReminderConfigChanged = onReminderConfigChanged,
+        bodyRepository = bodyRepo(),
+        periodPreferences = preferences,
+        hydrationGoalPreferences = preferences,
+        reminders = reminders,
+        dispatchers = mainDispatcherRule.dispatcherProvider,
+        savedStateHandle = SavedStateHandle(),
     )
+
+    private fun bodyRepo(): BodyRepository = mockk<BodyRepository>().also { repo ->
+        coEvery { repo.loadWeightEntries(any(), any()) } returns emptyList()
+    }
 
     @Test fun `initial range is WEEK`() = runTest {
         val vm = hydrationViewModel(emptyRepo())
@@ -117,7 +125,7 @@ class HydrationViewModelTest {
             activeEndTime = LocalTime.of(22, 0),
         )
 
-        val vm = hydrationViewModel(emptyRepo(), initialReminderConfig = config)
+        val vm = hydrationViewModel(emptyRepo(), reminders = FakeHydrationReminderSettings(config))
 
         assertEquals(config, vm.uiState.value.reminderConfig)
     }
@@ -482,46 +490,34 @@ class HydrationViewModelTest {
         )
         val repo = emptyRepo()
         coEvery { repo.loadDailyHydration(any(), any()) } returns hydration
-        var savedGoal: Double? = null
-        val vm = hydrationViewModel(
-            repository = repo,
-            initialDailyGoalLiters = 2.0,
-            onDailyGoalChanged = { goal -> savedGoal = goal },
-        )
+        val preferences = FakePreferences(hydrationDailyGoalLiters = 2.0)
+        val vm = hydrationViewModel(repository = repo, preferences = preferences)
 
         vm.increaseDailyGoal()
 
-        assertEquals(2.25, savedGoal ?: 0.0, 0.01)
+        assertEquals(2.25, preferences.hydrationDailyGoalLiters, 0.01)
         assertEquals(2.25, vm.uiState.value.dailyGoalLiters, 0.01)
         assertEquals(1, vm.uiState.value.display.summary.goalMetDays)
     }
 
     @Test fun `updating reminder config saves normalized config`() = runTest {
-        var savedConfig: HydrationReminderConfig? = null
-        val vm = hydrationViewModel(
-            repository = emptyRepo(),
-            initialReminderConfig = HydrationReminderConfig(intervalMinutes = 120),
-            onReminderConfigChanged = { config -> savedConfig = config },
-        )
+        val reminders = FakeHydrationReminderSettings(HydrationReminderConfig(intervalMinutes = 120))
+        val vm = hydrationViewModel(repository = emptyRepo(), reminders = reminders)
 
         vm.setHydrationRemindersEnabled(true)
         vm.increaseHydrationReminderInterval()
         vm.setHydrationReminderActiveStartTime(LocalTime.of(6, 30, 12))
 
-        assertEquals(true, savedConfig?.enabled)
+        assertEquals(true, reminders.updates.last().enabled)
         assertEquals(150, vm.uiState.value.reminderConfig.intervalMinutes)
         assertEquals(LocalTime.of(6, 30), vm.uiState.value.reminderConfig.activeStartTime)
     }
 
     @Test fun `the reminder interval is clamped to its upper bound`() = runTest {
-        var savedConfig: HydrationReminderConfig? = null
-        val vm = hydrationViewModel(
-            repository = emptyRepo(),
-            initialReminderConfig = HydrationReminderConfig(
-                intervalMinutes = HydrationReminderConfig.MaxIntervalMinutes,
-            ),
-            onReminderConfigChanged = { config -> savedConfig = config },
+        val reminders = FakeHydrationReminderSettings(
+            HydrationReminderConfig(intervalMinutes = HydrationReminderConfig.MaxIntervalMinutes),
         )
+        val vm = hydrationViewModel(repository = emptyRepo(), reminders = reminders)
 
         vm.increaseHydrationReminderInterval()
 
@@ -531,15 +527,15 @@ class HydrationViewModelTest {
         )
         assertEquals(
             HydrationReminderConfig.MaxIntervalMinutes,
-            savedConfig?.intervalMinutes,
+            reminders.updates.last().intervalMinutes,
         )
     }
 
     @Test fun `the reminder interval cannot go below the minimum`() = runTest {
         val vm = hydrationViewModel(
             repository = emptyRepo(),
-            initialReminderConfig = HydrationReminderConfig(
-                intervalMinutes = HydrationReminderConfig.MinIntervalMinutes,
+            reminders = FakeHydrationReminderSettings(
+                HydrationReminderConfig(intervalMinutes = HydrationReminderConfig.MinIntervalMinutes),
             ),
         )
 
@@ -583,15 +579,12 @@ class HydrationViewModelTest {
     }
 
     @Test fun `selectRange saves selected range`() = runTest {
-        var savedRange: TimeRange? = null
-        val vm = hydrationViewModel(
-            repository = emptyRepo(),
-            onRangeSelected = { range -> savedRange = range },
-        )
+        val preferences = FakePreferences()
+        val vm = hydrationViewModel(repository = emptyRepo(), preferences = preferences)
 
         vm.selectRange(TimeRange.MONTH)
 
-        assertEquals(TimeRange.MONTH, savedRange)
+        assertEquals(listOf(TimeRange.MONTH), preferences.storedRanges)
     }
 
     @Test fun `previousPeriod WEEK moves back one week`() = runTest {

@@ -62,8 +62,8 @@ class CaloriesViewModel @Inject constructor(
     private val bodyRepository: BodyRepository,
     private val periodPreferences: PeriodPreferences,
     private val calorieDisplayPreferences: CalorieDisplayPreferences,
-    private val caloriesSync: CaloriesHistorySyncService? = null,
-    savedStateHandle: androidx.lifecycle.SavedStateHandle? = null,
+    private val caloriesSync: CaloriesHistorySyncService,
+    savedStateHandle: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
 
     private var caloriesSyncKicked = false
@@ -72,7 +72,7 @@ class CaloriesViewModel @Inject constructor(
     private val initialWeekPeriodMode = periodPreferences.weekPeriodMode
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
-        initialDate = savedStateHandle?.selectedDayOrNull() ?: java.time.LocalDate.now(),
+        initialDate = savedStateHandle.selectedDayOrNull() ?: java.time.LocalDate.now(),
         initialWeekPeriodMode = initialWeekPeriodMode,
         onRangeSelected = { range ->
             periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.CALORIES, range)
@@ -226,11 +226,10 @@ class CaloriesViewModel @Inject constructor(
      * settles. The first sync builds the cache every later open serves from.
      */
     private fun kickCaloriesHistorySyncOnce() {
-        val sync = caloriesSync ?: return
         if (caloriesSyncKicked) return
         caloriesSyncKicked = true
         viewModelScope.launch {
-            runCatching { sync.syncAll() }
+            runCatching { caloriesSync.syncAll() }
             load()
         }
     }

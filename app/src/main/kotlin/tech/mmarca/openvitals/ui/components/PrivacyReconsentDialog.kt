@@ -83,8 +83,7 @@ fun PrivacyReconsentPrompt() {
                 }
             },
             onAccept = {
-                prefs.acceptedPrivacyPolicyVersion = PreferencesRepository.CURRENT_PRIVACY_POLICY_VERSION
-                prefs.privacyPolicyAcceptedAtMillis = System.currentTimeMillis()
+                prefs.acceptCurrentPrivacyPolicy()
                 showDialog = false
             },
         )

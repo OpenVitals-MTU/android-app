@@ -46,13 +46,13 @@ import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.RecordingPreferences
+import tech.mmarca.openvitals.data.repository.contract.UnitPreferences
 import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
 import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
-import tech.mmarca.openvitals.domain.model.PlannedExerciseCompletion
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardLayout
 import tech.mmarca.openvitals.navigation.ACTIVITY_ENTRY_ID_ARG
@@ -78,7 +78,8 @@ class ActivityEntryViewModel(
     private val elevationCorrector: RouteElevationCorrector? = null,
     private val activityRecorder: ActivityRecordingController? = null,
     private val recordingDraftStore: ActivityRecordingDraftStore? = null,
-    private val preferencesRepository: PreferencesRepository? = null,
+    private val recordingPreferences: RecordingPreferences? = null,
+    private val unitPreferences: UnitPreferences? = null,
     private val markerRepository: ActivityMarkerRepository? = null,
     private val coMapsNavigationRepository: CoMapsNavigationRepository? = null,
     private val clock: Clock = Clock.systemDefaultZone(),
@@ -97,7 +98,8 @@ class ActivityEntryViewModel(
         elevationCorrector: RouteElevationCorrector,
         activityRecorder: ActivityRecordingController,
         recordingDraftStore: ActivityRecordingDraftStore,
-        preferencesRepository: PreferencesRepository,
+        recordingPreferences: RecordingPreferences,
+        unitPreferences: UnitPreferences,
         markerRepository: ActivityMarkerRepository,
         coMapsNavigationRepository: CoMapsNavigationRepository,
         savedStateHandle: SavedStateHandle,
@@ -109,7 +111,8 @@ class ActivityEntryViewModel(
         elevationCorrector = elevationCorrector,
         activityRecorder = activityRecorder,
         recordingDraftStore = recordingDraftStore,
-        preferencesRepository = preferencesRepository,
+        recordingPreferences = recordingPreferences,
+        unitPreferences = unitPreferences,
         markerRepository = markerRepository,
         coMapsNavigationRepository = coMapsNavigationRepository,
         clock = Clock.systemDefaultZone(),
@@ -999,7 +1002,7 @@ class ActivityEntryViewModel(
         if (!withoutGps &&
             currentState.selectedActivityType.recordingKind() == ActivityRecordingKind.GPS_ROUTE &&
             recorder.state.value.activityTypeId == null &&
-            preferencesRepository?.activityRecordingPreferences()
+            recordingPreferences?.activityRecordingPreferences()
                 ?.coMapsNavigationContextEnabled == true
         ) {
             clearRecordingDraft()
@@ -1172,12 +1175,12 @@ class ActivityEntryViewModel(
     private fun restoreFinishedRecording() {
         if (editActivityId != null || _uiState.value.isRecordingDraft) return
         val snapshot = activityRecorder?.finishedRecording() ?: return
-        val unitSystem = preferencesRepository?.unitSystem ?: UnitSystem.METRIC
+        val unitSystem = unitPreferences?.unitSystem ?: UnitSystem.METRIC
         applyFinishedRecording(
             snapshot,
             ActivityEntryUnits(
-                distance = preferencesRepository?.unitOverride(UnitQuantity.DISTANCE) ?: unitSystem,
-                elevation = preferencesRepository?.unitOverride(UnitQuantity.ELEVATION) ?: unitSystem,
+                distance = unitPreferences?.unitOverride(UnitQuantity.DISTANCE) ?: unitSystem,
+                elevation = unitPreferences?.unitOverride(UnitQuantity.ELEVATION) ?: unitSystem,
             ),
         )
     }
@@ -1449,7 +1452,7 @@ class ActivityEntryViewModel(
             elevationText = if (selectedActivityType.supportsElevation && snapshot.elevationGainedMeters > 0.0) {
                 elevationInputText(
                     snapshot.elevationGainedMeters,
-                    preferencesRepository?.let { prefs ->
+                    unitPreferences?.let { prefs ->
                         prefs.unitOverride(UnitQuantity.ELEVATION) ?: prefs.unitSystem
                     } ?: UnitSystem.METRIC,
                 )
@@ -1506,10 +1509,10 @@ class ActivityEntryViewModel(
         val activityTypes = DefaultActivityEntryTypes
             .filter { (!requireGpsRoute || it.supportsGpsRoute) && (!requireLiveRecording || it.supportsLiveRecording) }
             .ifEmpty { DefaultActivityEntryTypes }
-        val preferredExerciseType = preferencesRepository
+        val preferredExerciseType = recordingPreferences
             ?.favoriteActivityExerciseType
             ?.takeIf { exerciseType -> activityTypes.any { it.exerciseType == exerciseType } }
-            ?: preferencesRepository
+            ?: recordingPreferences
                 ?.lastActivityExerciseType
                 ?.takeIf { exerciseType -> activityTypes.any { it.exerciseType == exerciseType } }
         return activityTypes.firstOrNull { it.exerciseType == preferredExerciseType }
@@ -1517,7 +1520,7 @@ class ActivityEntryViewModel(
     }
 
     private fun rememberLastActivityType(exerciseType: Int) {
-        preferencesRepository?.lastActivityExerciseType = exerciseType
+        recordingPreferences?.lastActivityExerciseType = exerciseType
     }
 }
 

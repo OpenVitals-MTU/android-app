@@ -33,7 +33,7 @@ import tech.mmarca.openvitals.domain.model.MindfulnessTimerConfig
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.data.repository.contract.MindfulnessRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.MindfulnessTimerPreferences
 import tech.mmarca.openvitals.navigation.MINDFULNESS_ENTRY_ID_ARG
 
 private const val MinSessionMinutes = 1
@@ -100,13 +100,9 @@ data class MindfulnessEntryUiState(
 @HiltViewModel
 class MindfulnessEntryViewModel @Inject constructor(
     private val repository: MindfulnessRepository,
-    private val preferencesRepository: PreferencesRepository,
+    private val timerPreferences: MindfulnessTimerPreferences,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    constructor(
-        repository: MindfulnessRepository,
-        preferencesRepository: PreferencesRepository,
-    ) : this(repository, preferencesRepository, SavedStateHandle())
 
     private var timerJob: Job? = null
     private var timerStart: Instant? = null
@@ -254,7 +250,7 @@ class MindfulnessEntryViewModel @Inject constructor(
             )
             return
         }
-        preferencesRepository.setMindfulnessTimerConfig(config)
+        timerPreferences.setMindfulnessTimerConfig(config)
         timerJob?.cancel()
         timerStart = Instant.now()
         completedStart = null
@@ -563,7 +559,7 @@ class MindfulnessEntryViewModel @Inject constructor(
     }
 
     private fun initialState(editRecordId: String?): MindfulnessEntryUiState {
-        val config = preferencesRepository.mindfulnessTimerConfig()
+        val config = timerPreferences.mindfulnessTimerConfig()
         return MindfulnessEntryUiState(
             durationMinutesText = config.durationMinutes.toString(),
             intervalEnabled = config.intervalMinutes != null,

@@ -35,22 +35,24 @@ class HydrationReminderController @Inject constructor(
     private val notificationService: HydrationReminderNotificationService,
     private val alarmManager: HydrationReminderAlarmManager,
     dispatcherProvider: DispatcherProvider,
-) {
+) : HydrationReminderSettings {
     private val scope = CoroutineScope(SupervisorJob() + dispatcherProvider.io)
 
     /** Serialises scheduling, so the last caller in is the one that arms the alarm. */
     private val scheduling = Mutex()
 
-    fun config(): HydrationReminderConfig =
+    override fun config(): HydrationReminderConfig =
         preferencesRepository.hydrationReminderConfig()
 
-    fun updateConfig(config: HydrationReminderConfig) {
+    override fun updateConfig(config: HydrationReminderConfig) {
         val normalized = config.normalized()
         preferencesRepository.setHydrationReminderConfig(normalized)
         applyConfig(normalized)
     }
 
-    fun applyConfig(config: HydrationReminderConfig = preferencesRepository.hydrationReminderConfig()) {
+    override fun applyStoredConfig() = applyConfig(preferencesRepository.hydrationReminderConfig())
+
+    fun applyConfig(config: HydrationReminderConfig) {
         scope.launch {
             scheduling.withLock { applyConfigNow(config) }
         }

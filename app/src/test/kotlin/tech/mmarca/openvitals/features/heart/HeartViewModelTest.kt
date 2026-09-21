@@ -1,5 +1,9 @@
 package tech.mmarca.openvitals.features.heart
 
+import tech.mmarca.openvitals.domain.model.HeartRateThresholds
+import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
+import androidx.lifecycle.SavedStateHandle
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.BloodPressureEntry
 import tech.mmarca.openvitals.domain.model.DailyHrv
@@ -17,7 +21,6 @@ import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
 import tech.mmarca.openvitals.data.repository.contract.VitalsRepository
 import tech.mmarca.openvitals.domain.usecase.LoadHeartPeriodUseCase
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -223,25 +226,33 @@ class HeartViewModelTest {
         heartRepo: HeartRepository = emptyRepo(),
         vitalsRepo: VitalsRepository = emptyVitalsRepo(),
         initialRange: TimeRange = TimeRange.WEEK,
-        initialWeekPeriodMode: tech.mmarca.openvitals.core.period.WeekPeriodMode =
-            tech.mmarca.openvitals.core.period.WeekPeriodMode.MONDAY_TO_SUNDAY,
         selectedMetric: HeartMetric? = HeartMetric.AVERAGE_HEART_RATE,
-        initialHighHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM,
-        initialLowHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM,
-        onHighHeartRateThresholdChanged: (Int) -> Unit = {},
-        onLowHeartRateThresholdChanged: (Int) -> Unit = {},
+        initialHighHeartRateThresholdBpm: Int = HeartRateThresholds.DEFAULT_HIGH_BPM,
+        initialLowHeartRateThresholdBpm: Int = HeartRateThresholds.DEFAULT_LOW_BPM,
+        preferences: FakePreferences = FakePreferences(
+            initialRange = initialRange,
+            highHeartRateThresholdBpm = initialHighHeartRateThresholdBpm,
+            lowHeartRateThresholdBpm = initialLowHeartRateThresholdBpm,
+        ),
     ) = HeartViewModel(
         loadHeartPeriodUseCase = LoadHeartPeriodUseCase(heartRepo, vitalsRepo),
         vitalsRepository = vitalsRepo,
+        periodPreferences = preferences,
+        heartThresholdPreferences = preferences,
+        vitalsSync = mockk(relaxed = true),
         dispatchers = mainDispatcherRule.dispatcherProvider,
-        initialRange = initialRange,
-        initialWeekPeriodMode = initialWeekPeriodMode,
-        selectedMetric = selectedMetric,
-        initialHighHeartRateThresholdBpm = initialHighHeartRateThresholdBpm,
-        initialLowHeartRateThresholdBpm = initialLowHeartRateThresholdBpm,
-        onHighHeartRateThresholdChanged = onHighHeartRateThresholdChanged,
-        onLowHeartRateThresholdChanged = onLowHeartRateThresholdChanged,
+        // No id is the overview, as the route has no argument there.
+        savedStateHandle = SavedStateHandle(
+            selectedMetric?.let { mapOf(METRIC_ID_ARG to it.routeId()) } ?: emptyMap(),
+        ),
     )
+
+    @Test fun `every heart metric round-trips through its route id`() {
+        HeartMetric.entries.forEach { metric ->
+            assertEquals(metric, heartMetricFromRoute(metric.routeId()))
+        }
+        assertNull(heartMetricFromRoute(null))
+    }
 
     // Initial state.
 
@@ -493,19 +504,18 @@ class HeartViewModelTest {
             HeartRateSample(Instant.ofEpochSecond(1_000), 116L, "test"),
             HeartRateSample(Instant.ofEpochSecond(2_000), 121L, "test"),
         )
-        var savedThreshold = -1
+        val preferences = FakePreferences(initialRange = TimeRange.DAY)
         val vm = heartViewModel(
             heartRepo = repo,
             vitalsRepo = emptyVitalsRepo(),
-            initialRange = TimeRange.DAY,
-            onHighHeartRateThresholdChanged = { threshold -> savedThreshold = threshold },
+            preferences = preferences,
         )
 
         assertEquals(1, vm.uiState.value.highHeartRateCheck.count)
 
         vm.decreaseHighHeartRateThreshold()
 
-        assertEquals(115, savedThreshold)
+        assertEquals(115, preferences.highHeartRateThresholdBpm)
         assertEquals(115, vm.uiState.value.highHeartRateCheck.thresholdBpm)
         assertEquals(2, vm.uiState.value.highHeartRateCheck.count)
     }

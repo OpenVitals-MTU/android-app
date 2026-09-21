@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.bodyenergy
 
+import tech.mmarca.openvitals.data.sync.BodyEnergyChainSyncService
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -9,7 +11,6 @@ import java.time.ZoneId
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -19,7 +20,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.core.presentation.ScreenError
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineResult
@@ -28,7 +28,6 @@ import tech.mmarca.openvitals.domain.insights.BodyEnergyConfidence
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelinePoint
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
-import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
@@ -42,10 +41,6 @@ class BodyEnergyViewModelTest {
     private val today = LocalDate.now()
     private val zone = ZoneId.systemDefault()
 
-    private fun prefs(): PreferencesRepository = mockk<PreferencesRepository>().also {
-        every { it.bodyEnergyCalibration() } returns BodyEnergyCalibration.Automatic
-        every { it.bodyProfile() } returns BodyProfile()
-    }
 
     private fun point(date: LocalDate, hour: Long, score: Int): BodyEnergyTimelinePoint =
         BodyEnergyTimelinePoint(
@@ -72,12 +67,23 @@ class BodyEnergyViewModelTest {
             confidenceReason = "test",
         )
 
-    private fun viewModel(repository: BodyEnergyRepository): BodyEnergyViewModel =
+    private fun viewModel(
+        repository: BodyEnergyRepository,
+        preferences: FakePreferences = FakePreferences(),
+        chainRebuilt: MutableSharedFlow<Unit> = MutableSharedFlow(),
+    ): BodyEnergyViewModel =
         BodyEnergyViewModel(
             repository = repository,
-            preferencesRepository = prefs(),
+            calibrationPreferences = preferences,
+            bodyProfilePreferences = preferences,
+            chainSyncService = chainSync(chainRebuilt),
             dispatchers = mainDispatcherRule.dispatcherProvider,
         )
+
+    private fun chainSync(rebuilt: MutableSharedFlow<Unit>): BodyEnergyChainSyncService =
+        mockk<BodyEnergyChainSyncService>(relaxed = true).also { service ->
+            every { service.chainRebuilt } returns rebuilt
+        }
 
     @Test
     fun `a loaded day lands with its display precomputed`() = runTest {
@@ -150,7 +156,7 @@ class BodyEnergyViewModelTest {
             BodyEnergyTimelineResult(firstArg(), listOf(timeline(today)))
         }
         val rebuilt = MutableSharedFlow<Unit>()
-        BodyEnergyViewModel(repository = repo, preferencesRepository = prefs(), chainRebuilt = rebuilt, dispatchers = mainDispatcherRule.dispatcherProvider)
+        viewModel(repo, chainRebuilt = rebuilt)
         advanceUntilIdle()
         coVerify(exactly = 1) { repo.loadTimeline(any()) }
 
@@ -167,18 +173,20 @@ class BodyEnergyViewModelTest {
         coEvery { repo.loadTimeline(any()) } coAnswers {
             BodyEnergyTimelineResult(firstArg(), listOf(timeline(today)))
         }
-        val calibration = MutableStateFlow(BodyEnergyCalibration.Automatic)
-        BodyEnergyViewModel(repository = repo, preferencesRepository = prefs(), calibrationChanges = calibration, dispatchers = mainDispatcherRule.dispatcherProvider)
+        val preferences = FakePreferences(initialCalibration = BodyEnergyCalibration.Automatic)
+        viewModel(repo, preferences = preferences)
         advanceUntilIdle()
         coVerify(exactly = 1) { repo.loadTimeline(any()) }
 
-        calibration.value = BodyEnergyCalibration.Automatic.copy(stressDrainGain = 1.04)
+        preferences.setBodyEnergyCalibration(BodyEnergyCalibration.Automatic.copy(stressDrainGain = 1.04))
         advanceUntilIdle()
         coVerify(exactly = 1) { repo.loadTimeline(any()) }
 
-        calibration.value = BodyEnergyCalibration(
-            useManualZones = true,
-            manualZoneThresholdsBpm = HeartZoneThresholds(95, 115, 135, 155, 175),
+        preferences.setBodyEnergyCalibration(
+            BodyEnergyCalibration(
+                useManualZones = true,
+                manualZoneThresholdsBpm = HeartZoneThresholds(95, 115, 135, 155, 175),
+            ),
         )
         advanceUntilIdle()
         coVerify(exactly = 2) { repo.loadTimeline(any()) }

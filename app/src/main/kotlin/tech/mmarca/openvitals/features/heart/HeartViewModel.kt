@@ -36,13 +36,13 @@ import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.domain.model.Vo2MaxEntry
 import tech.mmarca.openvitals.data.repository.HeartPeriodMetric
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.HeartThresholdPreferences
+import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
 import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
 import tech.mmarca.openvitals.data.repository.contract.VitalsRepository
 import tech.mmarca.openvitals.data.sync.VitalsHistorySyncService
 import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
 import tech.mmarca.openvitals.domain.usecase.HeartPeriodLoadRequest
-import tech.mmarca.openvitals.domain.usecase.HeartPeriodLoadResult
 import tech.mmarca.openvitals.domain.usecase.LoadHeartPeriodUseCase
 import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
 import java.time.LocalDate
@@ -50,9 +50,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -136,87 +134,52 @@ data class HeartUiState(
     val missingVitalsPermissions: Set<String> = emptySet(),
     val highHeartRateCheck: HeartRateThresholdCheck = HeartRateThresholdCheck(
         type = HeartRateThresholdCheckType.HIGH,
-        thresholdBpm = PreferencesRepository.DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM,
+        thresholdBpm = HeartRateThresholds.DEFAULT_HIGH_BPM,
     ),
     val lowHeartRateCheck: HeartRateThresholdCheck = HeartRateThresholdCheck(
         type = HeartRateThresholdCheckType.LOW,
-        thresholdBpm = PreferencesRepository.DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM,
+        thresholdBpm = HeartRateThresholds.DEFAULT_LOW_BPM,
     ),
     val display: HeartDisplayState = HeartDisplayState(),
     val error: ScreenError? = null,
 )
 
 @HiltViewModel
-class HeartViewModel(
+class HeartViewModel @Inject constructor(
     private val loadHeartPeriodUseCase: LoadHeartPeriodUseCase,
     private val vitalsRepository: VitalsRepository,
+    private val periodPreferences: PeriodPreferences,
+    private val heartThresholdPreferences: HeartThresholdPreferences,
+    private val vitalsSync: VitalsHistorySyncService,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    initialRange: TimeRange = TimeRange.WEEK,
-    initialDate: java.time.LocalDate? = null,
-    initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-    private val selectedMetric: HeartMetric? = HeartMetric.AVERAGE_HEART_RATE,
-    private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
-    private val onRangeSelected: (TimeRange) -> Unit = {},
-    initialHighHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_HIGH_HEART_RATE_THRESHOLD_BPM,
-    initialLowHeartRateThresholdBpm: Int = PreferencesRepository.DEFAULT_LOW_HEART_RATE_THRESHOLD_BPM,
-    private val onHighHeartRateThresholdChanged: (Int) -> Unit = {},
-    private val onLowHeartRateThresholdChanged: (Int) -> Unit = {},
-    private val vitalsSync: VitalsHistorySyncService? = null,
-    initialBloodPressureGuideline: BloodPressureGuideline = BloodPressureGuideline.ACC_AHA_2017,
-    private val bloodPressureGuidelineChanges: Flow<BloodPressureGuideline> = emptyFlow(),
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    @Inject
-    constructor(
-        loadHeartPeriodUseCase: LoadHeartPeriodUseCase,
-        vitalsRepository: VitalsRepository,
-        preferencesRepository: PreferencesRepository,
-        savedStateHandle: SavedStateHandle,
-        dispatchers: DispatcherProvider,
-        vitalsSync: VitalsHistorySyncService,
-    ) : this(
-        loadHeartPeriodUseCase = loadHeartPeriodUseCase,
-        vitalsRepository = vitalsRepository,
-        dispatchers = dispatchers,
-        vitalsSync = vitalsSync,
-        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HEART),
-        initialDate = savedStateHandle.selectedDayOrNull(),
-        initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
-        selectedMetric = heartMetricFromRoute(savedStateHandle[METRIC_ID_ARG]),
-        weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
-        onRangeSelected = { range ->
-            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.HEART, range)
-        },
-        initialHighHeartRateThresholdBpm = preferencesRepository.highHeartRateThresholdBpm,
-        initialLowHeartRateThresholdBpm = preferencesRepository.lowHeartRateThresholdBpm,
-        onHighHeartRateThresholdChanged = { threshold ->
-            preferencesRepository.highHeartRateThresholdBpm = threshold
-        },
-        onLowHeartRateThresholdChanged = { threshold ->
-            preferencesRepository.lowHeartRateThresholdBpm = threshold
-        },
-        initialBloodPressureGuideline = preferencesRepository.bloodPressureGuideline,
-        bloodPressureGuidelineChanges = preferencesRepository.bloodPressureGuidelineFlow,
-    )
+    /** The metric the route named; null is the overview. */
+    private val selectedMetric = heartMetricFromRoute(savedStateHandle[METRIC_ID_ARG])
+    private val initialRange = periodPreferences.timeRangeFor(PeriodRangePreferenceKey.HEART)
+    private val initialWeekPeriodMode = periodPreferences.weekPeriodMode
 
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
-        initialDate = initialDate ?: java.time.LocalDate.now(),
+        initialDate = savedStateHandle.selectedDayOrNull() ?: java.time.LocalDate.now(),
         initialWeekPeriodMode = initialWeekPeriodMode,
-        onRangeSelected = onRangeSelected,
+        onRangeSelected = { range ->
+            periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.HEART, range)
+        },
     )
     private val _uiState = MutableStateFlow(
         HeartUiState(
             selectedRange = initialRange,
             weekPeriodMode = initialWeekPeriodMode,
-            bloodPressureGuideline = initialBloodPressureGuideline,
+            bloodPressureGuideline = heartThresholdPreferences.bloodPressureGuideline,
             highHeartRateCheck = HeartRateThresholdCheck(
                 type = HeartRateThresholdCheckType.HIGH,
-                thresholdBpm = initialHighHeartRateThresholdBpm,
+                thresholdBpm = heartThresholdPreferences.highHeartRateThresholdBpm,
             ),
             lowHeartRateCheck = HeartRateThresholdCheck(
                 type = HeartRateThresholdCheckType.LOW,
-                thresholdBpm = initialLowHeartRateThresholdBpm,
+                thresholdBpm = heartThresholdPreferences.lowHeartRateThresholdBpm,
             ),
         )
     )
@@ -232,7 +195,7 @@ class HeartViewModel(
 
     private fun observeBloodPressureGuideline() {
         viewModelScope.launch {
-            bloodPressureGuidelineChanges.collect { guideline ->
+            heartThresholdPreferences.bloodPressureGuidelineFlow.collect { guideline ->
                 _uiState.value = _uiState.value.copy(bloodPressureGuideline = guideline)
             }
         }
@@ -240,7 +203,7 @@ class HeartViewModel(
 
     private fun observeWeekPeriodMode() {
         viewModelScope.launch {
-            weekPeriodModeChanges.drop(1).collect { mode ->
+            periodPreferences.weekPeriodModeFlow.drop(1).collect { mode ->
                 periodDriver.weekPeriodMode = mode
                 _uiState.value = _uiState.value.copy(weekPeriodMode = mode)
                 if (_uiState.value.selectedRange == TimeRange.WEEK) {
@@ -327,11 +290,10 @@ class HeartViewModel(
      * the screen does not stop it.
      */
     private fun kickVitalsHistorySyncOnce() {
-        val sync = vitalsSync ?: return
         if (vitalsSyncKicked) return
         vitalsSyncKicked = true
         viewModelScope.launch {
-            runCatching { sync.syncAll() }
+            runCatching { vitalsSync.syncAll() }
             load()
         }
     }
@@ -409,10 +371,10 @@ class HeartViewModel(
         val normalized = thresholdBpm
             .coerceAtLeast(current.lowHeartRateCheck.thresholdBpm + HeartRateThresholdMinimumGapBpm)
             .coerceIn(
-                PreferencesRepository.MIN_HIGH_HEART_RATE_THRESHOLD_BPM,
-                PreferencesRepository.MAX_HIGH_HEART_RATE_THRESHOLD_BPM,
+                HeartRateThresholds.MIN_HIGH_BPM,
+                HeartRateThresholds.MAX_HIGH_BPM,
             )
-        onHighHeartRateThresholdChanged(normalized)
+        heartThresholdPreferences.highHeartRateThresholdBpm = normalized
         _uiState.value = current.copy(
             highHeartRateCheck = current.heartRateThresholdCheck(
                 type = HeartRateThresholdCheckType.HIGH,
@@ -426,10 +388,10 @@ class HeartViewModel(
         val normalized = thresholdBpm
             .coerceAtMost(current.highHeartRateCheck.thresholdBpm - HeartRateThresholdMinimumGapBpm)
             .coerceIn(
-                PreferencesRepository.MIN_LOW_HEART_RATE_THRESHOLD_BPM,
-                PreferencesRepository.MAX_LOW_HEART_RATE_THRESHOLD_BPM,
+                HeartRateThresholds.MIN_LOW_BPM,
+                HeartRateThresholds.MAX_LOW_BPM,
             )
-        onLowHeartRateThresholdChanged(normalized)
+        heartThresholdPreferences.lowHeartRateThresholdBpm = normalized
         _uiState.value = current.copy(
             lowHeartRateCheck = current.heartRateThresholdCheck(
                 type = HeartRateThresholdCheckType.LOW,
@@ -496,7 +458,14 @@ private fun HeartMetric?.toLoadRequest(): HeartPeriodLoadRequest =
         HeartMetric.SKIN_TEMPERATURE -> HeartPeriodLoadRequest.VitalsOnly(VitalsPeriodMetric.SKIN_TEMPERATURE)
     }
 
-private fun heartMetricFromRoute(metricId: String?): HeartMetric? {
+/** The route argument that names [this]; the inverse of [heartMetricFromRoute]. */
+internal fun HeartMetric.routeId(): String = when (this) {
+    HeartMetric.AVERAGE_HEART_RATE -> "AVG_HEART_RATE"
+    else -> name
+}
+
+/** The metric a route argument names; null, the overview. The ids are [tech.mmarca.openvitals.domain.dashboard.DashboardWidgetId] names. */
+internal fun heartMetricFromRoute(metricId: String?): HeartMetric? {
     if (metricId == null) return null
     return when (metricId) {
         "AVG_HEART_RATE",

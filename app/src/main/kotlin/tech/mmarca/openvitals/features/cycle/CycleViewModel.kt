@@ -49,11 +49,11 @@ class CycleViewModel @Inject constructor(
     private val repository: CycleRepository,
     private val periodPreferences: PeriodPreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    savedStateHandle: androidx.lifecycle.SavedStateHandle? = null,
+    savedStateHandle: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
 
     private val initialRange = periodPreferences.timeRangeFor(PeriodRangePreferenceKey.CYCLE)
-    private val initialDate = savedStateHandle?.selectedDayOrNull()
+    private val initialDate = savedStateHandle.selectedDayOrNull()
     private val initialWeekPeriodMode = periodPreferences.weekPeriodMode
 
     private val periodDriver = PeriodSelectionDriver(

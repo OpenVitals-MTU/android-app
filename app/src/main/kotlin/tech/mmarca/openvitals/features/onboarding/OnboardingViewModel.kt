@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.OnboardingPreferences
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.OnboardingCategoryId
@@ -124,7 +124,7 @@ data class OnboardingUiState(
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val repository: HealthRepository,
-    private val preferencesRepository: PreferencesRepository,
+    private val preferences: OnboardingPreferences,
     private val permissionUxState: HealthConnectPermissionUxState,
 ) : ViewModel() {
     companion object {
@@ -149,7 +149,7 @@ class OnboardingViewModel @Inject constructor(
             if (avail != HealthConnectAvailability.AVAILABLE) {
                 _uiState.value = OnboardingUiState(
                     availability = avail,
-                    appLanguage = preferencesRepository.appLanguage,
+                    appLanguage = preferences.appLanguage,
                     isCheckingPermissions = false,
                 )
                 return@launch
@@ -162,8 +162,8 @@ class OnboardingViewModel @Inject constructor(
                 grantedPermissions = granted,
                 step = _uiState.value.step,
                 mindfulnessSupportedByDevice = catalog.mindfulnessSupportedByDevice,
-                mindfulnessOptIn = preferencesRepository.healthConnectMindfulnessEnabled,
-                appLanguage = preferencesRepository.appLanguage,
+                mindfulnessOptIn = preferences.healthConnectMindfulnessEnabled,
+                appLanguage = preferences.appLanguage,
                 isCheckingPermissions = false,
                 catalog = catalog,
                 openSettingsEvent = _uiState.value.openSettingsEvent,
@@ -217,8 +217,8 @@ class OnboardingViewModel @Inject constructor(
 
     fun setMindfulnessOptIn(enabled: Boolean) {
         // Both keys: the legacy opt-in and the settings toggle.
-        preferencesRepository.mindfulnessOptIn = enabled
-        preferencesRepository.healthConnectMindfulnessEnabled = enabled
+        preferences.mindfulnessOptIn = enabled
+        preferences.healthConnectMindfulnessEnabled = enabled
         _uiState.value = _uiState.value.copy(mindfulnessOptIn = enabled)
         // The catalog derives the mindfulness permissions from this preference; rebuild it.
         checkState()
@@ -237,13 +237,12 @@ class OnboardingViewModel @Inject constructor(
     }
 
     fun selectAppLanguage(appLanguage: AppLanguage) {
-        preferencesRepository.appLanguage = appLanguage
+        preferences.appLanguage = appLanguage
         _uiState.value = _uiState.value.copy(appLanguage = appLanguage)
     }
 
     fun completeOnboarding() {
-        preferencesRepository.acceptedPrivacyPolicyVersion = PreferencesRepository.CURRENT_PRIVACY_POLICY_VERSION
-        preferencesRepository.privacyPolicyAcceptedAtMillis = System.currentTimeMillis()
-        preferencesRepository.onboardingDone = true
+        preferences.acceptCurrentPrivacyPolicy()
+        preferences.onboardingDone = true
     }
 }

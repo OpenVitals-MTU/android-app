@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.onboarding
 
+import tech.mmarca.openvitals.data.repository.contract.OnboardingPreferences
 import android.util.Log
 import io.mockk.Runs
 import io.mockk.coEvery
@@ -20,7 +21,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.OnboardingCategoryId
@@ -81,7 +81,7 @@ class OnboardingViewModelTest {
     }
 
     /** The mindfulness keys are real vars: the view model re-reads them after a toggle. */
-    private fun prefs(optedIn: Boolean = false): PreferencesRepository = mockk<PreferencesRepository>().also { prefs ->
+    private fun prefs(optedIn: Boolean = false): OnboardingPreferences = mockk<OnboardingPreferences>().also { prefs ->
         var legacyOptIn = optedIn
         var integrationEnabled = optedIn
         every { prefs.appLanguage } returns AppLanguage.SYSTEM
@@ -90,15 +90,14 @@ class OnboardingViewModelTest {
         every { prefs.healthConnectMindfulnessEnabled } answers { integrationEnabled }
         every { prefs.healthConnectMindfulnessEnabled = any() } answers { integrationEnabled = firstArg() }
         every { prefs.onboardingDone = any() } just Runs
-        every { prefs.acceptedPrivacyPolicyVersion = any() } just Runs
-        every { prefs.privacyPolicyAcceptedAtMillis = any() } just Runs
+        every { prefs.acceptCurrentPrivacyPolicy() } just Runs
     }
 
     private fun uxState(): HealthConnectPermissionUxState = mockk(relaxed = true)
 
     private fun viewModel(
         repo: HealthRepository = repo(),
-        prefs: PreferencesRepository = prefs(),
+        prefs: OnboardingPreferences = prefs(),
         ux: HealthConnectPermissionUxState = uxState(),
     ) = OnboardingViewModel(repo, prefs, ux)
 
@@ -505,8 +504,7 @@ class OnboardingViewModelTest {
 
         vm.completeOnboarding()
 
-        verify { prefs.acceptedPrivacyPolicyVersion = PreferencesRepository.CURRENT_PRIVACY_POLICY_VERSION }
-        verify { prefs.privacyPolicyAcceptedAtMillis = any() }
+        verify { prefs.acceptCurrentPrivacyPolicy() }
         verify { prefs.onboardingDone = true }
     }
 

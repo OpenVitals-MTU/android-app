@@ -13,7 +13,8 @@ import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.performance.runCatchingCancellable
 import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.ActivitySplitPreferences
+import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
@@ -82,34 +83,19 @@ internal data class ActivityDetailUiState(
 )
 
 @HiltViewModel
-internal class ActivityDetailViewModel(
+internal class ActivityDetailViewModel @Inject constructor(
     private val repository: ActivityRepository,
-    private val activityId: String,
     private val heartRepository: HeartRepository? = null,
     private val markerRepository: ActivityMarkerRepository? = null,
-    private val preferencesRepository: PreferencesRepository? = null,
+    private val bodyProfilePreferences: BodyProfilePreferences,
+    private val splitPreferences: ActivitySplitPreferences,
     private val coMapsNavigationRepository: CoMapsNavigationRepository? = null,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    @Inject
-    constructor(
-        repository: ActivityRepository,
-        heartRepository: HeartRepository,
-        markerRepository: ActivityMarkerRepository,
-        preferencesRepository: PreferencesRepository,
-        coMapsNavigationRepository: CoMapsNavigationRepository,
-        dispatchers: DispatcherProvider,
-        savedStateHandle: SavedStateHandle,
-    ) : this(
-        repository = repository,
-        activityId = savedStateHandle[ACTIVITY_DETAIL_ID_ARG] ?: "",
-        heartRepository = heartRepository,
-        markerRepository = markerRepository,
-        preferencesRepository = preferencesRepository,
-        coMapsNavigationRepository = coMapsNavigationRepository,
-        dispatchers = dispatchers,
-    )
+    /** The workout the route opened. Blank when it named none: the not-found state. */
+    private val activityId: String = savedStateHandle[ACTIVITY_DETAIL_ID_ARG] ?: ""
 
     private val _uiState = MutableStateFlow(ActivityDetailUiState())
     val uiState: StateFlow<ActivityDetailUiState> = _uiState.asStateFlow()
@@ -255,29 +241,27 @@ internal class ActivityDetailViewModel(
         val heartRepository = heartRepository ?: return null
         val window = heartRateRecoveryWindowFor(workout) ?: return null
         val samples = heartRepository.loadHeartRateSamples(window.readStart, window.readEnd)
-        val profile = preferencesRepository?.bodyProfile()
+        val profile = bodyProfilePreferences.bodyProfile()
         return calculateHeartRateRecovery(
             recoveryStart = window.recoveryStart,
             samples = samples,
-            restingHeartRateBpm = profile?.restingHeartRateBpm,
-            ageYears = profile?.ageYears(),
+            restingHeartRateBpm = profile.restingHeartRateBpm,
+            ageYears = profile.ageYears(),
             // The 90-day observed maximum is a trend-screen concern.
             observedMaxHeartRateBpm = null,
-            explicitMaxHeartRateBpm = profile?.maxHeartRateBpm,
+            explicitMaxHeartRateBpm = profile.maxHeartRateBpm,
         )
     }
 
     private fun currentSplitDistanceMeters(): Double =
         ActivitySplitDistance.normalize(
-            preferencesRepository?.activitySplitDistanceMeters
-                ?: ActivitySplitDistance.defaultMeters,
+            splitPreferences.activitySplitDistanceMeters,
         )
 
     /** Re-cuts the splits when the preference changes. A state update only. */
     private fun observeSplitDistance() {
-        val preferences = preferencesRepository ?: return
         viewModelScope.launch {
-            preferences.activitySplitDistanceMetersFlow.collect { meters ->
+            splitPreferences.activitySplitDistanceMetersFlow.collect { meters ->
                 val normalized = ActivitySplitDistance.normalize(meters)
                 val state = _uiState.value
                 if (state.splitDistanceMeters == normalized && state.workout == null) return@collect

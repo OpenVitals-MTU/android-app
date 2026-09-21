@@ -1,7 +1,7 @@
 package tech.mmarca.openvitals.features.readiness
 
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockk
 import java.time.LocalDate
 import kotlinx.coroutines.CompletableDeferred
@@ -16,17 +16,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.core.presentation.ScreenError
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineResult
 import tech.mmarca.openvitals.data.repository.dashboard.DashboardDataLoader
-import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardQuery
 import tech.mmarca.openvitals.domain.model.RefreshMode
-import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
-import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
-import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
@@ -39,13 +34,7 @@ class DailyReadinessViewModelTest {
 
     private val today = LocalDate.now()
 
-    private fun prefs(): PreferencesRepository = mockk<PreferencesRepository>().also {
-        every { it.sleepWindow } returns SleepWindow.Default
-        every { it.activityWeekMode } returns ActivityWeekMode.MONDAY_TO_SUNDAY
-        every { it.dailyGoalFor(any()) } answers { firstArg<MetricDailyGoalKey>().defaultValue }
-        every { it.hydrationDailyGoalLiters } returns 2.0
-        every { it.bodyEnergyCalibration() } returns BodyEnergyCalibration.Automatic
-    }
+    private fun prefs(): FakePreferences = FakePreferences()
 
     private fun bodyEnergyRepo(): BodyEnergyRepository = mockk<BodyEnergyRepository>().also {
         coEvery { it.loadTimeline(any()) } coAnswers { BodyEnergyTimelineResult(firstArg(), emptyList()) }
@@ -75,11 +64,17 @@ class DailyReadinessViewModelTest {
     }
 
     private fun viewModel(loader: DashboardDataLoader): DailyReadinessViewModel =
-        DailyReadinessViewModel(
-            loadDashboardDayUseCase = LoadDashboardDayUseCase(loader),
-            prefs = prefs(),
-            bodyEnergyRepository = bodyEnergyRepo(),
-        )
+        prefs().let { preferences ->
+            DailyReadinessViewModel(
+                loadDashboardDayUseCase = LoadDashboardDayUseCase(loader),
+                periodPreferences = preferences,
+                sleepWindowPreferences = preferences,
+                dailyGoalPreferences = preferences,
+                hydrationGoalPreferences = preferences,
+                calibrationPreferences = preferences,
+                bodyEnergyRepository = bodyEnergyRepo(),
+            )
+        }
 
     @Test
     fun `load publishes the insight for the loaded day`() = runTest {

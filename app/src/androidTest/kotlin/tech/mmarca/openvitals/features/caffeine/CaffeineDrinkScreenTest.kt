@@ -1,5 +1,9 @@
 package tech.mmarca.openvitals.features.caffeine
 
+import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
+import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import java.time.LocalDate
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -77,9 +81,12 @@ class CaffeineDrinkScreenTest {
 
     private fun setScreen(entryId: String) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val preferences = PreferencesRepository(context)
         val viewModel = CaffeineViewModel(
             repository = FakeCaffeineRepository(listOf(FLAT_WHITE)),
-            preferencesRepository = PreferencesRepository(context),
+            caffeineModel = preferences,
+            bodyProfilePreferences = preferences,
+            nutritionRepository = UnusedNutritionRepository,
         )
         composeRule.setContent {
             CompositionLocalProvider(
@@ -125,4 +132,26 @@ class CaffeineDrinkScreenTest {
             mealType = 0,
         )
     }
+}
+
+/** The drink screen never deletes here, so no nutrition record is ever touched. */
+private object UnusedNutritionRepository : NutritionRepository {
+    override val nutritionWritePermissions: Set<String> = emptySet()
+
+    override suspend fun hasNutritionWritePermission(): Boolean = false
+
+    override suspend fun loadNutritionPeriod(
+        query: PeriodLoadQuery,
+        refreshMode: RefreshMode,
+    ) = error("unused")
+
+    override suspend fun loadDailyMacros(start: LocalDate, end: LocalDate) = error("unused")
+
+    override suspend fun loadNutritionEntries(start: LocalDate, end: LocalDate) = error("unused")
+
+    override suspend fun writeCarbsEntry(request: NutritionWriteRequest): String = error("unused")
+
+    override suspend fun writeNutritionEntry(request: NutritionWriteRequest): String = error("unused")
+
+    override suspend fun deleteNutritionEntry(id: String) = error("unused")
 }

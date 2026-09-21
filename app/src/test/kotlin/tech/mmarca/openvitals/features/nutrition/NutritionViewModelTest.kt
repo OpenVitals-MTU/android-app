@@ -1,5 +1,8 @@
 package tech.mmarca.openvitals.features.nutrition
 
+import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
+import androidx.lifecycle.SavedStateHandle
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.NutritionEntry
@@ -50,12 +53,22 @@ class NutritionViewModelTest {
         repo: NutritionRepository,
         selectedMetric: NutritionMetric = NutritionMetric.CALORIES_IN,
         initialRange: TimeRange = TimeRange.WEEK,
-    ) = NutritionViewModel(
-        repository = repo,
-        dispatchers = mainDispatcherRule.dispatcherProvider,
-        selectedMetric = selectedMetric,
-        initialRange = initialRange,
-    )
+    ) = FakePreferences(initialRange = initialRange).let { preferences ->
+        NutritionViewModel(
+            repository = repo,
+            periodPreferences = preferences,
+            dailyGoalPreferences = preferences,
+            nutritionDisplayPreferences = preferences,
+            dispatchers = mainDispatcherRule.dispatcherProvider,
+            savedStateHandle = SavedStateHandle(mapOf(METRIC_ID_ARG to selectedMetric.routeId())),
+        )
+    }
+
+    @Test fun `every nutrition metric round-trips through its route id`() {
+        NutritionMetric.entries.forEach { metric ->
+            assertEquals(metric, nutritionMetricFromRoute(metric.routeId()))
+        }
+    }
 
     @Test fun `initial range is WEEK`() = runTest {
         val vm = viewModel(emptyRepo())

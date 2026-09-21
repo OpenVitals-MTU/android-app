@@ -566,7 +566,7 @@ class HydrationEntryViewModel @Inject constructor(
                             runCatching { reminderController?.hideReminderNotification() }
                         }
                         // Re-anchor the reminder to the drink just saved.
-                        runCatching { reminderController?.applyConfig() }
+                        runCatching { reminderController?.applyStoredConfig() }
                         refreshFrequentDrinkOptions()
                     }
                 }

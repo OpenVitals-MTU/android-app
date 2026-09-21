@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.cycle
 
+import androidx.lifecycle.SavedStateHandle
 import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import io.mockk.coEvery
@@ -68,6 +69,7 @@ class CycleViewModelTest {
         repository = repository,
         periodPreferences = FakePreferences(),
         dispatchers = mainDispatcherRule.dispatcherProvider,
+        savedStateHandle = SavedStateHandle(),
     )
 
     @Test fun `initial range is MONTH`() = runTest {

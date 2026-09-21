@@ -7,12 +7,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import java.time.LocalDate
 import javax.inject.Inject
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
@@ -21,7 +19,8 @@ import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
+import tech.mmarca.openvitals.data.repository.contract.CaffeineModelPreferences
 import tech.mmarca.openvitals.data.repository.contract.CaffeineRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.insights.CaffeineInsightCalculator
@@ -55,37 +54,20 @@ enum class CaffeineAnalyticsRange {
 }
 
 @HiltViewModel
-class CaffeineViewModel(
+class CaffeineViewModel @Inject constructor(
     private val repository: CaffeineRepository,
-    private val preferencesRepository: PreferencesRepository,
-    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
+    private val caffeineModel: CaffeineModelPreferences,
+    private val bodyProfilePreferences: BodyProfilePreferences,
     // A caffeine entry is a nutrition record, so deletion goes through the nutrition repository.
-    private val nutritionRepository: NutritionRepository? = null,
-    initialAnalyticsRange: CaffeineAnalyticsRange = CaffeineAnalyticsRange.LAST_30_DAYS,
-    private val preferenceChanges: Flow<CaffeinePreferences> = emptyFlow(),
-    private val bodyProfileChanges: Flow<BodyProfile> = emptyFlow(),
+    private val nutritionRepository: NutritionRepository,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
 ) : ViewModel() {
-
-    @Inject
-    constructor(
-        repository: CaffeineRepository,
-        preferencesRepository: PreferencesRepository,
-        nutritionRepository: NutritionRepository,
-        dispatchers: DispatcherProvider,
-    ) : this(
-        repository = repository,
-        preferencesRepository = preferencesRepository,
-        dispatchers = dispatchers,
-        nutritionRepository = nutritionRepository,
-        preferenceChanges = preferencesRepository.caffeinePreferencesFlow,
-        bodyProfileChanges = preferencesRepository.bodyProfileFlow,
-    )
 
     private val _uiState = MutableStateFlow(
         CaffeineUiState(
-            analyticsRange = initialAnalyticsRange,
-            preferences = preferencesRepository.caffeinePreferences(),
-            bodyProfile = preferencesRepository.bodyProfile(),
+            analyticsRange = CaffeineAnalyticsRange.LAST_30_DAYS,
+            preferences = caffeineModel.caffeinePreferences(),
+            bodyProfile = bodyProfilePreferences.bodyProfile(),
         )
     )
     val uiState: StateFlow<CaffeineUiState> = _uiState.asStateFlow()
@@ -155,11 +137,11 @@ class CaffeineViewModel(
     }
 
     fun completeSetup(preferences: CaffeinePreferences) {
-        preferencesRepository.setCaffeinePreferences(preferences.copy(profileCompleted = true))
+        caffeineModel.setCaffeinePreferences(preferences.copy(profileCompleted = true))
     }
 
     fun skipSetup() {
-        preferencesRepository.setCaffeinePreferences(
+        caffeineModel.setCaffeinePreferences(
             _uiState.value.preferences.copy(profileCompleted = true)
         )
     }
@@ -176,10 +158,7 @@ class CaffeineViewModel(
                 error = null,
             )
             runCatching {
-                val nutrition = requireNotNull(nutritionRepository) {
-                    "Nutrition repository is not configured."
-                }
-                nutrition.deleteNutritionEntry(entryId)
+                nutritionRepository.deleteNutritionEntry(entryId)
             }.onSuccess {
                 load(RefreshMode.FORCE)
             }.onFailure { error ->
@@ -194,7 +173,7 @@ class CaffeineViewModel(
 
     private fun observePreferences() {
         viewModelScope.launch {
-            preferenceChanges.drop(1).collect { preferences ->
+            caffeineModel.caffeinePreferencesFlow.drop(1).collect { preferences ->
                 _uiState.value = _uiState.value.copy(preferences = preferences)
                 rebuildDisplay()
             }
@@ -203,7 +182,7 @@ class CaffeineViewModel(
 
     private fun observeBodyProfile() {
         viewModelScope.launch {
-            bodyProfileChanges.drop(1).collect { bodyProfile ->
+            bodyProfilePreferences.bodyProfileFlow.drop(1).collect { bodyProfile ->
                 _uiState.value = _uiState.value.copy(bodyProfile = bodyProfile)
                 rebuildDisplay()
             }

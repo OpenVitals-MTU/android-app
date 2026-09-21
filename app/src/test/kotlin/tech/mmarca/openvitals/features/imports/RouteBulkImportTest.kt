@@ -30,7 +30,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
@@ -58,7 +57,6 @@ import tech.mmarca.openvitals.features.activity.elevation.ElevationTileRepositor
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapImportWorkController
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapLibraryState
 import tech.mmarca.openvitals.features.activity.maps.OfflineMapRepository
-import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportService
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
 import tech.mmarca.openvitals.features.imports.garmin.FitHrvImportService
@@ -66,7 +64,6 @@ import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFil
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteFileImporter
 import tech.mmarca.openvitals.features.settings.RouteBulkImportProgress
 import tech.mmarca.openvitals.features.settings.DataImportViewModel
-import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 /**
@@ -437,7 +434,8 @@ class RouteBulkImportTest {
         DataImportViewModel(
             repository = repository,
             activityRepository = activityRepository,
-            preferencesRepository = preferencesRepository,
+            recordingPreferences = preferencesRepository,
+            unitPreferences = preferencesRepository,
             appleHealthImportService = mockk<AppleHealthImportService>(relaxed = true),
             appleHealthImportWorkController = importController(),
             routeFileImporter = routeFileImporter,

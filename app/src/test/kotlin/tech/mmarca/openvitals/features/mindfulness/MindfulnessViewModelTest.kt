@@ -1,5 +1,9 @@
 package tech.mmarca.openvitals.features.mindfulness
 
+import tech.mmarca.openvitals.features.mindfulness.reminders.FakeMindfulnessReminderSettings
+import tech.mmarca.openvitals.data.repository.contract.SleepRepository
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
+import androidx.lifecycle.SavedStateHandle
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.MindfulnessSession
 import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
@@ -60,14 +64,22 @@ class MindfulnessViewModelTest {
 
     private fun viewModel(
         repository: MindfulnessRepository,
-        initialReminderConfig: MindfulnessReminderConfig = MindfulnessReminderConfig(),
-        onReminderConfigChanged: (MindfulnessReminderConfig) -> Unit = {},
+        reminders: FakeMindfulnessReminderSettings = FakeMindfulnessReminderSettings(),
+        preferences: FakePreferences = FakePreferences(),
     ) = MindfulnessViewModel(
         repository = repository,
+        sleepRepository = sleepRepo(),
+        periodPreferences = preferences,
+        dailyGoalPreferences = preferences,
+        sleepWindowPreferences = preferences,
+        reminders = reminders,
         dispatchers = mainDispatcherRule.dispatcherProvider,
-        initialReminderConfig = initialReminderConfig,
-        onReminderConfigChanged = onReminderConfigChanged,
+        savedStateHandle = SavedStateHandle(),
     )
+
+    private fun sleepRepo(): SleepRepository = mockk<SleepRepository>().also { repo ->
+        coEvery { repo.loadSleepSessions(any(), any()) } returns emptyList()
+    }
 
     @Test fun `initial range is WEEK`() = runTest {
         val vm = viewModel(emptyRepo())
@@ -82,12 +94,8 @@ class MindfulnessViewModelTest {
     }
 
     @Test fun `mindfulness reminder config updates and persists`() = runTest {
-        val changes = mutableListOf<MindfulnessReminderConfig>()
-        val vm = viewModel(
-            repository = emptyRepo(),
-            initialReminderConfig = MindfulnessReminderConfig(reminderTime = LocalTime.of(17, 0)),
-            onReminderConfigChanged = changes::add,
-        )
+        val reminders = FakeMindfulnessReminderSettings(MindfulnessReminderConfig(reminderTime = LocalTime.of(17, 0)))
+        val vm = viewModel(repository = emptyRepo(), reminders = reminders)
 
         vm.setMindfulnessRemindersEnabled(true)
         vm.setMindfulnessReminderTime(LocalTime.of(18, 30))
@@ -101,7 +109,7 @@ class MindfulnessViewModelTest {
                 MindfulnessReminderConfig(enabled = true, reminderTime = LocalTime.of(17, 0)),
                 MindfulnessReminderConfig(enabled = true, reminderTime = LocalTime.of(18, 30)),
             ),
-            changes,
+            reminders.updates,
         )
     }
 

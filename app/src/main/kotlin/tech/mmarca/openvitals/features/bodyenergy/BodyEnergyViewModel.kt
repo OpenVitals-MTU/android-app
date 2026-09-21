@@ -6,12 +6,10 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import javax.inject.Inject
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.R
@@ -25,7 +23,8 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyEnergyCalibrationPreferences
+import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineResult
@@ -48,29 +47,13 @@ data class BodyEnergyUiState(
 )
 
 @HiltViewModel
-class BodyEnergyViewModel(
+class BodyEnergyViewModel @Inject constructor(
     private val repository: BodyEnergyRepository,
-    private val preferencesRepository: PreferencesRepository,
-    private val calibrationChanges: Flow<BodyEnergyCalibration> = emptyFlow(),
-    private val bodyProfileChanges: Flow<BodyProfile> = emptyFlow(),
-    private val chainSyncService: BodyEnergyChainSyncService? = null,
-    private val chainRebuilt: Flow<Unit> = emptyFlow(),
+    private val calibrationPreferences: BodyEnergyCalibrationPreferences,
+    private val bodyProfilePreferences: BodyProfilePreferences,
+    private val chainSyncService: BodyEnergyChainSyncService,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
 ) : ViewModel() {
-
-    @Inject
-    constructor(
-        repository: BodyEnergyRepository,
-        preferencesRepository: PreferencesRepository,
-        chainSyncService: BodyEnergyChainSyncService,
-    ) : this(
-        repository = repository,
-        preferencesRepository = preferencesRepository,
-        calibrationChanges = preferencesRepository.bodyEnergyCalibrationFlow,
-        bodyProfileChanges = preferencesRepository.bodyProfileFlow,
-        chainSyncService = chainSyncService,
-        chainRebuilt = chainSyncService.chainRebuilt,
-    )
 
     private val periodDriver = PeriodSelectionDriver(
         initialRange = TimeRange.DAY,
@@ -82,8 +65,8 @@ class BodyEnergyViewModel(
         BodyEnergyUiState(
             selectedRange = TimeRange.DAY,
             selectedDate = periodDriver.selection.selectedDate,
-            calibration = preferencesRepository.bodyEnergyCalibration(),
-            bodyProfile = preferencesRepository.bodyProfile(),
+            calibration = calibrationPreferences.bodyEnergyCalibration(),
+            bodyProfile = bodyProfilePreferences.bodyProfile(),
         )
     )
     val uiState: StateFlow<BodyEnergyUiState> = _uiState.asStateFlow()
@@ -97,7 +80,7 @@ class BodyEnergyViewModel(
 
     private fun observeCalibration() {
         viewModelScope.launch {
-            calibrationChanges.drop(1).collect { calibration ->
+            calibrationPreferences.bodyEnergyCalibrationFlow.drop(1).collect { calibration ->
                 // Zones change what a bucket means. The gains the watch learner nudges do not.
                 val zonesChanged =
                     calibration.zoneSignature() != _uiState.value.calibration.zoneSignature()
@@ -110,13 +93,13 @@ class BodyEnergyViewModel(
     private fun observeChainRebuilt() {
         viewModelScope.launch {
             // The rebuild dropped today's row; a normal load recomputes it on the new chain.
-            chainRebuilt.collect { load() }
+            chainSyncService.chainRebuilt.collect { load() }
         }
     }
 
     private fun observeBodyProfile() {
         viewModelScope.launch {
-            bodyProfileChanges.drop(1).collect { profile ->
+            bodyProfilePreferences.bodyProfileFlow.drop(1).collect { profile ->
                 _uiState.value = _uiState.value.copy(bodyProfile = profile)
                 load(RefreshMode.FORCE)
             }
@@ -126,18 +109,18 @@ class BodyEnergyViewModel(
     /** Commits the zone ladder and the birth year. The profile is written first: zones derive from age. */
     fun completeSetup(calibration: BodyEnergyCalibration, birthYear: Int?) {
         if (birthYear != null) {
-            preferencesRepository.setBodyProfile(
-                preferencesRepository.bodyProfile().copy(birthYear = birthYear)
+            bodyProfilePreferences.setBodyProfile(
+                bodyProfilePreferences.bodyProfile().copy(birthYear = birthYear)
             )
         }
-        preferencesRepository.setBodyEnergyCalibration(calibration.copy(setupCompleted = true))
+        calibrationPreferences.setBodyEnergyCalibration(calibration.copy(setupCompleted = true))
         load(RefreshMode.FORCE)
     }
 
     /** Returns the gains to neutral and forgets the watch readings. */
     fun resetPersonalTuning() {
-        val current = preferencesRepository.bodyEnergyCalibration()
-        preferencesRepository.setBodyEnergyCalibration(
+        val current = calibrationPreferences.bodyEnergyCalibration()
+        calibrationPreferences.setBodyEnergyCalibration(
             current.copy(
                 sleepChargeGain = 1.0,
                 activityDrainGain = 1.0,
@@ -231,9 +214,8 @@ class BodyEnergyViewModel(
 
     /** Best-effort, and its own throttle decides whether anything happens. */
     private fun warmChain() {
-        val service = chainSyncService ?: return
         viewModelScope.launch {
-            runCatching { service.syncAll() }
+            runCatching { chainSyncService.syncAll() }
         }
     }
 

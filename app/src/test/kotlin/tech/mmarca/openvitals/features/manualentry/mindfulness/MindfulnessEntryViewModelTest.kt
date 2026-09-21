@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry.mindfulness
 
+import androidx.lifecycle.SavedStateHandle
 import tech.mmarca.openvitals.features.manualentry.*
 import tech.mmarca.openvitals.features.manualentry.activity.*
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
@@ -34,7 +35,7 @@ import tech.mmarca.openvitals.domain.model.MindfulnessSessionWriteRequest
 import tech.mmarca.openvitals.domain.model.MindfulnessTimerConfig
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.data.repository.contract.MindfulnessRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.MindfulnessTimerPreferences
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -46,7 +47,8 @@ class MindfulnessEntryViewModelTest {
     @Test fun `initial load checks write permission`() = runTest {
         val vm = MindfulnessEntryViewModel(
             repository = repo(canWrite = true),
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -63,7 +65,7 @@ class MindfulnessEntryViewModelTest {
     @Test fun `initial state seeds fields from persisted timer config`() = runTest {
         val vm = MindfulnessEntryViewModel(
             repository = repo(canWrite = true),
-            preferencesRepository = prefs(
+            timerPreferences = prefs(
                 config = MindfulnessTimerConfig(
                     durationMinutes = 12,
                     intervalMinutes = 3,
@@ -71,6 +73,7 @@ class MindfulnessEntryViewModelTest {
                     backgroundSound = MindfulnessBackgroundSound.CHIMES,
                 )
             ),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -90,7 +93,8 @@ class MindfulnessEntryViewModelTest {
                 available = false,
                 writePermissions = emptySet(),
             ),
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -105,7 +109,8 @@ class MindfulnessEntryViewModelTest {
         val preferencesRepository = prefs()
         val vm = MindfulnessEntryViewModel(
             repository = repo(canWrite = true),
-            preferencesRepository = preferencesRepository,
+            timerPreferences = preferencesRepository,
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -133,7 +138,8 @@ class MindfulnessEntryViewModelTest {
     @Test fun `non-positive duration cannot start timer`() = runTest {
         val vm = MindfulnessEntryViewModel(
             repository = repo(canWrite = true),
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -147,7 +153,8 @@ class MindfulnessEntryViewModelTest {
     @Test fun `interval at or above duration is rejected`() = runTest {
         val vm = MindfulnessEntryViewModel(
             repository = repo(canWrite = true),
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -163,7 +170,8 @@ class MindfulnessEntryViewModelTest {
     @Test fun `timer fields are frozen while timer runs`() = runTest {
         val vm = MindfulnessEntryViewModel(
             repository = repo(canWrite = true),
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -182,7 +190,8 @@ class MindfulnessEntryViewModelTest {
     @Test fun `changing bell sound emits short preview`() = runTest {
         val vm = MindfulnessEntryViewModel(
             repository = repo(canWrite = true),
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -201,7 +210,8 @@ class MindfulnessEntryViewModelTest {
     @Test fun `interval bell rings mid-session but not at the end`() = runTest {
         val vm = MindfulnessEntryViewModel(
             repository = repo(canWrite = true),
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -228,7 +238,8 @@ class MindfulnessEntryViewModelTest {
     @Test fun `changing background sound emits short preview`() = runTest {
         val vm = MindfulnessEntryViewModel(
             repository = repo(canWrite = true),
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -242,7 +253,8 @@ class MindfulnessEntryViewModelTest {
     @Test fun `selecting no background sound clears background preview`() = runTest {
         val vm = MindfulnessEntryViewModel(
             repository = repo(canWrite = true),
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -257,7 +269,8 @@ class MindfulnessEntryViewModelTest {
         val repository = repo(canWrite = true)
         val vm = MindfulnessEntryViewModel(
             repository = repository,
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -284,7 +297,8 @@ class MindfulnessEntryViewModelTest {
         val repository = repo(canWrite = true)
         val vm = MindfulnessEntryViewModel(
             repository = repository,
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -305,7 +319,8 @@ class MindfulnessEntryViewModelTest {
         val repository = repo(canWrite = true)
         val vm = MindfulnessEntryViewModel(
             repository = repository,
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -325,7 +340,8 @@ class MindfulnessEntryViewModelTest {
         val repository = repo(canWrite = true)
         val vm = MindfulnessEntryViewModel(
             repository = repository,
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -340,7 +356,8 @@ class MindfulnessEntryViewModelTest {
         val repository = repo(canWrite = false)
         val vm = MindfulnessEntryViewModel(
             repository = repository,
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -355,13 +372,14 @@ class MindfulnessEntryViewModelTest {
         val repository = repo(canWrite = true)
         val vm = MindfulnessEntryViewModel(
             repository = repository,
-            preferencesRepository = prefs(
+            timerPreferences = prefs(
                 config = MindfulnessTimerConfig(
                     durationMinutes = 1,
                     intervalMinutes = null,
                     bellSound = MindfulnessBellSound.STRUCK,
                 )
             ),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -396,7 +414,7 @@ class MindfulnessEntryViewModelTest {
     @Test fun `stopping timer pauses with resume save and discard state`() = runTest {
         val vm = MindfulnessEntryViewModel(
             repository = repo(canWrite = true),
-            preferencesRepository = prefs(
+            timerPreferences = prefs(
                 config = MindfulnessTimerConfig(
                     durationMinutes = 2,
                     intervalMinutes = null,
@@ -404,6 +422,7 @@ class MindfulnessEntryViewModelTest {
                     backgroundSound = MindfulnessBackgroundSound.CHIMES,
                 )
             ),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -436,7 +455,8 @@ class MindfulnessEntryViewModelTest {
     @Test fun `resume on finished countdown is rejected`() = runTest {
         val vm = MindfulnessEntryViewModel(
             repository = repo(canWrite = true),
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -457,7 +477,8 @@ class MindfulnessEntryViewModelTest {
     @Test fun `discard rewinds timer to configured duration`() = runTest {
         val vm = MindfulnessEntryViewModel(
             repository = repo(canWrite = true),
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -480,13 +501,14 @@ class MindfulnessEntryViewModelTest {
         val repository = repo(canWrite = true)
         val vm = MindfulnessEntryViewModel(
             repository = repository,
-            preferencesRepository = prefs(
+            timerPreferences = prefs(
                 config = MindfulnessTimerConfig(
                     durationMinutes = 2,
                     intervalMinutes = null,
                     bellSound = MindfulnessBellSound.STRUCK,
                 )
             ),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -509,7 +531,8 @@ class MindfulnessEntryViewModelTest {
         val repository = repo(canWrite = true)
         val vm = MindfulnessEntryViewModel(
             repository = repository,
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -530,7 +553,8 @@ class MindfulnessEntryViewModelTest {
         val repository = repo(canWrite = true)
         val vm = MindfulnessEntryViewModel(
             repository = repository,
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -545,13 +569,14 @@ class MindfulnessEntryViewModelTest {
         val repository = repo(canWrite = true, available = false)
         val vm = MindfulnessEntryViewModel(
             repository = repository,
-            preferencesRepository = prefs(
+            timerPreferences = prefs(
                 config = MindfulnessTimerConfig(
                     durationMinutes = 1,
                     intervalMinutes = null,
                     bellSound = MindfulnessBellSound.STRUCK,
                 )
             ),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -572,13 +597,14 @@ class MindfulnessEntryViewModelTest {
         val repository = repo(canWrite = false)
         val vm = MindfulnessEntryViewModel(
             repository = repository,
-            preferencesRepository = prefs(
+            timerPreferences = prefs(
                 config = MindfulnessTimerConfig(
                     durationMinutes = 1,
                     intervalMinutes = null,
                     bellSound = MindfulnessBellSound.STRUCK,
                 )
             ),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -601,7 +627,8 @@ class MindfulnessEntryViewModelTest {
         }
         val vm = MindfulnessEntryViewModel(
             repository = repository,
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -622,7 +649,8 @@ class MindfulnessEntryViewModelTest {
         }
         val vm = MindfulnessEntryViewModel(
             repository = repository,
-            preferencesRepository = prefs(),
+            timerPreferences = prefs(),
+            savedStateHandle = SavedStateHandle(),
         )
         advanceUntilIdle()
 
@@ -656,8 +684,8 @@ class MindfulnessEntryViewModelTest {
             intervalMinutes = null,
             bellSound = MindfulnessBellSound.STRUCK,
         ),
-    ): PreferencesRepository =
-        mockk<PreferencesRepository>().also { prefs ->
+    ): MindfulnessTimerPreferences =
+        mockk<MindfulnessTimerPreferences>().also { prefs ->
             every { prefs.mindfulnessTimerConfig() } returns config
             every { prefs.setMindfulnessTimerConfig(any()) } returns Unit
         }

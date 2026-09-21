@@ -14,7 +14,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.HealthConnectPreferences
+import tech.mmarca.openvitals.data.repository.contract.HeartThresholdPreferences
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
@@ -70,7 +71,8 @@ class SettingsViewModel @Inject constructor(
     private val heartRepository: HeartRepository,
     private val sleepRepository: SleepRepository,
     private val hydrationReminderController: HydrationReminderController,
-    private val preferencesRepository: PreferencesRepository,
+    private val healthConnectPreferences: HealthConnectPreferences,
+    private val heartThresholdPreferences: HeartThresholdPreferences,
     private val permissionUxState: HealthConnectPermissionUxState,
 ) : ViewModel() {
     companion object {
@@ -99,10 +101,10 @@ class SettingsViewModel @Inject constructor(
                 permissionCategories = permissionCategories(avail),
                 allPermissions = repository.allPermissions,
                 manualOnlyPermissions = repository.manualOnlyPermissions,
-                bloodPressureGuideline = preferencesRepository.bloodPressureGuideline,
-                healthConnectSyncEnabled = preferencesRepository.healthConnectSyncEnabled,
-                healthConnectMindfulnessEnabled = preferencesRepository.healthConnectMindfulnessEnabled,
-                appLockEnabled = preferencesRepository.appLockEnabled,
+                bloodPressureGuideline = heartThresholdPreferences.bloodPressureGuideline,
+                healthConnectSyncEnabled = healthConnectPreferences.healthConnectSyncEnabled,
+                healthConnectMindfulnessEnabled = healthConnectPreferences.healthConnectMindfulnessEnabled,
+                appLockEnabled = healthConnectPreferences.appLockEnabled,
             )
             loadHealthConnectSources()
         }
@@ -128,7 +130,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setBloodPressureGuideline(guideline: BloodPressureGuideline) {
-        preferencesRepository.bloodPressureGuideline = guideline
+        heartThresholdPreferences.bloodPressureGuideline = guideline
         _uiState.value = _uiState.value.copy(bloodPressureGuideline = guideline)
     }
 
@@ -138,7 +140,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setHealthConnectMindfulnessEnabled(enabled: Boolean) {
-        preferencesRepository.healthConnectMindfulnessEnabled = enabled
+        healthConnectPreferences.healthConnectMindfulnessEnabled = enabled
         _uiState.value = _uiState.value.copy(healthConnectMindfulnessEnabled = enabled)
         // The declared mindfulness permission sets changed shape; re-read everything.
         refresh()
@@ -155,12 +157,12 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setHealthConnectSyncEnabled(enabled: Boolean) {
-        preferencesRepository.healthConnectSyncEnabled = enabled
+        healthConnectPreferences.healthConnectSyncEnabled = enabled
         _uiState.value = _uiState.value.copy(healthConnectSyncEnabled = enabled)
     }
 
     fun setAppLockEnabled(enabled: Boolean) {
-        preferencesRepository.appLockEnabled = enabled
+        healthConnectPreferences.appLockEnabled = enabled
         _uiState.value = _uiState.value.copy(appLockEnabled = enabled)
     }
 

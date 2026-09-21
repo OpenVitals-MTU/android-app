@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry
 
+import tech.mmarca.openvitals.data.repository.contract.WidgetOrderPreferences
 import tech.mmarca.openvitals.features.manualentry.*
 import tech.mmarca.openvitals.features.manualentry.activity.*
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
@@ -24,7 +25,6 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -122,8 +122,8 @@ class ManualEntryViewModelTest {
 
     private fun prefs(
         storedWidgetOrder: List<String>? = null,
-    ): PreferencesRepository =
-        mockk<PreferencesRepository>().also { prefs ->
+    ): WidgetOrderPreferences =
+        mockk<WidgetOrderPreferences>().also { prefs ->
             every { prefs.manualEntryWidgetOrder() } returns storedWidgetOrder
             every { prefs.setManualEntryWidgetOrder(any()) } returns Unit
         }

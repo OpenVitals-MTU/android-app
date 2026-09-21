@@ -15,7 +15,11 @@ import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyEnergyCalibrationPreferences
+import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
+import tech.mmarca.openvitals.data.repository.contract.HydrationGoalPreferences
+import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
+import tech.mmarca.openvitals.data.repository.contract.SleepWindowPreferences
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
@@ -46,16 +50,20 @@ data class DailyReadinessUiState(
 @HiltViewModel
 class DailyReadinessViewModel @Inject constructor(
     private val loadDashboardDayUseCase: LoadDashboardDayUseCase,
-    private val prefs: PreferencesRepository,
+    private val periodPreferences: PeriodPreferences,
+    private val sleepWindowPreferences: SleepWindowPreferences,
+    private val dailyGoalPreferences: DailyGoalPreferences,
+    private val hydrationGoalPreferences: HydrationGoalPreferences,
+    private val calibrationPreferences: BodyEnergyCalibrationPreferences,
     // Loaded beside the dashboard day: readiness needs the measured battery.
     private val bodyEnergyRepository: BodyEnergyRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
         DailyReadinessUiState(
-            goals = prefs.dailyReadinessGoals(),
-            sleepWindow = prefs.sleepWindow,
-            activityWeekMode = prefs.activityWeekMode,
+            goals = dailyReadinessGoals(dailyGoalPreferences, hydrationGoalPreferences),
+            sleepWindow = sleepWindowPreferences.sleepWindow,
+            activityWeekMode = periodPreferences.activityWeekMode,
         )
     )
     val uiState: StateFlow<DailyReadinessUiState> = _uiState.asStateFlow()
@@ -71,9 +79,9 @@ class DailyReadinessViewModel @Inject constructor(
     }
 
     fun refreshPreferences() {
-        val sleepWindow = prefs.sleepWindow
-        val activityWeekMode = prefs.activityWeekMode
-        val goals = prefs.dailyReadinessGoals()
+        val sleepWindow = sleepWindowPreferences.sleepWindow
+        val activityWeekMode = periodPreferences.activityWeekMode
+        val goals = dailyReadinessGoals(dailyGoalPreferences, hydrationGoalPreferences)
         val current = _uiState.value
         if (
             current.sleepWindow != sleepWindow ||
@@ -128,9 +136,9 @@ class DailyReadinessViewModel @Inject constructor(
     fun load(date: LocalDate, refreshMode: RefreshMode = RefreshMode.NORMAL) {
         val clampedDate = date.coerceAtMost(LocalDate.now())
         loadCoordinator.launch(viewModelScope) load@{
-            val sleepWindow = prefs.sleepWindow
-            val activityWeekMode = prefs.activityWeekMode
-            val goals = prefs.dailyReadinessGoals()
+            val sleepWindow = sleepWindowPreferences.sleepWindow
+            val activityWeekMode = periodPreferences.activityWeekMode
+            val goals = dailyReadinessGoals(dailyGoalPreferences, hydrationGoalPreferences)
             _uiState.value = _uiState.value.copy(
                 selectedDate = clampedDate,
                 goals = goals,
@@ -177,7 +185,7 @@ class DailyReadinessViewModel @Inject constructor(
         date: LocalDate,
         refreshMode: RefreshMode,
     ): BodyEnergyTimeline? {
-        if (!prefs.bodyEnergyCalibration().setupCompleted) return null
+        if (!calibrationPreferences.bodyEnergyCalibration().setupCompleted) return null
         return runCatching {
             bodyEnergyRepository.loadTimeline(
                 BodyEnergyTimelineQuery(
@@ -208,9 +216,12 @@ private val DailyReadinessMetrics = setOf(
     DashboardMetric.MINDFULNESS,
 )
 
-private fun PreferencesRepository.dailyReadinessGoals(): DailyReadinessGoalInputs =
+private fun dailyReadinessGoals(
+    goals: DailyGoalPreferences,
+    hydration: HydrationGoalPreferences,
+): DailyReadinessGoalInputs =
     DailyReadinessGoalInputs(
-        stepsGoal = dailyGoalFor(MetricDailyGoalKey.STEPS),
-        hydrationLitersGoal = hydrationDailyGoalLiters,
-        activeMinutesGoal = dailyGoalFor(MetricDailyGoalKey.ACTIVE_CALORIES_KCAL) / 10.0,
+        stepsGoal = goals.dailyGoalFor(MetricDailyGoalKey.STEPS),
+        hydrationLitersGoal = hydration.hydrationDailyGoalLiters,
+        activeMinutesGoal = goals.dailyGoalFor(MetricDailyGoalKey.ACTIVE_CALORIES_KCAL) / 10.0,
     )

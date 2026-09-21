@@ -10,7 +10,8 @@ import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.RecordingPreferences
+import tech.mmarca.openvitals.data.repository.contract.UnitPreferences
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryType
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryUnits
 import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
@@ -117,7 +118,8 @@ data class DataImportUiState(
 class DataImportViewModel @Inject constructor(
     private val repository: HealthRepository,
     private val activityRepository: ActivityRepository,
-    private val preferencesRepository: PreferencesRepository,
+    private val recordingPreferences: RecordingPreferences,
+    private val unitPreferences: UnitPreferences,
     private val appleHealthImportService: AppleHealthImportService,
     private val appleHealthImportWorkController: AppleHealthImportWorkController,
     private val routeFileImporter: RouteFileImporter,
@@ -502,7 +504,7 @@ class DataImportViewModel @Inject constructor(
             try {
                 activityRepository.writeActivityEntries(batch)
                 importedFiles += batch.size
-                preferencesRepository.lastActivityExerciseType = batch.last().exerciseType
+                recordingPreferences.lastActivityExerciseType = batch.last().exerciseType
                 return
             } catch (error: Throwable) {
                 if (error is kotlinx.coroutines.CancellationException) throw error
@@ -520,7 +522,7 @@ class DataImportViewModel @Inject constructor(
                 try {
                     activityRepository.writeActivityEntry(request)
                     importedFiles += 1
-                    preferencesRepository.lastActivityExerciseType = request.exerciseType
+                    recordingPreferences.lastActivityExerciseType = request.exerciseType
                 } catch (error: Throwable) {
                     if (error is kotlinx.coroutines.CancellationException) throw error
                     if (HealthConnectRateLimitBackoff.isRateLimitFailure(error)) {
@@ -600,7 +602,7 @@ class DataImportViewModel @Inject constructor(
     /** A route with no timestamps has no time of its own. The entry form's defaults supply one, as before. */
     private fun formWriteRequest(routeImport: RouteFileImport, preferredType: ActivityEntryType): ActivityWriteRequest? {
         // Any consistent unit pair works: nobody reads the text.
-        val importUnits = ActivityEntryUnits.uniform(preferencesRepository.unitSystem)
+        val importUnits = ActivityEntryUnits.uniform(unitPreferences.unitSystem)
         val routeState = initialActivityEntryState(
             clock = clock,
             repository = activityRepository,
@@ -618,9 +620,9 @@ class DataImportViewModel @Inject constructor(
             .filter { !requireGpsRoute || it.supportsGpsRoute }
             .ifEmpty { DefaultActivityEntryTypes }
             .let { activityTypes ->
-                val preferredExerciseType = preferencesRepository.favoriteActivityExerciseType
+                val preferredExerciseType = recordingPreferences.favoriteActivityExerciseType
                     ?.takeIf { exerciseType -> activityTypes.any { it.exerciseType == exerciseType } }
-                    ?: preferencesRepository.lastActivityExerciseType
+                    ?: recordingPreferences.lastActivityExerciseType
                         ?.takeIf { exerciseType -> activityTypes.any { it.exerciseType == exerciseType } }
                 activityTypes.firstOrNull { it.exerciseType == preferredExerciseType }
                     ?: activityTypes.first()

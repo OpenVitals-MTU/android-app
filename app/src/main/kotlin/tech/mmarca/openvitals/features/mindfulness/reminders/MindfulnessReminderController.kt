@@ -31,22 +31,24 @@ class MindfulnessReminderController @Inject constructor(
     private val notificationService: MindfulnessReminderNotificationService,
     private val alarmManager: MindfulnessReminderAlarmManager,
     dispatcherProvider: DispatcherProvider,
-) {
+) : MindfulnessReminderSettings {
     private val scope = CoroutineScope(SupervisorJob() + dispatcherProvider.io)
 
     /** Serialises scheduling, so the last caller in is the one that arms the alarm. */
     private val scheduling = Mutex()
 
-    fun config(): MindfulnessReminderConfig =
+    override fun config(): MindfulnessReminderConfig =
         preferencesRepository.mindfulnessReminderConfig()
 
-    fun updateConfig(config: MindfulnessReminderConfig) {
+    override fun updateConfig(config: MindfulnessReminderConfig) {
         val normalized = config.normalized()
         preferencesRepository.setMindfulnessReminderConfig(normalized)
         applyConfig(normalized)
     }
 
-    fun applyConfig(config: MindfulnessReminderConfig = preferencesRepository.mindfulnessReminderConfig()) {
+    override fun applyStoredConfig() = applyConfig(preferencesRepository.mindfulnessReminderConfig())
+
+    fun applyConfig(config: MindfulnessReminderConfig) {
         scope.launch {
             scheduling.withLock { applyConfigNow(config) }
         }

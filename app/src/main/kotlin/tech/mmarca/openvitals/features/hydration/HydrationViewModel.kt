@@ -28,9 +28,10 @@ import tech.mmarca.openvitals.domain.model.valueFor
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
-import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.HydrationGoalPreferences
+import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
 import tech.mmarca.openvitals.domain.insights.CaffeineHealthDrinkCatalog
-import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
+import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderSettings
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -39,9 +40,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
 private const val DefaultHydrationDailyGoalLiters = 2.0
@@ -70,66 +69,34 @@ data class HydrationUiState(
 )
 
 @HiltViewModel
-class HydrationViewModel(
+class HydrationViewModel @Inject constructor(
     private val repository: HydrationRepository,
+    private val nutritionRepository: NutritionRepository,
+    private val bodyRepository: BodyRepository,
+    private val periodPreferences: PeriodPreferences,
+    private val hydrationGoalPreferences: HydrationGoalPreferences,
+    private val reminders: HydrationReminderSettings,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    private val bodyRepository: BodyRepository? = null,
-    private val nutritionRepository: NutritionRepository? = null,
-    initialRange: TimeRange = TimeRange.WEEK,
-    initialDate: java.time.LocalDate? = null,
-    initialWeekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-    initialDailyGoalLiters: Double = DefaultHydrationDailyGoalLiters,
-    initialReminderConfig: HydrationReminderConfig = HydrationReminderConfig(),
-    private val weekPeriodModeChanges: Flow<WeekPeriodMode> = emptyFlow(),
-    private val onRangeSelected: (TimeRange) -> Unit = {},
-    private val onDailyGoalChanged: (Double) -> Unit = {},
-    private val onReminderConfigChanged: (HydrationReminderConfig) -> Unit = {},
+    savedStateHandle: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
 
-    @Inject
-    constructor(
-        repository: HydrationRepository,
-        nutritionRepository: NutritionRepository,
-        bodyRepository: BodyRepository,
-        preferencesRepository: PreferencesRepository,
-        reminderController: HydrationReminderController,
-        dispatchers: DispatcherProvider,
-        savedStateHandle: androidx.lifecycle.SavedStateHandle,
-    ) : this(
-        repository = repository,
-        dispatchers = dispatchers,
-        bodyRepository = bodyRepository,
-        nutritionRepository = nutritionRepository,
-        initialRange = preferencesRepository.timeRangeFor(PeriodRangePreferenceKey.HYDRATION),
-        initialDate = savedStateHandle.selectedDayOrNull(),
-        initialWeekPeriodMode = preferencesRepository.weekPeriodMode,
-        initialDailyGoalLiters = preferencesRepository.hydrationDailyGoalLiters,
-        initialReminderConfig = reminderController.config(),
-        weekPeriodModeChanges = preferencesRepository.weekPeriodModeFlow,
-        onRangeSelected = { range ->
-            preferencesRepository.setTimeRangeFor(PeriodRangePreferenceKey.HYDRATION, range)
-        },
-        onDailyGoalChanged = { goal ->
-            preferencesRepository.hydrationDailyGoalLiters = goal
-            reminderController.applyConfig()
-        },
-        onReminderConfigChanged = { config ->
-            reminderController.updateConfig(config)
-        },
-    )
+    private val initialRange = periodPreferences.timeRangeFor(PeriodRangePreferenceKey.HYDRATION)
+    private val initialWeekPeriodMode = periodPreferences.weekPeriodMode
 
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
-        initialDate = initialDate ?: java.time.LocalDate.now(),
+        initialDate = savedStateHandle.selectedDayOrNull() ?: java.time.LocalDate.now(),
         initialWeekPeriodMode = initialWeekPeriodMode,
-        onRangeSelected = onRangeSelected,
+        onRangeSelected = { range ->
+            periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.HYDRATION, range)
+        },
     )
     private val _uiState = MutableStateFlow(
         HydrationUiState(
             selectedRange = initialRange,
             weekPeriodMode = initialWeekPeriodMode,
-            dailyGoalLiters = normalizeHydrationGoalLiters(initialDailyGoalLiters),
-            reminderConfig = initialReminderConfig.normalized(),
+            dailyGoalLiters = normalizeHydrationGoalLiters(hydrationGoalPreferences.hydrationDailyGoalLiters),
+            reminderConfig = reminders.config().normalized(),
         )
     )
     val uiState: StateFlow<HydrationUiState> = _uiState.asStateFlow()
@@ -142,7 +109,7 @@ class HydrationViewModel(
 
     private fun observeWeekPeriodMode() {
         viewModelScope.launch {
-            weekPeriodModeChanges.drop(1).collect { mode ->
+            periodPreferences.weekPeriodModeFlow.drop(1).collect { mode ->
                 periodDriver.weekPeriodMode = mode
                 _uiState.value = _uiState.value.copy(weekPeriodMode = mode)
                 if (_uiState.value.selectedRange == TimeRange.WEEK) {
@@ -199,7 +166,9 @@ class HydrationViewModel(
 
     fun setDailyGoalLiters(liters: Double) {
         val goal = normalizeHydrationGoalLiters(liters)
-        onDailyGoalChanged(goal)
+        hydrationGoalPreferences.hydrationDailyGoalLiters = goal
+        // The reminder text quotes the goal, so the alarm is re-planned.
+        reminders.applyStoredConfig()
         _uiState.value = _uiState.value.copy(dailyGoalLiters = goal).withDisplay()
     }
 
@@ -238,10 +207,7 @@ class HydrationViewModel(
                 when (entry.recordType) {
                     HydrationEntryRecordType.HYDRATION -> repository.deleteHydrationEntry(entryId)
                     HydrationEntryRecordType.NUTRITION_ONLY -> {
-                        val repo = requireNotNull(nutritionRepository) {
-                            "Nutrition repository is not configured."
-                        }
-                        repo.deleteNutritionEntry(entryId)
+                        nutritionRepository.deleteNutritionEntry(entryId)
                     }
                 }
             }.onSuccess {
@@ -270,8 +236,7 @@ class HydrationViewModel(
                 }
                 val hydrationEntries = periodData.hydrationEntries
                 val nutritionOnlyEntries = nutritionRepository
-                    ?.loadNutritionEntries(windows.current.start, windows.current.end)
-                    .orEmpty()
+                    .loadNutritionEntries(windows.current.start, windows.current.end)
                     .toHydrationNutritionOnlyEntries(hydrationEntries)
                 HydrationLoadResult(
                     dailyHydration = periodData.dailyHydration,
@@ -279,8 +244,7 @@ class HydrationViewModel(
                     baselineDailyHydration = periodData.baselineDailyHydration,
                     hydrationEntries = hydrationEntries + nutritionOnlyEntries,
                     crossWeightEntries = bodyRepository
-                        ?.loadWeightEntries(windows.current.start, windows.current.end)
-                        .orEmpty(),
+                        .loadWeightEntries(windows.current.start, windows.current.end),
                 )
             }.onSuccess { result ->
                 if (!isCurrent) return@load
@@ -333,7 +297,7 @@ class HydrationViewModel(
 
     private fun updateReminderConfig(update: (HydrationReminderConfig) -> HydrationReminderConfig) {
         val config = update(_uiState.value.reminderConfig).normalized()
-        onReminderConfigChanged(config)
+        reminders.updateConfig(config)
         _uiState.value = _uiState.value.copy(reminderConfig = config)
     }
 

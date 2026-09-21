@@ -73,7 +73,7 @@ class BodyViewModel @Inject constructor(
     private val repository: BodyRepository,
     private val periodPreferences: PeriodPreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    savedStateHandle: androidx.lifecycle.SavedStateHandle? = null,
+    savedStateHandle: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
 
     private val initialRange = periodPreferences.timeRangeFor(PeriodRangePreferenceKey.BODY)
@@ -81,7 +81,7 @@ class BodyViewModel @Inject constructor(
 
     private val periodDriver = PeriodSelectionDriver(
         initialRange = initialRange,
-        initialDate = savedStateHandle?.selectedDayOrNull() ?: java.time.LocalDate.now(),
+        initialDate = savedStateHandle.selectedDayOrNull() ?: java.time.LocalDate.now(),
         initialWeekPeriodMode = initialWeekPeriodMode,
         onRangeSelected = { range ->
             periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.BODY, range)

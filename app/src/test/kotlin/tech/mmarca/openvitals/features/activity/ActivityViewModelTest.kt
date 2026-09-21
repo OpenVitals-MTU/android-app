@@ -1,5 +1,8 @@
 package tech.mmarca.openvitals.features.activity
 
+import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
+import androidx.lifecycle.SavedStateHandle
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
 import tech.mmarca.openvitals.domain.model.DailyNutrition
@@ -32,11 +35,21 @@ class ActivityViewModelTest {
     private fun viewModel(
         repo: ActivityRepository,
         selectedMetric: ActivityMetric = ActivityMetric.STEPS,
+        preferences: FakePreferences = FakePreferences(),
     ) = ActivityViewModel(
         repository = repo,
-        selectedMetric = selectedMetric,
+        periodPreferences = preferences,
+        dailyGoalPreferences = preferences,
+        calorieDisplayPreferences = preferences,
         dispatchers = mainDispatcherRule.dispatcherProvider,
+        savedStateHandle = SavedStateHandle(mapOf(METRIC_ID_ARG to selectedMetric.routeId())),
     )
+
+    @Test fun `every activity metric round-trips through its route id`() {
+        ActivityMetric.entries.forEach { metric ->
+            assertEquals(metric, activityMetricFromRoute(metric.routeId()))
+        }
+    }
 
     private fun emptyRepo() = mockk<ActivityRepository>().also { repo ->
         coEvery { repo.loadDailySteps(any(), any()) } returns emptyList()
@@ -62,13 +75,8 @@ class ActivityViewModelTest {
     // Daily goal.
 
     @Test fun `the goal steppers move and persist the daily goal`() = runTest {
-        val persisted = mutableListOf<Double>()
-        val vm = ActivityViewModel(
-            repository = emptyRepo(),
-            selectedMetric = ActivityMetric.STEPS,
-            dispatchers = mainDispatcherRule.dispatcherProvider,
-            onDailyGoalChanged = { persisted += it },
-        )
+        val preferences = FakePreferences()
+        val vm = viewModel(emptyRepo(), preferences = preferences)
 
         // The steps goal starts at 8 000 and moves in 500s.
         assertEquals(8_000.0, vm.uiState.value.dailyGoal, 0.0)
@@ -81,17 +89,12 @@ class ActivityViewModelTest {
         assertEquals(7_500.0, vm.uiState.value.dailyGoal, 0.0)
 
         // Every move is written through, not just the last one.
-        assertEquals(listOf(8_500.0, 8_000.0, 7_500.0), persisted)
+        assertEquals(listOf(8_500.0, 8_000.0, 7_500.0), preferences.storedGoals)
     }
 
     @Test fun `the daily goal stops at its floor and its ceiling`() = runTest {
         val goalKey = ActivityMetric.STEPS.dailyGoalKey
-        val vm = ActivityViewModel(
-            repository = emptyRepo(),
-            selectedMetric = ActivityMetric.STEPS,
-            dispatchers = mainDispatcherRule.dispatcherProvider,
-            initialDailyGoal = goalKey.minValue,
-        )
+        val vm = viewModel(emptyRepo(), preferences = FakePreferences(initialGoal = goalKey.minValue))
 
         vm.decreaseDailyGoal()
         assertEquals(goalKey.minValue, vm.uiState.value.dailyGoal, 0.0)
@@ -104,11 +107,7 @@ class ActivityViewModelTest {
         val repo = emptyRepo()
         // 8 000 steps today clears the default 8 000 goal and misses 8 500.
         coEvery { repo.loadDailySteps(any(), any()) } returns listOf(DailySteps(today, 8_000L, 6_000.0))
-        val vm = ActivityViewModel(
-            repository = repo,
-            selectedMetric = ActivityMetric.STEPS,
-            dispatchers = mainDispatcherRule.dispatcherProvider,
-        )
+        val vm = viewModel(repo)
         assertEquals(1, vm.uiState.value.display.metric.goalProgress!!.goalMetDays)
 
         vm.increaseDailyGoal()

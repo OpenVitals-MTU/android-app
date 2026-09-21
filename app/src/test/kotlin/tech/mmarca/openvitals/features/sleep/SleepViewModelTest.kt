@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.sleep
 
+import androidx.lifecycle.SavedStateHandle
 import tech.mmarca.openvitals.domain.usecase.LoadSleepPeriodUseCase
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.FakePreferences
@@ -51,6 +52,7 @@ class SleepViewModelTest {
         sleepWindowPreferences = preferences,
         bodyProfilePreferences = preferences,
         dispatchers = mainDispatcherRule.dispatcherProvider,
+        savedStateHandle = SavedStateHandle(),
     )
 
     private fun emptyRepo() = mockk<SleepRepository>().also { repo ->
