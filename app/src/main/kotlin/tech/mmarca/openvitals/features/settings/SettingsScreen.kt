@@ -32,10 +32,12 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.diagnostics.CrashReportEmailActivity
 import tech.mmarca.openvitals.core.diagnostics.PrivacySafeDebugLogExporter
 import tech.mmarca.openvitals.core.diagnostics.shareDebugDiagnosticsLog
+import tech.mmarca.openvitals.core.performance.offMainIo
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.FitImportMimeTypes
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.RouteImportMimeTypes
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
+import tech.mmarca.openvitals.ui.components.ConfirmLeaveWhileImporting
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +52,7 @@ fun SettingsScreen(
     onOpenReportExport: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    ConfirmLeaveWhileImporting(importing = state.isImportingRouteFiles || state.isScanningFitFolder)
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
@@ -185,20 +188,22 @@ fun SettingsScreen(
         contract = ActivityResultContracts.CreateDocument("text/plain"),
     ) { uri ->
         if (uri != null) {
-            runCatching {
-                val reportText = state.appleHealthImportResult?.shareableReportText
-                    ?: state.appleHealthImportError.orEmpty()
-                context.contentResolver.openOutputStream(uri)?.use { output ->
-                    output.write(reportText.toByteArray())
-                } ?: error("Unable to open destination.")
-            }.fold(
-                onSuccess = {
-                    Toast.makeText(context, reportSaved, Toast.LENGTH_SHORT).show()
-                },
-                onFailure = {
-                    Toast.makeText(context, reportSaveFailed, Toast.LENGTH_SHORT).show()
-                },
-            )
+            val reportText = state.appleHealthImportResult?.shareableReportText
+                ?: state.appleHealthImportError.orEmpty()
+            coroutineScope.launch {
+                offMainIo {
+                    context.contentResolver.openOutputStream(uri)?.use { output ->
+                        output.write(reportText.toByteArray())
+                    } ?: error("Unable to open destination.")
+                }.fold(
+                    onSuccess = {
+                        Toast.makeText(context, reportSaved, Toast.LENGTH_SHORT).show()
+                    },
+                    onFailure = {
+                        Toast.makeText(context, reportSaveFailed, Toast.LENGTH_SHORT).show()
+                    },
+                )
+            }
         }
     }
 

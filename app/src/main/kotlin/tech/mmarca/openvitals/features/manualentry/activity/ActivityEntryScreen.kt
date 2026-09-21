@@ -1,11 +1,20 @@
 package tech.mmarca.openvitals.features.manualentry.activity
 
-import tech.mmarca.openvitals.features.manualentry.activity.recording.*
 import android.Manifest
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.WbSunny
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -14,14 +23,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
+import tech.mmarca.openvitals.domain.preferences.isDarkTheme
+import tech.mmarca.openvitals.features.manualentry.activity.recording.*
 import tech.mmarca.openvitals.features.manualentry.rememberManualEntryWritePermissionRequester
+import tech.mmarca.openvitals.sensors.ble.hasBluetoothConnectPermission
+import tech.mmarca.openvitals.sensors.ble.recordingRuntimePermissionsToRequest
+import tech.mmarca.openvitals.ui.components.AppBarAction
+import tech.mmarca.openvitals.ui.components.DeclareAppBar
+import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
+import tech.mmarca.openvitals.ui.components.ScreenAppBar
+import tech.mmarca.openvitals.ui.theme.recordingOutdoorAccentForAppTheme
 
 @Composable
 fun ActivityEntryScreen(
@@ -36,10 +57,6 @@ fun ActivityEntryScreen(
     pendingRouteImportRequestId: Long? = null,
     onPendingRouteImportHandled: (Long) -> Unit = {},
     onEntrySaved: () -> Unit = {},
-    onActivityRecordingTitleChanged: (Int?) -> Unit = {},
-    onActivityRecordingEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit = { _, _, _ -> },
-    onActivityRecordingFocusModeChanged: (Boolean) -> Unit = {},
-    onActivityRecordingOutdoorModeStateChanged: (Boolean, Boolean, () -> Unit) -> Unit = { _, _, _ -> },
     appThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -48,11 +65,11 @@ fun ActivityEntryScreen(
     var pendingSourceAction by remember { mutableStateOf<ActivityEntrySourceAction?>(null) }
     var isRecordingFocusMode by rememberSaveable { mutableStateOf(false) }
     var isRecordingOutdoorMode by rememberSaveable { mutableStateOf(false) }
+    // The recording dashboard's own arrange toggle, hoisted to this screen so the whole
+    // app bar is declared in one place.
+    var recordingDashboardEdit by remember { mutableStateOf<RecordingDashboardEdit?>(null) }
     fun setRecordingFocusMode(enabled: Boolean) {
         isRecordingFocusMode = enabled
-    }
-    LaunchedEffect(isRecordingFocusMode) {
-        onActivityRecordingFocusModeChanged(isRecordingFocusMode)
     }
     fun performSourceAction(action: ActivityEntrySourceAction) {
         when (action) {
@@ -93,9 +110,19 @@ fun ActivityEntryScreen(
         }
     }
     fun continueSourceActionAfterWritePermission(action: ActivityEntrySourceAction) {
-        if (action.needsRecordingPermissions && needsActivityRecordingRuntimePermission(context)) {
+        val missing = if (action.needsRecordingPermissions) {
+            recordingRuntimePermissionsToRequest(
+                sdkInt = Build.VERSION.SDK_INT,
+                hasNotificationPermission = hasActivityRecordingNotificationPermission(context),
+                hasBluetoothConnectPermission = hasBluetoothConnectPermission(context),
+                hasSavedBleSensors = viewModel.hasSavedBleSensors,
+            )
+        } else {
+            emptyList()
+        }
+        if (missing.isNotEmpty()) {
             pendingSourceAction = action
-            requestRecordingSourcePermissions.launch(activityRecordingRuntimePermissions())
+            requestRecordingSourcePermissions.launch(missing.toTypedArray())
         } else {
             performSourceAction(action)
         }
@@ -142,33 +169,92 @@ fun ActivityEntryScreen(
         viewModel.onBuilderNavigationHandled()
         onOpenWorkoutPlanBuilder(planId)
     }
-    // The builder saves by delete-then-insert, so the plan comes back under a new id.
+    // The builder hands back the saved plan's id. An edit keeps the id it had.
     LaunchedEffect(savedWorkoutPlanId) {
         val planId = savedWorkoutPlanId ?: return@LaunchedEffect
         onSavedWorkoutPlanHandled()
         viewModel.reapplyPlan(planId)
     }
 
+    if (state.confirmRouteImportOverRecording) {
+        AlertDialog(
+            onDismissRequest = viewModel::keepRecordingInsteadOfRouteImport,
+            title = { Text(stringResource(R.string.activity_entry_route_import_replace_title)) },
+            text = { Text(stringResource(R.string.activity_entry_route_import_replace_body)) },
+            confirmButton = {
+                OpenVitalsTextButton(onClick = viewModel::confirmRouteImportOverRecording) {
+                    Text(stringResource(R.string.activity_entry_route_import_replace_confirm))
+                }
+            },
+            dismissButton = {
+                OpenVitalsTextButton(onClick = viewModel::keepRecordingInsteadOfRouteImport) {
+                    Text(stringResource(R.string.activity_entry_route_import_replace_keep))
+                }
+            },
+        )
+    }
+
     val isRecordingDashboardVisible =
         state.mode == ActivityEntryMode.RECORDING &&
         (recordingState.isActive || recordingState.activityTypeId != null)
-    LaunchedEffect(isRecordingDashboardVisible, isRecordingFocusMode, isRecordingOutdoorMode) {
-        onActivityRecordingOutdoorModeStateChanged(
-            isRecordingDashboardVisible && !isRecordingFocusMode,
-            isRecordingOutdoorMode,
-        ) {
-            isRecordingOutdoorMode = !isRecordingOutdoorMode
-        }
-    }
     LaunchedEffect(isRecordingDashboardVisible) {
         if (!isRecordingDashboardVisible) {
             setRecordingFocusMode(false)
             isRecordingOutdoorMode = false
-            onActivityRecordingTitleChanged(null)
-            onActivityRecordingEditStateChanged(false, false) {}
-            onActivityRecordingOutdoorModeStateChanged(false, false) {}
         }
     }
+
+    // Outdoor mode repaints the chrome; focus mode takes the whole display.
+    val outdoorModeAvailable = isRecordingDashboardVisible && !isRecordingFocusMode
+    val outdoorAccent = recordingOutdoorAccentForAppTheme(appThemeMode)
+    val editingTint = MaterialTheme.colorScheme.primary
+    val recordingTitle = stringResource(R.string.activity_entry_recording_title)
+    val outdoorBackground = if (appThemeMode.isDarkTheme(isSystemInDarkTheme())) Color.Black else Color.White
+    DeclareAppBar(
+        remember(
+            isRecordingDashboardVisible,
+            isRecordingFocusMode,
+            outdoorModeAvailable,
+            isRecordingOutdoorMode,
+            recordingDashboardEdit,
+            outdoorAccent,
+            editingTint,
+            recordingTitle,
+            outdoorBackground,
+        ) {
+            ScreenAppBar(
+                title = recordingTitle.takeIf { isRecordingDashboardVisible },
+                actions = buildList {
+                    if (outdoorModeAvailable) {
+                        add(
+                            AppBarAction(
+                                icon = if (isRecordingOutdoorMode) Icons.Outlined.LightMode else Icons.Outlined.WbSunny,
+                                contentDescription = R.string.cd_toggle_recording_outdoor_mode,
+                                tint = if (isRecordingOutdoorMode) outdoorAccent else null,
+                                onClick = { isRecordingOutdoorMode = !isRecordingOutdoorMode },
+                            ),
+                        )
+                    }
+                    recordingDashboardEdit?.let { edit ->
+                        add(
+                            AppBarAction(
+                                icon = if (edit.isEditing) Icons.Outlined.Check else Icons.Outlined.Edit,
+                                contentDescription = if (edit.isEditing) {
+                                    R.string.cd_finish_recording_dashboard_editing
+                                } else {
+                                    R.string.cd_edit_recording_dashboard
+                                },
+                                tint = if (edit.isEditing) editingTint else null,
+                                onClick = edit.onToggle,
+                            ),
+                        )
+                    }
+                },
+                containerColor = outdoorBackground.takeIf { outdoorModeAvailable && isRecordingOutdoorMode },
+                hidesAppBar = isRecordingFocusMode,
+            )
+        },
+    )
 
     if (isRecordingDashboardVisible) {
         ActivityEntryRecordingContent(
@@ -179,8 +265,13 @@ fun ActivityEntryScreen(
             isOutdoorMode = isRecordingOutdoorMode,
             onFocusModeChanged = ::setRecordingFocusMode,
             onOutdoorModeChanged = { isRecordingOutdoorMode = it },
-            onActivityRecordingTitleChanged = onActivityRecordingTitleChanged,
-            onActivityRecordingEditStateChanged = onActivityRecordingEditStateChanged,
+            onActivityRecordingEditStateChanged = { isAvailable, isEditing, onToggle ->
+                recordingDashboardEdit = if (isAvailable) {
+                    RecordingDashboardEdit(isEditing, onToggle)
+                } else {
+                    null
+                }
+            },
             appThemeMode = appThemeMode,
         )
     } else {
@@ -218,3 +309,9 @@ sealed interface ActivityEntrySourceAction {
     val needsRecordingPermissions: Boolean
         get() = this is Record || this is StartPlan || this is RepeatPlan
 }
+
+/** The recording dashboard's arrange toggle, as its screen root sees it. */
+private data class RecordingDashboardEdit(
+    val isEditing: Boolean,
+    val onToggle: () -> Unit,
+)

@@ -82,9 +82,27 @@ fi
 export JAVA_HOME
 export PATH="$JAVA_HOME/bin:$PATH"
 
+shared_gradle_home=/woodpecker/cache/gradle
+
+# A step that signs gets its own, empty Gradle home. Every pipeline can write the shared
+# one, pull requests included. An init.d script or a gradle.properties planted there would
+# run with the keystore, its password and the release token in scope.
+signing_build=false
+if [ -n "${OPENVITALS_RELEASE_STORE_FILE:-}" ] || [ -n "${OPENVITALS_RELEASE_KEYSTORE_BASE64:-}" ]; then
+    signing_build=true
+fi
+
 if [ -z "${GRADLE_USER_HOME:-}" ]; then
-    if [ -d /woodpecker/cache/gradle ]; then
-        GRADLE_USER_HOME=/woodpecker/cache/gradle
+    if [ "$signing_build" = true ] && [ -n "${CI_WORKSPACE:-}" ]; then
+        GRADLE_USER_HOME="$CI_WORKSPACE/.gradle-release"
+        rm -rf "$GRADLE_USER_HOME"
+        # Dependencies still come from the shared cache, but Gradle only reads it.
+        if [ -d "$shared_gradle_home/caches/modules-2" ]; then
+            GRADLE_RO_DEP_CACHE="$shared_gradle_home/caches"
+            export GRADLE_RO_DEP_CACHE
+        fi
+    elif [ -d "$shared_gradle_home" ]; then
+        GRADLE_USER_HOME="$shared_gradle_home"
     elif [ -n "${CI_WORKSPACE:-}" ]; then
         GRADLE_USER_HOME="$CI_WORKSPACE/.gradle-ci"
     fi
@@ -104,13 +122,21 @@ fi
 # advisory flock on the shared volume instead; once the exclusive lock is
 # held, any Gradle lock file still on disk is provably stale (a killed run's
 # leftover) and safe to sweep.
-if [ "${GRADLE_USER_HOME:-}" = /woodpecker/cache/gradle ] && command -v flock >/dev/null 2>&1; then
+if [ "${GRADLE_USER_HOME:-}" = "$shared_gradle_home" ] && command -v flock >/dev/null 2>&1; then
     exec 9>"$GRADLE_USER_HOME/.ci-build.flock"
     if ! flock -w 2700 9; then
         echo "Timed out after 45m waiting for another pipeline's Gradle build on the shared cache." >&2
         exit 1
     fi
     find "$GRADLE_USER_HOME/caches" -name '*.lock' -type f -delete 2>/dev/null || true
+elif [ -n "${GRADLE_RO_DEP_CACHE:-}" ] && command -v flock >/dev/null 2>&1; then
+    # Reading the shared cache while another build writes it is not safe either. Same
+    # lock, no sweep: this build does not own that cache.
+    exec 9>"$shared_gradle_home/.ci-build.flock"
+    if ! flock -w 2700 9; then
+        echo "Timed out after 45m waiting for another pipeline's Gradle build on the shared cache." >&2
+        exit 1
+    fi
 fi
 
 # fd 9 stays open across exec, so the flock is held for Gradle's lifetime and

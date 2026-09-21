@@ -159,6 +159,9 @@
     -->
     <uses-permission android:name="android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- An activity recording keeps the CPU awake while the screen is off. WorkManager already
+         merges this permission in; declaring it keeps the recorder from depending on that. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
@@ -322,7 +325,6 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data android:scheme="content" />
-                <data android:scheme="file" />
                 <data android:mimeType="application/gpx" />
                 <data android:mimeType="application/gpx+xml" />
                 <data android:mimeType="application/vnd.google-earth.kml+xml" />
@@ -342,7 +344,6 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data android:scheme="content" />
-                <data android:scheme="file" />
                 <data android:host="*" />
                 <data android:mimeType="*/*" />
                 <data android:pathPattern="/.*\\.gpx" />

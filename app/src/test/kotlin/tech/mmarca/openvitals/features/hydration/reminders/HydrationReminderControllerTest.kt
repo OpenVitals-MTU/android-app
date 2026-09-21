@@ -99,6 +99,30 @@ class HydrationReminderControllerTest {
         unmockkStatic(Log::class)
     }
 
+    @Test fun `a total that cannot be read is shown as unknown, not as zero`() = runTest {
+        mockkStatic(Log::class)
+        every { Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
+        every { preferencesRepository.hydrationReminderConfig() } returns HydrationReminderConfig(
+            enabled = true,
+            activeStartTime = LocalTime.MIDNIGHT,
+            activeEndTime = LocalTime.MIDNIGHT,
+        )
+        every { preferencesRepository.hydrationDailyGoalLiters } returns 2.0
+        coEvery {
+            hydrationRepository.loadDailyHydration(any(), any())
+        } throws RuntimeException("Health Connect is rate limited")
+        coEvery { hydrationRepository.loadHydrationEntries(any(), any()) } returns emptyList()
+        val controller = controller()
+
+        controller.handleReminderAlarm()
+        mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+        // Still reminded, but never with "0 of 2 L".
+        verify { notificationService.showHydrationReminder(null, 2.0) }
+        verify(exactly = 1) { alarmManager.schedule(any()) }
+        unmockkStatic(Log::class)
+    }
+
     @Test fun `logging a drink re-anchors and reschedules`() = runTest {
         // The entry screen re-applies the persisted config after a save.
         every { preferencesRepository.hydrationReminderConfig() } returns

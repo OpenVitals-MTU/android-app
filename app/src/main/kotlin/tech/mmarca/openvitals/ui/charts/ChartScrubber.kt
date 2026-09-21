@@ -36,14 +36,26 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.compose.foundation.Canvas as DrawCanvas
 
-/** A point a scrub can land on, in the plot's own fraction space. Sorted by [xFraction]. */
+/**
+ * A point a scrub can land on, in the plot's own fraction space. Sorted by [xFraction].
+ *
+ * The labels are made when they are first read. A plot builds a target for every sample
+ * on show, up to 2,500 of them, on every pinch frame, and the tooltip reads the labels of
+ * one. Formatting them all cost two number formats per sample per frame.
+ */
 @Immutable
-data class ScrubTarget(
+class ScrubTarget(
     val xFraction: Float,
     val yFraction: Float,
-    val primary: String,
-    val secondary: String? = null,
-)
+    label: () -> Pair<String, String?>,
+) {
+    constructor(xFraction: Float, yFraction: Float, primary: String, secondary: String? = null) :
+        this(xFraction, yFraction, { primary to secondary })
+
+    private val labels by lazy(LazyThreadSafetyMode.NONE, label)
+    val primary: String get() = labels.first
+    val secondary: String? get() = labels.second
+}
 
 /**
  * The target nearest [fraction] by x. Snaps to a sample, never the

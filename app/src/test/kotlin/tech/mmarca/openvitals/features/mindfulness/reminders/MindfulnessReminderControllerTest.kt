@@ -1,5 +1,8 @@
 package tech.mmarca.openvitals.features.mindfulness.reminders
 
+import io.mockk.unmockkStatic
+import io.mockk.mockkStatic
+import android.util.Log
 import android.content.Context
 import io.mockk.coEvery
 import io.mockk.every
@@ -75,6 +78,27 @@ class MindfulnessReminderControllerTest {
 
         verify { notificationService.showMindfulnessReminder(5.0, 10.0) }
         verify { alarmManager.schedule(any()) }
+    }
+
+    @Test fun `a total that cannot be read is shown as unknown, not as zero`() = runTest {
+        mockkStatic(Log::class)
+        every { Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
+        every { preferencesRepository.mindfulnessReminderConfig() } returns MindfulnessReminderConfig(
+            enabled = true,
+            reminderTime = LocalTime.MIDNIGHT,
+        )
+        every { preferencesRepository.dailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES) } returns 10.0
+        coEvery {
+            mindfulnessRepository.loadMindfulnessSessions(any(), any())
+        } throws RuntimeException("Health Connect is rate limited")
+        val controller = controller()
+
+        controller.handleReminderAlarm()
+        mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+        verify { notificationService.showMindfulnessReminder(null, 10.0) }
+        verify { alarmManager.schedule(any()) }
+        unmockkStatic(Log::class)
     }
 
     @Test fun `alarm trigger does not notify after goal is met`() = runTest {

@@ -35,6 +35,8 @@ Every device feature is built around keeping that true:
 
 A paired watch's recorded files are read over Bluetooth and imported on the device. Wellness series a watch records but Health Connect has no type for, such as stress and Body Battery, are stored in the app's own local database; the rest is written to Health Connect. Nothing about a watch is sent off the phone.
 
+What a watch leaves outside Health Connect has one owner, `GarminLocalData`: file copies (30 days), per-minute sleep data (45 days) and the watch-only wellness series. The first two age out at app start and inside a sync, and are deleted with the last Garmin watch. The wellness series is the user's record, so it is deleted only when the user ticks that option while removing the last watch, or clears the app's storage.
+
 Pairing uses Android's companion device manager. The association exists so Android keeps OpenVitals running while the watch is in range and a multi-minute sync can finish.
 
 ### Notification Forwarding
@@ -77,7 +79,7 @@ Health Connect is the source of truth. OpenVitals reads Health Connect records t
 
 Manual entries are saved back to Health Connect only when the user chooses to save them. Supported Apple Health export records are written to Health Connect only when the user imports an export file from Settings. OpenVitals-created records can be edited later; records created by other apps remain read-only.
 
-Apple Health exports are copied into app-private local storage and analyzed there before the user chooses which categories to import. The staged compressed copy is reused for the pending background import, cleared after a successful import or analysis failure, replaced by a newly selected export, and removed with the app's private data. Import reports are generated locally when the user runs an import and chooses to copy or download the report. These troubleshooting reports intentionally include full importer logs, selected categories, diagnostics, and exception details, so users should review them before sharing outside their device.
+Apple Health exports are copied into app-private local storage and analyzed there before the user chooses which categories to import. The staged compressed copy is reused for the pending background import, cleared after a successful import or analysis failure, replaced by a newly selected export, and removed with the app's private data. A copy from an analysis the user never finished is removed at the next app start once it is a day old, unless an import is queued or running. Import reports are generated locally when the user runs an import and chooses to copy or download the report. These troubleshooting reports intentionally include full importer logs, selected categories, diagnostics, and exception details, so users should review them before sharing outside their device.
 
 ## Sensitive Data
 

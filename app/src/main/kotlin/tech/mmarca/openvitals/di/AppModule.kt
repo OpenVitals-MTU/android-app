@@ -37,17 +37,7 @@ object AppModule {
             context,
             OpenVitalsDatabase::class.java,
             "openvitals.db",
-        ).addMigrations(
-            OpenVitalsDatabase.MIGRATION_1_3,
-            OpenVitalsDatabase.MIGRATION_2_3,
-            OpenVitalsDatabase.MIGRATION_3_4,
-            OpenVitalsDatabase.MIGRATION_4_5,
-            OpenVitalsDatabase.MIGRATION_5_6,
-            OpenVitalsDatabase.MIGRATION_6_7,
-            OpenVitalsDatabase.MIGRATION_7_8,
-            OpenVitalsDatabase.MIGRATION_8_9,
-            OpenVitalsDatabase.MIGRATION_9_10,
-        ).build()
+        ).addMigrations(*OpenVitalsDatabase.ALL_MIGRATIONS).build()
 
     @Provides
     @Singleton

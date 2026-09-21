@@ -1,11 +1,15 @@
 package tech.mmarca.openvitals.features.caffeine
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.test.platform.app.InstrumentationRegistry
 import java.time.Instant
-import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.R
@@ -19,6 +23,8 @@ import tech.mmarca.openvitals.domain.model.CaffeinePeriodData
 import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.testing.string
+import tech.mmarca.openvitals.ui.components.AppBarState
+import tech.mmarca.openvitals.ui.components.LocalAppBarState
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
 /**
@@ -30,13 +36,21 @@ class CaffeineDrinkScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    private val appBarState = AppBarState()
+
+    /** The app bar reads a screen's declaration by the destination it belongs to. */
+    private val destination = object : ViewModelStoreOwner {
+        override val viewModelStore = ViewModelStore()
+    }
+
+    private fun declaredTitle(): String? = appBarState.of(destination)?.title
+
     @Test
     fun theScreenShowsTheDrinkItWasOpenedForByNameAndDose() {
-        val titles = mutableListOf<String?>()
-        setScreen(entryId = FLAT_WHITE.id, onTitleChanged = { titles += it })
+        setScreen(entryId = FLAT_WHITE.id)
 
-        // The name reaches the toolbar through the caller.
-        composeRule.waitUntil(TIMEOUT_MS) { titles.contains(FLAT_WHITE.name) }
+        // The screen declares its own app bar title.
+        composeRule.waitUntil(TIMEOUT_MS) { declaredTitle() == FLAT_WHITE.name }
         // The dose is the whole reason someone taps a row.
         val dose = FORMATTER.count(FLAT_WHITE.caffeineMg.toInt())
         composeRule.waitUntil(TIMEOUT_MS) {
@@ -48,8 +62,7 @@ class CaffeineDrinkScreenTest {
 
     @Test
     fun aDrinkDeletedWhileItsScreenWasOpenDegradesToNoData() {
-        val titles = mutableListOf<String?>()
-        setScreen(entryId = "gone-drink", onTitleChanged = { titles += it })
+        setScreen(entryId = "gone-drink")
 
         composeRule.waitUntil(TIMEOUT_MS) {
             composeRule.onAllNodesWithText(string(R.string.no_data))
@@ -58,24 +71,29 @@ class CaffeineDrinkScreenTest {
         }
         // Falling back to the first drink would have the user read a stranger's dose.
         composeRule.onNodeWithText(FLAT_WHITE.name!!).assertDoesNotExist()
-        assertEquals(listOf<String?>(null), titles.distinct())
+        // No name to show: the app bar keeps the route's own title.
+        assertNull(declaredTitle())
     }
 
-    private fun setScreen(entryId: String, onTitleChanged: (String?) -> Unit) {
+    private fun setScreen(entryId: String) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val viewModel = CaffeineViewModel(
             repository = FakeCaffeineRepository(listOf(FLAT_WHITE)),
             preferencesRepository = PreferencesRepository(context),
         )
         composeRule.setContent {
-            OpenVitalsTheme {
-                CaffeineDrinkScreen(
-                    viewModel = viewModel,
-                    entryId = entryId,
-                    unitFormatter = FORMATTER,
-                    dateTimeFormatterProvider = DateTimeFormatterProvider(),
-                    onTitleChanged = onTitleChanged,
-                )
+            CompositionLocalProvider(
+                LocalAppBarState provides appBarState,
+                LocalViewModelStoreOwner provides destination,
+            ) {
+                OpenVitalsTheme {
+                    CaffeineDrinkScreen(
+                        viewModel = viewModel,
+                        entryId = entryId,
+                        unitFormatter = FORMATTER,
+                        dateTimeFormatterProvider = DateTimeFormatterProvider(),
+                    )
+                }
             }
         }
     }

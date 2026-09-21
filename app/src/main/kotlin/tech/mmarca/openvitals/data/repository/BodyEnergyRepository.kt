@@ -55,9 +55,12 @@ class BodyEnergyRepositoryImpl(
     /** Nullable for contexts that must not open Room. Then the chain uses the prefs mirror. */
     private val timelineStore: BodyEnergyTimelineStore?,
     private val now: () -> Instant = Instant::now,
-    private val zone: ZoneId = ZoneId.systemDefault(),
+    private val zoneSource: () -> ZoneId = ZoneId::systemDefault,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
 ) : BodyEnergyRepository {
+
+    /** Read per use: this singleton outlives a time zone change. */
+    private val zone: ZoneId get() = zoneSource()
 
     @Inject
     constructor(
@@ -454,10 +457,7 @@ class BodyEnergyRepositoryImpl(
     private suspend fun permissionSignature(): Int =
         runCatching {
             if (healthRepository.availability() == HealthConnectAvailability.AVAILABLE) {
-                healthRepository.grantedPermissions()
-                    .sorted()
-                    .joinToString(",")
-                    .hashCode()
+                bodyEnergyPermissionSignature(healthRepository.grantedPermissions())
                     .also { signature ->
                         if (preferencesRepository.bodyEnergyPermissionSignature != signature) {
                             preferencesRepository.bodyEnergyPermissionSignature = signature
@@ -579,3 +579,16 @@ private fun List<Double>.medianDoubleOrNull(): Double? {
         sorted[middle]
     }
 }
+
+/**
+ * The part of the granted set that can change a stored Body Energy day: what the app may
+ * read. A write grant changes no input. It used to count, so switching on water logging
+ * purged the whole chain.
+ */
+internal fun bodyEnergyPermissionSignature(granted: Set<String>): Int =
+    granted.filter { it.startsWith(HealthReadPermissionPrefix) }
+        .sorted()
+        .joinToString(",")
+        .hashCode()
+
+private const val HealthReadPermissionPrefix = "android.permission.health.READ_"

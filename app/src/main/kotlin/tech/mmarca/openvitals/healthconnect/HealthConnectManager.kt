@@ -187,6 +187,14 @@ class HealthConnectManager @Inject constructor(
         return HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND in grantedPermissions()
     }
 
+    /**
+     * True when this Health Connect offers the background-read grant and the user has not
+     * given it. A feature that reads while no screen is up asks for it when it is switched on.
+     */
+    suspend fun isBackgroundReadGrantMissing(): Boolean =
+        permissionService.isBackgroundHealthDataReadAvailable() &&
+            HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND !in grantedPermissions()
+
     suspend fun grantedPermissions(): Set<String> =
         permissionService.grantedPermissions()
 
@@ -411,6 +419,8 @@ class HealthConnectManager @Inject constructor(
     suspend fun updateActivityEntry(id: String, request: ActivityWriteRequest) =
         withSyncEnabled { activityReader.updateActivityEntry(id, request) }
 
+    suspend fun readOwnActivityMetrics(id: String) = activityReader.readOwnActivityMetrics(id)
+
     suspend fun deleteActivityEntry(id: String) =
         withSyncEnabled { activityReader.deleteActivityEntry(id) }
 
@@ -569,6 +579,9 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun deleteHydrationNutritionEntry(hydrationClientRecordId: String) =
         withSyncEnabled { nutritionReader.deleteHydrationNutritionEntry(hydrationClientRecordId) }
+
+    suspend fun updateHydrationNutritionEntry(change: tech.mmarca.openvitals.domain.model.HydrationEntryChange) =
+        withSyncEnabled { nutritionReader.updateHydrationNutritionEntry(change) }
 
     suspend fun deleteNutritionEntry(id: String): String? =
         withSyncEnabled { nutritionReader.deleteNutritionEntry(id) }

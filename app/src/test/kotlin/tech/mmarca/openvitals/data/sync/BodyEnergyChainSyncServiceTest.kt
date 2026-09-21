@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.data.sync
 
+import tech.mmarca.openvitals.healthconnect.StrictHealthConnectReads
+import kotlinx.coroutines.currentCoroutineContext
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
@@ -11,6 +13,7 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -60,6 +63,9 @@ private class RecordingRepository(
     val requested = mutableListOf<LocalDate>()
     var throwOnLoad = false
 
+    /** Whether each load ran with strict Health Connect reads, where a failed read throws. */
+    val loadedStrictly = mutableListOf<Boolean>()
+
     /** A day the foreground stores during the walk, on the first requested day. */
     var foregroundDayDuringWalk: LocalDate? = null
 
@@ -67,6 +73,7 @@ private class RecordingRepository(
         if (throwOnLoad) error("health connect exploded")
         val date = query.period.start
         requested += date
+        loadedStrictly += currentCoroutineContext()[StrictHealthConnectReads] != null
         foregroundDayDuringWalk?.let { foreground ->
             foregroundDayDuringWalk = null
             store.save(timelineFor(foreground))
@@ -129,14 +136,19 @@ class BodyEnergyChainSyncServiceTest {
         unmockkStatic(Log::class)
     }
 
-    private fun service(windowDays: Long = 5L) = BodyEnergyChainSyncService(
+    private fun service(
+        windowDays: Long = 5L,
+        readsOtherAppsData: Boolean = true,
+        zoneSource: () -> ZoneId = { TestZone },
+    ) = BodyEnergyChainSyncService(
+        readsOtherAppsData = { readsOtherAppsData },
         repository = repository,
         store = store,
         baselineStore = baselines,
         healthRepository = health,
         preferencesRepository = prefs,
         clock = { now },
-        zone = TestZone,
+        zoneSource = zoneSource,
         windowDays = windowDays,
     )
 
@@ -154,6 +166,20 @@ class BodyEnergyChainSyncServiceTest {
             ),
             repository.requested,
         )
+    }
+
+    @Test
+    fun `a time zone change after start-up moves today`() = runTest {
+        var zone = TestZone
+        val service = service(zoneSource = { zone })
+        service.syncAll()
+        assertFalse(today in repository.requested)
+
+        // The user flew east. It is 2 June there, so 1 June has closed.
+        zone = ZoneId.of("Pacific/Kiritimati")
+        service.syncAll(force = true)
+
+        assertTrue(today in repository.requested)
     }
 
     @Test
@@ -248,6 +274,24 @@ class BodyEnergyChainSyncServiceTest {
     }
 
     @Test
+    fun `a new write grant leaves the stored chain alone, a new read grant purges it`() = runTest {
+        service().syncAll()
+        assertEquals(4, dao.countDays())
+        now = now.plusSeconds(2 * 60)
+        repository.requested.clear()
+
+        // Switching on water logging changes no input of the model.
+        health = grantedHealthRepository(granted = setOf(ReadHeartRate, "android.permission.health.WRITE_HYDRATION"))
+        service().syncAll()
+        assertEquals(emptyList<LocalDate>(), repository.requested)
+
+        // Sleep is an input. Days computed without it are wrong.
+        health = grantedHealthRepository(granted = setOf(ReadHeartRate, "android.permission.health.READ_SLEEP"))
+        service().syncAll()
+        assertEquals(4, repository.requested.size)
+    }
+
+    @Test
     fun `an unchanged signature does not announce a rebuild`() = runTest {
         val service = service()
         service.syncAll()
@@ -280,6 +324,34 @@ class BodyEnergyChainSyncServiceTest {
             store.storedDaysBetween(today.minusDays(BodyEnergyBucketRetentionDays), today).size >=
                 storedBefore.size,
         )
+    }
+
+    @Test
+    fun `the walk reads strictly, so a failed read ends the pass instead of storing an empty day`() = runTest {
+        service().syncAll()
+
+        assertEquals(4, repository.loadedStrictly.size)
+        assertTrue(repository.loadedStrictly.all { it })
+    }
+
+    @Test
+    fun `in the background without the background-read grant the chain is left alone`() = runTest {
+        // A scheduled watch sync forces a pass. Reads would see only our own records.
+        service().syncAll()
+        assertEquals(4, dao.countDays())
+        repository.requested.clear()
+        prefs.setBodyEnergyCalibration(
+            BodyEnergyCalibration(
+                useManualZones = true,
+                manualZoneThresholdsBpm = HeartZoneThresholds(95, 115, 135, 155, 175),
+            )
+        )
+
+        service(readsOtherAppsData = false).syncAll(force = true)
+
+        // Not even the purge a changed calibration calls for: nothing could rebuild it.
+        assertEquals(emptyList<LocalDate>(), repository.requested)
+        assertEquals(4, dao.countDays())
     }
 
     @Test

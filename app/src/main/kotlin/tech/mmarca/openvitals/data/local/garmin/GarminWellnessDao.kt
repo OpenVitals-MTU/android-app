@@ -28,6 +28,9 @@ interface GarminWellnessDao {
     suspend fun latest(metric: String): GarminWellnessSampleEntity?
 
     /** Total rows held, for diagnostics. */
+    @Query("DELETE FROM garmin_wellness_samples")
+    suspend fun deleteAll()
+
     @Query("SELECT COUNT(time_millis) FROM garmin_wellness_samples WHERE metric = :metric")
     suspend fun countFor(metric: String): Long
 }

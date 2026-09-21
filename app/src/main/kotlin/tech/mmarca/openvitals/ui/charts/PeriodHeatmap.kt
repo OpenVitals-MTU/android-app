@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -41,6 +42,11 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import tech.mmarca.openvitals.ui.theme.LayoutMetrics
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 data class PeriodHeatmapCell(
     val date: LocalDate?,
@@ -145,6 +151,8 @@ fun PeriodMonthHeatmap(
     val minPositiveValue = cells.map { it.value }.filter { it > 0.0 }.minOrNull() ?: 0.0
     val maxValue = cells.maxOfOrNull { it.value }?.coerceAtLeast(1.0) ?: 1.0
     val dayFormatter = dateTimeFormatterProvider.chartDayOfMonth()
+    val spokenDateFormatter = dateTimeFormatterProvider.mediumDate()
+    val noDataLabel = stringResource(R.string.no_data)
     val gridStart = if (rolling) period.start else period.start.withDayOfMonth(1)
     val weekdays = remember(gridStart) {
         (0..6).map { offset ->
@@ -166,7 +174,7 @@ fun PeriodMonthHeatmap(
         Column(modifier = Modifier.padding(16.dp)) {
             PeriodHeatmapHeader(title, summaryText)
             Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 weekdays.forEach { weekday ->
                     Text(
                         text = weekday,
@@ -181,7 +189,7 @@ fun PeriodMonthHeatmap(
             cells.chunked(7).forEach { rowCells ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     rowCells.forEach { cell ->
                         val date = cell.date
@@ -193,17 +201,11 @@ fun PeriodMonthHeatmap(
                             accentColor = accentColor,
                         )
                         val isSelected = date != null && date == selectedDate
-                        val cellModifier = Modifier
+                        // What you can hit, which is taller than what is drawn. Seven columns of
+                        // 48 dp do not fit a 360 dp screen, so the width is what the grid allows.
+                        val touchTarget = Modifier
                             .weight(1f)
-                            .aspectRatio(1f)
-                            .background(cellColor, MaterialTheme.shapes.small)
-                            .then(
-                                if (isSelected) {
-                                    Modifier.border(2.dp, accentColor, MaterialTheme.shapes.small)
-                                } else {
-                                    Modifier
-                                },
-                            )
+                            .heightIn(min = LayoutMetrics.minTouchTarget)
                             .then(
                                 if (date != null && cell.isWithinLoadedPeriod && onCellTapped != null) {
                                     Modifier.clickable { onCellTapped(date) }
@@ -211,22 +213,51 @@ fun PeriodMonthHeatmap(
                                     Modifier
                                 },
                             )
+                            .then(
+                                if (date != null) {
+                                    // The cell shows a bare "14". Spoken, that is not a date and says nothing of the value.
+                                    Modifier.clearAndSetSemantics {
+                                        contentDescription = heatmapCellDescription(
+                                            dateText = spokenDateFormatter.format(date),
+                                            value = cell.value.takeIf { cell.isWithinLoadedPeriod },
+                                            noDataLabel = noDataLabel,
+                                        )
+                                        selected = isSelected
+                                    }
+                                } else {
+                                    Modifier
+                                },
+                            )
                         Box(
-                            modifier = cellModifier,
+                            modifier = touchTarget,
                             contentAlignment = Alignment.Center,
                         ) {
-                            date?.let {
-                                Text(
-                                    text = dayFormatter.format(it),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    textAlign = TextAlign.Center,
-                                )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                                    .background(cellColor, MaterialTheme.shapes.small)
+                                    .then(
+                                        if (isSelected) {
+                                            Modifier.border(2.dp, accentColor, MaterialTheme.shapes.small)
+                                        } else {
+                                            Modifier
+                                        },
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                date?.let {
+                                    Text(
+                                        text = dayFormatter.format(it),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                }
                             }
                         }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
             }
             HeatmapLegend(accentColor = accentColor, minPositiveValue = minPositiveValue, maxValue = maxValue)
         }
@@ -529,3 +560,11 @@ private fun emptyHeatmapCell(): PeriodHeatmapCell =
         value = 0.0,
         isWithinLoadedPeriod = false,
     )
+
+/** What a screen reader says for one day: the date, then the value, or that there is none. */
+internal fun heatmapCellDescription(dateText: String, value: Double?, noDataLabel: String): String {
+    val valueText = value?.takeIf { it > 0.0 }?.let { number ->
+        java.text.NumberFormat.getNumberInstance().apply { maximumFractionDigits = 1 }.format(number)
+    } ?: noDataLabel
+    return "$dateText, $valueText"
+}

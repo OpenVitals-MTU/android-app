@@ -10,6 +10,7 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkStatic
+import io.mockk.verify
 import java.io.File
 import org.junit.After
 import org.junit.Before
@@ -167,6 +168,46 @@ class FlutterDataMigratorTest {
         assertThat(runMigration(context, importer)).isTrue()
 
         assertThat(mainPrefs.getBoolean(FlutterPrefsKeyTable.MIGRATED_FLAG_KEY, false)).isTrue()
+    }
+
+    @Test
+    fun `an install that migrated before the wellness import existed gets it once`() {
+        // Versions 2.5.0 to 2.6.2 set the main flag and knew nothing of the wellness table.
+        mainPrefs.edit().putBoolean(FlutterPrefsKeyTable.MIGRATED_FLAG_KEY, true).commit()
+        val importer = noOpImporter()
+        val migrator = migrator(context(), importer)
+
+        assertThat(migrator.migrateIfNeeded()).isFalse()
+        assertThat(migrator.garminWellnessImportMissed()).isTrue()
+        migrator.importMissedGarminWellness(database())
+
+        verify(exactly = 1) { importer.importGarminWellness(any()) }
+        verify(exactly = 0) { importer.importBeverages(any()) }
+        assertThat(migrator.garminWellnessImportMissed()).isFalse()
+    }
+
+    @Test
+    fun `a full migration and a fresh install owe no wellness catch-up`() {
+        assertThat(migrator(context()).garminWellnessImportMissed()).isFalse()
+
+        installFlutterPrefsFile()
+        val context = context()
+        runMigration(context)
+
+        assertThat(migrator(context).garminWellnessImportMissed()).isFalse()
+    }
+
+    @Test
+    fun `a wellness catch-up that fails is not retried on every launch`() {
+        mainPrefs.edit().putBoolean(FlutterPrefsKeyTable.MIGRATED_FLAG_KEY, true).commit()
+        val importer = mockk<FlutterDatabaseImporter>().also {
+            every { it.importGarminWellness(any()) } throws IllegalStateException("unreadable")
+        }
+        val migrator = migrator(context(), importer)
+
+        migrator.importMissedGarminWellness(database())
+
+        assertThat(migrator.garminWellnessImportMissed()).isFalse()
     }
 
     // endregion

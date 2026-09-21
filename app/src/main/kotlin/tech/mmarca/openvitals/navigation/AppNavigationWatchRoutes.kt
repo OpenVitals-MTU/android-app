@@ -16,7 +16,6 @@ import tech.mmarca.openvitals.features.watches.WatchSettingsScreen
 /** The watch-facing destinations. Plain pushed screens. */
 internal fun NavGraphBuilder.watchRoutes(
     navController: NavHostController,
-    onWatchDeviceTitleChanged: (String?) -> Unit,
 ) {
     composable(Screen.WatchDevice.route) {
         WatchDeviceScreen(
@@ -47,7 +46,6 @@ internal fun NavGraphBuilder.watchRoutes(
                 }
             },
             onRemoved = { navController.popBackStack() },
-            onTitleChanged = onWatchDeviceTitleChanged,
         )
     }
 

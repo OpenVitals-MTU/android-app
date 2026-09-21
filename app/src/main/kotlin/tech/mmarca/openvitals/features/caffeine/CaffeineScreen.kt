@@ -106,7 +106,6 @@ fun CaffeineScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onOpenDrink: (String) -> Unit = {},
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedInsight = (state.homeDisplay.entryInsights + state.analyticsDisplay.entryInsights)

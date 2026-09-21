@@ -50,6 +50,14 @@ class LocalAppManifestPolicyTest {
         }
     }
 
+    @Test
+    fun `no intent filter accepts a file link`() {
+        // Another app chooses the link. A file:// one can name a file in our own private storage.
+        val manifest = File("src/main/AndroidManifest.xml").readText()
+
+        assertFalse(Regex("""android:scheme\s*=\s*"file"""").containsMatchIn(manifest))
+    }
+
     private fun manifestTags(manifest: String, tagName: String): List<String> =
         Regex("""<$tagName\b[^>]*>""").findAll(manifest).map { it.value }.toList()
 

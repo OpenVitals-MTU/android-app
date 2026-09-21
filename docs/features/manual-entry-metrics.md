@@ -30,3 +30,5 @@ Write permissions can be granted during onboarding or requested when an entry fl
 ## External Records
 
 Records created by other apps stay read-only in OpenVitals. OpenVitals checks ownership before allowing edits or deletes of records it created.
+
+Editing an activity follows the same line. The edit form is filled with the steps, distance, elevation and calories that OpenVitals itself stored for that session, never with the total across apps or a calorie estimate. A save replaces only the totals the user changed. A total the user left alone keeps its stored value, including one the form does not show for that activity type, such as the steps of a run imported from a watch. The stored heart rate, power, cadence and speed series are kept too.

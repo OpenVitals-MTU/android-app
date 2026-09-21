@@ -1,5 +1,10 @@
 package tech.mmarca.openvitals.features.devicesync
 
+import tech.mmarca.openvitals.features.devicesync.protocol.SyncByteTransport
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.currentCoroutineContext
+import kotlin.coroutines.ContinuationInterceptor
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import android.content.Context
 import android.util.Log
 import io.mockk.coEvery
@@ -76,6 +81,7 @@ class DeviceSyncViewModelTest {
         originRepository = mockk(relaxed = true),
         reportStore = mockk(relaxed = true),
         recordingController = recordingController,
+        dispatchers = mainDispatcherRule.dispatcherProvider,
     )
 
     // The guest's dial.
@@ -156,6 +162,56 @@ class DeviceSyncViewModelTest {
         assertTrue(peer.await().completed)
         assertEquals(DeviceSyncStep.REPORT, viewModel.uiState.value.step)
         assertNull(viewModel.uiState.value.error)
+    }
+
+    @Test
+    fun `the session runs on the default dispatcher, and the code question comes back to main`() = runTest {
+        val default = StandardTestDispatcher(mainDispatcherRule.testDispatcher.scheduler, name = "default")
+        val dispatchers = object : DispatcherProvider {
+            override val main = mainDispatcherRule.testDispatcher
+            override val io = mainDispatcherRule.testDispatcher
+            override val default = default
+        }
+        val (hostPipe, guestPipe) = SyncPipe.create()
+        // Every frame the session sends tells which dispatcher the session is on.
+        val sentOn = mutableSetOf<ContinuationInterceptor?>()
+        every { bluetooth.transport() } returns object : SyncByteTransport by hostPipe {
+            override suspend fun send(bytes: ByteArray) {
+                sentOn += currentCoroutineContext()[ContinuationInterceptor]
+                hostPipe.send(bytes)
+            }
+        }
+        val peer = async {
+            SyncSession(
+                transport = guestPipe,
+                store = EmptyStore,
+                config = SyncSessionConfig(
+                    role = SyncRole.GUEST,
+                    confirmCode = { true },
+                    deviceName = "Peer",
+                    supportedTypes = listOf("StepsRecord"),
+                ),
+            ).run()
+        }
+        val viewModel = DeviceSyncViewModel(
+            context = mockk<Context>(relaxed = true),
+            bluetooth = bluetooth,
+            healthConnectManager = mockk(relaxed = true),
+            importRepository = mockk(relaxed = true),
+            originRepository = mockk(relaxed = true),
+            reportStore = mockk(relaxed = true),
+            recordingController = recordingController,
+            dispatchers = dispatchers,
+        )
+        viewModel.startHosting(grantedSeconds = 120)
+        viewModel.startSync()
+        runCurrent()
+
+        assertEquals(setOf<ContinuationInterceptor?>(default), sentOn)
+        // The question reached the wizard, whose state belongs to the main thread.
+        assertEquals(DeviceSyncStep.COMPARE_CODE, viewModel.uiState.value.step)
+        viewModel.cancel()
+        peer.cancel()
     }
 
     @Test

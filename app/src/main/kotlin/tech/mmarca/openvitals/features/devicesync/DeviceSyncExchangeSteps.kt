@@ -311,6 +311,11 @@ internal fun DeviceSyncReportStep(state: DeviceSyncState, onDone: () -> Unit) {
                 report.duplicateSkipped,
             )
         }
+        if (report.refused > 0) {
+            item {
+                DeviceSyncStatRow(stringResource(R.string.device_sync_refused), report.refused)
+            }
+        }
         items(report.typeSummaries) { summary ->
             Row(
                 modifier = Modifier

@@ -2,6 +2,8 @@ package tech.mmarca.openvitals.features.manualentry.hydration
 
 import java.time.Duration
 import java.time.Instant
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
@@ -100,39 +102,43 @@ internal suspend fun writeHydrationAndNutritionEntry(
         ?: fallbackEntryTime?.coerceAtMost(now)
         ?: now
     if (editRecordId == null) {
-        val hydrationClientRecordId = if (writesHydration) {
-            repository.writeHydrationEntry(
-                HydrationWriteRequest(
-                    time = entryTime,
-                    volumeLiters = effectiveLiters,
-                    drinkId = drinkId,
-                )
-            )
-        } else {
-            null
-        }
-        if (writesNutrition) {
-            try {
-                nutritionRepository.writeNutritionEntry(
-                    NutritionWriteRequest(
+        // The two records land together or not at all. Left cancellable, a screen closed
+        // between the writes kept the water and lost the caffeine, with no rollback.
+        withContext(NonCancellable) {
+            val hydrationClientRecordId = if (writesHydration) {
+                repository.writeHydrationEntry(
+                    HydrationWriteRequest(
                         time = entryTime,
-                        nutrientValues = nutrientValues,
-                        name = nutritionName,
-                        associatedHydrationClientRecordId = hydrationClientRecordId,
-                        endTime = consumptionDurationMinutes
-                            ?.takeIf { it > 0 }
-                            ?.let { entryTime.plus(Duration.ofMinutes(it.toLong())) },
+                        volumeLiters = effectiveLiters,
+                        drinkId = drinkId,
                     )
                 )
-            } catch (error: Throwable) {
-                // Two records must land together. Roll back the hydration half, or a
-                // retry writes a second one. Best-effort.
-                if (hydrationClientRecordId != null) {
-                    runCatching {
-                        repository.deleteHydrationEntryByClientRecordId(hydrationClientRecordId)
+            } else {
+                null
+            }
+            if (writesNutrition) {
+                try {
+                    nutritionRepository.writeNutritionEntry(
+                        NutritionWriteRequest(
+                            time = entryTime,
+                            nutrientValues = nutrientValues,
+                            name = nutritionName,
+                            associatedHydrationClientRecordId = hydrationClientRecordId,
+                            endTime = consumptionDurationMinutes
+                                ?.takeIf { it > 0 }
+                                ?.let { entryTime.plus(Duration.ofMinutes(it.toLong())) },
+                        )
+                    )
+                } catch (error: Throwable) {
+                    // Two records must land together. Roll back the hydration half, or a
+                    // retry writes a second one. Best-effort.
+                    if (hydrationClientRecordId != null) {
+                        runCatching {
+                            repository.deleteHydrationEntryByClientRecordId(hydrationClientRecordId)
+                        }
                     }
+                    throw error
                 }
-                throw error
             }
         }
     } else {

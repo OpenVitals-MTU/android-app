@@ -195,6 +195,15 @@ fun decodeSyncRecord(recordType: String, clientRecordId: String, payload: ByteAr
     return decode(recordType, syncMetadata(clientRecordId, decodeDevice(json["device"])), json)
 }
 
+/**
+ * When a record on the wire starts: its start time, or its instant. Null when the
+ * payload cannot be read, which the decoder then reports.
+ */
+fun syncRecordStartTime(payload: ByteArray): Instant? = runCatching {
+    val json = CodecJson.parseToJsonElement(payload.toString(Charsets.UTF_8)).jsonObject
+    (json["s"] ?: json["i"])?.jsonPrimitive?.long?.let(Instant::ofEpochMilli)
+}.getOrNull()
+
 private val CodecJson = Json { ignoreUnknownKeys = true }
 private const val HEX_DIGITS = "0123456789abcdef"
 

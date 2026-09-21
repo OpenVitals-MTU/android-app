@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.healthconnect
 
+import tech.mmarca.openvitals.domain.model.OwnActivityMetrics
+import tech.mmarca.openvitals.domain.model.ActivityFormMetric
 import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.DistanceRecord
@@ -21,10 +23,12 @@ import io.mockk.unmockkStatic
 import java.time.Instant
 import kotlin.reflect.KClass
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.domain.model.ActivityRecordSource
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.BleHeartRateSample
@@ -51,7 +55,7 @@ class ActivityEntryWriteTest {
     }
 
     @Test
-    fun `deleting a workout keeps the metrics of one that starts inside its window`() = onARealClock {
+    fun `deleting a workout keeps the metrics of one that starts inside its window`() = onTheTestClock {
         val client = client()
         val reader = reader(client)
         // Minute rounding makes this overlap easy: A ends 10:31, B starts 10:30.
@@ -67,7 +71,7 @@ class ActivityEntryWriteTest {
     }
 
     @Test
-    fun `editing a workout keeps the metrics of one that starts inside its window`() = onARealClock {
+    fun `editing a workout keeps the metrics of one that starts inside its window`() = onTheTestClock {
         val client = client()
         val reader = reader(client)
         reader.writeActivityEntry(request(T10_00, T10_31, distanceMeters = 5_000.0))
@@ -80,7 +84,7 @@ class ActivityEntryWriteTest {
     }
 
     @Test
-    fun `editing the title keeps the recorded heart rate`() = onARealClock {
+    fun `editing the title keeps the recorded heart rate`() = onTheTestClock {
         val client = client()
         val reader = reader(client)
         reader.writeActivityEntry(
@@ -100,7 +104,7 @@ class ActivityEntryWriteTest {
     }
 
     @Test
-    fun `moving the window rebuilds the series inside it and a delete still finds it`() = onARealClock {
+    fun `moving the window rebuilds the series inside it and a delete still finds it`() = onTheTestClock {
         val client = client()
         val reader = reader(client)
         reader.writeActivityEntry(request(T10_00, T11_00, heartRate = listOf(T10_10 to 140L, T10_40 to 150L)))
@@ -117,7 +121,7 @@ class ActivityEntryWriteTest {
     }
 
     @Test
-    fun `an edit that carries samples replaces the series`() = onARealClock {
+    fun `an edit that carries samples replaces the series`() = onTheTestClock {
         val client = client()
         val reader = reader(client)
         reader.writeActivityEntry(request(T10_00, T11_00, heartRate = listOf(T10_10 to 140L)))
@@ -132,7 +136,7 @@ class ActivityEntryWriteTest {
     }
 
     @Test
-    fun `a failed write leaves the workout as it was`() = onARealClock {
+    fun `a failed write leaves the workout as it was`() = onTheTestClock {
         val client = client()
         val reader = reader(client)
         reader.writeActivityEntry(request(T10_00, T11_00, distanceMeters = 5_000.0, title = "Run"))
@@ -152,7 +156,7 @@ class ActivityEntryWriteTest {
     }
 
     @Test
-    fun `importing the same file twice stores the workout once`() = onARealClock {
+    fun `importing the same file twice stores the workout once`() = onTheTestClock {
         val client = client()
         val reader = reader(client)
         val imported = request(T10_00, T11_00, distanceMeters = 5_000.0, heartRate = listOf(T10_10 to 140L))
@@ -168,7 +172,7 @@ class ActivityEntryWriteTest {
     }
 
     @Test
-    fun `a watch file is stored as recorded by a watch, not typed in on a phone`() = onARealClock {
+    fun `a watch file is stored as recorded by a watch, not typed in on a phone`() = onTheTestClock {
         val client = client()
         val reader = reader(client)
 
@@ -184,7 +188,7 @@ class ActivityEntryWriteTest {
     }
 
     @Test
-    fun `an imported workout can still be deleted with all its records`() = onARealClock {
+    fun `an imported workout can still be deleted with all its records`() = onTheTestClock {
         val client = client()
         val reader = reader(client)
         reader.writeActivityEntry(
@@ -199,7 +203,115 @@ class ActivityEntryWriteTest {
         assertThat(client.all(HeartRateRecord::class)).isEmpty()
     }
 
-    private fun onARealClock(body: suspend CoroutineScope.() -> Unit) = runBlocking(block = body)
+    // An edit changes what the user changed, and nothing else.
+
+    private suspend fun insertAsAnotherApp(record: Record) {
+        fake.setPackageName("com.example.pedometer")
+        fake.insertRecords(listOf(record))
+        fake.setPackageName(APP_PACKAGE)
+    }
+
+    private fun otherAppsSteps(count: Long) = StepsRecord(
+        startTime = T10_10,
+        startZoneOffset = null,
+        endTime = T10_40,
+        endZoneOffset = null,
+        count = count,
+        metadata = Metadata.manualEntry(),
+    )
+
+    @Test
+    fun `a title-only edit does not turn another app's steps into ours`() = onTheTestClock {
+        val client = client()
+        val reader = reader(client)
+        reader.writeActivityEntry(request(T10_00, T11_00, distanceMeters = 5_000.0))
+        insertAsAnotherApp(otherAppsSteps(800))
+
+        // The old form was filled from every app's data, so it sent these values back.
+        reader.updateActivityEntry(
+            client.sessionIdAt(T10_00),
+            request(T10_00, T11_00, distanceMeters = 5_300.0, steps = 800, title = "Morning run")
+                .copy(editedMetrics = emptySet()),
+        )
+
+        val ownSteps = client.all(StepsRecord::class).filter { it.metadata.dataOrigin.packageName == APP_PACKAGE }
+        assertThat(ownSteps).isEmpty()
+        assertThat(client.all(DistanceRecord::class).map { it.distance.inMeters }).containsExactly(5_000.0)
+        assertThat(client.all(ExerciseSessionRecord::class).single().title).isEqualTo("Morning run")
+    }
+
+    @Test
+    fun `a total the form does not show survives an edit`() = onTheTestClock {
+        // A run from a watch file has steps. The form shows steps only for step-counting types.
+        val client = client()
+        val reader = reader(client)
+        reader.writeActivityEntry(request(T10_00, T11_00, distanceMeters = 5_000.0, steps = 6_200))
+
+        reader.updateActivityEntry(
+            client.sessionIdAt(T10_00),
+            request(T10_00, T11_00, title = "Morning run").copy(editedMetrics = emptySet()),
+        )
+
+        assertThat(client.all(StepsRecord::class).map { it.count }).containsExactly(6_200L)
+        assertThat(client.all(DistanceRecord::class).map { it.distance.inMeters }).containsExactly(5_000.0)
+    }
+
+    @Test
+    fun `a total the user changed is replaced, and one the user cleared is removed`() = onTheTestClock {
+        val client = client()
+        val reader = reader(client)
+        reader.writeActivityEntry(request(T10_00, T11_00, distanceMeters = 5_000.0, steps = 6_200))
+
+        reader.updateActivityEntry(
+            client.sessionIdAt(T10_00),
+            request(T10_00, T11_00, distanceMeters = 5_400.0, steps = null)
+                .copy(editedMetrics = setOf(ActivityFormMetric.DISTANCE, ActivityFormMetric.STEPS)),
+        )
+
+        assertThat(client.all(DistanceRecord::class).map { it.distance.inMeters }).containsExactly(5_400.0)
+        assertThat(client.all(StepsRecord::class)).isEmpty()
+    }
+
+    @Test
+    fun `untouched totals move with the window`() = onTheTestClock {
+        val client = client()
+        val reader = reader(client)
+        reader.writeActivityEntry(request(T10_00, T11_00, distanceMeters = 5_000.0))
+
+        reader.updateActivityEntry(
+            client.sessionIdAt(T10_00),
+            request(T10_10, T11_00).copy(editedMetrics = emptySet()),
+        )
+
+        val distance = client.all(DistanceRecord::class).single()
+        assertThat(distance.distance.inMeters).isEqualTo(5_000.0)
+        assertThat(distance.startTime).isEqualTo(T10_10)
+        // The next edit or delete must still find it.
+        reader.deleteActivityEntry(client.sessionIdAt(T10_10))
+        assertThat(client.all(DistanceRecord::class)).isEmpty()
+    }
+
+    @Test
+    fun `the edit form is filled with our own totals only`() = onTheTestClock {
+        val client = client()
+        val reader = reader(client)
+        reader.writeActivityEntry(request(T10_00, T11_00, distanceMeters = 5_000.0))
+        insertAsAnotherApp(otherAppsSteps(800))
+
+        val own = reader.readOwnActivityMetrics(client.sessionIdAt(T10_00))
+
+        assertThat(own).isEqualTo(OwnActivityMetrics(distanceMeters = 5_000.0))
+    }
+
+    private val testDispatcher = StandardTestDispatcher()
+    private val testDispatchers = object : DispatcherProvider {
+        override val main = testDispatcher
+        override val io = testDispatcher
+        override val default = testDispatcher
+    }
+
+    /** Every read hops to the support's dispatcher, so on this one the whole read is test time. */
+    private fun onTheTestClock(body: suspend CoroutineScope.() -> Unit) = runTest(testDispatcher) { body() }
 
     private fun request(
         start: Instant,
@@ -237,6 +349,7 @@ class ActivityEntryWriteTest {
             clientProvider = { client },
             diagnostics = diagnostics,
             rateLimitMessage = { "rate limited" },
+            dispatchers = testDispatchers,
         )
         return ActivityHealthReader(support, APP_PACKAGE)
     }

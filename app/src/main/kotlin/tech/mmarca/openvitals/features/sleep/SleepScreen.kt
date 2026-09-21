@@ -24,11 +24,10 @@ fun SleepScreen(
     onOpenSleepSession: (String) -> Unit,
     onOpenSleepScore: (() -> Unit)? = null,
     onOpenSleepEfficiency: (() -> Unit)? = null,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val display = state.display
-    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
+    val sectionContext = rememberMetricDetailSectionOrdering()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {

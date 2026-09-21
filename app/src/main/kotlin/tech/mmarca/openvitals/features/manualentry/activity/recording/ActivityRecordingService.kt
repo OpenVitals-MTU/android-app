@@ -19,7 +19,6 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -30,6 +29,7 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
+import android.os.PowerManager
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -132,6 +132,8 @@ class ActivityRecordingService : Service() {
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
     }
 
+    private var wakeLock: PowerManager.WakeLock? = null
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
@@ -164,6 +166,7 @@ class ActivityRecordingService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        releaseWakeLock()
         stopLocationUpdates()
         stopSensorUpdates()
         stopPressureUpdates()
@@ -177,6 +180,7 @@ class ActivityRecordingService : Service() {
     private fun observeRecordingState() {
         controller.state
             .onEach { state ->
+                if (state.status.needsCpuAwake()) holdWakeLock() else releaseWakeLock()
                 if (!state.isActive) {
                     stopLocationUpdates()
                     stopSensorUpdates()
@@ -189,39 +193,22 @@ class ActivityRecordingService : Service() {
                 }
 
                 ensureForeground(state)
-                if (state.status == ActivityRecordingStatus.RECORDING && state.recordingKind == ActivityRecordingKind.GPS_ROUTE) {
-                    startLocationUpdates()
-                    startPressureUpdates()
-                    if (activityEntryTypeById(state.activityTypeId)?.supportsStepCounting == true) {
-                        startSensorUpdates(state)
-                    } else {
-                        stopSensorUpdates()
+                val plan = recordingSensorPlan(
+                    status = state.status,
+                    kind = state.recordingKind,
+                    activityType = activityEntryTypeById(state.activityTypeId),
+                )
+                if (plan.location) startLocationUpdates() else stopLocationUpdates()
+                if (plan.pressure) startPressureUpdates() else stopPressureUpdates()
+                when (plan.sensor) {
+                    RecordingSensorUse.OFF -> stopSensorUpdates()
+                    RecordingSensorUse.STEPS -> startSensorUpdates(state)
+                    RecordingSensorUse.PER_STEP_RECOGNIZER -> {
+                        // In a plan run the recognizer changes per step.
+                        val wanted = state.sensorActivityType()
+                        if (wanted?.id != activeSensorTypeId) stopSensorUpdates()
+                        if (wanted != null) startSensorUpdates(state) else stopSensorUpdates()
                     }
-                } else if (state.status == ActivityRecordingStatus.RECORDING && state.recordingKind == ActivityRecordingKind.REPETITION) {
-                    stopLocationUpdates()
-                    stopPressureUpdates()
-                    // In a plan run the recognizer changes per step.
-                    val wanted = state.sensorActivityType()
-                    if (wanted?.id != activeSensorTypeId) stopSensorUpdates()
-                    if (wanted != null) startSensorUpdates(state) else stopSensorUpdates()
-                } else if (
-                    state.status == ActivityRecordingStatus.RECORDING &&
-                    state.recordingKind == ActivityRecordingKind.TIMED &&
-                    activityEntryTypeById(state.activityTypeId)?.supportsGpsRoute == true
-                ) {
-                    // Without GPS the barometer and step detector still run: neither
-                    // needs a position. Gated on supportsGpsRoute.
-                    stopLocationUpdates()
-                    startPressureUpdates()
-                    if (activityEntryTypeById(state.activityTypeId)?.supportsStepCounting == true) {
-                        startSensorUpdates(state)
-                    } else {
-                        stopSensorUpdates()
-                    }
-                } else {
-                    stopLocationUpdates()
-                    stopSensorUpdates()
-                    stopPressureUpdates()
                 }
                 updateNotification(state)
                 syncNotificationTicker(state)
@@ -232,6 +219,26 @@ class ActivityRecordingService : Service() {
                     )
             }
             .launchIn(serviceScope)
+    }
+
+    /**
+     * A foreground service keeps the process, not the CPU. With the screen off an indoor
+     * recording has nothing to wake it: its timers are delays and its sensors do not wake the
+     * phone. Rest countdowns stalled and sensor samples arrived in late batches.
+     */
+    private fun holdWakeLock() {
+        if (wakeLock?.isHeld == true) return
+        val power = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WakeLockTag).apply {
+            setReferenceCounted(false)
+            // The limit is a net under a bug, not a plan. A recording releases it long before.
+            acquire(WakeLockLimitMillis)
+        }
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.takeIf { it.isHeld }?.release()
+        wakeLock = null
     }
 
     /** A plan run's notification carries a countdown; state emits are not per second, so a ticker is. */
@@ -280,33 +287,13 @@ class ActivityRecordingService : Service() {
         }
     }
 
-    private fun ActivityRecordingState.foregroundServiceType(): Int {
-        val hasBleDevices = bleDeviceStatuses.isNotEmpty()
-        if (recordingKind == ActivityRecordingKind.GPS_ROUTE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
-            if (
-                activityEntryTypeById(activityTypeId)?.supportsStepCounting == true &&
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
-            ) {
-                type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
-            }
-            if (hasBleDevices && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-            }
-            return type
-        }
-        val usesHealthForegroundType =
-            recordingKind == ActivityRecordingKind.REPETITION || recordingKind == ActivityRecordingKind.TIMED
-        return if (usesHealthForegroundType && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
-            if (hasBleDevices) {
-                type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-            }
-            type
-        } else {
-            0
-        }
-    }
+    private fun ActivityRecordingState.foregroundServiceType(): Int =
+        recordingForegroundServiceType(
+            kind = recordingKind,
+            countsSteps = activityEntryTypeById(activityTypeId)?.supportsStepCounting == true,
+            hasBleDevices = bleDeviceStatuses.isNotEmpty(),
+            sdkInt = Build.VERSION.SDK_INT,
+        )
 
     private fun startSensorUpdates(state: ActivityRecordingState) {
         if (sensorUpdatesStarted) return
@@ -690,3 +677,15 @@ private const val RequestDiscard = 13
 private const val RequestCompletePlanStep = 14
 private const val RequestSkipPlanRest = 15
 private const val NotificationTickMillis = 1_000L
+
+/**
+ * Whether the service must keep the CPU running. A recording and a timed rest both count
+ * seconds and read sensors. A pause does neither, and may last an hour at a café.
+ */
+internal fun ActivityRecordingStatus.needsCpuAwake(): Boolean =
+    this == ActivityRecordingStatus.RECORDING || this == ActivityRecordingStatus.RESTING
+
+private const val WakeLockTag = "OpenVitals:recording"
+
+/** As long as the longest activity the app accepts. */
+private const val WakeLockLimitMillis = 7L * 24 * 60 * 60 * 1000

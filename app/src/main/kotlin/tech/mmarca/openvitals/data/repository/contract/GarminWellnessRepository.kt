@@ -21,4 +21,7 @@ interface GarminWellnessRepository {
 
     /** Total rows held for [metric], for diagnostics. */
     suspend fun countFor(metric: GarminWellnessMetric): Long
+
+    /** Deletes every sample. This table is their only copy, so only the user asks for it. */
+    suspend fun deleteAll()
 }

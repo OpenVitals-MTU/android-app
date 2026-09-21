@@ -590,14 +590,6 @@ private fun sampleWindowText(start: Instant?, end: Instant?): String {
     }
 }
 
-private fun formatOneDecimal(value: Double): String =
-    String.format(Locale.US, "%.1f", value)
-
-private fun formatSignedOneDecimal(value: Double): String {
-    val prefix = if (value > 0.0) "+" else ""
-    return prefix + formatOneDecimal(value)
-}
-
 private fun defaultStressCaveats(): List<String> =
     listOf(
         "This estimate does not diagnose mental stress.",

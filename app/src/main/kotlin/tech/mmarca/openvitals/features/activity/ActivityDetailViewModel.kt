@@ -5,9 +5,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.core.performance.runCatchingCancellable
 import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
@@ -30,10 +34,14 @@ import tech.mmarca.openvitals.domain.model.withSampleBackfilledMetrics
 import tech.mmarca.openvitals.domain.preferences.ActivitySplitDistance
 import tech.mmarca.openvitals.navigation.ACTIVITY_DETAIL_ID_ARG
 import javax.inject.Inject
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Immutable
 internal data class ActivityDetailUiState(
@@ -81,6 +89,7 @@ internal class ActivityDetailViewModel(
     private val markerRepository: ActivityMarkerRepository? = null,
     private val preferencesRepository: PreferencesRepository? = null,
     private val coMapsNavigationRepository: CoMapsNavigationRepository? = null,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
 ) : ViewModel() {
 
     @Inject
@@ -90,6 +99,7 @@ internal class ActivityDetailViewModel(
         markerRepository: ActivityMarkerRepository,
         preferencesRepository: PreferencesRepository,
         coMapsNavigationRepository: CoMapsNavigationRepository,
+        dispatchers: DispatcherProvider,
         savedStateHandle: SavedStateHandle,
     ) : this(
         repository = repository,
@@ -98,6 +108,7 @@ internal class ActivityDetailViewModel(
         markerRepository = markerRepository,
         preferencesRepository = preferencesRepository,
         coMapsNavigationRepository = coMapsNavigationRepository,
+        dispatchers = dispatchers,
     )
 
     private val _uiState = MutableStateFlow(ActivityDetailUiState())
@@ -120,74 +131,84 @@ internal class ActivityDetailViewModel(
 
         loadCoordinator.launch(viewModelScope) load@{
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            runCatching { repository.loadWorkout(activityId) }
-                .onSuccess { workout ->
+            runCatchingCancellable { loadDetail() }
+                .onSuccess { loaded ->
                     if (!isCurrent) return@load
-                    val heartRateSamples = if (workout != null) {
-                        heartRepository?.loadHeartRateSamples(workout.startTime, workout.endTime)
-                            .orEmpty()
-                    } else {
-                        emptyList()
-                    }
-                    // Speed, cadence, markers and recovery degrade to empty on failure.
-                    // The session and the heart-rate read do not.
-                    val speedSamples = if (workout != null) {
-                        runCatching {
-                            repository.loadSpeedSamples(workout.startTime, workout.endTime)
-                        }.getOrDefault(emptyList())
-                    } else {
-                        emptyList()
-                    }
-                    val cadenceSamples = if (workout != null) {
-                        runCatching {
-                            repository.loadActivityCadenceSamples(
-                                workout.startTime,
-                                workout.endTime,
-                            )
-                        }.getOrDefault(emptyList())
-                    } else {
-                        emptyList()
-                    }
-                    val markers = workout?.let { runCatching { loadMarkers(it) }.getOrNull() }
-                        .orEmpty()
-                    val coMapsSamples = workout
-                        ?.let { runCatching { loadCoMapsSamples(it) }.getOrNull() }
-                        .orEmpty()
-                    val heartRateRecovery = workout?.let {
-                        runCatching { loadHeartRateRecovery(it) }.getOrNull()
-                    }
-                    val linkedPlan = workout?.plannedExerciseSessionId?.let { planId ->
-                        runCatching { repository.loadPlannedWorkout(planId) }.getOrNull()
-                    }
-                    val backfilledWorkout = workout?.withSampleBackfilledMetrics(
-                        heartRateSamples = heartRateSamples,
-                        speedSamples = speedSamples,
-                        cadenceSamples = cadenceSamples,
-                    )
-                    val splitDistanceMeters = currentSplitDistanceMeters()
-                    _uiState.value = ActivityDetailUiState(
-                        isLoading = false,
-                        workout = backfilledWorkout,
-                        heartRateSamples = heartRateSamples,
-                        speedSamples = speedSamples,
-                        cadenceSamples = cadenceSamples,
-                        markers = markers,
-                        coMapsSamples = coMapsSamples,
-                        elevationSamples = backfilledWorkout
-                            ?.let { elevationProfile(it.route) }
-                            .orEmpty(),
-                        heartRateRecovery = heartRateRecovery,
-                        linkedPlan = linkedPlan,
-                        error = if (workout == null) ScreenError.NotFound else null,
-                    ).withSplitsCutAt(splitDistanceMeters)
+                    _uiState.value = loaded
                 }
                 .onFailure {
                     if (!isCurrent) return@load
                     _uiState.value = ActivityDetailUiState(
                         isLoading = false,
-                        error = it.toScreenError("Unable to load activity."),
+                        error = it.toScreenError(R.string.screen_error_load_activity),
                     )
                 }
+        }
+    }
+
+    /** The session first. The reads that hang on it then run together. */
+    private suspend fun loadDetail(): ActivityDetailUiState {
+        val splitDistanceMeters = currentSplitDistanceMeters()
+        val workout = repository.loadWorkout(activityId)
+            ?: return ActivityDetailUiState(isLoading = false, error = ScreenError.NotFound)
+                .withSplitsCutAt(splitDistanceMeters)
+        return coroutineScope {
+            // Speed, cadence, markers and recovery degrade to empty on failure.
+            // The session and the heart-rate read do not.
+            val heartRateSamples = async {
+                heartRepository?.loadHeartRateSamples(workout.startTime, workout.endTime).orEmpty()
+            }
+            val speedSamples = async {
+                runCatchingCancellable {
+                    repository.loadSpeedSamples(workout.startTime, workout.endTime)
+                }.getOrDefault(emptyList())
+            }
+            val cadenceSamples = async {
+                runCatchingCancellable {
+                    repository.loadActivityCadenceSamples(workout.startTime, workout.endTime)
+                }.getOrDefault(emptyList())
+            }
+            val markers = async {
+                runCatchingCancellable { loadMarkers(workout) }.getOrNull().orEmpty()
+            }
+            val coMapsSamples = async(dispatchers.io) {
+                runCatchingCancellable { loadCoMapsSamples(workout) }.getOrNull().orEmpty()
+            }
+            val heartRateRecovery = async {
+                runCatchingCancellable { loadHeartRateRecovery(workout) }.getOrNull()
+            }
+            val linkedPlan = async {
+                workout.plannedExerciseSessionId?.let { planId ->
+                    runCatchingCancellable { repository.loadPlannedWorkout(planId) }.getOrNull()
+                }
+            }
+            val heartRate = heartRateSamples.await()
+            val speed = speedSamples.await()
+            val cadence = cadenceSamples.await()
+            val loadedMarkers = markers.await()
+            val loadedCoMapsSamples = coMapsSamples.await()
+            val recovery = heartRateRecovery.await()
+            val plan = linkedPlan.await()
+            // Backfill, height profile and splits walk every sample.
+            withContext(dispatchers.default) {
+                val backfilledWorkout = workout.withSampleBackfilledMetrics(
+                    heartRateSamples = heartRate,
+                    speedSamples = speed,
+                    cadenceSamples = cadence,
+                )
+                ActivityDetailUiState(
+                    isLoading = false,
+                    workout = backfilledWorkout,
+                    heartRateSamples = heartRate,
+                    speedSamples = speed,
+                    cadenceSamples = cadence,
+                    markers = loadedMarkers,
+                    coMapsSamples = loadedCoMapsSamples,
+                    elevationSamples = elevationProfile(backfilledWorkout.route),
+                    heartRateRecovery = recovery,
+                    linkedPlan = plan,
+                ).withSplitsCutAt(splitDistanceMeters)
+            }
         }
     }
 
@@ -205,7 +226,7 @@ internal class ActivityDetailViewModel(
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isDeleting = false,
-                    error = error.toScreenError("Unable to delete activity."),
+                    error = error.toScreenError(R.string.screen_error_delete_activity),
                 )
             }
         }
@@ -260,7 +281,9 @@ internal class ActivityDetailViewModel(
                 val normalized = ActivitySplitDistance.normalize(meters)
                 val state = _uiState.value
                 if (state.splitDistanceMeters == normalized && state.workout == null) return@collect
-                _uiState.value = state.withSplitsCutAt(normalized)
+                val recut = withContext(dispatchers.default) { state.withSplitsCutAt(normalized) }
+                // A load that finished meanwhile already cut its own splits at this distance.
+                _uiState.update { current -> if (current === state) recut else current }
             }
         }
     }

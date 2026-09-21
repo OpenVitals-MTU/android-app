@@ -116,8 +116,14 @@ else
         previous_configured_version_code="$((configured_version_code - 1))"
         expected_version_code="$(sh scripts/version-code.sh next --floor "$previous_configured_version_code")"
         if [ "$expected_version_code" != "$configured_version_code" ]; then
-            echo "baseVersionCode $configured_version_code is stale; next expected versionCode is $expected_version_code." >&2
-            exit 1
+            # A re-run of this tag. Its first run already published the marker, so "next" has
+            # moved past it. Without this a release whose upload failed could never be finished.
+            published_version_code="$(sh scripts/version-code.sh for-tag "$release_tag" --floor 0)"
+            if [ "$published_version_code" != "$configured_version_code" ]; then
+                echo "baseVersionCode $configured_version_code is stale; next expected versionCode is $expected_version_code." >&2
+                exit 1
+            fi
+            echo "Re-running $release_tag: its release already carries versionCode $configured_version_code."
         fi
         version_code="$configured_version_code"
     fi

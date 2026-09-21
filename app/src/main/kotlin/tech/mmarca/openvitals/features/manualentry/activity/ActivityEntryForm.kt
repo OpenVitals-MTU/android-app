@@ -80,7 +80,8 @@ internal fun ActivityEntryCard(
     isEditMode: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val enabled = state.canWrite && !state.isSavingEntry && !state.isCheckingPermission && !state.isImportingRoute
+    val enabled = state.canWrite && !state.isSavingEntry && !state.isCheckingPermission && !state.isImportingRoute &&
+        state.canSaveEdit
     val titleError = state.validationErrorText(ActivityEntryField.TITLE)
     val durationError = state.validationErrorText(ActivityEntryField.DURATION)
 

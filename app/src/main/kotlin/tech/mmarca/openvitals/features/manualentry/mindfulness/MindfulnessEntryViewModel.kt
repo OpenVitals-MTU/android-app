@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry.mindfulness
 
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.features.manualentry.*
 import tech.mmarca.openvitals.features.manualentry.activity.*
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
@@ -501,7 +502,7 @@ class MindfulnessEntryViewModel @Inject constructor(
                 if (session == null || !session.isOpenVitalsEntry) {
                     _uiState.value = _uiState.value.copy(
                         entryError = MindfulnessEntryError.WRITE_FAILED,
-                        writeError = ScreenError.Message("Only OpenVitals entries can be edited."),
+                        writeError = ScreenError.Text(R.string.screen_error_entry_not_editable),
                     )
                     return@onSuccess
                 }

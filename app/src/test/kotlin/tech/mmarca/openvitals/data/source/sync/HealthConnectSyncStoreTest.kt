@@ -18,6 +18,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -325,5 +326,53 @@ class HealthConnectSyncStoreTest {
         // The batch was rejected, so its key is not reported as written.
         assertEquals(emptySet<String>(), written)
         assertEquals(0, hc.count)
+    }
+
+    // What this phone keeps. The peer chooses what it sends, not what lands here.
+
+    private fun wireItem(record: Record): SyncItem = SyncItem(
+        key = syncFingerprint(record),
+        recordType = record::class.simpleName!!,
+        payload = encodeSyncRecordPayload(record),
+    )
+
+    @Test
+    fun `a record from before the chosen window is not accepted`() {
+        val old = WeightRecord(
+            time = windowStart.minusSeconds(1),
+            zoneOffset = null,
+            weight = Mass.kilograms(70.0),
+            metadata = Metadata.manualEntry(device = Device(type = Device.TYPE_PHONE)),
+        )
+
+        assertFalse(storeOver(FakeHealthConnect()).accepts(wireItem(old)))
+        assertTrue(storeOver(FakeHealthConnect()).accepts(wireItem(weight(day = 5, kilograms = 70.0))))
+    }
+
+    @Test
+    fun `a record a little past the window's end is still accepted`() {
+        // The window ends when Start sync is pressed, and the two clocks differ.
+        val soon = WeightRecord(
+            time = windowEnd.plusSeconds(3_600),
+            zoneOffset = null,
+            weight = Mass.kilograms(70.0),
+            metadata = Metadata.manualEntry(device = Device(type = Device.TYPE_PHONE)),
+        )
+        val farFuture = WeightRecord(
+            time = windowEnd.plusSeconds(10L * 24 * 3_600),
+            zoneOffset = null,
+            weight = Mass.kilograms(70.0),
+            metadata = Metadata.manualEntry(device = Device(type = Device.TYPE_PHONE)),
+        )
+
+        assertTrue(storeOver(FakeHealthConnect()).accepts(wireItem(soon)))
+        assertFalse(storeOver(FakeHealthConnect()).accepts(wireItem(farFuture)))
+    }
+
+    @Test
+    fun `an unreadable payload is left to the write path, which reports it`() {
+        val broken = SyncItem(key = "k", recordType = "WeightRecord", payload = "not json".toByteArray())
+
+        assertTrue(storeOver(FakeHealthConnect()).accepts(broken))
     }
 }

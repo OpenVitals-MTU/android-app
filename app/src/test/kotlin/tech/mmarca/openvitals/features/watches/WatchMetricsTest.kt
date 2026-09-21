@@ -39,6 +39,8 @@ class WatchMetricsTest {
 
         override suspend fun countFor(metric: GarminWellnessMetric): Long =
             samples.count { it.metric == metric }.toLong()
+
+        override suspend fun deleteAll() = Unit
     }
 
     private val zone = ZoneId.of("UTC")

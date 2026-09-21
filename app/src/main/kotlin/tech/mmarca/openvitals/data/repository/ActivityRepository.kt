@@ -24,6 +24,7 @@ import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
 import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.DailySteps
+import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
@@ -365,6 +366,23 @@ class ActivityRepositoryImpl @Inject constructor(
             includeStepsCadence = readStepsCadencePermission in granted,
             includeCyclingCadence = readCyclingCadencePermission in granted,
             includeHeartRate = readHeartRatePermission in granted,
+        )
+    }
+
+    override suspend fun loadWorkoutForEdit(id: String): ExerciseData? {
+        val workout = loadWorkout(id) ?: return null
+        val own = hc.readOwnActivityMetrics(id)
+        return workout.copy(
+            steps = own.steps,
+            totalDistanceMeters = own.distanceMeters,
+            elevationGainedMeters = own.elevationGainedMeters,
+            activeCaloriesKcal = own.activeCaloriesKcal,
+            totalCaloriesKcal = own.totalCaloriesKcal,
+            totalCaloriesSource = if (own.totalCaloriesKcal != null) {
+                CaloriesBurnedSource.RECORDED_TOTAL
+            } else {
+                CaloriesBurnedSource.NO_DATA
+            },
         )
     }
 

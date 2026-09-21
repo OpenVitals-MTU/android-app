@@ -4,16 +4,15 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
-import java.io.ByteArrayInputStream
-import java.util.zip.GZIPInputStream
 import javax.inject.Inject
-import org.json.JSONObject
+import kotlin.concurrent.thread
 import tech.mmarca.openvitals.devices.garmin.GarminLog
 
 /**
  * Receives weather from a companion app (Breezy Weather) over the
  * generic-weather broadcast. This is the only weather source. Exported on
- * purpose: the payload is public weather, and freshness is capped.
+ * purpose: the payload is public weather, and freshness is capped. Any app can
+ * send it, so [GenericWeatherPayload] caps every size before it parses.
  */
 @AndroidEntryPoint
 class GenericWeatherReceiver : BroadcastReceiver() {
@@ -24,34 +23,27 @@ class GenericWeatherReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action !in ACCEPTED_ACTIONS) return
         val bundle = intent.extras ?: return
-        try {
-            val json = bundle.getString(EXTRA_WEATHER_JSON)
-                ?: bundle.getByteArray(EXTRA_WEATHER_GZ)?.let(::gunzip)
-                ?: return
-            // The gzipped form is an array of locations; only the primary matters.
-            val primary = json.trimStart().let { trimmed ->
-                if (trimmed.startsWith("[")) {
-                    org.json.JSONArray(trimmed).optJSONObject(0) ?: return
-                } else {
-                    JSONObject(trimmed)
-                }
+        val json = bundle.getString(EXTRA_WEATHER_JSON)
+        val gzipped = bundle.getByteArray(EXTRA_WEATHER_GZ)
+        if (json == null && gzipped == null) return
+        // Inflating and parsing do not belong on the main thread.
+        val pending = goAsync()
+        thread(name = "generic-weather") {
+            try {
+                val snapshot = GenericWeatherPayload.decode(json, gzipped) ?: return@thread
+                store.save(snapshot)
+                GarminLog.log(
+                    "[WEATHER] received ${snapshot.location.ifBlank { "(unnamed)" }} " +
+                        "${snapshot.currentTempKelvin}K, ${snapshot.hourly.size}h/" +
+                        "${snapshot.daily.size}d forecast",
+                )
+            } catch (error: Exception) {
+                GarminLog.log("[WEATHER] broken weather broadcast: $error")
+            } finally {
+                pending.finish()
             }
-            val snapshot = WeatherSnapshot.fromJson(primary)
-            store.save(snapshot)
-            GarminLog.log(
-                "[WEATHER] received ${snapshot.location.ifBlank { "(unnamed)" }} " +
-                    "${snapshot.currentTempKelvin}K, ${snapshot.hourly.size}h/" +
-                    "${snapshot.daily.size}d forecast",
-            )
-        } catch (error: Exception) {
-            GarminLog.log("[WEATHER] broken weather broadcast: $error")
         }
     }
-
-    private fun gunzip(compressed: ByteArray): String =
-        GZIPInputStream(ByteArrayInputStream(compressed)).use { stream ->
-            stream.readBytes().toString(Charsets.UTF_8)
-        }
 
     companion object {
         /** The generic-weather action, plus a native alias. */

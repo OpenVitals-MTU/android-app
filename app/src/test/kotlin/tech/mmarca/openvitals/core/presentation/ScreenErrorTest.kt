@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.core.presentation
 
+import tech.mmarca.openvitals.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -29,9 +30,13 @@ class ScreenErrorTest {
         assertEquals(ScreenError.Message("the provider hung up"), error)
     }
 
-    @Test fun `toScreenError uses fallback when message blank`() {
-        val error = RuntimeException("").toScreenError("fallback")
-        assertEquals(ScreenError.Message("fallback"), error)
+    @Test fun `a failure with no message shows our own sentence, which is translated`() {
+        val error = RuntimeException("").toScreenError(R.string.screen_error_load_activity)
+        assertEquals(ScreenError.Text(R.string.screen_error_load_activity), error)
+    }
+
+    @Test fun `with no sentence named, the generic one is used`() {
+        assertEquals(ScreenError.Text(R.string.screen_error_generic), RuntimeException().toScreenError())
     }
 
     @Test fun `toScreenError logs throwable conversion`() {

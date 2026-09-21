@@ -12,11 +12,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.KeyEvent
 import androidx.core.app.NotificationManagerCompat
-import dagger.Binds
-import dagger.Module
-import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
 import javax.inject.Inject
 import javax.inject.Singleton
 import tech.mmarca.openvitals.devices.garmin.GarminLog
@@ -187,12 +183,4 @@ class AndroidPhoneMediaSource @Inject constructor(
         val manager = context.packageManager
         manager.getApplicationLabel(manager.getApplicationInfo(packageName, 0)).toString()
     }.getOrNull()
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
-internal interface PhoneMediaModule {
-    @Binds
-    @Singleton
-    fun bindPhoneMediaSource(implementation: AndroidPhoneMediaSource): PhoneMediaSource
 }

@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
@@ -422,7 +423,7 @@ class HydrationEntryViewModel @Inject constructor(
                 if (entry == null || !entry.isOpenVitalsEntry) {
                     _uiState.value = _uiState.value.copy(
                         entryError = HydrationEntryError.WRITE_FAILED,
-                        writeError = ScreenError.Message("Only OpenVitals entries can be edited."),
+                        writeError = ScreenError.Text(R.string.screen_error_entry_not_editable),
                     )
                     return@onSuccess
                 }

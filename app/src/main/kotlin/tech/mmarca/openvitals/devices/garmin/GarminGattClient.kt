@@ -366,6 +366,14 @@ class GarminGattClient(
         }
         val device = runCatching { adapter.getRemoteDevice(address) }.getOrNull()
             ?: throw GarminGattClientException("Invalid device address")
+        // The bond is the only proof that this is the user's watch: the GFDI handshake
+        // just echoes. Without it any device that borrows the address would be sent
+        // notifications, calendar entries and the phone's position.
+        if (device.bondState != BluetoothDevice.BOND_BONDED) {
+            throw GarminGattClientException(
+                "The watch is no longer paired with this phone. Remove it and add it again.",
+            )
+        }
 
         gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
         val connectResult = withTimeoutOrNull(CONNECT_TIMEOUT) {

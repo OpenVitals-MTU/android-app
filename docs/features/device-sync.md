@@ -27,7 +27,7 @@ Both phones choose their own range and their own categories. The exchange uses t
 
 The exchange is bidirectional within a single session. Both phones send and receive over the same connection at the same time, and each phone reports what it wrote.
 
-The category selection controls what this phone sends. What it receives is decided by the other phone's selection, which is why the picker is framed as what to accept and shows the types both phones agreed on.
+Each phone's choices control both what it sends and what it keeps. The other phone decides what it sends; this phone writes a record only when its type is selected here and it starts inside the range chosen here. Anything else is counted in the report as not accepted and is never written. So a category moves only when both phones selected it, and "Last 30 days" on one phone holds even when the other chose "Everything".
 
 ## Bluetooth, Not The Internet
 

@@ -13,7 +13,14 @@ internal class RfcommClient(private val adapter: BluetoothAdapter) {
         // An active scan starves the RFCOMM connect.
         if (adapter.isDiscovering) adapter.cancelDiscovery()
         val socket = device.createRfcommSocketToServiceRecord(SyncBluetooth.APP_UUID)
-        socket.connect()
+        try {
+            socket.connect()
+        } catch (error: Exception) {
+            // A socket that failed to connect still holds its RFCOMM channel until it is
+            // closed. Left open, the next try to the same phone fails too.
+            runCatching { socket.close() }
+            throw error
+        }
         return socket
     }
 }

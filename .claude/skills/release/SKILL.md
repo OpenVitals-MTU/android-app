@@ -63,6 +63,10 @@ script's printed `versionCode` matches the filenames.
 bash scripts/release.sh X.Y.Z
 ```
 
+The script stops unless the instrumented tests passed for the committed `app/`
+sources. CI cannot run them. Run `ANDROID_SERIAL=<serial> ./gradlew verifyAndroidTest`
+first, or set `OPENVITALS_SKIP_DEVICE_TESTS=1` when no device is at hand.
+
 The script computes the version code, patches `baseVersionCode` and
 `baseVersionName` in `app/build.gradle.kts` and the `-SNAPSHOT` fallback in
 `build.gradle.kts`, commits `chore: release X.Y.Z` (staging CHANGELOG, README,

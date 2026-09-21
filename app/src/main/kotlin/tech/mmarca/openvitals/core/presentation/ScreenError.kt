@@ -1,13 +1,18 @@
 package tech.mmarca.openvitals.core.presentation
 
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.CancellationException
 import tech.mmarca.openvitals.R
 
 sealed interface ScreenError {
+    /** Text from outside the app, such as an exception message. Shown as it is. */
     data class Message(val text: String) : ScreenError
+
+    /** A sentence of ours. It is translated when it is shown. */
+    data class Text(@param:StringRes val messageRes: Int) : ScreenError
     data object NotFound : ScreenError
     data object MissingArgument : ScreenError
     data object PermissionDenied : ScreenError
@@ -23,7 +28,7 @@ fun Throwable.isPermissionFailure(): Boolean =
         .any { it is SecurityException }
 
 fun Throwable.toScreenError(
-    fallback: String = "Unable to complete the request.",
+    @StringRes fallback: Int = R.string.screen_error_generic,
     logTag: String = ScreenErrorLogTag,
     logMessage: String = "Showing throwable as screen error",
 ): ScreenError = ScreenErrorHandler.handle(
@@ -36,7 +41,7 @@ fun Throwable.toScreenError(
 )
 
 fun <T> Result<T>.onScreenError(
-    fallback: String = "Unable to complete the request.",
+    @StringRes fallback: Int = R.string.screen_error_generic,
     logTag: String = ScreenErrorLogTag,
     logMessage: String = "Showing throwable as screen error",
     onError: (ScreenError) -> Unit,
@@ -54,6 +59,7 @@ fun <T> Result<T>.onScreenError(
 fun ScreenError?.resolve(): String? = when (this) {
     null -> null
     is ScreenError.Message -> text
+    is ScreenError.Text -> stringResource(messageRes)
     ScreenError.NotFound -> stringResource(R.string.screen_error_not_found)
     ScreenError.MissingArgument -> stringResource(R.string.screen_error_missing_argument)
     ScreenError.PermissionDenied -> stringResource(R.string.screen_error_permission_denied)
@@ -61,7 +67,8 @@ fun ScreenError?.resolve(): String? = when (this) {
 }
 
 data class ScreenErrorContext(
-    val fallback: String = "Unable to complete the request.",
+    /** Shown when the throwable carries no message of its own. */
+    @param:StringRes val fallback: Int = R.string.screen_error_generic,
     val logTag: String = ScreenErrorLogTag,
     val logMessage: String = "Showing throwable as screen error",
 )
@@ -77,7 +84,7 @@ object ScreenErrorHandler {
         return throwable.message
             ?.takeIf { it.isNotBlank() }
             ?.let(ScreenError::Message)
-            ?: ScreenError.Message(context.fallback)
+            ?: ScreenError.Text(context.fallback)
     }
 
     fun warn(tag: String, message: String, throwable: Throwable) {

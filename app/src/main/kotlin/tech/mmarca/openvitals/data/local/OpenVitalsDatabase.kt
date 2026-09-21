@@ -30,8 +30,8 @@ import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
         SyncedRecordOriginEntity::class,
         GarminSleepMinuteEntity::class,
     ],
-    version = 10,
-    exportSchema = false,
+    version = OpenVitalsDatabase.VERSION,
+    exportSchema = true,
 )
 abstract class OpenVitalsDatabase : RoomDatabase() {
     abstract fun beverageDao(): BeverageDao
@@ -47,6 +47,9 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
     abstract fun syncedRecordOriginDao(): SyncedRecordOriginDao
 
     companion object {
+        /** Raise it with a new migration in [ALL_MIGRATIONS], and commit the schema file Room then writes. */
+        const val VERSION = 10
+
         val MIGRATION_1_3 = beverageMigration(1)
         val MIGRATION_2_3 = beverageMigration(2)
         val MIGRATION_3_4 = object : Migration(3, 4) {
@@ -96,6 +99,23 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                 createGarminSleepMinutesTable(db)
             }
         }
+
+        /**
+         * Every migration, in one place. The database builder takes this list, so a migration
+         * cannot be written and then left out of it.
+         */
+        val ALL_MIGRATIONS: Array<Migration>
+            get() = arrayOf(
+                MIGRATION_1_3,
+                MIGRATION_2_3,
+                MIGRATION_3_4,
+                MIGRATION_4_5,
+                MIGRATION_5_6,
+                MIGRATION_6_7,
+                MIGRATION_7_8,
+                MIGRATION_8_9,
+                MIGRATION_9_10,
+            )
 
         private fun beverageMigration(startVersion: Int): Migration =
             object : Migration(startVersion, 3) {

@@ -18,4 +18,7 @@ interface GarminSleepMinuteRepository {
 
     /** Drops minutes older than [before]. */
     suspend fun pruneBefore(before: Instant)
+
+    /** Drops every minute. They only feed the sleep-stage estimate of a paired watch. */
+    suspend fun deleteAll()
 }

@@ -117,20 +117,21 @@ fun MetricLinePlot(
     val cache = remember { PlotGeometryCache() }
     val fill = remember(accentColor) { ChartTokens.areaFill(accentColor) }
 
-    // Snapping targets: the samples on show, in plot space.
-    val targets = if (scrubLabel == null || points.size < 2) {
-        emptyList()
-    } else {
-        points.mapNotNull { point ->
-            val visible = viewport.visibleFraction(point.xFraction)
-            if (visible < 0f || visible > 1f) return@mapNotNull null
-            val (primary, secondary) = scrubLabel(point)
-            ScrubTarget(
-                xFraction = visible,
-                yFraction = ((point.value - minValue) / safeSpan).toFloat().coerceIn(0f, 1f),
-                primary = primary,
-                secondary = secondary,
-            )
+    // Snapping targets: the samples on show, in plot space. Remembered, so only a change
+    // of the data or the viewport rebuilds them, and their labels wait until a scrub asks.
+    val targets = remember(points, viewport, minValue, safeSpan, scrubLabel) {
+        if (scrubLabel == null || points.size < 2) {
+            emptyList()
+        } else {
+            points.mapNotNull { point ->
+                val visible = viewport.visibleFraction(point.xFraction)
+                if (visible < 0f || visible > 1f) return@mapNotNull null
+                ScrubTarget(
+                    xFraction = visible,
+                    yFraction = ((point.value - minValue) / safeSpan).toFloat().coerceIn(0f, 1f),
+                    label = { scrubLabel(point) },
+                )
+            }
         }
     }
 
@@ -348,21 +349,12 @@ fun MetricLineChart(
     onDateSelected: ((LocalDate) -> Unit)? = null,
     valueFormatter: (Double) -> String = ::formatCompactAxisValue,
 ) {
-    val visibleSeries = series
-        .map { chartSeries ->
-            chartSeries.copy(points = chartSeries.points.filter { point ->
-                point.value.isFinite() && !point.date.isBefore(period.start) && !point.date.isAfter(period.end)
-            })
-        }
-        .filter { it.points.isNotEmpty() }
-    val allPoints = visibleSeries.flatMap { it.points }
-    if (allPoints.isEmpty()) return
-    if (selectedRange == TimeRange.DAY && allPoints.mapNotNull { it.time }.distinct().size <= 1) return
-
-    val allValues = allPoints.map { it.value }
-    val minValue = allValues.minOrNull() ?: return
-    val maxValue = allValues.maxOrNull() ?: return
-    val (axisMin, axisMax) = paddedLineAxisRange(minValue, maxValue)
+    // Once per data change. These passes used to run on every recomposition, and a pinch or a
+    // day selection recomposes the chart many times over the same points.
+    val frame = remember(series, period, selectedRange) { metricLineChartFrame(series, period, selectedRange) }
+        ?: return
+    val visibleSeries = frame.series
+    val (axisMin, axisMax) = paddedLineAxisRange(frame.minValue, frame.maxValue)
     val axisDates = remember(period) { datesInPeriod(period) }
     // A year of days gives 365 slots for twelve month names. Borrow the bar
     // chart's twelve buckets instead.
@@ -381,6 +373,24 @@ fun MetricLineChart(
         Duration.between(dayStart, dayEnd).toMillis().coerceAtLeast(1L)
     }
     val periodDayCount = axisDates.size.coerceAtLeast(1)
+    // Where each point sits in the plot, as fractions. The draw only scales them. They were
+    // worked out again on every draw, with a date difference per point.
+    val seriesFractions = remember(frame, period, dayStart, dayDurationMillis, periodDayCount, axisMin, axisMax) {
+        visibleSeries.map { lineSeries ->
+            lineSeries.points.map { point ->
+                metricLinePointFraction(
+                    point = point,
+                    selectedRange = selectedRange,
+                    period = period,
+                    dayStart = dayStart,
+                    dayDurationMillis = dayDurationMillis,
+                    periodDayCount = periodDayCount,
+                    minValue = axisMin,
+                    maxValue = axisMax,
+                )
+            }
+        }
+    }
     val gridColor = ChartTokens.grid(accentColor)
     val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
 
@@ -443,16 +453,9 @@ fun MetricLineChart(
                         )
                         // Zoomed, the line runs past the plot edges: clip, never clamp.
                         val drawSeries: DrawScope.() -> Unit = {
-                            visibleSeries.forEach { lineSeries ->
+                            visibleSeries.forEachIndexed { index, lineSeries ->
                                 drawMetricLineSeries(
-                                    points = lineSeries.points,
-                                    selectedRange = selectedRange,
-                                    period = period,
-                                    dayStart = dayStart,
-                                    dayDurationMillis = dayDurationMillis,
-                                    periodDayCount = periodDayCount,
-                                    minValue = axisMin,
-                                    maxValue = axisMax,
+                                    fractions = seriesFractions[index],
                                     color = lineSeries.color,
                                     viewport = viewport,
                                 )
@@ -795,8 +798,44 @@ private fun MetricLineLegend(series: List<MetricLineSeries>) {
     }
 }
 
-private fun DrawScope.drawMetricLineSeries(
-    points: List<MetricLinePoint>,
+/** What [MetricLineChart] draws, worked out once per data change. Null when there is nothing to draw. */
+internal class MetricLineChartFrame(
+    val series: List<MetricLineSeries>,
+    val minValue: Double,
+    val maxValue: Double,
+)
+
+internal fun metricLineChartFrame(
+    series: List<MetricLineSeries>,
+    period: DatePeriod,
+    selectedRange: TimeRange,
+): MetricLineChartFrame? {
+    val visible = series
+        .map { chartSeries ->
+            chartSeries.copy(points = chartSeries.points.filter { point ->
+                point.value.isFinite() && !point.date.isBefore(period.start) && !point.date.isAfter(period.end)
+            })
+        }
+        .filter { it.points.isNotEmpty() }
+    if (visible.isEmpty()) return null
+    var minValue = Double.POSITIVE_INFINITY
+    var maxValue = Double.NEGATIVE_INFINITY
+    val times = if (selectedRange == TimeRange.DAY) HashSet<Instant>() else null
+    for (chartSeries in visible) {
+        for (point in chartSeries.points) {
+            if (point.value < minValue) minValue = point.value
+            if (point.value > maxValue) maxValue = point.value
+            point.time?.let { times?.add(it) }
+        }
+    }
+    // One instant is a dot, not a line.
+    if (times != null && times.size <= 1) return null
+    return MetricLineChartFrame(visible, minValue, maxValue)
+}
+
+/** A point's place in the plot: x and y in 0..1, y measured from the top. */
+internal fun metricLinePointFraction(
+    point: MetricLinePoint,
     selectedRange: TimeRange,
     period: DatePeriod,
     dayStart: Instant,
@@ -804,24 +843,33 @@ private fun DrawScope.drawMetricLineSeries(
     periodDayCount: Int,
     minValue: Double,
     maxValue: Double,
+): Offset {
+    val range = (maxValue - minValue).coerceAtLeast(1.0)
+    val xFraction = if (selectedRange == TimeRange.DAY) {
+        val pointTime = point.time ?: point.date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+        val elapsed = Duration.between(dayStart, pointTime).toMillis().coerceIn(0L, dayDurationMillis)
+        elapsed.toFloat() / dayDurationMillis
+    } else {
+        val daysFromStart = ChronoUnit.DAYS.between(period.start, point.date)
+            .coerceIn(0L, (periodDayCount - 1).toLong())
+        (daysFromStart + 0.5f) / periodDayCount
+    }
+    return Offset(
+        x = xFraction,
+        y = 1f - ((point.value - minValue) / range).toFloat().coerceIn(0f, 1f),
+    )
+}
+
+private fun DrawScope.drawMetricLineSeries(
+    fractions: List<Offset>,
     color: Color,
     viewport: ChartViewport,
 ) {
-    val range = (maxValue - minValue).coerceAtLeast(1.0)
-    val positioned = points.map { point ->
-        val xFraction = if (selectedRange == TimeRange.DAY) {
-            val pointTime = point.time ?: point.date.atStartOfDay(ZoneId.systemDefault()).toInstant()
-            val elapsed = Duration.between(dayStart, pointTime).toMillis().coerceIn(0L, dayDurationMillis)
-            elapsed.toFloat() / dayDurationMillis
-        } else {
-            val daysFromStart = ChronoUnit.DAYS.between(period.start, point.date)
-                .coerceIn(0L, (periodDayCount - 1).toLong())
-            (daysFromStart + 0.5f) / periodDayCount
-        }
+    val positioned = fractions.map { fraction ->
         Offset(
             // Full viewport is a no-op.
-            x = size.width * viewport.visibleFraction(xFraction),
-            y = size.height * (1f - ((point.value - minValue) / range).toFloat().coerceIn(0f, 1f)),
+            x = size.width * viewport.visibleFraction(fraction.x),
+            y = size.height * fraction.y,
         )
     }
 

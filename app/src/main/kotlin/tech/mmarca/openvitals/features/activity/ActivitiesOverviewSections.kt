@@ -464,6 +464,8 @@ internal fun ActivityOverviewWorkoutRow(
             onDelete = onDelete,
             modifier = modifier,
             shape = MaterialTheme.shapes.medium,
+            // A workout carries a route and sensor samples. The screen asks first.
+            asksBeforeDeleting = true,
         ) {
             ActivityOverviewWorkoutRowContent(
                 workout = workout,

@@ -524,6 +524,41 @@ class SyncSessionTest {
         assertTrue("s1" in guestStore.keys)
     }
 
+    @Test
+    fun `a type this phone did not pick is refused, even when the other phone sends it`() = runTest {
+        val hostStore = FakeRecordStore(
+            listOf(item("s1", type = "StepsRecord"), item("h1", type = "HeartRateRecord")),
+        )
+        val guestStore = FakeRecordStore()
+
+        val (_, guestReport) = runPair(hostStore, guestStore, guestSelected = listOf("StepsRecord"))
+
+        assertEquals(setOf("s1"), guestStore.keys)
+        assertEquals(1, guestReport.imported)
+        assertEquals(1, guestReport.refused)
+        assertEquals(1, guestReport.typeSummaries.first { it.recordType == "HeartRateRecord" }.refused)
+    }
+
+    @Test
+    fun `a record the store does not accept is refused and never written`() = runTest {
+        // The real store refuses a date before "how far back".
+        val hostStore = FakeRecordStore(listOf(item("new"), item("too-old")))
+        val guestStore = object : SyncRecordStore by FakeRecordStore() {
+            val written = mutableListOf<String>()
+            override fun accepts(item: SyncItem): Boolean = item.key != "too-old"
+            override suspend fun writeItems(items: List<SyncItem>): Set<String> {
+                written += items.map { it.key }
+                return items.map { it.key }.toSet()
+            }
+        }
+
+        val (_, guestReport) = runPair(hostStore, guestStore)
+
+        assertEquals(listOf("new"), guestStore.written)
+        assertEquals(1, guestReport.refused)
+        assertEquals(1, guestReport.imported)
+    }
+
     // Write accounting.
 
     @Test

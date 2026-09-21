@@ -9,8 +9,8 @@ The repo now has one Android app module for the local app. The goal is to keep b
 ## Current Snapshot
 
 - App namespace: `tech.mmarca.openvitals`
-- Project shape: one local Android app module under `app/`
-- Dependency wiring: Hilt in the single `:app` module, rooted at [`OpenVitalsApp`](../../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt); modules are `di/AppModule.kt`, `di/RepositoryModule.kt`, and `di/DevicesModule.kt`
+- Project shape: two Gradle modules. The phone app is `:app`, under `app/`. `:wear` is a Wear OS placeholder with its own CI gate. The rest of this document is about `:app`
+- Dependency wiring: Hilt in `:app`, rooted at [`OpenVitalsApp`](../../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt); modules are `di/AppModule.kt`, `di/RepositoryModule.kt`, and `di/DevicesModule.kt`
 - UI stack: Jetpack Compose + Material 3 app shell + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
 - Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
 - App-local domain code: pure models, insight calculations, and preference enums under [`domain`](../../app/src/main/kotlin/tech/mmarca/openvitals/domain)
@@ -18,7 +18,7 @@ The repo now has one Android app module for the local app. The goal is to keep b
 - Feature repositories: in place for activity, sleep, heart, body, body energy, caffeine, hydration, nutrition, mindfulness, cycle, and vitals
 - Dashboard: still a dedicated day-based summary screen, not a period-detail screen
 - Manual entry: separate from the dashboard and writes explicit user-entered records directly to Health Connect
-- Room is at schema version 10. It holds derived summary caches plus the two tables Health Connect cannot represent (`garmin_wellness_samples`, `garmin_sleep_minutes`); Health Connect remains the source of truth for everything it has a record type for
+- Room is at schema version 10. It holds derived summary caches plus the three tables Health Connect cannot represent (`garmin_wellness_samples`, `garmin_sleep_minutes`, `synced_record_origins`); Health Connect remains the source of truth for everything it has a record type for
 - WorkManager is used for user-started Apple Health imports, offline map imports, lightweight metric summary warmup, and the opt-in periodic watch sync
 - Device integration lives under [`devices`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices): the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, and notification forwarding
 - Phone-to-phone Health Connect sync lives under [`features/devicesync`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/devicesync) and runs over Bluetooth Classic RFCOMM
@@ -30,11 +30,12 @@ Most importantly, body and entry/session browsing now live in metric-owned detai
 
 | Package | Owns |
 |---|---|
-| `core/` | app-wide primitives: `period`, `presentation`, `stats`, `geo`, `fit`, `performance`, `diagnostics` |
+| `comaps/` | the CoMaps navigation provider: the `ContentResolver` source and the guidance feed |
+| `core/` | app-wide primitives: `period`, `presentation`, `stats`, `geo`, `fit`, `performance`, `diagnostics`, `export` (share staging), `permissions` (OS runtime permissions) |
 | `data/` | `local` (Room), `repository` (feature-facing repositories + `contract` interfaces), `sync` (history/backfill services), `migration` (one-time Flutter import) |
-| `devices/` | device integration: `core` (ports, radio lease, pairing), `garmin` (GFDI stack), `wearos`, `notifications` (notification listener) |
+| `devices/` | device integration: `core` (ports, radio lease, pairing), `garmin` (GFDI stack), `wearos`, `notifications` (notification listener), `media` (the phone's players, for music controls), `weather` (the weather a watch asks for) |
 | `di/` | `AppModule`, `RepositoryModule`, `DevicesModule` |
-| `domain/` | pure models, insights, preferences, queries, use cases |
+| `domain/` | pure code: `model`, `insights`, `preferences`, `query`, `usecase`, `cycle`, `dashboard` (the aggregator), `report` (report roll-ups) |
 | `features/` | one package per user-facing feature area |
 | `healthconnect/` | the Health Connect integration boundary: manager, per-area readers, permission/UX services |
 | `navigation/` | routes and graph registration |
@@ -198,7 +199,7 @@ Current boundary shape:
 - `HealthRepository` is now intentionally narrow: Health Connect availability, permission state, and dashboard aggregation.
 - Feature repositories are thin, permission-aware facades over `HealthConnectManager`.
 - Manual entry ViewModels use the same feature repositories for writes, so write permission and write behavior stay below the UI route.
-- `healthconnect` depends on app-local domain models, not on `data.repository`; repositories depend on `healthconnect` and `domain`.
+- `healthconnect` depends on app-local domain models; repositories depend on `healthconnect` and `domain`. The readers, writers and mappers import nothing from `data.repository`. Five permission and gate classes do: they read `PreferencesRepository`, and one reads the `HealthRepository` contract. `HealthConnectLayeringTest` lists them and fails on a sixth.
 
 This is a meaningful improvement over the earlier centralized repository approach. New feature reads should follow the feature-repository pattern, not expand `HealthRepository`.
 
@@ -206,7 +207,9 @@ Some repositories are now split into a `data/repository/contract/` interface and
 
 ### Local storage
 
-[`OpenVitalsDatabase`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/local/OpenVitalsDatabase.kt) is at `version = 10`, `exportSchema = false`, with migrations declared in its companion object.
+[`OpenVitalsDatabase`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/local/OpenVitalsDatabase.kt) is at `VERSION = 10`, with migrations declared in its companion object and listed once, in `ALL_MIGRATIONS`, which the database builder takes. Room exports the schema of each version to [`app/schemas`](../../app/schemas); the files are committed.
+
+To change the schema: raise `VERSION`, write the migration, add it to `ALL_MIGRATIONS`, build once, and commit the new schema file. `OpenVitalsDatabaseSchemaTest` fails until all of that is done: it replays every migration's statements and compares the tables they leave with the exported schema. It can do that on the JVM because the migrations only create and drop tables. A migration that alters a table needs a real database, so add `room-testing` and a `MigrationTestHelper` test with it; the exported schemas are what that helper reads.
 
 | Table | Package | Purpose |
 |---|---|---|
@@ -214,6 +217,7 @@ Some repositories are now split into a `data/repository/contract/` interface and
 | `vitals_daily_aggregates`, `vitals_sync_cursors` | `data/local/vitalscache` | derived daily summary cache and change-token cursors |
 | `body_energy_days`, `body_energy_buckets` | `data/local/bodyenergy` | the Body Energy chain, moved off SharedPreferences in migration 4 → 5 |
 | `garmin_wellness_samples` | `data/local/garmin` | watch-only wellness series, added in migration 5 → 6 |
+| `synced_record_origins` | `data/local/syncorigin` | the source app of each record received from another phone, added in migration 6 → 7 |
 | `garmin_sleep_minutes` | `data/local/garmin` | per-minute input for estimated sleep stages, added in migration 9 → 10 |
 
 `garmin_wellness_samples` is the one table that is not a cache. It is the system of record for the series a Garmin watch produces that Health Connect has no record type for (stress, Body Battery, watch sleep scores). Its schema is `(metric, time_millis, value)` with `(metric, time_millis)` as the primary key, so re-syncing an overlapping window rewrites rows instead of duplicating them.
@@ -388,7 +392,7 @@ Classification and onboarding only. There is no protocol: `OnboardWearOsWatchUse
 
 ### Hilt wiring
 
-`di/DevicesModule.kt` is the only module for this layer. It binds `BleWatchPairing` to `WatchPairingPort` and `GarminWatchSyncService` to `DeviceSyncPort`, and provides the GATT probe and the two `SharedPreferences`-backed stores. Everything else is constructor injection. There are no `@Module` declarations inside `devices/` itself; keep it that way.
+`di/DevicesModule.kt` is the only module for this layer. It binds `BleWatchPairing` to `WatchPairingPort` and `GarminWatchSyncService` to `DeviceSyncPort`, binds `AndroidPhoneMediaSource` to `PhoneMediaSource`, and provides the GATT probe, the two `SharedPreferences`-backed stores and the one `GarminFileStore`. Everything else is constructor injection. There are no `@Module` declarations inside `devices/` itself; keep it that way. `DevicesLayeringTest` fails on one.
 
 Live BLE sensor streaming during activity recording still lives in `sensors/ble`. Phone-to-phone sync is `features/devicesync`, below.
 
@@ -548,7 +552,7 @@ Two bounded exceptions exist today and should stay bounded:
 - **Constant vocabularies.** Display code may reference Health Connect's constant sets where the app has no reason to mirror them — `ExerciseSessionRecord` exercise types, `ExerciseSegment`, `MealType`, `SexualActivityRecord` protection values. That is naming, not data access.
 - **Write and import paths.** Importers and sync legitimately build `Record` instances. Each concentrates that in one place (`features/imports/applehealth`, `features/imports/csv`, `features/imports/garmin`, `features/devicesync/store/SyncRecordCodec.kt`, `devices/garmin/wellness/FitWellnessImport.kt`) and writes through `AppleHealthImportRepository.insertImportedRecords`, which is what makes deterministic `clientRecordId` upserts consistent across all of them.
 
-**A writer reads strictly.** The readers return a fallback (an empty list, a null) when a read fails, is rate limited, or sync is paused. That suits a screen, which wants an empty state. It is wrong for code that saves what it read: a cache rebuild, a derived-record reconcile. Such code wraps its reads in `withStrictHealthConnectReads { ... }` ([`HealthConnectReaderSupport.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectReaderSupport.kt)). Inside it every guarded read throws instead, in child coroutines too, so the pass aborts before it writes. `VitalsHistorySyncService`, `CaloriesHistorySyncService` and `StepDistanceBackfillService` do this. A new writer must too.
+**A writer reads strictly.** The readers return a fallback (an empty list, a null) when a read fails, is rate limited, or sync is paused. That suits a screen, which wants an empty state. It is wrong for code that saves what it read: a cache rebuild, a derived-record reconcile. Such code wraps its reads in `withStrictHealthConnectReads { ... }` ([`HealthConnectReaderSupport.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectReaderSupport.kt)). Inside it every guarded read throws instead, in child coroutines too, so the pass aborts before it writes. `VitalsHistorySyncService`, `CaloriesHistorySyncService`, `StepDistanceBackfillService` and `BodyEnergyChainSyncService` do this. A new writer must too. So does code that puts what it read into a document the user keeps: `ReportDataLoader` reads strictly, so a rate-limited metric shows as failed in the report and not as "No data in this range".
 
 **A writer checks that it can see other apps' data.** In the background, without the background-read grant, Health Connect answers a read with this app's own records only and raises nothing. `HealthConnectManager.readsOtherAppsDataNow()` is the test: a started Activity, or the grant. Code that saves or shows what it read while no Activity is up (a cache rebuild, a reconcile, a widget refresh) calls it first and skips the pass when it is false. A reminder that only needs this app's own entries does not need it.
 

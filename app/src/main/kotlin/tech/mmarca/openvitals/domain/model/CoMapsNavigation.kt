@@ -22,18 +22,12 @@ data class CoMapsNavigationSnapshot(
     val pedestrianDirection: String = "",
     val exitNumber: String = "",
 ) {
-    /** Everything except the timestamp, so equal readings compare equal. */
-    val contentKey: String
+    /** What the guidance says. Distances and times are left out: they change every second. */
+    val guidanceKey: String
         get() = listOf(
             sessionState,
             currentStreet,
             nextStreet,
-            distanceToTurn,
-            distanceToTarget,
-            distanceToNextStop,
-            totalTimeSeconds?.toString() ?: "",
-            timeToNextStopSeconds?.toString() ?: "",
-            completionPercent?.toString() ?: "",
             carDirection,
             pedestrianDirection,
             exitNumber,
@@ -160,7 +154,7 @@ class CoMapsNavigationSampleRecorder(
     fun accept(snapshot: CoMapsNavigationSnapshot): Boolean {
         val previous = recorded.lastOrNull()
         val keep = previous == null ||
-            previous.contentKey != snapshot.contentKey ||
+            previous.guidanceKey != snapshot.guidanceKey ||
             Duration.between(previous.sampledAt, snapshot.sampledAt) >= minSampleInterval
         if (keep) recorded.add(snapshot)
         return keep

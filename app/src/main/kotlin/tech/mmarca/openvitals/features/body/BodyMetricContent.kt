@@ -675,10 +675,9 @@ internal fun BodyMetricScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     metric: BodyMetric,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
+    val sectionContext = rememberMetricDetailSectionOrdering()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {

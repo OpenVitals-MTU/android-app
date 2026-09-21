@@ -27,10 +27,9 @@ fun NutritionScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
+    val sectionContext = rememberMetricDetailSectionOrdering()
     val chartDaySelection = rememberChartDaySelection(
         selectedRange = state.selectedRange,
         selectedDate = state.selectedDate,
@@ -79,14 +78,12 @@ fun CaloriesInScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     NutritionMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = NutritionMetric.CALORIES_IN,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -95,14 +92,12 @@ fun ProteinScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     NutritionMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = NutritionMetric.PROTEIN,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -111,14 +106,12 @@ fun CarbsScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     NutritionMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = NutritionMetric.CARBS,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -127,14 +120,12 @@ fun FatScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     NutritionMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = NutritionMetric.FAT,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -145,10 +136,9 @@ internal fun NutritionMetricScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     metric: NutritionMetric,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
+    val sectionContext = rememberMetricDetailSectionOrdering()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {

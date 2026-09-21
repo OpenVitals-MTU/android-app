@@ -13,10 +13,14 @@ class CoMapsNavigationTest {
         at: Instant,
         currentStreet: String = "Tartu mnt",
         sessionState: String = "OnRoute",
+        distanceToTurn: String = "400 m",
+        totalTimeSeconds: Int? = 900,
     ) = CoMapsNavigationSnapshot(
         sampledAt = at,
         sessionState = sessionState,
         currentStreet = currentStreet,
+        distanceToTurn = distanceToTurn,
+        totalTimeSeconds = totalTimeSeconds,
     )
 
     private val start: Instant = Instant.parse("2026-07-04T10:00:00Z")
@@ -96,13 +100,29 @@ class CoMapsNavigationTest {
         assertTrue(recorder.accept(snapshot(at = start)))
     }
 
-    @Test fun `the content key ignores the clock and nothing else`() {
+    @Test fun `the recorder drops a reading whose countdown alone moved`() {
+        // CoMaps counts the distance and the time down every second. Keeping each one kept them all.
+        val recorder = CoMapsNavigationSampleRecorder()
+        recorder.accept(snapshot(at = start))
+
+        (1L..14L).forEach { second ->
+            val reading = snapshot(
+                at = start.plusSeconds(second),
+                distanceToTurn = "${400 - second * 5} m",
+                totalTimeSeconds = 900 - second.toInt(),
+            )
+            assertFalse(recorder.accept(reading))
+        }
+        assertEquals(1, recorder.samples.size)
+    }
+
+    @Test fun `the guidance key ignores the clock and the countdown`() {
         val a = snapshot(at = Instant.parse("2026-07-04T10:00:00Z"))
-        val b = snapshot(at = Instant.parse("2026-07-04T11:00:00Z"))
+        val b = snapshot(at = Instant.parse("2026-07-04T11:00:00Z"), distanceToTurn = "5 m", totalTimeSeconds = 1)
         val c = snapshot(at = Instant.parse("2026-07-04T10:00:00Z"), sessionState = "Finish")
 
-        assertEquals(a.contentKey, b.contentKey)
-        assertNotEquals(a.contentKey, c.contentKey)
+        assertEquals(a.guidanceKey, b.guidanceKey)
+        assertNotEquals(a.guidanceKey, c.guidanceKey)
     }
 
     // The full vocabulary from CoMaps' RoutingSessionState, so a value added upstream shows up as a decision to make.

@@ -101,6 +101,8 @@ fun LazyListScope.orderedMetricDetailSections(
     val sectionBuilder = MetricDetailSectionBuilder().apply(builder)
     val visibleOrder = order.filter { it in sectionBuilder.sections }
 
+    // For a caller that builds the list without rememberMetricDetailSectionOrdering, which sets
+    // the same two values where a scroll cannot skip them.
     item(key = "metric_section_drag_config") {
         SideEffect {
             listState.isEditingSections = isEditingSections

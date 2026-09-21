@@ -36,6 +36,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,7 +52,9 @@ import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.performance.offMainIo
 import tech.mmarca.openvitals.domain.model.ReportGranularity
 import tech.mmarca.openvitals.domain.model.ReportMetric
 import tech.mmarca.openvitals.domain.model.ReportSection
@@ -385,12 +388,15 @@ internal fun ReportDoneStep(
     val file = state.stagedFile
     val savedToast = stringResource(R.string.report_saved_toast)
     val saveFailedToast = stringResource(R.string.report_save_failed_toast)
+    val saveScope = rememberCoroutineScope()
     val saveLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(PdfMimeType),
     ) { destination ->
         if (destination != null && file != null) {
-            val copied = copyReportTo(context, file, destination)
-            Toast.makeText(context, if (copied) savedToast else saveFailedToast, Toast.LENGTH_SHORT).show()
+            saveScope.launch {
+                val copied = copyReportTo(context, file, destination)
+                Toast.makeText(context, if (copied) savedToast else saveFailedToast, Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -475,8 +481,8 @@ private fun shareReport(context: Context, file: File): Result<Unit> = runCatchin
     )
 }
 
-private fun copyReportTo(context: Context, file: File, destination: Uri): Boolean =
-    runCatching {
+private suspend fun copyReportTo(context: Context, file: File, destination: Uri): Boolean =
+    offMainIo {
         context.contentResolver.openOutputStream(destination)?.use { output ->
             file.inputStream().use { input -> input.copyTo(output) }
         } ?: error("no output stream for $destination")

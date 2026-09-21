@@ -19,7 +19,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.SyncedRecordOriginRepository
 import tech.mmarca.openvitals.features.devicesync.bluetooth.BluetoothSyncManager
@@ -51,6 +53,7 @@ class DeviceSyncViewModel @Inject constructor(
     private val originRepository: SyncedRecordOriginRepository,
     private val reportStore: DeviceSyncReportStore,
     private val recordingController: ActivityRecordingController,
+    private val dispatchers: DispatcherProvider,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DeviceSyncState())
@@ -302,7 +305,8 @@ class DeviceSyncViewModel @Inject constructor(
                 store = store,
                 config = SyncSessionConfig(
                     role = role,
-                    confirmCode = { code -> askUserToCompare(code, gen) },
+                    // The session runs off the main thread. The wizard's state is the main thread's.
+                    confirmCode = { code -> withContext(dispatchers.main) { askUserToCompare(code, gen) } },
                     deviceName = deviceName(),
                     supportedTypes = state.availableTypes.toList(),
                     selectedTypes = state.selectedTypes.toList(),
@@ -320,7 +324,9 @@ class DeviceSyncViewModel @Inject constructor(
             // Keep the process foregrounded so the OS does not kill it. Best-effort.
             foregroundStartedByUs = DeviceSyncForegroundService.start(context)
             try {
-                val report = session.run()
+                // Unzipping, JSON, Base64 and a SHA-256 of every local record. On the main
+                // thread a large sync froze the progress screen it was meant to update.
+                val report = withContext(dispatchers.default) { session.run() }
                 Log.i(
                     TAG,
                     "session done: completed=${report.completed} sent=${report.itemsSent} " +

@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,6 +46,12 @@ data class WatchDeviceUiState(
     val stayConnected: Boolean = false,
     /** How often the watch syncs on its own, or OFF for by-hand only. */
     val autoSync: AutoSyncInterval = AutoSyncInterval.OFF,
+    /**
+     * Health Connect offers background access and the user has not granted it. A sync that
+     * runs with the app closed then saves the watch's data, but nothing built from other
+     * apps' records catches up until the app is opened.
+     */
+    val backgroundReadMissing: Boolean = false,
     /** Live readings streamed over that link. */
     val liveReadings: Boolean = false,
     /** The watch's music controls drive the phone's player. Off by default. */
@@ -103,12 +108,15 @@ class WatchDeviceViewModel @Inject constructor(
     private val coMapsGuidanceFeed: tech.mmarca.openvitals.comaps.CoMapsGuidanceFeed,
     private val musicRelay: tech.mmarca.openvitals.devices.garmin.GarminMusicRelay,
     private val notificationsGateway: WatchNotificationsGateway,
+    private val garminLocalData: tech.mmarca.openvitals.devices.garmin.GarminLocalData,
+    private val healthConnectManager: tech.mmarca.openvitals.healthconnect.HealthConnectManager,
+    private val dispatchers: tech.mmarca.openvitals.core.performance.DispatcherProvider,
 ) : ViewModel() {
 
     val deviceId: String = savedStateHandle.get<String>(WATCH_DEVICE_ID_ARG).orEmpty()
 
     /** Outlives the view-model: the unbond after a removal must not die with the screen. */
-    private val housekeepingScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val housekeepingScope = CoroutineScope(SupervisorJob() + dispatchers.default)
 
     private val localState = MutableStateFlow(WatchDeviceUiState())
 
@@ -150,7 +158,7 @@ class WatchDeviceViewModel @Inject constructor(
     /** Takes in an ephemeris file. Its contents say what it is; the message says why not. */
     fun importAgps(uri: android.net.Uri) {
         viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) { agpsStore.import(uri) }
+            val result = withContext(dispatchers.io) { agpsStore.import(uri) }
             localState.update {
                 it.copy(
                     agpsMessage = when (result) {
@@ -260,6 +268,18 @@ class WatchDeviceViewModel @Inject constructor(
         localState.update { it.copy(autoSync = interval) }
     }
 
+    /** Health Connect's permission string for background reads, for the screen's request. */
+    val backgroundReadPermission: String
+        get() = androidx.health.connect.client.permission.HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
+
+    /** Re-reads the background grant: on resume, and after the permission screen returns. */
+    fun refreshBackgroundAccess() {
+        viewModelScope.launch {
+            val missing = runCatching { healthConnectManager.isBackgroundReadGrantMissing() }.getOrDefault(false)
+            localState.update { it.copy(backgroundReadMissing = missing) }
+        }
+    }
+
     fun syncNow() {
         syncController.syncDevice(deviceId, listenAfter = DeviceSyncController.MANUAL_SYNC_LINGER)
     }
@@ -301,10 +321,20 @@ class WatchDeviceViewModel @Inject constructor(
         }
     }
 
-    /** Removes the watch: registry row, Garmin state, and the OS-level bond, fire and forget. */
-    fun removeDevice() {
+    /** True when removing this watch leaves no Garmin watch. The dialog then offers to delete its history. */
+    val isLastGarminWatch: Boolean
+        get() = deviceRepository.devices.count { it.isGarminGfdi } == 1 &&
+            deviceRepository.devices.any { it.id == deviceId && it.isGarminGfdi }
+
+    /**
+     * Removes the watch: registry row, Garmin state, and the OS-level bond, fire and forget.
+     * With the last Garmin watch go its file copies and sleep minutes, and, when the user
+     * ticked it, the watch-only history ([deleteWatchHistory]).
+     */
+    fun removeDevice(deleteWatchHistory: Boolean = false) {
         // Read the device before forgetting it: the OS cleanup needs its address.
         val device = deviceRepository.devices.firstOrNull { it.id == deviceId }
+        val wasLastGarminWatch = isLastGarminWatch
         deviceRepository.removeDevice(deviceId)
         // Before the early return: a schedule left running would wake the radio for nothing.
         autoSyncScheduler.forget(deviceId)
@@ -313,6 +343,11 @@ class WatchDeviceViewModel @Inject constructor(
             stateStore.clear(deviceId)
             housekeepingScope.launch {
                 runCatching { onboardGarminWatch.forget(device.address) }
+            }
+            if (wasLastGarminWatch) {
+                housekeepingScope.launch {
+                    runCatching { garminLocalData.clearAfterLastWatchRemoved(deleteWatchHistory) }
+                }
             }
         } else if (device.isWearosWatch) {
             housekeepingScope.launch {

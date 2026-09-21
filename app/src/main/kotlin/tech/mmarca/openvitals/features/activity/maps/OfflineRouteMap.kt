@@ -310,6 +310,8 @@ private class OfflineRouteMapRenderState {
 
     /** The planned-route display last written into the style, compared by identity. */
     private var writtenPlannedRouteDisplay: PlannedRouteDisplay? = null
+    private val written = RouteMapWrittenState()
+    private var writtenStyle: Style? = null
 
     fun render(
         context: Context,
@@ -370,6 +372,12 @@ private class OfflineRouteMapRenderState {
         ensureRouteImages(style)
         ensureRouteSources(style)
         ensureRouteLayers(style)
+        // A new style starts with empty sources, whatever was written into the old one.
+        if (style !== writtenStyle) {
+            writtenStyle = style
+            writtenPlannedRouteDisplay = null
+            written.reset()
+        }
         if (plannedRouteDisplay !== writtenPlannedRouteDisplay) {
             style.getSourceAs<GeoJsonSource>(PlannedRouteSourceId)
                 ?.setGeoJson(plannedRouteDisplay.line)
@@ -381,12 +389,17 @@ private class OfflineRouteMapRenderState {
                 ?.setGeoJson(plannedRouteDisplay.destination)
             writtenPlannedRouteDisplay = plannedRouteDisplay
         }
-        style.getSourceAs<GeoJsonSource>(RouteSourceId)
-            ?.setGeoJson(routeLineFeatureCollection(points, routeBreakIndexes))
-        style.getSourceAs<GeoJsonSource>(StartSourceId)
-            ?.setGeoJson(pointFeatureCollection(points.firstOrNull()))
-        style.getSourceAs<GeoJsonSource>(EndSourceId)
-            ?.setGeoJson(pointFeatureCollection(points.lastOrNull()))
+        // A compass step re-runs this. It must not hand MapLibre the whole track again.
+        val changes = written.changesFor(points, routeBreakIndexes, currentPoint, headingDegrees)
+        if (changes.track) {
+            style.getSourceAs<GeoJsonSource>(RouteSourceId)
+                ?.setGeoJson(routeLineFeatureCollection(points, routeBreakIndexes))
+            style.getSourceAs<GeoJsonSource>(StartSourceId)
+                ?.setGeoJson(pointFeatureCollection(points.firstOrNull()))
+            style.getSourceAs<GeoJsonSource>(EndSourceId)
+                ?.setGeoJson(pointFeatureCollection(points.lastOrNull()))
+        }
+        if (!changes.position) return
         style.getSourceAs<GeoJsonSource>(CurrentLocationSourceId)
             ?.setGeoJson(pointFeatureCollection(currentPoint))
         // The dot knows where you are; the arrow also knows which way. Only one speaks.

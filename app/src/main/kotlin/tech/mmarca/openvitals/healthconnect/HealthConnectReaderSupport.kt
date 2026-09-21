@@ -11,13 +11,14 @@ import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlin.math.roundToLong
 import kotlinx.coroutines.withContext
+import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 
 /**
  * Marks a block whose Health Connect reads must fail loudly.
@@ -42,6 +43,8 @@ internal class HealthConnectReaderSupport(
     private val diagnostics: HealthConnectDiagnostics,
     private val rateLimitMessage: (Long) -> String,
     private val syncEnabled: () -> Boolean = { true },
+    /** Every read hops here. A test passes its own, so the whole read runs on test time. */
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
 ) {
     private val readSemaphore = Semaphore(MaxConcurrentReads)
 
@@ -81,7 +84,7 @@ internal class HealthConnectReaderSupport(
             Log.d(TAG, "Starting $safeOperation ${diagnosticsSummary()}")
             try {
                 return readSemaphore.withPermit {
-                    withContext(Dispatchers.IO) {
+                    withContext(dispatchers.io) {
                         block().also { Log.d(TAG, "Finished $safeOperation successfully") }
                     }
                 }
@@ -135,7 +138,7 @@ internal class HealthConnectReaderSupport(
 
         return try {
             readSemaphore.withPermit {
-                withContext(Dispatchers.IO) {
+                withContext(dispatchers.io) {
                     block().also { Log.d(TAG, "Finished $safeOperation successfully") }
                 }
             }

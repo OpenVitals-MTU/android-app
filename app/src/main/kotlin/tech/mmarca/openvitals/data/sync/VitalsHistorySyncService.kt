@@ -12,17 +12,24 @@ import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.reflect.KClass
 import kotlinx.coroutines.async
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyAggregateEntity
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
+import tech.mmarca.openvitals.data.local.vitalscache.VitalsCacheFingerprintKey
+import tech.mmarca.openvitals.data.local.vitalscache.vitalsCacheFingerprint
 
 /**
  * Keeps the vitals daily-aggregate cache current via the Changes API, one
@@ -35,7 +42,13 @@ class VitalsHistorySyncService @Inject constructor(
     private val hc: HealthConnectManager,
     private val dao: VitalsDailyCacheDao,
 ) {
-    private val running = AtomicBoolean(false)
+    // The run belongs to the process, not to the screen that asked for it. The first full
+    // sync reads years of records. In a screen's scope, leaving the screen cancelled it, and
+    // since it writes at the end, the next visit started again from nothing.
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val lock = Mutex()
+    private var inFlight: Deferred<Unit>? = null
+    private var inFlightIsFull = false
 
     internal data class MetricSpec(
         val key: String,
@@ -81,19 +94,42 @@ class VitalsHistorySyncService @Inject constructor(
     }
 
     /** Full sync allowed: pays for a metric's first history rebuild when needed. */
-    suspend fun syncAll() = sync(incrementalOnly = false)
+    suspend fun syncAll() = join(incrementalOnly = false)
 
     /** Cheap drain only: returns immediately for metrics that never full-synced. */
-    suspend fun syncIncremental() = sync(incrementalOnly = true)
+    suspend fun syncIncremental() = join(incrementalOnly = true)
+
+    /**
+     * Waits for a run that covers what the caller asked for. Callers share one run. A caller
+     * that is cancelled stops waiting; the run goes on.
+     */
+    private suspend fun join(incrementalOnly: Boolean) {
+        while (true) {
+            var covers = true
+            val run = lock.withLock {
+                val current = inFlight?.takeIf { it.isActive }
+                if (current != null) {
+                    // A drain does not do a first full sync. Wait for it, then run one.
+                    covers = inFlightIsFull || incrementalOnly
+                    current
+                } else {
+                    inFlightIsFull = !incrementalOnly
+                    scope.async { sync(incrementalOnly) }.also { inFlight = it }
+                }
+            }
+            run.await()
+            if (covers) return
+        }
+    }
 
     private suspend fun sync(incrementalOnly: Boolean) {
-        if (!running.compareAndSet(false, true)) return
         try {
             if (hc.availability() != HealthConnectAvailability.AVAILABLE) return
             // In the background without the grant, a read returns this app's own records only.
             if (!hc.readsOtherAppsDataNow()) return
             val granted = hc.grantedPermissions()
             val skinTemperatureAvailable = hc.isSkinTemperatureAvailable()
+            dropCacheBuiltUnderOtherConditions(granted)
             // Strict: a failed read must abort the metric, not be cached as "no data".
             withStrictHealthConnectReads {
                 specs().map { spec ->
@@ -109,9 +145,27 @@ class VitalsHistorySyncService @Inject constructor(
                     }
                 }.forEach { it.await() }
             }
-        } finally {
-            running.set(false)
+        } catch (t: Throwable) {
+            if (t is kotlinx.coroutines.CancellationException) throw t
+            // The run is shared. One caller's wait must not rethrow what another's run hit.
+            Log.w(TAG, "Vitals cache sync failed", t)
         }
+    }
+
+    /**
+     * A change token only tells what records changed. It cannot tell that the user granted
+     * the history permission, or moved to another time zone. The fingerprint does. On a
+     * mismatch every metric loses its rows and its cursor, so reads go live until the next
+     * full sync has rebuilt them.
+     */
+    private suspend fun dropCacheBuiltUnderOtherConditions(granted: Set<String>) {
+        val current = vitalsCacheFingerprint(granted, ZoneId.systemDefault())
+        val stored = dao.cursor(VitalsCacheFingerprintKey)?.changesToken
+        if (stored == current) return
+        // No fingerprint yet: a cache from before this rule. Adopt it as it is, or every
+        // install would pay for a full rebuild on update.
+        if (stored != null) specs().forEach { dao.purgeMetric(it.key) }
+        dao.writeFullSync(VitalsSyncCursorEntity(VitalsCacheFingerprintKey, current, null))
     }
 
     private suspend fun syncMetric(spec: MetricSpec, incrementalOnly: Boolean) {

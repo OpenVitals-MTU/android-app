@@ -38,6 +38,7 @@ import tech.mmarca.openvitals.domain.report.distinctBloodPressureReadings
 import tech.mmarca.openvitals.domain.report.sleepDetail
 import tech.mmarca.openvitals.domain.report.workoutsDetail
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
 
 /** A cooperative cancel flag the UI flips; checked between read groups. */
 class ReportCancellation {
@@ -162,7 +163,10 @@ class ReportDataLoader @Inject constructor(
             }
             onProgress(ReportProgress(completed, total, group.metrics.first()))
             val series = try {
-                withTimeoutOrNull(GroupBudgetMillis) { group.read() }
+                // Strict: a rate-limited or paused read answers with an empty list, and the
+                // report then printed "No data in this range" over months of records. It must
+                // throw, so the metric reads FAILED.
+                withTimeoutOrNull(GroupBudgetMillis) { withStrictHealthConnectReads { group.read() } }
                     ?: run {
                         Log.w(TAG, "Report read group ${group.metrics} blew its ${GroupBudgetMillis}ms budget")
                         null

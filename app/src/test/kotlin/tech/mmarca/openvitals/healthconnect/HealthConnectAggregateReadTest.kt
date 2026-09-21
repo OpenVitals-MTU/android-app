@@ -30,11 +30,12 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 
 /**
  * The aggregate reads: day totals, the daily-steps series and the intraday progress line.
@@ -63,7 +64,7 @@ class HealthConnectAggregateReadTest {
 
     @Test
     fun `readSteps, readDistanceMeters and readFloorsClimbed use the aggregate API`() =
-        runTest {
+        runTest(testDispatcher) {
             val client = seeded(
                 steps(8_421L, at(9), at(10)),
                 DistanceRecord(
@@ -91,7 +92,7 @@ class HealthConnectAggregateReadTest {
         }
 
     @Test
-    fun `elevation and wheelchair aggregates return the aggregated value`() = runTest {
+    fun `elevation and wheelchair aggregates return the aggregated value`() = runTest(testDispatcher) {
         val client = seeded(
             ElevationGainedRecord(
                 startTime = at(9),
@@ -120,7 +121,7 @@ class HealthConnectAggregateReadTest {
     // Pinned as it stands; changing it is a product decision.
     @Test
     fun `elevation and wheelchair read zero, not null, when the device records neither`() =
-        runTest {
+        runTest(testDispatcher) {
             val reader = activity(seeded())
 
             assertThat(reader.readElevationGained(date)).isWithin(1e-9).of(0.0)
@@ -131,7 +132,7 @@ class HealthConnectAggregateReadTest {
     // The daily-steps series.
 
     @Test
-    fun `readDailySteps slices a day bucket over the local instant range`() = runTest {
+    fun `readDailySteps slices a day bucket over the local instant range`() = runTest(testDispatcher) {
         val client = seeded(
             steps(5_000L, at(9), at(10)),
             DistanceRecord(
@@ -167,7 +168,7 @@ class HealthConnectAggregateReadTest {
 
     @Test
     fun `readDailySteps maps floors when requested and leaves elevation null when not`() =
-        runTest {
+        runTest(testDispatcher) {
             val client = seeded(
                 steps(100L, at(9), at(10)),
                 FloorsClimbedRecord(
@@ -233,7 +234,7 @@ class HealthConnectAggregateReadTest {
 
     @Test
     fun `readRawActivityProgress accumulates each contribution into a running total`() =
-        onARealClock {
+        onTheTestClock {
             val client = seeded(
                 steps(1_200L, at(8), at(9)),
                 steps(800L, at(9), at(10)),
@@ -256,7 +257,7 @@ class HealthConnectAggregateReadTest {
     // Nullness follows what was asked for, not what came back:
     // a requested metric the device never wrote reads 0.
     @Test
-    fun `an unrequested metric stays null, while a requested one reads zero`() = onARealClock {
+    fun `an unrequested metric stays null, while a requested one reads zero`() = onTheTestClock {
         val client = seeded(steps(1_000L, at(8), at(9)))
 
         val point = progress(client, includeFloors = true).single()
@@ -273,7 +274,7 @@ class HealthConnectAggregateReadTest {
     // A running total carries forward through buckets that had none.
     @Test
     fun `a metric's running total carries forward through contributions that had none`() =
-        onARealClock {
+        onTheTestClock {
             val client = seeded(
                 steps(1_000L, at(8), at(9)),
                 steps(500L, at(9), at(10)),
@@ -298,7 +299,7 @@ class HealthConnectAggregateReadTest {
         }
 
     @Test
-    fun `a past day is read across the whole of it, and nothing outside it`() = onARealClock {
+    fun `a past day is read across the whole of it, and nothing outside it`() = onTheTestClock {
         val client = seeded(
             steps(10L, at(0), at(0).plusSeconds(60)),
             steps(20L, at(23), at(23).plusSeconds(1_800)),
@@ -315,7 +316,7 @@ class HealthConnectAggregateReadTest {
 
     // A record the device has not written yet cannot appear on today's line.
     @Test
-    fun `today stops at now rather than running on to midnight`() = onARealClock {
+    fun `today stops at now rather than running on to midnight`() = onTheTestClock {
         val today = LocalDate.now()
         val zone = ZoneId.systemDefault()
         val startOfToday = today.atStartOfDay(zone).toInstant()
@@ -339,7 +340,7 @@ class HealthConnectAggregateReadTest {
     }
 
     @Test
-    fun `no contributions means no points`() = onARealClock {
+    fun `no contributions means no points`() = onTheTestClock {
         assertThat(progress(seeded())).isEmpty()
     }
 
@@ -350,7 +351,7 @@ class HealthConnectAggregateReadTest {
      * No request may be wider than [DailyAggregateMaxQueryDays], and the chunks must stitch back into one series.
      */
     @Test
-    fun `readDailyNutrition chunks a long range and stitches the series back together`() = runTest {
+    fun `readDailyNutrition chunks a long range and stitches the series back together`() = runTest(testDispatcher) {
         val zone = ZoneId.systemDefault()
         val firstDay = date.minusDays(300)
         fun burn(day: LocalDate, kcal: Double) = TotalCaloriesBurnedRecord(
@@ -379,7 +380,7 @@ class HealthConnectAggregateReadTest {
 
     /** Same budget for heart rate: a year of daily BPM buckets must go out tiled and stitch back. */
     @Test
-    fun `readDailyHeartRateSummaries chunks a long range and stitches the series back together`() = runTest {
+    fun `readDailyHeartRateSummaries chunks a long range and stitches the series back together`() = runTest(testDispatcher) {
         val zone = ZoneId.systemDefault()
         val firstDay = date.minusDays(300)
         fun hr(day: LocalDate, bpm: Long) = HeartRateRecord(
@@ -414,7 +415,7 @@ class HealthConnectAggregateReadTest {
      * Summaries now slice by hour and fold the hours duration-weighted.
      */
     @Test
-    fun `readDailyHeartRateSummaries keeps a 1 Hz workout from becoming the day average`() = runTest {
+    fun `readDailyHeartRateSummaries keeps a 1 Hz workout from becoming the day average`() = runTest(testDispatcher) {
         val zone = ZoneId.systemDefault()
         val dayStart = date.atStartOfDay(zone).toInstant()
         // One background sample per hour at 70 bpm, except the workout hour.
@@ -460,7 +461,7 @@ class HealthConnectAggregateReadTest {
     }
 
     @Test
-    fun `readDailyHRV buckets a burst of readings so it does not outvote the spot checks`() = runTest {
+    fun `readDailyHRV buckets a burst of readings so it does not outvote the spot checks`() = runTest(testDispatcher) {
         val zone = ZoneId.systemDefault()
         val dayStart = date.atStartOfDay(zone).toInstant()
         fun hrv(at: Instant, ms: Double) = HeartRateVariabilityRmssdRecord(
@@ -487,7 +488,7 @@ class HealthConnectAggregateReadTest {
     }
 
     @Test
-    fun `readDailyRestingHR chunks a long range and stitches the series back together`() = runTest {
+    fun `readDailyRestingHR chunks a long range and stitches the series back together`() = runTest(testDispatcher) {
         val zone = ZoneId.systemDefault()
         val firstDay = date.minusDays(300)
         fun resting(day: LocalDate, bpm: Long) = RestingHeartRateRecord(
@@ -511,7 +512,7 @@ class HealthConnectAggregateReadTest {
     }
 
     @Test
-    fun `readHeartRateSamplesForInsights splits every day into budgeted requests`() = runTest {
+    fun `readHeartRateSamplesForInsights splits every day into budgeted requests`() = runTest(testDispatcher) {
         val zone = ZoneId.systemDefault()
         val firstDay = date.minusDays(1)
         fun hr(day: LocalDate, hour: Long, bpm: Long) = HeartRateRecord(
@@ -549,11 +550,15 @@ class HealthConnectAggregateReadTest {
 
     // Harness.
 
-    /**
-     * Runs on a real clock. Under [runTest] the reads hop to Dispatchers.IO, virtual time
-     * skips to the 12-second timeout, and every assertion would test a timeout.
-     */
-    private fun onARealClock(body: suspend CoroutineScope.() -> Unit) = runBlocking(block = body)
+    private val testDispatcher = StandardTestDispatcher()
+    private val testDispatchers = object : DispatcherProvider {
+        override val main = testDispatcher
+        override val io = testDispatcher
+        override val default = testDispatcher
+    }
+
+    /** Every read hops to the support's dispatcher, so on this one the whole read is test time. */
+    private fun onTheTestClock(body: suspend CoroutineScope.() -> Unit) = runTest(testDispatcher) { body() }
 
     /** A fixed past date, well away from any DST transition in any zone. */
     private val date: LocalDate = LocalDate.of(2026, 1, 2)
@@ -609,6 +614,7 @@ class HealthConnectAggregateReadTest {
             clientProvider = { client },
             diagnostics = diagnostics,
             rateLimitMessage = { "rate limited" },
+            dispatchers = testDispatchers,
         )
     }
 

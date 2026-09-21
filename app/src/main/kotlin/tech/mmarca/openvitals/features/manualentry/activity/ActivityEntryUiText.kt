@@ -93,6 +93,8 @@ internal fun activityEntryErrorText(
         R.string.activity_entry_route_import_failed,
         detailError.resolve() ?: stringResource(R.string.unknown_error),
     )
+    ActivityEntryError.ROUTE_IMPORT_WHILE_RECORDING ->
+        stringResource(R.string.activity_entry_route_import_while_recording)
     ActivityEntryError.LOCATION_PERMISSION_NEEDED -> stringResource(R.string.activity_entry_location_permission_needed)
     ActivityEntryError.NOTIFICATION_PERMISSION_NEEDED -> stringResource(R.string.activity_entry_notification_permission_needed)
     ActivityEntryError.ACTIVITY_RECOGNITION_PERMISSION_NEEDED ->

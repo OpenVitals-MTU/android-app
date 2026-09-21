@@ -41,6 +41,10 @@ class GarminWellnessRepositoryImpl @Inject constructor(
     override suspend fun countFor(metric: GarminWellnessMetric): Long =
         dao.countFor(metric.storageName)
 
+    override suspend fun deleteAll() {
+        dao.deleteAll()
+    }
+
     private fun GarminWellnessSampleEntity.toSample(metric: GarminWellnessMetric): GarminWellnessSample =
         GarminWellnessSample(
             metric = metric,

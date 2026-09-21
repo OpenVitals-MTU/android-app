@@ -321,7 +321,11 @@ class HeartViewModel(
         }
     }
 
-    /** Kicks the vitals history sync once per open, after the first load; one reload when it completes. */
+    /**
+     * Kicks the vitals history sync once per open, after the first load; one reload when it
+     * completes. Only the wait lives in this scope. The run belongs to the service, so leaving
+     * the screen does not stop it.
+     */
     private fun kickVitalsHistorySyncOnce() {
         val sync = vitalsSync ?: return
         if (vitalsSyncKicked) return

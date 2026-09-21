@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals
 
+import android.content.ContentResolver
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
@@ -41,6 +42,8 @@ import tech.mmarca.openvitals.devices.core.pairing.CompanionDevicePairing
 import tech.mmarca.openvitals.navigation.Screen
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 import java.util.Locale
+import tech.mmarca.openvitals.ui.components.AppBarState
+import tech.mmarca.openvitals.ui.components.LocalAppBarState
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -118,12 +121,16 @@ class MainActivity : AppCompatActivity() {
                 val chartAggregationMode by preferencesRepository.chartAggregationModeFlow
                     .collectAsStateWithLifecycle()
 
+                val rememberedAppBarState = remember { AppBarState() }
+
                 LaunchedEffect(appLanguage) {
                     AppCompatDelegate.setApplicationLocales(appLanguage.toLocaleListCompat())
                 }
 
                 CompositionLocalProvider(
                     LocalChartAggregationMode provides chartAggregationMode,
+                    // Where each screen declares what it wants in the app bar.
+                    LocalAppBarState provides rememberedAppBarState,
                 ) {
                     AppLockGate(enabled = preferencesRepository.appLockEnabled) {
                         AppNavigation(
@@ -281,7 +288,9 @@ private fun Intent.routeImportUri(): Uri? {
         else -> null
     } ?: return null
 
-    return uri.takeIf { isSupportedRouteImport(it, type) }
+    // Another app's intent picks this Uri. A file:// one could point at our own private
+    // files, and a picker or a share never sends one: they send content://.
+    return uri.takeIf { it.scheme == ContentResolver.SCHEME_CONTENT && isSupportedRouteImport(it, type) }
 }
 
 private fun isSupportedRouteImport(uri: Uri, mimeType: String?): Boolean =

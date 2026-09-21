@@ -96,6 +96,7 @@ Do not break these without an explicit decision. They are app-wide, and each has
 - **Nothing waits on the main thread.** No `runBlocking` in `app/src/main` (`NoRunBlockingRatchetTest` holds the allow-list). A receiver never holds a broadcast for a Health Connect read. Composables `remember` any pass over samples.
 - **`values-*/strings.xml` are Weblate-owned.** Add new strings to `values/strings.xml` only. See the translation-gate note in [development.md](docs/engineering/development.md).
 - **Room is at version 10.** A new entity means a `MIGRATION_10_11` and a bump, not `fallbackToDestructiveMigration`.
+- **The docs are checked against the code.** `ArchitectureDocTest` fails when a Room table, the Room version or a package is missing from the docs. `HealthConnectLayeringTest` and `DevicesLayeringTest` hold two layering rules. `FileSizeRatchetTest` stops a file passing 800 lines, and `FunctionLengthRatchetTest` stops a new function passing 150. When one fails, fix the code or the doc in the same commit.
 
 ## Implementation Rules
 

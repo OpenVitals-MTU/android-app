@@ -32,14 +32,12 @@ fun StepsScreen(
     viewModel: ActivityViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     ActivityMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = ActivityMetric.STEPS,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -48,14 +46,12 @@ fun DistanceScreen(
     viewModel: ActivityViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     ActivityMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = ActivityMetric.DISTANCE,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -64,14 +60,12 @@ fun CaloriesOutScreen(
     viewModel: ActivityViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     ActivityMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = ActivityMetric.CALORIES_BURNED,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -80,14 +74,12 @@ fun ActiveCaloriesScreen(
     viewModel: ActivityViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     ActivityMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = ActivityMetric.ACTIVE_CALORIES,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -96,14 +88,12 @@ fun FloorsScreen(
     viewModel: ActivityViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     ActivityMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = ActivityMetric.FLOORS,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -112,14 +102,12 @@ fun ElevationScreen(
     viewModel: ActivityViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     ActivityMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = ActivityMetric.ELEVATION,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -128,14 +116,12 @@ fun WheelchairPushesScreen(
     viewModel: ActivityViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     ActivityMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = ActivityMetric.WHEELCHAIR_PUSHES,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -146,10 +132,9 @@ private fun ActivityMetricScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     metric: ActivityMetric,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
+    val sectionContext = rememberMetricDetailSectionOrdering()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {

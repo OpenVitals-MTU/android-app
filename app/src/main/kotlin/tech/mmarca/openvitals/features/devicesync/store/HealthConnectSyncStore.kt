@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.devicesync.store
 
 import android.util.Log
 import androidx.health.connect.client.records.Record
+import java.time.Duration
 import java.time.Instant
 import kotlin.reflect.KClass
 import kotlinx.coroutines.CancellationException
@@ -106,6 +107,16 @@ class HealthConnectSyncStore(
         if (chunk.isNotEmpty()) emit(chunk.toList())
     }
 
+    /**
+     * Keeps a record only when it starts inside the window this phone's user chose.
+     * The peer may have chosen "Everything" while this phone asked for 30 days.
+     */
+    override fun accepts(item: SyncItem): Boolean {
+        // Unreadable: let the write path skip and log it as what it is.
+        val start = syncRecordStartTime(item.payload) ?: return true
+        return !start.isBefore(windowStart) && !start.isAfter(windowEnd.plus(WindowEndSlack))
+    }
+
     override suspend fun writeItems(items: List<SyncItem>): Set<String> {
         // Insert per type: a batch is atomic, so one rejected type must not sink the rest.
         val recordsByType = mutableMapOf<String, MutableList<Record>>()
@@ -208,6 +219,9 @@ class HealthConnectSyncStore(
 
     private companion object {
         const val TAG = "DeviceSync"
+
+        /** The window ends when Start sync is pressed. The other phone's clock may run ahead. */
+        val WindowEndSlack: Duration = Duration.ofDays(1)
     }
 }
 

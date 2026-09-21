@@ -16,6 +16,7 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,15 +33,22 @@ fun SwipeToDeleteEntryRow(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
     shape: Shape = CardDefaults.shape,
+    /**
+     * True when [onDelete] only asks the user, so the row must slide back. Otherwise a
+     * cancelled question leaves the row swiped away.
+     */
+    asksBeforeDeleting: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
+    val scope = rememberCoroutineScope()
     val currentOnDelete by rememberUpdatedState(onDelete)
-    val dismissAction = remember {
+    val dismissAction = remember(asksBeforeDeleting) {
         { value: SwipeToDismissBoxValue ->
             if (value == SwipeToDismissBoxValue.EndToStart) {
                 currentOnDelete()
             }
+            if (asksBeforeDeleting) scope.launch { dismissState.reset() }
         }
     }
 

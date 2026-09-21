@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +44,9 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.ui.theme.Emphasis
 import tech.mmarca.openvitals.ui.theme.Spacing
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.performance.offMainIo
+import tech.mmarca.openvitals.features.manualentry.activity.routeimport.readBytesBounded
+import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
@@ -67,21 +71,31 @@ fun WorkoutPlanListScreen(
     val exportedText = stringResource(R.string.workout_plans_exported)
     val importedText = stringResource(R.string.workout_plans_imported, state.importedCount)
     val context = LocalContext.current
+    val fileScope = rememberCoroutineScope()
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument(WorkoutPlanExport.MimeType),
     ) { uri ->
         val text = viewModel.exportJson()
         if (uri != null && text != null) {
-            runCatching {
-                context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
-            }.onSuccess { viewModel.onExported() }
+            fileScope.launch {
+                offMainIo {
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
+                }.onSuccess { viewModel.onExported() }
+            }
         }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            runCatching {
-                context.contentResolver.openInputStream(uri)?.use { it.readBytes().decodeToString() }
-            }.getOrNull()?.let(viewModel::importJson)
+            fileScope.launch {
+                val text = offMainIo {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        input.readBytesBounded(WorkoutPlanExport.ImportMaxBytes, "Plan file too large")
+                            .decodeToString()
+                    }
+                }.getOrNull()
+                // A file that is too large or unreadable fails like one that holds no plans.
+                viewModel.importJson(text.orEmpty())
+            }
         }
     }
 

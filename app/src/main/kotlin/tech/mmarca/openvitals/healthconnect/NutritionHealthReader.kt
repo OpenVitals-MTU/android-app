@@ -19,6 +19,7 @@ import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.NutritionEntry
+import tech.mmarca.openvitals.domain.model.HydrationEntryChange
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionNutrientUnit
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
@@ -241,6 +242,7 @@ internal class NutritionHealthReader(
             metadata = Metadata.manualEntry(
                 device = Device(type = Device.TYPE_PHONE),
                 clientRecordId = clientRecordId,
+                clientRecordVersion = request.clientRecordVersion,
             ),
             energy = nutrientValues.energy(NutritionNutrient.ENERGY),
             energyFromFat = nutrientValues.energy(NutritionNutrient.ENERGY_FROM_FAT),
@@ -291,6 +293,39 @@ internal class NutritionHealthReader(
         Log.d(TAG, "Writing nutrition record ${support.diagnosticsSummary()}")
         support.client().insertRecords(listOf(record))
         clientRecordId
+    }
+
+    /**
+     * Makes a drink's nutrition record follow an edit of its hydration record: the same shift
+     * in time, and nutrients scaled with the volume. It used to stay behind, so an edited
+     * coffee kept its caffeine at the old time and amount. Does nothing for plain water.
+     */
+    suspend fun updateHydrationNutritionEntry(change: HydrationEntryChange) = withContext(Dispatchers.IO) {
+        val hydrationClientRecordId = change.clientRecordId?.takeIf { it.isNotBlank() } ?: return@withContext
+        if (change.oldVolumeLiters <= 0.0) return@withContext
+        val clientRecordId = hydrationNutritionClientRecordId(hydrationClientRecordId)
+        // There is no read by client id. The record starts when the drink did.
+        val existing = support.client().readRecordsPaged(
+            recordType = NutritionRecord::class,
+            timeRangeFilter = TimeRangeFilter.between(change.oldTime, change.oldTime.plusSeconds(1)),
+            ascendingOrder = true,
+        ).firstOrNull { record ->
+            record.metadata.dataOrigin.packageName == appPackageName &&
+                record.metadata.clientRecordId == clientRecordId
+        } ?: return@withContext
+
+        val scale = change.newVolumeLiters / change.oldVolumeLiters
+        val intake = Duration.between(existing.startTime, existing.endTime)
+        writeNutritionEntry(
+            NutritionWriteRequest(
+                time = change.newTime,
+                nutrientValues = existing.nutritionNutrientValues().mapValues { (_, value) -> value * scale },
+                name = existing.name,
+                associatedHydrationClientRecordId = hydrationClientRecordId,
+                endTime = change.newTime.plus(intake),
+                clientRecordVersion = existing.metadata.clientRecordVersion + 1,
+            ),
+        )
     }
 
     suspend fun deleteHydrationNutritionEntry(hydrationClientRecordId: String) = withContext(Dispatchers.IO) {

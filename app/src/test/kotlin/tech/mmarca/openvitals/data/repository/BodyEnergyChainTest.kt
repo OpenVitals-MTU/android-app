@@ -64,7 +64,7 @@ class BodyEnergyChainTest {
         baselineCacheStore = baselines,
         timelineStore = if (withStore) timelines else null,
         now = { now },
-        zone = TestZone,
+        zoneSource = { TestZone },
         dispatchers = TestDispatcherProvider,
     )
 

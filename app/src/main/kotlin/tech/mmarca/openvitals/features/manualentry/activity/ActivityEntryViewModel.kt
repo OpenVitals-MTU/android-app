@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry.activity
 
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.features.manualentry.*
 import tech.mmarca.openvitals.features.manualentry.activity.*
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
@@ -126,6 +127,12 @@ class ActivityEntryViewModel(
     )
     val uiState: StateFlow<ActivityEntryUiState> = _uiState.asStateFlow()
     private val fallbackRecordingState = MutableStateFlow(ActivityRecordingState())
+
+    // The Uri stays out of the UI state: the state is compared and copied on every change.
+    private var routeImportAwaitingAnswer: Pair<Uri, ActivityEntryUnits>? = null
+    /** Read when a recording starts, so a sensor added meanwhile counts. */
+    val hasSavedBleSensors: Boolean get() = activityRecorder?.hasSavedBleSensors() == true
+
     val recordingState: StateFlow<ActivityRecordingState> =
         activityRecorder?.state ?: fallbackRecordingState.asStateFlow()
 
@@ -221,17 +228,20 @@ class ActivityEntryViewModel(
         clearRecordingDraft()
         activityRecorder?.stopBlePreview()
         activityRecorder?.clearPreparedRecording()
-        _uiState.value = initialActivityEntryState(clock, repository, preferredActivityType()).copy(
-            mode = ActivityEntryMode.START_HUB,
+        _uiState.value = emptyForm().copy(mode = ActivityEntryMode.START_HUB)
+        refreshPermission()
+        loadHubPlans()
+    }
+
+    /** A form with nothing typed or recorded in it. What the screen knows about the device stays. */
+    private fun emptyForm(): ActivityEntryUiState =
+        initialActivityEntryState(clock, repository, preferredActivityType()).copy(
             canWrite = _uiState.value.canWrite,
             isCheckingPermission = _uiState.value.isCheckingPermission,
             hubPlans = _uiState.value.hubPlans,
             hubPlansAvailable = _uiState.value.hubPlansAvailable,
             editRecordId = editActivityId,
         )
-        refreshPermission()
-        loadHubPlans()
-    }
 
     fun loadHubPlans() {
         val available = repository.plannedWorkoutWritePermissions().isNotEmpty()
@@ -338,7 +348,7 @@ class ActivityEntryViewModel(
         if (recorder == null) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.RECORDING_FAILED,
-                detailError = ScreenError.Message("Recording is not available."),
+                detailError = ScreenError.Text(R.string.screen_error_recording_unavailable),
                 validationErrors = emptySet(),
             )
             return
@@ -720,16 +730,53 @@ class ActivityEntryViewModel(
         }
     }
 
+    /**
+     * Fills the form from an activity file. Another app can start this with a shared file,
+     * so it never costs the user a recording: a live one refuses the file, and an unsaved
+     * one is replaced only after [confirmRouteImportOverRecording].
+     */
     fun importRouteFile(uri: Uri, units: ActivityEntryUnits) {
         val importer = routeFileImporter
         if (importer == null) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.ROUTE_IMPORT_FAILED,
-                detailError = ScreenError.Message("Activity file import is not available."),
+                detailError = ScreenError.Text(R.string.screen_error_activity_import_unavailable),
                 validationErrors = emptySet(),
             )
             return
         }
+        if (recordingState.value.isActive) {
+            _uiState.value = _uiState.value.copy(
+                entryError = ActivityEntryError.ROUTE_IMPORT_WHILE_RECORDING,
+                detailError = null,
+                validationErrors = emptySet(),
+            )
+            return
+        }
+        if (_uiState.value.isRecordingDraft || activityRecorder?.finishedRecording() != null) {
+            routeImportAwaitingAnswer = uri to units
+            _uiState.value = _uiState.value.copy(confirmRouteImportOverRecording = true)
+            return
+        }
+        startRouteImport(importer, uri, units)
+    }
+
+    fun confirmRouteImportOverRecording() {
+        val (uri, units) = routeImportAwaitingAnswer ?: return
+        val importer = routeFileImporter ?: return
+        routeImportAwaitingAnswer = null
+        // An import keeps what the form already holds. Left in place, the recording's
+        // distance and calories would end up on the file's route.
+        _uiState.value = emptyForm()
+        startRouteImport(importer, uri, units)
+    }
+
+    fun keepRecordingInsteadOfRouteImport() {
+        routeImportAwaitingAnswer = null
+        _uiState.value = _uiState.value.copy(confirmRouteImportOverRecording = false)
+    }
+
+    private fun startRouteImport(importer: RouteFileImporter, uri: Uri, units: ActivityEntryUnits) {
         clearRecordingDraft()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -887,7 +934,7 @@ class ActivityEntryViewModel(
         if (recorder == null) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.RECORDING_FAILED,
-                detailError = ScreenError.Message("GPS recording is not available."),
+                detailError = ScreenError.Text(R.string.screen_error_gps_recording_unavailable),
                 validationErrors = emptySet(),
             )
             return
@@ -932,7 +979,7 @@ class ActivityEntryViewModel(
         if (recorder == null) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.RECORDING_FAILED,
-                detailError = ScreenError.Message("GPS recording is not available."),
+                detailError = ScreenError.Text(R.string.screen_error_gps_recording_unavailable),
                 validationErrors = emptySet(),
             )
             return
@@ -1007,7 +1054,7 @@ class ActivityEntryViewModel(
         if (recorder == null) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.RECORDING_FAILED,
-                detailError = ScreenError.Message("Recording is not available."),
+                detailError = ScreenError.Text(R.string.screen_error_recording_unavailable),
                 validationErrors = emptySet(),
             )
             return
@@ -1103,7 +1150,7 @@ class ActivityEntryViewModel(
         if (snapshot == null) {
             _uiState.value = _uiState.value.copy(
                 entryError = ActivityEntryError.RECORDING_FAILED,
-                detailError = ScreenError.Message("No active activity recording was found."),
+                detailError = ScreenError.Text(R.string.screen_error_no_active_recording),
                 validationErrors = emptySet(),
             )
             return
@@ -1176,12 +1223,12 @@ class ActivityEntryViewModel(
         editEntryLoaded = true
         viewModelScope.launch {
             runCatching {
-                repository.loadWorkout(recordId)
+                repository.loadWorkoutForEdit(recordId)
             }.onSuccess { workout ->
                 if (workout == null || !workout.isOpenVitalsEntry) {
                     _uiState.value = _uiState.value.copy(
                         entryError = ActivityEntryError.WRITE_FAILED,
-                        detailError = ScreenError.Message("Only OpenVitals entries can be edited."),
+                        detailError = ScreenError.Text(R.string.screen_error_entry_not_editable),
                         validationErrors = emptySet(),
                     )
                     return@onSuccess
@@ -1228,6 +1275,9 @@ class ActivityEntryViewModel(
             )
             return
         }
+
+        // The button is off too. This is the guard that counts.
+        if (!_uiState.value.canSaveEdit) return
 
         val validationErrors = validateActivityEntry(_uiState.value, units)
         if (validationErrors.isNotEmpty()) {

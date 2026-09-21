@@ -29,6 +29,10 @@ class GarminSleepMinuteRepositoryImplTest {
             rows.headMap(beforeMillis).clear()
         }
 
+        override suspend fun deleteAll() {
+            rows.clear()
+        }
+
         override suspend fun count(): Long = rows.size.toLong()
     }
 

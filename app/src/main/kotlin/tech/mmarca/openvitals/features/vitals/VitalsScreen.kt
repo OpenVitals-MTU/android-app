@@ -14,7 +14,6 @@ fun BloodPressureScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
@@ -22,7 +21,6 @@ fun BloodPressureScreen(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.BLOOD_PRESSURE,
         onEditVitalsMeasurement = onEditVitalsMeasurement,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -32,7 +30,6 @@ fun SpO2Screen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
@@ -40,7 +37,6 @@ fun SpO2Screen(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.SPO2,
         onEditVitalsMeasurement = onEditVitalsMeasurement,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -49,14 +45,12 @@ fun Vo2MaxScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.VO2_MAX,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -66,7 +60,6 @@ fun RespiratoryRateScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
@@ -74,7 +67,6 @@ fun RespiratoryRateScreen(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.RESPIRATORY_RATE,
         onEditVitalsMeasurement = onEditVitalsMeasurement,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -84,7 +76,6 @@ fun BodyTemperatureScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
@@ -92,7 +83,6 @@ fun BodyTemperatureScreen(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.BODY_TEMPERATURE,
         onEditVitalsMeasurement = onEditVitalsMeasurement,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -101,14 +91,12 @@ fun BloodGlucoseScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.BLOOD_GLUCOSE,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -117,13 +105,11 @@ fun SkinTemperatureScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.SKIN_TEMPERATURE,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }

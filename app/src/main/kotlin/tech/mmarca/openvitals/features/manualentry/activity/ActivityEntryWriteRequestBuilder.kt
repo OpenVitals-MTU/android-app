@@ -21,6 +21,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import tech.mmarca.openvitals.domain.model.ActivityExerciseSegmentWrite
+import tech.mmarca.openvitals.domain.model.ActivityFormMetric
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
@@ -75,12 +76,10 @@ internal fun buildWriteRequest(
     if (lastSampleTime != null && !lastSampleTime.isBefore(end)) {
         end = lastSampleTime.plusSeconds(1)
     }
-    // The start is the user's and is not stretched. Samples before it are
-    // dropped rather than clamped onto it.
-    val firstSampleTime = bleSamples.firstSampleTime()
-    if (firstSampleTime != null && firstSampleTime.isBefore(start)) {
-        bleSamples = BleRecordingSampleBuffer()
-    }
+    // The start is the user's and is not stretched. A sample before it is dropped
+    // rather than clamped onto it. Only that sample: one early reading used to cost
+    // the whole series, for example after the user moved the start past the warm-up.
+    bleSamples = bleSamples.from(start)
 
     val supportsDistance = state.selectedActivityType.supportsDistance
     val supportsElevation = state.selectedActivityType.supportsElevation
@@ -154,7 +153,26 @@ internal fun buildWriteRequest(
         activeCaloriesKcal = activeCalories,
         totalCaloriesKcal = totalCalories,
         bleSamples = bleSamples,
+        editedMetrics = state.editedMetrics(),
     )
+}
+
+/**
+ * For an edit, the totals the user changed: the field is on screen for this activity type
+ * and no longer holds the text it was filled with. Null for a new entry, where every value
+ * is a decision.
+ */
+internal fun ActivityEntryUiState.editedMetrics(): Set<ActivityFormMetric>? {
+    val prefilled = editPrefilledMetricTexts ?: return null
+    val type = selectedActivityType
+    val shown = buildMap {
+        if (type.supportsDistance) put(ActivityFormMetric.DISTANCE, distanceText)
+        if (type.supportsElevation) put(ActivityFormMetric.ELEVATION, elevationText)
+        put(ActivityFormMetric.ACTIVE_CALORIES, activeCaloriesText)
+        put(ActivityFormMetric.TOTAL_CALORIES, totalCaloriesText)
+        if (type.supportsStepCounting) put(ActivityFormMetric.STEPS, repetitionTotalText)
+    }
+    return shown.filter { (metric, text) -> text.trim() != prefilled[metric].orEmpty().trim() }.keys
 }
 
 /**

@@ -28,12 +28,15 @@ import tech.mmarca.openvitals.data.repository.BodyEnergyBaselineCacheStore
 import tech.mmarca.openvitals.data.repository.BodyEnergyChainSettlingDays
 import tech.mmarca.openvitals.data.repository.BodyEnergyTimelineStore
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.bodyEnergyPermissionSignature
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimelineAlgorithmVersion
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
+import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 /** How many days back the warm window reaches. Matches the repository's chain lookback. */
 const val BodyEnergyChainWarmDays = 14L
@@ -51,10 +54,15 @@ class BodyEnergyChainSyncService(
     private val healthRepository: HealthRepository,
     private val preferencesRepository: PreferencesRepository,
     private val clock: () -> Instant = Instant::now,
-    private val zone: ZoneId = ZoneId.systemDefault(),
+    private val zoneSource: () -> ZoneId = ZoneId::systemDefault,
     private val windowDays: Long = BodyEnergyChainWarmDays,
     private val elapsedMillis: () -> Long = { System.nanoTime() / 1_000_000L },
+    /** False in the background without the background-read grant: reads then see our own records only. */
+    private val readsOtherAppsData: suspend () -> Boolean = { true },
 ) {
+    /** Read per use: this singleton outlives a time zone change. */
+    private val zone: ZoneId get() = zoneSource()
+
     @Inject
     constructor(
         repository: BodyEnergyRepository,
@@ -62,6 +70,7 @@ class BodyEnergyChainSyncService(
         baselineStore: BodyEnergyBaselineCacheStore,
         healthRepository: HealthRepository,
         preferencesRepository: PreferencesRepository,
+        healthConnectManager: HealthConnectManager,
     ) : this(
         repository = repository,
         store = store,
@@ -69,6 +78,7 @@ class BodyEnergyChainSyncService(
         healthRepository = healthRepository,
         preferencesRepository = preferencesRepository,
         clock = Instant::now,
+        readsOtherAppsData = healthConnectManager::readsOtherAppsDataNow,
     )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -114,6 +124,10 @@ class BodyEnergyChainSyncService(
             if (healthRepository.availability() != HealthConnectAvailability.AVAILABLE) return
             val granted = healthRepository.grantedPermissions()
             if (ReadHeartRatePermission !in granted) return
+            // A scheduled watch sync forces this pass from the background. Without the grant
+            // Health Connect shows our own records only, and a settled day is never computed
+            // again. Leave the chain to the next pass with the app open.
+            if (!readsOtherAppsData()) return
 
             val now = clock()
             val today = now.atZone(zone).toLocalDate()
@@ -147,21 +161,25 @@ class BodyEnergyChainSyncService(
             // Oldest first: each day's seed must be stored before its successor.
             val startedAt = elapsedMillis()
             var completed = true
-            for (back in (windowDays - 1) downTo 1L) {
-                if (elapsedMillis() - startedAt >= PassBudgetMillis) {
-                    completed = false
-                    break
-                }
-                // Today is skipped: the foreground load owns it.
-                val date = today.minusDays(back)
-                if (date.toEpochDay() in freshEpochDays) continue
-                repository.loadTimeline(
-                    BodyEnergyTimelineQuery(
-                        period = DatePeriod(date, date),
-                        range = TimeRange.DAY,
-                        refreshMode = RefreshMode.NORMAL,
+            // Strict: a read that fails must end the pass. A day built from an empty read
+            // would be stored as fresh, and the staleness rule never revisits a settled day.
+            withStrictHealthConnectReads {
+                for (back in (windowDays - 1) downTo 1L) {
+                    if (elapsedMillis() - startedAt >= PassBudgetMillis) {
+                        completed = false
+                        break
+                    }
+                    // Today is skipped: the foreground load owns it.
+                    val date = today.minusDays(back)
+                    if (date.toEpochDay() in freshEpochDays) continue
+                    repository.loadTimeline(
+                        BodyEnergyTimelineQuery(
+                            period = DatePeriod(date, date),
+                            range = TimeRange.DAY,
+                            refreshMode = RefreshMode.NORMAL,
+                        )
                     )
-                )
+                }
             }
 
             // Only a completed pass resets the throttle.
@@ -187,10 +205,10 @@ class BodyEnergyChainSyncService(
      * stored day, and the watch fit nudges gains on every sync.
      */
     private fun globalSignature(granted: Set<String>, today: LocalDate): String {
-        val permissions = granted.sorted().joinToString(",")
         val zones = preferencesRepository.bodyEnergyCalibration().zoneSignature()
         val profile = preferencesRepository.bodyProfile().signature(today)
-        return "v$BodyEnergyTimelineAlgorithmVersion|${zones.hashCode()}|${profile.hashCode()}|${permissions.hashCode()}"
+        return "v$BodyEnergyTimelineAlgorithmVersion|${zones.hashCode()}|${profile.hashCode()}|" +
+            bodyEnergyPermissionSignature(granted)
     }
 
     private companion object {

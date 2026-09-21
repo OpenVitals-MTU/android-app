@@ -238,7 +238,7 @@ class FitBodyEnergyFromWatchUseCaseTest {
         wellnessRepository = wellness,
         preferencesRepository = preferences,
         bodyEnergyRepository = bodyEnergy,
-        zone = ZONE,
+        zoneSource = { ZONE },
     )
 
     private fun givenSamples(samples: List<GarminWellnessSample>) {

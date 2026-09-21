@@ -14,6 +14,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.OutputStream
+import tech.mmarca.openvitals.core.performance.offMainIo
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -28,9 +29,8 @@ internal enum class ActivityRouteExportFormat(
     KMZ(KmzMimeType, "kmz"),
 }
 
-internal fun Context.openActivityRouteInMap(workout: ExerciseData): Result<Unit> =
-    runCatching {
-        val routeIntent = createActivityRouteViewIntent(workout)
+internal suspend fun Context.openActivityRouteInMap(workout: ExerciseData): Result<Unit> =
+    offMainIo { createActivityRouteViewIntent(workout) }.mapCatching { routeIntent ->
         startActivity(
             Intent.createChooser(
                 routeIntent,
@@ -39,12 +39,12 @@ internal fun Context.openActivityRouteInMap(workout: ExerciseData): Result<Unit>
         )
     }
 
-internal fun Context.saveActivityRouteExport(
+internal suspend fun Context.saveActivityRouteExport(
     workout: ExerciseData,
     format: ActivityRouteExportFormat,
     destination: Uri,
 ): Result<Unit> =
-    runCatching {
+    offMainIo {
         contentResolver.openOutputStream(destination)?.use { output ->
             writeActivityRouteExport(
                 workout = workout,
@@ -55,12 +55,11 @@ internal fun Context.saveActivityRouteExport(
     }
 
 /** Stages the route file in the cache and opens the share sheet. No toast: the chooser is the feedback. */
-internal fun Context.shareActivityRoute(
+internal suspend fun Context.shareActivityRoute(
     workout: ExerciseData,
     format: ActivityRouteExportFormat,
 ): Result<Unit> =
-    runCatching {
-        val exportFile = createActivityRouteExportFile(workout, format)
+    offMainIo { createActivityRouteExportFile(workout, format) }.mapCatching { exportFile ->
         val uri = FileProvider.getUriForFile(
             this,
             "$packageName.fileprovider",

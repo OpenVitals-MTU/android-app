@@ -270,6 +270,17 @@ class PreferencesRepository @Inject constructor(
             prefs.edit { putBoolean(KEY_STEP_DISTANCE_BACKFILL_ENABLED, value) }
         }
 
+    /**
+     * Set when the user switched the distance backfill off and its records are not removed
+     * yet. The purge used to run in the settings screen's scope, so leaving the screen left
+     * the derived records in Health Connect with the feature off.
+     */
+    var stepDistancePurgePending: Boolean
+        get() = prefs.getBoolean(KEY_STEP_DISTANCE_PURGE_PENDING, false)
+        set(value) {
+            prefs.edit { putBoolean(KEY_STEP_DISTANCE_PURGE_PENDING, value) }
+        }
+
     /** Replace imported route altitudes with offline DEM values. Does nothing until a tile is imported. */
     var elevationCorrectionEnabled: Boolean
         get() = prefs.getBoolean(KEY_ELEVATION_CORRECTION_ENABLED, true)
@@ -1283,6 +1294,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_DASHBOARD_KNOWN_WIDGETS = "dashboard_known_widget_ids"
         private const val KEY_DASHBOARD_SORT_EMPTY_TILES_LAST = "dashboard_sort_empty_tiles_last"
         private const val KEY_STEP_DISTANCE_BACKFILL_ENABLED = "step_distance_backfill_enabled"
+        private const val KEY_STEP_DISTANCE_PURGE_PENDING = "step_distance_purge_pending"
         private const val KEY_ELEVATION_CORRECTION_ENABLED = "elevation_correction_enabled"
         private const val KEY_STRIDE_LENGTH_METERS = "stride_length_meters"
         private const val KEY_MANUAL_ENTRY_WIDGET_ORDER = "manual_entry_widget_order"

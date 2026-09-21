@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
@@ -222,7 +223,7 @@ class BodyEnergyViewModel(
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = error.toScreenError("Unable to load Body Energy."),
+                    error = error.toScreenError(R.string.screen_error_load_body_energy),
                 )
             }
         }

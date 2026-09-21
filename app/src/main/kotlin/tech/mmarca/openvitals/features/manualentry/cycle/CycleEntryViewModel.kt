@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry.cycle
 
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.features.manualentry.*
 import tech.mmarca.openvitals.features.manualentry.activity.*
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
@@ -247,7 +248,7 @@ class CycleEntryViewModel @Inject constructor(
                 if (entry == null || !entry.isOpenVitalsEntry) {
                     _uiState.value = _uiState.value.copy(
                         entryError = CycleEntryError.WRITE_FAILED,
-                        writeError = ScreenError.Message("Only OpenVitals entries can be edited."),
+                        writeError = ScreenError.Text(R.string.screen_error_entry_not_editable),
                     )
                     return@onSuccess
                 }

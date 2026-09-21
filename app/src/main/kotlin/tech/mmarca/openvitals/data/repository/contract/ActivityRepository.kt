@@ -51,6 +51,13 @@ interface ActivityRepository {
 
     suspend fun loadWorkout(id: String): ExerciseData?
 
+    /**
+     * [loadWorkout] for the edit form: steps, distance, elevation and calories hold only what
+     * OpenVitals stored. [loadWorkout] totals every app's data and may estimate calories,
+     * which is right for a screen and wrong for a form that saves what it shows.
+     */
+    suspend fun loadWorkoutForEdit(id: String): ExerciseData? = loadWorkout(id)
+
     suspend fun loadSpeedSamples(start: Instant, end: Instant): List<SpeedSample>
 
     suspend fun loadActivityCadenceSamples(start: Instant, end: Instant): List<ActivityCadenceSample>

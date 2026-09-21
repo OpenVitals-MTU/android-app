@@ -32,7 +32,8 @@ class HydrationReminderNotificationService @Inject constructor(
     }
 
     @SuppressLint("MissingPermission")
-    fun showHydrationReminder(currentLiters: Double, dailyGoalLiters: Double) {
+    /** [currentLiters] is null when today's total could not be read. The reminder then shows no number. */
+    fun showHydrationReminder(currentLiters: Double?, dailyGoalLiters: Double) {
         if (!HydrationReminderController.hasNotificationPermission(context)) return
         NotificationManagerCompat.from(context).notify(
             NotificationId,
@@ -44,24 +45,22 @@ class HydrationReminderNotificationService @Inject constructor(
         NotificationManagerCompat.from(context).cancel(NotificationId)
     }
 
-    private fun buildNotification(currentLiters: Double, dailyGoalLiters: Double): Notification {
-        val current = unitFormatter.hydration(currentLiters)
+    private fun buildNotification(currentLiters: Double?, dailyGoalLiters: Double): Notification {
         val goal = unitFormatter.hydration(dailyGoalLiters)
-        val progressPercent = if (dailyGoalLiters > 0.0) {
+        val current = currentLiters?.let(unitFormatter::hydration)
+        val progressPercent = if (currentLiters != null && dailyGoalLiters > 0.0) {
             ((currentLiters / dailyGoalLiters) * 100.0).roundToInt().coerceIn(0, 100)
         } else {
-            0
+            null
         }
-        val progressText = context.getString(
-            R.string.hydration_reminder_notification_progress,
-            current.text,
-            goal.text,
-        )
-        val contentText = context.getString(
-            R.string.hydration_reminder_notification_body,
-            current.text,
-            goal.text,
-        )
+        val progressText = current?.let {
+            context.getString(R.string.hydration_reminder_notification_progress, it.text, goal.text)
+        }
+        val contentText = if (current != null) {
+            context.getString(R.string.hydration_reminder_notification_body, current.text, goal.text)
+        } else {
+            context.getString(R.string.hydration_reminder_notification_body_unknown)
+        }
 
         return NotificationCompat.Builder(context, ChannelId)
             .setSmallIcon(R.drawable.ic_stat_hydration_reminder)
@@ -73,8 +72,11 @@ class HydrationReminderNotificationService @Inject constructor(
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setProgress(100, progressPercent, false)
-            .setSubText(progressText)
+            .apply {
+                // No bar and no "0 / 2 L" for a total that is not known.
+                if (progressPercent != null) setProgress(100, progressPercent, false)
+                if (progressText != null) setSubText(progressText)
+            }
             .setColor(HydrationNotificationColor)
             .apply {
                 quickAddAmountsMilliliters().forEachIndexed { index, milliliters ->

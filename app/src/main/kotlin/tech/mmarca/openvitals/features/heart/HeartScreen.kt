@@ -43,7 +43,6 @@ fun AverageHeartRateScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
     onOpenHeartRateRecovery: (() -> Unit)? = null,
 ) {
     HeartMetricScreen(
@@ -52,7 +51,6 @@ fun AverageHeartRateScreen(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.AVERAGE_HEART_RATE,
         onOpenHeartRateRecovery = onOpenHeartRateRecovery,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -61,14 +59,12 @@ fun RestingHeartRateScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.RESTING_HEART_RATE,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -77,14 +73,12 @@ fun HrvScreen(
     viewModel: HeartViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     HeartMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = HeartMetric.HRV,
-        onSectionEditStateChanged = onSectionEditStateChanged,
     )
 }
 
@@ -97,13 +91,12 @@ internal fun HeartMetricScreen(
     metric: HeartMetric,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit = { _, _ -> },
     onOpenHeartRateRecovery: (() -> Unit)? = null,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit,
 ) {
     val uiState = viewModel.uiState
     val isLoading by remember(viewModel) { uiState.map { it.isLoading } }
         .collectAsStateWithLifecycle(initialValue = true)
     val state by uiState.collectAsStateWithLifecycle()
-    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
+    val sectionContext = rememberMetricDetailSectionOrdering()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {

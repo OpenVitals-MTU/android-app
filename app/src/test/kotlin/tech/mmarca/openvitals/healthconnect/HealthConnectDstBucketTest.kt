@@ -20,10 +20,12 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.TimeZone
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 
 /**
  * A daily read over a range crossing a DST fall-back. `Duration.ofDays(1)` slicing is
@@ -54,7 +56,7 @@ class HealthConnectDstBucketTest {
     }
 
     @Test
-    fun `the range really does hand back a clipped tail bucket`() = onARealClock {
+    fun `the range really does hand back a clipped tail bucket`() = onTheTestClock {
         // The premise every other case rests on: Health Connect clips.
         val client = seeded(
             steps(500, at(LAST, 12), at(LAST, 13)),
@@ -80,7 +82,7 @@ class HealthConnectDstBucketTest {
 
     @Test
     fun `readDailySteps sums a clipped tail bucket onto its date instead of duplicating it`() =
-        onARealClock {
+        onTheTestClock {
             val client = seeded(
                 steps(1_000, at(FIRST, 10), at(FIRST, 11)),
                 steps(500, at(LAST, 12), at(LAST, 13)),
@@ -96,7 +98,7 @@ class HealthConnectDstBucketTest {
         }
 
     @Test
-    fun `readDailyHydration sums same-date buckets instead of keeping the last`() = onARealClock {
+    fun `readDailyHydration sums same-date buckets instead of keeping the last`() = onTheTestClock {
         val client = seeded(
             hydration(1.5, at(LAST, 12), at(LAST, 13)),
             hydration(0.2, at(LAST, 23), at(LAST, 23, minutes = 45)),
@@ -110,7 +112,7 @@ class HealthConnectDstBucketTest {
 
     @Test
     fun `a daily heart summary spans its buckets rather than reporting the last sliver`() =
-        onARealClock {
+        onTheTestClock {
             val client = seeded(
                 heartRate(at(LAST, 12), 60),
                 heartRate(at(LAST, 13), 80),
@@ -127,7 +129,15 @@ class HealthConnectDstBucketTest {
             assertThat(day.avgBpm).isIn(96L..97L)
         }
 
-    private fun onARealClock(body: suspend CoroutineScope.() -> Unit) = runBlocking(block = body)
+    private val testDispatcher = StandardTestDispatcher()
+    private val testDispatchers = object : DispatcherProvider {
+        override val main = testDispatcher
+        override val io = testDispatcher
+        override val default = testDispatcher
+    }
+
+    /** Every read hops to the support's dispatcher, so on this one the whole read is test time. */
+    private fun onTheTestClock(body: suspend CoroutineScope.() -> Unit) = runTest(testDispatcher) { body() }
 
     private val zone: ZoneId get() = ZoneId.of(ZONE)
     private val watch = Device(type = Device.TYPE_WATCH)
@@ -176,6 +186,7 @@ class HealthConnectDstBucketTest {
             clientProvider = { client },
             diagnostics = diagnostics,
             rateLimitMessage = { "rate limited" },
+            dispatchers = testDispatchers,
         )
     }
 

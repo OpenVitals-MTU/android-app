@@ -153,6 +153,7 @@ Notification access is optional and used for two things: forwarding phone notifi
 ## Foreground Service Permissions
 
 - `android.permission.FOREGROUND_SERVICE`: base permission for foreground work.
+- `android.permission.WAKE_LOCK`: keeps the CPU running during an activity recording while the screen is off, so timers and sensors keep time. Held while recording and during a timed rest, released on pause and at the end. Android grants it without a prompt.
 - `android.permission.FOREGROUND_SERVICE_LOCATION`: marks the recording service as location-based.
 - `android.permission.FOREGROUND_SERVICE_HEALTH`: marks the recording service as health-related where Android supports it.
 - `android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE`: used by activity recording with connected Bluetooth LE sensors and by the keep-alive service that runs during a phone-to-phone sync transfer.

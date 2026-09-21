@@ -177,6 +177,22 @@ class ActivityRecordingPlanRunTest {
         assertNotNull(next.currentSetStartedAt)
     }
 
+    @Test fun `a rest ends by itself, on the thread that owns the state`() {
+        // The rest timer used to fire on Dispatchers.IO and write the state from there, racing
+        // the main thread's own writes. On the main dispatcher the test clock can drive it.
+        val recorder = controller()
+        assertTrue(recorder.startPlanRecording(plan(), calisthenics))
+        repeat(3) { recorder.acceptRecognizedRepetition() }
+        assertEquals(ActivityRecordingStatus.RESTING, recorder.state.value.status)
+
+        mainDispatcherRule.testDispatcher.scheduler.advanceTimeBy(31_000L)
+        mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+        val next = recorder.state.value
+        assertEquals(ActivityRecordingStatus.RECORDING, next.status)
+        assertEquals(1, next.planStepIndex)
+    }
+
     @Test fun `a completed step records the plan's weight on its set`() {
         val pushUps = plan().blocks.first()
         val weighted = plan().copy(

@@ -34,12 +34,21 @@ val hasAndroidSerial = providers.environmentVariable("ANDROID_SERIAL").isPresent
 val isCiEnvironment = providers.environmentVariable("CI").isPresent ||
     providers.environmentVariable("WOODPECKER").isPresent
 
+// CI has no device, so release.sh asks for a local run. This records one that passed.
+val recordAndroidTestRun = tasks.register<Exec>("recordAndroidTestRun") {
+    enabled = hasAndroidSerial && !isCiEnvironment
+    if (enabled) {
+        dependsOn(":app:connectedCiAndroidTest")
+    }
+    commandLine("sh", "scripts/device-tests-stamp.sh", "write")
+}
+
 tasks.register("verifyAndroidTest") {
     group = "verification"
     description = "Runs connectedCiAndroidTest for local connected-device checks."
     enabled = hasAndroidSerial && !isCiEnvironment
     if (enabled) {
-        dependsOn(":app:connectedCiAndroidTest")
+        dependsOn(recordAndroidTestRun)
     }
 }
 

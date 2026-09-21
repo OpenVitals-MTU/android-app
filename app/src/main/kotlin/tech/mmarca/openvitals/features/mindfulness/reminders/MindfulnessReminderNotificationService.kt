@@ -28,7 +28,8 @@ class MindfulnessReminderNotificationService @Inject constructor(
     }
 
     @SuppressLint("MissingPermission")
-    fun showMindfulnessReminder(currentMinutes: Double, dailyGoalMinutes: Double) {
+    /** [currentMinutes] is null when today's total could not be read. The reminder then shows no progress. */
+    fun showMindfulnessReminder(currentMinutes: Double?, dailyGoalMinutes: Double) {
         if (!MindfulnessReminderController.hasNotificationPermission(context)) return
         NotificationManagerCompat.from(context).notify(
             NotificationId,
@@ -40,19 +41,20 @@ class MindfulnessReminderNotificationService @Inject constructor(
         NotificationManagerCompat.from(context).cancel(NotificationId)
     }
 
-    private fun buildNotification(currentMinutes: Double, dailyGoalMinutes: Double): Notification {
-        val current = unitFormatter.minutes(currentMinutes.roundToLong().coerceAtLeast(0L))
+    private fun buildNotification(currentMinutes: Double?, dailyGoalMinutes: Double): Notification {
         val goal = unitFormatter.minutes(dailyGoalMinutes.roundToLong().coerceAtLeast(0L))
-        val progressPercent = if (dailyGoalMinutes > 0.0) {
+        val progressPercent = if (currentMinutes != null && dailyGoalMinutes > 0.0) {
             ((currentMinutes / dailyGoalMinutes) * 100.0).roundToInt().coerceIn(0, 100)
         } else {
-            0
+            null
         }
-        val progressText = context.getString(
-            R.string.mindfulness_reminder_notification_progress,
-            current.text,
-            goal.text,
-        )
+        val progressText = currentMinutes?.let { minutes ->
+            context.getString(
+                R.string.mindfulness_reminder_notification_progress,
+                unitFormatter.minutes(minutes.roundToLong().coerceAtLeast(0L)).text,
+                goal.text,
+            )
+        }
         val contentText = context.getString(
             R.string.mindfulness_reminder_notification_body,
             goal.text,
@@ -68,8 +70,11 @@ class MindfulnessReminderNotificationService @Inject constructor(
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setProgress(100, progressPercent, false)
-            .setSubText(progressText)
+            .apply {
+                // No bar and no "0 / 10 min" for a total that is not known.
+                if (progressPercent != null) setProgress(100, progressPercent, false)
+                if (progressText != null) setSubText(progressText)
+            }
             .setColor(MindfulnessNotificationColor)
             .build()
     }

@@ -33,4 +33,19 @@ class ChartScrubberTest {
         assertEquals(0, nearestScrubTargetIndex(targets, 0f))
         assertEquals(1, nearestScrubTargetIndex(targets, 1f))
     }
+
+    @Test
+    fun `a target's labels are made when they are read, and once`() {
+        // A plot builds a target per visible sample on every pinch frame. The tooltip reads one.
+        var formatted = 0
+        val targets = List(2_500) { i ->
+            ScrubTarget(xFraction = i / 2_500f, yFraction = 0.5f, label = { formatted += 1; "value $i" to null })
+        }
+        assertEquals(0, formatted)
+
+        assertEquals("value 1200", targets[1_200].primary)
+        assertEquals(null, targets[1_200].secondary)
+
+        assertEquals(1, formatted)
+    }
 }

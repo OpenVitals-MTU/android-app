@@ -73,7 +73,7 @@ While you record an activity, OpenVitals uses location to build the route, and m
 
 A paired watch is reached over Bluetooth only. Nothing about a watch is sent off the phone.
 
-**Sync.** The watch's recorded files are read over Bluetooth and imported on the device. Series Health Connect has no type for, such as stress, Body Battery, and the watch's sleep and readiness scores, are stored in the app's own local database. The rest is written to Health Connect. A copy of each downloaded file is kept in the app's private storage for about 30 days, and removed during a later sync.
+**Sync.** The watch's recorded files are read over Bluetooth and imported on the device. Series Health Connect has no type for, such as stress, Body Battery, and the watch's sleep and readiness scores, are stored in the app's own local database. The rest is written to Health Connect. A copy of each downloaded file is kept in the app's private storage for about 30 days. The copies, and the per-minute sleep data, age out when the app starts or a watch syncs, whichever comes first.
 
 **Pairing.** Pairing uses Android's companion device manager, so Android keeps OpenVitals running while the watch is in range and a long sync can finish.
 
@@ -91,7 +91,7 @@ A paired watch is reached over Bluetooth only. Nothing about a watch is sent off
 
 **Music controls (optional).** With **Music controls on watch** switched on, OpenVitals reads what the phone is playing so the watch can show and control it: the player app's name, the track, artist and album, the track length and the playback position. Android shows media players only to an app with notification access, so the same grant is used, behind its own disclosure. This is read only while the switch is on, sent only to the watch, and never stored. Granting access for music does not switch notification forwarding on.
 
-**Calendar (optional).** If you switch on **Calendar on watch** for a watch, OpenVitals asks for Android's calendar permission and reads your calendar to answer the watch's calendar glance. Events are read only while answering a watch that asked, within the window the watch named. They are held in memory only and sent only to the watch. Cancelled events are not sent.
+**Calendar (optional).** If you switch on **Calendar on watch** for a watch, OpenVitals asks for Android's calendar permission and reads your calendar to answer the watch's calendar glance. Events are read only while answering a watch that asked, within the window the watch named. They are held in memory only and sent only to the watch. Cancelled events, and meetings you declined, are not sent.
 
 **Weather.** Weather shown on the watch comes from a weather app on your phone that broadcasts it, such as Breezy Weather. OpenVitals never contacts a weather service. It passes the forecast on to the watch and keeps the latest one locally.
 
@@ -101,7 +101,7 @@ Sync copies Health Connect records from one phone to another over a paired Bluet
 
 ## Imports, Exports And Reports
 
-An Apple Health export you pick is copied into the app's private storage and analysed there before you choose what to import. The copy is removed after a successful import, when the analysis fails, or when you pick another export. Otherwise it stays until you clear the app's storage.
+An Apple Health export you pick is copied into the app's private storage and analysed there before you choose what to import. The copy is removed after a successful import, when the analysis fails, or when you pick another export. A copy you never came back to is removed when the app next starts, once it is a day old.
 
 Exports (routes, workouts, reports, CSV files) and import reports are created on the device and leave it only if you save or share them. An import report includes the importer's full log, so review it before you share it.
 
@@ -133,7 +133,7 @@ Health data in Health Connect is controlled by your device and Health Connect se
 
 You can revoke OpenVitals permissions at any time from Android Settings or Health Connect settings. After permissions are revoked, OpenVitals can no longer access the revoked data. Summaries it cached earlier stay on the device until you clear them.
 
-Removing a watch from OpenVitals does not delete the data it already synced.
+Removing a watch from OpenVitals does not delete the data it already synced. When you remove your last Garmin watch, its file copies and per-minute sleep data are deleted, and you can choose to delete the stress, Body Battery and score history that only this phone holds.
 
 You can delete all local OpenVitals data by clearing the app's storage in Android settings or uninstalling the app.
 

@@ -98,7 +98,6 @@ internal fun MetricRouteContent(
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
     onLogCycleEntry: () -> Unit = {},
     onEditCycleEntry: (CycleEntryKind, String) -> Unit = { _, _ -> },
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     when (val destination = metricRouteDestinationFor(metricId)) {
         MetricRouteDestination.Calories -> {
@@ -117,7 +116,6 @@ internal fun MetricRouteContent(
                 viewModel = nutritionViewModel,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onSectionEditStateChanged = onSectionEditStateChanged,
             )
         }
         is MetricRouteDestination.ActivityDetail -> {
@@ -127,7 +125,6 @@ internal fun MetricRouteContent(
                 viewModel = activityViewModel,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onSectionEditStateChanged = onSectionEditStateChanged,
             )
         }
         is MetricRouteDestination.HeartDetail -> {
@@ -139,7 +136,6 @@ internal fun MetricRouteContent(
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onEditVitalsMeasurement = onEditVitalsMeasurement,
                 onOpenHeartRateRecovery = onOpenHeartRateRecovery,
-                onSectionEditStateChanged = onSectionEditStateChanged,
             )
         }
         is MetricRouteDestination.BodyDetail -> {
@@ -150,7 +146,6 @@ internal fun MetricRouteContent(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onEditBodyMeasurement = onEditBodyMeasurement,
-                onSectionEditStateChanged = onSectionEditStateChanged,
             )
         }
         MetricRouteDestination.Activities -> {
@@ -168,7 +163,6 @@ internal fun MetricRouteContent(
                 onOpenDistance = { onOpenMetric(DashboardWidgetId.DISTANCE) },
                 onOpenEnergyBurned = { onOpenMetric(DashboardWidgetId.CALORIES_OUT) },
                 onOpenHrv = { onOpenMetric(DashboardWidgetId.HRV) },
-                onSectionEditStateChanged = onSectionEditStateChanged,
             )
         }
         MetricRouteDestination.Sleep -> {
@@ -180,7 +174,6 @@ internal fun MetricRouteContent(
                 onOpenSleepSession = onOpenSleepSession,
                 onOpenSleepScore = onOpenSleepScore,
                 onOpenSleepEfficiency = onOpenSleepEfficiency,
-                onSectionEditStateChanged = onSectionEditStateChanged,
             )
         }
         MetricRouteDestination.BodyEnergy -> {
@@ -296,50 +289,42 @@ private fun ActivityMetricRouteScreen(
     viewModel: ActivityViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit,
 ) {
     when (metric) {
         ActivityMetric.STEPS -> StepsScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
         ActivityMetric.DISTANCE -> DistanceScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
         ActivityMetric.CALORIES_BURNED -> CaloriesOutScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
         ActivityMetric.ACTIVE_CALORIES -> ActiveCaloriesScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
         ActivityMetric.FLOORS -> FloorsScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
         ActivityMetric.ELEVATION -> ElevationScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
         ActivityMetric.WHEELCHAIR_PUSHES -> WheelchairPushesScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
     }
 }
@@ -352,63 +337,54 @@ private fun HeartMetricRouteScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
     onOpenHeartRateRecovery: () -> Unit,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit,
 ) {
     when (metric) {
         HeartMetric.AVERAGE_HEART_RATE -> AverageHeartRateScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
             onOpenHeartRateRecovery,
         )
         HeartMetric.RESTING_HEART_RATE -> RestingHeartRateScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
-        HeartMetric.HRV -> HrvScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onSectionEditStateChanged)
+        HeartMetric.HRV -> HrvScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
         HeartMetric.BLOOD_PRESSURE -> BloodPressureScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
             onEditVitalsMeasurement,
-            onSectionEditStateChanged,
         )
         HeartMetric.SPO2 -> SpO2Screen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
             onEditVitalsMeasurement,
-            onSectionEditStateChanged,
         )
-        HeartMetric.VO2_MAX -> Vo2MaxScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onSectionEditStateChanged)
+        HeartMetric.VO2_MAX -> Vo2MaxScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
         HeartMetric.RESPIRATORY_RATE -> RespiratoryRateScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
             onEditVitalsMeasurement,
-            onSectionEditStateChanged,
         )
         HeartMetric.BODY_TEMPERATURE -> BodyTemperatureScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
             onEditVitalsMeasurement,
-            onSectionEditStateChanged,
         )
         HeartMetric.BLOOD_GLUCOSE -> BloodGlucoseScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
         HeartMetric.SKIN_TEMPERATURE -> SkinTemperatureScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
     }
 }
@@ -419,32 +395,27 @@ private fun NutritionMetricRouteScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit,
 ) {
     when (metric) {
         NutritionMetric.CALORIES_IN -> CaloriesInScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
         NutritionMetric.PROTEIN -> ProteinScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
         NutritionMetric.CARBS -> CarbsScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
         NutritionMetric.FAT -> FatScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
     }
 }
@@ -456,7 +427,6 @@ private fun BodyMetricRouteScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit,
 ) {
     when (metric) {
         BodyMetric.WEIGHT -> WeightScreen(
@@ -464,47 +434,40 @@ private fun BodyMetricRouteScreen(
             unitFormatter,
             dateTimeFormatterProvider,
             onEditBodyMeasurement,
-            onSectionEditStateChanged,
         )
         BodyMetric.HEIGHT -> HeightScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
             onEditBodyMeasurement,
-            onSectionEditStateChanged,
         )
         BodyMetric.BMI -> BmiScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
             onEditBodyMeasurement,
-            onSectionEditStateChanged,
         )
         BodyMetric.BODY_FAT -> BodyFatScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
             onEditBodyMeasurement,
-            onSectionEditStateChanged,
         )
         BodyMetric.LEAN_MASS -> LeanMassScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
-        BodyMetric.BMR -> BmrScreen(viewModel, unitFormatter, dateTimeFormatterProvider, onSectionEditStateChanged)
+        BodyMetric.BMR -> BmrScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
         BodyMetric.BONE_MASS -> BoneMassScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
         BodyMetric.BODY_WATER_MASS -> BodyWaterMassScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
-            onSectionEditStateChanged,
         )
     }
 }

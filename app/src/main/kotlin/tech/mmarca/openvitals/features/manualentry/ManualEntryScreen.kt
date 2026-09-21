@@ -4,15 +4,22 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
+import tech.mmarca.openvitals.ui.components.AppBarAction
+import tech.mmarca.openvitals.ui.components.DeclareAppBar
+import tech.mmarca.openvitals.ui.components.ScreenAppBar
 
 @Composable
 fun ManualEntryScreen(
@@ -24,7 +31,6 @@ fun ManualEntryScreen(
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
     onOpenCycleEntry: () -> Unit,
-    onEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
     onOpenWorkoutPlans: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -45,12 +51,25 @@ fun ManualEntryScreen(
     val visibleIds = state.widgets.filter { it in specsById }
     val hiddenSpecs = specs.filter { it.id !in visibleIds }
 
-    LaunchedEffect(state.isEditingWidgets) {
-        onEditStateChanged(state.isEditingWidgets, viewModel::toggleWidgetEdit)
-    }
-    DisposableEffect(Unit) {
-        onDispose { onEditStateChanged(false) {} }
-    }
+    val editingTint = MaterialTheme.colorScheme.primary
+    DeclareAppBar(
+        remember(state.isEditingWidgets, editingTint) {
+            ScreenAppBar(
+                actions = listOf(
+                    AppBarAction(
+                        icon = Icons.Outlined.Edit,
+                        contentDescription = if (state.isEditingWidgets) {
+                            R.string.cd_finish_manual_entry_editing
+                        } else {
+                            R.string.cd_edit_manual_entry_widgets
+                        },
+                        tint = if (state.isEditingWidgets) editingTint else null,
+                        onClick = viewModel::toggleWidgetEdit,
+                    ),
+                ),
+            )
+        },
+    )
     LaunchedEffect(state.pendingHydrationEntryNavigation) {
         if (state.pendingHydrationEntryNavigation) {
             viewModel.onHydrationEntryNavigationHandled()

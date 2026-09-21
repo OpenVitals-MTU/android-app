@@ -49,6 +49,12 @@ interface SyncRecordStore {
 
     /** Writes [items] and returns the keys that landed. A missing key is not counted as imported. */
     suspend fun writeItems(items: List<SyncItem>): Set<String>
+
+    /**
+     * False for a record outside what this phone's user chose, such as a date before
+     * "how far back". The peer decides what it sends; this phone decides what it keeps.
+     */
+    fun accepts(item: SyncItem): Boolean = true
 }
 
 /** Static configuration for a session. */
@@ -259,7 +265,7 @@ class SyncSession(
         // Sender and receiver run concurrently over the one full-duplex link.
         coroutineScope {
             launch { runSender(types) }
-            launch { runReceiver() }
+            launch { runReceiver(types) }
         }
     }
 
@@ -281,7 +287,7 @@ class SyncSession(
         send(SyncFrameType.SEND_DONE, ByteArray(0))
     }
 
-    private suspend fun runReceiver() {
+    private suspend fun runReceiver(types: Set<String>) {
         var received = 0
         var written = 0
         while (true) {
@@ -297,6 +303,11 @@ class SyncSession(
             val batch = result.getOrThrow()
             val fresh = mutableListOf<SyncItem>()
             for (item in batch.items) {
+                // The peer sends what its user picked. Only what this user picked is kept.
+                if (item.recordType !in types || !store.accepts(item)) {
+                    report.recordReceived(item.recordType, refused = true)
+                    continue
+                }
                 // seenKeys covers cross-device and within-session dedup.
                 val keyHash = keyHasher.hash(item.key)
                 if (keyHash in seenKeys) {

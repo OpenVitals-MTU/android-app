@@ -141,6 +141,21 @@ enum class ActivityRecordSource {
     FILE,
 }
 
+/** A total the activity form owns. Each is stored as one record beside the session. */
+enum class ActivityFormMetric { STEPS, DISTANCE, ELEVATION, ACTIVE_CALORIES, TOTAL_CALORIES }
+
+/**
+ * What OpenVitals itself stored for one session. Null means it stored nothing for that
+ * total, whatever other apps recorded over the same minutes.
+ */
+data class OwnActivityMetrics(
+    val steps: Long? = null,
+    val distanceMeters: Double? = null,
+    val elevationGainedMeters: Double? = null,
+    val activeCaloriesKcal: Double? = null,
+    val totalCaloriesKcal: Double? = null,
+)
+
 data class ActivityWriteRequest(
     val exerciseType: Int,
     val startTime: Instant,
@@ -164,7 +179,28 @@ data class ActivityWriteRequest(
      * file, so importing the file again updates the records instead of adding a second set.
      */
     val importKey: String? = null,
-)
+    /**
+     * For an edit: the totals the user changed. Every other total keeps the value OpenVitals
+     * stored, including one the form does not show for this activity type. Null means every
+     * total in this request is a decision, as for a new entry.
+     */
+    val editedMetrics: Set<ActivityFormMetric>? = null,
+) {
+    /** This request with every total the user did not change taken from [own]. */
+    fun keepingUntouchedMetrics(own: OwnActivityMetrics): ActivityWriteRequest {
+        val edited = editedMetrics ?: return this
+        return copy(
+            stepsCount = if (ActivityFormMetric.STEPS in edited) stepsCount else own.steps,
+            distanceMeters = if (ActivityFormMetric.DISTANCE in edited) distanceMeters else own.distanceMeters,
+            elevationGainedMeters =
+            if (ActivityFormMetric.ELEVATION in edited) elevationGainedMeters else own.elevationGainedMeters,
+            activeCaloriesKcal =
+            if (ActivityFormMetric.ACTIVE_CALORIES in edited) activeCaloriesKcal else own.activeCaloriesKcal,
+            totalCaloriesKcal =
+            if (ActivityFormMetric.TOTAL_CALORIES in edited) totalCaloriesKcal else own.totalCaloriesKcal,
+        )
+    }
+}
 
 data class PlannedExerciseData(
     val id: String,

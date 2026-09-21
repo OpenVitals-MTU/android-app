@@ -33,6 +33,9 @@ object WorkoutPlanExport {
     const val FormatVersion = 1
     const val MimeType = "application/json"
     const val FileName = "openvitals-workout-plans.json"
+
+    /** Any file can be picked for import. An export of many plans is a few hundred kilobytes. */
+    const val ImportMaxBytes = 2 * 1024 * 1024
 }
 
 private val json = Json { prettyPrint = true }

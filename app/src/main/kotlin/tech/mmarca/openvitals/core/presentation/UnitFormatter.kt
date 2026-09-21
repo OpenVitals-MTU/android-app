@@ -159,10 +159,20 @@ class UnitFormatter(
     fun minutes(minutes: Long): DisplayValue = DisplayValue(count(minutes), "min")
 
     fun decimal(value: Double, decimals: Int): String =
-        NumberFormat.getNumberInstance(localeProvider()).apply {
-            minimumFractionDigits = decimals
-            maximumFractionDigits = decimals
-        }.format(value)
+        decimalFormat(localeProvider(), decimals).format(value)
+
+    // A NumberFormat is costly to build and was built on every call: once per axis label,
+    // per list row, per chart point. One per locale and precision, per thread, because
+    // NumberFormat is not thread-safe.
+    private val decimalFormats = ThreadLocal.withInitial { HashMap<Pair<Locale, Int>, NumberFormat>() }
+
+    private fun decimalFormat(locale: Locale, decimals: Int): NumberFormat =
+        decimalFormats.get().getOrPut(locale to decimals) {
+            NumberFormat.getNumberInstance(locale).apply {
+                minimumFractionDigits = decimals
+                maximumFractionDigits = decimals
+            }
+        }
 
     private fun metricDistance(meters: Double): DisplayValue =
         if (meters >= 1000.0) {

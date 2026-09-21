@@ -24,6 +24,7 @@ import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.features.manualentry.hydration.HydrationDrinkLogOutcome
 import tech.mmarca.openvitals.features.manualentry.hydration.isValidHydrationContainerMilliliters
 import tech.mmarca.openvitals.features.manualentry.hydration.writeHydrationAndNutritionEntry
+import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
 
 @Singleton
 class HydrationReminderController @Inject constructor(
@@ -168,7 +169,8 @@ class HydrationReminderController @Inject constructor(
         val now = ZonedDateTime.now()
         val currentLiters = todayHydrationLiters()
         val dailyGoalLiters = preferencesRepository.hydrationDailyGoalLiters
-        val goalMet = dailyGoalLiters > 0.0 && currentLiters >= dailyGoalLiters
+        // An unknown total has not met the goal. The user is still reminded, without a number.
+        val goalMet = dailyGoalLiters > 0.0 && currentLiters != null && currentLiters >= dailyGoalLiters
         if (!goalMet && isWithinHydrationReminderActiveHours(now.toLocalTime(), config)) {
             notificationService.showHydrationReminder(currentLiters, dailyGoalLiters)
         }
@@ -185,16 +187,24 @@ class HydrationReminderController @Inject constructor(
 
     private suspend fun isDailyGoalMet(): Boolean {
         val dailyGoalLiters = preferencesRepository.hydrationDailyGoalLiters
-        return dailyGoalLiters > 0.0 && todayHydrationLiters() >= dailyGoalLiters
+        val currentLiters = todayHydrationLiters() ?: return false
+        return dailyGoalLiters > 0.0 && currentLiters >= dailyGoalLiters
     }
 
-    private suspend fun todayHydrationLiters(): Double {
+    /**
+     * Today's total, or null when it cannot be read. Strict: a rate-limited or paused read
+     * answers with an empty list, which summed to 0 and was printed as today's progress.
+     */
+    private suspend fun todayHydrationLiters(): Double? {
         val today = LocalDate.now()
         return runCatching {
-            hydrationRepository.loadDailyHydration(today, today).sumOf { it.liters }
+            withStrictHealthConnectReads {
+                hydrationRepository.loadDailyHydration(today, today).sumOf { it.liters }
+            }
         }.onFailure { error ->
+            if (error is kotlinx.coroutines.CancellationException) throw error
             Log.w(TAG, "Could not read today's hydration before reminder", error)
-        }.getOrDefault(0.0)
+        }.getOrNull()
     }
 
     private fun scheduleNextReminder(

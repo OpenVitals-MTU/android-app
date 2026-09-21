@@ -79,16 +79,27 @@ internal class BleGattConnection(
             return
         }
         if (gatt != null) return
+        // connectGatt throws without the Nearby devices grant, and a grant can be taken back.
+        if (!hasBluetoothConnectPermission(context)) {
+            updateStatus(BleConnectionStatus.DISCONNECTED)
+            return
+        }
         updateStatus(BleConnectionStatus.CONNECTING)
         val device = runCatching { adapter.getRemoteDevice(address) }.getOrNull() ?: return
-        gatt = device.connectGatt(
-            context,
-            false,
-            gattCallback,
-            BluetoothDevice.TRANSPORT_LE,
-            BluetoothDevice.PHY_LE_1M,
-            callbackHandler,
-        )
+        gatt = try {
+            device.connectGatt(
+                context,
+                false,
+                gattCallback,
+                BluetoothDevice.TRANSPORT_LE,
+                BluetoothDevice.PHY_LE_1M,
+                callbackHandler,
+            )
+        } catch (error: SecurityException) {
+            Log.w(TAG, "No Bluetooth grant for $displayName", error)
+            updateStatus(BleConnectionStatus.DISCONNECTED)
+            null
+        }
     }
 
     @SuppressLint("MissingPermission")

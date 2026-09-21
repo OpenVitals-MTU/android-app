@@ -35,7 +35,9 @@ The path taken decides what the device becomes. A device added through Settings,
 
 After pairing, a checklist offers the OS-level permissions a watch benefits from: notification access for forwarding, and exemption from battery optimization so a held link survives the night. Each row explains itself and opens the right system screen; all of them can be declined and granted later.
 
-A watch can be renamed, switched off without unpairing, or removed. Removing it unpairs the watch and forgets which files were already copied, so a future pairing starts fresh. Data already written to Health Connect is kept.
+Android's pairing (the bond) is what proves a device is the user's watch; the Garmin protocol has no check of its own. So OpenVitals connects to a Garmin watch only while that bond exists. If the watch was unpaired in Android's Bluetooth settings, a sync stops with a message that says to remove the watch and add it again.
+
+A watch can be renamed, switched off without unpairing, or removed. Removing it unpairs the watch and forgets which files were already copied, so a future pairing starts fresh. Data already written to Health Connect is kept. Removing the last Garmin watch also deletes the downloaded file copies and the per-minute sleep data, which only serve a paired watch, and the dialog offers to delete the watch-only history (stress, Body Battery, scores) that has no copy in Health Connect. `GarminLocalData` owns all three, and applies their retention at app start as well as inside a sync.
 
 A Garmin Edge bike computer is recognized as a bike computer rather than a watch. It gets a Live sensor section instead of the watch data screen, because broadcast mode is normally only on during a ride.
 
@@ -52,6 +54,8 @@ The dashboard carries a watch tile showing the most recently synced watch with i
 ### Automatic Sync
 
 "Automatic sync", on the watch's device screen, syncs the watch on its own every 30 minutes, hour, or two hours. Off by default, and set per watch, so two paired watches can be on different schedules or only one of them on a schedule at all.
+
+A scheduled sync runs while the app is closed. Health Connect then lets OpenVitals read other apps' records only with its "Access data in the background" grant. Without it the watch's data is still saved, but everything built from all apps' records, such as Body Energy and the history caches, waits until the app is opened. So switching Automatic sync on asks for that grant when it is missing, and the card keeps a line and an "Allow background access" button for as long as it is.
 
 A scheduled run does exactly what tapping Sync does, with three differences:
 
@@ -195,7 +199,7 @@ Off by default, because an open stream spends the watch's battery.
 
 ## Weather On The Watch
 
-The watch's weather glance asks the phone for weather, and OpenVitals answers from a weather app on the phone, not from the internet. Any app that broadcasts the Gadgetbridge generic-weather format works; [Breezy Weather](https://github.com/breezy-weather/breezy-weather) is the tested one (enable its Gadgetbridge broadcast and add OpenVitals to its recipients). The snapshot is considered fresh for six hours.
+The watch's weather glance asks the phone for weather, and OpenVitals answers from a weather app on the phone, not from the internet. Any app that broadcasts the Gadgetbridge generic-weather format works; [Breezy Weather](https://github.com/breezy-weather/breezy-weather) is the tested one (enable its Gadgetbridge broadcast and add OpenVitals to its recipients). The snapshot is considered fresh for six hours. Any app on the phone can send this broadcast, so the receiver caps what it reads: 512 KB after unzipping, 16 levels of nesting, 72 hours and 16 days of forecast. A payload past a cap is dropped.
 
 The location the watch shows is the weather app's location. OpenVitals also answers the watch's own position asks from the phone's last known location, which is what arms the glance in the first place.
 

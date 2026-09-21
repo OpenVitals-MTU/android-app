@@ -18,6 +18,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import java.io.File
 import java.io.OutputStream
+import tech.mmarca.openvitals.core.performance.offMainIo
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
@@ -36,13 +37,13 @@ internal enum class ActivityWorkoutExportFormat(
     FIT(FitMimeType, "fit"),
 }
 
-internal fun Context.saveActivityWorkoutExport(
+internal suspend fun Context.saveActivityWorkoutExport(
     workout: ExerciseData,
     heartRateSamples: List<HeartRateSample>,
     format: ActivityWorkoutExportFormat,
     destination: Uri,
 ): Result<Unit> =
-    runCatching {
+    offMainIo {
         contentResolver.openOutputStream(destination)?.use { output ->
             writeActivityWorkoutExport(
                 workout = workout,
@@ -54,13 +55,13 @@ internal fun Context.saveActivityWorkoutExport(
     }
 
 /** Same staging as [shareActivityRoute]: cache file, FileProvider URI, share sheet, no toast. */
-internal fun Context.shareActivityWorkout(
+internal suspend fun Context.shareActivityWorkout(
     workout: ExerciseData,
     heartRateSamples: List<HeartRateSample>,
     format: ActivityWorkoutExportFormat,
 ): Result<Unit> =
-    runCatching {
-        val exportFile = File(cacheDir, WorkoutExportCacheDirectory)
+    offMainIo {
+        File(cacheDir, WorkoutExportCacheDirectory)
             .stageExport(workout.workoutExportFileName(format)) { output ->
                 writeActivityWorkoutExport(
                     workout = workout,
@@ -69,6 +70,7 @@ internal fun Context.shareActivityWorkout(
                     output = output,
                 )
             }
+    }.mapCatching { exportFile ->
         val uri = FileProvider.getUriForFile(
             this,
             "$packageName.fileprovider",

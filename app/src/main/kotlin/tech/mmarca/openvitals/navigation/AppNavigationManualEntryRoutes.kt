@@ -41,11 +41,6 @@ internal fun NavGraphBuilder.manualEntryRoutes(
     appThemeMode: AppThemeMode,
     routeImportRequest: ExternalRouteImportRequest?,
     onRouteImportRequestHandled: (Long) -> Unit,
-    onManualEntryEditStateChanged: (Boolean, () -> Unit) -> Unit,
-    onActivityEntryTitleChanged: (Int?) -> Unit,
-    onActivityEntryEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit,
-    onActivityEntryFocusModeChanged: (Boolean) -> Unit,
-    onActivityRecordingOutdoorModeStateChanged: (Boolean, Boolean, () -> Unit) -> Unit,
     onEntrySaved: () -> Unit,
     onEntrySavedAndPopBack: () -> Unit,
     onActivityEntrySaved: () -> Unit,
@@ -79,7 +74,6 @@ internal fun NavGraphBuilder.manualEntryRoutes(
                 onOpenCycleEntry = {
                     navController.navigate(Screen.CycleEntry.route)
                 },
-                onEditStateChanged = onManualEntryEditStateChanged,
                 onOpenWorkoutPlans = {
                     navController.navigate(Screen.WorkoutPlans.route)
                 },
@@ -204,10 +198,6 @@ internal fun NavGraphBuilder.manualEntryRoutes(
             pendingRouteImportRequestId = routeImportRequest?.id,
             onPendingRouteImportHandled = onRouteImportRequestHandled,
             onEntrySaved = onActivityEntrySaved,
-            onActivityRecordingTitleChanged = onActivityEntryTitleChanged,
-            onActivityRecordingEditStateChanged = onActivityEntryEditStateChanged,
-            onActivityRecordingFocusModeChanged = onActivityEntryFocusModeChanged,
-            onActivityRecordingOutdoorModeStateChanged = onActivityRecordingOutdoorModeStateChanged,
             appThemeMode = appThemeMode,
         )
     }
@@ -231,10 +221,6 @@ internal fun NavGraphBuilder.manualEntryRoutes(
                 navController.navigate(Screen.WorkoutPlanBuilder.createRoute(planId))
             },
             onEntrySaved = onEntrySavedAndPopBack,
-            onActivityRecordingTitleChanged = onActivityEntryTitleChanged,
-            onActivityRecordingEditStateChanged = onActivityEntryEditStateChanged,
-            onActivityRecordingFocusModeChanged = onActivityEntryFocusModeChanged,
-            onActivityRecordingOutdoorModeStateChanged = onActivityRecordingOutdoorModeStateChanged,
             appThemeMode = appThemeMode,
         )
     }

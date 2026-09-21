@@ -22,6 +22,7 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.features.activity.DeleteActivityConfirmationDialog
 import tech.mmarca.openvitals.ui.components.DayNavigator
 import tech.mmarca.openvitals.ui.components.HealthConnectSyncStatusBanner
 import java.time.LocalDate

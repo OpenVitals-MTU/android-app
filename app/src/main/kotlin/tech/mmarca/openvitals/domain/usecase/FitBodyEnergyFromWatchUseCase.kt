@@ -33,8 +33,11 @@ class FitBodyEnergyFromWatchUseCase(
     private val wellnessRepository: GarminWellnessRepository,
     private val preferencesRepository: PreferencesRepository,
     private val bodyEnergyRepository: BodyEnergyRepository,
-    private val zone: ZoneId,
+    private val zoneSource: () -> ZoneId,
 ) {
+    /** Read per use: this singleton outlives a time zone change. */
+    private val zone: ZoneId get() = zoneSource()
+
     // Dagger does not read default arguments, so the injectable constructor supplies the zone.
     @Inject
     constructor(
@@ -45,7 +48,7 @@ class FitBodyEnergyFromWatchUseCase(
         wellnessRepository = wellnessRepository,
         preferencesRepository = preferencesRepository,
         bodyEnergyRepository = bodyEnergyRepository,
-        zone = ZoneId.systemDefault(),
+        zoneSource = ZoneId::systemDefault,
     )
 
     /** Returns how many observations were folded in. */

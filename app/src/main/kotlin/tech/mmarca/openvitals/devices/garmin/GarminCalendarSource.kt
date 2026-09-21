@@ -44,15 +44,14 @@ class GarminCalendarSource @Inject constructor(
             CalendarContract.Instances.ORGANIZER,
             CalendarContract.Instances.ALL_DAY,
             CalendarContract.Instances.STATUS,
+            CalendarContract.Instances.SELF_ATTENDEE_STATUS,
         )
 
         val events = mutableListOf<GarminCalendarEvent>()
         runCatching {
             context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
                 while (cursor.moveToNext()) {
-                    // A declined or cancelled meeting is not on the wearer's day.
-                    val status = cursor.getInt(7)
-                    if (status == CalendarContract.Instances.STATUS_CANCELED) continue
+                    if (!isOnTheWearersDay(status = cursor.getInt(7), selfAttendeeStatus = cursor.getInt(8))) continue
                     events.add(
                         GarminCalendarEvent(
                             title = cursor.getString(2).orEmpty()
@@ -73,8 +72,16 @@ class GarminCalendarSource @Inject constructor(
         return events.sortedBy { it.startEpochSeconds }
     }
 
-    private companion object {
+    internal companion object {
         /** The glance renders a nameless event as a blank line; name it instead. */
-        const val UNTITLED_EVENT = "(untitled)"
+        private const val UNTITLED_EVENT = "(untitled)"
+
+        /**
+         * A cancelled meeting, or one the wearer declined, is not on their day. The docs
+         * and the privacy policy promise that neither is sent to the watch.
+         */
+        fun isOnTheWearersDay(status: Int, selfAttendeeStatus: Int): Boolean =
+            status != CalendarContract.Instances.STATUS_CANCELED &&
+                selfAttendeeStatus != CalendarContract.Attendees.ATTENDEE_STATUS_DECLINED
     }
 }

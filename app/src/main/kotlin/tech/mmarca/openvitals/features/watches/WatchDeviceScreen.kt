@@ -45,8 +45,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,9 +67,13 @@ import tech.mmarca.openvitals.devices.garmin.GarminCapability
 import tech.mmarca.openvitals.devices.garmin.GarminSettingsService
 import tech.mmarca.openvitals.devices.garmin.canStorePoints
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
+import tech.mmarca.openvitals.ui.components.DeclareAppBar
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.rememberHealthConnectPermissionLauncher
+import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.theme.Spacing
 import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
+import tech.mmarca.openvitals.ui.components.ScreenAppBar
 
 /** The watch's settings tree browser exists, so the rows that open it are live. */
 internal const val WatchSettingsTreeAvailable: Boolean = true
@@ -95,15 +97,17 @@ fun WatchDeviceScreen(
     onOpenSendPoint: (String) -> Unit,
     onOpenAlarms: (String) -> Unit,
     onRemoved: () -> Unit,
-    onTitleChanged: (String?) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val device = state.device
 
-    LaunchedEffect(device?.displayName) { onTitleChanged(device?.displayName) }
-    DisposableEffect(Unit) { onDispose { onTitleChanged(null) } }
+    DeclareAppBar(ScreenAppBar(title = device?.displayName))
     // Notification access is granted in Android's settings, so it is re-read on the way back.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshMusicAccess() }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshBackgroundAccess() }
+    val backgroundAccessLauncher = rememberHealthConnectPermissionLauncher(
+        onResult = viewModel::refreshBackgroundAccess,
+    )
 
     if (state.showMusicDisclosure) {
         NotificationAccessDisclosureDialog(
@@ -242,7 +246,18 @@ fun WatchDeviceScreen(
             // First: the schedule decides whether this screen is ever visited again.
             AutoSyncCard(
                 selected = state.autoSync,
-                onSelect = viewModel::setAutoSync,
+                backgroundReadMissing = state.backgroundReadMissing,
+                onSelect = { interval ->
+                    // Switching it on is the moment to ask: from now on syncs run with the app closed.
+                    val switchingOn = state.autoSync == AutoSyncInterval.OFF && interval != AutoSyncInterval.OFF
+                    viewModel.setAutoSync(interval)
+                    if (switchingOn && state.backgroundReadMissing) {
+                        backgroundAccessLauncher.launch(setOf(viewModel.backgroundReadPermission))
+                    }
+                },
+                onAllowBackgroundRead = {
+                    backgroundAccessLauncher.launch(setOf(viewModel.backgroundReadPermission))
+                },
             )
             OpenVitalsCard {
                 Column(
@@ -367,9 +382,10 @@ fun WatchDeviceScreen(
     if (showRemoveDialog) {
         ConfirmRemoveWatchDialog(
             deviceName = device.displayName,
-            onConfirm = {
+            offerHistoryDelete = viewModel.isLastGarminWatch,
+            onConfirm = { deleteWatchHistory ->
                 showRemoveDialog = false
-                viewModel.removeDevice()
+                viewModel.removeDevice(deleteWatchHistory)
                 onRemoved()
             },
             onDismiss = { showRemoveDialog = false },
@@ -531,7 +547,9 @@ internal fun ActionsRow(
 @Composable
 private fun AutoSyncCard(
     selected: AutoSyncInterval,
+    backgroundReadMissing: Boolean,
     onSelect: (AutoSyncInterval) -> Unit,
+    onAllowBackgroundRead: () -> Unit,
 ) {
     OpenVitalsCard {
         Column(
@@ -578,6 +596,17 @@ private fun AutoSyncCard(
                             )
                         },
                     )
+                }
+            }
+            if (selected != AutoSyncInterval.OFF && backgroundReadMissing) {
+                Text(
+                    text = stringResource(R.string.settings_watch_auto_sync_background_access),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = Spacing.sm),
+                )
+                OpenVitalsTextButton(onClick = onAllowBackgroundRead) {
+                    Text(stringResource(R.string.settings_watch_auto_sync_background_access_action))
                 }
             }
         }

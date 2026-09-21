@@ -16,6 +16,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.domain.model.CycleEntry
@@ -253,7 +254,7 @@ class CycleEntryViewModelTest {
         advanceUntilIdle()
 
         assertEquals(CycleEntryError.WRITE_FAILED, vm.uiState.value.entryError)
-        assertTrue(vm.uiState.value.writeError is ScreenError.Message)
+        assertEquals(ScreenError.Text(R.string.screen_error_entry_not_editable), vm.uiState.value.writeError)
     }
 
     @Test fun `saving in edit mode routes to update`() = runTest {

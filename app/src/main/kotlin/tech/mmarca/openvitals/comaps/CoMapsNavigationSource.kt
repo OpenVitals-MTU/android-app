@@ -14,9 +14,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** What one query of CoMaps' live-navigation provider found. */
@@ -66,6 +69,8 @@ data class CoMapsLiveEvent(
 class CoMapsNavigationSource @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
+    // Read and set from the IO pool and from the caller's thread.
+    @Volatile
     private var resolvedPackage: String? = null
 
     suspend fun queryLive(): CoMapsProviderAnswer = withContext(Dispatchers.IO) {
@@ -113,18 +118,14 @@ class CoMapsNavigationSource @Inject constructor(
      */
     fun liveUpdates(): Flow<CoMapsLiveEvent> = callbackFlow {
         var observer: ContentObserver? = null
+        // A change carries no data, so a second one waiting adds nothing.
+        val changes = Channel<Unit>(Channel.CONFLATED)
         val authority = providerAuthority()
         if (authority != null) {
             val contentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+                // Runs on the main thread. It only signals; the read happens below, off it.
                 override fun onChange(selfChange: Boolean) {
-                    trySend(
-                        CoMapsLiveEvent(
-                            answer = queryLiveBlocking(),
-                            live = true,
-                            observing = true,
-                            initial = false,
-                        ),
-                    )
+                    changes.trySend(Unit)
                 }
             }
             observer = try {
@@ -139,18 +140,31 @@ class CoMapsNavigationSource @Inject constructor(
             }
         }
         // Registered first so `observing` is the truth. This is a read, not evidence.
-        trySend(
+        send(
             CoMapsLiveEvent(
-                answer = withContext(Dispatchers.IO) { queryLiveBlocking() },
+                answer = queryLiveBlocking(),
                 live = false,
                 observing = observer != null,
                 initial = true,
             ),
         )
+        launch {
+            for (change in changes) {
+                send(
+                    CoMapsLiveEvent(
+                        answer = queryLiveBlocking(),
+                        live = true,
+                        observing = true,
+                        initial = false,
+                    ),
+                )
+            }
+        }
         awaitClose {
             observer?.let(context.contentResolver::unregisterContentObserver)
+            changes.close()
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     /**
      * The followed route as interleaved `lat, lon`, or null. Separate from

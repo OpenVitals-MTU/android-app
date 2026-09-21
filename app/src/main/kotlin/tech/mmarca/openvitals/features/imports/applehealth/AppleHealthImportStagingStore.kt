@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import java.io.File
 import java.io.IOException
+import java.time.Duration
+import java.time.Instant
 import java.util.Properties
 
 internal data class AppleHealthStagedExport(
@@ -79,6 +81,21 @@ internal object AppleHealthImportStagingStore {
         }
         importDirectory(context).delete()
         return files.none(File::exists)
+    }
+
+    /**
+     * Removes a staged export that was copied more than [maxAge] ago. An analysis the user
+     * walked away from leaves a full copy of their health export, often hundreds of
+     * megabytes, and nothing else ever removes it. Returns true when something was removed.
+     */
+    fun clearIfOlderThan(context: Context, maxAge: Duration, now: Instant): Boolean {
+        val newest = listOf(stagedExportFile(context), stagedExportTempFile(context), metadataFile(context))
+            .filter(File::exists)
+            .maxOfOrNull(File::lastModified)
+            ?: return false
+        if (Duration.between(Instant.ofEpochMilli(newest), now) < maxAge) return false
+        clear(context)
+        return true
     }
 
     private fun File.matches(

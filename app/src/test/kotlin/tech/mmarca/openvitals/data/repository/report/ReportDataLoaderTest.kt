@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.data.repository.report
 
+import tech.mmarca.openvitals.healthconnect.StrictHealthConnectReads
+import kotlinx.coroutines.currentCoroutineContext
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
@@ -267,6 +269,19 @@ class ReportDataLoaderTest {
         assertEquals(ReportMetricStatus.FAILED, data.results.first { it.metric == ReportMetric.DISTANCE }.status)
         assertEquals(ReportMetricStatus.OK, data.results.first { it.metric == ReportMetric.SLEEP }.status)
         assertFalse(data.cancelled)
+    }
+
+    @Test fun `report reads are strict, so a rate-limited read is FAILED and not an empty range`() = runTest {
+        // In strict mode a guarded Health Connect read throws. This checks the loader asks for it.
+        var readStrictly: Boolean? = null
+        coEvery { activity.loadDailySteps(any(), any(), any()) } coAnswers {
+            readStrictly = currentCoroutineContext()[StrictHealthConnectReads] != null
+            emptyList()
+        }
+
+        loader(additional = emptySet()).load(request(ReportMetric.STEPS))
+
+        assertEquals(true, readStrictly)
     }
 
     @Test fun `cancelling mid-build marks the remaining metrics SKIPPED`() = runTest {

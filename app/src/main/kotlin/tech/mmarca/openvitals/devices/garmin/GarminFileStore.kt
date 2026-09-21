@@ -72,6 +72,22 @@ class GarminFileStore(
         files.forEach { file -> pendingNotes.remove(file)?.delete() }
     }
 
+    /** Deletes every saved file and note, whatever its age. For when the last watch is removed. */
+    suspend fun clearAll() {
+        try {
+            val directory = resolveDirectory()
+            if (!directory.exists()) return
+            for (entity in directory.listFiles().orEmpty()) {
+                if (entity.isFile && (entity.name.endsWith(".fit") || entity.name.endsWith(PENDING_SUFFIX))) {
+                    entity.delete()
+                }
+            }
+            pendingNotes.clear()
+        } catch (error: Exception) {
+            GarminLog.log("[GARMIN-STORE] clear failed: $error")
+        }
+    }
+
     /** Deletes files older than [retention]. Best-effort. */
     suspend fun prune(now: Instant) {
         val cutoff = now.minusMillis(retention.inWholeMilliseconds)
@@ -95,6 +111,13 @@ class GarminFileStore(
         const val PENDING_SUFFIX = ".pending"
     }
 }
+
+/** Under the app's files dir, matching the Flutter build's `garmin/`. */
+private const val FILE_STORE_DIRECTORY = "garmin"
+
+/** The app's one store of downloaded watch files. */
+fun garminFileStore(context: android.content.Context): GarminFileStore =
+    GarminFileStore(resolveDirectory = { File(context.filesDir, FILE_STORE_DIRECTORY) })
 
 private fun GarminDirectoryEntry.toPendingNote(deviceId: String): String = listOf(
     "device" to deviceId,

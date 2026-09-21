@@ -35,6 +35,8 @@ data class SyncTypeSummary(
     val received: Int = 0,
     val imported: Int = 0,
     val duplicateSkipped: Int = 0,
+    /** Sent by the peer but not accepted here: a type or a date this phone did not choose. */
+    val refused: Int = 0,
 )
 
 /** The final result of a session. Each device reports what it wrote. */
@@ -51,6 +53,8 @@ data class SyncReport(
     val imported: Int,
     /** Peer records skipped because Health Connect already had them. */
     val duplicateSkipped: Int,
+    /** Peer records this phone did not accept: a type or a date it did not choose. */
+    val refused: Int = 0,
     val typeSummaries: List<SyncTypeSummary>,
     /** Set when [completed] is false — why the session ended early. */
     val abortReason: String? = null,
@@ -66,20 +70,30 @@ class SyncReportBuilder {
         private set
     var duplicateSkipped: Int = 0
         private set
+    var refused: Int = 0
+        private set
 
     /**
      * Records one received item. [imported] only when written; [duplicate]
-     * when already present. A failed write is neither.
+     * when already present; [refused] when this phone did not choose its type
+     * or its date. A failed write is none of them.
      */
-    fun recordReceived(recordType: String, imported: Boolean = false, duplicate: Boolean = false) {
+    fun recordReceived(
+        recordType: String,
+        imported: Boolean = false,
+        duplicate: Boolean = false,
+        refused: Boolean = false,
+    ) {
         itemsReceived += 1
         if (imported) this.imported += 1
         if (duplicate) duplicateSkipped += 1
+        if (refused) this.refused += 1
         val current = byType[recordType] ?: SyncTypeSummary(recordType = recordType)
         byType[recordType] = current.copy(
             received = current.received + 1,
             imported = current.imported + if (imported) 1 else 0,
             duplicateSkipped = current.duplicateSkipped + if (duplicate) 1 else 0,
+            refused = current.refused + if (refused) 1 else 0,
         )
     }
 
@@ -96,6 +110,7 @@ class SyncReportBuilder {
         itemsReceived = itemsReceived,
         imported = imported,
         duplicateSkipped = duplicateSkipped,
+        refused = refused,
         typeSummaries = byType.values.sortedBy { it.recordType },
         abortReason = abortReason,
     )
@@ -116,6 +131,7 @@ fun buildSyncReportText(report: SyncReport, generatedAt: Instant): String = buil
     appendLine("Received: ${report.itemsReceived}")
     appendLine("Imported: ${report.imported}")
     appendLine("Already had (skipped): ${report.duplicateSkipped}")
+    appendLine("Not accepted (type or date not chosen here): ${report.refused}")
     appendLine()
     appendLine("By data type")
     if (report.typeSummaries.isEmpty()) {
@@ -124,7 +140,8 @@ fun buildSyncReportText(report: SyncReport, generatedAt: Instant): String = buil
         report.typeSummaries.forEach { summary ->
             appendLine(
                 "${summary.recordType}: received ${summary.received}, " +
-                    "imported ${summary.imported}, skipped ${summary.duplicateSkipped}",
+                    "imported ${summary.imported}, skipped ${summary.duplicateSkipped}, " +
+                    "not accepted ${summary.refused}",
             )
         }
     }

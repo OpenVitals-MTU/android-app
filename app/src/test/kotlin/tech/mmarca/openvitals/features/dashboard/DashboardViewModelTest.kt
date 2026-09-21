@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.dashboard
 
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.domain.model.RefreshMode
@@ -143,13 +144,13 @@ class DashboardViewModelTest {
         assertEquals(ScreenError.Message("network error"), state.error)
     }
 
-    @Test fun `load failure with null message uses Unknown error fallback`() = runTest {
+    @Test fun `load failure with null message uses the generic sentence`() = runTest {
         val loader = mockDashboardDataLoader()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } throws RuntimeException()
 
         val vm = dashboardViewModel(loader, prefs())
 
-        assertEquals(ScreenError.Message("Unknown error"), vm.uiState.value.error)
+        assertEquals(ScreenError.Text(R.string.screen_error_generic), vm.uiState.value.error)
     }
 
     @Test fun `transient load cancellation retries without surfacing dashboard error`() = runTest {

@@ -18,7 +18,7 @@ Users can choose drink type, container size, custom amount, and saved beverage d
 
 Beverages can contribute an effective hydration amount. Some drinks can use hydration multipliers so the logged hydration value better matches the selected beverage.
 
-Hydration entries created by OpenVitals can be edited or deleted when the app has the required Health Connect write permission.
+Hydration entries created by OpenVitals can be edited or deleted when the app has the required Health Connect write permission. A logged drink with nutrients is two Health Connect records: a hydration record, and a nutrition record found through the hydration record's client id. They are written, edited and deleted together. An edit shifts the nutrition record by the same time and scales its nutrients with the volume, so a coffee moved an hour later takes its caffeine with it. The hydration record is rewritten under its client id, not by record id, so the link survives the edit.
 
 ## Caffeine Values
 

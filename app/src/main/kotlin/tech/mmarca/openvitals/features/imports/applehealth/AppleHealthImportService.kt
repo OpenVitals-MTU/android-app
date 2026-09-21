@@ -31,6 +31,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectRateLimitBackoff
+import tech.mmarca.openvitals.core.performance.runCatchingCancellable
 
 @Singleton
 class AppleHealthImportService
@@ -967,7 +968,7 @@ class AppleHealthImportService
                                 ?: return@withPermit emptySet()
                             val end = chunk.maxOfOrNull { it.sourceTimeRange.end }?.plusSeconds(1)
                                 ?: return@withPermit emptySet()
-                            runCatching {
+                            runCatchingCancellable {
                                 importRepository.findMatchingImportedClientRecordIds(
                                     recordType = recordType,
                                     start = start,
@@ -995,7 +996,9 @@ class AppleHealthImportService
             importLogs: MutableList<String>,
         ): AppleHealthInsertionResult {
             if (records.isEmpty()) return AppleHealthInsertionResult()
-            val batchResult = runCatching {
+            // Cancellable: a stop from the system used to look like a failed batch. Up to 300
+            // records were then counted as failed and the checkpoint moved past them.
+            val batchResult = runCatchingCancellable {
                 importRepository.insertImportedRecords(records.map { it.record })
             }
             if (batchResult.isSuccess) {
@@ -1014,7 +1017,7 @@ class AppleHealthImportService
             }
 
             return records.fold(AppleHealthInsertionResult()) { result, converted ->
-                runCatching { importRepository.insertImportedRecords(listOf(converted.record)) }
+                runCatchingCancellable { importRepository.insertImportedRecords(listOf(converted.record)) }
                     .fold(
                         onSuccess = {
                             typeStats.getOrPut(converted.appleType) { MutableAppleImportTypeStats() }.imported += 1

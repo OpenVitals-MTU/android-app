@@ -21,6 +21,7 @@ import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
 import tech.mmarca.openvitals.data.repository.contract.MindfulnessRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
 
 @Singleton
 class MindfulnessReminderController @Inject constructor(
@@ -96,7 +97,8 @@ class MindfulnessReminderController @Inject constructor(
 
         val currentMinutes = todayMindfulnessMinutes()
         val dailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES)
-        val goalMet = dailyGoalMinutes > 0.0 && currentMinutes >= dailyGoalMinutes
+        // An unknown total has not met the goal. The user is still reminded, without a number.
+        val goalMet = dailyGoalMinutes > 0.0 && currentMinutes != null && currentMinutes >= dailyGoalMinutes
         if (!goalMet) {
             notificationService.showMindfulnessReminder(currentMinutes, dailyGoalMinutes)
         }
@@ -105,18 +107,26 @@ class MindfulnessReminderController @Inject constructor(
 
     private suspend fun isDailyGoalMet(): Boolean {
         val dailyGoalMinutes = preferencesRepository.dailyGoalFor(MetricDailyGoalKey.MINDFULNESS_MINUTES)
-        return dailyGoalMinutes > 0.0 && todayMindfulnessMinutes() >= dailyGoalMinutes
+        val currentMinutes = todayMindfulnessMinutes() ?: return false
+        return dailyGoalMinutes > 0.0 && currentMinutes >= dailyGoalMinutes
     }
 
-    private suspend fun todayMindfulnessMinutes(): Double {
+    /**
+     * Today's total, or null when it cannot be read. Strict: a rate-limited or paused read
+     * answers with an empty list, which summed to 0 and was shown as today's progress.
+     */
+    private suspend fun todayMindfulnessMinutes(): Double? {
         val today = LocalDate.now()
         return runCatching {
-            mindfulnessRepository.loadMindfulnessSessions(today, today)
-                .sumOf { session -> session.durationMs.coerceAtLeast(0L) }
-                .toDouble() / MillisPerMinute
+            withStrictHealthConnectReads {
+                mindfulnessRepository.loadMindfulnessSessions(today, today)
+                    .sumOf { session -> session.durationMs.coerceAtLeast(0L) }
+                    .toDouble() / MillisPerMinute
+            }
         }.onFailure { error ->
+            if (error is kotlinx.coroutines.CancellationException) throw error
             Log.w(TAG, "Could not read today's mindfulness before reminder", error)
-        }.getOrDefault(0.0)
+        }.getOrNull()
     }
 
     private fun scheduleNextReminder(config: MindfulnessReminderConfig, dailyGoalMet: Boolean) {

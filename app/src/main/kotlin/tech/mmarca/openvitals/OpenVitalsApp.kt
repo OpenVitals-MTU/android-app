@@ -2,6 +2,8 @@ package tech.mmarca.openvitals
 
 import android.app.Application
 import android.content.res.Configuration
+import android.os.Handler
+import android.os.Looper
 import android.os.StrictMode
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -9,27 +11,21 @@ import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.HiltAndroidApp
 import tech.mmarca.openvitals.core.diagnostics.CrashReportHandler
 import tech.mmarca.openvitals.core.performance.AppForegroundGate
-import tech.mmarca.openvitals.core.performance.ReminderRestoreBootstrap
 import tech.mmarca.openvitals.data.migration.FlutterDataMigrator
 import tech.mmarca.openvitals.data.migration.FlutterMigrationEntryPoint
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
-import tech.mmarca.openvitals.data.repository.SyncedRecordOriginRepository
-import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
-import tech.mmarca.openvitals.features.watches.WatchAutoSyncScheduler
 import javax.inject.Inject
+import kotlin.concurrent.thread
 
 @HiltAndroidApp
 class OpenVitalsApp : Application() {
 
+    // Needed before the first screen: the language, and whether the app is in the foreground.
     @Inject lateinit var preferencesRepository: PreferencesRepository
     @Inject lateinit var appForegroundGate: AppForegroundGate
-    @Inject lateinit var reminderRestoreBootstrap: ReminderRestoreBootstrap
-    @Inject lateinit var syncedRecordOriginRepository: SyncedRecordOriginRepository
-    @Inject lateinit var garminNotificationBridge: tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge
-    @Inject lateinit var garminNavigationRelay: tech.mmarca.openvitals.devices.garmin.GarminNavigationRelay
-    @Inject lateinit var garminMusicRelay: tech.mmarca.openvitals.devices.garmin.GarminMusicRelay
-    @Inject lateinit var watchAutoSyncScheduler: WatchAutoSyncScheduler
-    @Inject lateinit var homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler
+
+    // Lazy, so Hilt does not build their graph inside super.onCreate(). See AppStartupActors.
+    @Inject lateinit var startupActors: dagger.Lazy<AppStartupActors>
 
     override fun onCreate() {
         if (BuildConfig.DEBUG) logMainThreadStalls()
@@ -45,22 +41,28 @@ class OpenVitalsApp : Application() {
                     .fromApplication(this, FlutterMigrationEntryPoint::class.java)
                     .openVitalsDatabase(),
             )
+        } else if (flutterMigrator.garminWellnessImportMissed()) {
+            // Months of samples: not on the main thread. Nothing at start-up waits for them.
+            thread(name = "flutter-wellness-import") {
+                flutterMigrator.importMissedGarminWellness(
+                    EntryPointAccessors
+                        .fromApplication(this, FlutterMigrationEntryPoint::class.java)
+                        .openVitalsDatabase(),
+                )
+            }
         }
         CrashReportHandler.install(this)
         AppCompatDelegate.setApplicationLocales(preferencesRepository.appLanguage.toLocaleListCompat())
         appForegroundGate.registerProcessLifecycle(ProcessLifecycleOwner.get())
-        ProcessLifecycleOwner.get().lifecycle.addObserver(reminderRestoreBootstrap)
-        // Synced records show their original source app.
-        syncedRecordOriginRepository.warmOverlay()
-        // Companion mode must be re-armed on every start.
-        garminNotificationBridge.onAppStart()
-        garminNavigationRelay.start()
-        garminMusicRelay.start()
-        // Re-plans the sync schedules after what WorkManager does not cover.
-        watchAutoSyncScheduler.restoreAll()
-        // Widgets placed before this schedule existed, or a missed onEnabled.
-        homeWidgetRefreshScheduler.reconcile()
+        thread(name = "app-startup") {
+            startupActors.get().start { observer ->
+                // A late observer is brought up to the current state, so no start is missed.
+                mainHandler.post { ProcessLifecycleOwner.get().lifecycle.addObserver(observer) }
+            }
+        }
     }
+
+    private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
@@ -69,11 +71,13 @@ class OpenVitalsApp : Application() {
     }
 }
 
-// Debug builds only: log disk reads and flagged slow calls on the main thread. Never crashes the app.
+// Debug builds only: log disk reads, disk writes and flagged slow calls on the main thread.
+// Never crashes the app.
 private fun logMainThreadStalls() {
     StrictMode.setThreadPolicy(
         StrictMode.ThreadPolicy.Builder()
             .detectDiskReads()
+            .detectDiskWrites()
             .detectCustomSlowCalls()
             .penaltyLog()
             .build(),

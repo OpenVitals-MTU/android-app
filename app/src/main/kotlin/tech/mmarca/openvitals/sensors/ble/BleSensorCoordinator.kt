@@ -55,6 +55,13 @@ class BleSensorCoordinator @Inject constructor(
         context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
 
+    /**
+     * Guards everything below it. The app calls in from the main thread and from the
+     * recording service, while the sensors call back on [bleThread] and iterate the same
+     * maps. Unguarded, a reconnect during a notification threw
+     * ConcurrentModificationException, or dropped samples written on the other thread.
+     */
+    private val stateLock = Any()
     private val connections = linkedMapOf<String, BleGattConnection>()
     private val capabilityOwners = mutableMapOf<BleSensorCapability, BleSensorDevice>()
     private var sampleBuffer = BleRecordingSampleBuffer()
@@ -77,7 +84,7 @@ class BleSensorCoordinator @Inject constructor(
     )
     private var metricsTimeoutTickerScheduled = false
     private val metricsTimeoutTicker = object : Runnable {
-        override fun run() {
+        override fun run() = synchronized(stateLock) {
             metricsTimeoutTickerScheduled = false
             if (connections.isEmpty()) return
             // Refresh displayed metrics only; samples are recorded on BLE notifications.
@@ -86,9 +93,12 @@ class BleSensorCoordinator @Inject constructor(
         }
     }
 
-    fun currentSampleBuffer(): BleRecordingSampleBuffer = sampleBuffer
+    /** Whether a recording would try to connect to a sensor. */
+    fun hasSavedSensors(): Boolean = deviceRepository.resolveCapabilityAssignments().isNotEmpty()
 
-    fun startRecording() {
+    fun currentSampleBuffer(): BleRecordingSampleBuffer = synchronized(stateLock) { sampleBuffer }
+
+    fun startRecording() = synchronized(stateLock) {
         recordingActive = true
         sampleBuffer = BleRecordingSampleBuffer()
         val desiredAssignments = deviceRepository.resolveCapabilityAssignments()
@@ -100,16 +110,16 @@ class BleSensorCoordinator @Inject constructor(
         }
     }
 
-    fun stopRecording(): BleRecordingSampleBuffer {
+    fun stopRecording(): BleRecordingSampleBuffer = synchronized(stateLock) {
         recordingActive = false
         disconnectAll()
         val buffer = sampleBuffer.trimmed()
         sampleBuffer = BleRecordingSampleBuffer()
         _metrics.value = BleRecordingMetrics()
-        return buffer
+        buffer
     }
 
-    fun refreshConnections() {
+    fun refreshConnections() = synchronized(stateLock) {
         disconnectAll()
         capabilityOwners.clear()
         deviceRepository.resolveCapabilityAssignments().forEach { (capability, device) ->
@@ -135,7 +145,7 @@ class BleSensorCoordinator @Inject constructor(
         scheduleMetricsTimeoutTicker()
     }
 
-    fun disconnectAll() {
+    fun disconnectAll() = synchronized(stateLock) {
         stopMetricsTimeoutTicker()
         connections.values.forEach { it.disconnect() }
         connections.clear()
@@ -330,17 +340,17 @@ class BleSensorCoordinator @Inject constructor(
     }
 
     private val connectionListener = object : BleConnectionListener {
-        override fun onConnectionStatusChanged(status: BleConnectionStatus) {
+        override fun onConnectionStatusChanged(status: BleConnectionStatus) = synchronized(stateLock) {
             publishMetrics()
             scheduleMetricsTimeoutTicker()
         }
 
-        override fun onMetricsUpdated() {
+        override fun onMetricsUpdated() = synchronized(stateLock) {
             publishMetrics(recordSamples = true)
             scheduleMetricsTimeoutTicker()
         }
 
-        override fun onBatteryLevelChanged(deviceId: String, batteryPercent: Int) {
+        override fun onBatteryLevelChanged(deviceId: String, batteryPercent: Int) = synchronized(stateLock) {
             deviceRepository.updateBatteryLevel(deviceId, batteryPercent)
             publishMetrics()
             scheduleMetricsTimeoutTicker()

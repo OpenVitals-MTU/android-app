@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry.activity
 
+import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.domain.model.ActivityFormMetric
 import tech.mmarca.openvitals.features.manualentry.*
 import tech.mmarca.openvitals.features.manualentry.activity.*
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
@@ -1716,6 +1718,171 @@ class ActivityEntryViewModelTest {
         assertEquals(ScreenError.Message("Activity not found."), vm.uiState.value.detailError)
     }
 
+    @Test fun `an edit that failed to load cannot be saved over the workout`() = runTest {
+        // The form still shows its defaults: a 30 minute run starting now.
+        val repo = activityRepo(
+            canWrite = true,
+            loadWorkoutFailure = NoSuchElementException("Activity not found."),
+        )
+        coEvery { repo.updateActivityEntry(any(), any()) } returns Unit
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+            editActivityId = "activity-id",
+        )
+        advanceUntilIdle()
+        vm.loadEditEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.canSaveEdit)
+        vm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { repo.updateActivityEntry(any(), any()) }
+        coVerify(exactly = 0) { repo.writeActivityEntry(any()) }
+    }
+
+    @Test fun `editing a type the form does not list keeps that type`() = runTest {
+        // Yoga from an Apple Health import. The old fallback was the first type in the list: running.
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        val workout = ExerciseData(
+            id = "activity-id",
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_YOGA,
+            startTime = start,
+            endTime = start.plusSeconds(45 * 60),
+            durationMs = 45 * 60 * 1000,
+            source = "tech.mmarca.openvitals",
+            title = "Yoga",
+            isOpenVitalsEntry = true,
+        )
+        val repo = activityRepo(canWrite = true, workout = workout)
+        coEvery { repo.updateActivityEntry(any(), any()) } returns Unit
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(start, ZoneId.of("UTC")),
+            editActivityId = "activity-id",
+        )
+        advanceUntilIdle()
+        vm.loadEditEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.canSaveEdit)
+
+        vm.updateTitle("Evening yoga")
+        vm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        advanceUntilIdle()
+
+        coVerify {
+            repo.updateActivityEntry(
+                "activity-id",
+                match<ActivityWriteRequest> {
+                    it.exerciseType == ExerciseSessionRecord.EXERCISE_TYPE_YOGA && it.title == "Evening yoga"
+                },
+            )
+        }
+    }
+
+    @Test fun `an edit tells the save which totals the user changed`() = runTest {
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        val workout = ExerciseData(
+            id = "activity-id",
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+            startTime = start,
+            endTime = start.plusSeconds(45 * 60),
+            durationMs = 45 * 60 * 1000,
+            source = "tech.mmarca.openvitals",
+            title = "Morning run",
+            totalDistanceMeters = 10_500.0,
+            isOpenVitalsEntry = true,
+        )
+        val repo = activityRepo(canWrite = true, workout = workout)
+        coEvery { repo.updateActivityEntry(any(), any()) } returns Unit
+        val units = ActivityEntryUnits.uniform(UnitSystem.METRIC)
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            clock = Clock.fixed(start, ZoneId.of("UTC")),
+            editActivityId = "activity-id",
+        )
+        advanceUntilIdle()
+        vm.loadEditEntry(units)
+        advanceUntilIdle()
+
+        // Only the title: no total is the user's decision, so the stored ones stay as they are.
+        vm.updateTitle("Evening run")
+        assertEquals(emptySet<ActivityFormMetric>(), vm.uiState.value.editedMetrics())
+
+        vm.updateDistance("11")
+        assertEquals(setOf(ActivityFormMetric.DISTANCE), vm.uiState.value.editedMetrics())
+
+        vm.addEntry(units)
+        advanceUntilIdle()
+        coVerify {
+            repo.updateActivityEntry(
+                "activity-id",
+                match<ActivityWriteRequest> { it.editedMetrics == setOf(ActivityFormMetric.DISTANCE) },
+            )
+        }
+    }
+
+    @Test fun `a new entry decides every total`() = runTest {
+        val vm = ActivityEntryViewModel(
+            repository = activityRepo(canWrite = true),
+            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.editedMetrics())
+    }
+
+    @Test fun `editing a recovery test keeps the mark where the effort stopped`() = runTest {
+        // The trailing REST segment is what puts the session on the recovery screen.
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        val effortEnded = start.plusSeconds(40 * 60)
+        val workout = ExerciseData(
+            id = "activity-id",
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+            startTime = start,
+            endTime = start.plusSeconds(45 * 60),
+            durationMs = 45 * 60 * 1000,
+            source = "tech.mmarca.openvitals",
+            title = "Recovery test",
+            segments = listOf(
+                ExerciseSegmentData(
+                    startTime = effortEnded,
+                    endTime = start.plusSeconds(45 * 60),
+                    segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST,
+                    repetitions = 0,
+                ),
+            ),
+            isOpenVitalsEntry = true,
+        )
+        val repo = activityRepo(canWrite = true, workout = workout)
+        coEvery { repo.updateActivityEntry(any(), any()) } returns Unit
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            // The save reads the form's times in the system zone, so the form must be filled in it too.
+            clock = Clock.fixed(start, ZoneId.systemDefault()),
+            editActivityId = "activity-id",
+        )
+        advanceUntilIdle()
+        vm.loadEditEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        advanceUntilIdle()
+
+        vm.updateTitle("Recovery test, evening")
+        vm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        advanceUntilIdle()
+
+        coVerify {
+            repo.updateActivityEntry(
+                "activity-id",
+                match<ActivityWriteRequest> { request ->
+                    request.exerciseSegments.any {
+                        it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST && it.startTime == effortEnded
+                    }
+                },
+            )
+        }
+    }
+
     @Test fun `the route import runs and returns to rest`() = runTest {
         val repo = activityRepo(canWrite = true)
         val importer = mockk<RouteFileImporter>()
@@ -1783,6 +1950,108 @@ class ActivityEntryViewModelTest {
     }
 
     /** The three failable calls take an optional throwable. The device-bound ActivityRecordingController is mocked on purpose. */
+
+    // A file shared by another app must never cost the user a recording.
+
+    private fun unsavedRecording(start: Instant) = ActivityRecordingSnapshot(
+        exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+        startTime = start,
+        endTime = start.plusSeconds(45 * 60),
+        points = listOf(routePoint(start), routePoint(start.plusSeconds(45 * 60), latitude = 59.01)),
+        pauseIntervals = emptyList(),
+        distanceMeters = 1200.0,
+        elevationGainedMeters = 12.0,
+    )
+
+    private fun importedRun(start: Instant) = RouteFileImport(
+        fileName = "run.gpx",
+        points = listOf(routePoint(start), routePoint(start.plusSeconds(600), latitude = 59.01)),
+        distanceMeters = 5_000.0,
+        elevationGainedMeters = 0.0,
+        startTime = start,
+        endTime = start.plusSeconds(600),
+    )
+
+    @Test fun `a shared file waits for the user while a recording is unsaved`() = runTest {
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        val recorder = recorderMock()
+        every { recorder.finishedRecording() } returns unsavedRecording(start)
+        val importer = mockk<RouteFileImporter>()
+        val uri = mockk<Uri>()
+        coEvery { importer.import(uri) } returns importedRun(start)
+        val vm = ActivityEntryViewModel(
+            repository = activityRepo(canWrite = true),
+            routeFileImporter = importer,
+            activityRecorder = recorder,
+            recordingDraftStore = ActivityRecordingDraftStore(),
+            clock = Clock.fixed(start.plusSeconds(3_600), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.importRouteFile(uri, ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.confirmRouteImportOverRecording)
+        assertTrue(vm.uiState.value.isRecordingDraft)
+        assertEquals("1.2", vm.uiState.value.distanceText)
+        verify(exactly = 0) { recorder.clearFinishedRecording() }
+        coVerify(exactly = 0) { importer.import(any()) }
+
+        vm.keepRecordingInsteadOfRouteImport()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.confirmRouteImportOverRecording)
+        assertEquals("1.2", vm.uiState.value.distanceText)
+        verify(exactly = 0) { recorder.clearFinishedRecording() }
+    }
+
+    @Test fun `the user can let a shared file replace the unsaved recording`() = runTest {
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        val recorder = recorderMock()
+        every { recorder.finishedRecording() } returns unsavedRecording(start)
+        val importer = mockk<RouteFileImporter>()
+        val uri = mockk<Uri>()
+        coEvery { importer.import(uri) } returns importedRun(start)
+        val vm = ActivityEntryViewModel(
+            repository = activityRepo(canWrite = true),
+            routeFileImporter = importer,
+            activityRecorder = recorder,
+            recordingDraftStore = ActivityRecordingDraftStore(),
+            clock = Clock.fixed(start.plusSeconds(3_600), ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+        vm.importRouteFile(uri, ActivityEntryUnits.uniform(UnitSystem.METRIC))
+
+        vm.confirmRouteImportOverRecording()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.confirmRouteImportOverRecording)
+        assertFalse(vm.uiState.value.isRecordingDraft)
+        assertEquals("5", vm.uiState.value.distanceText)
+        verify { recorder.clearFinishedRecording() }
+    }
+
+    @Test fun `a shared file is refused while a recording runs`() = runTest {
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        val recorder = recorderMock(
+            state = MutableStateFlow(ActivityRecordingState(status = ActivityRecordingStatus.RECORDING)),
+        )
+        val importer = mockk<RouteFileImporter>()
+        val vm = ActivityEntryViewModel(
+            repository = activityRepo(canWrite = true),
+            routeFileImporter = importer,
+            activityRecorder = recorder,
+            clock = Clock.fixed(start, ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.importRouteFile(mockk<Uri>(), ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        advanceUntilIdle()
+
+        assertEquals(ActivityEntryError.ROUTE_IMPORT_WHILE_RECORDING, vm.uiState.value.entryError)
+        coVerify(exactly = 0) { importer.import(any()) }
+        verify(exactly = 0) { recorder.clearFinishedRecording() }
+    }
 
     private fun recorderMock(
         startResult: Boolean = true,
@@ -1884,7 +2153,7 @@ class ActivityEntryViewModelTest {
 
         assertEquals(ActivityEntryError.RECORDING_FAILED, vm.uiState.value.entryError)
         assertEquals(
-            ScreenError.Message("No active activity recording was found."),
+            ScreenError.Text(R.string.screen_error_no_active_recording),
             vm.uiState.value.detailError,
         )
     }
@@ -1960,6 +2229,9 @@ class ActivityEntryViewModelTest {
                 if (writeFailure != null) throw writeFailure else "activity-id"
             }
             coEvery { repo.loadWorkout(any()) } answers {
+                if (loadWorkoutFailure != null) throw loadWorkoutFailure else workout
+            }
+            coEvery { repo.loadWorkoutForEdit(any()) } answers {
                 if (loadWorkoutFailure != null) throw loadWorkoutFailure else workout
             }
             coEvery { repo.loadPlannedWorkout(any()) } answers {

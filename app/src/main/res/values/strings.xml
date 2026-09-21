@@ -67,11 +67,25 @@
     <string name="action_start">Start</string>
     <string name="action_finish">Finish</string>
     <string name="action_discard">Discard</string>
+    <string name="import_leave_title">Stop the import?</string>
+    <string name="import_leave_body">Leaving this screen stops the import. What is already imported stays, and you can run it again later.</string>
+    <string name="import_leave_confirm">Stop and leave</string>
+    <string name="import_leave_stay">Keep importing</string>
     <string name="unknown_error">Unknown error</string>
     <string name="screen_error_not_found">The requested item was not found.</string>
     <string name="screen_error_missing_argument">Required information is missing.</string>
     <string name="screen_error_permission_denied">Permission is required to load this data.</string>
     <string name="screen_error_health_connect_unavailable">Health Connect is not available on this device.</string>
+    <string name="screen_error_generic">Unable to complete the request.</string>
+    <string name="screen_error_load_activity">Unable to load activity.</string>
+    <string name="screen_error_delete_activity">Unable to delete activity.</string>
+    <string name="screen_error_load_body_energy">Unable to load Body energy.</string>
+    <string name="screen_error_load_heart_rate_recovery">Unable to load heart rate recovery.</string>
+    <string name="screen_error_recording_unavailable">Recording is not available.</string>
+    <string name="screen_error_gps_recording_unavailable">GPS recording is not available.</string>
+    <string name="screen_error_activity_import_unavailable">Activity file import is not available.</string>
+    <string name="screen_error_no_active_recording">No active activity recording was found.</string>
+    <string name="screen_error_entry_not_editable">Only OpenVitals entries can be edited.</string>
     <string name="screen_error_load_sleep_session">Unable to load sleep session.</string>
     <string name="screen_error_load_sleep_period">Unable to load sleep data.</string>
     <string name="not_available">Not available</string>
@@ -319,6 +333,11 @@
     <string name="activity_entry_notification_permission_needed">Notification permission is required so OpenVitals can show an ongoing recording notification.</string>
     <string name="activity_entry_activity_recognition_permission_needed">Activity recognition permission is required to count treadmill steps.</string>
     <string name="activity_entry_route_import_failed">Could not import activity file: %1$s</string>
+    <string name="activity_entry_route_import_while_recording">A recording is running. Finish or discard it before you import a file.</string>
+    <string name="activity_entry_route_import_replace_title">Replace the unsaved recording?</string>
+    <string name="activity_entry_route_import_replace_body">You have a recording that is not saved yet. Importing this file discards it.</string>
+    <string name="activity_entry_route_import_replace_confirm">Import and discard</string>
+    <string name="activity_entry_route_import_replace_keep">Keep the recording</string>
     <string name="activity_entry_recording_failed">Could not record activity: %1$s</string>
     <string name="activity_entry_write_failed">Could not write activity entry: %1$s</string>
     <string name="activity_route_open_in_map">Open route in map app</string>
@@ -583,6 +602,8 @@
     <string name="settings_watch_live_now">Now: %1$d bpm</string>
     <string name="settings_watch_auto_sync">Automatic sync</string>
     <string name="settings_watch_auto_sync_body">Syncs the watch on its own, so sleep and activity arrive without opening the app. The watch has to be in range, and Android decides the exact moment, so a run can be a little late. Off means the watch is only synced when you ask.</string>
+    <string name="settings_watch_auto_sync_background_access">Health Connect background access is off. A sync that runs while OpenVitals is closed still saves the watch\'s data. Body energy and the history charts catch up only when you open the app.</string>
+    <string name="settings_watch_auto_sync_background_access_action">Allow background access</string>
     <string name="settings_watch_auto_sync_off">Off</string>
     <string name="settings_watch_auto_sync_30m">30 min</string>
     <string name="settings_watch_auto_sync_1h">1 h</string>
@@ -1261,6 +1282,7 @@
     <string name="hydration_reminder_quick_add_action">Add %1$s</string>
     <string name="hydration_reminder_notification_body">You\'re at %1$s of %2$s today. Add a drink when you can.</string>
     <string name="hydration_reminder_notification_progress">%1$s / %2$s</string>
+    <string name="hydration_reminder_notification_body_unknown">Time for a drink. Today\'s total could not be read just now.</string>
     <string name="hydration_tracker_title">Log beverage</string>
     <string name="hydration_tracker_subtitle">Saved directly to Health Connect</string>
     <string name="hydration_tracker_permission_needed">For the summary, OpenVitals only asks for view permissions. To add this manual entry, we need write permission. OpenVitals will not store this data; entries are saved in Health Connect.</string>
@@ -1771,6 +1793,8 @@
     <string name="settings_privacy_policy_url" translatable="false">https://codeberg.org/OpenVitals/mobile-app/src/branch/main/PRIVACY.md</string>
     <string name="settings_app_lock_title">App lock</string>
     <string name="settings_app_lock_body">Require device unlock to open OpenVitals.</string>
+    <string name="app_lock_locked_title">OpenVitals is locked</string>
+    <string name="app_lock_unlock_action">Unlock</string>
     <string name="onboarding_core_required">Activity and sleep are needed to show you anything at all. The rest are optional \u2014 you can add them now or later from Settings.</string>
     <string name="settings_language_title">Language</string>
     <string name="settings_language_body">Choose app language or follow your system setting.</string>
@@ -2777,6 +2801,7 @@
     <string name="device_sync_report_heading">Merged %1$d records</string>
     <string name="device_sync_imported">Imported</string>
     <string name="device_sync_duplicates">Already had (skipped)</string>
+    <string name="device_sync_refused">Not accepted (not chosen on this phone)</string>
     <string name="device_sync_done">Done</string>
     <string name="device_sync_copy_report">Copy report</string>
     <string name="device_sync_share_report">Share report</string>
@@ -2925,6 +2950,7 @@
     <string name="settings_watch_remove">Remove watch</string>
     <string name="settings_device_remove_confirm_title">Remove %1$s?</string>
     <string name="settings_watch_remove_confirm_body">OpenVitals will unpair the watch and forget which files it has already copied, so a future pairing starts fresh. Data already saved to Health Connect is kept.</string>
+    <string name="settings_watch_remove_delete_history">Also delete the stress, Body Battery and score history that only this phone holds</string>
     <string name="action_remove">Remove</string>
 
     <!-- Bike computer live-sensor role (features/watches) -->

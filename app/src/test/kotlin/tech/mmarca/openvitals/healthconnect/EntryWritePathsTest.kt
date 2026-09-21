@@ -1,10 +1,18 @@
 package tech.mmarca.openvitals.healthconnect
 
+import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
+import androidx.health.connect.client.records.NutritionRecord
 import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.records.BasalBodyTemperatureRecord
 import androidx.health.connect.client.records.BloodPressureRecord
+import androidx.health.connect.client.records.BodyTemperatureMeasurementLocation
 import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.IntermenstrualBleedingRecord
+import androidx.health.connect.client.records.MenstruationFlowRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
+import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.WeightRecord
@@ -22,12 +30,16 @@ import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.reflect.KClass
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.BodyMeasurementWriteRequest
+import tech.mmarca.openvitals.domain.model.CycleEntryKind
+import tech.mmarca.openvitals.domain.model.CycleEntryWriteRequest
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
 import tech.mmarca.openvitals.domain.model.MindfulnessSessionWriteRequest
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
@@ -61,7 +73,7 @@ class EntryWritePathsTest {
     // Body.
 
     @Test
-    fun `a weight entry is written, edited in place and deleted`() = onARealClock {
+    fun `a weight entry is written, edited in place and deleted`() = onTheTestClock {
         val reader = BodyHealthReader(support(), APP_PACKAGE)
         reader.writeBodyMeasurementEntry(BodyMeasurementWriteRequest(BodyMeasurementType.WEIGHT, NOON, 72.5))
         val id = all(WeightRecord::class).single().metadata.id
@@ -77,7 +89,7 @@ class EntryWritePathsTest {
     }
 
     @Test
-    fun `another app's weight can be neither edited nor deleted`() = onARealClock {
+    fun `another app's weight can be neither edited nor deleted`() = onTheTestClock {
         val foreignId = insertAsAnotherApp(
             WeightRecord(NOON, ZoneOffset.UTC, Mass.kilograms(80.0), Metadata.manualEntry()),
         )
@@ -96,7 +108,7 @@ class EntryWritePathsTest {
     // Vitals.
 
     @Test
-    fun `an oxygen saturation entry is written, edited in place and deleted`() = onARealClock {
+    fun `an oxygen saturation entry is written, edited in place and deleted`() = onTheTestClock {
         val reader = VitalsHealthReader(support(), APP_PACKAGE)
         reader.writeVitalsMeasurementEntry(VitalsMeasurementWriteRequest(VitalsMeasurementType.SPO2, NOON, 97.0))
         val id = all(OxygenSaturationRecord::class).single().metadata.id
@@ -110,7 +122,7 @@ class EntryWritePathsTest {
     }
 
     @Test
-    fun `editing a blood pressure reading leaves exactly one reading`() = onARealClock {
+    fun `editing a blood pressure reading leaves exactly one reading`() = onTheTestClock {
         val reader = VitalsHealthReader(support(), APP_PACKAGE)
         reader.writeVitalsMeasurementEntry(
             VitalsMeasurementWriteRequest(VitalsMeasurementType.BLOOD_PRESSURE, NOON, 128.0, secondaryValue = 84.0),
@@ -131,7 +143,7 @@ class EntryWritePathsTest {
     // Mindfulness.
 
     @Test
-    fun `a mindfulness session is written, edited in place and deleted`() = onARealClock {
+    fun `a mindfulness session is written, edited in place and deleted`() = onTheTestClock {
         val reader = MindfulnessHealthReader(support(), APP_PACKAGE)
         reader.writeMindfulnessSessionEntry(MindfulnessSessionWriteRequest("Breathing", NOON, NOON.plusSeconds(600)))
         val id = all(MindfulnessSessionRecord::class).single().metadata.id
@@ -150,10 +162,63 @@ class EntryWritePathsTest {
         assertThat(all(MindfulnessSessionRecord::class)).isEmpty()
     }
 
+    // A logged drink is two records. They are written together, so they must be edited together.
+
+    @Test
+    fun `an edited coffee takes its caffeine with it`() = onTheTestClock {
+        val hydration = HydrationHealthReader(support(), APP_PACKAGE)
+        val nutrition = NutritionHealthReader(support(), APP_PACKAGE)
+        val clientId = hydration.writeHydrationEntry(HydrationWriteRequest(NOON, volumeLiters = 0.25))
+        nutrition.writeNutritionEntry(
+            NutritionWriteRequest(
+                time = NOON,
+                nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 0.080),
+                name = "Coffee",
+                associatedHydrationClientRecordId = clientId,
+                endTime = NOON.plusSeconds(600),
+            ),
+        )
+        val id = all(HydrationRecord::class).single().metadata.id
+
+        // An hour later, and a double.
+        val change = hydration.updateHydrationEntry(id, HydrationWriteRequest(NOON.plusSeconds(3_600), volumeLiters = 0.5))
+        nutrition.updateHydrationNutritionEntry(change)
+
+        val coffee = all(NutritionRecord::class).single()
+        assertThat(coffee.startTime).isEqualTo(NOON.plusSeconds(3_600))
+        assertThat(coffee.endTime).isEqualTo(NOON.plusSeconds(3_600 + 600))
+        assertThat(coffee.caffeine!!.inGrams).isWithin(1e-9).of(0.160)
+        assertThat(coffee.name).isEqualTo("Coffee")
+        // The link survives the edit, so a later delete still finds the caffeine.
+        val edited = all(HydrationRecord::class).single()
+        assertThat(edited.metadata.clientRecordId).isEqualTo(clientId)
+        assertThat(edited.metadata.id).isEqualTo(id)
+        assertThat(edited.volume.inLiters).isWithin(1e-9).of(0.5)
+    }
+
+    @Test
+    fun `editing plain water touches no nutrition record`() = onTheTestClock {
+        val hydration = HydrationHealthReader(support(), APP_PACKAGE)
+        val nutrition = NutritionHealthReader(support(), APP_PACKAGE)
+        hydration.writeHydrationEntry(HydrationWriteRequest(NOON, volumeLiters = 0.25))
+        nutrition.writeNutritionEntry(
+            NutritionWriteRequest(time = NOON, nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 0.080), name = "Espresso"),
+        )
+        val id = all(HydrationRecord::class).single().metadata.id
+
+        val change = hydration.updateHydrationEntry(id, HydrationWriteRequest(NOON.plusSeconds(60), volumeLiters = 0.5))
+        nutrition.updateHydrationNutritionEntry(change)
+
+        // The espresso was logged on its own. It is not this glass of water's other half.
+        val espresso = all(NutritionRecord::class).single()
+        assertThat(espresso.startTime).isEqualTo(NOON)
+        assertThat(espresso.caffeine!!.inGrams).isWithin(1e-9).of(0.080)
+    }
+
     // Hydration.
 
     @Test
-    fun `a drink is written, edited to one record and deleted`() = onARealClock {
+    fun `a drink is written, edited to one record and deleted`() = onTheTestClock {
         val reader = HydrationHealthReader(support(), APP_PACKAGE)
         reader.writeHydrationEntry(HydrationWriteRequest(NOON, volumeLiters = 0.25))
         val id = all(HydrationRecord::class).single().metadata.id
@@ -166,10 +231,86 @@ class EntryWritePathsTest {
         assertThat(all(HydrationRecord::class)).isEmpty()
     }
 
+    // Cycle entries.
+
+    @Test
+    fun `a flow entry is written, read back, edited in place and deleted`() = onTheTestClock {
+        val reader = CycleHealthReader(support(), APP_PACKAGE)
+        reader.writeCycleEntry(CycleEntryWriteRequest(CycleEntryKind.MENSTRUATION_FLOW, NOON, flow = MenstruationFlowRecord.FLOW_LIGHT))
+        val id = all(MenstruationFlowRecord::class).single().metadata.id
+
+        val loaded = reader.readCycleEntry(CycleEntryKind.MENSTRUATION_FLOW, id)
+        assertThat(loaded?.flow).isEqualTo(MenstruationFlowRecord.FLOW_LIGHT)
+        assertThat(loaded?.isOpenVitalsEntry).isTrue()
+
+        reader.updateCycleEntry(id, CycleEntryWriteRequest(CycleEntryKind.MENSTRUATION_FLOW, NOON, flow = MenstruationFlowRecord.FLOW_HEAVY))
+
+        val edited = all(MenstruationFlowRecord::class).single()
+        assertThat(edited.flow).isEqualTo(MenstruationFlowRecord.FLOW_HEAVY)
+        assertThat(edited.metadata.id).isEqualTo(id)
+
+        reader.deleteCycleEntry(CycleEntryKind.MENSTRUATION_FLOW, id)
+        assertThat(all(MenstruationFlowRecord::class)).isEmpty()
+    }
+
+    @Test
+    fun `a basal temperature keeps its value and where it was measured`() = onTheTestClock {
+        val reader = CycleHealthReader(support(), APP_PACKAGE)
+        reader.writeCycleEntry(
+            CycleEntryWriteRequest(
+                kind = CycleEntryKind.BASAL_BODY_TEMPERATURE,
+                time = NOON,
+                temperatureCelsius = 36.6,
+                measurementLocation = BodyTemperatureMeasurementLocation.MEASUREMENT_LOCATION_MOUTH,
+            ),
+        )
+        val id = all(BasalBodyTemperatureRecord::class).single().metadata.id
+
+        val loaded = reader.readCycleEntry(CycleEntryKind.BASAL_BODY_TEMPERATURE, id)
+
+        assertThat(loaded?.temperatureCelsius).isWithin(1e-9).of(36.6)
+        assertThat(loaded?.measurementLocation).isEqualTo(BodyTemperatureMeasurementLocation.MEASUREMENT_LOCATION_MOUTH)
+    }
+
+    @Test
+    fun `deleting one kind of cycle entry leaves the others of that moment alone`() = onTheTestClock {
+        val reader = CycleHealthReader(support(), APP_PACKAGE)
+        reader.writeCycleEntry(CycleEntryWriteRequest(CycleEntryKind.SPOTTING, NOON))
+        reader.writeCycleEntry(
+            CycleEntryWriteRequest(CycleEntryKind.OVULATION_TEST, NOON, ovulationTestResult = OvulationTestRecord.RESULT_POSITIVE),
+        )
+        val spottingId = all(IntermenstrualBleedingRecord::class).single().metadata.id
+
+        reader.deleteCycleEntry(CycleEntryKind.SPOTTING, spottingId)
+
+        assertThat(all(IntermenstrualBleedingRecord::class)).isEmpty()
+        assertThat(all(OvulationTestRecord::class).single().result).isEqualTo(OvulationTestRecord.RESULT_POSITIVE)
+    }
+
+    @Test
+    fun `another app's cycle entry can be neither edited nor deleted`() = onTheTestClock {
+        val foreignId = insertAsAnotherApp(
+            MenstruationFlowRecord(NOON, ZoneOffset.UTC, Metadata.manualEntry(), MenstruationFlowRecord.FLOW_MEDIUM),
+        )
+        val reader = CycleHealthReader(support(), APP_PACKAGE)
+
+        val edit = runCatching {
+            reader.updateCycleEntry(
+                foreignId,
+                CycleEntryWriteRequest(CycleEntryKind.MENSTRUATION_FLOW, NOON, flow = MenstruationFlowRecord.FLOW_LIGHT),
+            )
+        }
+        val delete = runCatching { reader.deleteCycleEntry(CycleEntryKind.MENSTRUATION_FLOW, foreignId) }
+
+        assertThat(edit.exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(delete.exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(all(MenstruationFlowRecord::class).single().flow).isEqualTo(MenstruationFlowRecord.FLOW_MEDIUM)
+    }
+
     // Step-derived distance: the one reader that deletes records nobody asked it to.
 
     @Test
-    fun `a second reconcile adds nothing, and a day another app covers is left alone`() = onARealClock {
+    fun `a second reconcile adds nothing, and a day another app covers is left alone`() = onTheTestClock {
         val zone = java.time.ZoneId.systemDefault()
         val covered = DAY.minusDays(1)
         insertAsAnotherApp(
@@ -196,7 +337,7 @@ class EntryWritePathsTest {
     }
 
     @Test
-    fun `a purge removes the derived records and nothing else`() = onARealClock {
+    fun `a purge removes the derived records and nothing else`() = onTheTestClock {
         val reader = StepDistanceHealthReader(support(), APP_PACKAGE)
         reader.reconcileStepDerivedDistance(DAY..DAY, mapOf(DAY to 10_000L), strideMeters = 0.7)
         val zone = java.time.ZoneId.systemDefault()
@@ -223,7 +364,15 @@ class EntryWritePathsTest {
         ),
     ).records
 
-    private fun onARealClock(body: suspend CoroutineScope.() -> Unit) = runBlocking(block = body)
+    private val testDispatcher = StandardTestDispatcher()
+    private val testDispatchers = object : DispatcherProvider {
+        override val main = testDispatcher
+        override val io = testDispatcher
+        override val default = testDispatcher
+    }
+
+    /** Every read hops to the support's dispatcher, so on this one the whole read is test time. */
+    private fun onTheTestClock(body: suspend CoroutineScope.() -> Unit) = runTest(testDispatcher) { body() }
 
     private suspend fun <T : Record> all(type: KClass<T>): List<T> =
         client.readRecords(ReadRecordsRequest(type, TimeRangeFilter.between(DAY_START, DAY_END))).records
@@ -244,6 +393,7 @@ class EntryWritePathsTest {
             clientProvider = { client },
             diagnostics = diagnostics,
             rateLimitMessage = { "rate limited" },
+            dispatchers = testDispatchers,
         )
     }
 

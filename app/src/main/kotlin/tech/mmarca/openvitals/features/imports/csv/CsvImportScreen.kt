@@ -35,6 +35,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
 import kotlinx.coroutines.launch
+import tech.mmarca.openvitals.core.performance.offMainIo
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
@@ -43,6 +44,7 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.StepBar
 import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
+import tech.mmarca.openvitals.ui.components.ConfirmLeaveWhileImporting
 import tech.mmarca.openvitals.ui.components.rememberHealthConnectPermissionLauncher
 
 private val CsvMimeTypes = arrayOf(
@@ -64,6 +66,7 @@ fun CsvImportScreen(
     viewModel: CsvImportViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    ConfirmLeaveWhileImporting(importing = state.isImporting)
 
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -424,14 +427,16 @@ private fun CsvDoneStep(
     ) { uri ->
         if (uri != null) {
             val text = viewModel.reportText() ?: return@rememberLauncherForActivityResult
-            runCatching {
-                context.contentResolver.openOutputStream(uri)?.use { output ->
-                    output.write(text.toByteArray())
-                } ?: error("Unable to open destination.")
-            }.fold(
-                onSuccess = { Toast.makeText(context, reportSaved, Toast.LENGTH_SHORT).show() },
-                onFailure = { Toast.makeText(context, reportSaveFailed, Toast.LENGTH_SHORT).show() },
-            )
+            scope.launch {
+                offMainIo {
+                    context.contentResolver.openOutputStream(uri)?.use { output ->
+                        output.write(text.toByteArray())
+                    } ?: error("Unable to open destination.")
+                }.fold(
+                    onSuccess = { Toast.makeText(context, reportSaved, Toast.LENGTH_SHORT).show() },
+                    onFailure = { Toast.makeText(context, reportSaveFailed, Toast.LENGTH_SHORT).show() },
+                )
+            }
         }
     }
 

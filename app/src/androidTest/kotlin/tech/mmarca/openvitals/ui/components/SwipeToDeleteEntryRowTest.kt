@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.ui.components
 
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
@@ -53,6 +54,26 @@ class SwipeToDeleteEntryRowTest {
 
         assertEquals(0, deleted)
         composeRule.onNodeWithText(ENTRY).assertExists()
+    }
+
+    @Test
+    fun aRowThatOnlyAsksSlidesBack() {
+        // The screen shows a question. If the user cancels it, the row must still be there.
+        var asked = 0
+
+        composeRule.setContent {
+            OpenVitalsTheme {
+                SwipeToDeleteEntryRow(onDelete = { asked++ }, asksBeforeDeleting = true) {
+                    ListItem(headlineContent = { Text(ENTRY) })
+                }
+            }
+        }
+
+        composeRule.onNodeWithText(ENTRY).performTouchInput { swipeLeft() }
+        composeRule.waitForIdle()
+
+        assertEquals(1, asked)
+        composeRule.onNodeWithText(ENTRY).assertIsDisplayed()
     }
 
     private companion object {

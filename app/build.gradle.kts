@@ -9,6 +9,12 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Room writes the schema of each database version here. The files are committed: a migration
+// can only be tested against a version whose schema was kept.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 val releaseStoreFilePath = System.getenv("OPENVITALS_RELEASE_STORE_FILE")
 val releaseStorePassword = System.getenv("OPENVITALS_RELEASE_STORE_PASSWORD")
 val releaseKeyAlias = System.getenv("OPENVITALS_RELEASE_KEY_ALIAS")

@@ -3,12 +3,16 @@ package tech.mmarca.openvitals.features.activity
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrdering
+import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.preferences.toWeekPeriodMode
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
@@ -30,11 +34,12 @@ fun ActivitiesScreen(
     onOpenDistance: (() -> Unit)? = null,
     onOpenEnergyBurned: (() -> Unit)? = null,
     onOpenHrv: (() -> Unit)? = null,
-    onSectionEditStateChanged: (Boolean, () -> Unit) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val sectionContext = rememberMetricDetailSectionOrdering(onSectionEditStateChanged)
+    val sectionContext = rememberMetricDetailSectionOrdering()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
+    // A swipe only asks. The dashboard already did; this list deleted at once, with no undo.
+    var workoutToDelete by remember { mutableStateOf<ExerciseData?>(null) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.resumeCurrentPeriod(refreshCurrent = true)
@@ -82,7 +87,7 @@ fun ActivitiesScreen(
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onOpenActivity = onOpenActivity,
                 onEditActivity = onEditActivity,
-                onDeleteActivity = viewModel::deleteActivityEntry,
+                onDeleteActivity = { id -> workoutToDelete = state.workouts.firstOrNull { it.id == id } },
                 onStartPlannedWorkout = onStartPlannedWorkout,
                 onManageWorkoutPlans = onManageWorkoutPlans,
                 onOpenCardioLoad = onOpenCardioLoad,
@@ -94,5 +99,16 @@ fun ActivitiesScreen(
                 onIncreaseGoal = viewModel::increaseDailyGoal,
             )
         }
+    }
+
+    workoutToDelete?.let { workout ->
+        DeleteActivityConfirmationDialog(
+            workout = workout,
+            onDismiss = { workoutToDelete = null },
+            onConfirm = {
+                workoutToDelete = null
+                viewModel.deleteActivityEntry(workout.id)
+            },
+        )
     }
 }

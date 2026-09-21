@@ -57,7 +57,8 @@ class RecordedSessionRangeTest {
             ActivityEntryUnits.uniform(UnitSystem.METRIC),
         )
 
-        assertTrue(request!!.bleSamples.isEmpty())
+        // Only the early sample goes. The rest of the series is the workout.
+        assertEquals(listOf(start.plusSeconds(30)), request!!.bleSamples.heartRateSamples.map { it.time })
     }
 
     @Test

@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -34,10 +33,12 @@ import tech.mmarca.openvitals.domain.insights.caffeineDrinkProfile
 import tech.mmarca.openvitals.ui.components.ChartTokens
 import tech.mmarca.openvitals.ui.components.ChartXAxisWithYAxis
 import tech.mmarca.openvitals.ui.components.ChartZoom
+import tech.mmarca.openvitals.ui.components.DeclareAppBar
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.MetricLinePlot
 import tech.mmarca.openvitals.ui.components.MetricLinePlotPoint
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.ScreenAppBar
 import tech.mmarca.openvitals.ui.components.timeAxisInstantsFor
 
 /**
@@ -50,14 +51,12 @@ fun CaffeineDrinkScreen(
     entryId: String,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onTitleChanged: (String?) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val entry = state.entries.firstOrNull { it.id == entryId }
 
-    LaunchedEffect(entry?.name) {
-        onTitleChanged(entry?.name?.takeIf { it.isNotBlank() })
-    }
+    // The app bar takes the drink's own name. Without one it keeps the route's title.
+    DeclareAppBar(ScreenAppBar(title = entry?.name?.takeIf { it.isNotBlank() }))
 
     if (entry == null) {
         // Deleted while open, or followed from something stale.

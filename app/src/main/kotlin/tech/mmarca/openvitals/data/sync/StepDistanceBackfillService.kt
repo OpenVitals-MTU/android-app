@@ -15,6 +15,8 @@ import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.preferences.StrideLength
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 /**
  * The opt-in "distance from steps" backfill: one daily DistanceRecord for
@@ -35,13 +37,23 @@ class StepDistanceBackfillService @Inject constructor(
 
     suspend fun syncNow() = sync(force = true)
 
+    /**
+     * Removes every derived record. It must finish: the feature is off, and what is left
+     * would stay in Health Connect. So it is noted as pending first, it does not stop when
+     * the caller's screen goes away, and a purge that did not finish is tried again by the
+     * next pass ([sync]).
+     */
     suspend fun purgeDerivedRecords() {
+        preferences.stepDistancePurgePending = true
         if (!running.compareAndSet(false, true)) return
         try {
             if (hc.availability() != HealthConnectAvailability.AVAILABLE) return
-            val today = LocalDate.now()
-            hc.purgeStepDerivedDistance(today.minusDays(HistoryLookbackDays)..today)
-            lastPass = null
+            withContext(NonCancellable) {
+                val today = LocalDate.now()
+                hc.purgeStepDerivedDistance(today.minusDays(HistoryLookbackDays)..today)
+                lastPass = null
+                preferences.stepDistancePurgePending = false
+            }
         } catch (t: Throwable) {
             if (t is kotlinx.coroutines.CancellationException) throw t
             Log.w(TAG, "Step distance purge failed", t)
@@ -51,7 +63,11 @@ class StepDistanceBackfillService @Inject constructor(
     }
 
     private suspend fun sync(force: Boolean) {
-        if (!preferences.stepDistanceBackfillEnabled) return
+        if (!preferences.stepDistanceBackfillEnabled) {
+            // Off, but the records of a purge that never finished are still there.
+            if (preferences.stepDistancePurgePending) purgeDerivedRecords()
+            return
+        }
         if (!running.compareAndSet(false, true)) return
         try {
             val now = Instant.now()

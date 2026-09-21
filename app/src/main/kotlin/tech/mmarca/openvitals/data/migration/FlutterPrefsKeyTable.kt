@@ -71,9 +71,15 @@ object FlutterPrefsKeyTable {
     /** The key the completed migration is flagged under (in [TargetPrefsFile.MAIN]). */
     const val MIGRATED_FLAG_KEY = "flutter_data_migrated"
 
+    /**
+     * The watch wellness import has its own flag. It was added to the migration later, behind
+     * [MIGRATED_FLAG_KEY], which everyone who had already migrated had set. They never got it.
+     */
+    const val WELLNESS_IMPORTED_FLAG_KEY = "flutter_garmin_wellness_imported"
+
     /** Maps one decoded Flutter entry. [value] must be a [FlutterPrefsReader] value type. */
     fun map(key: String, value: Any): KeyMapping {
-        if (key == MIGRATED_FLAG_KEY || key == "kotlin_data_migrated") {
+        if (key == MIGRATED_FLAG_KEY || key == WELLNESS_IMPORTED_FLAG_KEY || key == "kotlin_data_migrated") {
             // Never let legacy data forge (or resurrect) a migration flag.
             return KeyMapping.Drop("migration bookkeeping flag")
         }

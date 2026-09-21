@@ -1,5 +1,10 @@
 package tech.mmarca.openvitals.data.sync
 
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.CompletableDeferred
+import tech.mmarca.openvitals.data.local.vitalscache.vitalsCacheFingerprint
+import tech.mmarca.openvitals.data.local.vitalscache.VitalsCacheFingerprintKey
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.OxygenSaturationRecord
@@ -64,11 +69,15 @@ class VitalsHistorySyncServiceTest {
         return hc
     }
 
-    private fun dao(cursorToken: String? = null): VitalsDailyCacheDao {
+    private fun dao(cursorToken: String? = null, fingerprint: String? = null): VitalsDailyCacheDao {
         val dao = mockk<VitalsDailyCacheDao>()
         coEvery { dao.cursor(any()) } answers {
             cursorToken?.let { VitalsSyncCursorEntity(firstArg(), it, null) }
         }
+        // The fingerprint sits in the same table, under a key no metric uses.
+        coEvery { dao.cursor(VitalsCacheFingerprintKey) } returns
+            fingerprint?.let { VitalsSyncCursorEntity(VitalsCacheFingerprintKey, it, null) }
+        coEvery { dao.purgeMetric(any()) } just Runs
         coEvery { dao.replaceMetric(any(), any()) } just Runs
         coEvery { dao.writeFullSync(any()) } just Runs
         coEvery { dao.writeToken(any(), any()) } just Runs
@@ -205,6 +214,96 @@ class VitalsHistorySyncServiceTest {
         // Deleting the day and moving the token on meant the day was never looked at again.
         coVerify(exactly = 0) { dao.deleteDay(VitalsCacheKeys.SPO2, any()) }
         coVerify(exactly = 0) { dao.writeToken(VitalsCacheKeys.SPO2, any()) }
+    }
+
+    @Test fun `leaving the screen does not stop the first full sync`() = runTest {
+        // The Heart screen starts it. It reads years of records and writes at the end.
+        val hc = hc()
+        val reading = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        coEvery { hc.readDailySpO2(any(), any()) } coAnswers {
+            reading.complete(Unit)
+            release.await()
+            emptyList()
+        }
+        val dao = dao(cursorToken = null)
+        val service = VitalsHistorySyncService(hc, dao)
+
+        val screen = launch { service.syncAll() }
+        reading.await()
+        screen.cancelAndJoin()
+        release.complete(Unit)
+        // Coming back joins the run that is still going. It does not start another.
+        service.syncAll()
+
+        coVerify(exactly = 1) { dao.replaceMetric(VitalsCacheKeys.SPO2, any()) }
+        coVerify(exactly = 1) { hc.getChangesToken(OxygenSaturationRecord::class) }
+    }
+
+    @Test fun `a first full sync asked for during a drain still happens`() = runTest {
+        // The scheduler's drain skips metrics that never synced. The screen's request must not be lost in it.
+        val hc = hc()
+        val draining = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        var first = true
+        coEvery { hc.grantedPermissions() } coAnswers {
+            if (first) {
+                first = false
+                draining.complete(Unit)
+                release.await()
+            }
+            setOf(spO2Permission)
+        }
+        val dao = dao(cursorToken = null)
+        val service = VitalsHistorySyncService(hc, dao)
+
+        val drain = launch { service.syncIncremental() }
+        draining.await()
+        val screen = launch { service.syncAll() }
+        release.complete(Unit)
+        drain.join()
+        screen.join()
+
+        coVerify(exactly = 1) { dao.replaceMetric(VitalsCacheKeys.SPO2, any()) }
+    }
+
+    @Test fun `a cache built in another time zone or under other grants is dropped`() = runTest {
+        // A token cannot tell that the history permission arrived, or that midnight moved.
+        val hc = hc()
+        val dao = dao(cursorToken = "token-1", fingerprint = "v1|Pacific/Auckland|123")
+
+        VitalsHistorySyncService(hc, dao).syncIncremental()
+
+        coVerify { dao.purgeMetric(VitalsCacheKeys.SPO2) }
+        coVerify { dao.purgeMetric(VitalsCacheKeys.BLOOD_PRESSURE) }
+        coVerify {
+            dao.writeFullSync(match { it.metric == VitalsCacheFingerprintKey && it.changesToken != "v1|Pacific/Auckland|123" })
+        }
+    }
+
+    @Test fun `a cache from before the fingerprint is kept, and gets one`() = runTest {
+        // Dropping it would cost every install a full rebuild on update.
+        val hc = hc()
+        val dao = dao(cursorToken = "token-1", fingerprint = null)
+
+        VitalsHistorySyncService(hc, dao).syncIncremental()
+
+        coVerify(exactly = 0) { dao.purgeMetric(any()) }
+        coVerify { dao.writeFullSync(match { it.metric == VitalsCacheFingerprintKey }) }
+    }
+
+    @Test fun `a cache whose fingerprint still holds is left alone`() = runTest {
+        val hc = hc()
+        val granted = hc.grantedPermissions()
+        val dao = dao(
+            cursorToken = "token-1",
+            fingerprint = vitalsCacheFingerprint(granted, java.time.ZoneId.systemDefault()),
+        )
+
+        VitalsHistorySyncService(hc, dao).syncIncremental()
+
+        coVerify(exactly = 0) { dao.purgeMetric(any()) }
+        coVerify(exactly = 0) { dao.writeFullSync(match { it.metric == VitalsCacheFingerprintKey }) }
     }
 
     @Test fun `deletions force a full rebuild because they carry no date`() = runTest {

@@ -20,7 +20,7 @@ The builder (`WorkoutPlanBuilderScreen`) edits one plan:
 - On load the builder folds such runs back into one row: consecutive copies of one exercise, each followed by the same rest (or by nothing), read as one row with that many sets. The scan is greedy from the left, so a plan from another app with `A R A R A` (no rest after the last set) reads as "A ×2 with rest" followed by "A ×1", and writes back unchanged. A rest right after an exercise is always that exercise's set rest, so "Add rest" rows survive only where no exercise precedes them (block start, after another rest, after a read-only step).
 - Steps the builder cannot express (distance goals, calorie goals, manual completion, unknown goals, usually from other apps) are shown read-only and written back unchanged, so editing a foreign plan never drops part of it. Of the performance targets, only the weight target is edited (the Weight field); pace, power and heart-rate targets are shown under the step and written back as they came.
 
-Saving writes a `PlannedExerciseSessionRecord`. Updating an existing plan is a delete-then-insert, so the record id changes on every save.
+Saving writes a `PlannedExerciseSessionRecord`. Updating an existing plan is an in-place update, so the record id stays the same. Sessions that completed the plan keep their link, and a failed save leaves the old plan as it was.
 
 ## Plan List
 
@@ -32,7 +32,7 @@ Entry points: the "Manage" action on the Planned workouts section of the Activit
 
 Activity entry opens on a **start hub** (`ActivityStartHub`): the uncompleted plans for today and later, each one tap ("Log") from the prefilled form, then **Record activity**, **Log manually**, and a link to Manage plans. Plan rows on the Activities screen and in the plan list open the same prefilled form directly (`planId` route argument).
 
-The manual form no longer edits plans. A session prefilled from a plan shows a **From plan: …** card with Change plan (back to the hub), Edit (opens the builder; the edited plan is picked up again on return, under its new id) and Remove (unlink). Saving writes the session with `plannedExerciseSessionId`, and Health Connect marks the plan completed; editing a session later keeps that link. **Save as plan** on a session built by hand writes a one-block plan from its steps and opens the builder on it — the builder is the only plan editor, so rich plans are never flattened by the form.
+The manual form no longer edits plans. A session prefilled from a plan shows a **From plan: …** card with Change plan (back to the hub), Edit (opens the builder; the edited plan is picked up again on return, under the same id) and Remove (unlink). Saving writes the session with `plannedExerciseSessionId`, and Health Connect marks the plan completed; editing a session later keeps that link. **Save as plan** on a session built by hand writes a one-block plan from its steps and opens the builder on it — the builder is the only plan editor, so rich plans are never flattened by the form.
 
 ## Guided Run
 

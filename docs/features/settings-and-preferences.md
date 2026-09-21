@@ -93,6 +93,16 @@ The section also holds a Health Connect sync switch and a mindfulness integratio
 
 Settings provide Data Importers for Apple Health export import, single or bulk GPX/KML/KMZ/TCX route import, FIT activity/course/workout import, and CSV import of body measurements and vitals, plus entry points for offline map pack import and Bluetooth LE sensor management. Apple Health exports are analyzed first so the user can choose detected categories before anything is written to Health Connect. Route bulk import writes selected files directly after route import permissions are granted. CSV import runs its own mapping wizard; see [CSV import](csv-import.md). Import results can be copied or downloaded as a full text report with summary, selected categories, logs, diagnostics, and failure details.
 
+## App Lock
+
+App lock asks for the device's own unlock (PIN, pattern, password or biometrics) before OpenVitals shows anything. A phone with no screen lock has nothing to ask for, so the app opens.
+
+- It asks on every cold start. A rotation does not ask again. A process that Android killed and restored starts locked.
+- It asks again after the app has spent a minute in the background. The screens stay loaded under the lock screen, so a file picker's result or the place in a form is not lost.
+- A cancelled prompt leaves a lock screen with an Unlock button.
+- While the lock is on, the recent-apps list shows no thumbnail of the app. On Android 12 and older that needs a window flag that also blocks screenshots of OpenVitals.
+- The lock hides the screen. It does not encrypt anything; app-private storage and Health Connect's own permissions protect the data.
+
 ## Diagnostics And App Information
 
 The settings area includes app version information, diagnostics/support surfaces, and privacy notes.

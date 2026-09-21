@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,9 +34,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.ExerciseData
-import tech.mmarca.openvitals.features.activity.exerciseTypeLabel
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
-import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 import java.time.ZoneId
 
@@ -165,36 +162,6 @@ internal fun DashboardSwipeToDeleteActivityCard(
         },
         modifier = modifier.clip(shape),
         content = { content() },
-    )
-}
-
-@Composable
-internal fun DeleteActivityConfirmationDialog(
-    workout: ExerciseData,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.dashboard_delete_activity_title)) },
-        text = {
-            Text(
-                stringResource(
-                    R.string.dashboard_delete_activity_message,
-                    exerciseTypeLabel(workout.exerciseType),
-                )
-            )
-        },
-        confirmButton = {
-            OpenVitalsTextButton(onClick = onConfirm) {
-                Text(stringResource(R.string.action_delete))
-            }
-        },
-        dismissButton = {
-            OpenVitalsTextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
-        },
     )
 }
 

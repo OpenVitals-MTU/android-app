@@ -185,6 +185,15 @@ data class BleRecordingSampleBuffer(
      */
     fun firstSampleTime(): Instant? = sampleTimes().minOrNull()
 
+    /** Every series without the samples taken before [start]. */
+    fun from(start: Instant): BleRecordingSampleBuffer = copy(
+        heartRateSamples = heartRateSamples.filterNot { it.time.isBefore(start) },
+        powerSamples = powerSamples.filterNot { it.time.isBefore(start) },
+        cyclingCadenceSamples = cyclingCadenceSamples.filterNot { it.time.isBefore(start) },
+        speedSamples = speedSamples.filterNot { it.time.isBefore(start) },
+        stepsCadenceSamples = stepsCadenceSamples.filterNot { it.time.isBefore(start) },
+    )
+
     fun lastSampleTime(): Instant? = sampleTimes().maxOrNull()
 
     private fun sampleTimes(): List<Instant> =

@@ -54,9 +54,40 @@ class FlutterDataMigrator(
         step("completion flag") {
             targetPrefs(TargetPrefsFile.MAIN).edit()
                 .putBoolean(FlutterPrefsKeyTable.MIGRATED_FLAG_KEY, true)
+                .putBoolean(FlutterPrefsKeyTable.WELLNESS_IMPORTED_FLAG_KEY, true)
                 .commit()
         }
         Log.i(TAG, "Flutter data migration finished.")
+    }
+
+    /**
+     * True for an install that migrated before the wellness import existed (2.5.0 to 2.6.2).
+     * Its stress, Body Battery and score history is still in the Flutter database, which the
+     * migration never deletes.
+     */
+    fun garminWellnessImportMissed(): Boolean = try {
+        val main = targetPrefs(TargetPrefsFile.MAIN)
+        main.getBoolean(FlutterPrefsKeyTable.MIGRATED_FLAG_KEY, false) &&
+            !main.getBoolean(FlutterPrefsKeyTable.WELLNESS_IMPORTED_FLAG_KEY, false)
+    } catch (error: Exception) {
+        Log.e(TAG, "Wellness import check failed; not importing.", error)
+        false
+    }
+
+    /**
+     * The catch-up for [garminWellnessImportMissed]. The upsert converges, so a run cut short
+     * is safe to repeat. The flag is written even on failure, like the main one. Blocks: call
+     * it off the main thread.
+     */
+    fun importMissedGarminWellness(database: OpenVitalsDatabase) {
+        step("missed garmin wellness samples") {
+            databaseImporter.importGarminWellness(database.garminWellnessDao())
+        }
+        step("wellness flag") {
+            targetPrefs(TargetPrefsFile.MAIN).edit()
+                .putBoolean(FlutterPrefsKeyTable.WELLNESS_IMPORTED_FLAG_KEY, true)
+                .commit()
+        }
     }
 
     /** The flag is absent and the Flutter preferences file exists. A fresh install fails the stat. */

@@ -9,6 +9,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
@@ -165,7 +166,7 @@ class DailyReadinessViewModel @Inject constructor(
                     if (!isCurrent) return@load
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = error.toScreenError("Unknown error"),
+                        error = error.toScreenError(R.string.screen_error_generic),
                     )
                 }
         }

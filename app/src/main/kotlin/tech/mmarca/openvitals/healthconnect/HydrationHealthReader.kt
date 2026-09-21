@@ -10,6 +10,7 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.Volume
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
+import tech.mmarca.openvitals.domain.model.HydrationEntryChange
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
 import java.time.Duration
 import java.time.Instant
@@ -114,7 +115,10 @@ internal class HydrationHealthReader(
         clientRecordId
     }
 
-    suspend fun updateHydrationEntry(id: String, request: HydrationWriteRequest) = withContext(Dispatchers.IO) {
+    suspend fun updateHydrationEntry(
+        id: String,
+        request: HydrationWriteRequest,
+    ): HydrationEntryChange = withContext(Dispatchers.IO) {
         require(request.volumeLiters > 0.0) { "Hydration volume must be greater than zero." }
         require(request.volumeLiters <= MaxHydrationRecordLiters) {
             "Hydration volume must not exceed ${MaxHydrationRecordLiters.toInt()} L."
@@ -127,20 +131,41 @@ internal class HydrationHealthReader(
         val endTime = startTime.plusSeconds(1)
         val zone = ZoneId.systemDefault()
         val volumeMilliliters = request.volumeLiters * MillilitersPerLiter
+        val device = existing.metadata.device ?: Device(type = Device.TYPE_PHONE)
+        val clientRecordId = existing.metadata.clientRecordId
         val record = HydrationRecord(
             startTime = startTime,
             startZoneOffset = zone.rules.getOffset(startTime),
             endTime = endTime,
             endZoneOffset = zone.rules.getOffset(endTime),
             volume = Volume.milliliters(volumeMilliliters),
-            metadata = Metadata.manualEntryWithId(
-                id = id,
-                device = existing.metadata.device ?: Device(type = Device.TYPE_PHONE),
-            ),
+            // The client id is the link to the drink's nutrition record. An update by record id
+            // carries no client id, so the stored one would be lost. Writing the same client id
+            // with a higher version replaces the record in place and keeps the link.
+            metadata = if (clientRecordId != null) {
+                Metadata.manualEntry(
+                    device = device,
+                    clientRecordId = clientRecordId,
+                    clientRecordVersion = existing.metadata.clientRecordVersion + 1,
+                )
+            } else {
+                Metadata.manualEntryWithId(id = id, device = device)
+            },
         )
 
         Log.d(TAG, "Updating hydration record ${support.diagnosticsSummary()}")
-        support.client().updateRecords(listOf(record))
+        if (clientRecordId != null) {
+            support.client().insertRecords(listOf(record))
+        } else {
+            support.client().updateRecords(listOf(record))
+        }
+        HydrationEntryChange(
+            clientRecordId = clientRecordId,
+            oldTime = existing.startTime,
+            newTime = startTime,
+            oldVolumeLiters = existing.volume.inLiters,
+            newVolumeLiters = request.volumeLiters,
+        )
     }
 
     suspend fun deleteHydrationEntry(id: String): String? = withContext(Dispatchers.IO) {

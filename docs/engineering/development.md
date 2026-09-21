@@ -251,6 +251,17 @@ For a versioned prerelease:
 git diff --check
 ```
 
+   CI has no device, so it never runs the instrumented tests. Run them here,
+   with a phone or emulator connected:
+
+```bash
+ANDROID_SERIAL=<serial> ./gradlew verifyAndroidTest
+```
+
+   A passing run is recorded for the committed `app/` sources.
+   `scripts/release.sh` stops without that record. Set
+   `OPENVITALS_SKIP_DEVICE_TESTS=1` to release without one.
+
 6. Commit the release prep, tag the commit as an annotated `v<versionName>` tag
    such as `v0.7.0` using the matching `CHANGELOG.md` section as the tag
    message, and push both the branch and tag. The tag pipeline runs the release

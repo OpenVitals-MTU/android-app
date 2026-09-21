@@ -40,6 +40,8 @@ That is what gives an imported activity the same charts a recorded one has, and 
 
 The user opens Settings, Data Importers and chooses route file import, or shares a supported file with OpenVitals. OpenVitals then shows the detected activity details before the user decides whether to save.
 
+Another app chooses the file when it shares one, so a shared file is never allowed to cost the user a recording. While a recording runs, the file is refused with a message. When a finished recording is not saved yet, OpenVitals asks first: "Import and discard" or "Keep the recording". Only `content://` links are accepted; a `file://` link could name a file in the app's own storage, and pickers and share sheets never send one.
+
 For mass import, the user chooses the bulk action from Settings, Data Importers, selects multiple files, grants route import write permissions if needed, and OpenVitals writes each valid activity directly. The card shows progress plus imported and failed counts.
 
 The review can include:

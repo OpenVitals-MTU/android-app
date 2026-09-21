@@ -57,6 +57,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.comaps.CoMapsGuidanceFeed
@@ -284,7 +285,15 @@ class ActivityRecordingController @Inject constructor(
     private val recordingStore: ActivityRecordingStore = ActivityRecordingStore(context),
 ) {
     private val persistenceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val bleMetricsScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /**
+     * The one place the state is written from: the main thread. Every write is "read the
+     * state, copy it, put it back", which loses an update when two threads do it at once.
+     * The timers used to fire on Dispatchers.IO and a GPS fix landed on the location
+     * executor, both racing the main thread's own writes. A lost update there is a lost
+     * route point or a rest that never ends.
+     */
+    private val stateScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val locationProcessingDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private val locationProcessingScope = CoroutineScope(SupervisorJob() + locationProcessingDispatcher)
     private val altitudeConverter = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -303,7 +312,7 @@ class ActivityRecordingController @Inject constructor(
     private val coMapsWatch = CoMapsRecordingWatch(
         repository = coMapsNavigationRepository,
         feed = coMapsGuidanceFeed,
-        scope = bleMetricsScope,
+        scope = stateScope,
         isEnabled = {
             preferencesRepository.activityRecordingPreferences().coMapsNavigationContextEnabled
         },
@@ -324,13 +333,13 @@ class ActivityRecordingController @Inject constructor(
         schedulePlanStepCompletion(_state.value)
         bleSensorCoordinator.metrics
             .onEach { metrics -> acceptBleMetrics(metrics) }
-            .launchIn(bleMetricsScope)
+            .launchIn(stateScope)
         state
             .onEach { recording -> coMapsWatch.sync(recording) }
-            .launchIn(bleMetricsScope)
+            .launchIn(stateScope)
         coMapsPrestartWatchRequested
             .onEach { coMapsWatch.sync(_state.value) }
-            .launchIn(bleMetricsScope)
+            .launchIn(stateScope)
     }
 
     /** Re-reads guidance after a permission grant. */
@@ -351,6 +360,9 @@ class ActivityRecordingController @Inject constructor(
     fun setCoMapsPrestartWatch(active: Boolean) {
         coMapsPrestartWatchRequested.value = active
     }
+
+    /** Whether a recording start should ask for the Bluetooth grant. */
+    fun hasSavedBleSensors(): Boolean = bleSensorCoordinator.hasSavedSensors()
 
     fun startRecording(activityType: ActivityEntryType, initialFix: Location?): Boolean =
         startRecording(activityType, initialFix, repetitionRestSeconds = 0L)
@@ -389,6 +401,7 @@ class ActivityRecordingController @Inject constructor(
         if (_state.value.isActive) return
         val recordingKind = activityType.recordingKind()
         persistenceScope.coroutineContext.cancelChildren()
+        cancelTimers()
         recordingGeneration += 1
         updateAndPersist(
             ActivityRecordingState(
@@ -452,6 +465,7 @@ class ActivityRecordingController @Inject constructor(
         }
 
         persistenceScope.coroutineContext.cancelChildren()
+        cancelTimers()
         recordingStore.clear()
         recordingGeneration += 1
         updateAndPersist(
@@ -520,6 +534,7 @@ class ActivityRecordingController @Inject constructor(
         val recordingPreferences = preferencesRepository.activityRecordingPreferences()
         val dashboardLayout = preferencesRepository.activityRecordingDashboardLayout(activityType.id)
         persistenceScope.coroutineContext.cancelChildren()
+        cancelTimers()
         recordingStore.clear()
         recordingGeneration += 1
         updateAndPersist(
@@ -564,6 +579,7 @@ class ActivityRecordingController @Inject constructor(
         val recordingPreferences = preferencesRepository.activityRecordingPreferences()
         val dashboardLayout = preferencesRepository.activityRecordingDashboardLayout(activityType.id)
         persistenceScope.coroutineContext.cancelChildren()
+        cancelTimers()
         recordingStore.clear()
         recordingGeneration += 1
         updateAndPersist(
@@ -657,7 +673,7 @@ class ActivityRecordingController @Inject constructor(
         val scheduledPhase = state.hrrPhase
         val scheduledEffortEnd = state.hrrEffortEndedAt
 
-        hrrPhaseJob = persistenceScope.launch {
+        hrrPhaseJob = stateScope.launch {
             delay(delayMillis)
             val current = _state.value
             // A timer for a test that has already moved on must do nothing.
@@ -730,7 +746,7 @@ class ActivityRecordingController @Inject constructor(
         if (!state.isPlanRun) return
         val restEnd = state.restEndTime() ?: return
         val scheduledStart = state.restStartedAt
-        restCountdownJob = bleMetricsScope.launch {
+        restCountdownJob = stateScope.launch {
             for (secondsLeft in RestCountdownSeconds downTo 1L) {
                 val delayMillis = Duration.between(Instant.now(), restEnd.minusSeconds(secondsLeft)).toMillis()
                 if (delayMillis < 0L) continue
@@ -747,7 +763,7 @@ class ActivityRecordingController @Inject constructor(
         runCatching {
             val tone = ToneGenerator(AudioManager.STREAM_MUSIC, CountdownBeepVolume)
             tone.startTone(ToneGenerator.TONE_PROP_BEEP, CountdownBeepMillis)
-            bleMetricsScope.launch {
+            stateScope.launch {
                 delay(CountdownBeepMillis.toLong() + 50L)
                 runCatching { tone.release() }
             }
@@ -1036,11 +1052,17 @@ class ActivityRecordingController @Inject constructor(
         val generation = recordingGeneration
         updateGpsStatus(location)
         locationProcessingScope.launch {
-            acceptConvertedLocation(
-                location = location.withMslAltitude(),
-                generation = generation,
-                recordingPreferences = preferencesRepository.activityRecordingPreferences(),
-            )
+            // The altitude conversion can block, so it stays off the main thread. The state
+            // change does not.
+            val converted = location.withMslAltitude()
+            val recordingPreferences = preferencesRepository.activityRecordingPreferences()
+            withContext(Dispatchers.Main.immediate) {
+                acceptConvertedLocation(
+                    location = converted,
+                    generation = generation,
+                    recordingPreferences = recordingPreferences,
+                )
+            }
         }
     }
 
@@ -1402,15 +1424,21 @@ class ActivityRecordingController @Inject constructor(
     }
 
     /** Back to idle in memory. The store is the caller's business. */
-    private fun resetRecording() {
-        persistenceScope.coroutineContext.cancelChildren()
+    /** The timers of the recording that is ending, or of one that came before. */
+    private fun cancelTimers() {
         restCompletionJob?.cancel()
+        restCompletionJob = null
         planStepJob?.cancel()
         planStepJob = null
         restCountdownJob?.cancel()
         restCountdownJob = null
         hrrPhaseJob?.cancel()
         hrrPhaseJob = null
+    }
+
+    private fun resetRecording() {
+        persistenceScope.coroutineContext.cancelChildren()
+        cancelTimers()
         hrrTargetHits = 0
         recordingGeneration += 1
         _state.value = ActivityRecordingState()
@@ -1461,7 +1489,7 @@ class ActivityRecordingController @Inject constructor(
         val restEnd = state.restEndTime() ?: return
         val now = Instant.now()
         val delayMillis = Duration.between(now, restEnd).toMillis().coerceAtLeast(0L)
-        restCompletionJob = persistenceScope.launch {
+        restCompletionJob = stateScope.launch {
             delay(delayMillis)
             val current = _state.value
             if (current.status == ActivityRecordingStatus.RESTING &&
@@ -1543,7 +1571,7 @@ class ActivityRecordingController @Inject constructor(
         val scheduledIndex = state.planStepIndex
         val scheduledStart = state.currentSetStartedAt
         val delayMillis = Duration.between(Instant.now(), deadline).toMillis().coerceAtLeast(0L)
-        planStepJob = bleMetricsScope.launch {
+        planStepJob = stateScope.launch {
             delay(delayMillis)
             val current = _state.value
             if (current.status == ActivityRecordingStatus.RECORDING &&

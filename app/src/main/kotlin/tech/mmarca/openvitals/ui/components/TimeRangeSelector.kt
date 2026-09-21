@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.ui.components
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,7 +27,9 @@ fun TimeRangeSelector(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp)
+            // One group, one choice. Colour alone told a sighted user which range is on.
+            .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         TimeRange.entries.forEach { range ->
@@ -34,7 +38,7 @@ fun TimeRangeSelector(
                 modifier = Modifier
                     .weight(1f)
                     .clip(MaterialTheme.shapes.large)
-                    .clickable(onClick = { onSelect(range) }),
+                    .selectable(selected = isSelected, role = Role.Tab, onClick = { onSelect(range) }),
                 containerColor = if (isSelected) {
                     MaterialTheme.colorScheme.primaryContainer
                 } else {

@@ -47,6 +47,7 @@ import tech.mmarca.openvitals.domain.model.ActivityCadenceKind
 import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
 import tech.mmarca.openvitals.domain.model.ActivityRecordSource
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
+import tech.mmarca.openvitals.domain.model.OwnActivityMetrics
 import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
@@ -958,23 +959,37 @@ internal class ActivityHealthReader(
             blocks = blocks.map { it.toPlannedExerciseBlockData() },
         )
 
+    /**
+     * Writes a plan and returns its id. An edit ([PlannedExerciseWriteRequest.id]) updates the
+     * record in place. It used to delete the plan and insert a copy: a failed insert lost the
+     * plan, and the new id cut the link from every session that had completed it.
+     */
     suspend fun writePlannedExerciseSession(request: PlannedExerciseWriteRequest): String = withContext(Dispatchers.IO) {
-        request.id?.let { existingId -> deletePlannedExerciseSession(existingId) }
+        val existingId = request.id
         val zone = ZoneId.systemDefault()
         val record = PlannedExerciseSessionRecord(
             startTime = request.startTime,
             startZoneOffset = zone.rules.getOffset(request.startTime),
             endTime = request.endTime,
             endZoneOffset = zone.rules.getOffset(request.endTime),
-            metadata = Metadata.manualEntry(
-                clientRecordId = "openvitals_planned_activity_${request.startTime.toEpochMilli()}_${UUID.randomUUID()}",
-                device = Device(type = Device.TYPE_PHONE),
-            ),
+            metadata = if (existingId != null) {
+                Metadata.manualEntryWithId(id = existingId, device = Device(type = Device.TYPE_PHONE))
+            } else {
+                Metadata.manualEntry(
+                    clientRecordId =
+                    "openvitals_planned_activity_${request.startTime.toEpochMilli()}_${UUID.randomUUID()}",
+                    device = Device(type = Device.TYPE_PHONE),
+                )
+            },
             blocks = request.blocks.map { it.toPlannedExerciseBlock() },
             exerciseType = request.exerciseType,
             title = request.title?.trim()?.takeIf { it.isNotBlank() },
             notes = request.notes?.trim()?.takeIf { it.isNotBlank() },
         )
+        if (existingId != null) {
+            support.client().updateRecords(listOf(record))
+            return@withContext existingId
+        }
         support.client()
             .insertRecords(listOf(record))
             .recordIdsList
@@ -1051,7 +1066,11 @@ internal class ActivityHealthReader(
             exerciseSegments = exerciseSegments,
             zone = zone,
         )
-        val extraRecords = request.toManualActivityMetricRecords(zone)
+        // A total the user did not change keeps the value we stored. The form used to be
+        // prefilled from every app's data, so saving a new title wrote other apps' steps and a
+        // calorie estimate as our records, and swept a total the form does not show.
+        val extraRecords = request.keepingUntouchedMetrics(ownActivityMetrics(existing))
+            .toManualActivityMetricRecords(zone)
 
         Log.d(
             TAG,
@@ -1095,6 +1114,27 @@ internal class ActivityHealthReader(
             updateShrinkingRoutes(listOf(session))
             staleRecordIds.forEach { (recordType, ids) -> deleteRecordsById(recordType, ids) }
         }
+    }
+
+    /** The totals OpenVitals stored for session [id]. The edit form shows these, not the aggregate. */
+    suspend fun readOwnActivityMetrics(id: String): OwnActivityMetrics = withContext(Dispatchers.IO) {
+        ownActivityMetrics(support.client().readRecord(ExerciseSessionRecord::class, id).record)
+    }
+
+    private suspend fun ownActivityMetrics(session: ExerciseSessionRecord): OwnActivityMetrics {
+        suspend fun <T : Record> own(type: KClass<T>, kind: String): List<T> =
+            ownManualActivityMetricRecords(type, kind, session.startTime, session.endTime)
+        return OwnActivityMetrics(
+            steps = own(StepsRecord::class, "steps").takeIf { it.isNotEmpty() }?.sumOf { it.count },
+            distanceMeters = own(DistanceRecord::class, "distance")
+                .takeIf { it.isNotEmpty() }?.sumOf { it.distance.inMeters },
+            elevationGainedMeters = own(ElevationGainedRecord::class, "elevation")
+                .takeIf { it.isNotEmpty() }?.sumOf { it.elevation.inMeters },
+            activeCaloriesKcal = own(ActiveCaloriesBurnedRecord::class, "active_calories")
+                .takeIf { it.isNotEmpty() }?.sumOf { it.energy.inKilocalories },
+            totalCaloriesKcal = own(TotalCaloriesBurnedRecord::class, "total_calories")
+                .takeIf { it.isNotEmpty() }?.sumOf { it.energy.inKilocalories },
+        )
     }
 
     suspend fun deleteActivityEntry(id: String) = withContext(Dispatchers.IO) {

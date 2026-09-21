@@ -15,6 +15,7 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodWindows
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
+import tech.mmarca.openvitals.data.local.vitalscache.matchesFingerprint
 import tech.mmarca.openvitals.data.sync.HistoryLookbackDays
 import tech.mmarca.openvitals.data.sync.VitalsCacheKeys
 import tech.mmarca.openvitals.data.sync.VitalsHistorySyncService
@@ -92,7 +93,6 @@ class VitalsRepositoryImpl @Inject constructor(
         return phase3Permissions.filterNot { it in granted }.toSet()
     }
 
-    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadVitalsPeriod(
         query: PeriodLoadQuery,
         metric: VitalsPeriodMetric,
@@ -124,7 +124,14 @@ class VitalsRepositoryImpl @Inject constructor(
                             skinTemperature = skinTemperature.await(),
                         )
                     } else {
-                        loadOverviewDailyVitals(current.start, current.end, granted, missingPermissions)
+                        loadOverviewDailyVitals(
+                            current.start,
+                            current.end,
+                            granted,
+                            missingPermissions,
+                            // A pull to refresh asks Health Connect, not the cache.
+                            useCache = refreshMode != RefreshMode.FORCE,
+                        )
                     }
                 }
                 VitalsPeriodMetric.BLOOD_PRESSURE -> {
@@ -204,6 +211,7 @@ class VitalsRepositoryImpl @Inject constructor(
         end: LocalDate,
         granted: Set<String>,
         missingPermissions: Set<String>,
+        useCache: Boolean = true,
     ): VitalsPeriodData = coroutineScope {
         val startInstant = start.toInstant()
         val endInstant = end.plusDays(1).toInstant()
@@ -230,37 +238,37 @@ class VitalsRepositoryImpl @Inject constructor(
         val skinTemperatureAvailable = hc.isSkinTemperatureAvailable()
         val bloodPressureDaily = async {
             budgeted(VitalsPeriodMetric.BLOOD_PRESSURE, readBloodPressurePermission) { _, _ ->
-                dailyBloodPressureCore(start, end)
+                dailyBloodPressureCore(start, end, useCache)
             }
         }
         val spO2Daily = async {
             budgeted(VitalsPeriodMetric.SPO2, readSpO2Permission) { _, _ ->
-                dailyVitalsCore(VitalsPeriodMetric.SPO2, start, end)
+                dailyVitalsCore(VitalsPeriodMetric.SPO2, start, end, useCache)
             }
         }
         val respiratoryRateDaily = async {
             budgeted(VitalsPeriodMetric.RESPIRATORY_RATE, readRespiratoryRatePermission) { _, _ ->
-                dailyVitalsCore(VitalsPeriodMetric.RESPIRATORY_RATE, start, end)
+                dailyVitalsCore(VitalsPeriodMetric.RESPIRATORY_RATE, start, end, useCache)
             }
         }
         val bodyTemperatureDaily = async {
             budgeted(VitalsPeriodMetric.BODY_TEMPERATURE, readBodyTemperaturePermission) { _, _ ->
-                dailyVitalsCore(VitalsPeriodMetric.BODY_TEMPERATURE, start, end)
+                dailyVitalsCore(VitalsPeriodMetric.BODY_TEMPERATURE, start, end, useCache)
             }
         }
         val vo2MaxDaily = async {
             budgeted(VitalsPeriodMetric.VO2_MAX, readVo2MaxPermission) { _, _ ->
-                dailyVitalsCore(VitalsPeriodMetric.VO2_MAX, start, end)
+                dailyVitalsCore(VitalsPeriodMetric.VO2_MAX, start, end, useCache)
             }
         }
         val bloodGlucoseDaily = async {
             budgeted(VitalsPeriodMetric.BLOOD_GLUCOSE, readBloodGlucosePermission) { _, _ ->
-                dailyVitalsCore(VitalsPeriodMetric.BLOOD_GLUCOSE, start, end)
+                dailyVitalsCore(VitalsPeriodMetric.BLOOD_GLUCOSE, start, end, useCache)
             }
         }
         val skinTemperatureDaily = async {
             budgeted(VitalsPeriodMetric.SKIN_TEMPERATURE, readSkinTemperaturePermission, skinTemperatureAvailable) { _, _ ->
-                dailyVitalsCore(VitalsPeriodMetric.SKIN_TEMPERATURE, start, end)
+                dailyVitalsCore(VitalsPeriodMetric.SKIN_TEMPERATURE, start, end, useCache)
             }
         }
         val latestBloodPressure = async { latest(readBloodPressurePermission, read = hc::readLatestBloodPressureInWindow) }
@@ -298,9 +306,12 @@ class VitalsRepositoryImpl @Inject constructor(
         metric: VitalsPeriodMetric,
         start: LocalDate,
         end: LocalDate,
+        useCache: Boolean = true,
     ): List<DailyVitalPoint> {
         val startInstant = start.toInstant()
         val endInstant = end.plusDays(1).toInstant()
+        suspend fun cachedDaily(key: String, start: LocalDate, end: LocalDate): List<DailyVitalPoint>? =
+            if (useCache) this.cachedDaily(key, start, end) else null
         return when (metric) {
             VitalsPeriodMetric.SPO2 ->
                 cachedDaily(VitalsCacheKeys.SPO2, start, end) ?: hc.readDailySpO2(startInstant, endInstant)
@@ -324,8 +335,12 @@ class VitalsRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun dailyBloodPressureCore(start: LocalDate, end: LocalDate): List<DailyBloodPressurePoint> =
-        cachedDailyBloodPressure(start, end)
+    private suspend fun dailyBloodPressureCore(
+        start: LocalDate,
+        end: LocalDate,
+        useCache: Boolean = true,
+    ): List<DailyBloodPressurePoint> =
+        (if (useCache) cachedDailyBloodPressure(start, end) else null)
             ?: hc.readDailyBloodPressure(start.toInstant(), end.plusDays(1).toInstant())
 
     override suspend fun loadDailyVitals(
@@ -365,14 +380,15 @@ class VitalsRepositoryImpl @Inject constructor(
     }
 
     /**
-     * The cached daily points, or null to fall through to the live read.
-     * Cursor presence is the whole freshness model. Ranges before the
-     * lookback window fall through too.
+     * The cached daily points, or null to fall through to the live read. A cursor says the
+     * metric was synced. The fingerprint says it was synced under today's grants and in
+     * today's time zone. Ranges before the lookback window fall through too.
      */
     private suspend fun cachedDaily(key: String, start: LocalDate, end: LocalDate): List<DailyVitalPoint>? {
         val dao = cacheDao ?: return null
         if (start.isBefore(LocalDate.now().minusDays(HistoryLookbackDays))) return null
         dao.cursor(key) ?: return null
+        if (!dao.matchesFingerprint(grantedPermissionsIfAvailable(), ZoneId.systemDefault())) return null
         return dao.aggregatesBetween(key, start.toEpochDay(), end.toEpochDay()).map { row ->
             DailyVitalPoint(
                 date = LocalDate.ofEpochDay(row.epochDay),
@@ -386,6 +402,7 @@ class VitalsRepositoryImpl @Inject constructor(
         val dao = cacheDao ?: return null
         if (start.isBefore(LocalDate.now().minusDays(HistoryLookbackDays))) return null
         dao.cursor(VitalsCacheKeys.BLOOD_PRESSURE) ?: return null
+        if (!dao.matchesFingerprint(grantedPermissionsIfAvailable(), ZoneId.systemDefault())) return null
         return dao.aggregatesBetween(VitalsCacheKeys.BLOOD_PRESSURE, start.toEpochDay(), end.toEpochDay())
             .map { row ->
                 DailyBloodPressurePoint(

@@ -55,6 +55,19 @@ data class HydrationWriteRequest(
     val drinkId: String? = null,
 )
 
+/**
+ * What an edit did to a hydration entry. A logged drink is two records: this one, and a
+ * nutrition record found through [clientRecordId]. The nutrition record must follow.
+ */
+data class HydrationEntryChange(
+    /** Null for an entry with no nutrition record beside it. */
+    val clientRecordId: String?,
+    val oldTime: Instant,
+    val newTime: Instant,
+    val oldVolumeLiters: Double,
+    val newVolumeLiters: Double,
+)
+
 enum class BeverageCategory {
     WATER,
     COFFEE,
@@ -120,6 +133,8 @@ data class NutritionWriteRequest(
     val associatedHydrationClientRecordId: String? = null,
     /** When a spread intake finished. Null means at once. The caffeine model spreads the dose to here. */
     val endTime: Instant? = null,
+    /** Above the stored version to replace a record that has the same client id. */
+    val clientRecordVersion: Long = 0,
 ) {
     constructor(time: Instant, carbsGrams: Double) : this(
         time = time,

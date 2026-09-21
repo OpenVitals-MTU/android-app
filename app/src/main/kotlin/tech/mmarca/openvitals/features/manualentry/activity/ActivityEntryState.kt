@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry.activity
 
+import tech.mmarca.openvitals.domain.model.ActivityFormMetric
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.outlined.SentimentVeryDissatisfied
 import androidx.compose.material.icons.outlined.SentimentDissatisfied
@@ -35,6 +36,9 @@ enum class ActivityEntryError {
     INVALID_VALUE,
     MISSING_WRITE_PERMISSION,
     ROUTE_IMPORT_FAILED,
+
+    /** A file arrived while a recording runs. The recording wins. */
+    ROUTE_IMPORT_WHILE_RECORDING,
     LOCATION_PERMISSION_NEEDED,
     NOTIFICATION_PERMISSION_NEEDED,
     ACTIVITY_RECOGNITION_PERMISSION_NEEDED,
@@ -190,6 +194,15 @@ data class ActivityEntryUiState(
     val validationErrors: Set<ActivityEntryValidationError> = emptySet(),
     val editRecordId: String? = null,
     val isRecordingDraft: Boolean = false,
+    /** Set once the stored workout has filled the form. See [canSaveEdit]. */
+    val editEntryLoaded: Boolean = false,
+    /**
+     * For an edit: the text each total was filled with. A total whose text is still this one
+     * was not changed by the user, and the save leaves the stored value alone.
+     */
+    val editPrefilledMetricTexts: Map<ActivityFormMetric, String>? = null,
+    /** A file import waits for the user: it would replace a recording that is not saved yet. */
+    val confirmRouteImportOverRecording: Boolean = false,
     val saveCompleted: Boolean = false,
     val recordedBleSamples: BleRecordingSampleBuffer = BleRecordingSampleBuffer(),
     /** CoMaps guidance banked during the recording. App-local only. */
@@ -203,4 +216,11 @@ data class ActivityEntryUiState(
 
     val isEditMode: Boolean
         get() = editRecordId != null
+
+    /**
+     * False while an edit still shows the empty form: the stored workout is loading, or the
+     * load failed. Saving then would overwrite the workout with the form's defaults.
+     */
+    val canSaveEdit: Boolean
+        get() = !isEditMode || editEntryLoaded
 }

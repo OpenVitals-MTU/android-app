@@ -164,7 +164,6 @@ internal fun ActivityRecordingScreen(
     onSkipPlanStep: () -> Unit = {},
     onUndoPlanStep: () -> Unit = {},
     onEndHeartRateRecoveryEffort: () -> Unit = {},
-    onActivityRecordingTitleChanged: (Int?) -> Unit = {},
     onDashboardEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit = { _, _, _ -> },
     isFocusMode: Boolean = false,
     onFocusModeChanged: (Boolean) -> Unit = {},
@@ -180,7 +179,6 @@ internal fun ActivityRecordingScreen(
 ) {
     var now by remember { mutableStateOf(Instant.now()) }
     var isEditingDashboard by rememberSaveable(state.activityTypeId) { mutableStateOf(false) }
-    val currentOnActivityRecordingTitleChanged by rememberUpdatedState(onActivityRecordingTitleChanged)
     val currentOnDashboardEditStateChanged by rememberUpdatedState(onDashboardEditStateChanged)
     val canUseFocusMode = state.canUseFocusMode
     val canEditDashboard = !isFocusMode &&
@@ -250,19 +248,13 @@ internal fun ActivityRecordingScreen(
     } else {
         state.elapsedDuration(now)
     }
-    LaunchedEffect(Unit) {
-        currentOnActivityRecordingTitleChanged(R.string.activity_entry_recording_title)
-    }
     LaunchedEffect(canEditDashboard, isEditingDashboard) {
         currentOnDashboardEditStateChanged(canEditDashboard, isEditingDashboard) {
             isEditingDashboard = !isEditingDashboard
         }
     }
     DisposableEffect(Unit) {
-        onDispose {
-            currentOnActivityRecordingTitleChanged(null)
-            currentOnDashboardEditStateChanged(false, false) {}
-        }
+        onDispose { currentOnDashboardEditStateChanged(false, false) {} }
     }
     BackHandler(enabled = isFocusMode) {
         onFocusModeChanged(false)

@@ -10,9 +10,14 @@ import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 
 @Singleton
@@ -23,6 +28,26 @@ class AppleHealthImportWorkController @Inject constructor(
 
     val workInfos: Flow<List<WorkInfo>> =
         workManager.getWorkInfosForUniqueWorkFlow(AppleHealthImportWorker.UniqueWorkName)
+
+    private val housekeepingScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * For app start, fire-and-forget: removes a staged export nobody came back for.
+     * Skipped while an import is queued or running, because the import reads that copy.
+     */
+    fun clearAbandonedStagedExport() {
+        housekeepingScope.launch {
+            runCatching {
+                val importPending = workManager
+                    .getWorkInfosForUniqueWork(AppleHealthImportWorker.UniqueWorkName)
+                    .get()
+                    .any { !it.state.isFinished }
+                if (!importPending) {
+                    AppleHealthImportStagingStore.clearIfOlderThan(context, StagedExportMaxAge, Instant.now())
+                }
+            }
+        }
+    }
 
     fun enqueue(
         uri: Uri,
@@ -79,5 +104,10 @@ class AppleHealthImportWorkController @Inject constructor(
             uri,
             Intent.FLAG_GRANT_READ_URI_PERMISSION,
         )
+    }
+
+    private companion object {
+        /** An analysis takes minutes. A day is long past "I will pick the categories in a moment". */
+        val StagedExportMaxAge: Duration = Duration.ofDays(1)
     }
 }

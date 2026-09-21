@@ -204,7 +204,16 @@ class HydrationRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping updateHydrationEntry missingCount=1")
             throw SecurityException("Missing Health Connect hydration write permission.")
         }
-        hc.updateHydrationEntry(id, request)
+        val change = hc.updateHydrationEntry(id, request)
+        // The drink's nutrition record follows, as it does on a delete. Best-effort for the
+        // same reason: the hydration half has landed, and the user asked for that.
+        if (change.clientRecordId != null && writeNutritionPermission in granted) {
+            runCatching {
+                hc.updateHydrationNutritionEntry(change)
+            }.onFailure { error ->
+                Log.w(TAG, "Could not update paired nutrition record.", error)
+            }
+        }
     }
 
     override suspend fun deleteHydrationEntry(id: String) {

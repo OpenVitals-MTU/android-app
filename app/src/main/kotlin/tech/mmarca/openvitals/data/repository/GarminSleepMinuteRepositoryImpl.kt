@@ -29,6 +29,10 @@ class GarminSleepMinuteRepositoryImpl @Inject constructor(
         dao.pruneBefore(before.toEpochMilli())
     }
 
+    override suspend fun deleteAll() {
+        dao.deleteAll()
+    }
+
     private fun GarminSleepMinute.toEntity(): GarminSleepMinuteEntity = GarminSleepMinuteEntity(
         timeMillis = time.toEpochMilli(),
         kind = kind.storageName,

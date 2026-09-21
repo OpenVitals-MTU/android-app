@@ -25,6 +25,9 @@ interface GarminSleepMinuteDao {
     suspend fun pruneBefore(beforeMillis: Long)
 
     /** Total rows held, for diagnostics. */
+    @Query("DELETE FROM garmin_sleep_minutes")
+    suspend fun deleteAll()
+
     @Query("SELECT COUNT(time_millis) FROM garmin_sleep_minutes")
     suspend fun count(): Long
 }

@@ -24,7 +24,6 @@ internal fun ActivityEntryRecordingContent(
     isOutdoorMode: Boolean,
     onFocusModeChanged: (Boolean) -> Unit,
     onOutdoorModeChanged: (Boolean) -> Unit,
-    onActivityRecordingTitleChanged: (Int?) -> Unit,
     onActivityRecordingEditStateChanged: (Boolean, Boolean, () -> Unit) -> Unit,
     appThemeMode: AppThemeMode,
 ) {
@@ -57,7 +56,6 @@ internal fun ActivityEntryRecordingContent(
             viewModel.finishGpsRecording(ActivityEntryUnits.from(unitFormatter))
         },
         onEndHeartRateRecoveryEffort = viewModel::endHeartRateRecoveryEffort,
-        onActivityRecordingTitleChanged = onActivityRecordingTitleChanged,
         onDashboardEditStateChanged = onActivityRecordingEditStateChanged,
         isFocusMode = isFocusMode,
         onFocusModeChanged = onFocusModeChanged,

@@ -1,5 +1,10 @@
 package tech.mmarca.openvitals.features.imports.applehealth
 
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CancellationException
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
@@ -1900,6 +1905,40 @@ class AppleHealthImportServiceTest {
             "Missing fixture $name"
         }
         return input.use { AppleHealthImportParser.parse(BufferedInputStream(it)) }
+    }
+
+    @Test
+    fun `a stop during a batch insert stops the import instead of retrying record by record`() = runTest {
+        // The system stops the worker while a batch is being written. A plain runCatching took
+        // the CancellationException for a failed batch: it went on to the per-record retry,
+        // counted the records as failed, and moved the checkpoint past them.
+        val xml = """
+            <HealthData>
+                <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Phone"
+                    startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:10:00 +0000"
+                    unit="count" value="100" />
+            </HealthData>
+            """.trimIndent()
+        val uri = mockk<Uri>()
+        val resolver = mockk<ContentResolver>()
+        val context = mockk<Context>()
+        val repository = mockk<AppleHealthImportRepository>()
+        every { context.contentResolver } returns resolver
+        every { resolver.openInputStream(uri) } returns ByteArrayInputStream(xml.toByteArray())
+        every { repository.isMindfulnessAvailable() } returns true
+        coEvery { repository.findMatchingImportedClientRecordIds(any(), any(), any(), any()) } returns emptySet()
+        val writing = CompletableDeferred<Unit>()
+        coEvery { repository.insertImportedRecords(any()) } coAnswers {
+            writing.complete(Unit)
+            awaitCancellation()
+        }
+
+        val worker = launch { AppleHealthImportService(context, repository).importAppleHealthExport(uri) }
+        writing.await()
+        worker.cancelAndJoin()
+
+        assertTrue(worker.isCancelled)
+        coVerify(exactly = 1) { repository.insertImportedRecords(any()) }
     }
 
     private fun zipExport(

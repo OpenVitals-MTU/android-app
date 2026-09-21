@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -47,6 +48,7 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.theme.Spacing
 import tech.mmarca.openvitals.healthconnect.openHealthConnectPermissionSettings
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun ActivityDetailScreen(
@@ -59,6 +61,7 @@ internal fun ActivityDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val exportScope = rememberCoroutineScope()
     val error = state.error
     val workout = state.workout
     val latestWorkout by rememberUpdatedState(workout)
@@ -69,15 +72,15 @@ internal fun ActivityDetailScreen(
             Toast.LENGTH_LONG,
         ).show()
     }
-    val saveGpxRoute = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument(ActivityRouteExportFormat.GPX.mimeType),
-    ) { uri ->
-        val currentWorkout = latestWorkout ?: return@rememberLauncherForActivityResult
-        if (uri != null) {
+    // The picker answers on the main thread. Encoding a long route there froze the screen.
+    fun saveRouteExport(format: ActivityRouteExportFormat, destination: Uri?) {
+        val currentWorkout = latestWorkout ?: return
+        if (destination == null) return
+        exportScope.launch {
             context.saveActivityRouteExport(
                 workout = currentWorkout,
-                format = ActivityRouteExportFormat.GPX,
-                destination = uri,
+                format = format,
+                destination = destination,
             )
                 .onSuccess {
                     Toast.makeText(
@@ -89,25 +92,15 @@ internal fun ActivityDetailScreen(
                 .onFailure { showRouteExportFailure() }
         }
     }
+    val saveGpxRoute = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(ActivityRouteExportFormat.GPX.mimeType),
+    ) { uri ->
+        saveRouteExport(ActivityRouteExportFormat.GPX, uri)
+    }
     val saveKmzRoute = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(ActivityRouteExportFormat.KMZ.mimeType),
     ) { uri ->
-        val currentWorkout = latestWorkout ?: return@rememberLauncherForActivityResult
-        if (uri != null) {
-            context.saveActivityRouteExport(
-                workout = currentWorkout,
-                format = ActivityRouteExportFormat.KMZ,
-                destination = uri,
-            )
-                .onSuccess {
-                    Toast.makeText(
-                        context,
-                        R.string.activity_route_export_saved,
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                }
-                .onFailure { showRouteExportFailure() }
-        }
+        saveRouteExport(ActivityRouteExportFormat.KMZ, uri)
     }
     fun launchRouteExport(format: ActivityRouteExportFormat) {
         val currentWorkout = latestWorkout ?: return
@@ -128,20 +121,23 @@ internal fun ActivityDetailScreen(
     fun saveWorkoutExport(format: ActivityWorkoutExportFormat, destination: Uri?) {
         val currentWorkout = latestWorkout ?: return
         if (destination == null) return
-        context.saveActivityWorkoutExport(
-            workout = currentWorkout,
-            heartRateSamples = latestHeartRateSamples,
-            format = format,
-            destination = destination,
-        )
-            .onSuccess {
-                Toast.makeText(
-                    context,
-                    R.string.activity_workout_export_saved,
-                    Toast.LENGTH_SHORT,
-                ).show()
-            }
-            .onFailure { showWorkoutExportFailure() }
+        val heartRateSamples = latestHeartRateSamples
+        exportScope.launch {
+            context.saveActivityWorkoutExport(
+                workout = currentWorkout,
+                heartRateSamples = heartRateSamples,
+                format = format,
+                destination = destination,
+            )
+                .onSuccess {
+                    Toast.makeText(
+                        context,
+                        R.string.activity_workout_export_saved,
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+                .onFailure { showWorkoutExportFailure() }
+        }
     }
     val saveTcxWorkout = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(ActivityWorkoutExportFormat.TCX.mimeType),
@@ -163,29 +159,34 @@ internal fun ActivityDetailScreen(
     }
     fun shareWorkout(format: ActivityWorkoutExportFormat) {
         val currentWorkout = latestWorkout ?: return
-        context.shareActivityWorkout(
-            workout = currentWorkout,
-            heartRateSamples = latestHeartRateSamples,
-            format = format,
-        )
-            .onFailure {
-                Toast.makeText(
-                    context,
-                    R.string.activity_workout_share_failed,
-                    Toast.LENGTH_LONG,
-                ).show()
-            }
+        val heartRateSamples = latestHeartRateSamples
+        exportScope.launch {
+            context.shareActivityWorkout(
+                workout = currentWorkout,
+                heartRateSamples = heartRateSamples,
+                format = format,
+            )
+                .onFailure {
+                    Toast.makeText(
+                        context,
+                        R.string.activity_workout_share_failed,
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+        }
     }
     fun shareRoute(format: ActivityRouteExportFormat) {
         val currentWorkout = latestWorkout ?: return
-        context.shareActivityRoute(workout = currentWorkout, format = format)
-            .onFailure {
-                Toast.makeText(
-                    context,
-                    R.string.activity_route_share_failed,
-                    Toast.LENGTH_LONG,
-                ).show()
-            }
+        exportScope.launch {
+            context.shareActivityRoute(workout = currentWorkout, format = format)
+                .onFailure {
+                    Toast.makeText(
+                        context,
+                        R.string.activity_route_share_failed,
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+        }
     }
 
     when {
@@ -213,14 +214,16 @@ internal fun ActivityDetailScreen(
             linkedPlanTitle = state.linkedPlan?.title,
             onOpenPlan = onOpenPlan,
             onOpenRouteInMap = {
-                context.openActivityRouteInMap(workout)
-                    .onFailure {
-                        Toast.makeText(
-                            context,
-                            R.string.activity_route_open_failed,
-                            Toast.LENGTH_LONG,
-                        ).show()
-                    }
+                exportScope.launch {
+                    context.openActivityRouteInMap(workout)
+                        .onFailure {
+                            Toast.makeText(
+                                context,
+                                R.string.activity_route_open_failed,
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        }
+                }
             },
             onSaveRouteAsGpx = { launchRouteExport(ActivityRouteExportFormat.GPX) },
             onSaveRouteAsKmz = { launchRouteExport(ActivityRouteExportFormat.KMZ) },

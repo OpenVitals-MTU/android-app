@@ -26,6 +26,9 @@ import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 import tech.mmarca.openvitals.domain.model.ExerciseRouteStatus
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
+import tech.mmarca.openvitals.domain.insights.heartRateRecoveryWindowFor
+import tech.mmarca.openvitals.domain.model.ActivityFormMetric
+import tech.mmarca.openvitals.features.activity.exerciseTypeLabelRes
 
 internal fun ExerciseData.toEditState(
     units: ActivityEntryUnits,
@@ -56,6 +59,10 @@ internal fun ExerciseData.toEditState(
         Duration.between(startTime, endTime).seconds.coerceAtLeast(1).toDouble() / 60.0
     ).toLong().coerceIn(1, MaxActivityDurationMinutes)
     val repetitionEditState = toRepetitionEditState(selectedType)
+    val distanceText = totalDistanceMeters?.takeIf { it > 0.0 }?.toDistanceInputText(units.distance).orEmpty()
+    val elevationText = elevationGainedMeters?.takeIf { it > 0.0 }?.toElevationInputText(units.elevation).orEmpty()
+    val activeCaloriesText = activeCaloriesKcal?.takeIf { it > 0.0 }?.toInputText(maxFractionDigits = 1).orEmpty()
+    val totalCaloriesText = totalCaloriesKcal?.takeIf { it > 0.0 }?.toInputText(maxFractionDigits = 1).orEmpty()
     return ActivityEntryUiState(
         mode = if (routeImport == null) ActivityEntryMode.MANUAL else ActivityEntryMode.ROUTE_IMPORT,
         selectedActivityType = selectedType,
@@ -64,10 +71,19 @@ internal fun ExerciseData.toEditState(
         startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(start),
         startTimeText = TimeFormatter.format(start.toLocalTime()),
         durationMinutesText = durationMinutes.toString(),
-        distanceText = totalDistanceMeters?.takeIf { it > 0.0 }?.toDistanceInputText(units.distance).orEmpty(),
-        elevationText = elevationGainedMeters?.takeIf { it > 0.0 }?.toElevationInputText(units.elevation).orEmpty(),
-        activeCaloriesText = activeCaloriesKcal?.takeIf { it > 0.0 }?.toInputText(maxFractionDigits = 1).orEmpty(),
-        totalCaloriesText = totalCaloriesKcal?.takeIf { it > 0.0 }?.toInputText(maxFractionDigits = 1).orEmpty(),
+        distanceText = distanceText,
+        elevationText = elevationText,
+        activeCaloriesText = activeCaloriesText,
+        totalCaloriesText = totalCaloriesText,
+        editPrefilledMetricTexts = mapOf(
+            ActivityFormMetric.DISTANCE to distanceText,
+            ActivityFormMetric.ELEVATION to elevationText,
+            ActivityFormMetric.ACTIVE_CALORIES to activeCaloriesText,
+            ActivityFormMetric.TOTAL_CALORIES to totalCaloriesText,
+            // Steps share the repetition field, and only step-counting types show it.
+            ActivityFormMetric.STEPS to
+                if (selectedType.supportsStepCounting) repetitionEditState.totalText else "",
+        ),
         repetitionMode = repetitionEditState.mode,
         repetitionTotalText = repetitionEditState.totalText,
         repetitionSets = repetitionEditState.sets,
@@ -78,10 +94,22 @@ internal fun ExerciseData.toEditState(
             .filter { it.segmentType == ExerciseSegment.EXERCISE_SEGMENT_TYPE_PAUSE }
             .map { ActivityPauseInterval(startTime = it.startTime, endTime = it.endTime) },
         recordedLaps = laps,
+        // A recovery test ends with a REST segment that marks where the effort stopped. The
+        // form cannot show it, so the edit carries it, or the save would rebuild the
+        // segments without it and the session would leave the recovery screen. A session
+        // with sets keeps its own segments and needs no mark.
+        recordedRecoveryStartTime = heartRateRecoveryWindowFor(this)?.recoveryStart
+            ?.takeIf {
+                segments.none { segment ->
+                    segment.segmentType != ExerciseSegment.EXERCISE_SEGMENT_TYPE_PAUSE &&
+                        segment.segmentType != ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST
+                }
+            },
         writePermissions = repository.activityWritePermissions(),
         canWrite = canWrite,
         isCheckingPermission = isCheckingPermission,
         editRecordId = id,
+        editEntryLoaded = true,
     )
 }
 
@@ -117,9 +145,24 @@ internal fun ExerciseData.inferStoredActivityType(): ActivityEntryType {
         else -> DefaultActivityEntryTypes
             .firstOrNull { it.exerciseType == exerciseType && !it.isRepetitionLike }
             ?: DefaultActivityEntryTypes.firstOrNull { it.exerciseType == exerciseType }
-            ?: DefaultActivityEntryTypes.first()
+            ?: storedActivityType(exerciseType)
     }
 }
+
+/**
+ * A type the form does not list, such as yoga or pilates from an import. The edit
+ * keeps it. The old fallback was the first type in the list, so saving a new title
+ * turned the session into a run.
+ */
+internal fun storedActivityType(exerciseType: Int): ActivityEntryType = ActivityEntryType(
+    exerciseType = exerciseType,
+    id = "stored_$exerciseType",
+    labelRes = exerciseTypeLabelRes(exerciseType),
+    // Nothing to record in an edit. Distance and elevation stay, so stored values are not dropped.
+    supportsGpsRoute = false,
+    supportsDistance = true,
+    supportsElevation = true,
+)
 
 internal data class RepetitionEditState(
     val mode: ActivityRepetitionEntryMode = ActivityRepetitionEntryMode.TOTAL,

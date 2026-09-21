@@ -54,6 +54,9 @@ release_response="$tmp_dir/codeberg-release-${release_tag}.json"
 release_payload="$tmp_dir/codeberg-release-${release_tag}-payload.json"
 release_title="$(sed -n '1p' "$title_file")"
 
+# A dropped connection must not leave a release without its APK.
+curl_retry="--retry 5 --retry-delay 2 --retry-all-errors"
+
 print_response_body() {
     response_file="$1"
     if [ -s "$response_file" ]; then
@@ -65,7 +68,7 @@ print_response_body() {
 }
 
 http_status="$(
-    curl -sS -w '%{http_code}' -o "$release_response" \
+    curl -sS $curl_retry -w '%{http_code}' -o "$release_response" \
         -H "Authorization: token ${CODEBERG_RELEASE_API_KEY}" \
         "$api_base/releases/tags/$release_tag" || true
 )"
@@ -138,7 +141,7 @@ EOF
 
     asset_response="$tmp_dir/codeberg-release-${release_tag}-asset-${asset_name}.response"
     asset_status="$(
-        curl -sS -w '%{http_code}' -o "$asset_response" -X POST \
+        curl -sS $curl_retry -w '%{http_code}' -o "$asset_response" -X POST \
             -H "Authorization: token ${CODEBERG_RELEASE_API_KEY}" \
             -F "attachment=@${asset_path}" \
             "$api_base/releases/$release_id/assets?name=$asset_name" || true

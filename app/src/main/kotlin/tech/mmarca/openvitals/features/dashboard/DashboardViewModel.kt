@@ -5,6 +5,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.devices.garmin.GarminRealtimeState
 import tech.mmarca.openvitals.devices.garmin.GarminRealtimeStore
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
@@ -279,7 +280,7 @@ class DashboardViewModel @Inject constructor(
                 refresh()
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
-                    error = error.toScreenError("Unable to delete activity."),
+                    error = error.toScreenError(R.string.screen_error_delete_activity),
                 )
             }
         }
@@ -445,7 +446,7 @@ class DashboardViewModel @Inject constructor(
         val firstFailure = failures.filterNotNull().firstOrNull()
         if (firstFailure != null && failures.size == groups.size && failures.none { it == null }) {
             _uiState.value = _uiState.value.copy(
-                error = firstFailure.toScreenError("Unknown error"),
+                error = firstFailure.toScreenError(R.string.screen_error_generic),
                 // Nothing shown before: the error is the whole screen. Otherwise a toast.
                 data = if (hadExistingData) _uiState.value.data else null,
                 isLoading = false,

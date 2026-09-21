@@ -56,11 +56,19 @@ class StepDistanceBackfillServiceTest {
         coEvery { readDailySteps(any(), any(), any(), any(), any(), any(), any(), any()) } returns emptyList()
     }
 
-    private fun prefs(enabled: Boolean = true, strideMeters: Double = 0.7): PreferencesRepository =
-        mockk {
+    private fun prefs(
+        enabled: Boolean = true,
+        strideMeters: Double = 0.7,
+        purgePending: Boolean = false,
+    ): PreferencesRepository {
+        var pending = purgePending
+        return mockk {
             every { stepDistanceBackfillEnabled } returns enabled
             every { strideLengthMeters } returns strideMeters
+            every { stepDistancePurgePending } answers { pending }
+            every { stepDistancePurgePending = any() } answers { pending = firstArg() }
         }
+    }
 
     @Test
     fun `disabled feature never touches Health Connect`() = runTest {
@@ -129,6 +137,36 @@ class StepDistanceBackfillServiceTest {
         val window = slot<ClosedRange<LocalDate>>()
         coVerify(exactly = 1) { hc.purgeStepDerivedDistance(capture(window)) }
         assertEquals(LocalDate.now().minusDays(HistoryLookbackDays), window.captured.start)
+    }
+
+    @Test
+    fun `a purge is noted as pending until it has finished`() = runTest {
+        val hc = hc()
+        val prefs = prefs(enabled = false)
+        var pendingDuringPurge: Boolean? = null
+        coEvery { hc.purgeStepDerivedDistance(any()) } coAnswers { pendingDuringPurge = prefs.stepDistancePurgePending }
+
+        StepDistanceBackfillService(hc, prefs).purgeDerivedRecords()
+
+        assertEquals(true, pendingDuringPurge)
+        assertEquals(false, prefs.stepDistancePurgePending)
+    }
+
+    @Test
+    fun `a purge that failed is tried again by the next pass, with the feature off`() = runTest {
+        // The user left the settings screen, or Health Connect refused. The records are still there.
+        val hc = hc()
+        val prefs = prefs(enabled = false)
+        coEvery { hc.purgeStepDerivedDistance(any()) } throws IllegalStateException("rate limited")
+        val service = StepDistanceBackfillService(hc, prefs)
+        service.purgeDerivedRecords()
+        assertEquals(true, prefs.stepDistancePurgePending)
+
+        coEvery { hc.purgeStepDerivedDistance(any()) } returns Unit
+        service.syncIncremental()
+
+        coVerify(exactly = 2) { hc.purgeStepDerivedDistance(any()) }
+        assertEquals(false, prefs.stepDistancePurgePending)
     }
 
     @Test

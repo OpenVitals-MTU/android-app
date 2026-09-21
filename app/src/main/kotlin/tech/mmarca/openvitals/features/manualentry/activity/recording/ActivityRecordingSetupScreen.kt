@@ -22,7 +22,6 @@ import android.hardware.SensorManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.Build
 import android.os.Looper
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -597,13 +596,6 @@ internal fun PreRecordingGpsFixStatus(
     }
 }
 
-internal fun activityRecordingRuntimePermissions(): Array<String> =
-    buildList {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }.toTypedArray()
-
 internal fun activityRecordingLocationPermissions(): Array<String> =
     arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -615,9 +607,6 @@ internal fun hasActivityRecordingPreciseLocationPermission(context: Context): Bo
         context,
         Manifest.permission.ACCESS_FINE_LOCATION,
     ) == PackageManager.PERMISSION_GRANTED
-
-internal fun needsActivityRecordingRuntimePermission(context: Context): Boolean =
-    !hasActivityRecordingNotificationPermission(context)
 
 internal fun hasActivityRecordingNotificationPermission(context: Context): Boolean =
     ActivityRecordingController.hasNotificationPermission(context)

@@ -20,6 +20,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import java.time.Instant
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -40,7 +41,7 @@ class ActivityDetailViewModelTest {
         coEvery { repo.loadWorkout("activity-1") } returns workout
         stubMetricSamples(repo)
 
-        val vm = ActivityDetailViewModel(repo, "activity-1")
+        val vm = ActivityDetailViewModel(repo, "activity-1", dispatchers = mainDispatcherRule.dispatcherProvider)
 
         assertFalse(vm.uiState.value.isLoading)
         assertEquals(workout, vm.uiState.value.workout)
@@ -71,7 +72,7 @@ class ActivityDetailViewModelTest {
         coEvery { repo.loadSpeedSamples(workout.startTime, workout.endTime) } returns speedSamples
         coEvery { repo.loadActivityCadenceSamples(workout.startTime, workout.endTime) } returns cadenceSamples
 
-        val vm = ActivityDetailViewModel(repo, "activity-1", heartRepository = heartRepo)
+        val vm = ActivityDetailViewModel(repo, "activity-1", heartRepository = heartRepo, dispatchers = mainDispatcherRule.dispatcherProvider)
         val backfilled = requireNotNull(vm.uiState.value.workout)
 
         assertEquals(105L, backfilled.averageHeartRateBpm)
@@ -94,7 +95,7 @@ class ActivityDetailViewModelTest {
             SpeedSample(workout.startTime.plusSeconds(60), 4.0, "test"),
         )
 
-        val vm = ActivityDetailViewModel(repo, "activity-1")
+        val vm = ActivityDetailViewModel(repo, "activity-1", dispatchers = mainDispatcherRule.dispatcherProvider)
 
         assertEquals(180.0, vm.uiState.value.workout!!.totalDistanceMeters ?: 0.0, 0.001)
     }
@@ -109,7 +110,7 @@ class ActivityDetailViewModelTest {
             SpeedSample(workout.startTime.plusSeconds(60), 4.0, "test"),
         )
 
-        val vm = ActivityDetailViewModel(repo, "activity-1")
+        val vm = ActivityDetailViewModel(repo, "activity-1", dispatchers = mainDispatcherRule.dispatcherProvider)
 
         assertEquals(5_000.0, vm.uiState.value.workout!!.totalDistanceMeters ?: 0.0, 0.001)
     }
@@ -118,7 +119,7 @@ class ActivityDetailViewModelTest {
         val repo = mockk<ActivityRepository>()
         coEvery { repo.loadWorkout("missing") } returns null
 
-        val vm = ActivityDetailViewModel(repo, "missing")
+        val vm = ActivityDetailViewModel(repo, "missing", dispatchers = mainDispatcherRule.dispatcherProvider)
 
         assertFalse(vm.uiState.value.isLoading)
         assertNull(vm.uiState.value.workout)
@@ -128,7 +129,7 @@ class ActivityDetailViewModelTest {
     @Test fun `blank activity id fails without calling repository`() = runTest {
         val repo = mockk<ActivityRepository>(relaxed = true)
 
-        val vm = ActivityDetailViewModel(repo, "")
+        val vm = ActivityDetailViewModel(repo, "", dispatchers = mainDispatcherRule.dispatcherProvider)
 
         assertFalse(vm.uiState.value.isLoading)
         assertEquals(ScreenError.MissingArgument, vm.uiState.value.error)
@@ -140,7 +141,7 @@ class ActivityDetailViewModelTest {
         coEvery { repo.loadWorkout("activity-1") } throws RuntimeException("timeout")
         stubMetricSamples(repo)
 
-        val vm = ActivityDetailViewModel(repo, "activity-1")
+        val vm = ActivityDetailViewModel(repo, "activity-1", dispatchers = mainDispatcherRule.dispatcherProvider)
 
         assertFalse(vm.uiState.value.isLoading)
         assertNull(vm.uiState.value.workout)
@@ -153,7 +154,7 @@ class ActivityDetailViewModelTest {
         coEvery { repo.loadWorkout("activity-1") } returns workout
         coEvery { repo.deleteActivityEntry("activity-1") } returns Unit
         stubMetricSamples(repo)
-        val vm = ActivityDetailViewModel(repo, "activity-1")
+        val vm = ActivityDetailViewModel(repo, "activity-1", dispatchers = mainDispatcherRule.dispatcherProvider)
         var deleted = false
 
         vm.deleteActivity { deleted = true }
@@ -171,7 +172,7 @@ class ActivityDetailViewModelTest {
         coEvery { repo.deleteActivityEntry("activity-1") } throws
             IllegalStateException("the write was rejected")
         stubMetricSamples(repo)
-        val vm = ActivityDetailViewModel(repo, "activity-1")
+        val vm = ActivityDetailViewModel(repo, "activity-1", dispatchers = mainDispatcherRule.dispatcherProvider)
         var deleted = false
 
         vm.deleteActivity { deleted = true }
@@ -188,7 +189,7 @@ class ActivityDetailViewModelTest {
         val repo = mockk<ActivityRepository>(relaxed = true)
         coEvery { repo.loadWorkout("activity-1") } returns workout
         stubMetricSamples(repo)
-        val vm = ActivityDetailViewModel(repo, "activity-1")
+        val vm = ActivityDetailViewModel(repo, "activity-1", dispatchers = mainDispatcherRule.dispatcherProvider)
 
         vm.deleteActivity()
 
@@ -206,6 +207,7 @@ class ActivityDetailViewModelTest {
             repo,
             "activity-1",
             preferencesRepository = prefs(splitDistanceMeters = 1_000.0),
+            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
 
         val state = vm.uiState.value
@@ -228,6 +230,7 @@ class ActivityDetailViewModelTest {
             repo,
             "activity-1",
             preferencesRepository = prefs(splitDistanceMeters = 1_000.0, flow = distanceFlow),
+            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
         assertEquals(3, vm.uiState.value.splits.splits.size)
 
@@ -254,9 +257,47 @@ class ActivityDetailViewModelTest {
             repo,
             "activity-1",
             preferencesRepository = prefs(splitDistanceMeters = 1_000.0),
+            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
 
         assertTrue(vm.uiState.value.splits.isEmpty)
+    }
+
+    @Test fun `the reads that hang on the session run together`() = runTest {
+        val repo = mockk<ActivityRepository>()
+        val speedRead = CompletableDeferred<List<SpeedSample>>()
+        coEvery { repo.loadWorkout("activity-1") } returns workout(id = "activity-1")
+        coEvery { repo.loadSpeedSamples(any(), any()) } coAnswers { speedRead.await() }
+        coEvery { repo.loadActivityCadenceSamples(any(), any()) } returns emptyList()
+
+        val vm = ActivityDetailViewModel(repo, "activity-1", dispatchers = mainDispatcherRule.dispatcherProvider)
+
+        // The cadence read used to wait for the speed read to finish.
+        assertTrue(vm.uiState.value.isLoading)
+        coVerify(exactly = 1) { repo.loadActivityCadenceSamples(any(), any()) }
+
+        speedRead.complete(emptyList())
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
+    @Test fun `a failing heart rate read shows an error`() = runTest {
+        // It used to leave the load coroutine uncaught, which ends the process.
+        val repo = mockk<ActivityRepository>()
+        val heartRepo = mockk<HeartRepository>()
+        coEvery { repo.loadWorkout("activity-1") } returns workout(id = "activity-1")
+        stubMetricSamples(repo)
+        coEvery { heartRepo.loadHeartRateSamples(any<Instant>(), any<Instant>()) } throws
+            IllegalStateException("rate limited")
+
+        val vm = ActivityDetailViewModel(
+            repo,
+            "activity-1",
+            heartRepository = heartRepo,
+            dispatchers = mainDispatcherRule.dispatcherProvider,
+        )
+
+        assertFalse(vm.uiState.value.isLoading)
+        assertEquals(ScreenError.Message("rate limited"), vm.uiState.value.error)
     }
 
     @Test fun `a failing cadence read costs the card, not the screen`() = runTest {
@@ -270,7 +311,7 @@ class ActivityDetailViewModelTest {
         coEvery { repo.loadActivityCadenceSamples(any(), any()) } throws
             SecurityException("no cadence permission")
 
-        val vm = ActivityDetailViewModel(repo, "activity-1")
+        val vm = ActivityDetailViewModel(repo, "activity-1", dispatchers = mainDispatcherRule.dispatcherProvider)
 
         // The cadence card is empty, the speed card is not, and the screen renders.
         val state = vm.uiState.value
@@ -292,6 +333,7 @@ class ActivityDetailViewModelTest {
             repo,
             "activity-1",
             preferencesRepository = prefs(splitDistanceMeters = 1_000.0),
+            dispatchers = mainDispatcherRule.dispatcherProvider,
         )
 
         val state = vm.uiState.value
@@ -311,7 +353,7 @@ class ActivityDetailViewModelTest {
         every { markerRepo.markersForActivity(any()) } throws
             IllegalStateException("the marker store is corrupt")
 
-        val vm = ActivityDetailViewModel(repo, "activity-1", markerRepository = markerRepo)
+        val vm = ActivityDetailViewModel(repo, "activity-1", markerRepository = markerRepo, dispatchers = mainDispatcherRule.dispatcherProvider)
 
         val state = vm.uiState.value
         assertTrue(state.markers.isEmpty())
@@ -337,7 +379,7 @@ class ActivityDetailViewModelTest {
             heartRepo.loadHeartRateSamples(recoveryStart.minusSeconds(60), any())
         } throws SecurityException("no heart rate permission")
 
-        val vm = ActivityDetailViewModel(repo, "activity-1", heartRepository = heartRepo)
+        val vm = ActivityDetailViewModel(repo, "activity-1", heartRepository = heartRepo, dispatchers = mainDispatcherRule.dispatcherProvider)
 
         // The workout still loads, its own samples are there, and the recovery
         // card simply has nothing to draw.
@@ -402,7 +444,7 @@ class ActivityDetailViewModelTest {
             HeartRateSample(recoveryStart.plusSeconds(60), 140L, "test"),
         )
 
-        val vm = ActivityDetailViewModel(repo, "activity-1", heartRepository = heartRepo)
+        val vm = ActivityDetailViewModel(repo, "activity-1", heartRepository = heartRepo, dispatchers = mainDispatcherRule.dispatcherProvider)
 
         val reading = requireNotNull(vm.uiState.value.heartRateRecovery)
         assertEquals(178L, reading.peakBpm)
@@ -420,7 +462,7 @@ class ActivityDetailViewModelTest {
             heartRepo.loadHeartRateSamples(workout.startTime, workout.endTime)
         } returns emptyList()
 
-        val vm = ActivityDetailViewModel(repo, "activity-1", heartRepository = heartRepo)
+        val vm = ActivityDetailViewModel(repo, "activity-1", heartRepository = heartRepo, dispatchers = mainDispatcherRule.dispatcherProvider)
 
         assertNull(vm.uiState.value.heartRateRecovery)
         coVerify(exactly = 1) { heartRepo.loadHeartRateSamples(any<Instant>(), any<Instant>()) }

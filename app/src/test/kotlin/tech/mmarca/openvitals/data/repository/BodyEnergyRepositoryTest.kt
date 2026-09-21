@@ -54,7 +54,7 @@ class BodyEnergyRepositoryTest {
         baselineCacheStore = inMemoryBaselineStore(),
         timelineStore = timelines,
         now = { clock },
-        zone = TestZone,
+        zoneSource = { TestZone },
         dispatchers = TestDispatcherProvider,
     )
 

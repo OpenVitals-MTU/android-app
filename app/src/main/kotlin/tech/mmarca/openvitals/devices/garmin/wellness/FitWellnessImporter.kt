@@ -260,4 +260,4 @@ class FitWellnessImporter @Inject constructor(
 }
 
 /** How long stored sleep minutes are kept. Long enough for a late-synced night. */
-private val SleepMinuteRetention = 45.days
+internal val SleepMinuteRetention = 45.days

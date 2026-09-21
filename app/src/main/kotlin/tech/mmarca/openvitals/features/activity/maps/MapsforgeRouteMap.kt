@@ -186,7 +186,10 @@ internal fun MapsforgeRouteMap(
 }
 
 private class MapsforgeRouteMapRenderState {
-    private var routeLayers: List<Layer> = emptyList()
+    private var trackLayers: List<Layer> = emptyList()
+    private var positionLayers: List<Layer> = emptyList()
+    private val written = RouteMapWrittenState()
+    private var writtenMapView: MapView? = null
     private var didFitInitialCamera = false
 
     /**
@@ -242,7 +245,17 @@ private class MapsforgeRouteMapRenderState {
         headingDegrees: Float?,
     ) {
         val layers = mapView.getLayerManager().getLayers()
-        if (plannedRoute !== builtPlannedRoute) {
+        // A new view holds none of our layers. The old view destroyed its own.
+        if (mapView !== writtenMapView) {
+            writtenMapView = mapView
+            written.reset()
+            trackLayers = emptyList()
+            positionLayers = emptyList()
+            plannedLayers = emptyList()
+            builtPlannedRoute = null
+        }
+        val plannedChanged = plannedRoute !== builtPlannedRoute
+        if (plannedChanged) {
             plannedLayers.forEach { layer ->
                 layers.remove(layer)
                 layer.onDestroy()
@@ -253,17 +266,30 @@ private class MapsforgeRouteMapRenderState {
                 .orEmpty()
             builtPlannedRoute = plannedRoute
         }
-        routeLayers.forEach { layer ->
+        // A compass step re-runs this. It must not rebuild the whole track.
+        val changes = written.changesFor(points, routeBreakIndexes, currentPoint, headingDegrees)
+        val trackChanged = changes.track || plannedChanged
+        if (!trackChanged && !changes.position) return
+        if (trackChanged) {
+            trackLayers.forEach { layer ->
+                layers.remove(layer)
+                layer.onDestroy()
+            }
+            // Re-add the track after the planned layers so the record draws over the plan.
+            plannedLayers.forEach { layer ->
+                layers.remove(layer)
+                layers.add(layer)
+            }
+            trackLayers = buildMapsforgeTrackLayers(points, routeBreakIndexes)
+            trackLayers.forEach(layers::add)
+        }
+        // Last, so the position marker stays on top of a rebuilt track.
+        positionLayers.forEach { layer ->
             layers.remove(layer)
             layer.onDestroy()
         }
-        // Re-add the track after the planned layers so the record draws over the plan.
-        plannedLayers.forEach { layer ->
-            layers.remove(layer)
-            layers.add(layer)
-        }
-        routeLayers = buildMapsforgeRouteLayers(points, routeBreakIndexes, currentPoint, headingDegrees)
-        routeLayers.forEach(layers::add)
+        positionLayers = buildMapsforgePositionLayers(currentPoint, headingDegrees)
+        positionLayers.forEach(layers::add)
         mapView.getLayerManager().redrawLayers()
     }
 
@@ -613,11 +639,9 @@ private fun drawMapsforgeChevron(
     canvas.drawPath(path, stroke)
 }
 
-private fun buildMapsforgeRouteLayers(
+private fun buildMapsforgeTrackLayers(
     points: List<ExerciseRoutePoint>,
     routeBreakIndexes: List<Int>,
-    currentPoint: ExerciseRoutePoint?,
-    headingDegrees: Float? = null,
 ): List<Layer> {
     val validPoints = points.filter { point -> point.hasFiniteCoordinates() }
     val routeLineLayers = routeSegments(points, routeBreakIndexes)
@@ -634,14 +658,19 @@ private fun buildMapsforgeRouteLayers(
         validPoints.lastOrNull()?.let { point ->
             add(markerCircle(point, EndMarkerColor, MarkerRadiusPx))
         }
-        currentPoint?.takeIf { point -> point.hasFiniteCoordinates() }?.let { point ->
-            // A phone without a heading falls back to the dot.
-            if (headingDegrees != null) {
-                add(DeviceHeadingLayer(point.toLatLong(), headingDegrees))
-            } else {
-                add(markerCircle(point, CurrentLocationColor, CurrentLocationRadiusPx))
-            }
-        }
+    }
+}
+
+private fun buildMapsforgePositionLayers(
+    currentPoint: ExerciseRoutePoint?,
+    headingDegrees: Float?,
+): List<Layer> {
+    val point = currentPoint?.takeIf { it.hasFiniteCoordinates() } ?: return emptyList()
+    // A phone without a heading falls back to the dot.
+    return if (headingDegrees != null) {
+        listOf(DeviceHeadingLayer(point.toLatLong(), headingDegrees))
+    } else {
+        listOf(markerCircle(point, CurrentLocationColor, CurrentLocationRadiusPx))
     }
 }
 

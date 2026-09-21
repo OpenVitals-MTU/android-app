@@ -2,6 +2,8 @@ package tech.mmarca.openvitals.features.watches
 
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -80,6 +82,8 @@ class WatchDeviceViewModelTest {
     private lateinit var stateStore: GarminDeviceStateStore
     private lateinit var pairing: FakePairing
     private val notificationsGateway = mockk<WatchNotificationsGateway>(relaxed = true)
+    private val garminLocalData = mockk<tech.mmarca.openvitals.devices.garmin.GarminLocalData>(relaxed = true)
+    private val healthConnectManager = mockk<tech.mmarca.openvitals.healthconnect.HealthConnectManager>(relaxed = true)
     private val notificationBridge = mockk<tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge>(relaxed = true)
 
     /** The scheduler owns the stored interval and the WorkManager side, so it is one stub that remembers. */
@@ -140,15 +144,11 @@ class WatchDeviceViewModelTest {
         autoSyncScheduler = autoSyncScheduler,
         musicRelay = mockk(relaxed = true),
         notificationsGateway = notificationsGateway,
+        garminLocalData = garminLocalData,
+        healthConnectManager = healthConnectManager,
+        // The cleanup after a removal runs on the default dispatcher. Here it runs at once.
+        dispatchers = mainDispatcherRule.dispatcherProvider,
     )
-
-    /** The OS-level cleanup is fire-and-forget on a scope that outlives the screen. */
-    private fun awaitPairingCalls(expected: Int) {
-        val deadline = System.currentTimeMillis() + 5_000
-        while (pairing.snapshot().size < expected && System.currentTimeMillis() < deadline) {
-            Thread.sleep(5)
-        }
-    }
 
     @Test
     fun `switching music controls on without notification access shows the disclosure first`() = runTest {
@@ -237,6 +237,67 @@ class WatchDeviceViewModelTest {
     }
 
     @Test
+    fun `the screen learns when Health Connect's background access is missing`() = runTest {
+        coEvery { healthConnectManager.isBackgroundReadGrantMissing() } returns true
+        val watch = addWatch()
+        val vm = viewModel(watch.id)
+        backgroundScope.launch { vm.uiState.collect { } }
+        runCurrent()
+        assertFalse(vm.uiState.value.backgroundReadMissing)
+
+        vm.refreshBackgroundAccess()
+        runCurrent()
+        assertTrue(vm.uiState.value.backgroundReadMissing)
+
+        // After the permission screen returns with the grant, the notice goes away.
+        coEvery { healthConnectManager.isBackgroundReadGrantMissing() } returns false
+        vm.refreshBackgroundAccess()
+        runCurrent()
+        assertFalse(vm.uiState.value.backgroundReadMissing)
+    }
+
+    @Test
+    fun `removing the last Garmin watch clears what only served a paired watch`() = runTest {
+        val watch = addWatch()
+        val vm = viewModel(watch.id)
+        assertTrue(vm.isLastGarminWatch)
+
+        vm.removeDevice()
+
+        // The user did not tick the box, so the watch-only history stays.
+        coVerify(timeout = 2_000) { garminLocalData.clearAfterLastWatchRemoved(deleteWellnessHistory = false) }
+    }
+
+    @Test
+    fun `the user can have the watch-only history deleted with the last watch`() = runTest {
+        val watch = addWatch()
+        val vm = viewModel(watch.id)
+
+        vm.removeDevice(deleteWatchHistory = true)
+
+        coVerify(timeout = 2_000) { garminLocalData.clearAfterLastWatchRemoved(deleteWellnessHistory = true) }
+    }
+
+    @Test
+    fun `removing one of two Garmin watches clears nothing the other still needs`() = runTest {
+        val watch = addWatch()
+        repo.addDevice(
+            displayName = "Edge 540",
+            address = "E0:48:24:00:00:01",
+            bluetoothName = "Edge 540",
+            capabilities = emptySet(),
+            kind = BleDeviceKind.WATCH,
+            integration = DeviceIntegration.GARMIN,
+        )
+        val vm = viewModel(watch.id)
+        assertFalse(vm.isLastGarminWatch)
+
+        vm.removeDevice(deleteWatchHistory = true)
+
+        coVerify(exactly = 0) { garminLocalData.clearAfterLastWatchRemoved(any()) }
+    }
+
+    @Test
     fun `forgetting a watch also drops its bond, association and Garmin state`() = runTest {
         val watch = addWatch()
         stateStore.recordSyncedFileKeys(watch.id, listOf("128/49/1"))
@@ -244,7 +305,6 @@ class WatchDeviceViewModelTest {
         val vm = viewModel(watch.id)
 
         vm.removeDevice()
-        awaitPairingCalls(expected = 2)
 
         assertTrue(repo.devices.isEmpty())
         assertEquals(
@@ -271,8 +331,6 @@ class WatchDeviceViewModelTest {
         val vm = viewModel(sensor.id)
 
         vm.removeDevice()
-        // Give a cleanup that must never happen the same chance as the one that must.
-        Thread.sleep(100)
 
         assertTrue(repo.devices.isEmpty())
         assertTrue(pairing.snapshot().isEmpty())
@@ -299,7 +357,6 @@ class WatchDeviceViewModelTest {
         vm.setAutoSync(AutoSyncInterval.EVERY_30_MINUTES)
 
         vm.removeDevice()
-        awaitPairingCalls(expected = 2)
 
         // A schedule outliving the watch would wake the radio for nothing.
         verify { autoSyncScheduler.forget(watch.id) }

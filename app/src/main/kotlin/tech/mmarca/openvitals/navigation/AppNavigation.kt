@@ -1,15 +1,11 @@
 package tech.mmarca.openvitals.navigation
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.BatteryChargingFull
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material.icons.outlined.WorkspacePremium
@@ -22,13 +18,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import tech.mmarca.openvitals.R
@@ -53,11 +49,9 @@ import tech.mmarca.openvitals.features.dashboard.DashboardViewModel
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.features.heart.HeartViewModel
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
-import tech.mmarca.openvitals.domain.preferences.isDarkTheme
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.features.manualentry.body.titleRes
-import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingOutdoorModeToggle
 import tech.mmarca.openvitals.features.manualentry.vitals.titleRes
 import tech.mmarca.openvitals.features.nutrition.NutritionScreen
 import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
@@ -80,12 +74,23 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsAdaptiveScaffold
 import tech.mmarca.openvitals.ui.components.OpenVitalsNavigationDestination
 import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 import tech.mmarca.openvitals.ui.components.HealthConnectNewPermissionsPrompt
+import tech.mmarca.openvitals.ui.components.LocalAppBarState
 import tech.mmarca.openvitals.ui.components.PrivacyReconsentPrompt
 
 internal const val CardioLoadDetailRoute = "activity/cardio_load"
 internal const val SleepEfficiencyDetailRoute = "recovery/sleep_efficiency"
 internal const val SleepScoreDetailRoute = "recovery/sleep_score"
 internal const val HeartRecoveryDetailRoute = "heart/recovery"
+
+/** Titles of the detail routes that are plain strings, not [Screen] objects. */
+@StringRes
+internal fun detailRouteTitleRes(route: String?): Int? = when (route) {
+    CardioLoadDetailRoute -> R.string.metric_cardio_load
+    SleepEfficiencyDetailRoute -> R.string.recovery_sleep_efficiency
+    SleepScoreDetailRoute -> R.string.recovery_sleep_score
+    HeartRecoveryDetailRoute -> R.string.heart_rate_recovery_history_title
+    else -> null
+}
 
 @Composable
 fun AppNavigation(
@@ -100,6 +105,7 @@ fun AppNavigation(
     onOnboardingComplete: () -> Unit = {},
 ) {
     val navController = rememberNavController()
+    val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     // Day-accepting destinations register with a query pattern appended; compare
@@ -126,18 +132,11 @@ fun AppNavigation(
     } else {
         null
     }
-    var manualEntryTopBarState by remember { mutableStateOf(TopBarEditState()) }
-    var metricSectionTopBarState by remember { mutableStateOf<TopBarEditState?>(null) }
-    var activityEntryTopBarTitleRes by remember { mutableStateOf<Int?>(null) }
-    var activityEntryTopBarEditState by remember { mutableStateOf<TopBarEditState?>(null) }
-    var activityRecordingOutdoorTopBarState by remember { mutableStateOf<TopBarOutdoorModeState?>(null) }
-    var isActivityRecordingFocusMode by remember { mutableStateOf(false) }
-    // The drink screen's title is the drink's name, which only the screen knows.
-    var caffeineDrinkTitle by remember { mutableStateOf<String?>(null) }
-    // Likewise the watch device screen's title.
-    var watchDeviceTitle by remember { mutableStateOf<String?>(null) }
+    // What the screen on this destination asked the app bar for. It is withdrawn when
+    // the screen leaves, so nothing here has to be cleared by route.
+    val appBarState = LocalAppBarState.current
+    val screenAppBar = appBarState.of(navBackStackEntry)
     var dashboardRefreshRequest by remember { mutableIntStateOf(0) }
-    var dashboardDeviceActionVisible by remember { mutableStateOf(false) }
     var settingsRouteImportRequest by remember { mutableStateOf<ExternalRouteImportRequest?>(null) }
     var nextSettingsRouteImportRequestId by remember { mutableStateOf(0L) }
     val activeRouteImportRequest = settingsRouteImportRequest ?: routeImportRequest
@@ -187,65 +186,12 @@ fun AppNavigation(
             Screen.Dashboard.route,
         )
     }
-    val taskRoutes = remember {
-        setOf(
-            Screen.ManualEntry.route,
-            Screen.HydrationEntry.route,
-            Screen.HydrationEntryEdit.route,
-            Screen.HydrationEntryLogDrink.route,
-            Screen.CarbsEntry.route,
-            Screen.ActivityEntry.basePath,
-            Screen.ActivityEntryEdit.basePath,
-            Screen.WorkoutPlans.route,
-            Screen.WorkoutPlanBuilder.basePath,
-            Screen.MindfulnessEntry.route,
-            Screen.MindfulnessEntryEdit.route,
-            Screen.BodyMeasurementEntry.route,
-            Screen.BodyMeasurementEntryEdit.route,
-            Screen.VitalsMeasurementEntry.route,
-            Screen.VitalsMeasurementEntryEdit.route,
-            Screen.CycleEntry.route,
-            Screen.CycleEntryEdit.route,
-        )
-    }
-    val settingsRoutes = remember {
-        setOf(
-            Screen.Settings.route,
-            Screen.SettingsDisplay.route,
-            Screen.SettingsActivities.route,
-            Screen.SettingsSensors.route,
-            Screen.SettingsWatches.route,
-            Screen.SettingsNutrition.route,
-            Screen.SettingsCalories.route,
-            Screen.SettingsCaffeine.route,
-            Screen.SettingsBodyProfile.route,
-            Screen.SettingsVitals.route,
-            Screen.SettingsRecovery.route,
-            Screen.SettingsSleep.route,
-            Screen.SettingsBodyEnergy.route,
-            Screen.SettingsDataImport.route,
-            Screen.SettingsCsvImport.route,
-            Screen.SettingsDeviceSync.route,
-            Screen.SettingsHealthConnect.route,
-            Screen.SettingsPermissions.route,
-            Screen.SettingsDebugDiagnostics.route,
-        )
-    }
-
     val isActivityEntryRoute =
         currentRoute == Screen.ActivityEntry.basePath ||
             currentRoute == Screen.ActivityEntryEdit.basePath
-    val isActivityRecordingFocusRoute = isActivityEntryRoute && isActivityRecordingFocusMode
-    // Outdoor mode repaints the recording body pure black or white; the chrome
-    // takes the same ground while it is on.
-    val activityRecordingOutdoorBackground = activityRecordingOutdoorTopBarState
-        ?.takeIf { isActivityEntryRoute && it.enabled }
-        ?.let { if (appThemeMode.isDarkTheme(isSystemInDarkTheme())) Color.Black else Color.White }
     val showTopBar = currentRoute != null &&
         currentRoute != Screen.Onboarding.route &&
-        !isActivityRecordingFocusRoute
-    val isTaskRoute = currentRoute?.let { it in taskRoutes } == true
-    val isSettingsRoute = currentRoute?.let { it in settingsRoutes } == true
+        screenAppBar?.hidesAppBar != true
     val showNavigation =
         topLevelDestinations.size > 1 && currentRoute?.let { it in topLevelRoutes } == true
     val canNavigateBack =
@@ -260,23 +206,6 @@ fun AppNavigation(
         onNavigate = { route -> navController.navigate(route) },
     )
 
-    val metricSectionRoutes = remember {
-        setOf(
-            Screen.Metric.route,
-            Screen.Activity.route,
-            Screen.Sleep.route,
-        )
-    }
-
-    // Keyed on the metric id too: metric-to-metric navigation must drop a stale edit toggle.
-    LaunchedEffect(currentRoute, currentMetricId) {
-        if (currentRoute !in metricSectionRoutes) {
-            metricSectionTopBarState = null
-        } else if (currentRoute == Screen.Metric.route) {
-            metricSectionTopBarState = null
-        }
-    }
-
     LaunchedEffect(activeRouteImportRequest, currentRoute) {
         if (
             activeRouteImportRequest != null &&
@@ -286,12 +215,6 @@ fun AppNavigation(
             navController.navigate(Screen.ActivityEntry.createRoute()) {
                 launchSingleTop = true
             }
-        }
-    }
-
-    LaunchedEffect(isActivityEntryRoute) {
-        if (!isActivityEntryRoute) {
-            isActivityRecordingFocusMode = false
         }
     }
 
@@ -316,78 +239,22 @@ fun AppNavigation(
         }
     }
 
-    val topBarTitle = when (currentRoute) {
-        Screen.Dashboard.route -> stringResource(R.string.app_name)
-        Screen.StressDetails.route -> stringResource(R.string.screen_stress_tracking)
-        Screen.BodyEnergyDetails.route -> stringResource(R.string.screen_body_energy)
-        Screen.TrainingReadinessDetails.route -> stringResource(R.string.screen_training_readiness)
-        CardioLoadDetailRoute -> stringResource(R.string.metric_cardio_load)
-        SleepEfficiencyDetailRoute -> stringResource(R.string.recovery_sleep_efficiency)
-        SleepScoreDetailRoute -> stringResource(R.string.recovery_sleep_score)
-        HeartRecoveryDetailRoute -> stringResource(R.string.heart_rate_recovery_history_title)
-        Screen.ManualEntry.route -> stringResource(R.string.screen_manual_entry)
-        Screen.WorkoutPlans.route -> stringResource(R.string.screen_workout_plans)
-        Screen.WorkoutPlanBuilder.basePath -> stringResource(R.string.screen_workout_plan_builder)
-        Screen.HydrationEntry.route -> stringResource(R.string.screen_hydration_entry)
-        Screen.HydrationEntryEdit.route -> stringResource(R.string.screen_hydration_entry)
-        Screen.HydrationEntryLogDrink.route -> stringResource(R.string.screen_hydration_entry)
-        Screen.CarbsEntry.route -> stringResource(R.string.screen_carbs_entry)
-        Screen.ActivityEntry.basePath -> activityEntryTopBarTitleRes
-            ?.let { stringResource(it) }
-            ?: stringResource(R.string.screen_activity_entry)
-        Screen.ActivityEntryEdit.basePath -> activityEntryTopBarTitleRes
-            ?.let { stringResource(it) }
-            ?: stringResource(R.string.screen_activity_entry)
-        Screen.MindfulnessEntry.route -> stringResource(R.string.screen_mindfulness_entry)
-        Screen.MindfulnessEntryEdit.route -> stringResource(R.string.screen_mindfulness_entry)
+    // A screen that knows a better title than its fixed one names it here.
+    val screenOwnTitle = when (currentRoute) {
         Screen.BodyMeasurementEntry.route,
-        Screen.BodyMeasurementEntryEdit.route -> currentBodyMeasurementType
-            ?.let { stringResource(it.titleRes()) }
-            ?: stringResource(R.string.screen_body_measurement_entry)
+        Screen.BodyMeasurementEntryEdit.route ->
+            currentBodyMeasurementType?.let { stringResource(it.titleRes()) }
         Screen.VitalsMeasurementEntry.route,
-        Screen.VitalsMeasurementEntryEdit.route -> currentVitalsMeasurementType
-            ?.let { stringResource(it.titleRes()) }
-            ?: stringResource(R.string.screen_vitals_measurement_entry)
-        Screen.CycleEntry.route,
-        Screen.CycleEntryEdit.route -> stringResource(R.string.screen_cycle_entry)
-        Screen.Calories.route -> stringResource(R.string.screen_calories)
-        Screen.Nutrition.route -> stringResource(R.string.screen_nutrition)
-        Screen.Activity.route -> stringResource(R.string.screen_activities)
-        Screen.ActivityDetail.route -> stringResource(R.string.screen_activity_detail)
-        Screen.Sleep.route -> stringResource(R.string.screen_sleep)
-        Screen.SleepDetail.route -> stringResource(R.string.screen_sleep_detail)
-        Screen.Metric.route -> currentMetricId?.let { stringResource(metricTitleRes(it)) }.orEmpty()
-        Screen.CaffeineDrink.route -> caffeineDrinkTitle
-            ?: stringResource(R.string.caffeine_drink_title)
-        Screen.Settings.route -> stringResource(R.string.screen_settings)
-        Screen.SettingsDisplay.route -> stringResource(R.string.settings_display_group_title)
-        Screen.SettingsActivities.route -> stringResource(R.string.settings_activities_group_title)
-        Screen.SettingsSensors.route -> stringResource(R.string.settings_sensors_group_title)
-        Screen.SettingsWatches.route -> stringResource(R.string.settings_watches_group_title)
-        Screen.SettingsNutrition.route,
-        Screen.SettingsCalories.route,
-        Screen.SettingsCaffeine.route -> stringResource(R.string.settings_nutrition_group_title)
-        Screen.SettingsVitals.route -> stringResource(R.string.settings_vitals_group_title)
-        Screen.SettingsRecovery.route,
-        Screen.SettingsSleep.route,
-        Screen.SettingsBodyEnergy.route -> stringResource(R.string.settings_recovery_group_title)
-        Screen.SettingsDataImport.route -> stringResource(R.string.settings_data_transfer_group_title)
-        Screen.SettingsCsvImport.route -> stringResource(R.string.settings_csv_import_screen_title)
-        Screen.SettingsReportExport.route -> stringResource(R.string.report_builder_title)
-        Screen.SettingsDeviceSync.route -> stringResource(R.string.settings_device_sync_group_title)
-        Screen.SettingsHealthConnect.route,
-        Screen.SettingsPermissions.route -> stringResource(R.string.settings_health_connect_group_title)
-        Screen.SettingsDebugDiagnostics.route -> stringResource(R.string.settings_debug_diagnostics_group_title)
-        // Titled with the watch's own name, which only the screen knows.
-        Screen.WatchDevice.route -> watchDeviceTitle.orEmpty()
-        Screen.WatchData.route -> stringResource(R.string.settings_watch_data_title)
-        Screen.WatchNotifications.route -> stringResource(R.string.screen_watch_notifications)
-        Screen.WatchSettings.route -> stringResource(R.string.settings_watch_on_device_settings)
-        Screen.WatchAlarms.route -> stringResource(R.string.settings_watch_action_alarms)
-        Screen.WatchSendPoint.basePath -> stringResource(R.string.settings_watch_point_title)
-        Screen.Achievements.route -> stringResource(R.string.screen_achievements)
-        else -> ""
+        Screen.VitalsMeasurementEntryEdit.route ->
+            currentVitalsMeasurementType?.let { stringResource(it.titleRes()) }
+        Screen.Metric.route -> currentMetricId?.let { stringResource(metricTitleRes(it)) }
+        else -> null
     }
+    val topBarTitle = screenAppBar?.title
+        ?: screenOwnTitle
+        ?: detailRouteTitleRes(currentRoute)?.let { stringResource(it) }
+        ?: Screen.titleResFor(currentRoute)?.let { stringResource(it) }
+        ?: ""
 
     OpenVitalsAdaptiveScaffold(
         title = topBarTitle,
@@ -396,7 +263,9 @@ fun AppNavigation(
         showTopBar = showTopBar,
         showNavigation = showNavigation,
         canNavigateBack = canNavigateBack,
-        onNavigateBack = { navController.popBackStack() },
+        // The arrow is Back. Through the dispatcher a screen's BackHandler guards it too: it
+        // used to pop the stack directly, past "unsaved changes" and "an import is running".
+        onNavigateBack = { backDispatcher?.onBackPressed() ?: navController.popBackStack() },
         onNavigate = { route ->
             if (route in topLevelRoutes) {
                 navController.navigate(route) {
@@ -409,7 +278,7 @@ fun AppNavigation(
         navigationIcon = Icons.AutoMirrored.Outlined.ArrowBack,
         navigationContentDescription = stringResource(R.string.cd_back),
         action = addEntryAction,
-        containerColor = activityRecordingOutdoorBackground,
+        containerColor = screenAppBar?.containerColor,
         topBarActions = {
             // The hydration screen's app-bar add-drink shortcut.
             if (currentRoute == Screen.Metric.route &&
@@ -425,76 +294,19 @@ fun AppNavigation(
                     )
                 }
             }
-            val topBarEditState = when (currentRoute) {
-                Screen.ManualEntry.route -> manualEntryTopBarState
-                in metricSectionRoutes -> metricSectionTopBarState
-                Screen.ActivityEntry.basePath,
-                Screen.ActivityEntryEdit.basePath -> activityEntryTopBarEditState
-                else -> null
-            }
-            val isActivityRecordingRoute =
-                currentRoute == Screen.ActivityEntry.basePath ||
-                    currentRoute == Screen.ActivityEntryEdit.basePath
-            if (isActivityRecordingRoute) {
-                activityRecordingOutdoorTopBarState?.let { outdoorState ->
-                    ActivityRecordingOutdoorModeToggle(
-                        enabled = outdoorState.enabled,
-                        onEnabledChange = { outdoorState.onToggle() },
-                        appThemeMode = appThemeMode,
-                    )
-                }
-            }
-            if (topBarEditState != null) {
-                val isActivityRecordingEditState = isActivityRecordingRoute
-                OpenVitalsIconButton(onClick = topBarEditState.onToggleEdit) {
+            // Whatever the screen declared, in the order it declared it. The app bar
+            // does not know which screen sent it.
+            screenAppBar?.actions?.forEach { action ->
+                OpenVitalsIconButton(onClick = action.onClick) {
                     Icon(
-                        imageVector = when {
-                            topBarEditState.isEditing &&
-                                (isActivityRecordingEditState || currentRoute in metricSectionRoutes) ->
-                                Icons.Outlined.Check
-                            // Metric screens use the section-layout affordance: tune, then check.
-                            currentRoute in metricSectionRoutes -> Icons.Outlined.Tune
-                            else -> Icons.Outlined.Edit
-                        },
-                        contentDescription = stringResource(
-                            when {
-                                isActivityRecordingEditState && topBarEditState.isEditing ->
-                                    R.string.cd_finish_recording_dashboard_editing
-                                isActivityRecordingEditState -> R.string.cd_edit_recording_dashboard
-                                currentRoute == Screen.Dashboard.route && topBarEditState.isEditing ->
-                                    R.string.cd_finish_dashboard_editing
-                                currentRoute == Screen.Dashboard.route -> R.string.cd_edit_dashboard
-                                currentRoute in metricSectionRoutes && topBarEditState.isEditing ->
-                                    R.string.cd_finish_metric_section_editing
-                                currentRoute in metricSectionRoutes -> R.string.cd_edit_metric_sections
-                                topBarEditState.isEditing -> R.string.cd_finish_manual_entry_editing
-                                else -> R.string.cd_edit_manual_entry_widgets
-                            }
-                        ),
-                        tint = if (topBarEditState.isEditing) {
-                            androidx.compose.material3.MaterialTheme.colorScheme.primary
-                        } else {
-                            androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                        imageVector = action.icon,
+                        contentDescription = stringResource(action.contentDescription),
+                        tint = action.tint
+                            ?: androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
             if (currentRoute == Screen.Dashboard.route) {
-                // The readiness screen merged into Body Energy, which the tile opens.
-                if (dashboardDeviceActionVisible) {
-                    OpenVitalsIconButton(
-                        onClick = {
-                            navController.navigate(Screen.SettingsSensors.route) {
-                                launchSingleTop = true
-                            }
-                        },
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.BatteryChargingFull,
-                            contentDescription = stringResource(R.string.cd_sensor_battery_status),
-                        )
-                    }
-                }
                 OpenVitalsIconButton(
                     onClick = {
                         navController.navigate(Screen.Achievements.route) {
@@ -574,9 +386,6 @@ fun AppNavigation(
                         navController.navigate(Screen.SettingsSensors.route) {
                             launchSingleTop = true
                         }
-                    },
-                    onSensorStatusVisibilityChanged = { visible ->
-                        dashboardDeviceActionVisible = visible
                     },
                 )
             }
@@ -686,27 +495,6 @@ fun AppNavigation(
                         onRouteImportRequestHandled(requestId)
                     }
                 },
-                onManualEntryEditStateChanged = { isEditing, onToggleEdit ->
-                    manualEntryTopBarState = TopBarEditState(isEditing, onToggleEdit)
-                },
-                onActivityEntryTitleChanged = { titleRes ->
-                    activityEntryTopBarTitleRes = titleRes
-                },
-                onActivityEntryEditStateChanged = { isAvailable, isEditing, onToggleEdit ->
-                    activityEntryTopBarEditState = if (isAvailable) {
-                        TopBarEditState(isEditing, onToggleEdit)
-                    } else {
-                        null
-                    }
-                },
-                onActivityEntryFocusModeChanged = { isActivityRecordingFocusMode = it },
-                onActivityRecordingOutdoorModeStateChanged = { isAvailable, enabled, onToggle ->
-                    activityRecordingOutdoorTopBarState = if (isAvailable) {
-                        TopBarOutdoorModeState(enabled, onToggle)
-                    } else {
-                        null
-                    }
-                },
                 onEntrySaved = ::markDashboardDirty,
                 onEntrySavedAndPopBack = ::markDashboardDirtyAndPopBack,
                 onActivityEntrySaved = ::finishActivityEntrySave,
@@ -806,9 +594,6 @@ fun AppNavigation(
                     onEditCycleEntry = { kind, entryId ->
                         navController.navigate(Screen.CycleEntryEdit.createRoute(kind.name, entryId))
                     },
-                    onSectionEditStateChanged = { isEditing, onToggleEdit ->
-                        metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
-                    },
                 )
             }
 
@@ -822,7 +607,6 @@ fun AppNavigation(
                     entryId = backStackEntry.arguments?.getString(CAFFEINE_ENTRY_ID_ARG).orEmpty(),
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onTitleChanged = { caffeineDrinkTitle = it },
                 )
             }
 
@@ -835,9 +619,6 @@ fun AppNavigation(
                     viewModel = caloriesViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onSectionEditStateChanged = { isEditing, onToggleEdit ->
-                        metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
-                    },
                 )
             }
 
@@ -850,9 +631,6 @@ fun AppNavigation(
                     viewModel = nutritionViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onSectionEditStateChanged = { isEditing, onToggleEdit ->
-                        metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
-                    },
                 )
             }
 
@@ -893,9 +671,6 @@ fun AppNavigation(
                     },
                     onOpenHrv = {
                         navController.navigate(Screen.Metric.createRoute(DashboardWidgetId.HRV.name))
-                    },
-                    onSectionEditStateChanged = { isEditing, onToggleEdit ->
-                        metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
                     },
                 )
             }
@@ -940,9 +715,6 @@ fun AppNavigation(
                     onOpenSleepEfficiency = {
                         navController.navigate(SleepEfficiencyDetailRoute)
                     },
-                    onSectionEditStateChanged = { isEditing, onToggleEdit ->
-                        metricSectionTopBarState = TopBarEditState(isEditing, onToggleEdit)
-                    },
                 )
             }
 
@@ -969,7 +741,6 @@ fun AppNavigation(
 
             watchRoutes(
                 navController = navController,
-                onWatchDeviceTitleChanged = { watchDeviceTitle = it },
             )
 
             settingsRoutes(
@@ -1054,12 +825,3 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.WATCH -> R.string.metric_watch
     }
 
-private data class TopBarEditState(
-    val isEditing: Boolean = false,
-    val onToggleEdit: () -> Unit = {},
-)
-
-private data class TopBarOutdoorModeState(
-    val enabled: Boolean = false,
-    val onToggle: () -> Unit = {},
-)
