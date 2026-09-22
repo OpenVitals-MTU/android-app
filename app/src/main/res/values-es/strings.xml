@@ -2944,4 +2944,15 @@
     <string name="device_sync_phase_waiting_for_peer">A la espera de que el otro teléfono inicie la sincronización</string>
     <string name="device_sync_refused">No aceptado (no seleccionado en este teléfono)</string>
     <string name="settings_watch_remove_delete_history">Borrar historial de estrés, Body Battery y puntuación local</string>
+    <plurals name="chart_plot_summary">
+        <item quantity="one">%1$d punto, mínimo %2$s, máximo %3$s, último %4$s</item>
+        <item quantity="many">%1$d puntos, mínimo %2$s, máximo %3$s, último %4$s</item>
+        <item quantity="other">%1$d puntos, mínimo %2$s, máximo %3$s, último %4$s</item>
+    </plurals>
+    <string name="chart_zoom_in">Acercar</string>
+    <string name="chart_zoom_out">Alejar</string>
+    <string name="chart_zoom_reset">Ver rango completo</string>
+    <string name="chart_next_point">Próximo punto</string>
+    <string name="chart_previous_point">Punto anterior</string>
+    <string name="chart_body_energy_influences">Cargada %1$d , descargada %2$d</string>
 </resources>
