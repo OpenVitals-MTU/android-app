@@ -341,7 +341,7 @@ class ActivityEntryViewModel(
         )
         refreshPermission()
         activityRecorder?.clearPreparedRecording()
-        activityRecorder?.previewBleConnections()
+        activityRecorder?.previewBleConnections(activityType.exerciseType)
     }
 
     /** Setup's Start for a guided plan. */
@@ -539,6 +539,10 @@ class ActivityEntryViewModel(
             validationErrors = emptySet(),
         )
         refreshPermission()
+        // The setup card shows the sensors this workout reads, so a new type reconnects.
+        if (_uiState.value.mode == ActivityEntryMode.RECORDING) {
+            activityRecorder?.previewBleConnections(type.exerciseType)
+        }
     }
 
     fun startManualEntry() {
@@ -929,7 +933,7 @@ class ActivityEntryViewModel(
         )
         refreshPermission()
         activityRecorder?.clearPreparedRecording()
-        activityRecorder?.previewBleConnections()
+        activityRecorder?.previewBleConnections(_uiState.value.selectedActivityType.exerciseType)
     }
 
     fun openRecordingDashboard(repetitionRestSeconds: Long = 0L) {

@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.domain.model
 
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -23,6 +24,23 @@ class ExerciseTypeTraitsTest {
         assertFalse(isDistanceBasedExercise(ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING))
         assertFalse(isDistanceBasedExercise(ExerciseSessionRecord.EXERCISE_TYPE_YOGA))
         assertFalse(isDistanceBasedExercise(ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING))
+    }
+
+    @Test
+    fun `a workout reads only the sensors that fit it`() {
+        // A strength session next to a powered-on bike once recorded its speed and cadence.
+        assertEquals(
+            setOf(BleSensorCapability.HEART_RATE),
+            sensorCapabilitiesForExercise(ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING),
+        )
+        assertEquals(
+            BleSensorCapability.entries.toSet() - BleSensorCapability.RUNNING_SPEED_CADENCE,
+            sensorCapabilitiesForExercise(ExerciseSessionRecord.EXERCISE_TYPE_BIKING),
+        )
+        assertEquals(
+            setOf(BleSensorCapability.HEART_RATE, BleSensorCapability.RUNNING_SPEED_CADENCE),
+            sensorCapabilitiesForExercise(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING),
+        )
     }
 
     @Test

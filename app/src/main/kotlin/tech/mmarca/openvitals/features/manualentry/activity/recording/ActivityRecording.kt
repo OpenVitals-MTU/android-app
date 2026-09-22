@@ -66,6 +66,7 @@ import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepositor
 import tech.mmarca.openvitals.domain.model.CoMapsNavigationSnapshot
 import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
 import tech.mmarca.openvitals.domain.model.CoMapsRoutePolyline
+import tech.mmarca.openvitals.domain.model.sensorCapabilitiesForExercise
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
 import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
@@ -413,7 +414,7 @@ class ActivityRecordingController @Inject constructor(
             ),
             replaceRoutePoints = true,
         )
-        previewBleConnections()
+        previewBleConnections(activityType.exerciseType)
     }
 
     fun updateDashboardLayout(layout: ActivityRecordingDashboardLayout) {
@@ -487,7 +488,7 @@ class ActivityRecordingController @Inject constructor(
             replaceRoutePoints = true,
         )
         acceptLocation(Location(lockedFix).apply { time = now.toEpochMilli() })
-        bleSensorCoordinator.startRecording()
+        bleSensorCoordinator.startRecording(sensorCapabilitiesForExercise(activityType.exerciseType))
         acceptBleMetrics(bleSensorCoordinator.metrics.value)
         ContextCompat.startForegroundService(
             context,
@@ -556,7 +557,7 @@ class ActivityRecordingController @Inject constructor(
             ),
             replaceRoutePoints = true,
         )
-        bleSensorCoordinator.startRecording()
+        bleSensorCoordinator.startRecording(sensorCapabilitiesForExercise(activityType.exerciseType))
         acceptBleMetrics(bleSensorCoordinator.metrics.value)
         ContextCompat.startForegroundService(
             context,
@@ -594,7 +595,7 @@ class ActivityRecordingController @Inject constructor(
             ),
             replaceRoutePoints = true,
         )
-        bleSensorCoordinator.startRecording()
+        bleSensorCoordinator.startRecording(sensorCapabilitiesForExercise(activityType.exerciseType))
         acceptBleMetrics(bleSensorCoordinator.metrics.value)
         ContextCompat.startForegroundService(
             context,
@@ -842,9 +843,10 @@ class ActivityRecordingController @Inject constructor(
         }
     }
 
-    fun previewBleConnections() {
+    /** Connects the sensors the workout of [exerciseType] reads, so the setup card can show them. */
+    fun previewBleConnections(exerciseType: Int) {
         if (_state.value.isActive) return
-        bleSensorCoordinator.refreshConnections()
+        bleSensorCoordinator.refreshConnections(sensorCapabilitiesForExercise(exerciseType))
         acceptBleMetrics(bleSensorCoordinator.metrics.value)
     }
 

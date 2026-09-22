@@ -2081,7 +2081,7 @@ class ActivityEntryViewModelTest {
         }
         every { recorder.discardRecording() } answers { state.value = ActivityRecordingState() }
         every { recorder.stopBlePreview() } returns Unit
-        every { recorder.previewBleConnections() } returns Unit
+        every { recorder.previewBleConnections(any()) } returns Unit
         every { recorder.clearPreparedRecording() } returns Unit
         every { recorder.startPlanRecording(any(), any()) } answers {
             state.value = ActivityRecordingState(status = ActivityRecordingStatus.RECORDING)

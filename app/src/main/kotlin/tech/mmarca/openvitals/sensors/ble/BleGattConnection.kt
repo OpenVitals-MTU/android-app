@@ -31,6 +31,9 @@ internal interface BleConnectionListener {
     fun onConnectionStatusChanged(status: BleConnectionStatus)
     fun onMetricsUpdated()
     fun onBatteryLevelChanged(deviceId: String, batteryPercent: Int)
+
+    /** The sensor dropped and its GATT object is gone. A scan has to find it again. */
+    fun onConnectionLost(address: String)
 }
 
 internal class BleGattConnection(
@@ -71,15 +74,16 @@ internal class BleGattConnection(
         private set
 
     /**
-     * True when the phone does not know the sensor. It forgets unpaired devices on every
-     * reboot. A connect by address then assumes a public address and never gets through.
+     * A bonded sensor connects by its address: the phone keeps its keys and address type.
+     * Any other sensor is found by a scan first. The phone forgets it on a reboot, and
+     * a connect by address then assumes a public address and never gets through.
      */
     @SuppressLint("MissingPermission")
-    fun needsScan(): Boolean {
+    fun isBonded(): Boolean {
         val adapter = bluetoothAdapter ?: return false
         if (!adapter.isEnabled || !hasBluetoothConnectPermission(context)) return false
         return runCatching {
-            adapter.getRemoteDevice(address).type == BluetoothDevice.DEVICE_TYPE_UNKNOWN
+            adapter.getRemoteDevice(address).bondState == BluetoothDevice.BOND_BONDED
         }.getOrDefault(false)
     }
 
@@ -103,7 +107,10 @@ internal class BleGattConnection(
             updateStatus(BleConnectionStatus.DISCONNECTED)
             return
         }
-        updateStatus(BleConnectionStatus.CONNECTING)
+        // A reconnect keeps its label.
+        if (connectionStatus != BleConnectionStatus.RECONNECTING) {
+            updateStatus(BleConnectionStatus.CONNECTING)
+        }
         val device = scanned
             ?: runCatching { adapter.getRemoteDevice(address) }.getOrNull()
             ?: return
@@ -207,13 +214,16 @@ internal class BleGattConnection(
                     subscribedCharacteristics.clear()
                     notificationWrites.clear()
                     resetAggregators()
-                    if (!closed) {
-                        updateStatus(BleConnectionStatus.RECONNECTING)
-                        gatt.connect()
-                    } else {
+                    // The old object is not reused. connect() on it did not get through
+                    // to a sensor that had slept during a pause. A scan and a fresh
+                    // connectGatt do, so the coordinator finds the sensor again.
+                    runCatching { gatt.close() }
+                    this@BleGattConnection.gatt = null
+                    if (closed) {
                         updateStatus(BleConnectionStatus.DISCONNECTED)
-                        runCatching { gatt.close() }
-                        this@BleGattConnection.gatt = null
+                    } else {
+                        updateStatus(BleConnectionStatus.RECONNECTING)
+                        listener.onConnectionLost(address)
                     }
                 }
             }
@@ -223,6 +233,8 @@ internal class BleGattConnection(
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 Log.w(TAG, "Service discovery failed status=$status")
+                // Connected without services is a sensor stuck at 0. A drop starts over.
+                runCatching { gatt.disconnect() }
                 return
             }
             val notificationCharacteristics = buildList {

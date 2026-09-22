@@ -74,11 +74,7 @@ class BleSensorCoordinator @Inject constructor(
     // A fast scan drains the battery, and Android mutes any scan after 30 minutes.
     // So the scan drops to low power, and starts over before Android mutes it.
     private val connectScanRestart = Runnable {
-        synchronized(stateLock) {
-            if (connectScanCallback == null) return@synchronized
-            stopConnectScan()
-            startConnectScan(ScanSettings.SCAN_MODE_LOW_POWER)
-        }
+        synchronized(stateLock) { restartConnectScan(ScanSettings.SCAN_MODE_LOW_POWER) }
     }
 
     private val _metrics = MutableStateFlow(BleRecordingMetrics())
@@ -112,12 +108,15 @@ class BleSensorCoordinator @Inject constructor(
 
     fun currentSampleBuffer(): BleRecordingSampleBuffer = synchronized(stateLock) { sampleBuffer }
 
-    fun startRecording() = synchronized(stateLock) {
+    private fun assignments(capabilities: Set<BleSensorCapability>): Map<BleSensorCapability, BleSensorDevice> =
+        deviceRepository.resolveCapabilityAssignments().filterKeys { it in capabilities }
+
+    /** [capabilities] is what the workout reads. A strength session skips the bike sensors. */
+    fun startRecording(capabilities: Set<BleSensorCapability>) = synchronized(stateLock) {
         recordingActive = true
         sampleBuffer = BleRecordingSampleBuffer()
-        val desiredAssignments = deviceRepository.resolveCapabilityAssignments()
-        if (connections.isEmpty() || capabilityOwners.toMap() != desiredAssignments) {
-            refreshConnections()
+        if (connections.isEmpty() || capabilityOwners.toMap() != assignments(capabilities)) {
+            refreshConnections(capabilities)
         } else {
             publishMetrics(recordSamples = true)
             scheduleMetricsTimeoutTicker()
@@ -133,10 +132,10 @@ class BleSensorCoordinator @Inject constructor(
         buffer
     }
 
-    fun refreshConnections() = synchronized(stateLock) {
+    fun refreshConnections(capabilities: Set<BleSensorCapability>) = synchronized(stateLock) {
         disconnectAll()
         capabilityOwners.clear()
-        deviceRepository.resolveCapabilityAssignments().forEach { (capability, device) ->
+        assignments(capabilities).forEach { (capability, device) ->
             capabilityOwners[capability] = device
         }
         val grouped = capabilityOwners.entries.groupBy({ it.value.address }, { it.key })
@@ -153,11 +152,11 @@ class BleSensorCoordinator @Inject constructor(
                 callbackHandler = bleHandler,
             )
             connections[address] = connection
-            if (connection.needsScan()) {
+            if (connection.isBonded()) {
+                connection.connect()
+            } else {
                 connection.awaitScan()
                 awaitingScan += address
-            } else {
-                connection.connect()
             }
         }
         startConnectScan(ScanSettings.SCAN_MODE_LOW_LATENCY)
@@ -197,7 +196,13 @@ class BleSensorCoordinator @Inject constructor(
                 synchronized(stateLock) {
                     if (connectScanCallback !== this) return@synchronized
                     stopConnectScan()
-                    connectAwaitingByAddress()
+                    if (errorCode == ScanCallback.SCAN_FAILED_SCANNING_TOO_FREQUENTLY) {
+                        // Android allows five scan starts per 30 seconds. A sensor that
+                        // drops and returns in a loop uses them up. Wait the window out.
+                        bleHandler.postDelayed(connectScanRestart, CONNECT_SCAN_RETRY_MS)
+                    } else {
+                        connectAwaitingByAddress()
+                    }
                 }
             }
         }
@@ -220,6 +225,11 @@ class BleSensorCoordinator @Inject constructor(
             CONNECT_SCAN_RESTART_MS
         }
         bleHandler.postDelayed(connectScanRestart, restartDelayMs)
+    }
+
+    private fun restartConnectScan(scanMode: Int) {
+        stopConnectScan()
+        startConnectScan(scanMode)
     }
 
     @SuppressLint("MissingPermission")
@@ -448,6 +458,12 @@ class BleSensorCoordinator @Inject constructor(
             publishMetrics()
             scheduleMetricsTimeoutTicker()
         }
+
+        override fun onConnectionLost(address: String) = synchronized(stateLock) {
+            if (address !in connections) return
+            awaitingScan += address
+            restartConnectScan(ScanSettings.SCAN_MODE_LOW_LATENCY)
+        }
     }
 
     private fun collectMetrics(now: Instant = Instant.now()): BleRecordingMetrics {
@@ -534,5 +550,6 @@ class BleSensorCoordinator @Inject constructor(
         private const val METRICS_TIMEOUT_PUBLISH_INTERVAL_MS = 1_000L
         private const val CONNECT_SCAN_FAST_MS = 30_000L
         private const val CONNECT_SCAN_RESTART_MS = 20 * 60_000L
+        private const val CONNECT_SCAN_RETRY_MS = 30_000L
     }
 }
