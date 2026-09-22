@@ -134,7 +134,8 @@ private const val HydrationSavedDrinkGridColumns = 2
 private const val HydrationCatalogSearchLimit = 48
 private const val HydrationSavedDrinkEditWiggleDegrees = 0.45f
 private val HydrationSavedDrinkGridSpacing = 8.dp
-private val HydrationCatalogRowHeight = 76.dp
+// A minimum. Large text makes a row taller, never cut off.
+private val HydrationCatalogMinRowHeight = 76.dp
 private val HydrationCatalogRowSpacing = 6.dp
 private const val HydrationCatalogMaxVisibleRows = 4
 private val HydrationDrinkDialogScrollFadeHeight = Spacing.xxxl
@@ -936,16 +937,16 @@ private fun HydrationCatalogDrinkRows(
             onMoveRowToTarget(fromKey, toKey)
         }
     }
+    // The list shows up to four rows at the default text size and scrolls past that.
     val visibleRows = min(rows.size, HydrationCatalogMaxVisibleRows)
-    val listHeight = HydrationCatalogRowHeight * visibleRows.toFloat() +
+    val listMaxHeight = HydrationCatalogMinRowHeight * visibleRows.toFloat() +
         HydrationCatalogRowSpacing * (visibleRows - 1).coerceAtLeast(0).toFloat()
 
     LazyColumn(
         state = lazyListState,
-        userScrollEnabled = rows.size > HydrationCatalogMaxVisibleRows,
         modifier = modifier
             .fillMaxWidth()
-            .height(listHeight),
+            .heightIn(max = listMaxHeight),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         items(
@@ -997,7 +998,6 @@ private fun HydrationCatalogDrinkRow(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(HydrationCatalogRowHeight)
             .zIndex(if (isDragging) 1f else 0f)
             .graphicsLayer {
                 alpha = if (enabled || isEditingSavedDrinks) 1f else 0.48f
@@ -1009,7 +1009,7 @@ private fun HydrationCatalogDrinkRow(
     ) {
         OpenVitalsSurface(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .clickable(
                     enabled = enabled && !(row.isSavedDrink && isEditingSavedDrinks),
                     role = Role.Button,
@@ -1021,7 +1021,9 @@ private fun HydrationCatalogDrinkRow(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier
+                    .heightIn(min = HydrationCatalogMinRowHeight)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

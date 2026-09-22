@@ -24,7 +24,11 @@ fun AutoResizeText(
     maxLines: Int = 1,
     minLines: Int = 1,
     softWrap: Boolean = true,
-    minFontSize: TextUnit = 8.sp,
+    /**
+     * How small the text may get. Unspecified keeps at least [MinShrinkFraction] of the
+     * style's size, and never less than [SmallestFontSize]: the user set a size for a reason.
+     */
+    minFontSize: TextUnit = TextUnit.Unspecified,
     fontSize: TextUnit = TextUnit.Unspecified,
 ) {
     val maxFontSize = when {
@@ -32,23 +36,36 @@ fun AutoResizeText(
         style.fontSize != TextUnit.Unspecified -> style.fontSize
         else -> 16.sp
     }
+    val floor = if (minFontSize != TextUnit.Unspecified) minFontSize else autoResizeFloor(maxFontSize)
 
     Text(
         text = text,
         modifier = modifier,
         color = color,
         autoSize = TextAutoSize.StepBased(
-            minFontSize = minFontSize,
+            minFontSize = floor,
             maxFontSize = maxFontSize,
             stepSize = 0.5.sp,
         ),
         fontSize = fontSize,
         fontWeight = fontWeight,
         textAlign = textAlign,
-        overflow = TextOverflow.Clip,
+        overflow = TextOverflow.Ellipsis,
         softWrap = softWrap,
         maxLines = maxLines,
         minLines = minLines,
         style = style,
     )
+}
+
+/** The fraction of the style's size that shrinking keeps. */
+internal const val MinShrinkFraction = 0.75f
+
+/** No shrunk text goes under this. */
+internal val SmallestFontSize = 12.sp
+
+/** The floor for a text of [maxFontSize]. A floor above the size means no shrinking. */
+internal fun autoResizeFloor(maxFontSize: TextUnit): TextUnit {
+    if (!maxFontSize.isSp) return maxFontSize
+    return maxOf(SmallestFontSize.value, maxFontSize.value * MinShrinkFraction).sp
 }

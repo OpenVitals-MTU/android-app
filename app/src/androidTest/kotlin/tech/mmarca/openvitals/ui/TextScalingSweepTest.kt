@@ -58,7 +58,7 @@ import tech.mmarca.openvitals.features.sleep.SleepUiState
 import tech.mmarca.openvitals.features.sleep.sleepPeriodContent
 import tech.mmarca.openvitals.features.vitals.VitalsOverviewContent
 import tech.mmarca.openvitals.testing.TextScaleSurface
-import tech.mmarca.openvitals.testing.assertScaledScreenFitsItsWidth
+import tech.mmarca.openvitals.testing.assertScaledScreenFits
 import tech.mmarca.openvitals.testing.dashboardFixtureData
 import tech.mmarca.openvitals.testing.dashboardFlowWidgetIds
 import tech.mmarca.openvitals.testing.string
@@ -116,7 +116,7 @@ class TextScalingSweepTest {
             )
         }
 
-        composeRule.assertScaledScreenFitsItsWidth()
+        composeRule.assertScaledScreenFits()
         // The tile the user opens the app for is still legible.
         composeRule.onAllNodesWithText(string(R.string.metric_steps)).onFirst().assertIsDisplayed()
     }
@@ -164,7 +164,7 @@ class TextScalingSweepTest {
             }
         }
 
-        composeRule.assertScaledScreenFitsItsWidth()
+        composeRule.assertScaledScreenFits()
         // The range switcher is the one control on the screen.
         composeRule.onNodeWithText(string(R.string.range_week)).assertIsDisplayed()
     }
@@ -211,7 +211,7 @@ class TextScalingSweepTest {
             }
         }
 
-        composeRule.assertScaledScreenFitsItsWidth()
+        composeRule.assertScaledScreenFits()
         composeRule.onNodeWithText(string(R.string.metric_total_hydration)).assertIsDisplayed()
     }
 
@@ -252,7 +252,7 @@ class TextScalingSweepTest {
             }
         }
 
-        composeRule.assertScaledScreenFitsItsWidth()
+        composeRule.assertScaledScreenFits()
         // The workout is still named, not squeezed out by the metrics.
         composeRule.onNodeWithText(WORKOUT_TITLE).assertIsDisplayed()
     }
@@ -282,7 +282,7 @@ class TextScalingSweepTest {
             }
         }
 
-        composeRule.assertScaledScreenFitsItsWidth()
+        composeRule.assertScaledScreenFits()
     }
 
     @Test
@@ -325,7 +325,7 @@ class TextScalingSweepTest {
             }
         }
 
-        composeRule.assertScaledScreenFitsItsWidth()
+        composeRule.assertScaledScreenFits()
         composeRule.onNodeWithText(string(R.string.metric_mindfulness)).assertIsDisplayed()
     }
 
@@ -358,7 +358,7 @@ class TextScalingSweepTest {
             }
         }
 
-        composeRule.assertScaledScreenFitsItsWidth()
+        composeRule.assertScaledScreenFits()
     }
 
     @Test
@@ -377,7 +377,7 @@ class TextScalingSweepTest {
             }
         }
 
-        composeRule.assertScaledScreenFitsItsWidth()
+        composeRule.assertScaledScreenFits()
         // Settings is a routing surface: a clipped title is a feature the user cannot identify.
         composeRule
             .onNodeWithText(string(SettingsSection.entries.first().titleRes))
