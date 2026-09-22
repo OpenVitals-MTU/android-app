@@ -472,6 +472,7 @@ private fun NutritionIntradayChartCard(
                             lineStrokeWidth = 3.dp,
                             viewport = zoom.viewport,
                             multiTouch = zoom.multiTouch,
+                            title = stringResource(metricData.titleRes),
                             scrubLabel = { point ->
                                 val at = dayStart.plusMillis(
                                     (point.xFraction.coerceIn(0f, 1f) * dayMillis).roundToLong(),

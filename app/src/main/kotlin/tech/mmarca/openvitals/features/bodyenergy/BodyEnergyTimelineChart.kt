@@ -1,5 +1,8 @@
 package tech.mmarca.openvitals.features.bodyenergy
 
+import tech.mmarca.openvitals.ui.components.chartSemantics
+import tech.mmarca.openvitals.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -64,6 +67,13 @@ internal fun BodyEnergyTimelineChart(
             .map { MetricLinePlotPoint(xFraction = it.x, value = it.y.toDouble()) }
     }
 
+    // The strip is a picture; the day's totals are what a screen reader gets.
+    val influenceSummary = stringResource(
+        R.string.chart_body_energy_influences,
+        influenceBars.sumOf { it.charge }.roundToInt(),
+        influenceBars.sumOf { it.drain }.roundToInt(),
+    )
+
     ChartZoom(points, enabled = points.isNotEmpty(), modifier = modifier.fillMaxWidth()) { zoom ->
         Column(modifier = Modifier.fillMaxWidth()) {
             MetricLinePlot(
@@ -83,6 +93,7 @@ internal fun BodyEnergyTimelineChart(
                     point.value.roundToInt().toString() to clockAt(point.xFraction, timeFormatter)
                 },
                 modifier = Modifier.fillMaxWidth(),
+                title = stringResource(R.string.metric_body_energy),
             )
             ChartXAxisWithYAxis(
                 modifier = Modifier
@@ -98,7 +109,8 @@ internal fun BodyEnergyTimelineChart(
                     viewport = zoom.viewport,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(ChartTokens.heightInfluenceStrip),
+                        .height(ChartTokens.heightInfluenceStrip)
+                        .chartSemantics(influenceSummary),
                 )
             }
             // The plot has a y-axis gutter, so the hour row insets to match.

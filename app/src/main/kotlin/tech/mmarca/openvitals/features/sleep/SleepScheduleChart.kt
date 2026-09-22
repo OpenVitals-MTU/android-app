@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.sleep
 
+import tech.mmarca.openvitals.ui.components.chartSemantics
+import tech.mmarca.openvitals.ui.components.chartSemanticSummary
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
@@ -102,7 +104,8 @@ internal fun SleepScheduleStageChart(
         Modifier
     }
 
-    OpenVitalsCard(modifier = modifier) {
+    // The bars are a picture; this is what a screen reader gets instead.
+    OpenVitalsCard(modifier = modifier.chartSemantics(chartSemanticSummary(title, summaryText))) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = title,

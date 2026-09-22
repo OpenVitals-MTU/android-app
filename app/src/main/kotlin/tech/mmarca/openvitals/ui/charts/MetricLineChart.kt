@@ -106,6 +106,8 @@ fun MetricLinePlot(
     viewport: ChartViewport = ChartViewport.Full,
     multiTouch: Boolean = false,
     scrubLabel: ((MetricLinePlotPoint) -> Pair<String, String?>)? = null,
+    /** Spoken before the shape of the series: the metric's name. Null speaks the shape alone. */
+    title: String? = null,
 ) {
     // A flat series would divide by zero when normalizing.
     val span = maxValue - minValue
@@ -116,6 +118,10 @@ fun MetricLinePlot(
     // builds the path once.
     val cache = remember { PlotGeometryCache() }
     val fill = remember(accentColor) { ChartTokens.areaFill(accentColor) }
+
+    // The Canvas publishes nothing to a screen reader; this one line does.
+    val spokenValues = remember(points) { points.filterNot { it.synthetic }.map { it.value } }
+    val spoken = plotSemanticSummary(title = title, values = spokenValues, valueFormatter = valueFormatter)
 
     // Snapping targets: the samples on show, in plot space. Remembered, so only a change
     // of the data or the viewport rebuilds them, and their labels wait until a scrub asks.
@@ -144,7 +150,7 @@ fun MetricLinePlot(
             valueFormatter = valueFormatter,
         ),
         chartHeight = chartHeight,
-        modifier = modifier,
+        modifier = if (spoken != null) modifier.chartSemantics(spoken) else modifier,
     ) {
         ChartScrubber(
             targets = targets,
@@ -201,6 +207,8 @@ fun <T> DayTimelineLinePlot(
     pointRadius: Dp = 3.5.dp,
     drawPoints: Boolean = true,
     zoomKey: Any? = null,
+    /** Spoken before the shape of the series: the metric's name. */
+    title: String? = null,
 ) {
     val aggregationMode = LocalChartAggregationMode.current
     val bucketMinutes = aggregationMode.bucketMinutes
@@ -250,6 +258,7 @@ fun <T> DayTimelineLinePlot(
                 band = band,
                 viewport = zoom.viewport,
                 multiTouch = zoom.multiTouch,
+                title = title,
                 scrubLabel = { point ->
                     val at = dayStart.plusMillis(
                         (point.xFraction.coerceIn(0f, 1f) * dayMillis).toLong(),
@@ -393,6 +402,11 @@ fun MetricLineChart(
     }
     val gridColor = ChartTokens.grid(accentColor)
     val axisColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
+    // What each bucket says when spoken: the headline series, one mean per label date.
+    val bucketValues = remember(visibleSeries, labelDates, selectedRange) {
+        lineChartBucketValues(visibleSeries.first().points, labelDates, selectedRange)
+    }
+    val daySelection = onDateSelected?.takeIf { selectedRange.supportsChartDaySelection() && axisDates.isNotEmpty() }
 
     // The Canvas publishes nothing to a screen reader; this one line does.
     val semanticSummary = chartSemanticSummary(title = title, summaryText = summaryText)
@@ -429,39 +443,53 @@ fun MetricLineChart(
                 }
 
                 Column {
-                    YAxisChart(
+                    YAxisChartSlot(
                         labels = chartYAxisLabels(
                             minValue = axisMin,
                             maxValue = axisMax,
                             valueFormatter = valueFormatter,
                         ),
                         chartHeight = chartHeight,
-                        canvasModifier = chartTapModifier,
                     ) {
-                        drawYAxisGuides(
-                            gridColor = gridColor,
-                            axisColor = axisColor,
-                            strokeWidth = 1.dp.toPx(),
-                        )
-                        drawLineSelectedDateHighlight(
-                            selectedRange = selectedRange,
-                            selectedDate = selectedDate,
-                            period = period,
-                            axisDates = axisDates,
-                            color = accentColor.copy(alpha = 0.16f),
-                            viewport = viewport,
-                        )
-                        // Zoomed, the line runs past the plot edges: clip, never clamp.
-                        val drawSeries: DrawScope.() -> Unit = {
-                            visibleSeries.forEachIndexed { index, lineSeries ->
-                                drawMetricLineSeries(
-                                    fractions = seriesFractions[index],
-                                    color = lineSeries.color,
+                        Box {
+                            Canvas(modifier = Modifier.fillMaxSize().then(chartTapModifier)) {
+                                drawYAxisGuides(
+                                    gridColor = gridColor,
+                                    axisColor = axisColor,
+                                    strokeWidth = 1.dp.toPx(),
+                                )
+                                drawLineSelectedDateHighlight(
+                                    selectedRange = selectedRange,
+                                    selectedDate = selectedDate,
+                                    period = period,
+                                    axisDates = axisDates,
+                                    color = accentColor.copy(alpha = 0.16f),
                                     viewport = viewport,
                                 )
+                                // Zoomed, the line runs past the plot edges: clip, never clamp.
+                                val drawSeries: DrawScope.() -> Unit = {
+                                    visibleSeries.forEachIndexed { index, lineSeries ->
+                                        drawMetricLineSeries(
+                                            fractions = seriesFractions[index],
+                                            color = lineSeries.color,
+                                            viewport = viewport,
+                                        )
+                                    }
+                                }
+                                if (viewport.isZoomed) clipRect { drawSeries() } else drawSeries()
                             }
+                            // One node per bucket, so a screen reader can walk the days and select one.
+                            PeriodBucketNodes(
+                                dates = labelDates,
+                                values = bucketValues,
+                                selectedRange = selectedRange,
+                                selectedDate = selectedDate,
+                                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                                valueFormatter = valueFormatter,
+                                onDateSelected = daySelection,
+                                modifier = Modifier.matchParentSize(),
+                            )
                         }
-                        if (viewport.isZoomed) clipRect { drawSeries() } else drawSeries()
                     }
                     Spacer(Modifier.height(8.dp))
                     if (selectedRange == TimeRange.DAY) {

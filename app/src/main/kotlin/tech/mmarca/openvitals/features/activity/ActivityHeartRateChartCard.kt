@@ -119,6 +119,7 @@ internal fun ActivityHeartRateChartCard(
                         drawPoints = sorted.size <= 120,
                         viewport = zoom.viewport,
                         multiTouch = zoom.multiTouch,
+                        title = stringResource(R.string.activity_recording_live_heart_rate),
                         // Moving elapsed, matching the labels under it.
                         scrubLabel = { point ->
                             unitFormatter.heartRate(point.value.roundToLong()).text to

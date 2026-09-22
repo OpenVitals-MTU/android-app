@@ -773,6 +773,7 @@ private fun CaffeineLineChart(
                 markers = markers,
                 viewport = zoom.viewport,
                 multiTouch = zoom.multiTouch,
+                title = stringResource(R.string.metric_caffeine),
                 scrubLabel = { point ->
                     val at = start.plusMillis((point.xFraction.coerceIn(0f, 1f) * spanMillis).toLong())
                     formatMg(point.value, unitFormatter) to

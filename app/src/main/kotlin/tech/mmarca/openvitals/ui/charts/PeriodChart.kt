@@ -282,26 +282,39 @@ fun PeriodBarChart(
                 }
 
                 Column {
-                    ChartReveal { progress ->
-                        Canvas(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(chartHeight)
-                                .then(chartTapModifier),
-                        ) {
-                            drawPeriodBars(
-                                buckets = buckets,
-                                maxValue = maxValue,
-                                accentColor = accentColor,
-                                selectedDate = selectedDate,
-                                selectedRange = selectedRange,
-                                viewport = viewport,
-                                progress = progress,
-                                textMeasurer = textMeasurer,
-                                barLabelStyle = barLabelStyle,
-                                valueFormatter = valueFormatter,
-                            )
+                    Box {
+                        ChartReveal { progress ->
+                            Canvas(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(chartHeight)
+                                    .then(chartTapModifier),
+                            ) {
+                                drawPeriodBars(
+                                    buckets = buckets,
+                                    maxValue = maxValue,
+                                    accentColor = accentColor,
+                                    selectedDate = selectedDate,
+                                    selectedRange = selectedRange,
+                                    viewport = viewport,
+                                    progress = progress,
+                                    textMeasurer = textMeasurer,
+                                    barLabelStyle = barLabelStyle,
+                                    valueFormatter = valueFormatter,
+                                )
+                            }
                         }
+                        // One node per bar, so a screen reader can walk the days and select one.
+                        PeriodBucketNodes(
+                            dates = buckets.map { it.date },
+                            values = buckets.map { bucket -> bucket.value.takeIf { it > 0.0 } },
+                            selectedRange = selectedRange,
+                            selectedDate = selectedDate,
+                            dateTimeFormatterProvider = dateTimeFormatterProvider,
+                            valueFormatter = valueFormatter,
+                            onDateSelected = onDateSelected.takeIf { canSelect },
+                            modifier = Modifier.matchParentSize(),
+                        )
                     }
                     Spacer(Modifier.height(8.dp))
                     PeriodChartXAxis(

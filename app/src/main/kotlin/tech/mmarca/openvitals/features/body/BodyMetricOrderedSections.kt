@@ -194,6 +194,7 @@ private fun BodyIntradayMetricChartCard(
                     time = { it.time },
                     value = { it.value },
                     lineStrokeWidth = 3.dp,
+                    title = stringResource(metricData.titleRes),
                     zoomKey = selectedDate,
                 )
                 Spacer(Modifier.height(12.dp))

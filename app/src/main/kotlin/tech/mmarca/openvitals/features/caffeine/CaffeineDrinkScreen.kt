@@ -238,6 +238,7 @@ private fun CaffeineDrinkCurveCard(
                         drawPoints = false,
                         viewport = zoom.viewport,
                         multiTouch = zoom.multiTouch,
+                        title = stringResource(R.string.caffeine_drink_curve_title),
                         scrubLabel = { point ->
                             val at = start.plusMillis(
                                 (point.xFraction.coerceIn(0f, 1f) * spanMillis).roundToLong(),

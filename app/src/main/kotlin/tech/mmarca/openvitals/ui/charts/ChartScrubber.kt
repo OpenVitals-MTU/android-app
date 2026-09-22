@@ -1,5 +1,12 @@
 package tech.mmarca.openvitals.ui.components
 
+import tech.mmarca.openvitals.R
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
@@ -121,6 +128,19 @@ fun ChartScrubber(
         currentOnScrub?.invoke(null)
     }
 
+    // A drag is touch-only. A screen reader steps through the samples instead.
+    fun step(delta: Int): Boolean {
+        val targetList = currentTargets
+        if (targetList.isEmpty()) return false
+        val next = ((index ?: -1) + delta).coerceIn(0, targetList.lastIndex)
+        if (next == index) return false
+        index = next
+        currentOnScrub?.invoke(next)
+        return true
+    }
+    val nextLabel = stringResource(R.string.chart_next_point)
+    val previousLabel = stringResource(R.string.chart_previous_point)
+
     // The list is the caller's and can shrink under a zoom, so a stale index
     // or a pinch-interrupted scrub is dropped.
     LaunchedEffect(targets.size, multiTouch) {
@@ -133,7 +153,14 @@ fun ChartScrubber(
     val active = index?.takeIf { !multiTouch && it < targets.size }
 
     Box(
-        modifier = modifier.pointerInput(Unit) {
+        modifier = modifier
+            .semantics {
+                customActions = listOf(
+                    CustomAccessibilityAction(nextLabel) { step(1) },
+                    CustomAccessibilityAction(previousLabel) { step(-1) },
+                )
+            }
+            .pointerInput(Unit) {
             // Horizontal only, or the page would freeze.
             detectHorizontalDragGestures(
                 onDragStart = { offset -> land(offset.x, size.width) },
@@ -200,7 +227,9 @@ private fun BoxScope.ScrubTooltip(target: ScrubTarget) {
                 .offset { IntOffset(left.roundToInt(), 0) }
                 .width(TooltipWidth)
                 .background(tooltipSurface, RoundedCornerShape(8.dp))
-                .padding(horizontal = 10.dp, vertical = 6.dp),
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+                // Stepped to by a screen reader, the new value is read out.
+                .semantics { liveRegion = LiveRegionMode.Polite },
         ) {
             Text(
                 text = target.primary,

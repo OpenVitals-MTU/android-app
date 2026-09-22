@@ -101,6 +101,7 @@ internal fun IntradayActivityChartCard(
                             drawPoints = false,
                             viewport = zoom.viewport,
                             multiTouch = zoom.multiTouch,
+                            title = title,
                             // Drag to read the total and the hour it stood at.
                             scrubLabel = { point ->
                                 val at = dayStart.plusMillis(

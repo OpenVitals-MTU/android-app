@@ -58,6 +58,7 @@ internal fun BasalTemperatureTrendCard(
                     chartHeight = chartHeight,
                     valueFormatter = { unitFormatter.temperature(it).text },
                     pointRadius = 4.dp,
+                    title = stringResource(R.string.cycle_observation_basal_body_temperature),
                 )
                 Spacer(Modifier.height(8.dp))
             }

@@ -428,13 +428,6 @@ internal fun SleepStageEventRow(
     }
 }
 
-private fun stageTotals(stages: List<SleepStage>): List<Pair<Int, Long>> =
-    stages
-        .groupBy { it.stageType }
-        .mapValues { (_, stageList) -> stageList.sumOf { it.durationMs } }
-        .toList()
-        .sortedByDescending { it.second }
-
 private fun formatDateTime(
     value: ZonedDateTime,
     dateTimeFormatterProvider: DateTimeFormatterProvider,

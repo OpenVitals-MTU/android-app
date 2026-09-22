@@ -1,5 +1,10 @@
 package tech.mmarca.openvitals.ui.components
 
+import tech.mmarca.openvitals.R
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
@@ -52,8 +57,24 @@ fun ChartZoom(
     var viewport by remember(*keys) { mutableStateOf(ChartViewport.Full) }
     var multiTouch by remember { mutableStateOf(false) }
 
+    // A pinch is touch-only. These give a screen reader the same three moves.
+    val zoomInLabel = stringResource(R.string.chart_zoom_in)
+    val zoomOutLabel = stringResource(R.string.chart_zoom_out)
+    val resetLabel = stringResource(R.string.chart_zoom_reset)
+    val zoomActions = Modifier.semantics {
+        customActions = buildList {
+            if (viewport.span > ChartViewport.MinimumSpan) {
+                add(CustomAccessibilityAction(zoomInLabel) { viewport = viewport.zoomed(2f, 0.5f); true })
+            }
+            if (viewport.isZoomed) {
+                add(CustomAccessibilityAction(zoomOutLabel) { viewport = viewport.zoomed(0.5f, 0.5f); true })
+                add(CustomAccessibilityAction(resetLabel) { viewport = ChartViewport.Full; true })
+            }
+        }
+    }
+
     Box(
-        modifier = modifier.pointerInput(*keys) {
+        modifier = modifier.then(zoomActions).pointerInput(*keys) {
             val tapSlopPx = TapSlop.toPx()
             // The last single-finger lift, for spotting a double tap.
             var lastTapAtMillis = 0L

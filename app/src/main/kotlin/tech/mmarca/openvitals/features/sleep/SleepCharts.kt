@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.sleep
 
+import tech.mmarca.openvitals.ui.components.plotSemanticSummary
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -104,6 +105,7 @@ internal fun SleepOverviewSectionContent(
             dates = summary.dates,
             selectedRange = selectedRange,
             modifier = metricModifier(),
+            chartValueFormatter = { unitFormatter.duration(it.toLong()) },
         )
         SleepOverviewMetricCard(
             title = stringResource(R.string.recovery_deep_sleep),
@@ -114,6 +116,7 @@ internal fun SleepOverviewSectionContent(
             dates = summary.dates,
             selectedRange = selectedRange,
             modifier = metricModifier(),
+            chartValueFormatter = { unitFormatter.duration(it.toLong()) },
         )
         SleepOverviewMetricCard(
             title = stringResource(R.string.recovery_sleep_efficiency),
@@ -124,6 +127,7 @@ internal fun SleepOverviewSectionContent(
             dates = summary.dates,
             selectedRange = selectedRange,
             modifier = metricModifier(),
+            chartValueFormatter = { unitFormatter.percent(it, 0).text },
             onClick = onOpenSleepEfficiency,
         )
     }
@@ -258,14 +262,18 @@ private fun SleepOverviewMetricCard(
     dates: List<LocalDate>,
     selectedRange: TimeRange,
     modifier: Modifier = Modifier,
+    /** Speaks one chart value; the spoken summary uses it. */
+    chartValueFormatter: (Double) -> String = { it.toString() },
     onClick: (() -> Unit)? = null,
     valueEmphasis: SleepOverviewValueEmphasis = SleepOverviewValueEmphasis.Large,
     chartContent: (@Composable () -> Unit)? = {
         SleepOverviewSparkline(
+            title = title,
             values = chartValues,
             dates = dates,
             selectedRange = selectedRange,
             accentColor = SleepColor,
+            valueFormatter = chartValueFormatter,
         )
     },
 ) {
@@ -316,10 +324,12 @@ private fun SleepOverviewMetricCard(
 
 @Composable
 private fun SleepOverviewSparkline(
+    title: String,
     values: List<Double>,
     dates: List<LocalDate>,
     selectedRange: TimeRange,
     accentColor: Color,
+    valueFormatter: (Double) -> String,
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val labelDates = sleepOverviewLabelDates(dates, selectedRange)
@@ -331,6 +341,7 @@ private fun SleepOverviewSparkline(
             modifier = Modifier
                 .width(SleepOverviewChartWidth)
                 .height(SleepOverviewChartHeight),
+            contentDescription = plotSemanticSummary(title, values, valueFormatter),
         )
         Spacer(Modifier.height(6.dp))
         Row(

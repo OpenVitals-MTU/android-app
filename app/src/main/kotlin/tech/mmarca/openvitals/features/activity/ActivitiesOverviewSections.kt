@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
+import tech.mmarca.openvitals.ui.components.plotSemanticSummary
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
@@ -586,6 +587,8 @@ internal fun ActivityMetricCard(
     chartDays: List<LocalDate>,
     selectedRange: TimeRange,
     modifier: Modifier = Modifier,
+    /** Speaks one chart value; the spoken summary uses it. */
+    chartValueFormatter: (Double) -> String = { it.toString() },
     subtitleColor: Color? = null,
     onClick: (() -> Unit)? = null,
 ) {
@@ -654,6 +657,7 @@ internal fun ActivityMetricCard(
                 dates = chartDays,
                 selectedRange = selectedRange,
                 accentColor = accentColor,
+                contentDescription = plotSemanticSummary(title, chartValues, chartValueFormatter),
             )
         }
     }
@@ -665,6 +669,7 @@ internal fun ActivityMetricSparkline(
     dates: List<LocalDate>,
     selectedRange: TimeRange,
     accentColor: Color,
+    contentDescription: String? = null,
 ) {
     val locale = LocalConfiguration.current.locales[0]
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -685,6 +690,7 @@ internal fun ActivityMetricSparkline(
             pointStrokeWidth = 2.dp,
             pointFillRadius = 2.5.dp,
             singlePointLine = true,
+            contentDescription = contentDescription,
         )
         Spacer(Modifier.height(6.dp))
         Row(

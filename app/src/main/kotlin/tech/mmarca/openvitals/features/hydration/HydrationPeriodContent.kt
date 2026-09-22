@@ -340,6 +340,7 @@ private fun HydrationIntradayChartCard(
                             lineStrokeWidth = 3.dp,
                             viewport = zoom.viewport,
                             multiTouch = zoom.multiTouch,
+                            title = stringResource(R.string.metric_hydration),
                             // Drag to read the total and the hour it stood at.
                             scrubLabel = { point ->
                                 val at = dayStart.plusMillis(

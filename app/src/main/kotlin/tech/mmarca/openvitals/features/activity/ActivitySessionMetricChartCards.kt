@@ -270,6 +270,7 @@ private fun ActivitySessionMetricChartCard(
                         drawPoints = drawPoints,
                         viewport = zoom.viewport,
                         multiTouch = zoom.multiTouch,
+                        title = title,
                         // Moving elapsed, matching the labels under it.
                         scrubLabel = { point ->
                             valueFormatter(point.value) to

@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -309,6 +310,7 @@ private fun ActivityKeyMetricsSectionContent(
             chartValues = cardioSeries.values,
             chartDays = cardioSeries.dates,
             selectedRange = selectedRange,
+            chartValueFormatter = { unitFormatter.count(it.roundToInt()) },
             modifier = metricCardModifier(),
             onClick = onOpenCardioLoad,
         )
@@ -344,6 +346,7 @@ private fun ActivityKeyMetricsSectionContent(
             chartValues = caloriesSeries.values,
             chartDays = caloriesSeries.dates,
             selectedRange = selectedRange,
+            chartValueFormatter = { unitFormatter.energy(it).text },
             modifier = metricCardModifier(),
             onClick = onOpenEnergyBurned,
         )
@@ -361,6 +364,7 @@ private fun ActivityKeyMetricsSectionContent(
             chartValues = stepsSeries.values,
             chartDays = stepsSeries.dates,
             selectedRange = selectedRange,
+            chartValueFormatter = { unitFormatter.count(it.roundToInt()) },
             modifier = metricCardModifier(),
             onClick = onOpenSteps,
         )
@@ -378,6 +382,7 @@ private fun ActivityKeyMetricsSectionContent(
             chartValues = distanceSeries.values,
             chartDays = distanceSeries.dates,
             selectedRange = selectedRange,
+            chartValueFormatter = { unitFormatter.distance(it).text },
             modifier = metricCardModifier(),
             onClick = onOpenDistance,
         )
@@ -397,6 +402,7 @@ private fun ActivityKeyMetricsSectionContent(
             chartValues = hrvSeries.values,
             chartDays = hrvSeries.dates,
             selectedRange = selectedRange,
+            chartValueFormatter = { unitFormatter.hrv(it).text },
             modifier = metricCardModifier(),
             onClick = onOpenHrv,
         )

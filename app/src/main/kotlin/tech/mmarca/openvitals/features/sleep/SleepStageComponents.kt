@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.sleep
 
+import tech.mmarca.openvitals.ui.components.chartSemantics
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -133,6 +134,10 @@ internal fun SleepStagesLaneChart(
     val totalMs = Duration.between(chartStart, chartEnd).toMillis().takeIf { it > 0L } ?: return
     val zone = ZoneId.systemDefault()
     val midpoint = chartStart.plusMillis(totalMs / 2L)
+    // The lanes are a picture; the totals per stage are what a screen reader gets.
+    val spokenStages = stageTotals(orderedStages)
+        .map { (type, ms) -> "${sleepStageLabel(type)} ${unitFormatter.duration(ms)}" }
+        .joinToString(separator = ", ")
     val trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
     val labelStyle = MaterialTheme.typography.titleSmall
 
@@ -179,7 +184,7 @@ internal fun SleepStagesLaneChart(
         }
     }
 
-    Column(modifier = modifier) {
+    Column(modifier = modifier.chartSemantics(spokenStages)) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -638,3 +643,11 @@ private fun laneDurationMs(stages: List<SleepStage>, lane: SleepStageLane): Long
 
 /** The fixed part of a lane: the track and its air, under the label band. */
 private val SleepLaneTrackBandHeight = ChartTokens.heightSleepLane - ChartTokens.sleepLaneLabelHeight
+
+/** Total time per stage type, longest first. */
+internal fun stageTotals(stages: List<SleepStage>): List<Pair<Int, Long>> =
+    stages
+        .groupBy { it.stageType }
+        .mapValues { (_, stageList) -> stageList.sumOf { it.durationMs } }
+        .toList()
+        .sortedByDescending { it.second }

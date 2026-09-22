@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.testing
 
+import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
 import androidx.test.platform.app.InstrumentationRegistry
 
@@ -9,3 +10,7 @@ fun string(@StringRes id: Int): String =
 
 fun string(@StringRes id: Int, vararg formatArgs: Any): String =
     InstrumentationRegistry.getInstrumentation().targetContext.getString(id, *formatArgs)
+
+/** A plural resolved as the app resolves it, for [quantity]. */
+fun plural(@PluralsRes id: Int, quantity: Int, vararg formatArgs: Any): String =
+    InstrumentationRegistry.getInstrumentation().targetContext.resources.getQuantityString(id, quantity, *formatArgs)

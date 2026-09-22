@@ -91,6 +91,17 @@
     <string name="not_available">Not available</string>
     <string name="not_recorded">Not recorded</string>
     <string name="no_data">No data</string>
+    <!-- Charts: what a screen reader gets instead of the picture. -->
+    <plurals name="chart_plot_summary">
+        <item quantity="one">%1$d point, lowest %2$s, highest %3$s, latest %4$s</item>
+        <item quantity="other">%1$d points, lowest %2$s, highest %3$s, latest %4$s</item>
+    </plurals>
+    <string name="chart_zoom_in">Zoom in</string>
+    <string name="chart_zoom_out">Zoom out</string>
+    <string name="chart_zoom_reset">Show the whole range</string>
+    <string name="chart_next_point">Next point</string>
+    <string name="chart_previous_point">Previous point</string>
+    <string name="chart_body_energy_influences">Charged %1$d, drained %2$d</string>
     <string name="loading">Loading...</string>
 
     <string name="home_metric_widget_description">OpenVitals metric</string>
