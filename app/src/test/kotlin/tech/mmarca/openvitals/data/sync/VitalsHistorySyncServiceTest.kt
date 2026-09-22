@@ -20,6 +20,7 @@ import io.mockk.unmockkStatic
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -232,9 +233,13 @@ class VitalsHistorySyncServiceTest {
         val screen = launch { service.syncAll() }
         reading.await()
         screen.cancelAndJoin()
-        release.complete(Unit)
         // Coming back joins the run that is still going. It does not start another.
-        service.syncAll()
+        // Join before the run is released: the run finishes on IO, and a finished run
+        // is not one to join.
+        val back = launch { service.syncAll() }
+        runCurrent()
+        release.complete(Unit)
+        back.join()
 
         coVerify(exactly = 1) { dao.replaceMetric(VitalsCacheKeys.SPO2, any()) }
         coVerify(exactly = 1) { hc.getChangesToken(OxygenSaturationRecord::class) }
