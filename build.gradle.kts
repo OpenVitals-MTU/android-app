@@ -66,11 +66,13 @@ tasks.register<Exec>("verifyTranslations") {
 
 tasks.register("verifyCiPreflight") {
     group = "verification"
-    description = "Runs phone app build, lint, and android-test compile checks for CI."
+    description = "Runs phone app lint, duplicate-class and android-test compile checks for CI."
     dependsOn(
         "verifyTranslations",
         ":app:lintCi",
-        ":app:assembleCi",
+        // Not assembleCi: nothing used that APK, and dexing it was a minute and a half.
+        // The release pipeline builds and packages the real one after this gate.
+        ":app:checkCiDuplicateClasses",
         ":app:compileCiAndroidTestKotlin",
     )
 }
@@ -99,8 +101,3 @@ tasks.register("verifyWearCi") {
     )
 }
 
-project(":app").tasks.configureEach {
-    if (name == "lintCi") {
-        mustRunAfter("assembleCi")
-    }
-}

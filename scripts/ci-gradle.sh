@@ -141,4 +141,11 @@ fi
 
 # fd 9 stays open across exec, so the flock is held for Gradle's lifetime and
 # released by the kernel when the process exits, however it exits.
-exec ./gradlew --no-daemon "$@"
+#
+# The runner has 32 GB. The build JVM gets 8 GB (lint runs inside it) and the
+# Kotlin compiler 6 GB; test forks take 1 GB each, at most four. About 18 GB.
+# Developer machines keep the smaller sizes in gradle.properties. Through
+# GRADLE_OPTS, not -D: the single-use daemon splits a -D value at its spaces.
+GRADLE_OPTS="${GRADLE_OPTS:-} -Dorg.gradle.jvmargs=\"-Xmx8g -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8\""
+export GRADLE_OPTS
+exec ./gradlew --no-daemon -Pkotlin.daemon.jvmargs=-Xmx6g "$@"

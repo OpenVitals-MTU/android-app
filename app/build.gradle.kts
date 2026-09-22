@@ -195,6 +195,8 @@ android {
     }
 
     lint {
+        // Tests do not ship. Analysing them cost as much as the app itself.
+        ignoreTestSources = true
         disable += setOf(
             "LogNotTimber",
             // Partial Weblate languages are allowed once scripts/verify-translations.py
@@ -329,6 +331,10 @@ dependencies {
 
 tasks.withType<Test>().configureEach {
     jvmArgs("-XX:+EnableDynamicAgentLoading")
+    // Test classes spread over a few JVMs. Half the cores, at most four: each fork
+    // is about a gigabyte, and lint and the Kotlin compiler run at the same time.
+    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
+    maxHeapSize = "1g"
     localAppleHealthExportPath.orNull?.let { path ->
         systemProperty("appleHealthExport", path)
     }
