@@ -460,6 +460,43 @@ class HealthConnectAggregateReadTest {
         assertThat(day.maxBpm).isEqualTo(140L)
     }
 
+    /** The Today tile must match the detail screen, even inside a workout hour. */
+    @Test
+    fun `readAvgHeartRate weights each minute once, even inside a 1 Hz workout hour`() = runTest(testDispatcher) {
+        val zone = ZoneId.systemDefault()
+        val dayStart = date.atStartOfDay(zone).toInstant()
+        val workoutMinutes = 8L * 60 until 8L * 60 + 23
+        // One sample a minute at 60 bpm from 00:00 to 10:00, except during the workout.
+        val background = HeartRateRecord(
+            startTime = dayStart,
+            startZoneOffset = null,
+            endTime = dayStart.plusSeconds(10L * 3_600),
+            endZoneOffset = null,
+            samples = (0L until 10L * 60).filter { it !in workoutMinutes }.map { minute ->
+                HeartRateRecord.Sample(time = dayStart.plusSeconds(minute * 60), beatsPerMinute = 60L)
+            },
+            metadata = Metadata.autoRecorded(watch),
+        )
+        // 23 minutes at 1 Hz and 130 bpm from 08:00: 1,380 samples in one hour.
+        val workoutStart = dayStart.plusSeconds(workoutMinutes.first * 60)
+        val workout = HeartRateRecord(
+            startTime = workoutStart,
+            startZoneOffset = null,
+            endTime = workoutStart.plusSeconds(23L * 60),
+            endZoneOffset = null,
+            samples = (0L until 23L * 60).map { second ->
+                HeartRateRecord.Sample(time = workoutStart.plusSeconds(second), beatsPerMinute = 130L)
+            },
+            metadata = Metadata.autoRecorded(watch),
+        )
+        val client = seeded(background, workout)
+
+        val avg = HeartHealthReader(support(client), APP_PACKAGE).readAvgHeartRate(date)
+
+        // (577 × 60 + 23 × 130) / 600 ≈ 63. Hour buckets said 67, the day aggregate 109.
+        assertThat(avg).isEqualTo(63L)
+    }
+
     @Test
     fun `readDailyHRV buckets a burst of readings so it does not outvote the spot checks`() = runTest(testDispatcher) {
         val zone = ZoneId.systemDefault()

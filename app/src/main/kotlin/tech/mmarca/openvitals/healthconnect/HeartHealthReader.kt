@@ -23,6 +23,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.math.roundToLong
 
 internal class HeartHealthReader(
     private val support: HealthConnectReaderSupport,
@@ -34,11 +35,18 @@ internal class HeartHealthReader(
     }
 
     /**
-     * Hour-bucketed, not the whole-day BPM_AVG: that is sample-weighted, so a
-     * 1 Hz workout series printed a 79 bpm day as 115.
+     * Minute-bucketed mean of the day's raw samples, as on the detail screen.
+     * Hour aggregates are not enough: each hour's BPM_AVG is sample-weighted,
+     * so a 1 Hz workout still printed a 65 bpm day as 71.
      */
-    suspend fun readAvgHeartRate(date: LocalDate): Long? =
-        readDailyHeartRateSummaries(date, date).firstOrNull { it.date == date }?.avgBpm
+    suspend fun readAvgHeartRate(date: LocalDate): Long? {
+        val zone = ZoneId.systemDefault()
+        val start = date.atStartOfDay(zone).toInstant()
+        val end = date.plusDays(1).atStartOfDay(zone).toInstant()
+        return readRawHeartRateSamples(start, end)
+            .timeBucketedAverageOrNull(time = { it.time }, value = { it.beatsPerMinute.toDouble() })
+            ?.roundToLong()
+    }
 
     suspend fun readAvgHeartRateToday(): Long? = readAvgHeartRate(LocalDate.now())
 
