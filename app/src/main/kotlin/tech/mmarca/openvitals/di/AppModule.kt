@@ -17,6 +17,7 @@ import tech.mmarca.openvitals.data.local.beverage.BeverageDao
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyTimelineDao
 import tech.mmarca.openvitals.data.local.garmin.GarminSleepMinuteDao
 import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
+import tech.mmarca.openvitals.data.local.heartratecache.HeartRateDayCacheDao
 import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginDao
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -68,6 +69,11 @@ object AppModule {
     @Singleton
     fun provideSyncedRecordOriginDao(database: OpenVitalsDatabase): SyncedRecordOriginDao =
         database.syncedRecordOriginDao()
+
+    @Provides
+    @Singleton
+    fun provideHeartRateDayCacheDao(database: OpenVitalsDatabase): HeartRateDayCacheDao =
+        database.heartRateDayCacheDao()
 
     @Provides
     @Singleton

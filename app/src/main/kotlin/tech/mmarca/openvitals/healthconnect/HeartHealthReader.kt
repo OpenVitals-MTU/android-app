@@ -10,6 +10,7 @@ import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateChartBucketDuration
+import tech.mmarca.openvitals.domain.model.HeartRateDayAggregate
 import tech.mmarca.openvitals.domain.model.HeartRateInsightBucketDuration
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
@@ -192,10 +193,15 @@ internal class HeartHealthReader(
         return if (even > MinAggregateBucket) even else MinAggregateBucket
     }
 
-    suspend fun readDailyHeartRateSummaries(
+    /**
+     * Each local day from hour buckets, folded duration-weighted. Cheap over
+     * long ranges, but each hour is still sample-weighted: see
+     * [readDailyHeartRateAverages] for the day view's number.
+     */
+    suspend fun readDailyHeartRateAggregates(
         startDate: LocalDate,
         endDate: LocalDate,
-    ): List<HeartRateSummary> {
+    ): List<HeartRateDayAggregate> {
         val zone = ZoneId.systemDefault()
         // Hour buckets folded per day: a whole-day BPM_AVG is sample-weighted.
         // Chunked smaller because each request returns 24x the buckets.
@@ -206,26 +212,75 @@ internal class HeartHealthReader(
         ).flatMap { (chunkStart, chunkEnd) ->
             val start = chunkStart.atStartOfDay(zone).toInstant()
             val end = chunkEnd.plusDays(1).atStartOfDay(zone).toInstant()
-            support.withLogging("readDailyHeartRateSummaries[$start..$end]", emptyList()) {
+            support.withLogging("readDailyHeartRateAggregates[$start..$end]", emptyList()) {
                 support.client().aggregateGroupByDuration(
                     AggregateGroupByDurationRequest(
                         metrics = setOf(
                             HeartRateRecord.BPM_AVG,
                             HeartRateRecord.BPM_MIN,
                             HeartRateRecord.BPM_MAX,
+                            HeartRateRecord.MEASUREMENTS_COUNT,
                         ),
                         timeRangeFilter = TimeRangeFilter.between(start, end),
                         timeRangeSlicer = Duration.ofHours(1),
                     )
                 ).byLocalDate(zone).mapNotNull { day ->
                     val avg = day.weightedAverage { it[HeartRateRecord.BPM_AVG] } ?: return@mapNotNull null
-                    HeartRateSummary(
-                        date = day.date,
-                        avgBpm = avg,
-                        minBpm = day.lowest { it[HeartRateRecord.BPM_MIN] } ?: avg,
-                        maxBpm = day.highest { it[HeartRateRecord.BPM_MAX] } ?: avg,
+                    HeartRateDayAggregate(
+                        summary = HeartRateSummary(
+                            date = day.date,
+                            avgBpm = avg,
+                            minBpm = day.lowest { it[HeartRateRecord.BPM_MIN] } ?: avg,
+                            maxBpm = day.highest { it[HeartRateRecord.BPM_MAX] } ?: avg,
+                        ),
+                        sampleCount = day.totalLong { it[HeartRateRecord.MEASUREMENTS_COUNT] },
+                        signature = day.hourlySignature(),
                     )
                 }
+            }
+        }
+    }
+
+    /** Every hour's bounds, count, average, low and high, hashed to 64 bits. */
+    private fun DayBuckets.hourlySignature(): String {
+        var hash = 17L
+        for (bucket in buckets.sortedBy { it.startTime }) {
+            val result = bucket.result
+            val parts = longArrayOf(
+                bucket.startTime.toEpochMilli(),
+                bucket.endTime.toEpochMilli(),
+                result[HeartRateRecord.MEASUREMENTS_COUNT] ?: -1L,
+                result[HeartRateRecord.BPM_AVG] ?: -1L,
+                result[HeartRateRecord.BPM_MIN] ?: -1L,
+                result[HeartRateRecord.BPM_MAX] ?: -1L,
+            )
+            for (part in parts) hash = 31 * hash + part
+        }
+        return java.lang.Long.toHexString(hash)
+    }
+
+    /**
+     * Each local day's minute-bucketed mean of raw samples: the day view's
+     * number. One read covers the whole range and holds every sample, so the
+     * caller keeps the range small. A day without samples is absent. A failed
+     * read is an empty map, never a zero.
+     */
+    suspend fun readDailyHeartRateAverages(
+        startDate: LocalDate,
+        endDate: LocalDate,
+    ): Map<LocalDate, Double> {
+        val zone = ZoneId.systemDefault()
+        val start = startDate.atStartOfDay(zone).toInstant()
+        val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
+        val samples = support.withLogging("readDailyHeartRateAverages[$start..$end]", emptyList()) {
+            support.client().readSeriesSamples(HeartRateRecord::class, start, end) { record ->
+                record.samples.map { TimedSample(it.time, it) }
+            }
+        }
+        return buildMap {
+            samples.groupBy { it.time.atZone(zone).toLocalDate() }.forEach { (date, day) ->
+                day.timeBucketedAverageOrNull(time = { it.time }, value = { it.beatsPerMinute.toDouble() })
+                    ?.let { put(date, it) }
             }
         }
     }

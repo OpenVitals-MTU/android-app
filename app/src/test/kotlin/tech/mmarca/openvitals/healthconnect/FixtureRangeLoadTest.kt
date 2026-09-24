@@ -75,7 +75,10 @@ class FixtureRangeLoadTest {
             r.heart.readHeartRateSamples(s, e).map { it.time }
         },
         RangedRead("heart daily summaries", corpusCovered = true) { r, s, e ->
-            r.heart.readDailyHeartRateSummaries(s.date(), e.lastDate()).map { it.date.midday() }
+            r.heart.readDailyHeartRateAggregates(s.date(), e.lastDate()).map { it.summary.date.midday() }
+        },
+        RangedRead("heart daily raw averages", corpusCovered = true) { r, s, e ->
+            r.heart.readDailyHeartRateAverages(s.date(), e.lastDate()).keys.map { it.midday() }
         },
         RangedRead("resting heart rate samples", corpusCovered = true) { r, s, e ->
             r.heart.readRestingHeartRateSamples(s, e).map { it.time }

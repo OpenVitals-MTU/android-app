@@ -38,8 +38,8 @@ import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.HeartRateDayAggregate
 import tech.mmarca.openvitals.domain.model.HeartRateSample
-import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.HeightEntry
 import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.HydrationEntry
@@ -466,11 +466,17 @@ class HealthConnectManager @Inject constructor(
     suspend fun readMaxHeartRate(start: Instant, end: Instant): Long? =
         heartReader.readMaxHeartRate(start, end)
 
-    suspend fun readDailyHeartRateSummaries(
+    suspend fun readDailyHeartRateAggregates(
         startDate: LocalDate,
         endDate: LocalDate,
-    ): List<HeartRateSummary> =
-        heartReader.readDailyHeartRateSummaries(startDate, endDate)
+    ): List<HeartRateDayAggregate> =
+        heartReader.readDailyHeartRateAggregates(startDate, endDate)
+
+    suspend fun readDailyHeartRateAverages(
+        startDate: LocalDate,
+        endDate: LocalDate,
+    ): Map<LocalDate, Double> =
+        heartReader.readDailyHeartRateAverages(startDate, endDate)
 
     suspend fun readRestingHeartRate(date: LocalDate): Long? =
         heartReader.readRestingHeartRate(date)

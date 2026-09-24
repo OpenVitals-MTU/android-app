@@ -30,6 +30,17 @@ data class HeartRateSummary(
     val maxBpm: Long,
 )
 
+/**
+ * One local day of hourly heart-rate aggregates. Inside an hour Health Connect
+ * weights by sample, so [summary]'s average leans toward 1 Hz workouts.
+ * [signature] changes when any hour's count, average, low or high does.
+ */
+data class HeartRateDayAggregate(
+    val summary: HeartRateSummary,
+    val sampleCount: Long,
+    val signature: String,
+)
+
 data class DailyRestingHR(
     val date: LocalDate,
     val bpm: Long,

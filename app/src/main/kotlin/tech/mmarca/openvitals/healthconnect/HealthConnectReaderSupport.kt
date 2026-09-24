@@ -257,8 +257,12 @@ internal fun List<AggregationResultGroupedByDuration>.byLocalDate(
  */
 internal const val DailyAggregateMaxQueryDays = 122L
 
-/** Chunk size for hour-bucketed reads: ~504 buckets per request, inside the Binder budget. */
-internal const val HourlyAggregateMaxQueryDays = 21L
+/**
+ * Chunk size for hour-bucketed reads: 360 buckets of four metrics per request.
+ * That is fewer values than the 21 days of three metrics it replaced, which
+ * stayed inside the Binder budget.
+ */
+internal const val HourlyAggregateMaxQueryDays = 15L
 
 /** Splits an inclusive date range into chunks of at most [maxDays]. Empty for inverted ranges. */
 internal fun dailyAggregateDateChunks(

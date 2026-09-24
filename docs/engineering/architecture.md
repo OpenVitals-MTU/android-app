@@ -18,7 +18,7 @@ The repo now has one Android app module for the local app. The goal is to keep b
 - Feature repositories: in place for activity, sleep, heart, body, body energy, caffeine, hydration, nutrition, mindfulness, cycle, and vitals
 - Dashboard: still a dedicated day-based summary screen, not a period-detail screen
 - Manual entry: separate from the dashboard and writes explicit user-entered records directly to Health Connect
-- Room is at schema version 10. It holds derived summary caches plus the three tables Health Connect cannot represent (`garmin_wellness_samples`, `garmin_sleep_minutes`, `synced_record_origins`); Health Connect remains the source of truth for everything it has a record type for
+- Room is at schema version 11. It holds derived summary caches plus the three tables Health Connect cannot represent (`garmin_wellness_samples`, `garmin_sleep_minutes`, `synced_record_origins`); Health Connect remains the source of truth for everything it has a record type for
 - WorkManager is used for user-started Apple Health imports, offline map imports, lightweight metric summary warmup, and the opt-in periodic watch sync
 - Device integration lives under [`devices`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices): the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, and notification forwarding
 - Phone-to-phone Health Connect sync lives under [`features/devicesync`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/devicesync) and runs over Bluetooth Classic RFCOMM
@@ -207,7 +207,7 @@ Some repositories are now split into a `data/repository/contract/` interface and
 
 ### Local storage
 
-[`OpenVitalsDatabase`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/local/OpenVitalsDatabase.kt) is at `VERSION = 10`, with migrations declared in its companion object and listed once, in `ALL_MIGRATIONS`, which the database builder takes. Room exports the schema of each version to [`app/schemas`](../../app/schemas); the files are committed.
+[`OpenVitalsDatabase`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/local/OpenVitalsDatabase.kt) is at `VERSION = 11`, with migrations declared in its companion object and listed once, in `ALL_MIGRATIONS`, which the database builder takes. Room exports the schema of each version to [`app/schemas`](../../app/schemas); the files are committed.
 
 To change the schema: raise `VERSION`, write the migration, add it to `ALL_MIGRATIONS`, build once, and commit the new schema file. `OpenVitalsDatabaseSchemaTest` fails until all of that is done: it replays every migration's statements and compares the tables they leave with the exported schema. It can do that on the JVM because the migrations only create and drop tables. A migration that alters a table needs a real database, so add `room-testing` and a `MigrationTestHelper` test with it; the exported schemas are what that helper reads.
 
@@ -219,6 +219,7 @@ To change the schema: raise `VERSION`, write the migration, add it to `ALL_MIGRA
 | `garmin_wellness_samples` | `data/local/garmin` | watch-only wellness series, added in migration 5 → 6 |
 | `synced_record_origins` | `data/local/syncorigin` | the source app of each record received from another phone, added in migration 6 → 7 |
 | `garmin_sleep_minutes` | `data/local/garmin` | per-minute input for estimated sleep stages, added in migration 9 → 10 |
+| `heart_rate_days` | `data/local/heartratecache` | each day's heart-rate average from raw samples, read again when the day's hourly aggregates change, added in migration 10 → 11 |
 
 `garmin_wellness_samples` is the one table that is not a cache. It is the system of record for the series a Garmin watch produces that Health Connect has no record type for (stress, Body Battery, watch sleep scores). Its schema is `(metric, time_millis, value)` with `(metric, time_millis)` as the primary key, so re-syncing an overlapping window rewrites rows instead of duplicating them.
 

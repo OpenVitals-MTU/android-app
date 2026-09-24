@@ -360,6 +360,9 @@ class AggregatingFakeHealthConnectClient(
             HeartRateRecord.BPM_MAX to Spec(HeartRateRecord::class) { rs, s, e ->
                 hr(rs, s, e).maxOrNull()
             },
+            HeartRateRecord.MEASUREMENTS_COUNT to Spec(HeartRateRecord::class) { rs, s, e ->
+                hr(rs, s, e).size.toLong().takeIf { it > 0L }
+            },
             RestingHeartRateRecord.BPM_AVG to Spec(RestingHeartRateRecord::class) { rs, s, e ->
                 rs.filterIsInstance<RestingHeartRateRecord>()
                     .filter { !it.time.isBefore(s) && it.time.isBefore(e) }

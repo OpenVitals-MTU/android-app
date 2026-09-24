@@ -89,6 +89,26 @@ class OpenVitalsDatabaseMigrationTest {
     }
 
     @Test
+    fun `version ten adds the heart rate days table`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+
+        OpenVitalsDatabase.MIGRATION_10_11.migrate(db)
+
+        assertEquals(10, OpenVitalsDatabase.MIGRATION_10_11.startVersion)
+        assertEquals(11, OpenVitalsDatabase.MIGRATION_10_11.endVersion)
+        verify {
+            db.execSQL(
+                match {
+                    it.contains("CREATE TABLE IF NOT EXISTS `heart_rate_days`") &&
+                        it.contains("`signature` TEXT NOT NULL") &&
+                        it.contains("`average_bpm` REAL NOT NULL") &&
+                        it.contains("PRIMARY KEY(`epoch_day`)")
+                },
+            )
+        }
+    }
+
+    @Test
     fun `version eight restores the garmin wellness table`() {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
 

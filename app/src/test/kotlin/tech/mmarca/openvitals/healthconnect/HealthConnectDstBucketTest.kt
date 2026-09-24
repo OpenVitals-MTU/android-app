@@ -120,7 +120,7 @@ class HealthConnectDstBucketTest {
                 heartRate(at(LAST, 23), 150),
             )
 
-            val days = heart(client).readDailyHeartRateSummaries(FIRST, LAST)
+            val days = heart(client).readDailyHeartRateAggregates(FIRST, LAST).map { it.summary }
 
             val day = days.single { it.date == LAST }
             assertThat(day.maxBpm).isEqualTo(150)

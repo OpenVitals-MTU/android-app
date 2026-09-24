@@ -120,7 +120,7 @@ class HeartRepositoryTest {
         coEvery { hc.grantedPermissions() } returns setOf(heartRatePermission)
         coEvery { hc.readRawHeartRateSamples(any(), any()) } returns rawSamples
         coEvery { hc.readHeartRateSamples(any(), any()) } returns emptyList()
-        coEvery { hc.readDailyHeartRateSummaries(any(), any()) } returns emptyList()
+        coEvery { hc.readDailyHeartRateAggregates(any(), any()) } returns emptyList()
 
         val data = HeartRepositoryImpl(hc).loadHeartPeriod(
             query = PeriodLoadQuery(
@@ -146,12 +146,12 @@ class HeartRepositoryTest {
         val hc = mockk<HealthConnectManager>()
         every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
         coEvery { hc.grantedPermissions() } returns setOf(heartRatePermission)
-        coEvery { hc.readDailyHeartRateSummaries(any(), any()) } returns emptyList()
+        coEvery { hc.readDailyHeartRateAggregates(any(), any()) } returns emptyList()
 
         HeartRepositoryImpl(hc).loadHeartPeriod(query, HeartPeriodMetric.AVERAGE_HEART_RATE)
 
         coVerify(exactly = 1) {
-            hc.readDailyHeartRateSummaries(query.windows.current.start, query.windows.current.end)
+            hc.readDailyHeartRateAggregates(query.windows.current.start, query.windows.current.end)
         }
         coVerify(exactly = 0) { hc.readRawHeartRateSamples(any(), any()) }
         coVerify(exactly = 0) { hc.readHeartRateSamples(any(), any()) }

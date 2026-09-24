@@ -8,9 +8,12 @@ import androidx.health.connect.client.records.RestingHeartRateRecord
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
+import tech.mmarca.openvitals.data.local.heartratecache.HeartRateDayCacheDao
+import tech.mmarca.openvitals.data.local.heartratecache.HeartRateDayEntity
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.HeartRateDayAggregate
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.HrvSample
@@ -29,14 +32,26 @@ import javax.inject.Singleton
 import kotlin.math.roundToLong
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @Singleton
 class HeartRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
+    private val dayCache: HeartRateDayCacheDao? = null,
 ) : HeartRepository {
 
     companion object {
         private const val TAG = "HeartRepository"
+
+        /** Raise it when the cached day average is computed differently. Every row is then read again. */
+        private const val DayCacheVersion = 1
+
+        /** Samples one raw read aims to hold: about two weeks of once-a-minute data. A bigger day is read alone. */
+        internal const val DayCacheReadSamples = 50_000L
+
+        /** Samples one load may read raw. Older stale days keep the hourly average until a later load. */
+        internal const val DayCacheLoadSamples = 250_000L
 
         // Health Connect filters series records by record boundary; a watch sync groups an hour per record.
         private val HeartRateSeriesLookback = Duration.ofHours(1)
@@ -45,6 +60,9 @@ class HeartRepositoryImpl @Inject constructor(
     private val readHeartRatePermission = HealthPermission.getReadPermission(HeartRateRecord::class)
     private val readRestingHRPermission = HealthPermission.getReadPermission(RestingHeartRateRecord::class)
     private val readHrvPermission = HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class)
+
+    /** One load fills the day cache at a time, so parallel windows do not read the same days twice. */
+    private val dayCacheFill = Mutex()
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
@@ -340,8 +358,68 @@ class HeartRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping loadDailyHeartRateSummaries missingCount=1")
             return emptyList()
         }
-        return hc.readDailyHeartRateSummaries(start, end)
+        val days = hc.readDailyHeartRateAggregates(start, end)
+        val averages = rawDayAverages(days)
+        return days.map { day ->
+            val average = averages[day.summary.date] ?: return@map day.summary
+            day.summary.copy(avgBpm = average.roundToLong())
+        }
     }
+
+    /**
+     * Each day's average as the day view computes it, from raw samples. Inside an
+     * hour, Health Connect weights by sample, so a 1 Hz workout still pulls the
+     * hourly fold up. Cached per day and read again when the day's hourly signature
+     * changes. Days past the load's budget are missing from the map.
+     */
+    private suspend fun rawDayAverages(days: List<HeartRateDayAggregate>): Map<LocalDate, Double> {
+        val cache = dayCache ?: return emptyMap()
+        if (days.isEmpty()) return emptyMap()
+        val averages = HashMap<LocalDate, Double>()
+        val first = days.minOf { it.summary.date }.toEpochDay()
+        val last = days.maxOf { it.summary.date }.toEpochDay()
+        if (takeCached(cache.daysBetween(first, last), days, averages).isEmpty()) return averages
+        dayCacheFill.withLock {
+            // A parallel load may have read these days while this one waited.
+            val stale = takeCached(cache.daysBetween(first, last), days, averages)
+            val reads = planRawDayReads(
+                days = days,
+                stale = stale.mapTo(HashSet()) { it.summary.date },
+                readSamples = DayCacheReadSamples,
+                loadSamples = DayCacheLoadSamples,
+            )
+            for (read in reads) {
+                val oldest = read.last().summary.date
+                val newest = read.first().summary.date
+                val rawAverages = hc.readDailyHeartRateAverages(oldest, newest)
+                val rows = read.mapNotNull { day ->
+                    val average = rawAverages[day.summary.date] ?: return@mapNotNull null
+                    HeartRateDayEntity(day.summary.date.toEpochDay(), cacheSignature(day), average)
+                }
+                if (rows.isEmpty()) continue
+                cache.upsert(rows)
+                rows.forEach { averages[LocalDate.ofEpochDay(it.epochDay)] = it.averageBpm }
+            }
+        }
+        return averages
+    }
+
+    /** Puts each day whose cached row still matches into [averages]. Returns the other days. */
+    private fun takeCached(
+        rows: List<HeartRateDayEntity>,
+        days: List<HeartRateDayAggregate>,
+        averages: MutableMap<LocalDate, Double>,
+    ): List<HeartRateDayAggregate> {
+        val byDay = rows.associateBy { it.epochDay }
+        return days.filter { day ->
+            val row = byDay[day.summary.date.toEpochDay()]
+            if (row == null || row.signature != cacheSignature(day)) return@filter true
+            averages[day.summary.date] = row.averageBpm
+            false
+        }
+    }
+
+    private fun cacheSignature(day: HeartRateDayAggregate): String = "v$DayCacheVersion|${day.signature}"
 
     override suspend fun loadRestingHeartRate(date: LocalDate): Long? {
         val granted = grantedPermissionsIfAvailable()
