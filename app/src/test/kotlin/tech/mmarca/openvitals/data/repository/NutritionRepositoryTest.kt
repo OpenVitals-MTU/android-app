@@ -42,7 +42,7 @@ class NutritionRepositoryTest {
     }
 
     @Test
-    fun `DAY nutrition uses raw full entries for selected day metrics`() = runTest {
+    fun `DAY nutrition reads the one-day series, the dashboard tile's read`() = runTest {
         val date = LocalDate.of(2026, 6, 1)
         val entries = listOf(
             NutritionEntry(
@@ -73,7 +73,7 @@ class NutritionRepositoryTest {
         val aggregate = listOf(
             DailyMacros(
                 date = date,
-                nutrientValues = mapOf(NutritionNutrient.ENERGY to 9_999.0),
+                nutrientValues = mapOf(NutritionNutrient.ENERGY to 830.0, NutritionNutrient.PROTEIN to 48.0),
             )
         )
         val hc = hc(entries = entries, dailyMacros = aggregate)
@@ -83,12 +83,9 @@ class NutritionRepositoryTest {
         )
 
         assertEquals(entries, result.entries)
-        assertEquals(1, result.dailyMacros.size)
+        assertEquals(aggregate, result.dailyMacros)
         assertEquals(830.0, result.dailyMacros.single().energyKcal, 0.01)
-        assertEquals(48.0, result.dailyMacros.single().proteinGrams, 0.01)
-        assertEquals(100.0, result.dailyMacros.single().carbsGrams, 0.01)
-        assertEquals(27.0, result.dailyMacros.single().fatGrams, 0.01)
-        coVerify(exactly = 0) { hc.readDailyMacros(date, date) }
+        coVerify(exactly = 1) { hc.readDailyMacros(date, date) }
     }
 
     @Test

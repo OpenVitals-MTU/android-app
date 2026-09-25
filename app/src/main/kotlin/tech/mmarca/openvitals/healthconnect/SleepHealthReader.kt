@@ -72,19 +72,9 @@ internal class SleepHealthReader(
         if (startDate.isAfter(endDate)) return SleepReadData()
 
         val sessions = readSleepSessionsForDates(startDate, endDate, sleepWindow)
-        val durations = readSleepDurationsByLocalDay(
-            start = sleepRangeStartFor(startDate, sleepWindow),
-            end = sleepRangeEndFor(endDate, sleepWindow),
-        )
-        val dailyAggregateDurations = datesBetween(startDate, endDate).map { date ->
-            DailySleepDuration(
-                date = date,
-                durationMs = durations[sleepRangeStartFor(date, sleepWindow)] ?: 0L,
-            )
-        }
         return SleepReadData(
             sessions = sessions,
-            dailyAggregateDurations = dailyAggregateDurations,
+            dailyAggregateDurations = readDailySleepDurations(startDate, endDate, sleepWindow),
         )
     }
 

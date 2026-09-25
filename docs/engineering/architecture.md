@@ -19,7 +19,7 @@ The repo now has one Android app module for the local app. The goal is to keep b
 - Dashboard: still a dedicated day-based summary screen, not a period-detail screen
 - Manual entry: separate from the dashboard and writes explicit user-entered records directly to Health Connect
 - Room is at schema version 11. It holds derived summary caches plus the three tables Health Connect cannot represent (`garmin_wellness_samples`, `garmin_sleep_minutes`, `synced_record_origins`); Health Connect remains the source of truth for everything it has a record type for
-- WorkManager is used for user-started Apple Health imports, offline map imports, lightweight metric summary warmup, and the opt-in periodic watch sync
+- WorkManager is used for user-started Apple Health imports, offline map imports, and the opt-in periodic watch sync
 - Device integration lives under [`devices`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices): the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, and notification forwarding
 - Phone-to-phone Health Connect sync lives under [`features/devicesync`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/devicesync) and runs over Bluetooth Classic RFCOMM
 - A one-time Flutter-to-Kotlin data migrator lives under [`data/migration`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/migration) and runs from `OpenVitalsApp.onCreate()`
@@ -124,9 +124,9 @@ The current app does not need:
 - a multi-module split
 - a raw Health Connect mirror
 
-Derived summaries may be cached in Room when a screen otherwise repeats expensive Health Connect reads or calculations.
-The cache stores versioned UI/repository result envelopes and must be invalidated by permission fingerprint,
-calculation config, and schema version.
+Two Room caches exist, and each has a reason: the vitals daily cache, because seven vitals types have no Health Connect aggregate, and `heart_rate_days`, because the day view's average needs every sample.
+The first is invalidated by a permission-and-zone fingerprint, the second by a per-day signature of the hourly aggregates.
+Everything else reads Health Connect on every load, through one reader function per metric and shape. A new cache needs a fingerprint and a reason as strong as these.
 
 ### 7. Keep module boundaries proportional
 
@@ -196,7 +196,7 @@ Current files:
 Current boundary shape:
 
 - `HealthConnectManager` is the low-level integration wrapper. It talks to the AndroidX client, performs reads, writes explicit manual entries, and maps results into app models.
-- `HealthRepository` is now intentionally narrow: Health Connect availability, permission state, and dashboard aggregation.
+- `HealthRepository` is now intentionally narrow: Health Connect availability and permission state. Dashboard loading is `DashboardDataLoader`, behind `LoadDashboardDayUseCase`.
 - Feature repositories are thin, permission-aware facades over `HealthConnectManager`.
 - Manual entry ViewModels use the same feature repositories for writes, so write permission and write behavior stay below the UI route.
 - `healthconnect` depends on app-local domain models; repositories depend on `healthconnect` and `domain`. The readers, writers and mappers import nothing from `data.repository`. Five permission and gate classes do: they read `PreferencesRepository`, and one reads the `HealthRepository` contract. `HealthConnectLayeringTest` lists them and fails on a sixth.
@@ -553,7 +553,7 @@ Two bounded exceptions exist today and should stay bounded:
 - **Constant vocabularies.** Display code may reference Health Connect's constant sets where the app has no reason to mirror them — `ExerciseSessionRecord` exercise types, `ExerciseSegment`, `MealType`, `SexualActivityRecord` protection values. That is naming, not data access.
 - **Write and import paths.** Importers and sync legitimately build `Record` instances. Each concentrates that in one place (`features/imports/applehealth`, `features/imports/csv`, `features/imports/garmin`, `features/devicesync/store/SyncRecordCodec.kt`, `devices/garmin/wellness/FitWellnessImport.kt`) and writes through `AppleHealthImportRepository.insertImportedRecords`, which is what makes deterministic `clientRecordId` upserts consistent across all of them.
 
-**A writer reads strictly.** The readers return a fallback (an empty list, a null) when a read fails, is rate limited, or sync is paused. That suits a screen, which wants an empty state. It is wrong for code that saves what it read: a cache rebuild, a derived-record reconcile. Such code wraps its reads in `withStrictHealthConnectReads { ... }` ([`HealthConnectReaderSupport.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectReaderSupport.kt)). Inside it every guarded read throws instead, in child coroutines too, so the pass aborts before it writes. `VitalsHistorySyncService`, `CaloriesHistorySyncService`, `StepDistanceBackfillService` and `BodyEnergyChainSyncService` do this. A new writer must too. So does code that puts what it read into a document the user keeps: `ReportDataLoader` reads strictly, so a rate-limited metric shows as failed in the report and not as "No data in this range".
+**A writer reads strictly.** The readers return a fallback (an empty list, a null) when a read fails, is rate limited, or sync is paused. That suits a screen, which wants an empty state. It is wrong for code that saves what it read: a cache rebuild, a derived-record reconcile. Such code wraps its reads in `withStrictHealthConnectReads { ... }` ([`HealthConnectReaderSupport.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectReaderSupport.kt)). Inside it every guarded read throws instead, in child coroutines too, so the pass aborts before it writes. `VitalsHistorySyncService`, `StepDistanceBackfillService` and `BodyEnergyChainSyncService` do this. A new writer must too. So does code that puts what it read into a document the user keeps: `ReportDataLoader` reads strictly, so a rate-limited metric shows as failed in the report and not as "No data in this range".
 
 **A writer checks that it can see other apps' data.** In the background, without the background-read grant, Health Connect answers a read with this app's own records only and raises nothing. `HealthConnectManager.readsOtherAppsDataNow()` is the test: a started Activity, or the grant. Code that saves or shows what it read while no Activity is up (a cache rebuild, a reconcile, a widget refresh) calls it first and skips the pass when it is false. A reminder that only needs this app's own entries does not need it.
 
@@ -640,7 +640,6 @@ Keep using `HealthRepository` for:
 - availability
 - permission contract access
 - granted/missing permissions
-- dashboard loading
 
 Do not add new feature-detail data methods there unless the app is in a temporary migration step.
 
@@ -734,12 +733,12 @@ For example, [`MetricCard.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/
 
 ### 4. Background work is narrow and explicit
 
-Room-backed caching is intentionally narrow: it stores derived summaries and the beverage catalog, not raw Health Connect records.
-The first cached surface is dashboard-style daily summaries, which also powers daily readiness.
-The one non-cache table, `garmin_wellness_samples`, exists only because Health Connect has no record type for those series; it is not a precedent for mirroring records Health Connect can already hold.
+Room-backed caching is intentionally narrow: the vitals daily cache, the heart-rate day averages and the beverage catalog, not raw Health Connect records.
+The dashboard and daily readiness read Health Connect on every load.
+The watch and sync tables (`garmin_wellness_samples`, `garmin_sleep_minutes`, `synced_record_origins`) exist only because Health Connect has no record type for those series; they are not a precedent for mirroring records Health Connect can already hold.
 
 WorkManager is used for the Apple Health import worker and the offline map import worker because those workflows can be long-running and user-visible.
-It is also used for small metric summary warmup jobs after app open, and for the one scheduled job in the app: [`WatchAutoSyncWorker`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/watches/WatchAutoSyncWorker.kt), the per-watch automatic sync a user opts into on the watch's device screen. That worker schedules the sync; it does not implement one. It resolves `DeviceSyncController` and runs exactly the sequence a tap runs, so there is still only one watch-sync path.
+It is also used for the one scheduled job in the app: [`WatchAutoSyncWorker`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/watches/WatchAutoSyncWorker.kt), the per-watch automatic sync a user opts into on the watch's device screen. That worker schedules the sync; it does not implement one. It resolves `DeviceSyncController` and runs exactly the sequence a tap runs, so there is still only one watch-sync path.
 
 Everything else about device work is unchanged: a watch sync and a phone-to-phone sync hold their own coroutine scope, the phone-to-phone one is foreground and user-initiated, and neither has a background variant. `WatchAutoSyncWorker` runs with no foreground service at all, deliberately (see the foreground-slot rule). Do not read it as a general background-sync layer, and do not design new features as if one or a raw-record database already exists.
 

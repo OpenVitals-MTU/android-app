@@ -220,7 +220,7 @@ class ActivityRepositoryGatingTest {
         )
 
         coVerify(exactly = 0) {
-            hc.readRawActivityProgress(
+            hc.readActivityProgress(
                 date = any(),
                 includeSteps = any(),
                 includeDistance = any(),
@@ -367,7 +367,7 @@ class ActivityRepositoryGatingTest {
             )
         } returns emptyList()
         coEvery {
-            hc.readRawActivityProgress(
+            hc.readActivityProgress(
                 date = any(),
                 includeSteps = any(),
                 includeDistance = any(),

@@ -39,19 +39,18 @@ import androidx.health.connect.client.units.meters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import tech.mmarca.openvitals.domain.model.ActivityExerciseSegmentWrite
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
 import tech.mmarca.openvitals.domain.model.ActivityCadenceKind
 import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
+import tech.mmarca.openvitals.domain.model.ActivityIntradayBucketDuration
 import tech.mmarca.openvitals.domain.model.ActivityRecordSource
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.OwnActivityMetrics
 import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.domain.model.BleRecordingSampleBuffer
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
-import tech.mmarca.openvitals.domain.model.CaloriesBurnedValue
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
@@ -83,8 +82,6 @@ internal class ActivityHealthReader(
             )[StepsRecord.COUNT_TOTAL] ?: 0L
         }
     }
-
-    suspend fun readTodaySteps(): Long = readSteps(LocalDate.now())
 
     suspend fun readDailySteps(
         startDate: LocalDate,
@@ -211,6 +208,12 @@ internal class ActivityHealthReader(
         }
     }
 
+    /**
+     * The intraday series: running totals per five-minute aggregate bucket,
+     * the Body Energy timeline's bucket. Today stops at now. A full day is
+     * two requests. Health Connect prorates a record across the buckets it
+     * spans, so the last point can differ from the day total by rounding.
+     */
     suspend fun readActivityProgress(
         date: LocalDate,
         includeSteps: Boolean = true,
@@ -224,7 +227,8 @@ internal class ActivityHealthReader(
     ): List<ActivityProgressPoint> {
         val zone = ZoneId.systemDefault()
         val start = date.atStartOfDay(zone).toInstant()
-        val end = if (date == LocalDate.now()) Instant.now() else date.plusDays(1).atStartOfDay(zone).toInstant()
+        val end = if (date == LocalDate.now(zone)) Instant.now() else date.plusDays(1).atStartOfDay(zone).toInstant()
+        if (!start.isBefore(end)) return emptyList()
         return support.withLogging("readActivityProgress[$date][$start..$end]", emptyList()) {
             val client = support.client()
             val includeEstimatedCalories = includeCalories && includeCaloriesEstimate
@@ -250,16 +254,20 @@ internal class ActivityHealthReader(
             var cumulativeActiveCalories = 0.0
             var hasActiveCaloriesData = false
             var cumulativeWheelchairPushes = 0L
-            var cumulativeFloors = 0
+            var cumulativeFloors = 0.0
             var cumulativeElevation = 0.0
 
-            val buckets = support.client().aggregateGroupByDuration(
-                AggregateGroupByDurationRequest(
-                    metrics = metrics,
-                    timeRangeFilter = TimeRangeFilter.between(start, end),
-                    timeRangeSlicer = Duration.ofHours(1),
-                )
-            )
+            // At most MaxInsightAggregateBuckets per request: a full day is two.
+            val buckets = aggregateWindows(start, end, ActivityIntradayBucketDuration)
+                .flatMap { (windowStart, windowEnd) ->
+                    client.aggregateGroupByDuration(
+                        AggregateGroupByDurationRequest(
+                            metrics = metrics,
+                            timeRangeFilter = TimeRangeFilter.between(windowStart, windowEnd),
+                            timeRangeSlicer = ActivityIntradayBucketDuration,
+                        )
+                    )
+                }
             val hasRecordedTotalCaloriesData = includeCalories &&
                 buckets.any { bucket -> bucket.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL] != null }
             buckets.map { bucket ->
@@ -281,7 +289,7 @@ internal class ActivityHealthReader(
                     cumulativeWheelchairPushes += bucket.result[WheelchairPushesRecord.COUNT_TOTAL] ?: 0L
                 }
                 if (includeFloors) {
-                    cumulativeFloors += bucket.result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.toInt() ?: 0
+                    cumulativeFloors += bucket.result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL] ?: 0.0
                 }
                 if (includeElevation) {
                     cumulativeElevation += bucket.result[ElevationGainedRecord.ELEVATION_GAINED_TOTAL]?.inMeters ?: 0.0
@@ -308,265 +316,12 @@ internal class ActivityHealthReader(
                     totalCaloriesBurnedKcal = totalCaloriesBurnedKcal,
                     totalActiveCaloriesKcal = if (includeActiveCalories) cumulativeActiveCalories else null,
                     totalWheelchairPushes = if (includeWheelchairPushes) cumulativeWheelchairPushes else null,
-                    totalFloorsClimbed = if (includeFloors) cumulativeFloors else null,
-                    totalElevationGainedMeters = if (includeElevation) cumulativeElevation else null,
-                )
-            }
-        }
-    }
-
-    /** The hourly intraday series, budgeted: a stall here would hang the Day spinner alone. */
-    suspend fun readRawActivityProgress(
-        date: LocalDate,
-        includeSteps: Boolean = true,
-        includeDistance: Boolean,
-        includeCalories: Boolean,
-        includeActiveCalories: Boolean,
-        includeCaloriesEstimate: Boolean = false,
-        includeWheelchairPushes: Boolean,
-        includeFloors: Boolean,
-        includeElevation: Boolean,
-    ): List<ActivityProgressPoint> {
-        val zone = ZoneId.systemDefault()
-        val start = date.atStartOfDay(zone).toInstant()
-        val end = if (date == LocalDate.now()) Instant.now() else date.plusDays(1).atStartOfDay(zone).toInstant()
-        return withTimeoutOrNull(IntradayAggregateTimeoutMillis) {
-            readRawActivityProgressWithin(
-                date = date,
-                start = start,
-                end = end,
-                includeSteps = includeSteps,
-                includeDistance = includeDistance,
-                includeCalories = includeCalories,
-                includeActiveCalories = includeActiveCalories,
-                includeCaloriesEstimate = includeCaloriesEstimate,
-                includeWheelchairPushes = includeWheelchairPushes,
-                includeFloors = includeFloors,
-                includeElevation = includeElevation,
-            )
-        } ?: run {
-            Log.w(TAG, "readRawActivityProgress blew its ${IntradayAggregateTimeoutMillis}ms budget")
-            emptyList()
-        }
-    }
-
-    private suspend fun readRawActivityProgressWithin(
-        date: LocalDate,
-        start: Instant,
-        end: Instant,
-        includeSteps: Boolean,
-        includeDistance: Boolean,
-        includeCalories: Boolean,
-        includeActiveCalories: Boolean,
-        includeCaloriesEstimate: Boolean,
-        includeWheelchairPushes: Boolean,
-        includeFloors: Boolean,
-        includeElevation: Boolean,
-    ): List<ActivityProgressPoint> {
-        return support.withLogging("readRawActivityProgress[$date][$start..$end]", emptyList()) {
-            val client = support.client()
-            val includeEstimatedCalories = includeCalories && includeCaloriesEstimate
-            val bmrKcalPerDay = if (includeEstimatedCalories) {
-                client.readLatestBmrKcalPerDayBefore(end)
-            } else {
-                null
-            }
-            val rangeFilter = TimeRangeFilter.between(start, end)
-            val contributions = mutableListOf<ActivityProgressContribution>()
-            if (includeSteps) {
-                contributions += client.readRecordsPaged(
-                    recordType = StepsRecord::class,
-                    timeRangeFilter = rangeFilter,
-                    ascendingOrder = true,
-                    pageSize = 500,
-                ).map { record ->
-                    ActivityProgressContribution(
-                        startTime = record.startTime,
-                        time = record.endTime,
-                        steps = record.count,
-                    )
-                }
-            }
-            if (includeDistance) {
-                contributions += client.readRecordsPaged(
-                    recordType = DistanceRecord::class,
-                    timeRangeFilter = rangeFilter,
-                    ascendingOrder = true,
-                    pageSize = 500,
-                ).map { record ->
-                    ActivityProgressContribution(
-                        startTime = record.startTime,
-                        time = record.endTime,
-                        distanceMeters = record.distance.inMeters,
-                    )
-                }
-            }
-            if (includeCalories) {
-                contributions += client.readRecordsPaged(
-                    recordType = TotalCaloriesBurnedRecord::class,
-                    timeRangeFilter = rangeFilter,
-                    ascendingOrder = true,
-                    pageSize = 500,
-                ).map { record ->
-                    ActivityProgressContribution(
-                        startTime = record.startTime,
-                        time = record.endTime,
-                        totalCaloriesKcal = record.energy.inKilocalories,
-                    )
-                }
-            }
-            if (includeActiveCalories || includeEstimatedCalories) {
-                contributions += client.readRecordsPaged(
-                    recordType = ActiveCaloriesBurnedRecord::class,
-                    timeRangeFilter = rangeFilter,
-                    ascendingOrder = true,
-                    pageSize = 500,
-                ).map { record ->
-                    ActivityProgressContribution(
-                        startTime = record.startTime,
-                        time = record.endTime,
-                        activeCaloriesKcal = record.energy.inKilocalories,
-                    )
-                }
-            }
-            if (includeWheelchairPushes) {
-                contributions += client.readRecordsPaged(
-                    recordType = WheelchairPushesRecord::class,
-                    timeRangeFilter = rangeFilter,
-                    ascendingOrder = true,
-                    pageSize = 500,
-                ).map { record ->
-                    ActivityProgressContribution(
-                        startTime = record.startTime,
-                        time = record.endTime,
-                        wheelchairPushes = record.count,
-                    )
-                }
-            }
-            if (includeFloors) {
-                contributions += client.readRecordsPaged(
-                    recordType = FloorsClimbedRecord::class,
-                    timeRangeFilter = rangeFilter,
-                    ascendingOrder = true,
-                    pageSize = 500,
-                ).map { record ->
-                    ActivityProgressContribution(
-                        startTime = record.startTime,
-                        time = record.endTime,
-                        floors = record.floors,
-                    )
-                }
-            }
-            if (includeElevation) {
-                contributions += client.readRecordsPaged(
-                    recordType = ElevationGainedRecord::class,
-                    timeRangeFilter = rangeFilter,
-                    ascendingOrder = true,
-                    pageSize = 500,
-                ).map { record ->
-                    ActivityProgressContribution(
-                        startTime = record.startTime,
-                        time = record.endTime,
-                        elevationMeters = record.elevation.inMeters,
-                    )
-                }
-            }
-            rawActivityContributionsToProgress(
-                contributions = contributions,
-                includeDistance = includeDistance,
-                includeCalories = includeCalories,
-                includeActiveCalories = includeActiveCalories,
-                includeEstimatedCalories = includeEstimatedCalories,
-                includeWheelchairPushes = includeWheelchairPushes,
-                includeFloors = includeFloors,
-                includeElevation = includeElevation,
-                bmrKcalPerDay = bmrKcalPerDay,
-                start = start,
-            )
-        }
-    }
-
-    private fun rawActivityContributionsToProgress(
-        contributions: List<ActivityProgressContribution>,
-        includeDistance: Boolean,
-        includeCalories: Boolean,
-        includeActiveCalories: Boolean,
-        includeEstimatedCalories: Boolean,
-        includeWheelchairPushes: Boolean,
-        includeFloors: Boolean,
-        includeElevation: Boolean,
-        bmrKcalPerDay: Double?,
-        start: Instant,
-    ): List<ActivityProgressPoint> {
-        var cumulativeSteps = 0L
-        var cumulativeDistance = 0.0
-        var cumulativeCalories = 0.0
-        var cumulativeActiveCalories = 0.0
-        var hasActiveCaloriesData = false
-        var hasRecordedTotalCaloriesData = false
-        var cumulativeWheelchairPushes = 0L
-        var cumulativeFloors = 0.0
-        var cumulativeElevation = 0.0
-
-        return contributions
-            .sortedWith(compareBy<ActivityProgressContribution> { it.time }.thenBy { it.startTime })
-            .groupBy { it.time }
-            .toSortedMap()
-            .map { (time, timeContributions) ->
-                timeContributions.forEach { contribution ->
-                    cumulativeSteps += contribution.steps
-                    cumulativeDistance += contribution.distanceMeters
-                    contribution.totalCaloriesKcal?.let { calories ->
-                        hasRecordedTotalCaloriesData = true
-                        cumulativeCalories += calories
-                    }
-                    contribution.activeCaloriesKcal?.let { calories ->
-                        hasActiveCaloriesData = true
-                        cumulativeActiveCalories += calories
-                    }
-                    cumulativeWheelchairPushes += contribution.wheelchairPushes
-                    cumulativeFloors += contribution.floors
-                    cumulativeElevation += contribution.elevationMeters
-                }
-                val totalCaloriesBurnedKcal = if (includeCalories) {
-                    totalCaloriesRecordedOrIntervalEstimated(
-                        recordedTotalCaloriesKcal = if (hasRecordedTotalCaloriesData) cumulativeCalories else null,
-                        activeCaloriesKcal = if (includeEstimatedCalories && hasActiveCaloriesData) {
-                            cumulativeActiveCalories
-                        } else {
-                            null
-                        },
-                        bmrKcalPerDay = bmrKcalPerDay,
-                        start = start,
-                        end = time,
-                    )?.kcal
-                } else {
-                    null
-                }
-                ActivityProgressPoint(
-                    time = time,
-                    totalSteps = cumulativeSteps,
-                    totalDistanceMeters = if (includeDistance) cumulativeDistance else null,
-                    totalCaloriesBurnedKcal = totalCaloriesBurnedKcal,
-                    totalActiveCaloriesKcal = if (includeActiveCalories) cumulativeActiveCalories else null,
-                    totalWheelchairPushes = if (includeWheelchairPushes) cumulativeWheelchairPushes else null,
                     totalFloorsClimbed = if (includeFloors) cumulativeFloors.toInt() else null,
                     totalElevationGainedMeters = if (includeElevation) cumulativeElevation else null,
                 )
             }
+        }
     }
-
-    private data class ActivityProgressContribution(
-        val startTime: Instant,
-        val time: Instant,
-        val steps: Long = 0L,
-        val distanceMeters: Double = 0.0,
-        val totalCaloriesKcal: Double? = null,
-        val activeCaloriesKcal: Double? = null,
-        val wheelchairPushes: Long = 0L,
-        val floors: Double = 0.0,
-        val elevationMeters: Double = 0.0,
-    )
 
     suspend fun readDistanceMeters(date: LocalDate): Double {
         val (start, end) = support.dayRange(date)
@@ -579,77 +334,6 @@ internal class ActivityHealthReader(
             )[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
         }
     }
-
-    suspend fun readTodayDistanceMeters(): Double = readDistanceMeters(LocalDate.now())
-
-    suspend fun readCaloriesBurned(
-        date: LocalDate,
-        includeEstimatedCalories: Boolean = false,
-    ): CaloriesBurnedValue? {
-        val zone = ZoneId.systemDefault()
-        val start = date.atStartOfDay(zone).toInstant()
-        val end = if (date == LocalDate.now()) Instant.now() else date.plusDays(1).atStartOfDay(zone).toInstant()
-        return support.withNullableLogging("readCaloriesBurned[$date][$start..$end]") {
-            val client = support.client()
-            val metrics = buildSet {
-                add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
-                if (includeEstimatedCalories) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
-            }
-
-            val aggregate = client.aggregate(
-                AggregateRequest(
-                    metrics = metrics,
-                    timeRangeFilter = TimeRangeFilter.between(start, end),
-                )
-            )
-            val recordedTotalCaloriesKcal = aggregate[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories
-            totalCaloriesRecordedOrDailyEstimated(
-                recordedTotalCaloriesKcal = recordedTotalCaloriesKcal,
-                activeCaloriesKcal = if (includeEstimatedCalories && recordedTotalCaloriesKcal == null) {
-                    aggregate[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories
-                } else {
-                    null
-                },
-                bmrKcalPerDay = if (includeEstimatedCalories && recordedTotalCaloriesKcal == null) {
-                    client.readLatestBmrKcalPerDayBefore(end)
-                } else {
-                    null
-                },
-            )
-        }
-    }
-
-    suspend fun readCaloriesKcal(
-        date: LocalDate,
-        includeEstimatedCalories: Boolean = false,
-    ): Double? = readCaloriesBurned(date, includeEstimatedCalories)?.kcal
-
-    suspend fun readTodayCaloriesKcal(includeEstimatedCalories: Boolean = false): Double? =
-        readCaloriesKcal(LocalDate.now(), includeEstimatedCalories)
-
-    suspend fun readLatestWorkout(date: LocalDate): ExerciseData? {
-        val (start, end) = support.dayRange(date)
-        return support.withNullableLogging("readLatestWorkout[$date][$start..$end]") {
-            support.client().readRecordsPaged(
-                recordType = ExerciseSessionRecord::class,
-                timeRangeFilter = TimeRangeFilter.between(start, end),
-                ascendingOrder = false,
-                pageSize = 1,
-                maxRecords = 1,
-            ).firstOrNull()?.toExerciseData(appPackageName = appPackageName)
-        }
-    }
-
-    suspend fun readLatestWorkout(): ExerciseData? =
-        support.withNullableLogging("readLatestWorkout") {
-            support.client().readRecordsPaged(
-                recordType = ExerciseSessionRecord::class,
-                timeRangeFilter = TimeRangeFilter.before(Instant.now()),
-                ascendingOrder = false,
-                pageSize = 1,
-                maxRecords = 1,
-            ).firstOrNull()?.toExerciseData(appPackageName = appPackageName)
-        }
 
     suspend fun readExerciseSessions(start: Instant, end: Instant): List<ExerciseData> =
         support.withLogging("readExerciseSessions[$start..$end]", emptyList()) {
@@ -1604,7 +1288,6 @@ internal class ActivityHealthReader(
         )
 
         private const val TAG = "HealthConnectManager"
-        private const val IntradayAggregateTimeoutMillis = 12_000L
         private const val MinRoutePointCount = 2
         private const val MaxRouteShrinkAttempts = 3
         private const val MaxActivityDistanceMeters = 1_000_000.0

@@ -7,13 +7,13 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 
 /**
- * Drains the caches' change tokens once per app open, after the first load
- * settles, sequentially. Incremental only.
+ * Once per app open, after the first load settles, one after another: drains
+ * the vitals change token, warms the Body Energy chain, runs the opt-in
+ * step-distance backfill. Incremental only.
  */
 @Singleton
 class HistorySyncScheduler @Inject constructor(
     private val vitalsSync: VitalsHistorySyncService,
-    private val caloriesSync: CaloriesHistorySyncService,
     private val bodyEnergyChainSync: BodyEnergyChainSyncService,
     private val stepDistanceSync: StepDistanceBackfillService,
 ) {
@@ -22,7 +22,6 @@ class HistorySyncScheduler @Inject constructor(
     suspend fun drainIncrementalOnce() {
         if (!drained.compareAndSet(false, true)) return
         drain { vitalsSync.syncIncremental() }
-        drain { caloriesSync.syncIncremental() }
         // After the foreground load: the chain warm is the most read-hungry drain.
         drain { bodyEnergyChainSync.syncAll() }
         // Last: the only drain that writes to Health Connect. Off unless opted in.

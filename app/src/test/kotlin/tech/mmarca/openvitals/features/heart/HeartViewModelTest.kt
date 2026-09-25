@@ -50,7 +50,8 @@ class HeartViewModelTest {
     private val pastAnchor = today.minusWeeks(4)
 
     private fun emptyRepo() = mockk<HeartRepository>().also { repo ->
-        coEvery { repo.loadHeartRateSamples(any()) } returns emptyList()
+        coEvery { repo.loadRawHeartRateSamplesForDayGraph(any()) } returns emptyList()
+        coEvery { repo.loadAvgHeartRate(any()) } returns null
         coEvery { repo.loadDailyHeartRateSummaries(any(), any()) } returns emptyList()
         coEvery { repo.loadRestingHeartRate(any()) } returns null
         coEvery { repo.loadHrvRmssd(any()) } returns null
@@ -61,8 +62,8 @@ class HeartViewModelTest {
             return when (metric) {
                 HeartPeriodMetric.ALL -> if (query.range == TimeRange.DAY) {
                     HeartPeriodData(
-                        daySamples = repo.loadHeartRateSamples(query.selectedDate),
-                        previousDaySamples = repo.loadHeartRateSamples(windows.previous.start),
+                        daySamples = repo.loadRawHeartRateSamplesForDayGraph(query.selectedDate),
+                        previousDayAvgBpm = repo.loadAvgHeartRate(windows.previous.start),
                         baselineDailySummaries = repo.loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end),
                         dayRestingBpm = repo.loadRestingHeartRate(query.selectedDate),
                         previousDayRestingBpm = repo.loadRestingHeartRate(windows.previous.start),
@@ -86,8 +87,8 @@ class HeartViewModelTest {
                 }
                 HeartPeriodMetric.AVERAGE_HEART_RATE -> if (query.range == TimeRange.DAY) {
                     HeartPeriodData(
-                        daySamples = repo.loadHeartRateSamples(query.selectedDate),
-                        previousDaySamples = repo.loadHeartRateSamples(windows.previous.start),
+                        daySamples = repo.loadRawHeartRateSamplesForDayGraph(query.selectedDate),
+                        previousDayAvgBpm = repo.loadAvgHeartRate(windows.previous.start),
                         baselineDailySummaries = repo.loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end),
                     )
                 } else {
@@ -389,18 +390,18 @@ class HeartViewModelTest {
         assertNotNull(display.restingRangeSummary)
     }
 
-    @Test fun `WEEK range does not call loadHeartRateSamples`() = runTest {
+    @Test fun `WEEK range does not call loadRawHeartRateSamplesForDayGraph`() = runTest {
         val repo = emptyRepo()
         heartViewModel(repo, emptyVitalsRepo())
-        coVerify(exactly = 0) { repo.loadHeartRateSamples(any()) }
+        coVerify(exactly = 0) { repo.loadRawHeartRateSamplesForDayGraph(any()) }
     }
 
     // DAY range loads samples, not summaries.
 
-    @Test fun `DAY range calls loadHeartRateSamples`() = runTest {
+    @Test fun `DAY range calls loadRawHeartRateSamplesForDayGraph`() = runTest {
         val samples = listOf(HeartRateSample(Instant.now(), 75L, "test"))
         val repo = emptyRepo()
-        coEvery { repo.loadHeartRateSamples(any()) } returns samples
+        coEvery { repo.loadRawHeartRateSamplesForDayGraph(any()) } returns samples
 
         val vm = heartViewModel(repo, emptyVitalsRepo())
         vm.selectRange(TimeRange.DAY)
@@ -463,7 +464,7 @@ class HeartViewModelTest {
             HeartRateSample(Instant.ofEpochSecond(3_000), 110L, "test"),
         )
         val repo = emptyRepo()
-        coEvery { repo.loadHeartRateSamples(any()) } returns samples
+        coEvery { repo.loadRawHeartRateSamplesForDayGraph(any()) } returns samples
 
         val vm = heartViewModel(
             heartRepo = repo,
@@ -500,7 +501,7 @@ class HeartViewModelTest {
 
     @Test fun `updating high heart rate threshold persists and recalculates checks`() = runTest {
         val repo = emptyRepo()
-        coEvery { repo.loadHeartRateSamples(any()) } returns listOf(
+        coEvery { repo.loadRawHeartRateSamplesForDayGraph(any()) } returns listOf(
             HeartRateSample(Instant.ofEpochSecond(1_000), 116L, "test"),
             HeartRateSample(Instant.ofEpochSecond(2_000), 121L, "test"),
         )
@@ -570,7 +571,7 @@ class HeartViewModelTest {
     @Test fun `switching from DAY to WEEK clears HR samples`() = runTest {
         val samples = listOf(HeartRateSample(Instant.now(), 72L, "test"))
         val repo = emptyRepo()
-        coEvery { repo.loadHeartRateSamples(any()) } returns samples
+        coEvery { repo.loadRawHeartRateSamplesForDayGraph(any()) } returns samples
 
         val vm = heartViewModel(repo, emptyVitalsRepo())
         vm.selectRange(TimeRange.DAY)

@@ -1,7 +1,6 @@
 package tech.mmarca.openvitals.data.repository.report
 
 import android.util.Log
-import androidx.health.connect.client.permission.HealthPermission
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -38,6 +37,9 @@ import tech.mmarca.openvitals.domain.report.distinctBloodPressureReadings
 import tech.mmarca.openvitals.domain.report.sleepDetail
 import tech.mmarca.openvitals.domain.report.workoutsDetail
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.HistoryReadWindowDays
+import tech.mmarca.openvitals.healthconnect.historyReadStart
+import tech.mmarca.openvitals.domain.model.minutesByStartDate
 import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
 
 /** A cooperative cancel flag the UI flips; checked between read groups. */
@@ -84,9 +86,6 @@ class ReportDataLoader @Inject constructor(
         /** Per-group budget. Past this a group costs its own section, not the report. */
         private const val GroupBudgetMillis = 60_000L
 
-        /** What the range shrinks to when the history permission is missing. */
-        private const val HistoryClampDays = 30
-
         /** Past this many glucose readings the range is CGM territory; use the daily chart. */
         private const val MaxGlucoseDetailReadings = 500
 
@@ -94,7 +93,6 @@ class ReportDataLoader @Inject constructor(
         private const val MaxTemperatureDetailReadings = 200
     }
 
-    private val readHealthDataHistoryPermission = HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY
 
     /** The raw permissions [metric]'s read needs. The steps family adds the steps permission. */
     fun rawPermissionsFor(metric: ReportMetric): Set<String> {
@@ -133,11 +131,8 @@ class ReportDataLoader @Inject constructor(
     ): ReportData = withContext(dispatchers.io) {
         val granted = grantedPermissionsIfAvailable()
 
-        val historyDefined = readHealthDataHistoryPermission in hc.additionalDataAccessPermissions
-        val historyMissing = historyDefined && readHealthDataHistoryPermission !in granted
-        val clampStart = request.end.minusDays(HistoryClampDays - 1L)
-        val truncated = historyMissing && request.start.isBefore(clampStart)
-        val effectiveStart = if (truncated) clampStart else request.start
+        val effectiveStart = hc.historyReadStart(request.start, request.end, granted)
+        val truncated = effectiveStart != request.start
 
         val requested = request.metrics
         // Readable only when every needed permission is managed and granted.
@@ -196,7 +191,7 @@ class ReportDataLoader @Inject constructor(
         ReportData(
             request = request,
             effectiveStart = effectiveStart,
-            truncatedToDays = HistoryClampDays.takeIf { truncated },
+            truncatedToDays = HistoryReadWindowDays.toInt().takeIf { truncated },
             missingPermissions = missing,
             historyPermissionMissing = truncated,
             cancelled = cancelled,
@@ -486,13 +481,10 @@ class ReportDataLoader @Inject constructor(
         }
 
         singleGroup(ReportMetric.MINDFULNESS) {
-            val sessionZone = ZoneId.systemDefault()
             mindfulnessRepository.loadMindfulnessSessions(start, end)
-                .groupBy { it.startTime.atZone(sessionZone).toLocalDate() }
+                .minutesByStartDate(ZoneId.systemDefault())
                 .filterKeys { !it.isBefore(start) && !it.isAfter(end) }
-                .map { (date, sessions) ->
-                    ReportDailyValue(date, sessions.sumOf { it.durationMs } / 60_000.0)
-                }
+                .map { (date, minutes) -> ReportDailyValue(date, minutes) }
         }
 
         return groups

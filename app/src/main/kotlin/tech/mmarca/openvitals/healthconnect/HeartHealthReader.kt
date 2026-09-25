@@ -9,7 +9,6 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
-import tech.mmarca.openvitals.domain.model.HeartRateChartBucketDuration
 import tech.mmarca.openvitals.domain.model.HeartRateDayAggregate
 import tech.mmarca.openvitals.domain.model.HeartRateInsightBucketDuration
 import tech.mmarca.openvitals.domain.model.HeartRateSample
@@ -17,6 +16,7 @@ import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.MaxInsightAggregateBuckets
 import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
+import tech.mmarca.openvitals.domain.model.dayAverageBpm
 import tech.mmarca.openvitals.domain.model.exceedsRawHeartRateReadRange
 import tech.mmarca.openvitals.domain.model.heartRateSampleFromAggregateBucket
 import tech.mmarca.openvitals.domain.model.shouldUseAggregatedHeartRateSamples
@@ -49,18 +49,6 @@ internal class HeartHealthReader(
             ?.roundToLong()
     }
 
-    suspend fun readAvgHeartRateToday(): Long? = readAvgHeartRate(LocalDate.now())
-
-    suspend fun readHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> =
-        support.withLogging("readHeartRateSamples[$start..$end]", emptyList()) {
-            val range = Duration.between(start, end)
-            if (shouldUseAggregatedHeartRateSamples(range)) {
-                readAggregatedHeartRateSamples(start, end, HeartRateChartBucketDuration)
-            } else {
-                readRawOrAggregatedFallback(start, end)
-            }
-        }
-
     /**
      * Heart-rate series dense enough for TRIMP and intensity-minute coverage.
      * Sliced at [HeartRateInsightBucketDuration], at most
@@ -78,7 +66,7 @@ internal class HeartHealthReader(
             if (windowEnd.isAfter(windowStart)) {
                 val dayRange = Duration.between(windowStart, windowEnd)
                 if (shouldUseAggregatedHeartRateSamples(dayRange)) {
-                    insightAggregateWindows(windowStart, windowEnd).forEach { (chunkStart, chunkEnd) ->
+                    aggregateWindows(windowStart, windowEnd, HeartRateInsightBucketDuration).forEach { (chunkStart, chunkEnd) ->
                         samples += support.withLogging(
                             "readHeartRateSamplesForInsights[$chunkStart..$chunkEnd]",
                             emptyList(),
@@ -102,23 +90,6 @@ internal class HeartHealthReader(
             day = day.plusDays(1)
         }
         return samples
-    }
-
-    /**
-     * Splits one day into requests of at most [MaxInsightAggregateBuckets],
-     * on bucket boundaries. A rate-limit retry then replays half a day, not
-     * the whole walk.
-     */
-    private fun insightAggregateWindows(start: Instant, end: Instant): List<Pair<Instant, Instant>> {
-        val span = HeartRateInsightBucketDuration.multipliedBy(MaxInsightAggregateBuckets)
-        val windows = mutableListOf<Pair<Instant, Instant>>()
-        var windowStart = start
-        while (windowStart.isBefore(end)) {
-            val windowEnd = minOf(end, windowStart.plus(span))
-            windows += windowStart to windowEnd
-            windowStart = windowEnd
-        }
-        return windows
     }
 
     /**
@@ -285,16 +256,10 @@ internal class HeartHealthReader(
         }
     }
 
+    /** The day's resting rate as the Heart Day shows it: raw samples, minute-bucketed. */
     suspend fun readRestingHeartRate(date: LocalDate): Long? {
         val (start, end) = support.dayRange(date)
-        return support.withNullableLogging("readRestingHeartRate[$date][$start..$end]") {
-            support.client().aggregate(
-                AggregateRequest(
-                    metrics = setOf(RestingHeartRateRecord.BPM_AVG),
-                    timeRangeFilter = TimeRangeFilter.between(start, end),
-                )
-            )[RestingHeartRateRecord.BPM_AVG]
-        }
+        return readRestingHeartRateSamples(start, end).dayAverageBpm()
     }
 
     suspend fun readRestingHeartRateSamples(start: Instant, end: Instant): List<RestingHeartRateSample> =
@@ -334,15 +299,6 @@ internal class HeartHealthReader(
                     )
                 }
             }
-        }
-    }
-
-    suspend fun readHrvRmssd(date: LocalDate): Double? {
-        val (start, end) = support.dayRange(date)
-        return support.withNullableLogging("readHrvRmssd[$date][$start..$end]") {
-            // Minute-bucketed like every other intraday mean.
-            readHrvSamples(start, end)
-                .timeBucketedAverageOrNull(time = { it.time }, value = { it.rmssdMs })
         }
     }
 

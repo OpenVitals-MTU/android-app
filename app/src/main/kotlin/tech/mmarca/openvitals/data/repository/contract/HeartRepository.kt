@@ -19,7 +19,8 @@ interface HeartRepository {
         refreshMode: RefreshMode = RefreshMode.NORMAL,
     ): HeartPeriodData
 
-    suspend fun loadHeartRateSamples(date: LocalDate): List<HeartRateSample>
+    /** The day's average as the Today tile shows it: raw samples, minute-bucketed. */
+    suspend fun loadAvgHeartRate(date: LocalDate): Long?
 
     suspend fun loadRawHeartRateSamplesForDayGraph(date: LocalDate): List<HeartRateSample>
 
@@ -36,6 +37,7 @@ interface HeartRepository {
 
     suspend fun loadDailyRestingHR(start: LocalDate, end: LocalDate): List<DailyRestingHR>
 
+    /** The day's HRV as the Day view shows it: raw samples, minute-bucketed. */
     suspend fun loadHrvRmssd(date: LocalDate): Double?
 
     suspend fun loadHrvSamples(start: Instant, end: Instant): List<HrvSample>

@@ -32,7 +32,6 @@ import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.CalorieDisplayPreferences
 import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
-import tech.mmarca.openvitals.data.sync.CaloriesHistorySyncService
 
 @Immutable
 data class CaloriesUiState(
@@ -62,11 +61,8 @@ class CaloriesViewModel @Inject constructor(
     private val bodyRepository: BodyRepository,
     private val periodPreferences: PeriodPreferences,
     private val calorieDisplayPreferences: CalorieDisplayPreferences,
-    private val caloriesSync: CaloriesHistorySyncService,
     savedStateHandle: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
-
-    private var caloriesSyncKicked = false
 
     private val initialRange = periodPreferences.timeRangeFor(PeriodRangePreferenceKey.CALORIES)
     private val initialWeekPeriodMode = periodPreferences.weekPeriodMode
@@ -167,7 +163,7 @@ class CaloriesViewModel @Inject constructor(
                                 query = query,
                                 includeSteps = true,
                                 includeNutrition = true,
-                                // This screen draws the intraday cards on Day, so it keeps the hourly aggregate.
+                                // This screen draws the intraday cards on Day, so it keeps the intraday series.
                                 includeActivityProgress = true,
                                 // No comparison windows: this screen shows the current window alone.
                                 includeComparisonWindows = false,
@@ -177,7 +173,7 @@ class CaloriesViewModel @Inject constructor(
                                 query = query,
                                 includeSteps = true,
                                 includeNutrition = true,
-                                // This screen draws the intraday cards on Day, so it keeps the hourly aggregate.
+                                // This screen draws the intraday cards on Day, so it keeps the intraday series.
                                 includeActivityProgress = true,
                                 // No comparison windows: this screen shows the current window alone.
                                 includeComparisonWindows = false,
@@ -209,7 +205,6 @@ class CaloriesViewModel @Inject constructor(
                     latestBmrKcal = latestBmr,
                     activityProgress = activity.activityProgress,
                 )
-                kickCaloriesHistorySyncOnce()
             }.onFailure {
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
@@ -218,19 +213,6 @@ class CaloriesViewModel @Inject constructor(
                     error = it.toScreenError(),
                 )
             }
-        }
-    }
-
-    /**
-     * Kicks the calories history sync once per open, after the first load
-     * settles. The first sync builds the cache every later open serves from.
-     */
-    private fun kickCaloriesHistorySyncOnce() {
-        if (caloriesSyncKicked) return
-        caloriesSyncKicked = true
-        viewModelScope.launch {
-            runCatching { caloriesSync.syncAll() }
-            load()
         }
     }
 

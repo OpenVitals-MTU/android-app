@@ -395,7 +395,7 @@ internal fun heartRateSampleStats(samples: List<HeartRateSample>): HeartRateSamp
 @Composable
 internal fun HeartRateSampleStatisticsContent(
     samples: List<HeartRateSample>,
-    previousSamples: List<HeartRateSample>,
+    previousAverage: Long?,
     baselineSummaries: List<HeartRateSummary>,
     period: DatePeriod,
     selectedRange: TimeRange,
@@ -403,14 +403,13 @@ internal fun HeartRateSampleStatisticsContent(
 ) {
     val stats = remember(samples) { heartRateSampleStats(samples) } ?: return
     val average = stats.average
-    val previousAverage = remember(previousSamples) { heartRateSampleAverage(previousSamples) }
     HeartNumericStatisticsContent(
         unitFormatter = unitFormatter,
         average = unitFormatter.heartRate(average.roundToInt().toLong()),
         low = unitFormatter.heartRate(stats.low),
         high = unitFormatter.heartRate(stats.high),
         readings = stats.readings,
-        comparison = previousAverage?.let { periodComparison(average, it) },
+        comparison = previousAverage?.let { periodComparison(average, it.toDouble()) },
         selectedRange = selectedRange,
         comparisonValueFormatter = { unitFormatter.heartRate(it.roundToInt().toLong()) },
         icon = Icons.Outlined.Favorite,
@@ -847,7 +846,7 @@ internal fun SkinTemperatureStatisticsContent(
 
 internal fun LazyListScope.heartRateSampleStatistics(
     samples: List<HeartRateSample>,
-    previousSamples: List<HeartRateSample>,
+    previousAverage: Long?,
     baselineSummaries: List<HeartRateSummary>,
     period: DatePeriod,
     selectedRange: TimeRange,
@@ -856,7 +855,7 @@ internal fun LazyListScope.heartRateSampleStatistics(
     item {
         HeartRateSampleStatisticsContent(
             samples = samples,
-            previousSamples = previousSamples,
+            previousAverage = previousAverage,
             baselineSummaries = baselineSummaries,
             period = period,
             selectedRange = selectedRange,

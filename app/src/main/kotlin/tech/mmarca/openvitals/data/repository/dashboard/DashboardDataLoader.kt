@@ -35,8 +35,6 @@ import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.WheelchairPushesRecord
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
-import tech.mmarca.openvitals.core.performance.DashboardLoadCoalesceKey
-import tech.mmarca.openvitals.core.performance.DashboardLoadCoalescer
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.PerformanceTrace
 import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
@@ -70,9 +68,9 @@ import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.dailySleepSummary
+import tech.mmarca.openvitals.domain.model.minutesByStartDate
 import tech.mmarca.openvitals.domain.model.sleepRangeStartFor
 import tech.mmarca.openvitals.domain.dashboard.DashboardAggregator
 import tech.mmarca.openvitals.domain.dashboard.DashboardAggregator.cardioLoadWindows
@@ -148,7 +146,6 @@ class DashboardDataLoader @Inject constructor(
     private val readMenstruationPeriodPermission = HealthPermission.getReadPermission(MenstruationPeriodRecord::class)
     private val readOvulationTestPermission = HealthPermission.getReadPermission(OvulationTestRecord::class)
     private val readBasalBodyTemperaturePermission = HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class)
-    private val dashboardLoadCoalescer = DashboardLoadCoalescer()
 
     suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) {
@@ -164,19 +161,7 @@ class DashboardDataLoader @Inject constructor(
 
     suspend fun loadDashboard(query: DashboardQuery): DashboardData =
         withContext(dispatchers.io) {
-            val inputs = dashboardLoadInputs()
-            if (query.refreshMode == RefreshMode.NORMAL) {
-                val coalesceKey = DashboardLoadCoalesceKey.from(
-                    query = query,
-                    granted = inputs.granted,
-                    showOpenVitalsCalculatedCalories = inputs.showOpenVitalsCalculatedCalories,
-                )
-                dashboardLoadCoalescer.getOrPut(coalesceKey) {
-                    loadDashboardInternal(query, inputs)
-                }
-            } else {
-                loadDashboardInternal(query, inputs)
-            }
+            loadDashboardInternal(query, dashboardLoadInputs())
         }
 
     private suspend fun dashboardLoadInputs(): DashboardLoadInputs =
@@ -291,11 +276,13 @@ class DashboardDataLoader @Inject constructor(
             )
         }
         val calories = readIfNeeded(wants(DashboardMetric.CALORIES_OUT), readCaloriesPermission, "calories") {
-            hc.readCaloriesBurned(
-                date = date,
+            hc.readDailyNutrition(
+                startDate = date,
+                endDate = date,
+                includeHydration = false,
                 includeEstimatedCalories = calculateDerivedMetrics &&
                     canEstimateTotalCalories(granted, showOpenVitalsCalculatedCalories),
-            )
+            ).firstOrNull()
         }
         val activeCalories = if (
             wants(DashboardMetric.ACTIVE_CALORIES) &&
@@ -305,7 +292,7 @@ class DashboardDataLoader @Inject constructor(
         ) {
             async {
                 dashboardMetric("active calories") {
-                    hc.readDailySteps(date, date, includeActiveCalories = true)
+                    hc.readDailySteps(date, date, includeSteps = false, includeDistance = false, includeActiveCalories = true)
                         .firstOrNull()
                         ?.activeCaloriesKcal
                 }
@@ -313,11 +300,14 @@ class DashboardDataLoader @Inject constructor(
         } else {
             null
         }
-        val caloriesIn = readIfNeeded(wants(DashboardMetric.CALORIES_IN), readNutritionPermission, "calories in") {
-            hc.readCaloriesInKcal(date)
-        }
         val macros = readIfNeeded(
-            wantsAny(DashboardMetric.PROTEIN, DashboardMetric.CARBS, DashboardMetric.FAT, DashboardMetric.CAFFEINE),
+            wantsAny(
+                DashboardMetric.CALORIES_IN,
+                DashboardMetric.PROTEIN,
+                DashboardMetric.CARBS,
+                DashboardMetric.FAT,
+                DashboardMetric.CAFFEINE,
+            ),
             readNutritionPermission,
             "macros",
         ) {
@@ -346,7 +336,7 @@ class DashboardDataLoader @Inject constructor(
             }
         }
         val hydration = readIfNeeded(wants(DashboardMetric.HYDRATION), readHydrationPermission, "hydration") {
-            hc.readHydrationLiters(date)
+            hc.readDailyHydration(date, date).firstOrNull()?.liters
         }
         val weight = readIfNeeded(
             wantsAny(DashboardMetric.WEIGHT, DashboardMetric.BMI, DashboardMetric.FFMI),
@@ -504,7 +494,7 @@ class DashboardDataLoader @Inject constructor(
             readMindfulnessPermission,
             "mindfulness",
         ) {
-            hc.readMindfulnessMinutes(date)
+            hc.readMindfulnessSessions(dayStart, dayEnd).minutesByStartDate(zone)[date]?.toInt() ?: 0
         }
         val menstruationPeriods = readIfNeeded(
             wants(DashboardMetric.CYCLE),
@@ -603,10 +593,10 @@ class DashboardDataLoader @Inject constructor(
             date = date,
             steps = steps?.await() ?: 0L,
             distanceMeters = distance?.await() ?: 0.0,
-            caloriesKcal = caloriesBurned?.kcal ?: 0.0,
-            caloriesKcalSource = caloriesBurned?.source ?: CaloriesBurnedSource.NO_DATA,
+            caloriesKcal = caloriesBurned?.caloriesBurnedKcal ?: 0.0,
+            caloriesKcalSource = caloriesBurned?.caloriesBurnedSource ?: CaloriesBurnedSource.NO_DATA,
             activeCaloriesKcal = activeCalories?.await(),
-            caloriesInKcal = caloriesIn?.await()?.takeIf { it > 0.0 },
+            caloriesInKcal = dailyMacros?.energyKcal?.takeIf { it > 0.0 },
             proteinGrams = dailyMacros?.proteinGrams?.takeIf { it > 0.0 },
             carbsGrams = dailyMacros?.carbsGrams?.takeIf { it > 0.0 },
             fatGrams = dailyMacros?.fatGrams?.takeIf { it > 0.0 },
@@ -923,28 +913,15 @@ class DashboardDataLoader @Inject constructor(
         end: LocalDate,
         granted: Set<String>,
     ): List<DailySteps> =
-        when {
-            readStepsPermission in granted && readDistancePermission in granted -> {
-                hc.readDailySteps(
-                    startDate = start,
-                    endDate = end,
-                    includeActiveCalories = readActiveCaloriesPermission in granted,
-                )
-            }
-            readStepsPermission in granted -> {
-                buildList {
-                    datesInRange(start, end).forEach { date ->
-                        add(
-                            DailySteps(
-                                date = date,
-                                steps = hc.readSteps(date),
-                                distanceMeters = 0.0,
-                            )
-                        )
-                    }
-                }
-            }
-            else -> emptyList()
+        if (readStepsPermission in granted) {
+            hc.readDailySteps(
+                startDate = start,
+                endDate = end,
+                includeDistance = readDistancePermission in granted,
+                includeActiveCalories = readActiveCaloriesPermission in granted,
+            )
+        } else {
+            emptyList()
         }
 
     private fun canEstimateTotalCalories(

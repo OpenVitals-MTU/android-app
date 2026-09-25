@@ -56,11 +56,6 @@ class HistorySyncSchedulerTest {
         coEvery { it.syncAll() } coAnswers { recorder.run("vitals-full") }
     }
 
-    private val calories = mockk<CaloriesHistorySyncService>().also {
-        coEvery { it.syncIncremental() } coAnswers { recorder.run("calories") }
-        coEvery { it.syncAll() } coAnswers { recorder.run("calories-full") }
-    }
-
     private val bodyEnergy = mockk<BodyEnergyChainSyncService>().also {
         coEvery { it.syncAll(any()) } coAnswers { recorder.run("bodyEnergy") }
     }
@@ -69,14 +64,14 @@ class HistorySyncSchedulerTest {
         coEvery { it.syncIncremental() } coAnswers { recorder.run("stepDistance") }
     }
 
-    private val scheduler = HistorySyncScheduler(vitals, calories, bodyEnergy, stepDistance)
+    private val scheduler = HistorySyncScheduler(vitals, bodyEnergy, stepDistance)
 
     @Test
     fun `the drains run one after another, never at the same time`() = runTest {
         // Health Connect serializes reads, so overlapping drains are the contention the sequencing avoids.
         scheduler.drainIncrementalOnce()
 
-        assertEquals(listOf("vitals", "calories", "bodyEnergy", "stepDistance"), recorder.started)
+        assertEquals(listOf("vitals", "bodyEnergy", "stepDistance"), recorder.started)
         assertEquals(emptySet<String>(), recorder.overlapped)
     }
 
@@ -86,7 +81,6 @@ class HistorySyncSchedulerTest {
         scheduler.drainIncrementalOnce()
 
         coVerify(exactly = 0) { vitals.syncAll() }
-        coVerify(exactly = 0) { calories.syncAll() }
     }
 
     @Test
@@ -96,13 +90,13 @@ class HistorySyncSchedulerTest {
 
         scheduler.drainIncrementalOnce()
 
-        assertEquals(listOf("calories", "bodyEnergy", "stepDistance"), recorder.started)
+        assertEquals(listOf("bodyEnergy", "stepDistance"), recorder.started)
     }
 
     @Test
     fun `a cancelled drain still unwinds`() = runTest {
         // Cancellation is not a failing drain.
-        coEvery { calories.syncIncremental() } throws CancellationException("gone")
+        coEvery { bodyEnergy.syncAll(any()) } throws CancellationException("gone")
 
         var cancelled = false
         try {
@@ -125,6 +119,6 @@ class HistorySyncSchedulerTest {
             ).awaitAll()
         }
 
-        assertEquals(listOf("vitals", "calories", "bodyEnergy", "stepDistance"), recorder.started)
+        assertEquals(listOf("vitals", "bodyEnergy", "stepDistance"), recorder.started)
     }
 }

@@ -31,7 +31,7 @@ class HydrationRepositoryTest {
     private val nutritionWritePermission = HealthPermission.getWritePermission(NutritionRecord::class)
 
     @Test
-    fun `DAY hydration uses raw full entries for selected day total`() = runTest {
+    fun `DAY hydration reads the one-day series, the dashboard tile's read`() = runTest {
         val date = LocalDate.of(2026, 6, 1)
         val entries = listOf(
             HydrationEntry(
@@ -47,7 +47,7 @@ class HydrationRepositoryTest {
                 source = "test.source",
             ),
         )
-        val aggregate = listOf(DailyHydration(date = date, liters = 9.99))
+        val aggregate = listOf(DailyHydration(date = date, liters = 0.85))
         val hc = hc(entries = entries, dailyHydration = aggregate)
 
         val result = HydrationRepositoryImpl(hc).loadHydrationPeriod(
@@ -55,8 +55,8 @@ class HydrationRepositoryTest {
         )
 
         assertEquals(entries, result.hydrationEntries)
-        assertEquals(listOf(DailyHydration(date = date, liters = 0.85)), result.dailyHydration)
-        coVerify(exactly = 0) { hc.readDailyHydration(date, date) }
+        assertEquals(aggregate, result.dailyHydration)
+        coVerify(exactly = 1) { hc.readDailyHydration(date, date) }
     }
 
     @Test

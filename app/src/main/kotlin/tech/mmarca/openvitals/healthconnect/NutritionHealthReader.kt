@@ -11,7 +11,6 @@ import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
-import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.Energy
 import androidx.health.connect.client.units.Mass
@@ -35,20 +34,6 @@ internal class NutritionHealthReader(
     private val support: HealthConnectReaderSupport,
     private val appPackageName: String,
 ) {
-    suspend fun readCaloriesInKcal(date: LocalDate): Double? {
-        val zone = ZoneId.systemDefault()
-        val start = date.atStartOfDay(zone).toInstant()
-        val end = date.plusDays(1).atStartOfDay(zone).toInstant()
-        return support.withNullableLogging("readCaloriesInKcal[$date][$start..$end]") {
-            support.client().aggregate(
-                AggregateRequest(
-                    metrics = setOf(NutritionRecord.ENERGY_TOTAL),
-                    timeRangeFilter = TimeRangeFilter.between(start, end),
-                )
-            )[NutritionRecord.ENERGY_TOTAL]?.inKilocalories
-        }
-    }
-
     suspend fun readDailyNutrition(
         startDate: LocalDate,
         endDate: LocalDate,

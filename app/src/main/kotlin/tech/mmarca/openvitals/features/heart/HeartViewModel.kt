@@ -76,7 +76,7 @@ data class HeartUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val weekPeriodMode: WeekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
     val daySamples: List<HeartRateSample> = emptyList(),
-    val previousDaySamples: List<HeartRateSample> = emptyList(),
+    val previousDayAvgBpm: Long? = null,
     val dailySummaries: List<HeartRateSummary> = emptyList(),
     val previousDailySummaries: List<HeartRateSummary> = emptyList(),
     val baselineDailySummaries: List<HeartRateSummary> = emptyList(),

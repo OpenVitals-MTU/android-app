@@ -1,6 +1,8 @@
 package tech.mmarca.openvitals.domain.model
 
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 data class MindfulnessSession(
     val id: String,
@@ -14,6 +16,11 @@ data class MindfulnessSession(
 ) {
     val durationMinutes: Long get() = durationMs / 60_000
 }
+
+/** Minutes per local day, each session counted on the day it starts. The day value everywhere. */
+fun List<MindfulnessSession>.minutesByStartDate(zone: ZoneId): Map<LocalDate, Double> =
+    groupBy { it.startTime.atZone(zone).toLocalDate() }
+        .mapValues { (_, sessions) -> sessions.sumOf { it.durationMs.coerceAtLeast(0L) } / 60_000.0 }
 
 enum class MindfulnessBellSound {
     STRUCK,

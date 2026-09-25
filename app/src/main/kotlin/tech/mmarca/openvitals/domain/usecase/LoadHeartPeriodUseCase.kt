@@ -44,7 +44,7 @@ sealed interface HeartPeriodLoadRequest {
 
 data class HeartPeriodLoadResult(
     val daySamples: List<HeartRateSample> = emptyList(),
-    val previousDaySamples: List<HeartRateSample> = emptyList(),
+    val previousDayAvgBpm: Long? = null,
     val dailySummaries: List<HeartRateSummary> = emptyList(),
     val previousDailySummaries: List<HeartRateSummary> = emptyList(),
     val baselineDailySummaries: List<HeartRateSummary> = emptyList(),
@@ -195,7 +195,7 @@ class LoadHeartPeriodUseCase @Inject constructor(
 private fun HeartPeriodData.toLoadResult(): HeartPeriodLoadResult =
     HeartPeriodLoadResult(
         daySamples = daySamples,
-        previousDaySamples = previousDaySamples,
+        previousDayAvgBpm = previousDayAvgBpm,
         dailySummaries = dailySummaries,
         previousDailySummaries = previousDailySummaries,
         baselineDailySummaries = baselineDailySummaries,
@@ -258,7 +258,7 @@ private fun VitalsPeriodData.toLoadResult(): HeartPeriodLoadResult =
 internal fun HeartPeriodLoadResult.merge(other: HeartPeriodLoadResult): HeartPeriodLoadResult =
     HeartPeriodLoadResult(
         daySamples = daySamples + other.daySamples,
-        previousDaySamples = previousDaySamples + other.previousDaySamples,
+        previousDayAvgBpm = previousDayAvgBpm ?: other.previousDayAvgBpm,
         dailySummaries = dailySummaries + other.dailySummaries,
         previousDailySummaries = previousDailySummaries + other.previousDailySummaries,
         baselineDailySummaries = baselineDailySummaries + other.baselineDailySummaries,

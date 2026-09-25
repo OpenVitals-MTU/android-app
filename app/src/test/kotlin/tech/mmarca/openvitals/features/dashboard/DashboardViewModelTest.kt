@@ -153,16 +153,15 @@ class DashboardViewModelTest {
         assertEquals(ScreenError.Text(R.string.screen_error_generic), vm.uiState.value.error)
     }
 
-    @Test fun `transient load cancellation retries without surfacing dashboard error`() = runTest {
+    @Test fun `a cancelled pass is a tile failure, not the screen's`() = runTest {
         val loader = mockDashboardDataLoader()
         var stepsPasses = 0
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
             val query = firstArg<DashboardQuery>()
-            // Only the steps pass fails. A coalesced pass can be handed the cancellation of the one
-            // it shared; it must retry without taking the other passes down.
+            // Only the steps pass is cancelled. Its tile stays empty; the others fill.
             if (query.visibleMetrics == setOf(DashboardMetric.STEPS)) {
                 stepsPasses += 1
-                if (stepsPasses == 1) throw CancellationException("Job was cancelled")
+                throw CancellationException("Job was cancelled")
             }
             DashboardData(date = today, steps = 7_200, loadedMetrics = query.visibleMetrics)
         }
@@ -171,9 +170,10 @@ class DashboardViewModelTest {
 
         val state = vm.uiState.value
         assertFalse(state.isLoading)
-        assertEquals(7_200L, state.data?.steps)
+        // The other passes' 7,200 never reaches the steps tile: only loaded metrics merge.
+        assertEquals(0L, state.data?.steps)
         assertNull(state.error)
-        assertEquals(2, stepsPasses)
+        assertEquals(1, stepsPasses)
     }
 
     @Test fun `sensor status includes saved battery and live connection status`() = runTest {

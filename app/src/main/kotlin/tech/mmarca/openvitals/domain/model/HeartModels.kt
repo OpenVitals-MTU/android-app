@@ -2,6 +2,8 @@ package tech.mmarca.openvitals.domain.model
 
 import java.time.Instant
 import java.time.LocalDate
+import kotlin.math.roundToLong
+import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 
 data class HeartRateSample(
     val time: Instant,
@@ -14,6 +16,10 @@ data class RestingHeartRateSample(
     val beatsPerMinute: Long,
     val source: String,
 )
+
+/** A day's resting rate: the minute-bucketed mean of its samples, rounded. */
+fun List<RestingHeartRateSample>.dayAverageBpm(): Long? =
+    timeBucketedAverageOrNull(time = { it.time }, value = { it.beatsPerMinute.toDouble() })?.roundToLong()
 
 data class HrvSample(
     val time: Instant,

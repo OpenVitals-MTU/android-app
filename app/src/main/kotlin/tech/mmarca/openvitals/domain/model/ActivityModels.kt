@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.domain.model
 
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.LocalDate
@@ -282,6 +283,12 @@ data class DailySteps(
     val activeCaloriesKcal: Double? = null,
     val elevationGainedMeters: Double? = null,
 )
+
+/**
+ * The intraday series bucket. It is the Body Energy timeline's bucket, so
+ * steps and calories per bucket come straight from the read. A day is 288.
+ */
+val ActivityIntradayBucketDuration: Duration = Duration.ofMinutes(5)
 
 data class ActivityProgressPoint(
     val time: Instant,

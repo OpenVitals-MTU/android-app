@@ -116,7 +116,7 @@ internal fun LazyListScope.averageHeartRateContent(
                 statistics = {
                     HeartRateSampleStatisticsContent(
                         samples = state.daySamples,
-                        previousSamples = state.previousDaySamples,
+                        previousAverage = state.previousDayAvgBpm,
                         baselineSummaries = state.baselineDailySummaries,
                         period = period,
                         selectedRange = state.selectedRange,
