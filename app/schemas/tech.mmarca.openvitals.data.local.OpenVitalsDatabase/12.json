@@ -1,0 +1,662 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 12,
+    "identityHash": "893a14a613884d4a9f4e7d483d68379c",
+    "entities": [
+      {
+        "tableName": "beverages",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `category` TEXT, `volume_milliliters` REAL NOT NULL, `hydration_multiplier` REAL NOT NULL, `is_preloaded` INTEGER NOT NULL, `is_deleted` INTEGER NOT NULL, `sort_order` INTEGER NOT NULL, `energy_kcal` REAL, `protein_grams` REAL, `total_carbohydrate_grams` REAL, `total_fat_grams` REAL, `dietary_fiber_grams` REAL, `sugar_grams` REAL, `saturated_fat_grams` REAL, `sodium_grams` REAL, `potassium_grams` REAL, `calcium_grams` REAL, `caffeine_grams` REAL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "volumeMilliliters",
+            "columnName": "volume_milliliters",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hydrationMultiplier",
+            "columnName": "hydration_multiplier",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isPreloaded",
+            "columnName": "is_preloaded",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDeleted",
+            "columnName": "is_deleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sort_order",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "energyKcal",
+            "columnName": "energy_kcal",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "proteinGrams",
+            "columnName": "protein_grams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "totalCarbohydrateGrams",
+            "columnName": "total_carbohydrate_grams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "totalFatGrams",
+            "columnName": "total_fat_grams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "dietaryFiberGrams",
+            "columnName": "dietary_fiber_grams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "sugarGrams",
+            "columnName": "sugar_grams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "saturatedFatGrams",
+            "columnName": "saturated_fat_grams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "sodiumGrams",
+            "columnName": "sodium_grams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "potassiumGrams",
+            "columnName": "potassium_grams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "calciumGrams",
+            "columnName": "calcium_grams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "caffeineGrams",
+            "columnName": "caffeine_grams",
+            "affinity": "REAL"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "vitals_daily_aggregates",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`metric` TEXT NOT NULL, `epoch_day` INTEGER NOT NULL, `value_sum` REAL NOT NULL, `secondary_sum` REAL, `sample_count` INTEGER NOT NULL, PRIMARY KEY(`metric`, `epoch_day`))",
+        "fields": [
+          {
+            "fieldPath": "metric",
+            "columnName": "metric",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "epochDay",
+            "columnName": "epoch_day",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "valueSum",
+            "columnName": "value_sum",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "secondarySum",
+            "columnName": "secondary_sum",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "sampleCount",
+            "columnName": "sample_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "metric",
+            "epoch_day"
+          ]
+        }
+      },
+      {
+        "tableName": "vitals_sync_cursors",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`metric` TEXT NOT NULL, `changes_token` TEXT, `last_full_sync_millis` INTEGER, PRIMARY KEY(`metric`))",
+        "fields": [
+          {
+            "fieldPath": "metric",
+            "columnName": "metric",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "changesToken",
+            "columnName": "changes_token",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lastFullSyncMillis",
+            "columnName": "last_full_sync_millis",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "metric"
+          ]
+        }
+      },
+      {
+        "tableName": "body_energy_days",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`epoch_day` INTEGER NOT NULL, `signature` TEXT NOT NULL, `start_score` INTEGER NOT NULL, `end_score` INTEGER NOT NULL, `charged` INTEGER NOT NULL, `drained` INTEGER NOT NULL, `confidence` TEXT NOT NULL, `confidence_reason` TEXT NOT NULL, `generated_at_millis` INTEGER NOT NULL, `algorithm_version` INTEGER NOT NULL, `bucket_minutes` INTEGER NOT NULL, `heart_rate_sample_count` INTEGER NOT NULL, `hrv_sample_count` INTEGER NOT NULL, `sleep_session_count` INTEGER NOT NULL, `workout_count` INTEGER NOT NULL, `respiratory_sample_count` INTEGER NOT NULL, `has_resting_heart_rate` INTEGER NOT NULL, `has_baseline_resting_heart_rate` INTEGER NOT NULL, `has_observed_max_heart_rate` INTEGER NOT NULL, `has_hrv_baseline` INTEGER NOT NULL, `has_respiratory_baseline` INTEGER NOT NULL, `previous_end_score` INTEGER, `carry_over_floor_applied` INTEGER NOT NULL, `seed_source` TEXT NOT NULL, `calibration_mode` TEXT NOT NULL, PRIMARY KEY(`epoch_day`))",
+        "fields": [
+          {
+            "fieldPath": "epochDay",
+            "columnName": "epoch_day",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "signature",
+            "columnName": "signature",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startScore",
+            "columnName": "start_score",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endScore",
+            "columnName": "end_score",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "charged",
+            "columnName": "charged",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "drained",
+            "columnName": "drained",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "confidence",
+            "columnName": "confidence",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "confidenceReason",
+            "columnName": "confidence_reason",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generatedAtMillis",
+            "columnName": "generated_at_millis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "algorithmVersion",
+            "columnName": "algorithm_version",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bucketMinutes",
+            "columnName": "bucket_minutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "heartRateSampleCount",
+            "columnName": "heart_rate_sample_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hrvSampleCount",
+            "columnName": "hrv_sample_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sleepSessionCount",
+            "columnName": "sleep_session_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workoutCount",
+            "columnName": "workout_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "respiratorySampleCount",
+            "columnName": "respiratory_sample_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasRestingHeartRate",
+            "columnName": "has_resting_heart_rate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasBaselineRestingHeartRate",
+            "columnName": "has_baseline_resting_heart_rate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasObservedMaxHeartRate",
+            "columnName": "has_observed_max_heart_rate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasHrvBaseline",
+            "columnName": "has_hrv_baseline",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasRespiratoryBaseline",
+            "columnName": "has_respiratory_baseline",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "previousEndScore",
+            "columnName": "previous_end_score",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "carryOverFloorApplied",
+            "columnName": "carry_over_floor_applied",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "seedSource",
+            "columnName": "seed_source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "calibrationMode",
+            "columnName": "calibration_mode",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "epoch_day"
+          ]
+        }
+      },
+      {
+        "tableName": "body_energy_buckets",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`epoch_day` INTEGER NOT NULL, `time_millis` INTEGER NOT NULL, `score` INTEGER NOT NULL, `delta` REAL NOT NULL, `state` TEXT NOT NULL, `confidence` TEXT NOT NULL, `charge` REAL NOT NULL, `intensity_drain` REAL NOT NULL, `activity_energy_drain` REAL NOT NULL, `basal_drain` REAL NOT NULL, `stress_drain` REAL NOT NULL, `recovery_debt_drain` REAL NOT NULL, `primary_influence` TEXT NOT NULL, PRIMARY KEY(`epoch_day`, `time_millis`))",
+        "fields": [
+          {
+            "fieldPath": "epochDay",
+            "columnName": "epoch_day",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timeMillis",
+            "columnName": "time_millis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "score",
+            "columnName": "score",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "delta",
+            "columnName": "delta",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "confidence",
+            "columnName": "confidence",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "charge",
+            "columnName": "charge",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "intensityDrain",
+            "columnName": "intensity_drain",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activityEnergyDrain",
+            "columnName": "activity_energy_drain",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "basalDrain",
+            "columnName": "basal_drain",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stressDrain",
+            "columnName": "stress_drain",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recoveryDebtDrain",
+            "columnName": "recovery_debt_drain",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "primaryInfluence",
+            "columnName": "primary_influence",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "epoch_day",
+            "time_millis"
+          ]
+        }
+      },
+      {
+        "tableName": "garmin_wellness_samples",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`metric` TEXT NOT NULL, `time_millis` INTEGER NOT NULL, `value` INTEGER NOT NULL, PRIMARY KEY(`metric`, `time_millis`))",
+        "fields": [
+          {
+            "fieldPath": "metric",
+            "columnName": "metric",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timeMillis",
+            "columnName": "time_millis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "value",
+            "columnName": "value",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "metric",
+            "time_millis"
+          ]
+        }
+      },
+      {
+        "tableName": "synced_record_origins",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`client_record_id` TEXT NOT NULL, `origin_package` TEXT NOT NULL, PRIMARY KEY(`client_record_id`))",
+        "fields": [
+          {
+            "fieldPath": "clientRecordId",
+            "columnName": "client_record_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "originPackage",
+            "columnName": "origin_package",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "client_record_id"
+          ]
+        }
+      },
+      {
+        "tableName": "garmin_sleep_minutes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`time_millis` INTEGER NOT NULL, `kind` TEXT NOT NULL, `heart_rate` REAL, `movement` REAL, `activity` REAL, `offset_seconds` INTEGER NOT NULL, `features` BLOB, PRIMARY KEY(`time_millis`))",
+        "fields": [
+          {
+            "fieldPath": "timeMillis",
+            "columnName": "time_millis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "heartRate",
+            "columnName": "heart_rate",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "movement",
+            "columnName": "movement",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "activity",
+            "columnName": "activity",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "offsetSeconds",
+            "columnName": "offset_seconds",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "features",
+            "columnName": "features",
+            "affinity": "BLOB"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "time_millis"
+          ]
+        }
+      },
+      {
+        "tableName": "heart_rate_days",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`epoch_day` INTEGER NOT NULL, `signature` TEXT NOT NULL, `average_bpm` REAL NOT NULL, PRIMARY KEY(`epoch_day`))",
+        "fields": [
+          {
+            "fieldPath": "epochDay",
+            "columnName": "epoch_day",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "signature",
+            "columnName": "signature",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "averageBpm",
+            "columnName": "average_bpm",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "epoch_day"
+          ]
+        }
+      },
+      {
+        "tableName": "foods",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `category` TEXT, `amount_grams` REAL NOT NULL, `is_deleted` INTEGER NOT NULL, `sort_order` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "amountGrams",
+            "columnName": "amount_grams",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDeleted",
+            "columnName": "is_deleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sort_order",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "food_nutrients",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`food_id` TEXT NOT NULL, `nutrient` TEXT NOT NULL, `value` REAL NOT NULL, PRIMARY KEY(`food_id`, `nutrient`))",
+        "fields": [
+          {
+            "fieldPath": "foodId",
+            "columnName": "food_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nutrient",
+            "columnName": "nutrient",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "value",
+            "columnName": "value",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "food_id",
+            "nutrient"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '893a14a613884d4a9f4e7d483d68379c')"
+    ]
+  }
+}

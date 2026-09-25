@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 
 enum class ManualEntryWidgetId {
     HYDRATION,
+    FOOD,
     CARBS,
     ACTIVITY,
     MINDFULNESS,
@@ -30,6 +31,7 @@ enum class ManualEntryWidgetId {
 
 val DefaultManualEntryWidgetIds: List<ManualEntryWidgetId> = listOf(
     ManualEntryWidgetId.HYDRATION,
+    ManualEntryWidgetId.FOOD,
     ManualEntryWidgetId.CARBS,
     ManualEntryWidgetId.ACTIVITY,
     ManualEntryWidgetId.WORKOUT_PLANS,

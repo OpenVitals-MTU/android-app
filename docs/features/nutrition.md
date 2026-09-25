@@ -3,8 +3,8 @@
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
 > **Implementation:** `features/nutrition`, `features/manualentry/nutrition`, `data/repository/NutritionRepository.kt`.
-> **Navigation:** `Screen.Nutrition`, `Screen.CarbsEntry`, `Screen.Metric`; widgets `CALORIES_IN`, `PROTEIN`, `CARBS`, `FAT`.
-> **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Preloaded beverage nutrition reference](preloaded-beverage-nutrition.md).
+> **Navigation:** `Screen.Nutrition`, `Screen.CarbsEntry`, `Screen.FoodEntry`, `Screen.Metric`; widgets `CALORIES_IN`, `PROTEIN`, `CARBS`, `FAT`; entry widgets `FOOD`, `CARBS`.
+> **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Food logging](food-logging.md), [Preloaded beverage nutrition reference](preloaded-beverage-nutrition.md).
 
 The nutrition feature owns period-based nutrition detail screens for intake metrics read from Health Connect.
 
@@ -32,7 +32,7 @@ Nutrition metrics follow the canonical period-detail pattern:
 - Over a week, month or year the nutrient tiles lead with a **daily average**; see below.
 - Reorderable detail sections.
 
-Nutrition records remain in Health Connect. OpenVitals writes nutrition records through explicit entry flows such as carbohydrate entry and beverage logging; the nutrition detail screens remain read-oriented.
+Nutrition records remain in Health Connect. OpenVitals writes nutrition records through explicit entry flows: food logging, carbohydrate entry and beverage logging. The nutrition detail screens remain read-oriented.
 
 ## Daily Averages Over A Period
 

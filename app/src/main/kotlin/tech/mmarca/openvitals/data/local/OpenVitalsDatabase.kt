@@ -9,6 +9,9 @@ import tech.mmarca.openvitals.data.local.beverage.BeverageEntity
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyBucketEntity
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyDayEntity
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyTimelineDao
+import tech.mmarca.openvitals.data.local.food.FoodDao
+import tech.mmarca.openvitals.data.local.food.FoodEntity
+import tech.mmarca.openvitals.data.local.food.FoodNutrientEntity
 import tech.mmarca.openvitals.data.local.garmin.GarminSleepMinuteDao
 import tech.mmarca.openvitals.data.local.garmin.GarminSleepMinuteEntity
 import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
@@ -32,6 +35,8 @@ import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
         SyncedRecordOriginEntity::class,
         GarminSleepMinuteEntity::class,
         HeartRateDayEntity::class,
+        FoodEntity::class,
+        FoodNutrientEntity::class,
     ],
     version = OpenVitalsDatabase.VERSION,
     exportSchema = true,
@@ -51,9 +56,11 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
 
     abstract fun heartRateDayCacheDao(): HeartRateDayCacheDao
 
+    abstract fun foodDao(): FoodDao
+
     companion object {
         /** Raise it with a new migration in [ALL_MIGRATIONS], and commit the schema file Room then writes. */
-        const val VERSION = 11
+        const val VERSION = 12
 
         val MIGRATION_1_3 = beverageMigration(1)
         val MIGRATION_2_3 = beverageMigration(2)
@@ -112,6 +119,13 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
             }
         }
 
+        /** The user's food catalog and each food's nutrients. Creation only; there are no preloaded foods. */
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                createFoodTables(db)
+            }
+        }
+
         /**
          * Every migration, in one place. The database builder takes this list, so a migration
          * cannot be written and then left out of it.
@@ -128,6 +142,7 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                 MIGRATION_8_9,
                 MIGRATION_9_10,
                 MIGRATION_10_11,
+                MIGRATION_11_12,
             )
 
         private fun beverageMigration(startVersion: Int): Migration =
@@ -267,6 +282,32 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                     `signature` TEXT NOT NULL,
                     `average_bpm` REAL NOT NULL,
                     PRIMARY KEY(`epoch_day`)
+                )
+                """.trimIndent()
+            )
+        }
+
+        private fun createFoodTables(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `foods` (
+                    `id` TEXT NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `category` TEXT,
+                    `amount_grams` REAL NOT NULL,
+                    `is_deleted` INTEGER NOT NULL,
+                    `sort_order` INTEGER NOT NULL,
+                    PRIMARY KEY(`id`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `food_nutrients` (
+                    `food_id` TEXT NOT NULL,
+                    `nutrient` TEXT NOT NULL,
+                    `value` REAL NOT NULL,
+                    PRIMARY KEY(`food_id`, `nutrient`)
                 )
                 """.trimIndent()
             )

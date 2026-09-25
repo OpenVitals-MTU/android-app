@@ -5,6 +5,7 @@ import java.util.Locale
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.NutritionEntry
+import tech.mmarca.openvitals.domain.model.OpenVitalsFoodClientRecordPrefix
 
 internal const val FrequentHydrationDrinkLimit = 6
 internal const val FrequentHydrationDrinkLookbackDays = 90L
@@ -54,6 +55,8 @@ internal fun frequentHydrationDrinkOptions(
 
     nutritionEntries.forEach { entry ->
         if (!entry.isOpenVitalsNutritionEntry()) return@forEach
+        // A food shares the record type, and may share a drink's name.
+        if (entry.clientRecordId?.startsWith(OpenVitalsFoodClientRecordPrefix) == true) return@forEach
         val pairedHydrationClientRecordId = entry.clientRecordId?.pairedHydrationClientRecordIdOrNull()
         val pairedDrinkId = pairedHydrationClientRecordId?.hydrationDrinkIdFromClientRecordId()
         if (pairedDrinkId != null) {

@@ -261,6 +261,7 @@ internal fun isSupportedOpenVitalsRoute(route: String): Boolean {
     if (route == Screen.Dashboard.route) return true
     if (route == Screen.ActivityEntry.createRoute()) return true
     if (route == Screen.HydrationEntry.route) return true
+    if (route == Screen.FoodEntry.route) return true
     val hydrationDrinkLogPrefix = "manual_entry/hydration/log/"
     if (route.startsWith(hydrationDrinkLogPrefix)) {
         return Uri.decode(route.removePrefix(hydrationDrinkLogPrefix)).isNotBlank()

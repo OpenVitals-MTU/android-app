@@ -55,7 +55,7 @@ class FileSizeRatchetTest {
         /** The files over the limit on 2026-09-21. Each ceiling leaves 25 to 75 lines for small fixes. */
         val Ceilings: Map<String, Int> = mapOf(
             "features/settings/SettingsCards.kt" to 3050,
-            "features/manualentry/hydration/HydrationEntryFormContent.kt" to 2350,
+            "features/manualentry/hydration/HydrationEntryFormContent.kt" to 2200,
             "features/manualentry/activity/recording/ActivityRecording.kt" to 1850,
             "healthconnect/ActivityHealthReader.kt" to 1600,
             "domain/insights/CaffeineHealthDrinkCatalog.kt" to 1750,

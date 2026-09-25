@@ -36,6 +36,7 @@ class HomeWidgetLaunchRouteTest {
         assertTrue(isSupportedOpenVitalsRoute("daily_readiness/body_energy/2026-07-10"))
         assertTrue(isSupportedOpenVitalsRoute("metric/STEPS"))
         assertTrue(isSupportedOpenVitalsRoute(Screen.HydrationEntry.route))
+        assertTrue(isSupportedOpenVitalsRoute(Screen.FoodEntry.route))
         assertTrue(isSupportedOpenVitalsRoute("manual_entry/hydration/log/coffee"))
         assertTrue(isSupportedOpenVitalsRoute(Screen.ActivityEntry.createRoute()))
     }

@@ -109,6 +109,36 @@ class OpenVitalsDatabaseMigrationTest {
     }
 
     @Test
+    fun `version eleven adds the food tables`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+
+        OpenVitalsDatabase.MIGRATION_11_12.migrate(db)
+
+        assertEquals(11, OpenVitalsDatabase.MIGRATION_11_12.startVersion)
+        assertEquals(12, OpenVitalsDatabase.MIGRATION_11_12.endVersion)
+        verify {
+            db.execSQL(
+                match {
+                    it.contains("CREATE TABLE IF NOT EXISTS `foods`") &&
+                        it.contains("`amount_grams` REAL NOT NULL") &&
+                        it.contains("`is_deleted` INTEGER NOT NULL") &&
+                        it.contains("PRIMARY KEY(`id`)")
+                },
+            )
+        }
+        // One row per nutrient, so a food can carry any of them without a column each.
+        verify {
+            db.execSQL(
+                match {
+                    it.contains("CREATE TABLE IF NOT EXISTS `food_nutrients`") &&
+                        it.contains("`value` REAL NOT NULL") &&
+                        it.contains("PRIMARY KEY(`food_id`, `nutrient`)")
+                },
+            )
+        }
+    }
+
+    @Test
     fun `version eight restores the garmin wellness table`() {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
 

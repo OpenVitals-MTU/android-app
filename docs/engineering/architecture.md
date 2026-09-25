@@ -207,7 +207,7 @@ Some repositories are now split into a `data/repository/contract/` interface and
 
 ### Local storage
 
-[`OpenVitalsDatabase`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/local/OpenVitalsDatabase.kt) is at `VERSION = 11`, with migrations declared in its companion object and listed once, in `ALL_MIGRATIONS`, which the database builder takes. Room exports the schema of each version to [`app/schemas`](../../app/schemas); the files are committed.
+[`OpenVitalsDatabase`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/local/OpenVitalsDatabase.kt) is at `VERSION = 12`, with migrations declared in its companion object and listed once, in `ALL_MIGRATIONS`, which the database builder takes. Room exports the schema of each version to [`app/schemas`](../../app/schemas); the files are committed.
 
 To change the schema: raise `VERSION`, write the migration, add it to `ALL_MIGRATIONS`, build once, and commit the new schema file. `OpenVitalsDatabaseSchemaTest` fails until all of that is done: it replays every migration's statements and compares the tables they leave with the exported schema. It can do that on the JVM because the migrations only create and drop tables. A migration that alters a table needs a real database, so add `room-testing` and a `MigrationTestHelper` test with it; the exported schemas are what that helper reads.
 
@@ -220,6 +220,7 @@ To change the schema: raise `VERSION`, write the migration, add it to `ALL_MIGRA
 | `synced_record_origins` | `data/local/syncorigin` | the source app of each record received from another phone, added in migration 6 → 7 |
 | `garmin_sleep_minutes` | `data/local/garmin` | per-minute input for estimated sleep stages, added in migration 9 → 10 |
 | `heart_rate_days` | `data/local/heartratecache` | each day's heart-rate average from raw samples, read again when the day's hourly aggregates change, added in migration 10 → 11 |
+| `foods`, `food_nutrients` | `data/local/food` | the user's food catalog and each food's nutrients, added in migration 11 → 12; a logged portion is a Health Connect nutrition record, not a row |
 
 `garmin_wellness_samples` is the one table that is not a cache. It is the system of record for the series a Garmin watch produces that Health Connect has no record type for (stress, Body Battery, watch sleep scores). Its schema is `(metric, time_millis, value)` with `(metric, time_millis)` as the primary key, so re-syncing an overlapping window rewrites rows instead of duplicating them.
 
@@ -455,11 +456,13 @@ Current files:
 - [`features/manualentry/activity/recording`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/activity/recording)
 - [`features/manualentry/activity/routeimport`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/activity/routeimport)
 - [`features/manualentry/hydration`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/hydration)
+- [`features/manualentry/food`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/food)
+- [`features/manualentry/nutrition`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/nutrition)
 - [`features/manualentry/body`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/body)
 - [`features/manualentry/vitals`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/vitals)
 - [`features/manualentry/mindfulness`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/manualentry/mindfulness)
 
-The current manual entry widgets cover hydration, activity sessions with manual entry, existing plans, or GPS recording, activity file review launched from Settings Data Importers for GPX/KML/KMZ, TCX, and FIT files, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature. Widget order is customizable in the same spirit as the dashboard, but the dashboard remains read-only.
+The current manual entry widgets cover hydration, food from a catalog the user builds, carbohydrate totals, activity sessions with manual entry, existing plans, or GPS recording, activity file review launched from Settings Data Importers for GPX/KML/KMZ, TCX, and FIT files, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature. Widget order is customizable in the same spirit as the dashboard, but the dashboard remains read-only.
 
 Write permissions can be requested during one-tap onboarding or lazily from Add entry and the specific metric entry route. The dashboard remains read-only. Each write goes directly to Health Connect; OpenVitals keeps only local UI preferences such as widget order and mindfulness timer/background-sound settings.
 

@@ -29,11 +29,13 @@ import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
 import tech.mmarca.openvitals.domain.query.NutritionPeriodData
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
+import tech.mmarca.openvitals.features.manualentry.nutrition.MaxNutrientInputValue
+import tech.mmarca.openvitals.features.manualentry.nutrition.isValidNutrientInputValue
 import tech.mmarca.openvitals.navigation.HYDRATION_ENTRY_ID_ARG
 
 internal const val MillilitersPerLiter = 1000.0
 private const val MaxHealthConnectHydrationLiters = 100.0
-internal const val MaxCustomDrinkNutrientValue = 10000.0
+internal const val MaxCustomDrinkNutrientValue = MaxNutrientInputValue
 private const val DefaultCustomDrinkHydrationMultiplier = 1.0
 internal const val MinHydrationContainerMilliliters = 1.0
 internal const val MaxHydrationContainerMilliliters =
@@ -646,9 +648,7 @@ internal fun isValidCustomDrinkHydrationMultiplier(value: Double): Boolean =
         value.isFinite()
 
 internal fun isValidCustomDrinkNutrientValue(value: Double): Boolean =
-    value > 0.0 &&
-        value <= MaxCustomDrinkNutrientValue &&
-        value.isFinite()
+    isValidNutrientInputValue(value)
 
 private fun Instant.isToday(): Boolean =
     atZone(ZoneId.systemDefault()).toLocalDate() == LocalDate.now()

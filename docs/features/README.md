@@ -35,6 +35,7 @@ Use the [feature map](feature-map.md) when you need the route/widget/package map
 
 - [Manual entry of metrics](manual-entry-metrics.md): explicit user-entered records written back to Health Connect.
 - [Beverage logging and caffeine](beverage-logging-and-caffeine.md): drink logging with hydration, caffeine, presets, custom catalog choices, and selected nutrition defaults.
+- [Food logging](food-logging.md): a food catalog the user builds, with a name, amount, category and nutrients per food, logged as nutrition records.
 - [Recording of activity](activity-recording.md): GPS and repetition-oriented activity recording before saving to Health Connect.
 - [Activity and training plans](activity-training-plans.md): planned workouts, activity setup defaults, favorite activities, repetitions, sets, and review flows.
 - [Bluetooth LE sensors](ble-sensors.md): supported heart-rate, cadence, power, and footpod sensors during activity recording.

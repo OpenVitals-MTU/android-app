@@ -131,6 +131,8 @@ data class NutritionWriteRequest(
     val nutrientValues: Map<NutritionNutrient, Double>,
     val name: String? = null,
     val associatedHydrationClientRecordId: String? = null,
+    /** The catalog food this portion came from. Marks the record as food, not a drink. */
+    val foodId: String? = null,
     /** When a spread intake finished. Null means at once. The caffeine model spreads the dose to here. */
     val endTime: Instant? = null,
     /** Above the stored version to replace a record that has the same client id. */

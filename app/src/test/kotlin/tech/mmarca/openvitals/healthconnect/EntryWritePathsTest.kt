@@ -215,6 +215,32 @@ class EntryWritePathsTest {
         assertThat(espresso.caffeine!!.inGrams).isWithin(1e-9).of(0.080)
     }
 
+    // Food.
+
+    @Test
+    fun `a logged food is marked as food, so the beverage screens can skip it`() = onTheTestClock {
+        val nutrition = NutritionHealthReader(support(), APP_PACKAGE)
+
+        nutrition.writeNutritionEntry(
+            NutritionWriteRequest(
+                time = NOON,
+                nutrientValues = mapOf(
+                    NutritionNutrient.ENERGY to 105.0,
+                    NutritionNutrient.TOTAL_CARBOHYDRATE to 27.0,
+                ),
+                name = "Banana",
+                foodId = "banana-id",
+            ),
+        )
+
+        val banana = all(NutritionRecord::class).single()
+        assertThat(banana.metadata.clientRecordId).startsWith("openvitals_food_")
+        assertThat(banana.metadata.clientRecordId).contains("_banana-id_")
+        assertThat(banana.name).isEqualTo("Banana")
+        assertThat(banana.energy!!.inKilocalories).isWithin(1e-9).of(105.0)
+        assertThat(banana.totalCarbohydrate!!.inGrams).isWithin(1e-9).of(27.0)
+    }
+
     // Hydration.
 
     @Test

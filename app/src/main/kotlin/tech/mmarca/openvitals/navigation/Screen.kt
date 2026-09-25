@@ -90,6 +90,7 @@ sealed class Screen(
         fun createRoute(drinkId: String): String = "manual_entry/hydration/log/${Uri.encode(drinkId)}"
     }
     data object CarbsEntry : Screen("manual_entry/carbs", R.string.screen_carbs_entry)
+    data object FoodEntry : Screen("manual_entry/food", R.string.screen_food_entry)
     data object ActivityEntry : Screen(
         "manual_entry/activity" +
             "?$ACTIVITY_ENTRY_MODE_ARG={$ACTIVITY_ENTRY_MODE_ARG}" +
@@ -270,6 +271,7 @@ sealed class Screen(
                 HydrationEntryEdit,
                 HydrationEntryLogDrink,
                 CarbsEntry,
+                FoodEntry,
                 ActivityEntry,
                 WorkoutPlans,
                 WorkoutPlanBuilder,

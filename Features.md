@@ -244,7 +244,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 ### Manual Entry Screen
 
 - Open a centralized manual entry area with configurable entry widgets.
-- Show entry widgets for beverages/hydration, activity, carbohydrate, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature.
+- Show entry widgets for beverages/hydration, food, activity, carbohydrate, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature.
 - Reorder, remove, and manage manual entry widgets.
 
 ### Beverages And Hydration
@@ -261,6 +261,16 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Update OpenVitals-created beverage/hydration entries.
 - Delete OpenVitals-created beverage/hydration entries.
 - Request Health Connect hydration and nutrition write permissions from the entry flow.
+
+### Food
+
+- Build a food catalog: each food has a name, an amount, a category, and any of the supported nutrients.
+- There are no preloaded foods; the catalog starts empty.
+- Edit and delete saved foods.
+- Log a portion of a saved food with an amount and a time; the nutrients scale with the amount.
+- Save each logged portion directly to Health Connect as a nutrition record named after the food.
+- View today's calories in while logging.
+- Request Health Connect nutrition write permission from the entry flow.
 
 ### Nutrition
 
@@ -403,7 +413,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 ### View-Only Or External-Only Data
 
 - Sleep sessions are view-only in the app.
-- Meal entries and nutrition fields other than manual carbohydrate totals are view-only in the manual UI.
+- Nutrition records other than logged foods, drinks, and manual carbohydrate totals are view-only in the manual UI.
 - Cycle tracking observations are view-only in the app.
 - Heart rate, resting heart rate, HRV, VO2 max, blood glucose, and skin temperature are view-only in the manual UI.
 - Lean body mass, BMR, bone mass, body water mass, and BMI are view-only in the manual UI.

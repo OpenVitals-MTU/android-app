@@ -22,6 +22,7 @@ import tech.mmarca.openvitals.domain.model.HydrationEntryRecordType
 import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
+import tech.mmarca.openvitals.domain.model.OpenVitalsFoodClientRecordPrefix
 import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.domain.model.valueFor
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
@@ -342,6 +343,7 @@ private fun List<NutritionEntry>.toHydrationNutritionOnlyEntries(
         entry.shouldAppearInBeverageHistory() &&
             entry.id.isNotBlank() &&
             entry.name != OpenVitalsCarbsEntryName &&
+            !entry.isOpenVitalsFoodEntry() &&
             entry.isStandaloneHydrationNutrition(hydrationEntries)
     }.map { entry ->
         HydrationEntry(
@@ -357,6 +359,10 @@ private fun List<NutritionEntry>.toHydrationNutritionOnlyEntries(
             nutrientValues = entry.nutrientValues,
         )
     }
+
+/** A logged food. It carries nutrients, and may carry caffeine, but it is not a drink. */
+private fun NutritionEntry.isOpenVitalsFoodEntry(): Boolean =
+    clientRecordId?.startsWith(OpenVitalsFoodClientRecordPrefix) == true
 
 private fun NutritionEntry.shouldAppearInBeverageHistory(): Boolean =
     isOpenVitalsEntry ||

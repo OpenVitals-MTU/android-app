@@ -97,7 +97,8 @@ class TokenDisciplineTest {
         // 2026-09-12: SettingsScreenContent gutters migrated (1925 -> 1892).
         // 2026-09-19: hydration impact rows became a dropdown (1892 -> 1883, alpha 92 -> 91).
         // 2026-09-20: phone sync dropped its code keypad (1883 -> 1871).
-        const val MaxBareDp = 1868
+        // 2026-09-25: the nutrient rows moved to a shared, token-based file (1868 -> 1860).
+        const val MaxBareDp = 1860
         const val MaxBareAlpha = 91
         const val MaxBareCorner = 16
     }

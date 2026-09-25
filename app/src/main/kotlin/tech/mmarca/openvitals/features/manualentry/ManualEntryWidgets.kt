@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.LocalDrink
+import androidx.compose.material.icons.outlined.LunchDining
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.SelfImprovement
@@ -263,78 +265,56 @@ internal fun manualEntryWidgetSpecs(
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
     onOpenCycleEntry: () -> Unit,
     onOpenWorkoutPlans: () -> Unit = {},
+    onOpenFoodEntry: () -> Unit = {},
 ): List<ManualEntryWidgetSpec> {
-    val hydrationClick = if (isEditingWidgets) null else onOpenHydrationEntry
-    val carbsClick = if (isEditingWidgets) null else onOpenCarbsEntry
-    val activityClick = if (isEditingWidgets) null else onOpenActivityEntry
-    val workoutPlansClick = if (isEditingWidgets) null else onOpenWorkoutPlans
-    val mindfulnessClick = if (isEditingWidgets) null else onOpenMindfulnessEntry
-    val cycleClick = if (isEditingWidgets) null else onOpenCycleEntry
     return listOf(
-        ManualEntryWidgetSpec(
+        metricTileWidgetSpec(
             id = ManualEntryWidgetId.HYDRATION,
-            title = stringResource(R.string.manual_entry_hydration_label),
-            content = { modifier ->
-                ManualEntryMetricTile(
-                    title = stringResource(R.string.manual_entry_hydration_label),
-                    icon = Icons.Outlined.LocalDrink,
-                    accentColor = HydrationColor,
-                    modifier = modifier,
-                    onClick = hydrationClick,
-                )
-            },
+            titleRes = R.string.manual_entry_hydration_label,
+            icon = Icons.Outlined.LocalDrink,
+            accentColor = HydrationColor,
+            isEditingWidgets = isEditingWidgets,
+            onOpen = onOpenHydrationEntry,
         ),
-        ManualEntryWidgetSpec(
+        metricTileWidgetSpec(
+            id = ManualEntryWidgetId.FOOD,
+            titleRes = R.string.manual_entry_food_label,
+            icon = Icons.Outlined.LunchDining,
+            accentColor = NutritionColor,
+            isEditingWidgets = isEditingWidgets,
+            onOpen = onOpenFoodEntry,
+        ),
+        metricTileWidgetSpec(
             id = ManualEntryWidgetId.CARBS,
-            title = stringResource(R.string.metric_carbs),
-            content = { modifier ->
-                ManualEntryMetricTile(
-                    title = stringResource(R.string.metric_carbs),
-                    icon = Icons.Outlined.Restaurant,
-                    accentColor = NutritionColor,
-                    modifier = modifier,
-                    onClick = carbsClick,
-                )
-            },
+            titleRes = R.string.metric_carbs,
+            icon = Icons.Outlined.Restaurant,
+            accentColor = NutritionColor,
+            isEditingWidgets = isEditingWidgets,
+            onOpen = onOpenCarbsEntry,
         ),
-        ManualEntryWidgetSpec(
+        metricTileWidgetSpec(
             id = ManualEntryWidgetId.ACTIVITY,
-            title = stringResource(R.string.manual_entry_activity_title),
-            content = { modifier ->
-                ManualEntryMetricTile(
-                    title = stringResource(R.string.manual_entry_activity_title),
-                    icon = Icons.AutoMirrored.Outlined.DirectionsRun,
-                    accentColor = WorkoutColor,
-                    modifier = modifier,
-                    onClick = activityClick,
-                )
-            },
+            titleRes = R.string.manual_entry_activity_title,
+            icon = Icons.AutoMirrored.Outlined.DirectionsRun,
+            accentColor = WorkoutColor,
+            isEditingWidgets = isEditingWidgets,
+            onOpen = onOpenActivityEntry,
         ),
-        ManualEntryWidgetSpec(
+        metricTileWidgetSpec(
             id = ManualEntryWidgetId.WORKOUT_PLANS,
-            title = stringResource(R.string.screen_workout_plans),
-            content = { modifier ->
-                ManualEntryMetricTile(
-                    title = stringResource(R.string.screen_workout_plans),
-                    icon = Icons.Outlined.FitnessCenter,
-                    accentColor = WorkoutColor,
-                    modifier = modifier,
-                    onClick = workoutPlansClick,
-                )
-            },
+            titleRes = R.string.screen_workout_plans,
+            icon = Icons.Outlined.FitnessCenter,
+            accentColor = WorkoutColor,
+            isEditingWidgets = isEditingWidgets,
+            onOpen = onOpenWorkoutPlans,
         ),
-        ManualEntryWidgetSpec(
+        metricTileWidgetSpec(
             id = ManualEntryWidgetId.MINDFULNESS,
-            title = stringResource(R.string.metric_mindfulness),
-            content = { modifier ->
-                ManualEntryMetricTile(
-                    title = stringResource(R.string.metric_mindfulness),
-                    icon = Icons.Outlined.SelfImprovement,
-                    accentColor = MindfulnessColor,
-                    modifier = modifier,
-                    onClick = mindfulnessClick,
-                )
-            },
+            titleRes = R.string.metric_mindfulness,
+            icon = Icons.Outlined.SelfImprovement,
+            accentColor = MindfulnessColor,
+            isEditingWidgets = isEditingWidgets,
+            onOpen = onOpenMindfulnessEntry,
         ),
         bodyMeasurementWidgetSpec(
             id = ManualEntryWidgetId.WEIGHT,
@@ -384,19 +364,40 @@ internal fun manualEntryWidgetSpecs(
             isEditingWidgets = isEditingWidgets,
             onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
         ),
-        ManualEntryWidgetSpec(
+        metricTileWidgetSpec(
             id = ManualEntryWidgetId.CYCLE,
-            title = stringResource(R.string.metric_cycle),
-            content = { modifier ->
-                ManualEntryMetricTile(
-                    title = stringResource(R.string.metric_cycle),
-                    icon = Icons.Outlined.CalendarMonth,
-                    accentColor = CycleColor,
-                    modifier = modifier,
-                    onClick = cycleClick,
-                )
-            },
+            titleRes = R.string.metric_cycle,
+            icon = Icons.Outlined.CalendarMonth,
+            accentColor = CycleColor,
+            isEditingWidgets = isEditingWidgets,
+            onOpen = onOpenCycleEntry,
         ),
+    )
+}
+
+/** A tile that opens one entry screen. Editing the grid turns the tap off. */
+@Composable
+private fun metricTileWidgetSpec(
+    id: ManualEntryWidgetId,
+    @StringRes titleRes: Int,
+    icon: ImageVector,
+    accentColor: Color,
+    isEditingWidgets: Boolean,
+    onOpen: () -> Unit,
+): ManualEntryWidgetSpec {
+    val click = if (isEditingWidgets) null else onOpen
+    return ManualEntryWidgetSpec(
+        id = id,
+        title = stringResource(titleRes),
+        content = { modifier ->
+            ManualEntryMetricTile(
+                title = stringResource(titleRes),
+                icon = icon,
+                accentColor = accentColor,
+                modifier = modifier,
+                onClick = click,
+            )
+        },
     )
 }
 

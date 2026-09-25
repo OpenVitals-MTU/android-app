@@ -113,10 +113,17 @@ import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.model.BeverageCategory
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
-import tech.mmarca.openvitals.domain.model.NutritionNutrientUnit
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.manualentry.ManualEntryTimestampFields
+import tech.mmarca.openvitals.features.manualentry.nutrition.AddNutrientButton
+import tech.mmarca.openvitals.features.manualentry.nutrition.NutrientAmountRow
+import tech.mmarca.openvitals.features.manualentry.nutrition.NutrientChooserDialog
+import tech.mmarca.openvitals.features.manualentry.nutrition.NutrientInputRow
+import tech.mmarca.openvitals.features.manualentry.nutrition.nutrientTitleComparator
+import tech.mmarca.openvitals.features.manualentry.nutrition.parsedNutrientValues
+import tech.mmarca.openvitals.features.manualentry.nutrition.sortedByTitle
+import tech.mmarca.openvitals.features.manualentry.nutrition.toNutrientInputRows
 import tech.mmarca.openvitals.features.nutrition.titleRes
 import tech.mmarca.openvitals.ui.components.AccentIconChip
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
@@ -1670,41 +1677,20 @@ internal fun HydrationCustomDrinkDialog(
         mutableStateOf(hydrationImpactPercentText(initialHydrationMultiplier))
     }
     var selectedCategory by remember(initialCategory) { mutableStateOf(initialCategory) }
-    val resources = LocalContext.current.resources
-    val nutrientComparator = Comparator<NutritionNutrient> { first, second ->
-        resources.getString(first.titleRes()).compareTo(
-            other = resources.getString(second.titleRes()),
-            ignoreCase = true,
-        )
-    }
+    val nutrientComparator = nutrientTitleComparator(LocalContext.current.resources)
     var nutrientRows by remember(initialNutrientValues) {
-        mutableStateOf(
-            initialNutrientValues.entries.sortedWith { first, second ->
-                nutrientComparator.compare(first.key, second.key)
-            }.map { (nutrient, value) ->
-                HydrationNutrientInputRow(
-                    nutrient = nutrient,
-                    amountText = value.toString(),
-                )
-            }
-        )
+        mutableStateOf(initialNutrientValues.toNutrientInputRows(nutrientComparator))
     }
     var nutrientChooserOpen by remember { mutableStateOf(false) }
     val amountMilliliters = hydrationInputMilliliters(amountText, unitFormatter.unitSystem(UnitQuantity.HYDRATION))
     val isAmountValid = amountMilliliters?.let(::isValidHydrationContainerMilliliters) == true
     // A blank row is skipped on save; only unparsable text blocks the form.
-    val filledNutrientRows = nutrientRows.filter { it.amountText.isNotBlank() }
-    val nutrientValues = filledNutrientRows.mapNotNull { row ->
-        val value = row.amountText.replace(',', '.').toDoubleOrNull()
-            ?.takeIf(::isValidCustomDrinkNutrientValue)
-            ?: return@mapNotNull null
-        row.nutrient to value
-    }.toMap()
+    val nutrientValues = nutrientRows.parsedNutrientValues()
     val selectedNutrients = nutrientRows.map { it.nutrient }.toSet()
     val availableNutrients = NutritionNutrient.entries
         .filter { it !in selectedNutrients }
         .sortedWith(nutrientComparator)
-    val areNutrientsValid = nutrientValues.size == filledNutrientRows.size
+    val areNutrientsValid = nutrientValues != null
     val canAddNutrient = availableNutrients.isNotEmpty()
     val hydrationMultiplier = hydrationImpactMultiplier(
         option = hydrationImpactOption,
@@ -1789,7 +1775,7 @@ internal fun HydrationCustomDrinkDialog(
                     )
                 }
                 nutrientRows.forEachIndexed { index, row ->
-                    HydrationCustomDrinkNutrientRow(
+                    NutrientAmountRow(
                         row = row,
                         onAmountChanged = { text ->
                             nutrientRows = nutrientRows.mapIndexed { rowIndex, existing ->
@@ -1801,7 +1787,7 @@ internal fun HydrationCustomDrinkDialog(
                         },
                     )
                 }
-                HydrationNutrientPicker(
+                AddNutrientButton(
                     enabled = canAddNutrient,
                     onClick = { nutrientChooserOpen = true },
                 )
@@ -1812,13 +1798,14 @@ internal fun HydrationCustomDrinkDialog(
                 onClick = {
                     amountMilliliters?.takeIf(::isValidHydrationContainerMilliliters)?.let { milliliters ->
                         val impactMultiplier = hydrationMultiplier ?: return@let
+                        val values = nutrientValues ?: return@let
                         onSave(
                             CustomHydrationDrinkInput(
                                 name = nameText,
                                 volumeMilliliters = milliliters,
                                 hydrationMultiplier = impactMultiplier,
                                 category = selectedCategory,
-                                nutrientValues = nutrientValues,
+                                nutrientValues = values,
                             )
                         )
                     }
@@ -1836,14 +1823,11 @@ internal fun HydrationCustomDrinkDialog(
     )
 
     if (nutrientChooserOpen) {
-        HydrationNutrientChooserDialog(
+        NutrientChooserDialog(
             availableNutrients = availableNutrients,
             onDismiss = { nutrientChooserOpen = false },
             onSelectNutrient = { nutrient ->
-                nutrientRows = (nutrientRows + HydrationNutrientInputRow(nutrient))
-                    .sortedWith { first, second ->
-                        nutrientComparator.compare(first.nutrient, second.nutrient)
-                    }
+                nutrientRows = (nutrientRows + NutrientInputRow(nutrient)).sortedByTitle(nutrientComparator)
                 nutrientChooserOpen = false
             },
         )
@@ -1923,87 +1907,6 @@ private fun HydrationDrinkCategorySelector(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun HydrationNutrientPicker(
-    enabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    OpenVitalsOutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Add,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp),
-        )
-        Text(
-            text = stringResource(R.string.hydration_custom_drink_add_nutrient),
-            modifier = Modifier.padding(start = 6.dp),
-        )
-    }
-}
-
-@Composable
-private fun HydrationNutrientChooserDialog(
-    availableNutrients: List<NutritionNutrient>,
-    onDismiss: () -> Unit,
-    onSelectNutrient: (NutritionNutrient) -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(stringResource(R.string.hydration_custom_drink_add_nutrient))
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 420.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                availableNutrients.forEach { nutrient ->
-                    HydrationNutrientChoiceRow(
-                        nutrient = nutrient,
-                        onClick = { onSelectNutrient(nutrient) },
-                    )
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            OpenVitalsTextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
-        },
-    )
-}
-
-@Composable
-private fun HydrationNutrientChoiceRow(
-    nutrient: NutritionNutrient,
-    onClick: () -> Unit,
-) {
-    OpenVitalsSurface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.medium,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-    ) {
-        Text(
-            text = stringResource(nutrient.titleRes()),
-            style = MaterialTheme.typography.bodyLarge,
-        )
     }
 }
 
@@ -2118,64 +2021,11 @@ private fun HydrationImpactOption.bodyRes(): Int =
         HydrationImpactOption.NONE -> R.string.hydration_impact_does_not_count_body
     }
 
-@Composable
-private fun HydrationCustomDrinkNutrientRow(
-    row: HydrationNutrientInputRow,
-    onAmountChanged: (String) -> Unit,
-    onRemove: () -> Unit,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(row.nutrient.titleRes()),
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(onClick = onRemove) {
-                Icon(
-                    imageVector = Icons.Outlined.Delete,
-                    contentDescription = stringResource(R.string.action_delete),
-                )
-            }
-        }
-        OutlinedTextField(
-            value = row.amountText,
-            onValueChange = onAmountChanged,
-            label = { Text(nutrientAmountLabel(row.nutrient)) },
-            isError = row.amountText.isNotBlank() &&
-                row.amountText.replace(',', '.').toDoubleOrNull()
-                    ?.let(::isValidCustomDrinkNutrientValue) != true,
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-}
-
-private data class HydrationNutrientInputRow(
-    val nutrient: NutritionNutrient,
-    val amountText: String = "",
-)
-
 internal enum class HydrationImpactOption {
     FULL,
     PARTIAL,
     NONE,
 }
-
-@Composable
-private fun nutrientAmountLabel(nutrient: NutritionNutrient): String =
-    when (nutrient.unit) {
-        NutritionNutrientUnit.ENERGY_KCAL -> stringResource(R.string.hydration_custom_drink_amount_kcal)
-        NutritionNutrientUnit.MASS_GRAMS,
-        NutritionNutrientUnit.MASS_ADAPTIVE -> stringResource(R.string.hydration_custom_drink_amount_grams)
-    }
 
 @Composable
 internal fun hydrationEntryErrorText(

@@ -22,6 +22,7 @@ import tech.mmarca.openvitals.domain.model.HydrationEntryChange
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionNutrientUnit
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
+import tech.mmarca.openvitals.domain.model.OpenVitalsFoodClientRecordPrefix
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -218,6 +219,9 @@ internal class NutritionHealthReader(
         val clientRecordId = request.associatedHydrationClientRecordId
             ?.takeIf { it.isNotBlank() }
             ?.let(::hydrationNutritionClientRecordId)
+            ?: request.foodId
+                ?.takeIf { it.isNotBlank() }
+                ?.let { foodId -> foodNutritionClientRecordId(foodId, startTime) }
             ?: "openvitals_nutrition_${startTime.toEpochMilli()}_${UUID.randomUUID()}"
         val record = NutritionRecord(
             startTime = startTime,
@@ -345,6 +349,10 @@ private const val HydrationNutritionClientRecordIdPrefix = "openvitals_hydration
 
 internal fun hydrationNutritionClientRecordId(hydrationClientRecordId: String): String =
     "$HydrationNutritionClientRecordIdPrefix$hydrationClientRecordId"
+
+/** The beverage screens skip this prefix, so a food never shows up as a drink. */
+internal fun foodNutritionClientRecordId(foodId: String, time: Instant): String =
+    "$OpenVitalsFoodClientRecordPrefix${time.toEpochMilli()}_${foodId}_${UUID.randomUUID()}"
 
 private fun Map<NutritionNutrient, Double>.energy(nutrient: NutritionNutrient): Energy? {
     require(nutrient.unit == NutritionNutrientUnit.ENERGY_KCAL) {

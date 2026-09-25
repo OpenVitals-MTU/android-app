@@ -32,6 +32,7 @@ fun ManualEntryScreen(
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
     onOpenCycleEntry: () -> Unit,
     onOpenWorkoutPlans: () -> Unit = {},
+    onOpenFoodEntry: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     // A tile only opens its entry screen, so the one dialog Health Connect allows is not spent here.
@@ -39,6 +40,7 @@ fun ManualEntryScreen(
         isEditingWidgets = state.isEditingWidgets,
         onOpenHydrationEntry = viewModel::onHydrationWidgetTapped,
         onOpenCarbsEntry = viewModel::onCarbsWidgetTapped,
+        onOpenFoodEntry = viewModel::onFoodWidgetTapped,
         onOpenActivityEntry = viewModel::onActivityWidgetTapped,
         onOpenMindfulnessEntry = viewModel::onMindfulnessWidgetTapped,
         onOpenBodyMeasurementEntry = viewModel::onBodyMeasurementWidgetTapped,
@@ -80,6 +82,12 @@ fun ManualEntryScreen(
         if (state.pendingCarbsEntryNavigation) {
             viewModel.onCarbsEntryNavigationHandled()
             onOpenCarbsEntry()
+        }
+    }
+    LaunchedEffect(state.pendingFoodEntryNavigation) {
+        if (state.pendingFoodEntryNavigation) {
+            viewModel.onFoodEntryNavigationHandled()
+            onOpenFoodEntry()
         }
     }
     LaunchedEffect(state.pendingActivityEntryNavigation) {

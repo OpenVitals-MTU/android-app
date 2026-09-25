@@ -301,6 +301,13 @@ class HydrationViewModelTest {
             clientRecordId = null,
             isOpenVitalsEntry = false,
         )
+        // A logged food: OpenVitals wrote it, and it even carries caffeine, but it is not a drink.
+        val loggedFoodEntry = caffeineEntry.copy(
+            time = start.plusSeconds(300),
+            name = "Dark chocolate",
+            id = "logged-food",
+            clientRecordId = "openvitals_food_1300_chocolate-id_uuid",
+        )
         val repo = emptyRepo()
         coEvery { repo.loadHydrationEntries(any(), any()) } returns listOf(hydrationEntry)
         val nutritionRepo = emptyNutritionRepo(
@@ -312,6 +319,7 @@ class HydrationViewModelTest {
                 noClientIdPairedEntry,
                 externalCaffeineEntry,
                 externalFoodEntry,
+                loggedFoodEntry,
             )
         )
 

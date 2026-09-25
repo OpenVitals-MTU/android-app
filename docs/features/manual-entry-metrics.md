@@ -2,9 +2,9 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/manualentry` and child packages for activity, hydration, nutrition, body, vitals, and mindfulness.
+> **Implementation:** `features/manualentry` and child packages for activity, hydration, food, nutrition, body, vitals, and mindfulness.
 > **Navigation:** `Screen.ManualEntry` and manual entry routes; widgets in `ManualEntryWidgetId`.
-> **Related:** [Feature map](feature-map.md), [Permissions](../app/permissions.md), [Beverage logging and caffeine](beverage-logging-and-caffeine.md).
+> **Related:** [Feature map](feature-map.md), [Permissions](../app/permissions.md), [Beverage logging and caffeine](beverage-logging-and-caffeine.md), [Food logging](food-logging.md).
 
 Manual entry flows let the user write explicit records to Health Connect. OpenVitals does not keep a separate health database for these records.
 
@@ -17,6 +17,7 @@ Weight is a core manual metric flow. The user enters a value and saves it to Hea
 OpenVitals supports explicit logging for:
 
 - Beverages/hydration, including drink/container choices, custom amounts, caffeine-aware presets, and selected nutrition defaults.
+- Foods from a catalog the user builds: each food has a name, an amount, a category and nutrients; a logged portion scales the nutrients and is saved as a Health Connect nutrition record.
 - Carbohydrate totals as Health Connect nutrition records.
 - Activity sessions, optionally with routes, distance, elevation, calories, repetitions, title, and notes.
 - Mindfulness sessions through a timer or manual duration.
