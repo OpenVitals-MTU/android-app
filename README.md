@@ -36,6 +36,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - PDF health report export built fully on-device, with charts, statistics, and clinical sections for blood pressure, glucose, workouts, and sleep
 - Manual cycle logging with derived period days and next-period predictions, stored only in Health Connect
 - Period detail screens with `Day / Week / Month / Year` navigation and reorderable metric sections
+- Charts that speak to a screen reader: a summary per chart, one element per day, and zoom and scrub offered as actions
 - Daily goal cards that say how far ahead or behind the period is and what each remaining day needs to average to land on goal
 - Body measurements charted as a trend line over a fitted scale, and nutrition periods led by a daily average rather than a total nobody eats by
 - Daily Readiness with Body Energy, Training Readiness, physiological stress, HRV status, intensity minutes, adaptive goals, and local explanation screens
@@ -43,6 +44,8 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - Refreshed UI/UX with clearer Summary-first navigation, metric screens, and entry flows
 - Health Connect permission onboarding with clear data categories and a one-tap full setup option
 - Manual logging for beverages with hydration, caffeine, and nutrition defaults, an optional period a caffeinated drink was drunk over, carbohydrate entries, body measurements, vitals, mindfulness sessions with notes, and activities
+- Food logging from a catalog you build yourself - name, amount, category and any of Health Connect's nutrients - with each portion saved as one nutrition record
+- An optional basal metabolic rate estimate (Mifflin-St Jeor) written to Health Connect one day at a time, off by default, that leaves days another source covers alone
 - Opt-in hydration reminders with active hours, daily-goal pause logic, and automatic hiding after saved hydration entries
 - Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
 - Home screen widgets for readiness, Body energy, today's vitals, chosen metrics and quick beverage logging, refreshed from Health Connect every 15, 30, 60 or 120 minutes as you choose

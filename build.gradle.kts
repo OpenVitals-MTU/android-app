@@ -13,7 +13,7 @@ val openVitalsGroup = providers.gradleProperty("openVitalsGroup")
     .orElse("tech.mmarca.openvitals")
 val openVitalsArtifactVersion = providers.gradleProperty("openVitalsArtifactVersion")
     .orElse(providers.environmentVariable("OPENVITALS_ARTIFACT_VERSION"))
-    .orElse("2.9.1-SNAPSHOT")
+    .orElse("2.10.0-SNAPSHOT")
 
 allprojects {
     group = openVitalsGroup.get()
