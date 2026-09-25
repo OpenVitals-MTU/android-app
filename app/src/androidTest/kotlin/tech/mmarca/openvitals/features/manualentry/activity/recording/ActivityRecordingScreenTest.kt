@@ -246,7 +246,7 @@ class ActivityRecordingScreenTest {
 
     /** A GPS session under way, so the pre-start fix poller stays off and no test touches the real GPS. */
     @Test
-    fun `dismissing the CoMaps card before starting keeps it dismissed once riding`() {
+    fun dismissingTheCoMapsCardBeforeStartingKeepsItDismissedOnceRiding() {
         // The dismissal used to be keyed on the start time, so pressing Start brought the card back.
         val status = mutableStateOf(ActivityRecordingStatus.IDLE)
         composeRule.setContent {
@@ -286,7 +286,7 @@ class ActivityRecordingScreenTest {
     }
 
     @Test
-    fun `the tab row is the first thing on the screen, above any guidance card`() {
+    fun theTabRowIsTheFirstThingOnTheScreenAboveAnyGuidanceCard() {
         // The guidance card can run tall; above the tabs it pushed them down the screen.
         composeRule.setContent {
             OpenVitalsTheme {
@@ -330,7 +330,7 @@ class ActivityRecordingScreenTest {
     }
 
     @Test
-    fun `starting with no route set asks before it starts, and starts when answered`() {
+    fun startingWithNoRouteSetAsksBeforeItStartsAndStartsWhenAnswered() {
         // Start is a question, not a refusal. It used to raise a toast the user could not follow from any tab but the map.
         var started = 0
         composeRule.setContent {
@@ -371,7 +371,7 @@ class ActivityRecordingScreenTest {
     }
 
     @Test
-    fun `a route already being followed starts on the first press`() {
+    fun aRouteAlreadyBeingFollowedStartsOnTheFirstPress() {
         // The gate is about the absence of a route. With CoMaps guiding there is nothing to ask.
         var started = 0
         composeRule.setContent {
