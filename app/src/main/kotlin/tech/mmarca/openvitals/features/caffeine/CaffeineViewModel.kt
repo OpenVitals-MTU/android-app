@@ -26,7 +26,6 @@ import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.insights.CaffeineInsightCalculator
 import tech.mmarca.openvitals.domain.model.CaffeineEntry
 import tech.mmarca.openvitals.domain.model.CaffeineInsights
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 
@@ -86,10 +85,10 @@ class CaffeineViewModel @Inject constructor(
     }
 
     fun refresh() {
-        load(RefreshMode.FORCE)
+        load()
     }
 
-    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
+    fun load() {
         loadCoordinator.launch(viewModelScope) load@{
             val state = _uiState.value
             val today = LocalDate.now()
@@ -98,7 +97,7 @@ class CaffeineViewModel @Inject constructor(
             val loadPeriod = homePeriod.union(analyticsPeriod)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                repository.loadCaffeineData(loadPeriod, refreshMode)
+                repository.loadCaffeineData(loadPeriod)
             }.onSuccess { result ->
                 if (!isCurrent) return@load
                 val preferences = _uiState.value.preferences
@@ -160,7 +159,7 @@ class CaffeineViewModel @Inject constructor(
             runCatching {
                 nutritionRepository.deleteNutritionEntry(entryId)
             }.onSuccess {
-                load(RefreshMode.FORCE)
+                load()
             }.onFailure { error ->
                 _uiState.value = previous.copy(error = error.toScreenError())
             }

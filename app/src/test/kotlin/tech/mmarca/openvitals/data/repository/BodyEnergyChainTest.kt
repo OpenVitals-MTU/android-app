@@ -36,7 +36,6 @@ class BodyEnergyChainTest {
 
     private lateinit var dao: FakeBodyEnergyTimelineDao
     private lateinit var timelines: BodyEnergyTimelineStore
-    private lateinit var baselines: BodyEnergyBaselineCacheStore
     private lateinit var prefs: PreferencesRepository
     private lateinit var heart: FakeHeartRepository
 
@@ -44,7 +43,6 @@ class BodyEnergyChainTest {
     fun setUp() {
         dao = FakeBodyEnergyTimelineDao()
         timelines = BodyEnergyTimelineStore(dao)
-        baselines = inMemoryBaselineStore()
         prefs = inMemoryPreferences()
         heart = FakeHeartRepository()
     }
@@ -61,7 +59,6 @@ class BodyEnergyChainTest {
         bodyRepository = emptyBodyRepository(),
         healthRepository = healthRepository,
         preferencesRepository = prefs,
-        baselineCacheStore = baselines,
         timelineStore = if (withStore) timelines else null,
         now = { now },
         zoneSource = { TestZone },

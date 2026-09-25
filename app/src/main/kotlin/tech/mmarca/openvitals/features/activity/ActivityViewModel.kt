@@ -20,7 +20,6 @@ import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
 import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.DailySteps
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.CalorieDisplayPreferences
 import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
@@ -148,7 +147,7 @@ class ActivityViewModel @Inject constructor(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load(RefreshMode.FORCE)
+            if (refreshCurrent) load()
             return
         }
         applyPeriodSelection(selection)
@@ -169,7 +168,7 @@ class ActivityViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(dailyGoal = normalized).withDisplay(selectedMetric)
     }
 
-    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
+    fun load() {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -179,22 +178,12 @@ class ActivityViewModel @Inject constructor(
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                if (refreshMode == RefreshMode.NORMAL) {
-                    repository.loadActivityPeriod(
-                        query = query,
-                        includeSteps = selectedMetric.usesDailySteps,
-                        includeNutrition = selectedMetric.usesDailyNutrition,
-                        includeWheelchairPushes = selectedMetric.usesWheelchairPushes,
-                    )
-                } else {
-                    repository.loadActivityPeriod(
-                        query = query,
-                        includeSteps = selectedMetric.usesDailySteps,
-                        includeNutrition = selectedMetric.usesDailyNutrition,
-                        includeWheelchairPushes = selectedMetric.usesWheelchairPushes,
-                        refreshMode = refreshMode,
-                    )
-                }
+                repository.loadActivityPeriod(
+                    query = query,
+                    includeSteps = selectedMetric.usesDailySteps,
+                    includeNutrition = selectedMetric.usesDailyNutrition,
+                    includeWheelchairPushes = selectedMetric.usesWheelchairPushes,
+                )
             }.onSuccess { result ->
                 if (!isCurrent) return@load
                 val display = withContext(dispatchers.default) {

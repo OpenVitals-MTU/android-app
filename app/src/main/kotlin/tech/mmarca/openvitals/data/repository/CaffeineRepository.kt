@@ -9,7 +9,6 @@ import tech.mmarca.openvitals.domain.model.CaffeineEntry
 import tech.mmarca.openvitals.domain.model.CaffeinePeriodData
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.valueFor
 
 @Singleton
@@ -17,10 +16,8 @@ class CaffeineRepositoryImpl @Inject constructor(
     private val nutritionRepository: NutritionRepository,
 ) : CaffeineRepository {
 
-    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadCaffeineData(
         period: DatePeriod,
-        refreshMode: RefreshMode,
     ): CaffeinePeriodData {
         val entries = nutritionRepository
             .loadNutritionEntries(

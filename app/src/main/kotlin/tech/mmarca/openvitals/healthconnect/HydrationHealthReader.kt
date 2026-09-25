@@ -5,7 +5,6 @@ import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
-import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.Volume
 import tech.mmarca.openvitals.domain.model.DailyHydration
@@ -24,36 +23,28 @@ internal class HydrationHealthReader(
     private val support: HealthConnectReaderSupport,
     private val appPackageName: String,
 ) {
-    suspend fun readHydrationLiters(date: LocalDate): Double? {
-        val zone = ZoneId.systemDefault()
-        val start = date.atStartOfDay(zone).toInstant()
-        val end = date.plusDays(1).atStartOfDay(zone).toInstant()
-        return support.withNullableLogging("readHydrationLiters[$date][$start..$end]") {
-            support.client().aggregate(
-                AggregateRequest(
-                    metrics = setOf(HydrationRecord.VOLUME_TOTAL),
-                    timeRangeFilter = TimeRangeFilter.between(start, end),
-                )
-            )[HydrationRecord.VOLUME_TOTAL]?.inLiters
-        }
-    }
-
-    suspend fun readTodayHydrationLiters(): Double? = readHydrationLiters(LocalDate.now())
-
+    /**
+     * One row per day, zero-filled. A one-day range is the day value. Chunked
+     * like readDailySteps, with one guard around all chunks.
+     */
     suspend fun readDailyHydration(startDate: LocalDate, endDate: LocalDate): List<DailyHydration> {
+        if (endDate.isBefore(startDate)) return emptyList()
         val zone = ZoneId.systemDefault()
-        val start = startDate.atStartOfDay(zone).toInstant()
-        val end = endDate.plusDays(1).atStartOfDay(zone).toInstant()
-        return support.withLogging("readDailyHydration[$start..$end]", emptyList()) {
-            val hydrationByDate = support.client().aggregateGroupByDuration(
-                AggregateGroupByDurationRequest(
-                    metrics = setOf(HydrationRecord.VOLUME_TOTAL),
-                    timeRangeFilter = TimeRangeFilter.between(start, end),
-                    timeRangeSlicer = Duration.ofDays(1),
-                )
-            ).byLocalDate(zone).associate { day ->
-                day.date to day.total { it[HydrationRecord.VOLUME_TOTAL]?.inLiters }
-            }
+        return support.withLogging("readDailyHydration[$startDate..$endDate]", emptyList()) {
+            val hydrationByDate = dailyAggregateDateChunks(startDate, endDate)
+                .flatMap { (chunkStart, chunkEnd) ->
+                    support.client().aggregateGroupByDuration(
+                        AggregateGroupByDurationRequest(
+                            metrics = setOf(HydrationRecord.VOLUME_TOTAL),
+                            timeRangeFilter = TimeRangeFilter.between(
+                                chunkStart.atStartOfDay(zone).toInstant(),
+                                chunkEnd.plusDays(1).atStartOfDay(zone).toInstant(),
+                            ),
+                            timeRangeSlicer = Duration.ofDays(1),
+                        )
+                    ).byLocalDate(zone)
+                }
+                .associate { day -> day.date to day.total { it[HydrationRecord.VOLUME_TOTAL]?.inLiters } }
             dailyHydrationSeries(startDate, endDate, hydrationByDate)
         }
     }

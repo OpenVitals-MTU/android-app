@@ -13,7 +13,6 @@ import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.model.PlannedExerciseWriteRequest
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SpeedSample
 
 interface ActivityRepository {
@@ -29,12 +28,10 @@ interface ActivityRepository {
         includeWheelchairPushes: Boolean = false,
         includeActivityProgress: Boolean = true,
         includeComparisonWindows: Boolean = true,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
     ): ActivityPeriodData
 
     suspend fun loadActivitiesPeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
     ): ActivitiesPeriodData
 
     suspend fun loadDailySteps(

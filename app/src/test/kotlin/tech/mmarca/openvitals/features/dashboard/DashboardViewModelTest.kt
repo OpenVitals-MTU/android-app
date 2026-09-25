@@ -3,7 +3,6 @@ package tech.mmarca.openvitals.features.dashboard
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
@@ -153,16 +152,15 @@ class DashboardViewModelTest {
         assertEquals(ScreenError.Text(R.string.screen_error_generic), vm.uiState.value.error)
     }
 
-    @Test fun `transient load cancellation retries without surfacing dashboard error`() = runTest {
+    @Test fun `a cancelled pass is a tile failure, not the screen's`() = runTest {
         val loader = mockDashboardDataLoader()
         var stepsPasses = 0
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
             val query = firstArg<DashboardQuery>()
-            // Only the steps pass fails. A coalesced pass can be handed the cancellation of the one
-            // it shared; it must retry without taking the other passes down.
+            // Only the steps pass is cancelled. Its tile stays empty; the others fill.
             if (query.visibleMetrics == setOf(DashboardMetric.STEPS)) {
                 stepsPasses += 1
-                if (stepsPasses == 1) throw CancellationException("Job was cancelled")
+                throw CancellationException("Job was cancelled")
             }
             DashboardData(date = today, steps = 7_200, loadedMetrics = query.visibleMetrics)
         }
@@ -171,9 +169,10 @@ class DashboardViewModelTest {
 
         val state = vm.uiState.value
         assertFalse(state.isLoading)
-        assertEquals(7_200L, state.data?.steps)
+        // The other passes' 7,200 never reaches the steps tile: only loaded metrics merge.
+        assertEquals(0L, state.data?.steps)
         assertNull(state.error)
-        assertEquals(2, stepsPasses)
+        assertEquals(1, stepsPasses)
     }
 
     @Test fun `sensor status includes saved battery and live connection status`() = runTest {
@@ -717,7 +716,7 @@ class DashboardViewModelTest {
         )
     }
 
-    @Test fun `refresh passes force refresh mode`() = runTest {
+    @Test fun `refresh reads the day again`() = runTest {
         val loader = mockDashboardDataLoader()
         val queries = mutableListOf<DashboardQuery>()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
@@ -726,9 +725,10 @@ class DashboardViewModelTest {
         }
 
         val vm = dashboardViewModel(loader, prefs())
+        val afterOpen = queries.size
         vm.refresh()
 
-        assertEquals(RefreshMode.FORCE, queries.last().refreshMode)
+        assertTrue(queries.size > afterOpen)
     }
 
     @Test fun `newer load wins when navigation requests overlap`() = runTest {
@@ -811,7 +811,6 @@ class DashboardViewModelTest {
         advanceUntilIdle()
 
         assertEquals(2, queries.size)
-        assertEquals(RefreshMode.FORCE, queries.last().refreshMode)
     }
 
     @Test fun `refreshPreferences reloads dashboard when sleep range mode changes`() = runTest {

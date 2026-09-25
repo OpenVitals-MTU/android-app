@@ -45,7 +45,6 @@ class ActivityOverviewViewModelTest {
         periodPreferences = preferences,
         calorieDisplayPreferences = preferences,
         dispatchers = mainDispatcherRule.dispatcherProvider,
-        caloriesSync = mockk(relaxed = true),
         savedStateHandle = SavedStateHandle(),
     )
 

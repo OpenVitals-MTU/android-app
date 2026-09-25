@@ -57,7 +57,7 @@ class FileSizeRatchetTest {
             "features/settings/SettingsCards.kt" to 3050,
             "features/manualentry/hydration/HydrationEntryFormContent.kt" to 2350,
             "features/manualentry/activity/recording/ActivityRecording.kt" to 1850,
-            "healthconnect/ActivityHealthReader.kt" to 1850,
+            "healthconnect/ActivityHealthReader.kt" to 1600,
             "domain/insights/CaffeineHealthDrinkCatalog.kt" to 1750,
             "features/caffeine/CaffeineScreen.kt" to 1600,
             "features/manualentry/activity/ActivityEntryViewModel.kt" to 1600,
@@ -80,7 +80,6 @@ class FileSizeRatchetTest {
             "devices/garmin/GarminSession.kt" to 950,
             "features/homewidgets/HomeReadinessWidgets.kt" to 950,
             "features/activity/maps/OfflineRouteMap.kt" to 900,
-            "healthconnect/HealthConnectManager.kt" to 850,
             "features/vitals/HeartVitalsOverviewScreen.kt" to 850,
         )
     }

@@ -6,7 +6,6 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.MindfulnessSession
 import tech.mmarca.openvitals.domain.model.MindfulnessSessionWriteRequest
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.MindfulnessPeriodData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.LocalDate
@@ -30,10 +29,8 @@ class MindfulnessRepositoryImpl @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadMindfulnessPeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode,
     ): MindfulnessPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()

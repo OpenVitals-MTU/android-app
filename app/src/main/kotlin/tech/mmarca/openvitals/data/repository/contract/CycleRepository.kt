@@ -7,7 +7,6 @@ import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.CycleEntry
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.model.CycleEntryWriteRequest
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.CyclePeriodData
 
 interface CycleRepository {
@@ -17,7 +16,6 @@ interface CycleRepository {
 
     suspend fun loadCyclePeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
     ): CyclePeriodData
 
     suspend fun loadCycleData(start: LocalDate, end: LocalDate): CycleData

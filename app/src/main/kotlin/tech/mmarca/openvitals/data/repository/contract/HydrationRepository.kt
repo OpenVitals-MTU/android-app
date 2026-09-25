@@ -7,7 +7,6 @@ import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
 import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.HydrationPeriodData
 
 interface HydrationRepository {
@@ -40,7 +39,6 @@ interface HydrationRepository {
 
     suspend fun loadHydrationPeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
     ): HydrationPeriodData
 
     suspend fun loadDailyHydration(start: LocalDate, end: LocalDate): List<DailyHydration>

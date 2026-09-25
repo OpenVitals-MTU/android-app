@@ -24,7 +24,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.data.repository.BodyEnergyBaselineCacheStore
 import tech.mmarca.openvitals.data.repository.BodyEnergyChainSettlingDays
 import tech.mmarca.openvitals.data.repository.BodyEnergyTimelineStore
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -50,7 +49,6 @@ const val BodyEnergyChainWarmDays = 14L
 class BodyEnergyChainSyncService(
     private val repository: BodyEnergyRepository,
     private val store: BodyEnergyTimelineStore,
-    private val baselineStore: BodyEnergyBaselineCacheStore,
     private val healthRepository: HealthRepository,
     private val preferencesRepository: PreferencesRepository,
     private val clock: () -> Instant = Instant::now,
@@ -67,14 +65,12 @@ class BodyEnergyChainSyncService(
     constructor(
         repository: BodyEnergyRepository,
         store: BodyEnergyTimelineStore,
-        baselineStore: BodyEnergyBaselineCacheStore,
         healthRepository: HealthRepository,
         preferencesRepository: PreferencesRepository,
         healthConnectManager: HealthConnectManager,
     ) : this(
         repository = repository,
         store = store,
-        baselineStore = baselineStore,
         healthRepository = healthRepository,
         preferencesRepository = preferencesRepository,
         clock = Instant::now,
@@ -118,9 +114,6 @@ class BodyEnergyChainSyncService(
 
     private suspend fun sync(force: Boolean) {
         try {
-            // One-shot cleanup of the retired SharedPreferences timelines.
-            baselineStore.purgeLegacyTimelineEntries()
-
             if (healthRepository.availability() != HealthConnectAvailability.AVAILABLE) return
             val granted = healthRepository.grantedPermissions()
             if (ReadHeartRatePermission !in granted) return

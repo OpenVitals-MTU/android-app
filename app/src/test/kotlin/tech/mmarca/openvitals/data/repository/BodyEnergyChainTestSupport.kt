@@ -2,9 +2,7 @@ package tech.mmarca.openvitals.data.repository
 
 import io.mockk.coEvery
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.runs
 import io.mockk.slot
 import java.time.Instant
 import java.time.LocalDate
@@ -108,25 +106,6 @@ fun grantedHealthRepository(
 fun failingPermissionsHealthRepository(): HealthRepository = mockk<HealthRepository>().also {
     every { it.availability() } returns HealthConnectAvailability.AVAILABLE
     coEvery { it.grantedPermissions() } throws IllegalStateException("rate limited")
-}
-
-/** A baseline store backed by a map instead of SharedPreferences. */
-fun inMemoryBaselineStore(): BodyEnergyBaselineCacheStore = mockk<BodyEnergyBaselineCacheStore>().also { store ->
-    val entries = mutableMapOf<String, BodyEnergyBaselineCacheEntry>()
-    val dateSlot = slot<LocalDate>()
-    val signatureSlot = slot<String>()
-    every { store.loadBaseline(capture(dateSlot), capture(signatureSlot)) } answers {
-        entries["${dateSlot.captured}|${signatureSlot.captured}"]
-    }
-    val saveDate = slot<LocalDate>()
-    val saveSignature = slot<String>()
-    val saveEntry = slot<BodyEnergyBaselineCacheEntry>()
-    every {
-        store.saveBaseline(capture(saveDate), capture(saveSignature), capture(saveEntry))
-    } answers {
-        entries["${saveDate.captured}|${saveSignature.captured}"] = saveEntry.captured
-    }
-    every { store.purgeLegacyTimelineEntries() } just runs
 }
 
 /** The preferences the chain reads and writes, backed by local state. */

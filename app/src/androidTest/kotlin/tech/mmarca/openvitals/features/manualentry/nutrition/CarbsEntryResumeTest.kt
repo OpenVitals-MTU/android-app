@@ -18,7 +18,6 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
@@ -85,7 +84,6 @@ class CarbsEntryResumeTest {
 
         override suspend fun loadNutritionPeriod(
             query: PeriodLoadQuery,
-            refreshMode: RefreshMode,
         ) = error("unused")
 
         override suspend fun loadDailyMacros(start: LocalDate, end: LocalDate) = error("unused")

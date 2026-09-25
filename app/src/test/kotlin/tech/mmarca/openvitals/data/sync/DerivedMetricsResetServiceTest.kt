@@ -2,11 +2,8 @@ package tech.mmarca.openvitals.data.sync
 
 import android.content.Context
 import android.util.Log
-import io.mockk.Runs
 import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
@@ -20,8 +17,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.data.local.bodyenergy.FakeBodyEnergyTimelineDao
-import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
-import tech.mmarca.openvitals.data.repository.BodyEnergyBaselineCacheStore
 import tech.mmarca.openvitals.data.repository.BodyEnergyTimelineStore
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.inMemoryPreferences
@@ -41,12 +36,8 @@ class DerivedMetricsResetServiceTest {
 
     private lateinit var dao: FakeBodyEnergyTimelineDao
     private lateinit var store: BodyEnergyTimelineStore
-    private lateinit var baselines: BodyEnergyBaselineCacheStore
-    private lateinit var vitalsCache: VitalsDailyCacheDao
     private lateinit var prefs: PreferencesRepository
-    private lateinit var caloriesSync: CaloriesHistorySyncService
     private lateinit var chainSync: BodyEnergyChainSyncService
-    private val purgedMetrics = mutableListOf<String>()
     private val rebuildOrder = mutableListOf<String>()
     private var widgetRefreshes = 0
 
@@ -56,10 +47,6 @@ class DerivedMetricsResetServiceTest {
         every { Log.w(any(), any<String>(), any()) } returns 0
         dao = FakeBodyEnergyTimelineDao()
         store = BodyEnergyTimelineStore(dao)
-        baselines = mockk { every { clearBaselines() } just Runs }
-        vitalsCache = mockk {
-            coEvery { purgeMetric(any()) } answers { purgedMetrics += firstArg<String>() }
-        }
         prefs = inMemoryPreferences(
             calibration = BodyEnergyCalibration(
                 manualZoneThresholdsBpm = manualZones,
@@ -77,7 +64,6 @@ class DerivedMetricsResetServiceTest {
         prefs.bodyEnergyWatchFitWatermarkMillis = 1_700_000_000_000L
         prefs.bodyEnergyChainSeedMirror = "20600|62|55|1"
         prefs.bodyEnergyPermissionSignature = 4242
-        caloriesSync = mockk { coEvery { syncAll() } answers { rebuildOrder += "calories" } }
         chainSync = mockk { coEvery { syncAll(force = true) } answers { rebuildOrder += "chain" } }
     }
 
@@ -89,17 +75,14 @@ class DerivedMetricsResetServiceTest {
     private fun kotlinx.coroutines.test.TestScope.service() = DerivedMetricsResetService(
         context = mockk<Context>(),
         timelineStore = store,
-        baselineStore = baselines,
-        vitalsCacheDao = vitalsCache,
         preferencesRepository = prefs,
-        caloriesSync = caloriesSync,
         bodyEnergyChainSync = chainSync,
         rebuildScope = this,
         refreshWidgets = { widgetRefreshes++ },
     )
 
     @Test
-    fun `wipes the chain, its cursor and the baselines`() = runTest {
+    fun `wipes the chain and its cursor`() = runTest {
         store.writeGlobalSignature("v11|abc|def|ghi")
         val service = service()
 
@@ -107,17 +90,6 @@ class DerivedMetricsResetServiceTest {
 
         assertNull(store.storedGlobalSignature())
         assertEquals(0, dao.countDays())
-        coVerify(exactly = 1) { baselines.clearBaselines() }
-    }
-
-    @Test
-    fun `purges the calories cache under its current and legacy keys, nothing else`() = runTest {
-        service().reset()
-
-        assertEquals(
-            VitalsCacheKeys.LEGACY_CALORIES_BURNED + VitalsCacheKeys.CALORIES_BURNED,
-            purgedMetrics,
-        )
     }
 
     @Test
@@ -139,7 +111,7 @@ class DerivedMetricsResetServiceTest {
     }
 
     @Test
-    fun `rebuilds calories then the chain, forced, and repaints the widgets`() = runTest {
+    fun `rebuilds the chain, forced, and repaints the widgets`() = runTest {
         val service = service()
 
         val rebuild = service.reset()
@@ -147,18 +119,18 @@ class DerivedMetricsResetServiceTest {
         advanceUntilIdle()
         rebuild.join()
 
-        assertEquals(listOf("calories", "chain"), rebuildOrder)
+        assertEquals(listOf("chain"), rebuildOrder)
         assertEquals(1, widgetRefreshes)
     }
 
     @Test
-    fun `a failed rebuild step does not stop the others`() = runTest {
-        coEvery { caloriesSync.syncAll() } throws IllegalStateException("rate limited")
+    fun `a failed rebuild still repaints the widgets`() = runTest {
+        coEvery { chainSync.syncAll(force = true) } throws IllegalStateException("rate limited")
         val service = service()
 
         service.reset().join()
 
-        assertEquals(listOf("chain"), rebuildOrder)
+        assertEquals(emptyList<String>(), rebuildOrder)
         assertEquals(1, widgetRefreshes)
     }
 }

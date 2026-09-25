@@ -12,7 +12,6 @@ import tech.mmarca.openvitals.domain.model.BmrEntry
 import tech.mmarca.openvitals.domain.model.BoneMassEntry
 import tech.mmarca.openvitals.domain.model.HeightEntry
 import tech.mmarca.openvitals.domain.model.LeanBodyMassEntry
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.query.BodyPeriodData
@@ -23,7 +22,6 @@ interface BodyRepository {
     suspend fun loadBodyPeriod(
         query: PeriodLoadQuery,
         metric: BodyPeriodMetric,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
     ): BodyPeriodData
 
     suspend fun loadWeightEntries(start: LocalDate, end: LocalDate): List<WeightEntry>

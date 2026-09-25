@@ -62,6 +62,14 @@ class DashboardMetricLoadGroupsTest {
     }
 
     @Test
+    fun `calories in rides the macros read`() {
+        val groups = dashboardMetricLoadGroups(listOf(DashboardMetric.CALORIES_IN, DashboardMetric.PROTEIN))
+
+        // Both come out of the one readDailyMacros call.
+        assertEquals(listOf(setOf(DashboardMetric.CALORIES_IN, DashboardMetric.PROTEIN)), groups)
+    }
+
+    @Test
     fun `sleep and HRV stay together so the sleep score keeps its HRV term`() {
         val groups = dashboardMetricLoadGroups(listOf(DashboardMetric.SLEEP, DashboardMetric.HRV))
 

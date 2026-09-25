@@ -5,6 +5,7 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.aggregate.AggregationResultGroupedByDuration
 import java.time.Instant
+import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.coroutines.AbstractCoroutineContextElement
@@ -19,6 +20,7 @@ import kotlin.math.roundToLong
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
+import tech.mmarca.openvitals.domain.model.MaxInsightAggregateBuckets
 
 /**
  * Marks a block whose Health Connect reads must fail loudly.
@@ -280,4 +282,26 @@ internal fun dailyAggregateDateChunks(
         chunkStart = chunkEnd.plusDays(1)
     }
     return chunks
+}
+
+/**
+ * Splits `[start, end)` into windows of at most [maxBuckets] buckets of
+ * [bucket], on bucket boundaries. A rate-limit retry then replays one
+ * window, not the whole range. Empty for inverted ranges.
+ */
+internal fun aggregateWindows(
+    start: Instant,
+    end: Instant,
+    bucket: Duration,
+    maxBuckets: Long = MaxInsightAggregateBuckets,
+): List<Pair<Instant, Instant>> {
+    val span = bucket.multipliedBy(maxBuckets)
+    val windows = mutableListOf<Pair<Instant, Instant>>()
+    var windowStart = start
+    while (windowStart.isBefore(end)) {
+        val windowEnd = minOf(end, windowStart.plus(span))
+        windows += windowStart to windowEnd
+        windowStart = windowEnd
+    }
+    return windows
 }

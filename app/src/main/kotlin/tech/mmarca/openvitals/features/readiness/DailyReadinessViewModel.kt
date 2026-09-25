@@ -154,7 +154,6 @@ class DailyReadinessViewModel @Inject constructor(
                         sleepWindow = sleepWindow,
                         activityWeekMode = activityWeekMode,
                         visibleMetrics = DailyReadinessMetrics,
-                        refreshMode = refreshMode,
                     )
                 )
             }

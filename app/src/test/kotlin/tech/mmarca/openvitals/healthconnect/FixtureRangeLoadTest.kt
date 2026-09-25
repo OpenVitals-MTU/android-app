@@ -72,7 +72,7 @@ class FixtureRangeLoadTest {
 
     private val reads = listOf(
         RangedRead("heart samples", corpusCovered = true) { r, s, e ->
-            r.heart.readHeartRateSamples(s, e).map { it.time }
+            r.heart.readRawHeartRateSamples(s, e).map { it.time }
         },
         RangedRead("heart daily summaries", corpusCovered = true) { r, s, e ->
             r.heart.readDailyHeartRateAggregates(s.date(), e.lastDate()).map { it.summary.date.midday() }

@@ -22,7 +22,6 @@ import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.cycle.CycleStatistics
 import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
 import java.time.LocalDate
@@ -122,7 +121,7 @@ class CycleViewModel @Inject constructor(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load(RefreshMode.FORCE)
+            if (refreshCurrent) load()
             return
         }
         applyPeriodSelection(selection)
@@ -130,10 +129,10 @@ class CycleViewModel @Inject constructor(
     }
 
     fun onCyclePermissionsResult(granted: Set<String>) {
-        load(RefreshMode.FORCE)
+        load()
     }
 
-    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
+    fun load() {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -143,11 +142,7 @@ class CycleViewModel @Inject constructor(
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                if (refreshMode == RefreshMode.NORMAL) {
-                    repository.loadCyclePeriod(query)
-                } else {
-                    repository.loadCyclePeriod(query, refreshMode)
-                }
+                repository.loadCyclePeriod(query)
             }.onSuccess { result ->
                 if (!isCurrent) return@load
                 val display = withContext(dispatchers.default) {
@@ -186,7 +181,7 @@ class CycleViewModel @Inject constructor(
             runCatching {
                 repository.deleteCycleEntry(kind, entryId)
             }.onSuccess {
-                load(RefreshMode.FORCE)
+                load()
             }.onFailure { error ->
                 _uiState.value = previous.copy(error = error.toScreenError())
             }

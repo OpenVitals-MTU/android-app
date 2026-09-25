@@ -2,8 +2,6 @@ package tech.mmarca.openvitals.data.sync
 
 import tech.mmarca.openvitals.healthconnect.StrictHealthConnectReads
 import kotlinx.coroutines.currentCoroutineContext
-import android.content.Context
-import android.content.SharedPreferences
 import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HeartRateRecord
@@ -31,7 +29,6 @@ import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyBucketRetentionDays
 import tech.mmarca.openvitals.data.local.bodyenergy.FakeBodyEnergyTimelineDao
-import tech.mmarca.openvitals.data.repository.BodyEnergyBaselineCacheStore
 import tech.mmarca.openvitals.data.repository.BodyEnergyChainSettlingDays
 import tech.mmarca.openvitals.data.repository.BodyEnergyTimelineStore
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -41,9 +38,7 @@ import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineResult
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.grantedHealthRepository
-import tech.mmarca.openvitals.data.repository.inMemoryBaselineStore
 import tech.mmarca.openvitals.data.repository.inMemoryPreferences
-import tech.mmarca.openvitals.devices.FakeSharedPreferences
 import tech.mmarca.openvitals.domain.insights.BodyEnergyBucketState
 import tech.mmarca.openvitals.domain.insights.BodyEnergyConfidence
 import tech.mmarca.openvitals.domain.insights.BodyEnergyInputSummary
@@ -113,7 +108,6 @@ class BodyEnergyChainSyncServiceTest {
 
     private lateinit var dao: FakeBodyEnergyTimelineDao
     private lateinit var store: BodyEnergyTimelineStore
-    private lateinit var baselines: BodyEnergyBaselineCacheStore
     private lateinit var prefs: PreferencesRepository
     private lateinit var health: HealthRepository
     private lateinit var repository: RecordingRepository
@@ -125,7 +119,6 @@ class BodyEnergyChainSyncServiceTest {
         now = Instant.parse("2026-06-01T10:00:00Z")
         dao = FakeBodyEnergyTimelineDao()
         store = BodyEnergyTimelineStore(dao)
-        baselines = inMemoryBaselineStore()
         prefs = inMemoryPreferences()
         health = grantedHealthRepository(granted = setOf(ReadHeartRate))
         repository = RecordingRepository(store) { now }
@@ -144,7 +137,6 @@ class BodyEnergyChainSyncServiceTest {
         readsOtherAppsData = { readsOtherAppsData },
         repository = repository,
         store = store,
-        baselineStore = baselines,
         healthRepository = health,
         preferencesRepository = prefs,
         clock = { now },
@@ -384,20 +376,6 @@ class BodyEnergyChainSyncServiceTest {
         repository.throwOnLoad = true
 
         service().syncAll()
-    }
-
-    @Test
-    fun `the legacy prefs timelines are purged on the first pass`() = runTest {
-        val cachePrefs = FakeSharedPreferences()
-        cachePrefs.edit().putString("2026-05-30|-12345", "a retired encoded timeline").commit()
-        val context = mockk<Context> {
-            every { getSharedPreferences(any(), any()) } returns (cachePrefs as SharedPreferences)
-        }
-        baselines = BodyEnergyBaselineCacheStore(context)
-
-        service().syncAll()
-
-        assertFalse(cachePrefs.contains("2026-05-30|-12345"))
     }
 
     @Test

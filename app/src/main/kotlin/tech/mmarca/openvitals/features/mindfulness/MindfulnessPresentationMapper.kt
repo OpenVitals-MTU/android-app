@@ -11,6 +11,7 @@ import tech.mmarca.openvitals.domain.insights.dailyGoalProgress
 import tech.mmarca.openvitals.domain.insights.periodComparison
 import tech.mmarca.openvitals.domain.insights.personalBaselineInsight
 import tech.mmarca.openvitals.domain.model.MindfulnessSession
+import tech.mmarca.openvitals.domain.model.minutesByStartDate
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.dailySleepSummary
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
@@ -92,17 +93,9 @@ private fun List<MindfulnessSession>.summary(): MindfulnessPeriodSummary {
     )
 }
 
-private fun mindfulnessDailyMinutes(sessions: List<MindfulnessSession>): List<MindfulnessDayValue> {
-    val zone = ZoneId.systemDefault()
-    return sessions
-        .groupBy { it.startTime.atZone(zone).toLocalDate() }
-        .map { (date, daySessions) ->
-            MindfulnessDayValue(
-                date = date,
-                minutes = daySessions.sumOf { it.durationMs.coerceAtLeast(0L) }.toDouble() / 60_000.0,
-            )
-        }
-}
+private fun mindfulnessDailyMinutes(sessions: List<MindfulnessSession>): List<MindfulnessDayValue> =
+    sessions.minutesByStartDate(ZoneId.systemDefault())
+        .map { (date, minutes) -> MindfulnessDayValue(date = date, minutes = minutes) }
 
 private fun sleepDurationValues(
     sessions: List<SleepData>,

@@ -72,9 +72,9 @@ class LoadHeartPeriodUseCaseTest {
         assertEquals(setOf("perm"), result.missingVitalsPermissions)
     }
 
-    @Test fun `force refresh passes refresh mode to repositories`() = runTest {
+    @Test fun `a forced load reads the heart repository the same way`() = runTest {
         coEvery {
-            heartRepository.loadHeartPeriod(query, HeartPeriodMetric.HRV, RefreshMode.FORCE)
+            heartRepository.loadHeartPeriod(query, HeartPeriodMetric.HRV)
         }.returns(HeartPeriodData(dayHrvMs = 42.0))
 
         val result = useCase(
@@ -83,7 +83,7 @@ class LoadHeartPeriodUseCaseTest {
             refreshMode = RefreshMode.FORCE,
         )
 
-        coVerify { heartRepository.loadHeartPeriod(query, HeartPeriodMetric.HRV, RefreshMode.FORCE) }
+        coVerify { heartRepository.loadHeartPeriod(query, HeartPeriodMetric.HRV) }
         assertEquals(42.0, result.dayHrvMs)
     }
 

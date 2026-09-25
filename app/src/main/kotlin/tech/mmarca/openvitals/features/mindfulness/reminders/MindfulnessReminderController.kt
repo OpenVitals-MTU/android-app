@@ -8,6 +8,8 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.LocalDate
+import java.time.ZoneId
+import tech.mmarca.openvitals.domain.model.minutesByStartDate
 import java.time.ZonedDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -122,8 +124,7 @@ class MindfulnessReminderController @Inject constructor(
         return runCatching {
             withStrictHealthConnectReads {
                 mindfulnessRepository.loadMindfulnessSessions(today, today)
-                    .sumOf { session -> session.durationMs.coerceAtLeast(0L) }
-                    .toDouble() / MillisPerMinute
+                    .minutesByStartDate(ZoneId.systemDefault())[today] ?: 0.0
             }
         }.onFailure { error ->
             if (error is kotlinx.coroutines.CancellationException) throw error
@@ -147,7 +148,6 @@ class MindfulnessReminderController @Inject constructor(
 
     companion object {
         private const val TAG = "MindfulnessReminderController"
-        private const val MillisPerMinute = 60_000.0
 
         fun hasNotificationPermission(context: Context): Boolean =
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||

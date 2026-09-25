@@ -662,7 +662,6 @@ private suspend fun loadReadinessInsight(context: Context): Result<DailyReadines
                     sleepWindow = preferences.sleepWindow,
                     activityWeekMode = preferences.activityWeekMode,
                     visibleMetrics = ReadinessWidgetMetrics,
-                    refreshMode = RefreshMode.NORMAL,
                 )
             )
         } ?: throw WidgetLoadTimeoutException()
@@ -706,7 +705,6 @@ private suspend fun loadDashboardResult(
                     sleepWindow = preferences.sleepWindow,
                     activityWeekMode = preferences.activityWeekMode,
                     visibleMetrics = metrics,
-                    refreshMode = RefreshMode.FORCE,
                     includeHistoricalBaselines = false,
                     includeWeeklyTrainingSignals = DashboardMetric.WEEKLY_CARDIO_LOAD in metrics ||
                         DashboardMetric.INTENSITY_MINUTES in metrics,

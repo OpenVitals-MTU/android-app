@@ -51,7 +51,6 @@ class BodyEnergyRepositoryTest {
         bodyRepository = body,
         healthRepository = grantedHealthRepository(),
         preferencesRepository = inMemoryPreferences(),
-        baselineCacheStore = inMemoryBaselineStore(),
         timelineStore = timelines,
         now = { clock },
         zoneSource = { TestZone },
@@ -130,18 +129,18 @@ class BodyEnergyRepositoryTest {
     }
 
     @Test
-    fun `a stale timeline recomputes but reuses the fresh baseline`() = runTest {
+    fun `a stale timeline recomputes its baselines too`() = runTest {
         val r = repo()
         r.loadTimeline(query)
         assertEquals(1, heart.dayGraphCalls)
         assertEquals(1, heart.dailyRestingCalls)
 
-        // 20 minutes later: today's timeline is stale, but the baseline is still fresh and must be reused.
+        // 20 minutes later: today's timeline is stale. The baselines are read with the day.
         clock = clock.plusSeconds(20 * 60)
         r.loadTimeline(query)
 
         assertEquals("stale timeline recomputes", 2, heart.dayGraphCalls)
-        assertEquals("baseline reused, not recomputed", 1, heart.dailyRestingCalls)
+        assertEquals("baselines are read with the day", 2, heart.dailyRestingCalls)
     }
 
     @Test

@@ -441,7 +441,6 @@ internal suspend fun loadSnapshot(
                         sleepWindow = entryPoint.preferencesRepository().sleepWindow,
                         activityWeekMode = entryPoint.preferencesRepository().activityWeekMode,
                         visibleMetrics = setOf(metric),
-                        refreshMode = RefreshMode.FORCE,
                         includeHistoricalBaselines = false,
                         includeWeeklyTrainingSignals = metric == DashboardMetric.WEEKLY_CARDIO_LOAD,
                     )

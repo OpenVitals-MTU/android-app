@@ -3,9 +3,6 @@ package tech.mmarca.openvitals.domain.model
 import java.time.Duration
 import java.time.Instant
 
-/** Buckets used when Health Connect aggregates heart rate for day/long-range charts. */
-val HeartRateChartBucketDuration: Duration = Duration.ofMinutes(15)
-
 /**
  * Buckets for strain math. TRIMP and intensity coverage drop pairs more
  * than five minutes apart, so five-minute buckets are the coarsest slicing

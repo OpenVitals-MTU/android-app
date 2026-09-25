@@ -14,6 +14,7 @@ import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.preferences.StrideLength
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.historyReadStart
 import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -86,7 +87,7 @@ class StepDistanceBackfillService @Inject constructor(
             if (!granted.containsAll(required)) return
 
             val today = LocalDate.now()
-            val start = backfillStart(today, granted)
+            val start = hc.historyReadStart(today.minusDays(BackfillWindowDays - 1), today, granted)
             // Strict: an empty step map reads as "0 steps every day", and the reconcile then
             // deletes every derived distance record. A failed read must abort the pass.
             withStrictHealthConnectReads {
@@ -109,20 +110,6 @@ class StepDistanceBackfillService @Inject constructor(
             Log.w(TAG, "Step distance backfill failed", t)
         } finally {
             running.set(false)
-        }
-    }
-
-    private fun backfillStart(today: LocalDate, granted: Set<String>): LocalDate {
-        val start = today.minusDays(BackfillWindowDays - 1)
-        val historyPermissionRequired =
-            HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY in hc.additionalDataAccessPermissions
-        return if (
-            historyPermissionRequired &&
-            HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY !in granted
-        ) {
-            maxOf(start, today.minusDays(29))
-        } else {
-            start
         }
     }
 

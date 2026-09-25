@@ -13,8 +13,9 @@ private val CoupledDashboardMetricGroups: List<Set<DashboardMetric>> = listOf(
         DashboardMetric.BMI,
         DashboardMetric.FFMI,
     ),
-    // readDailyMacros answers all four out of a single nutrition read.
+    // readDailyMacros answers all five out of a single nutrition read.
     setOf(
+        DashboardMetric.CALORIES_IN,
         DashboardMetric.PROTEIN,
         DashboardMetric.CARBS,
         DashboardMetric.FAT,

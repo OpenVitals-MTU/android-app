@@ -18,12 +18,11 @@ import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.reducedForChart
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
+import tech.mmarca.openvitals.domain.model.dayAverageBpm
 import tech.mmarca.openvitals.domain.query.HeartPeriodData
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
-import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -52,9 +51,6 @@ class HeartRepositoryImpl @Inject constructor(
 
         /** Samples one load may read raw. Older stale days keep the hourly average until a later load. */
         internal const val DayCacheLoadSamples = 250_000L
-
-        // Health Connect filters series records by record boundary; a watch sync groups an hour per record.
-        private val HeartRateSeriesLookback = Duration.ofHours(1)
     }
 
     private val readHeartRatePermission = HealthPermission.getReadPermission(HeartRateRecord::class)
@@ -67,11 +63,9 @@ class HeartRepositoryImpl @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadHeartPeriod(
         query: PeriodLoadQuery,
         metric: HeartPeriodMetric,
-        refreshMode: RefreshMode,
     ): HeartPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
@@ -80,13 +74,13 @@ class HeartRepositoryImpl @Inject constructor(
                 HeartPeriodMetric.ALL -> loadAllHeartPeriod(query, granted)
                 HeartPeriodMetric.AVERAGE_HEART_RATE -> if (query.range == TimeRange.DAY) {
                     val daySamples = async { loadRawHeartRateSamplesForDayGraph(query.selectedDate, granted) }
-                    val previousDaySamples = async { loadHeartRateSamples(windows.previous.start, granted) }
+                    val previousDayAvgBpm = async { loadAvgHeartRate(windows.previous.start, granted) }
                     val baselineDailySummaries = async {
                         loadDailyHeartRateSummaries(windows.baseline.start, windows.baseline.end, granted)
                     }
                     HeartPeriodData(
                         daySamples = daySamples.await(),
-                        previousDaySamples = previousDaySamples.await(),
+                        previousDayAvgBpm = previousDayAvgBpm.await(),
                         baselineDailySummaries = baselineDailySummaries.await(),
                     )
                 } else {
@@ -114,7 +108,7 @@ class HeartRepositoryImpl @Inject constructor(
                     val samples = dayRestingSamples.await()
                     HeartPeriodData(
                         dayRestingSamples = samples,
-                        dayRestingBpm = samples.averageRestingBpm(),
+                        dayRestingBpm = samples.dayAverageBpm(),
                         previousDayRestingBpm = previousDayRestingBpm.await(),
                         baselineDailyRestingHR = baselineDailyRestingHR.await(),
                     )
@@ -153,11 +147,7 @@ class HeartRepositoryImpl @Inject constructor(
                 }
             }
         }
-        return if (query.range == TimeRange.DAY) {
-            enrichDayHeartRateSamples(data, query, metric, granted)
-        } else {
-            data
-        }
+        return data
     }
 
     private suspend fun loadAllHeartPeriod(
@@ -173,7 +163,7 @@ class HeartRepositoryImpl @Inject constructor(
             HeartPeriodData(
                 daySamples = daySamples.await(),
                 dayRestingSamples = restingSamples,
-                dayRestingBpm = restingSamples.averageRestingBpm(),
+                dayRestingBpm = restingSamples.dayAverageBpm(),
                 dayHrvSamples = hrvSamples,
                 dayHrvMs = hrvSamples.averageRmssdMs(),
             )
@@ -192,55 +182,17 @@ class HeartRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun loadHeartRateSamples(date: LocalDate): List<HeartRateSample> {
+    override suspend fun loadAvgHeartRate(date: LocalDate): Long? {
         val granted = grantedPermissionsIfAvailable()
-        return loadHeartRateSamples(date, granted)
+        return loadAvgHeartRate(date, granted)
     }
 
-    private suspend fun loadHeartRateSamples(
-        date: LocalDate,
-        granted: Set<String>,
-    ): List<HeartRateSample> {
+    private suspend fun loadAvgHeartRate(date: LocalDate, granted: Set<String>): Long? {
         if (readHeartRatePermission !in granted) {
-            Log.w(TAG, "Skipping loadHeartRateSamples missingCount=1")
-            return emptyList()
+            Log.w(TAG, "Skipping loadAvgHeartRate missingCount=1")
+            return null
         }
-        val zone = ZoneId.systemDefault()
-        val start = date.atStartOfDay(zone).toInstant()
-        val end = date.plusDays(1).atStartOfDay(zone).toInstant()
-        return hc.readHeartRateSamples(start, end).reducedForChart()
-    }
-
-    private suspend fun enrichDayHeartRateSamples(
-        data: HeartPeriodData,
-        query: PeriodLoadQuery,
-        metric: HeartPeriodMetric,
-        granted: Set<String>,
-    ): HeartPeriodData = coroutineScope {
-        when (metric) {
-            HeartPeriodMetric.ALL -> if (data.daySamples.isEmpty()) {
-                data.copy(daySamples = loadRawHeartRateSamplesForDayGraph(query.selectedDate, granted))
-            } else {
-                data
-            }
-            HeartPeriodMetric.AVERAGE_HEART_RATE -> {
-                val daySamples = if (data.daySamples.isEmpty()) {
-                    async { loadRawHeartRateSamplesForDayGraph(query.selectedDate, granted) }
-                } else {
-                    null
-                }
-                val previousDaySamples = if (data.previousDaySamples.isEmpty()) {
-                    async { loadHeartRateSamples(query.windows.previous.start, granted) }
-                } else {
-                    null
-                }
-                data.copy(
-                    daySamples = daySamples?.await() ?: data.daySamples,
-                    previousDaySamples = previousDaySamples?.await() ?: data.previousDaySamples,
-                )
-            }
-            else -> data
-        }
+        return hc.readAvgHeartRate(date)
     }
 
     override suspend fun loadRawHeartRateSamplesForDayGraph(date: LocalDate): List<HeartRateSample> {
@@ -318,13 +270,8 @@ class HeartRepositoryImpl @Inject constructor(
             return emptyList()
         }
         if (!end.isAfter(start)) return emptyList()
-
-        return hc.readRawHeartRateSamples(start.minus(HeartRateSeriesLookback), end)
-            .asSequence()
-            .filter { sample -> !sample.time.isBefore(start) && sample.time.isBefore(end) }
-            .sortedBy { it.time }
-            .toList()
-            .reducedForChart()
+        // The reader widens the read past the record bounds and clips the samples to the window.
+        return hc.readRawHeartRateSamples(start, end).reducedForChart()
     }
 
     private suspend fun loadHeartRateSamples(
@@ -468,9 +415,7 @@ class HeartRepositoryImpl @Inject constructor(
     private suspend fun loadHrvRmssd(
         date: LocalDate,
         granted: Set<String>,
-    ): Double? {
-        return loadDailyHRV(date, date, granted).firstOrNull { it.date == date }?.rmssdMs
-    }
+    ): Double? = loadHrvSamplesForDay(date, granted).averageRmssdMs()
 
     override suspend fun loadDailyHRV(start: LocalDate, end: LocalDate): List<DailyHrv> {
         val granted = grantedPermissionsIfAvailable()
@@ -489,9 +434,6 @@ class HeartRepositoryImpl @Inject constructor(
         return hc.readDailyHRV(start, end)
     }
 }
-
-private fun List<RestingHeartRateSample>.averageRestingBpm(): Long? =
-    timeBucketedAverageOrNull(time = { it.time }, value = { it.beatsPerMinute.toDouble() })?.roundToLong()
 
 private fun List<HrvSample>.averageRmssdMs(): Double? =
     timeBucketedAverageOrNull(time = { it.time }, value = { it.rmssdMs })

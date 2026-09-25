@@ -34,14 +34,10 @@ import tech.mmarca.openvitals.domain.query.ActivityPeriodData
 import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
-import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
-import tech.mmarca.openvitals.data.sync.CaloriesHistorySyncService
-import tech.mmarca.openvitals.data.sync.HistoryLookbackDays
-import tech.mmarca.openvitals.data.sync.VitalsCacheKeys
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.historyReadStart
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -55,8 +51,6 @@ class ActivityRepositoryImpl @Inject constructor(
     private val hc: HealthConnectManager,
     private val preferencesRepository: PreferencesRepository? = null,
     private val markerRepository: ActivityMarkerRepository? = null,
-    private val cacheDao: VitalsDailyCacheDao? = null,
-    private val caloriesSync: CaloriesHistorySyncService? = null,
     private val coMapsNavigationRepository: CoMapsNavigationRepository? = null,
 ) : ActivityRepository {
 
@@ -66,7 +60,6 @@ class ActivityRepositoryImpl @Inject constructor(
 
     private val readStepsPermission = HealthPermission.getReadPermission(StepsRecord::class)
     private val readDistancePermission = HealthPermission.getReadPermission(DistanceRecord::class)
-    private val readHealthDataHistoryPermission = HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY
     private val readExercisePermission = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
     private val readCaloriesPermission = HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
     private val readFloorsPermission = HealthPermission.getReadPermission(FloorsClimbedRecord::class)
@@ -97,7 +90,6 @@ class ActivityRepositoryImpl @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadActivityPeriod(
         query: PeriodLoadQuery,
         includeSteps: Boolean,
@@ -105,7 +97,6 @@ class ActivityRepositoryImpl @Inject constructor(
         includeWheelchairPushes: Boolean,
         includeActivityProgress: Boolean,
         includeComparisonWindows: Boolean,
-        refreshMode: RefreshMode,
     ): ActivityPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
@@ -197,10 +188,8 @@ class ActivityRepositoryImpl @Inject constructor(
         }
     }
 
-    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadActivitiesPeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode,
     ): ActivitiesPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
@@ -242,7 +231,7 @@ class ActivityRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping loadDailySteps missingCount=${missingRequired.size}")
             return emptyList()
         }
-        val effectiveStart = activityHistoryStart(start, end, granted)
+        val effectiveStart = hc.historyReadStart(start, end, granted)
         return hc.readDailySteps(
             startDate = effectiveStart,
             endDate = end,
@@ -253,19 +242,6 @@ class ActivityRepositoryImpl @Inject constructor(
             includeActiveCalories = readActiveCaloriesPermission in granted,
             includeElevation = readElevationPermission in granted,
         )
-    }
-
-    private fun activityHistoryStart(
-        start: LocalDate,
-        end: LocalDate,
-        granted: Set<String>,
-    ): LocalDate {
-        val historyPermissionRequired = readHealthDataHistoryPermission in hc.additionalDataAccessPermissions
-        return if (historyPermissionRequired && readHealthDataHistoryPermission !in granted) {
-            maxOf(start, end.minusDays(29))
-        } else {
-            start
-        }
     }
 
     override suspend fun loadActivityProgress(date: LocalDate): List<ActivityProgressPoint> {
@@ -287,7 +263,7 @@ class ActivityRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping loadActivityProgress missingCount=${missingRequired.size}")
             return emptyList()
         }
-        return hc.readRawActivityProgress(
+        return hc.readActivityProgress(
             date = date,
             includeSteps = includeSteps,
             includeDistance = readDistancePermission in granted,
@@ -507,65 +483,12 @@ class ActivityRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping loadDailyNutrition missingCount=1")
             return emptyList()
         }
-        val estimateCalories = canEstimateTotalCalories(granted)
-        if (!estimateCalories) {
-            cachedCaloriesBurned(start, end)?.let { return it }
-        }
         return hc.readDailyNutrition(
             startDate = start,
             endDate = end,
             includeHydration = false,
-            includeEstimatedCalories = estimateCalories,
+            includeEstimatedCalories = canEstimateTotalCalories(granted),
         )
-    }
-
-    /**
-     * The cached daily calories-burned series, or null to fall through. The
-     * cache serves neither ranges before its window nor calculated-calories
-     * mode. Missing days zero-fill.
-     */
-    private suspend fun cachedCaloriesBurned(start: LocalDate, end: LocalDate): List<DailyNutrition>? {
-        val dao = cacheDao ?: return null
-        if (start.isBefore(LocalDate.now().minusDays(HistoryLookbackDays))) return null
-        dao.cursor(VitalsCacheKeys.CALORIES_BURNED) ?: return null
-        val kcalByEpochDay = dao
-            .aggregatesBetween(VitalsCacheKeys.CALORIES_BURNED, start.toEpochDay(), end.toEpochDay())
-            .associate { it.epochDay to it.valueSum }
-        return generateSequence(start) { date -> date.plusDays(1).takeUnless { it.isAfter(end) } }
-            .map { date ->
-                DailyNutrition(
-                    date = date,
-                    hydrationLiters = 0.0,
-                    caloriesBurnedKcal = kcalByEpochDay[date.toEpochDay()] ?: 0.0,
-                )
-            }
-            .toList()
-    }
-
-    /** The activity's local day, read only when there is a cache to patch. */
-    private suspend fun dayOfActivity(id: String): LocalDate? {
-        if (cacheDao == null || caloriesSync == null) return null
-        return runCatching {
-            hc.readExerciseSession(
-                id = id,
-                includeSteps = false,
-                includeDistance = false,
-                includeTotalCalories = false,
-                includeActiveCalories = false,
-                includeWheelchairPushes = false,
-                includeFloors = false,
-                includeElevation = false,
-                includeSpeed = false,
-                includePower = false,
-                includeStepsCadence = false,
-                includeCyclingCadence = false,
-            )?.startTime
-        }.getOrNull()?.atZone(ZoneId.systemDefault())?.toLocalDate()
-    }
-
-    /** A workout changes what Health Connect derives for its day; patch those days. */
-    private suspend fun afterActivityWrite(days: Set<LocalDate>) {
-        caloriesSync?.patchDays(days)
     }
 
     private fun canEstimateTotalCalories(granted: Set<String>): Boolean =
@@ -659,9 +582,7 @@ class ActivityRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping writeActivityEntry missingCount=${missingPermissions.size}")
             throw SecurityException("Missing Health Connect activity write permission.")
         }
-        val id = hc.writeActivityEntry(request)
-        afterActivityWrite(setOf(request.startTime.atZone(ZoneId.systemDefault()).toLocalDate()))
-        return id
+        return hc.writeActivityEntry(request)
     }
 
     override suspend fun writeActivityEntries(requests: List<ActivityWriteRequest>): List<String> {
@@ -673,10 +594,7 @@ class ActivityRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping writeActivityEntries missingCount=${missingPermissions.size}")
             throw SecurityException("Missing Health Connect activity write permission.")
         }
-        val ids = hc.writeActivityEntries(requests)
-        val zone = ZoneId.systemDefault()
-        afterActivityWrite(requests.mapTo(mutableSetOf()) { it.startTime.atZone(zone).toLocalDate() })
-        return ids
+        return hc.writeActivityEntries(requests)
     }
 
     override suspend fun updateActivityEntry(id: String, request: ActivityWriteRequest) {
@@ -685,11 +603,7 @@ class ActivityRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping updateActivityEntry missingCount=${missingPermissions.size}")
             throw SecurityException("Missing Health Connect activity write permission.")
         }
-        // The pre-edit day is captured first, so a move across midnight patches both days.
-        val oldDay = dayOfActivity(id)
         hc.updateActivityEntry(id, request)
-        val newDay = request.startTime.atZone(ZoneId.systemDefault()).toLocalDate()
-        afterActivityWrite(setOfNotNull(newDay, oldDay))
     }
 
     override suspend fun deleteActivityEntry(id: String) {
@@ -698,10 +612,8 @@ class ActivityRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping deleteActivityEntry missingCount=1")
             throw SecurityException("Missing Health Connect activity write permission.")
         }
-        val day = dayOfActivity(id)
         hc.deleteActivityEntry(id)
         markerRepository?.deleteMarkersForActivity(id)
         coMapsNavigationRepository?.deleteSamples(id)
-        if (day != null) afterActivityWrite(setOf(day))
     }
 }

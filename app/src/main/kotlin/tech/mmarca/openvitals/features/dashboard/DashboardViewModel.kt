@@ -422,7 +422,6 @@ class DashboardViewModel @Inject constructor(
                     loadMetricGroup(
                         metrics = group,
                         date = clampedDate,
-                        refreshMode = refreshMode,
                         sleepWindow = sleepWindow,
                         activityWeekMode = activityWeekMode,
                         generation = generation,
@@ -453,10 +452,10 @@ class DashboardViewModel @Inject constructor(
                 isRefreshing = false,
             )
         }
-        // Once per app open, after the load settles: drain the caches' change tokens.
+        // Once per app open, after the load settles: the background passes.
         historySyncScheduler?.let { scheduler ->
             viewModelScope.launch {
-                // Four sync services in a row. Their bookkeeping stays off Main.
+                // Three services in a row. Their bookkeeping stays off Main.
                 runCatching { withContext(dispatchers.default) { scheduler.drainIncrementalOnce() } }
             }
         }
@@ -472,7 +471,6 @@ class DashboardViewModel @Inject constructor(
     private suspend fun loadMetricGroup(
         metrics: Set<DashboardMetric>,
         date: LocalDate,
-        refreshMode: RefreshMode,
         sleepWindow: SleepWindow,
         activityWeekMode: ActivityWeekMode,
         generation: Long,
@@ -485,28 +483,21 @@ class DashboardViewModel @Inject constructor(
             sleepWindow = sleepWindow,
             activityWeekMode = activityWeekMode,
             visibleMetrics = metrics,
-            refreshMode = refreshMode,
             // Nothing is gated on a pass any more, so the tile can afford these reads.
             includeHistoricalBaselines = true,
             includeWeeklyTrainingSignals = DashboardMetric.WEEKLY_CARDIO_LOAD in metrics,
         )
         var failure: Throwable? = null
-        var data: DashboardData? = null
-        // Two attempts: identical in-flight loads are coalesced, so a live caller
-        // can be handed the cancellation of the pass it shared.
-        repeat(2) {
-            if (data != null) return@repeat
-            try {
-                data = loadDashboardDayUseCase(query)
-                failure = null
-            } catch (error: CancellationException) {
-                if (!currentCoroutineContext().isActive) throw error
-                failure = error
-            } catch (error: Throwable) {
-                failure = error
-            }
+        val loaded = try {
+            loadDashboardDayUseCase(query)
+        } catch (error: CancellationException) {
+            if (!currentCoroutineContext().isActive) throw error
+            failure = error
+            null
+        } catch (error: Throwable) {
+            failure = error
+            null
         }
-        val loaded = data
         publishMerged(generation = generation, date = date, clearing = widgetIds) { current ->
             if (loaded == null) current else current.mergeLoaded(loaded)
         }

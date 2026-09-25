@@ -8,7 +8,6 @@ import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.NutritionPeriodData
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -167,12 +166,12 @@ class NutritionViewModelTest {
         assertEquals(1_750.0, vm.uiState.value.display.metric.goalProgress?.target ?: 0.0, 0.01)
         assertEquals(0, vm.uiState.value.display.metric.goalProgress?.goalMetDays)
         // A goal nudge must not reload: the boot load is the only one.
-        coVerify(exactly = 1) { repo.loadNutritionPeriod(any(), any()) }
+        coVerify(exactly = 1) { repo.loadNutritionPeriod(any()) }
     }
 
-    @Test fun `refresh reloads the current selection in force mode`() = runTest {
+    @Test fun `resuming the current period reloads it`() = runTest {
         val repo = emptyRepo()
-        coEvery { repo.loadNutritionPeriod(any(), any()) } coAnswers {
+        coEvery { repo.loadNutritionPeriod(any()) } coAnswers {
             val query = firstArg<PeriodLoadQuery>()
             val windows = query.windows
             NutritionPeriodData(
@@ -186,8 +185,7 @@ class NutritionViewModelTest {
 
         vm.resumeCurrentPeriod(refreshCurrent = true)
 
-        coVerify(exactly = 1) { repo.loadNutritionPeriod(any()) }
-        coVerify(exactly = 1) { repo.loadNutritionPeriod(any(), RefreshMode.FORCE) }
+        coVerify(exactly = 2) { repo.loadNutritionPeriod(any()) }
     }
 
     @Test fun `a stale load cannot overwrite the newer one it lost to`() = runTest {
@@ -285,7 +283,7 @@ class NutritionViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadNutritionEntries(any(), any()) } returns entries
         coEvery { repo.deleteNutritionEntry("a") } returns Unit
-        coEvery { repo.loadNutritionPeriod(any(), any()) } coAnswers {
+        coEvery { repo.loadNutritionPeriod(any()) } coAnswers {
             val query = firstArg<PeriodLoadQuery>()
             val windows = query.windows
             NutritionPeriodData(
@@ -304,7 +302,7 @@ class NutritionViewModelTest {
         assertEquals(listOf("b"), vm.uiState.value.entries.map { it.id })
         assertNull(vm.uiState.value.error)
         coVerify { repo.deleteNutritionEntry("a") }
-        coVerify { repo.loadNutritionPeriod(any(), RefreshMode.FORCE) }
+        coVerify(atLeast = 2) { repo.loadNutritionPeriod(any()) }
     }
 
     @Test fun `a failed delete restores the entry and surfaces the error`() = runTest {

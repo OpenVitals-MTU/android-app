@@ -40,7 +40,7 @@ import tech.mmarca.openvitals.domain.preferences.BodyProfile
  *
  * Body Energy is a chain: each day opens where the previous one closed, so
  * the stored end score is an input to the next day. [resolveSeed] makes that
- * true. Baselines live in SharedPreferences, day timelines in Room.
+ * true. Baselines are read with each day; day timelines live in Room.
  */
 @Singleton
 class BodyEnergyRepositoryImpl(
@@ -51,7 +51,6 @@ class BodyEnergyRepositoryImpl(
     private val bodyRepository: BodyRepository,
     private val healthRepository: HealthRepository,
     private val preferencesRepository: PreferencesRepository,
-    private val baselineCacheStore: BodyEnergyBaselineCacheStore,
     /** Nullable for contexts that must not open Room. Then the chain uses the prefs mirror. */
     private val timelineStore: BodyEnergyTimelineStore?,
     private val now: () -> Instant = Instant::now,
@@ -71,7 +70,6 @@ class BodyEnergyRepositoryImpl(
         bodyRepository: BodyRepository,
         healthRepository: HealthRepository,
         preferencesRepository: PreferencesRepository,
-        baselineCacheStore: BodyEnergyBaselineCacheStore,
         timelineStore: BodyEnergyTimelineStore,
     ) : this(
         heartRepository = heartRepository,
@@ -81,7 +79,6 @@ class BodyEnergyRepositoryImpl(
         bodyRepository = bodyRepository,
         healthRepository = healthRepository,
         preferencesRepository = preferencesRepository,
-        baselineCacheStore = baselineCacheStore,
         timelineStore = timelineStore,
         now = Instant::now,
     )
@@ -297,15 +294,7 @@ class BodyEnergyRepositoryImpl(
         val baselineEnd = date.minusDays(1)
 
         // Independent reads run concurrently.
-        val baselinesJob = async {
-            loadBaselines(
-                date = date,
-                baselineStart = baselineStart,
-                baselineEnd = baselineEnd,
-                dayStart = dayStart,
-                signature = baselineSignature(context.permissionSignature),
-            )
-        }
+        val baselinesJob = async { loadBaselines(baselineStart, baselineEnd, dayStart) }
         val heartRateJob = async { heartRepository.loadRawHeartRateSamplesForDayGraph(date) }
         val hrvJob = async { heartRepository.loadHrvSamples(dayStart, dayEnd) }
         val respiratoryJob = async { vitalsRepository.loadRespiratoryRate(date, date) }
@@ -387,17 +376,12 @@ class BodyEnergyRepositoryImpl(
             "${timeline.date.toEpochDay()}|${timeline.currentScore}|${timeline.startScore}|$chained"
     }
 
-    /** Reuse a fresh cached baseline (this or an adjacent day), else recompute and cache. */
+    /** The 28-day baselines, read with each day. Four aggregate reads. */
     private suspend fun loadBaselines(
-        date: LocalDate,
         baselineStart: LocalDate,
         baselineEnd: LocalDate,
         dayStart: Instant,
-        signature: String,
-    ): BodyEnergyBaselineCacheEntry = coroutineScope {
-        val reusable = loadReusableBaseline(date, signature)
-        if (reusable != null && !baselineIsStale(reusable)) return@coroutineScope reusable
-
+    ): BodyEnergyBaselines = coroutineScope {
         val baselineStartInstant = baselineStart.atStartOfDay(zone).toInstant()
         val baselineResting = async {
             heartRepository.loadDailyRestingHR(baselineStart, baselineEnd)
@@ -421,34 +405,20 @@ class BodyEnergyRepositoryImpl(
                 .filter { it > 0.0 }
                 .medianDoubleOrNull()
         }
-        val baseline = BodyEnergyBaselineCacheEntry(
+        BodyEnergyBaselines(
             baselineRestingHeartRateBpm = baselineResting.await(),
             observedMaxHeartRateBpm = observedMax.await(),
             hrvBaselineRmssdMs = hrvBaseline.await(),
             respiratoryRateBaseline = respiratoryBaseline.await(),
-            generatedAt = now(),
         )
-        baselineCacheStore.saveBaseline(date, signature, baseline)
-        baseline
     }
 
-    private fun loadReusableBaseline(
-        date: LocalDate,
-        signature: String,
-    ): BodyEnergyBaselineCacheEntry? {
-        val exact = baselineCacheStore.loadBaseline(date, signature)
-        if (exact != null && !baselineIsStale(exact)) return exact
-
-        val adjacent = listOf(date.minusDays(1), date.plusDays(1))
-            .firstNotNullOfOrNull { adjacentDate ->
-                baselineCacheStore.loadBaseline(adjacentDate, signature)
-                    ?.takeUnless { baselineIsStale(it) }
-            }
-        if (adjacent != null) {
-            baselineCacheStore.saveBaseline(date, signature, adjacent)
-        }
-        return adjacent
-    }
+    private data class BodyEnergyBaselines(
+        val baselineRestingHeartRateBpm: Long?,
+        val observedMaxHeartRateBpm: Long?,
+        val hrvBaselineRmssdMs: Double?,
+        val respiratoryRateBaseline: Double?,
+    )
 
     /**
      * The granted-permission hash for chain signatures, or the last successful
@@ -493,9 +463,6 @@ class BodyEnergyRepositoryImpl(
         return if (cut < 0) signature else signature.substring(0, cut)
     }
 
-    private fun baselineSignature(permissionSignature: Int): String =
-        "v$BodyEnergyTimelineAlgorithmVersion|baseline|$permissionSignature"
-
     /**
      * Whether [timeline] should be recomputed. Today re-reads every 15 minutes,
      * a day inside [BodyEnergyChainSettlingDays] daily, a settled day never.
@@ -518,16 +485,12 @@ class BodyEnergyRepositoryImpl(
     private fun cacheIsUsable(cached: BodyEnergyTimeline): Boolean =
         cached.points.isNotEmpty() || cached.confidence == BodyEnergyConfidence.NO_DATA
 
-    private fun baselineIsStale(baseline: BodyEnergyBaselineCacheEntry): Boolean =
-        Duration.between(baseline.generatedAt, now()).toHours() >= BaselineCacheHours
-
     private fun today(): LocalDate = now().atZone(zone).toLocalDate()
 
     private companion object {
         const val BaselineDays = 28L
         const val CurrentDayCacheMinutes = 15L
         const val PastDayCacheHours = 24L
-        const val BaselineCacheHours = 24L
 
         /** How far back a chain anchor is looked for. One SQLite query, cheap to raise. */
         const val ChainLookbackDays = 14L

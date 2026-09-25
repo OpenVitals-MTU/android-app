@@ -22,7 +22,6 @@ import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.query.ActivityPeriodData
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
-import tech.mmarca.openvitals.data.sync.CaloriesHistorySyncService
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 class CaloriesViewModelTest {
@@ -36,20 +35,18 @@ class CaloriesViewModelTest {
         activityRepository: ActivityRepository,
         bodyRepository: BodyRepository,
         preferences: FakePreferences = FakePreferences(),
-        caloriesSync: CaloriesHistorySyncService = mockk(relaxed = true),
     ) = CaloriesViewModel(
         activityRepository = activityRepository,
         bodyRepository = bodyRepository,
         periodPreferences = preferences,
         calorieDisplayPreferences = preferences,
-        caloriesSync = caloriesSync,
         savedStateHandle = SavedStateHandle(),
     )
 
     private fun activityRepo(data: ActivityPeriodData = ActivityPeriodData()) =
         mockk<ActivityRepository>().also { repo ->
             coEvery {
-                repo.loadActivityPeriod(any(), any(), any(), any(), any(), any(), any())
+                repo.loadActivityPeriod(any(), any(), any(), any(), any(), any())
             } returns data
         }
 
@@ -134,18 +131,18 @@ class CaloriesViewModelTest {
 
         preferences.showOpenVitalsCalculatedCalories = true
 
-        // The first load kicks the history sync, which reloads once; the toggle reloads again.
-        coVerify(exactly = 3) {
+        // The first load, then the toggle's reload.
+        coVerify(exactly = 2) {
             activityRepository.loadActivityPeriod(any(), true, true, includeComparisonWindows = false)
         }
-        coVerify(exactly = 3) { bodyRepository.loadBmrEntries(any(), any()) }
+        coVerify(exactly = 2) { bodyRepository.loadBmrEntries(any(), any()) }
     }
 
     @Test
     fun `load failure sets error and clears loading`() = runTest {
         val activityRepository = mockk<ActivityRepository>()
         coEvery {
-            activityRepository.loadActivityPeriod(any(), any(), any(), any(), any(), any(), any())
+            activityRepository.loadActivityPeriod(any(), any(), any(), any(), any(), any())
         } throws RuntimeException("timeout")
         val bodyRepository = bodyRepo()
 
@@ -153,46 +150,5 @@ class CaloriesViewModelTest {
 
         assertFalse(vm.uiState.value.isLoading)
         assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
-    }
-
-    @Test
-    fun `first load kicks the calories history sync once, then reloads from the cache`() = runTest {
-        val activityRepository = activityRepo()
-        val sync = mockk<CaloriesHistorySyncService>()
-        coEvery { sync.syncAll() } returns Unit
-
-        caloriesViewModel(activityRepository, bodyRepo(), caloriesSync = sync)
-
-        // The screen owns the cache's first full sync, and one reload re-derives the period.
-        coVerify(exactly = 1) { sync.syncAll() }
-        coVerify(exactly = 2) {
-            activityRepository.loadActivityPeriod(any(), true, true, includeComparisonWindows = false)
-        }
-    }
-
-    @Test
-    fun `the sync kick fires once per screen open, not once per load`() = runTest {
-        val activityRepository = activityRepo()
-        val sync = mockk<CaloriesHistorySyncService>()
-        coEvery { sync.syncAll() } returns Unit
-        val vm = caloriesViewModel(activityRepository, bodyRepo(), caloriesSync = sync)
-
-        vm.selectRange(TimeRange.YEAR)
-
-        coVerify(exactly = 1) { sync.syncAll() }
-    }
-
-    @Test
-    fun `a failed load does not kick the sync`() = runTest {
-        val activityRepository = mockk<ActivityRepository>()
-        coEvery {
-            activityRepository.loadActivityPeriod(any(), any(), any(), any(), any(), any(), any())
-        } throws RuntimeException("timeout")
-        val sync = mockk<CaloriesHistorySyncService>()
-        coEvery { sync.syncAll() } returns Unit
-
-        caloriesViewModel(activityRepository, bodyRepo(), caloriesSync = sync)
-
-        coVerify(exactly = 0) { sync.syncAll() }
     }
 }

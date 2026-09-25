@@ -28,7 +28,6 @@ import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.CalorieDisplayPreferences
 import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
-import tech.mmarca.openvitals.data.sync.CaloriesHistorySyncService
 import tech.mmarca.openvitals.navigation.selectedDayOrNull
 import java.time.LocalDate
 import java.time.ZoneId
@@ -98,13 +97,10 @@ class ActivityOverviewViewModel @Inject constructor(
     private val periodPreferences: PeriodPreferences,
     private val calorieDisplayPreferences: CalorieDisplayPreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
-    private val caloriesSync: CaloriesHistorySyncService,
     savedStateHandle: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
 
     private val initialDay: java.time.LocalDate? = savedStateHandle.selectedDayOrNull()
-
-    private var caloriesSyncKicked = false
 
     private val _uiState = MutableStateFlow(
         ActivityOverviewUiState(
@@ -117,16 +113,6 @@ class ActivityOverviewViewModel @Inject constructor(
     init {
         observePreferences()
         load(initialDay ?: java.time.LocalDate.now())
-    }
-
-    /** Kicks the calories history sync once per open, after the first load; one reload when done. */
-    private fun kickCaloriesHistorySyncOnce() {
-        if (caloriesSyncKicked) return
-        caloriesSyncKicked = true
-        viewModelScope.launch {
-            runCatching { caloriesSync.syncAll() }
-            load()
-        }
     }
 
     private fun observePreferences() {
@@ -169,7 +155,6 @@ class ActivityOverviewViewModel @Inject constructor(
                     selectedDate = today,
                     days = days,
                 )
-                kickCaloriesHistorySyncOnce()
             }.onFailure { error ->
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(

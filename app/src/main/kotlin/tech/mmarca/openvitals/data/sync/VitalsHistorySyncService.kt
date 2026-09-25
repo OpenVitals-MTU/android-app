@@ -266,10 +266,6 @@ object VitalsCacheKeys {
 
     /** No cache spec behind it — HRV reads live; the key only names the metric. */
     const val HRV = "hrv"
-
-    /** `.v2` is the cache-format version: bumping it forces the rebuild that rewrites old rows. */
-    const val CALORIES_BURNED = "totalCaloriesBurned.v2"
-    val LEGACY_CALORIES_BURNED = listOf("totalCaloriesBurned")
 }
 
 /** How far back the daily-aggregate caches cover. */

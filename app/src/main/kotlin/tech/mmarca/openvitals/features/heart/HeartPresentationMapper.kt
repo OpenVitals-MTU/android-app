@@ -28,7 +28,7 @@ object HeartPresentationMapper {
             isLoading = false,
             selectedDate = query.selectedDate,
             daySamples = result.daySamples,
-            previousDaySamples = result.previousDaySamples,
+            previousDayAvgBpm = result.previousDayAvgBpm,
             dailySummaries = result.dailySummaries,
             previousDailySummaries = result.previousDailySummaries,
             baselineDailySummaries = result.baselineDailySummaries,
@@ -141,7 +141,7 @@ object HeartPresentationMapper {
 private fun HeartUiState.toLoadResult(): HeartPeriodLoadResult =
     HeartPeriodLoadResult(
         daySamples = daySamples,
-        previousDaySamples = previousDaySamples,
+        previousDayAvgBpm = previousDayAvgBpm,
         dailySummaries = dailySummaries,
         previousDailySummaries = previousDailySummaries,
         baselineDailySummaries = baselineDailySummaries,

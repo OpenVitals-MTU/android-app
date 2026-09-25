@@ -46,30 +46,20 @@ class HeartRepositoryTest {
     private val restingHeartRatePermission = HealthPermission.getReadPermission(RestingHeartRateRecord::class)
     private val hrvPermission = HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class)
 
-    @Test fun `instant range includes samples from a heart rate series starting before the workout`() = runTest {
+    @Test fun `instant range reads the window as is, the reader widens and clips`() = runTest {
         val start = Instant.parse("2026-07-11T08:03:00Z")
         val end = Instant.parse("2026-07-11T08:35:00Z")
-        val beforeWorkout = HeartRateSample(start.minusSeconds(1), 90L, "gadgetbridge")
         val firstWorkoutSample = HeartRateSample(start, 120L, "gadgetbridge")
         val laterWorkoutSample = HeartRateSample(start.plusSeconds(12 * 60), 150L, "gadgetbridge")
-        val afterWorkout = HeartRateSample(end, 100L, "gadgetbridge")
         val hc = mockk<HealthConnectManager>()
         every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
         coEvery { hc.grantedPermissions() } returns setOf(heartRatePermission)
-        coEvery { hc.readRawHeartRateSamples(any(), any()) } returns listOf(
-            afterWorkout,
-            laterWorkoutSample,
-            beforeWorkout,
-            firstWorkoutSample,
-        )
+        coEvery { hc.readRawHeartRateSamples(any(), any()) } returns listOf(firstWorkoutSample, laterWorkoutSample)
 
         val samples = HeartRepositoryImpl(hc).loadHeartRateSamples(start, end)
 
         assertEquals(listOf(firstWorkoutSample, laterWorkoutSample), samples)
-        coVerify(exactly = 1) {
-            hc.readRawHeartRateSamples(start.minus(Duration.ofHours(1)), end)
-        }
-        coVerify(exactly = 0) { hc.readHeartRateSamples(any(), any()) }
+        coVerify(exactly = 1) { hc.readRawHeartRateSamples(start, end) }
     }
 
     @Test fun `instant range returns empty for an inverted or empty window`() = runTest {
@@ -119,7 +109,7 @@ class HeartRepositoryTest {
         every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
         coEvery { hc.grantedPermissions() } returns setOf(heartRatePermission)
         coEvery { hc.readRawHeartRateSamples(any(), any()) } returns rawSamples
-        coEvery { hc.readHeartRateSamples(any(), any()) } returns emptyList()
+        coEvery { hc.readAvgHeartRate(any()) } returns 68L
         coEvery { hc.readDailyHeartRateAggregates(any(), any()) } returns emptyList()
 
         val data = HeartRepositoryImpl(hc).loadHeartPeriod(
@@ -132,8 +122,10 @@ class HeartRepositoryTest {
         )
 
         assertEquals(rawSamples, data.daySamples)
+        // The previous day is one number, read the way the Today tile reads it.
+        assertEquals(68L, data.previousDayAvgBpm)
         coVerify(exactly = 1) { hc.readRawHeartRateSamples(start, end) }
-        coVerify(exactly = 0) { hc.readHeartRateSamples(start, end) }
+        coVerify(exactly = 1) { hc.readAvgHeartRate(date.minusDays(1)) }
     }
 
     @Test fun `WEEK average heart rate uses daily aggregate summaries without raw day samples`() = runTest {
@@ -154,7 +146,7 @@ class HeartRepositoryTest {
             hc.readDailyHeartRateAggregates(query.windows.current.start, query.windows.current.end)
         }
         coVerify(exactly = 0) { hc.readRawHeartRateSamples(any(), any()) }
-        coVerify(exactly = 0) { hc.readHeartRateSamples(any(), any()) }
+        coVerify(exactly = 0) { hc.readAvgHeartRate(any()) }
     }
 
     @Test fun `DAY resting heart rate uses raw full samples for selected day graph`() = runTest {
@@ -205,7 +197,6 @@ class HeartRepositoryTest {
         coEvery { hc.grantedPermissions() } returns setOf(hrvPermission)
         coEvery { hc.readHrvSamples(any(), any()) } returns rawSamples
         coEvery { hc.readDailyHRV(any(), any()) } returns emptyList()
-        coEvery { hc.readHrvRmssd(any()) } returns 99.0
 
         val data = HeartRepositoryImpl(hc).loadHeartPeriod(query, HeartPeriodMetric.HRV)
 
@@ -215,6 +206,5 @@ class HeartRepositoryTest {
         coVerify(exactly = 1) { hc.readHrvSamples(start, end) }
         coVerify(exactly = 0) { hc.readDailyHRV(date, date) }
         coVerify(exactly = 1) { hc.readDailyHRV(query.windows.baseline.start, query.windows.baseline.end) }
-        coVerify(exactly = 0) { hc.readHrvRmssd(any()) }
     }
 }

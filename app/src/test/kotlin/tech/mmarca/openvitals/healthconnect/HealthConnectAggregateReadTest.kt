@@ -8,6 +8,7 @@ import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.StepsRecord
@@ -18,6 +19,7 @@ import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.testing.FakeHealthConnectClient
 import androidx.health.connect.client.units.Energy
 import androidx.health.connect.client.units.Length
+import androidx.health.connect.client.units.Volume
 import tech.mmarca.openvitals.domain.model.HeartRateInsightBucketDuration
 import tech.mmarca.openvitals.domain.model.MaxInsightAggregateBuckets
 import com.google.common.truth.Truth.assertThat
@@ -230,15 +232,15 @@ class HealthConnectAggregateReadTest {
         assertThat(bucketDate).isEqualTo(LocalDate.of(2026, 1, 2))
     }
 
-    // The intraday progress line.
+    // The intraday progress line: running totals per five-minute aggregate bucket.
 
     @Test
-    fun `readRawActivityProgress accumulates each contribution into a running total`() =
+    fun `readActivityProgress accumulates each bucket into a running total`() =
         onTheTestClock {
             val client = seeded(
                 steps(1_200L, at(8), at(9)),
-                steps(800L, at(9), at(10)),
-                steps(2_000L, at(10), at(11)),
+                steps(600L, at(9), at(10)),
+                steps(2_400L, at(10), at(11)),
                 distance(800.0, at(8), at(9)),
                 distance(500.0, at(9), at(10)),
                 distance(1_400.0, at(10), at(11)),
@@ -246,10 +248,13 @@ class HealthConnectAggregateReadTest {
 
             val points = progress(client, includeDistance = true)
 
-            assertThat(points).hasSize(3)
-            // Cumulative, not per-contribution.
-            assertThat(points.map { it.totalSteps }).containsExactly(1_200L, 2_000L, 4_000L)
-                .inOrder()
+            // Three hours of records, twelve buckets an hour.
+            assertThat(points).hasSize(36)
+            assertThat(points.first().time).isEqualTo(at(8).plusSeconds(300))
+            assertThat(points.first().totalSteps).isEqualTo(100L)
+            // Cumulative, not per-bucket.
+            assertThat(points[11].totalSteps).isEqualTo(1_200L)
+            assertThat(points.last().totalSteps).isEqualTo(4_200L)
             assertThat(points.last().totalDistanceMeters!!).isWithin(1e-6).of(2_700.0)
             assertThat(points.last().time).isEqualTo(at(11))
         }
@@ -258,11 +263,11 @@ class HealthConnectAggregateReadTest {
     // a requested metric the device never wrote reads 0.
     @Test
     fun `an unrequested metric stays null, while a requested one reads zero`() = onTheTestClock {
-        val client = seeded(steps(1_000L, at(8), at(9)))
+        val client = seeded(steps(1_200L, at(8), at(9)))
 
-        val point = progress(client, includeFloors = true).single()
+        val point = progress(client, includeFloors = true).last()
 
-        assertThat(point.totalSteps).isEqualTo(1_000L)
+        assertThat(point.totalSteps).isEqualTo(1_200L)
         // Requested, never recorded -> 0, not null.
         assertThat(point.totalFloorsClimbed).isEqualTo(0)
         // Never requested -> null.
@@ -273,12 +278,12 @@ class HealthConnectAggregateReadTest {
 
     // A running total carries forward through buckets that had none.
     @Test
-    fun `a metric's running total carries forward through contributions that had none`() =
+    fun `a metric's running total carries forward through buckets that had none`() =
         onTheTestClock {
             val client = seeded(
-                steps(1_000L, at(8), at(9)),
-                steps(500L, at(9), at(10)),
-                steps(500L, at(10), at(11)),
+                steps(1_200L, at(8), at(9)),
+                steps(600L, at(9), at(10)),
+                steps(600L, at(10), at(11)),
                 FloorsClimbedRecord(
                     startTime = at(9),
                     startZoneOffset = null,
@@ -291,20 +296,21 @@ class HealthConnectAggregateReadTest {
 
             val points = progress(client, includeFloors = true)
 
-            assertThat(points).hasSize(3)
-            assertThat(points[0].totalFloorsClimbed).isEqualTo(0)
-            assertThat(points[1].totalFloorsClimbed).isEqualTo(3)
-            // Carried forward even though this contribution had none.
-            assertThat(points[2].totalFloorsClimbed).isEqualTo(3)
+            assertThat(points).hasSize(36)
+            // The 09:00 point closes the first hour, the 10:00 point the second.
+            assertThat(points[11].totalFloorsClimbed).isEqualTo(0)
+            assertThat(points[23].totalFloorsClimbed).isEqualTo(3)
+            // Carried forward even though the third hour had none.
+            assertThat(points.last().totalFloorsClimbed).isEqualTo(3)
         }
 
     @Test
     fun `a past day is read across the whole of it, and nothing outside it`() = onTheTestClock {
         val client = seeded(
-            steps(10L, at(0), at(0).plusSeconds(60)),
-            steps(20L, at(23), at(23).plusSeconds(1_800)),
-            // The next day's first hour must not leak into this day's line.
-            steps(999L, at(24), at(24).plusSeconds(1_800)),
+            steps(10L, at(0), at(0).plusSeconds(300)),
+            steps(20L, at(23), at(23).plusSeconds(300)),
+            // The next day's first minutes must not leak into this day's line.
+            steps(999L, at(24), at(24).plusSeconds(300)),
             // Nor must the previous day's last hour.
             steps(888L, at(-1), at(0)),
         )
@@ -312,6 +318,18 @@ class HealthConnectAggregateReadTest {
         val points = progress(client)
 
         assertThat(points.map { it.totalSteps }).containsExactly(10L, 30L).inOrder()
+    }
+
+    // 288 buckets a day, at most 144 a request.
+    @Test
+    fun `a past day is two requests, each half a day`() = onTheTestClock {
+        val client = seeded(steps(1_200L, at(8), at(9)))
+
+        progress(client)
+
+        assertThat(client.groupByDurationRequestRanges)
+            .containsExactly(at(0) to at(12), at(12) to at(24))
+            .inOrder()
     }
 
     // A record the device has not written yet cannot appear on today's line.
@@ -326,7 +344,7 @@ class HealthConnectAggregateReadTest {
             steps(999L, Instant.now().plusSeconds(7_200), Instant.now().plusSeconds(10_800)),
         )
 
-        val points = activity(client).readRawActivityProgress(
+        val points = activity(client).readActivityProgress(
             date = today,
             includeDistance = false,
             includeCalories = false,
@@ -340,7 +358,7 @@ class HealthConnectAggregateReadTest {
     }
 
     @Test
-    fun `no contributions means no points`() = onTheTestClock {
+    fun `no records means no points`() = onTheTestClock {
         assertThat(progress(seeded())).isEmpty()
     }
 
@@ -376,6 +394,34 @@ class HealthConnectAggregateReadTest {
         // And the stitched series still carries both ends of the range.
         assertThat(series.single { it.date == firstDay }.caloriesBurnedKcal).isWithin(1e-6).of(1_800.0)
         assertThat(series.single { it.date == date }.caloriesBurnedKcal).isWithin(1e-6).of(2_200.0)
+    }
+
+    /** Hydration too: a two-year report asked for 730 buckets in one request. */
+    @Test
+    fun `readDailyHydration chunks a long range and stitches the series back together`() = runTest(testDispatcher) {
+        val zone = ZoneId.systemDefault()
+        val firstDay = date.minusDays(300)
+        fun drink(day: LocalDate, liters: Double) = HydrationRecord(
+            startTime = day.atStartOfDay(zone).toInstant().plusSeconds(12 * 3_600),
+            startZoneOffset = null,
+            endTime = day.atStartOfDay(zone).toInstant().plusSeconds(12 * 3_600 + 60),
+            endZoneOffset = null,
+            volume = Volume.liters(liters),
+            metadata = Metadata.autoRecorded(watch),
+        )
+        val client = seeded(drink(firstDay, 0.5), drink(date, 1.5))
+
+        val series = HydrationHealthReader(support(client), APP_PACKAGE)
+            .readDailyHydration(startDate = firstDay, endDate = date)
+
+        assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(1)
+        client.groupByDurationRequestRanges.forEach { (start, end) ->
+            assertThat(java.time.Duration.between(start, end).toDays()).isAtMost(DailyAggregateMaxQueryDays)
+        }
+        // Zero-filled, and both ends of the range survive the stitching.
+        assertThat(series).hasSize(301)
+        assertThat(series.single { it.date == firstDay }.liters).isWithin(1e-6).of(0.5)
+        assertThat(series.single { it.date == date }.liters).isWithin(1e-6).of(1.5)
     }
 
     /** Same budget for heart rate: a year of hourly BPM buckets must go out tiled and stitch back. */
@@ -606,7 +652,28 @@ class HealthConnectAggregateReadTest {
         val day = reader.readDailyHRV(startDate = date, endDate = date).single()
         assertThat(day.date).isEqualTo(date)
         assertThat(day.rmssdMs).isWithin(1e-9).of(40.0)
-        assertThat(reader.readHrvRmssd(date)).isWithin(1e-9).of(40.0)
+    }
+
+    // The day value the Heart Day shows: minute buckets, so a burst of readings is one vote.
+    @Test
+    fun `readRestingHeartRate averages the day's samples minute-bucketed`() = runTest(testDispatcher) {
+        val zone = ZoneId.systemDefault()
+        val dayStart = date.atStartOfDay(zone).toInstant()
+        fun resting(at: Instant, bpm: Long) = RestingHeartRateRecord(
+            time = at,
+            zoneOffset = null,
+            beatsPerMinute = bpm,
+            metadata = Metadata.autoRecorded(watch),
+        )
+        val client = seeded(
+            resting(dayStart.plusSeconds(8L * 3_600), 60L),
+            resting(dayStart.plusSeconds(8L * 3_600 + 20), 60L),
+            resting(dayStart.plusSeconds(8L * 3_600 + 40), 60L),
+            resting(dayStart.plusSeconds(9L * 3_600), 70L),
+        )
+
+        // (60 + 70) / 2 = 65. The per-sample mean, which is the provider's BPM_AVG, says 63.
+        assertThat(HeartHealthReader(support(client), APP_PACKAGE).readRestingHeartRate(date)).isEqualTo(65L)
     }
 
     @Test
@@ -712,7 +779,7 @@ class HealthConnectAggregateReadTest {
         client: HealthConnectClient,
         includeDistance: Boolean = false,
         includeFloors: Boolean = false,
-    ) = activity(client).readRawActivityProgress(
+    ) = activity(client).readActivityProgress(
         date = date,
         includeDistance = includeDistance,
         includeCalories = false,

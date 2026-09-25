@@ -19,8 +19,7 @@ class HeartRateAggregatedSamplesTest {
     }
 
     @Test
-    fun `insight buckets are denser than chart buckets`() {
-        assertTrue(HeartRateInsightBucketDuration < HeartRateChartBucketDuration)
+    fun `insight buckets are five minutes or finer`() {
         assertTrue(HeartRateInsightBucketDuration.toMinutes() <= 5)
     }
 

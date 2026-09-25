@@ -74,12 +74,10 @@ class AchievementsEmptyHistoryTest {
             includeWheelchairPushes: Boolean,
             includeActivityProgress: Boolean,
             includeComparisonWindows: Boolean,
-            refreshMode: tech.mmarca.openvitals.domain.model.RefreshMode,
         ) = error("unused")
 
         override suspend fun loadActivitiesPeriod(
             query: tech.mmarca.openvitals.core.period.PeriodLoadQuery,
-            refreshMode: tech.mmarca.openvitals.domain.model.RefreshMode,
         ) = error("unused")
 
         override suspend fun loadActivityProgress(date: LocalDate) = error("unused")

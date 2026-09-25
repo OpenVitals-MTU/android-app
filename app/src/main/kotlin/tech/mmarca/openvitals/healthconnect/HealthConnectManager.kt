@@ -25,7 +25,6 @@ import tech.mmarca.openvitals.domain.model.BodyWaterMassEntry
 import tech.mmarca.openvitals.domain.model.BodyTempEntry
 import tech.mmarca.openvitals.domain.model.BmrEntry
 import tech.mmarca.openvitals.domain.model.BoneMassEntry
-import tech.mmarca.openvitals.domain.model.CaloriesBurnedValue
 import tech.mmarca.openvitals.domain.model.CervicalMucusEntry
 import tech.mmarca.openvitals.domain.model.CycleEntry
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
@@ -207,9 +206,6 @@ class HealthConnectManager @Inject constructor(
     suspend fun readSteps(date: LocalDate): Long =
         activityReader.readSteps(date)
 
-    suspend fun readTodaySteps(): Long =
-        activityReader.readTodaySteps()
-
     suspend fun readDailySteps(
         startDate: LocalDate,
         endDate: LocalDate,
@@ -263,58 +259,8 @@ class HealthConnectManager @Inject constructor(
             includeElevation = includeElevation,
         )
 
-    suspend fun readRawActivityProgress(
-        date: LocalDate,
-        includeSteps: Boolean = true,
-        includeDistance: Boolean,
-        includeCalories: Boolean,
-        includeActiveCalories: Boolean,
-        includeCaloriesEstimate: Boolean = false,
-        includeWheelchairPushes: Boolean,
-        includeFloors: Boolean,
-        includeElevation: Boolean,
-    ): List<ActivityProgressPoint> =
-        activityReader.readRawActivityProgress(
-            date = date,
-            includeSteps = includeSteps,
-            includeDistance = includeDistance,
-            includeCalories = includeCalories,
-            includeActiveCalories = includeActiveCalories,
-            includeCaloriesEstimate = includeCaloriesEstimate,
-            includeWheelchairPushes = includeWheelchairPushes,
-            includeFloors = includeFloors,
-            includeElevation = includeElevation,
-        )
-
     suspend fun readDistanceMeters(date: LocalDate): Double =
         activityReader.readDistanceMeters(date)
-
-    suspend fun readTodayDistanceMeters(): Double =
-        activityReader.readTodayDistanceMeters()
-
-    suspend fun readCaloriesKcal(
-        date: LocalDate,
-        includeEstimatedCalories: Boolean = false,
-    ): Double? =
-        activityReader.readCaloriesKcal(date, includeEstimatedCalories)
-
-    suspend fun readCaloriesBurned(
-        date: LocalDate,
-        includeEstimatedCalories: Boolean = false,
-    ): CaloriesBurnedValue? =
-        activityReader.readCaloriesBurned(date, includeEstimatedCalories)
-
-    suspend fun readTodayCaloriesKcal(includeEstimatedCalories: Boolean = false): Double? =
-        activityReader.readTodayCaloriesKcal(includeEstimatedCalories)
-
-    suspend fun readCaloriesInKcal(date: LocalDate): Double? =
-        nutritionReader.readCaloriesInKcal(date)
-
-    suspend fun readHydrationLiters(date: LocalDate): Double? =
-        hydrationReader.readHydrationLiters(date)
-
-    suspend fun readTodayHydrationLiters(): Double? =
-        hydrationReader.readTodayHydrationLiters()
 
     suspend fun readDailyHydration(startDate: LocalDate, endDate: LocalDate): List<DailyHydration> =
         hydrationReader.readDailyHydration(startDate, endDate)
@@ -336,12 +282,6 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun deleteHydrationEntryByClientRecordId(clientRecordId: String) =
         withSyncEnabled { hydrationReader.deleteHydrationEntryByClientRecordId(clientRecordId) }
-
-    suspend fun readLatestWorkout(date: LocalDate): ExerciseData? =
-        activityReader.readLatestWorkout(date)
-
-    suspend fun readLatestWorkout(): ExerciseData? =
-        activityReader.readLatestWorkout()
 
     suspend fun readExerciseSessions(start: Instant, end: Instant): List<ExerciseData> =
         activityReader.readExerciseSessions(start, end)
@@ -451,12 +391,6 @@ class HealthConnectManager @Inject constructor(
     suspend fun readAvgHeartRate(date: LocalDate): Long? =
         heartReader.readAvgHeartRate(date)
 
-    suspend fun readAvgHeartRateToday(): Long? =
-        heartReader.readAvgHeartRateToday()
-
-    suspend fun readHeartRateSamples(start: Instant, end: Instant): List<HeartRateSample> =
-        heartReader.readHeartRateSamples(start, end)
-
     suspend fun readHeartRateSamplesForInsights(start: Instant, end: Instant): List<HeartRateSample> =
         heartReader.readHeartRateSamplesForInsights(start, end)
 
@@ -486,9 +420,6 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readDailyRestingHR(startDate: LocalDate, endDate: LocalDate): List<DailyRestingHR> =
         heartReader.readDailyRestingHR(startDate, endDate)
-
-    suspend fun readHrvRmssd(date: LocalDate): Double? =
-        heartReader.readHrvRmssd(date)
 
     suspend fun readHrvSamples(start: Instant, end: Instant): List<HrvSample> =
         heartReader.readHrvSamples(start, end)
@@ -597,9 +528,6 @@ class HealthConnectManager @Inject constructor(
 
     suspend fun readMindfulnessSession(id: String): MindfulnessSession? =
         mindfulnessReader.readMindfulnessSession(id)
-
-    suspend fun readMindfulnessMinutes(date: LocalDate): Int =
-        mindfulnessReader.readMindfulnessMinutes(date)
 
     suspend fun writeMindfulnessSessionEntry(request: MindfulnessSessionWriteRequest): String =
         withSyncEnabled { mindfulnessReader.writeMindfulnessSessionEntry(request) }

@@ -51,7 +51,7 @@ import tech.mmarca.openvitals.domain.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.domain.model.BloodPressureEntry
 import tech.mmarca.openvitals.domain.model.BodyTempEntry
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
-import tech.mmarca.openvitals.domain.model.CaloriesBurnedValue
+import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.DailySleepDuration
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.DashboardMetric
@@ -173,7 +173,6 @@ class DashboardDataLoaderTest {
         assertNull(data.heartRateSampleEndTime)
         coVerify(exactly = 1) { hc.readAvgHeartRate(date) }
         coVerify(exactly = 0) { hc.readRawHeartRateSamples(any(), any()) }
-        coVerify(exactly = 0) { hc.readHeartRateSamples(any(), any()) }
         coVerify(exactly = 0) { hc.readHeartRateSamplesForInsights(any(), any()) }
     }
 
@@ -401,8 +400,15 @@ class DashboardDataLoaderTest {
             bmrPermission,
         )
         coEvery {
-            hc.readCaloriesBurned(date = date, includeEstimatedCalories = false)
-        } returns CaloriesBurnedValue(123.0, CaloriesBurnedSource.RECORDED_TOTAL)
+            hc.readDailyNutrition(date, date, includeHydration = false, includeEstimatedCalories = false)
+        } returns listOf(
+            DailyNutrition(
+                date = date,
+                hydrationLiters = 0.0,
+                caloriesBurnedKcal = 123.0,
+                caloriesBurnedSource = CaloriesBurnedSource.RECORDED_TOTAL,
+            ),
+        )
 
         val data = dashboardDataLoader(hc).loadDashboard(
             DashboardQuery(
@@ -414,7 +420,7 @@ class DashboardDataLoaderTest {
         assertEquals(123.0, data.caloriesKcal, 0.01)
         assertEquals(CaloriesBurnedSource.RECORDED_TOTAL, data.caloriesKcalSource)
         coVerify(exactly = 0) {
-            hc.readCaloriesBurned(date = date, includeEstimatedCalories = true)
+            hc.readDailyNutrition(date, date, includeHydration = false, includeEstimatedCalories = true)
         }
     }
 
@@ -460,8 +466,15 @@ class DashboardDataLoaderTest {
             bmrPermission,
         )
         coEvery {
-            hc.readCaloriesBurned(date = date, includeEstimatedCalories = true)
-        } returns CaloriesBurnedValue(456.0, CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR)
+            hc.readDailyNutrition(date, date, includeHydration = false, includeEstimatedCalories = true)
+        } returns listOf(
+            DailyNutrition(
+                date = date,
+                hydrationLiters = 0.0,
+                caloriesBurnedKcal = 456.0,
+                caloriesBurnedSource = CaloriesBurnedSource.ESTIMATED_ACTIVE_AND_BMR,
+            ),
+        )
 
         val data = dashboardDataLoader(
             hc = hc,
@@ -490,8 +503,8 @@ class DashboardDataLoaderTest {
         )
         coEvery { hc.grantedPermissions() } returns setOf(totalCaloriesPermission)
         coEvery {
-            hc.readCaloriesBurned(date = date, includeEstimatedCalories = false)
-        } returns null
+            hc.readDailyNutrition(date, date, includeHydration = false, includeEstimatedCalories = false)
+        } returns emptyList()
 
         val data = dashboardDataLoader(
             hc = hc,
@@ -627,6 +640,52 @@ class DashboardDataLoaderTest {
                 includeElevation = false,
             )
         }
+    }
+
+    @Test fun `weekly cardio load reads the daily series without distance when only steps are granted`() = runTest {
+        val date = LocalDate.of(2026, 6, 2)
+        val hc = mockk<HealthConnectManager>()
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.managedPermissions } returns setOf(stepsPermission, distancePermission)
+        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission)
+        coEvery {
+            hc.readDailySteps(
+                startDate = any(),
+                endDate = any(),
+                includeDistance = any(),
+                includeFloors = any(),
+                includeActiveCalories = any(),
+                includeElevation = any(),
+            )
+        } returns (0..6).map { offset ->
+            DailySteps(
+                date = date.minusDays(offset.toLong()),
+                steps = 3_000L,
+                distanceMeters = 0.0,
+            )
+        }
+
+        val data = dashboardDataLoader(hc).loadDashboard(
+            DashboardQuery(
+                date = date,
+                activityWeekMode = ActivityWeekMode.LAST_7_DAYS,
+                visibleMetrics = setOf(DashboardMetric.WEEKLY_CARDIO_LOAD),
+            )
+        )
+
+        // One series read, never a day-by-day walk.
+        assertEquals(setOf(DashboardMetric.WEEKLY_CARDIO_LOAD), data.loadedMetrics)
+        coVerify(exactly = 1) {
+            hc.readDailySteps(
+                startDate = date.minusDays(34),
+                endDate = date,
+                includeDistance = false,
+                includeFloors = false,
+                includeActiveCalories = false,
+                includeElevation = false,
+            )
+        }
+        coVerify(exactly = 0) { hc.readSteps(any()) }
     }
 
     @Test fun `weekly cardio reads heart rate samples for two week window`() = runTest {

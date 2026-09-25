@@ -137,7 +137,7 @@ class ActivityRepositoryTest {
 
         assertEquals(progress, result.activityProgress)
         coVerify {
-            hc.readRawActivityProgress(
+            hc.readActivityProgress(
                 date = date,
                 includeSteps = true,
                 includeDistance = true,
@@ -147,19 +147,6 @@ class ActivityRepositoryTest {
                 includeWheelchairPushes = false,
                 includeFloors = false,
                 includeElevation = false,
-            )
-        }
-        coVerify(exactly = 0) {
-            hc.readActivityProgress(
-                date = any(),
-                includeSteps = any(),
-                includeDistance = any(),
-                includeCalories = any(),
-                includeActiveCalories = any(),
-                includeCaloriesEstimate = any(),
-                includeWheelchairPushes = any(),
-                includeFloors = any(),
-                includeElevation = any(),
             )
         }
     }
@@ -307,19 +294,6 @@ class ActivityRepositoryTest {
                 )
             } returns dailySteps
             coEvery {
-                hc.readRawActivityProgress(
-                    date = any(),
-                    includeSteps = any(),
-                    includeDistance = any(),
-                    includeCalories = any(),
-                    includeActiveCalories = any(),
-                    includeCaloriesEstimate = any(),
-                    includeWheelchairPushes = any(),
-                    includeFloors = any(),
-                    includeElevation = any(),
-                )
-            } returns activityProgress
-            coEvery {
                 hc.readActivityProgress(
                     date = any(),
                     includeSteps = any(),
@@ -331,6 +305,6 @@ class ActivityRepositoryTest {
                     includeFloors = any(),
                     includeElevation = any(),
                 )
-            } returns emptyList()
+            } returns activityProgress
         }
 }
