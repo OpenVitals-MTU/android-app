@@ -18,7 +18,6 @@ import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.reducedForChart
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
 import tech.mmarca.openvitals.domain.model.dayAverageBpm
 import tech.mmarca.openvitals.domain.query.HeartPeriodData
@@ -64,11 +63,9 @@ class HeartRepositoryImpl @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadHeartPeriod(
         query: PeriodLoadQuery,
         metric: HeartPeriodMetric,
-        refreshMode: RefreshMode,
     ): HeartPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()

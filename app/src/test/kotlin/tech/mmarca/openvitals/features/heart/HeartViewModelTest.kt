@@ -128,9 +128,6 @@ class HeartViewModelTest {
         coEvery { repo.loadHeartPeriod(any(), any()) } coAnswers {
             heartPeriodData(firstArg(), secondArg())
         }
-        coEvery { repo.loadHeartPeriod(any(), any(), any()) } coAnswers {
-            heartPeriodData(firstArg(), secondArg())
-        }
     }
 
     private fun emptyVitalsRepo() = mockk<VitalsRepository>().also { repo ->
@@ -687,8 +684,7 @@ class HeartViewModelTest {
         vm.resumeCurrentPeriod(refreshCurrent = true)
         advanceUntilIdle()
 
-        coVerify(exactly = 1) { repo.loadHeartPeriod(any(), any()) }
-        coVerify(exactly = 1) { repo.loadHeartPeriod(any(), any(), RefreshMode.FORCE) }
+        coVerify(exactly = 2) { repo.loadHeartPeriod(any(), any()) }
         assertEquals(rangeBefore, vm.uiState.value.selectedRange)
     }
 

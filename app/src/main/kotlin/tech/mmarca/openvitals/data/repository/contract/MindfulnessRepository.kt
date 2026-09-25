@@ -4,7 +4,6 @@ import java.time.LocalDate
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.domain.model.MindfulnessSession
 import tech.mmarca.openvitals.domain.model.MindfulnessSessionWriteRequest
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.MindfulnessPeriodData
 
 interface MindfulnessRepository {
@@ -12,7 +11,6 @@ interface MindfulnessRepository {
 
     suspend fun loadMindfulnessPeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
     ): MindfulnessPeriodData
 
     suspend fun loadMindfulnessSessions(start: LocalDate, end: LocalDate): List<MindfulnessSession>

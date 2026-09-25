@@ -26,7 +26,6 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.query.CyclePeriodData
 import tech.mmarca.openvitals.data.repository.contract.CycleRepository
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -46,14 +45,6 @@ class CycleViewModelTest {
         coEvery { repo.missingPermissions() } returns missingPermissions
         coEvery { repo.loadCycleData(any(), any()) } returns data
         coEvery { repo.loadCyclePeriod(any()) } coAnswers {
-            val query = firstArg<PeriodLoadQuery>()
-            val period = query.windows.current
-            CyclePeriodData(
-                data = repo.loadCycleData(period.start, period.end),
-                missingPermissions = repo.missingPermissions(),
-            )
-        }
-        coEvery { repo.loadCyclePeriod(any(), any()) } coAnswers {
             val query = firstArg<PeriodLoadQuery>()
             val period = query.windows.current
             CyclePeriodData(
@@ -212,10 +203,10 @@ class CycleViewModelTest {
 
         vm.onCyclePermissionsResult(setOf("cycle"))
 
-        coVerify { repo.loadCyclePeriod(any(), RefreshMode.FORCE) }
+        coVerify(atLeast = 2) { repo.loadCyclePeriod(any()) }
     }
 
-    @Test fun `resuming the current period refreshes the current selection in force mode`() = runTest {
+    @Test fun `resuming the current period reloads the current selection`() = runTest {
         val repo = repo()
         val vm = viewModel(repo)
 
@@ -224,7 +215,7 @@ class CycleViewModelTest {
         advanceUntilIdle()
 
         assertEquals(today, vm.uiState.value.selectedDate)
-        coVerify { repo.loadCyclePeriod(any(), RefreshMode.FORCE) }
+        coVerify(atLeast = 2) { repo.loadCyclePeriod(any()) }
     }
 
     @Test fun `a stale load cannot overwrite the newer one it lost to`() = runTest {
@@ -250,7 +241,6 @@ class CycleViewModelTest {
                 CyclePeriodData(data = freshData, missingPermissions = emptySet())
             }
         coEvery { repo.loadCyclePeriod(any()) } coAnswers { answer(firstArg()) }
-        coEvery { repo.loadCyclePeriod(any(), any()) } coAnswers { answer(firstArg()) }
 
         val vm = viewModel(repo)
         runCurrent()

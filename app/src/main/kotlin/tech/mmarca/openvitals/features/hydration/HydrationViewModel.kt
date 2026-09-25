@@ -22,7 +22,6 @@ import tech.mmarca.openvitals.domain.model.HydrationEntryRecordType
 import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.domain.model.valueFor
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
@@ -149,7 +148,7 @@ class HydrationViewModel @Inject constructor(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load(RefreshMode.FORCE)
+            if (refreshCurrent) load()
             return
         }
         applyPeriodSelection(selection)
@@ -211,14 +210,14 @@ class HydrationViewModel @Inject constructor(
                     }
                 }
             }.onSuccess {
-                load(RefreshMode.FORCE)
+                load()
             }.onFailure { error ->
                 _uiState.value = previous.copy(error = error.toScreenError())
             }
         }
     }
 
-    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
+    fun load() {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -229,11 +228,7 @@ class HydrationViewModel @Inject constructor(
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                val periodData = if (refreshMode == RefreshMode.NORMAL) {
-                    repository.loadHydrationPeriod(query)
-                } else {
-                    repository.loadHydrationPeriod(query, refreshMode)
-                }
+                val periodData = repository.loadHydrationPeriod(query)
                 val hydrationEntries = periodData.hydrationEntries
                 val nutritionOnlyEntries = nutritionRepository
                     .loadNutritionEntries(windows.current.start, windows.current.end)

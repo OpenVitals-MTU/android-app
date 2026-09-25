@@ -12,7 +12,6 @@ import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.HydrationPeriodData
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -92,10 +91,8 @@ class HydrationRepositoryImpl @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadHydrationPeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode,
     ): HydrationPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()

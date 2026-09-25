@@ -21,7 +21,6 @@ import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineResult
 import tech.mmarca.openvitals.data.repository.dashboard.DashboardDataLoader
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardQuery
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
@@ -130,7 +129,7 @@ class DailyReadinessViewModelTest {
     }
 
     @Test
-    fun `refresh reloads the selected day, forcing it`() = runTest {
+    fun `refresh reloads the selected day`() = runTest {
         val loader = RecordingLoader()
         val vm = viewModel(loader.mock())
         advanceUntilIdle()
@@ -141,7 +140,6 @@ class DailyReadinessViewModelTest {
         advanceUntilIdle()
 
         assertEquals(today.minusDays(2), loader.queries.last().date)
-        assertEquals(RefreshMode.FORCE, loader.queries.last().refreshMode)
     }
 
     @Test

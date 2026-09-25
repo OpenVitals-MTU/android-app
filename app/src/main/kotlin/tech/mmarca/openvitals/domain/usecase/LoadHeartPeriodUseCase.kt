@@ -150,18 +150,14 @@ class LoadHeartPeriodUseCase @Inject constructor(
         when (request) {
             HeartPeriodLoadRequest.Combined -> coroutineScope {
                 val heart = async {
-                    loadHeartPeriod(query, HeartPeriodMetric.ALL, refreshMode).toLoadResult()
+                    loadHeartPeriod(query, HeartPeriodMetric.ALL).toLoadResult()
                 }
                 val vitals = async {
                     loadVitalsPeriod(query, VitalsPeriodMetric.ALL, refreshMode).toLoadResult()
                 }
                 heart.await().merge(vitals.await())
             }
-            is HeartPeriodLoadRequest.HeartOnly -> loadHeartPeriod(
-                query,
-                request.metric,
-                refreshMode,
-            ).toLoadResult()
+            is HeartPeriodLoadRequest.HeartOnly -> loadHeartPeriod(query, request.metric).toLoadResult()
             is HeartPeriodLoadRequest.VitalsOnly -> loadVitalsPeriod(
                 query,
                 request.metric,
@@ -169,27 +165,15 @@ class LoadHeartPeriodUseCase @Inject constructor(
             ).toLoadResult()
         }
 
-    private suspend fun loadHeartPeriod(
-        query: PeriodLoadQuery,
-        metric: HeartPeriodMetric,
-        refreshMode: RefreshMode,
-    ): HeartPeriodData =
-        if (refreshMode == RefreshMode.NORMAL) {
-            heartRepository.loadHeartPeriod(query, metric)
-        } else {
-            heartRepository.loadHeartPeriod(query, metric, refreshMode)
-        }
+    private suspend fun loadHeartPeriod(query: PeriodLoadQuery, metric: HeartPeriodMetric): HeartPeriodData =
+        heartRepository.loadHeartPeriod(query, metric)
 
+    /** The mode reaches vitals alone: a forced load reads past its daily cache. */
     private suspend fun loadVitalsPeriod(
         query: PeriodLoadQuery,
         metric: VitalsPeriodMetric,
         refreshMode: RefreshMode,
-    ): VitalsPeriodData =
-        if (refreshMode == RefreshMode.NORMAL) {
-            vitalsRepository.loadVitalsPeriod(query, metric)
-        } else {
-            vitalsRepository.loadVitalsPeriod(query, metric, refreshMode)
-        }
+    ): VitalsPeriodData = vitalsRepository.loadVitalsPeriod(query, metric, refreshMode)
 }
 
 private fun HeartPeriodData.toLoadResult(): HeartPeriodLoadResult =

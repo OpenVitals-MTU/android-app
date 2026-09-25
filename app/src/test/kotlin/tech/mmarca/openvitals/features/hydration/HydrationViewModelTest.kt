@@ -16,7 +16,6 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.query.HydrationPeriodData
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -49,16 +48,6 @@ class HydrationViewModelTest {
         coEvery { repo.loadHydrationEntries(any(), any()) } returns emptyList()
         coEvery { repo.deleteHydrationEntry(any()) } returns Unit
         coEvery { repo.loadHydrationPeriod(any()) } coAnswers {
-            val query = firstArg<PeriodLoadQuery>()
-            val windows = query.windows
-            HydrationPeriodData(
-                dailyHydration = repo.loadDailyHydration(windows.current.start, windows.current.end),
-                previousDailyHydration = repo.loadDailyHydration(windows.previous.start, windows.previous.end),
-                baselineDailyHydration = repo.loadDailyHydration(windows.baseline.start, windows.baseline.end),
-                hydrationEntries = repo.loadHydrationEntries(windows.current.start, windows.current.end),
-            )
-        }
-        coEvery { repo.loadHydrationPeriod(any(), any()) } coAnswers {
             val query = firstArg<PeriodLoadQuery>()
             val windows = query.windows
             HydrationPeriodData(
@@ -177,7 +166,7 @@ class HydrationViewModelTest {
         vm.resumeCurrentPeriod(refreshCurrent = true)
         advanceUntilIdle()
 
-        coVerify { repo.loadHydrationPeriod(any(), RefreshMode.FORCE) }
+        coVerify(atLeast = 2) { repo.loadHydrationPeriod(any()) }
     }
 
     @Test fun `a stale load cannot overwrite the newer one it lost to`() = runTest {
@@ -368,7 +357,7 @@ class HydrationViewModelTest {
         assertTrue(vm.uiState.value.hydrationEntries.isEmpty())
         assertEquals(0.0, vm.uiState.value.display.summary.totalLiters, 0.01)
         coVerify { repo.deleteHydrationEntry("hydration-id") }
-        coVerify { repo.loadHydrationPeriod(any(), RefreshMode.FORCE) }
+        coVerify(atLeast = 2) { repo.loadHydrationPeriod(any()) }
     }
 
     @Test fun `deleteHydrationEntry removes nutrition only drink through nutrition repository`() = runTest {
@@ -404,7 +393,7 @@ class HydrationViewModelTest {
         assertTrue(vm.uiState.value.hydrationEntries.isEmpty())
         coVerify { nutritionRepo.deleteNutritionEntry("nutrition-id") }
         coVerify(exactly = 0) { repo.deleteHydrationEntry("nutrition-id") }
-        coVerify { repo.loadHydrationPeriod(any(), RefreshMode.FORCE) }
+        coVerify(atLeast = 2) { repo.loadHydrationPeriod(any()) }
     }
 
     @Test fun `deleteHydrationEntry ignores entries not created by OpenVitals`() = runTest {

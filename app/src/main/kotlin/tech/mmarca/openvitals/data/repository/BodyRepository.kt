@@ -21,7 +21,6 @@ import tech.mmarca.openvitals.domain.model.BoneMassEntry
 import tech.mmarca.openvitals.domain.model.HeightEntry
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.LeanBodyMassEntry
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.query.BodyPeriodData
@@ -65,11 +64,9 @@ class BodyRepositoryImpl @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadBodyPeriod(
         query: PeriodLoadQuery,
         metric: BodyPeriodMetric,
-        refreshMode: RefreshMode,
     ): BodyPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()

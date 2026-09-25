@@ -19,7 +19,6 @@ import tech.mmarca.openvitals.domain.model.CycleEntry
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.model.CycleEntryWriteRequest
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.CyclePeriodData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.LocalDate
@@ -55,10 +54,8 @@ class CycleRepositoryImpl @Inject constructor(
         return phase4Permissions.filterNot { it in granted }.toSet()
     }
 
-    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadCyclePeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode,
     ): CyclePeriodData {
         return coroutineScope {
             val data = async { loadCycleData(query.windows.current.start, query.windows.current.end) }

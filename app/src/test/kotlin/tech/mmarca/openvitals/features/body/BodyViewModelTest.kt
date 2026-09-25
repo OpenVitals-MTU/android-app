@@ -15,7 +15,6 @@ import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.domain.query.BodyPeriodData
 import tech.mmarca.openvitals.data.repository.BodyPeriodMetric
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -128,9 +127,6 @@ class BodyViewModelTest {
         coEvery { repo.loadBodyPeriod(any(), any()) } coAnswers {
             periodData(firstArg(), secondArg())
         }
-        coEvery { repo.loadBodyPeriod(any(), any(), any()) } coAnswers {
-            periodData(firstArg(), secondArg())
-        }
     }
 
     private fun weightAt(weightKg: Double, epochSeconds: Long) =
@@ -219,7 +215,7 @@ class BodyViewModelTest {
 
         assertTrue(vm.uiState.value.weightEntries.isEmpty())
         coVerify { repo.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "weight-id") }
-        coVerify { repo.loadBodyPeriod(any(), BodyPeriodMetric.ALL, RefreshMode.FORCE) }
+        coVerify(atLeast = 2) { repo.loadBodyPeriod(any(), BodyPeriodMetric.ALL) }
     }
 
     @Test fun `deleteBodyMeasurementEntry ignores weight not created by OpenVitals`() = runTest {
@@ -364,7 +360,7 @@ class BodyViewModelTest {
         gate.complete(Unit)
         advanceUntilIdle()
         assertEquals(listOf(theirs), vm.uiState.value.weightEntries)
-        coVerify { repo.loadBodyPeriod(any(), BodyPeriodMetric.ALL, RefreshMode.FORCE) }
+        coVerify(atLeast = 2) { repo.loadBodyPeriod(any(), BodyPeriodMetric.ALL) }
     }
 
     @Test fun `a failed delete restores the previous display, with an error`() = runTest {
@@ -427,7 +423,7 @@ class BodyViewModelTest {
 
         // Same range + date: a refresh must NOT blank the chart while it reloads.
         gate = CompletableDeferred()
-        vm.load(RefreshMode.FORCE)
+        vm.load()
         runCurrent()
 
         val state = vm.uiState.value
@@ -452,7 +448,6 @@ class BodyViewModelTest {
                 BodyPeriodData(weightEntries = listOf(weightAt(60.0, 1_000)))
             }
         coEvery { repo.loadBodyPeriod(any(), any()) } coAnswers { answer(firstArg()) }
-        coEvery { repo.loadBodyPeriod(any(), any(), any()) } coAnswers { answer(firstArg()) }
 
         val vm = bodyViewModel(repo)
         runCurrent()

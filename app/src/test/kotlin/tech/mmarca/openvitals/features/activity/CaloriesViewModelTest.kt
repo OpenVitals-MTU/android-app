@@ -46,7 +46,7 @@ class CaloriesViewModelTest {
     private fun activityRepo(data: ActivityPeriodData = ActivityPeriodData()) =
         mockk<ActivityRepository>().also { repo ->
             coEvery {
-                repo.loadActivityPeriod(any(), any(), any(), any(), any(), any(), any())
+                repo.loadActivityPeriod(any(), any(), any(), any(), any(), any())
             } returns data
         }
 
@@ -142,7 +142,7 @@ class CaloriesViewModelTest {
     fun `load failure sets error and clears loading`() = runTest {
         val activityRepository = mockk<ActivityRepository>()
         coEvery {
-            activityRepository.loadActivityPeriod(any(), any(), any(), any(), any(), any(), any())
+            activityRepository.loadActivityPeriod(any(), any(), any(), any(), any(), any())
         } throws RuntimeException("timeout")
         val bodyRepository = bodyRepo()
 

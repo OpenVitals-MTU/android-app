@@ -22,7 +22,6 @@ import tech.mmarca.openvitals.data.repository.contract.CaffeineRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.model.CaffeineEntry
 import tech.mmarca.openvitals.domain.model.CaffeinePeriodData
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
@@ -95,7 +94,6 @@ class CaffeineViewModelTest {
         coVerify {
             repository.loadCaffeineData(
                 DatePeriod(today.minusDays(89), today),
-                RefreshMode.NORMAL,
             )
         }
 
@@ -106,13 +104,12 @@ class CaffeineViewModelTest {
         coVerify(exactly = 1) {
             repository.loadCaffeineData(
                 DatePeriod(today.minusDays(89), today),
-                RefreshMode.NORMAL,
             )
         }
     }
 
     @Test
-    fun `refresh reloads with force mode`() = runTest {
+    fun `refresh reloads`() = runTest {
         val repository = repo()
         val vm = viewModel(
             repository = repository,
@@ -121,13 +118,13 @@ class CaffeineViewModelTest {
 
         vm.refresh()
 
-        coVerify { repository.loadCaffeineData(any(), RefreshMode.FORCE) }
+        coVerify(atLeast = 2) { repository.loadCaffeineData(any()) }
     }
 
     @Test
     fun `newer load wins when analytics range requests overlap`() = runTest {
         val repository = mockk<CaffeineRepository>()
-        coEvery { repository.loadCaffeineData(any(), any()) } coAnswers {
+        coEvery { repository.loadCaffeineData(any()) } coAnswers {
             val period = firstArg<DatePeriod>()
             if (period.start == today.minusDays(89)) {
                 delay(100)
@@ -157,8 +154,10 @@ class CaffeineViewModelTest {
         )
         val repository = mockk<CaffeineRepository>()
         // The reload returns the trimmed list, as Health Connect would after the delete.
-        coEvery { repository.loadCaffeineData(any(), RefreshMode.NORMAL) } returns CaffeinePeriodData(entries)
-        coEvery { repository.loadCaffeineData(any(), RefreshMode.FORCE) } returns CaffeinePeriodData(entries.drop(1))
+        coEvery { repository.loadCaffeineData(any()) } returnsMany listOf(
+            CaffeinePeriodData(entries),
+            CaffeinePeriodData(entries.drop(1)),
+        )
         val nutrition = mockk<NutritionRepository>()
         coEvery { nutrition.deleteNutritionEntry("a") } returns Unit
 
@@ -173,7 +172,7 @@ class CaffeineViewModelTest {
         assertNull(vm.uiState.value.error)
         // A caffeine entry IS a nutrition record, so the nutrition repository is what deletes.
         coVerify { nutrition.deleteNutritionEntry("a") }
-        coVerify { repository.loadCaffeineData(any(), RefreshMode.FORCE) }
+        coVerify(atLeast = 2) { repository.loadCaffeineData(any()) }
     }
 
     @Test
@@ -217,7 +216,7 @@ class CaffeineViewModelTest {
     fun `a permission failure becomes ScreenError PermissionDenied`() = runTest {
         val repository = mockk<CaffeineRepository>()
         coEvery {
-            repository.loadCaffeineData(any(), any())
+            repository.loadCaffeineData(any())
         } throws SecurityException("nutrition read")
 
         val vm = viewModel(
@@ -235,7 +234,7 @@ class CaffeineViewModelTest {
     fun `an unexpected failure carries its message to the screen`() = runTest {
         val repository = mockk<CaffeineRepository>()
         coEvery {
-            repository.loadCaffeineData(any(), any())
+            repository.loadCaffeineData(any())
         } throws RuntimeException("the provider hung up")
 
         val vm = viewModel(
@@ -292,7 +291,7 @@ class CaffeineViewModelTest {
 
     private fun repo(entries: List<CaffeineEntry> = emptyList()): CaffeineRepository =
         mockk<CaffeineRepository>().also { repository ->
-            coEvery { repository.loadCaffeineData(any(), any()) } returns CaffeinePeriodData(entries)
+            coEvery { repository.loadCaffeineData(any()) } returns CaffeinePeriodData(entries)
         }
 
     private fun prefs(initial: CaffeinePreferences): FakePreferences =

@@ -12,7 +12,6 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.query.SleepPeriodData
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.clearMocks
 import io.mockk.coEvery
@@ -67,7 +66,6 @@ class SleepViewModelTest {
             )
         }
         coEvery { repo.loadSleepPeriod(any(), any()) } coAnswers { periodData(firstArg()) }
-        coEvery { repo.loadSleepPeriod(any(), any(), any()) } coAnswers { periodData(firstArg()) }
     }
 
     /** One night ending at 07:00 LOCAL on [date], so day bucketing is zone-proof. */
@@ -164,8 +162,7 @@ class SleepViewModelTest {
         vm.resumeCurrentPeriod(refreshCurrent = true)
         advanceUntilIdle()
 
-        coVerify(exactly = 2) { repo.loadSleepPeriod(any(), any(), any()) }
-        coVerify(exactly = 1) { repo.loadSleepPeriod(any(), any(), RefreshMode.FORCE) }
+        coVerify(exactly = 2) { repo.loadSleepPeriod(any(), any()) }
         assertEquals(rangeBefore, vm.uiState.value.selectedRange)
     }
 

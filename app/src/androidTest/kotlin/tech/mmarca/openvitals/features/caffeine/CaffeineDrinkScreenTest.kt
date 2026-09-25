@@ -24,7 +24,6 @@ import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.CaffeineRepository
 import tech.mmarca.openvitals.domain.model.CaffeineEntry
 import tech.mmarca.openvitals.domain.model.CaffeinePeriodData
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.components.AppBarState
@@ -110,7 +109,6 @@ class CaffeineDrinkScreenTest {
     ) : CaffeineRepository {
         override suspend fun loadCaffeineData(
             period: DatePeriod,
-            refreshMode: RefreshMode,
         ): CaffeinePeriodData = CaffeinePeriodData(entries = entries)
     }
 
@@ -142,7 +140,6 @@ private object UnusedNutritionRepository : NutritionRepository {
 
     override suspend fun loadNutritionPeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode,
     ) = error("unused")
 
     override suspend fun loadDailyMacros(start: LocalDate, end: LocalDate) = error("unused")

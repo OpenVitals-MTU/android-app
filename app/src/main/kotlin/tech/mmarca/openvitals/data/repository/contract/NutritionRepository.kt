@@ -5,7 +5,6 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.NutritionPeriodData
 
 interface NutritionRepository {
@@ -13,7 +12,6 @@ interface NutritionRepository {
 
     suspend fun loadNutritionPeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
     ): NutritionPeriodData
 
     suspend fun loadDailyMacros(start: LocalDate, end: LocalDate): List<DailyMacros>

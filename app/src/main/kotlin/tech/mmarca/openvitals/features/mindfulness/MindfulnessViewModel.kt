@@ -21,7 +21,6 @@ import tech.mmarca.openvitals.domain.model.MindfulnessSession
 import tech.mmarca.openvitals.data.repository.contract.MindfulnessRepository
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.model.MindfulnessReminderConfig
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
 import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
@@ -137,7 +136,7 @@ class MindfulnessViewModel @Inject constructor(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load(RefreshMode.FORCE)
+            if (refreshCurrent) load()
             return
         }
         applyPeriodSelection(selection)
@@ -178,14 +177,14 @@ class MindfulnessViewModel @Inject constructor(
             runCatching {
                 repository.deleteMindfulnessSessionEntry(entryId)
             }.onSuccess {
-                load(RefreshMode.FORCE)
+                load()
             }.onFailure { error ->
                 _uiState.value = previous.copy(error = error.toScreenError())
             }
         }
     }
 
-    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
+    fun load() {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -198,11 +197,7 @@ class MindfulnessViewModel @Inject constructor(
             val sleepQueryStart = period.start.minusDays(1)
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                val periodData = if (refreshMode == RefreshMode.NORMAL) {
-                    repository.loadMindfulnessPeriod(query)
-                } else {
-                    repository.loadMindfulnessPeriod(query, refreshMode)
-                }
+                val periodData = repository.loadMindfulnessPeriod(query)
                 MindfulnessLoadResult(
                     sessions = periodData.sessions,
                     previousSessions = periodData.previousSessions,

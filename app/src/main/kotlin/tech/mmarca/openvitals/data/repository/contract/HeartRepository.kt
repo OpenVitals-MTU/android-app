@@ -9,14 +9,12 @@ import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.HrvSample
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.HeartPeriodData
 
 interface HeartRepository {
     suspend fun loadHeartPeriod(
         query: PeriodLoadQuery,
         metric: HeartPeriodMetric,
-        refreshMode: RefreshMode = RefreshMode.NORMAL,
     ): HeartPeriodData
 
     /** The day's average as the Today tile shows it: raw samples, minute-bucketed. */

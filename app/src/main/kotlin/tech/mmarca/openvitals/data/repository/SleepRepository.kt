@@ -7,7 +7,6 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.domain.model.DailySleepDuration
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.domain.model.mergeSleepSessions
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
@@ -34,11 +33,9 @@ class SleepRepositoryImpl @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadSleepPeriod(
         query: PeriodLoadQuery,
         sleepWindow: SleepWindow,
-        refreshMode: RefreshMode,
     ): SleepPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()

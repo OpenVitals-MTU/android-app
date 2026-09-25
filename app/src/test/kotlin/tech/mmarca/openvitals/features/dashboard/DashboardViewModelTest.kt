@@ -3,7 +3,6 @@ package tech.mmarca.openvitals.features.dashboard
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
@@ -717,7 +716,7 @@ class DashboardViewModelTest {
         )
     }
 
-    @Test fun `refresh passes force refresh mode`() = runTest {
+    @Test fun `refresh reads the day again`() = runTest {
         val loader = mockDashboardDataLoader()
         val queries = mutableListOf<DashboardQuery>()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
@@ -726,9 +725,10 @@ class DashboardViewModelTest {
         }
 
         val vm = dashboardViewModel(loader, prefs())
+        val afterOpen = queries.size
         vm.refresh()
 
-        assertEquals(RefreshMode.FORCE, queries.last().refreshMode)
+        assertTrue(queries.size > afterOpen)
     }
 
     @Test fun `newer load wins when navigation requests overlap`() = runTest {
@@ -811,7 +811,6 @@ class DashboardViewModelTest {
         advanceUntilIdle()
 
         assertEquals(2, queries.size)
-        assertEquals(RefreshMode.FORCE, queries.last().refreshMode)
     }
 
     @Test fun `refreshPreferences reloads dashboard when sleep range mode changes`() = runTest {

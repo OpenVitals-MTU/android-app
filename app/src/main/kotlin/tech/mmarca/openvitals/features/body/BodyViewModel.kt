@@ -23,7 +23,6 @@ import tech.mmarca.openvitals.domain.model.BmrEntry
 import tech.mmarca.openvitals.domain.model.BoneMassEntry
 import tech.mmarca.openvitals.domain.model.HeightEntry
 import tech.mmarca.openvitals.domain.model.LeanBodyMassEntry
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.WeightEntry
 import tech.mmarca.openvitals.data.repository.BodyPeriodMetric
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
@@ -143,7 +142,7 @@ class BodyViewModel @Inject constructor(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load(RefreshMode.FORCE)
+            if (refreshCurrent) load()
             return
         }
         applyPeriodSelection(selection)
@@ -171,14 +170,14 @@ class BodyViewModel @Inject constructor(
             runCatching {
                 repository.deleteBodyMeasurementEntry(type, entryId)
             }.onSuccess {
-                load(RefreshMode.FORCE)
+                load()
             }.onFailure { error ->
                 _uiState.value = previous.copy(error = error.toScreenError())
             }
         }
     }
 
-    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
+    fun load() {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -188,11 +187,7 @@ class BodyViewModel @Inject constructor(
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                if (refreshMode == RefreshMode.NORMAL) {
-                    repository.loadBodyPeriod(query, BodyPeriodMetric.ALL)
-                } else {
-                    repository.loadBodyPeriod(query, BodyPeriodMetric.ALL, refreshMode)
-                }
+                repository.loadBodyPeriod(query, BodyPeriodMetric.ALL)
             }
                 .onSuccess { result ->
                     if (!isCurrent) return@load

@@ -19,7 +19,6 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.model.DailyHrv
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.SleepData
 import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
 import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
@@ -140,7 +139,7 @@ class SleepViewModel @Inject constructor(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load(RefreshMode.FORCE)
+            if (refreshCurrent) load()
             return
         }
         applyPeriodSelection(selection)
@@ -161,7 +160,7 @@ class SleepViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(dailyGoalHours = goal)
     }
 
-    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
+    fun load() {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -172,7 +171,7 @@ class SleepViewModel @Inject constructor(
             val sleepWindow = _uiState.value.sleepWindow
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                loadSleepPeriodUseCase(query, sleepWindow, refreshMode)
+                loadSleepPeriodUseCase(query, sleepWindow)
             }
                 .onSuccess { result ->
                     if (!isCurrent) return@load

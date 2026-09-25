@@ -9,7 +9,6 @@ import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.model.valueFor
 import tech.mmarca.openvitals.domain.query.NutritionPeriodData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -36,10 +35,8 @@ class NutritionRepositoryImpl @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadNutritionPeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode,
     ): NutritionPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()

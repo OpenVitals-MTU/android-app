@@ -27,7 +27,6 @@ import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.domain.query.NutritionPeriodData
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.navigation.HYDRATION_ENTRY_ID_ARG
@@ -659,7 +658,6 @@ private object NoopNutritionRepository : NutritionRepository {
 
     override suspend fun loadNutritionPeriod(
         query: tech.mmarca.openvitals.core.period.PeriodLoadQuery,
-        refreshMode: RefreshMode,
     ): NutritionPeriodData = NutritionPeriodData()
 
     override suspend fun loadDailyMacros(

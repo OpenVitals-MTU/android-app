@@ -34,7 +34,6 @@ import tech.mmarca.openvitals.domain.query.ActivityPeriodData
 import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -91,7 +90,6 @@ class ActivityRepositoryImpl @Inject constructor(
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
 
-    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadActivityPeriod(
         query: PeriodLoadQuery,
         includeSteps: Boolean,
@@ -99,7 +97,6 @@ class ActivityRepositoryImpl @Inject constructor(
         includeWheelchairPushes: Boolean,
         includeActivityProgress: Boolean,
         includeComparisonWindows: Boolean,
-        refreshMode: RefreshMode,
     ): ActivityPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()
@@ -191,10 +188,8 @@ class ActivityRepositoryImpl @Inject constructor(
         }
     }
 
-    @Suppress("UNUSED_PARAMETER")
     override suspend fun loadActivitiesPeriod(
         query: PeriodLoadQuery,
-        refreshMode: RefreshMode,
     ): ActivitiesPeriodData {
         val windows = query.windows
         val granted = grantedPermissionsIfAvailable()

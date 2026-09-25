@@ -19,7 +19,6 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.NutritionEntry
-import tech.mmarca.openvitals.domain.model.RefreshMode
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
 import tech.mmarca.openvitals.data.repository.contract.NutritionDisplayPreferences
@@ -141,7 +140,7 @@ class NutritionViewModel @Inject constructor(
     fun resumeCurrentPeriod(refreshCurrent: Boolean = false) {
         val selection = periodDriver.resumeCurrentPeriod()
         if (selection == null) {
-            if (refreshCurrent) load(RefreshMode.FORCE)
+            if (refreshCurrent) load()
             return
         }
         applyPeriodSelection(selection)
@@ -174,14 +173,14 @@ class NutritionViewModel @Inject constructor(
             runCatching {
                 repository.deleteNutritionEntry(entryId)
             }.onSuccess {
-                load(RefreshMode.FORCE)
+                load()
             }.onFailure { error ->
                 _uiState.value = previous.copy(error = error.toScreenError())
             }
         }
     }
 
-    fun load(refreshMode: RefreshMode = RefreshMode.NORMAL) {
+    fun load() {
         loadCoordinator.launch(viewModelScope) load@{
             val query = PeriodLoadQuery(
                 range = periodDriver.selection.selectedRange,
@@ -191,11 +190,7 @@ class NutritionViewModel @Inject constructor(
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             runCatching {
-                if (refreshMode == RefreshMode.NORMAL) {
-                    repository.loadNutritionPeriod(query)
-                } else {
-                    repository.loadNutritionPeriod(query, refreshMode)
-                }
+                repository.loadNutritionPeriod(query)
             }.onSuccess { result ->
                 if (!isCurrent) return@load
                 val display = withContext(dispatchers.default) {

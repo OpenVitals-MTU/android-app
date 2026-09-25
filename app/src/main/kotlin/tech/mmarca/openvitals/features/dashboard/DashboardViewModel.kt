@@ -422,7 +422,6 @@ class DashboardViewModel @Inject constructor(
                     loadMetricGroup(
                         metrics = group,
                         date = clampedDate,
-                        refreshMode = refreshMode,
                         sleepWindow = sleepWindow,
                         activityWeekMode = activityWeekMode,
                         generation = generation,
@@ -472,7 +471,6 @@ class DashboardViewModel @Inject constructor(
     private suspend fun loadMetricGroup(
         metrics: Set<DashboardMetric>,
         date: LocalDate,
-        refreshMode: RefreshMode,
         sleepWindow: SleepWindow,
         activityWeekMode: ActivityWeekMode,
         generation: Long,
@@ -485,7 +483,6 @@ class DashboardViewModel @Inject constructor(
             sleepWindow = sleepWindow,
             activityWeekMode = activityWeekMode,
             visibleMetrics = metrics,
-            refreshMode = refreshMode,
             // Nothing is gated on a pass any more, so the tile can afford these reads.
             includeHistoricalBaselines = true,
             includeWeeklyTrainingSignals = DashboardMetric.WEEKLY_CARDIO_LOAD in metrics,
