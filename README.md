@@ -62,7 +62,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - App language support with an in-app language picker for system default, English, Czech, Spanish, French, Galician, German, Italian, Japanese, Estonian, Finnish, Polish, Portuguese, Russian, and Simplified Chinese
 - Apple Health export import for supported activity, heart, body, hydration, and vitals records, with background progress and chunked processing for large exports
 - CSV import with hand-mapped columns for body measurements, vitals and steps - a smart scale's history, a temperature log, a step export - with an optional end-time column giving each steps row its span
-- Health Connect 1.2.0-alpha04 coverage for newer activity records and recording permissions
+- Health Connect 1.2.0-alpha06 coverage for newer activity records and recording permissions
 - Wheelchair activity and wheelchair push tracking when Health Connect data is available
 - Dedicated Calories detail screen with total, active, and BMR calorie context
 - Body composition insights including Fat-Free Mass Index (FFMI) when weight, height, and body fat are available
@@ -163,7 +163,7 @@ Health Connect platform notes:
 - On Android 13 and older, the Health Connect app must be installed separately
 - Health Connect is not supported in work profiles
 - Mindfulness sessions require a Health Connect provider version that supports `FEATURE_MINDFULNESS_SESSION`
-- The app uses `androidx.health.connect:connect-client` 1.2.0-alpha04 so AndroidX maps newer activity, mindfulness, and aggregation APIs to the current platform permissions
+- The app uses `androidx.health.connect:connect-client` 1.2.0-alpha06 so AndroidX maps newer activity, mindfulness, and aggregation APIs to the current platform permissions
 
 ## Build from source
 
