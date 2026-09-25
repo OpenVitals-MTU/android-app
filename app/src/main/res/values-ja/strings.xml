@@ -2960,4 +2960,15 @@
     <string name="device_sync_phase_waiting_for_peer">相手のスマートフォンが同期を開始するのを待っています</string>
     <string name="device_sync_refused">受け入れられませんでした（このスマートフォンで選択されていません）</string>
     <string name="settings_watch_remove_delete_history">このスマートフォンだけが保持しているストレス、Body Battery、スコアの履歴も削除する</string>
+    <string name="settings_body_profile_sex">性別</string>
+    <string name="settings_body_profile_sex_body">基礎代謝量の推定にのみ使用します。</string>
+    <string name="settings_body_profile_sex_not_set">未設定</string>
+    <string name="settings_body_profile_sex_female">女性</string>
+    <string name="settings_body_profile_sex_male">男性</string>
+    <string name="settings_bmr_estimate_title">基礎代謝量</string>
+    <string name="settings_bmr_estimate_body">性別・生年・体重・身長から安静時に消費するカロリーを推定し（Mifflin-St Jeor 式）、1 日 1 件の値を Health Connect に保存します。他のソースの値がすでにある日はそのまま残します。</string>
+    <string name="settings_bmr_estimate_toggle">推定値を Health Connect に保存</string>
+    <string name="settings_bmr_estimate_today">今日の推定値: 1 日 %1$d kcal</string>
+    <string name="settings_bmr_estimate_missing">体プロフィールに次の項目が入るまで何も保存されません: %1$s。</string>
+    <string name="settings_bmr_estimate_permission_body">推定値を保存するには Health Connect の基礎代謝量の書き込み権限が必要です。</string>
 </resources>

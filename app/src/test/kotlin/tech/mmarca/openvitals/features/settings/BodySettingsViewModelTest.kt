@@ -20,9 +20,11 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
+import tech.mmarca.openvitals.data.sync.BmrEstimateService
 import tech.mmarca.openvitals.data.sync.BodyEnergyChainSyncService
 import tech.mmarca.openvitals.data.sync.DerivedMetricsResetService
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
+import tech.mmarca.openvitals.domain.preferences.BiologicalSex
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
@@ -212,12 +214,14 @@ class BodySettingsViewModelTest {
         bodyRepository: BodyRepository = bodyRepo(),
         bodyEnergyChainSyncService: BodyEnergyChainSyncService = mockk(relaxed = true),
         derivedMetricsResetService: DerivedMetricsResetService = mockk(relaxed = true),
+        bmrEstimateService: BmrEstimateService = mockk(relaxed = true),
     ): BodySettingsViewModel =
         BodySettingsViewModel(
             preferencesRepository = preferencesRepository,
             bodyRepository = bodyRepository,
             bodyEnergyChainSyncService = bodyEnergyChainSyncService,
             derivedMetricsResetService = derivedMetricsResetService,
+            bmrEstimateService = bmrEstimateService,
         )
 
     private fun bodyRepo(): BodyRepository =
@@ -255,6 +259,61 @@ class BodySettingsViewModelTest {
             }
             every { prefs.bodyEnergyCalibration() } returns BodyEnergyCalibration.Automatic
             every { prefs.setBodyEnergyCalibration(any()) } just runs
+            var bmrEstimateEnabled = false
+            every { prefs.bmrEstimateEnabled } answers { bmrEstimateEnabled }
+            every { prefs.bmrEstimateEnabled = any() } answers { bmrEstimateEnabled = firstArg() }
         }
+    }
+
+    @Test fun `enabling the BMR estimate writes at once`() = runTest {
+        val service = mockk<BmrEstimateService>(relaxed = true)
+        val vm = viewModel(bmrEstimateService = service)
+
+        vm.setBmrEstimateEnabled(true)
+        advanceUntilIdle()
+
+        assertEquals(true, vm.uiState.value.bmrEstimateEnabled)
+        coVerify(exactly = 1) { service.syncNow() }
+        coVerify(exactly = 0) { service.purgeDerivedRecords() }
+    }
+
+    @Test fun `disabling the BMR estimate purges its records`() = runTest {
+        val prefs = prefs()
+        prefs.bmrEstimateEnabled = true
+        val service = mockk<BmrEstimateService>(relaxed = true)
+        val vm = viewModel(preferencesRepository = prefs, bmrEstimateService = service)
+
+        vm.setBmrEstimateEnabled(false)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { service.purgeDerivedRecords() }
+        coVerify(exactly = 0) { service.syncNow() }
+    }
+
+    @Test fun `a profile change resyncs the BMR estimate only while it is on`() = runTest {
+        val prefs = prefs()
+        val service = mockk<BmrEstimateService>(relaxed = true)
+        val vm = viewModel(preferencesRepository = prefs, bmrEstimateService = service)
+        advanceUntilIdle()
+
+        val changed = BodyProfile(birthYear = 1990, weightKg = 70.0, heightCm = 175.0, sex = BiologicalSex.MALE)
+        var stored = BodyProfile()
+        every { prefs.bodyProfile() } answers { stored }
+        every { prefs.setBodyProfile(any()) } answers { stored = firstArg() }
+
+        vm.updateBodyProfile(changed)
+        advanceUntilIdle()
+        coVerify(exactly = 0) { service.syncNow() }
+        assertEquals(emptySet<Any>(), vm.uiState.value.bmrEstimateMissingInputs)
+
+        prefs.bmrEstimateEnabled = true
+        vm.updateBodyProfile(changed.copy(weightKg = 72.0))
+        advanceUntilIdle()
+        coVerify(exactly = 1) { service.syncNow() }
+
+        // The same profile again is not a change.
+        vm.updateBodyProfile(changed.copy(weightKg = 72.0))
+        advanceUntilIdle()
+        coVerify(exactly = 1) { service.syncNow() }
     }
 }

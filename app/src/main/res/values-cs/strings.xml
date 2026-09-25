@@ -2900,4 +2900,15 @@
     <string name="device_sync_phase_waiting_for_peer">Čeká se, až druhý telefon spustí synchronizaci</string>
     <string name="device_sync_refused">Nepřijato (na tomto telefonu nevybráno)</string>
     <string name="settings_watch_remove_delete_history">Smazat také historii stresu, Body Battery a skóre, kterou má jen tento telefon</string>
+    <string name="settings_body_profile_sex">Pohlaví</string>
+    <string name="settings_body_profile_sex_body">Používá se jen pro odhad bazálního metabolismu.</string>
+    <string name="settings_body_profile_sex_not_set">Nenastaveno</string>
+    <string name="settings_body_profile_sex_female">Žena</string>
+    <string name="settings_body_profile_sex_male">Muž</string>
+    <string name="settings_bmr_estimate_title">Bazální metabolismus</string>
+    <string name="settings_bmr_estimate_body">Odhadne kalorie, které tělo spálí v klidu, z pohlaví, roku narození, hmotnosti a výšky (Mifflin-St Jeor) a uloží jednu hodnotu za den do Health Connect. Dny, které už mají hodnotu z jiného zdroje, zůstanou beze změny.</string>
+    <string name="settings_bmr_estimate_toggle">Ukládat odhad do Health Connect</string>
+    <string name="settings_bmr_estimate_today">Dnešní odhad: %1$d kcal za den</string>
+    <string name="settings_bmr_estimate_missing">Nic se neuloží, dokud tělesný profil nemá: %1$s.</string>
+    <string name="settings_bmr_estimate_permission_body">K uložení odhadu je potřeba oprávnění k zápisu bazálního metabolismu do Health Connect.</string>
 </resources>

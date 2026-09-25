@@ -2900,4 +2900,15 @@
     <string name="device_sync_phase_waiting_for_peer">Ожидание запуска синхронизации на другом телефоне</string>
     <string name="device_sync_refused">Не принято (не выбрано на этом телефоне)</string>
     <string name="settings_watch_remove_delete_history">Также удалить историю стресса, Body Battery и оценок, которая хранится только на этом телефоне</string>
+    <string name="settings_body_profile_sex">Пол</string>
+    <string name="settings_body_profile_sex_body">Используется только для оценки основного обмена.</string>
+    <string name="settings_body_profile_sex_not_set">Не указан</string>
+    <string name="settings_body_profile_sex_female">Женский</string>
+    <string name="settings_body_profile_sex_male">Мужской</string>
+    <string name="settings_bmr_estimate_title">Основной обмен</string>
+    <string name="settings_bmr_estimate_body">Оценивает калории, которые тело сжигает в покое, по полу, году рождения, весу и росту (Mifflin-St Jeor) и сохраняет одно значение в день в Health Connect. Дни, у которых уже есть значение из другого источника, не затрагиваются.</string>
+    <string name="settings_bmr_estimate_toggle">Сохранять оценку в Health Connect</string>
+    <string name="settings_bmr_estimate_today">Оценка на сегодня: %1$d ккал в день</string>
+    <string name="settings_bmr_estimate_missing">Ничего не сохраняется, пока в профиле тела нет: %1$s.</string>
+    <string name="settings_bmr_estimate_permission_body">Для сохранения оценки нужно разрешение Health Connect на запись основного обмена.</string>
 </resources>

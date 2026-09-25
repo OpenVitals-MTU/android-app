@@ -2880,4 +2880,15 @@
     <string name="device_sync_phase_waiting_for_peer">Ootan, kuni teine telefon sünkroonimise käivitab</string>
     <string name="device_sync_refused">Ei võetud vastu (selles telefonis ei valitud)</string>
     <string name="settings_watch_remove_delete_history">Kustuta ka stressi, Body Battery ja skooride ajalugu, mida hoiab ainult see telefon</string>
+    <string name="settings_body_profile_sex">Sugu</string>
+    <string name="settings_body_profile_sex_body">Seda kasutab ainult põhiainevahetuse hinnang.</string>
+    <string name="settings_body_profile_sex_not_set">Määramata</string>
+    <string name="settings_body_profile_sex_female">Naine</string>
+    <string name="settings_body_profile_sex_male">Mees</string>
+    <string name="settings_bmr_estimate_title">Põhiainevahetus</string>
+    <string name="settings_bmr_estimate_body">Hindab kaloreid, mida keha puhkeolekus põletab, sinu soo, sünniaasta, kaalu ja pikkuse põhjal (Mifflin-St Jeor) ning salvestab ühe väärtuse päevas Health Connecti. Päevad, millel on juba väärtus mõnest muust allikast, jäetakse puutumata.</string>
+    <string name="settings_bmr_estimate_toggle">Salvesta hinnang Health Connecti</string>
+    <string name="settings_bmr_estimate_today">Tänane hinnang: %1$d kcal päevas</string>
+    <string name="settings_bmr_estimate_missing">Midagi ei salvestata, kuni kehaprofiilis on: %1$s.</string>
+    <string name="settings_bmr_estimate_permission_body">Hinnangu salvestamiseks on vaja Health Connecti kirjutusõigust põhiainevahetuse jaoks.</string>
 </resources>

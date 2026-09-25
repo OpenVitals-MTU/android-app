@@ -12,6 +12,9 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,10 +28,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.domain.preferences.BiologicalSex
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsTonalButton
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 @Composable
 internal fun BodyProfileCard(
@@ -97,6 +102,10 @@ internal fun BodyProfileCard(
                 suffix = "bpm",
                 onValue = { draft = draft.copy(maxHeartRateBpm = it) },
             )
+            BodyProfileSexField(
+                selected = draft.sex,
+                onSelect = { draft = draft.copy(sex = it) },
+            )
             Row(
                 horizontalArrangement = Arrangement.End,
                 modifier = Modifier
@@ -110,6 +119,48 @@ internal fun BodyProfileCard(
         }
     }
 }
+
+/** Optional, and read by nothing but the basal metabolic rate estimate. */
+@Composable
+private fun BodyProfileSexField(
+    selected: BiologicalSex?,
+    onSelect: (BiologicalSex?) -> Unit,
+) {
+    val options = listOf(null, BiologicalSex.FEMALE, BiologicalSex.MALE)
+    Text(
+        text = stringResource(R.string.settings_body_profile_sex),
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(top = Spacing.md),
+    )
+    SingleChoiceSegmentedButtonRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = Spacing.sm),
+    ) {
+        options.forEachIndexed { index, option ->
+            SegmentedButton(
+                selected = option == selected,
+                onClick = { onSelect(option) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+            ) {
+                Text(stringResource(option.labelRes))
+            }
+        }
+    }
+    Text(
+        text = stringResource(R.string.settings_body_profile_sex_body),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = Spacing.xs),
+    )
+}
+
+private val BiologicalSex?.labelRes: Int
+    get() = when (this) {
+        null -> R.string.settings_body_profile_sex_not_set
+        BiologicalSex.FEMALE -> R.string.settings_body_profile_sex_female
+        BiologicalSex.MALE -> R.string.settings_body_profile_sex_male
+    }
 
 @Composable
 private fun bodyMetricLabel(label: String, measured: Boolean): String =

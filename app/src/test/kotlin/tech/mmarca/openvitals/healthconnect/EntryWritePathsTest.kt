@@ -383,6 +383,60 @@ class EntryWritePathsTest {
         assertThat(allDistances().map { it.metadata.dataOrigin.packageName }).containsExactly("com.example.otherapp")
     }
 
+    // Estimated basal metabolic rate: the other reader that deletes records nobody asked it to.
+
+    @Test
+    fun `a second BMR reconcile adds nothing, and a day another app covers is left alone`() = onTheTestClock {
+        val zone = java.time.ZoneId.systemDefault()
+        val covered = DAY.minusDays(1)
+        insertAsAnotherApp(
+            androidx.health.connect.client.records.BasalMetabolicRateRecord(
+                time = covered.atStartOfDay(zone).toInstant().plusSeconds(3_600),
+                zoneOffset = null,
+                basalMetabolicRate = androidx.health.connect.client.units.Power.kilocaloriesPerDay(1_500.0),
+                metadata = Metadata.manualEntry(),
+            ),
+        )
+        val reader = BmrEstimateHealthReader(support(), APP_PACKAGE)
+        val estimates = mapOf(DAY to 1_648.75, covered to 1_648.75)
+
+        reader.reconcileEstimatedBmr(covered..DAY, estimates)
+        reader.reconcileEstimatedBmr(covered..DAY, estimates)
+
+        val rates = allBmr()
+        val own = rates.filter { it.metadata.dataOrigin.packageName == APP_PACKAGE }
+        assertThat(own).hasSize(1)
+        assertThat(own.single().basalMetabolicRate.inKilocaloriesPerDay).isWithin(1e-6).of(1_648.75)
+        assertThat(own.single().time).isEqualTo(DAY.atStartOfDay(zone).toInstant())
+        assertThat(rates.filter { it.metadata.dataOrigin.packageName != APP_PACKAGE }).hasSize(1)
+    }
+
+    @Test
+    fun `a BMR purge removes the estimates and nothing else`() = onTheTestClock {
+        val reader = BmrEstimateHealthReader(support(), APP_PACKAGE)
+        reader.reconcileEstimatedBmr(DAY..DAY, mapOf(DAY to 1_648.75))
+        val zone = java.time.ZoneId.systemDefault()
+        insertAsAnotherApp(
+            androidx.health.connect.client.records.BasalMetabolicRateRecord(
+                time = DAY.minusDays(2).atStartOfDay(zone).toInstant().plusSeconds(3_600),
+                zoneOffset = null,
+                basalMetabolicRate = androidx.health.connect.client.units.Power.kilocaloriesPerDay(1_500.0),
+                metadata = Metadata.manualEntry(),
+            ),
+        )
+
+        reader.purgeEstimatedBmr(DAY.minusDays(5)..DAY)
+
+        assertThat(allBmr().map { it.metadata.dataOrigin.packageName }).containsExactly("com.example.otherapp")
+    }
+
+    private suspend fun allBmr() = client.readRecords(
+        ReadRecordsRequest(
+            androidx.health.connect.client.records.BasalMetabolicRateRecord::class,
+            TimeRangeFilter.between(DAY_START.minusSeconds(10 * 86_400), DAY_END.plusSeconds(86_400)),
+        ),
+    ).records
+
     private suspend fun allDistances() = client.readRecords(
         ReadRecordsRequest(
             androidx.health.connect.client.records.DistanceRecord::class,

@@ -62,8 +62,11 @@ Body profile is its own section. It holds the facts about the user that personal
 - Height, in centimetres.
 - Resting heart rate.
 - Maximum heart rate.
+- Sex, read only by the basal metabolic rate estimate.
 
 Weight and height are shared with health data. When a measurement is available from Health Connect the field is labelled as measured and shows that value, so BMI, FFMI context, and caffeine estimates all use the same number. When nothing has been recorded, the typed value is kept as a local preference and used the same way.
+
+The same section holds the "Basal metabolic rate" card: an off-by-default switch that estimates the resting daily burn from the profile (Mifflin-St Jeor) and writes one value per day to Health Connect, leaving days another source already covers alone. See [Body metrics](body-metrics.md#basal-metabolic-rate-estimate).
 
 The same section holds the Metabolism card, which used to live behind caffeine settings. It collects the optional factors that change how quickly caffeine is cleared. Leaving them alone uses population averages.
 

@@ -9,13 +9,14 @@ import kotlinx.coroutines.CancellationException
 /**
  * Once per app open, after the first load settles, one after another: drains
  * the vitals change token, warms the Body Energy chain, runs the opt-in
- * step-distance backfill. Incremental only.
+ * step-distance backfill and the opt-in BMR estimate. Incremental only.
  */
 @Singleton
 class HistorySyncScheduler @Inject constructor(
     private val vitalsSync: VitalsHistorySyncService,
     private val bodyEnergyChainSync: BodyEnergyChainSyncService,
     private val stepDistanceSync: StepDistanceBackfillService,
+    private val bmrEstimateSync: BmrEstimateService,
 ) {
     private val drained = AtomicBoolean(false)
 
@@ -24,8 +25,9 @@ class HistorySyncScheduler @Inject constructor(
         drain { vitalsSync.syncIncremental() }
         // After the foreground load: the chain warm is the most read-hungry drain.
         drain { bodyEnergyChainSync.syncAll() }
-        // Last: the only drain that writes to Health Connect. Off unless opted in.
+        // Last: the two drains that write to Health Connect. Off unless opted in.
         drain { stepDistanceSync.syncIncremental() }
+        drain { bmrEstimateSync.syncIncremental() }
     }
 
     /** Runs one drain, letting it fail alone; the once-per-open latch is already claimed. */

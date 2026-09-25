@@ -1913,6 +1913,17 @@
     <string name="settings_body_profile_weight">Weight</string>
     <string name="settings_body_profile_height">Height</string>
     <string name="settings_body_profile_measured_label">%1$s (measured)</string>
+    <string name="settings_body_profile_sex">Sex</string>
+    <string name="settings_body_profile_sex_body">Only the basal metabolic rate estimate uses it.</string>
+    <string name="settings_body_profile_sex_not_set">Not set</string>
+    <string name="settings_body_profile_sex_female">Female</string>
+    <string name="settings_body_profile_sex_male">Male</string>
+    <string name="settings_bmr_estimate_title">Basal metabolic rate</string>
+    <string name="settings_bmr_estimate_body">Estimate the calories your body burns at rest from your sex, birth year, weight and height (Mifflin-St Jeor) and save one value per day to Health Connect. Days that already have a rate from another source are left alone.</string>
+    <string name="settings_bmr_estimate_toggle">Save the estimate to Health Connect</string>
+    <string name="settings_bmr_estimate_today">Today\'s estimate: %1$d kcal per day</string>
+    <string name="settings_bmr_estimate_missing">Nothing is saved until the body profile has: %1$s.</string>
+    <string name="settings_bmr_estimate_permission_body">Health Connect write access for basal metabolic rate is needed to save the estimate.</string>
     <string name="settings_apple_health_import_title">Apple Health Importer</string>
     <string name="settings_apple_health_import_body">Import Health Connect-compatible records from Apple Health export.xml or export.zip, with duplicate checks and a shareable diagnostics report.</string>
     <string name="settings_apple_health_import_permissions">%1$d/%2$d import permissions granted.</string>

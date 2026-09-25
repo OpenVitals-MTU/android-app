@@ -27,6 +27,7 @@ import tech.mmarca.openvitals.domain.model.MindfulnessTimerConfig
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.domain.preferences.BiologicalSex
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeineAlcoholUse
 import tech.mmarca.openvitals.domain.preferences.CaffeineGenotype
@@ -423,14 +424,21 @@ class PreferencesRepositoryTest {
 
     @Test fun `bodyProfile round-trips and normalizes`() {
         val (repo, prefs) = newRepo()
-        repo.setBodyProfile(BodyProfile(birthYear = 1990, weightKg = 72.5))
+        repo.setBodyProfile(BodyProfile(birthYear = 1990, weightKg = 72.5, sex = BiologicalSex.FEMALE))
         val profile = repo.bodyProfile()
         assertEquals(1990, profile.birthYear)
         assertNotNull(profile.weightKg)
         assertEquals(72.5, profile.weightKg!!, 1e-6)
+        assertEquals(BiologicalSex.FEMALE, profile.sex)
 
         val reloaded = reload(prefs)
         assertEquals(profile.signature(), reloaded.bodyProfile().signature())
+        assertEquals(BiologicalSex.FEMALE, reloaded.bodyProfile().sex)
+
+        // Clearing the sex removes it; the signature is untouched, so Body Energy does not rebuild.
+        repo.setBodyProfile(profile.copy(sex = null))
+        assertEquals(null, reload(prefs).bodyProfile().sex)
+        assertEquals(profile.signature(), repo.bodyProfile().signature())
     }
 
     @Test fun `bodyEnergyCalibration round-trips manual zones`() {

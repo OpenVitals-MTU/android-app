@@ -2884,4 +2884,15 @@
     <string name="device_sync_phase_waiting_for_peer">In attesa che l\'altro telefono avvii la sincronizzazione</string>
     <string name="device_sync_refused">Non accettato (non scelto su questo telefono)</string>
     <string name="settings_watch_remove_delete_history">Elimina anche lo storico di stress, Body Battery e punteggi che solo questo telefono conserva</string>
+    <string name="settings_body_profile_sex">Sesso</string>
+    <string name="settings_body_profile_sex_body">Lo usa solo la stima del metabolismo basale.</string>
+    <string name="settings_body_profile_sex_not_set">Non impostato</string>
+    <string name="settings_body_profile_sex_female">Femmina</string>
+    <string name="settings_body_profile_sex_male">Maschio</string>
+    <string name="settings_bmr_estimate_title">Metabolismo basale</string>
+    <string name="settings_bmr_estimate_body">Stima le calorie che il corpo brucia a riposo da sesso, anno di nascita, peso e altezza (Mifflin-St Jeor) e salva un valore al giorno in Health Connect. I giorni che hanno già un valore da un’altra fonte restano intatti.</string>
+    <string name="settings_bmr_estimate_toggle">Salva la stima in Health Connect</string>
+    <string name="settings_bmr_estimate_today">Stima di oggi: %1$d kcal al giorno</string>
+    <string name="settings_bmr_estimate_missing">Non viene salvato nulla finché il profilo corporeo non ha: %1$s.</string>
+    <string name="settings_bmr_estimate_permission_body">Per salvare la stima serve il permesso di scrittura del metabolismo basale in Health Connect.</string>
 </resources>

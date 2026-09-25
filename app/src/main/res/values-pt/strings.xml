@@ -2884,4 +2884,15 @@
     <string name="device_sync_phase_waiting_for_peer">A aguardar que o outro telemóvel inicie a sincronização</string>
     <string name="device_sync_refused">Não aceite (não escolhido neste telemóvel)</string>
     <string name="settings_watch_remove_delete_history">Eliminar também o histórico de stress, Body Battery e pontuações que só este telemóvel guarda</string>
+    <string name="settings_body_profile_sex">Sexo</string>
+    <string name="settings_body_profile_sex_body">Só a estimativa da taxa metabólica basal o usa.</string>
+    <string name="settings_body_profile_sex_not_set">Não definido</string>
+    <string name="settings_body_profile_sex_female">Feminino</string>
+    <string name="settings_body_profile_sex_male">Masculino</string>
+    <string name="settings_bmr_estimate_title">Taxa metabólica basal</string>
+    <string name="settings_bmr_estimate_body">Estima as calorias que o corpo queima em repouso a partir do sexo, ano de nascimento, peso e altura (Mifflin-St Jeor) e guarda um valor por dia no Health Connect. Os dias que já têm uma taxa de outra fonte ficam como estão.</string>
+    <string name="settings_bmr_estimate_toggle">Guardar a estimativa no Health Connect</string>
+    <string name="settings_bmr_estimate_today">Estimativa de hoje: %1$d kcal por dia</string>
+    <string name="settings_bmr_estimate_missing">Nada é guardado até o perfil corporal ter: %1$s.</string>
+    <string name="settings_bmr_estimate_permission_body">Para guardar a estimativa é preciso permissão de escrita de taxa metabólica basal no Health Connect.</string>
 </resources>

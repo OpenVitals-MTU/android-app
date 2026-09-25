@@ -64,14 +64,18 @@ class HistorySyncSchedulerTest {
         coEvery { it.syncIncremental() } coAnswers { recorder.run("stepDistance") }
     }
 
-    private val scheduler = HistorySyncScheduler(vitals, bodyEnergy, stepDistance)
+    private val bmrEstimate = mockk<BmrEstimateService>().also {
+        coEvery { it.syncIncremental() } coAnswers { recorder.run("bmrEstimate") }
+    }
+
+    private val scheduler = HistorySyncScheduler(vitals, bodyEnergy, stepDistance, bmrEstimate)
 
     @Test
     fun `the drains run one after another, never at the same time`() = runTest {
         // Health Connect serializes reads, so overlapping drains are the contention the sequencing avoids.
         scheduler.drainIncrementalOnce()
 
-        assertEquals(listOf("vitals", "bodyEnergy", "stepDistance"), recorder.started)
+        assertEquals(listOf("vitals", "bodyEnergy", "stepDistance", "bmrEstimate"), recorder.started)
         assertEquals(emptySet<String>(), recorder.overlapped)
     }
 
@@ -90,7 +94,7 @@ class HistorySyncSchedulerTest {
 
         scheduler.drainIncrementalOnce()
 
-        assertEquals(listOf("bodyEnergy", "stepDistance"), recorder.started)
+        assertEquals(listOf("bodyEnergy", "stepDistance", "bmrEstimate"), recorder.started)
     }
 
     @Test
@@ -119,6 +123,6 @@ class HistorySyncSchedulerTest {
             ).awaitAll()
         }
 
-        assertEquals(listOf("vitals", "bodyEnergy", "stepDistance"), recorder.started)
+        assertEquals(listOf("vitals", "bodyEnergy", "stepDistance", "bmrEstimate"), recorder.started)
     }
 }

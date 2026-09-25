@@ -2880,4 +2880,15 @@
     <string name="device_sync_phase_waiting_for_peer">Warte, bis das andere Telefon die Synchronisierung startet</string>
     <string name="device_sync_refused">Nicht akzeptiert (auf diesem Telefon nicht ausgewählt)</string>
     <string name="settings_watch_remove_delete_history">Auch den Stress-, Body-Battery- und Score-Verlauf löschen, den nur dieses Telefon hält</string>
+    <string name="settings_body_profile_sex">Geschlecht</string>
+    <string name="settings_body_profile_sex_body">Nur die Schätzung des Grundumsatzes verwendet es.</string>
+    <string name="settings_body_profile_sex_not_set">Nicht festgelegt</string>
+    <string name="settings_body_profile_sex_female">Weiblich</string>
+    <string name="settings_body_profile_sex_male">Männlich</string>
+    <string name="settings_bmr_estimate_title">Grundumsatz</string>
+    <string name="settings_bmr_estimate_body">Schätzt die Kalorien, die der Körper in Ruhe verbrennt, aus Geschlecht, Geburtsjahr, Gewicht und Größe (Mifflin-St Jeor) und speichert einen Wert pro Tag in Health Connect. Tage, die bereits einen Wert aus einer anderen Quelle haben, bleiben unberührt.</string>
+    <string name="settings_bmr_estimate_toggle">Schätzung in Health Connect speichern</string>
+    <string name="settings_bmr_estimate_today">Heutige Schätzung: %1$d kcal pro Tag</string>
+    <string name="settings_bmr_estimate_missing">Es wird nichts gespeichert, bis das Körperprofil Folgendes enthält: %1$s.</string>
+    <string name="settings_bmr_estimate_permission_body">Zum Speichern der Schätzung ist Health Connect-Schreibzugriff für den Grundumsatz nötig.</string>
 </resources>

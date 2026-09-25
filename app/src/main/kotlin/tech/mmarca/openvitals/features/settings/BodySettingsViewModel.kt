@@ -7,17 +7,22 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import javax.inject.Inject
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
+import tech.mmarca.openvitals.data.sync.BmrEstimateService
 import tech.mmarca.openvitals.data.sync.BodyEnergyChainSyncService
 import tech.mmarca.openvitals.data.sync.DerivedMetricsResetService
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.domain.model.HeartRateThresholds
+import tech.mmarca.openvitals.domain.insights.BmrInput
+import tech.mmarca.openvitals.domain.insights.basalMetabolicRateKcal
+import tech.mmarca.openvitals.domain.insights.bmrMissingInputs
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
@@ -41,6 +46,11 @@ data class BodySettingsUiState(
     val lowHeartRateThresholdBpm: Int = HeartRateThresholds.DEFAULT_LOW_BPM,
     val bodyEnergyCalibration: BodyEnergyCalibration = BodyEnergyCalibration.Automatic,
     val isResettingDerivedMetrics: Boolean = false,
+    val bmrEstimateEnabled: Boolean = false,
+    /** Today's Mifflin-St Jeor value from [bodyProfile], or null while an input is missing. */
+    val bmrEstimateTodayKcal: Int? = null,
+    val bmrEstimateMissingInputs: Set<BmrInput> = emptySet(),
+    val bmrEstimateWritePermissionMissing: Boolean = false,
 )
 
 /**
@@ -55,6 +65,7 @@ class BodySettingsViewModel @Inject constructor(
     private val bodyRepository: BodyRepository,
     private val bodyEnergyChainSyncService: BodyEnergyChainSyncService,
     private val derivedMetricsResetService: DerivedMetricsResetService,
+    private val bmrEstimateService: BmrEstimateService,
 ) : ViewModel() {
     companion object {
         private const val TAG = "BodySettingsViewModel"
@@ -84,6 +95,7 @@ class BodySettingsViewModel @Inject constructor(
             highHeartRateThresholdBpm = preferencesRepository.highHeartRateThresholdBpm,
             lowHeartRateThresholdBpm = preferencesRepository.lowHeartRateThresholdBpm,
             bodyEnergyCalibration = preferencesRepository.bodyEnergyCalibration(),
+            bmrEstimateEnabled = preferencesRepository.bmrEstimateEnabled,
         )
 
     /** Folds the latest Health Connect weight and height into the card state. */
@@ -98,12 +110,34 @@ class BodySettingsViewModel @Inject constructor(
             val canWrite = runCatching {
                 bodyRepository.hasBodyWritePermission(BodyMeasurementType.WEIGHT)
             }.getOrDefault(false)
+            val canWriteBmr = runCatching { bmrEstimateService.canWrite() }.getOrDefault(false)
             _uiState.value = _uiState.value.copy(
                 bodyProfile = resolved,
                 bodyProfileWeightMeasured = resolved.weightKg != null && resolved.weightKg != declared.weightKg,
                 bodyProfileHeightMeasured = resolved.heightCm != null && resolved.heightCm != declared.heightCm,
                 canWriteBodyMeasurements = canWrite,
-            )
+                bmrEstimateWritePermissionMissing = !canWriteBmr,
+            ).withBmrPreview(resolved)
+        }
+    }
+
+    private fun BodySettingsUiState.withBmrPreview(profile: BodyProfile): BodySettingsUiState =
+        copy(
+            bmrEstimateTodayKcal = profile.basalMetabolicRateKcal()?.roundToInt(),
+            bmrEstimateMissingInputs = profile.bmrMissingInputs(),
+        )
+
+    /** Writes or removes the estimated rates as the switch moves. */
+    fun setBmrEstimateEnabled(enabled: Boolean) {
+        val wasEnabled = preferencesRepository.bmrEstimateEnabled
+        preferencesRepository.bmrEstimateEnabled = enabled
+        _uiState.value = _uiState.value.copy(bmrEstimateEnabled = enabled)
+        viewModelScope.launch {
+            if (enabled) {
+                bmrEstimateService.syncNow()
+            } else if (wasEnabled) {
+                bmrEstimateService.purgeDerivedRecords()
+            }
         }
     }
 
@@ -112,8 +146,12 @@ class BodySettingsViewModel @Inject constructor(
         val declared = preferencesRepository.bodyProfile()
         preferencesRepository.setBodyProfile(profile)
         val saved = preferencesRepository.bodyProfile()
-        _uiState.value = _uiState.value.copy(bodyProfile = saved)
+        _uiState.value = _uiState.value.copy(bodyProfile = saved).withBmrPreview(saved)
         if (saved.signature() != declared.signature()) rebuildBodyEnergyChain()
+        // The estimate is a function of the profile: every stored day may be wrong now.
+        if (saved != declared && preferencesRepository.bmrEstimateEnabled) {
+            viewModelScope.launch { bmrEstimateService.syncNow() }
+        }
         if (!_uiState.value.canWriteBodyMeasurements) return
         // A changed weight or height is written to Health Connect as a real
         // measurement. Only on a real change, or every save adds a duplicate.

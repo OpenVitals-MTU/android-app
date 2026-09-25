@@ -35,6 +35,7 @@ import tech.mmarca.openvitals.domain.preferences.AppLanguage
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
 import tech.mmarca.openvitals.domain.preferences.BodyEnergyCalibration
+import tech.mmarca.openvitals.domain.preferences.BiologicalSex
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeineAlcoholUse
 import tech.mmarca.openvitals.domain.preferences.CaffeineGenotype
@@ -317,6 +318,16 @@ class PreferencesRepository @Inject constructor(
             prefs.edit { putBoolean(KEY_STEP_DISTANCE_PURGE_PENDING, value) }
         }
 
+    /** The opt-in basal metabolic rate estimate, written to Health Connect. Off by default. */
+    var bmrEstimateEnabled: Boolean
+        get() = prefs.getBoolean(KEY_BMR_ESTIMATE_ENABLED, false)
+        set(value) = prefs.edit { putBoolean(KEY_BMR_ESTIMATE_ENABLED, value) }
+
+    /** Like [stepDistancePurgePending], for the estimate's records. */
+    var bmrEstimatePurgePending: Boolean
+        get() = prefs.getBoolean(KEY_BMR_ESTIMATE_PURGE_PENDING, false)
+        set(value) = prefs.edit { putBoolean(KEY_BMR_ESTIMATE_PURGE_PENDING, value) }
+
     /** Replace imported route altitudes with offline DEM values. Does nothing until a tile is imported. */
     var elevationCorrectionEnabled: Boolean
         get() = prefs.getBoolean(KEY_ELEVATION_CORRECTION_ENABLED, true)
@@ -527,6 +538,7 @@ class PreferencesRepository @Inject constructor(
                 ?: remove(KEY_BODY_PROFILE_RESTING_HR_BPM)
             normalized.maxHeartRateBpm?.let { putInt(KEY_BODY_PROFILE_MAX_HR_BPM, it) }
                 ?: remove(KEY_BODY_PROFILE_MAX_HR_BPM)
+            normalized.sex?.let { putString(KEY_BODY_PROFILE_SEX, it.name) } ?: remove(KEY_BODY_PROFILE_SEX)
         }
         _bodyProfile.value = normalized
     }
@@ -1075,6 +1087,7 @@ class PreferencesRepository @Inject constructor(
                 .takeIf { it != MISSING_BODY_PROFILE_INT },
             maxHeartRateBpm = prefs.getInt(KEY_BODY_PROFILE_MAX_HR_BPM, MISSING_BODY_PROFILE_INT)
                 .takeIf { it != MISSING_BODY_PROFILE_INT },
+            sex = prefs.getString(KEY_BODY_PROFILE_SEX, null)?.let { name -> BiologicalSex.entries.find { it.name == name } },
         ).normalized()
     }
 
@@ -1337,6 +1350,8 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_DASHBOARD_SORT_EMPTY_TILES_LAST = "dashboard_sort_empty_tiles_last"
         private const val KEY_STEP_DISTANCE_BACKFILL_ENABLED = "step_distance_backfill_enabled"
         private const val KEY_STEP_DISTANCE_PURGE_PENDING = "step_distance_purge_pending"
+        private const val KEY_BMR_ESTIMATE_ENABLED = "bmr_estimate_enabled"
+        private const val KEY_BMR_ESTIMATE_PURGE_PENDING = "bmr_estimate_purge_pending"
         private const val KEY_ELEVATION_CORRECTION_ENABLED = "elevation_correction_enabled"
         private const val KEY_STRIDE_LENGTH_METERS = "stride_length_meters"
         private const val KEY_MANUAL_ENTRY_WIDGET_ORDER = "manual_entry_widget_order"
@@ -1377,6 +1392,7 @@ class PreferencesRepository @Inject constructor(
         private const val KEY_BODY_PROFILE_HEIGHT_CM = "body_profile_height_cm"
         private const val KEY_BODY_PROFILE_RESTING_HR_BPM = "body_profile_resting_hr_bpm"
         private const val KEY_BODY_PROFILE_MAX_HR_BPM = "body_profile_max_hr_bpm"
+        private const val KEY_BODY_PROFILE_SEX = "body_profile_sex"
         private const val KEY_CAFFEINE_PROFILE_COMPLETED = "caffeine_profile_completed"
         private const val KEY_CAFFEINE_HALF_LIFE_MINUTES = "caffeine_half_life_minutes"
         private const val KEY_CAFFEINE_ABSORPTION_MINUTES = "caffeine_absorption_minutes"

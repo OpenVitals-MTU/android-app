@@ -2880,4 +2880,15 @@
         <item quantity="one">+%1$d lisää</item>
         <item quantity="other">+%1$d lisää</item>
     </plurals>
+    <string name="settings_body_profile_sex">Sukupuoli</string>
+    <string name="settings_body_profile_sex_body">Vain perusaineenvaihdunnan arvio käyttää sitä.</string>
+    <string name="settings_body_profile_sex_not_set">Ei asetettu</string>
+    <string name="settings_body_profile_sex_female">Nainen</string>
+    <string name="settings_body_profile_sex_male">Mies</string>
+    <string name="settings_bmr_estimate_title">Perusaineenvaihdunta</string>
+    <string name="settings_bmr_estimate_body">Arvioi kehosi levossa kuluttamat kalorit sukupuolen, syntymävuoden, painon ja pituuden perusteella (Mifflin-St Jeor) ja tallentaa yhden arvon päivässä Health Connectiin. Päivät, joilla on jo arvo toisesta lähteestä, jätetään rauhaan.</string>
+    <string name="settings_bmr_estimate_toggle">Tallenna arvio Health Connectiin</string>
+    <string name="settings_bmr_estimate_today">Tämän päivän arvio: %1$d kcal päivässä</string>
+    <string name="settings_bmr_estimate_missing">Mitään ei tallenneta, ennen kuin kehoprofiilissa on: %1$s.</string>
+    <string name="settings_bmr_estimate_permission_body">Arvion tallentamiseen tarvitaan Health Connectin kirjoitusoikeus perusaineenvaihdunnalle.</string>
 </resources>

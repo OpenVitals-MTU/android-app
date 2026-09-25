@@ -8,16 +8,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tech.mmarca.openvitals.data.sync.BmrEstimateService
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.rememberHealthConnectPermissionLauncher
 import tech.mmarca.openvitals.ui.theme.LayoutMetrics
 
-/** Body profile: the declared body and the caffeine clearance factors. Shares [BodySettingsViewModel] with Recovery. */
+/** Body profile: the declared body, the BMR estimate and the caffeine clearance factors. Shares [BodySettingsViewModel] with Recovery. */
 @Composable
 fun BodyProfileSettingsScreen(viewModel: BodySettingsViewModel) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     // The write permission is granted in Health Connect, so it is re-read on the way back.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
+    val permissionLauncher = rememberHealthConnectPermissionLauncher(onResult = { viewModel.refresh() })
 
     SettingsSectionList {
         item { SectionHeader(stringResource(SettingsSection.BODY_PROFILE.titleRes)) }
@@ -29,6 +32,18 @@ fun BodyProfileSettingsScreen(viewModel: BodySettingsViewModel) {
                 onSave = viewModel::updateBodyProfile,
                 weightMeasured = state.bodyProfileWeightMeasured,
                 heightMeasured = state.bodyProfileHeightMeasured,
+                modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
+            )
+        }
+        item { SettingsCardSpacer() }
+        item {
+            BmrEstimateCard(
+                enabled = state.bmrEstimateEnabled,
+                todayKcal = state.bmrEstimateTodayKcal,
+                missingInputs = state.bmrEstimateMissingInputs,
+                writePermissionMissing = state.bmrEstimateWritePermissionMissing,
+                onEnabledChange = viewModel::setBmrEstimateEnabled,
+                onGrantPermission = { permissionLauncher.launch(BmrEstimateService.RequiredPermissions) },
                 modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
             )
         }

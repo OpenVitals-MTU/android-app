@@ -2889,4 +2889,15 @@
     <string name="device_sync_phase_waiting_for_peer">正在等待另一台手机开始同步</string>
     <string name="device_sync_refused">未接受（未在此手机上选择）</string>
     <string name="settings_watch_remove_delete_history">同时删除仅保存在此手机上的压力、Body Battery 和评分历史</string>
+    <string name="settings_body_profile_sex">性别</string>
+    <string name="settings_body_profile_sex_body">仅用于基础代谢率估算。</string>
+    <string name="settings_body_profile_sex_not_set">未设置</string>
+    <string name="settings_body_profile_sex_female">女</string>
+    <string name="settings_body_profile_sex_male">男</string>
+    <string name="settings_bmr_estimate_title">基础代谢率</string>
+    <string name="settings_bmr_estimate_body">根据性别、出生年份、体重和身高（Mifflin-St Jeor 公式）估算身体静息时消耗的热量，并每天向 Health Connect 保存一个值。已有其他来源数值的日期保持不变。</string>
+    <string name="settings_bmr_estimate_toggle">将估算值保存到 Health Connect</string>
+    <string name="settings_bmr_estimate_today">今日估算：每天 %1$d kcal</string>
+    <string name="settings_bmr_estimate_missing">在身体资料填入以下项目前不会保存任何内容：%1$s。</string>
+    <string name="settings_bmr_estimate_permission_body">保存估算值需要 Health Connect 的基础代谢率写入权限。</string>
 </resources>

@@ -35,6 +35,16 @@ Settings, Body profile holds a weight and a height alongside birth year and hear
 
 Either way there is one weight and one height, so BMI, FFMI context, Body Energy, and caffeine estimates all agree. See [Settings and preferences](settings-and-preferences.md).
 
+## Basal Metabolic Rate Estimate
+
+Off by default. Settings, Body profile has a "Basal metabolic rate" switch. On, OpenVitals estimates the resting daily burn with Mifflin-St Jeor from the profile's sex, birth year, weight and height, and writes one `BasalMetabolicRateRecord` per day to Health Connect.
+
+- It is a writer like the step-distance backfill (`data/sync/BmrEstimateService.kt`, `healthconnect/BmrEstimateHealthReader.kt`): it runs as the last history drain after app open, and at once when the switch or the profile changes.
+- It covers the last 90 days. Each day uses the weight measured on or before it, falling back to the declared profile weight, so an old day is not rewritten with today's weight.
+- A day that already has a rate from any other source, a watch import or a CSV row included, is left alone, and a rate that arrives later evicts the estimate for that day.
+- Its records carry the `openvitals_bmr_<date>` client record id; nothing else is ever deleted. Switching off removes them all, and a purge that could not finish is retried by the next pass.
+- The card names which profile inputs are still missing; until they are all there nothing is written. The sex field exists only for this formula.
+
 ## Detail Pattern
 
 Body metrics follow the canonical period-detail pattern:

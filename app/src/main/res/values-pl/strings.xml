@@ -2900,4 +2900,15 @@
         <item quantity="many">+%1$d więcej</item>
         <item quantity="other">+%1$d więcej</item>
     </plurals>
+    <string name="settings_body_profile_sex">Płeć</string>
+    <string name="settings_body_profile_sex_body">Używa jej tylko szacunek podstawowej przemiany materii.</string>
+    <string name="settings_body_profile_sex_not_set">Nie ustawiono</string>
+    <string name="settings_body_profile_sex_female">Kobieta</string>
+    <string name="settings_body_profile_sex_male">Mężczyzna</string>
+    <string name="settings_bmr_estimate_title">Podstawowa przemiana materii</string>
+    <string name="settings_bmr_estimate_body">Szacuje kalorie, które ciało spala w spoczynku, z płci, roku urodzenia, wagi i wzrostu (Mifflin-St Jeor) i zapisuje jedną wartość dziennie w Health Connect. Dni, które mają już wartość z innego źródła, zostają bez zmian.</string>
+    <string name="settings_bmr_estimate_toggle">Zapisuj szacunek w Health Connect</string>
+    <string name="settings_bmr_estimate_today">Dzisiejszy szacunek: %1$d kcal dziennie</string>
+    <string name="settings_bmr_estimate_missing">Nic nie jest zapisywane, dopóki profil ciała nie ma: %1$s.</string>
+    <string name="settings_bmr_estimate_permission_body">Do zapisania szacunku potrzebne jest uprawnienie Health Connect do zapisu podstawowej przemiany materii.</string>
 </resources>

@@ -2889,4 +2889,15 @@
     <string name="device_sync_phase_waiting_for_peer">En attente du lancement de la synchronisation par l\'autre téléphone</string>
     <string name="device_sync_refused">Non accepté (non choisi sur ce téléphone)</string>
     <string name="settings_watch_remove_delete_history">Supprimer aussi l\'historique du stress, de la Body Battery et des scores que seul ce téléphone conserve</string>
+    <string name="settings_body_profile_sex">Sexe</string>
+    <string name="settings_body_profile_sex_body">Seule l’estimation du métabolisme de base l’utilise.</string>
+    <string name="settings_body_profile_sex_not_set">Non défini</string>
+    <string name="settings_body_profile_sex_female">Femme</string>
+    <string name="settings_body_profile_sex_male">Homme</string>
+    <string name="settings_bmr_estimate_title">Métabolisme de base</string>
+    <string name="settings_bmr_estimate_body">Estime les calories que votre corps brûle au repos à partir de votre sexe, année de naissance, poids et taille (Mifflin-St Jeor) et enregistre une valeur par jour dans Santé Connect. Les jours qui ont déjà une valeur d’une autre source sont laissés tels quels.</string>
+    <string name="settings_bmr_estimate_toggle">Enregistrer l’estimation dans Santé Connect</string>
+    <string name="settings_bmr_estimate_today">Estimation du jour : %1$d kcal par jour</string>
+    <string name="settings_bmr_estimate_missing">Rien n’est enregistré tant que le profil corporel n’a pas : %1$s.</string>
+    <string name="settings_bmr_estimate_permission_body">L’accès en écriture au métabolisme de base dans Santé Connect est nécessaire pour enregistrer l’estimation.</string>
 </resources>
