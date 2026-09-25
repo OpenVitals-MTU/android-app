@@ -42,15 +42,11 @@
     <string name="cd_open_calendar">Open calendar</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_add">Add</string>
-    <string name="action_add_custom">Add custom</string>
     <string name="action_save">Save</string>
     <string name="action_close">Close</string>
-    <string name="action_continue">Continue</string>
     <string name="action_delete">Delete</string>
     <string name="action_details">Details</string>
     <string name="action_edit">Edit</string>
-    <string name="action_enable">Enable</string>
-    <string name="action_get_started">Get started</string>
     <string name="action_grant">Grant</string>
     <string name="action_grant_permission">Grant permission</string>
     <string name="action_load_more_entries">Load 10 more</string>
@@ -86,8 +82,6 @@
     <string name="screen_error_activity_import_unavailable">Activity file import is not available.</string>
     <string name="screen_error_no_active_recording">No active activity recording was found.</string>
     <string name="screen_error_entry_not_editable">Only OpenVitals entries can be edited.</string>
-    <string name="screen_error_load_sleep_session">Unable to load sleep session.</string>
-    <string name="screen_error_load_sleep_period">Unable to load sleep data.</string>
     <string name="not_available">Not available</string>
     <string name="not_recorded">Not recorded</string>
     <string name="no_data">No data</string>
@@ -125,7 +119,6 @@
     <string name="home_body_energy_widget_description">OpenVitals body energy</string>
     <string name="home_today_vitals_widget_description">OpenVitals today vitals</string>
     <string name="home_widget_today_title">Today</string>
-    <string name="home_widget_context">Context</string>
     <string name="home_widget_hrv_short">HRV</string>
     <string name="home_widget_body_energy_charged">Charged</string>
     <string name="home_widget_body_energy_steady">Steady</string>
@@ -138,20 +131,16 @@
     <string name="settings_home_widget_refresh_1h">1 h</string>
     <string name="settings_home_widget_refresh_2h">2 h</string>
 
-    <string name="screen_steps">Steps</string>
     <string name="screen_activities">Activities</string>
     <string name="screen_calories">Calories</string>
     <string name="screen_activity_detail">Activity detail</string>
     <string name="screen_sleep">Sleep</string>
     <string name="screen_sleep_detail">Sleep detail</string>
-    <string name="screen_heart_vitals">Heart &amp; vitals</string>
     <string name="screen_stress_tracking">Stress tracking</string>
     <string name="screen_body_energy">Body energy</string>
     <string name="screen_training_readiness">Training Readiness</string>
     <string name="screen_body">Body</string>
     <string name="screen_nutrition">Nutrition</string>
-    <string name="screen_mindfulness">Mindfulness</string>
-    <string name="screen_cycle">Cycle</string>
     <string name="screen_daily_readiness">Daily readiness</string>
     <string name="screen_settings">Settings</string>
     <string name="screen_achievements">Achievements</string>
@@ -264,11 +253,9 @@
     <string name="activity_entry_imported_route">Imported route</string>
     <string name="activity_entry_recording_title">Recording activity</string>
     <string name="activity_entry_recording_ready_body">Choose the activity type, then start when you are ready. After finishing, you can review and add details before saving.</string>
-    <string name="activity_entry_recording_go_to_activity_screen">Go to activity screen</string>
     <string name="activity_entry_recording_active">Recording</string>
     <string name="activity_entry_recording_paused">Paused</string>
     <string name="activity_entry_recording_idle">Idle</string>
-    <string name="activity_entry_recording_resting">Resting</string>
     <string name="activity_entry_recording_gps_fix">GPS ready</string>
     <string name="activity_entry_recording_gps_poor">Weak GPS</string>
     <string name="activity_entry_recording_gps_lost">GPS lost</string>
@@ -297,9 +284,6 @@
     <string name="activity_entry_recording_marker_note">Note</string>
     <string name="activity_entry_recording_waiting_for_gps">Waiting for a precise GPS fix</string>
     <string name="activity_entry_recording_gps_waiting">Waiting for a precise GPS fix before start.</string>
-    <string name="activity_entry_recording_gps_waiting_accuracy">Waiting for better GPS accuracy • %1$s</string>
-    <string name="activity_entry_recording_gps_ready">GPS ready • accuracy %1$s</string>
-    <string name="activity_entry_recording_gps_disabled">Turn on GPS to start recording.</string>
     <string name="activity_entry_recording_distance">Distance</string>
     <string name="activity_entry_recording_total_time">Total time</string>
     <string name="activity_entry_recording_moving_time">Moving time</string>
@@ -309,17 +293,14 @@
     <string name="activity_entry_recording_average_speed">Avg speed</string>
     <string name="activity_entry_recording_average_moving_speed">Avg moving speed</string>
     <string name="activity_entry_recording_elevation_gain">Climb</string>
-    <string name="activity_entry_recording_points">Points</string>
     <string name="activity_entry_recording_rest_seconds_label">Rest seconds</string>
     <string name="activity_entry_recording_end_set">End set</string>
     <string name="activity_entry_recording_start_next_set">Start next set</string>
     <string name="activity_entry_recording_end_session">Finish session</string>
     <string name="activity_entry_recording_rest_remaining">Rest %1$s</string>
-    <string name="activity_entry_recording_finish_hint">Finish opens the activity details form so you can add title, notes, calories, or adjust values before saving.</string>
     <string name="activity_entry_recording_repetition_correction_hint">Use + or - if the sensor misses or adds a rep.</string>
     <string name="activity_entry_recording_accuracy">Last accuracy %1$s</string>
     <string name="activity_entry_recording_focus">Focus</string>
-    <string name="activity_entry_recording_dashboard_layout">Dashboard layout</string>
     <string name="activity_entry_recording_dashboard_layout_two_by_four">2x4</string>
     <string name="activity_entry_recording_dashboard_layout_three_by_four">3x4</string>
     <string name="activity_entry_recording_dashboard_layout_large_top">Large top</string>
@@ -647,7 +628,6 @@
     <string name="metric_body_water_mass">Body water mass</string>
     <string name="metric_latest">Latest</string>
     <string name="metric_change">Change</string>
-    <string name="metric_macros">Macros</string>
     <string name="metric_protein">Protein</string>
     <string name="metric_carbs">Carbs</string>
     <string name="metric_fat">Fat</string>
@@ -765,7 +745,6 @@
     <string name="workout_plan_move_down">Move down</string>
     <string name="workout_plan_remove">Remove</string>
     <string name="workout_plan_summary">%1$d blocks · %2$d steps · %3$d min</string>
-    <string name="workout_plan_rounds_summary">×%1$d</string>
     <string name="workout_plan_preview_seconds">%1$d s</string>
     <string name="workout_plan_goal_distance">%1$.2f km</string>
     <string name="workout_plan_goal_steps">%1$d steps</string>
@@ -782,7 +761,6 @@
     <string name="workout_plans_import">Import plans</string>
     <string name="workout_plans_exported">Plans exported</string>
     <string name="workout_plans_imported">%1$d plans imported</string>
-    <string name="workout_plans_nothing_to_export">No plans to export</string>
     <string name="workout_plan_goal_seconds_short">sec</string>
     <string name="workout_plan_goal_minutes_short">min</string>
     <string name="workout_plan_preview_minutes">%1$d min</string>
@@ -960,7 +938,6 @@
     <string name="dashboard_sleep_score_subtitle">%1$s &#8226; %2$s</string>
     <string name="sleep_score_calculation_title">How it is calculated</string>
     <string name="sleep_score_day_numbers_title">Today values</string>
-    <string name="sleep_score_references_title">Backed links</string>
     <string name="sleep_score_calculation_summary">OpenVitals scores objective sleep health from duration, quality, and overnight recovery — the same three pillars Garmin describes, grounded in NSF and AASM sleep-science references. It does not diagnose sleep disorders.</string>
     <string name="sleep_score_formula">Sleep score = duration 40 + quality 40 + overnight recovery 20</string>
     <string name="sleep_score_formula_body">Duration uses age-banded NSF recommendations (adults 7–9 h; older adults 7–8 h). Quality combines sleep efficiency, wake after sleep onset / continuity, and restorative deep + REM balance when stages are available. Overnight recovery compares night HRV RMSSD with your recent personal baseline.</string>
@@ -972,7 +949,6 @@
     <string name="sleep_score_component_efficiency">Efficiency</string>
     <string name="sleep_score_component_continuity">Continuity</string>
     <string name="sleep_score_component_stages">Stage balance</string>
-    <string name="sleep_score_component_regularity">Regularity</string>
     <string name="sleep_score_total_sleep">Total sleep</string>
     <string name="sleep_score_time_in_bed">Time in bed</string>
     <string name="sleep_score_efficiency">Efficiency</string>
@@ -990,19 +966,11 @@
     <string name="sleep_score_quality_stage_awake">Uses sleep stages and awake stages from Health Connect.</string>
     <string name="sleep_score_quality_stage_only">Uses sleep stages; awake continuity may be estimated.</string>
     <string name="sleep_score_quality_session_only">Uses sleep session timing only; confidence is limited.</string>
-    <string name="sleep_score_reference_aasm">AASM adult sleep duration</string>
-    <string name="sleep_score_reference_nsf_duration">NSF sleep duration recommendations</string>
-    <string name="sleep_score_reference_nsf_quality">NSF sleep quality recommendations</string>
-    <string name="sleep_score_reference_garmin">Garmin sleep score overview</string>
-    <string name="sleep_score_reference_sleep_health">Multidimensional sleep health</string>
-    <string name="sleep_score_reference_efficiency">Sleep efficiency definition</string>
-    <string name="sleep_score_reference_regularity">Sleep regularity research</string>
     <string name="sleep_efficiency_confidence_high">High confidence</string>
     <string name="sleep_efficiency_confidence_low">Low confidence</string>
     <string name="sleep_efficiency_confidence_no_data">No data</string>
     <string name="sleep_efficiency_calculation_title">How it is calculated</string>
     <string name="sleep_efficiency_day_numbers_title">Today values</string>
-    <string name="sleep_efficiency_references_title">Backed links</string>
     <string name="sleep_efficiency_calculation_summary">Sleep efficiency is the percentage of the sleep window spent asleep. Higher values usually mean less time awake in bed.</string>
     <string name="sleep_efficiency_formula">Sleep efficiency = total sleep time / time in bed x 100</string>
     <string name="sleep_efficiency_formula_body">Total sleep time is the sum of Health Connect sleep stages when stages are available. Time in bed is the main sleep session start-to-end window.</string>
@@ -1011,9 +979,6 @@
     <string name="sleep_efficiency_quality_no_data">Insufficient sleep data for efficiency.</string>
     <string name="sleep_efficiency_quality_stage_based">Uses Health Connect sleep stages for total sleep time.</string>
     <string name="sleep_efficiency_quality_session_only">Uses session timing only; awake time may be missing.</string>
-    <string name="sleep_efficiency_reference_definition">Sleep efficiency definition</string>
-    <string name="sleep_efficiency_reference_denominator">Sleep efficiency denominator research</string>
-    <string name="sleep_efficiency_reference_methods">Sleep assessment methods review</string>
     <string name="references_backed_links">Backed links</string>
     <string name="reference_aasm_sleep_duration">AASM adult sleep duration (Watson 2015)</string>
     <string name="reference_nsf_sleep_duration">NSF sleep duration recommendations (Hirshkowitz 2015)</string>
@@ -1021,7 +986,6 @@
     <string name="reference_garmin_sleep_score">Garmin Sleep Score and Sleep Insights</string>
     <string name="reference_multidimensional_sleep_health">Multidimensional sleep health</string>
     <string name="reference_sleep_efficiency_definition">Sleep efficiency definition</string>
-    <string name="reference_sleep_regularity">Sleep regularity research</string>
     <string name="reference_sleep_efficiency_denominator">Sleep efficiency denominator research</string>
     <string name="reference_sleep_assessment_methods">Sleep assessment methods review</string>
     <string name="cardio_load_confidence_high">High confidence</string>
@@ -1070,7 +1034,6 @@
     <string name="section_respiratory">Respiratory</string>
     <string name="section_respiratory_rate_daily_breakdown">Respiratory rate daily breakdown</string>
     <string name="section_vo2_max_history">VO2 max history</string>
-    <string name="section_display">Display</string>
     <string name="section_privacy">Privacy</string>
     <string name="section_cycle_calendar">Cycle calendar</string>
     <string name="section_basal_body_temperature">Basal body temperature</string>
@@ -1100,7 +1063,6 @@
     <string name="summary_resting_value">Resting %1$s</string>
     <string name="summary_hrv_value">HRV %1$s</string>
     <string name="summary_last_update">Last update %1$s</string>
-    <string name="summary_now">Now</string>
     <string name="summary_today">%1$s today</string>
     <string name="summary_on_date">%1$s on %2$s</string>
     <string name="summary_empty_today">%1$s yet today.</string>
@@ -1405,11 +1367,6 @@
     <string name="dashboard_action_log">Log</string>
     <string name="dashboard_action_start_workout">Start workout</string>
     <string name="dashboard_activities_today">Activities</string>
-    <string name="dashboard_sensor_status_title">Sensor battery</string>
-    <string name="dashboard_sensor_battery_lowest">%1$d%% lowest</string>
-    <string name="dashboard_sensor_battery_unknown">Battery pending</string>
-    <string name="dashboard_sensor_status_active_connected">%1$d active &#8226; %2$d connected</string>
-    <string name="dashboard_sensor_status_all_disabled">All sensors disabled</string>
     <string name="dashboard_delete_activity_title">Delete activity?</string>
     <string name="dashboard_delete_activity_message">Delete this %1$s activity from OpenVitals?</string>
     <string name="dashboard_readiness_title">Daily readiness</string>
@@ -1501,11 +1458,6 @@
     <string name="health_disclaimer_body">OpenVitals is for general wellness and informational use only. It is not a medical device and does not provide medical advice. It does not diagnose, treat, cure, or prevent any disease or medical condition. Always consult a qualified healthcare professional for medical advice, diagnosis, or treatment.</string>
     <string name="onboarding_health_connect_title">Powered by Health Connect</string>
     <string name="onboarding_health_connect_body">Reads from the secure on-device Android health store and saves entries you create back to Health Connect. Works with all data imported into Health Connect.</string>
-    <string name="onboarding_permissions_header">HEALTH CONNECT PERMISSIONS</string>
-    <string name="onboarding_grant_core">Grant required Health Connect permissions</string>
-    <string name="onboarding_grant_all">Grant required Health Connect permissions</string>
-    <string name="onboarding_grant_remaining">Grant remaining available permissions</string>
-    <string name="onboarding_open_required_permissions">Open required Health Connect permissions</string>
     <string name="onboarding_unable_open_permissions">Unable to open Health Connect permissions.</string>
     <string name="onboarding_health_connect_not_supported">Health Connect is not supported on this device.</string>
     <string name="onboarding_health_connect_needs_play_store">This device is running Android 13 with the standalone Health Connect app installed. Sadly, this version depends on Google Play Store services, which are missing on this device, so Health Connect rejects requests before OpenVitals can read your data. OpenVitals cannot fix or bypass this device-side Health Connect issue. The only way to solve it is to install Google Play services or upgrade to Android 14 or higher, where Health Connect is part of the operating system and does not need Google services.</string>
@@ -1529,8 +1481,6 @@
     <string name="onboarding_category_nutrition_hydration_desc">Health Connect will ask for:\n* Hydration\n* Nutrition</string>
     <string name="onboarding_category_manual_entry_write">Manual entry write access</string>
     <string name="onboarding_category_manual_entry_write_desc">Health Connect will ask for write access to:\n* Exercise\n* Distance\n* Elevation gained\n* Active calories burned\n* Total calories burned\n* Exercise route\n* Hydration\n* Weight\n* Height\n* Body fat\n* Blood pressure\n* Oxygen saturation\n* Respiratory rate\n* Body temperature\n* Heart rate variability\n* Mindfulness, when supported</string>
-    <string name="onboarding_category_data_import_write">Data import write access</string>
-    <string name="onboarding_category_data_import_write_desc">Health Connect will ask for write access to imported records:\n* Activity, exercise, calories, and distance\n* Heart rate, resting heart rate, and heart rate variability\n* Body measurements\n* Hydration and nutrition\n* Sleep\n* Vitals\n* Mindfulness, when supported\n* Cycle tracking records</string>
     <string name="onboarding_category_mindfulness">Mindfulness</string>
     <string name="onboarding_category_mindfulness_desc">Health Connect will ask for:\n* Mindfulness sessions</string>
     <string name="onboarding_category_mindfulness_unavailable">Mindfulness sessions require a newer Health Connect version.</string>
@@ -1629,7 +1579,6 @@
     <string name="settings_sensors_wheel_circumference">Wheel circumference (mm)</string>
     <string name="activity_recording_sensors_title">Sensors</string>
     <string name="activity_recording_sensors_add_in_settings">Add sensors in Settings</string>
-    <string name="activity_recording_sensors_not_configured">Not configured</string>
     <string name="activity_recording_sensors_connected">Connected</string>
     <string name="activity_recording_sensors_connecting">Connecting</string>
     <string name="activity_recording_sensors_reconnecting">Reconnecting</string>
@@ -1646,20 +1595,12 @@
     <string name="activity_recording_notification_heart_rate">HR %1$s</string>
     <string name="settings_nutrition_group_title">Nutrition</string>
     <string name="settings_nutrition_group_body">Calories data and caffeine personalization</string>
-    <string name="settings_calories_group_title">Calories</string>
-    <string name="settings_calories_group_body">Total calories data</string>
-    <string name="settings_caffeine_group_title">Caffeine</string>
-    <string name="settings_caffeine_group_body">Half-life, bedtime, sleep threshold, and personalization.</string>
     <string name="settings_body_profile_group_title">Body profile</string>
     <string name="settings_body_profile_group_body">Age, body size, and metabolism</string>
     <string name="settings_vitals_group_title">Vitals</string>
     <string name="settings_vitals_group_body">Blood pressure categories</string>
     <string name="settings_recovery_group_title">Recovery</string>
     <string name="settings_recovery_group_body">Sleep night window and Body energy calibration</string>
-    <string name="settings_sleep_group_title">Sleep</string>
-    <string name="settings_sleep_group_body">Sleep range</string>
-    <string name="settings_cycle_group_title">Menstrual cycle</string>
-    <string name="settings_cycle_group_body">Cycle data and Health Connect permissions</string>
     <string name="settings_data_transfer_group_title">Import &amp; export</string>
     <string name="settings_data_transfer_group_body">Import Apple Health exports, route, FIT, and CSV files, or export a PDF health report</string>
     <string name="settings_report_export_title">Health report</string>
@@ -1680,7 +1621,6 @@
     <string name="report_custom_end_date">End date</string>
     <string name="report_custom_range_invalid">The start date must be on or before the end date</string>
     <string name="report_permission_callout_body">Some selected metrics don\'t have Health Connect read access yet. You can grant access now, or build the report without them.</string>
-    <string name="report_grant_access_action">Grant access</string>
     <string name="report_build_action">Build PDF</string>
     <string name="report_building_title">Building report…</string>
     <string name="report_building_metric">Reading %1$s…</string>
@@ -1766,8 +1706,6 @@
     <string name="report_pdf_sleep_rem">REM</string>
     <string name="report_pdf_sleep_light">Light</string>
     <string name="report_pdf_sleep_awake">Awake</string>
-    <string name="settings_permissions_group_title">Permissions</string>
-    <string name="settings_permissions_group_body">Health data access and manual permission steps</string>
     <string name="settings_health_connect_group_title">Health Connect</string>
     <string name="settings_health_connect_group_body">Sync, permissions, access, and app lock</string>
     <string name="settings_debug_diagnostics_group_title">Debug diagnostics</string>
@@ -1775,7 +1713,6 @@
     <string name="settings_health_connect_sync_title">Sync with Health Connect</string>
     <string name="settings_health_connect_sync_body">When on, OpenVitals reads and writes health data according to your permissions. When off, sync pauses without revoking access.</string>
     <string name="settings_health_connect_manage_access">Manage access</string>
-    <string name="settings_health_connect_manage_access_body">Open Health Connect to review or change which data OpenVitals can use.</string>
     <string name="health_connect_access_insufficient_title">Choose data to share</string>
     <string name="health_connect_access_insufficient_body">OpenVitals needs Health Connect access to show this information. Set up the data you want to share to continue.</string>
     <string name="health_connect_access_double_cancel_title">Permissions need attention</string>
@@ -1783,16 +1720,8 @@
     <string name="health_connect_sync_paused">Health Connect sync is paused</string>
     <string name="health_connect_sync_in_progress">Syncing with Health Connect…</string>
     <string name="health_connect_data_source_manage">Manage data sources</string>
-    <string name="health_connect_data_source_manage_body">See which apps write data to Health Connect and manage their access.</string>
     <string name="data_source_synced_label">%1$s (synced)</string>
-    <string name="dashboard_health_connect_promo_title">Set up your health data</string>
-    <string name="dashboard_health_connect_promo_body">Get a unified view of your activity, sleep, and heart data from the apps and devices you already use.</string>
-    <string name="dashboard_health_connect_promo_action">Get started</string>
     <string name="dashboard_health_connect_sync_paused_body">Turn sync back on in Settings to refresh your dashboard.</string>
-    <string name="dashboard_health_connect_install_action">Install Health Connect</string>
-    <string name="health_connect_matchmaking_title">Connect your apps</string>
-    <string name="health_connect_matchmaking_body">Find apps and devices that can share data OpenVitals is ready to read.</string>
-    <string name="health_connect_matchmaking_action">Find data sources</string>
     <string name="health_connect_promote_activity_title">Unlock activity insights</string>
     <string name="health_connect_promote_activity_body">Allow activity data to see steps, distance, workouts, and trends in OpenVitals.</string>
     <string name="health_connect_promote_activities_title">See your workouts</string>
@@ -1984,13 +1913,10 @@
     <string name="settings_body_profile_weight">Weight</string>
     <string name="settings_body_profile_height">Height</string>
     <string name="settings_body_profile_measured_label">%1$s (measured)</string>
-    <string name="settings_cycle_permissions_title">Cycle permissions</string>
-    <string name="settings_cycle_permissions_granted">%1$d/%2$d cycle permissions granted.</string>
     <string name="settings_apple_health_import_title">Apple Health Importer</string>
     <string name="settings_apple_health_import_body">Import Health Connect-compatible records from Apple Health export.xml or export.zip, with duplicate checks and a shareable diagnostics report.</string>
     <string name="settings_apple_health_import_permissions">%1$d/%2$d import permissions granted.</string>
     <string name="settings_apple_health_import_grant">Grant import permissions</string>
-    <string name="settings_apple_health_import_action">Import Apple Health export</string>
     <string name="settings_apple_health_import_analyze_action">Analyze Apple Health export</string>
     <string name="settings_apple_health_import_choose_another_action">Choose another Apple Health export</string>
     <string name="settings_apple_health_import_selected_action">Import selected categories</string>
@@ -2240,7 +2166,6 @@
     <string name="settings_support_issues_action">Report an issue</string>
     <string name="settings_support_discussion_action">Join Zulip discussions</string>
     <string name="settings_support_action">Open Liberapay</string>
-    <string name="settings_support_issues_url" translatable="false">https://codeberg.org/OpenVitals/mobile-app/issues</string>
     <string name="settings_support_discussion_url" translatable="false">https://openvitals.zulipchat.com/</string>
     <string name="settings_support_url" translatable="false">https://liberapay.com/manuel.mmarca.tech/donate</string>
     <string name="crash_report_email_chooser_title">Email OpenVitals report</string>
@@ -2354,8 +2279,6 @@
     <string name="sleep_stage_unknown">Unknown</string>
     <string name="sleep_stages_share_title">Share of time in bed</string>
 
-    <string name="cycle_permissions_missing_title">Cycle permissions missing</string>
-    <string name="cycle_permissions_missing_body">Grant cycle tracking permissions to show period days, ovulation tests, cervical mucus, and basal temperature.</string>
     <string name="cycle_observation_menstruation_period">Menstruation period</string>
     <string name="cycle_observation_menstruation_flow">Menstruation flow</string>
     <string name="cycle_observation_ovulation_test">Ovulation test</string>
@@ -2425,8 +2348,6 @@
     <string name="weekday_saturday_short">S</string>
     <string name="weekday_sunday_short">S</string>
 
-    <string name="vitals_permissions_needed_title">Vitals permissions needed</string>
-    <string name="vitals_permissions_needed_body">Grant blood pressure, oxygen saturation, respiratory rate, temperature, VO2 max, and glucose permissions to fill this screen.</string>
     <string name="vitals_respiratory_rate_readings">Respiratory rate readings</string>
     <string name="vitals_body_temperature_readings">Body temperature readings</string>
     <string name="heart_rate_health_checks_title">Heart rate checks</string>
@@ -2469,11 +2390,9 @@
     <string name="macro_fiber">fiber %1$sg</string>
     <string name="macro_sugar">sugar %1$sg</string>
 
-    <string name="caffeine_section_overview">Overview</string>
     <string name="caffeine_section_dashboard">Dashboard</string>
     <string name="caffeine_section_analytics">Analytics</string>
     <string name="caffeine_section_sleep">Sleep impact</string>
-    <string name="caffeine_section_sources">Sources</string>
     <string name="caffeine_section_entries">Entries</string>
     <string name="caffeine_section_science">Science</string>
     <string name="caffeine_setup_title">Personalize caffeine insights</string>
@@ -2489,9 +2408,6 @@
     <string name="caffeine_sleep_status_may_affect_body">Bedtime forecast is %1$s at %2$s, above your %3$s threshold.</string>
     <string name="caffeine_period_total">Period total</string>
     <string name="caffeine_daily_average">Daily average</string>
-    <string name="caffeine_logged_days">Logged days</string>
-    <string name="caffeine_peak_day">Peak day</string>
-    <string name="caffeine_peak_day_value">%1$s - %2$s</string>
     <string name="caffeine_curve_title">Caffeine curve</string>
     <string name="caffeine_threshold_line">Sleep threshold %1$s</string>
     <string name="caffeine_bedtime_forecast">Bedtime forecast</string>
@@ -2598,8 +2514,6 @@
     <string name="data_confidence_warning_calculated">This value is derived, not directly measured.</string>
     <string name="data_confidence_warning_no_sources">This aggregate does not expose source-level details.</string>
 
-    <string name="settings_body_energy_group_title">Body energy</string>
-    <string name="settings_body_energy_group_body">Calibration for estimated intraday energy and effort zones.</string>
     <string name="body_energy_calibration_title">Turn on Body energy</string>
     <string name="body_energy_calibration_body">OpenVitals estimates drain from heart-rate intensity over time. Your resting and maximum heart rate are measured from your own data, so there is nothing to enter for them.</string>
     <string name="body_energy_calibration_optional_body">Manual heart-rate zones are optional. Without them, zones are worked out from your birth year and the hardest effort in the last four weeks, which is why the birth year is needed.</string>
@@ -2625,7 +2539,6 @@
     <string name="settings_derived_metrics_reset_failed">Could not reset the metrics</string>
     <string name="body_energy_not_set_up">Not set up</string>
     <string name="body_energy_timeline_estimated">Estimated by OpenVitals</string>
-    <string name="body_energy_timeline_current">Current</string>
     <string name="body_energy_timeline_start">Start</string>
     <string name="body_energy_timeline_charged">Charged</string>
     <string name="body_energy_timeline_drained">Drained</string>
@@ -2757,7 +2670,6 @@
     <string name="stress_reason_activity">activity may influence</string>
     <string name="stress_reason_single">single local signal</string>
     <string name="stress_reason_needs_more">needs more local data</string>
-    <string name="stress_no_estimate_day">No stress estimate for this day.</string>
     <string name="body_energy_confidence_high">High</string>
     <string name="body_energy_confidence_medium">Medium</string>
     <string name="body_energy_confidence_low">Low</string>
@@ -2774,31 +2686,22 @@
     <string name="device_sync_role_heading">Move your data, no cloud</string>
     <string name="device_sync_role_body">Copy Health Connect records straight to another phone over Bluetooth. Nothing leaves your devices.</string>
     <string name="device_sync_host_option">Make this phone discoverable</string>
-    <string name="device_sync_host_option_body">Show a code the other phone types in.</string>
     <string name="device_sync_host_option_body_compare">Let the other phone find this one.</string>
     <string name="device_sync_guest_option">Find a phone to sync with</string>
-    <string name="device_sync_guest_option_body">Scan nearby and enter its code.</string>
     <string name="device_sync_guest_option_body_compare">Scan nearby and pick it.</string>
     <string name="device_sync_privacy_note">Transfer runs on a paired, encrypted Bluetooth link. OpenVitals has no internet permission, so this never touches a network.</string>
     <string name="device_sync_bluetooth_off">Turn on Bluetooth to sync with another phone.</string>
     <string name="device_sync_host_heading">Waiting for the other phone</string>
-    <string name="device_sync_host_body">On the other phone, choose Find a phone, tap this device, and type the code below.</string>
     <string name="device_sync_host_body_compare">On the other phone, choose Find a phone and tap this device.</string>
     <string name="device_sync_code_label">Pairing code</string>
     <string name="device_sync_waiting">Waiting for a connection…</string>
     <string name="device_sync_scan_heading">Scanning nearby</string>
-    <string name="device_sync_scan_body">Pick the phone showing a pairing code. Make sure it is discoverable.</string>
     <string name="device_sync_scan_body_compare">Pick the other phone. Make sure it is discoverable.</string>
     <string name="device_sync_connecting">Connecting to %1$s…</string>
     <string name="device_sync_no_devices">No phones found. Make sure the other phone is on the Make discoverable screen, then scan again.</string>
     <string name="device_sync_rescan">Scan again</string>
     <string name="device_sync_paired">Paired</string>
-    <string name="device_sync_code_heading">Code from %1$s</string>
-    <string name="device_sync_code_body">Type the six digits shown on the other phone to confirm it is really that device.</string>
-    <string name="device_sync_wrong_code">That code did not match. Check the other phone and try again.</string>
-    <string name="device_sync_connect">Connect</string>
     <string name="device_sync_cancel">Cancel</string>
-    <string name="device_sync_keypad_delete">Delete digit</string>
     <string name="device_sync_compare_heading">Compare the codes</string>
     <string name="device_sync_compare_body">Both phones now show a code. Check that they are the same. If they differ, someone else may be on the connection.</string>
     <string name="device_sync_compare_match">They match</string>
@@ -2862,13 +2765,11 @@
     <string name="settings_watch_notifications_body">Phone notifications appear on your wrist. Read on this device and sent only to this watch.</string>
     <string name="settings_watch_notifications_grant">Allow notification access</string>
     <string name="settings_watch_notifications_grant_body">Android asks for this on its own settings screen. OpenVitals cannot request it from here.</string>
-    <string name="settings_watch_notifications_apps">Apps to silence</string>
     <string name="settings_watch_notifications_apps_none">All apps send to the watch</string>
     <plurals name="settings_watch_notifications_apps_blocked">
         <item quantity="one">%1$d app silenced</item>
         <item quantity="other">%1$d apps silenced</item>
     </plurals>
-    <string name="settings_watch_notifications_apps_title">Apps</string>
     <string name="settings_watch_notifications_apps_intro">Turn an app off to stop its notifications reaching the watch. Everything else keeps coming through.</string>
     <string name="settings_watch_notifications_apps_empty">No apps found.</string>
     <string name="settings_watch_notifications_disclosure_title">OpenVitals will read your notifications</string>

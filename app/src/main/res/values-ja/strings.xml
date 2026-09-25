@@ -41,15 +41,11 @@
     <string name="cd_open_calendar">カレンダーを開く</string>
     <string name="action_cancel">キャンセル</string>
     <string name="action_add">追加</string>
-    <string name="action_add_custom">カスタムを追加</string>
     <string name="action_save">保存</string>
     <string name="action_close">閉じる</string>
-    <string name="action_continue">続行</string>
     <string name="action_delete">削除</string>
     <string name="action_details">詳細</string>
     <string name="action_edit">編集</string>
-    <string name="action_enable">有効化</string>
-    <string name="action_get_started">始めましょう</string>
     <string name="action_grant">許可</string>
     <string name="action_grant_permission">権限を許可</string>
     <string name="action_load_more_entries">さらに10個読み込む</string>
@@ -71,8 +67,6 @@
     <string name="screen_error_missing_argument">必須の情報が不足しています。</string>
     <string name="screen_error_permission_denied">このデータを読み込むためには権限が必要です。</string>
     <string name="screen_error_health_connect_unavailable">このデバイスではヘルスコネクトを利用できません。</string>
-    <string name="screen_error_load_sleep_session">睡眠セッションを読み込めません。</string>
-    <string name="screen_error_load_sleep_period">睡眠データを読み込めません。</string>
     <string name="not_available">利用不可</string>
     <string name="not_recorded">記録はありません</string>
     <string name="no_data">データはありません</string>
@@ -98,26 +92,21 @@
     <string name="home_body_energy_widget_description">OpenVitals身体エネルギー</string>
     <string name="home_today_vitals_widget_description">OpenVitals今日のバイタル</string>
     <string name="home_widget_today_title">今日</string>
-    <string name="home_widget_context">コンテクスト</string>
     <string name="home_widget_hrv_short">心拍変動</string>
     <string name="home_widget_body_energy_charged">元気満々</string>
     <string name="home_widget_body_energy_steady">安定</string>
     <string name="home_widget_body_energy_limited">疲れ気味</string>
     <string name="home_widget_body_energy_low">低</string>
-    <string name="screen_steps">歩数</string>
     <string name="screen_activities">アクティビティ</string>
     <string name="screen_calories">カロリー</string>
     <string name="screen_activity_detail">アクティビティの詳細</string>
     <string name="screen_sleep">睡眠</string>
     <string name="screen_sleep_detail">睡眠の詳細</string>
-    <string name="screen_heart_vitals">心臓とバイタル</string>
     <string name="screen_stress_tracking">ストレスの追跡</string>
     <string name="screen_body_energy">身体エネルギー</string>
     <string name="screen_training_readiness">トレーニングの予備能</string>
     <string name="screen_body">身体</string>
     <string name="screen_nutrition">栄養</string>
-    <string name="screen_mindfulness">マインドフルネス</string>
-    <string name="screen_cycle">月経</string>
     <string name="screen_daily_readiness">日々の予備能</string>
     <string name="screen_settings">設定</string>
     <string name="screen_achievements">実績</string>
@@ -169,11 +158,9 @@
     <string name="activity_entry_imported_route">インポートしたルート</string>
     <string name="activity_entry_recording_title">アクティビティを記録中</string>
     <string name="activity_entry_recording_ready_body">アクティビティの種類を選択し、準備ができたら開始してください。終了したら、保存する前に確認して詳細を追加することができます。</string>
-    <string name="activity_entry_recording_go_to_activity_screen">アクティビティの画面に移動する</string>
     <string name="activity_entry_recording_active">記録中</string>
     <string name="activity_entry_recording_paused">一時停止</string>
     <string name="activity_entry_recording_idle">準備中</string>
-    <string name="activity_entry_recording_resting">休憩中</string>
     <string name="activity_entry_recording_gps_fix">GPS準備完了</string>
     <string name="activity_entry_recording_gps_poor">GPS信号が弱いです</string>
     <string name="activity_entry_recording_gps_lost">GPS信号が失われました</string>
@@ -202,9 +189,6 @@
     <string name="activity_entry_recording_marker_note">メモ</string>
     <string name="activity_entry_recording_waiting_for_gps">正確なGPS補正を待機中</string>
     <string name="activity_entry_recording_gps_waiting">開始前に正確なGPS補正を待機しています。</string>
-    <string name="activity_entry_recording_gps_waiting_accuracy">GPS精度の向上を待機しています・%1$s</string>
-    <string name="activity_entry_recording_gps_ready">GPS準備完了・正確性%1$s</string>
-    <string name="activity_entry_recording_gps_disabled">GPSを有効にして記録を開始します。</string>
     <string name="activity_entry_hub_plans_empty">今日のプランはまだありません。「プランを管理」で作成してください。</string>
     <string name="activity_entry_hub_log_from_plan">記録</string>
     <string name="activity_entry_hub_log_manually">手動で記録</string>
@@ -273,17 +257,14 @@
     <string name="activity_entry_recording_average_speed">平均速度</string>
     <string name="activity_entry_recording_average_moving_speed">平均移動速度</string>
     <string name="activity_entry_recording_elevation_gain">上昇</string>
-    <string name="activity_entry_recording_points">ポイント</string>
     <string name="activity_entry_recording_rest_seconds_label">休憩秒数</string>
     <string name="activity_entry_recording_end_set">セット終了</string>
     <string name="activity_entry_recording_start_next_set">次のセットを開始</string>
     <string name="activity_entry_recording_end_session">セッション終了</string>
     <string name="activity_entry_recording_rest_remaining">休憩 %1$s</string>
-    <string name="activity_entry_recording_finish_hint">終了するとアクティビティ詳細フォームが開き、保存前にタイトル、メモ、カロリーの追加や値の調整ができます。</string>
     <string name="activity_entry_recording_repetition_correction_hint">センサーが回数を見逃したり余分に数えたりしたら + や - で修正してください。</string>
     <string name="activity_entry_recording_accuracy">最新の精度 %1$s</string>
     <string name="activity_entry_recording_focus">フォーカス</string>
-    <string name="activity_entry_recording_dashboard_layout">ダッシュボードのレイアウト</string>
     <string name="activity_entry_recording_dashboard_layout_two_by_four">2x4</string>
     <string name="activity_entry_recording_dashboard_layout_three_by_four">3x4</string>
     <string name="activity_entry_recording_dashboard_layout_large_top">上部を大きく</string>
@@ -632,7 +613,6 @@
     <string name="metric_body_water_mass">体水分量</string>
     <string name="metric_latest">最新</string>
     <string name="metric_change">変化</string>
-    <string name="metric_macros">マクロ栄養素</string>
     <string name="metric_protein">タンパク質</string>
     <string name="metric_carbs">炭水化物</string>
     <string name="metric_fat">脂質</string>
@@ -741,7 +721,6 @@
     <string name="workout_plan_move_down">下へ移動</string>
     <string name="workout_plan_remove">削除</string>
     <string name="workout_plan_summary">%1$d ブロック · %2$d ステップ · %3$d 分</string>
-    <string name="workout_plan_rounds_summary">×%1$d</string>
     <string name="workout_plan_preview_seconds">%1$d 秒</string>
     <string name="workout_plan_goal_distance">%1$.2f km</string>
     <string name="workout_plan_goal_steps">%1$d 歩</string>
@@ -758,7 +737,6 @@
     <string name="workout_plans_import">プランをインポート</string>
     <string name="workout_plans_exported">プランをエクスポートしました</string>
     <string name="workout_plans_imported">%1$d 件のプランをインポートしました</string>
-    <string name="workout_plans_nothing_to_export">エクスポートするプランがありません</string>
     <string name="workout_plan_goal_seconds_short">秒</string>
     <string name="workout_plan_goal_minutes_short">分</string>
     <string name="workout_plan_preview_minutes">%1$d 分</string>
@@ -933,7 +911,6 @@
     <string name="dashboard_sleep_score_subtitle">%1$s • %2$s</string>
     <string name="sleep_score_calculation_title">計算方法</string>
     <string name="sleep_score_day_numbers_title">今日の値</string>
-    <string name="sleep_score_references_title">参考リンク</string>
     <string name="sleep_score_calculation_summary">OpenVitals は、時間、質、夜間の回復という 3 本柱から客観的な睡眠の健康度を採点します。Garmin が説明するものと同じ 3 本柱で、NSF と AASM の睡眠科学の参考文献に基づきます。睡眠障害の診断はしません。</string>
     <string name="sleep_score_formula">睡眠スコア = 時間 40 + 質 40 + 夜間の回復 20</string>
     <string name="sleep_score_formula_body">時間は年齢帯別の NSF 推奨値（成人 7〜9 時間、高齢者 7〜8 時間）を使います。質は睡眠効率、入眠後の覚醒 / 連続性、ステージがある場合の深い睡眠 + レム睡眠の回復バランスを組み合わせます。夜間の回復は、夜間の HRV RMSSD を最近の個人ベースラインと比較します。</string>
@@ -945,7 +922,6 @@
     <string name="sleep_score_component_efficiency">効率</string>
     <string name="sleep_score_component_continuity">連続性</string>
     <string name="sleep_score_component_stages">ステージバランス</string>
-    <string name="sleep_score_component_regularity">規則性</string>
     <string name="sleep_score_total_sleep">総睡眠時間</string>
     <string name="sleep_score_time_in_bed">就床時間</string>
     <string name="sleep_score_efficiency">効率</string>
@@ -963,19 +939,11 @@
     <string name="sleep_score_quality_stage_awake">Health Connect の睡眠ステージと覚醒ステージを使用。</string>
     <string name="sleep_score_quality_stage_only">睡眠ステージを使用。覚醒の連続性は推定の場合があります。</string>
     <string name="sleep_score_quality_session_only">睡眠セッションの時刻のみを使用。信頼度は限られます。</string>
-    <string name="sleep_score_reference_aasm">AASM 成人の睡眠時間</string>
-    <string name="sleep_score_reference_nsf_duration">NSF 睡眠時間の推奨</string>
-    <string name="sleep_score_reference_nsf_quality">NSF 睡眠の質の推奨</string>
-    <string name="sleep_score_reference_garmin">Garmin 睡眠スコアの概要</string>
-    <string name="sleep_score_reference_sleep_health">多次元的な睡眠の健康</string>
-    <string name="sleep_score_reference_efficiency">睡眠効率の定義</string>
-    <string name="sleep_score_reference_regularity">睡眠の規則性に関する研究</string>
     <string name="sleep_efficiency_confidence_high">信頼度 高</string>
     <string name="sleep_efficiency_confidence_low">信頼度 低</string>
     <string name="sleep_efficiency_confidence_no_data">データなし</string>
     <string name="sleep_efficiency_calculation_title">計算方法</string>
     <string name="sleep_efficiency_day_numbers_title">今日の値</string>
-    <string name="sleep_efficiency_references_title">参考リンク</string>
     <string name="sleep_efficiency_calculation_summary">睡眠効率は、睡眠時間帯のうち眠っていた割合です。値が高いほど、ベッドで目覚めていた時間が短いことを意味します。</string>
     <string name="sleep_efficiency_formula">睡眠効率 = 総睡眠時間 / 就床時間 x 100</string>
     <string name="sleep_efficiency_formula_body">総睡眠時間は、ステージがある場合は Health Connect の睡眠ステージの合計です。就床時間はメインの睡眠セッションの開始から終了までです。</string>
@@ -984,9 +952,6 @@
     <string name="sleep_efficiency_quality_no_data">効率を出すには睡眠データが不十分です。</string>
     <string name="sleep_efficiency_quality_stage_based">総睡眠時間に Health Connect の睡眠ステージを使用。</string>
     <string name="sleep_efficiency_quality_session_only">セッションの時刻のみを使用。覚醒時間が欠けている可能性があります。</string>
-    <string name="sleep_efficiency_reference_definition">睡眠効率の定義</string>
-    <string name="sleep_efficiency_reference_denominator">睡眠効率の分母に関する研究</string>
-    <string name="sleep_efficiency_reference_methods">睡眠評価法のレビュー</string>
     <string name="references_backed_links">参考リンク</string>
     <string name="reference_aasm_sleep_duration">AASM 成人の睡眠時間 (Watson 2015)</string>
     <string name="reference_nsf_sleep_duration">NSF 睡眠時間の推奨 (Hirshkowitz 2015)</string>
@@ -994,7 +959,6 @@
     <string name="reference_garmin_sleep_score">Garmin 睡眠スコアと睡眠インサイト</string>
     <string name="reference_multidimensional_sleep_health">多次元的な睡眠の健康</string>
     <string name="reference_sleep_efficiency_definition">睡眠効率の定義</string>
-    <string name="reference_sleep_regularity">睡眠の規則性に関する研究</string>
     <string name="reference_sleep_efficiency_denominator">睡眠効率の分母に関する研究</string>
     <string name="reference_sleep_assessment_methods">睡眠評価法のレビュー</string>
     <string name="cardio_load_confidence_high">信頼度 高</string>
@@ -1043,7 +1007,6 @@
     <string name="section_respiratory">呼吸</string>
     <string name="section_respiratory_rate_daily_breakdown">呼吸数の日別内訳</string>
     <string name="section_vo2_max_history">最大酸素摂取量の履歴</string>
-    <string name="section_display">表示</string>
     <string name="section_privacy">プライバシー</string>
     <string name="section_cycle_calendar">周期カレンダー</string>
     <string name="section_basal_body_temperature">基礎体温</string>
@@ -1072,7 +1035,6 @@
     <string name="summary_resting_value">安静時 %1$s</string>
     <string name="summary_hrv_value">HRV %1$s</string>
     <string name="summary_last_update">最終更新 %1$s</string>
-    <string name="summary_now">現在</string>
     <string name="summary_today">今日 %1$s</string>
     <string name="summary_on_date">%2$s に %1$s</string>
     <string name="summary_empty_today">今日はまだ %1$s。</string>
@@ -1341,11 +1303,6 @@
     <string name="dashboard_action_log">記録</string>
     <string name="dashboard_action_start_workout">ワークアウトを開始</string>
     <string name="dashboard_activities_today">アクティビティ</string>
-    <string name="dashboard_sensor_status_title">センサーのバッテリー</string>
-    <string name="dashboard_sensor_battery_lowest">最低 %1$d%%</string>
-    <string name="dashboard_sensor_battery_unknown">バッテリー未取得</string>
-    <string name="dashboard_sensor_status_active_connected">%1$d 有効 • %2$d 接続中</string>
-    <string name="dashboard_sensor_status_all_disabled">すべてのセンサーが無効</string>
     <string name="dashboard_delete_activity_title">アクティビティを削除しますか？</string>
     <string name="dashboard_delete_activity_message">この %1$s のアクティビティを OpenVitals から削除しますか？</string>
     <string name="dashboard_readiness_title">今日のコンディション</string>
@@ -1440,11 +1397,6 @@
     <string name="health_disclaimer_body">OpenVitals は一般的なウェルネスと情報提供のみを目的としています。医療機器ではなく、医学的助言を提供しません。いかなる疾患や病状の診断、治療、治癒、予防も行いません。医学的助言、診断、治療については必ず資格のある医療専門家に相談してください。</string>
     <string name="onboarding_health_connect_title">Health Connect を活用</string>
     <string name="onboarding_health_connect_body">Android の安全なデバイス内ヘルスストアから読み取り、作成した記録を Health Connect に保存します。Health Connect にインポートされたすべてのデータで動作します。</string>
-    <string name="onboarding_permissions_header">HEALTH CONNECT の権限</string>
-    <string name="onboarding_grant_core">必要な Health Connect の権限を許可</string>
-    <string name="onboarding_grant_all">必要な Health Connect の権限を許可</string>
-    <string name="onboarding_grant_remaining">残りの利用可能な権限を許可</string>
-    <string name="onboarding_open_required_permissions">必要な Health Connect の権限を開く</string>
     <string name="onboarding_unable_open_permissions">Health Connect の権限を開けませんでした。</string>
     <string name="onboarding_health_connect_not_supported">このデバイスは Health Connect に対応していません。</string>
     <string name="onboarding_health_connect_needs_play_store">このデバイスは Android 13 でスタンドアロンの Health Connect アプリがインストールされています。残念ながらこのバージョンは Google Play ストアのサービスに依存しており、このデバイスにはそれがないため、OpenVitals がデータを読み取る前に Health Connect が要求を拒否します。OpenVitals はこのデバイス側の Health Connect の問題を修正も回避もできません。解決するには Google Play サービスをインストールするか、Health Connect が OS の一部となり Google サービスを必要としない Android 14 以降にアップグレードするしかありません。</string>
@@ -1494,16 +1446,6 @@
 * 栄養</string>
     <string name="onboarding_category_manual_entry_write">手動記録の書き込みアクセス</string>
     <string name="onboarding_category_manual_entry_write_desc">Health Connect が求める書き込みアクセス: * 運動 * 距離 * 累積上昇 * 活動消費カロリー * 総消費カロリー * 運動ルート * 水分補給 * 体重 * 身長 * 体脂肪 * 血圧 * 血中酸素飽和度 * 呼吸数 * 体温 * マインドフルネス（対応時）</string>
-    <string name="onboarding_category_data_import_write">データインポートの書き込みアクセス</string>
-    <string name="onboarding_category_data_import_write_desc">Health Connect がインポート記録に求める書き込みアクセス:
-* アクティビティ、運動、カロリー、距離
-* 心拍数、安静時心拍数、心拍変動
-* 身体測定
-* 水分補給と栄養
-* 睡眠
-* バイタル
-* マインドフルネス（対応時）
-* 周期の記録</string>
     <string name="onboarding_category_mindfulness">マインドフルネス</string>
     <string name="onboarding_category_mindfulness_desc">Health Connect が求めるもの:
 * マインドフルネスセッション</string>
@@ -1646,7 +1588,6 @@
     <string name="settings_sensors_wheel_circumference">ホイール周長 (mm)</string>
     <string name="activity_recording_sensors_title">センサー</string>
     <string name="activity_recording_sensors_add_in_settings">設定でセンサーを追加</string>
-    <string name="activity_recording_sensors_not_configured">未設定</string>
     <string name="activity_recording_sensors_connected">接続済み</string>
     <string name="activity_recording_sensors_connecting">接続中</string>
     <string name="activity_recording_sensors_reconnecting">再接続中</string>
@@ -1663,20 +1604,12 @@
     <string name="activity_recording_notification_heart_rate">心拍 %1$s</string>
     <string name="settings_nutrition_group_title">栄養</string>
     <string name="settings_nutrition_group_body">カロリーデータとカフェインのパーソナライズ</string>
-    <string name="settings_calories_group_title">カロリー</string>
-    <string name="settings_calories_group_body">総カロリーデータ</string>
-    <string name="settings_caffeine_group_title">カフェイン</string>
-    <string name="settings_caffeine_group_body">半減期、就寝時刻、睡眠しきい値、パーソナライズ。</string>
     <string name="settings_body_profile_group_title">体のプロフィール</string>
     <string name="settings_body_profile_group_body">年齢、体格、代謝</string>
     <string name="settings_vitals_group_title">バイタル</string>
     <string name="settings_vitals_group_body">血圧の分類</string>
     <string name="settings_recovery_group_title">回復</string>
     <string name="settings_recovery_group_body">睡眠の夜間ウィンドウとボディエネルギーの調整</string>
-    <string name="settings_sleep_group_title">睡眠</string>
-    <string name="settings_sleep_group_body">睡眠の範囲</string>
-    <string name="settings_cycle_group_title">月経周期</string>
-    <string name="settings_cycle_group_body">周期データと Health Connect の権限</string>
     <string name="settings_data_transfer_group_title">インポートとエクスポート</string>
     <string name="settings_data_transfer_group_body">Apple ヘルスケアのエクスポート、ルート、FIT、CSV ファイルをインポート、または PDF の健康レポートをエクスポート</string>
     <string name="settings_report_export_title">健康レポート</string>
@@ -1697,7 +1630,6 @@
     <string name="report_custom_end_date">終了日</string>
     <string name="report_custom_range_invalid">開始日は終了日以前にしてください</string>
     <string name="report_permission_callout_body">選択した指標の一部はまだ Health Connect の読み取りアクセスがありません。今すぐ許可するか、それらを除いてレポートを作成できます。</string>
-    <string name="report_grant_access_action">アクセスを許可</string>
     <string name="report_build_action">PDF を作成</string>
     <string name="report_building_title">レポートを作成中…</string>
     <string name="report_building_metric">%1$s を読み取り中…</string>
@@ -1783,8 +1715,6 @@
     <string name="report_pdf_sleep_rem">レム</string>
     <string name="report_pdf_sleep_light">浅い</string>
     <string name="report_pdf_sleep_awake">覚醒</string>
-    <string name="settings_permissions_group_title">権限</string>
-    <string name="settings_permissions_group_body">健康データへのアクセスと手動の権限手順</string>
     <string name="settings_health_connect_group_title">Health Connect</string>
     <string name="settings_health_connect_group_body">同期、権限、アクセス、アプリロック</string>
     <string name="settings_debug_diagnostics_group_title">デバッグ診断</string>
@@ -1792,7 +1722,6 @@
     <string name="settings_health_connect_sync_title">Health Connect と同期</string>
     <string name="settings_health_connect_sync_body">オンにすると、OpenVitals は権限に従って健康データを読み書きします。オフにすると、アクセスを取り消さずに同期を一時停止します。</string>
     <string name="settings_health_connect_manage_access">アクセスを管理</string>
-    <string name="settings_health_connect_manage_access_body">Health Connect を開いて、OpenVitals が使えるデータを確認または変更します。</string>
     <string name="health_connect_access_insufficient_title">共有するデータを選択</string>
     <string name="health_connect_access_insufficient_body">この情報を表示するには Health Connect へのアクセスが必要です。続けるには共有するデータを設定してください。</string>
     <string name="health_connect_access_double_cancel_title">権限の確認が必要</string>
@@ -1800,16 +1729,8 @@
     <string name="health_connect_sync_paused">Health Connect の同期は一時停止中</string>
     <string name="health_connect_sync_in_progress">Health Connect と同期中…</string>
     <string name="health_connect_data_source_manage">データソースを管理</string>
-    <string name="health_connect_data_source_manage_body">どのアプリが Health Connect にデータを書き込んでいるかを確認し、アクセスを管理します。</string>
     <string name="data_source_synced_label">%1$s（同期済み）</string>
-    <string name="dashboard_health_connect_promo_title">健康データを設定</string>
-    <string name="dashboard_health_connect_promo_body">すでに使っているアプリやデバイスのアクティビティ、睡眠、心拍データをまとめて表示します。</string>
-    <string name="dashboard_health_connect_promo_action">始める</string>
     <string name="dashboard_health_connect_sync_paused_body">ダッシュボードを更新するには、設定で同期をオンに戻してください。</string>
-    <string name="dashboard_health_connect_install_action">Health Connect をインストール</string>
-    <string name="health_connect_matchmaking_title">アプリを連携</string>
-    <string name="health_connect_matchmaking_body">OpenVitals が読み取れるデータを共有できるアプリやデバイスを探します。</string>
-    <string name="health_connect_matchmaking_action">データソースを探す</string>
     <string name="health_connect_promote_activity_title">アクティビティのインサイトを解放</string>
     <string name="health_connect_promote_activity_body">アクティビティデータを許可して、OpenVitals で歩数、距離、ワークアウト、推移を確認しましょう。</string>
     <string name="health_connect_promote_activities_title">ワークアウトを見る</string>
@@ -1997,13 +1918,10 @@
     <string name="settings_body_profile_weight">体重</string>
     <string name="settings_body_profile_height">身長</string>
     <string name="settings_body_profile_measured_label">%1$s（測定値）</string>
-    <string name="settings_cycle_permissions_title">周期の権限</string>
-    <string name="settings_cycle_permissions_granted">周期の権限 %1$d/%2$d 許可済み。</string>
     <string name="settings_apple_health_import_title">Apple ヘルスケアインポーター</string>
     <string name="settings_apple_health_import_body">Apple ヘルスケアの export.xml または export.zip から Health Connect 互換の記録をインポートします。重複チェックと共有可能な診断レポート付き。</string>
     <string name="settings_apple_health_import_permissions">インポート権限 %1$d/%2$d 許可済み。</string>
     <string name="settings_apple_health_import_grant">インポート権限を許可</string>
-    <string name="settings_apple_health_import_action">Apple ヘルスケアのエクスポートをインポート</string>
     <string name="settings_apple_health_import_analyze_action">Apple ヘルスケアのエクスポートを分析</string>
     <string name="settings_apple_health_import_choose_another_action">別の Apple ヘルスケアのエクスポートを選択</string>
     <string name="settings_apple_health_import_selected_action">選択したカテゴリをインポート</string>
@@ -2357,8 +2275,6 @@
     <string name="sleep_stage_awake_in_bed">ベッドで覚醒</string>
     <string name="sleep_stage_unknown">不明</string>
     <string name="sleep_stages_share_title">就床時間の内訳</string>
-    <string name="cycle_permissions_missing_title">周期の権限がありません</string>
-    <string name="cycle_permissions_missing_body">月経日、排卵検査、頸管粘液、基礎体温を表示するには周期の記録権限を許可してください。</string>
     <string name="cycle_observation_menstruation_period">月経期間</string>
     <string name="cycle_observation_menstruation_flow">月経の量</string>
     <string name="cycle_observation_ovulation_test">排卵検査</string>
@@ -2427,8 +2343,6 @@
     <string name="weekday_friday_short">金</string>
     <string name="weekday_saturday_short">土</string>
     <string name="weekday_sunday_short">日</string>
-    <string name="vitals_permissions_needed_title">バイタルの権限が必要</string>
-    <string name="vitals_permissions_needed_body">この画面を埋めるには、血圧、血中酸素飽和度、呼吸数、体温、最大酸素摂取量、血糖値の権限を許可してください。</string>
     <string name="vitals_respiratory_rate_readings">呼吸数の測定値</string>
     <string name="vitals_body_temperature_readings">体温の測定値</string>
     <string name="heart_rate_health_checks_title">心拍数チェック</string>
@@ -2469,11 +2383,9 @@
     <string name="macro_fat_short">F %1$sg</string>
     <string name="macro_fiber">食物繊維 %1$sg</string>
     <string name="macro_sugar">糖類 %1$sg</string>
-    <string name="caffeine_section_overview">概要</string>
     <string name="caffeine_section_dashboard">ダッシュボード</string>
     <string name="caffeine_section_analytics">分析</string>
     <string name="caffeine_section_sleep">睡眠への影響</string>
-    <string name="caffeine_section_sources">ソース</string>
     <string name="caffeine_section_entries">記録</string>
     <string name="caffeine_section_science">科学的根拠</string>
     <string name="caffeine_setup_title">カフェインのインサイトをパーソナライズ</string>
@@ -2489,9 +2401,6 @@
     <string name="caffeine_sleep_status_may_affect_body">就寝時刻 %2$s の予測は %1$s で、しきい値 %3$s を上回っています。</string>
     <string name="caffeine_period_total">期間の合計</string>
     <string name="caffeine_daily_average">1 日平均</string>
-    <string name="caffeine_logged_days">記録した日数</string>
-    <string name="caffeine_peak_day">ピークの日</string>
-    <string name="caffeine_peak_day_value">%1$s - %2$s</string>
     <string name="caffeine_curve_title">カフェイン曲線</string>
     <string name="caffeine_threshold_line">睡眠しきい値 %1$s</string>
     <string name="caffeine_bedtime_forecast">就寝時の予測</string>
@@ -2594,8 +2503,6 @@
     <string name="data_confidence_warning_manual">この期間には手動入力が含まれます。</string>
     <string name="data_confidence_warning_calculated">この値は導出されたもので、直接測定されていません。</string>
     <string name="data_confidence_warning_no_sources">この集計はソースレベルの詳細を公開していません。</string>
-    <string name="settings_body_energy_group_title">ボディエネルギー</string>
-    <string name="settings_body_energy_group_body">日中のエネルギー推定と運動強度ゾーンの調整。</string>
     <string name="body_energy_calibration_title">ボディエネルギーをオンにする</string>
     <string name="body_energy_calibration_body">OpenVitals は時間経過に伴う心拍強度から消耗を推定します。安静時と最大の心拍数はあなた自身のデータから測定されるため、入力は不要です。</string>
     <string name="body_energy_calibration_optional_body">手動の心拍ゾーンは任意です。設定しない場合、ゾーンは生年と過去 4 週間で最もきつい運動から算出されるため、生年が必要です。</string>
@@ -2621,7 +2528,6 @@
     <string name="settings_derived_metrics_reset_failed">指標をリセットできませんでした</string>
     <string name="body_energy_not_set_up">未設定</string>
     <string name="body_energy_timeline_estimated">OpenVitals による推定</string>
-    <string name="body_energy_timeline_current">現在</string>
     <string name="body_energy_timeline_start">開始</string>
     <string name="body_energy_timeline_charged">充電</string>
     <string name="body_energy_timeline_drained">消耗</string>
@@ -2752,7 +2658,6 @@
     <string name="stress_reason_activity">活動が影響している可能性</string>
     <string name="stress_reason_single">ローカル信号 1 つのみ</string>
     <string name="stress_reason_needs_more">ローカルデータが不足</string>
-    <string name="stress_no_estimate_day">この日のストレス推定はありません。</string>
     <string name="body_energy_confidence_high">高</string>
     <string name="body_energy_confidence_medium">中</string>
     <string name="body_energy_confidence_low">低</string>
@@ -2763,26 +2668,17 @@
     <string name="device_sync_role_heading">クラウドなしでデータを移動</string>
     <string name="device_sync_role_body">Health Connect の記録を Bluetooth で別のスマートフォンに直接コピーします。デバイスの外には何も出ません。</string>
     <string name="device_sync_host_option">このスマートフォンを検出可能にする</string>
-    <string name="device_sync_host_option_body">相手のスマートフォンが入力するコードを表示します。</string>
     <string name="device_sync_guest_option">同期するスマートフォンを探す</string>
-    <string name="device_sync_guest_option_body">近くをスキャンしてそのコードを入力します。</string>
     <string name="device_sync_privacy_note">転送はペアリング済みの暗号化された Bluetooth 接続で行われます。OpenVitals にはインターネット権限がないため、ネットワークには一切触れません。</string>
     <string name="device_sync_bluetooth_off">別のスマートフォンと同期するには Bluetooth をオンにしてください。</string>
     <string name="device_sync_host_heading">相手のスマートフォンを待っています</string>
-    <string name="device_sync_host_body">相手のスマートフォンで「スマートフォンを探す」を選び、このデバイスをタップして下のコードを入力してください。</string>
     <string name="device_sync_code_label">ペアリングコード</string>
     <string name="device_sync_waiting">接続を待っています…</string>
     <string name="device_sync_scan_heading">近くをスキャン中</string>
-    <string name="device_sync_scan_body">ペアリングコードを表示しているスマートフォンを選んでください。検出可能になっていることを確認してください。</string>
     <string name="device_sync_no_devices">スマートフォンが見つかりません。相手のスマートフォンが「検出可能にする」画面にあることを確認して、もう一度スキャンしてください。</string>
     <string name="device_sync_rescan">再スキャン</string>
     <string name="device_sync_paired">ペアリング済み</string>
-    <string name="device_sync_code_heading">%1$s のコード</string>
-    <string name="device_sync_code_body">本当にそのデバイスであることを確認するため、相手のスマートフォンに表示された 6 桁を入力してください。</string>
-    <string name="device_sync_wrong_code">コードが一致しません。相手のスマートフォンを確認してもう一度お試しください。</string>
-    <string name="device_sync_connect">接続</string>
     <string name="device_sync_cancel">キャンセル</string>
-    <string name="device_sync_keypad_delete">1 桁削除</string>
     <string name="device_sync_error_heading">同期が完了しませんでした</string>
     <string name="device_sync_error_generic">同期を完了できませんでした。もう一度お試しください。</string>
     <string name="device_sync_error_connect">相手のスマートフォンに接続できませんでした。近くにあることを確認してもう一度お試しください。</string>
@@ -2836,9 +2732,7 @@
     <string name="settings_watch_notifications_body">スマートフォンの通知が手首に表示されます。このデバイスで読み取り、このウォッチにのみ送ります。</string>
     <string name="settings_watch_notifications_grant">通知へのアクセスを許可</string>
     <string name="settings_watch_notifications_grant_body">Android は独自の設定画面でこれを求めます。OpenVitals からは要求できません。</string>
-    <string name="settings_watch_notifications_apps">ミュートするアプリ</string>
     <string name="settings_watch_notifications_apps_none">すべてのアプリがウォッチに送信</string>
-    <string name="settings_watch_notifications_apps_title">アプリ</string>
     <string name="settings_watch_notifications_apps_intro">アプリをオフにすると、その通知はウォッチに届かなくなります。それ以外は引き続き届きます。</string>
     <string name="settings_watch_notifications_apps_empty">アプリが見つかりません。</string>
     <string name="settings_watch_notifications_disclosure_title">OpenVitals が通知を読み取ります</string>
@@ -2984,4 +2878,86 @@
     <string name="settings_watch_metric_training_readiness">トレーニング準備度</string>
     <string name="settings_watch_metric_training_load">トレーニング負荷</string>
     <string name="settings_watch_average_prefix">平均 %1$s</string>
+    <string name="import_leave_title">インポートを中止しますか？</string>
+    <string name="import_leave_body">この画面を離れるとインポートが中止されます。すでにインポートされたデータは残り、後でもう一度実行できます。</string>
+    <string name="import_leave_confirm">中止して戻る</string>
+    <string name="import_leave_stay">インポートを続ける</string>
+    <string name="screen_error_generic">リクエストを完了できません。</string>
+    <string name="screen_error_load_activity">アクティビティを読み込めません。</string>
+    <string name="screen_error_delete_activity">アクティビティを削除できません。</string>
+    <string name="screen_error_load_body_energy">身体エネルギーを読み込めません。</string>
+    <string name="screen_error_load_heart_rate_recovery">心拍数の回復を読み込めません。</string>
+    <string name="screen_error_recording_unavailable">記録は利用できません。</string>
+    <string name="screen_error_gps_recording_unavailable">GPS 記録は利用できません。</string>
+    <string name="screen_error_activity_import_unavailable">アクティビティファイルのインポートは利用できません。</string>
+    <string name="screen_error_no_active_recording">実行中のアクティビティ記録が見つかりません。</string>
+    <string name="screen_error_entry_not_editable">編集できるのは OpenVitals の記録のみです。</string>
+    <plurals name="chart_plot_summary">
+        <item quantity="one">%1$d 点、最低 %2$s、最高 %3$s、最新 %4$s</item>
+        <item quantity="other">%1$d 点、最低 %2$s、最高 %3$s、最新 %4$s</item>
+    </plurals>
+    <string name="chart_zoom_in">拡大</string>
+    <string name="chart_zoom_out">縮小</string>
+    <string name="chart_zoom_reset">全範囲を表示</string>
+    <string name="chart_next_point">次の点</string>
+    <string name="chart_previous_point">前の点</string>
+    <string name="chart_body_energy_influences">充電 %1$d、消費 %2$d</string>
+    <string name="screen_food_entry">食事の記録</string>
+    <string name="activity_entry_route_import_while_recording">記録が実行中です。ファイルをインポートする前に終了するか破棄してください。</string>
+    <string name="activity_entry_route_import_replace_title">未保存の記録を置き換えますか？</string>
+    <string name="activity_entry_route_import_replace_body">まだ保存されていない記録があります。このファイルをインポートすると破棄されます。</string>
+    <string name="activity_entry_route_import_replace_confirm">インポートして破棄</string>
+    <string name="activity_entry_route_import_replace_keep">記録を残す</string>
+    <string name="settings_watch_auto_sync_background_access">Health Connect のバックグラウンドアクセスがオフです。OpenVitals を閉じている間の同期でもウォッチのデータは保存されます。身体エネルギーと履歴グラフはアプリを開いたときにのみ更新されます。</string>
+    <string name="settings_watch_auto_sync_background_access_action">バックグラウンドアクセスを許可</string>
+    <string name="cd_food_actions">食品の操作</string>
+    <string name="manual_entry_food_label">食事</string>
+    <string name="hydration_reminder_notification_body_unknown">飲み物の時間です。今日の合計は現在読み取れませんでした。</string>
+    <string name="food_tracker_title">食事を記録</string>
+    <string name="food_tracker_subtitle">Health Connect に直接保存</string>
+    <string name="food_tracker_permission_needed">食事の記録を追加するには、OpenVitals に Health Connect の栄養の書き込み権限が必要です。アプリはこのデータを保持せず、記録は Health Connect に保存されます。</string>
+    <string name="food_today_energy">今日: %1$s</string>
+    <string name="food_catalog_search">食品を検索</string>
+    <string name="food_catalog_empty">保存した食品はまだありません。「新しい食品」で作成してください。</string>
+    <string name="food_catalog_saved_outside">保存した食品</string>
+    <string name="food_catalog_section_fruit">果物</string>
+    <string name="food_catalog_section_vegetables">野菜</string>
+    <string name="food_catalog_section_grains">穀物とパン</string>
+    <string name="food_catalog_section_protein">肉・魚・卵</string>
+    <string name="food_catalog_section_dairy">乳製品</string>
+    <string name="food_catalog_section_snacks">スナック</string>
+    <string name="food_catalog_section_meals">食事</string>
+    <string name="food_catalog_section_desserts">菓子とデザート</string>
+    <string name="food_catalog_section_other">その他の食品</string>
+    <string name="food_new_food_action">新しい食品</string>
+    <string name="food_new_food_title">新しい食品</string>
+    <string name="food_edit_food_title">食品を編集</string>
+    <string name="food_log_food_title">%1$s を記録</string>
+    <string name="food_name">名前</string>
+    <string name="food_amount_label">量 (%1$s)</string>
+    <string name="food_invalid_amount_range">%1$s から %2$s の量を入力してください。</string>
+    <string name="food_category">カテゴリ</string>
+    <string name="food_no_category">カテゴリなし</string>
+    <string name="food_nutrients">栄養素</string>
+    <string name="food_nutrients_hint">上の量に対する値です。少なくとも 1 つ追加してください。</string>
+    <string name="food_invalid">食品の名前、量、正の栄養素量を少なくとも 1 つ入力してください。</string>
+    <string name="food_invalid_amount">この分量は大きすぎて保存できません。少ない量を入力してください。</string>
+    <string name="food_write_failed">食事の記録を保存できませんでした: %1$s</string>
+    <string name="privacy_reconsent_no_browser">このスマートフォンにはリンクを開けるアプリがありません。ポリシーは %1$s にあります</string>
+    <string name="app_lock_locked_title">OpenVitals はロックされています</string>
+    <string name="app_lock_unlock_action">ロック解除</string>
+    <string name="device_sync_host_option_body_compare">相手のスマートフォンにこの端末を見つけてもらいます。</string>
+    <string name="device_sync_guest_option_body_compare">近くをスキャンして選びます。</string>
+    <string name="device_sync_host_body_compare">相手のスマートフォンで「スマートフォンを探す」を選び、このデバイスをタップしてください。</string>
+    <string name="device_sync_scan_body_compare">相手のスマートフォンを選んでください。検出可能になっていることを確認してください。</string>
+    <string name="device_sync_connecting">%1$s に接続中…</string>
+    <string name="device_sync_compare_heading">コードを比べる</string>
+    <string name="device_sync_compare_body">両方のスマートフォンにコードが表示されています。同じかどうか確認してください。異なる場合、別の誰かが接続している可能性があります。</string>
+    <string name="device_sync_compare_match">一致する</string>
+    <string name="device_sync_compare_mismatch">一致しない</string>
+    <string name="device_sync_error_codes_differ">コードが一致しないと回答したため、何も同期されませんでした。両方のスマートフォンを近づけてもう一度お試しください。</string>
+    <string name="device_sync_phase_confirming">相手のスマートフォンがコードを確認するのを待っています</string>
+    <string name="device_sync_phase_waiting_for_peer">相手のスマートフォンが同期を開始するのを待っています</string>
+    <string name="device_sync_refused">受け入れられませんでした（このスマートフォンで選択されていません）</string>
+    <string name="settings_watch_remove_delete_history">このスマートフォンだけが保持しているストレス、Body Battery、スコアの履歴も削除する</string>
 </resources>

@@ -105,9 +105,9 @@ either way: Zulip readers see it first too.
 ## 5. Gotchas that have actually happened
 
 - Unescaped `&` in a translated string breaks `verifyTranslations` (XML parse).
-- `values-fi` and `values-pl` are below the 70% picker threshold - do not add
-  keys there or count them against coverage. Galician cleared it in 2.9.0 and
-  gets new keys like any other offered locale.
+- Every locale, Finnish and Polish included, is at 100% since 2026-09-25. New
+  keys go to all 13 locale files; a locale that slips under 70% drops out of
+  the picker silently.
 - The fastlane changelog is per-versionCode, not per-versionName: a release
   whose code raced a nightly ships the wrong changelog silently if step 3's
   verification is skipped.

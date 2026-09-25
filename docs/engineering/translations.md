@@ -35,10 +35,9 @@ community translation.
 ## Shipping Policy
 
 Shipping app languages are English, Czech, Spanish, French, Galician, German,
-Italian, Japanese, Estonian, Portuguese, Russian, and Simplified Chinese.
-Finnish (`values-fi`) and Polish (`values-pl`) have been merged from Codeberg
-Translate but are still below the shipping threshold, so they do not appear in
-the in-app language picker yet.
+Italian, Japanese, Estonian, Finnish, Polish, Portuguese, Russian, and
+Simplified Chinese. Every locale file is fully translated, so new keys go to
+all of them.
 
 New languages can be collected in Codeberg Translate before they are ready to
 ship. A new `values-<lang>/strings.xml` file can be merged once it is more than

@@ -75,10 +75,11 @@ greater-than-70% coverage per locale, placeholder safety, plural shape, and
 `translatable="false"` handling. `verifyCi` includes it, so Weblate pull requests
 must keep locale files more than 70% translated and placeholders intact.
 
-Current state: `verifyTranslations` passes. `values-gl` is still far below the
-gate, but a locale under the threshold only prints a note now — the coverage
-floor decides whether a language is *offered* in the picker, not whether its
-file may exist, so a translator's first commit does not break CI:
+Current state: `verifyTranslations` passes and every locale file is at 100%.
+A locale under the threshold only prints a note — the coverage floor decides
+whether a language is *offered* in the picker, not whether its file may exist,
+so a translator's first commit does not break CI. Galician looked like this
+before it was completed:
 
 ```text
 note: app/src/main/res/values-gl/strings.xml is at 3.4% coverage and is not offered in the language picker until it passes 70%.

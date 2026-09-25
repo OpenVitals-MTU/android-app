@@ -40,15 +40,11 @@
     <string name="cd_open_calendar">Abrir calendario</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_add">Engadir</string>
-    <string name="action_add_custom">Engadir persoal</string>
     <string name="action_save">Gardar</string>
     <string name="action_close">Fechar</string>
-    <string name="action_continue">Continuar</string>
     <string name="action_delete">Eliminar</string>
     <string name="action_details">Detalles</string>
     <string name="action_edit">Editar</string>
-    <string name="action_enable">Activar</string>
-    <string name="action_get_started">Comezar</string>
     <string name="action_grant">Permitir</string>
     <string name="action_grant_permission">Conceder permiso</string>
     <string name="action_load_more_entries">Cargar 10 máis</string>
@@ -70,8 +66,6 @@
     <string name="screen_error_missing_argument">Non se atopa a información solicitada.</string>
     <string name="screen_error_permission_denied">Precísase permiso para cargar estes datos.</string>
     <string name="screen_error_health_connect_unavailable">Saúde Conectada non está dispoñible neste dispositivo.</string>
-    <string name="screen_error_load_sleep_session">Non se puido cargar a sesión de durmir.</string>
-    <string name="screen_error_load_sleep_period">Non se cargaron os datos so sono.</string>
     <string name="not_available">Non dispoñible</string>
     <string name="not_recorded">Non gravado</string>
     <string name="no_data">Sen datos</string>
@@ -98,26 +92,21 @@
     <string name="home_body_energy_widget_description">Enerxía corporal de OpenVitals</string>
     <string name="home_today_vitals_widget_description">Constantes de hoxe de OpenVitals</string>
     <string name="home_widget_today_title">Hoxe</string>
-    <string name="home_widget_context">Contexto</string>
     <string name="home_widget_hrv_short">VFC</string>
     <string name="home_widget_body_energy_charged">Cargado</string>
     <string name="home_widget_body_energy_steady">Estable</string>
     <string name="home_widget_body_energy_limited">Limitado</string>
     <string name="home_widget_body_energy_low">Baixo</string>
-    <string name="screen_steps">Pasos</string>
     <string name="screen_activities">Actividades</string>
     <string name="screen_calories">Calorías</string>
     <string name="screen_activity_detail">Detalle da actividade</string>
     <string name="screen_sleep">Sono</string>
     <string name="screen_sleep_detail">Detalle do sono</string>
-    <string name="screen_heart_vitals">Corazón e constantes</string>
     <string name="screen_stress_tracking">Seguimento do estrés</string>
     <string name="screen_body_energy">Enerxía corporal</string>
     <string name="screen_training_readiness">Preparación para adestrar</string>
     <string name="screen_body">Corpo</string>
     <string name="screen_nutrition">Nutrición</string>
-    <string name="screen_mindfulness">Atención plena</string>
-    <string name="screen_cycle">Ciclo</string>
     <string name="screen_daily_readiness">Preparación diaria</string>
     <string name="screen_settings">Axustes</string>
     <string name="screen_achievements">Logros</string>
@@ -228,11 +217,9 @@
     <string name="activity_entry_imported_route">Ruta importada</string>
     <string name="activity_entry_recording_title">Gravando actividade</string>
     <string name="activity_entry_recording_ready_body">Escolle o tipo de actividade e comeza cando esteas listo. Ao rematar, poderás revisar e engadir detalles antes de gardar.</string>
-    <string name="activity_entry_recording_go_to_activity_screen">Ir á pantalla da actividade</string>
     <string name="activity_entry_recording_active">Gravando</string>
     <string name="activity_entry_recording_paused">En pausa</string>
     <string name="activity_entry_recording_idle">Inactivo</string>
-    <string name="activity_entry_recording_resting">Descansando</string>
     <string name="activity_entry_recording_gps_fix">GPS listo</string>
     <string name="activity_entry_recording_gps_poor">GPS débil</string>
     <string name="activity_entry_recording_gps_lost">GPS perdido</string>
@@ -261,9 +248,6 @@
     <string name="activity_entry_recording_marker_note">Nota</string>
     <string name="activity_entry_recording_waiting_for_gps">Agardando un sinal GPS preciso</string>
     <string name="activity_entry_recording_gps_waiting">Agardando un sinal GPS preciso antes de comezar.</string>
-    <string name="activity_entry_recording_gps_waiting_accuracy">Agardando mellor precisión GPS • %1$s</string>
-    <string name="activity_entry_recording_gps_ready">GPS listo • precisión %1$s</string>
-    <string name="activity_entry_recording_gps_disabled">Activa o GPS para comezar a gravar.</string>
     <string name="activity_entry_recording_distance">Distancia</string>
     <string name="activity_entry_recording_total_time">Tempo total</string>
     <string name="activity_entry_recording_moving_time">Tempo en movemento</string>
@@ -273,17 +257,14 @@
     <string name="activity_entry_recording_average_speed">Velocidade media</string>
     <string name="activity_entry_recording_average_moving_speed">Velocidade media en movemento</string>
     <string name="activity_entry_recording_elevation_gain">Desnivel</string>
-    <string name="activity_entry_recording_points">Puntos</string>
     <string name="activity_entry_recording_rest_seconds_label">Segundos de descanso</string>
     <string name="activity_entry_recording_end_set">Rematar serie</string>
     <string name="activity_entry_recording_start_next_set">Comezar a seguinte serie</string>
     <string name="activity_entry_recording_end_session">Rematar sesión</string>
     <string name="activity_entry_recording_rest_remaining">Descanso %1$s</string>
-    <string name="activity_entry_recording_finish_hint">Rematar abre o formulario de detalles da actividade para engadir título, notas, calorías ou axustar valores antes de gardar.</string>
     <string name="activity_entry_recording_repetition_correction_hint">Usa + ou - se o sensor perde ou engade unha repetición.</string>
     <string name="activity_entry_recording_accuracy">Última precisión %1$s</string>
     <string name="activity_entry_recording_focus">Enfoque</string>
-    <string name="activity_entry_recording_dashboard_layout">Disposición do panel</string>
     <string name="activity_entry_recording_dashboard_layout_two_by_four">2x4</string>
     <string name="activity_entry_recording_dashboard_layout_three_by_four">3x4</string>
     <string name="activity_entry_recording_dashboard_layout_large_top">Grande arriba</string>
@@ -632,7 +613,6 @@
     <string name="metric_body_water_mass">Masa de auga corporal</string>
     <string name="metric_latest">Último</string>
     <string name="metric_change">Cambio</string>
-    <string name="metric_macros">Macros</string>
     <string name="metric_protein">Proteína</string>
     <string name="metric_carbs">Carbohidratos</string>
     <string name="metric_fat">Graxa</string>
@@ -741,7 +721,6 @@
     <string name="workout_plan_move_down">Baixar</string>
     <string name="workout_plan_remove">Eliminar</string>
     <string name="workout_plan_summary">%1$d bloques · %2$d pasos · %3$d min</string>
-    <string name="workout_plan_rounds_summary">×%1$d</string>
     <string name="workout_plan_preview_seconds">%1$d s</string>
     <string name="workout_plan_goal_distance">%1$.2f km</string>
     <string name="workout_plan_goal_steps">%1$d pasos</string>
@@ -758,7 +737,6 @@
     <string name="workout_plans_import">Importar plans</string>
     <string name="workout_plans_exported">Plans exportados</string>
     <string name="workout_plans_imported">%1$d plans importados</string>
-    <string name="workout_plans_nothing_to_export">Non hai plans para exportar</string>
     <string name="workout_plan_goal_seconds_short">s</string>
     <string name="workout_plan_goal_minutes_short">min</string>
     <string name="workout_plan_preview_minutes">%1$d min</string>
@@ -933,7 +911,6 @@
     <string name="dashboard_sleep_score_subtitle">%1$s • %2$s</string>
     <string name="sleep_score_calculation_title">Como se calcula</string>
     <string name="sleep_score_day_numbers_title">Valores de hoxe</string>
-    <string name="sleep_score_references_title">Ligazóns de apoio</string>
     <string name="sleep_score_calculation_summary">OpenVitals puntúa a saúde obxectiva do sono a partir da duración, a calidade e a recuperación nocturna, os mesmos tres piares que describe Garmin, baseados en referencias científicas da NSF e a AASM. Non diagnostica trastornos do sono.</string>
     <string name="sleep_score_formula">Puntuación do sono = duración 40 + calidade 40 + recuperación nocturna 20</string>
     <string name="sleep_score_formula_body">A duración usa as recomendacións da NSF por franxa de idade (adultos 7–9 h; maiores 7–8 h). A calidade combina a eficiencia do sono, os espertares tras durmir / continuidade e o equilibrio reparador de sono profundo + REM cando hai fases. A recuperación nocturna compara o RMSSD da VFC nocturna coa túa liña base persoal recente.</string>
@@ -945,7 +922,6 @@
     <string name="sleep_score_component_efficiency">Eficiencia</string>
     <string name="sleep_score_component_continuity">Continuidade</string>
     <string name="sleep_score_component_stages">Equilibrio de fases</string>
-    <string name="sleep_score_component_regularity">Regularidade</string>
     <string name="sleep_score_total_sleep">Sono total</string>
     <string name="sleep_score_time_in_bed">Tempo na cama</string>
     <string name="sleep_score_efficiency">Eficiencia</string>
@@ -963,19 +939,11 @@
     <string name="sleep_score_quality_stage_awake">Usa fases de sono e de vixilia de Health Connect.</string>
     <string name="sleep_score_quality_stage_only">Usa fases de sono; a continuidade da vixilia pode ser estimada.</string>
     <string name="sleep_score_quality_session_only">Usa só a duración da sesión de sono; a confianza é limitada.</string>
-    <string name="sleep_score_reference_aasm">Duración do sono en adultos (AASM)</string>
-    <string name="sleep_score_reference_nsf_duration">Recomendacións de duración do sono (NSF)</string>
-    <string name="sleep_score_reference_nsf_quality">Recomendacións de calidade do sono (NSF)</string>
-    <string name="sleep_score_reference_garmin">Resumo da puntuación de sono de Garmin</string>
-    <string name="sleep_score_reference_sleep_health">Saúde do sono multidimensional</string>
-    <string name="sleep_score_reference_efficiency">Definición de eficiencia do sono</string>
-    <string name="sleep_score_reference_regularity">Investigación sobre regularidade do sono</string>
     <string name="sleep_efficiency_confidence_high">Confianza alta</string>
     <string name="sleep_efficiency_confidence_low">Confianza baixa</string>
     <string name="sleep_efficiency_confidence_no_data">Sen datos</string>
     <string name="sleep_efficiency_calculation_title">Como se calcula</string>
     <string name="sleep_efficiency_day_numbers_title">Valores de hoxe</string>
-    <string name="sleep_efficiency_references_title">Ligazóns de apoio</string>
     <string name="sleep_efficiency_calculation_summary">A eficiencia do sono é a porcentaxe da ventá de sono que pasas durmindo. Valores máis altos normalmente significan menos tempo esperto na cama.</string>
     <string name="sleep_efficiency_formula">Eficiencia do sono = tempo total de sono / tempo na cama x 100</string>
     <string name="sleep_efficiency_formula_body">O tempo total de sono é a suma das fases de sono de Health Connect cando hai fases. O tempo na cama é a ventá de inicio a fin da sesión principal de sono.</string>
@@ -984,9 +952,6 @@
     <string name="sleep_efficiency_quality_no_data">Datos de sono insuficientes para a eficiencia.</string>
     <string name="sleep_efficiency_quality_stage_based">Usa as fases de sono de Health Connect para o tempo total de sono.</string>
     <string name="sleep_efficiency_quality_session_only">Usa só a duración da sesión; o tempo esperto pode faltar.</string>
-    <string name="sleep_efficiency_reference_definition">Definición de eficiencia do sono</string>
-    <string name="sleep_efficiency_reference_denominator">Investigación sobre o denominador da eficiencia do sono</string>
-    <string name="sleep_efficiency_reference_methods">Revisión de métodos de avaliación do sono</string>
     <string name="references_backed_links">Ligazóns de apoio</string>
     <string name="reference_aasm_sleep_duration">Duración do sono en adultos (AASM, Watson 2015)</string>
     <string name="reference_nsf_sleep_duration">Recomendacións de duración do sono (NSF, Hirshkowitz 2015)</string>
@@ -994,7 +959,6 @@
     <string name="reference_garmin_sleep_score">Puntuación e datos de sono de Garmin</string>
     <string name="reference_multidimensional_sleep_health">Saúde do sono multidimensional</string>
     <string name="reference_sleep_efficiency_definition">Definición de eficiencia do sono</string>
-    <string name="reference_sleep_regularity">Investigación sobre regularidade do sono</string>
     <string name="reference_sleep_efficiency_denominator">Investigación sobre o denominador da eficiencia do sono</string>
     <string name="reference_sleep_assessment_methods">Revisión de métodos de avaliación do sono</string>
     <string name="cardio_load_confidence_high">Confianza alta</string>
@@ -1043,7 +1007,6 @@
     <string name="section_respiratory">Respiratorio</string>
     <string name="section_respiratory_rate_daily_breakdown">Desglose diario da frecuencia respiratoria</string>
     <string name="section_vo2_max_history">Historial de VO2 máx</string>
-    <string name="section_display">Pantalla</string>
     <string name="section_privacy">Privacidade</string>
     <string name="section_cycle_calendar">Calendario do ciclo</string>
     <string name="section_basal_body_temperature">Temperatura basal</string>
@@ -1072,7 +1035,6 @@
     <string name="summary_resting_value">Repouso %1$s</string>
     <string name="summary_hrv_value">VFC %1$s</string>
     <string name="summary_last_update">Última actualización %1$s</string>
-    <string name="summary_now">Agora</string>
     <string name="summary_today">%1$s hoxe</string>
     <string name="summary_on_date">%1$s o %2$s</string>
     <string name="summary_empty_today">%1$s aínda hoxe.</string>
@@ -1341,11 +1303,6 @@
     <string name="dashboard_action_log">Rexistrar</string>
     <string name="dashboard_action_start_workout">Comezar adestramento</string>
     <string name="dashboard_activities_today">Actividades</string>
-    <string name="dashboard_sensor_status_title">Batería dos sensores</string>
-    <string name="dashboard_sensor_battery_lowest">%1$d%% o máis baixo</string>
-    <string name="dashboard_sensor_battery_unknown">Batería pendente</string>
-    <string name="dashboard_sensor_status_active_connected">%1$d activos • %2$d conectados</string>
-    <string name="dashboard_sensor_status_all_disabled">Todos os sensores desactivados</string>
     <string name="dashboard_delete_activity_title">Eliminar a actividade?</string>
     <string name="dashboard_delete_activity_message">Eliminar esta actividade de %1$s de OpenVitals?</string>
     <string name="dashboard_readiness_title">Preparación diaria</string>
@@ -1440,11 +1397,6 @@ Sincroniza unha báscula ou un wearable que envíe o peso a Health Connect.</str
     <string name="health_disclaimer_body">OpenVitals é só para benestar xeral e uso informativo. Non é un dispositivo médico e non ofrece consello médico. Non diagnostica, trata, cura nin prevén ningunha enfermidade ou condición médica. Consulta sempre un profesional sanitario cualificado para consello médico, diagnóstico ou tratamento.</string>
     <string name="onboarding_health_connect_title">Funciona con Health Connect</string>
     <string name="onboarding_health_connect_body">Le do almacén de saúde seguro de Android no dispositivo e garda as entradas que creas de volta en Health Connect. Funciona con todos os datos importados en Health Connect.</string>
-    <string name="onboarding_permissions_header">PERMISOS DE HEALTH CONNECT</string>
-    <string name="onboarding_grant_core">Conceder os permisos necesarios de Health Connect</string>
-    <string name="onboarding_grant_all">Conceder os permisos necesarios de Health Connect</string>
-    <string name="onboarding_grant_remaining">Conceder os permisos dispoñibles restantes</string>
-    <string name="onboarding_open_required_permissions">Abrir os permisos necesarios de Health Connect</string>
     <string name="onboarding_unable_open_permissions">Non se puideron abrir os permisos de Health Connect.</string>
     <string name="onboarding_health_connect_not_supported">Health Connect non é compatible con este dispositivo.</string>
     <string name="onboarding_health_connect_needs_play_store">Este dispositivo usa Android 13 coa app independente de Health Connect instalada. Por desgraza, esta versión depende dos servizos de Google Play Store, que faltan neste dispositivo, así que Health Connect rexeita as peticións antes de que OpenVitals poida ler os teus datos. OpenVitals non pode arranxar nin evitar este problema de Health Connect do dispositivo. A única forma de resolvelo é instalar os servizos de Google Play ou actualizar a Android 14 ou superior, onde Health Connect forma parte do sistema operativo e non necesita os servizos de Google.</string>
@@ -1494,16 +1446,6 @@ Sincroniza unha báscula ou un wearable que envíe o peso a Health Connect.</str
 * Nutrición</string>
     <string name="onboarding_category_manual_entry_write">Acceso de escritura para entradas manuais</string>
     <string name="onboarding_category_manual_entry_write_desc">Health Connect pedirá acceso de escritura a: * Exercicio * Distancia * Desnivel acumulado * Calorías activas queimadas * Calorías totais queimadas * Ruta de exercicio * Hidratación * Peso * Altura * Graxa corporal * Presión arterial * Saturación de osíxeno * Frecuencia respiratoria * Temperatura corporal * Atención plena, cando sexa compatible</string>
-    <string name="onboarding_category_data_import_write">Acceso de escritura para importación de datos</string>
-    <string name="onboarding_category_data_import_write_desc">Health Connect pedirá acceso de escritura para rexistros importados:
-* Actividade, exercicio, calorías e distancia
-* Frecuencia cardíaca, en repouso e variabilidade
-* Medidas corporais
-* Hidratación e nutrición
-* Sono
-* Constantes
-* Atención plena, cando sexa compatible
-* Rexistros de seguimento do ciclo</string>
     <string name="onboarding_category_mindfulness">Atención plena</string>
     <string name="onboarding_category_mindfulness_desc">Health Connect pedirá:
 * Sesións de atención plena</string>
@@ -1646,7 +1588,6 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_sensors_wheel_circumference">Circunferencia da roda (mm)</string>
     <string name="activity_recording_sensors_title">Sensores</string>
     <string name="activity_recording_sensors_add_in_settings">Engade sensores en Axustes</string>
-    <string name="activity_recording_sensors_not_configured">Sen configurar</string>
     <string name="activity_recording_sensors_connected">Conectado</string>
     <string name="activity_recording_sensors_connecting">Conectando</string>
     <string name="activity_recording_sensors_reconnecting">Reconectando</string>
@@ -1663,20 +1604,12 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="activity_recording_notification_heart_rate">FC %1$s</string>
     <string name="settings_nutrition_group_title">Nutrición</string>
     <string name="settings_nutrition_group_body">Datos de calorías e personalización da cafeína</string>
-    <string name="settings_calories_group_title">Calorías</string>
-    <string name="settings_calories_group_body">Datos de calorías totais</string>
-    <string name="settings_caffeine_group_title">Cafeína</string>
-    <string name="settings_caffeine_group_body">Vida media, hora de deitarse, limiar de sono e personalización.</string>
     <string name="settings_body_profile_group_title">Perfil corporal</string>
     <string name="settings_body_profile_group_body">Idade, tamaño corporal e metabolismo</string>
     <string name="settings_vitals_group_title">Constantes</string>
     <string name="settings_vitals_group_body">Categorías de presión arterial</string>
     <string name="settings_recovery_group_title">Recuperación</string>
     <string name="settings_recovery_group_body">Ventá nocturna de sono e calibración da enerxía corporal</string>
-    <string name="settings_sleep_group_title">Sono</string>
-    <string name="settings_sleep_group_body">Intervalo de sono</string>
-    <string name="settings_cycle_group_title">Ciclo menstrual</string>
-    <string name="settings_cycle_group_body">Datos do ciclo e permisos de Health Connect</string>
     <string name="settings_data_transfer_group_title">Importar e exportar</string>
     <string name="settings_data_transfer_group_body">Importa exportacións de Apple Health, ficheiros de rutas, FIT e CSV, ou exporta un informe de saúde en PDF</string>
     <string name="settings_report_export_title">Informe de saúde</string>
@@ -1697,7 +1630,6 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="report_custom_end_date">Data de fin</string>
     <string name="report_custom_range_invalid">A data de inicio debe ser igual ou anterior á data de fin</string>
     <string name="report_permission_callout_body">Algunhas métricas seleccionadas aínda non teñen acceso de lectura en Health Connect. Podes concedelo agora ou crear o informe sen elas.</string>
-    <string name="report_grant_access_action">Conceder acceso</string>
     <string name="report_build_action">Crear PDF</string>
     <string name="report_building_title">Creando o informe…</string>
     <string name="report_building_metric">Lendo %1$s…</string>
@@ -1783,8 +1715,6 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="report_pdf_sleep_rem">REM</string>
     <string name="report_pdf_sleep_light">Lixeiro</string>
     <string name="report_pdf_sleep_awake">Esperto</string>
-    <string name="settings_permissions_group_title">Permisos</string>
-    <string name="settings_permissions_group_body">Acceso aos datos de saúde e pasos de permisos manuais</string>
     <string name="settings_health_connect_group_title">Health Connect</string>
     <string name="settings_health_connect_group_body">Sincronización, permisos, acceso e bloqueo da app</string>
     <string name="settings_debug_diagnostics_group_title">Diagnóstico de depuración</string>
@@ -1792,7 +1722,6 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_health_connect_sync_title">Sincronizar con Health Connect</string>
     <string name="settings_health_connect_sync_body">Cando está activado, OpenVitals le e escribe datos de saúde segundo os teus permisos. Cando está desactivado, a sincronización pausa sen revogar o acceso.</string>
     <string name="settings_health_connect_manage_access">Xestionar acceso</string>
-    <string name="settings_health_connect_manage_access_body">Abre Health Connect para revisar ou cambiar que datos pode usar OpenVitals.</string>
     <string name="health_connect_access_insufficient_title">Escolle os datos que compartir</string>
     <string name="health_connect_access_insufficient_body">OpenVitals necesita acceso a Health Connect para mostrar esta información. Configura os datos que queres compartir para continuar.</string>
     <string name="health_connect_access_double_cancel_title">Os permisos necesitan atención</string>
@@ -1800,16 +1729,8 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="health_connect_sync_paused">A sincronización con Health Connect está en pausa</string>
     <string name="health_connect_sync_in_progress">Sincronizando con Health Connect…</string>
     <string name="health_connect_data_source_manage">Xestionar fontes de datos</string>
-    <string name="health_connect_data_source_manage_body">Mira que apps escriben datos en Health Connect e xestiona o seu acceso.</string>
     <string name="data_source_synced_label">%1$s (sincronizado)</string>
-    <string name="dashboard_health_connect_promo_title">Configura os teus datos de saúde</string>
-    <string name="dashboard_health_connect_promo_body">Obtén unha vista unificada da túa actividade, sono e datos cardíacos das apps e dispositivos que xa usas.</string>
-    <string name="dashboard_health_connect_promo_action">Comezar</string>
     <string name="dashboard_health_connect_sync_paused_body">Volve activar a sincronización en Axustes para actualizar o teu panel.</string>
-    <string name="dashboard_health_connect_install_action">Instalar Health Connect</string>
-    <string name="health_connect_matchmaking_title">Conecta as túas apps</string>
-    <string name="health_connect_matchmaking_body">Atopa apps e dispositivos que poden compartir datos que OpenVitals está listo para ler.</string>
-    <string name="health_connect_matchmaking_action">Atopar fontes de datos</string>
     <string name="health_connect_promote_activity_title">Desbloquea información de actividade</string>
     <string name="health_connect_promote_activity_body">Permite os datos de actividade para ver pasos, distancia, adestramentos e tendencias en OpenVitals.</string>
     <string name="health_connect_promote_activities_title">Mira os teus adestramentos</string>
@@ -1997,13 +1918,10 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_body_profile_weight">Peso</string>
     <string name="settings_body_profile_height">Altura</string>
     <string name="settings_body_profile_measured_label">%1$s (medido)</string>
-    <string name="settings_cycle_permissions_title">Permisos do ciclo</string>
-    <string name="settings_cycle_permissions_granted">%1$d/%2$d permisos do ciclo concedidos.</string>
     <string name="settings_apple_health_import_title">Importador de Apple Health</string>
     <string name="settings_apple_health_import_body">Importa rexistros compatibles con Health Connect desde export.xml ou export.zip de Apple Health, con comprobación de duplicados e un informe de diagnóstico compartible.</string>
     <string name="settings_apple_health_import_permissions">%1$d/%2$d permisos de importación concedidos.</string>
     <string name="settings_apple_health_import_grant">Conceder permisos de importación</string>
-    <string name="settings_apple_health_import_action">Importar exportación de Apple Health</string>
     <string name="settings_apple_health_import_analyze_action">Analizar exportación de Apple Health</string>
     <string name="settings_apple_health_import_choose_another_action">Escoller outra exportación de Apple Health</string>
     <string name="settings_apple_health_import_selected_action">Importar as categorías seleccionadas</string>
@@ -2357,8 +2275,6 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="sleep_stage_awake_in_bed">Esperto na cama</string>
     <string name="sleep_stage_unknown">Descoñecido</string>
     <string name="sleep_stages_share_title">Proporción do tempo na cama</string>
-    <string name="cycle_permissions_missing_title">Faltan permisos do ciclo</string>
-    <string name="cycle_permissions_missing_body">Concede os permisos de seguimento do ciclo para mostrar días de período, tests de ovulación, moco cervical e temperatura basal.</string>
     <string name="cycle_observation_menstruation_period">Período menstrual</string>
     <string name="cycle_observation_menstruation_flow">Fluxo menstrual</string>
     <string name="cycle_observation_ovulation_test">Test de ovulación</string>
@@ -2427,8 +2343,6 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="weekday_friday_short">V</string>
     <string name="weekday_saturday_short">S</string>
     <string name="weekday_sunday_short">D</string>
-    <string name="vitals_permissions_needed_title">Fan falta permisos de constantes</string>
-    <string name="vitals_permissions_needed_body">Concede os permisos de presión arterial, saturación de osíxeno, frecuencia respiratoria, temperatura, VO2 máx e glicosa para encher esta pantalla.</string>
     <string name="vitals_respiratory_rate_readings">Lecturas de frecuencia respiratoria</string>
     <string name="vitals_body_temperature_readings">Lecturas de temperatura corporal</string>
     <string name="heart_rate_health_checks_title">Comprobacións de frecuencia cardíaca</string>
@@ -2469,11 +2383,9 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="macro_fat_short">G %1$sg</string>
     <string name="macro_fiber">fibra %1$sg</string>
     <string name="macro_sugar">azucre %1$sg</string>
-    <string name="caffeine_section_overview">Resumo</string>
     <string name="caffeine_section_dashboard">Panel</string>
     <string name="caffeine_section_analytics">Analíticas</string>
     <string name="caffeine_section_sleep">Impacto no sono</string>
-    <string name="caffeine_section_sources">Fontes</string>
     <string name="caffeine_section_entries">Entradas</string>
     <string name="caffeine_section_science">Ciencia</string>
     <string name="caffeine_setup_title">Personaliza a información de cafeína</string>
@@ -2489,9 +2401,6 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="caffeine_sleep_status_may_affect_body">A previsión para a hora de deitarse é %1$s ás %2$s, por riba do teu limiar de %3$s.</string>
     <string name="caffeine_period_total">Total do período</string>
     <string name="caffeine_daily_average">Media diaria</string>
-    <string name="caffeine_logged_days">Días rexistrados</string>
-    <string name="caffeine_peak_day">Día pico</string>
-    <string name="caffeine_peak_day_value">%1$s - %2$s</string>
     <string name="caffeine_curve_title">Curva de cafeína</string>
     <string name="caffeine_threshold_line">Limiar de sono %1$s</string>
     <string name="caffeine_bedtime_forecast">Previsión para a hora de deitarse</string>
@@ -2594,8 +2503,6 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="data_confidence_warning_manual">Este período inclúe entradas manuais.</string>
     <string name="data_confidence_warning_calculated">Este valor é derivado, non medido directamente.</string>
     <string name="data_confidence_warning_no_sources">Este agregado non expón detalles a nivel de fonte.</string>
-    <string name="settings_body_energy_group_title">Enerxía corporal</string>
-    <string name="settings_body_energy_group_body">Calibración da enerxía intradía estimada e das zonas de esforzo.</string>
     <string name="body_energy_calibration_title">Activar a enerxía corporal</string>
     <string name="body_energy_calibration_body">OpenVitals estima o desgaste a partir da intensidade da frecuencia cardíaca ao longo do tempo. A túa frecuencia cardíaca en repouso e máxima mídense cos teus propios datos, así que non hai que introducir nada.</string>
     <string name="body_energy_calibration_optional_body">As zonas de frecuencia cardíaca manuais son opcionais. Sen elas, as zonas calcúlanse a partir do teu ano de nacemento e do esforzo máis intenso das últimas catro semanas, por iso fai falta o ano de nacemento.</string>
@@ -2621,7 +2528,6 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_derived_metrics_reset_failed">Non se puideron restablecer as métricas</string>
     <string name="body_energy_not_set_up">Sen configurar</string>
     <string name="body_energy_timeline_estimated">Estimado por OpenVitals</string>
-    <string name="body_energy_timeline_current">Actual</string>
     <string name="body_energy_timeline_start">Inicio</string>
     <string name="body_energy_timeline_charged">Cargado</string>
     <string name="body_energy_timeline_drained">Gastado</string>
@@ -2752,7 +2658,6 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="stress_reason_activity">a actividade pode influír</string>
     <string name="stress_reason_single">un só sinal local</string>
     <string name="stress_reason_needs_more">precisa máis datos locais</string>
-    <string name="stress_no_estimate_day">Sen estimación de estrés para este día.</string>
     <string name="body_energy_confidence_high">Alta</string>
     <string name="body_energy_confidence_medium">Media</string>
     <string name="body_energy_confidence_low">Baixa</string>
@@ -2763,26 +2668,17 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="device_sync_role_heading">Move os teus datos, sen nube</string>
     <string name="device_sync_role_body">Copia os rexistros de Health Connect directamente a outro teléfono por Bluetooth. Nada sae dos teus dispositivos.</string>
     <string name="device_sync_host_option">Facer este teléfono visible</string>
-    <string name="device_sync_host_option_body">Mostra un código que o outro teléfono escribe.</string>
     <string name="device_sync_guest_option">Buscar un teléfono co que sincronizar</string>
-    <string name="device_sync_guest_option_body">Busca preto e introduce o seu código.</string>
     <string name="device_sync_privacy_note">A transferencia vai por unha ligazón Bluetooth emparellada e cifrada. OpenVitals non ten permiso de internet, así que isto nunca toca unha rede.</string>
     <string name="device_sync_bluetooth_off">Activa o Bluetooth para sincronizar con outro teléfono.</string>
     <string name="device_sync_host_heading">Agardando polo outro teléfono</string>
-    <string name="device_sync_host_body">No outro teléfono, escolle Buscar un teléfono, toca este dispositivo e escribe o código de abaixo.</string>
     <string name="device_sync_code_label">Código de emparellamento</string>
     <string name="device_sync_waiting">Agardando unha conexión…</string>
     <string name="device_sync_scan_heading">Buscando preto</string>
-    <string name="device_sync_scan_body">Escolle o teléfono que mostra un código de emparellamento. Asegúrate de que está visible.</string>
     <string name="device_sync_no_devices">Non se atoparon teléfonos. Asegúrate de que o outro teléfono está na pantalla Facer visible e volve buscar.</string>
     <string name="device_sync_rescan">Buscar de novo</string>
     <string name="device_sync_paired">Emparellado</string>
-    <string name="device_sync_code_heading">Código de %1$s</string>
-    <string name="device_sync_code_body">Escribe os seis díxitos que mostra o outro teléfono para confirmar que é realmente ese dispositivo.</string>
-    <string name="device_sync_wrong_code">Ese código non coincide. Comproba o outro teléfono e téntao de novo.</string>
-    <string name="device_sync_connect">Conectar</string>
     <string name="device_sync_cancel">Cancelar</string>
-    <string name="device_sync_keypad_delete">Borrar díxito</string>
     <string name="device_sync_error_heading">A sincronización non rematou</string>
     <string name="device_sync_error_generic">Non se puido completar a sincronización. Téntao de novo.</string>
     <string name="device_sync_error_connect">Non se puido conectar co outro teléfono. Asegúrate de que está preto e téntao de novo.</string>
@@ -2836,9 +2732,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_watch_notifications_body">As notificacións do teléfono aparecen no teu pulso. Lense neste dispositivo e envíanse só a este reloxo.</string>
     <string name="settings_watch_notifications_grant">Permitir o acceso ás notificacións</string>
     <string name="settings_watch_notifications_grant_body">Android pídeo na súa propia pantalla de axustes. OpenVitals non pode solicitalo desde aquí.</string>
-    <string name="settings_watch_notifications_apps">Apps para silenciar</string>
     <string name="settings_watch_notifications_apps_none">Todas as apps envían ao reloxo</string>
-    <string name="settings_watch_notifications_apps_title">Apps</string>
     <string name="settings_watch_notifications_apps_intro">Desactiva unha app para que as súas notificacións non cheguen ao reloxo. Todo o demais segue chegando.</string>
     <string name="settings_watch_notifications_apps_empty">Non se atoparon apps.</string>
     <string name="settings_watch_notifications_disclosure_title">OpenVitals lerá as túas notificacións</string>
@@ -2984,4 +2878,86 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
     <string name="settings_watch_metric_training_readiness">Preparación para adestrar</string>
     <string name="settings_watch_metric_training_load">Carga de adestramento</string>
     <string name="settings_watch_average_prefix">Media %1$s</string>
+    <string name="import_leave_title">Deter a importación?</string>
+    <string name="import_leave_body">Saír desta pantalla detén a importación. O que xa está importado consérvase, e podes executala de novo máis tarde.</string>
+    <string name="import_leave_confirm">Deter e saír</string>
+    <string name="import_leave_stay">Seguir importando</string>
+    <string name="screen_error_generic">Non se puido completar a solicitude.</string>
+    <string name="screen_error_load_activity">Non se puido cargar a actividade.</string>
+    <string name="screen_error_delete_activity">Non se puido eliminar a actividade.</string>
+    <string name="screen_error_load_body_energy">Non se puido cargar a enerxía corporal.</string>
+    <string name="screen_error_load_heart_rate_recovery">Non se puido cargar a recuperación da frecuencia cardíaca.</string>
+    <string name="screen_error_recording_unavailable">A gravación non está dispoñible.</string>
+    <string name="screen_error_gps_recording_unavailable">A gravación GPS non está dispoñible.</string>
+    <string name="screen_error_activity_import_unavailable">A importación de ficheiros de actividade non está dispoñible.</string>
+    <string name="screen_error_no_active_recording">Non se atopou ningunha gravación de actividade en curso.</string>
+    <string name="screen_error_entry_not_editable">Só se poden editar as entradas de OpenVitals.</string>
+    <plurals name="chart_plot_summary">
+        <item quantity="one">%1$d punto, mínimo %2$s, máximo %3$s, último %4$s</item>
+        <item quantity="other">%1$d puntos, mínimo %2$s, máximo %3$s, último %4$s</item>
+    </plurals>
+    <string name="chart_zoom_in">Ampliar</string>
+    <string name="chart_zoom_out">Reducir</string>
+    <string name="chart_zoom_reset">Mostrar todo o intervalo</string>
+    <string name="chart_next_point">Punto seguinte</string>
+    <string name="chart_previous_point">Punto anterior</string>
+    <string name="chart_body_energy_influences">Cargada %1$d, descargada %2$d</string>
+    <string name="screen_food_entry">Entrada de comida</string>
+    <string name="activity_entry_route_import_while_recording">Hai unha gravación en curso. Remátaa ou descártaa antes de importar un ficheiro.</string>
+    <string name="activity_entry_route_import_replace_title">Substituír a gravación non gardada?</string>
+    <string name="activity_entry_route_import_replace_body">Tes unha gravación que aínda non está gardada. Importar este ficheiro descártaa.</string>
+    <string name="activity_entry_route_import_replace_confirm">Importar e descartar</string>
+    <string name="activity_entry_route_import_replace_keep">Manter a gravación</string>
+    <string name="settings_watch_auto_sync_background_access">O acceso en segundo plano a Health Connect está desactivado. Unha sincronización que se execute con OpenVitals pechado garda igualmente os datos do reloxo. A enerxía corporal e as gráficas de historial só se actualizan cando abres a app.</string>
+    <string name="settings_watch_auto_sync_background_access_action">Permitir o acceso en segundo plano</string>
+    <string name="cd_food_actions">Accións do alimento</string>
+    <string name="manual_entry_food_label">Comida</string>
+    <string name="hydration_reminder_notification_body_unknown">Hora de beber. Non se puido ler o total de hoxe agora mesmo.</string>
+    <string name="food_tracker_title">Rexistrar comida</string>
+    <string name="food_tracker_subtitle">Gárdase directamente en Health Connect</string>
+    <string name="food_tracker_permission_needed">Para engadir entradas de comida, OpenVitals necesita o permiso de escritura de nutrición en Health Connect. A app non almacenará estes datos; as entradas gárdanse en Health Connect.</string>
+    <string name="food_today_energy">Hoxe: %1$s</string>
+    <string name="food_catalog_search">Buscar alimentos</string>
+    <string name="food_catalog_empty">Aínda non hai alimentos gardados. Crea un con Novo alimento.</string>
+    <string name="food_catalog_saved_outside">Alimentos gardados</string>
+    <string name="food_catalog_section_fruit">Froita</string>
+    <string name="food_catalog_section_vegetables">Verduras</string>
+    <string name="food_catalog_section_grains">Cereais e pan</string>
+    <string name="food_catalog_section_protein">Carne, peixe e ovos</string>
+    <string name="food_catalog_section_dairy">Lácteos</string>
+    <string name="food_catalog_section_snacks">Aperitivos</string>
+    <string name="food_catalog_section_meals">Comidas</string>
+    <string name="food_catalog_section_desserts">Doces e sobremesas</string>
+    <string name="food_catalog_section_other">Outros alimentos</string>
+    <string name="food_new_food_action">Novo alimento</string>
+    <string name="food_new_food_title">Novo alimento</string>
+    <string name="food_edit_food_title">Editar alimento</string>
+    <string name="food_log_food_title">Rexistrar %1$s</string>
+    <string name="food_name">Nome</string>
+    <string name="food_amount_label">Cantidade (%1$s)</string>
+    <string name="food_invalid_amount_range">Introduce unha cantidade de %1$s a %2$s.</string>
+    <string name="food_category">Categoría</string>
+    <string name="food_no_category">Sen categoría</string>
+    <string name="food_nutrients">Nutrientes</string>
+    <string name="food_nutrients_hint">Para a cantidade de arriba. Engade polo menos un.</string>
+    <string name="food_invalid">Introduce un nome, unha cantidade e polo menos unha cantidade positiva de nutriente.</string>
+    <string name="food_invalid_amount">Esa porción é demasiado grande para gardala. Introduce unha cantidade menor.</string>
+    <string name="food_write_failed">Non se puido gardar a entrada de comida: %1$s</string>
+    <string name="privacy_reconsent_no_browser">Ningunha app deste teléfono pode abrir a ligazón. A política está en %1$s</string>
+    <string name="app_lock_locked_title">OpenVitals está bloqueado</string>
+    <string name="app_lock_unlock_action">Desbloquear</string>
+    <string name="device_sync_host_option_body_compare">Deixa que o outro teléfono atope este.</string>
+    <string name="device_sync_guest_option_body_compare">Busca preto e escólleo.</string>
+    <string name="device_sync_host_body_compare">No outro teléfono, escolle Buscar un teléfono e toca este dispositivo.</string>
+    <string name="device_sync_scan_body_compare">Escolle o outro teléfono. Asegúrate de que está visible.</string>
+    <string name="device_sync_connecting">Conectando con %1$s…</string>
+    <string name="device_sync_compare_heading">Compara os códigos</string>
+    <string name="device_sync_compare_body">Os dous teléfonos mostran agora un código. Comproba que son iguais. Se son distintos, pode haber outra persoa na conexión.</string>
+    <string name="device_sync_compare_match">Coinciden</string>
+    <string name="device_sync_compare_mismatch">Non coinciden</string>
+    <string name="device_sync_error_codes_differ">Indicaches que os códigos non coincidían, así que non se sincronizou nada. Téntao de novo cos dous teléfonos preto.</string>
+    <string name="device_sync_phase_confirming">Agardando a que o outro teléfono confirme o código</string>
+    <string name="device_sync_phase_waiting_for_peer">Agardando a que o outro teléfono inicie a sincronización</string>
+    <string name="device_sync_refused">Non aceptado (non escollido neste teléfono)</string>
+    <string name="settings_watch_remove_delete_history">Eliminar tamén o historial de estrés, Body Battery e puntuacións que só garda este teléfono</string>
 </resources>
