@@ -1,5 +1,37 @@
 # Changelog
 
+## 2.10.1 - 2026-09-26
+
+### English
+
+- **A goal ring on each day of the month.** In a metric's Month view, each day has a thin ring around its number. It fills clockwise from the top with the day's share of the daily goal: 7,500 steps against a 10,000 goal fills three quarters, and a day on or past the goal is full. Steps, distance, calories, active calories, floors, elevation, wheelchair pushes, workouts, hydration, mindfulness and sleep each use their own daily goal. Days with no data and future days get no ring, and nutrition has none yet. Based on a contribution by Teccheck.
+- **Fixes:** with "Sort empty tiles last" on, the dashboard no longer shuffles its tiles on every refresh and then shuffles them back: a tile that is still loading keeps its place and moves only once its own data arrives; the Health Connect library (1.2.0-alpha06) and the other libraries the app is built on are updated; Spanish updates contributed by gallegonovato on Codeberg Translate.
+
+### Espanol
+
+- **Un anillo de objetivo en cada dia del mes.** En la vista Mes de una metrica, cada dia tiene un anillo fino alrededor de su numero. Se llena en el sentido de las agujas del reloj, desde arriba, con la parte del objetivo diario alcanzada ese dia: 7.500 pasos frente a un objetivo de 10.000 llenan tres cuartos, y un dia que alcanza o supera el objetivo queda completo. Pasos, distancia, calorias, calorias activas, pisos, elevacion, impulsos de silla de ruedas, entrenamientos, hidratacion, mindfulness y sueno usan cada uno su propio objetivo diario. Los dias sin datos y los dias futuros no tienen anillo, y la nutricion aun no lo tiene. Basado en una contribucion de Teccheck.
+- **Correcciones:** con "Ordenar las tarjetas vacias al final" activado, el panel ya no desordena sus tarjetas en cada actualizacion para luego volver a ordenarlas: una tarjeta que aun esta cargando mantiene su sitio y solo se mueve cuando llegan sus propios datos; se actualizan la biblioteca de Health Connect (1.2.0-alpha06) y las demas bibliotecas de la app; actualizaciones de espanol aportadas por gallegonovato en Codeberg Translate.
+
+### Deutsch
+
+- **Ein Zielring an jedem Tag des Monats.** In der Monatsansicht einer Metrik hat jeder Tag einen duennen Ring um seine Zahl. Er fuellt sich von oben im Uhrzeigersinn mit dem Anteil des Tagesziels, den der Tag erreicht hat: 7.500 Schritte bei einem Ziel von 10.000 fuellen drei Viertel, und ein Tag am oder ueber dem Ziel ist voll. Schritte, Distanz, Kalorien, aktive Kalorien, Etagen, Hoehe, Rollstuhlschuebe, Trainings, Hydrierung, Achtsamkeit und Schlaf nutzen jeweils ihr eigenes Tagesziel. Tage ohne Daten und kuenftige Tage bekommen keinen Ring, und Ernaehrung hat noch keinen. Basiert auf einem Beitrag von Teccheck.
+- **Korrekturen:** mit "Leere Kacheln nach hinten sortieren" mischt das Dashboard seine Kacheln nicht mehr bei jeder Aktualisierung durcheinander und danach wieder zurueck: eine Kachel, die noch laedt, behaelt ihren Platz und rueckt erst, wenn ihre eigenen Daten da sind; die Health-Connect-Bibliothek (1.2.0-alpha06) und die anderen Bibliotheken der App sind aktualisiert; spanische Aktualisierungen beigetragen von gallegonovato auf Codeberg Translate.
+
+### Italiano
+
+- **Un anello dell'obiettivo su ogni giorno del mese.** Nella vista Mese di una metrica, ogni giorno ha un anello sottile attorno al suo numero. Si riempie in senso orario dall'alto con la quota dell'obiettivo giornaliero raggiunta quel giorno: 7.500 passi su un obiettivo di 10.000 riempiono tre quarti, e un giorno che raggiunge o supera l'obiettivo e pieno. Passi, distanza, calorie, calorie attive, piani, elevazione, spinte della sedia a rotelle, allenamenti, idratazione, consapevolezza e sonno usano ciascuno il proprio obiettivo giornaliero. I giorni senza dati e i giorni futuri non hanno anello, e la nutrizione non lo ha ancora. Basato su un contributo di Teccheck.
+- **Correzioni:** con "Riquadri vuoti in fondo" attivo, la dashboard non rimescola piu i riquadri a ogni aggiornamento per poi rimetterli a posto: un riquadro ancora in caricamento mantiene il suo posto e si sposta solo quando arrivano i suoi dati; la libreria di Health Connect (1.2.0-alpha06) e le altre librerie dell'app sono aggiornate; aggiornamenti dello spagnolo a cura di gallegonovato su Codeberg Translate.
+
+### Eesti
+
+- **Eesmargiring kuu igal paeval.** Moodiku Kuu vaates on igal paeval numbri umber peenike ring. See taitub ulevalt paripaeva paeva osaga paevaeesmargist: 7500 sammu 10 000 eesmargi puhul taidab kolm neljandikku ja eesmargini jouanud voi selle uletanud paev on tais. Sammud, vahemaa, kalorid, aktiivsed kalorid, korrused, korgus, ratastooli lukked, treeningud, joogid, teadvelolek ja uni kasutavad igauks oma paevaeesmarki. Andmeteta paevadel ja tulevastel paevadel ringi ei ole ning toitumisel seda veel pole. Pohineb Teccheck'i panusel.
+- **Parandused:** kui "Jarjesta tuhjad paanid viimaseks" on sees, ei sega tooplaat enam iga varskendusega oma paane segamini, et need siis tagasi seada: veel laadiv paan jaab oma kohale ja liigub alles siis, kui tema enda andmed saabuvad; Health Connecti teek (1.2.0-alpha06) ja rakenduse teised teegid on uuendatud; hispaania keele uuendused panustas gallegonovato Codeberg Translate'is.
+
+### Portugues
+
+- **Um anel de objetivo em cada dia do mes.** Na vista Mes de uma metrica, cada dia tem um anel fino a volta do seu numero. Enche no sentido dos ponteiros do relogio, a partir do topo, com a parte do objetivo diario atingida nesse dia: 7500 passos para um objetivo de 10 000 enchem tres quartos, e um dia que atinge ou ultrapassa o objetivo fica completo. Passos, distancia, calorias, calorias ativas, andares, elevacao, impulsos de cadeira de rodas, treinos, bebidas, atencao plena e sono usam cada um o seu proprio objetivo diario. Os dias sem dados e os dias futuros nao tem anel, e a nutricao ainda nao o tem. Baseado numa contribuicao de Teccheck.
+- **Correcoes:** com "Ordenar mosaicos vazios no fim" ativo, o painel ja nao baralha os mosaicos a cada atualizacao para depois os repor: um mosaico que ainda esta a carregar mantem o seu lugar e so se move quando chegam os seus proprios dados; a biblioteca do Health Connect (1.2.0-alpha06) e as outras bibliotecas da app foram atualizadas; atualizacoes de espanhol por gallegonovato no Codeberg Translate.
+
 ## 2.10.0 - 2026-09-25
 
 ### English

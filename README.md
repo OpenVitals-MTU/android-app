@@ -37,7 +37,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - Manual cycle logging with derived period days and next-period predictions, stored only in Health Connect
 - Period detail screens with `Day / Week / Month / Year` navigation and reorderable metric sections
 - Charts that speak to a screen reader: a summary per chart, one element per day, and zoom and scrub offered as actions
-- Daily goal cards that say how far ahead or behind the period is and what each remaining day needs to average to land on goal
+- Daily goal cards that say how far ahead or behind the period is and what each remaining day needs to average to land on goal, and a goal ring on each day of the Month view
 - Body measurements charted as a trend line over a fitted scale, and nutrition periods led by a daily average rather than a total nobody eats by
 - Daily Readiness with Body Energy, Training Readiness, physiological stress, HRV status, intensity minutes, adaptive goals, and local explanation screens
 - Body Energy that reads how well a night was slept - efficiency, time awake, deep and REM share - and not only how long it lasted
