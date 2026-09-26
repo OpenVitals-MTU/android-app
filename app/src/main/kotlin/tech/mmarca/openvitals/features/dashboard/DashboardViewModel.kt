@@ -720,6 +720,8 @@ class DashboardViewModel @Inject constructor(
             // Only edit mode shows unsupported metrics, in the add tray.
             includeUnsupported = _uiState.value.isEditingDashboard,
         )
+            // A reload marks every tile loading. Without the last answers, the sort would reshuffle.
+            .withLastDemoted(_uiState.value.display.lastDemoted)
     }
 }
 

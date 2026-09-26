@@ -49,22 +49,22 @@ class DashboardContentLayoutTest {
         },
     )
 
-    /** DISTANCE and SLEEP have readings; CALORIES_OUT and HYDRATION do not. */
+    /** By default DISTANCE and SLEEP have readings; CALORIES_OUT and HYDRATION do not. */
     private fun display(
         loading: Set<DashboardWidgetId> = emptySet(),
-    ): DashboardDisplayState {
-        val withData = setOf(
+        withData: Set<DashboardWidgetId> = setOf(
             DashboardWidgetId.STEPS,
             DashboardWidgetId.WEEKLY_CARDIO_LOAD,
             DashboardWidgetId.DISTANCE,
             DashboardWidgetId.SLEEP,
-        )
-        return DashboardDisplayState(
+        ),
+        previous: DashboardDisplayState? = null,
+    ): DashboardDisplayState =
+        DashboardDisplayState(
             widgets = savedOrder.associateWith { id ->
                 widget(id, hasData = id in withData, isLoading = id in loading)
             },
-        )
-    }
+        ).withLastDemoted(previous?.lastDemoted.orEmpty())
 
     private fun visibleIds(
         widgets: List<DashboardWidgetId> = savedOrder,
@@ -140,8 +140,8 @@ class DashboardContentLayoutTest {
     }
 
     @Test
-    fun `no tile is demoted while any tile is still loading`() {
-        // Metrics land one at a time, so nothing moves while anything is still reading.
+    fun `on first load no tile is demoted until every tile has answered`() {
+        // Metrics land one at a time, so nothing moves while a tile has never answered.
         assertEquals(savedOrder, visibleIds(display = display(loading = setOf(DashboardWidgetId.SLEEP))))
 
         // The demotion still happens, once the last tile has spoken.
@@ -155,6 +155,40 @@ class DashboardContentLayoutTest {
                 DashboardWidgetId.HYDRATION,
             ),
             visibleIds(),
+        )
+    }
+
+    @Test
+    fun `a reload keeps the sorted order while its tiles load`() {
+        // A refresh marks every tile loading. Loading is not empty: each tile keeps its last answer.
+        val settled = display()
+        val reloading = display(loading = savedOrder.toSet(), previous = settled)
+
+        assertEquals(visibleIds(display = settled), visibleIds(display = reloading))
+        assertNotEquals(savedOrder, visibleIds(display = reloading))
+    }
+
+    @Test
+    fun `a reloaded tile moves once its own answer lands`() {
+        // CALORIES_OUT was empty and now has data; the rest are still loading.
+        val settled = display()
+        val partial = display(
+            loading = savedOrder.toSet() - DashboardWidgetId.CALORIES_OUT,
+            withData = savedOrder.toSet() - DashboardWidgetId.HYDRATION,
+            previous = settled,
+        )
+
+        assertEquals(
+            listOf(
+                DashboardWidgetId.STEPS,
+                DashboardWidgetId.WEEKLY_CARDIO_LOAD,
+                DashboardWidgetId.DISTANCE,
+                DashboardWidgetId.CALORIES_OUT,
+                DashboardWidgetId.SLEEP,
+                // Still loading, so it keeps its place at the back.
+                DashboardWidgetId.HYDRATION,
+            ),
+            visibleIds(display = partial),
         )
     }
 

@@ -731,6 +731,44 @@ class DashboardViewModelTest {
         assertTrue(queries.size > afterOpen)
     }
 
+    @Test fun `a refresh keeps each tile's sort answer while it reloads`() = runTest {
+        // A reloading tile is not empty. Dropping its answer made the grid shuffle and shuffle back.
+        val loader = mockDashboardDataLoader()
+        val refreshGate = CompletableDeferred<Unit>()
+        var refreshing = false
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            if (refreshing) refreshGate.await()
+            DashboardData(
+                date = today,
+                steps = 9_000,
+                loadedMetrics = firstArg<DashboardQuery>().visibleMetrics,
+            )
+        }
+        val prefs = prefs()
+        every { prefs.dashboardWidgetOrder() } returns listOf(
+            DashboardWidgetId.STEPS.name,
+            DashboardWidgetId.WEIGHT.name,
+        )
+
+        val vm = dashboardViewModel(loader, prefs)
+        advanceUntilIdle()
+        val settled = vm.uiState.value.display.lastDemoted
+        assertEquals(false, settled[DashboardWidgetId.STEPS])
+        assertEquals(true, settled[DashboardWidgetId.WEIGHT])
+
+        refreshing = true
+        vm.refresh()
+
+        val midRefresh = vm.uiState.value
+        assertTrue(DashboardWidgetId.WEIGHT in midRefresh.loadingWidgets)
+        assertEquals(true, midRefresh.display.widgets[DashboardWidgetId.WEIGHT]?.isLoading)
+        assertEquals(settled, midRefresh.display.lastDemoted)
+
+        refreshGate.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(settled, vm.uiState.value.display.lastDemoted)
+    }
+
     @Test fun `newer load wins when navigation requests overlap`() = runTest {
         val loader = mockDashboardDataLoader()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
