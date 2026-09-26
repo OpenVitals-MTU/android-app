@@ -32,9 +32,13 @@ have installed, or Play rejects the rollout with "does not allow any existing
 users to upgrade" (this bit 2.6.0's predecessor).
 
 **Race caveat:** a nightly can mint a code between your preview and the release
-run (every push to main triggers one). Compute the code and name the fastlane
-files immediately before running the release script, and afterwards verify the
-script's printed `versionCode` matches the filenames.
+run. Only the `nightly` cron (around 02:06 local time) and manual runs of
+`.woodpecker/release.yml` build nightlies; a push to main runs tests only. Near
+02:00, or while a manual run is going, check the pipelines first
+(`https://ci.codeberg.org/api/repos/16841/pipelines?per_page=5`). Either way,
+compute the code and name the fastlane files immediately before running the
+release script, and afterwards verify the script's printed `versionCode`
+matches the filenames.
 
 ## 2. Documents to write, all before running the script
 
@@ -62,10 +66,6 @@ script's printed `versionCode` matches the filenames.
 ```bash
 bash scripts/release.sh X.Y.Z
 ```
-
-The script stops unless the instrumented tests passed for the committed `app/`
-sources. CI cannot run them. Run `ANDROID_SERIAL=<serial> ./gradlew verifyAndroidTest`
-first, or set `OPENVITALS_SKIP_DEVICE_TESTS=1` when no device is at hand.
 
 The script computes the version code, patches `baseVersionCode` and
 `baseVersionName` in `app/build.gradle.kts` and the `-SNAPSHOT` fallback in
