@@ -46,14 +46,15 @@ internal fun dashboardVisibleWidgetIds(
         // While editing, an unsupported metric the user never placed goes to the tray.
         .filterNot { isEditingDashboard && it in display.unsupportedIds && it !in placedWidgetIds }
     if (isEditingDashboard || !sortEmptyTilesLast) return ordered
-    // A tile still loading is not empty. Hold the saved order until every tile has answered.
-    if (display.widgets.values.any { it.isLoading }) return ordered
     val fixed = dashboardWidgetIdsThatFitRows(ordered, DashboardFixedWidgetRows).toSet()
     val rest = ordered.filterNot { it in fixed }
-    // An empty tile goes to the back; a setup offer does not. See [isDemotableEmptyTile].
-    val (withData, empty) = rest.partition { id ->
-        display.widgets[id]?.isDemotableEmptyTile() != true
+    // On first load, hold the saved order until every tile has answered once.
+    // Otherwise the grid would move on every arrival.
+    if (rest.any { id -> display.widgets[id]?.isLoading == true && display.isDemoted(id) == null }) {
+        return ordered
     }
+    // An empty tile goes to the back; a setup offer does not. See [isDemoted].
+    val (empty, withData) = rest.partition { id -> display.isDemoted(id) == true }
     return ordered.filter { it in fixed } + withData + empty
 }
 

@@ -12,6 +12,8 @@ data class DashboardDisplayState(
     val widgets: Map<DashboardWidgetId, DashboardWidgetDisplayModel> = emptyMap(),
     /** Ids materialised only by `includeUnsupported`. Kept out of the carousel; the add tray shows them. */
     val unsupportedIds: Set<DashboardWidgetId> = emptySet(),
+    /** Each tile's last answer to [isDemotableEmptyTile]. A tile keeps it while it reloads. */
+    val lastDemoted: Map<DashboardWidgetId, Boolean> = emptyMap(),
 )
 
 @Immutable
@@ -120,6 +122,25 @@ data class BodyEnergyTileSubtitle(
  */
 internal fun DashboardWidgetDisplayModel.isDemotableEmptyTile(): Boolean =
     showsNoDataMessage() && !isNotSetUp && !hasRecentHistory
+
+/**
+ * Whether the tile sorts to the back. A loading tile is not empty, so it
+ * keeps its last answer. Null when it has not answered yet.
+ */
+internal fun DashboardDisplayState.isDemoted(id: DashboardWidgetId): Boolean? {
+    val model = widgets[id] ?: return null
+    return if (model.isLoading) lastDemoted[id] else model.isDemotableEmptyTile()
+}
+
+/** Fills [DashboardDisplayState.lastDemoted], carrying [previous] answers over for loading tiles. */
+internal fun DashboardDisplayState.withLastDemoted(
+    previous: Map<DashboardWidgetId, Boolean>,
+): DashboardDisplayState {
+    val carried = copy(lastDemoted = previous)
+    return copy(
+        lastDemoted = widgets.keys.mapNotNull { id -> carried.isDemoted(id)?.let { id to it } }.toMap(),
+    )
+}
 
 internal fun DashboardWidgetDisplayModel.showsNoDataMessage(): Boolean = when {
     isLoading -> false
