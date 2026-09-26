@@ -134,21 +134,12 @@ internal fun LazyListScope.mindfulnessPeriodContent(
                     modifier = metricModifier(),
                 )
             } else {
-                val chartValues = display.dailyMinutes.map {
-                    PeriodChartValue(date = it.date, value = it.minutes)
-                }
-                MetricBarChart(
-                    title = stringResource(R.string.metric_mindfulness),
-                    values = chartValues,
-                    selectedRange = state.selectedRange,
+                MindfulnessPeriodChart(
+                    state = state,
                     period = period,
-                    accentColor = MindfulnessColor,
-                    summaryValue = unitFormatter.minutes(display.summary.totalMinutes).text,
+                    unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    modifier = metricModifier(),
-                    selectedDate = chartDaySelection.selectedDate,
-                    onDateSelected = chartDaySelection.onDateSelected,
-                    valueFormatter = { unitFormatter.minutes(it.roundToLong()).text },
+                    chartDaySelection = chartDaySelection,
                 )
             }
         }
@@ -212,6 +203,31 @@ internal fun LazyListScope.mindfulnessPeriodContent(
             }
         }
     }
+}
+
+@Composable
+private fun MindfulnessPeriodChart(
+    state: MindfulnessUiState,
+    period: DatePeriod,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+    chartDaySelection: ChartDaySelection,
+) {
+    val display = state.display
+    MetricBarChart(
+        title = stringResource(R.string.metric_mindfulness),
+        values = display.dailyMinutes.map { PeriodChartValue(date = it.date, value = it.minutes) },
+        selectedRange = state.selectedRange,
+        period = period,
+        goal = state.dailyGoalMinutes,
+        accentColor = MindfulnessColor,
+        summaryValue = unitFormatter.minutes(display.summary.totalMinutes).text,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        modifier = metricModifier(),
+        selectedDate = chartDaySelection.selectedDate,
+        onDateSelected = chartDaySelection.onDateSelected,
+        valueFormatter = { unitFormatter.minutes(it.roundToLong()).text },
+    )
 }
 
 @Composable
