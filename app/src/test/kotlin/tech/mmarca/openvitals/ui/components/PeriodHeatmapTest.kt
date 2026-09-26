@@ -110,4 +110,19 @@ class PeriodHeatmapTest {
             monthStart.dayOfMonth == 1 && weeks[column].any { it.date == monthStart }
         })
     }
+
+    @Test fun `goal ring fills by the day's share of the goal`() {
+        assertEquals(0.75f, heatmapGoalFraction(7_500.0, 10_000.0, isWithinLoadedPeriod = true)!!, 0f)
+    }
+
+    @Test fun `goal ring stays full past the goal`() {
+        assertEquals(1f, heatmapGoalFraction(12_000.0, 10_000.0, isWithinLoadedPeriod = true)!!, 0f)
+    }
+
+    @Test fun `no goal ring without a goal, a value, or a loaded day`() {
+        assertNull(heatmapGoalFraction(7_500.0, null, isWithinLoadedPeriod = true))
+        assertNull(heatmapGoalFraction(7_500.0, 0.0, isWithinLoadedPeriod = true))
+        assertNull(heatmapGoalFraction(0.0, 10_000.0, isWithinLoadedPeriod = true))
+        assertNull(heatmapGoalFraction(7_500.0, 10_000.0, isWithinLoadedPeriod = false))
+    }
 }

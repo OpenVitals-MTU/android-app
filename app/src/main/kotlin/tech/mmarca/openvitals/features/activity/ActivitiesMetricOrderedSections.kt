@@ -201,6 +201,7 @@ internal fun LazyListScope.renderActivitiesOrderedContent(
                 values = values,
                 selectedRange = state.selectedRange,
                 period = period,
+                goal = state.dailyGoalMinutes,
                 accentColor = WorkoutColor,
                 summaryValue = unitFormatter.duration(state.workouts.sumOf { it.durationMs.coerceAtLeast(0L) }),
                 dateTimeFormatterProvider = dateTimeFormatterProvider,

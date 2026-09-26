@@ -254,6 +254,7 @@ private fun HydrationTrendContent(
             data = state.dailyHydration,
             selectedRange = state.selectedRange,
             period = period,
+            goal = state.dailyGoalLiters,
             accentColor = if (useWeekAccent) HydrationWeekChartColor else HydrationColor,
             accentAlpha = if (useWeekAccent) 1f else 0.85f,
             summaryValue = unitFormatter.hydration(display.summary.totalLiters).text,
