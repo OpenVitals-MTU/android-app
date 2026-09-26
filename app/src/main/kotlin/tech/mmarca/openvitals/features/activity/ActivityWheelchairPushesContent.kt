@@ -67,6 +67,7 @@ internal fun LazyListScope.wheelchairPushesContent(
                         data = state.dailySteps,
                         selectedRange = state.selectedRange,
                         period = period,
+                        goal = state.dailyGoal,
                         summaryValue = "${unitFormatter.count(state.dailySteps.sumOf { it.wheelchairPushes ?: 0L })} ${stringResource(R.string.unit_pushes)}",
                         accentColor = WheelchairPushesColor,
                         accentAlpha = 0.8f,

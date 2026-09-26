@@ -238,6 +238,7 @@ internal fun LazyListScope.renderSleepPeriodOrderedContent(
                         values = display.durationPoints.map { PeriodChartValue(date = it.date, value = it.hours) },
                         selectedRange = state.selectedRange,
                         period = period,
+                        goal = state.dailyGoalHours,
                         accentColor = SleepColor,
                         accentAlpha = 0.75f,
                         summaryValue = summaryValue,
