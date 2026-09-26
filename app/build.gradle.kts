@@ -1,5 +1,7 @@
+import com.android.build.api.artifact.SingleArtifact
 import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.PathSensitivity
+import org.gradle.process.CommandLineArgumentProvider
 
 plugins {
     alias(libs.plugins.android.application)
@@ -223,27 +225,35 @@ tasks.configureEach {
 // that it kept what is reached by name: manifest components, Glance action callbacks and the
 // record names phone sync puts on the wire. R8 once stripped a callback's no-arg constructor
 // and widget taps were dead from 2.7.0 to 2.7.1. A failure here fails the build.
-listOf("debug", "ci", "release", "nightly").forEach { variant ->
-    val variantName = variant.replaceFirstChar { it.uppercase() }
-    val verifyR8Keeps = tasks.register<Exec>("verify${variantName}R8Keeps") {
-        group = "verification"
-        description = "Checks that R8 kept what the $variant build reaches by name."
-        workingDir(rootProject.projectDir)
-        commandLine(
-            "python3",
-            rootProject.file("scripts/verify-r8-keeps.py"),
-            "--mapping",
-            layout.buildDirectory.file("outputs/mapping/$variant/mapping.txt").get().asFile,
-            "--manifest",
-            layout.buildDirectory
-                .file("intermediates/merged_manifest/$variant/process${variantName}MainManifest/AndroidManifest.xml")
-                .get().asFile,
-            "--sources",
-            file("src/main/kotlin"),
-        )
-    }
-    tasks.matching { it.name == "minify${variantName}WithR8" }.configureEach {
-        finalizedBy(verifyR8Keeps)
+androidComponents {
+    onVariants { variant ->
+        val variantName = variant.name.replaceFirstChar { it.uppercase() }
+        // AGP's public artifacts, not build paths: AGP 9.4 stopped writing outputs/mapping.
+        val mapping = variant.artifacts.get(SingleArtifact.OBFUSCATION_MAPPING_FILE)
+        val manifest = variant.artifacts.get(SingleArtifact.MERGED_MANIFEST)
+        val script = rootProject.file("scripts/verify-r8-keeps.py")
+        val sources = file("src/main/kotlin")
+        val verifyR8Keeps = tasks.register<Exec>("verify${variantName}R8Keeps") {
+            group = "verification"
+            description = "Checks that R8 kept what the ${variant.name} build reaches by name."
+            workingDir(rootProject.projectDir)
+            inputs.file(mapping)
+            inputs.file(manifest)
+            executable("python3")
+            argumentProviders.add(
+                CommandLineArgumentProvider {
+                    listOf(
+                        script.path,
+                        "--mapping", mapping.get().asFile.path,
+                        "--manifest", manifest.get().asFile.path,
+                        "--sources", sources.path,
+                    )
+                },
+            )
+        }
+        tasks.matching { it.name == "minify${variantName}WithR8" }.configureEach {
+            finalizedBy(verifyR8Keeps)
+        }
     }
 }
 
