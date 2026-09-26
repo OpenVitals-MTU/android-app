@@ -27,7 +27,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
@@ -45,6 +48,7 @@ import java.util.Locale
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
+import tech.mmarca.openvitals.ui.theme.Emphasis
 import tech.mmarca.openvitals.ui.theme.LayoutMetrics
 import tech.mmarca.openvitals.ui.theme.Spacing
 
@@ -131,6 +135,7 @@ internal fun yearHeatmapMonthStartColumns(
             ?.let { monthStart -> index to monthStart }
     }
 
+/** @param goal the daily target, in the unit of [values]. Each day gets a ring filled by its share of it. */
 @Composable
 fun PeriodMonthHeatmap(
     title: String,
@@ -140,6 +145,7 @@ fun PeriodMonthHeatmap(
     summaryText: String,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
+    goal: Double? = null,
     selectedDate: LocalDate? = null,
     onDateSelected: ((LocalDate) -> Unit)? = null,
 ) {
@@ -153,6 +159,8 @@ fun PeriodMonthHeatmap(
     val dayFormatter = dateTimeFormatterProvider.chartDayOfMonth()
     val spokenDateFormatter = dateTimeFormatterProvider.mediumDate()
     val noDataLabel = stringResource(R.string.no_data)
+    val goalRingColor = MaterialTheme.colorScheme.onSurface
+    val goalRingTrackColor = goalRingColor.copy(alpha = Emphasis.subtle)
     val gridStart = if (rolling) period.start else period.start.withDayOfMonth(1)
     val weekdays = remember(gridStart) {
         (0..6).map { offset ->
@@ -243,6 +251,11 @@ fun PeriodMonthHeatmap(
                                         } else {
                                             Modifier
                                         },
+                                    )
+                                    .goalRing(
+                                        fraction = heatmapGoalFraction(cell.value, goal, cell.isWithinLoadedPeriod),
+                                        color = goalRingColor,
+                                        trackColor = goalRingTrackColor,
                                     ),
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -395,6 +408,7 @@ fun PeriodHistoryChart(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
     yearAggregation: PeriodBarAggregation = PeriodBarAggregation.SUM,
+    goal: Double? = null,
     selectedDate: LocalDate? = null,
     onDateSelected: ((LocalDate) -> Unit)? = null,
     valueFormatter: (Double) -> String = ::formatCompactAxisValue,
@@ -408,6 +422,7 @@ fun PeriodHistoryChart(
             summaryText = summaryText,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
             modifier = modifier,
+            goal = goal,
             selectedDate = selectedDate,
             onDateSelected = onDateSelected,
         )
@@ -553,6 +568,48 @@ private const val HeatmapEmptyDayAlpha = 0.65f
 
 /** A day the grid draws but the loaded period does not cover — future, or before a rolling window. */
 private const val HeatmapOutsidePeriodAlpha = 0.35f
+
+/** The share of [goal] a day reached, capped at 1. Null means no ring: no goal, or nothing tracked. */
+internal fun heatmapGoalFraction(value: Double, goal: Double?, isWithinLoadedPeriod: Boolean): Float? {
+    if (goal == null || goal <= 0.0 || value <= 0.0 || !isWithinLoadedPeriod) return null
+    return (value / goal).toFloat().coerceIn(0f, 1f)
+}
+
+/** A ring around the day number, filled clockwise from the top by [fraction]. */
+private fun Modifier.goalRing(fraction: Float?, color: Color, trackColor: Color): Modifier =
+    if (fraction == null) {
+        this
+    } else {
+        drawBehind {
+            val strokePx = HeatmapGoalRingStroke.toPx()
+            val diameter = size.minDimension - 2 * HeatmapGoalRingInset.toPx() - strokePx
+            val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
+            val arcSize = Size(diameter, diameter)
+            drawArc(
+                color = trackColor,
+                startAngle = -90f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokePx),
+            )
+            drawArc(
+                color = color,
+                startAngle = -90f,
+                sweepAngle = 360f * fraction,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokePx, cap = StrokeCap.Round),
+            )
+        }
+    }
+
+private val HeatmapGoalRingStroke = 2.dp
+
+/** Keeps the ring clear of the selected-day border. */
+private val HeatmapGoalRingInset = 4.dp
 
 private fun emptyHeatmapCell(): PeriodHeatmapCell =
     PeriodHeatmapCell(
