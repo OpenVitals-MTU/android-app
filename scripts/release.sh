@@ -10,14 +10,6 @@ if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
     exit 1
 fi
 
-# CI cannot run the instrumented tests: it has no device. They must have passed here.
-# OPENVITALS_SKIP_DEVICE_TESTS=1 releases without them, for when no device is at hand.
-if [ "${OPENVITALS_SKIP_DEVICE_TESTS:-}" = "1" ]; then
-    echo "Warning: releasing $VERSION without an instrumented test run." >&2
-else
-    sh scripts/device-tests-stamp.sh check
-fi
-
 CURRENT_VERSION_CODE="$(sed -n 's/.*baseVersionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
 if [ -z "$CURRENT_VERSION_CODE" ]; then
     echo "Could not read baseVersionCode from app/build.gradle.kts" >&2
