@@ -126,6 +126,7 @@ import tech.mmarca.openvitals.domain.model.DashboardWeeklyCardioLoad
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.features.activity.exerciseTypeIcon
 import tech.mmarca.openvitals.features.activity.exerciseTypeLabel
+import tech.mmarca.openvitals.features.cycle.cycleSecondaryLineText
 import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.DayNavigator
 import tech.mmarca.openvitals.ui.theme.ActiveCaloriesColor
@@ -216,6 +217,10 @@ internal fun dashboardWidgetSpecs(
                             accentColor = meta.accentColor,
                             message = loadingMessage.takeIf { model.isLoading }
                                 ?: if (cycleValue == null) stringResource(R.string.message_cycle_browse) else null,
+                            subtitle = (model.cycle as? CycleWidgetDisplay.RecordedDay)?.let { recorded ->
+                                cycleSecondaryLineText(recorded.secondary, DateTimeFormatterProvider().mediumDate())
+                            },
+                            subtitleColor = MaterialTheme.colorScheme.onSurface,
                             modifier = modifier,
                             onClick = openMetric(widgetId),
                         )
@@ -400,6 +405,7 @@ private fun noDataMessageFor(model: DashboardWidgetDisplayModel): String? =
 @Composable
 private fun CycleWidgetDisplay.toDisplayValue(unitFormatter: UnitFormatter): DisplayValue =
     when (this) {
+        is CycleWidgetDisplay.RecordedDay -> DisplayValue(stringResource(R.string.widget_cycle_day, day), "")
         is CycleWidgetDisplay.MenstruationDays ->
             DisplayValue(unitFormatter.count(days), stringResource(R.string.unit_days))
         is CycleWidgetDisplay.OvulationTests ->

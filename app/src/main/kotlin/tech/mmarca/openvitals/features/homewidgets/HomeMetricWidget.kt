@@ -52,6 +52,7 @@ import tech.mmarca.openvitals.MainActivity
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.dashboard.DashboardDataLoader
@@ -64,6 +65,7 @@ import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.features.cycle.cycleSummarySecondaryLine
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.features.dashboard.toDashboardMetricOrNull
 import tech.mmarca.openvitals.features.nutrition.displayValue
@@ -650,10 +652,23 @@ internal fun DashboardData.toSnapshot(
         )
         DashboardWidgetId.MINDFULNESS -> count(mindfulnessMinutes, "min")
         DashboardWidgetId.CYCLE -> {
-            val displayValue = menstruationPeriodDays?.let { DisplayValue(unitFormatter.count(it), context.getString(R.string.unit_days)) }
-                ?: ovulationTestCount?.let { DisplayValue(unitFormatter.count(it), context.getString(R.string.unit_tests)) }
-                ?: latestBasalBodyTemperatureCelsius?.let(unitFormatter::temperature)
-            snapshot(displayValue)
+            val summary = cycleSummary
+            val day = summary?.currentCycleDay
+            if (summary != null && day != null) {
+                snapshot(
+                    DisplayValue(context.getString(R.string.widget_cycle_day, day), ""),
+                    subtitle = cycleSummarySecondaryLine(
+                        context, summary.phase, summary.estimate, date, DateTimeFormatterProvider().mediumDate(),
+                    ),
+                )
+            } else {
+                val displayValue = menstruationPeriodDays?.takeIf { it > 0 }
+                    ?.let { DisplayValue(unitFormatter.count(it), context.getString(R.string.unit_days)) }
+                    ?: ovulationTestCount?.takeIf { it > 0 }
+                        ?.let { DisplayValue(unitFormatter.count(it), context.getString(R.string.unit_tests)) }
+                    ?: latestBasalBodyTemperatureCelsius?.let(unitFormatter::temperature)
+                snapshot(displayValue)
+            }
         }
         // Device state, not a day's reading.
         DashboardWidgetId.WATCH -> snapshot(null)
@@ -703,8 +718,11 @@ fun DashboardWidgetId.homeMetricTitleRes(): Int = when (this) {
     DashboardWidgetId.WATCH -> R.string.metric_watch
 }
 
+/** CYCLE has its own concealed-by-default widget; a placed metric tile for it keeps rendering. */
 fun homeMetricWidgetCatalog(): List<DashboardWidgetId> =
-    DashboardWidgetId.entries.filterNot { it == DashboardWidgetId.CARDIO_LOAD || it == DashboardWidgetId.CAFFEINE }
+    DashboardWidgetId.entries.filterNot {
+        it == DashboardWidgetId.CARDIO_LOAD || it == DashboardWidgetId.CAFFEINE || it == DashboardWidgetId.CYCLE
+    }
 
 private fun String?.toDashboardWidgetIdOrNull(): DashboardWidgetId? =
     this?.let { stored -> runCatching { DashboardWidgetId.valueOf(stored) }.getOrNull() }

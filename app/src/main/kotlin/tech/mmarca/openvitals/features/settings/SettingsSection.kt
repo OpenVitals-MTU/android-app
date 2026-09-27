@@ -41,6 +41,10 @@ enum class SettingsSection(
         titleRes = R.string.settings_recovery_group_title,
         summaryRes = R.string.settings_recovery_group_body,
     ),
+    CYCLE(
+        titleRes = R.string.settings_cycle_group_title,
+        summaryRes = R.string.settings_cycle_group_body,
+    ),
     DATA_IMPORT(
         titleRes = R.string.settings_data_transfer_group_title,
         summaryRes = R.string.settings_data_transfer_group_body,

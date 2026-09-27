@@ -4,34 +4,38 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Test
+import tech.mmarca.openvitals.features.cycle.reminders.CycleReminderController
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.features.mindfulness.reminders.MindfulnessReminderController
 
 /**
- * Foregrounding re-plans both reminder schedules. A reminder firing without `POST_NOTIFICATIONS`
+ * Foregrounding re-plans every reminder schedule. A reminder firing without `POST_NOTIFICATIONS`
  * cancels its own alarm and never reschedules, and Android auto-revokes that permission.
- * Both calls must happen even when the first throws.
+ * Every call must happen even when an earlier one throws.
  */
 class ReminderRestoreBootstrapTest {
 
     private val hydration = mockk<HydrationReminderController>(relaxed = true)
     private val mindfulness = mockk<MindfulnessReminderController>(relaxed = true)
+    private val cycle = mockk<CycleReminderController>(relaxed = true)
 
     @Test
-    fun `coming to the foreground restores both schedules`() {
+    fun `coming to the foreground restores every schedule`() {
         bootstrap().onStart(mockk(relaxed = true))
 
         verify(exactly = 1) { hydration.restoreSchedule(any()) }
         verify(exactly = 1) { mindfulness.restoreSchedule(any()) }
+        verify(exactly = 1) { cycle.restoreSchedule(any()) }
     }
 
     @Test
-    fun `a controller that throws does not starve the other`() {
+    fun `a controller that throws does not starve the others`() {
         every { hydration.restoreSchedule(any()) } throws IllegalStateException("no alarm manager")
+        every { mindfulness.restoreSchedule(any()) } throws IllegalStateException("no alarm manager")
 
         bootstrap().onStart(mockk(relaxed = true))
 
-        verify(exactly = 1) { mindfulness.restoreSchedule(any()) }
+        verify(exactly = 1) { cycle.restoreSchedule(any()) }
     }
 
     @Test
@@ -45,10 +49,12 @@ class ReminderRestoreBootstrapTest {
 
         verify(exactly = 2) { hydration.restoreSchedule(any()) }
         verify(exactly = 2) { mindfulness.restoreSchedule(any()) }
+        verify(exactly = 2) { cycle.restoreSchedule(any()) }
     }
 
     private fun bootstrap() = ReminderRestoreBootstrap(
         hydrationReminderController = hydration,
         mindfulnessReminderController = mindfulness,
+        cycleReminderController = cycle,
     )
 }

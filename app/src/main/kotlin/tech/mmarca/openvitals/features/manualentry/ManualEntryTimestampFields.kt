@@ -147,7 +147,7 @@ internal fun ManualEntryPickerButton(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ManualEntryTimePickerDialog(
+internal fun ManualEntryTimePickerDialog(
     selectedTime: LocalTime,
     onDismiss: () -> Unit,
     onConfirm: (LocalTime) -> Unit,
@@ -183,13 +183,13 @@ private fun ManualEntryTimePickerDialog(
 }
 
 @Composable
-private fun LocalDate.localizedDateText(): String =
+internal fun LocalDate.localizedDateText(): String =
     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
         .withLocale(LocalLocale.current.platformLocale)
         .format(this)
 
 @Composable
-private fun LocalTime.localizedTimeText(): String =
+internal fun LocalTime.localizedTimeText(): String =
     DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
         .withLocale(LocalLocale.current.platformLocale)
         .format(this)

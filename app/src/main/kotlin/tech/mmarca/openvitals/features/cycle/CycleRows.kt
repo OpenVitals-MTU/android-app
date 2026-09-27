@@ -37,9 +37,10 @@ internal fun CycleObservationRow(
     modifier: Modifier = Modifier,
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
+    asksBeforeDeleting: Boolean = false,
 ) {
     if (onDelete != null) {
-        SwipeToDeleteEntryRow(onDelete = onDelete, modifier = modifier) {
+        SwipeToDeleteEntryRow(onDelete = onDelete, modifier = modifier, asksBeforeDeleting = asksBeforeDeleting) {
             CycleObservationRowContent(
                 observation = observation,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,

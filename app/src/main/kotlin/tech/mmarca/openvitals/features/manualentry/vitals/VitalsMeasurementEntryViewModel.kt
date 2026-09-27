@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry.vitals
 
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.TemperatureUnits
 import tech.mmarca.openvitals.features.manualentry.*
 import tech.mmarca.openvitals.features.manualentry.activity.*
 import tech.mmarca.openvitals.features.manualentry.activity.recording.*
@@ -42,8 +43,6 @@ private const val MaxRespiratoryRate = 1000.0
 private const val MaxBodyTemperatureCelsius = 100.0
 private const val MinHrvMillis = 1.0
 private const val MaxHrvMillis = 200.0
-private const val FahrenheitFreezingPoint = 32.0
-private const val FahrenheitPerCelsius = 1.8
 
 enum class VitalsMeasurementEntryError {
     INVALID_VALUE,
@@ -309,7 +308,7 @@ private fun isValidVitalsValue(
 private fun Double.toDisplayInput(type: VitalsMeasurementType, unitSystem: UnitSystem): String {
     val displayValue = when (type) {
         VitalsMeasurementType.BODY_TEMPERATURE -> if (unitSystem == UnitSystem.IMPERIAL) {
-            this * FahrenheitPerCelsius + FahrenheitFreezingPoint
+            TemperatureUnits.celsiusToFahrenheit(this)
         } else {
             this
         }

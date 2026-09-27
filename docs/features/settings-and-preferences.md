@@ -20,6 +20,7 @@ Settings is a list of section cards. Tapping one opens it:
 - Body profile.
 - Vitals, for the blood pressure guideline.
 - Recovery.
+- Cycle.
 - Data Importers.
 - Sync with another phone.
 - Health Connect.
@@ -78,9 +79,13 @@ The Watches section pairs and manages Garmin and WearOS watches, syncs what a wa
 
 Settings, Sync with another phone opens the phone-to-phone sync wizard, which copies supported Health Connect records between two nearby phones over Bluetooth. See [Sync with another phone](device-sync.md).
 
+## Cycle
+
+The Cycle section holds tracking contexts (PMS, PMDD, endometriosis, PCOS, perimenopause, thyroid), the age band, the cycle reminder configuration, and a "Delete cycle journal" action. The age band follows the body profile's birth year when one is set; the picker is the fallback. Contexts and age band only shape the estimate's width and the day log's suggested symptoms. They are stored in their own preferences file and never written to Health Connect. Deleting the journal removes the day logs, the exclusions and every cycle setting from the device after a confirmation, and leaves Health Connect records alone. See [Cycle tracking](cycle-tracking.md) and [Reminders](reminders.md).
+
 ## Goals And Reminders
 
-Settings expose local goals and reminders for supported metric families, including hydration and mindfulness reminders.
+Settings expose local goals and reminders for supported metric families, including hydration, mindfulness, and cycle reminders.
 
 Goals and reminders are local app preferences. They help shape guidance and notifications but do not create Health Connect health records by themselves.
 

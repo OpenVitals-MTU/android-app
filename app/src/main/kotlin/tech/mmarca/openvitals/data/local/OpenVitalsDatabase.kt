@@ -9,6 +9,9 @@ import tech.mmarca.openvitals.data.local.beverage.BeverageEntity
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyBucketEntity
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyDayEntity
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyTimelineDao
+import tech.mmarca.openvitals.data.local.cycle.CycleExclusionEntity
+import tech.mmarca.openvitals.data.local.cycle.CycleJournalDao
+import tech.mmarca.openvitals.data.local.cycle.CycleJournalEntryEntity
 import tech.mmarca.openvitals.data.local.food.FoodDao
 import tech.mmarca.openvitals.data.local.food.FoodEntity
 import tech.mmarca.openvitals.data.local.food.FoodNutrientEntity
@@ -37,6 +40,8 @@ import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
         HeartRateDayEntity::class,
         FoodEntity::class,
         FoodNutrientEntity::class,
+        CycleJournalEntryEntity::class,
+        CycleExclusionEntity::class,
     ],
     version = OpenVitalsDatabase.VERSION,
     exportSchema = true,
@@ -58,9 +63,11 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
 
     abstract fun foodDao(): FoodDao
 
+    abstract fun cycleJournalDao(): CycleJournalDao
+
     companion object {
         /** Raise it with a new migration in [ALL_MIGRATIONS], and commit the schema file Room then writes. */
-        const val VERSION = 12
+        const val VERSION = 13
 
         val MIGRATION_1_3 = beverageMigration(1)
         val MIGRATION_2_3 = beverageMigration(2)
@@ -126,6 +133,13 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
             }
         }
 
+        /** The cycle journal and cycle exclusions. Creation only; nothing to backfill. */
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                createCycleJournalTables(db)
+            }
+        }
+
         /**
          * Every migration, in one place. The database builder takes this list, so a migration
          * cannot be written and then left out of it.
@@ -143,6 +157,7 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                 MIGRATION_9_10,
                 MIGRATION_10_11,
                 MIGRATION_11_12,
+                MIGRATION_12_13,
             )
 
         private fun beverageMigration(startVersion: Int): Migration =
@@ -308,6 +323,36 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                     `nutrient` TEXT NOT NULL,
                     `value` REAL NOT NULL,
                     PRIMARY KEY(`food_id`, `nutrient`)
+                )
+                """.trimIndent()
+            )
+        }
+
+        private fun createCycleJournalTables(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `cycle_journal_entries` (
+                    `date` TEXT NOT NULL,
+                    `bleeding_none` INTEGER NOT NULL,
+                    `pain` INTEGER,
+                    `mood` INTEGER,
+                    `energy` INTEGER,
+                    `symptoms` TEXT NOT NULL,
+                    `notes` TEXT NOT NULL,
+                    `hcg_test` TEXT,
+                    `bbt_disturbances` TEXT NOT NULL,
+                    `cervical_sensation` TEXT,
+                    `updated_at_millis` INTEGER NOT NULL,
+                    PRIMARY KEY(`date`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `cycle_exclusions` (
+                    `start_date` TEXT NOT NULL,
+                    `reason` TEXT,
+                    PRIMARY KEY(`start_date`)
                 )
                 """.trimIndent()
             )

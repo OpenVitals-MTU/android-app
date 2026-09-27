@@ -8,6 +8,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
+import tech.mmarca.openvitals.data.repository.contract.CyclePreferences
+import tech.mmarca.openvitals.features.devicesync.store.CompositeSyncStore
+import tech.mmarca.openvitals.features.devicesync.store.CycleJournalSyncStore
+import tech.mmarca.openvitals.features.devicesync.store.CycleJournalSyncTypes
 import tech.mmarca.openvitals.features.homewidgets.refreshPlacedHomeWidgets
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -51,6 +56,8 @@ class DeviceSyncViewModel @Inject constructor(
     private val healthConnectManager: HealthConnectManager,
     private val importRepository: AppleHealthImportRepository,
     private val originRepository: SyncedRecordOriginRepository,
+    private val cycleJournalRepository: CycleJournalRepository,
+    private val cyclePreferences: CyclePreferences,
     private val reportStore: DeviceSyncReportStore,
     private val recordingController: ActivityRecordingController,
     private val dispatchers: DispatcherProvider,
@@ -108,13 +115,13 @@ class DeviceSyncViewModel @Inject constructor(
         viewModelScope.launch {
             val granted = runCatching { healthConnectManager.grantedPermissions() }
                 .getOrNull() ?: return@launch
-            // Syncable here only with both a read and a write grant.
+            // Syncable here only with both a read and a write grant. The journal needs none.
             val available = syncableTypePermissionSuffix
                 .filterValues { suffix ->
                     healthReadPermission(suffix) in granted &&
                         healthWritePermission(suffix) in granted
                 }
-                .keys
+                .keys + CycleJournalSyncTypes.all
             _uiState.update { state ->
                 state.copy(
                     availableTypes = available,
@@ -292,13 +299,25 @@ class DeviceSyncViewModel @Inject constructor(
             }
 
             val window = state.range.window()
-            val store = HealthConnectSyncStore(
+            val healthConnectStore = HealthConnectSyncStore(
                 healthConnectManager = healthConnectManager,
                 importRepository = importRepository,
                 originRepository = originRepository,
                 localPackageName = context.packageName,
                 windowStart = window.first,
                 windowEnd = window.second,
+            )
+            val journalStore = CycleJournalSyncStore(
+                journal = cycleJournalRepository,
+                preferences = cyclePreferences,
+                windowStart = window.first,
+                windowEnd = window.second,
+            )
+            val store = CompositeSyncStore(
+                listOf(
+                    syncableRecordTypes.toSet() to healthConnectStore,
+                    CycleJournalSyncTypes.all.toSet() to journalStore,
+                ),
             )
             val session = SyncSession(
                 transport = bluetooth.transport(),

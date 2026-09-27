@@ -3,13 +3,14 @@ package tech.mmarca.openvitals.features.cycle
 import android.content.res.Resources
 import androidx.health.connect.client.records.SexualActivityRecord
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.domain.model.CervicalMucusEntry
 import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
+import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.domain.model.CycleRecordValues
 import tech.mmarca.openvitals.domain.model.MenstruationFlowEntry
 import tech.mmarca.openvitals.domain.model.MenstruationPeriodEntry
@@ -27,8 +28,18 @@ data class CycleDay(
     val flows: List<MenstruationFlowEntry>,
     val ovulationTests: List<OvulationTestEntry>,
     val basalBodyTemperature: BasalBodyTemperatureEntry?,
+    /** Inside the estimated window of the next period, and not a recorded period day. */
     val predictedPeriod: Boolean = false,
-)
+    val spotting: Boolean = false,
+    val isCycleStart: Boolean = false,
+    val journal: CycleJournalEntry? = null,
+    val hasOtherObservations: Boolean = false,
+) {
+    /** Anything recorded besides bleeding: a journal entry, a test, a temperature. */
+    val hasObservations: Boolean
+        get() = journal?.hasObservations == true || ovulationTests.isNotEmpty() ||
+            basalBodyTemperature != null || hasOtherObservations
+}
 
 internal data class CycleObservation(
     val time: Instant,
@@ -38,6 +49,8 @@ internal data class CycleObservation(
     val id: String = "",
     val kind: CycleEntryKind? = null,
     val isOpenVitalsEntry: Boolean = false,
+    /** Set for a journal row: it opens that day's log instead of a record editor. */
+    val dayLogDate: LocalDate? = null,
 )
 
 internal fun cycleDays(
@@ -45,6 +58,9 @@ internal fun cycleDays(
     data: CycleData,
     zone: ZoneId,
     predictedWindows: List<ClosedRange<LocalDate>> = emptyList(),
+    journalByDate: Map<LocalDate, CycleJournalEntry> = emptyMap(),
+    cycleStarts: Set<LocalDate> = emptySet(),
+    today: LocalDate = LocalDate.now(),
 ): List<CycleDay> {
     val gridStart = period.start.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
     val gridEnd = period.end.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
@@ -54,8 +70,13 @@ internal fun cycleDays(
         .groupBy { it.time.atZone(zone).toLocalDate() }
         .mapValues { (_, readings) -> readings.maxByOrNull { it.time } }
     val menstruationDates = data.menstruationPeriods.flatMap { it.dates(zone) }.toSet()
+    val spottingDates = data.intermenstrualBleeding.map { it.time.atZone(zone).toLocalDate() }.toSet()
+    val otherDates = (data.cervicalMucus.map { it.time } + data.sexualActivity.map { it.time })
+        .map { it.atZone(zone).toLocalDate() }
+        .toSet()
 
     return datesBetween(gridStart, gridEnd).map { date ->
+        val hasPeriod = date in menstruationDates || date in flowsByDate
         CycleDay(
             date = date,
             inSelectedPeriod = !date.isBefore(period.start) && !date.isAfter(period.end),
@@ -63,28 +84,31 @@ internal fun cycleDays(
             flows = flowsByDate[date].orEmpty(),
             ovulationTests = ovulationByDate[date].orEmpty(),
             basalBodyTemperature = bbtByDate[date],
-            predictedPeriod = date.isAfter(LocalDate.now()) &&
+            predictedPeriod = !hasPeriod && !date.isBefore(today) &&
                 predictedWindows.any { !date.isBefore(it.start) && !date.isAfter(it.endInclusive) },
+            spotting = date in spottingDates,
+            isCycleStart = date in cycleStarts,
+            journal = journalByDate[date],
+            hasOtherObservations = date in otherDates,
         )
     }
 }
 
-internal fun observationsFor(data: CycleData, resources: Resources): List<CycleObservation> {
+internal fun observationsFor(
+    data: CycleData,
+    resources: Resources,
+    journalEntries: List<CycleJournalEntry>,
+    unitFormatter: UnitFormatter,
+): List<CycleObservation> {
     val zone = ZoneId.systemDefault()
     return buildList {
         data.menstruationPeriods.forEach { period ->
-            val days = period.dates(zone).size.toLong().coerceAtLeast(1)
+            val days = period.dates(zone).size.coerceAtLeast(1)
             add(
                 CycleObservation(
                     time = period.startTime,
                     title = resources.getString(R.string.cycle_observation_menstruation_period),
-                    value = resources.getString(
-                        R.string.cycle_days_value,
-                        days,
-                        resources.getString(
-                            if (days == 1L) R.string.cycle_day_singular else R.string.cycle_day_plural
-                        ),
-                    ),
+                    value = resources.getQuantityString(R.plurals.cycle_days_value, days, days),
                     source = period.source,
                 )
             )
@@ -99,6 +123,7 @@ internal fun observationsFor(data: CycleData, resources: Resources): List<CycleO
                     id = flow.id,
                     kind = CycleEntryKind.MENSTRUATION_FLOW,
                     isOpenVitalsEntry = flow.isOpenVitalsEntry,
+                    dayLogDate = ownDayLogDate(flow.isOpenVitalsEntry, flow.time, zone),
                 )
             )
         }
@@ -112,6 +137,7 @@ internal fun observationsFor(data: CycleData, resources: Resources): List<CycleO
                     id = test.id,
                     kind = CycleEntryKind.OVULATION_TEST,
                     isOpenVitalsEntry = test.isOpenVitalsEntry,
+                    dayLogDate = ownDayLogDate(test.isOpenVitalsEntry, test.time, zone),
                 )
             )
         }
@@ -125,6 +151,7 @@ internal fun observationsFor(data: CycleData, resources: Resources): List<CycleO
                     id = mucus.id,
                     kind = CycleEntryKind.CERVICAL_MUCUS,
                     isOpenVitalsEntry = mucus.isOpenVitalsEntry,
+                    dayLogDate = ownDayLogDate(mucus.isOpenVitalsEntry, mucus.time, zone),
                 )
             )
         }
@@ -135,13 +162,14 @@ internal fun observationsFor(data: CycleData, resources: Resources): List<CycleO
                     title = resources.getString(R.string.cycle_observation_basal_body_temperature),
                     value = resources.getString(
                         R.string.cycle_basal_temperature_value,
-                        temperature.temperatureCelsius,
+                        unitFormatter.temperature(temperature.temperatureCelsius, decimals = BbtDecimals).text,
                         resources.getString(measurementLocationLabelRes(temperature.measurementLocation)),
                     ),
                     source = temperature.source,
                     id = temperature.id,
                     kind = CycleEntryKind.BASAL_BODY_TEMPERATURE,
                     isOpenVitalsEntry = temperature.isOpenVitalsEntry,
+                    dayLogDate = ownDayLogDate(temperature.isOpenVitalsEntry, temperature.time, zone),
                 )
             )
         }
@@ -150,11 +178,12 @@ internal fun observationsFor(data: CycleData, resources: Resources): List<CycleO
                 CycleObservation(
                     time = bleeding.time,
                     title = resources.getString(R.string.cycle_observation_intermenstrual_bleeding),
-                    value = resources.getString(R.string.recording_actively_recorded),
+                    value = resources.getString(R.string.cycle_entry_section_spotting),
                     source = bleeding.source,
                     id = bleeding.id,
                     kind = CycleEntryKind.SPOTTING,
                     isOpenVitalsEntry = bleeding.isOpenVitalsEntry,
+                    dayLogDate = ownDayLogDate(bleeding.isOpenVitalsEntry, bleeding.time, zone),
                 )
             )
         }
@@ -168,16 +197,38 @@ internal fun observationsFor(data: CycleData, resources: Resources): List<CycleO
                     id = activity.id,
                     kind = CycleEntryKind.SEXUAL_ACTIVITY,
                     isOpenVitalsEntry = activity.isOpenVitalsEntry,
+                    dayLogDate = ownDayLogDate(activity.isOpenVitalsEntry, activity.time, zone),
+                )
+            )
+        }
+        journalEntries.filter { it.hasObservations }.forEach { entry ->
+            add(
+                CycleObservation(
+                    time = entry.date.atStartOfDay(zone).toInstant(),
+                    title = resources.getString(R.string.cycle_observation_day_log),
+                    value = journalSummary(entry, resources),
+                    source = resources.getString(R.string.app_name),
+                    id = entry.date.toString(),
+                    isOpenVitalsEntry = true,
+                    dayLogDate = entry.date,
                 )
             )
         }
     }.sortedByDescending { it.time }
 }
 
-@Composable
-internal fun measurementLocationLabel(location: Int): String = stringResource(
-    measurementLocationLabelRes(location)
-)
+/** "Pain 3/5 · Mood 4/5 · 2 symptoms · note", from what the day holds. */
+internal fun journalSummary(entry: CycleJournalEntry, resources: Resources): String = buildList {
+    entry.painLevel?.let { add(resources.getString(R.string.cycle_today_pain, it)) }
+    entry.moodLevel?.let { add(resources.getString(R.string.cycle_today_mood, it)) }
+    entry.energyLevel?.let { add(resources.getString(R.string.cycle_today_energy, it)) }
+    if (entry.symptoms.isNotEmpty()) {
+        add(resources.getQuantityString(R.plurals.cycle_today_symptoms, entry.symptoms.size, entry.symptoms.size))
+    }
+    if (entry.bleedingNone) add(resources.getString(R.string.cycle_bleeding_none))
+    if (entry.hcgTest != null) add(resources.getString(R.string.cycle_entry_section_hcg))
+    if (entry.notes.isNotBlank()) add(resources.getString(R.string.cycle_journal_summary_note))
+}.joinToString(separator = " · ")
 
 internal fun measurementLocationLabelRes(location: Int): Int = when (location) {
     1 -> R.string.measurement_location_armpit
@@ -205,14 +256,14 @@ private fun datesBetween(start: LocalDate, endInclusive: LocalDate): List<LocalD
         if (next.isAfter(endInclusive)) null else next
     }.toList()
 
-private fun flowLabel(flow: Int, resources: Resources): String = resources.getString(
-    when (flow) {
-        FLOW_LIGHT -> R.string.cycle_flow_light
-        FLOW_MEDIUM -> R.string.cycle_flow_medium
-        FLOW_HEAVY -> R.string.cycle_flow_heavy
-        else -> R.string.recording_unknown
-    }
-)
+internal fun flowLabel(flow: Int, resources: Resources): String = resources.getString(flowLabelRes(flow))
+
+internal fun flowLabelRes(flow: Int): Int = when (flow) {
+    FLOW_LIGHT -> R.string.cycle_flow_light
+    FLOW_MEDIUM -> R.string.cycle_flow_medium
+    FLOW_HEAVY -> R.string.cycle_flow_heavy
+    else -> R.string.recording_unknown
+}
 
 private fun ovulationResultLabel(result: Int, resources: Resources): String = resources.getString(
     when (result) {
@@ -273,3 +324,10 @@ private const val MUCUS_UNUSUAL = CycleRecordValues.MUCUS_APPEARANCE_UNUSUAL
 private const val MUCUS_LIGHT = CycleRecordValues.MUCUS_SENSATION_LIGHT
 private const val MUCUS_MEDIUM = CycleRecordValues.MUCUS_SENSATION_MEDIUM
 private const val MUCUS_HEAVY = CycleRecordValues.MUCUS_SENSATION_HEAVY
+
+/** An own Health Connect record is edited through its day's log; another app's is not. */
+private fun ownDayLogDate(isOwn: Boolean, time: Instant, zone: ZoneId): LocalDate? =
+    if (isOwn) time.atZone(zone).toLocalDate() else null
+
+/** Basal temperatures are read to the hundredth. */
+private const val BbtDecimals = 2

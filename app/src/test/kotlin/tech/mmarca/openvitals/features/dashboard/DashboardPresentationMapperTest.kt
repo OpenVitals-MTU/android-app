@@ -4,8 +4,16 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.insights.BodyEnergyConfidence
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
+import tech.mmarca.openvitals.domain.cycle.CurrentCyclePhase
+import tech.mmarca.openvitals.domain.cycle.CycleEstimateResult
+import tech.mmarca.openvitals.domain.cycle.CyclePhase
+import tech.mmarca.openvitals.domain.cycle.PhaseCertainty
+import tech.mmarca.openvitals.domain.cycle.PhaseIndeterminateReason
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
+import tech.mmarca.openvitals.domain.model.DashboardCycleSummary
 import tech.mmarca.openvitals.domain.model.DashboardData
+import tech.mmarca.openvitals.features.cycle.CycleEstimateSummary
+import tech.mmarca.openvitals.features.cycle.CycleSecondaryLine
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import java.time.Instant
@@ -99,6 +107,59 @@ class DashboardPresentationMapperTest {
 
         val cycle = display.widgets[DashboardWidgetId.CYCLE]?.cycle
         assertEquals(CycleWidgetDisplay.MenstruationDays(5), cycle)
+    }
+
+    @Test
+    fun build_cycleWidget_prefersTheRecordedDayWithItsPhase() {
+        val today = LocalDate.now()
+        val data = DashboardData(
+            date = today,
+            menstruationPeriodDays = 5,
+            cycleSummary = DashboardCycleSummary(
+                currentCycleDay = 12,
+                cycleStartDate = today.minusDays(11),
+                phase = CurrentCyclePhase.Available(CyclePhase.FOLLICULAR, PhaseCertainty.ESTIMATED),
+                estimate = CycleEstimateResult.NeedsMoreHistory,
+            ),
+        )
+
+        val display = DashboardPresentationMapper.build(
+            data = data,
+            dailyGoals = dailyGoals,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+        )
+
+        assertEquals(
+            CycleWidgetDisplay.RecordedDay(12, CycleSecondaryLine.Phase(CyclePhase.FOLLICULAR)),
+            display.widgets[DashboardWidgetId.CYCLE]?.cycle,
+        )
+    }
+
+    @Test
+    fun build_cycleWidget_showsTheEstimateWhileThePhaseIsUnknown() {
+        val today = LocalDate.now()
+        val data = DashboardData(
+            date = today,
+            cycleSummary = DashboardCycleSummary(
+                currentCycleDay = 3,
+                cycleStartDate = today.minusDays(2),
+                phase = CurrentCyclePhase.Indeterminate(PhaseIndeterminateReason.NEEDS_MORE_HISTORY),
+                estimate = CycleEstimateResult.NeedsMoreHistory,
+            ),
+        )
+
+        val display = DashboardPresentationMapper.build(
+            data = data,
+            dailyGoals = dailyGoals,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+        )
+
+        assertEquals(
+            CycleWidgetDisplay.RecordedDay(3, CycleSecondaryLine.Estimate(CycleEstimateSummary.NeedsHistory)),
+            display.widgets[DashboardWidgetId.CYCLE]?.cycle,
+        )
     }
 
     @Test

@@ -1,7 +1,21 @@
 package tech.mmarca.openvitals.features.cycle
 
 import androidx.lifecycle.SavedStateHandle
+import io.mockk.slot
+import io.mockk.verify
+import java.time.LocalTime
+import java.time.ZoneId
+import org.junit.Assert.assertNotNull
+import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
+import tech.mmarca.openvitals.data.repository.contract.FakeCycleJournalRepository
 import tech.mmarca.openvitals.data.repository.contract.FakePreferences
+import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
+import tech.mmarca.openvitals.domain.model.CycleEntryKind
+import tech.mmarca.openvitals.domain.model.CycleEntryWriteRequest
+import tech.mmarca.openvitals.domain.model.CycleJournalEntry
+import tech.mmarca.openvitals.domain.model.CycleRecordValues
+import tech.mmarca.openvitals.features.cycle.reminders.FakeCycleReminderSettings
+import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -56,11 +70,19 @@ class CycleViewModelTest {
 
     private fun viewModel(
         repository: CycleRepository,
+        journal: CycleJournalRepository = FakeCycleJournalRepository(),
+        reminders: FakeCycleReminderSettings = FakeCycleReminderSettings(),
+        widgets: HomeWidgetRefreshScheduler = mockk(relaxed = true),
     ) = CycleViewModel(
         repository = repository,
         periodPreferences = FakePreferences(),
+        journal = journal,
+        cyclePreferences = FakePreferences(),
+        bodyProfilePreferences = FakePreferences(),
+        reminders = reminders,
         dispatchers = mainDispatcherRule.dispatcherProvider,
         savedStateHandle = SavedStateHandle(),
+        homeWidgetRefreshScheduler = widgets,
     )
 
     @Test fun `initial range is MONTH`() = runTest {
@@ -255,5 +277,101 @@ class CycleViewModelTest {
         assertEquals(freshData, state.data)
         assertEquals(1, state.display.summary.totalEntryCount)
         assertFalse(state.isLoading)
+    }
+
+    @Test fun `deleting a journal row drops it at once, re-plans the reminders and redraws the widget`() = runTest {
+        val date = today.minusDays(1)
+        val journal = FakeCycleJournalRepository(initialEntries = listOf(CycleJournalEntry(date = date, painLevel = 2)))
+        val reminders = FakeCycleReminderSettings()
+        val widgets = mockk<HomeWidgetRefreshScheduler>(relaxed = true)
+        val vm = viewModel(repo(), journal = journal, reminders = reminders, widgets = widgets)
+
+        vm.deleteJournalEntry(date)
+        advanceUntilIdle()
+
+        assertNull(journal.entries[date])
+        assertEquals(1, reminders.applied)
+        verify(exactly = 1) { widgets.refreshNow() }
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test fun `a failed journal delete surfaces the error and plans nothing`() = runTest {
+        val journal = mockk<CycleJournalRepository> {
+            coEvery { delete(any()) } throws IllegalStateException("disk")
+        }
+        val reminders = FakeCycleReminderSettings()
+        val vm = viewModel(repo(), journal = journal, reminders = reminders)
+
+        vm.deleteJournalEntry(today.minusDays(1))
+        advanceUntilIdle()
+
+        assertNotNull(vm.uiState.value.error)
+        assertEquals(0, reminders.applied)
+    }
+
+    @Test fun `deleting an own record asks the repository once and re-plans`() = runTest {
+        val flow = MenstruationFlowEntry(time = Instant.now(), flow = 2, source = "OpenVitals", id = "own", isOpenVitalsEntry = true)
+        val repo = repo(data = CycleData(menstruationFlows = listOf(flow)))
+        coEvery { repo.deleteCycleEntry(any(), any()) } returns Unit
+        val reminders = FakeCycleReminderSettings()
+        val vm = viewModel(repo, reminders = reminders)
+
+        vm.deleteCycleEntry(CycleEntryKind.MENSTRUATION_FLOW, "own")
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { repo.deleteCycleEntry(CycleEntryKind.MENSTRUATION_FLOW, "own") }
+        assertEquals(1, reminders.applied)
+    }
+
+    @Test fun `excluding a cycle stores the reason, and including it clears the row`() = runTest {
+        val journal = FakeCycleJournalRepository()
+        val reminders = FakeCycleReminderSettings()
+        val repo = repo()
+        val vm = viewModel(repo, journal = journal, reminders = reminders)
+        val start = today.minusDays(40)
+
+        vm.setCycleExclusion(start, today.minusDays(12), excluded = true, reason = CycleExclusionReason.ILLNESS)
+        advanceUntilIdle()
+        assertEquals(CycleExclusionReason.ILLNESS, journal.exclusionsByDate[start])
+        assertEquals(1, reminders.applied)
+
+        vm.setCycleExclusion(start, today.minusDays(12), excluded = false, reason = null)
+        advanceUntilIdle()
+        assertTrue(journal.exclusionsByDate.isEmpty())
+        assertEquals(2, reminders.applied)
+        // The initial load plus one reload per change.
+        coVerify(exactly = 3) { repo.loadCyclePeriod(any()) }
+    }
+
+    @Test fun `a past period is one light-flow record at noon`() = runTest {
+        val repo = repo()
+        val request = slot<CycleEntryWriteRequest>()
+        coEvery { repo.writeCycleEntry(capture(request)) } returns "new"
+        val reminders = FakeCycleReminderSettings()
+        val widgets = mockk<HomeWidgetRefreshScheduler>(relaxed = true)
+        val vm = viewModel(repo, reminders = reminders, widgets = widgets)
+        val date = today.minusDays(30)
+
+        vm.addPastPeriod(date)
+        advanceUntilIdle()
+
+        assertEquals(CycleEntryKind.MENSTRUATION_FLOW, request.captured.kind)
+        assertEquals(CycleRecordValues.FLOW_LIGHT, request.captured.flow)
+        assertEquals(date.atTime(LocalTime.NOON).atZone(ZoneId.systemDefault()).toInstant(), request.captured.time)
+        assertEquals(1, reminders.applied)
+        verify(exactly = 1) { widgets.refreshNow() }
+    }
+
+    @Test fun `a refused past period surfaces the error and plans nothing`() = runTest {
+        val repo = repo()
+        coEvery { repo.writeCycleEntry(any()) } throws SecurityException("no write permission")
+        val reminders = FakeCycleReminderSettings()
+        val vm = viewModel(repo, reminders = reminders)
+
+        vm.addPastPeriod(today.minusDays(30))
+        advanceUntilIdle()
+
+        assertNotNull(vm.uiState.value.error)
+        assertEquals(0, reminders.applied)
     }
 }

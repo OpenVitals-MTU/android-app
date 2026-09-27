@@ -1,31 +1,12 @@
 package tech.mmarca.openvitals.features.manualentry.cycle
 
-import tech.mmarca.openvitals.features.manualentry.*
-import tech.mmarca.openvitals.features.manualentry.activity.*
-import tech.mmarca.openvitals.features.manualentry.activity.recording.*
-import tech.mmarca.openvitals.features.manualentry.activity.routeimport.*
-import tech.mmarca.openvitals.features.manualentry.body.*
-import tech.mmarca.openvitals.features.manualentry.hydration.*
-import tech.mmarca.openvitals.features.manualentry.mindfulness.*
-import tech.mmarca.openvitals.features.manualentry.vitals.*
-
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.CycleRecordValues
 import tech.mmarca.openvitals.features.cycle.measurementLocationLabelRes
 import tech.mmarca.openvitals.ui.components.OptionDropdown
-import tech.mmarca.openvitals.ui.theme.Spacing
 
 /** One single-select section as a dropdown with "Not specified" first. */
 @Composable
@@ -47,73 +28,6 @@ internal fun CycleChipSection(
         modifier = modifier,
     )
 }
-
-@Composable
-internal fun CycleToggleSection(
-    label: String,
-    chipLabel: String,
-    logged: Boolean,
-    enabled: Boolean,
-    onToggle: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        FilterChip(
-            selected = logged,
-            enabled = enabled,
-            onClick = onToggle,
-            label = { Text(chipLabel) },
-        )
-    }
-}
-
-@Composable
-internal fun CycleBbtSection(
-    label: String,
-    inputText: String,
-    location: Int?,
-    enabled: Boolean,
-    onInputChanged: (String) -> Unit,
-    onLocationSelected: (Int?) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-    ) {
-        OutlinedTextField(
-            value = inputText,
-            onValueChange = onInputChanged,
-            enabled = enabled,
-            label = { Text(label) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        CycleChipSection(
-            label = stringResource(R.string.cycle_entry_bbt_location),
-            options = bbtLocationOptions(),
-            selection = location,
-            enabled = enabled,
-            onSelect = onLocationSelected,
-        )
-    }
-}
-
-@Composable
-internal fun flowOptions(): List<Pair<Int, String>> = listOf(
-    CycleRecordValues.FLOW_LIGHT to stringResource(R.string.cycle_flow_light),
-    CycleRecordValues.FLOW_MEDIUM to stringResource(R.string.cycle_flow_medium),
-    CycleRecordValues.FLOW_HEAVY to stringResource(R.string.cycle_flow_heavy),
-)
 
 @Composable
 internal fun protectionOptions(): List<Pair<Int, String>> = listOf(

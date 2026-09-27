@@ -51,6 +51,15 @@ class HomeWidgetLaunchRouteTest {
         }
         assertTrue(isSupportedOpenVitalsRoute(Screen.BodyEnergyDetails.createRoute(today.toString())))
         assertTrue(isSupportedOpenVitalsRoute(Screen.HydrationEntryLogDrink.createRoute("coffee")))
+        assertTrue(isSupportedOpenVitalsRoute(homeCycleWidgetEntryRoute()))
+    }
+
+    @Test
+    fun `the cycle widget opens today's day log and never a dated one`() {
+        // A date baked into the widget goes stale after midnight, so only the bare route is allowed.
+        assertEquals(Screen.CycleEntry.route, homeCycleWidgetEntryRoute())
+        assertFalse(isSupportedOpenVitalsRoute(Screen.CycleEntry.createRoute(LocalDate.of(2026, 7, 10))))
+        assertFalse(isSupportedOpenVitalsRoute("manual_entry/cycle/day/2026-07-10"))
     }
 
     @Test

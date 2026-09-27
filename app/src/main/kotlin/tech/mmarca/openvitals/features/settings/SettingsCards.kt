@@ -30,6 +30,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Bluetooth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -216,6 +217,7 @@ internal val SettingsSection.icon: ImageVector
         SettingsSection.BODY_PROFILE -> Icons.Outlined.Person
         SettingsSection.VITALS -> Icons.Outlined.MonitorHeart
         SettingsSection.RECOVERY -> Icons.Outlined.FavoriteBorder
+        SettingsSection.CYCLE -> Icons.Outlined.CalendarMonth
         SettingsSection.DATA_IMPORT -> Icons.Outlined.FolderOpen
         SettingsSection.DEVICE_SYNC -> Icons.Outlined.Devices
         SettingsSection.HEALTH_CONNECT -> Icons.Outlined.HealthAndSafety
@@ -1240,7 +1242,7 @@ internal fun formatOfflineMapSize(bytes: Long): String {
 }
 
 @Composable
-private fun SettingsSwitchRow(
+internal fun SettingsSwitchRow(
     title: String,
     body: String,
     checked: Boolean,

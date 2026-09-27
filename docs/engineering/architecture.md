@@ -18,7 +18,7 @@ The repo now has one Android app module for the local app. The goal is to keep b
 - Feature repositories: in place for activity, sleep, heart, body, body energy, caffeine, hydration, nutrition, mindfulness, cycle, and vitals
 - Dashboard: still a dedicated day-based summary screen, not a period-detail screen
 - Manual entry: separate from the dashboard and writes explicit user-entered records directly to Health Connect
-- Room is at schema version 11. It holds derived summary caches plus the three tables Health Connect cannot represent (`garmin_wellness_samples`, `garmin_sleep_minutes`, `synced_record_origins`); Health Connect remains the source of truth for everything it has a record type for
+- Room is at schema version 13. It holds derived summary caches plus the tables Health Connect cannot represent (`garmin_wellness_samples`, `garmin_sleep_minutes`, `synced_record_origins`, the food catalog, the cycle journal and cycle exclusions); Health Connect remains the source of truth for everything it has a record type for
 - WorkManager is used for user-started Apple Health imports, offline map imports, and the opt-in periodic watch sync
 - Device integration lives under [`devices`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices): the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, and notification forwarding
 - Phone-to-phone Health Connect sync lives under [`features/devicesync`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/devicesync) and runs over Bluetooth Classic RFCOMM
@@ -207,7 +207,7 @@ Some repositories are now split into a `data/repository/contract/` interface and
 
 ### Local storage
 
-[`OpenVitalsDatabase`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/local/OpenVitalsDatabase.kt) is at `VERSION = 12`, with migrations declared in its companion object and listed once, in `ALL_MIGRATIONS`, which the database builder takes. Room exports the schema of each version to [`app/schemas`](../../app/schemas); the files are committed.
+[`OpenVitalsDatabase`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/local/OpenVitalsDatabase.kt) is at `VERSION = 13`, with migrations declared in its companion object and listed once, in `ALL_MIGRATIONS`, which the database builder takes. Room exports the schema of each version to [`app/schemas`](../../app/schemas); the files are committed.
 
 To change the schema: raise `VERSION`, write the migration, add it to `ALL_MIGRATIONS`, build once, and commit the new schema file. `OpenVitalsDatabaseSchemaTest` fails until all of that is done: it replays every migration's statements and compares the tables they leave with the exported schema. It can do that on the JVM because the migrations only create and drop tables. A migration that alters a table needs a real database, so add `room-testing` and a `MigrationTestHelper` test with it; the exported schemas are what that helper reads.
 
@@ -221,6 +221,7 @@ To change the schema: raise `VERSION`, write the migration, add it to `ALL_MIGRA
 | `garmin_sleep_minutes` | `data/local/garmin` | per-minute input for estimated sleep stages, added in migration 9 → 10 |
 | `heart_rate_days` | `data/local/heartratecache` | each day's heart-rate average from raw samples, read again when the day's hourly aggregates change, added in migration 10 → 11 |
 | `foods`, `food_nutrients` | `data/local/food` | the user's food catalog and each food's nutrients, added in migration 11 → 12; a logged portion is a Health Connect nutrition record, not a row |
+| `cycle_journal_entries`, `cycle_exclusions` | `data/local/cycle` | the cycle day log Health Connect has no record type for (pain, mood, energy, symptoms, notes, pregnancy test, temperature disturbances, cervical sensation) and the cycles kept out of the estimate, added in migration 12 → 13 |
 
 `garmin_wellness_samples` is the one table that is not a cache. It is the system of record for the series a Garmin watch produces that Health Connect has no record type for (stress, Body Battery, watch sleep scores). Its schema is `(metric, time_millis, value)` with `(metric, time_millis)` as the primary key, so re-syncing an overlapping window rewrites rows instead of duplicating them.
 
@@ -668,11 +669,11 @@ Each repository should:
 - call `HealthConnectManager`
 - return app models ready for the ViewModel
 
-Not every repository is a Health Connect facade. `GarminWellnessRepository` is a thin seam over a Room DAO for series Health Connect has no type for, and `BleDeviceRepository` and `PreferencesRepository` own app-local device and preference state. Those are the exception. If a new repository is not backed by Health Connect, say in its KDoc why Health Connect cannot own the data.
+Not every repository is a Health Connect facade. `GarminWellnessRepository` is a thin seam over a Room DAO for series Health Connect has no type for, `CycleJournalRepository` holds the subjective cycle journal for the same reason, and `BleDeviceRepository`, `PreferencesRepository` and `CyclePreferencesRepository` own app-local device and preference state. Those are the exception. If a new repository is not backed by Health Connect, say in its KDoc why Health Connect cannot own the data.
 
 ### Ask for the preferences you use, not the repository
 
-`PreferencesRepository` holds every setting in the app and needs a `Context`, so a ViewModel that injects it cannot be built in a JVM test. Narrow contracts in `data/repository/contract` carve it into the groups screens actually use — `PeriodPreferences`, `DailyGoalPreferences`, `BodyProfilePreferences`, `CalorieDisplayPreferences`, `SleepWindowPreferences`, `NutritionDisplayPreferences`, `HeartThresholdPreferences`, `HydrationGoalPreferences`, `BodyEnergyCalibrationPreferences`, `CaffeineModelPreferences`, `MindfulnessTimerPreferences`, `ActivitySplitPreferences`, `WidgetOrderPreferences`, `RecordingPreferences`, `UnitPreferences`, `OnboardingPreferences`, `HealthConnectPreferences` — and `PreferencesModule` binds each to the repository. The Settings screens and the dashboard read too wide a set to fit one, and take the repository. The reminder controllers need a `Context` for the same reason; `HydrationReminderSettings` and `MindfulnessReminderSettings` are the three-method slice a screen uses, bound in `RemindersModule`.
+`PreferencesRepository` holds every setting in the app and needs a `Context`, so a ViewModel that injects it cannot be built in a JVM test. Narrow contracts in `data/repository/contract` carve it into the groups screens actually use — `PeriodPreferences`, `DailyGoalPreferences`, `BodyProfilePreferences`, `CalorieDisplayPreferences`, `SleepWindowPreferences`, `NutritionDisplayPreferences`, `HeartThresholdPreferences`, `HydrationGoalPreferences`, `BodyEnergyCalibrationPreferences`, `CaffeineModelPreferences`, `MindfulnessTimerPreferences`, `ActivitySplitPreferences`, `WidgetOrderPreferences`, `RecordingPreferences`, `UnitPreferences`, `OnboardingPreferences`, `HealthConnectPreferences` — and `PreferencesModule` binds each to the repository. `CyclePreferences` is bound to `CyclePreferencesRepository`, a separate store in its own preferences file, because the main repository is at its size ceiling. The Settings screens and the dashboard read too wide a set to fit one, and take the repository. The reminder controllers need a `Context` for the same reason; `HydrationReminderSettings`, `MindfulnessReminderSettings` and `CycleReminderSettings` are the three-method slice a screen uses, bound in `RemindersModule`.
 
 Inject the contract. The ViewModel then needs one constructor, and its test passes `FakePreferences` instead of mocking a hundred members. A route argument is read from the injected `SavedStateHandle` in that same constructor; a test builds the handle with the real argument, so `activityMetricFromRoute` and its `routeId()` inverse are the contract. Add a contract for a new group rather than widening an existing one.
 

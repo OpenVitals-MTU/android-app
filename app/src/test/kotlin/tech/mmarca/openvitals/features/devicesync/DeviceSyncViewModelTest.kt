@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.devicesync
 
+import tech.mmarca.openvitals.data.repository.contract.FakeCycleJournalRepository
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncByteTransport
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.currentCoroutineContext
@@ -79,6 +81,8 @@ class DeviceSyncViewModelTest {
         healthConnectManager = mockk(relaxed = true),
         importRepository = mockk(relaxed = true),
         originRepository = mockk(relaxed = true),
+        cycleJournalRepository = FakeCycleJournalRepository(),
+        cyclePreferences = FakePreferences(),
         reportStore = mockk(relaxed = true),
         recordingController = recordingController,
         dispatchers = mainDispatcherRule.dispatcherProvider,
@@ -199,6 +203,8 @@ class DeviceSyncViewModelTest {
             healthConnectManager = mockk(relaxed = true),
             importRepository = mockk(relaxed = true),
             originRepository = mockk(relaxed = true),
+            cycleJournalRepository = FakeCycleJournalRepository(),
+            cyclePreferences = FakePreferences(),
             reportStore = mockk(relaxed = true),
             recordingController = recordingController,
             dispatchers = dispatchers,

@@ -75,7 +75,7 @@ Keep `screenError` on the scaffold and read presentation values from `state.disp
 A settings section is five edits, and missing any one of them fails the build or leaves a dead card:
 
 1. Add an entry to the `SettingsSection` enum in `features/settings/SettingsSection.kt`, with a `titleRes` and a `summaryRes`.
-2. Add the two strings to `values/strings.xml`. Do not add them to any `values-*/strings.xml`; those are Weblate-owned.
+2. Add the two strings to `values/strings.xml` and, translated, to every `values-*/strings.xml`, then run `python3 scripts/verify-translations.py`.
 3. Add an icon branch to `SettingsSection.icon` in `features/settings/SettingsCards.kt`. It is an exhaustive `when`, so this is compulsory.
 4. Add a content branch to the `when` in `features/settings/SettingsScreenContent.kt`. Sections that are a bespoke screen rather than a card list map to `Unit` there (see `WATCHES` and `DEVICE_SYNC`).
 5. Add a `Screen` entry in `navigation/Screen.kt`, a `composable` in `navigation/AppNavigationSettingsRoutes.kt`, and the mapping in `settingsSectionRoute`.
@@ -84,11 +84,11 @@ Sections hidden outside diagnostics builds are filtered in `SettingsScreenConten
 
 ### Add A Room Entity
 
-The database is at version 12. A new entity means:
+The database is at version 13. A new entity means:
 
 1. Add the `@Entity` and its DAO under `data/local/<area>/`.
-2. Add the entity to the `entities` array in `OpenVitalsDatabase`, add the abstract DAO accessor, and bump `VERSION` to 13.
-3. Add a `MIGRATION_12_13` in the companion object that creates the table, and add it to `ALL_MIGRATIONS`. Provide the DAO in `di/AppModule.kt`. Build once and commit the schema file Room writes to `app/schemas`.
+2. Add the entity to the `entities` array in `OpenVitalsDatabase`, add the abstract DAO accessor, and bump `VERSION` to 14.
+3. Add a `MIGRATION_13_14` in the companion object that creates the table, and add it to `ALL_MIGRATIONS`. Provide the DAO in `di/AppModule.kt`. Build once and commit the schema file Room writes to `app/schemas`.
 4. Give the migration a KDoc saying whether it copies data or only creates the table, and why. Every existing migration does.
 5. Prefer a natural composite primary key that makes a re-import idempotent, as `garmin_wellness_samples` does with `(metric, time_millis)`.
 

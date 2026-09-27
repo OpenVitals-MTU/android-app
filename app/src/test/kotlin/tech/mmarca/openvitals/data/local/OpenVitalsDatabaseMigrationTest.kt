@@ -139,6 +139,35 @@ class OpenVitalsDatabaseMigrationTest {
     }
 
     @Test
+    fun `version twelve adds the cycle journal tables`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+
+        OpenVitalsDatabase.MIGRATION_12_13.migrate(db)
+
+        assertEquals(12, OpenVitalsDatabase.MIGRATION_12_13.startVersion)
+        assertEquals(13, OpenVitalsDatabase.MIGRATION_12_13.endVersion)
+        verify {
+            db.execSQL(
+                match {
+                    it.contains("CREATE TABLE IF NOT EXISTS `cycle_journal_entries`") &&
+                        it.contains("`symptoms` TEXT NOT NULL") &&
+                        it.contains("`updated_at_millis` INTEGER NOT NULL") &&
+                        it.contains("PRIMARY KEY(`date`)")
+                },
+            )
+        }
+        // One row per excluded cycle, keyed by the start the app resolved from the date the user picked.
+        verify {
+            db.execSQL(
+                match {
+                    it.contains("CREATE TABLE IF NOT EXISTS `cycle_exclusions`") &&
+                        it.contains("PRIMARY KEY(`start_date`)")
+                },
+            )
+        }
+    }
+
+    @Test
     fun `version eight restores the garmin wellness table`() {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
 

@@ -6,6 +6,7 @@ import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.domain.insights.SleepScoreConfidence
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.DashboardWeeklyCardioLoad
+import tech.mmarca.openvitals.features.cycle.CycleSecondaryLine
 
 @Immutable
 data class DashboardDisplayState(
@@ -80,6 +81,8 @@ data class WatchWidgetDisplay(
 
 @Immutable
 sealed interface CycleWidgetDisplay {
+    /** The recorded cycle day, with the phase or the estimate under it. */
+    data class RecordedDay(val day: Int, val secondary: CycleSecondaryLine) : CycleWidgetDisplay
     data class MenstruationDays(val days: Int) : CycleWidgetDisplay
     data class OvulationTests(val count: Int) : CycleWidgetDisplay
     data class BasalTemperature(val celsius: Double) : CycleWidgetDisplay

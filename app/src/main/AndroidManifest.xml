@@ -565,6 +565,21 @@
         </receiver>
 
         <receiver
+            android:name=".features.cycle.reminders.CycleReminderReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".features.cycle.reminders.CycleReminderBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
             android:name=".features.homewidgets.HomeMetricWidgetReceiver"
             android:exported="true">
             <intent-filter>
@@ -606,6 +621,17 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/home_daily_readiness_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".features.homewidgets.HomeCycleWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/home_cycle_widget_info" />
         </receiver>
 
         <receiver

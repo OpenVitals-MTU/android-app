@@ -23,6 +23,7 @@ import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
+import tech.mmarca.openvitals.features.cycle.reminders.CycleReminderController
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -117,6 +118,7 @@ class SettingsViewModelTest {
         heartRepository: HeartRepository = heartRepo(),
         sleepRepository: SleepRepository = sleepRepo(),
         hydrationReminderController: HydrationReminderController = mockk(relaxed = true),
+        cycleReminderController: CycleReminderController = mockk(relaxed = true),
         preferences: FakePreferences = FakePreferences(),
         permissionUxState: HealthConnectPermissionUxState = mockk(relaxed = true),
     ): SettingsViewModel =
@@ -125,6 +127,7 @@ class SettingsViewModelTest {
             heartRepository = heartRepository,
             sleepRepository = sleepRepository,
             hydrationReminderController = hydrationReminderController,
+            cycleReminderController = cycleReminderController,
             healthConnectPreferences = preferences,
             heartThresholdPreferences = preferences,
             permissionUxState = permissionUxState,

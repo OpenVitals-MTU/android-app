@@ -16,7 +16,7 @@ The local app:
 - Reads supported records through Health Connect.
 - Writes supported records only after an explicit save, import, record, edit, or delete action.
 
-Local app preferences may include onboarding state, acknowledged permission prompts, unit settings, language, theme, widget order, goals, reminders, Body Energy calibration, timer settings, paired device settings, and display choices.
+Local app preferences may include onboarding state, acknowledged permission prompts, unit settings, language, theme, widget order, goals, reminders, Body Energy calibration, timer settings, paired device settings, display choices, and the cycle tracking contexts, age band and cycle reminder settings, which live in their own preferences file.
 
 ## No Internet Permission
 
@@ -83,7 +83,7 @@ Apple Health exports are copied into app-private local storage and analyzed ther
 
 ## Sensitive Data
 
-Cycle tracking uses sensitive Health Connect records and is shown only after cycle permissions are granted explicitly.
+Cycle tracking uses Health Connect records and is shown only after cycle permissions are granted explicitly. The day log's subjective fields (pain, mood, energy, symptoms, notes, pregnancy-test results, temperature disturbances, cervical sensation), the cycles excluded from estimates, and the declared contexts and age band have no Health Connect record type and live in the app's Room database (`cycle_journal_entries`, `cycle_exclusions`) and its own preferences file. They are handled like the rest of the app's local data: they move between two phones with the cycle category of phone-to-phone sync, and they are deleted from Settings → Cycle or with the app's data.
 
 Workout route previews require manual Health Connect approval in some cases. GPS recording requires location permission because OpenVitals needs location points to build the route. Imported PMTiles or Mapsforge map packs stay local on the device.
 

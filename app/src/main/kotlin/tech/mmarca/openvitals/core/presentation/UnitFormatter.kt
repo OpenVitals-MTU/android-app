@@ -64,11 +64,10 @@ class UnitFormatter(
 
     fun energy(kcal: Double): DisplayValue = DisplayValue(count(kcal.roundToInt()), "kcal")
 
-    fun temperature(celsius: Double): DisplayValue =
-        when (unitSystem(UnitQuantity.TEMPERATURE)) {
-            UnitSystem.METRIC -> DisplayValue(decimal(celsius, 1), "deg C")
-            UnitSystem.IMPERIAL -> DisplayValue(decimal(celsiusToFahrenheit(celsius), 1), "deg F")
-        }
+    fun temperature(celsius: Double, decimals: Int = 1): DisplayValue {
+        val system = unitSystem(UnitQuantity.TEMPERATURE)
+        return DisplayValue(decimal(TemperatureUnits.fromCelsius(celsius, system), decimals), TemperatureUnits.label(system))
+    }
 
     fun temperatureDelta(celsius: Double): DisplayValue {
         val system = unitSystem(UnitQuantity.TEMPERATURE)
@@ -77,11 +76,7 @@ class UnitFormatter(
             UnitSystem.IMPERIAL -> celsius * 9.0 / 5.0
         }
         val prefix = if (value > 0.0) "+" else ""
-        val unit = when (system) {
-            UnitSystem.METRIC -> "deg C"
-            UnitSystem.IMPERIAL -> "deg F"
-        }
-        return DisplayValue("$prefix${decimal(value, 1)}", unit)
+        return DisplayValue("$prefix${decimal(value, 1)}", TemperatureUnits.label(system))
     }
 
     fun bloodGlucose(millimolesPerLiter: Double): DisplayValue =
@@ -203,5 +198,4 @@ class UnitFormatter(
 
     private fun litersToFluidOunces(liters: Double): Double = liters * 33.8140227018
 
-    private fun celsiusToFahrenheit(celsius: Double): Double = celsius * 9.0 / 5.0 + 32.0
 }

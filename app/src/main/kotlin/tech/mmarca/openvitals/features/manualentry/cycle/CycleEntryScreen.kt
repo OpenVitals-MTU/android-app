@@ -1,32 +1,24 @@
 package tech.mmarca.openvitals.features.manualentry.cycle
 
-import tech.mmarca.openvitals.features.manualentry.*
-import tech.mmarca.openvitals.features.manualentry.activity.*
-import tech.mmarca.openvitals.features.manualentry.activity.recording.*
-import tech.mmarca.openvitals.features.manualentry.activity.routeimport.*
-import tech.mmarca.openvitals.features.manualentry.body.*
-import tech.mmarca.openvitals.features.manualentry.hydration.*
-import tech.mmarca.openvitals.features.manualentry.mindfulness.*
-import tech.mmarca.openvitals.features.manualentry.vitals.*
-
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,260 +28,232 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import java.time.LocalDate
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.features.manualentry.rememberManualEntryWritePermissionRequester
-import tech.mmarca.openvitals.features.manualentry.ManualEntryWritePermissionCallout
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.presentation.resolve
-import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.features.manualentry.ManualEntryPickerButton
+import tech.mmarca.openvitals.features.manualentry.ManualEntryWritePermissionCallout
+import tech.mmarca.openvitals.features.manualentry.localizedDateText
+import tech.mmarca.openvitals.features.manualentry.rememberManualEntryWritePermissionRequester
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.theme.CycleColor
+import tech.mmarca.openvitals.ui.theme.LayoutMetrics
+import tech.mmarca.openvitals.ui.theme.Spacing
 
+private val HeaderIconSize: Dp = 22.dp
+private val ButtonIconSize: Dp = 18.dp
+
+/** The day log: one day, every observation, saved together. */
 @Composable
 fun CycleEntryScreen(
     viewModel: CycleEntryViewModel,
     unitFormatter: UnitFormatter,
     onEntrySaved: () -> Unit = {},
+    onLeave: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val unitSystem = unitFormatter.unitSystem(UnitQuantity.TEMPERATURE)
+    var showDiscardConfirmation by remember { mutableStateOf(false) }
 
     val requestWritePermissions = rememberManualEntryWritePermissionRequester {
         viewModel.refreshPermission()
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.start(unitSystem)
-    }
+    LaunchedEffect(Unit) { viewModel.start(unitSystem) }
     LaunchedEffect(state.saveCompleted) {
         if (state.saveCompleted) {
             viewModel.onSaveCompletedHandled()
             onEntrySaved()
         }
     }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.refreshPermission()
-    }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshPermission() }
 
-    LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
+    // Back is guarded only when there is something to lose.
+    BackHandler(enabled = state.shouldConfirmDiscard) { showDiscardConfirmation = true }
+
+    LazyColumn(contentPadding = PaddingValues(vertical = Spacing.sm)) {
         item {
             CycleEntryCard(
                 state = state,
                 unitSystem = unitSystem,
-                onDateChanged = viewModel::updateDate,
-                onEntryTimeChanged = viewModel::updateEntryTime,
-                onSelectSection = viewModel::selectSection,
-                onSelectFlow = viewModel::selectFlow,
-                onToggleSpotting = viewModel::toggleSpotting,
-                onSelectSexualActivity = viewModel::selectSexualActivity,
-                onSelectOvulation = viewModel::selectOvulation,
-                onSelectMucusAppearance = viewModel::selectMucusAppearance,
-                onSelectMucusSensation = viewModel::selectMucusSensation,
-                onBbtInputChanged = viewModel::updateBbtInput,
-                onSelectBbtLocation = viewModel::selectBbtLocation,
+                actions = CycleEntryActions(viewModel, unitSystem),
                 onSave = { viewModel.save(unitSystem) },
-                onRequestWritePermission = {
-                    requestWritePermissions.launch(state.writePermissions)
-                },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                onRequestWritePermission = { requestWritePermissions.launch(state.writePermissions) },
+                modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter, vertical = Spacing.sm),
             )
         }
     }
+
+    if (showDiscardConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDiscardConfirmation = false },
+            title = { Text(stringResource(R.string.cycle_entry_discard_title)) },
+            text = { Text(stringResource(R.string.cycle_entry_discard_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDiscardConfirmation = false
+                        onLeave()
+                    },
+                ) { Text(stringResource(R.string.cycle_entry_discard_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardConfirmation = false }) {
+                    Text(stringResource(R.string.cycle_entry_keep_editing))
+                }
+            },
+        )
+    }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/** The callbacks the card needs, gathered so the card's signature stays readable. */
+internal data class CycleEntryActions(
+    val onDateChanged: (LocalDate) -> Unit,
+    val onBleeding: (BleedingOption?) -> Unit,
+    val onPain: (Int?) -> Unit,
+    val onMood: (Int?) -> Unit,
+    val onEnergy: (Int?) -> Unit,
+    val onToggleMore: () -> Unit,
+    val onToggleBiomarkers: () -> Unit,
+    val onToggleSymptom: (tech.mmarca.openvitals.domain.cycle.CycleSymptom) -> Unit,
+    val onCopyPreviousDay: () -> Unit,
+    val onNotes: (String) -> Unit,
+    val onHcgTest: (tech.mmarca.openvitals.domain.model.HcgTestResult?) -> Unit,
+    val onBbtInput: (String) -> Unit,
+    val onBbtLocation: (Int?) -> Unit,
+    val onBbtTime: (java.time.LocalTime?) -> Unit,
+    val onToggleBbtDisturbance: (tech.mmarca.openvitals.domain.model.BbtDisturbance) -> Unit,
+    val onCervicalSensation: (tech.mmarca.openvitals.domain.model.CervicalSensation?) -> Unit,
+    val onMucusAppearance: (Int?) -> Unit,
+    val onMucusAmount: (Int?) -> Unit,
+    val onOvulation: (Int?) -> Unit,
+    val onSexualActivity: (Int?) -> Unit,
+) {
+    constructor(viewModel: CycleEntryViewModel, unitSystem: UnitSystem) : this(
+        onDateChanged = { viewModel.updateDate(it, unitSystem) },
+        onBleeding = viewModel::setBleeding,
+        onPain = viewModel::setPain,
+        onMood = viewModel::setMood,
+        onEnergy = viewModel::setEnergy,
+        onToggleMore = viewModel::toggleMore,
+        onToggleBiomarkers = viewModel::toggleBiomarkers,
+        onToggleSymptom = viewModel::toggleSymptom,
+        onCopyPreviousDay = viewModel::copyPreviousDaySymptoms,
+        onNotes = viewModel::setNotes,
+        onHcgTest = viewModel::setHcgTest,
+        onBbtInput = viewModel::setBbtInput,
+        onBbtLocation = viewModel::setBbtLocation,
+        onBbtTime = viewModel::setBbtTime,
+        onToggleBbtDisturbance = viewModel::toggleBbtDisturbance,
+        onCervicalSensation = viewModel::setCervicalSensation,
+        onMucusAppearance = viewModel::setMucusAppearance,
+        onMucusAmount = viewModel::setMucusAmount,
+        onOvulation = viewModel::setOvulation,
+        onSexualActivity = viewModel::setSexualActivity,
+    )
+
+    companion object {
+        /** No-op callbacks, for previews and tests. */
+        val None = CycleEntryActions(
+            {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+        )
+    }
+}
+
 @Composable
 internal fun CycleEntryCard(
     state: CycleEntryUiState,
     unitSystem: UnitSystem,
-    onDateChanged: (java.time.LocalDate) -> Unit,
-    onEntryTimeChanged: (java.time.Instant) -> Unit,
-    onSelectSection: (CycleEntryKind) -> Unit,
-    onSelectFlow: (Int?) -> Unit,
-    onToggleSpotting: () -> Unit,
-    onSelectSexualActivity: (Int?) -> Unit,
-    onSelectOvulation: (Int?) -> Unit,
-    onSelectMucusAppearance: (Int?) -> Unit,
-    onSelectMucusSensation: (Int?) -> Unit,
-    onBbtInputChanged: (String) -> Unit,
-    onSelectBbtLocation: (Int?) -> Unit,
+    actions: CycleEntryActions,
     onSave: () -> Unit,
     onRequestWritePermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val anyGranted = state.grantedKinds.isNotEmpty()
     val saving = state.isSavingEntry
-    val saveEnabled = anyGranted && !saving && !state.isCheckingPermission
+    val editable = !saving && !state.isLoadingDay
     var showDatePicker by remember { mutableStateOf(false) }
+    val form = state.form
 
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(LayoutMetrics.cardPadding),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            Row(
+            CycleEntryHeader(anyGranted = anyGranted, isCheckingPermission = state.isCheckingPermission, onRequestWritePermission = onRequestWritePermission)
+
+            ManualEntryPickerButton(
+                label = stringResource(R.string.manual_entry_date_label),
+                value = state.date.localizedDateText(),
+                icon = Icons.Outlined.CalendarMonth,
+                enabled = editable,
+                onClick = { showDatePicker = true },
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.CalendarMonth,
-                    contentDescription = null,
-                    tint = CycleColor,
-                    modifier = Modifier.size(22.dp),
+            )
+
+            CycleEntryBleedingSection(
+                selected = form.bleeding,
+                enabled = editable,
+                foreignFlowLevel = state.foreignFlowLevel,
+                foreignSpotting = state.foreignSpotting,
+                onSelect = actions.onBleeding,
+            )
+
+            CycleEntryScales(
+                form = form,
+                enabled = editable,
+                onPain = actions.onPain,
+                onMood = actions.onMood,
+                onEnergy = actions.onEnergy,
+            )
+
+            CycleEntryToggle(
+                expanded = state.showMore,
+                showLabel = stringResource(R.string.cycle_entry_more_show),
+                hideLabel = stringResource(R.string.cycle_entry_more_hide),
+                onToggle = actions.onToggleMore,
+            )
+            if (state.showMore) {
+                CycleEntrySymptoms(
+                    selected = form.symptoms,
+                    offered = state.offeredSymptoms,
+                    previousDay = state.previousDaySymptoms,
+                    enabled = editable,
+                    onToggle = actions.onToggleSymptom,
+                    onCopyPreviousDay = actions.onCopyPreviousDay,
                 )
-                Column(
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp)
-                        .weight(1f),
-                ) {
-                    Text(
-                        text = stringResource(R.string.metric_cycle),
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Text(
-                        text = stringResource(R.string.cycle_entry_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                CycleEntryNotes(notes = form.notes, enabled = editable, onNotesChanged = actions.onNotes)
+                CycleEntryHcgTest(selected = form.hcgTest, enabled = editable, onSelect = actions.onHcgTest)
             }
 
-            if (!anyGranted && !state.isCheckingPermission) {
-                ManualEntryWritePermissionCallout(
-                    body = stringResource(R.string.cycle_entry_permission_needed),
-                    onGrant = onRequestWritePermission,
-                )
-            }
-
-            if (state.isEditMode) {
-                ManualEntryTimestampFields(
-                    timestamp = state.editTime,
-                    enabled = !saving,
-                    onTimestampChanged = onEntryTimeChanged,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            } else {
-                ManualEntryPickerButton(
-                    label = stringResource(R.string.manual_entry_date_label),
-                    value = state.date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)),
-                    icon = Icons.Outlined.CalendarMonth,
-                    enabled = !saving,
-                    onClick = { showDatePicker = true },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-
-            if (!state.isEditMode) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    CycleEntryKind.entries.forEach { kind ->
-                        FilterChip(
-                            selected = state.selectedSection == kind,
-                            onClick = { onSelectSection(kind) },
-                            label = { Text(stringResource(kind.categoryLabelRes())) },
-                            enabled = !saving,
-                        )
-                    }
-                }
-            }
-
-            val sections = setOf(state.activeSection)
-
-            if (CycleEntryKind.MENSTRUATION_FLOW in sections) {
-                CycleChipSection(
-                    label = stringResource(R.string.cycle_entry_section_flow),
-                    options = flowOptions(),
-                    selection = state.flowSelection,
-                    enabled = !saving && CycleEntryKind.MENSTRUATION_FLOW in state.grantedKinds,
-                    onSelect = onSelectFlow,
-                )
-            }
-            if (CycleEntryKind.SPOTTING in sections) {
-                CycleToggleSection(
-                    label = stringResource(R.string.cycle_observation_intermenstrual_bleeding),
-                    chipLabel = stringResource(R.string.cycle_entry_section_spotting),
-                    logged = state.spottingLogged,
-                    enabled = !saving && CycleEntryKind.SPOTTING in state.grantedKinds,
-                    onToggle = onToggleSpotting,
-                )
-            }
-            if (CycleEntryKind.SEXUAL_ACTIVITY in sections) {
-                CycleChipSection(
-                    label = stringResource(R.string.cycle_entry_section_sexual_activity),
-                    options = protectionOptions(),
-                    selection = state.sexualActivitySelection,
-                    enabled = !saving && CycleEntryKind.SEXUAL_ACTIVITY in state.grantedKinds,
-                    onSelect = onSelectSexualActivity,
-                )
-            }
-            if (CycleEntryKind.OVULATION_TEST in sections) {
-                CycleChipSection(
-                    label = stringResource(R.string.cycle_entry_section_ovulation),
-                    options = ovulationOptions(),
-                    selection = state.ovulationSelection,
-                    enabled = !saving && CycleEntryKind.OVULATION_TEST in state.grantedKinds,
-                    onSelect = onSelectOvulation,
-                )
-            }
-            if (CycleEntryKind.CERVICAL_MUCUS in sections) {
-                CycleChipSection(
-                    label = stringResource(R.string.cycle_entry_section_mucus_appearance),
-                    options = mucusAppearanceOptions(),
-                    selection = state.mucusAppearance,
-                    enabled = !saving && CycleEntryKind.CERVICAL_MUCUS in state.grantedKinds,
-                    onSelect = onSelectMucusAppearance,
-                )
-                CycleChipSection(
-                    label = stringResource(R.string.cycle_entry_section_mucus_sensation),
-                    options = mucusSensationOptions(),
-                    selection = state.mucusSensation,
-                    enabled = !saving && CycleEntryKind.CERVICAL_MUCUS in state.grantedKinds,
-                    onSelect = onSelectMucusSensation,
-                )
-            }
-            if (CycleEntryKind.BASAL_BODY_TEMPERATURE in sections) {
-                CycleBbtSection(
-                    label = stringResource(
-                        R.string.cycle_entry_section_bbt,
-                        if (unitSystem == UnitSystem.IMPERIAL) "deg F" else "deg C",
-                    ),
-                    inputText = state.bbtInputText,
-                    location = state.bbtLocation,
-                    enabled = !saving && CycleEntryKind.BASAL_BODY_TEMPERATURE in state.grantedKinds,
-                    onInputChanged = onBbtInputChanged,
-                    onLocationSelected = onSelectBbtLocation,
-                )
+            CycleEntryToggle(
+                expanded = state.showBiomarkers,
+                showLabel = stringResource(R.string.cycle_entry_biomarkers_show),
+                hideLabel = stringResource(R.string.cycle_entry_biomarkers_hide),
+                onToggle = actions.onToggleBiomarkers,
+            )
+            if (state.showBiomarkers) {
+                CycleEntryBiomarkers(form = form, state = state, unitSystem = unitSystem, editable = editable, actions = actions)
             }
 
             OpenVitalsButton(
                 onClick = onSave,
-                enabled = saveEnabled,
+                enabled = editable && !state.isCheckingPermission,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Icon(
-                    imageVector = if (state.isEditMode) Icons.Outlined.Check else Icons.Outlined.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Text(
-                    text = if (state.isEditMode) {
-                        stringResource(R.string.action_save)
-                    } else {
-                        stringResource(R.string.cycle_log_action)
-                    },
-                    modifier = Modifier.padding(start = 6.dp),
-                )
+                Icon(imageVector = Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(ButtonIconSize))
+                Text(text = stringResource(R.string.cycle_entry_save), modifier = Modifier.padding(start = Spacing.sm))
             }
 
             state.entryError?.let { entryError ->
@@ -308,8 +272,101 @@ internal fun CycleEntryCard(
             onDismiss = { showDatePicker = false },
             onConfirm = { date ->
                 showDatePicker = false
-                onDateChanged(date)
+                actions.onDateChanged(date)
             },
+        )
+    }
+}
+
+@Composable
+private fun CycleEntryHeader(
+    anyGranted: Boolean,
+    isCheckingPermission: Boolean,
+    onRequestWritePermission: () -> Unit,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = Icons.Outlined.CalendarMonth,
+            contentDescription = null,
+            tint = CycleColor,
+            modifier = Modifier.size(HeaderIconSize),
+        )
+        Column(
+            modifier = Modifier
+                .padding(horizontal = Spacing.md)
+                .weight(1f),
+        ) {
+            Text(text = stringResource(R.string.cycle_entry_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = stringResource(R.string.cycle_entry_day_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    if (!anyGranted && !isCheckingPermission) {
+        ManualEntryWritePermissionCallout(
+            body = stringResource(R.string.cycle_entry_permission_needed),
+            onGrant = onRequestWritePermission,
+        )
+    }
+}
+
+@Composable
+private fun CycleEntryToggle(expanded: Boolean, showLabel: String, hideLabel: String, onToggle: () -> Unit) {
+    OpenVitalsOutlinedButton(onClick = onToggle, modifier = Modifier.fillMaxWidth()) {
+        Icon(
+            imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+            contentDescription = null,
+            modifier = Modifier.size(ButtonIconSize),
+        )
+        Text(text = if (expanded) hideLabel else showLabel, modifier = Modifier.padding(start = Spacing.sm))
+    }
+}
+
+@Composable
+private fun CycleEntryBiomarkers(
+    form: CycleDayForm,
+    state: CycleEntryUiState,
+    unitSystem: UnitSystem,
+    editable: Boolean,
+    actions: CycleEntryActions,
+) {
+    CycleEntryBbtSection(
+        form = form,
+        unitSystem = unitSystem,
+        enabled = editable,
+        onInputChanged = actions.onBbtInput,
+        onLocationSelected = actions.onBbtLocation,
+        onTimeSelected = actions.onBbtTime,
+        onToggleDisturbance = actions.onToggleBbtDisturbance,
+    )
+    CycleEntryCervicalFluidSection(
+        form = form,
+        enabled = editable,
+        onSensation = actions.onCervicalSensation,
+        onAppearance = actions.onMucusAppearance,
+        onAmount = actions.onMucusAmount,
+    )
+    CycleChipSection(
+        label = stringResource(R.string.cycle_entry_section_ovulation),
+        options = ovulationOptions(),
+        selection = form.ovulationResult,
+        enabled = editable,
+        onSelect = actions.onOvulation,
+    )
+    CycleChipSection(
+        label = stringResource(R.string.cycle_entry_section_sexual_activity),
+        options = protectionOptions(),
+        selection = form.sexualActivityProtection,
+        enabled = editable,
+        onSelect = actions.onSexualActivity,
+    )
+    if (state.grantedKinds.size < tech.mmarca.openvitals.domain.model.CycleEntryKind.entries.size) {
+        Text(
+            text = stringResource(R.string.cycle_entry_partial_permission),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -330,13 +387,4 @@ private fun cycleEntryErrorText(
         R.string.cycle_entry_write_failed,
         writeError.resolve() ?: stringResource(R.string.unknown_error),
     )
-}
-
-private fun CycleEntryKind.categoryLabelRes(): Int = when (this) {
-    CycleEntryKind.MENSTRUATION_FLOW -> R.string.cycle_entry_section_flow
-    CycleEntryKind.SPOTTING -> R.string.cycle_observation_intermenstrual_bleeding
-    CycleEntryKind.SEXUAL_ACTIVITY -> R.string.cycle_observation_sexual_activity
-    CycleEntryKind.OVULATION_TEST -> R.string.cycle_observation_ovulation_test
-    CycleEntryKind.CERVICAL_MUCUS -> R.string.cycle_observation_cervical_mucus
-    CycleEntryKind.BASAL_BODY_TEMPERATURE -> R.string.cycle_observation_basal_body_temperature
 }

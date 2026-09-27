@@ -38,6 +38,11 @@ val WheelchairPushesColor = Color(0xFF2E8C7F)
 val MindfulnessColor = Color(0xFF8A6E9C)
 val CycleColor = Color(0xFFBE5C85)
 
+// Cycle phases reuse audited accents, so they clear 3:1 on both surfaces. Menstrual is CycleColor.
+val FollicularPhaseColor = StepsColor
+val OvulatoryPhaseColor = FloorsColor
+val LutealPhaseColor = SleepColor
+
 // Surface variants
 val SurfaceDark = Color(0xFF1A1C1E)
 val SurfaceContainerDark = Color(0xFF2B2D30)

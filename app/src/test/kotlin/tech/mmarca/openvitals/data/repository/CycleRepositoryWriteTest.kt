@@ -24,6 +24,8 @@ import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.model.CycleEntryWriteRequest
 import tech.mmarca.openvitals.domain.model.CycleRecordValues
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.data.repository.contract.FakeCycleJournalRepository
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 /** The write guards and reconcile triggering. The permission failure must be a SecurityException: ScreenError maps only that type. */
@@ -64,7 +66,7 @@ class CycleRepositoryWriteTest {
     @Test
     fun `a missing write permission throws SecurityException and never reaches Health Connect`() = runTest {
         val hc = hc(granted = emptySet())
-        val repository = CycleRepositoryImpl(hc)
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
 
         assertThrows(SecurityException::class.java) {
             kotlinx.coroutines.runBlocking { repository.writeCycleEntry(flowRequest) }
@@ -76,7 +78,7 @@ class CycleRepositoryWriteTest {
     fun `a flow write reconciles the derived period over the written day`() = runTest {
         val hc = hc(granted = setOf(flowWrite))
         coEvery { hc.writeCycleEntry(flowRequest) } returns "client-id"
-        val repository = CycleRepositoryImpl(hc)
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
 
         assertEquals("client-id", repository.writeCycleEntry(flowRequest))
 
@@ -88,7 +90,7 @@ class CycleRepositoryWriteTest {
     fun `a non-flow write does not reconcile`() = runTest {
         val hc = hc(granted = setOf(spottingWrite))
         coEvery { hc.writeCycleEntry(spottingRequest) } returns "client-id"
-        val repository = CycleRepositoryImpl(hc)
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
 
         repository.writeCycleEntry(spottingRequest)
 
@@ -100,7 +102,7 @@ class CycleRepositoryWriteTest {
         val hc = hc(granted = setOf(flowWrite))
         coEvery { hc.writeCycleEntry(flowRequest) } returns "client-id"
         coEvery { hc.reconcileMenstruationPeriods(any()) } throws IllegalStateException("hc down")
-        val repository = CycleRepositoryImpl(hc)
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
 
         assertEquals("client-id", repository.writeCycleEntry(flowRequest))
     }
@@ -116,7 +118,7 @@ class CycleRepositoryWriteTest {
             flow = CycleRecordValues.FLOW_LIGHT,
             isOpenVitalsEntry = true,
         )
-        val repository = CycleRepositoryImpl(hc)
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
 
         repository.updateCycleEntry("uid", flowRequest)
 
@@ -139,7 +141,7 @@ class CycleRepositoryWriteTest {
             flow = CycleRecordValues.FLOW_LIGHT,
             isOpenVitalsEntry = true,
         )
-        val repository = CycleRepositoryImpl(hc)
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
 
         repository.deleteCycleEntry(CycleEntryKind.MENSTRUATION_FLOW, "uid")
 
@@ -152,7 +154,7 @@ class CycleRepositoryWriteTest {
     @Test
     fun `delete guards on the write permission too`() = runTest {
         val hc = hc(granted = emptySet())
-        val repository = CycleRepositoryImpl(hc)
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
 
         assertThrows(SecurityException::class.java) {
             kotlinx.coroutines.runBlocking {
@@ -175,7 +177,7 @@ class CycleRepositoryWriteTest {
                 source = "other.app",
             ),
         )
-        val repository = CycleRepositoryImpl(hc)
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
 
         val statistics = repository.loadCycleStatistics(today)
 
@@ -184,7 +186,7 @@ class CycleRepositoryWriteTest {
 
     @Test
     fun `statistics are null without the menstruation read permission`() = runTest {
-        val repository = CycleRepositoryImpl(hc(granted = emptySet()))
+        val repository = CycleRepositoryImpl(hc(granted = emptySet()), FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
         assertEquals(null, repository.loadCycleStatistics(LocalDate.of(2026, 8, 5)))
     }
 }

@@ -37,6 +37,7 @@ import androidx.health.connect.client.records.WheelchairPushesRecord
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.PerformanceTrace
+import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.domain.insights.CardioLoadEstimate
 import tech.mmarca.openvitals.domain.insights.CardioLoadTimeWindow
@@ -52,6 +53,7 @@ import tech.mmarca.openvitals.domain.insights.calculateSleepScoreForDate
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.periodFor
 import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
+import tech.mmarca.openvitals.domain.model.toDashboardSummary
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
 import tech.mmarca.openvitals.domain.preferences.SleepWindow
 import tech.mmarca.openvitals.domain.preferences.toWeekPeriodMode
@@ -106,6 +108,7 @@ class DashboardDataLoader @Inject constructor(
     private val hc: HealthConnectManager,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     private val preferencesRepository: PreferencesRepository? = null,
+    private val cycleRepository: CycleRepository? = null,
 ) {
     companion object {
         private const val TAG = "DashboardDataLoader"
@@ -526,6 +529,14 @@ class DashboardDataLoader @Inject constructor(
                 .maxByOrNull { it.time }
                 ?.temperatureCelsius
         }
+        // The cycle day and the estimate, from the same statistics the cycle screen shows.
+        val cycleSummary = readIfNeeded(
+            wants(DashboardMetric.CYCLE) && cycleRepository != null,
+            readMenstruationPeriodPermission,
+            "cycle summary",
+        ) {
+            cycleRepository?.loadCycleStatistics(date)?.toDashboardSummary()
+        }
 
         val missingPerms = dashboardPermissionsFor(
             metrics = metrics,
@@ -683,6 +694,7 @@ class DashboardDataLoader @Inject constructor(
             },
             ovulationTestCount = ovulationTests?.await()?.size,
             latestBasalBodyTemperatureCelsius = basalBodyTemperature?.await(),
+            cycleSummary = cycleSummary?.await(),
             missingPermissions = missingPerms,
             loadedMetrics = metrics,
             supportedMetrics = supportedMetrics(),

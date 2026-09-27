@@ -44,8 +44,18 @@ const val MINDFULNESS_ENTRY_ID_ARG = "mindfulnessEntryId"
 const val CAFFEINE_ENTRY_ID_ARG = "caffeineEntryId"
 const val VITALS_MEASUREMENT_TYPE_ARG = "vitalsMeasurementType"
 const val VITALS_ENTRY_ID_ARG = "vitalsEntryId"
-const val CYCLE_ENTRY_KIND_ARG = "cycleEntryKind"
-const val CYCLE_ENTRY_ID_ARG = "cycleEntryId"
+const val CYCLE_ENTRY_DATE_ARG = "cycleEntryDate"
+const val CYCLE_ENTRY_PRESET_ARG = "cycleEntryPreset"
+
+/** The optional query the day-log route declares: the day it opens on and a preset. */
+const val CYCLE_ENTRY_QUERY_PATTERN =
+    "?$CYCLE_ENTRY_DATE_ARG={$CYCLE_ENTRY_DATE_ARG}&$CYCLE_ENTRY_PRESET_ARG={$CYCLE_ENTRY_PRESET_ARG}"
+
+/** What the day log preselects on its first load. */
+object CycleEntryPreset {
+    /** Light flow: the user is logging the first day of a period. */
+    const val PERIOD_START = "period_start"
+}
 const val STRESS_DATE_ARG = "stressDate"
 const val WATCH_DEVICE_ID_ARG = "watchDeviceId"
 const val WATCH_SETTINGS_SCREEN_ID_ARG = "screenId"
@@ -156,11 +166,15 @@ sealed class Screen(
         fun createRoute(type: String, entryId: String): String =
             "manual_entry/vitals/${Uri.encode(type)}/edit/${Uri.encode(entryId)}"
     }
-    data object CycleEntry : Screen("manual_entry/cycle", R.string.screen_cycle_entry)
-    data object CycleEntryEdit :
-        Screen("manual_entry/cycle/edit/{$CYCLE_ENTRY_KIND_ARG}/{$CYCLE_ENTRY_ID_ARG}", R.string.screen_cycle_entry) {
-        fun createRoute(kind: String, entryId: String): String =
-            "manual_entry/cycle/edit/${Uri.encode(kind)}/${Uri.encode(entryId)}"
+    data object CycleEntry : Screen("manual_entry/cycle", R.string.screen_cycle_entry) {
+        /** Without arguments the day log opens on today. */
+        fun createRoute(date: LocalDate? = null, preset: String? = null): String {
+            val query = listOfNotNull(
+                date?.let { "$CYCLE_ENTRY_DATE_ARG=${Uri.encode(it.toString())}" },
+                preset?.let { "$CYCLE_ENTRY_PRESET_ARG=${Uri.encode(it)}" },
+            )
+            return if (query.isEmpty()) route else "$route?${query.joinToString("&")}"
+        }
     }
     data object Calories : Screen("calories", R.string.screen_calories)
     data object Nutrition : Screen("nutrition", R.string.screen_nutrition)
@@ -191,6 +205,7 @@ sealed class Screen(
     data object SettingsBodyProfile : Screen("settings/body_profile", R.string.settings_body_profile_group_title)
     data object SettingsVitals : Screen("settings/vitals", R.string.settings_vitals_group_title)
     data object SettingsRecovery : Screen("settings/recovery", R.string.settings_recovery_group_title)
+    data object SettingsCycle : Screen("settings/cycle", R.string.settings_cycle_group_title)
     data object SettingsSleep : Screen("settings/sleep", R.string.settings_recovery_group_title)
     data object SettingsBodyEnergy : Screen("settings/body_energy", R.string.settings_recovery_group_title)
     data object SettingsDataImport : Screen("settings/data_import", R.string.settings_data_transfer_group_title)
@@ -285,7 +300,6 @@ sealed class Screen(
                 VitalsMeasurementEntry,
                 VitalsMeasurementEntryEdit,
                 CycleEntry,
-                CycleEntryEdit,
                 Calories,
                 Nutrition,
                 Activity,
@@ -305,6 +319,7 @@ sealed class Screen(
                 SettingsBodyProfile,
                 SettingsVitals,
                 SettingsRecovery,
+                SettingsCycle,
                 SettingsSleep,
                 SettingsBodyEnergy,
                 SettingsDataImport,

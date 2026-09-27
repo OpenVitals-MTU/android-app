@@ -13,12 +13,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.domain.model.CervicalMucusEntry
 import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.MenstruationFlowEntry
 import tech.mmarca.openvitals.domain.model.MenstruationPeriodEntry
 import tech.mmarca.openvitals.domain.model.OvulationTestEntry
+import tech.mmarca.openvitals.domain.preferences.UnitSystem
 
 class CyclePresentationTest {
 
@@ -121,6 +123,8 @@ class CyclePresentationTest {
                     ),
                 ),
                 resources = resources,
+                journalEntries = emptyList(),
+                unitFormatter = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC }),
             )
         } finally {
             TimeZone.setDefault(previousTimeZone)
@@ -154,9 +158,8 @@ class CyclePresentationTest {
         every { resources.getString(R.string.cycle_ovulation_positive) } returns "Positive"
         every { resources.getString(R.string.cycle_mucus_egg_white) } returns "Egg white"
         every { resources.getString(R.string.cycle_mucus_heavy) } returns "heavy"
-        every { resources.getString(R.string.cycle_day_plural) } returns "days"
         every { resources.getString(R.string.cycle_mucus_value, "Egg white", "heavy") } returns "Egg white, heavy"
-        every { resources.getString(R.string.cycle_days_value, 2L, "days") } returns "2 days"
+        every { resources.getQuantityString(R.plurals.cycle_days_value, 2, 2) } returns "2 days"
         return resources
     }
 }

@@ -6,7 +6,7 @@
 > **Navigation:** `Screen.SettingsDeviceSync`; settings section `DEVICE_SYNC`.
 > **Related:** [Feature map](feature-map.md), [Settings and preferences](settings-and-preferences.md), [Permissions](../app/permissions.md), [Privacy](../app/privacy.md).
 
-Sync with another phone copies Health Connect records directly between two nearby Android phones over Bluetooth. There is no account, no server, and no network step.
+Sync with another phone copies Health Connect records, and the cycle journal the app keeps itself, directly between two nearby Android phones over Bluetooth. There is no account, no server, and no network step.
 
 It is reached from Settings, Sync with another phone, which opens its own wizard.
 
@@ -62,6 +62,12 @@ Each record is identified by a fingerprint computed from its own content: the re
 - A receiving phone re-derives the fingerprint from the record it decoded rather than trusting the identifier the other phone sent, so a sync cannot overwrite an unrelated record.
 
 Running the same sync twice therefore writes nothing new, and the two phones converge.
+
+## The Cycle Journal
+
+The cycle category also carries what the cycle screen keeps outside Health Connect: the day logs (pain, mood, energy, symptoms, notes, pregnancy-test results, temperature disturbances, cervical sensation), the cycles excluded from estimates, and the declared tracking contexts and age band. These need no Health Connect permission, so the category is always offered.
+
+A day log is fingerprinted by its content, so an unchanged day counts as already present. When both phones edited the same day, the later edit wins and the other is counted as not accepted. Excluded cycles merge; taking a cycle back into the estimates on one phone does not travel. The contexts and age band move only to a phone that has declared none. Reminder settings do not move: they are alarms on one phone.
 
 ## While The Sync Runs
 
