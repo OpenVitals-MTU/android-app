@@ -4,8 +4,10 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import tech.mmarca.openvitals.data.repository.CyclePreferencesRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivitySplitPreferences
+import tech.mmarca.openvitals.data.repository.contract.CyclePreferences
 import tech.mmarca.openvitals.data.repository.contract.HealthConnectPreferences
 import tech.mmarca.openvitals.data.repository.contract.OnboardingPreferences
 import tech.mmarca.openvitals.data.repository.contract.UnitPreferences
@@ -85,4 +87,8 @@ abstract class PreferencesModule {
 
     @Binds
     abstract fun bindHealthConnectPreferences(impl: PreferencesRepository): HealthConnectPreferences
+
+    /** Its own store: the main repository is at its size ceiling. */
+    @Binds
+    abstract fun bindCyclePreferences(impl: CyclePreferencesRepository): CyclePreferences
 }

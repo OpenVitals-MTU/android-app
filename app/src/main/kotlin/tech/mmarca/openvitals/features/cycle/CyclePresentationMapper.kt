@@ -1,18 +1,40 @@
 package tech.mmarca.openvitals.features.cycle
 
-import tech.mmarca.openvitals.core.period.PeriodLoadQuery
-import tech.mmarca.openvitals.core.period.displayPeriodFor
-import tech.mmarca.openvitals.domain.cycle.CycleStatistics
-import tech.mmarca.openvitals.domain.model.CycleData
 import java.time.LocalDate
 import java.time.ZoneId
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.period.displayPeriodFor
+import tech.mmarca.openvitals.domain.cycle.BbtReading
+import tech.mmarca.openvitals.domain.cycle.CurrentCyclePhase
+import tech.mmarca.openvitals.domain.cycle.CycleEstimateResult
+import tech.mmarca.openvitals.domain.cycle.CycleFacts
+import tech.mmarca.openvitals.domain.cycle.CycleStatistics
+import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
+import tech.mmarca.openvitals.domain.cycle.LongitudinalCycleStats
+import tech.mmarca.openvitals.domain.cycle.LongitudinalCycleStatsCalculator
+import tech.mmarca.openvitals.domain.cycle.PhaseIndeterminateReason
+import tech.mmarca.openvitals.domain.cycle.PhaseTips
+import tech.mmarca.openvitals.domain.cycle.SymptomDay
+import tech.mmarca.openvitals.domain.cycle.SymptomPatternCalculator
+import tech.mmarca.openvitals.domain.cycle.ThermalShiftCalculator
+import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
+import tech.mmarca.openvitals.domain.model.CycleData
+import tech.mmarca.openvitals.domain.model.CycleJournalEntry
+import tech.mmarca.openvitals.domain.model.DayBleedingChoice
 
 object CyclePresentationMapper {
+
+    private const val RECENT_SYMPTOM_DAYS = 3L
 
     fun build(
         query: PeriodLoadQuery,
         data: CycleData,
         statistics: CycleStatistics? = null,
+        journalEntries: List<CycleJournalEntry> = emptyList(),
+        allJournalEntries: List<CycleJournalEntry> = journalEntries,
+        currentCycleTemperatures: List<BasalBodyTemperatureEntry> = emptyList(),
+        profile: CycleTrackingProfile = CycleTrackingProfile(),
+        today: LocalDate = LocalDate.now(),
     ): CycleDisplayState {
         val selectedPeriod = displayPeriodFor(
             range = query.range,
@@ -20,33 +42,116 @@ object CyclePresentationMapper {
             weekPeriodMode = query.weekPeriodMode,
         )
         val zone = ZoneId.systemDefault()
+        val journalByDate = journalEntries.associateBy { it.date }
         val calendarDays = cycleDays(
             period = selectedPeriod,
             data = data,
             zone = zone,
             predictedWindows = statistics?.predictedWindows.orEmpty(),
+            journalByDate = journalByDate,
+            cycleStarts = statistics?.cycleStarts.orEmpty().toSet(),
+            today = today,
         )
         val periodDays = calendarDays.count { day ->
             day.inSelectedPeriod && (day.periodActive || day.flows.isNotEmpty())
         }
-        val trackedDates = data.trackedDates(zone)
-        val latestBbt = data.basalBodyTemperature.maxByOrNull { it.time }
+        val trackedDates = data.trackedDates(zone) + journalEntries.map { it.date }
+        val allByDate = allJournalEntries.associateBy { it.date }
 
         return CycleDisplayState(
             selectedPeriod = selectedPeriod,
-            hasData = data.hasData,
+            hasData = data.hasData || journalEntries.any { it.hasObservations },
             summary = CyclePeriodSummary(
                 periodDays = periodDays,
                 ovulationTestCount = data.ovulationTests.size,
                 bbtReadingCount = data.basalBodyTemperature.size,
-                totalEntryCount = data.entryCount(),
-                latestBbtCelsius = latestBbt?.temperatureCelsius,
-                latestBbtMeasurementLocation = latestBbt?.measurementLocation ?: 0,
+                totalEntryCount = data.entryCount() + journalEntries.count { it.hasObservations },
             ),
             calendarDays = calendarDays,
             trackedDates = trackedDates,
-            sampleCount = data.entryCount(),
+            sampleCount = data.entryCount() + journalEntries.count { it.hasObservations },
             sources = data.allSources(),
+            today = todayDisplay(statistics, data, allByDate, profile, today, zone),
+            history = statistics?.let { LongitudinalCycleStatsCalculator.calculate(it.cycles, today) }
+                ?: LongitudinalCycleStats.Empty,
+            thermal = thermalDisplay(statistics, currentCycleTemperatures, allByDate, zone),
+            patterns = statistics?.let { stats ->
+                SymptomPatternCalculator.calculate(
+                    cycles = stats.cycles,
+                    days = allJournalEntries.map { SymptomDay(it.date, it.symptoms) },
+                    bleedingDays = stats.cycles.flatMap { it.flowDays.keys + it.spottingDays }.toSet(),
+                )
+            }.orEmpty(),
+        )
+    }
+
+    private fun todayDisplay(
+        statistics: CycleStatistics?,
+        data: CycleData,
+        journalByDate: Map<LocalDate, CycleJournalEntry>,
+        profile: CycleTrackingProfile,
+        today: LocalDate,
+        zone: ZoneId,
+    ): CycleTodayDisplay {
+        val journal = journalByDate[today]
+        val phase = statistics?.currentPhase
+            ?: CurrentCyclePhase.Indeterminate(PhaseIndeterminateReason.NO_CURRENT_CYCLE)
+        val recentSymptoms = (0..RECENT_SYMPTOM_DAYS)
+            .mapNotNull { journalByDate[today.minusDays(it)] }
+            .flatMapTo(mutableSetOf()) { it.symptoms }
+        val todayFlow = data.menstruationFlows
+            .filter { it.time.atZone(zone).toLocalDate() == today }
+            .maxOfOrNull { it.flow }
+        val bleeding = when {
+            todayFlow != null -> DayBleedingChoice.Flow(todayFlow)
+            statistics?.currentCycle?.flowDays?.containsKey(today) == true ->
+                DayBleedingChoice.Flow(statistics.currentCycle!!.flowDays.getValue(today))
+            statistics?.currentCycle?.spottingDays?.contains(today) == true -> DayBleedingChoice.Spotting
+            journal?.bleedingNone == true -> DayBleedingChoice.None
+            else -> null
+        }
+        return CycleTodayDisplay(
+            today = today,
+            currentCycle = statistics?.currentCycle,
+            cycleDay = statistics?.currentCycleDay,
+            phase = phase,
+            estimate = statistics?.estimate ?: CycleEstimateResult.NeedsMoreHistory,
+            tip = (phase as? CurrentCyclePhase.Available)?.let {
+                PhaseTips.forDate(it.phase, today, profile.contexts, recentSymptoms)
+            },
+            fact = if (phase is CurrentCyclePhase.Indeterminate) CycleFacts.forDate(today) else null,
+            journal = journal,
+            bleeding = bleeding,
+            recentIntervalLengths = statistics?.recentIntervalLengths.orEmpty(),
+            totalCycles = statistics?.cycles?.size ?: 0,
+            hasProfile = profile.contexts.isNotEmpty() || profile.ageBand != null,
+        )
+    }
+
+    private fun thermalDisplay(
+        statistics: CycleStatistics?,
+        temperatures: List<BasalBodyTemperatureEntry>,
+        journalByDate: Map<LocalDate, CycleJournalEntry>,
+        zone: ZoneId,
+    ): CycleThermalDisplay? {
+        val cycle = statistics?.currentCycle ?: return null
+        val readings = temperatures
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+            .filterKeys { !it.isBefore(cycle.startDate) }
+            .map { (date, entries) ->
+                val latest = entries.maxBy { it.time }
+                BbtReading(
+                    date = date,
+                    celsius = latest.temperatureCelsius,
+                    disturbed = journalByDate[date]?.bbtDisturbances.orEmpty().isNotEmpty(),
+                )
+            }
+            .sortedBy { it.date }
+        if (readings.isEmpty()) return null
+        return CycleThermalDisplay(
+            cycleStart = cycle.startDate,
+            readings = readings,
+            shift = ThermalShiftCalculator.evaluateCycle(cycle.startDate, readings),
         )
     }
 }

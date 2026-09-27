@@ -27,6 +27,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import java.time.LocalDate
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -588,11 +589,14 @@ fun AppNavigation(
                     onEditVitalsMeasurement = { type, entryId ->
                         navController.navigate(Screen.VitalsMeasurementEntryEdit.createRoute(type.name, entryId))
                     },
-                    onLogCycleEntry = {
-                        navController.navigate(Screen.CycleEntry.route)
+                    onLogCycleEntry = { date ->
+                        navController.navigate(Screen.CycleEntry.createRoute(date))
                     },
-                    onEditCycleEntry = { kind, entryId ->
-                        navController.navigate(Screen.CycleEntryEdit.createRoute(kind.name, entryId))
+                    onStartPeriod = {
+                        navController.navigate(Screen.CycleEntry.createRoute(LocalDate.now(), CycleEntryPreset.PERIOD_START))
+                    },
+                    onOpenCycleSettings = {
+                        navController.navigate(Screen.SettingsCycle.route)
                     },
                 )
             }

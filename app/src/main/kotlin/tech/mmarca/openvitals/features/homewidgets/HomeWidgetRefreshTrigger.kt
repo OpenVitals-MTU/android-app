@@ -21,6 +21,7 @@ internal val HomeWidgetReceivers: List<Class<*>> = listOf(
     HomeDailyReadinessWidgetReceiver::class.java,
     HomeBodyEnergyWidgetReceiver::class.java,
     HomeTodayVitalsWidgetReceiver::class.java,
+    HomeCycleWidgetReceiver::class.java,
     HomeQuickBeverageWidgetReceiver::class.java,
     HomeQuickBeverageOneTapWidgetReceiver::class.java,
 )
@@ -31,6 +32,7 @@ internal val HomeWidgetRefreshers: Map<Class<*>, suspend (Context, Int) -> Unit>
     HomeDailyReadinessWidgetReceiver::class.java to { context, id -> refreshDailyReadinessWidget(context, id) },
     HomeBodyEnergyWidgetReceiver::class.java to { context, id -> refreshBodyEnergyWidget(context, id) },
     HomeTodayVitalsWidgetReceiver::class.java to { context, id -> refreshTodayVitalsWidget(context, id) },
+    HomeCycleWidgetReceiver::class.java to { context, id -> refreshHomeCycleWidget(context, id) },
     HomeQuickBeverageWidgetReceiver::class.java to { context, id -> refreshHomeQuickBeverageWidget(context, id) },
     HomeQuickBeverageOneTapWidgetReceiver::class.java to { context, id -> refreshHomeQuickBeverageWidget(context, id) },
 )
@@ -41,6 +43,7 @@ internal val HealthConnectBackedWidgetReceivers: Set<Class<*>> = setOf(
     HomeDailyReadinessWidgetReceiver::class.java,
     HomeBodyEnergyWidgetReceiver::class.java,
     HomeTodayVitalsWidgetReceiver::class.java,
+    HomeCycleWidgetReceiver::class.java,
 )
 
 /**

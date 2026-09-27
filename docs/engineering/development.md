@@ -90,8 +90,9 @@ and plural-shape safety. A locale may carry *more* CLDR plural categories than
 the English base (Czech and Spanish need `few`/`many`); those extra branches are
 checked against the base `other` branch so they cannot drop an argument.
 
-Do not "fix" locale files by editing `values-*/strings.xml` by hand; they are
-owned by Weblate.
+A new key goes to every `values-*/strings.xml` together with the base file, in
+the plural shape that locale needs; see [translations.md](translations.md).
+Weblate then refines the wording.
 
 For Apple Health importer work, there is also a desktop JVM smoke test that can exercise the Kotlin importer against a real local export without building or installing the app:
 

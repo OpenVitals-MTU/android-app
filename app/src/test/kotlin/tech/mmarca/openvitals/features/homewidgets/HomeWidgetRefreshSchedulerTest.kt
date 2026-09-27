@@ -16,6 +16,8 @@ import io.mockk.slot
 import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Before
@@ -121,6 +123,40 @@ class HomeWidgetRefreshSchedulerTest {
 
         assertThat(storedInterval).isEqualTo(HomeWidgetRefreshInterval.HOURLY)
         verify(exactly = 0) { workManager.enqueueUniquePeriodicWork(any(), any(), any()) }
+    }
+
+    @Test
+    fun `a placed widget also plans one redraw at the next local midnight`() {
+        every { appWidgetManager.getAppWidgetIds(any()) } returns intArrayOf(7)
+        val request = slot<OneTimeWorkRequest>()
+
+        scheduler.reconcile()
+
+        verify(exactly = 1) {
+            workManager.enqueueUniqueWork(HomeWidgetRefreshScheduler.MIDNIGHT_WORK_NAME, ExistingWorkPolicy.KEEP, capture(request))
+        }
+        assertThat(request.captured.workSpec.workerClassName).isEqualTo(HomeWidgetRefreshWorker::class.java.name)
+        assertThat(request.captured.workSpec.initialDelay).isGreaterThan(0L)
+        assertThat(request.captured.workSpec.initialDelay).isAtMost(TimeUnit.DAYS.toMillis(1))
+    }
+
+    @Test
+    fun `the midnight redraw lands on the first instant of the next local day`() {
+        val now = ZonedDateTime.of(2026, 7, 10, 22, 30, 0, 0, ZoneId.of("Europe/Madrid"))
+        val request = slot<OneTimeWorkRequest>()
+
+        scheduler.scheduleMidnightRedraw(now)
+
+        verify { workManager.enqueueUniqueWork(HomeWidgetRefreshScheduler.MIDNIGHT_WORK_NAME, ExistingWorkPolicy.KEEP, capture(request)) }
+        assertThat(request.captured.workSpec.initialDelay).isEqualTo(TimeUnit.MINUTES.toMillis(90))
+    }
+
+    @Test
+    fun `cancel drops the periodic refresh and the midnight redraw together`() {
+        scheduler.cancel()
+
+        verify(exactly = 1) { workManager.cancelUniqueWork(HomeWidgetRefreshScheduler.PERIODIC_WORK_NAME) }
+        verify(exactly = 1) { workManager.cancelUniqueWork(HomeWidgetRefreshScheduler.MIDNIGHT_WORK_NAME) }
     }
 
     @Test

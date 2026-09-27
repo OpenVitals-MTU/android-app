@@ -10,6 +10,7 @@ import tech.mmarca.openvitals.data.repository.CoMapsNavigationRepositoryImpl
 import tech.mmarca.openvitals.data.repository.BodyEnergyRepositoryImpl
 import tech.mmarca.openvitals.data.repository.BodyRepositoryImpl
 import tech.mmarca.openvitals.data.repository.CaffeineRepositoryImpl
+import tech.mmarca.openvitals.data.repository.CycleJournalRepositoryImpl
 import tech.mmarca.openvitals.data.repository.CycleRepositoryImpl
 import tech.mmarca.openvitals.data.repository.FoodRepositoryImpl
 import tech.mmarca.openvitals.data.repository.GarminSleepMinuteRepositoryImpl
@@ -26,6 +27,7 @@ import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepositor
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.CaffeineRepository
+import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
 import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.data.repository.contract.FoodRepository
 import tech.mmarca.openvitals.data.repository.contract.GarminSleepMinuteRepository
@@ -94,6 +96,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCycleRepository(impl: CycleRepositoryImpl): CycleRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCycleJournalRepository(impl: CycleJournalRepositoryImpl): CycleJournalRepository
 
     @Binds
     @Singleton

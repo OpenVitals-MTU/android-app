@@ -28,6 +28,8 @@ import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.MenstruationFlowEntry
 import tech.mmarca.openvitals.domain.model.MenstruationPeriodEntry
 import tech.mmarca.openvitals.domain.model.OvulationTestEntry
+import tech.mmarca.openvitals.data.repository.contract.FakeCycleJournalRepository
+import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 class CycleRepositoryTest {
@@ -63,7 +65,7 @@ class CycleRepositoryTest {
     @Test fun `missingPermissions returns phase 4 permissions not granted`() = runTest {
         val hc = hc(grantedPermissions = setOf(menstruationPermission, bbtPermission))
         every { hc.phase4Permissions } returns allCyclePermissions
-        val repository = CycleRepositoryImpl(hc)
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
 
         assertEquals(
             setOf(ovulationPermission, mucusPermission),
@@ -77,7 +79,7 @@ class CycleRepositoryTest {
             grantedPermissions = allCyclePermissions,
         )
         every { hc.phase4Permissions } returns allCyclePermissions
-        val repository = CycleRepositoryImpl(hc)
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
 
         assertEquals(allCyclePermissions, repository.missingPermissions())
         coVerify(exactly = 0) { hc.grantedPermissions() }
@@ -85,7 +87,7 @@ class CycleRepositoryTest {
 
     @Test fun `loadCycleData skips reads when no cycle permissions are granted`() = runTest {
         val hc = hc(grantedPermissions = emptySet())
-        val repository = CycleRepositoryImpl(hc)
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
 
         val data = repository.loadCycleData(startDate, endDate)
 
@@ -114,7 +116,7 @@ class CycleRepositoryTest {
         coEvery { hc.readMenstruationFlowEntries(startInstant, endInstant) } returns listOf(flow)
         coEvery { hc.readMenstruationPeriods(startInstant, endInstant) } returns listOf(period)
         coEvery { hc.readBasalBodyTemperatureEntries(startInstant, endInstant) } returns listOf(bbt)
-        val repository = CycleRepositoryImpl(hc)
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
 
         val data = repository.loadCycleData(startDate, endDate)
 
@@ -157,7 +159,7 @@ class CycleRepositoryTest {
         coEvery { hc.readOvulationTests(startInstant, endInstant) } returns listOf(ovulation)
         coEvery { hc.readCervicalMucusEntries(startInstant, endInstant) } returns listOf(mucus)
         coEvery { hc.readBasalBodyTemperatureEntries(startInstant, endInstant) } returns listOf(bbt)
-        val repository = CycleRepositoryImpl(hc)
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
 
         val data = repository.loadCycleData(startDate, endDate)
 

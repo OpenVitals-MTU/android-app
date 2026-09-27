@@ -47,6 +47,7 @@ internal fun LazyListScope.settingsScreenContent(
                 item {
                     ReminderTestCard(
                         onShowTestReminder = viewModel::showTestHydrationReminder,
+                        onShowTestCycleReminder = viewModel::showTestCycleReminder,
                         modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
                     )
                 }
@@ -67,6 +68,7 @@ internal fun LazyListScope.settingsScreenContent(
         SettingsSection.NUTRITION,
         SettingsSection.BODY_PROFILE,
         SettingsSection.RECOVERY,
+        SettingsSection.CYCLE,
         SettingsSection.DATA_IMPORT,
         SettingsSection.DEVICE_SYNC,
         -> Unit

@@ -209,6 +209,16 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - View basal body temperature trend charts.
 - View observation rows with date/time, value, and source.
 - View data confidence and statistics for period days, ovulation tests, basal body temperature readings, and total entries.
+- View the recorded cycle day and the period start it counts from.
+- View the current phase (menstrual, follicular, ovulatory transition, luteal) or the reason it cannot be placed, labelled recorded or estimated.
+- View the estimated next period window, where today sits in it, and why there is no estimate yet.
+- View a phase tip or a sourced cycle fact that changes daily.
+- View the count, mean, and range of recorded cycles.
+- View cycle history bars against a 21 to 35 day reference band, with a per-cycle detail sheet.
+- View a thermal chart for the current cycle with a coverline when a temperature shift is confirmed.
+- View how often each symptom was logged in each phase.
+- View today's logged observations (bleeding, pain, mood, energy, symptoms, note).
+- Add a cycle home screen widget that shows the cycle day, the estimated range, and whether today is logged, with a button that hides them.
 
 ### Watch Data
 
@@ -244,7 +254,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 ### Manual Entry Screen
 
 - Open a centralized manual entry area with configurable entry widgets.
-- Show entry widgets for beverages/hydration, food, activity, carbohydrate, mindfulness, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature.
+- Show entry widgets for beverages/hydration, food, activity, carbohydrate, mindfulness, cycle, weight, height, body fat, blood pressure, SpO2, respiratory rate, and body temperature.
 - Reorder, remove, and manage manual entry widgets.
 
 ### Beverages And Hydration
@@ -314,6 +324,17 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Delete OpenVitals-created mindfulness sessions.
 - Request Health Connect mindfulness write permission from the entry flow.
 
+### Cycle
+
+- Log one day at a time: bleeding (none, spotting, light, medium, heavy), pain, mood, and energy on a 1 to 5 scale, symptoms, a private note, a pregnancy test result, basal body temperature with time and disturbance flags, cervical sensation, cervical mucus, ovulation test, and sexual activity.
+- Copy yesterday's symptoms into today's log.
+- Have each Health Connect record kind updated, inserted, or deleted only when its value changed.
+- Keep pain, mood, energy, symptoms, notes, pregnancy test, disturbance flags, and cervical sensation in the app's local database, since Health Connect has no record type for them.
+- Add a past period up to three months back so estimates start sooner.
+- Exclude a cycle from estimates with an optional reason, without removing it from history.
+- Delete OpenVitals-created cycle records and journal entries.
+- Request Health Connect cycle write permissions from the entry flow; kinds without permission are skipped and the screen says so.
+
 ### Body
 
 - Add weight measurements.
@@ -378,7 +399,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Choose whether this phone is the host or the guest.
 - Compare a six-digit code shown on both phones before any health data moves. The records then travel encrypted between the two phones.
 - Choose how far back to sync: 30 days, 6 months, a year, or everything.
-- Choose which data categories to sync from those both phones support.
+- Choose which data categories to sync from those both phones support. The cycle category also carries the cycle journal, excluded cycles, and the declared contexts and age band.
 - Exchange records in both directions in a single session.
 - Read a report of what was merged, what was already present, and a per-record-type breakdown, and copy or share it.
 - Re-running a sync writes no duplicates.
@@ -414,7 +435,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 
 - Sleep sessions are view-only in the app.
 - Nutrition records other than logged foods, drinks, and manual carbohydrate totals are view-only in the manual UI.
-- Cycle tracking observations are view-only in the app.
+- Cycle records written by other apps are view-only; only OpenVitals' own records and the local journal are editable.
 - Heart rate, resting heart rate, HRV, VO2 max, blood glucose, and skin temperature are view-only in the manual UI.
 - Lean body mass, BMR, bone mass, body water mass, and BMI are view-only in the manual UI.
 - Planned workouts are view-only.
@@ -468,6 +489,10 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 
 - Request cycle tracking permissions from the cycle settings area.
 - View cycle data access alongside other Health Connect permissions.
+- Declare tracking contexts: PMS, PMDD, and endometriosis add symptom suggestions; PCOS, perimenopause, and thyroid widen the estimate.
+- Set an optional age band that picks the estimate's variability prior.
+- Turn on local cycle reminders: a daily check-in, an upcoming-window reminder with a lead of 1 to 3 days, and a late-cycle reminder with a grace of 0 to 7 days.
+- Choose what a cycle reminder shows: concealed, descriptive, or a custom title and message.
 
 ### Data Import Settings
 
@@ -517,6 +542,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Configure the daily hydration goal with a stepper.
 - Configure caffeine sensitivity, daily limit, and bedtime guidance.
 - Configure mindfulness reminders and reminder time.
+- Configure cycle reminders: daily check-in time, upcoming-window lead, late-cycle grace, and notification visibility.
 - Store custom hydration container sizes.
 - Log a drink with one tap from a hydration reminder notification, using recently used container sizes.
 - Have reminder schedules restored after a reboot, an app update, a time zone change, or a clock change.
@@ -524,7 +550,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 ### Privacy And App Information
 
 - View privacy notes explaining that OpenVitals uses no account, no cloud sync, no analytics, and no ads.
-- View that health data is read from and written to Health Connect on device, apart from watch-only measurements Health Connect has no record type for, which stay in the app's local database.
+- View that health data is read from and written to Health Connect on device, apart from watch-only measurements and the cycle journal, which Health Connect has no record type for and which stay in the app's local database.
 - View the read-only dashboard/privacy positioning and health disclaimer.
 - View app version information.
 - The app declares no internet permission. Live BLE sensors, watch sync, notification forwarding, and phone-to-phone sync run over Bluetooth.

@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.manualentry.vitals
 
+import tech.mmarca.openvitals.core.presentation.TemperatureUnits
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 
 import tech.mmarca.openvitals.features.manualentry.*
@@ -75,8 +76,6 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OptionDropdown
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 
-private const val FahrenheitFreezingPoint = 32.0
-private const val FahrenheitPerCelsius = 1.8
 private val OxygenColor = Color(0xFF00897B)
 private val RespiratoryColor = Color(0xFF5E97F6)
 private val TemperatureColor = Color(0xFFFF7043)
@@ -334,7 +333,7 @@ internal fun canonicalVitalsValue(
     val value = input.toVitalsDoubleOrNull() ?: return null
     return when (type) {
         VitalsMeasurementType.BODY_TEMPERATURE -> if (unitSystem == UnitSystem.IMPERIAL) {
-            (value - FahrenheitFreezingPoint) / FahrenheitPerCelsius
+            TemperatureUnits.fahrenheitToCelsius(value)
         } else {
             value
         }
@@ -357,7 +356,7 @@ private fun VitalsMeasurementType.inputUnitLabel(unitSystem: UnitSystem): String
     VitalsMeasurementType.BLOOD_PRESSURE -> "mmHg"
     VitalsMeasurementType.SPO2 -> "%"
     VitalsMeasurementType.RESPIRATORY_RATE -> "br/min"
-    VitalsMeasurementType.BODY_TEMPERATURE -> if (unitSystem == UnitSystem.IMPERIAL) "deg F" else "deg C"
+    VitalsMeasurementType.BODY_TEMPERATURE -> TemperatureUnits.label(unitSystem)
     VitalsMeasurementType.HRV -> "ms"
 }
 

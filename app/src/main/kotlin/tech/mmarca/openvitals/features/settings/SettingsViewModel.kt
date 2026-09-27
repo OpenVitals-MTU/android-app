@@ -21,6 +21,7 @@ import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.preferences.BloodPressureGuideline
+import tech.mmarca.openvitals.features.cycle.reminders.CycleReminderController
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.healthconnect.HealthConnectPermissionUxState
 
@@ -71,6 +72,7 @@ class SettingsViewModel @Inject constructor(
     private val heartRepository: HeartRepository,
     private val sleepRepository: SleepRepository,
     private val hydrationReminderController: HydrationReminderController,
+    private val cycleReminderController: CycleReminderController,
     private val healthConnectPreferences: HealthConnectPreferences,
     private val heartThresholdPreferences: HeartThresholdPreferences,
     private val permissionUxState: HealthConnectPermissionUxState,
@@ -137,6 +139,10 @@ class SettingsViewModel @Inject constructor(
     /** Diagnostics: posts the hydration reminder immediately via the real path. */
     fun showTestHydrationReminder() {
         hydrationReminderController.showTestReminder()
+    }
+
+    fun showTestCycleReminder() {
+        cycleReminderController.showTestReminder()
     }
 
     fun setHealthConnectMindfulnessEnabled(enabled: Boolean) {

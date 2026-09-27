@@ -2,34 +2,39 @@ package tech.mmarca.openvitals.domain.cycle
 
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
-import kotlin.math.roundToLong
-import kotlin.math.sqrt
 
 /**
- * Cross-cycle statistics from bleeding days. Everything degrades with
- * sparse data: predictions need [CycleCalculations.MinCompletedCyclesForPrediction] cycles.
+ * Cross-cycle statistics from recorded bleeding. Everything degrades with sparse
+ * data: the estimate needs two starts, the phase needs an estimate.
  */
 data class CycleStatistics(
     val cycleStarts: List<LocalDate> = emptyList(),
+    /** Blank past [CycleCalculations.MaxDisplayableCycleDay] days. */
     val currentCycleDay: Int? = null,
+    /** Mean of the intervals the estimate uses. */
     val averageCycleLengthDays: Double? = null,
-    val stdDevCycleLengthDays: Double? = null,
+    /** The estimated window, when there is one. Kept as a list for the calendar. */
     val predictedWindows: List<ClosedRange<LocalDate>> = emptyList(),
-)
+    val cycles: List<RecordedCycle> = emptyList(),
+    val estimate: CycleEstimateResult = CycleEstimateResult.NeedsMoreHistory,
+    val currentPhase: CurrentCyclePhase =
+        CurrentCyclePhase.Indeterminate(PhaseIndeterminateReason.NO_CURRENT_CYCLE),
+    val recentIntervalLengths: List<Int> = emptyList(),
+) {
+    val currentCycle: RecordedCycle?
+        get() = cycles.lastOrNull()?.takeIf { it.isCurrent }
+}
 
 /**
- * Pure cycle arithmetic on local days, after drip's method: a cycle starts
- * on a bleeding day preceded by more than [MaxBreakInBleedingDays] free
- * days; predictions use the mean length with a spread from the standard
- * deviation. No fertility inference. A timezone change can shift a day.
+ * Pure cycle arithmetic on local days. A cycle starts on a flow day preceded
+ * by more than [MaxBreakInBleedingDays] free days. The estimate and the phase
+ * live in [CycleEstimateCalculator] and [CurrentCyclePhaseCalculator].
+ * A timezone change can shift a day.
  */
 object CycleCalculations {
 
     const val MaxBreakInBleedingDays = 1
-    const val MinCompletedCyclesForPrediction = 3
-    const val MaxPredictedWindows = 3
     const val MaxDisplayableCycleDay = 99
-    const val NarrowWindowStdDevThreshold = 1.5
 
     /** Groups bleeding days into segments tolerating gaps of [maxBreakDays]. Each start is a cycle start. */
     fun bleedingSegments(
@@ -53,42 +58,52 @@ object CycleCalculations {
         return segments
     }
 
-    fun compute(bleedingDays: Collection<LocalDate>, today: LocalDate): CycleStatistics {
-        val starts = bleedingSegments(bleedingDays).map { it.start }
-        if (starts.isEmpty()) return CycleStatistics()
+    /**
+     * @param flowDays period flow per day; these define the cycles.
+     * @param spottingDays intermenstrual bleeding; counted, never a start.
+     * @param exclusions cycles the user keeps out of the estimate, by a date inside them.
+     * @param profile the declared contexts and age band.
+     * @param todayBleeding what the journal says about today, when the flow days do not.
+     */
+    fun compute(
+        flowDays: Map<LocalDate, Int>,
+        today: LocalDate,
+        spottingDays: Set<LocalDate> = emptySet(),
+        exclusions: Map<LocalDate, CycleExclusionReason?> = emptyMap(),
+        profile: CycleTrackingProfile = CycleTrackingProfile(),
+        todayBleeding: DayBleeding? = null,
+    ): CycleStatistics {
+        val cycles = CycleHistory.build(flowDays, spottingDays, exclusions)
+        if (cycles.isEmpty()) return CycleStatistics()
 
-        val lastStart = starts.last()
+        val lastStart = cycles.last().startDate
         val daysSinceStart = ChronoUnit.DAYS.between(lastStart, today)
         val currentCycleDay = (daysSinceStart + 1)
             .takeIf { daysSinceStart >= 0 && it <= MaxDisplayableCycleDay }
             ?.toInt()
 
-        val lengths = starts.zipWithNext { a, b -> ChronoUnit.DAYS.between(a, b).toDouble() }
-        if (lengths.size < MinCompletedCyclesForPrediction) {
-            return CycleStatistics(cycleStarts = starts, currentCycleDay = currentCycleDay)
-        }
-
-        val mean = lengths.average()
-        val stdDev = sqrt(lengths.sumOf { (it - mean) * (it - mean) } / lengths.size)
-        val periodDistance = mean.roundToLong()
-        val variation = if (stdDev < NarrowWindowStdDevThreshold) 1L else 2L
-
-        // Overlapping windows carry no information; suppress when the length varies too much.
-        val windows = if (periodDistance - 5 < variation) {
-            emptyList()
-        } else {
-            (1..MaxPredictedWindows).map { i ->
-                val predictedStart = lastStart.plusDays(periodDistance * i)
-                predictedStart.minusDays(variation)..predictedStart.plusDays(variation)
-            }
-        }
-
+        val estimate = CycleEstimateCalculator.evaluate(
+            cycles = cycles,
+            ageBand = profile.ageBand,
+            hasTimingContext = profile.hasTimingContext,
+        )
+        val recent = CycleEstimateCalculator.recentIntervalLengths(cycles)
+        val phase = CurrentCyclePhaseCalculator.evaluate(
+            today = today,
+            currentCycle = cycles.last().takeIf { it.isCurrent },
+            todayBleeding = todayBleeding,
+            estimateResult = estimate,
+        )
         return CycleStatistics(
-            cycleStarts = starts,
+            cycleStarts = cycles.map { it.startDate },
             currentCycleDay = currentCycleDay,
-            averageCycleLengthDays = mean,
-            stdDevCycleLengthDays = stdDev,
-            predictedWindows = windows,
+            averageCycleLengthDays = recent.takeIf { it.isNotEmpty() }?.average(),
+            predictedWindows = listOfNotNull(estimate.estimateOrNull?.window),
+            cycles = cycles,
+            estimate = estimate,
+            currentPhase = phase,
+            recentIntervalLengths = recent,
         )
     }
+
 }

@@ -15,6 +15,7 @@ import tech.mmarca.openvitals.features.settings.BodyProfileSettingsScreen
 import tech.mmarca.openvitals.features.settings.DataImportScreen
 import tech.mmarca.openvitals.features.settings.DisplaySettingsScreen
 import tech.mmarca.openvitals.features.settings.NutritionSettingsScreen
+import tech.mmarca.openvitals.features.settings.CycleSettingsScreen
 import tech.mmarca.openvitals.features.settings.RecoverySettingsScreen
 import tech.mmarca.openvitals.features.settings.SensorsSettingsScreen
 import tech.mmarca.openvitals.features.settings.SettingsScreen
@@ -91,6 +92,10 @@ internal fun NavGraphBuilder.settingsRoutes(
         RecoverySettingsScreen(viewModel = hiltViewModel())
     }
 
+    composable(Screen.SettingsCycle.route) {
+        CycleSettingsScreen(viewModel = hiltViewModel())
+    }
+
     composable(Screen.SettingsSleep.route) {
         RecoverySettingsScreen(viewModel = hiltViewModel())
     }
@@ -156,6 +161,7 @@ private fun settingsSectionRoute(section: SettingsSection): String =
         SettingsSection.BODY_PROFILE -> Screen.SettingsBodyProfile.route
         SettingsSection.VITALS -> Screen.SettingsVitals.route
         SettingsSection.RECOVERY -> Screen.SettingsRecovery.route
+        SettingsSection.CYCLE -> Screen.SettingsCycle.route
         SettingsSection.DATA_IMPORT -> Screen.SettingsDataImport.route
         SettingsSection.DEVICE_SYNC -> Screen.SettingsDeviceSync.route
         SettingsSection.HEALTH_CONNECT -> Screen.SettingsHealthConnect.route

@@ -4,12 +4,18 @@ import androidx.datastore.preferences.core.mutablePreferencesOf
 import java.time.LocalDate
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.domain.cycle.CurrentCyclePhase
+import tech.mmarca.openvitals.domain.cycle.CycleEstimateResult
+import tech.mmarca.openvitals.domain.cycle.CyclePhase
+import tech.mmarca.openvitals.domain.cycle.PhaseCertainty
+import tech.mmarca.openvitals.domain.model.DashboardCycleSummary
 import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.navigation.Screen
@@ -146,9 +152,36 @@ class HomeMetricWidgetSnapshotTest {
         assertEquals(catalog.toSet().size, catalog.size)
         assertTrue(DashboardWidgetId.BODY_ENERGY in catalog)
         assertTrue(DashboardWidgetId.WEEKLY_CARDIO_LOAD in catalog)
+        // The cycle has its own concealed widget; a tile that reveals it by default is not offered.
+        assertFalse(DashboardWidgetId.CYCLE in catalog)
         catalog.forEach { metricId ->
             assertNotEquals(0, metricId.homeMetricTitleRes())
         }
+    }
+
+    @Test
+    fun `a placed cycle tile shows the recorded day and the phase`() {
+        val data = DashboardData(
+            date = date,
+            menstruationPeriodDays = 5,
+            cycleSummary = DashboardCycleSummary(
+                currentCycleDay = 12,
+                cycleStartDate = date.minusDays(11),
+                phase = CurrentCyclePhase.Available(CyclePhase.LUTEAL, PhaseCertainty.ESTIMATED),
+                estimate = CycleEstimateResult.NeedsMoreHistory,
+            ),
+        )
+
+        val snapshot = buildMetricWidgetSnapshot(
+            context = context,
+            metricId = DashboardWidgetId.CYCLE,
+            data = data,
+            unitFormatter = unitFormatter(),
+            route = homeMetricWidgetRoute(DashboardWidgetId.CYCLE, date),
+        )
+
+        assertEquals(context.getString(R.string.widget_cycle_day, 12), snapshot.value)
+        assertEquals(context.getString(R.string.cycle_phase_luteal), snapshot.subtitle)
     }
 
     @Test

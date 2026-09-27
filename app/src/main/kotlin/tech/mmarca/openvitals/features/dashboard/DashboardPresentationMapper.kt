@@ -9,6 +9,7 @@ import tech.mmarca.openvitals.domain.model.DashboardData
 import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.asleepDurationMs
+import tech.mmarca.openvitals.features.cycle.cycleSecondaryLine
 import tech.mmarca.openvitals.features.nutrition.displayValue
 import java.time.ZoneId
 import kotlin.math.roundToInt
@@ -486,8 +487,12 @@ object DashboardPresentationMapper {
     private fun gramDisplayValue(value: Double, unitFormatter: UnitFormatter): DisplayValue =
         DisplayValue(unitFormatter.count(value.roundToInt()), "g")
 
-    private fun cycleDisplay(data: DashboardData): CycleWidgetDisplay? =
-        when {
+    private fun cycleDisplay(data: DashboardData): CycleWidgetDisplay? {
+        val summary = data.cycleSummary
+        val day = summary?.currentCycleDay
+        return when {
+            summary != null && day != null ->
+                CycleWidgetDisplay.RecordedDay(day, cycleSecondaryLine(summary.phase, summary.estimate, data.date))
             data.menstruationPeriodDays != null && data.menstruationPeriodDays > 0 ->
                 CycleWidgetDisplay.MenstruationDays(data.menstruationPeriodDays)
             data.ovulationTestCount != null && data.ovulationTestCount > 0 ->
@@ -496,6 +501,7 @@ object DashboardPresentationMapper {
                 CycleWidgetDisplay.BasalTemperature(data.latestBasalBodyTemperatureCelsius)
             else -> null
         }
+    }
 }
 
 internal fun dashboardMeasurementDate(

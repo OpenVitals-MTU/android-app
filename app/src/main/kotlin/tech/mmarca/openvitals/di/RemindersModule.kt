@@ -4,6 +4,8 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import tech.mmarca.openvitals.features.cycle.reminders.CycleReminderController
+import tech.mmarca.openvitals.features.cycle.reminders.CycleReminderSettings
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderController
 import tech.mmarca.openvitals.features.hydration.reminders.HydrationReminderSettings
 import tech.mmarca.openvitals.features.mindfulness.reminders.MindfulnessReminderController
@@ -21,4 +23,7 @@ abstract class RemindersModule {
     abstract fun bindMindfulnessReminderSettings(
         impl: MindfulnessReminderController,
     ): MindfulnessReminderSettings
+
+    @Binds
+    abstract fun bindCycleReminderSettings(impl: CycleReminderController): CycleReminderSettings
 }

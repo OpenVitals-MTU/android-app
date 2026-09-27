@@ -19,12 +19,23 @@ import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
+import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
 import tech.mmarca.openvitals.domain.cycle.CycleStatistics
 import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
+import tech.mmarca.openvitals.domain.model.CycleEntryWriteRequest
+import tech.mmarca.openvitals.domain.model.CycleJournalEntry
+import tech.mmarca.openvitals.domain.model.CycleRecordValues
+import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
+import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
+import tech.mmarca.openvitals.data.repository.contract.CyclePreferences
 import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
+import tech.mmarca.openvitals.features.cycle.reminders.CycleReminderSettings
+import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -39,6 +50,7 @@ data class CycleUiState(
     val data: CycleData = CycleData(),
     val display: CycleDisplayState = CycleDisplayState(),
     val statistics: CycleStatistics? = null,
+    val journalEntries: List<CycleJournalEntry> = emptyList(),
     val missingPermissions: Set<String> = emptySet(),
     val error: ScreenError? = null,
 )
@@ -47,8 +59,13 @@ data class CycleUiState(
 class CycleViewModel @Inject constructor(
     private val repository: CycleRepository,
     private val periodPreferences: PeriodPreferences,
+    private val journal: CycleJournalRepository,
+    private val cyclePreferences: CyclePreferences,
+    private val bodyProfilePreferences: BodyProfilePreferences,
+    private val reminders: CycleReminderSettings,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     savedStateHandle: androidx.lifecycle.SavedStateHandle,
+    private val homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler? = null,
 ) : ViewModel() {
 
     private val initialRange = periodPreferences.timeRangeFor(PeriodRangePreferenceKey.CYCLE)
@@ -145,11 +162,16 @@ class CycleViewModel @Inject constructor(
                 repository.loadCyclePeriod(query)
             }.onSuccess { result ->
                 if (!isCurrent) return@load
+                val profile = cyclePreferences.cycleTrackingProfile().resolved(bodyProfilePreferences.bodyProfile())
                 val display = withContext(dispatchers.default) {
                     CyclePresentationMapper.build(
                         query = query,
                         data = result.data,
                         statistics = result.statistics,
+                        journalEntries = result.journalEntries,
+                        allJournalEntries = result.allJournalEntries,
+                        currentCycleTemperatures = result.currentCycleTemperatures,
+                        profile = profile,
                     )
                 }
                 if (!isCurrent) return@load
@@ -159,6 +181,7 @@ class CycleViewModel @Inject constructor(
                     data = result.data,
                     display = display,
                     statistics = result.statistics,
+                    journalEntries = result.journalEntries,
                     missingPermissions = result.missingPermissions,
                 )
             }.onFailure { error ->
@@ -181,11 +204,64 @@ class CycleViewModel @Inject constructor(
             runCatching {
                 repository.deleteCycleEntry(kind, entryId)
             }.onSuccess {
+                historyChanged()
                 load()
             }.onFailure { error ->
                 _uiState.value = previous.copy(error = error.toScreenError())
             }
         }
+    }
+
+    /** Removes a day's journal row. Its Health Connect records stay. */
+    fun deleteJournalEntry(date: LocalDate) {
+        val previous = _uiState.value
+        _uiState.value = previous.copy(journalEntries = previous.journalEntries.filterNot { it.date == date })
+        viewModelScope.launch {
+            runCatching { journal.delete(date) }
+                .onSuccess {
+                    historyChanged()
+                    load()
+                }
+                .onFailure { error -> _uiState.value = previous.copy(error = error.toScreenError()) }
+        }
+    }
+
+    /** Keeps a cycle in the history but out of the estimate, or brings it back. */
+    fun setCycleExclusion(start: LocalDate, end: LocalDate?, excluded: Boolean, reason: CycleExclusionReason?) {
+        viewModelScope.launch {
+            runCatching {
+                if (excluded) journal.exclude(start, end, reason) else journal.include(start, end)
+            }.onSuccess {
+                historyChanged()
+                load()
+            }
+                .onFailure { error -> _uiState.value = _uiState.value.copy(error = error.toScreenError()) }
+        }
+    }
+
+    /** A past period start: one light-flow day, which starts a cycle. */
+    fun addPastPeriod(date: LocalDate) {
+        viewModelScope.launch {
+            runCatching {
+                repository.writeCycleEntry(
+                    CycleEntryWriteRequest(
+                        kind = CycleEntryKind.MENSTRUATION_FLOW,
+                        time = date.atTime(LocalTime.NOON).atZone(ZoneId.systemDefault()).toInstant(),
+                        flow = CycleRecordValues.FLOW_LIGHT,
+                    ),
+                )
+            }.onSuccess {
+                historyChanged()
+                load()
+            }
+                .onFailure { error -> _uiState.value = _uiState.value.copy(error = error.toScreenError()) }
+        }
+    }
+
+    /** A changed history moves the estimate: the alarms and the home widget follow. */
+    private fun historyChanged() {
+        reminders.applyStoredConfig()
+        homeWidgetRefreshScheduler?.refreshNow()
     }
 
     private fun applyPeriodSelection(selection: PeriodSelection) {

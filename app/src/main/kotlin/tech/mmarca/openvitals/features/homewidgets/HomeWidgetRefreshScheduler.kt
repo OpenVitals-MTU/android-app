@@ -10,6 +10,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.Duration
+import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -45,12 +47,32 @@ class HomeWidgetRefreshScheduler @Inject constructor(
     fun reconcile() {
         // Runs from Application.onCreate and widget receivers. Not worth failing either over.
         runCatching {
-            if (anyHomeWidgetPlaced(context)) enqueue(interval, ExistingPeriodicWorkPolicy.KEEP) else cancel()
+            if (anyHomeWidgetPlaced(context)) {
+                enqueue(interval, ExistingPeriodicWorkPolicy.KEEP)
+                scheduleMidnightRedraw()
+            } else {
+                cancel()
+            }
         }.onFailure { Log.w(HomeWidgetLogTag, "Could not reconcile the widget refresh schedule", it) }
     }
 
     fun cancel() {
         workManager.cancelUniqueWork(PERIODIC_WORK_NAME)
+        workManager.cancelUniqueWork(MIDNIGHT_WORK_NAME)
+    }
+
+    /**
+     * One redraw at the next local midnight, so a day counter rolls over.
+     * Every worker run re-arms it; KEEP leaves a pending one alone.
+     */
+    fun scheduleMidnightRedraw(now: ZonedDateTime = ZonedDateTime.now()) {
+        runCatching {
+            val midnight = now.toLocalDate().plusDays(1).atStartOfDay(now.zone)
+            val request = OneTimeWorkRequestBuilder<HomeWidgetRefreshWorker>()
+                .setInitialDelay(Duration.between(now, midnight).toMillis(), TimeUnit.MILLISECONDS)
+                .build()
+            workManager.enqueueUniqueWork(MIDNIGHT_WORK_NAME, ExistingWorkPolicy.KEEP, request)
+        }.onFailure { Log.w(HomeWidgetLogTag, "Could not plan the midnight widget redraw", it) }
     }
 
     /** One run now. KEEP: a burst of app refreshes is one widget redraw. */
@@ -76,6 +98,7 @@ class HomeWidgetRefreshScheduler @Inject constructor(
     companion object {
         const val PERIODIC_WORK_NAME = "home-widget-refresh"
         const val NOW_WORK_NAME = "home-widget-refresh-now"
+        const val MIDNIGHT_WORK_NAME = "home-widget-midnight"
         private const val RETRY_BACKOFF_MINUTES = 10L
     }
 }

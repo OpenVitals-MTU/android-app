@@ -6,7 +6,9 @@ import kotlinx.coroutines.flow.map
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
+import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
+import tech.mmarca.openvitals.domain.model.CycleReminderConfig
 import tech.mmarca.openvitals.domain.model.MindfulnessBellSound
 import tech.mmarca.openvitals.domain.model.MindfulnessTimerConfig
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
@@ -75,7 +77,8 @@ class FakePreferences(
     RecordingPreferences,
     UnitPreferences,
     OnboardingPreferences,
-    HealthConnectPreferences {
+    HealthConnectPreferences,
+    CyclePreferences {
 
     private val ranges = mutableMapOf<PeriodRangePreferenceKey, TimeRange>()
     private val goals = mutableMapOf<MetricDailyGoalKey, Double>()
@@ -223,6 +226,28 @@ class FakePreferences(
 
     fun setUnitOverride(quantity: UnitQuantity, override: UnitSystem?) {
         if (override == null) unitOverrides.remove(quantity) else unitOverrides[quantity] = override
+    }
+
+    private val cycleProfile = MutableStateFlow(CycleTrackingProfile())
+    private var cycleReminders = CycleReminderConfig()
+
+    override fun cycleTrackingProfile(): CycleTrackingProfile = cycleProfile.value
+
+    override val cycleTrackingProfileFlow: Flow<CycleTrackingProfile> = cycleProfile
+
+    override fun setCycleTrackingProfile(profile: CycleTrackingProfile) {
+        cycleProfile.value = profile
+    }
+
+    override fun cycleReminderConfig(): CycleReminderConfig = cycleReminders
+
+    override fun setCycleReminderConfig(config: CycleReminderConfig) {
+        cycleReminders = config.normalized()
+    }
+
+    override fun clearCyclePreferences() {
+        cycleProfile.value = CycleTrackingProfile()
+        cycleReminders = CycleReminderConfig()
     }
 
     /** How often the current policy was accepted. */

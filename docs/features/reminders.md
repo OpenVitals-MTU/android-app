@@ -2,9 +2,9 @@
 
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
-> **Implementation:** `features/hydration/reminders`, `features/mindfulness/reminders`, `features/settings`.
-> **Navigation:** hydration detail, mindfulness detail, reminder-related settings.
-> **Related:** [Feature map](feature-map.md), [Hydration](hydration.md), [Mindfulness](mindfulness.md).
+> **Implementation:** `features/hydration/reminders`, `features/mindfulness/reminders`, `features/cycle/reminders`, `features/settings`.
+> **Navigation:** hydration detail, mindfulness detail, Settings → Cycle, reminder-related settings.
+> **Related:** [Feature map](feature-map.md), [Hydration](hydration.md), [Mindfulness](mindfulness.md), [Cycle tracking](cycle-tracking.md).
 
 OpenVitals reminders are local device notifications for supported wellness workflows.
 
@@ -24,6 +24,18 @@ A hydration reminder carries two one-tap add buttons, so a drink can be logged f
 
 Mindfulness reminders can help users return to timer or session logging workflows. Reminder settings stay local to the device.
 
+## Cycle Reminders
+
+Cycle reminders are off by default and are configured in Settings → Cycle. Three kinds exist:
+
+- **Daily log** at a chosen time (21:00 by default). It is skipped when the day already has a log.
+- **Upcoming range**, 1 to 3 days before the estimated next period range. It exists only while there is an estimate.
+- **Late cycle**, 0 to 7 days after the estimated range ends without a new period start.
+
+What the notification shows is a separate choice: **concealed** (a neutral "Reminder" text that reveals nothing, the default), **descriptive** (says why the reminder came, only on an unlocked screen), or **custom** (the user's own title and message). The lock-screen version is always neutral.
+
+The schedule is recomputed after every day-log save, delete, exclusion or backfill and every settings change, so a reminder that no longer applies is cancelled rather than shown late. Turning the reminders on asks for the notification permission first and enables them once it is granted. The estimate is read strictly and only with the background-read grant; without it, or when Health Connect cannot answer, the window and late-cycle alarms already armed stay as they are and are re-planned the next time the app opens, like the other reminders.
+
 ## Surviving Reboots And Clock Changes
 
 Reminders are scheduled as wall-clock alarms, so the schedule is re-armed after:
@@ -33,7 +45,7 @@ Reminders are scheduled as wall-clock alarms, so the schedule is re-armed after:
 - A time zone change.
 - A manual or network clock change.
 
-Without the re-arm, an alarm set before the change would fire at the old absolute instant, which is the wrong time of day. Both hydration and mindfulness reminders are restored the same way.
+Without the re-arm, an alarm set before the change would fire at the old absolute instant, which is the wrong time of day. Hydration, mindfulness, and cycle reminders are restored the same way.
 
 ## Android Permissions
 

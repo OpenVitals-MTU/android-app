@@ -3,55 +3,41 @@ package tech.mmarca.openvitals.features.manualentry.cycle
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
-import tech.mmarca.openvitals.domain.model.CycleRecordValues
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
-import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
-/**
- * The cycle day-log shows one section at a time. Edit mode scopes to the record being edited,
- * or it would write records the user never meant to touch.
- */
+/** The day log card: the bleeding scale, the optional sections, and the permission callout. */
 class CycleEntryContentTest {
 
     @get:Rule
     val composeRule = createComposeRule()
 
+    private fun string(id: Int): String =
+        InstrumentationRegistry.getInstrumentation().targetContext.getString(id)
+
     private fun setCard(
         state: CycleEntryUiState,
-        onSelectFlow: (Int?) -> Unit = {},
-        onSelectSection: (CycleEntryKind) -> Unit = {},
+        actions: CycleEntryActions = CycleEntryActions.None,
     ) {
         composeRule.setContent {
             OpenVitalsTheme {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
+                Column(modifier = androidx.compose.ui.Modifier.verticalScroll(rememberScrollState())) {
                     CycleEntryCard(
                         state = state,
                         unitSystem = UnitSystem.METRIC,
-                        onDateChanged = {},
-                        onEntryTimeChanged = {},
-                        onSelectSection = onSelectSection,
-                        onSelectFlow = onSelectFlow,
-                        onToggleSpotting = {},
-                        onSelectSexualActivity = {},
-                        onSelectOvulation = {},
-                        onSelectMucusAppearance = {},
-                        onSelectMucusSensation = {},
-                        onBbtInputChanged = {},
-                        onSelectBbtLocation = {},
+                        actions = actions,
                         onSave = {},
                         onRequestWritePermission = {},
                     )
@@ -60,123 +46,44 @@ class CycleEntryContentTest {
         }
     }
 
-    @Test
-    fun createModeShowsTheCategoryPickerAndOnlyTheSelectedSection() {
-        setCard(
-            CycleEntryUiState(
-                isCheckingPermission = false,
-                grantedKinds = CycleEntryKind.entries.toSet(),
-            )
-        )
+    private fun readyState() = CycleEntryUiState(
+        isCheckingPermission = false,
+        isLoadingDay = false,
+        grantedKinds = CycleEntryKind.entries.toSet(),
+    )
 
-        // All six categories are offered...
-        composeRule.onNodeWithText(string(R.string.cycle_observation_intermenstrual_bleeding))
-            .performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText(string(R.string.cycle_observation_sexual_activity))
-            .performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText(string(R.string.cycle_observation_ovulation_test))
-            .performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText(string(R.string.cycle_observation_cervical_mucus))
-            .performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText(string(R.string.cycle_observation_basal_body_temperature))
-            .performScrollTo().assertIsDisplayed()
-        // Only the selected category's input renders, as a collapsed dropdown. Exactly one.
-        composeRule.onAllNodesWithText(string(R.string.option_not_specified))
-            .assertCountEquals(1)
-        composeRule.onNodeWithText(string(R.string.cycle_entry_section_spotting))
-            .assertDoesNotExist()
-        composeRule.onNodeWithText(string(R.string.cycle_entry_section_mucus_appearance))
-            .assertDoesNotExist()
-        composeRule.onNodeWithText(string(R.string.cycle_entry_bbt_location))
-            .assertDoesNotExist()
+    @Test
+    fun theBleedingScaleOffersEveryStepAndReportsTheTap() {
+        var selected: BleedingOption? = null
+        setCard(readyState(), CycleEntryActions.None.copy(onBleeding = { selected = it }))
+
+        composeRule.onNodeWithText(string(R.string.cycle_bleeding_not_recorded)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.cycle_bleeding_none)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.cycle_entry_section_spotting)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.cycle_flow_heavy)).performClick()
+
+        assertEquals(BleedingOption.HEAVY, selected)
     }
 
     @Test
-    fun tappingACategoryChipReportsTheSelection() {
-        var selected: CycleEntryKind? = null
-        setCard(
-            CycleEntryUiState(
-                isCheckingPermission = false,
-                grantedKinds = CycleEntryKind.entries.toSet(),
-            ),
-            onSelectSection = { selected = it },
-        )
+    fun theOptionalSectionsStayCollapsedUntilOpened() {
+        setCard(readyState())
 
-        composeRule.onNodeWithText(string(R.string.cycle_observation_ovulation_test))
-            .performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.cycle_entry_more_show)).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.cycle_entry_biomarkers_show)).performScrollTo().assertIsDisplayed()
 
-        assertEquals(CycleEntryKind.OVULATION_TEST, selected)
+        setCard(readyState().copy(showMore = true, showBiomarkers = true))
+
+        composeRule.onNodeWithText(string(R.string.cycle_entry_symptoms)).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.cycle_observation_basal_body_temperature)).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.cycle_entry_section_hcg)).performScrollTo().assertIsDisplayed()
     }
 
     @Test
-    fun aSelectedCategoryRendersItsOwnSection() {
-        setCard(
-            CycleEntryUiState(
-                isCheckingPermission = false,
-                grantedKinds = CycleEntryKind.entries.toSet(),
-                selectedSection = CycleEntryKind.BASAL_BODY_TEMPERATURE,
-            )
-        )
+    fun withoutAnyWritePermissionTheCalloutShowsAndSaveStillWorksForTheJournal() {
+        setCard(readyState().copy(grantedKinds = emptySet()))
 
-        composeRule.onNodeWithText(string(R.string.cycle_entry_bbt_location))
-            .performScrollTo().assertIsDisplayed()
-        // "Period flow" appears once, as the chip. If the flow section rendered too, it would be two.
-        composeRule.onAllNodesWithText(string(R.string.cycle_entry_section_flow))
-            .assertCountEquals(1)
-    }
-
-    @Test
-    fun pickingAFlowOptionFromTheDropdownReportsTheSelection() {
-        var selected: Int? = null
-        setCard(
-            CycleEntryUiState(
-                isCheckingPermission = false,
-                grantedKinds = CycleEntryKind.entries.toSet(),
-            ),
-            onSelectFlow = { selected = it },
-        )
-
-        composeRule.onNodeWithText(string(R.string.option_not_specified))
-            .performScrollTo().performClick()
-        composeRule.onNodeWithText(string(R.string.cycle_flow_medium)).performClick()
-
-        assertEquals(CycleRecordValues.FLOW_MEDIUM, selected)
-    }
-
-    @Test
-    fun missingPermissionShowsTheGrantAffordance() {
-        setCard(
-            CycleEntryUiState(
-                isCheckingPermission = false,
-                grantedKinds = emptySet(),
-            )
-        )
-
-        composeRule.onNodeWithText(string(R.string.cycle_entry_permission_needed))
-            .assertIsDisplayed()
-        composeRule.onNodeWithText(string(R.string.action_grant_permission))
-            .assertIsDisplayed()
-    }
-
-    @Test
-    fun editModeRendersOnlyTheScopedSection() {
-        setCard(
-            CycleEntryUiState(
-                isCheckingPermission = false,
-                grantedKinds = CycleEntryKind.entries.toSet(),
-                editKind = CycleEntryKind.OVULATION_TEST,
-                editRecordId = "uid",
-            )
-        )
-
-        composeRule.onNodeWithText(string(R.string.cycle_entry_section_ovulation))
-            .performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText(string(R.string.cycle_entry_section_flow))
-            .assertDoesNotExist()
-        composeRule.onNodeWithText(string(R.string.cycle_entry_section_spotting))
-            .assertDoesNotExist()
-        // No category picker while editing: the record's kind is not a choice.
-        composeRule.onNodeWithText(string(R.string.cycle_observation_basal_body_temperature))
-            .assertDoesNotExist()
+        composeRule.onNodeWithText(string(R.string.cycle_entry_permission_needed)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.cycle_entry_save)).performScrollTo().assertIsDisplayed()
     }
 }

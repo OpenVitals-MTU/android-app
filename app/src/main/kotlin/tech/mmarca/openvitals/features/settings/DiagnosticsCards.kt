@@ -25,12 +25,14 @@ import java.time.format.FormatStyle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 /** Diagnostics: fires the hydration reminder immediately, as a scheduled fire would. */
 @Composable
 internal fun ReminderTestCard(
     onShowTestReminder: () -> Unit,
     modifier: Modifier = Modifier,
+    onShowTestCycleReminder: () -> Unit = {},
 ) {
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -67,6 +69,14 @@ internal fun ReminderTestCard(
                     .padding(top = 12.dp),
             ) {
                 Text(stringResource(R.string.settings_reminder_test_show_hydration))
+            }
+            OpenVitalsOutlinedButton(
+                onClick = onShowTestCycleReminder,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = Spacing.sm),
+            ) {
+                Text(stringResource(R.string.settings_reminder_test_show_cycle))
             }
         }
     }

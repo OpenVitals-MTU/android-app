@@ -67,8 +67,8 @@ class FunctionLengthRatchetTest {
         const val MaxLines = 150
         const val GiantLines = 450
 
-        /** The count on 2026-09-21, after the Settings split. */
-        const val MaxLongFunctions = 55
+        /** The count on 2026-09-27, after the cycle day log replaced the old entry card. */
+        const val MaxLongFunctions = 54
 
         /** Each ceiling is the length on 2026-09-21 plus about 20 lines. */
         val GiantCeilings = mapOf(

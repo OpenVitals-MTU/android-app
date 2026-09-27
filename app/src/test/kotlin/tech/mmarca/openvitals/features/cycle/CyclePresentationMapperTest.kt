@@ -12,11 +12,13 @@ import org.junit.Test
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
+import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.MenstruationFlowEntry
 import tech.mmarca.openvitals.domain.model.MenstruationPeriodEntry
 import tech.mmarca.openvitals.domain.model.OvulationTestEntry
+import tech.mmarca.openvitals.domain.preferences.UnitSystem
 
 class CyclePresentationMapperTest {
 
@@ -68,12 +70,11 @@ class CyclePresentationMapperTest {
         assertEquals(0, display.summary.ovulationTestCount)
         assertEquals(0, display.summary.bbtReadingCount)
         assertEquals(0, display.summary.totalEntryCount)
-        assertNull(display.summary.latestBbtCelsius)
         assertEquals(0, display.sampleCount)
         assertTrue(display.trackedDates.isEmpty())
         assertTrue(display.sources.isEmpty())
         // Nothing to observe either: the entry list the screen renders is empty.
-        assertTrue(observationsFor(CycleData(), mockk(relaxed = true)).isEmpty())
+        assertTrue(observationsFor(CycleData(), mockk(relaxed = true), emptyList(), UnitFormatter(unitSystemProvider = { UnitSystem.METRIC })).isEmpty())
     }
 
     @Test fun `period days count the days a period covers, not the records`() {
@@ -136,8 +137,6 @@ class CyclePresentationMapperTest {
 
         assertTrue(display.summary.periodDays >= 3)
         assertEquals(2, display.summary.bbtReadingCount)
-        assertEquals(36.7, display.summary.latestBbtCelsius ?: 0.0, 0.01)
-        assertEquals(10, display.summary.latestBbtMeasurementLocation)
     }
 
     private fun instant(value: String): Instant = Instant.parse(value)

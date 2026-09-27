@@ -23,14 +23,16 @@ class HomeWidgetRefreshWorker(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
+        val scheduler = EntryPointAccessors.fromApplication(applicationContext, HomeWidgetRefreshWorkerEntryPoint::class.java)
+            .homeWidgetRefreshScheduler()
         if (!anyHomeWidgetPlaced(applicationContext)) {
             // The schedule outlived the widgets.
-            EntryPointAccessors.fromApplication(applicationContext, HomeWidgetRefreshWorkerEntryPoint::class.java)
-                .homeWidgetRefreshScheduler()
-                .cancel()
+            scheduler.cancel()
             return Result.success()
         }
         refreshPlacedHomeWidgetsInProcess(applicationContext)
+        // The midnight run cannot re-arm itself (KEEP sees it running); the next run does.
+        scheduler.scheduleMidnightRedraw()
         return Result.success()
     }
 }

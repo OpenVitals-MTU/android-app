@@ -1,6 +1,6 @@
 # OpenVitals Privacy Policy
 
-Last updated: September 20, 2026
+Last updated: September 27, 2026
 
 OpenVitals is a local-first Android app for viewing health and fitness data from Health Connect.
 
@@ -50,7 +50,7 @@ OpenVitals uses granted Health Connect data to show dashboards, charts, summarie
 
 The one-tap onboarding option can request write permissions up front. A granted write permission is used only by the actions listed in the summary. If a needed write permission has not been granted yet, the app asks for it before it writes, so Health Connect remains the source of truth.
 
-If you enable hydration or mindfulness reminders, OpenVitals uses locally stored reminder preferences and granted Health Connect data to decide when to show an on-device reminder. Reminder notifications are generated locally on your device and are not sent to a server.
+If you enable hydration, mindfulness or cycle reminders, OpenVitals uses locally stored reminder preferences and granted Health Connect data to decide when to show an on-device reminder. Cycle reminders use a neutral wording unless you choose otherwise. Reminder notifications are generated locally on your device and are not sent to a server.
 
 The app does not use health data for advertising, profiling, credit decisions, insurance decisions, employment decisions, or any purpose unrelated to showing your health data back to you.
 
@@ -115,8 +115,8 @@ OpenVitals does not include advertising SDKs or analytics SDKs.
 
 Health Connect remains the source of truth for the health data it has a record type for. OpenVitals also keeps, in its private storage on your device:
 
-- App preferences, such as units, language, theme, widget order, goals, reminder settings, timer settings, your body profile, paired device settings, and acknowledged permission prompts.
-- A local database with your drink catalog, cached daily summaries that make the charts fast (up to two years), the Body Energy timeline, the watch-only wellness series described above, and up to 45 days of per-minute watch data used to estimate sleep stages.
+- App preferences, such as units, language, theme, widget order, goals, reminder settings, timer settings, your body profile, paired device settings, acknowledged permission prompts, and the cycle tracking contexts and age band you declare.
+- A local database with your drink catalog, cached daily summaries that make the charts fast (up to two years), the Body Energy timeline, the watch-only wellness series described above, up to 45 days of per-minute watch data used to estimate sleep stages, and the cycle journal: the pain, mood, energy, symptoms, notes, pregnancy-test results, temperature disturbances and cervical sensation you log per day, and the cycles you exclude from estimates. Health Connect has no record type for these. The journal stays until you delete a day's entry, delete the journal in Settings, or clear the app's data. It moves to another phone only through Sync with another phone, when the cycle category is selected on both phones.
 - Files: downloaded watch files, a recording in progress or not yet saved, a staged Apple Health export, offline map packs and elevation tiles you imported, and the last sync report.
 
 If reminders are enabled, Android may restore the local reminder schedule after a device restart. OpenVitals uses the notification permission for reminders, active recording notifications, sync notifications, and the find-my-phone alert a watch can start.

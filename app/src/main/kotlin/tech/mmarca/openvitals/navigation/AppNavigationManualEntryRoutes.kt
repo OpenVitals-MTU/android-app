@@ -258,20 +258,12 @@ internal fun NavGraphBuilder.manualEntryRoutes(
         )
     }
 
-    composable(Screen.CycleEntry.route) {
-        val cycleEntryViewModel = hiltViewModel<CycleEntryViewModel>()
-        CycleEntryScreen(
-            viewModel = cycleEntryViewModel,
-            unitFormatter = unitFormatter,
-            onEntrySaved = onEntrySaved,
-        )
-    }
-
+    // A day log is one save per day, so the route returns to the caller once it lands.
     composable(
-        route = Screen.CycleEntryEdit.route,
+        route = Screen.CycleEntry.route + CYCLE_ENTRY_QUERY_PATTERN,
         arguments = listOf(
-            navArgument(CYCLE_ENTRY_KIND_ARG) { type = NavType.StringType },
-            navArgument(CYCLE_ENTRY_ID_ARG) { type = NavType.StringType },
+            navArgument(CYCLE_ENTRY_DATE_ARG) { type = NavType.StringType; nullable = true; defaultValue = null },
+            navArgument(CYCLE_ENTRY_PRESET_ARG) { type = NavType.StringType; nullable = true; defaultValue = null },
         ),
     ) {
         val cycleEntryViewModel = hiltViewModel<CycleEntryViewModel>()

@@ -66,6 +66,8 @@ data class DashboardData(
     val menstruationPeriodDays: Int? = null,
     val ovulationTestCount: Int? = null,
     val latestBasalBodyTemperatureCelsius: Double? = null,
+    /** The recorded cycle day, phase and estimate; null without the read permission or a loader that carries it. */
+    val cycleSummary: DashboardCycleSummary? = null,
     val bodyEnergyTimeline: BodyEnergyTimeline? = null,
     val missingPermissions: Set<String> = emptySet(),
     val loadedMetrics: Set<DashboardMetric> = emptySet(),
@@ -259,6 +261,7 @@ fun DashboardData.mergeLoaded(other: DashboardData): DashboardData =
             menstruationPeriodDays
         },
         ovulationTestCount = if (DashboardMetric.CYCLE in other.loadedMetrics) other.ovulationTestCount else ovulationTestCount,
+        cycleSummary = if (DashboardMetric.CYCLE in other.loadedMetrics) other.cycleSummary else cycleSummary,
         latestBasalBodyTemperatureCelsius = if (DashboardMetric.CYCLE in other.loadedMetrics) {
             other.latestBasalBodyTemperatureCelsius
         } else {

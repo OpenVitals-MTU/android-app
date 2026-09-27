@@ -6,6 +6,7 @@ import tech.mmarca.openvitals.features.devicesync.bluetooth.DiscoveredSyncDevice
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncProgress
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncReport
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncRole
+import tech.mmarca.openvitals.features.devicesync.store.CycleJournalSyncTypes
 
 /** How far back the user chose to sync. */
 enum class SyncRange { DAYS_30, MONTHS_6, YEAR_1, ALL }
@@ -163,6 +164,10 @@ enum class DeviceSyncCategory(val types: List<String>) {
             "CervicalMucusRecord",
             "IntermenstrualBleedingRecord",
             "SexualActivityRecord",
+            // The journal in Room: day logs, excluded cycles, contexts and age band.
+            CycleJournalSyncTypes.ENTRY,
+            CycleJournalSyncTypes.EXCLUSION,
+            CycleJournalSyncTypes.PROFILE,
         ),
     ),
 }
