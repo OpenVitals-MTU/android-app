@@ -3268,4 +3268,40 @@
         <item quantity="many">%1$d ciclos</item>
         <item quantity="other">%1$d ciclos</item>
     </plurals>
+    <string name="report_pdf_caption_cycle">%1$d ciclos completos · duración media %2$s días</string>
+    <string name="report_cycle_cycles">Ciclos completos</string>
+    <string name="report_cycle_mean_length">Duración media (días)</string>
+    <string name="report_cycle_median_length">Duración mediana (días)</string>
+    <string name="report_cycle_sd_length">Dispersión, DE (días)</string>
+    <string name="report_cycle_range">Del más corto al más largo (días)</string>
+    <string name="report_cycle_mean_bleeding">Media de días de sangrado</string>
+    <string name="report_cycle_bleeding_days">Días de sangrado</string>
+    <string name="report_cycle_spotting_days">Días de manchado</string>
+    <string name="report_cycle_intermenstrual_days">Manchado una semana o más tras un inicio</string>
+    <string name="report_cycle_pain_on_bleeding">Días con dolor en días de sangrado</string>
+    <string name="report_cycle_pain_off_bleeding">Días con dolor fuera del sangrado</string>
+    <string name="report_cycle_severe_pain_days">Días de dolor intenso (4 o 5)</string>
+    <string name="report_cycle_mean_pain">Dolor medio (1 a 5)</string>
+    <string name="report_cycle_start">Inicio</string>
+    <string name="report_cycle_end">Fin</string>
+    <string name="report_cycle_length">Duración</string>
+    <string name="report_cycle_peak_flow">Flujo máximo</string>
+    <string name="report_cycle_pain_days">Días con dolor</string>
+    <string name="report_cycle_in_progress">En curso</string>
+    <string name="report_cycle_symptom">Síntoma</string>
+    <string name="report_cycle_on_bleeding">En días de sangrado</string>
+    <string name="report_cycle_off_bleeding">Fuera del sangrado</string>
+    <string name="report_cycle_notes">Notas</string>
+    <string name="report_cycle_disclaimer">Observaciones registradas y cifras calculadas a partir de ellas. No es un diagnóstico.</string>
+    <string name="cycle_settings_backup_title">Copia del diario</string>
+    <string name="cycle_settings_backup_body">Un archivo JSON con los registros diarios, los ciclos excluidos, las áreas de atención y la franja de edad. Importar fusiona: en un día que tienen ambos, se queda la edición más reciente.</string>
+    <string name="cycle_settings_backup_export">Exportar diario</string>
+    <string name="cycle_settings_backup_import">Importar diario</string>
+    <string name="cycle_journal_exported">Diario exportado</string>
+    <plurals name="cycle_journal_imported">
+        <item quantity="one">%1$d día importado</item>
+        <item quantity="many">%1$d días importados</item>
+        <item quantity="other">%1$d días importados</item>
+    </plurals>
+    <string name="cycle_journal_import_failed">No se importó nada: el archivo no es una exportación del diario.</string>
 </resources>

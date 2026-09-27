@@ -309,6 +309,44 @@ private fun CycleVisibilityChoice(config: CycleReminderConfig, viewModel: CycleS
     }
 }
 
+/** Export and import of the journal file. The outcome of the last action shows under the buttons. */
+@Composable
+internal fun CycleJournalBackupCard(
+    message: CycleBackupMessage?,
+    importedDays: Int,
+    onExport: () -> Unit,
+    onImport: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(LayoutMetrics.cardPadding), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Text(text = stringResource(R.string.cycle_settings_backup_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = stringResource(R.string.cycle_settings_backup_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OpenVitalsOutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.cycle_settings_backup_export))
+            }
+            OpenVitalsOutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.cycle_settings_backup_import))
+            }
+            message?.let {
+                Text(
+                    text = when (it) {
+                        CycleBackupMessage.EXPORTED -> stringResource(R.string.cycle_journal_exported)
+                        CycleBackupMessage.IMPORTED -> pluralStringResource(R.plurals.cycle_journal_imported, importedDays, importedDays)
+                        CycleBackupMessage.IMPORT_FAILED -> stringResource(R.string.cycle_journal_import_failed)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (it == CycleBackupMessage.IMPORT_FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
 /** The journal's off switch. Health Connect records are not this card's to delete. */
 @Composable
 internal fun CycleDeleteJournalCard(

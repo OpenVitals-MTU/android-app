@@ -32,6 +32,7 @@ Some metrics carry more structure than a daily number, and their sections show i
 - **Workouts**: totals per activity type and a session list (date, activity, duration, distance) instead of an anonymous bucket table.
 - **Sleep**: average bedtime and wake-up time (averaged correctly across midnight), the deep/REM/light/awake stage mix over nights with reliable stage data, and one row per night. Naps under three hours stay out of the clinical numbers.
 - **Body temperature**: every individual reading, listed — a fever diary, not just a trend.
+- **Cycle tracking**: the chart is the cycle day, restarting at each recorded period start. Under it: completed cycles with mean, median, spread and range of length and mean bleeding days; bleeding, spotting and intermenstrual days in the range; pain days on and off bleeding, severe days and the mean score; one row per cycle (start, end, length, bleeding days, peak flow, pain days, excluded); each symptom's count on and off bleeding days; the notes in order; and a line saying these are recorded observations, not a diagnosis. The subjective fields come from the app's own journal, the rest from Health Connect.
 
 The first page carries the OpenVitals masthead, when the report was generated, and the exact range and detail level. Every page is numbered.
 
@@ -46,7 +47,7 @@ The report says so, in print, when something could not be included:
 
 ## Metrics Not Offered
 
-BMI and FFMI are display-time derivations with no stored history. Weekly cardio load and intensity minutes are estimates without an exportable daily series. Cycle tracking data is a set of event logs rather than a numeric series and is not part of the numeric report.
+BMI and FFMI are display-time derivations with no stored history. Weekly cardio load and intensity minutes are estimates without an exportable daily series.
 
 ## Units and Language
 

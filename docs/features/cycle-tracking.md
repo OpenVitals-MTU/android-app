@@ -89,6 +89,12 @@ Settings → Cycle holds:
 
 All of it is local. Nothing here is written to Health Connect.
 
+## Report and backup
+
+The health report offers a Cycle tracking section: the cycle-day chart, the length statistics over completed cycles, bleeding and pain counts, a table of the cycles in the range, the symptom counts on and off bleeding days, and the notes. See [Health report export](health-report-export.md).
+
+Settings → Cycle exports the journal as a JSON file (day logs, excluded cycles, contexts and age band) and imports one back. An import merges: a day both sides hold keeps the newer edit, exclusions are added, and the contexts and age band fill a phone that declared none. Health Connect records are not in the file; Health Connect has its own export.
+
 ## Dashboard tile and widget
 
 The dashboard cycle tile shows the recorded cycle day with the phase, or the estimate when the phase is unknown; it falls back to the day's counts when there is no current cycle. See [Home widgets](home-widgets.md) for the home-screen widget, which shows the cycle day, the estimated range, and whether today is logged, with a button that hides them.

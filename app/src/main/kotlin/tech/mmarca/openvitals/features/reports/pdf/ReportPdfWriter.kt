@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.asAndroidPath
 import java.io.OutputStream
 import tech.mmarca.openvitals.domain.model.BpMealContext
 import tech.mmarca.openvitals.domain.model.ReportBloodPressureDetail
+import tech.mmarca.openvitals.domain.model.ReportCycleDetail
 import tech.mmarca.openvitals.domain.model.ReportGlucoseDetail
 import tech.mmarca.openvitals.domain.model.ReportReadingsDetail
 import tech.mmarca.openvitals.domain.model.ReportSleepDetail
@@ -77,6 +78,7 @@ data class ReportPdfLabels(
     val sleepAwake: String,
     val workoutTypeLabel: (exerciseType: Int) -> String,
     val pageLabel: (page: Int, pageCount: Int) -> String,
+    val cycle: ReportPdfCycleLabels,
 )
 
 /** Locale- and unit-aware number rendering, provided by the caller. */
@@ -107,6 +109,9 @@ interface ReportValueFormatter {
 
     /** An hours-and-minutes duration, e.g. "7h 32m". */
     fun durationHm(durationMs: Long): String
+
+    /** A unitless number with fixed decimals, locale-formatted. */
+    fun decimal(value: Double, decimals: Int): String
 
     /** A signed change, e.g. "+1.2 kg" / "-0.8 kg". */
     fun signedValue(metric: ReportMetric, delta: Double): String
@@ -306,6 +311,7 @@ class ReportPdfWriter(
                             items += statsItem(result)
                             items += readingsItems(result.metric, detail)
                         }
+                        is ReportCycleDetail -> items += cycleItems(detail, labels.cycle, values, statsHeight(), headerHeight(), rowHeight())
                         null -> {
                             items += statsItem(result)
                             items += tableItems(result, data.request.granularity)

@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.settings
 import android.content.Context
 import io.mockk.mockk
 import io.mockk.verify
+import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -21,6 +22,8 @@ import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.domain.model.CycleReminderConfig
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
+import tech.mmarca.openvitals.features.cycle.cycleJournalExportJson
+import tech.mmarca.openvitals.features.cycle.parseCycleJournalExport
 import tech.mmarca.openvitals.features.cycle.reminders.FakeCycleReminderSettings
 import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -102,6 +105,61 @@ class CycleSettingsViewModelTest {
         assertEquals(CycleTrackingProfile(), vm.uiState.value.profile)
         assertFalse(vm.uiState.value.isDeletingJournal)
         verify(exactly = 1) { widgets.refreshNow() }
+    }
+
+    @Test
+    fun `importing a backup keeps the newer edit per day, adds exclusions and fills an empty profile`() = runTest {
+        val kept = CycleJournalEntry(date = today.minusDays(2), painLevel = 5, updatedAt = Instant.parse("2026-09-20T10:00:00Z"))
+        val journal = FakeCycleJournalRepository(initialEntries = listOf(kept))
+        val preferences = FakePreferences()
+        val reminders = FakeCycleReminderSettings()
+        val widgets = mockk<HomeWidgetRefreshScheduler>(relaxed = true)
+        val vm = viewModel(preferences = preferences, journal = journal, reminders = reminders, widgets = widgets)
+        val file = cycleJournalExportJson(
+            entries = listOf(
+                kept.copy(painLevel = 1, updatedAt = Instant.parse("2026-09-19T10:00:00Z")),
+                CycleJournalEntry(date = today.minusDays(1), moodLevel = 4, updatedAt = Instant.parse("2026-09-21T10:00:00Z")),
+            ),
+            exclusions = mapOf(today.minusDays(40) to CycleExclusionReason.OTHER),
+            profile = CycleTrackingProfile(contexts = setOf(TrackingContext.PCOS)),
+            exportedAt = Instant.parse("2026-09-22T10:00:00Z"),
+        )
+
+        vm.importJson(file)
+        mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(5, journal.entries[today.minusDays(2)]?.painLevel)
+        assertEquals(4, journal.entries[today.minusDays(1)]?.moodLevel)
+        assertEquals(CycleExclusionReason.OTHER, journal.exclusionsByDate[today.minusDays(40)])
+        assertEquals(setOf(TrackingContext.PCOS), preferences.cycleTrackingProfile().contexts)
+        assertEquals(CycleBackupMessage.IMPORTED, vm.uiState.value.backupMessage)
+        assertEquals(1, vm.uiState.value.importedDays)
+        assertEquals(1, reminders.applied)
+        verify(exactly = 1) { widgets.refreshNow() }
+    }
+
+    @Test
+    fun `a file that is not a journal export imports nothing`() = runTest {
+        val journal = FakeCycleJournalRepository()
+        val vm = viewModel(journal = journal)
+
+        vm.importJson("{\"format\":1,\"plans\":[]}")
+        mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(journal.entries.isEmpty())
+        assertEquals(CycleBackupMessage.IMPORT_FAILED, vm.uiState.value.backupMessage)
+    }
+
+    @Test
+    fun `the export carries the whole journal`() = runTest {
+        val journal = FakeCycleJournalRepository(initialEntries = listOf(CycleJournalEntry(date = today, energyLevel = 2)))
+        val vm = viewModel(journal = journal)
+
+        val text = vm.exportJson()
+
+        assertEquals(1, parseCycleJournalExport(text)!!.entries.size)
+        vm.onExported()
+        assertEquals(CycleBackupMessage.EXPORTED, vm.uiState.value.backupMessage)
     }
 
     private fun viewModel(

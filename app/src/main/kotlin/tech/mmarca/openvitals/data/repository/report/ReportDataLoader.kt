@@ -14,6 +14,8 @@ import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.data.repository.VitalsPeriodMetric
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyRepository
+import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
+import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.data.repository.contract.MindfulnessRepository
@@ -33,6 +35,8 @@ import tech.mmarca.openvitals.domain.model.ReportRequest
 import tech.mmarca.openvitals.domain.report.ReportRollup
 import tech.mmarca.openvitals.domain.report.bloodGlucoseDetail
 import tech.mmarca.openvitals.domain.report.bloodPressureDetail
+import tech.mmarca.openvitals.domain.report.cycleDailySeries
+import tech.mmarca.openvitals.domain.report.cycleDetail
 import tech.mmarca.openvitals.domain.report.distinctBloodPressureReadings
 import tech.mmarca.openvitals.domain.report.sleepDetail
 import tech.mmarca.openvitals.domain.report.workoutsDetail
@@ -79,6 +83,8 @@ class ReportDataLoader @Inject constructor(
     private val vitalsRepository: VitalsRepository,
     private val mindfulnessRepository: MindfulnessRepository,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
+    private val cycleRepository: CycleRepository? = null,
+    private val cycleJournalRepository: CycleJournalRepository? = null,
 ) {
     companion object {
         private const val TAG = "ReportDataLoader"
@@ -311,6 +317,15 @@ class ReportDataLoader @Inject constructor(
                         ReportDailyValue(date, dayWorkouts.sumOf { it.durationMs } / 60_000.0)
                     }
                 mapOf(ReportMetric.WORKOUT to MetricSeries(daily, workoutsDetail(workouts)))
+            }
+        }
+
+        if (ReportMetric.CYCLE in readable && cycleRepository != null && cycleJournalRepository != null) {
+            groups += ReadGroup(listOf(ReportMetric.CYCLE)) {
+                // The statistics look back from the range's end, so a cycle that started before it is still whole.
+                val cycles = cycleRepository.loadCycleStatistics(end)?.cycles.orEmpty()
+                val journal = cycleJournalRepository.entries(start, end)
+                mapOf(ReportMetric.CYCLE to MetricSeries(cycleDailySeries(cycles, start, end), cycleDetail(cycles, journal, start, end)))
             }
         }
 

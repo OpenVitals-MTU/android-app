@@ -3262,4 +3262,40 @@
         <item quantity="many">%1$d ciclos</item>
         <item quantity="other">%1$d ciclos</item>
     </plurals>
+    <string name="report_pdf_caption_cycle">%1$d ciclos completos · duração média %2$s dias</string>
+    <string name="report_cycle_cycles">Ciclos completos</string>
+    <string name="report_cycle_mean_length">Duração média (dias)</string>
+    <string name="report_cycle_median_length">Duração mediana (dias)</string>
+    <string name="report_cycle_sd_length">Dispersão, DP (dias)</string>
+    <string name="report_cycle_range">Do mais curto ao mais longo (dias)</string>
+    <string name="report_cycle_mean_bleeding">Média de dias de sangramento</string>
+    <string name="report_cycle_bleeding_days">Dias de sangramento</string>
+    <string name="report_cycle_spotting_days">Dias de spotting</string>
+    <string name="report_cycle_intermenstrual_days">Spotting uma semana ou mais após um início</string>
+    <string name="report_cycle_pain_on_bleeding">Dias com dor em dias de sangramento</string>
+    <string name="report_cycle_pain_off_bleeding">Dias com dor fora do sangramento</string>
+    <string name="report_cycle_severe_pain_days">Dias de dor intensa (4 ou 5)</string>
+    <string name="report_cycle_mean_pain">Dor média (1 a 5)</string>
+    <string name="report_cycle_start">Início</string>
+    <string name="report_cycle_end">Fim</string>
+    <string name="report_cycle_length">Duração</string>
+    <string name="report_cycle_peak_flow">Fluxo máximo</string>
+    <string name="report_cycle_pain_days">Dias com dor</string>
+    <string name="report_cycle_in_progress">Em curso</string>
+    <string name="report_cycle_symptom">Sintoma</string>
+    <string name="report_cycle_on_bleeding">Em dias de sangramento</string>
+    <string name="report_cycle_off_bleeding">Fora do sangramento</string>
+    <string name="report_cycle_notes">Notas</string>
+    <string name="report_cycle_disclaimer">Observações registadas e valores calculados a partir delas. Não é um diagnóstico.</string>
+    <string name="cycle_settings_backup_title">Cópia do diário</string>
+    <string name="cycle_settings_backup_body">Um ficheiro JSON com os registos diários, os ciclos excluídos, as áreas de atenção e a faixa etária. Importar funde: num dia que ambos os lados têm, fica a edição mais recente.</string>
+    <string name="cycle_settings_backup_export">Exportar diário</string>
+    <string name="cycle_settings_backup_import">Importar diário</string>
+    <string name="cycle_journal_exported">Diário exportado</string>
+    <plurals name="cycle_journal_imported">
+        <item quantity="one">%1$d dia importado</item>
+        <item quantity="many">%1$d dias importados</item>
+        <item quantity="other">%1$d dias importados</item>
+    </plurals>
+    <string name="cycle_journal_import_failed">Nada importado: o ficheiro não é uma exportação do diário.</string>
 </resources>

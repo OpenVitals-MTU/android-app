@@ -3245,4 +3245,39 @@
         <item quantity="one">%1$d tsükli</item>
         <item quantity="other">%1$d tsükli</item>
     </plurals>
+    <string name="report_pdf_caption_cycle">%1$d lõpetatud tsüklit · keskmine pikkus %2$s päeva</string>
+    <string name="report_cycle_cycles">Lõpetatud tsüklid</string>
+    <string name="report_cycle_mean_length">Keskmine pikkus (päeva)</string>
+    <string name="report_cycle_median_length">Pikkuse mediaan (päeva)</string>
+    <string name="report_cycle_sd_length">Hajuvus, SD (päeva)</string>
+    <string name="report_cycle_range">Lühimast pikimani (päeva)</string>
+    <string name="report_cycle_mean_bleeding">Vereeritisega päevi keskmiselt</string>
+    <string name="report_cycle_bleeding_days">Vereeritisega päevad</string>
+    <string name="report_cycle_spotting_days">Määrimisega päevad</string>
+    <string name="report_cycle_intermenstrual_days">Määrimine nädal või rohkem pärast algust</string>
+    <string name="report_cycle_pain_on_bleeding">Valupäevad vereeritisega päevadel</string>
+    <string name="report_cycle_pain_off_bleeding">Valupäevad väljaspool vereeritist</string>
+    <string name="report_cycle_severe_pain_days">Tugeva valu päevad (4 või 5)</string>
+    <string name="report_cycle_mean_pain">Keskmine valu (1 kuni 5)</string>
+    <string name="report_cycle_start">Algus</string>
+    <string name="report_cycle_end">Lõpp</string>
+    <string name="report_cycle_length">Pikkus</string>
+    <string name="report_cycle_peak_flow">Tugevaim vereeritis</string>
+    <string name="report_cycle_pain_days">Valupäevad</string>
+    <string name="report_cycle_in_progress">Käimas</string>
+    <string name="report_cycle_symptom">Sümptom</string>
+    <string name="report_cycle_on_bleeding">Vereeritisega päevadel</string>
+    <string name="report_cycle_off_bleeding">Väljaspool vereeritist</string>
+    <string name="report_cycle_notes">Märkused</string>
+    <string name="report_cycle_disclaimer">Salvestatud tähelepanekud ja nende põhjal arvutatud näitajad. Mitte diagnoos.</string>
+    <string name="cycle_settings_backup_title">Päeviku varukoopia</string>
+    <string name="cycle_settings_backup_body">JSON-fail päeva kirjete, välja jäetud tsüklite, tähelepanu vajavate valdkondade ja vanuserühmaga. Import ühendab: päeval, mis on mõlemal poolel, jääb uuem muudatus.</string>
+    <string name="cycle_settings_backup_export">Ekspordi päevik</string>
+    <string name="cycle_settings_backup_import">Impordi päevik</string>
+    <string name="cycle_journal_exported">Päevik eksporditud</string>
+    <plurals name="cycle_journal_imported">
+        <item quantity="one">%1$d päev imporditud</item>
+        <item quantity="other">%1$d päeva imporditud</item>
+    </plurals>
+    <string name="cycle_journal_import_failed">Midagi ei imporditud: fail ei ole päeviku eksport.</string>
 </resources>

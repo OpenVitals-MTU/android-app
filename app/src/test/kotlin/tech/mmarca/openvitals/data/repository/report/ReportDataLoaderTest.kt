@@ -1,5 +1,12 @@
 package tech.mmarca.openvitals.data.repository.report
 
+import tech.mmarca.openvitals.data.repository.contract.CycleRepository
+import tech.mmarca.openvitals.data.repository.contract.FakeCycleJournalRepository
+import tech.mmarca.openvitals.domain.cycle.CycleStatistics
+import tech.mmarca.openvitals.domain.cycle.RecordedCycle
+import tech.mmarca.openvitals.domain.model.CycleJournalEntry
+import tech.mmarca.openvitals.domain.model.CycleRecordValues
+import tech.mmarca.openvitals.domain.model.ReportCycleDetail
 import tech.mmarca.openvitals.healthconnect.StrictHealthConnectReads
 import kotlinx.coroutines.currentCoroutineContext
 import android.util.Log
@@ -559,5 +566,48 @@ class ReportDataLoaderTest {
 
         assertTrue(data.results.all { it.status == ReportMetricStatus.MISSING_PERMISSION })
         coVerify(exactly = 0) { activity.loadDailySteps(any(), any(), any()) }
+    }
+
+    @Test fun `the cycle section comes from the statistics and the journal`() = runTest {
+        val cycleRepository = mockk<CycleRepository>()
+        val cycleStart = end.minusDays(40)
+        coEvery { cycleRepository.loadCycleStatistics(end) } returns CycleStatistics(
+            cycles = listOf(
+                RecordedCycle(startDate = cycleStart, endDate = end.minusDays(12), flowDays = mapOf(cycleStart to CycleRecordValues.FLOW_MEDIUM)),
+                RecordedCycle(startDate = end.minusDays(11), endDate = null, flowDays = mapOf(end.minusDays(11) to CycleRecordValues.FLOW_LIGHT)),
+            ),
+        )
+        val journal = FakeCycleJournalRepository(initialEntries = listOf(CycleJournalEntry(date = end.minusDays(5), painLevel = 4)))
+        val base = loader()
+        val loader = ReportDataLoader(
+            hc = hc,
+            activityRepository = activity,
+            sleepRepository = sleep,
+            nutritionRepository = nutrition,
+            hydrationRepository = hydration,
+            bodyRepository = body,
+            heartRepository = heart,
+            vitalsRepository = vitals,
+            mindfulnessRepository = mindfulness,
+            cycleRepository = cycleRepository,
+            cycleJournalRepository = journal,
+        )
+        assertTrue(ReportMetric.CYCLE in base.supportedReportMetrics())
+
+        val result = loader.load(request(ReportMetric.CYCLE)).results.single()
+
+        assertEquals(ReportMetricStatus.OK, result.status)
+        val detail = result.detail as ReportCycleDetail
+        assertEquals(2, detail.cycles.size)
+        assertEquals(1, detail.completedCycles)
+        assertEquals(1, detail.severePainDays)
+        // The chart is the cycle day: day 1 on the second start.
+        assertEquals(1.0, result.points.first { it.bucketStart == end.minusDays(11) }.value, 0.0)
+    }
+
+    @Test fun `without its repositories the cycle metric reads as missing, never as empty`() = runTest {
+        val result = loader().load(request(ReportMetric.CYCLE)).results.single()
+
+        assertEquals(ReportMetricStatus.MISSING_PERMISSION, result.status)
     }
 }

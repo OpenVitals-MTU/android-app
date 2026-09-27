@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.Instant
 import java.time.LocalTime
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,9 +21,18 @@ import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
 import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.CycleReminderConfig
 import tech.mmarca.openvitals.domain.model.CycleReminderVisibility
+import tech.mmarca.openvitals.features.cycle.cycleJournalExportJson
+import tech.mmarca.openvitals.features.cycle.parseCycleJournalExport
 import tech.mmarca.openvitals.features.cycle.reminders.CycleReminderController
 import tech.mmarca.openvitals.features.cycle.reminders.CycleReminderSettings
 import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
+
+/** What the last backup action did, shown once under the card. */
+enum class CycleBackupMessage {
+    EXPORTED,
+    IMPORTED,
+    IMPORT_FAILED,
+}
 
 @Immutable
 data class CycleSettingsUiState(
@@ -32,6 +42,8 @@ data class CycleSettingsUiState(
     val reminders: CycleReminderConfig = CycleReminderConfig(),
     val hasNotificationPermission: Boolean = true,
     val isDeletingJournal: Boolean = false,
+    val backupMessage: CycleBackupMessage? = null,
+    val importedDays: Int = 0,
 )
 
 /** The cycle section: declared contexts, the age band, the reminders, and the journal's off switch. */
@@ -93,6 +105,52 @@ class CycleSettingsViewModel @Inject constructor(
     fun setCustomTitle(title: String) = updateReminders { copy(customTitle = title) }
 
     fun setCustomBody(body: String) = updateReminders { copy(customBody = body) }
+
+    /** The whole journal as the backup file's text. */
+    suspend fun exportJson(): String = cycleJournalExportJson(
+        entries = journal.allEntries(),
+        exclusions = journal.exclusions(),
+        profile = preferences.cycleTrackingProfile(),
+        exportedAt = Instant.now(),
+    )
+
+    fun onExported() {
+        _uiState.value = _uiState.value.copy(backupMessage = CycleBackupMessage.EXPORTED)
+    }
+
+    /**
+     * Merges a backup file: a day both sides hold keeps the newer edit,
+     * exclusions are added, and the contexts and age band fill a phone that
+     * declared none. A file that is not a journal export imports nothing.
+     */
+    fun importJson(text: String) {
+        val import = parseCycleJournalExport(text)
+        if (import == null) {
+            _uiState.value = _uiState.value.copy(backupMessage = CycleBackupMessage.IMPORT_FAILED)
+            return
+        }
+        viewModelScope.launch {
+            var imported = 0
+            for (entry in import.entries) {
+                val local = journal.entry(entry.date)
+                if (local == null || entry.updatedAt.isAfter(local.updatedAt)) {
+                    journal.restore(entry)
+                    imported += 1
+                }
+            }
+            import.exclusions.forEach { (start, reason) -> journal.exclude(start, start, reason) }
+            val current = preferences.cycleTrackingProfile()
+            val incoming = import.profile
+            if (incoming != null && current.contexts.isEmpty() && current.ageBand == null &&
+                (incoming.contexts.isNotEmpty() || incoming.ageBand != null)
+            ) {
+                preferences.setCycleTrackingProfile(incoming)
+            }
+            reminders.applyStoredConfig()
+            homeWidgetRefreshScheduler?.refreshNow()
+            _uiState.value = snapshot().copy(backupMessage = CycleBackupMessage.IMPORTED, importedDays = imported)
+        }
+    }
 
     /** Wipes the journal, the exclusions and every cycle setting on this device. Health Connect is not touched. */
     fun deleteCycleJournal() {

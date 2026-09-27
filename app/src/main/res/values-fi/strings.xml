@@ -3245,4 +3245,39 @@
         <item quantity="one">%1$d kierron</item>
         <item quantity="other">%1$d kierron</item>
     </plurals>
+    <string name="report_pdf_caption_cycle">%1$d päättynyttä kiertoa · keskipituus %2$s päivää</string>
+    <string name="report_cycle_cycles">Päättyneet kierrot</string>
+    <string name="report_cycle_mean_length">Keskipituus (päivää)</string>
+    <string name="report_cycle_median_length">Pituuden mediaani (päivää)</string>
+    <string name="report_cycle_sd_length">Hajonta, SD (päivää)</string>
+    <string name="report_cycle_range">Lyhimmästä pisimpään (päivää)</string>
+    <string name="report_cycle_mean_bleeding">Vuotopäiviä keskimäärin</string>
+    <string name="report_cycle_bleeding_days">Vuotopäivät</string>
+    <string name="report_cycle_spotting_days">Tiputteluvuotopäivät</string>
+    <string name="report_cycle_intermenstrual_days">Tiputteluvuoto viikko tai enemmän alun jälkeen</string>
+    <string name="report_cycle_pain_on_bleeding">Kipupäivät vuotopäivinä</string>
+    <string name="report_cycle_pain_off_bleeding">Kipupäivät vuodon ulkopuolella</string>
+    <string name="report_cycle_severe_pain_days">Voimakkaan kivun päivät (4 tai 5)</string>
+    <string name="report_cycle_mean_pain">Keskimääräinen kipu (1–5)</string>
+    <string name="report_cycle_start">Alku</string>
+    <string name="report_cycle_end">Loppu</string>
+    <string name="report_cycle_length">Pituus</string>
+    <string name="report_cycle_peak_flow">Runsain vuoto</string>
+    <string name="report_cycle_pain_days">Kipupäivät</string>
+    <string name="report_cycle_in_progress">Käynnissä</string>
+    <string name="report_cycle_symptom">Oire</string>
+    <string name="report_cycle_on_bleeding">Vuotopäivinä</string>
+    <string name="report_cycle_off_bleeding">Vuodon ulkopuolella</string>
+    <string name="report_cycle_notes">Muistiinpanot</string>
+    <string name="report_cycle_disclaimer">Kirjattuja havaintoja ja niistä laskettuja lukuja. Ei diagnoosi.</string>
+    <string name="cycle_settings_backup_title">Päiväkirjan varmuuskopio</string>
+    <string name="cycle_settings_backup_body">JSON-tiedosto, jossa ovat päivän merkinnät, pois jätetyt kierrot, huomion kohteet ja ikäryhmä. Tuonti yhdistää: päivälle, joka on molemmilla puolilla, jää uudempi muokkaus.</string>
+    <string name="cycle_settings_backup_export">Vie päiväkirja</string>
+    <string name="cycle_settings_backup_import">Tuo päiväkirja</string>
+    <string name="cycle_journal_exported">Päiväkirja viety</string>
+    <plurals name="cycle_journal_imported">
+        <item quantity="one">%1$d päivä tuotu</item>
+        <item quantity="other">%1$d päivää tuotu</item>
+    </plurals>
+    <string name="cycle_journal_import_failed">Mitään ei tuotu: tiedosto ei ole päiväkirjan vienti.</string>
 </resources>
