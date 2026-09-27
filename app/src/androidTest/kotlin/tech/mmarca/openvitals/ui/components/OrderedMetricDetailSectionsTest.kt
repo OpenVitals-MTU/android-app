@@ -48,6 +48,17 @@ class OrderedMetricDetailSectionsTest {
     }
 
     @Test
+    fun aSectionWithAHeaderAndABodyStacksThemInsteadOfLayeringThem() {
+        setSections(isEditing = false)
+
+        // Hydration's goal card sat hidden under its reminder card, and every statistics grid on its header.
+        val header = composeRule.onNodeWithTag(STATS).getUnclippedBoundsInRoot()
+        val body = composeRule.onNodeWithTag(STATS_BODY).getUnclippedBoundsInRoot()
+
+        assertTrue("the body starts below the header", body.top >= header.bottom)
+    }
+
+    @Test
     fun editModeExposesEachSectionWithItsMoveActions() {
         setSections(isEditing = true)
 
@@ -104,7 +115,10 @@ class OrderedMetricDetailSectionsTest {
                     renderOrderedMetricDetailSections(context) {
                         // Declared out of order: the stored order must decide.
                         section(MetricDetailSectionId.ENTRIES) { Tag(ENTRIES) }
-                        section(MetricDetailSectionId.STATISTICS) { Tag(STATS) }
+                        section(MetricDetailSectionId.STATISTICS) {
+                            Tag(STATS)
+                            Tag(STATS_BODY)
+                        }
                         section(MetricDetailSectionId.DAILY_GOAL) { Tag(GOAL) }
                         section(MetricDetailSectionId.INTRADAY_CHART, visible = false) {
                             Tag(INTRADAY)
@@ -123,6 +137,7 @@ class OrderedMetricDetailSectionsTest {
     private companion object {
         const val GOAL = "section-goal"
         const val STATS = "section-stats"
+        const val STATS_BODY = "section-stats-body"
         const val ENTRIES = "section-entries"
         const val INTRADAY = "section-intraday"
     }
