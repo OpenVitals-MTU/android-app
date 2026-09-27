@@ -2383,10 +2383,7 @@
     <string name="macro_fat_short">F %1$sg</string>
     <string name="macro_fiber">食物繊維 %1$sg</string>
     <string name="macro_sugar">糖類 %1$sg</string>
-    <string name="caffeine_section_dashboard">ダッシュボード</string>
-    <string name="caffeine_section_analytics">分析</string>
     <string name="caffeine_section_sleep">睡眠への影響</string>
-    <string name="caffeine_section_entries">記録</string>
     <string name="caffeine_section_science">科学的根拠</string>
     <string name="caffeine_setup_title">カフェインのインサイトをパーソナライズ</string>
     <string name="caffeine_setup_body">OpenVitals がカフェインデータを見つけました。パーソナライズするとカフェイン曲線と就寝予測が改善します。</string>

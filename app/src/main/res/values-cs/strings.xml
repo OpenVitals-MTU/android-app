@@ -2002,10 +2002,7 @@
     <string name="macro_fat_short">T %1$s g</string>
     <string name="macro_fiber">vláknina %1$s g</string>
     <string name="macro_sugar">cukry %1$s g</string>
-    <string name="caffeine_section_dashboard">Nástěnka</string>
-    <string name="caffeine_section_analytics">Analýza</string>
     <string name="caffeine_section_sleep">Vliv na spánek</string>
-    <string name="caffeine_section_entries">Záznamy</string>
     <string name="caffeine_section_science">Věda</string>
     <string name="caffeine_setup_title">Personalizujte přehled o kofeinu</string>
     <string name="caffeine_setup_body">OpenVitals našel data o kofeinu. Personalizace zpřesní křivku kofeinu i předpověď k času usínání.</string>

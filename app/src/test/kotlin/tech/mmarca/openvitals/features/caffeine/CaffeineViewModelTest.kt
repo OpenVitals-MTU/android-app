@@ -16,13 +16,19 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import androidx.lifecycle.SavedStateHandle
 import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
+import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
+import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.data.repository.contract.CaffeineRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.model.CaffeineEntry
 import tech.mmarca.openvitals.domain.model.CaffeinePeriodData
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
+import tech.mmarca.openvitals.navigation.CAFFEINE_ENTRY_ID_ARG
+import tech.mmarca.openvitals.navigation.SELECTED_DAY_ARG
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -38,7 +44,6 @@ class CaffeineViewModelTest {
         val vm = viewModel(
             repository = repo(entries = listOf(entryAt(today))),
             preferences = prefs(CaffeinePreferences(profileCompleted = false)),
-            initialAnalyticsRange = CaffeineAnalyticsRange.TODAY,
         )
 
         assertFalse(vm.uiState.value.isLoading)
@@ -52,7 +57,6 @@ class CaffeineViewModelTest {
         val vm = viewModel(
             repository = repo(entries = listOf(entryAt(today))),
             preferences = preferences,
-            initialAnalyticsRange = CaffeineAnalyticsRange.TODAY,
         )
 
         vm.skipSetup()
@@ -69,7 +73,6 @@ class CaffeineViewModelTest {
         val vm = viewModel(
             repository = repo(entries = listOf(entryAt(today))),
             preferences = preferences,
-            initialAnalyticsRange = CaffeineAnalyticsRange.TODAY,
         )
 
         preferences.setCaffeinePreferences(preferences.caffeinePreferences().copy(sleepThresholdMg = 35))
@@ -80,70 +83,114 @@ class CaffeineViewModelTest {
     }
 
     @Test
-    fun `analytics range selection reloads matching caffeine window`() = runTest {
+    fun `the screen opens on the saved range and a new range is saved and loaded`() = runTest {
         val repository = repo()
+        val preferences = prefs(CaffeinePreferences(profileCompleted = true))
+        val vm = viewModel(repository = repository, preferences = preferences)
+
+        // The day first: active caffeine and tonight are why the screen is opened.
+        assertEquals(TimeRange.DAY, vm.uiState.value.selectedRange)
+
+        vm.selectRange(TimeRange.MONTH)
+
+        assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
+        assertEquals(TimeRange.MONTH, preferences.timeRangeFor(PeriodRangePreferenceKey.CAFFEINE))
+        coVerify { repository.loadCaffeinePeriod(match { it.range == TimeRange.MONTH }) }
+    }
+
+    @Test
+    fun `the drink route opens on the drink's day and leaves the saved range alone`() = runTest {
+        val repository = repo()
+        val preferences = prefs(CaffeinePreferences(profileCompleted = true), initialRange = TimeRange.YEAR)
+        val drinkDay = today.minusDays(40)
         val vm = viewModel(
             repository = repository,
-            preferences = prefs(CaffeinePreferences(profileCompleted = true)),
-            initialAnalyticsRange = CaffeineAnalyticsRange.TODAY,
+            preferences = preferences,
+            savedStateHandle = SavedStateHandle(
+                mapOf(CAFFEINE_ENTRY_ID_ARG to "coffee", SELECTED_DAY_ARG to drinkDay.toString()),
+            ),
         )
 
-        vm.selectAnalyticsRange(CaffeineAnalyticsRange.LAST_90_DAYS)
-
-        assertEquals(CaffeineAnalyticsRange.LAST_90_DAYS, vm.uiState.value.analyticsRange)
+        assertEquals(TimeRange.DAY, vm.uiState.value.selectedRange)
+        assertEquals(drinkDay, vm.uiState.value.selectedDate)
+        assertEquals(TimeRange.YEAR, preferences.timeRangeFor(PeriodRangePreferenceKey.CAFFEINE))
         coVerify {
-            repository.loadCaffeineData(
-                DatePeriod(today.minusDays(89), today),
-            )
-        }
-
-        // The same range again is not a reload.
-        vm.selectAnalyticsRange(CaffeineAnalyticsRange.LAST_90_DAYS)
-        advanceUntilIdle()
-
-        coVerify(exactly = 1) {
-            repository.loadCaffeineData(
-                DatePeriod(today.minusDays(89), today),
+            repository.loadCaffeinePeriod(
+                match { it.range == TimeRange.DAY && it.windows.current == DatePeriod(drinkDay, drinkDay) },
             )
         }
     }
 
     @Test
-    fun `refresh reloads`() = runTest {
+    fun `stepping back a period loads the one before`() = runTest {
         val repository = repo()
         val vm = viewModel(
             repository = repository,
             preferences = prefs(CaffeinePreferences(profileCompleted = true)),
         )
 
-        vm.refresh()
+        vm.previousPeriod()
 
-        coVerify(atLeast = 2) { repository.loadCaffeineData(any()) }
+        assertEquals(today.minusDays(1), vm.uiState.value.selectedDate)
+        coVerify {
+            repository.loadCaffeinePeriod(
+                match { it.windows.current == DatePeriod(today.minusDays(1), today.minusDays(1)) },
+            )
+        }
     }
 
     @Test
-    fun `newer load wins when analytics range requests overlap`() = runTest {
+    fun `the previous period's total becomes the comparison`() = runTest {
         val repository = mockk<CaffeineRepository>()
-        coEvery { repository.loadCaffeineData(any()) } coAnswers {
-            val period = firstArg<DatePeriod>()
-            if (period.start == today.minusDays(89)) {
+        coEvery { repository.loadCaffeinePeriod(any()) } returns CaffeinePeriodData(
+            entries = listOf(entryAt(today)),
+            previousTotalMg = 50.0,
+        )
+        val vm = viewModel(
+            repository = repository,
+            preferences = prefs(CaffeinePreferences(profileCompleted = true)),
+        )
+
+        assertEquals(100.0, vm.uiState.value.periodComparison.currentValue, 0.001)
+        assertEquals(50.0, vm.uiState.value.periodComparison.previousValue, 0.001)
+    }
+
+    @Test
+    fun `load reloads`() = runTest {
+        val repository = repo()
+        val vm = viewModel(
+            repository = repository,
+            preferences = prefs(CaffeinePreferences(profileCompleted = true)),
+        )
+
+        vm.load()
+
+        coVerify(atLeast = 2) { repository.loadCaffeinePeriod(any()) }
+    }
+
+    @Test
+    fun `newer load wins when range requests overlap`() = runTest {
+        val repository = mockk<CaffeineRepository>()
+        coEvery { repository.loadCaffeinePeriod(any()) } coAnswers {
+            val query = firstArg<PeriodLoadQuery>()
+            if (query.range == TimeRange.YEAR) {
                 delay(100)
             }
             CaffeinePeriodData(
-                entries = listOf(entryAt(period.start, id = period.start.toString()))
+                entries = listOf(entryAt(query.windows.current.start, id = query.range.name))
             )
         }
         val vm = viewModel(
             repository = repository,
             preferences = prefs(CaffeinePreferences(profileCompleted = true)),
-            initialAnalyticsRange = CaffeineAnalyticsRange.TODAY,
         )
 
-        vm.selectAnalyticsRange(CaffeineAnalyticsRange.LAST_90_DAYS)
-        vm.selectAnalyticsRange(CaffeineAnalyticsRange.TODAY)
+        vm.selectRange(TimeRange.YEAR)
+        vm.selectRange(TimeRange.DAY)
+        advanceUntilIdle()
 
-        assertEquals(CaffeineAnalyticsRange.TODAY, vm.uiState.value.analyticsRange)
-        assertEquals(today.toString(), vm.uiState.value.entries.single().id)
+        assertEquals(TimeRange.DAY, vm.uiState.value.selectedRange)
+        assertEquals(TimeRange.DAY.name, vm.uiState.value.entries.single().id)
     }
 
     @Test
@@ -154,7 +201,7 @@ class CaffeineViewModelTest {
         )
         val repository = mockk<CaffeineRepository>()
         // The reload returns the trimmed list, as Health Connect would after the delete.
-        coEvery { repository.loadCaffeineData(any()) } returnsMany listOf(
+        coEvery { repository.loadCaffeinePeriod(any()) } returnsMany listOf(
             CaffeinePeriodData(entries),
             CaffeinePeriodData(entries.drop(1)),
         )
@@ -172,7 +219,7 @@ class CaffeineViewModelTest {
         assertNull(vm.uiState.value.error)
         // A caffeine entry IS a nutrition record, so the nutrition repository is what deletes.
         coVerify { nutrition.deleteNutritionEntry("a") }
-        coVerify(atLeast = 2) { repository.loadCaffeineData(any()) }
+        coVerify(atLeast = 2) { repository.loadCaffeinePeriod(any()) }
     }
 
     @Test
@@ -216,7 +263,7 @@ class CaffeineViewModelTest {
     fun `a permission failure becomes ScreenError PermissionDenied`() = runTest {
         val repository = mockk<CaffeineRepository>()
         coEvery {
-            repository.loadCaffeineData(any())
+            repository.loadCaffeinePeriod(any())
         } throws SecurityException("nutrition read")
 
         val vm = viewModel(
@@ -234,7 +281,7 @@ class CaffeineViewModelTest {
     fun `an unexpected failure carries its message to the screen`() = runTest {
         val repository = mockk<CaffeineRepository>()
         coEvery {
-            repository.loadCaffeineData(any())
+            repository.loadCaffeinePeriod(any())
         } throws RuntimeException("the provider hung up")
 
         val vm = viewModel(
@@ -261,7 +308,7 @@ class CaffeineViewModelTest {
         assertFalse(state.isLoading)
         assertNull(state.error)
         assertEquals(CaffeineSleepImpactStatus.UNLIKELY, caffeineSleepImpactStatus(state.display))
-        assertTrue(caffeineDistributionBars(state.analyticsDisplay.sourceTotals).isEmpty())
+        assertTrue(caffeineDistributionBars(state.display.sourceTotals).isEmpty())
         // The curve is still plotted as a flat zero line, and the threshold line has to fit.
         assertTrue(state.display.curvePoints.isNotEmpty())
         assertTrue(
@@ -275,27 +322,26 @@ class CaffeineViewModelTest {
     private fun viewModel(
         repository: CaffeineRepository,
         preferences: FakePreferences,
-        initialAnalyticsRange: CaffeineAnalyticsRange = CaffeineAnalyticsRange.LAST_30_DAYS,
         nutritionRepository: NutritionRepository = mockk(),
+        savedStateHandle: SavedStateHandle = SavedStateHandle(),
     ): CaffeineViewModel =
         CaffeineViewModel(
             repository = repository,
             caffeineModel = preferences,
             bodyProfilePreferences = preferences,
             nutritionRepository = nutritionRepository,
+            periodPreferences = preferences,
             dispatchers = mainDispatcherRule.dispatcherProvider,
-        ).also { vm ->
-            // The screen opens on 30 days. A test that wants another range moves it, as the user would.
-            if (initialAnalyticsRange != CaffeineAnalyticsRange.LAST_30_DAYS) vm.selectAnalyticsRange(initialAnalyticsRange)
-        }
+            savedStateHandle = savedStateHandle,
+        )
 
     private fun repo(entries: List<CaffeineEntry> = emptyList()): CaffeineRepository =
         mockk<CaffeineRepository>().also { repository ->
-            coEvery { repository.loadCaffeineData(any()) } returns CaffeinePeriodData(entries)
+            coEvery { repository.loadCaffeinePeriod(any()) } returns CaffeinePeriodData(entries)
         }
 
-    private fun prefs(initial: CaffeinePreferences): FakePreferences =
-        FakePreferences(initialCaffeine = initial)
+    private fun prefs(initial: CaffeinePreferences, initialRange: TimeRange? = null): FakePreferences =
+        FakePreferences(initialRange = initialRange, initialCaffeine = initial)
 
     private fun entryAt(
         date: LocalDate,

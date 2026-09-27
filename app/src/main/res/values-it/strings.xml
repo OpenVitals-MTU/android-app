@@ -1535,10 +1535,7 @@
     <string name="macro_fat_short">G %1$sg</string>
     <string name="macro_fiber">fibra %1$sg</string>
     <string name="macro_sugar">zucchero %1$sg</string>
-    <string name="caffeine_section_dashboard">Dashboard</string>
-    <string name="caffeine_section_analytics">Analisi</string>
     <string name="caffeine_section_sleep">Impatto sul sonno</string>
-    <string name="caffeine_section_entries">Voci</string>
     <string name="caffeine_section_science">Scienza</string>
     <string name="caffeine_setup_title">Personalizza insight sulla caffeina</string>
     <string name="caffeine_setup_body">OpenVitals ha trovato dati sulla caffeina. La personalizzazione migliora la curva della caffeina e la previsione dell\'ora di andare a letto.</string>

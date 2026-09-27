@@ -12,6 +12,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
+import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
@@ -43,6 +44,7 @@ class CaffeineRepositoryTest {
         coEvery {
             nutritionRepository.loadNutritionEntries(any(), any())
         } returns listOf(caffeineEntry, nonCaffeineEntry)
+        coEvery { nutritionRepository.loadDailyMacros(any(), any()) } returns emptyList()
 
         val result = CaffeineRepositoryImpl(nutritionRepository).loadCaffeinePeriod(
             PeriodLoadQuery(range = TimeRange.DAY, anchorDate = date)
@@ -64,11 +66,33 @@ class CaffeineRepositoryTest {
         coEvery {
             nutritionRepository.loadNutritionEntries(any(), any())
         } returns emptyList()
+        coEvery { nutritionRepository.loadDailyMacros(any(), any()) } returns emptyList()
 
         val result = CaffeineRepositoryImpl(nutritionRepository).loadCaffeinePeriod(
             PeriodLoadQuery(range = TimeRange.DAY, anchorDate = date)
         )
 
         assertTrue(result.entries.isEmpty())
+        assertEquals(0.0, result.previousTotalMg, 0.0)
+    }
+
+    @Test
+    fun `loadCaffeinePeriod totals the previous period from daily aggregates`() = runTest {
+        val date = LocalDate.of(2026, 7, 1)
+        val nutritionRepository = mockk<NutritionRepository>()
+        coEvery { nutritionRepository.loadNutritionEntries(any(), any()) } returns emptyList()
+        // Aggregates are in grams. A day without caffeine has no key at all.
+        coEvery { nutritionRepository.loadDailyMacros(any(), any()) } returns listOf(
+            DailyMacros(date = date.minusDays(1), nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 0.15)),
+            DailyMacros(date = date.minusDays(1), nutrientValues = mapOf(NutritionNutrient.PROTEIN to 20.0)),
+        )
+
+        val result = CaffeineRepositoryImpl(nutritionRepository).loadCaffeinePeriod(
+            PeriodLoadQuery(range = TimeRange.DAY, anchorDate = date, today = date)
+        )
+
+        assertEquals(150.0, result.previousTotalMg, 0.001)
+        // Only the previous day is summed: the current one comes from the records.
+        coVerify { nutritionRepository.loadDailyMacros(date.minusDays(1), date.minusDays(1)) }
     }
 }

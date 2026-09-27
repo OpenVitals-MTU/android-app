@@ -92,7 +92,7 @@ internal fun MetricRouteContent(
     onOpenTrainingReadinessDetails: (java.time.LocalDate) -> Unit = {},
     onOpenStressDetails: (java.time.LocalDate) -> Unit = {},
     onEditHydrationEntry: (String) -> Unit,
-    onOpenCaffeineDrink: (String) -> Unit = {},
+    onOpenCaffeineDrink: (String, LocalDate) -> Unit = { _, _ -> },
     onEditMindfulnessSession: (String) -> Unit,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,

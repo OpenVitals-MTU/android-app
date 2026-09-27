@@ -2301,10 +2301,7 @@
     <string name="macro_fat_short">Ж %1$s г</string>
     <string name="macro_fiber">Клетчатка %1$s г</string>
     <string name="macro_sugar">Сахар %1$s г</string>
-    <string name="caffeine_section_dashboard">Панель</string>
-    <string name="caffeine_section_analytics">Аналитика</string>
     <string name="caffeine_section_sleep">Влияние на сон</string>
-    <string name="caffeine_section_entries">Записи</string>
     <string name="caffeine_section_science">Научные данные</string>
     <string name="caffeine_setup_title">Персонализировать анализ кофеина</string>
     <string name="caffeine_setup_body">OpenVitals обнаружил данные о кофеине. Персонализация повышает точность кривой кофеина и прогноза времени отхода ко сну.</string>

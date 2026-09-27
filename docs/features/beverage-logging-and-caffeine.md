@@ -22,13 +22,16 @@ Hydration entries created by OpenVitals can be edited or deleted when the app ha
 
 ## Caffeine Values
 
-Caffeine-aware drinks can write caffeine nutrition values and feed the caffeine detail screen. The caffeine experience can show:
+Caffeine-aware drinks can write caffeine nutrition values and feed the caffeine detail screen.
 
-- Total caffeine intake.
-- Active caffeine estimates.
-- Source and time-of-day context.
-- Daily limit and sensitivity settings.
-- Bedtime guidance.
+The caffeine screen works like the other metric screens: Day, Week, Month and Year, a period you can step through, and sections you can reorder. It opens on Day. It remembers the last range you picked.
+
+- **Day, today:** active caffeine now, the sleep verdict, the day's total and the time until you are under your threshold. Then the day's caffeine curve with the threshold line and a mark for each drink. Tap near a mark to see that drink.
+- **Day, past:** that day's total, whether that night was over your threshold, and the curve for that day.
+- **Week, Month, Year:** the period total with daily average, safe nights, top source and threshold. A chart of daily totals; tap a day in Week or Month to list its drinks. The daily and bedtime impact card with the safe-night calendar.
+- **Every range:** the bedtime level, statistics with a comparison to the previous period, where the caffeine came from (apps, items, categories, time of day), the drinks in the period, and how the estimate works.
+
+The curve covers the whole day, from midnight to midnight. If your bedtime is after midnight, it runs on to your bedtime.
 
 ## Where The Caffeine Settings Live
 

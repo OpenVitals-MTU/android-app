@@ -6,18 +6,13 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
@@ -31,7 +26,6 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -49,6 +43,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -67,7 +62,9 @@ import kotlin.math.roundToInt
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrdering
+import tech.mmarca.openvitals.domain.insights.CaffeineInsightCalculator
+import tech.mmarca.openvitals.domain.insights.caffeineDrinkProfile
 import tech.mmarca.openvitals.domain.model.CaffeineCatalogMatchConfidence
 import tech.mmarca.openvitals.domain.model.CaffeineDailyStat
 import tech.mmarca.openvitals.domain.model.CaffeineDistributionSlice
@@ -83,21 +80,18 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.ChartEmptyState
 import tech.mmarca.openvitals.ui.components.ChartGuideLine
 import tech.mmarca.openvitals.ui.components.ChartMarker
-import tech.mmarca.openvitals.ui.components.ChartSkeleton
-import tech.mmarca.openvitals.ui.components.ChartSkeletonShape
-import tech.mmarca.openvitals.ui.components.ChartTokens
 import tech.mmarca.openvitals.ui.components.ChartXAxisWithYAxis
 import tech.mmarca.openvitals.ui.components.ChartZoom
+import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.MetricLinePlot
 import tech.mmarca.openvitals.ui.components.MetricLinePlotPoint
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
-import tech.mmarca.openvitals.ui.components.PullToRefreshBox
-import tech.mmarca.openvitals.ui.components.ScreenErrorContent
-import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.SwipeToDeleteEntryRow
 import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
+import tech.mmarca.openvitals.ui.components.rememberChartDaySelection
 import tech.mmarca.openvitals.ui.components.timeAxisInstantsFor
 import tech.mmarca.openvitals.ui.theme.HydrationColor
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,14 +99,15 @@ fun CaffeineScreen(
     viewModel: CaffeineViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onOpenDrink: (String) -> Unit = {},
+    onOpenDrink: (entryId: String, day: LocalDate) -> Unit = { _, _ -> },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val selectedInsight = (state.homeDisplay.entryInsights + state.analyticsDisplay.entryInsights)
-        .firstOrNull { it.entry.id == state.selectedEntryId }
+    val sectionContext = rememberMetricDetailSectionOrdering()
+    val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate)
+    val selectedInsight = state.display.entryInsights.firstOrNull { it.entry.id == state.selectedEntryId }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.refresh()
+        viewModel.resumeCurrentPeriod(refreshCurrent = true)
     }
 
     WithHealthConnectFeatureScreen(
@@ -120,29 +115,34 @@ fun CaffeineScreen(
         isLoading = state.isLoading,
         showInlineSyncBanner = false,
     ) { hcUx ->
-        PullToRefreshBox(
-            isRefreshing = state.isLoading,
-            onRefresh = viewModel::refresh,
-            enabled = !hcUx.syncPaused,
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = 8.dp),
-            ) {
-                caffeineHomeAndAnalyticsContent(
-                    state = state,
-                    screenError = state.error,
-                    unitFormatter = unitFormatter,
-                    dateTimeFormatterProvider = dateTimeFormatterProvider,
-                    onCompleteSetup = viewModel::completeSetup,
-                    onSkipSetup = viewModel::skipSetup,
-                    onSelectAnalyticsRange = viewModel::selectAnalyticsRange,
-                    onSelectEntry = viewModel::selectEntry,
-                    onOpenDrink = onOpenDrink,
-                    onDeleteEntry = viewModel::deleteCaffeineEntry,
-                )
-            }
+        MetricDetailScaffold(
+            isLoading = state.isLoading,
+            selectedRange = state.selectedRange,
+            selectedDate = state.selectedDate,
+            screenError = state.error,
+            onRefresh = viewModel::load,
+            onSelectRange = viewModel::selectRange,
+            onPreviousPeriod = viewModel::previousPeriod,
+            onNextPeriod = viewModel::nextPeriod,
+            onSelectDate = viewModel::selectDate,
+            onSelectDay = viewModel::selectDay,
+            weekPeriodMode = state.weekPeriodMode,
+            syncPaused = hcUx.syncPaused,
+            sectionListState = sectionContext.listState,
+        ) { period ->
+            caffeinePeriodContent(
+                sectionContext = sectionContext,
+                state = state,
+                period = period,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                chartDaySelection = chartDaySelection,
+                onCompleteSetup = viewModel::completeSetup,
+                onSkipSetup = viewModel::skipSetup,
+                onSelectEntry = viewModel::selectEntry,
+                onOpenDrink = onOpenDrink,
+                onDeleteEntry = viewModel::deleteCaffeineEntry,
+            )
         }
     }
 
@@ -152,6 +152,8 @@ fun CaffeineScreen(
         ) {
             CaffeineContributionSheet(
                 insight = selectedInsight,
+                preferences = state.preferences,
+                bodyProfile = state.bodyProfile,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -161,172 +163,8 @@ fun CaffeineScreen(
     }
 }
 
-internal fun LazyListScope.caffeineHomeAndAnalyticsContent(
-    state: CaffeineUiState,
-    screenError: ScreenError?,
-    unitFormatter: UnitFormatter,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    onCompleteSetup: (CaffeinePreferences) -> Unit,
-    onSkipSetup: () -> Unit,
-    onSelectAnalyticsRange: (CaffeineAnalyticsRange) -> Unit,
-    onSelectEntry: (String) -> Unit,
-    onOpenDrink: (String) -> Unit,
-    onDeleteEntry: (String) -> Unit,
-) {
-    if (screenError != null) {
-        item {
-            ScreenErrorContent(screenError)
-        }
-    }
-
-    if (state.isLoading && state.homeDisplay.curvePoints.isEmpty()) {
-        // Still loading: the shape of the coming curve, so the page does not jump.
-        item {
-            ChartSkeleton(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = ChartSkeletonShape.BARS,
-                height = ChartTokens.heightPeriodBar,
-            )
-        }
-    }
-
-    if (state.showSetup) {
-        item {
-            CaffeineSetupCard(
-                preferences = state.preferences,
-                bodyProfile = state.bodyProfile,
-                onSave = onCompleteSetup,
-                onSkip = onSkipSetup,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
-        }
-    }
-
-    item { SectionHeader(stringResource(R.string.caffeine_section_dashboard)) }
-    item {
-        CaffeineHomeOverviewCard(
-            insights = state.homeDisplay,
-            unitFormatter = unitFormatter,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-    }
-    item {
-        CaffeineCurveCard(
-            insights = state.homeDisplay,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            onSelectEntry = onSelectEntry,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-    }
-
-    item { SectionHeader(stringResource(R.string.caffeine_section_sleep)) }
-    item {
-        CaffeineSleepImpactCard(
-            insights = state.homeDisplay,
-            unitFormatter = unitFormatter,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-    }
-
-    item { SectionHeader(stringResource(R.string.caffeine_section_entries)) }
-    if (state.homeDisplay.entryInsights.isEmpty()) {
-        item {
-            EmptyCaffeineCard(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-        }
-    } else {
-        items(state.homeDisplay.entryInsights, key = { it.entry.id }) { insight ->
-            CaffeineEntryRow(
-                insight = insight,
-                unitFormatter = unitFormatter,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onClick = { onOpenDrink(insight.entry.id) },
-                // Only a record this app wrote, with an id, can be deleted here.
-                onDelete = if (insight.entry.isOpenVitalsEntry && insight.entry.id.isNotBlank()) {
-                    { onDeleteEntry(insight.entry.id) }
-                } else {
-                    null
-                },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-        }
-    }
-
-    item { SectionHeader(stringResource(R.string.caffeine_section_analytics)) }
-    item {
-        CaffeineAnalyticsRangePicker(
-            selectedRange = state.analyticsRange,
-            onSelectRange = onSelectAnalyticsRange,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-    }
-    item {
-        CaffeineAnalyticsSummaryCard(
-            insights = state.analyticsDisplay,
-            range = state.analyticsRange,
-            unitFormatter = unitFormatter,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-    }
-    item {
-        CaffeineDailyImpactCard(
-            stats = state.analyticsDisplay.dailyStats,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            rangeLabel = state.analyticsRange.displayLabel(),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-    }
-
-    item {
-        CaffeineDistributionCard(
-            title = stringResource(R.string.caffeine_sources),
-            slices = state.analyticsDisplay.sourceTotals,
-            unitFormatter = unitFormatter,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-    }
-    item {
-        CaffeineDistributionCard(
-            title = stringResource(R.string.caffeine_items),
-            slices = state.analyticsDisplay.itemTotals,
-            unitFormatter = unitFormatter,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-    }
-    item {
-        CaffeineDistributionCard(
-            title = stringResource(R.string.caffeine_inferred_categories),
-            slices = state.analyticsDisplay.categoryTotals,
-            unitFormatter = unitFormatter,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-    }
-    item {
-        CaffeineTimeBucketsCard(
-            buckets = state.analyticsDisplay.timeBuckets,
-            unitFormatter = unitFormatter,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-    }
-
-    item { SectionHeader(stringResource(R.string.caffeine_section_science)) }
-    item {
-        CaffeineScienceCard(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-    }
-    item {
-        CaffeineReferencesCard(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-    }
-}
-
 @Composable
-private fun CaffeineSetupCard(
+internal fun CaffeineSetupCard(
     preferences: CaffeinePreferences,
     bodyProfile: BodyProfile,
     onSave: (CaffeinePreferences) -> Unit,
@@ -379,7 +217,7 @@ private fun CaffeineSetupCard(
 }
 
 @Composable
-private fun CaffeineHomeOverviewCard(
+internal fun CaffeineHomeOverviewCard(
     insights: CaffeineInsights,
     unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
@@ -426,6 +264,55 @@ private fun CaffeineHomeOverviewCard(
     }
 }
 
+/** A past day: what was drunk, and whether that night was clear of the threshold. */
+@Composable
+internal fun CaffeinePastDayOverviewCard(
+    insights: CaffeineInsights,
+    unitFormatter: UnitFormatter,
+    modifier: Modifier = Modifier,
+) {
+    OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
+            Text(
+                text = stringResource(R.string.stat_total_intake),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = formatMg(insights.periodTotalMg, unitFormatter),
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = Spacing.xs),
+            )
+            // The figures sit in the stats below, so the verdict needs no sentence.
+            CaffeineSleepStatusBanner(
+                status = caffeineNightStatus(insights),
+                body = null,
+                modifier = Modifier.padding(top = Spacing.md),
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = Spacing.md),
+            ) {
+                CaffeineMiniStat(
+                    title = stringResource(R.string.caffeine_bedtime_forecast),
+                    value = formatMg(insights.bedtimeMg, unitFormatter),
+                    icon = Icons.Outlined.Bedtime,
+                    modifier = Modifier.weight(1f),
+                )
+                CaffeineMiniStat(
+                    title = stringResource(R.string.caffeine_sleep_threshold),
+                    value = formatMg(insights.sleepThresholdMg.toDouble(), unitFormatter),
+                    icon = Icons.Outlined.NightsStay,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun CaffeineCurrentSleepStatus(
     insights: CaffeineInsights,
@@ -433,23 +320,6 @@ private fun CaffeineCurrentSleepStatus(
     modifier: Modifier = Modifier,
 ) {
     val status = caffeineSleepImpactStatus(insights)
-    val color = when (status) {
-        CaffeineSleepImpactStatus.UNLIKELY -> MaterialTheme.colorScheme.primary
-        CaffeineSleepImpactStatus.ELEVATED_NOW -> MaterialTheme.colorScheme.tertiary
-        CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP -> MaterialTheme.colorScheme.error
-    }
-    val icon = when (status) {
-        CaffeineSleepImpactStatus.UNLIKELY -> Icons.Outlined.CheckCircle
-        CaffeineSleepImpactStatus.ELEVATED_NOW -> Icons.Outlined.QueryStats
-        CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP -> Icons.Outlined.WarningAmber
-    }
-    val title = stringResource(
-        when (status) {
-            CaffeineSleepImpactStatus.UNLIKELY -> R.string.caffeine_sleep_status_unlikely
-            CaffeineSleepImpactStatus.ELEVATED_NOW -> R.string.caffeine_sleep_status_elevated_now
-            CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP -> R.string.caffeine_sleep_status_may_affect
-        }
-    )
     val body = when (status) {
         CaffeineSleepImpactStatus.UNLIKELY -> stringResource(
             R.string.caffeine_sleep_status_unlikely_body,
@@ -477,6 +347,33 @@ private fun CaffeineCurrentSleepStatus(
         )
     }
 
+    CaffeineSleepStatusBanner(status = status, body = body, modifier = modifier)
+}
+
+@Composable
+private fun CaffeineSleepStatusBanner(
+    status: CaffeineSleepImpactStatus,
+    body: String?,
+    modifier: Modifier = Modifier,
+) {
+    val color = when (status) {
+        CaffeineSleepImpactStatus.UNLIKELY -> MaterialTheme.colorScheme.primary
+        CaffeineSleepImpactStatus.ELEVATED_NOW -> MaterialTheme.colorScheme.tertiary
+        CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP -> MaterialTheme.colorScheme.error
+    }
+    val icon = when (status) {
+        CaffeineSleepImpactStatus.UNLIKELY -> Icons.Outlined.CheckCircle
+        CaffeineSleepImpactStatus.ELEVATED_NOW -> Icons.Outlined.QueryStats
+        CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP -> Icons.Outlined.WarningAmber
+    }
+    val title = stringResource(
+        when (status) {
+            CaffeineSleepImpactStatus.UNLIKELY -> R.string.caffeine_sleep_status_unlikely
+            CaffeineSleepImpactStatus.ELEVATED_NOW -> R.string.caffeine_sleep_status_elevated_now
+            CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP -> R.string.caffeine_sleep_status_may_affect
+        }
+    )
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -503,12 +400,14 @@ private fun CaffeineCurrentSleepStatus(
                 style = MaterialTheme.typography.titleSmall,
                 color = color,
             )
-            Text(
-                text = body,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp),
-            )
+            body?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
         }
     }
 }
@@ -520,57 +419,35 @@ internal enum class CaffeineSleepImpactStatus {
 }
 
 internal fun caffeineSleepImpactStatus(insights: CaffeineInsights): CaffeineSleepImpactStatus {
-    val threshold = insights.sleepThresholdMg.toDouble()
+    val threshold = insights.sleepThresholdMg
     return when {
-        insights.bedtimeMg > threshold -> CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP
-        insights.currentMg > threshold -> CaffeineSleepImpactStatus.ELEVATED_NOW
+        CaffeineInsightCalculator.isOverSleepThreshold(insights.bedtimeMg, threshold) ->
+            CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP
+        CaffeineInsightCalculator.isOverSleepThreshold(insights.currentMg, threshold) ->
+            CaffeineSleepImpactStatus.ELEVATED_NOW
         else -> CaffeineSleepImpactStatus.UNLIKELY
     }
 }
 
-@Composable
-private fun CaffeineAnalyticsRangePicker(
-    selectedRange: CaffeineAnalyticsRange,
-    onSelectRange: (CaffeineAnalyticsRange) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val rows = listOf(
-        listOf(CaffeineAnalyticsRange.TODAY, CaffeineAnalyticsRange.YESTERDAY),
-        listOf(CaffeineAnalyticsRange.LAST_30_DAYS, CaffeineAnalyticsRange.LAST_90_DAYS),
-    )
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        rows.forEach { ranges ->
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                ranges.forEach { range ->
-                    FilterChip(
-                        selected = selectedRange == range,
-                        onClick = { onSelectRange(range) },
-                        label = { Text(range.displayLabel()) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
+/** A past night's verdict: bedtime alone. "Now" belongs to today. */
+internal fun caffeineNightStatus(insights: CaffeineInsights): CaffeineSleepImpactStatus =
+    if (caffeineBedtimeIsSafe(insights)) {
+        CaffeineSleepImpactStatus.UNLIKELY
+    } else {
+        CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP
     }
-}
 
 @Composable
-private fun CaffeineAnalyticsSummaryCard(
+internal fun CaffeineAnalyticsSummaryCard(
     insights: CaffeineInsights,
-    range: CaffeineAnalyticsRange,
+    periodTitle: String,
     unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
 ) {
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = range.displayLabel(),
+                text = periodTitle,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -633,7 +510,7 @@ private fun CaffeineAnalyticsSummaryCard(
 private fun CaffeineMiniStat(
     title: String,
     value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     modifier: Modifier = Modifier,
 ) {
     val color = MaterialTheme.colorScheme.primary
@@ -830,8 +707,9 @@ private fun CaffeineLineChart(
     }
 }
 
+/** One night's bedtime level. The tally and streak need a longer period. */
 @Composable
-private fun CaffeineSleepImpactCard(
+internal fun CaffeineSleepImpactCard(
     insights: CaffeineInsights,
     unitFormatter: UnitFormatter,
     modifier: Modifier = Modifier,
@@ -870,35 +748,16 @@ private fun CaffeineSleepImpactCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-            ) {
-                CaffeineMiniStat(
-                    title = stringResource(R.string.caffeine_safe_nights),
-                    value = "${insights.safeNights}/${insights.totalNights}",
-                    icon = Icons.Outlined.NightsStay,
-                    modifier = Modifier.weight(1f),
-                )
-                CaffeineMiniStat(
-                    title = stringResource(R.string.caffeine_safe_streak),
-                    value = unitFormatter.count(insights.safeSleepStreak),
-                    icon = Icons.Outlined.Bedtime,
-                    modifier = Modifier.weight(1f),
-                )
-            }
         }
     }
 }
 
-/** Whether the bedtime projection is at or under the threshold. Exactly at counts as safe. */
+/** Whether the bedtime projection shows at or under the threshold. Exactly at counts as safe. */
 internal fun caffeineBedtimeIsSafe(insights: CaffeineInsights): Boolean =
-    insights.bedtimeMg <= insights.sleepThresholdMg
+    !CaffeineInsightCalculator.isOverSleepThreshold(insights.bedtimeMg, insights.sleepThresholdMg)
 
 @Composable
-private fun CaffeineDailyImpactCard(
+internal fun CaffeineDailyImpactCard(
     stats: List<CaffeineDailyStat>,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
@@ -1119,7 +978,7 @@ internal fun caffeineTimeBucketBars(
 }
 
 @Composable
-private fun CaffeineScienceCard(modifier: Modifier = Modifier) {
+internal fun CaffeineScienceCard(modifier: Modifier = Modifier) {
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -1154,7 +1013,7 @@ private fun CaffeineScienceCard(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun CaffeineReferencesCard(modifier: Modifier = Modifier) {
+internal fun CaffeineReferencesCard(modifier: Modifier = Modifier) {
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -1253,7 +1112,7 @@ private fun DistributionRow(
 
 /** One logged drink. Tap opens its profile; an OpenVitals one swipes away. */
 @Composable
-private fun CaffeineEntryRow(
+internal fun CaffeineEntryRow(
     insight: CaffeineEntryInsight,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
@@ -1352,12 +1211,23 @@ private fun CaffeineEntryRowContent(
 @Composable
 private fun CaffeineContributionSheet(
     insight: CaffeineEntryInsight,
+    preferences: CaffeinePreferences,
+    bodyProfile: BodyProfile,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     modifier: Modifier = Modifier,
 ) {
     val zone = ZoneId.systemDefault()
     val unknownSource = stringResource(R.string.unknown_source)
+    // The drink screen's own model, so the sheet and that screen agree on this drink.
+    val profile = remember(insight.entry, preferences, bodyProfile) {
+        caffeineDrinkProfile(
+            entry = insight.entry,
+            now = Instant.now(),
+            preferences = preferences,
+            bodyProfile = bodyProfile,
+        )
+    }
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = insight.entry.name?.takeIf { it.isNotBlank() } ?: stringResource(R.string.caffeine_entry),
@@ -1417,7 +1287,7 @@ private fun CaffeineContributionSheet(
             )
             CaffeineMiniStat(
                 title = stringResource(R.string.caffeine_peak),
-                value = formatMg(insight.peakMg, unitFormatter),
+                value = formatMg(profile.peakMg, unitFormatter),
                 icon = Icons.Outlined.QueryStats,
                 modifier = Modifier.weight(1f),
             )
@@ -1436,7 +1306,7 @@ private fun CaffeineContributionSheet(
             )
             CaffeineMiniStat(
                 title = stringResource(R.string.caffeine_peak_time),
-                value = insight.peakTime.atZone(zone).format(dateTimeFormatterProvider.shortTime()),
+                value = profile.peakTime.atZone(zone).format(dateTimeFormatterProvider.shortTime()),
                 icon = Icons.Outlined.QueryStats,
                 modifier = Modifier.weight(1f),
             )
@@ -1447,7 +1317,7 @@ private fun CaffeineContributionSheet(
             modifier = Modifier.padding(top = 16.dp),
         )
         CaffeineLineChart(
-            points = insight.contributionPoints,
+            points = profile.curve,
             thresholdMg = 0.0,
             entryInsights = emptyList(),
             onSelectEntry = {},
@@ -1488,7 +1358,7 @@ private fun SheetMetadataRow(
 }
 
 @Composable
-private fun EmptyCaffeineCard(modifier: Modifier = Modifier) {
+internal fun EmptyCaffeineCard(modifier: Modifier = Modifier) {
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
         Text(
             text = stringResource(R.string.caffeine_empty),
@@ -1499,7 +1369,7 @@ private fun EmptyCaffeineCard(modifier: Modifier = Modifier) {
     }
 }
 
-private fun formatMg(value: Double, unitFormatter: UnitFormatter): String =
+internal fun formatMg(value: Double, unitFormatter: UnitFormatter): String =
     "${unitFormatter.count(value.roundToInt())} mg"
 
 private fun formatDurationMinutes(minutes: Long): String =
@@ -1510,13 +1380,6 @@ private fun formatDurationMinutes(minutes: Long): String =
         val remaining = minutes % 60L
         if (remaining == 0L) "${hours}h" else "${hours}h ${remaining}m"
     }
-
-private fun CaffeineAnalyticsRange.displayLabel(): String = when (this) {
-    CaffeineAnalyticsRange.TODAY -> "Today"
-    CaffeineAnalyticsRange.YESTERDAY -> "Yesterday"
-    CaffeineAnalyticsRange.LAST_30_DAYS -> "Last 30 days"
-    CaffeineAnalyticsRange.LAST_90_DAYS -> "Last 90 days"
-}
 
 private fun CaffeineTimeOfDayBucket.displayLabel(): String = when (this) {
     CaffeineTimeOfDayBucket.MORNING -> "Morning"

@@ -5,6 +5,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneOffset
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -222,5 +223,82 @@ class CaffeineInsightCalculatorTest {
         assertEquals(false, insights.dailyStats.last().safeForSleep)
         assertEquals(false, insights.dailyStats.last().nightCompleted)
         assertEquals(1, insights.safeSleepStreak)
+    }
+
+    @Test
+    fun `the curve covers the period's last day, midnight to midnight`() {
+        val insights = CaffeineInsightCalculator.build(
+            entries = listOf(entry),
+            period = DatePeriod(LocalDate.of(2026, 6, 28), LocalDate.of(2026, 7, 1)),
+            preferences = preferences.copy(bedtime = LocalTime.of(22, 30)),
+            now = Instant.parse("2026-07-03T12:00:00Z"),
+            zone = ZoneOffset.UTC,
+        )
+
+        // A past day is drawn whole, not the hours around "now".
+        assertEquals(Instant.parse("2026-07-01T00:00:00Z"), insights.curvePoints.first().time)
+        assertEquals(Instant.parse("2026-07-02T00:00:00Z"), insights.curvePoints.last().time)
+        // The bedtime figure is that day's night.
+        val expected = CaffeineInsightCalculator.activeCaffeineMg(
+            entries = listOf(entry),
+            at = Instant.parse("2026-07-01T22:30:00Z"),
+            preferences = preferences,
+        )
+        assertEquals(expected, insights.bedtimeMg, 0.001)
+    }
+
+    @Test
+    fun `a bedtime after midnight stretches the curve to reach it`() {
+        val insights = CaffeineInsightCalculator.build(
+            entries = listOf(entry),
+            period = DatePeriod(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 1)),
+            preferences = preferences.copy(bedtime = LocalTime.of(1, 30)),
+            now = Instant.parse("2026-07-03T12:00:00Z"),
+            zone = ZoneOffset.UTC,
+        )
+
+        assertEquals(Instant.parse("2026-07-02T01:30:00Z"), insights.curvePoints.last().time)
+    }
+
+    @Test
+    fun `a drink older than a week adds nothing`() {
+        val weekOld = entry.copy(
+            startTime = Instant.parse("2026-06-23T08:00:00Z"),
+            endTime = Instant.parse("2026-06-23T08:10:00Z"),
+            caffeineMg = 10_000.0,
+        )
+
+        // The slowest half-life allowed: 16 half-lives on, the model alone still leaves about 0.15 mg.
+        val activeMg = CaffeineInsightCalculator.activeCaffeineMg(
+            entries = listOf(weekOld),
+            at = Instant.parse("2026-07-01T08:00:01Z"),
+            preferences = preferences.copy(halfLifeMinutes = CaffeinePreferences.MaxHalfLifeMinutes),
+        )
+
+        assertEquals(0.0, activeMg, 0.0)
+    }
+
+    @Test
+    fun `a night that shows as the threshold counts as safe, and needs no wait`() {
+        val threshold = preferences.sleepThresholdMg
+        // Just under half a milligram over: it shows as the threshold itself.
+        assertFalse(CaffeineInsightCalculator.isOverSleepThreshold(threshold + 0.49, threshold))
+        assertTrue(CaffeineInsightCalculator.isOverSleepThreshold(threshold + 0.5, threshold))
+
+        // A dose sized so the level at 22:30 lands between the threshold and half a milligram over it.
+        val bedtime = Instant.parse("2026-07-01T22:30:00Z")
+        val unitDose = CaffeineInsightCalculator.activeCaffeineMg(listOf(entry.copy(caffeineMg = 1.0)), bedtime, preferences)
+        val dose = entry.copy(caffeineMg = (threshold + 0.25) / unitDose)
+        val insights = CaffeineInsightCalculator.build(
+            entries = listOf(dose),
+            period = DatePeriod(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 1)),
+            preferences = preferences,
+            now = bedtime,
+            zone = ZoneOffset.UTC,
+        )
+
+        assertTrue(insights.bedtimeMg > threshold)
+        assertTrue(insights.dailyStats.single().safeForSleep)
+        assertEquals(0L, insights.timeToThresholdMinutes)
     }
 }

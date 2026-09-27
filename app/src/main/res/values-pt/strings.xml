@@ -1895,10 +1895,7 @@
     <string name="macro_fat_short">G %1$sg</string>
     <string name="macro_fiber">fibra %1$sg</string>
     <string name="macro_sugar">açúcar %1$sg</string>
-    <string name="caffeine_section_dashboard">Painel</string>
-    <string name="caffeine_section_analytics">Análise</string>
     <string name="caffeine_section_sleep">Impacto no sono</string>
-    <string name="caffeine_section_entries">Entradas</string>
     <string name="caffeine_section_science">Ciência</string>
     <string name="caffeine_setup_title">Personalizar as informações de cafeína</string>
     <string name="caffeine_setup_body">O OpenVitals encontrou dados de cafeína. A personalização melhora a curva de cafeína e a previsão da hora de deitar.</string>

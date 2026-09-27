@@ -576,8 +576,8 @@ fun AppNavigation(
                     onEditHydrationEntry = { entryId ->
                         navController.navigate(Screen.HydrationEntryEdit.createRoute(entryId))
                     },
-                    onOpenCaffeineDrink = { entryId ->
-                        navController.navigate(Screen.CaffeineDrink.createRoute(entryId))
+                    onOpenCaffeineDrink = { entryId, day ->
+                        navController.navigate(Screen.CaffeineDrink.createRoute(entryId, day))
                     },
                     onEditMindfulnessSession = { entryId ->
                         navController.navigate(Screen.MindfulnessEntryEdit.createRoute(entryId))
@@ -598,8 +598,11 @@ fun AppNavigation(
             }
 
             composable(
-                route = Screen.CaffeineDrink.route,
-                arguments = listOf(navArgument(CAFFEINE_ENTRY_ID_ARG) { type = NavType.StringType }),
+                route = Screen.CaffeineDrink.route + SELECTED_DAY_QUERY_PATTERN,
+                arguments = listOf(
+                    navArgument(CAFFEINE_ENTRY_ID_ARG) { type = NavType.StringType },
+                    navArgument(SELECTED_DAY_ARG) { type = NavType.StringType; nullable = true; defaultValue = null },
+                ),
             ) { backStackEntry ->
                 val caffeineViewModel = hiltViewModel<CaffeineViewModel>()
                 CaffeineDrinkScreen(
