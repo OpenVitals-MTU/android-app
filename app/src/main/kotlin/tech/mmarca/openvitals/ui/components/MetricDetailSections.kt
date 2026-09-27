@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
@@ -249,7 +250,10 @@ private fun ReorderableMetricDetailSection(
             ),
     ) {
         CompositionLocalProvider(LocalMetricSectionEditMode provides isEditingSections) {
-            content()
+            // Stacked, not layered: a section may hold a header and cards, and the Box drew them on top of each other.
+            Column(modifier = Modifier.fillMaxWidth()) {
+                content()
+            }
             if (isEditingSections && !isDragging) {
                 Box(
                     modifier = Modifier
