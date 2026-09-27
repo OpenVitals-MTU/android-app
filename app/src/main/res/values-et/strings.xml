@@ -1535,10 +1535,7 @@
     <string name="macro_fat_short">R %1$sg</string>
     <string name="macro_fiber">kiudaineid %1$sg</string>
     <string name="macro_sugar">suhkrut %1$sg</string>
-    <string name="caffeine_section_dashboard">Kokkuvõte</string>
-    <string name="caffeine_section_analytics">Analüütika</string>
     <string name="caffeine_section_sleep">Mõju unele</string>
-    <string name="caffeine_section_entries">Kirjed</string>
     <string name="caffeine_section_science">Teadus</string>
     <string name="caffeine_setup_title">Isikupärasta kofeiini ülevaated</string>
     <string name="caffeine_setup_body">OpenVitals leidis kofeiiniandmeid. Isikupärastamine parandab kofeiinikõverat ja magamaminekuprognoosi.</string>

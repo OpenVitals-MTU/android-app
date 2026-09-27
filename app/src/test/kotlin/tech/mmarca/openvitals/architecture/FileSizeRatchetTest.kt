@@ -59,7 +59,7 @@ class FileSizeRatchetTest {
             "features/manualentry/activity/recording/ActivityRecording.kt" to 1850,
             "healthconnect/ActivityHealthReader.kt" to 1600,
             "domain/insights/CaffeineHealthDrinkCatalog.kt" to 1750,
-            "features/caffeine/CaffeineScreen.kt" to 1600,
+            "features/caffeine/CaffeineScreen.kt" to 1460,
             "features/manualentry/activity/ActivityEntryViewModel.kt" to 1600,
             "features/imports/applehealth/AppleHealthImportService.kt" to 1500,
             "features/heart/HeartMetricSharedSections.kt" to 1450,

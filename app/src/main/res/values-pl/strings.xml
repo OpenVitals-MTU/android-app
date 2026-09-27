@@ -2371,10 +2371,7 @@
     <string name="macro_fat_short">T %1$sg</string>
     <string name="macro_fiber">błonnik %1$sg</string>
     <string name="macro_sugar">cukier %1$sg</string>
-    <string name="caffeine_section_dashboard">Pulpit</string>
-    <string name="caffeine_section_analytics">Analiza</string>
     <string name="caffeine_section_sleep">Wpływ na sen</string>
-    <string name="caffeine_section_entries">Wpisy</string>
     <string name="caffeine_section_science">Nauka</string>
     <string name="caffeine_setup_title">Spersonalizuj analizę kofeiny</string>
     <string name="caffeine_setup_body">OpenVitals znalazł dane o kofeinie. Personalizacja poprawia krzywą kofeiny i prognozę na porę snu.</string>

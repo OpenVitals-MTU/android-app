@@ -23,10 +23,7 @@ import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.CaffeinePreferences
 
 object CaffeineInsightCalculator {
-    private const val CurvePastHours = 24L
-    private const val CurveFutureHours = 18L
     private const val CurveStepMinutes = 30L
-    private const val ContributionStepMinutes = 20L
     private const val ForecastLimitHours = 168L
     private val MilligramsEpsilon = 0.01
 
@@ -46,8 +43,8 @@ object CaffeineInsightCalculator {
         val today = now.atZone(zone).toLocalDate()
         val todayEntries = periodEntries.filter { it.startTime.atZone(zone).toLocalDate() == today }
         val currentMg = activeCaffeineMg(entries, now, normalizedPreferences, bodyProfile)
-        val bedtimeInstant = bedtimeInstant(today, normalizedPreferences.bedtime, zone)
-        val bedtimeMg = activeCaffeineMg(entries, bedtimeInstant, normalizedPreferences, bodyProfile)
+        val lastNightBedtime = bedtimeInstant(period.end, normalizedPreferences.bedtime, zone)
+        val bedtimeMg = activeCaffeineMg(entries, lastNightBedtime, normalizedPreferences, bodyProfile)
         val dailyStats = dailyStats(entries, period, normalizedPreferences, zone, bodyProfile, now)
         val periodTotal = periodEntries.sumOf { it.caffeineMg }
         val periodDays = dailyStats.size.coerceAtLeast(1)
@@ -55,14 +52,10 @@ object CaffeineInsightCalculator {
         val entryInsights = periodEntries
             .sortedByDescending { it.startTime }
             .map { entry ->
-                val peak = peakContribution(entry, normalizedPreferences, bodyProfile)
                 val catalogMatch = CaffeineHealthDrinkCatalog.match(entry)
                 CaffeineEntryInsight(
                     entry = entry,
                     currentContributionMg = contributionMg(entry, now, normalizedPreferences, bodyProfile),
-                    peakTime = peak.time,
-                    peakMg = peak.valueMg,
-                    contributionPoints = contributionCurve(entry, normalizedPreferences, bodyProfile),
                     inferredCategory = catalogMatch?.item?.category ?: inferCategory(entry.name),
                     catalogMatch = catalogMatch,
                 )
@@ -84,11 +77,18 @@ object CaffeineInsightCalculator {
             timeToThresholdMinutes = timeUntilBelowThreshold(
                 entries = entries,
                 from = now,
-                thresholdMg = normalizedPreferences.sleepThresholdMg.toDouble(),
+                thresholdMg = normalizedPreferences.sleepThresholdMg,
                 preferences = normalizedPreferences,
                 bodyProfile = bodyProfile,
             ),
-            curvePoints = caffeineCurve(entries, now, normalizedPreferences, bodyProfile),
+            curvePoints = caffeineCurve(
+                entries = entries,
+                start = period.end.atStartOfDay(zone).toInstant(),
+                // Past midnight when bedtime is, so the night's level is on the chart.
+                end = maxOf(period.end.plusDays(1).atStartOfDay(zone).toInstant(), lastNightBedtime),
+                preferences = normalizedPreferences,
+                bodyProfile = bodyProfile,
+            ),
             dailyStats = dailyStats,
             entryInsights = entryInsights,
             sourceTotals = distribution(periodEntries) { it.source.ifBlank { "Unknown source" } },
@@ -98,12 +98,24 @@ object CaffeineInsightCalculator {
         )
     }
 
+    /**
+     * Whether [mg] is over the sleep threshold as the screen shows it. Levels show in whole
+     * milligrams, so 60.4 mg reads "60 mg" and must not be called over a 60 mg threshold.
+     */
+    fun isOverSleepThreshold(mg: Double, thresholdMg: Int): Boolean = mg >= thresholdMg + 0.5
+
     fun activeCaffeineMg(
         entries: List<CaffeineEntry>,
         at: Instant,
         preferences: CaffeinePreferences,
         bodyProfile: BodyProfile = BodyProfile(),
-    ): Double = entries.sumOf { contributionMg(it, at, preferences, bodyProfile) }.zeroFloor()
+    ): Double {
+        // Older drinks are gone. Skipping them keeps a year of nights fast.
+        val oldest = at.minus(Duration.ofHours(ForecastLimitHours))
+        return entries
+            .sumOf { if (it.startTime.isBefore(oldest)) 0.0 else contributionMg(it, at, preferences, bodyProfile) }
+            .zeroFloor()
+    }
 
     fun contributionMg(
         entry: CaffeineEntry,
@@ -143,28 +155,13 @@ object CaffeineInsightCalculator {
         return best
     }
 
-    private fun contributionCurve(
-        entry: CaffeineEntry,
-        preferences: CaffeinePreferences,
-        bodyProfile: BodyProfile,
-    ): List<CaffeinePoint> {
-        val endMinutes = (preferences.effectiveHalfLifeMinutes(bodyProfile) * 5L)
-            .coerceAtLeast(12 * 60L)
-            .coerceAtMost(ForecastLimitHours * 60L)
-        return (0..endMinutes step ContributionStepMinutes).map { minute ->
-            val time = entry.startTime.plus(Duration.ofMinutes(minute))
-            CaffeinePoint(time, contributionMg(entry, time, preferences, bodyProfile))
-        }
-    }
-
     private fun caffeineCurve(
         entries: List<CaffeineEntry>,
-        now: Instant,
+        start: Instant,
+        end: Instant,
         preferences: CaffeinePreferences,
         bodyProfile: BodyProfile,
     ): List<CaffeinePoint> {
-        val start = now.minus(Duration.ofHours(CurvePastHours))
-        val end = now.plus(Duration.ofHours(CurveFutureHours))
         return generateSequence(start) { time ->
             time.plus(Duration.ofMinutes(CurveStepMinutes)).takeIf { !it.isAfter(end) }
         }.map { time ->
@@ -179,39 +176,42 @@ object CaffeineInsightCalculator {
         zone: ZoneId,
         bodyProfile: BodyProfile,
         now: Instant,
-    ): List<CaffeineDailyStat> =
-        generateSequence(period.start) { date ->
+    ): List<CaffeineDailyStat> {
+        // Grouped once: a year of days must not each walk every drink.
+        val totalsByDate = entries
+            .groupBy { it.startTime.atZone(zone).toLocalDate() }
+            .mapValues { (_, dayEntries) -> dayEntries.sumOf { it.caffeineMg } }
+        return generateSequence(period.start) { date ->
             date.plusDays(1).takeIf { !it.isAfter(period.end) }
         }.map { date ->
-            val total = entries.sumOf { entry ->
-                if (entry.startTime.atZone(zone).toLocalDate() == date) entry.caffeineMg else 0.0
-            }
+            val total = totalsByDate[date] ?: 0.0
             val bedtime = bedtimeInstant(date, preferences.bedtime, zone)
             val bedtimeMg = activeCaffeineMg(entries, bedtime, preferences, bodyProfile)
             CaffeineDailyStat(
                 date = date,
                 totalMg = total,
                 bedtimeMg = bedtimeMg,
-                safeForSleep = bedtimeMg <= preferences.sleepThresholdMg,
+                safeForSleep = !isOverSleepThreshold(bedtimeMg, preferences.sleepThresholdMg),
                 nightCompleted = !bedtime.isAfter(now),
             )
         }.toList()
+    }
 
     private fun timeUntilBelowThreshold(
         entries: List<CaffeineEntry>,
         from: Instant,
-        thresholdMg: Double,
+        thresholdMg: Int,
         preferences: CaffeinePreferences,
         bodyProfile: BodyProfile,
     ): Long? {
-        if (activeCaffeineMg(entries, from, preferences, bodyProfile) <= thresholdMg) return 0
+        if (!isOverSleepThreshold(activeCaffeineMg(entries, from, preferences, bodyProfile), thresholdMg)) return 0
         val limit = from.plus(Duration.ofHours(ForecastLimitHours))
         var low = from
         var high = limit
-        if (activeCaffeineMg(entries, high, preferences, bodyProfile) > thresholdMg) return null
+        if (isOverSleepThreshold(activeCaffeineMg(entries, high, preferences, bodyProfile), thresholdMg)) return null
         repeat(32) {
             val mid = low.plusMillis(Duration.between(low, high).toMillis() / 2L)
-            if (activeCaffeineMg(entries, mid, preferences, bodyProfile) > thresholdMg) {
+            if (isOverSleepThreshold(activeCaffeineMg(entries, mid, preferences, bodyProfile), thresholdMg)) {
                 low = mid
             } else {
                 high = mid

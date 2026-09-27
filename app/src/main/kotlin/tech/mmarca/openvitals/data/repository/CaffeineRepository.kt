@@ -2,7 +2,10 @@ package tech.mmarca.openvitals.data.repository
 
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import tech.mmarca.openvitals.core.period.DatePeriod
+import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.data.repository.contract.CaffeineRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.model.CaffeineEntry
@@ -15,6 +18,20 @@ import tech.mmarca.openvitals.domain.model.valueFor
 class CaffeineRepositoryImpl @Inject constructor(
     private val nutritionRepository: NutritionRepository,
 ) : CaffeineRepository {
+
+    override suspend fun loadCaffeinePeriod(
+        query: PeriodLoadQuery,
+    ): CaffeinePeriodData = coroutineScope {
+        val windows = query.windows
+        val current = async { loadCaffeineData(windows.current) }
+        // Only a total is needed, so the daily aggregate beats reading every record.
+        val previousTotalMg = async {
+            nutritionRepository
+                .loadDailyMacros(windows.previous.start, windows.previous.end)
+                .sumOf { it.nutrientValues[NutritionNutrient.CAFFEINE] ?: 0.0 } * 1000.0
+        }
+        current.await().copy(previousTotalMg = previousTotalMg.await())
+    }
 
     override suspend fun loadCaffeineData(
         period: DatePeriod,

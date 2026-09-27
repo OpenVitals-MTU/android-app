@@ -18,6 +18,8 @@ data class CaffeineEntry(
 
 data class CaffeinePeriodData(
     val entries: List<CaffeineEntry>,
+    /** The previous period's intake, for the comparison stat. */
+    val previousTotalMg: Double = 0.0,
 )
 
 data class CaffeinePoint(
@@ -25,12 +27,10 @@ data class CaffeinePoint(
     val valueMg: Double,
 )
 
+/** One drink in a period. Its own curve is worked out on demand: a year holds too many drinks. */
 data class CaffeineEntryInsight(
     val entry: CaffeineEntry,
     val currentContributionMg: Double,
-    val peakTime: Instant,
-    val peakMg: Double,
-    val contributionPoints: List<CaffeinePoint>,
     val inferredCategory: CaffeineSourceCategory,
     val catalogMatch: CaffeineCatalogMatch? = null,
 )
@@ -64,10 +64,12 @@ data class CaffeineInsights(
     val safeNights: Int = 0,
     val totalNights: Int = 0,
     val safeSleepStreak: Int = 0,
+    /** The level at bedtime on the period's last night. */
     val bedtimeMg: Double = 0.0,
     val sleepThresholdMg: Int = 0,
     val bedtime: LocalTime = LocalTime.MIDNIGHT,
     val timeToThresholdMinutes: Long? = null,
+    /** The level across the period's last day, from midnight through its bedtime. */
     val curvePoints: List<CaffeinePoint> = emptyList(),
     val dailyStats: List<CaffeineDailyStat> = emptyList(),
     val entryInsights: List<CaffeineEntryInsight> = emptyList(),

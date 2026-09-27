@@ -2401,10 +2401,7 @@
     <string name="macro_fiber">fiber %1$sg</string>
     <string name="macro_sugar">sugar %1$sg</string>
 
-    <string name="caffeine_section_dashboard">Dashboard</string>
-    <string name="caffeine_section_analytics">Analytics</string>
     <string name="caffeine_section_sleep">Sleep impact</string>
-    <string name="caffeine_section_entries">Entries</string>
     <string name="caffeine_section_science">Science</string>
     <string name="caffeine_setup_title">Personalize caffeine insights</string>
     <string name="caffeine_setup_body">OpenVitals found caffeine data. Personalization improves the caffeine curve and bedtime forecast.</string>

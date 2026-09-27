@@ -173,7 +173,9 @@ sealed class Screen(
         fun createRoute(sleepId: String): String = "sleep_detail/${Uri.encode(sleepId)}"
     }
     data object CaffeineDrink : Screen("caffeine/drink/{$CAFFEINE_ENTRY_ID_ARG}", R.string.caffeine_drink_title) {
-        fun createRoute(entryId: String): String = "caffeine/drink/${Uri.encode(entryId)}"
+        /** [day] is the drink's own date: the drink screen loads only that day. */
+        fun createRoute(entryId: String, day: LocalDate): String =
+            "caffeine/drink/${Uri.encode(entryId)}".withSelectedDay(day)
     }
     data object Metric : Screen("metric/{$METRIC_ID_ARG}") {
         fun createRoute(metricId: String): String = "metric/${Uri.encode(metricId)}"

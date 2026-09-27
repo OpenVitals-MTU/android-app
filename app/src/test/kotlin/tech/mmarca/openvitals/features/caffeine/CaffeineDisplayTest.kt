@@ -5,6 +5,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -67,6 +68,21 @@ class CaffeineDisplayTest {
         assertTrue(caffeineBedtimeIsSafe(insights))
         // …and the verdict agrees: 50 is not ABOVE 50.
         assertEquals(CaffeineSleepImpactStatus.UNLIKELY, caffeineSleepImpactStatus(insights))
+    }
+
+    @Test
+    fun `a level that shows as the threshold is not called over it`() {
+        // 60.4 mg reads "60 mg". The card once said "60 mg, above your 60 mg threshold".
+        val showsAsThreshold = CaffeineInsights(currentMg = 60.4, bedtimeMg = 60.4, sleepThresholdMg = 60)
+        assertTrue(caffeineBedtimeIsSafe(showsAsThreshold))
+        assertEquals(CaffeineSleepImpactStatus.UNLIKELY, caffeineSleepImpactStatus(showsAsThreshold))
+        assertEquals(CaffeineSleepImpactStatus.UNLIKELY, caffeineNightStatus(showsAsThreshold))
+
+        // 60.5 mg reads "61 mg": over.
+        val showsAsOver = showsAsThreshold.copy(currentMg = 60.5, bedtimeMg = 60.5)
+        assertFalse(caffeineBedtimeIsSafe(showsAsOver))
+        assertEquals(CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP, caffeineSleepImpactStatus(showsAsOver))
+        assertEquals(CaffeineSleepImpactStatus.MAY_AFFECT_SLEEP, caffeineNightStatus(showsAsOver))
     }
 
     @Test

@@ -2012,10 +2012,7 @@
     <string name="macro_fat_short">L %1$s g</string>
     <string name="macro_fiber">fibres %1$s g</string>
     <string name="macro_sugar">sucres %1$s g</string>
-    <string name="caffeine_section_dashboard">Tableau de bord</string>
-    <string name="caffeine_section_analytics">Analyses</string>
     <string name="caffeine_section_sleep">Impact sur le sommeil</string>
-    <string name="caffeine_section_entries">Entrées</string>
     <string name="caffeine_section_science">Science</string>
     <string name="caffeine_setup_title">Personnaliser les analyses de caféine</string>
     <string name="caffeine_setup_body">OpenVitals a trouvé des données de caféine. La personnalisation améliore la courbe de caféine et la prévision au coucher.</string>

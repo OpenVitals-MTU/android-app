@@ -155,9 +155,6 @@ class CaffeineCurveGoldenTest {
                     isOpenVitalsEntry = true,
                 ),
                 currentContributionMg = mg,
-                peakTime = at,
-                peakMg = mg,
-                contributionPoints = emptyList(),
                 inferredCategory = CaffeineSourceCategory.COFFEE,
             )
     }

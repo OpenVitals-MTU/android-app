@@ -8,11 +8,13 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.test.platform.app.InstrumentationRegistry
 import java.time.Instant
+import java.time.ZoneId
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
@@ -25,6 +27,8 @@ import tech.mmarca.openvitals.data.repository.contract.CaffeineRepository
 import tech.mmarca.openvitals.domain.model.CaffeineEntry
 import tech.mmarca.openvitals.domain.model.CaffeinePeriodData
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.navigation.CAFFEINE_ENTRY_ID_ARG
+import tech.mmarca.openvitals.navigation.SELECTED_DAY_ARG
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.components.AppBarState
 import tech.mmarca.openvitals.ui.components.LocalAppBarState
@@ -86,6 +90,14 @@ class CaffeineDrinkScreenTest {
             caffeineModel = preferences,
             bodyProfilePreferences = preferences,
             nutritionRepository = UnusedNutritionRepository,
+            periodPreferences = preferences,
+            // The route the drink screen is opened on: its drink, on the drink's day.
+            savedStateHandle = SavedStateHandle(
+                mapOf(
+                    CAFFEINE_ENTRY_ID_ARG to entryId,
+                    SELECTED_DAY_ARG to DRANK_AT.atZone(ZoneId.systemDefault()).toLocalDate().toString(),
+                ),
+            ),
         )
         composeRule.setContent {
             CompositionLocalProvider(

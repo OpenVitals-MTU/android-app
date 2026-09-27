@@ -2383,10 +2383,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="macro_fat_short">G %1$sg</string>
     <string name="macro_fiber">fibra %1$sg</string>
     <string name="macro_sugar">azucre %1$sg</string>
-    <string name="caffeine_section_dashboard">Panel</string>
-    <string name="caffeine_section_analytics">Analíticas</string>
     <string name="caffeine_section_sleep">Impacto no sono</string>
-    <string name="caffeine_section_entries">Entradas</string>
     <string name="caffeine_section_science">Ciencia</string>
     <string name="caffeine_setup_title">Personaliza a información de cafeína</string>
     <string name="caffeine_setup_body">OpenVitals atopou datos de cafeína. A personalización mellora a curva de cafeína e a previsión de hora de deitarse.</string>

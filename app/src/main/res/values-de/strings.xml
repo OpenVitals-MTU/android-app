@@ -1529,10 +1529,7 @@
     <string name="macro_fat_short">F %1$sg</string>
     <string name="macro_fiber">Ballaststoffe %1$sg</string>
     <string name="macro_sugar">Zucker %1$sg</string>
-    <string name="caffeine_section_dashboard">Dashboard</string>
-    <string name="caffeine_section_analytics">Analysen</string>
     <string name="caffeine_section_sleep">Schlafauswirkung</string>
-    <string name="caffeine_section_entries">Einträge</string>
     <string name="caffeine_section_science">Wissenschaft</string>
     <string name="caffeine_setup_title">Koffein-Einblicke personalisieren</string>
     <string name="caffeine_setup_body">OpenVitals hat Koffeindaten gefunden. Personalisierung verbessert die Koffeinkurve und die Schlafenszeitprognose.</string>

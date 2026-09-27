@@ -2027,10 +2027,7 @@
     <string name="macro_fat_short">脂肪 %1$sg</string>
     <string name="macro_fiber">纤维 %1$sg</string>
     <string name="macro_sugar">糖 %1$sg</string>
-    <string name="caffeine_section_dashboard">面板</string>
-    <string name="caffeine_section_analytics">分析</string>
     <string name="caffeine_section_sleep">睡眠影响</string>
-    <string name="caffeine_section_entries">记录</string>
     <string name="caffeine_section_science">原理</string>
     <string name="caffeine_setup_title">个性化咖啡因洞察</string>
     <string name="caffeine_setup_body">OpenVitals 发现了咖啡因数据。个性化可改善咖啡因曲线和就寝时间预测。</string>

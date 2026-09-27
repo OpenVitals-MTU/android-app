@@ -2375,10 +2375,7 @@
     <string name="macro_fat_short">R %1$sg</string>
     <string name="macro_fiber">kuitu %1$sg</string>
     <string name="macro_sugar">sokeri %1$sg</string>
-    <string name="caffeine_section_dashboard">Yhteenveto</string>
-    <string name="caffeine_section_analytics">Analytiikka</string>
     <string name="caffeine_section_sleep">Vaikutus uneen</string>
-    <string name="caffeine_section_entries">Merkinnät</string>
     <string name="caffeine_section_science">Tiede</string>
     <string name="caffeine_setup_title">Yksilöi kofeiinihavainnot</string>
     <string name="caffeine_setup_body">OpenVitals löysi kofeiinitietoja. Yksilöinti parantaa kofeiinikäyrää ja nukkumaanmenon ennustetta.</string>
