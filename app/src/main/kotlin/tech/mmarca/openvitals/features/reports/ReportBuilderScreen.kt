@@ -496,6 +496,7 @@ private fun ReportSection.titleRes(): Int = when (this) {
     ReportSection.HEART -> R.string.section_heart
     ReportSection.VITALS -> R.string.section_vitals
     ReportSection.MINDFULNESS -> R.string.onboarding_category_mindfulness
+    ReportSection.CYCLE -> R.string.onboarding_category_cycle_tracking
 }
 
 private fun ReportGranularity.titleRes(): Int = when (this) {

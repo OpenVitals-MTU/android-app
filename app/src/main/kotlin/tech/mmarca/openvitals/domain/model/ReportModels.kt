@@ -15,6 +15,7 @@ enum class ReportSection {
     HEART,
     VITALS,
     MINDFULNESS,
+    CYCLE,
 }
 
 /** How daily values combine into a bucket. SUM metrics add up; AVERAGE metrics mean out. */
@@ -24,8 +25,8 @@ enum class ReportValueKind {
 }
 
 /**
- * The metrics a report can carry: [DashboardMetric] minus the five with no
- * exportable daily series. Values stay in storage units until render.
+ * The metrics a report can carry: [DashboardMetric] minus the four with no
+ * exportable daily series. The cycle's series is the cycle day. Values stay in storage units until render.
  */
 enum class ReportMetric(
     val dashboardMetric: DashboardMetric,
@@ -66,6 +67,7 @@ enum class ReportMetric(
     BLOOD_GLUCOSE(DashboardMetric.BLOOD_GLUCOSE, ReportSection.VITALS, ReportValueKind.AVERAGE, UnitQuantity.BLOOD_GLUCOSE),
     SKIN_TEMPERATURE(DashboardMetric.SKIN_TEMPERATURE, ReportSection.VITALS, ReportValueKind.AVERAGE, UnitQuantity.TEMPERATURE),
     MINDFULNESS(DashboardMetric.MINDFULNESS, ReportSection.MINDFULNESS, ReportValueKind.SUM),
+    CYCLE(DashboardMetric.CYCLE, ReportSection.CYCLE, ReportValueKind.AVERAGE),
 }
 
 enum class ReportGranularity {
@@ -270,6 +272,54 @@ data class ReportReading(
 /** A plain readings list for sparse manual metrics (body temperature). */
 data class ReportReadingsDetail(
     val readings: List<ReportReading>,
+) : ReportMetricDetail
+
+/** One recorded cycle in the report's table. [lengthDays] is null while the cycle is open. */
+data class ReportCycleRow(
+    val start: LocalDate,
+    val end: LocalDate?,
+    val lengthDays: Int?,
+    val bleedingDays: Int,
+    /** `CycleRecordValues` FLOW_*, or null without flow detail. */
+    val peakFlow: Int?,
+    val painDays: Int,
+    val excluded: Boolean,
+    val exclusionReason: tech.mmarca.openvitals.domain.cycle.CycleExclusionReason? = null,
+)
+
+/** How often a symptom was logged on bleeding days and on the others. */
+data class ReportSymptomFrequency(
+    val symptom: tech.mmarca.openvitals.domain.cycle.CycleSymptom,
+    val onBleeding: Int,
+    val offBleeding: Int,
+)
+
+data class ReportCycleNote(val date: LocalDate, val text: String)
+
+/**
+ * The cycle section: the cycles touching the range, length statistics over
+ * the closed ones, bleeding and pain counted over the range, the symptoms
+ * by phase and the notes. Counts, never conclusions.
+ */
+data class ReportCycleDetail(
+    val cycles: List<ReportCycleRow>,
+    val completedCycles: Int,
+    val meanLengthDays: Double?,
+    val medianLengthDays: Double?,
+    val sdLengthDays: Double?,
+    val minLengthDays: Int?,
+    val maxLengthDays: Int?,
+    val meanBleedingDays: Double?,
+    val bleedingDays: Int,
+    val spottingDays: Int,
+    /** Spotting a week or more after its cycle's start. */
+    val intermenstrualDays: Int,
+    val painDaysOnBleeding: Int,
+    val painDaysOffBleeding: Int,
+    val severePainDays: Int,
+    val meanPain: Double?,
+    val symptomFrequency: List<ReportSymptomFrequency>,
+    val notes: List<ReportCycleNote>,
 ) : ReportMetricDetail
 
 /**

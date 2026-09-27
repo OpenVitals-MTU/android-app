@@ -3291,4 +3291,41 @@
         <item quantity="many">%1$d cyklu</item>
         <item quantity="other">%1$d cyklech</item>
     </plurals>
+    <string name="report_pdf_caption_cycle">Dokončených cyklů: %1$d · průměrná délka %2$s dní</string>
+    <string name="report_cycle_cycles">Dokončené cykly</string>
+    <string name="report_cycle_mean_length">Průměrná délka (dny)</string>
+    <string name="report_cycle_median_length">Medián délky (dny)</string>
+    <string name="report_cycle_sd_length">Rozptyl, SD (dny)</string>
+    <string name="report_cycle_range">Od nejkratšího po nejdelší (dny)</string>
+    <string name="report_cycle_mean_bleeding">Průměr dní krvácení</string>
+    <string name="report_cycle_bleeding_days">Dny krvácení</string>
+    <string name="report_cycle_spotting_days">Dny špinění</string>
+    <string name="report_cycle_intermenstrual_days">Špinění týden a více po začátku</string>
+    <string name="report_cycle_pain_on_bleeding">Dny bolesti ve dnech krvácení</string>
+    <string name="report_cycle_pain_off_bleeding">Dny bolesti mimo krvácení</string>
+    <string name="report_cycle_severe_pain_days">Dny silné bolesti (4 nebo 5)</string>
+    <string name="report_cycle_mean_pain">Průměrná bolest (1 až 5)</string>
+    <string name="report_cycle_start">Začátek</string>
+    <string name="report_cycle_end">Konec</string>
+    <string name="report_cycle_length">Délka</string>
+    <string name="report_cycle_peak_flow">Nejsilnější krvácení</string>
+    <string name="report_cycle_pain_days">Dny bolesti</string>
+    <string name="report_cycle_in_progress">Probíhá</string>
+    <string name="report_cycle_symptom">Příznak</string>
+    <string name="report_cycle_on_bleeding">Ve dnech krvácení</string>
+    <string name="report_cycle_off_bleeding">Mimo krvácení</string>
+    <string name="report_cycle_notes">Poznámky</string>
+    <string name="report_cycle_disclaimer">Zaznamenaná pozorování a z nich vypočítané hodnoty. Není to diagnóza.</string>
+    <string name="cycle_settings_backup_title">Záloha deníku</string>
+    <string name="cycle_settings_backup_body">Soubor JSON s denními záznamy, vyloučenými cykly, oblastmi pozornosti a věkovou skupinou. Import slučuje: u dne, který mají obě strany, zůstane novější úprava.</string>
+    <string name="cycle_settings_backup_export">Exportovat deník</string>
+    <string name="cycle_settings_backup_import">Importovat deník</string>
+    <string name="cycle_journal_exported">Deník exportován</string>
+    <plurals name="cycle_journal_imported">
+        <item quantity="one">Importován %1$d den</item>
+        <item quantity="few">Importovány %1$d dny</item>
+        <item quantity="many">Importováno %1$d dne</item>
+        <item quantity="other">Importováno %1$d dní</item>
+    </plurals>
+    <string name="cycle_journal_import_failed">Nic se neimportovalo: soubor není export deníku.</string>
 </resources>

@@ -95,6 +95,38 @@ class ReportPdfWriterSmokeTest {
         sleepAwake = "Awake",
         workoutTypeLabel = { "Type $it" },
         pageLabel = { page, count -> "Page $page of $count" },
+        cycle = ReportPdfCycleLabels(
+            cycles = "Completed cycles",
+            meanLength = "Mean length (days)",
+            medianLength = "Median length (days)",
+            sdLength = "Spread, SD (days)",
+            range = "Shortest to longest (days)",
+            meanBleeding = "Mean bleeding days",
+            bleedingDays = "Bleeding days",
+            spottingDays = "Spotting days",
+            intermenstrualDays = "Spotting a week or more after a start",
+            painOnBleeding = "Pain days on bleeding days",
+            painOffBleeding = "Pain days off bleeding days",
+            severePainDays = "Severe pain days",
+            meanPain = "Mean pain",
+            start = "Start",
+            end = "End",
+            length = "Length",
+            peakFlow = "Peak flow",
+            painDays = "Pain days",
+            excluded = "Excluded",
+            inProgress = "In progress",
+            symptom = "Symptom",
+            onBleeding = "On bleeding days",
+            offBleeding = "Off bleeding days",
+            notes = "Notes",
+            date = "Date",
+            disclaimer = "Recorded observations and figures computed from them. Not a diagnosis.",
+            flowLabels = mapOf(1 to "Light", 2 to "Medium", 3 to "Heavy"),
+            flowUnknown = "Not recorded",
+            symptomLabels = emptyMap(),
+            exclusionReasons = emptyMap(),
+        ),
     )
 
     private val values = object : ReportValueFormatter {
@@ -113,6 +145,7 @@ class ReportPdfWriterSmokeTest {
             (if (delta < 0) "-" else "+") + "%.1f".format(kotlin.math.abs(delta))
         override fun percent(value: Double) = "%.0f%%".format(value)
         override fun date(date: LocalDate) = date.toString()
+        override fun decimal(value: Double, decimals: Int) = "%.${decimals}f".format(value)
     }
 
     @Test

@@ -81,7 +81,7 @@ Settings, Sync with another phone opens the phone-to-phone sync wizard, which co
 
 ## Cycle
 
-The Cycle section holds tracking contexts (PMS, PMDD, endometriosis, PCOS, perimenopause, thyroid), the age band, the cycle reminder configuration, and a "Delete cycle journal" action. The age band follows the body profile's birth year when one is set; the picker is the fallback. Contexts and age band only shape the estimate's width and the day log's suggested symptoms. They are stored in their own preferences file and never written to Health Connect. Deleting the journal removes the day logs, the exclusions and every cycle setting from the device after a confirmation, and leaves Health Connect records alone. See [Cycle tracking](cycle-tracking.md) and [Reminders](reminders.md).
+The Cycle section holds tracking contexts (PMS, PMDD, endometriosis, PCOS, perimenopause, thyroid), the age band, the cycle reminder configuration, a journal backup card that exports the journal to a JSON file and imports one back, and a "Delete cycle journal" action. The age band follows the body profile's birth year when one is set; the picker is the fallback. Contexts and age band only shape the estimate's width and the day log's suggested symptoms. They are stored in their own preferences file and never written to Health Connect. Deleting the journal removes the day logs, the exclusions and every cycle setting from the device after a confirmation, and leaves Health Connect records alone. See [Cycle tracking](cycle-tracking.md) and [Reminders](reminders.md).
 
 ## Goals And Reminders
 

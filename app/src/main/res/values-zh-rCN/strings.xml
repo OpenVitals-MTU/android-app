@@ -3254,4 +3254,39 @@
         <item quantity="one">%1$d 个周期</item>
         <item quantity="other">%1$d 个周期</item>
     </plurals>
+    <string name="report_pdf_caption_cycle">%1$d 个完整周期 · 平均长度 %2$s 天</string>
+    <string name="report_cycle_cycles">完整周期</string>
+    <string name="report_cycle_mean_length">平均长度（天）</string>
+    <string name="report_cycle_median_length">长度中位数（天）</string>
+    <string name="report_cycle_sd_length">离散度，SD（天）</string>
+    <string name="report_cycle_range">最短到最长（天）</string>
+    <string name="report_cycle_mean_bleeding">平均出血天数</string>
+    <string name="report_cycle_bleeding_days">出血天数</string>
+    <string name="report_cycle_spotting_days">点滴出血天数</string>
+    <string name="report_cycle_intermenstrual_days">开始一周及以后的点滴出血</string>
+    <string name="report_cycle_pain_on_bleeding">出血日的疼痛天数</string>
+    <string name="report_cycle_pain_off_bleeding">非出血日的疼痛天数</string>
+    <string name="report_cycle_severe_pain_days">剧烈疼痛天数（4 或 5）</string>
+    <string name="report_cycle_mean_pain">平均疼痛（1 到 5）</string>
+    <string name="report_cycle_start">开始</string>
+    <string name="report_cycle_end">结束</string>
+    <string name="report_cycle_length">长度</string>
+    <string name="report_cycle_peak_flow">最大经血量</string>
+    <string name="report_cycle_pain_days">疼痛天数</string>
+    <string name="report_cycle_in_progress">进行中</string>
+    <string name="report_cycle_symptom">症状</string>
+    <string name="report_cycle_on_bleeding">出血日</string>
+    <string name="report_cycle_off_bleeding">非出血日</string>
+    <string name="report_cycle_notes">备注</string>
+    <string name="report_cycle_disclaimer">记录的观察以及由此计算的数值。不是诊断。</string>
+    <string name="cycle_settings_backup_title">日志备份</string>
+    <string name="cycle_settings_backup_body">一个 JSON 文件，包含当日记录、已排除的周期、关注的状况和年龄段。导入会合并：双方都有的日期保留较新的编辑。</string>
+    <string name="cycle_settings_backup_export">导出日志</string>
+    <string name="cycle_settings_backup_import">导入日志</string>
+    <string name="cycle_journal_exported">日志已导出</string>
+    <plurals name="cycle_journal_imported">
+        <item quantity="one">已导入 %1$d 天</item>
+        <item quantity="other">已导入 %1$d 天</item>
+    </plurals>
+    <string name="cycle_journal_import_failed">未导入任何内容：该文件不是日志导出。</string>
 </resources>

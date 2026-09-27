@@ -217,6 +217,8 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - View cycle history bars against a 21 to 35 day reference band, with a per-cycle detail sheet.
 - View a thermal chart for the current cycle with a coverline when a temperature shift is confirmed.
 - View how often each symptom was logged in each phase.
+- Include a cycle section in the PDF health report: cycle-day chart, length statistics, bleeding and pain counts, a table per cycle, symptom counts, and notes.
+- Export the cycle journal to a JSON file and import one back, merging by the newer edit per day.
 - View today's logged observations (bleeding, pain, mood, energy, symptoms, note).
 - Add a cycle home screen widget that shows the cycle day, the estimated range, and whether today is logged, with a button that hides them.
 

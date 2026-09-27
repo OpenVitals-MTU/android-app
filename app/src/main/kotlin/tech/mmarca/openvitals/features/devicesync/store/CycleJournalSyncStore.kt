@@ -10,29 +10,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.add
-import kotlinx.serialization.json.boolean
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.int
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.long
-import kotlinx.serialization.json.put
 import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
 import tech.mmarca.openvitals.data.repository.contract.CyclePreferences
-import tech.mmarca.openvitals.domain.cycle.AgeBand
 import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
-import tech.mmarca.openvitals.domain.cycle.CycleSymptom
 import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
-import tech.mmarca.openvitals.domain.cycle.TrackingContext
-import tech.mmarca.openvitals.domain.model.BbtDisturbance
-import tech.mmarca.openvitals.domain.model.CervicalSensation
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
-import tech.mmarca.openvitals.domain.model.HcgTestResult
+import tech.mmarca.openvitals.features.cycle.CycleJournalJson
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncItem
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncRecordStore
 
@@ -196,64 +181,21 @@ private const val HEX_DIGITS = "0123456789abcdef"
 
 private val JournalJson = Json { ignoreUnknownKeys = true }
 
-internal fun encodeEntry(entry: CycleJournalEntry): ByteArray = buildJsonObject {
-    put("date", entry.date.toString())
-    put("bleedingNone", entry.bleedingNone)
-    entry.painLevel?.let { put("pain", it) }
-    entry.moodLevel?.let { put("mood", it) }
-    entry.energyLevel?.let { put("energy", it) }
-    put("symptoms", buildJsonArray { entry.symptoms.map { it.id }.sorted().forEach { add(it) } })
-    put("notes", entry.notes)
-    entry.hcgTest?.let { put("hcg", it.name) }
-    put("disturbances", buildJsonArray { entry.bbtDisturbances.map { it.name }.sorted().forEach { add(it) } })
-    entry.cervicalSensation?.let { put("sensation", it.name) }
-    put("updatedAt", entry.updatedAt.toEpochMilli())
-}.toString().toByteArray(Charsets.UTF_8)
+private fun bytes(json: JsonObject): ByteArray = json.toString().toByteArray(Charsets.UTF_8)
+
+private fun objectOrNull(payload: ByteArray): JsonObject? =
+    runCatching { JournalJson.parseToJsonElement(payload.toString(Charsets.UTF_8)).jsonObject }.getOrNull()
+
+internal fun encodeEntry(entry: CycleJournalEntry): ByteArray = bytes(CycleJournalJson.entry(entry))
 
 /** Null for a payload this build cannot read; the caller skips it. */
-internal fun decodeEntry(payload: ByteArray): CycleJournalEntry? = runCatching {
-    val json = JournalJson.parseToJsonElement(payload.toString(Charsets.UTF_8)).jsonObject
-    CycleJournalEntry(
-        date = LocalDate.parse(json.getValue("date").jsonPrimitive.content),
-        bleedingNone = json["bleedingNone"]?.jsonPrimitive?.boolean ?: false,
-        painLevel = json.intOrNull("pain"),
-        moodLevel = json.intOrNull("mood"),
-        energyLevel = json.intOrNull("energy"),
-        symptoms = json.names("symptoms").mapNotNullTo(mutableSetOf()) { id -> CycleSymptom.entries.firstOrNull { it.id == id } },
-        notes = json["notes"]?.jsonPrimitive?.content.orEmpty(),
-        hcgTest = json.nameOrNull("hcg")?.let { name -> HcgTestResult.entries.firstOrNull { it.name == name } },
-        bbtDisturbances = json.names("disturbances").mapNotNullTo(mutableSetOf()) { name -> BbtDisturbance.entries.firstOrNull { it.name == name } },
-        cervicalSensation = json.nameOrNull("sensation")?.let { name -> CervicalSensation.entries.firstOrNull { it.name == name } },
-        updatedAt = json["updatedAt"]?.jsonPrimitive?.long?.let(Instant::ofEpochMilli) ?: Instant.EPOCH,
-    )
-}.getOrNull()
+internal fun decodeEntry(payload: ByteArray): CycleJournalEntry? = objectOrNull(payload)?.let(CycleJournalJson::entryOrNull)
 
-internal fun encodeExclusion(start: LocalDate, reason: CycleExclusionReason?): ByteArray = buildJsonObject {
-    put("start", start.toString())
-    reason?.let { put("reason", it.name) }
-}.toString().toByteArray(Charsets.UTF_8)
+internal fun encodeExclusion(start: LocalDate, reason: CycleExclusionReason?): ByteArray = bytes(CycleJournalJson.exclusion(start, reason))
 
-internal fun decodeExclusion(payload: ByteArray): Pair<LocalDate, CycleExclusionReason?>? = runCatching {
-    val json = JournalJson.parseToJsonElement(payload.toString(Charsets.UTF_8)).jsonObject
-    LocalDate.parse(json.getValue("start").jsonPrimitive.content) to CycleExclusionReason.fromName(json.nameOrNull("reason"))
-}.getOrNull()
+internal fun decodeExclusion(payload: ByteArray): Pair<LocalDate, CycleExclusionReason?>? =
+    objectOrNull(payload)?.let(CycleJournalJson::exclusionOrNull)
 
-internal fun encodeProfile(profile: CycleTrackingProfile): ByteArray = buildJsonObject {
-    put("contexts", buildJsonArray { profile.contexts.map { it.id }.sorted().forEach { add(it) } })
-    profile.ageBand?.let { put("ageBand", it.id) }
-}.toString().toByteArray(Charsets.UTF_8)
+internal fun encodeProfile(profile: CycleTrackingProfile): ByteArray = bytes(CycleJournalJson.profile(profile))
 
-internal fun decodeProfile(payload: ByteArray): CycleTrackingProfile? = runCatching {
-    val json = JournalJson.parseToJsonElement(payload.toString(Charsets.UTF_8)).jsonObject
-    CycleTrackingProfile(
-        contexts = json.names("contexts").mapNotNullTo(mutableSetOf()) { TrackingContext.fromId(it) },
-        ageBand = AgeBand.fromId(json.nameOrNull("ageBand")),
-    )
-}.getOrNull()
-
-private fun JsonObject.intOrNull(key: String): Int? = this[key]?.takeIf { it !is JsonNull }?.jsonPrimitive?.int
-
-private fun JsonObject.nameOrNull(key: String): String? = this[key]?.takeIf { it !is JsonNull }?.jsonPrimitive?.content
-
-private fun JsonObject.names(key: String): List<String> =
-    this[key]?.takeIf { it !is JsonNull }?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty()
+internal fun decodeProfile(payload: ByteArray): CycleTrackingProfile? = objectOrNull(payload)?.let(CycleJournalJson::profileOrNull)

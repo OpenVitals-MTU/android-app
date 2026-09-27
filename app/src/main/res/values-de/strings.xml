@@ -3245,4 +3245,39 @@
         <item quantity="one">%1$d Zyklus</item>
         <item quantity="other">%1$d Zyklen</item>
     </plurals>
+    <string name="report_pdf_caption_cycle">%1$d abgeschlossene Zyklen · mittlere Länge %2$s Tage</string>
+    <string name="report_cycle_cycles">Abgeschlossene Zyklen</string>
+    <string name="report_cycle_mean_length">Mittlere Länge (Tage)</string>
+    <string name="report_cycle_median_length">Median der Länge (Tage)</string>
+    <string name="report_cycle_sd_length">Streuung, SD (Tage)</string>
+    <string name="report_cycle_range">Kürzester bis längster (Tage)</string>
+    <string name="report_cycle_mean_bleeding">Blutungstage im Mittel</string>
+    <string name="report_cycle_bleeding_days">Blutungstage</string>
+    <string name="report_cycle_spotting_days">Schmierblutungstage</string>
+    <string name="report_cycle_intermenstrual_days">Schmierblutung eine Woche oder mehr nach einem Beginn</string>
+    <string name="report_cycle_pain_on_bleeding">Schmerztage an Blutungstagen</string>
+    <string name="report_cycle_pain_off_bleeding">Schmerztage außerhalb der Blutung</string>
+    <string name="report_cycle_severe_pain_days">Tage mit starkem Schmerz (4 oder 5)</string>
+    <string name="report_cycle_mean_pain">Mittlerer Schmerz (1 bis 5)</string>
+    <string name="report_cycle_start">Beginn</string>
+    <string name="report_cycle_end">Ende</string>
+    <string name="report_cycle_length">Länge</string>
+    <string name="report_cycle_peak_flow">Stärkste Blutung</string>
+    <string name="report_cycle_pain_days">Schmerztage</string>
+    <string name="report_cycle_in_progress">Läuft</string>
+    <string name="report_cycle_symptom">Symptom</string>
+    <string name="report_cycle_on_bleeding">An Blutungstagen</string>
+    <string name="report_cycle_off_bleeding">Außerhalb der Blutung</string>
+    <string name="report_cycle_notes">Notizen</string>
+    <string name="report_cycle_disclaimer">Erfasste Beobachtungen und daraus berechnete Zahlen. Keine Diagnose.</string>
+    <string name="cycle_settings_backup_title">Sicherung des Tagebuchs</string>
+    <string name="cycle_settings_backup_body">Eine JSON-Datei mit den täglichen Protokollen, den ausgeschlossenen Zyklen, den Schwerpunkten und der Altersgruppe. Der Import führt zusammen: bei einem Tag, den beide Seiten haben, bleibt die neuere Änderung.</string>
+    <string name="cycle_settings_backup_export">Tagebuch exportieren</string>
+    <string name="cycle_settings_backup_import">Tagebuch importieren</string>
+    <string name="cycle_journal_exported">Tagebuch exportiert</string>
+    <plurals name="cycle_journal_imported">
+        <item quantity="one">%1$d Tag importiert</item>
+        <item quantity="other">%1$d Tage importiert</item>
+    </plurals>
+    <string name="cycle_journal_import_failed">Nichts importiert: Die Datei ist kein Tagebuch-Export.</string>
 </resources>

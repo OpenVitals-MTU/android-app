@@ -3311,4 +3311,39 @@
         <item quantity="one">%1$d cycle</item>
         <item quantity="other">%1$d cycles</item>
     </plurals>
+    <string name="report_pdf_caption_cycle">%1$d completed cycles · mean length %2$s days</string>
+    <string name="report_cycle_cycles">Completed cycles</string>
+    <string name="report_cycle_mean_length">Mean length (days)</string>
+    <string name="report_cycle_median_length">Median length (days)</string>
+    <string name="report_cycle_sd_length">Spread, SD (days)</string>
+    <string name="report_cycle_range">Shortest to longest (days)</string>
+    <string name="report_cycle_mean_bleeding">Mean bleeding days</string>
+    <string name="report_cycle_bleeding_days">Bleeding days</string>
+    <string name="report_cycle_spotting_days">Spotting days</string>
+    <string name="report_cycle_intermenstrual_days">Spotting a week or more after a start</string>
+    <string name="report_cycle_pain_on_bleeding">Pain days on bleeding days</string>
+    <string name="report_cycle_pain_off_bleeding">Pain days off bleeding days</string>
+    <string name="report_cycle_severe_pain_days">Severe pain days (4 or 5)</string>
+    <string name="report_cycle_mean_pain">Mean pain (1 to 5)</string>
+    <string name="report_cycle_start">Start</string>
+    <string name="report_cycle_end">End</string>
+    <string name="report_cycle_length">Length</string>
+    <string name="report_cycle_peak_flow">Peak flow</string>
+    <string name="report_cycle_pain_days">Pain days</string>
+    <string name="report_cycle_in_progress">In progress</string>
+    <string name="report_cycle_symptom">Symptom</string>
+    <string name="report_cycle_on_bleeding">On bleeding days</string>
+    <string name="report_cycle_off_bleeding">Off bleeding days</string>
+    <string name="report_cycle_notes">Notes</string>
+    <string name="report_cycle_disclaimer">Recorded observations and figures computed from them. Not a diagnosis.</string>
+    <string name="cycle_settings_backup_title">Journal backup</string>
+    <string name="cycle_settings_backup_body">A JSON file with the day logs, the excluded cycles, the contexts and the age band. Importing merges: for a day both sides hold, the newer edit stays.</string>
+    <string name="cycle_settings_backup_export">Export journal</string>
+    <string name="cycle_settings_backup_import">Import journal</string>
+    <string name="cycle_journal_exported">Journal exported</string>
+    <plurals name="cycle_journal_imported">
+        <item quantity="one">%1$d day imported</item>
+        <item quantity="other">%1$d days imported</item>
+    </plurals>
+    <string name="cycle_journal_import_failed">Nothing imported: the file is not a journal export.</string>
 </resources>

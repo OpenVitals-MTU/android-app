@@ -89,7 +89,7 @@ Status legend: **exists** already in OpenVitals · **new** built for this design
 
 | Feature | Detail | Status |
 |---|---|---|
-| Consultation summary | Last 3, 6, 12 or all cycles. Cycle table (start, end, length, bleeding days, peak flow, pain days, excluded), mean, median, sample SD, range, mean bleeding days; bleeding distribution incl. intermenstrual days (7+ days from a start); pain days on and off bleeding, severe days (4+), mean score; symptom frequency on and off bleeding; optional notes chronology; a disclaimer. | queued: becomes a section of the existing PDF health report |
+| Consultation summary | The report's range instead of a cycle count. Cycle table (start, end, length, bleeding days, peak flow, pain days, excluded), mean, median, sample SD, range, mean bleeding days; bleeding, spotting and intermenstrual days (7+ days from a start); pain days on and off bleeding, severe days (4+), mean score; symptom frequency on and off bleeding; notes chronology; a disclaimer. | done: a section of the PDF health report |
 
 ### 8. Setup and settings
 
@@ -100,7 +100,7 @@ Status legend: **exists** already in OpenVitals · **new** built for this design
 | Age band | Optional, picks the variability prior. | new |
 | Temperature unit | Celsius or Fahrenheit. | exists: unit overrides |
 | App lock, screen masking | PIN, biometric, `FLAG_SECURE`. | exists: app lock |
-| JSON export and import | Versioned backup of the journal, exclusions and preferences; merge or replace. | queued |
+| JSON export and import | Versioned backup of the journal, exclusions, contexts and age band; import merges, the newer edit per day wins. | done |
 | Erase all data | — | adapted: the journal is erased with the app's data reset |
 
 ### 9. Out of scope
@@ -128,4 +128,4 @@ Preferences, through a `CyclePreferences` contract: declared contexts, age band,
 6. Reminders. *done*
 7. Home-screen widget. *done*
 8. Alignment with the rest of the app: one day-log route, widget deep link and state, reminders restored and read strictly, dashboard tile, age band from the body profile, journal deletion, swipe-delete confirmation, accessibility, plurals, docs. *done*
-9. Report section and journal export. *queued*
+9. Report section and journal export. *done*

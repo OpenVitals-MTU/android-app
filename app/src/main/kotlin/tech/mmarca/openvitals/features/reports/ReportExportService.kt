@@ -24,7 +24,11 @@ import tech.mmarca.openvitals.data.repository.report.ReportCancellation
 import tech.mmarca.openvitals.data.repository.report.ReportDataLoader
 import tech.mmarca.openvitals.data.repository.report.ReportProgress
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
+import tech.mmarca.openvitals.domain.cycle.CycleSymptom
+import tech.mmarca.openvitals.domain.model.CycleRecordValues
 import tech.mmarca.openvitals.domain.model.GlucoseRecordValues
+import tech.mmarca.openvitals.domain.model.ReportCycleDetail
 import tech.mmarca.openvitals.domain.model.ReportData
 import tech.mmarca.openvitals.domain.model.ReportGranularity
 import tech.mmarca.openvitals.domain.model.ReportMetric
@@ -33,6 +37,9 @@ import tech.mmarca.openvitals.domain.model.ReportPoint
 import tech.mmarca.openvitals.domain.model.ReportRequest
 import tech.mmarca.openvitals.domain.model.ReportValueKind
 import tech.mmarca.openvitals.features.activity.exerciseTypeLabel
+import tech.mmarca.openvitals.features.cycle.cycleSymptomLabelRes
+import tech.mmarca.openvitals.features.cycle.exclusionReasonLabelRes
+import tech.mmarca.openvitals.features.reports.pdf.ReportPdfCycleLabels
 import tech.mmarca.openvitals.features.reports.pdf.ReportPdfLabels
 import tech.mmarca.openvitals.features.reports.pdf.ReportPdfWriter
 import tech.mmarca.openvitals.features.reports.pdf.ReportValueFormatter
@@ -210,6 +217,7 @@ class ReportExportService @Inject constructor(
             sleepAwake = context.getString(R.string.report_pdf_sleep_awake),
             workoutTypeLabel = { exerciseTypeLabel(context, it) },
             pageLabel = { page, count -> context.getString(R.string.report_pdf_page_of, page, count) },
+            cycle = cycleLabels(context),
         )
     }
 
@@ -220,7 +228,14 @@ class ReportExportService @Inject constructor(
             .associate { result ->
                 val summary = result.summary!!
                 val detail = result.detail as? tech.mmarca.openvitals.domain.model.ReportBloodPressureDetail
-                val caption = if (detail != null) {
+                val cycle = result.detail as? ReportCycleDetail
+                val caption = if (cycle != null) {
+                    context.getString(
+                        R.string.report_pdf_caption_cycle,
+                        cycle.completedCycles,
+                        cycle.meanLengthDays?.let { unitFormatter.decimal(it, 1) } ?: "\u2013",
+                    )
+                } else if (detail != null) {
                     context.getString(
                         R.string.report_pdf_caption_blood_pressure,
                         formatter.bloodPressure(detail.systolic.average, detail.diastolic.average),
@@ -301,6 +316,8 @@ class ReportExportService @Inject constructor(
 
             override fun percent(value: Double): String = unitFormatter.percent(value, 0).text
 
+            override fun decimal(value: Double, decimals: Int): String = unitFormatter.decimal(value, decimals)
+
             override fun date(date: LocalDate): String = formatters.mediumDate().format(date)
 
             private fun displayValue(metric: ReportMetric, value: Double, withUnit: Boolean = true): String {
@@ -308,6 +325,7 @@ class ReportExportService @Inject constructor(
                     ReportMetric.STEPS,
                     ReportMetric.FLOORS,
                     ReportMetric.WHEELCHAIR_PUSHES,
+                    ReportMetric.CYCLE,
                     -> DisplayValue(unitFormatter.count(value.roundToLong()), "")
                     ReportMetric.DISTANCE -> unitFormatter.distance(value)
                     ReportMetric.ELEVATION -> unitFormatter.elevation(value)
@@ -357,6 +375,7 @@ class ReportExportService @Inject constructor(
         }
 
     private fun metricTitleRes(metric: ReportMetric): Int = when (metric) {
+        ReportMetric.CYCLE -> R.string.metric_cycle_tracking
         ReportMetric.STEPS -> R.string.metric_steps
         ReportMetric.DISTANCE -> R.string.metric_distance
         ReportMetric.CALORIES_OUT -> R.string.metric_calories_out
@@ -396,3 +415,41 @@ class ReportExportService @Inject constructor(
 /** `openvitals-report-20260805-1432.pdf` — sortable, collision-free per minute. */
 internal fun reportFileName(generatedAt: LocalDateTime): String =
     "openvitals-report-${generatedAt.format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmm"))}.pdf"
+
+/** The cycle section's strings, resolved once per report. */
+internal fun cycleLabels(context: Context): ReportPdfCycleLabels = ReportPdfCycleLabels(
+    cycles = context.getString(R.string.report_cycle_cycles),
+    meanLength = context.getString(R.string.report_cycle_mean_length),
+    medianLength = context.getString(R.string.report_cycle_median_length),
+    sdLength = context.getString(R.string.report_cycle_sd_length),
+    range = context.getString(R.string.report_cycle_range),
+    meanBleeding = context.getString(R.string.report_cycle_mean_bleeding),
+    bleedingDays = context.getString(R.string.report_cycle_bleeding_days),
+    spottingDays = context.getString(R.string.report_cycle_spotting_days),
+    intermenstrualDays = context.getString(R.string.report_cycle_intermenstrual_days),
+    painOnBleeding = context.getString(R.string.report_cycle_pain_on_bleeding),
+    painOffBleeding = context.getString(R.string.report_cycle_pain_off_bleeding),
+    severePainDays = context.getString(R.string.report_cycle_severe_pain_days),
+    meanPain = context.getString(R.string.report_cycle_mean_pain),
+    start = context.getString(R.string.report_cycle_start),
+    end = context.getString(R.string.report_cycle_end),
+    length = context.getString(R.string.report_cycle_length),
+    peakFlow = context.getString(R.string.report_cycle_peak_flow),
+    painDays = context.getString(R.string.report_cycle_pain_days),
+    excluded = context.getString(R.string.cycle_variability_excluded_badge),
+    inProgress = context.getString(R.string.report_cycle_in_progress),
+    symptom = context.getString(R.string.report_cycle_symptom),
+    onBleeding = context.getString(R.string.report_cycle_on_bleeding),
+    offBleeding = context.getString(R.string.report_cycle_off_bleeding),
+    notes = context.getString(R.string.report_cycle_notes),
+    date = context.getString(R.string.report_pdf_workout_date),
+    disclaimer = context.getString(R.string.report_cycle_disclaimer),
+    flowLabels = mapOf(
+        CycleRecordValues.FLOW_LIGHT to context.getString(R.string.cycle_flow_light),
+        CycleRecordValues.FLOW_MEDIUM to context.getString(R.string.cycle_flow_medium),
+        CycleRecordValues.FLOW_HEAVY to context.getString(R.string.cycle_flow_heavy),
+    ),
+    flowUnknown = context.getString(R.string.cycle_bleeding_not_recorded),
+    symptomLabels = CycleSymptom.entries.associateWith { context.getString(cycleSymptomLabelRes(it)) },
+    exclusionReasons = CycleExclusionReason.entries.associateWith { context.getString(exclusionReasonLabelRes(it)) },
+)

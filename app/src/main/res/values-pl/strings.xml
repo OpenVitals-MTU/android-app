@@ -3291,4 +3291,41 @@
         <item quantity="many">%1$d cyklach</item>
         <item quantity="other">%1$d cyklu</item>
     </plurals>
+    <string name="report_pdf_caption_cycle">Zakończone cykle: %1$d · średnia długość %2$s dni</string>
+    <string name="report_cycle_cycles">Zakończone cykle</string>
+    <string name="report_cycle_mean_length">Średnia długość (dni)</string>
+    <string name="report_cycle_median_length">Mediana długości (dni)</string>
+    <string name="report_cycle_sd_length">Rozrzut, SD (dni)</string>
+    <string name="report_cycle_range">Od najkrótszego do najdłuższego (dni)</string>
+    <string name="report_cycle_mean_bleeding">Średnia dni krwawienia</string>
+    <string name="report_cycle_bleeding_days">Dni krwawienia</string>
+    <string name="report_cycle_spotting_days">Dni plamienia</string>
+    <string name="report_cycle_intermenstrual_days">Plamienie tydzień lub dłużej po początku</string>
+    <string name="report_cycle_pain_on_bleeding">Dni z bólem w dni krwawienia</string>
+    <string name="report_cycle_pain_off_bleeding">Dni z bólem poza krwawieniem</string>
+    <string name="report_cycle_severe_pain_days">Dni silnego bólu (4 lub 5)</string>
+    <string name="report_cycle_mean_pain">Średni ból (1 do 5)</string>
+    <string name="report_cycle_start">Początek</string>
+    <string name="report_cycle_end">Koniec</string>
+    <string name="report_cycle_length">Długość</string>
+    <string name="report_cycle_peak_flow">Najsilniejsze krwawienie</string>
+    <string name="report_cycle_pain_days">Dni z bólem</string>
+    <string name="report_cycle_in_progress">W toku</string>
+    <string name="report_cycle_symptom">Objaw</string>
+    <string name="report_cycle_on_bleeding">W dni krwawienia</string>
+    <string name="report_cycle_off_bleeding">Poza krwawieniem</string>
+    <string name="report_cycle_notes">Notatki</string>
+    <string name="report_cycle_disclaimer">Zapisane obserwacje i obliczone z nich wartości. To nie jest diagnoza.</string>
+    <string name="cycle_settings_backup_title">Kopia dziennika</string>
+    <string name="cycle_settings_backup_body">Plik JSON z dziennikami dnia, wykluczonymi cyklami, obszarami uwagi i przedziałem wiekowym. Import scala: dla dnia, który mają obie strony, zostaje nowsza edycja.</string>
+    <string name="cycle_settings_backup_export">Eksportuj dziennik</string>
+    <string name="cycle_settings_backup_import">Importuj dziennik</string>
+    <string name="cycle_journal_exported">Dziennik wyeksportowany</string>
+    <plurals name="cycle_journal_imported">
+        <item quantity="one">Zaimportowano %1$d dzień</item>
+        <item quantity="few">Zaimportowano %1$d dni</item>
+        <item quantity="many">Zaimportowano %1$d dni</item>
+        <item quantity="other">Zaimportowano %1$d dnia</item>
+    </plurals>
+    <string name="cycle_journal_import_failed">Nic nie zaimportowano: plik nie jest eksportem dziennika.</string>
 </resources>

@@ -3291,4 +3291,41 @@
         <item quantity="many">%1$d циклов</item>
         <item quantity="other">%1$d цикла</item>
     </plurals>
+    <string name="report_pdf_caption_cycle">Завершённых циклов: %1$d · средняя длина %2$s дн.</string>
+    <string name="report_cycle_cycles">Завершённые циклы</string>
+    <string name="report_cycle_mean_length">Средняя длина (дн.)</string>
+    <string name="report_cycle_median_length">Медиана длины (дн.)</string>
+    <string name="report_cycle_sd_length">Разброс, SD (дн.)</string>
+    <string name="report_cycle_range">От самого короткого до самого длинного (дн.)</string>
+    <string name="report_cycle_mean_bleeding">Среднее число дней с выделениями</string>
+    <string name="report_cycle_bleeding_days">Дни с выделениями</string>
+    <string name="report_cycle_spotting_days">Дни мажущих выделений</string>
+    <string name="report_cycle_intermenstrual_days">Мажущие выделения через неделю и позже после начала</string>
+    <string name="report_cycle_pain_on_bleeding">Дни с болью в дни выделений</string>
+    <string name="report_cycle_pain_off_bleeding">Дни с болью вне выделений</string>
+    <string name="report_cycle_severe_pain_days">Дни сильной боли (4 или 5)</string>
+    <string name="report_cycle_mean_pain">Средняя боль (от 1 до 5)</string>
+    <string name="report_cycle_start">Начало</string>
+    <string name="report_cycle_end">Конец</string>
+    <string name="report_cycle_length">Длина</string>
+    <string name="report_cycle_peak_flow">Максимальные выделения</string>
+    <string name="report_cycle_pain_days">Дни с болью</string>
+    <string name="report_cycle_in_progress">Идёт</string>
+    <string name="report_cycle_symptom">Симптом</string>
+    <string name="report_cycle_on_bleeding">В дни выделений</string>
+    <string name="report_cycle_off_bleeding">Вне выделений</string>
+    <string name="report_cycle_notes">Заметки</string>
+    <string name="report_cycle_disclaimer">Отмеченные наблюдения и рассчитанные по ним показатели. Это не диагноз.</string>
+    <string name="cycle_settings_backup_title">Резервная копия журнала</string>
+    <string name="cycle_settings_backup_body">Файл JSON с ежедневными записями, исключёнными циклами, областями внимания и возрастной группой. Импорт объединяет: для дня, который есть с обеих сторон, остаётся более новая правка.</string>
+    <string name="cycle_settings_backup_export">Экспортировать журнал</string>
+    <string name="cycle_settings_backup_import">Импортировать журнал</string>
+    <string name="cycle_journal_exported">Журнал экспортирован</string>
+    <plurals name="cycle_journal_imported">
+        <item quantity="one">Импортирован %1$d день</item>
+        <item quantity="few">Импортировано %1$d дня</item>
+        <item quantity="many">Импортировано %1$d дней</item>
+        <item quantity="other">Импортировано %1$d дня</item>
+    </plurals>
+    <string name="cycle_journal_import_failed">Ничего не импортировано: файл не является экспортом журнала.</string>
 </resources>
