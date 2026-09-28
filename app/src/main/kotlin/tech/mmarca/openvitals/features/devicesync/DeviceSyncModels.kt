@@ -164,10 +164,12 @@ enum class DeviceSyncCategory(val types: List<String>) {
             "CervicalMucusRecord",
             "IntermenstrualBleedingRecord",
             "SexualActivityRecord",
-            // The journal in Room: day logs, excluded cycles, contexts and age band.
+            // The journal in Room: day logs, excluded cycles, contexts and age band, the pill scheme and its taken days.
             CycleJournalSyncTypes.ENTRY,
             CycleJournalSyncTypes.EXCLUSION,
             CycleJournalSyncTypes.PROFILE,
+            CycleJournalSyncTypes.PILL_PLAN,
+            CycleJournalSyncTypes.PILL_INTAKE,
         ),
     ),
 }

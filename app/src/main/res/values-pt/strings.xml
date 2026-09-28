@@ -3309,4 +3309,26 @@
     <string name="cycle_choice_bbt_summary">A tua temperatura ao acordar e o que a pode ter alterado</string>
     <string name="cycle_choice_cervical_mucus_summary">Aspeto, quantidade e sensação</string>
     <string name="cycle_choice_full_day_log">Registar tudo para o dia</string>
+    <string name="cycle_pill_title">Pílula contracetiva</string>
+    <string name="cycle_pill_track">Registar a pílula</string>
+    <string name="cycle_pill_track_body">Mostra em que dia da embalagem estás. Desligado por predefinição.</string>
+    <string name="cycle_pill_active_days">Dias de toma</string>
+    <string name="cycle_pill_pause_days">Dias de pausa</string>
+    <string name="cycle_pill_scheme_hint">Esquemas comuns: 21 + 7, 24 + 4 ou 28 sem pausa.</string>
+    <string name="cycle_pill_pack_start">Primeiro dia de uma embalagem</string>
+    <string name="cycle_pill_reminder">Lembrete diário</string>
+    <string name="cycle_pill_reminder_body">Nos dias de toma, à hora que escolheres. Fica em silêncio quando marcas a de hoje como tomada. Mostra o mesmo que os lembretes do ciclo.</string>
+    <string name="cycle_pill_day_active">Dia %1$d de %2$d, toma</string>
+    <string name="cycle_pill_day_pause">Dia de pausa %1$d de %2$d</string>
+    <string name="cycle_pill_next_pack">A próxima embalagem começa a %1$s</string>
+    <string name="cycle_pill_before_start">A primeira embalagem começa a %1$s</string>
+    <string name="cycle_pill_taken_today">Tomada hoje</string>
+    <string name="cycle_pill_not_taken">Ainda não tomada</string>
+    <string name="cycle_pill_mark_taken">Marcar como tomada</string>
+    <string name="cycle_pill_undo_taken">Anular</string>
+    <string name="cycle_reminder_pill_title">Pílula</string>
+    <string name="cycle_reminder_pill_body">Hora de tomar a pílula. Dia %1$d de %2$d.</string>
+    <string name="cycle_reminder_pill_body_plain">Hora de tomar a pílula.</string>
+    <string name="cycle_reminder_pill_concealed_body">O teu lembrete agendado.</string>
+    <string name="cycle_reminder_pill_taken_action">Tomada</string>
 </resources>

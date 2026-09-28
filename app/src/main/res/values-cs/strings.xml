@@ -3339,4 +3339,26 @@
     <string name="cycle_choice_bbt_summary">Teplota po probuzení a co ji mohlo ovlivnit</string>
     <string name="cycle_choice_cervical_mucus_summary">Vzhled, množství a pocit</string>
     <string name="cycle_choice_full_day_log">Zaznamenat vše za den</string>
+    <string name="cycle_pill_title">Antikoncepční pilulka</string>
+    <string name="cycle_pill_track">Sledovat pilulku</string>
+    <string name="cycle_pill_track_body">Ukazuje, který den balení právě máte. Ve výchozím nastavení vypnuto.</string>
+    <string name="cycle_pill_active_days">Dny užívání</string>
+    <string name="cycle_pill_pause_days">Dny pauzy</string>
+    <string name="cycle_pill_scheme_hint">Běžná schémata: 21 + 7, 24 + 4 nebo 28 bez pauzy.</string>
+    <string name="cycle_pill_pack_start">První den balení</string>
+    <string name="cycle_pill_reminder">Denní připomínka</string>
+    <string name="cycle_pill_reminder_body">Ve dnech užívání ve zvolený čas. Ztichne, jakmile dnešní pilulku označíte jako užitou. Zobrazuje totéž co připomínky cyklu.</string>
+    <string name="cycle_pill_day_active">Den %1$d z %2$d, užívání</string>
+    <string name="cycle_pill_day_pause">Den pauzy %1$d z %2$d</string>
+    <string name="cycle_pill_next_pack">Další balení začíná %1$s</string>
+    <string name="cycle_pill_before_start">První balení začíná %1$s</string>
+    <string name="cycle_pill_taken_today">Dnes užita</string>
+    <string name="cycle_pill_not_taken">Zatím neužita</string>
+    <string name="cycle_pill_mark_taken">Označit jako užitou</string>
+    <string name="cycle_pill_undo_taken">Zpět</string>
+    <string name="cycle_reminder_pill_title">Pilulka</string>
+    <string name="cycle_reminder_pill_body">Čas na pilulku. Den %1$d z %2$d.</string>
+    <string name="cycle_reminder_pill_body_plain">Čas na pilulku.</string>
+    <string name="cycle_reminder_pill_concealed_body">Vaše naplánovaná připomínka.</string>
+    <string name="cycle_reminder_pill_taken_action">Užita</string>
 </resources>

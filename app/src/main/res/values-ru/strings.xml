@@ -3339,4 +3339,26 @@
     <string name="cycle_choice_bbt_summary">Температура после пробуждения и что могло на неё повлиять</string>
     <string name="cycle_choice_cervical_mucus_summary">Вид, количество и ощущение</string>
     <string name="cycle_choice_full_day_log">Записать всё за день</string>
+    <string name="cycle_pill_title">Противозачаточная таблетка</string>
+    <string name="cycle_pill_track">Отслеживать таблетки</string>
+    <string name="cycle_pill_track_body">Показывает, какой день упаковки идёт. По умолчанию выключено.</string>
+    <string name="cycle_pill_active_days">Дни приёма</string>
+    <string name="cycle_pill_pause_days">Дни перерыва</string>
+    <string name="cycle_pill_scheme_hint">Обычные схемы: 21 + 7, 24 + 4 или 28 без перерыва.</string>
+    <string name="cycle_pill_pack_start">Первый день упаковки</string>
+    <string name="cycle_pill_reminder">Ежедневное напоминание</string>
+    <string name="cycle_pill_reminder_body">В дни приёма в выбранное время. Замолкает, когда сегодняшняя отмечена как принятая. Показывает то же, что и напоминания цикла.</string>
+    <string name="cycle_pill_day_active">День %1$d из %2$d, приём</string>
+    <string name="cycle_pill_day_pause">День перерыва %1$d из %2$d</string>
+    <string name="cycle_pill_next_pack">Следующая упаковка начинается %1$s</string>
+    <string name="cycle_pill_before_start">Первая упаковка начинается %1$s</string>
+    <string name="cycle_pill_taken_today">Принята сегодня</string>
+    <string name="cycle_pill_not_taken">Ещё не принята</string>
+    <string name="cycle_pill_mark_taken">Отметить как принятую</string>
+    <string name="cycle_pill_undo_taken">Отменить</string>
+    <string name="cycle_reminder_pill_title">Таблетка</string>
+    <string name="cycle_reminder_pill_body">Пора принять таблетку. День %1$d из %2$d.</string>
+    <string name="cycle_reminder_pill_body_plain">Пора принять таблетку.</string>
+    <string name="cycle_reminder_pill_concealed_body">Ваше запланированное напоминание.</string>
+    <string name="cycle_reminder_pill_taken_action">Принята</string>
 </resources>

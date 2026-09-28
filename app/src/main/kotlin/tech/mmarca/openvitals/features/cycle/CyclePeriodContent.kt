@@ -35,6 +35,8 @@ internal data class CycleContentActions(
     val onOpenDayLog: (LocalDate) -> Unit = {},
     /** What to log today: the chooser. */
     val onChooseLog: () -> Unit = {},
+    /** Marks or unmarks today's pill. */
+    val onTogglePillTaken: (Boolean) -> Unit = {},
     val onStartPeriod: () -> Unit = {},
     val onAddPastPeriod: () -> Unit = {},
     val onOpenSettings: () -> Unit = {},
@@ -141,6 +143,16 @@ private fun LazyListScope.cycleTodaySections(
             onOpenDayLog = { if (today.hasLoggedSomething) actions.onOpenDayLog(today.today) else actions.onChooseLog() },
             modifier = sectionModifier,
         )
+    }
+    today.pill?.let { pill ->
+        item(key = "cycle-pill") {
+            CyclePillCard(
+                pill = pill,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onToggleTaken = actions.onTogglePillTaken,
+                modifier = sectionModifier,
+            )
+        }
     }
     if (today.bleeding !is DayBleedingChoice.Flow) {
         item(key = "cycle-start-period") {

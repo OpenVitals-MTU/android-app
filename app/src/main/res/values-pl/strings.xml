@@ -3339,4 +3339,26 @@
     <string name="cycle_choice_bbt_summary">Temperatura po przebudzeniu i co mogło ją zaburzyć</string>
     <string name="cycle_choice_cervical_mucus_summary">Wygląd, ilość i odczucie</string>
     <string name="cycle_choice_full_day_log">Zapisz wszystko z tego dnia</string>
+    <string name="cycle_pill_title">Pigułka antykoncepcyjna</string>
+    <string name="cycle_pill_track">Śledź pigułkę</string>
+    <string name="cycle_pill_track_body">Pokazuje, który dzień opakowania trwa. Domyślnie wyłączone.</string>
+    <string name="cycle_pill_active_days">Dni brania</string>
+    <string name="cycle_pill_pause_days">Dni przerwy</string>
+    <string name="cycle_pill_scheme_hint">Typowe schematy: 21 + 7, 24 + 4 lub 28 bez przerwy.</string>
+    <string name="cycle_pill_pack_start">Pierwszy dzień opakowania</string>
+    <string name="cycle_pill_reminder">Codzienne przypomnienie</string>
+    <string name="cycle_pill_reminder_body">W dni brania o wybranej godzinie. Milknie, gdy oznaczysz dzisiejszą jako wziętą. Pokazuje to samo co przypomnienia cyklu.</string>
+    <string name="cycle_pill_day_active">Dzień %1$d z %2$d, branie</string>
+    <string name="cycle_pill_day_pause">Dzień przerwy %1$d z %2$d</string>
+    <string name="cycle_pill_next_pack">Następne opakowanie zaczyna się %1$s</string>
+    <string name="cycle_pill_before_start">Pierwsze opakowanie zaczyna się %1$s</string>
+    <string name="cycle_pill_taken_today">Wzięta dzisiaj</string>
+    <string name="cycle_pill_not_taken">Jeszcze nie wzięta</string>
+    <string name="cycle_pill_mark_taken">Oznacz jako wziętą</string>
+    <string name="cycle_pill_undo_taken">Cofnij</string>
+    <string name="cycle_reminder_pill_title">Pigułka</string>
+    <string name="cycle_reminder_pill_body">Czas na pigułkę. Dzień %1$d z %2$d.</string>
+    <string name="cycle_reminder_pill_body_plain">Czas na pigułkę.</string>
+    <string name="cycle_reminder_pill_concealed_body">Twoje zaplanowane przypomnienie.</string>
+    <string name="cycle_reminder_pill_taken_action">Wzięta</string>
 </resources>

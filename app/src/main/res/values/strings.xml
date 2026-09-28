@@ -3216,6 +3216,28 @@
     <string name="cycle_reminder_window_body">Your next estimated period is a few days away.</string>
     <string name="cycle_reminder_late_title">Extended cycle</string>
     <string name="cycle_reminder_late_body">Your cycle is running past its estimated range. Remember to log your observations.</string>
+    <string name="cycle_pill_title">Contraceptive pill</string>
+    <string name="cycle_pill_track">Track the pill</string>
+    <string name="cycle_pill_track_body">Shows which day of the pack you are on. Off by default.</string>
+    <string name="cycle_pill_active_days">Days taking</string>
+    <string name="cycle_pill_pause_days">Days pausing</string>
+    <string name="cycle_pill_scheme_hint">Common schemes: 21 + 7, 24 + 4, or 28 with no pause.</string>
+    <string name="cycle_pill_pack_start">First day of a pack</string>
+    <string name="cycle_pill_reminder">Daily reminder</string>
+    <string name="cycle_pill_reminder_body">On taking days, at the time you choose. Quiet once today is marked as taken. Shows what the cycle reminders show.</string>
+    <string name="cycle_pill_day_active">Day %1$d of %2$d, taking</string>
+    <string name="cycle_pill_day_pause">Pause day %1$d of %2$d</string>
+    <string name="cycle_pill_next_pack">Next pack starts %1$s</string>
+    <string name="cycle_pill_before_start">First pack starts %1$s</string>
+    <string name="cycle_pill_taken_today">Taken today</string>
+    <string name="cycle_pill_not_taken">Not taken yet</string>
+    <string name="cycle_pill_mark_taken">Mark as taken</string>
+    <string name="cycle_pill_undo_taken">Undo</string>
+    <string name="cycle_reminder_pill_title">Pill</string>
+    <string name="cycle_reminder_pill_body">Time to take your pill. Day %1$d of %2$d.</string>
+    <string name="cycle_reminder_pill_body_plain">Time to take your pill.</string>
+    <string name="cycle_reminder_pill_concealed_body">Your scheduled reminder.</string>
+    <string name="cycle_reminder_pill_taken_action">Taken</string>
 
     <!-- Cycle home-screen widget -->
     <string name="widget_cycle_name">Cycle</string>

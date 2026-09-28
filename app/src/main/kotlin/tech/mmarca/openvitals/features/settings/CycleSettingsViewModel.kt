@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,11 +17,13 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
 import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
 import tech.mmarca.openvitals.data.repository.contract.CyclePreferences
+import tech.mmarca.openvitals.data.repository.contract.PillIntakeRepository
 import tech.mmarca.openvitals.domain.cycle.AgeBand
 import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
 import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.CycleReminderConfig
 import tech.mmarca.openvitals.domain.model.CycleReminderVisibility
+import tech.mmarca.openvitals.domain.model.PillPlan
 import tech.mmarca.openvitals.features.cycle.cycleJournalExportJson
 import tech.mmarca.openvitals.features.cycle.parseCycleJournalExport
 import tech.mmarca.openvitals.features.cycle.reminders.CycleReminderController
@@ -40,19 +43,21 @@ data class CycleSettingsUiState(
     /** The band the body profile's birth year gives, or null when none is set. */
     val derivedAgeBand: AgeBand? = null,
     val reminders: CycleReminderConfig = CycleReminderConfig(),
+    val pill: PillPlan = PillPlan(),
     val hasNotificationPermission: Boolean = true,
     val isDeletingJournal: Boolean = false,
     val backupMessage: CycleBackupMessage? = null,
     val importedDays: Int = 0,
 )
 
-/** The cycle section: declared contexts, the age band, the reminders, and the journal's off switch. */
+/** The cycle section: declared contexts, the age band, the reminders, the pill scheme, and the journal's off switch. */
 @HiltViewModel
 class CycleSettingsViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val preferences: CyclePreferences,
     private val bodyProfilePreferences: BodyProfilePreferences,
     private val journal: CycleJournalRepository,
+    private val pillIntakes: PillIntakeRepository,
     private val reminders: CycleReminderSettings,
     private val homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler? = null,
 ) : ViewModel() {
@@ -106,6 +111,19 @@ class CycleSettingsViewModel @Inject constructor(
 
     fun setCustomBody(body: String) = updateReminders { copy(customBody = body) }
 
+    /** Turning the pill on without a pack start counts today as one. */
+    fun setPillEnabled(enabled: Boolean) = updatePill { copy(enabled = enabled, packStart = packStart ?: LocalDate.now()) }
+
+    fun setPillActiveDays(days: Int) = updatePill { copy(activeDays = days) }
+
+    fun setPillPauseDays(days: Int) = updatePill { copy(pauseDays = days) }
+
+    fun setPillPackStart(date: LocalDate) = updatePill { copy(packStart = date) }
+
+    fun setPillReminder(enabled: Boolean) = updatePill { copy(reminderEnabled = enabled) }
+
+    fun setPillReminderTime(time: LocalTime) = updatePill { copy(reminderTime = time) }
+
     /** The whole journal as the backup file's text. */
     suspend fun exportJson(): String = cycleJournalExportJson(
         entries = journal.allEntries(),
@@ -158,9 +176,12 @@ class CycleSettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(isDeletingJournal = true)
         viewModelScope.launch {
             runCatching { journal.deleteAll() }
+            runCatching { pillIntakes.deleteAll() }
             // Disabled first: the controller cancels the alarms and any posted notification.
             reminders.updateConfig(CycleReminderConfig())
             preferences.clearCyclePreferences()
+            // The pill alarm follows the plan just cleared.
+            reminders.applyStoredConfig()
             homeWidgetRefreshScheduler?.refreshNow()
             _uiState.value = snapshot()
         }
@@ -180,10 +201,19 @@ class CycleSettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(reminders = config)
     }
 
+    /** Every edit is stamped, so the newer scheme wins when two phones sync. */
+    private inline fun updatePill(transform: PillPlan.() -> PillPlan) {
+        val plan = _uiState.value.pill.transform().copy(updatedAt = Instant.now()).normalized()
+        preferences.setPillPlan(plan)
+        reminders.applyStoredConfig()
+        _uiState.value = _uiState.value.copy(pill = plan)
+    }
+
     private fun snapshot() = CycleSettingsUiState(
         profile = preferences.cycleTrackingProfile(),
         derivedAgeBand = bodyProfilePreferences.bodyProfile().ageYears()?.let(AgeBand::forAge),
         reminders = reminders.config(),
+        pill = preferences.pillPlan(),
         hasNotificationPermission = CycleReminderController.hasNotificationPermission(context),
     )
 }

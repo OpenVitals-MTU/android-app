@@ -5,12 +5,14 @@ import java.time.LocalTime
 import java.time.ZonedDateTime
 import tech.mmarca.openvitals.domain.cycle.CycleEstimateResult
 import tech.mmarca.openvitals.domain.model.CycleReminderConfig
+import tech.mmarca.openvitals.domain.model.PillPlan
 
-/** The three cycle reminders. The ordinal is the alarm request code offset. */
+/** The cycle reminders and the pill. The ordinal is the alarm request code offset, so new ones go last. */
 enum class CycleReminderType {
     DAILY_CHECK_IN,
     PERIOD_WINDOW,
     LATE_CYCLE,
+    PILL,
 }
 
 /** Pure timing rules. Null means no alarm. */
@@ -36,6 +38,15 @@ internal object CycleReminderSchedule {
         val latest = estimate.estimateOrNull?.latestDate ?: return null
         return latest.plusDays(config.lateCycleGraceDays.toLong()).atTime(LateCycleTime).atZone(now.zone)
             .takeIf { it.isAfter(now) }
+    }
+
+    /** Today at the set time on a taking day, unless it passed or today is taken; else the next taking day. Null without a pack start. */
+    fun nextPill(now: ZonedDateTime, plan: PillPlan, takenToday: Boolean): ZonedDateTime? {
+        val today = now.toLocalDate()
+        val todayAt = today.atTime(plan.reminderTime).atZone(now.zone)
+        if (plan.dayAt(today)?.isActive == true && !takenToday && todayAt.isAfter(now)) return todayAt
+        val next = plan.nextActiveDay(today.plusDays(1)) ?: return null
+        return next.atTime(plan.reminderTime).atZone(now.zone)
     }
 
     fun LocalDate.isToday(now: ZonedDateTime): Boolean = this == now.toLocalDate()

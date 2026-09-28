@@ -18,7 +18,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.contract.FakeCycleJournalRepository
+import tech.mmarca.openvitals.data.repository.contract.FakePillIntakeRepository
 import tech.mmarca.openvitals.data.repository.contract.FakePreferences
+import tech.mmarca.openvitals.domain.model.PillPlan
 import tech.mmarca.openvitals.domain.cycle.AgeBand
 import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
 import tech.mmarca.openvitals.domain.cycle.CycleSymptom
@@ -145,6 +147,54 @@ class CycleJournalSyncStoreTest {
     }
 
     @Test
+    fun `the pill scheme travels once touched, the newer edit wins, and the reminder stays local`() = runTest {
+        val edited = PillPlan(
+            enabled = true,
+            activeDays = 24,
+            pauseDays = 4,
+            packStart = day,
+            reminderEnabled = false,
+            updatedAt = Instant.parse("2026-07-10T20:00:00Z"),
+        )
+        assertNull(pillPlanItem(PillPlan()))
+        val item = pillPlanItem(edited)!!
+        assertEquals(pillPlanKey(edited), pillPlanKey(edited.copy(updatedAt = Instant.EPOCH, reminderEnabled = true)))
+
+        val blank = FakePreferences()
+        val blankStore = store(FakeCycleJournalRepository(), blank)
+        assertTrue(blankStore.accepts(item))
+        assertEquals(setOf(item.key), blankStore.writeItems(listOf(item)))
+        val landed = blank.pillPlan()
+        assertEquals(24, landed.activeDays)
+        assertEquals(4, landed.pauseDays)
+        assertEquals(day, landed.packStart)
+        assertEquals(edited.updatedAt, landed.updatedAt)
+        // This phone's own reminder switch, not the sender's.
+        assertTrue(landed.reminderEnabled)
+
+        val newer = FakePreferences().also {
+            it.setPillPlan(PillPlan(enabled = true, packStart = day, updatedAt = Instant.parse("2026-07-11T08:00:00Z")))
+        }
+        assertFalse(store(FakeCycleJournalRepository(), newer).accepts(item))
+    }
+
+    @Test
+    fun `taken days travel inside the window and merge as a union`() = runTest {
+        val outside = LocalDate.of(2025, 12, 1)
+        val mine = FakePillIntakeRepository().apply { taken += listOf(day, outside) }
+        val sender = store(FakeCycleJournalRepository(), pillIntakes = mine)
+        assertEquals(listOf(pillIntakeKey(day)), sender.readKeys(setOf(CycleJournalSyncTypes.PILL_INTAKE)).toList())
+
+        val theirs = FakePillIntakeRepository().apply { taken += day.minusDays(1) }
+        val receiver = store(FakeCycleJournalRepository(), pillIntakes = theirs)
+        val item = pillIntakeItem(day)
+        assertTrue(receiver.accepts(item))
+        assertFalse(receiver.accepts(pillIntakeItem(outside)))
+        assertEquals(setOf(item.key), receiver.writeItems(listOf(item)))
+        assertEquals(setOf(day.minusDays(1), day), theirs.taken)
+    }
+
+    @Test
     fun `an unknown type is refused and a broken payload is skipped`() = runTest {
         val store = store(FakeCycleJournalRepository())
         val broken = SyncItem(key = "k", recordType = CycleJournalSyncTypes.EXCLUSION, payload = "{".toByteArray())
@@ -153,6 +203,9 @@ class CycleJournalSyncStoreTest {
         assertTrue(store.writeItems(listOf(broken)).isEmpty())
     }
 
-    private fun store(journal: FakeCycleJournalRepository, preferences: FakePreferences = FakePreferences()) =
-        CycleJournalSyncStore(journal, preferences, windowStart, windowEnd, zone)
+    private fun store(
+        journal: FakeCycleJournalRepository,
+        preferences: FakePreferences = FakePreferences(),
+        pillIntakes: FakePillIntakeRepository = FakePillIntakeRepository(),
+    ) = CycleJournalSyncStore(journal, preferences, pillIntakes, windowStart, windowEnd, zone)
 }

@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
+import java.time.LocalDate
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -11,6 +12,11 @@ class CycleReminderReceiver : BroadcastReceiver() {
     @Inject lateinit var controller: CycleReminderController
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == ActionPillTaken) {
+            val pendingResult = goAsync()
+            controller.markPillTaken(LocalDate.now()) { pendingResult.finish() }
+            return
+        }
         val type = intent.getStringExtra(ExtraType)?.let { name -> CycleReminderType.entries.firstOrNull { it.name == name } }
             ?: return
         val pendingResult = goAsync()
@@ -19,6 +25,9 @@ class CycleReminderReceiver : BroadcastReceiver() {
 
     companion object {
         const val ExtraType = "tech.mmarca.openvitals.extra.CYCLE_REMINDER_TYPE"
+
+        /** The pill notification's Taken action. */
+        const val ActionPillTaken = "tech.mmarca.openvitals.action.CYCLE_PILL_TAKEN"
     }
 }
 

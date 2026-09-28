@@ -16,6 +16,7 @@ import tech.mmarca.openvitals.MainActivity
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.CycleReminderConfig
 import tech.mmarca.openvitals.domain.model.CycleReminderVisibility
+import tech.mmarca.openvitals.domain.model.PillDay
 
 /**
  * Posts a cycle reminder. The lock-screen version is always neutral; what an
@@ -29,18 +30,24 @@ class CycleReminderNotificationService @Inject constructor(
         createNotificationChannel()
     }
 
+    /** [pillDay] is today's place in the scheme, for the pill reminder's descriptive text. */
     @SuppressLint("MissingPermission")
-    fun show(type: CycleReminderType, config: CycleReminderConfig) {
+    fun show(type: CycleReminderType, config: CycleReminderConfig, pillDay: PillDay? = null) {
         if (!CycleReminderController.hasNotificationPermission(context)) return
-        NotificationManagerCompat.from(context).notify(notificationId(type), build(type, config))
+        NotificationManagerCompat.from(context).notify(notificationId(type), build(type, config, pillDay))
     }
 
-    fun cancelAll() {
-        CycleReminderType.entries.forEach { NotificationManagerCompat.from(context).cancel(notificationId(it)) }
+    fun cancel(type: CycleReminderType) {
+        NotificationManagerCompat.from(context).cancel(notificationId(type))
     }
 
-    private fun build(type: CycleReminderType, config: CycleReminderConfig): Notification {
-        val (title, body) = content(type, config)
+    /** The three behind the master switch. The pill reminder is cancelled on its own. */
+    fun cancelCycleReminders() {
+        CycleReminderType.entries.forEach { if (it != CycleReminderType.PILL) cancel(it) }
+    }
+
+    private fun build(type: CycleReminderType, config: CycleReminderConfig, pillDay: PillDay?): Notification {
+        val (title, body) = content(type, config, pillDay)
         val public = NotificationCompat.Builder(context, ChannelId)
             .setSmallIcon(R.drawable.ic_stat_cycle_reminder)
             .setContentTitle(context.getString(R.string.cycle_reminder_public_title))
@@ -58,27 +65,52 @@ class CycleReminderNotificationService @Inject constructor(
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(public)
             .setColor(CycleNotificationColor)
+            .apply {
+                if (type == CycleReminderType.PILL) {
+                    addAction(0, context.getString(R.string.cycle_reminder_pill_taken_action), pillTakenPendingIntent())
+                }
+            }
             .build()
     }
 
-    private fun content(type: CycleReminderType, config: CycleReminderConfig): Pair<String, String> = when (config.visibility) {
-        CycleReminderVisibility.CONCEALED -> concealed()
-        CycleReminderVisibility.CUSTOM -> Pair(
-            config.customTitle.ifBlank { concealed().first },
-            config.customBody.ifBlank { concealed().second },
-        )
-        CycleReminderVisibility.DESCRIPTIVE -> when (type) {
-            CycleReminderType.DAILY_CHECK_IN ->
-                context.getString(R.string.cycle_reminder_daily_title) to context.getString(R.string.cycle_reminder_daily_body)
-            CycleReminderType.PERIOD_WINDOW ->
-                context.getString(R.string.cycle_reminder_window_title) to context.getString(R.string.cycle_reminder_window_body)
-            CycleReminderType.LATE_CYCLE ->
-                context.getString(R.string.cycle_reminder_late_title) to context.getString(R.string.cycle_reminder_late_body)
+    private fun content(type: CycleReminderType, config: CycleReminderConfig, pillDay: PillDay?): Pair<String, String> =
+        when (config.visibility) {
+            CycleReminderVisibility.CONCEALED -> concealed(type)
+            CycleReminderVisibility.CUSTOM -> Pair(
+                config.customTitle.ifBlank { concealed(type).first },
+                config.customBody.ifBlank { concealed(type).second },
+            )
+            CycleReminderVisibility.DESCRIPTIVE -> when (type) {
+                CycleReminderType.DAILY_CHECK_IN ->
+                    context.getString(R.string.cycle_reminder_daily_title) to context.getString(R.string.cycle_reminder_daily_body)
+                CycleReminderType.PERIOD_WINDOW ->
+                    context.getString(R.string.cycle_reminder_window_title) to context.getString(R.string.cycle_reminder_window_body)
+                CycleReminderType.LATE_CYCLE ->
+                    context.getString(R.string.cycle_reminder_late_title) to context.getString(R.string.cycle_reminder_late_body)
+                CycleReminderType.PILL -> context.getString(R.string.cycle_reminder_pill_title) to pillBody(pillDay)
+            }
         }
+
+    private fun pillBody(pillDay: PillDay?): String =
+        if (pillDay == null) {
+            context.getString(R.string.cycle_reminder_pill_body_plain)
+        } else {
+            context.getString(R.string.cycle_reminder_pill_body, pillDay.dayOfPhase, pillDay.phaseLength)
+        }
+
+    /** Neutral copy. The pill's version says nothing about a daily log either. */
+    private fun concealed(type: CycleReminderType): Pair<String, String> {
+        val body = if (type == CycleReminderType.PILL) R.string.cycle_reminder_pill_concealed_body else R.string.cycle_reminder_concealed_body
+        return context.getString(R.string.cycle_reminder_concealed_title) to context.getString(body)
     }
 
-    private fun concealed(): Pair<String, String> =
-        context.getString(R.string.cycle_reminder_concealed_title) to context.getString(R.string.cycle_reminder_concealed_body)
+    private fun pillTakenPendingIntent(): PendingIntent =
+        PendingIntent.getBroadcast(
+            context,
+            RequestPillTaken,
+            Intent(context, CycleReminderReceiver::class.java).setAction(CycleReminderReceiver.ActionPillTaken),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
 
     private fun openAppPendingIntent(): PendingIntent =
         PendingIntent.getActivity(
@@ -110,6 +142,7 @@ class CycleReminderNotificationService @Inject constructor(
         const val ChannelId = "cycle_reminders"
         const val NotificationIdBase = 4120
         const val RequestOpenApp = 23
+        const val RequestPillTaken = 24
         val CycleNotificationColor = 0xFFBE5C85.toInt()
     }
 }

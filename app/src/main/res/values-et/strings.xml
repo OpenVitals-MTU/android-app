@@ -3291,4 +3291,26 @@
     <string name="cycle_choice_bbt_summary">Sinu ärkamisaegne kehatemperatuur ja mis võis seda mõjutada</string>
     <string name="cycle_choice_cervical_mucus_summary">Välimus, kogus ja tunne</string>
     <string name="cycle_choice_full_day_log">Pane kirja kogu päev</string>
+    <string name="cycle_pill_title">Rasestumisvastane tablett</string>
+    <string name="cycle_pill_track">Jälgi tabletti</string>
+    <string name="cycle_pill_track_body">Näitab, mitmes pakendi päev käib. Vaikimisi väljas.</string>
+    <string name="cycle_pill_active_days">Võtmispäevad</string>
+    <string name="cycle_pill_pause_days">Pausipäevad</string>
+    <string name="cycle_pill_scheme_hint">Levinud skeemid: 21 + 7, 24 + 4 või 28 ilma pausita.</string>
+    <string name="cycle_pill_pack_start">Pakendi esimene päev</string>
+    <string name="cycle_pill_reminder">Igapäevane meeldetuletus</string>
+    <string name="cycle_pill_reminder_body">Võtmispäevadel valitud kellaajal. Vaikib, kui tänane on võetuks märgitud. Näitab sama, mida tsükli meeldetuletused.</string>
+    <string name="cycle_pill_day_active">Päev %1$d/%2$d, võtmine</string>
+    <string name="cycle_pill_day_pause">Pausipäev %1$d/%2$d</string>
+    <string name="cycle_pill_next_pack">Järgmine pakend algab %1$s</string>
+    <string name="cycle_pill_before_start">Esimene pakend algab %1$s</string>
+    <string name="cycle_pill_taken_today">Täna võetud</string>
+    <string name="cycle_pill_not_taken">Veel võtmata</string>
+    <string name="cycle_pill_mark_taken">Märgi võetuks</string>
+    <string name="cycle_pill_undo_taken">Võta tagasi</string>
+    <string name="cycle_reminder_pill_title">Tablett</string>
+    <string name="cycle_reminder_pill_body">Aeg tablett võtta. Päev %1$d/%2$d.</string>
+    <string name="cycle_reminder_pill_body_plain">Aeg tablett võtta.</string>
+    <string name="cycle_reminder_pill_concealed_body">Sinu ajastatud meeldetuletus.</string>
+    <string name="cycle_reminder_pill_taken_action">Võetud</string>
 </resources>

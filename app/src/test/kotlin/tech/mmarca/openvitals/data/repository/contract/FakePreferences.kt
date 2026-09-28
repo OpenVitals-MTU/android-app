@@ -9,6 +9,7 @@ import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.domain.model.CycleReminderConfig
+import tech.mmarca.openvitals.domain.model.PillPlan
 import tech.mmarca.openvitals.domain.model.MindfulnessBellSound
 import tech.mmarca.openvitals.domain.model.MindfulnessTimerConfig
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
@@ -245,9 +246,18 @@ class FakePreferences(
         cycleReminders = config.normalized()
     }
 
+    private var pill = PillPlan()
+
+    override fun pillPlan(): PillPlan = pill
+
+    override fun setPillPlan(plan: PillPlan) {
+        pill = plan.normalized()
+    }
+
     override fun clearCyclePreferences() {
         cycleProfile.value = CycleTrackingProfile()
         cycleReminders = CycleReminderConfig()
+        pill = PillPlan()
     }
 
     /** How often the current policy was accepted. */

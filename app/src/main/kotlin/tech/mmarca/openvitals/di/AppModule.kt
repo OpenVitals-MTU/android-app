@@ -16,6 +16,7 @@ import tech.mmarca.openvitals.data.local.OpenVitalsDatabase
 import tech.mmarca.openvitals.data.local.beverage.BeverageDao
 import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyTimelineDao
 import tech.mmarca.openvitals.data.local.cycle.CycleJournalDao
+import tech.mmarca.openvitals.data.local.cycle.PillIntakeDao
 import tech.mmarca.openvitals.data.local.food.FoodDao
 import tech.mmarca.openvitals.data.local.garmin.GarminSleepMinuteDao
 import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
@@ -61,6 +62,11 @@ object AppModule {
     @Singleton
     fun provideCycleJournalDao(database: OpenVitalsDatabase): CycleJournalDao =
         database.cycleJournalDao()
+
+    @Provides
+    @Singleton
+    fun providePillIntakeDao(database: OpenVitalsDatabase): PillIntakeDao =
+        database.pillIntakeDao()
 
     @Provides
     @Singleton

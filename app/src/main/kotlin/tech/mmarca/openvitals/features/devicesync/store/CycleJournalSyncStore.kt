@@ -14,32 +14,38 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
 import tech.mmarca.openvitals.data.repository.contract.CyclePreferences
+import tech.mmarca.openvitals.data.repository.contract.PillIntakeRepository
 import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
 import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
+import tech.mmarca.openvitals.domain.model.PillPlan
 import tech.mmarca.openvitals.features.cycle.CycleJournalJson
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncItem
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncRecordStore
 
-/** The wire type names of the cycle journal. It lives in Room; Health Connect has no record type for it. */
+/** The wire type names of the cycle journal and the pill. They live in Room and preferences; Health Connect has no record type for them. */
 object CycleJournalSyncTypes {
     const val ENTRY = "CycleJournalEntry"
     const val EXCLUSION = "CycleExclusion"
     const val PROFILE = "CycleTrackingProfile"
-    val all: List<String> = listOf(ENTRY, EXCLUSION, PROFILE)
+    const val PILL_PLAN = "PillPlan"
+    const val PILL_INTAKE = "PillIntake"
+    val all: List<String> = listOf(ENTRY, EXCLUSION, PROFILE, PILL_PLAN, PILL_INTAKE)
 }
 
 /**
  * The cycle journal's [SyncRecordStore]: one item per day log, one per
- * excluded cycle, and one for the declared contexts and age band. Keys are
- * content fingerprints, so an unchanged day is "already present". A day
- * edited on both phones keeps the later edit. The contexts and age band
- * move only to a phone that has declared none. Reminder settings stay
- * local: they are alarms on one phone.
+ * excluded cycle, one for the declared contexts and age band, one for the
+ * pill scheme and one per day the pill was taken. Keys are content
+ * fingerprints, so an unchanged day is "already present". A day or a pill
+ * scheme edited on both phones keeps the later edit; taken days merge as a
+ * union. The contexts and age band move only to a phone that has declared
+ * none. Reminder settings stay local: they are alarms on one phone.
  */
 class CycleJournalSyncStore(
     private val journal: CycleJournalRepository,
     private val preferences: CyclePreferences,
+    private val pillIntakes: PillIntakeRepository,
     private val windowStart: Instant,
     private val windowEnd: Instant,
     private val zone: ZoneId = ZoneId.systemDefault(),
@@ -61,6 +67,12 @@ class CycleJournalSyncStore(
         if (CycleJournalSyncTypes.PROFILE in types) {
             profileItem(preferences.cycleTrackingProfile())?.let { emit(it.key) }
         }
+        if (CycleJournalSyncTypes.PILL_PLAN in types) {
+            pillPlanItem(preferences.pillPlan())?.let { emit(it.key) }
+        }
+        if (CycleJournalSyncTypes.PILL_INTAKE in types) {
+            intakesInWindow().forEach { emit(pillIntakeKey(it)) }
+        }
     }
 
     override fun readItemChunks(types: Set<String>, chunkSize: Int): Flow<List<SyncItem>> = flow {
@@ -70,17 +82,21 @@ class CycleJournalSyncStore(
                 exclusionsInWindow().forEach { (start, reason) -> add(exclusionItem(start, reason)) }
             }
             if (CycleJournalSyncTypes.PROFILE in types) profileItem(preferences.cycleTrackingProfile())?.let { add(it) }
+            if (CycleJournalSyncTypes.PILL_PLAN in types) pillPlanItem(preferences.pillPlan())?.let { add(it) }
+            if (CycleJournalSyncTypes.PILL_INTAKE in types) intakesInWindow().forEach { add(pillIntakeItem(it)) }
         }
         items.chunked(chunkSize.coerceAtLeast(1)).forEach { emit(it) }
     }
 
-    /** The window this phone's user chose, and for a day log, the newer edit. */
+    /** The window this phone's user chose, and for a day log or the pill scheme, the newer edit. */
     override fun accepts(item: SyncItem): Boolean = when (item.recordType) {
         CycleJournalSyncTypes.ENTRY -> decodeEntry(item.payload)?.let { entry ->
             inWindow(entry.date) && localUpdatedAt[entry.date]?.let { entry.updatedAt.isAfter(it) } ?: true
         } ?: true
         CycleJournalSyncTypes.EXCLUSION -> decodeExclusion(item.payload)?.let { inWindow(it.first) } ?: true
         CycleJournalSyncTypes.PROFILE -> preferences.cycleTrackingProfile().let { it.contexts.isEmpty() && it.ageBand == null }
+        CycleJournalSyncTypes.PILL_PLAN -> decodePillPlan(item.payload)?.let { it.updatedAt.isAfter(preferences.pillPlan().updatedAt) } ?: true
+        CycleJournalSyncTypes.PILL_INTAKE -> decodePillIntake(item.payload)?.let { inWindow(it) } ?: true
         else -> false
     }
 
@@ -103,6 +119,24 @@ class CycleJournalSyncStore(
                         preferences.setCycleTrackingProfile(profile)
                         true
                     } ?: false
+                    CycleJournalSyncTypes.PILL_PLAN -> decodePillPlan(item.payload)?.let { incoming ->
+                        // The scheme travels; this phone keeps its own reminder switch and time.
+                        val local = preferences.pillPlan()
+                        preferences.setPillPlan(
+                            local.copy(
+                                enabled = incoming.enabled,
+                                activeDays = incoming.activeDays,
+                                pauseDays = incoming.pauseDays,
+                                packStart = incoming.packStart,
+                                updatedAt = incoming.updatedAt,
+                            ),
+                        )
+                        true
+                    } ?: false
+                    CycleJournalSyncTypes.PILL_INTAKE -> decodePillIntake(item.payload)?.let { date ->
+                        pillIntakes.setTaken(date, true)
+                        true
+                    } ?: false
                     else -> false
                 }
                 if (landed) written += item.key else Log.w(TAG, "skipping undecodable ${item.recordType}")
@@ -120,6 +154,11 @@ class CycleJournalSyncStore(
 
     private suspend fun exclusionsInWindow(): List<Pair<LocalDate, CycleExclusionReason?>> =
         journal.exclusions().entries.filter { inWindow(it.key) }.map { it.key to it.value }.sortedBy { it.first }
+
+    private suspend fun intakesInWindow(): List<LocalDate> =
+        pillIntakes.takenDays(windowStart.atZone(zone).toLocalDate(), windowEnd.plus(WindowEndSlack).atZone(zone).toLocalDate())
+            .filter { inWindow(it) }
+            .sorted()
 
     private fun inWindow(date: LocalDate): Boolean {
         val start = date.atStartOfDay(zone).toInstant()
@@ -163,6 +202,21 @@ internal fun exclusionKey(start: LocalDate, reason: CycleExclusionReason?): Stri
 internal fun profileKey(profile: CycleTrackingProfile): String =
     fingerprintOf(listOf("profile", profile.contexts.map { it.id }.sorted(), profile.ageBand?.id))
 
+/** A scheme the user never touched is nothing to send. */
+internal fun pillPlanItem(plan: PillPlan): SyncItem? {
+    if (plan.updatedAt == Instant.EPOCH) return null
+    return SyncItem(key = pillPlanKey(plan), recordType = CycleJournalSyncTypes.PILL_PLAN, payload = encodePillPlan(plan))
+}
+
+internal fun pillIntakeItem(date: LocalDate): SyncItem =
+    SyncItem(key = pillIntakeKey(date), recordType = CycleJournalSyncTypes.PILL_INTAKE, payload = encodePillIntake(date))
+
+/** The scheme, not the edit time or the reminder: the same scheme on both phones is one record. */
+internal fun pillPlanKey(plan: PillPlan): String =
+    fingerprintOf(listOf("pillplan", plan.enabled, plan.activeDays, plan.pauseDays, plan.packStart))
+
+internal fun pillIntakeKey(date: LocalDate): String = fingerprintOf(listOf("pill", date))
+
 /** The same `sync_<hex>` shape Health Connect records use, so one report reads alike. */
 private fun fingerprintOf(parts: List<Any?>): String {
     val joined = parts.joinToString("|") { it?.toString() ?: "" }
@@ -199,3 +253,11 @@ internal fun decodeExclusion(payload: ByteArray): Pair<LocalDate, CycleExclusion
 internal fun encodeProfile(profile: CycleTrackingProfile): ByteArray = bytes(CycleJournalJson.profile(profile))
 
 internal fun decodeProfile(payload: ByteArray): CycleTrackingProfile? = objectOrNull(payload)?.let(CycleJournalJson::profileOrNull)
+
+internal fun encodePillPlan(plan: PillPlan): ByteArray = bytes(CycleJournalJson.pillPlan(plan))
+
+internal fun decodePillPlan(payload: ByteArray): PillPlan? = objectOrNull(payload)?.let(CycleJournalJson::pillPlanOrNull)
+
+internal fun encodePillIntake(date: LocalDate): ByteArray = bytes(CycleJournalJson.pillIntake(date))
+
+internal fun decodePillIntake(payload: ByteArray): LocalDate? = objectOrNull(payload)?.let(CycleJournalJson::pillIntakeOrNull)

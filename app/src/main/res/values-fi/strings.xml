@@ -3291,4 +3291,26 @@
     <string name="cycle_choice_bbt_summary">Heräämislämpösi ja mikä on voinut häiritä sitä</string>
     <string name="cycle_choice_cervical_mucus_summary">Ulkonäkö, määrä ja tuntemus</string>
     <string name="cycle_choice_full_day_log">Kirjaa koko päivä</string>
+    <string name="cycle_pill_title">Ehkäisypilleri</string>
+    <string name="cycle_pill_track">Seuraa pilleriä</string>
+    <string name="cycle_pill_track_body">Näyttää, monesko liuskan päivä on menossa. Oletuksena pois päältä.</string>
+    <string name="cycle_pill_active_days">Ottopäivät</string>
+    <string name="cycle_pill_pause_days">Taukopäivät</string>
+    <string name="cycle_pill_scheme_hint">Yleiset rytmit: 21 + 7, 24 + 4 tai 28 ilman taukoa.</string>
+    <string name="cycle_pill_pack_start">Liuskan ensimmäinen päivä</string>
+    <string name="cycle_pill_reminder">Päivittäinen muistutus</string>
+    <string name="cycle_pill_reminder_body">Ottopäivinä valitsemaasi aikaan. Hiljenee, kun tämän päivän pilleri on merkitty otetuksi. Näyttää saman kuin kiertomuistutukset.</string>
+    <string name="cycle_pill_day_active">Päivä %1$d/%2$d, otto</string>
+    <string name="cycle_pill_day_pause">Taukopäivä %1$d/%2$d</string>
+    <string name="cycle_pill_next_pack">Seuraava liuska alkaa %1$s</string>
+    <string name="cycle_pill_before_start">Ensimmäinen liuska alkaa %1$s</string>
+    <string name="cycle_pill_taken_today">Otettu tänään</string>
+    <string name="cycle_pill_not_taken">Ei vielä otettu</string>
+    <string name="cycle_pill_mark_taken">Merkitse otetuksi</string>
+    <string name="cycle_pill_undo_taken">Kumoa</string>
+    <string name="cycle_reminder_pill_title">Pilleri</string>
+    <string name="cycle_reminder_pill_body">Aika ottaa pilleri. Päivä %1$d/%2$d.</string>
+    <string name="cycle_reminder_pill_body_plain">Aika ottaa pilleri.</string>
+    <string name="cycle_reminder_pill_concealed_body">Ajastamasi muistutus.</string>
+    <string name="cycle_reminder_pill_taken_action">Otettu</string>
 </resources>

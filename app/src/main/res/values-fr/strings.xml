@@ -3314,4 +3314,26 @@
     <string name="cycle_choice_bbt_summary">Votre température au réveil et ce qui a pu la perturber</string>
     <string name="cycle_choice_cervical_mucus_summary">Aspect, quantité et sensation</string>
     <string name="cycle_choice_full_day_log">Tout noter pour la journée</string>
+    <string name="cycle_pill_title">Pilule contraceptive</string>
+    <string name="cycle_pill_track">Suivre la pilule</string>
+    <string name="cycle_pill_track_body">Indique à quel jour de la plaquette vous êtes. Désactivé par défaut.</string>
+    <string name="cycle_pill_active_days">Jours de prise</string>
+    <string name="cycle_pill_pause_days">Jours de pause</string>
+    <string name="cycle_pill_scheme_hint">Schémas courants : 21 + 7, 24 + 4 ou 28 sans pause.</string>
+    <string name="cycle_pill_pack_start">Premier jour d\'une plaquette</string>
+    <string name="cycle_pill_reminder">Rappel quotidien</string>
+    <string name="cycle_pill_reminder_body">Les jours de prise, à l\'heure de votre choix. Silencieux dès que la prise du jour est marquée. Affiche la même chose que les rappels de cycle.</string>
+    <string name="cycle_pill_day_active">Jour %1$d sur %2$d, prise</string>
+    <string name="cycle_pill_day_pause">Jour de pause %1$d sur %2$d</string>
+    <string name="cycle_pill_next_pack">La prochaine plaquette commence le %1$s</string>
+    <string name="cycle_pill_before_start">La première plaquette commence le %1$s</string>
+    <string name="cycle_pill_taken_today">Prise aujourd\'hui</string>
+    <string name="cycle_pill_not_taken">Pas encore prise</string>
+    <string name="cycle_pill_mark_taken">Marquer comme prise</string>
+    <string name="cycle_pill_undo_taken">Annuler</string>
+    <string name="cycle_reminder_pill_title">Pilule</string>
+    <string name="cycle_reminder_pill_body">C\'est l\'heure de votre pilule. Jour %1$d sur %2$d.</string>
+    <string name="cycle_reminder_pill_body_plain">C\'est l\'heure de votre pilule.</string>
+    <string name="cycle_reminder_pill_concealed_body">Votre rappel programmé.</string>
+    <string name="cycle_reminder_pill_taken_action">Prise</string>
 </resources>

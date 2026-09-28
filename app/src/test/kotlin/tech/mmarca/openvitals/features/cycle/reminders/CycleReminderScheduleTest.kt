@@ -33,6 +33,25 @@ class CycleReminderScheduleTest {
         ),
     )
 
+    private val pill = tech.mmarca.openvitals.domain.model.PillPlan(
+        enabled = true,
+        activeDays = 21,
+        pauseDays = 7,
+        packStart = LocalDate.of(2026, 7, 1),
+        reminderTime = LocalTime.of(20, 0),
+    )
+
+    @Test
+    fun `the pill reminder is today at the set time on a taking day, else the next taking day`() {
+        assertEquals(at(10, 20, 0), CycleReminderSchedule.nextPill(at(10, 8, 30), pill, takenToday = false))
+        assertEquals(at(11, 20, 0), CycleReminderSchedule.nextPill(at(10, 21, 0), pill, takenToday = false))
+        assertEquals(at(11, 20, 0), CycleReminderSchedule.nextPill(at(10, 8, 30), pill, takenToday = true))
+        // The last taking day has passed: the pause is skipped to the next pack.
+        assertEquals(at(29, 20, 0), CycleReminderSchedule.nextPill(at(21, 21, 0), pill, takenToday = false))
+        assertEquals(at(29, 20, 0), CycleReminderSchedule.nextPill(at(24, 8, 30), pill, takenToday = false))
+        org.junit.Assert.assertNull(CycleReminderSchedule.nextPill(at(10, 8, 30), pill.copy(packStart = null), takenToday = false))
+    }
+
     @Test
     fun `the daily reminder is today at the set time until it passes or the day is logged`() {
         assertEquals(at(10, 21, 0), CycleReminderSchedule.nextDailyCheckIn(at(10, 8, 30), config, loggedToday = false))
