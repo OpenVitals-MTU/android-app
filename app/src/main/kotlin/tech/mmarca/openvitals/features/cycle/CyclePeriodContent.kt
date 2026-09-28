@@ -33,6 +33,8 @@ import tech.mmarca.openvitals.ui.theme.Spacing
 /** The callbacks of the cycle screen's sections. Defaults keep tests and previews short. */
 internal data class CycleContentActions(
     val onOpenDayLog: (LocalDate) -> Unit = {},
+    /** What to log today: the chooser. */
+    val onChooseLog: () -> Unit = {},
     val onStartPeriod: () -> Unit = {},
     val onAddPastPeriod: () -> Unit = {},
     val onOpenSettings: () -> Unit = {},
@@ -133,7 +135,12 @@ private fun LazyListScope.cycleTodaySections(
         CycleHeroCard(today = today, dateTimeFormatterProvider = dateTimeFormatterProvider, modifier = sectionModifier)
     }
     item(key = "cycle-today-observations") {
-        CycleTodayObservationsCard(today = today, onOpenDayLog = { actions.onOpenDayLog(today.today) }, modifier = sectionModifier)
+        // An empty day asks what to log; a day with entries opens them all.
+        CycleTodayObservationsCard(
+            today = today,
+            onOpenDayLog = { if (today.hasLoggedSomething) actions.onOpenDayLog(today.today) else actions.onChooseLog() },
+            modifier = sectionModifier,
+        )
     }
     if (today.bleeding !is DayBleedingChoice.Flow) {
         item(key = "cycle-start-period") {

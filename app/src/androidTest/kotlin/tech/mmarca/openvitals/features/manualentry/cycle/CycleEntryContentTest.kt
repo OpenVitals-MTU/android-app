@@ -86,4 +86,15 @@ class CycleEntryContentTest {
         composeRule.onNodeWithText(string(R.string.cycle_entry_permission_needed)).assertIsDisplayed()
         composeRule.onNodeWithText(string(R.string.cycle_entry_save)).performScrollTo().assertIsDisplayed()
     }
+
+    @Test
+    fun aFocusedDayLogShowsOnlyItsSectionAndAsksNoPermissionForTheJournal() {
+        setCard(readyState().copy(section = CycleEntrySection.PREGNANCY_TEST, grantedKinds = emptySet()))
+
+        composeRule.onNodeWithText(string(R.string.cycle_choice_pregnancy_test_summary)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.cycle_entry_save)).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.cycle_bleeding_not_recorded)).assertDoesNotExist()
+        composeRule.onNodeWithText(string(R.string.cycle_entry_more_show)).assertDoesNotExist()
+        composeRule.onNodeWithText(string(R.string.cycle_entry_permission_needed)).assertDoesNotExist()
+    }
 }

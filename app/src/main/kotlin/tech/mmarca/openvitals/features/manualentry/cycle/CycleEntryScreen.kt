@@ -54,7 +54,7 @@ import tech.mmarca.openvitals.ui.theme.Spacing
 private val HeaderIconSize: Dp = 22.dp
 private val ButtonIconSize: Dp = 18.dp
 
-/** The day log: one day, every observation, saved together. */
+/** The day log: one day, every observation, saved together. Opened from the chooser it shows one section. */
 @Composable
 fun CycleEntryScreen(
     viewModel: CycleEntryViewModel,
@@ -180,18 +180,20 @@ internal fun CycleEntryCard(
     onRequestWritePermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val anyGranted = state.grantedKinds.isNotEmpty()
     val saving = state.isSavingEntry
     val editable = !saving && !state.isLoadingDay
     var showDatePicker by remember { mutableStateOf(false) }
-    val form = state.form
 
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(LayoutMetrics.cardPadding),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            CycleEntryHeader(anyGranted = anyGranted, isCheckingPermission = state.isCheckingPermission, onRequestWritePermission = onRequestWritePermission)
+            CycleEntryHeader(
+                section = state.section,
+                showPermissionCallout = state.lacksWritePermission && !state.isCheckingPermission,
+                onRequestWritePermission = onRequestWritePermission,
+            )
 
             ManualEntryPickerButton(
                 label = stringResource(R.string.manual_entry_date_label),
@@ -202,49 +204,9 @@ internal fun CycleEntryCard(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            CycleEntryBleedingSection(
-                selected = form.bleeding,
-                enabled = editable,
-                foreignFlowLevel = state.foreignFlowLevel,
-                foreignSpotting = state.foreignSpotting,
-                onSelect = actions.onBleeding,
-            )
-
-            CycleEntryScales(
-                form = form,
-                enabled = editable,
-                onPain = actions.onPain,
-                onMood = actions.onMood,
-                onEnergy = actions.onEnergy,
-            )
-
-            CycleEntryToggle(
-                expanded = state.showMore,
-                showLabel = stringResource(R.string.cycle_entry_more_show),
-                hideLabel = stringResource(R.string.cycle_entry_more_hide),
-                onToggle = actions.onToggleMore,
-            )
-            if (state.showMore) {
-                CycleEntrySymptoms(
-                    selected = form.symptoms,
-                    offered = state.offeredSymptoms,
-                    previousDay = state.previousDaySymptoms,
-                    enabled = editable,
-                    onToggle = actions.onToggleSymptom,
-                    onCopyPreviousDay = actions.onCopyPreviousDay,
-                )
-                CycleEntryNotes(notes = form.notes, enabled = editable, onNotesChanged = actions.onNotes)
-                CycleEntryHcgTest(selected = form.hcgTest, enabled = editable, onSelect = actions.onHcgTest)
-            }
-
-            CycleEntryToggle(
-                expanded = state.showBiomarkers,
-                showLabel = stringResource(R.string.cycle_entry_biomarkers_show),
-                hideLabel = stringResource(R.string.cycle_entry_biomarkers_hide),
-                onToggle = actions.onToggleBiomarkers,
-            )
-            if (state.showBiomarkers) {
-                CycleEntryBiomarkers(form = form, state = state, unitSystem = unitSystem, editable = editable, actions = actions)
+            when (val section = state.section) {
+                null -> CycleEntryAllSections(state = state, unitSystem = unitSystem, editable = editable, actions = actions)
+                else -> CycleEntryOneSection(section = section, state = state, unitSystem = unitSystem, editable = editable, actions = actions)
             }
 
             OpenVitalsButton(
@@ -278,15 +240,115 @@ internal fun CycleEntryCard(
     }
 }
 
+/** The full day log: bleeding and the scales first, the rest behind two toggles. */
+@Composable
+private fun CycleEntryAllSections(
+    state: CycleEntryUiState,
+    unitSystem: UnitSystem,
+    editable: Boolean,
+    actions: CycleEntryActions,
+) {
+    val form = state.form
+    CycleEntryBleedingSection(
+        selected = form.bleeding,
+        enabled = editable,
+        foreignFlowLevel = state.foreignFlowLevel,
+        foreignSpotting = state.foreignSpotting,
+        onSelect = actions.onBleeding,
+    )
+    CycleEntryScales(form = form, enabled = editable, onPain = actions.onPain, onMood = actions.onMood, onEnergy = actions.onEnergy)
+
+    CycleEntryToggle(
+        expanded = state.showMore,
+        showLabel = stringResource(R.string.cycle_entry_more_show),
+        hideLabel = stringResource(R.string.cycle_entry_more_hide),
+        onToggle = actions.onToggleMore,
+    )
+    if (state.showMore) {
+        CycleEntrySymptoms(
+            selected = form.symptoms,
+            offered = state.offeredSymptoms,
+            previousDay = state.previousDaySymptoms,
+            enabled = editable,
+            onToggle = actions.onToggleSymptom,
+            onCopyPreviousDay = actions.onCopyPreviousDay,
+        )
+        CycleEntryNotes(notes = form.notes, enabled = editable, onNotesChanged = actions.onNotes)
+        CycleEntryHcgTest(selected = form.hcgTest, enabled = editable, onSelect = actions.onHcgTest)
+    }
+
+    CycleEntryToggle(
+        expanded = state.showBiomarkers,
+        showLabel = stringResource(R.string.cycle_entry_biomarkers_show),
+        hideLabel = stringResource(R.string.cycle_entry_biomarkers_hide),
+        onToggle = actions.onToggleBiomarkers,
+    )
+    if (state.showBiomarkers) {
+        CycleEntryBiomarkers(form = form, state = state, unitSystem = unitSystem, editable = editable, actions = actions)
+    }
+}
+
+/** One section on its own, as the chooser opens it. */
+@Composable
+private fun CycleEntryOneSection(
+    section: CycleEntrySection,
+    state: CycleEntryUiState,
+    unitSystem: UnitSystem,
+    editable: Boolean,
+    actions: CycleEntryActions,
+) {
+    val form = state.form
+    when (section) {
+        CycleEntrySection.BLEEDING -> CycleEntryBleedingSection(
+            selected = form.bleeding,
+            enabled = editable,
+            foreignFlowLevel = state.foreignFlowLevel,
+            foreignSpotting = state.foreignSpotting,
+            onSelect = actions.onBleeding,
+        )
+        CycleEntrySection.FEELING -> {
+            CycleEntryScales(form = form, enabled = editable, onPain = actions.onPain, onMood = actions.onMood, onEnergy = actions.onEnergy)
+            CycleEntrySymptoms(
+                selected = form.symptoms,
+                offered = state.offeredSymptoms,
+                previousDay = state.previousDaySymptoms,
+                enabled = editable,
+                onToggle = actions.onToggleSymptom,
+                onCopyPreviousDay = actions.onCopyPreviousDay,
+            )
+            CycleEntryNotes(notes = form.notes, enabled = editable, onNotesChanged = actions.onNotes)
+        }
+        CycleEntrySection.PREGNANCY_TEST -> CycleEntryHcgTest(selected = form.hcgTest, enabled = editable, onSelect = actions.onHcgTest)
+        CycleEntrySection.OVULATION_TEST -> CycleEntryOvulationSection(form = form, editable = editable, actions = actions)
+        CycleEntrySection.SEXUAL_ACTIVITY -> CycleEntrySexualActivitySection(form = form, editable = editable, actions = actions)
+        CycleEntrySection.BASAL_BODY_TEMPERATURE -> CycleEntryBbtSection(
+            form = form,
+            unitSystem = unitSystem,
+            enabled = editable,
+            onInputChanged = actions.onBbtInput,
+            onLocationSelected = actions.onBbtLocation,
+            onTimeSelected = actions.onBbtTime,
+            onToggleDisturbance = actions.onToggleBbtDisturbance,
+        )
+        CycleEntrySection.CERVICAL_MUCUS -> CycleEntryCervicalFluidSection(
+            form = form,
+            enabled = editable,
+            onSensation = actions.onCervicalSensation,
+            onAppearance = actions.onMucusAppearance,
+            onAmount = actions.onMucusAmount,
+        )
+    }
+}
+
 @Composable
 private fun CycleEntryHeader(
-    anyGranted: Boolean,
-    isCheckingPermission: Boolean,
+    section: CycleEntrySection?,
+    showPermissionCallout: Boolean,
     onRequestWritePermission: () -> Unit,
 ) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            imageVector = Icons.Outlined.CalendarMonth,
+            imageVector = section?.icon ?: Icons.Outlined.CalendarMonth,
             contentDescription = null,
             tint = CycleColor,
             modifier = Modifier.size(HeaderIconSize),
@@ -296,15 +358,15 @@ private fun CycleEntryHeader(
                 .padding(horizontal = Spacing.md)
                 .weight(1f),
         ) {
-            Text(text = stringResource(R.string.cycle_entry_title), style = MaterialTheme.typography.titleSmall)
+            Text(text = stringResource(section?.titleRes ?: R.string.cycle_entry_title), style = MaterialTheme.typography.titleSmall)
             Text(
-                text = stringResource(R.string.cycle_entry_day_subtitle),
+                text = stringResource(section?.summaryRes ?: R.string.cycle_entry_day_subtitle),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
-    if (!anyGranted && !isCheckingPermission) {
+    if (showPermissionCallout) {
         ManualEntryWritePermissionCallout(
             body = stringResource(R.string.cycle_entry_permission_needed),
             onGrant = onRequestWritePermission,
@@ -348,20 +410,8 @@ private fun CycleEntryBiomarkers(
         onAppearance = actions.onMucusAppearance,
         onAmount = actions.onMucusAmount,
     )
-    CycleChipSection(
-        label = stringResource(R.string.cycle_entry_section_ovulation),
-        options = ovulationOptions(),
-        selection = form.ovulationResult,
-        enabled = editable,
-        onSelect = actions.onOvulation,
-    )
-    CycleChipSection(
-        label = stringResource(R.string.cycle_entry_section_sexual_activity),
-        options = protectionOptions(),
-        selection = form.sexualActivityProtection,
-        enabled = editable,
-        onSelect = actions.onSexualActivity,
-    )
+    CycleEntryOvulationSection(form = form, editable = editable, actions = actions)
+    CycleEntrySexualActivitySection(form = form, editable = editable, actions = actions)
     if (state.grantedKinds.size < tech.mmarca.openvitals.domain.model.CycleEntryKind.entries.size) {
         Text(
             text = stringResource(R.string.cycle_entry_partial_permission),
@@ -369,6 +419,28 @@ private fun CycleEntryBiomarkers(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+@Composable
+private fun CycleEntryOvulationSection(form: CycleDayForm, editable: Boolean, actions: CycleEntryActions) {
+    CycleChipSection(
+        label = stringResource(R.string.cycle_entry_section_ovulation),
+        options = ovulationOptions(),
+        selection = form.ovulationResult,
+        enabled = editable,
+        onSelect = actions.onOvulation,
+    )
+}
+
+@Composable
+private fun CycleEntrySexualActivitySection(form: CycleDayForm, editable: Boolean, actions: CycleEntryActions) {
+    CycleChipSection(
+        label = stringResource(R.string.cycle_entry_section_sexual_activity),
+        options = protectionOptions(),
+        selection = form.sexualActivityProtection,
+        enabled = editable,
+        onSelect = actions.onSexualActivity,
+    )
 }
 
 @Composable

@@ -3280,4 +3280,15 @@
         <item quantity="other">%1$d Tage importiert</item>
     </plurals>
     <string name="cycle_journal_import_failed">Nichts importiert: Die Datei ist kein Tagebuch-Export.</string>
+    <string name="cycle_choose_prompt">Was möchtest du eintragen?</string>
+    <string name="cycle_choice_bleeding">Blutung</string>
+    <string name="cycle_choice_bleeding_summary">Periodenstärke, Schmierblutung oder keine</string>
+    <string name="cycle_choice_feeling">Wie du dich fühlst</string>
+    <string name="cycle_choice_feeling_summary">Schmerz, Stimmung, Energie, Symptome und eine Notiz</string>
+    <string name="cycle_choice_pregnancy_test_summary">Negativ, positiv oder schwache Linie</string>
+    <string name="cycle_choice_ovulation_test_summary">Negativ, hoch, positiv oder nicht eindeutig</string>
+    <string name="cycle_choice_sexual_activity_summary">Geschützt, ungeschützt oder unbekannt</string>
+    <string name="cycle_choice_bbt_summary">Deine Aufwachtemperatur und was sie gestört haben könnte</string>
+    <string name="cycle_choice_cervical_mucus_summary">Aussehen, Menge und Empfinden</string>
+    <string name="cycle_choice_full_day_log">Alles für den Tag eintragen</string>
 </resources>

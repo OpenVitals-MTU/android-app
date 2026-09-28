@@ -2953,6 +2953,17 @@
     <string name="cycle_entry_more_hide">Hide symptoms and note</string>
     <string name="cycle_entry_biomarkers_show">Show body observations</string>
     <string name="cycle_entry_biomarkers_hide">Hide body observations</string>
+    <string name="cycle_choose_prompt">What do you want to log?</string>
+    <string name="cycle_choice_bleeding">Bleeding</string>
+    <string name="cycle_choice_bleeding_summary">Period flow, spotting, or none</string>
+    <string name="cycle_choice_feeling">How you feel</string>
+    <string name="cycle_choice_feeling_summary">Pain, mood, energy, symptoms, and a note</string>
+    <string name="cycle_choice_pregnancy_test_summary">Negative, positive, or a faint line</string>
+    <string name="cycle_choice_ovulation_test_summary">Negative, high, positive, or inconclusive</string>
+    <string name="cycle_choice_sexual_activity_summary">Protected, unprotected, or unknown</string>
+    <string name="cycle_choice_bbt_summary">Your waking temperature and what may have disturbed it</string>
+    <string name="cycle_choice_cervical_mucus_summary">Appearance, amount, and sensation</string>
+    <string name="cycle_choice_full_day_log">Log everything for the day</string>
     <string name="cycle_entry_symptoms">Symptoms</string>
     <string name="cycle_entry_copy_yesterday">Copy yesterday\'s symptoms (%1$d)</string>
     <string name="cycle_symptom_group_pain">Pain</string>

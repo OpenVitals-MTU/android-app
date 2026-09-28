@@ -29,6 +29,7 @@ fun CycleScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onLogCycleEntry: (LocalDate) -> Unit = {},
+    onChooseCycleEntry: () -> Unit = {},
     onStartPeriod: () -> Unit = {},
     onOpenCycleSettings: () -> Unit = {},
 ) {
@@ -45,6 +46,7 @@ fun CycleScreen(
 
     val actions = CycleContentActions(
         onOpenDayLog = onLogCycleEntry,
+        onChooseLog = onChooseCycleEntry,
         onStartPeriod = onStartPeriod,
         onAddPastPeriod = { showBackfill = true },
         onOpenSettings = onOpenCycleSettings,
@@ -73,7 +75,7 @@ fun CycleScreen(
             primaryAction = MetricAction(
                 labelRes = R.string.cycle_log_action,
                 icon = Icons.Outlined.Add,
-                onClick = { onLogCycleEntry(LocalDate.now()) },
+                onClick = onChooseCycleEntry,
             ),
         ) { period ->
             cyclePeriodContent(

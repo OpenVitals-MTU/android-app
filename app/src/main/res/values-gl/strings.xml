@@ -3360,4 +3360,15 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
         <item quantity="other">%1$d días importados</item>
     </plurals>
     <string name="cycle_journal_import_failed">Non se importou nada: o ficheiro non é unha exportación do diario.</string>
+    <string name="cycle_choose_prompt">Que queres rexistrar?</string>
+    <string name="cycle_choice_bleeding">Sangrado</string>
+    <string name="cycle_choice_bleeding_summary">Fluxo do período, manchado ou ningún</string>
+    <string name="cycle_choice_feeling">Como te sentes</string>
+    <string name="cycle_choice_feeling_summary">Dor, ánimo, enerxía, síntomas e unha nota</string>
+    <string name="cycle_choice_pregnancy_test_summary">Negativo, positivo ou liña tenue</string>
+    <string name="cycle_choice_ovulation_test_summary">Negativo, alto, positivo ou non concluínte</string>
+    <string name="cycle_choice_sexual_activity_summary">Con protección, sen protección ou descoñecido</string>
+    <string name="cycle_choice_bbt_summary">A túa temperatura ao espertar e que puido alterala</string>
+    <string name="cycle_choice_cervical_mucus_summary">Aspecto, cantidade e sensación</string>
+    <string name="cycle_choice_full_day_log">Rexistrar todo o día</string>
 </resources>

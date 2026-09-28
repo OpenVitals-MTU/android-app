@@ -3280,4 +3280,15 @@
         <item quantity="other">%1$d päivää tuotu</item>
     </plurals>
     <string name="cycle_journal_import_failed">Mitään ei tuotu: tiedosto ei ole päiväkirjan vienti.</string>
+    <string name="cycle_choose_prompt">Mitä haluat kirjata?</string>
+    <string name="cycle_choice_bleeding">Vuoto</string>
+    <string name="cycle_choice_bleeding_summary">Kuukautisvuoto, tiputteluvuoto tai ei vuotoa</string>
+    <string name="cycle_choice_feeling">Miltä sinusta tuntuu</string>
+    <string name="cycle_choice_feeling_summary">Kipu, mieliala, energia, oireet ja muistiinpano</string>
+    <string name="cycle_choice_pregnancy_test_summary">Negatiivinen, positiivinen tai heikko viiva</string>
+    <string name="cycle_choice_ovulation_test_summary">Negatiivinen, korkea, positiivinen tai epäselvä</string>
+    <string name="cycle_choice_sexual_activity_summary">Suojattu, suojaamaton tai ei tiedossa</string>
+    <string name="cycle_choice_bbt_summary">Heräämislämpösi ja mikä on voinut häiritä sitä</string>
+    <string name="cycle_choice_cervical_mucus_summary">Ulkonäkö, määrä ja tuntemus</string>
+    <string name="cycle_choice_full_day_log">Kirjaa koko päivä</string>
 </resources>

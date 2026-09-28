@@ -39,6 +39,7 @@ import tech.mmarca.openvitals.features.cycle.reminders.FakeCycleReminderSettings
 import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.navigation.CYCLE_ENTRY_DATE_ARG
 import tech.mmarca.openvitals.navigation.CYCLE_ENTRY_PRESET_ARG
+import tech.mmarca.openvitals.navigation.CYCLE_ENTRY_SECTION_ARG
 import tech.mmarca.openvitals.navigation.CycleEntryPreset
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
@@ -279,6 +280,15 @@ class CycleEntryViewModelTest {
         vm.updateDate(today.minusDays(1))
         advanceUntilIdle()
         assertNull(vm.uiState.value.form.bleeding)
+    }
+
+    @Test fun `a section in the route focuses the day log on it`() = runTest {
+        val handle = SavedStateHandle(mapOf(CYCLE_ENTRY_SECTION_ARG to CycleEntrySection.BASAL_BODY_TEMPERATURE.routeValue))
+        val focused = viewModel(repository(), handle = handle)
+        assertEquals(CycleEntrySection.BASAL_BODY_TEMPERATURE, focused.uiState.value.section)
+
+        val unknown = viewModel(repository(), handle = SavedStateHandle(mapOf(CYCLE_ENTRY_SECTION_ARG to "no_such_section")))
+        assertNull(unknown.uiState.value.section)
     }
 
     @Test fun `the period-start preset never overrides recorded bleeding`() = runTest {

@@ -18,6 +18,7 @@ import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryScreen
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.body.BodyMeasurementEntryScreen
 import tech.mmarca.openvitals.features.manualentry.body.BodyMeasurementEntryViewModel
+import tech.mmarca.openvitals.features.manualentry.cycle.CycleEntryChooserScreen
 import tech.mmarca.openvitals.features.manualentry.cycle.CycleEntryScreen
 import tech.mmarca.openvitals.features.manualentry.cycle.CycleEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.food.FoodEntryScreen
@@ -77,7 +78,7 @@ internal fun NavGraphBuilder.manualEntryRoutes(
                     navController.navigate(Screen.VitalsMeasurementEntry.createRoute(type.name))
                 },
                 onOpenCycleEntry = {
-                    navController.navigate(Screen.CycleEntry.route)
+                    navController.navigate(Screen.CycleEntryChooser.route)
                 },
                 onOpenWorkoutPlans = {
                     navController.navigate(Screen.WorkoutPlans.route)
@@ -258,12 +259,21 @@ internal fun NavGraphBuilder.manualEntryRoutes(
         )
     }
 
+    // What to log. A card opens the day log on one section; the full log stays one tap away.
+    composable(Screen.CycleEntryChooser.route) {
+        CycleEntryChooserScreen(
+            onChoose = { section -> navController.navigate(Screen.CycleEntry.createRoute(section = section.routeValue)) },
+            onOpenFullDayLog = { navController.navigate(Screen.CycleEntry.createRoute()) },
+        )
+    }
+
     // A day log is one save per day, so the route returns to the caller once it lands.
     composable(
         route = Screen.CycleEntry.route + CYCLE_ENTRY_QUERY_PATTERN,
         arguments = listOf(
             navArgument(CYCLE_ENTRY_DATE_ARG) { type = NavType.StringType; nullable = true; defaultValue = null },
             navArgument(CYCLE_ENTRY_PRESET_ARG) { type = NavType.StringType; nullable = true; defaultValue = null },
+            navArgument(CYCLE_ENTRY_SECTION_ARG) { type = NavType.StringType; nullable = true; defaultValue = null },
         ),
     ) {
         val cycleEntryViewModel = hiltViewModel<CycleEntryViewModel>()

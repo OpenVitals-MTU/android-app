@@ -46,10 +46,12 @@ const val VITALS_MEASUREMENT_TYPE_ARG = "vitalsMeasurementType"
 const val VITALS_ENTRY_ID_ARG = "vitalsEntryId"
 const val CYCLE_ENTRY_DATE_ARG = "cycleEntryDate"
 const val CYCLE_ENTRY_PRESET_ARG = "cycleEntryPreset"
+const val CYCLE_ENTRY_SECTION_ARG = "cycleEntrySection"
 
-/** The optional query the day-log route declares: the day it opens on and a preset. */
+/** The optional query the day-log route declares: the day it opens on, a preset, and the one section to show. */
 const val CYCLE_ENTRY_QUERY_PATTERN =
-    "?$CYCLE_ENTRY_DATE_ARG={$CYCLE_ENTRY_DATE_ARG}&$CYCLE_ENTRY_PRESET_ARG={$CYCLE_ENTRY_PRESET_ARG}"
+    "?$CYCLE_ENTRY_DATE_ARG={$CYCLE_ENTRY_DATE_ARG}&$CYCLE_ENTRY_PRESET_ARG={$CYCLE_ENTRY_PRESET_ARG}" +
+        "&$CYCLE_ENTRY_SECTION_ARG={$CYCLE_ENTRY_SECTION_ARG}"
 
 /** What the day log preselects on its first load. */
 object CycleEntryPreset {
@@ -166,12 +168,15 @@ sealed class Screen(
         fun createRoute(type: String, entryId: String): String =
             "manual_entry/vitals/${Uri.encode(type)}/edit/${Uri.encode(entryId)}"
     }
+    /** What to log, one card each. A card opens [CycleEntry] on that section alone. */
+    data object CycleEntryChooser : Screen("manual_entry/cycle/choose", R.string.screen_cycle_entry)
     data object CycleEntry : Screen("manual_entry/cycle", R.string.screen_cycle_entry) {
-        /** Without arguments the day log opens on today. */
-        fun createRoute(date: LocalDate? = null, preset: String? = null): String {
+        /** Without arguments the day log opens on today with every section. */
+        fun createRoute(date: LocalDate? = null, preset: String? = null, section: String? = null): String {
             val query = listOfNotNull(
                 date?.let { "$CYCLE_ENTRY_DATE_ARG=${Uri.encode(it.toString())}" },
                 preset?.let { "$CYCLE_ENTRY_PRESET_ARG=${Uri.encode(it)}" },
+                section?.let { "$CYCLE_ENTRY_SECTION_ARG=${Uri.encode(it)}" },
             )
             return if (query.isEmpty()) route else "$route?${query.joinToString("&")}"
         }
@@ -299,6 +304,7 @@ sealed class Screen(
                 BodyMeasurementEntryEdit,
                 VitalsMeasurementEntry,
                 VitalsMeasurementEntryEdit,
+                CycleEntryChooser,
                 CycleEntry,
                 Calories,
                 Nutrition,
