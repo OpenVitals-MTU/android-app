@@ -1,0 +1,1 @@
+Every app language reads right now. The steps ring no longer says "steps" in English, heart rate uses your language's own unit, days, nights and tests agree with the number ("1 day", not "1 days"), and the health disclaimer in Czech, Polish, Russian and Estonian matches the English again. This page now has a description and screenshots in all 14 app languages.

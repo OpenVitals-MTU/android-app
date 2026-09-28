@@ -1,0 +1,1 @@
+Corrections de langue : l'anneau des pas n'affiche plus « steps » en anglais, et les jours, nuits et tests s'accordent avec le nombre (« 1 jour », et non « 1 jours »). Cette page Google Play est désormais en français, avec une nouvelle description et de nouvelles captures d'écran.

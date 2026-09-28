@@ -1,0 +1,1 @@
+Correzioni di lingua: l'anello dei passi non mostra più «steps» in inglese, e giorni, notti e test concordano con il numero («1 giorno», non «1 giorni»). Questa pagina di Google Play è ora disponibile in tutte le 14 lingue dell'app, con nuova descrizione e nuovi screenshot.

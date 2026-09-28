@@ -1,0 +1,1 @@
+Correccións de idioma: o anel de pasos xa non di «steps» en inglés, a frecuencia cardíaca usa «ppm» en todas partes e os días, noites e tests concordan co número («1 día», non «1 días»). Esta páxina de Google Play está agora en galego, con nova descrición e novas capturas.

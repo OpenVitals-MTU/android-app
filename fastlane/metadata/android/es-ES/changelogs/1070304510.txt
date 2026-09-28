@@ -1,0 +1,1 @@
+Correcciones de idioma: el anillo de pasos ya no dice «steps» en inglés, la frecuencia cardiaca usa «lpm» en todas partes y los días, noches y pruebas concuerdan con el número («1 día», no «1 días»). Esta página de Google Play está ahora en los 14 idiomas de la app, con nueva descripción y nuevas capturas.

@@ -1,0 +1,1 @@
+Opravy češtiny: kruh kroků už neukazuje anglické „steps“, srdeční tep používá jednotku „tep/min“ všude včetně osy grafu, dny, noci a testy mají tvar podle čísla („1 den“, ne „1 dní“) a zdravotní upozornění znovu odpovídá originálu. Tato stránka v Google Play je nově česky, s popisem i snímky obrazovky.

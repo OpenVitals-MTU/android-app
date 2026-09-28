@@ -1,0 +1,1 @@
+Korrekturen in allen Sprachen: Der Schrittring zeigt nicht mehr das englische „steps“, und Tage, Nächte und Tests passen jetzt zur Zahl („1 Tag“ statt „1 Tage“). Diese Seite auf Google Play gibt es jetzt in allen 14 Sprachen der App, mit neuer Beschreibung und neuen Screenshots.

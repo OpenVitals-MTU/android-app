@@ -1,0 +1,1 @@
+Kielikorjauksia: askelrengas ei enää näytä englanninkielistä ”steps”-sanaa, ja päivät, yöt ja testit taipuvat nyt luvun mukaan (”1 päivä”, ei ”1 päivää”). Tämä Google Play -sivu on nyt suomeksi, uuden kuvauksen ja kuvakaappausten kera.
