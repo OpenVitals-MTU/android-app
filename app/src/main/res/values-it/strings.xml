@@ -3021,7 +3021,6 @@
     <string name="cycle_today_note">Nota: %1$s</string>
     <string name="cycle_log_today">Registra oggi</string>
     <string name="cycle_edit_today">Modifica osservazioni</string>
-    <string name="cycle_start_period">Registra inizio mestruazioni</string>
     <string name="cycle_stats_title">I tuoi cicli a colpo d’occhio</string>
     <string name="cycle_stats_avg_length">Durata media: %1$d giorni</string>
     <string name="cycle_stats_total">Cicli registrati: %1$d</string>

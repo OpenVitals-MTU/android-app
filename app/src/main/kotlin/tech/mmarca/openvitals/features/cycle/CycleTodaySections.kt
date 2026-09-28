@@ -448,12 +448,3 @@ internal fun CycleSetupCard(onOpenSettings: () -> Unit, modifier: Modifier = Mod
         }
     }
 }
-
-/** The one-tap "my period started" action. */
-@Composable
-internal fun CycleStartPeriodButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    OpenVitalsOutlinedButton(onClick = onClick, modifier = modifier.fillMaxWidth()) {
-        Icon(imageVector = Icons.Outlined.WaterDrop, contentDescription = null, tint = CycleColor)
-        Text(text = stringResource(R.string.cycle_start_period), modifier = Modifier.padding(start = Spacing.sm))
-    }
-}

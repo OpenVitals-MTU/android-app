@@ -3042,7 +3042,6 @@
     <string name="cycle_today_note">Notatka: %1$s</string>
     <string name="cycle_log_today">Zapisz dzisiaj</string>
     <string name="cycle_edit_today">Edytuj obserwacje</string>
-    <string name="cycle_start_period">Zapisz początek miesiączki</string>
     <string name="cycle_stats_title">Twoje cykle w skrócie</string>
     <string name="cycle_stats_avg_length">Średnia długość: %1$d dni</string>
     <string name="cycle_stats_total">Zapisane cykle: %1$d</string>

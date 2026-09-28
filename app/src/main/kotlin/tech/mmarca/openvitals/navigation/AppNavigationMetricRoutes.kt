@@ -97,7 +97,6 @@ internal fun MetricRouteContent(
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
     onLogCycleEntry: (LocalDate) -> Unit = {},
     onChooseCycleEntry: () -> Unit = {},
-    onStartPeriod: () -> Unit = {},
     onOpenCycleSettings: () -> Unit = {},
 ) {
     when (val destination = metricRouteDestinationFor(metricId)) {
@@ -225,7 +224,6 @@ internal fun MetricRouteContent(
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onLogCycleEntry = onLogCycleEntry,
                 onChooseCycleEntry = onChooseCycleEntry,
-                onStartPeriod = onStartPeriod,
                 onOpenCycleSettings = onOpenCycleSettings,
             )
         }

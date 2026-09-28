@@ -53,7 +53,6 @@ import tech.mmarca.openvitals.domain.preferences.AppThemeMode
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.features.manualentry.body.titleRes
-import tech.mmarca.openvitals.features.manualentry.cycle.CycleEntrySection
 import tech.mmarca.openvitals.features.manualentry.vitals.titleRes
 import tech.mmarca.openvitals.features.nutrition.NutritionScreen
 import tech.mmarca.openvitals.features.nutrition.NutritionViewModel
@@ -595,10 +594,6 @@ fun AppNavigation(
                     },
                     onChooseCycleEntry = {
                         navController.navigate(Screen.CycleEntryChooser.route)
-                    },
-                    onStartPeriod = {
-                        val bleeding = CycleEntrySection.BLEEDING.routeValue
-                        navController.navigate(Screen.CycleEntry.createRoute(LocalDate.now(), CycleEntryPreset.PERIOD_START, bleeding))
                     },
                     onOpenCycleSettings = {
                         navController.navigate(Screen.SettingsCycle.route)

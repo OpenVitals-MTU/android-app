@@ -3042,7 +3042,6 @@
     <string name="cycle_today_note">Poznámka: %1$s</string>
     <string name="cycle_log_today">Zaznamenat dnešek</string>
     <string name="cycle_edit_today">Upravit pozorování</string>
-    <string name="cycle_start_period">Zaznamenat začátek menstruace</string>
     <string name="cycle_stats_title">Vaše cykly v kostce</string>
     <string name="cycle_stats_avg_length">Průměrná délka: %1$d dní</string>
     <string name="cycle_stats_total">Zaznamenané cykly: %1$d</string>

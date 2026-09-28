@@ -3021,7 +3021,6 @@
     <string name="cycle_today_note">备注：%1$s</string>
     <string name="cycle_log_today">记录今天</string>
     <string name="cycle_edit_today">编辑观察</string>
-    <string name="cycle_start_period">记录经期开始</string>
     <string name="cycle_stats_title">周期概览</string>
     <string name="cycle_stats_avg_length">平均长度：%1$d 天</string>
     <string name="cycle_stats_total">已记录周期：%1$d</string>

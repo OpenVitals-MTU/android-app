@@ -3012,7 +3012,6 @@
     <string name="cycle_today_note">Märkus: %1$s</string>
     <string name="cycle_log_today">Pane tänane kirja</string>
     <string name="cycle_edit_today">Muuda tähelepanekuid</string>
-    <string name="cycle_start_period">Salvesta menstruatsiooni algus</string>
     <string name="cycle_stats_title">Sinu tsüklid lühidalt</string>
     <string name="cycle_stats_avg_length">Keskmine pikkus: %1$d päeva</string>
     <string name="cycle_stats_total">Salvestatud tsükleid: %1$d</string>

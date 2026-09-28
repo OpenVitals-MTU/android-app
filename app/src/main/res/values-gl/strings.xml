@@ -3092,7 +3092,6 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
     <string name="cycle_today_note">Nota: %1$s</string>
     <string name="cycle_log_today">Rexistrar hoxe</string>
     <string name="cycle_edit_today">Editar observacións</string>
-    <string name="cycle_start_period">Rexistrar inicio da regra</string>
     <string name="cycle_stats_title">Os teus ciclos dunha ollada</string>
     <string name="cycle_stats_avg_length">Duración media: %1$d días</string>
     <string name="cycle_stats_total">Ciclos rexistrados: %1$d</string>

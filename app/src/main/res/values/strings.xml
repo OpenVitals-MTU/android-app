@@ -3078,7 +3078,6 @@
     <string name="cycle_today_note">Note: %1$s</string>
     <string name="cycle_log_today">Log today</string>
     <string name="cycle_edit_today">Edit observations</string>
-    <string name="cycle_start_period">Log period start</string>
     <string name="cycle_stats_title">Your cycles at a glance</string>
     <string name="cycle_stats_avg_length">Average length: %1$d days</string>
     <string name="cycle_stats_total">Cycles recorded: %1$d</string>

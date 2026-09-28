@@ -27,9 +27,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.cycle.reminders.CycleReminderSettings
 import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.navigation.CYCLE_ENTRY_DATE_ARG
-import tech.mmarca.openvitals.navigation.CYCLE_ENTRY_PRESET_ARG
 import tech.mmarca.openvitals.navigation.CYCLE_ENTRY_SECTION_ARG
-import tech.mmarca.openvitals.navigation.CycleEntryPreset
 
 enum class CycleEntryError {
     NOTHING_TO_SAVE,
@@ -98,9 +96,6 @@ class CycleEntryViewModel @Inject constructor(
 
     private val requestedDate: LocalDate? =
         savedStateHandle.get<String>(CYCLE_ENTRY_DATE_ARG)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-
-    /** Applied once, to the first day loaded, and only where nothing is recorded yet. */
-    private var pendingPreset: String? = savedStateHandle[CYCLE_ENTRY_PRESET_ARG]
 
     private val _uiState = MutableStateFlow(
         CycleEntryUiState(
@@ -247,12 +242,7 @@ class CycleEntryViewModel @Inject constructor(
             }.onSuccess { (loaded, log, previous) ->
                 if (_uiState.value.date != date) return@onSuccess
                 val catalog = ObservationCatalog.symptomsFor(preferences.cycleTrackingProfile().contexts)
-                val preset = pendingPreset.also { pendingPreset = null }
-                val form = when {
-                    preset == CycleEntryPreset.PERIOD_START && loaded.bleeding == null && log.foreignFlowLevel == null ->
-                        loaded.copy(bleeding = BleedingOption.LIGHT)
-                    else -> loaded
-                }
+                val form = loaded
                 _uiState.value = _uiState.value.copy(
                     form = form,
                     loadedForm = loaded,

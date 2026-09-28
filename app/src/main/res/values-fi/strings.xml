@@ -3012,7 +3012,6 @@
     <string name="cycle_today_note">Muistiinpano: %1$s</string>
     <string name="cycle_log_today">Kirjaa tämä päivä</string>
     <string name="cycle_edit_today">Muokkaa havaintoja</string>
-    <string name="cycle_start_period">Kirjaa kuukautisten alku</string>
     <string name="cycle_stats_title">Kiertosi yhdellä silmäyksellä</string>
     <string name="cycle_stats_avg_length">Keskipituus: %1$d päivää</string>
     <string name="cycle_stats_total">Kirjattuja kiertoja: %1$d</string>

@@ -16,6 +16,19 @@ enum class MetricDetailSectionId {
     VITALS_HEART_SECTION,
     VITALS_CARDIOVASCULAR_SECTION,
     VITALS_RESPIRATORY_SECTION,
+    // The cycle screen's own sections. All new ids, so a saved order still shows them in this default order.
+    CYCLE_TODAY,
+    CYCLE_CALENDAR,
+    CYCLE_OBSERVATIONS,
+    CYCLE_PILL,
+    CYCLE_ENTRIES,
+    CYCLE_ESTIMATE,
+    CYCLE_TIP,
+    CYCLE_STATISTICS,
+    CYCLE_SETUP,
+    CYCLE_HISTORY,
+    CYCLE_THERMAL,
+    CYCLE_PATTERNS,
 }
 
 val DefaultMetricDetailSectionOrder: List<MetricDetailSectionId> = listOf(
@@ -34,6 +47,18 @@ val DefaultMetricDetailSectionOrder: List<MetricDetailSectionId> = listOf(
     MetricDetailSectionId.VITALS_HEART_SECTION,
     MetricDetailSectionId.VITALS_CARDIOVASCULAR_SECTION,
     MetricDetailSectionId.VITALS_RESPIRATORY_SECTION,
+    MetricDetailSectionId.CYCLE_TODAY,
+    MetricDetailSectionId.CYCLE_CALENDAR,
+    MetricDetailSectionId.CYCLE_OBSERVATIONS,
+    MetricDetailSectionId.CYCLE_PILL,
+    MetricDetailSectionId.CYCLE_ENTRIES,
+    MetricDetailSectionId.CYCLE_ESTIMATE,
+    MetricDetailSectionId.CYCLE_TIP,
+    MetricDetailSectionId.CYCLE_STATISTICS,
+    MetricDetailSectionId.CYCLE_SETUP,
+    MetricDetailSectionId.CYCLE_HISTORY,
+    MetricDetailSectionId.CYCLE_THERMAL,
+    MetricDetailSectionId.CYCLE_PATTERNS,
 )
 
 fun metricDetailSectionOrderFromStored(storedIds: List<String>?): List<MetricDetailSectionId> {
