@@ -51,7 +51,10 @@ internal data class CycleObservation(
     val isOpenVitalsEntry: Boolean = false,
     /** Set for a journal row: it opens that day's log instead of a record editor. */
     val dayLogDate: LocalDate? = null,
-)
+) {
+    /** The journal row: a whole day's log, not one record. */
+    val isDayLog: Boolean get() = kind == null && dayLogDate != null
+}
 
 internal fun cycleDays(
     period: DatePeriod,

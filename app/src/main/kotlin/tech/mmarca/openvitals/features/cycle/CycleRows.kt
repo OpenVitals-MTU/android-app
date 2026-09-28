@@ -66,6 +66,9 @@ private fun CycleObservationRowContent(
 ) {
     val zone = ZoneId.systemDefault()
     val time = observation.time.atZone(zone)
+    // A day log's value is a sentence, so it wraps under the date instead of beside the title.
+    val isDayLog = observation.isDayLog
+    val formatter = if (isDayLog) dateTimeFormatterProvider.mediumDate() else dateTimeFormatterProvider.mediumDateTime()
 
     OpenVitalsCard(
         modifier = modifier,
@@ -83,21 +86,18 @@ private fun CycleObservationRowContent(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = dateTimeFormatterProvider.mediumDateTime().format(time),
+                    text = formatter.format(time),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (isDayLog) ObservationValue(observation.value)
                 Spacer(Modifier.height(4.dp))
                 SourceChip(source = observation.source)
             }
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = observation.value,
-                style = MaterialTheme.typography.bodyMedium,
-                color = CycleColor,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.End,
-            )
+            if (!isDayLog) {
+                Spacer(Modifier.width(12.dp))
+                ObservationValue(observation.value, textAlign = TextAlign.End)
+            }
             if (onEdit != null) {
                 Spacer(Modifier.width(4.dp))
                 OpenVitalsIconButton(onClick = onEdit) {
@@ -109,4 +109,15 @@ private fun CycleObservationRowContent(
             }
         }
     }
+}
+
+@Composable
+private fun ObservationValue(text: String, textAlign: TextAlign? = null) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = CycleColor,
+        fontWeight = FontWeight.SemiBold,
+        textAlign = textAlign,
+    )
 }

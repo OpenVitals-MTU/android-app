@@ -17,6 +17,7 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.domain.model.CervicalMucusEntry
 import tech.mmarca.openvitals.domain.model.CycleData
+import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.domain.model.MenstruationFlowEntry
 import tech.mmarca.openvitals.domain.model.MenstruationPeriodEntry
 import tech.mmarca.openvitals.domain.model.OvulationTestEntry
@@ -138,6 +139,46 @@ class CyclePresentationTest {
         assertEquals("Positive", observations[1].value)
         assertEquals("Heavy", observations[2].value)
         assertEquals("2 days", observations[3].value)
+    }
+
+    @Test fun `only the journal row is a day log`() {
+        val resources = resourcesForCycleStrings()
+        every { resources.getString(R.string.cycle_observation_day_log) } returns "Day log"
+        every { resources.getString(R.string.cycle_today_pain, 3) } returns "Pain: 3/5"
+        every { resources.getString(R.string.app_name) } returns "OpenVitals"
+        val previousTimeZone = TimeZone.getDefault()
+        val observations = try {
+            TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+            observationsFor(
+                CycleData(
+                    menstruationPeriods = listOf(
+                        MenstruationPeriodEntry(
+                            startTime = instant("2026-04-10T00:00:00Z"),
+                            endTime = instant("2026-04-12T00:00:00Z"),
+                            source = "period",
+                        )
+                    ),
+                    // An own record also carries a day-log date, but it is one record, not the day log.
+                    menstruationFlows = listOf(
+                        MenstruationFlowEntry(
+                            time = instant("2026-04-13T10:00:00Z"),
+                            flow = FLOW_HEAVY,
+                            source = "flow",
+                            isOpenVitalsEntry = true,
+                        )
+                    ),
+                ),
+                resources = resources,
+                journalEntries = listOf(CycleJournalEntry(date = LocalDate.of(2026, 4, 11), painLevel = 3)),
+                unitFormatter = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC }),
+            )
+        } finally {
+            TimeZone.setDefault(previousTimeZone)
+        }
+
+        assertEquals(listOf("Menstruation flow", "Day log", "Menstruation period"), observations.map { it.title })
+        assertEquals(listOf(false, true, false), observations.map { it.isDayLog })
+        assertEquals("Pain: 3/5", observations[1].value)
     }
 
     @Test fun `measurementLocationLabel maps known locations and fallback`() {
