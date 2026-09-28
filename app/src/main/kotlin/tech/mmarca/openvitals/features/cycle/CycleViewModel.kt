@@ -14,7 +14,6 @@ import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
-import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.PeriodSelection
 import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -29,6 +28,7 @@ import tech.mmarca.openvitals.domain.model.CycleRecordValues
 import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
 import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
 import tech.mmarca.openvitals.data.repository.contract.CyclePreferences
+import tech.mmarca.openvitals.data.repository.contract.PillIntakeRepository
 import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
 import tech.mmarca.openvitals.features.cycle.reminders.CycleReminderSettings
@@ -60,6 +60,7 @@ class CycleViewModel @Inject constructor(
     private val repository: CycleRepository,
     private val periodPreferences: PeriodPreferences,
     private val journal: CycleJournalRepository,
+    private val pillIntakes: PillIntakeRepository,
     private val cyclePreferences: CyclePreferences,
     private val bodyProfilePreferences: BodyProfilePreferences,
     private val reminders: CycleReminderSettings,
@@ -68,21 +69,18 @@ class CycleViewModel @Inject constructor(
     private val homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler? = null,
 ) : ViewModel() {
 
-    private val initialRange = periodPreferences.timeRangeFor(PeriodRangePreferenceKey.CYCLE)
     private val initialDate = savedStateHandle.selectedDayOrNull()
     private val initialWeekPeriodMode = periodPreferences.weekPeriodMode
 
+    // The screen is a month calendar, so the range is fixed; the arrows move month by month.
     private val periodDriver = PeriodSelectionDriver(
-        initialRange = initialRange,
+        initialRange = TimeRange.MONTH,
         initialDate = initialDate ?: java.time.LocalDate.now(),
         initialWeekPeriodMode = initialWeekPeriodMode,
-        onRangeSelected = { range ->
-            periodPreferences.setTimeRangeFor(PeriodRangePreferenceKey.CYCLE, range)
-        },
     )
     private val _uiState = MutableStateFlow(
         CycleUiState(
-            selectedRange = initialRange,
+            selectedRange = TimeRange.MONTH,
             weekPeriodMode = initialWeekPeriodMode,
         )
     )
@@ -101,16 +99,8 @@ class CycleViewModel @Inject constructor(
             periodPreferences.weekPeriodModeFlow.drop(1).collect { mode ->
                 periodDriver.weekPeriodMode = mode
                 _uiState.value = _uiState.value.copy(weekPeriodMode = mode)
-                if (_uiState.value.selectedRange == TimeRange.WEEK) {
-                    load()
-                }
             }
         }
-    }
-
-    fun selectRange(range: TimeRange) {
-        applyPeriodSelection(periodDriver.selectRange(range))
-        load()
     }
 
     fun previousPeriod() {
@@ -125,13 +115,9 @@ class CycleViewModel @Inject constructor(
         }
     }
 
+    /** Moves the calendar to the month holding [date]. There is no day view to drill into. */
     fun selectDate(date: LocalDate) {
         applyPeriodSelection(periodDriver.selectDate(date))
-        load()
-    }
-
-    fun selectDay(date: LocalDate) {
-        applyPeriodSelection(periodDriver.selectDay(date))
         load()
     }
 
@@ -163,6 +149,7 @@ class CycleViewModel @Inject constructor(
             }.onSuccess { result ->
                 if (!isCurrent) return@load
                 val profile = cyclePreferences.cycleTrackingProfile().resolved(bodyProfilePreferences.bodyProfile())
+                val pill = pillTodayDisplay()
                 val display = withContext(dispatchers.default) {
                     CyclePresentationMapper.build(
                         query = query,
@@ -172,6 +159,7 @@ class CycleViewModel @Inject constructor(
                         allJournalEntries = result.allJournalEntries,
                         currentCycleTemperatures = result.currentCycleTemperatures,
                         profile = profile,
+                        pill = pill,
                     )
                 }
                 if (!isCurrent) return@load
@@ -259,6 +247,29 @@ class CycleViewModel @Inject constructor(
     }
 
     /** A changed history moves the estimate: the alarms and the home widget follow. */
+    /** Today's place in the pill scheme, or null when the pill is not tracked. */
+    private suspend fun pillTodayDisplay(): PillTodayDisplay? {
+        val plan = cyclePreferences.pillPlan()
+        if (!plan.enabled) return null
+        val today = LocalDate.now()
+        val taken = runCatching { pillIntakes.isTaken(today) }.getOrDefault(false)
+        return PillTodayDisplay(plan = plan, today = today, day = plan.dayAt(today), taken = taken)
+    }
+
+    /** Marks or unmarks today's pill and re-plans its reminder. */
+    fun setPillTaken(taken: Boolean) {
+        val pill = _uiState.value.display.today.pill ?: return
+        viewModelScope.launch {
+            runCatching { pillIntakes.setTaken(pill.today, taken) }.onSuccess {
+                reminders.applyStoredConfig()
+                val display = _uiState.value.display
+                _uiState.value = _uiState.value.copy(
+                    display = display.copy(today = display.today.copy(pill = pill.copy(taken = taken))),
+                )
+            }
+        }
+    }
+
     private fun historyChanged() {
         reminders.applyStoredConfig()
         homeWidgetRefreshScheduler?.refreshNow()

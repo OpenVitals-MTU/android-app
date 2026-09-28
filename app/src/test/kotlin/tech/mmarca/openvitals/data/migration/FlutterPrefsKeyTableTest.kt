@@ -84,7 +84,6 @@ class FlutterPrefsKeyTableTest {
             "detail_range_steps", "detail_range_calories", "detail_range_activities",
             "detail_range_sleep", "detail_range_heart", "detail_range_body",
             "detail_range_hydration", "detail_range_nutrition", "detail_range_mindfulness",
-            "detail_range_cycle",
         )) {
             assertThat(mappedMainValue(key, "day")).isEqualTo(TargetValue.StringValue("DAY"))
             assertThat(mappedMainValue(key, "week")).isEqualTo(TargetValue.StringValue("WEEK"))

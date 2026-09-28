@@ -47,6 +47,7 @@ fun CycleScreen(
     val actions = CycleContentActions(
         onOpenDayLog = onLogCycleEntry,
         onChooseLog = onChooseCycleEntry,
+        onTogglePillTaken = viewModel::setPillTaken,
         onStartPeriod = onStartPeriod,
         onAddPastPeriod = { showBackfill = true },
         onOpenSettings = onOpenCycleSettings,
@@ -65,11 +66,13 @@ fun CycleScreen(
             selectedDate = state.selectedDate,
             screenError = state.error,
             onRefresh = viewModel::load,
-            onSelectRange = viewModel::selectRange,
+            // A month calendar has one range; the arrows and the date picker move it.
+            showTimeRangeSelector = false,
+            onSelectRange = {},
             onPreviousPeriod = viewModel::previousPeriod,
             onNextPeriod = viewModel::nextPeriod,
             onSelectDate = viewModel::selectDate,
-            onSelectDay = viewModel::selectDay,
+            onSelectDay = viewModel::selectDate,
             weekPeriodMode = state.weekPeriodMode,
             syncPaused = hcUx.syncPaused,
             primaryAction = MetricAction(

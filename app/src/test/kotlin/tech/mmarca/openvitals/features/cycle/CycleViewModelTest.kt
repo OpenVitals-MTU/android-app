@@ -8,6 +8,7 @@ import java.time.ZoneId
 import org.junit.Assert.assertNotNull
 import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
 import tech.mmarca.openvitals.data.repository.contract.FakeCycleJournalRepository
+import tech.mmarca.openvitals.data.repository.contract.FakePillIntakeRepository
 import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
@@ -31,6 +32,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -77,6 +79,7 @@ class CycleViewModelTest {
         repository = repository,
         periodPreferences = FakePreferences(),
         journal = journal,
+        pillIntakes = FakePillIntakeRepository(),
         cyclePreferences = FakePreferences(),
         bodyProfilePreferences = FakePreferences(),
         reminders = reminders,
@@ -171,16 +174,6 @@ class CycleViewModelTest {
         assertEquals(ScreenError.Message("timeout"), vm.uiState.value.error)
     }
 
-    @Test fun `selectRange updates selectedRange and reloads`() = runTest {
-        val repo = repo()
-        val vm = viewModel(repo)
-
-        vm.selectRange(TimeRange.YEAR)
-
-        assertEquals(TimeRange.YEAR, vm.uiState.value.selectedRange)
-        coVerify(atLeast = 2) { repo.loadCycleData(any(), any()) }
-    }
-
     @Test fun `previousPeriod MONTH moves back one month`() = runTest {
         val vm = viewModel(repo())
         val before = vm.uiState.value.selectedDate
@@ -190,15 +183,14 @@ class CycleViewModelTest {
         assertEquals(before.minusMonths(1), vm.uiState.value.selectedDate)
     }
 
-    @Test fun `nextPeriod DAY is blocked when selectedDate is today`() = runTest {
-        val repo = repo()
-        val vm = viewModel(repo)
-        vm.selectRange(TimeRange.DAY)
+    @Test fun `nextPeriod is blocked in the current month`() = runTest {
+        val vm = viewModel(repo())
         val before = vm.uiState.value.selectedDate
 
         vm.nextPeriod()
 
         assertEquals(before, vm.uiState.value.selectedDate)
+        assertEquals(TimeRange.MONTH, vm.uiState.value.selectedRange)
     }
 
     @Test fun `nextPeriod MONTH advances from a past month`() = runTest {
@@ -254,8 +246,9 @@ class CycleViewModelTest {
         )
         val repo = mockk<CycleRepository>()
         every { repo.phase4Permissions } returns setOf("cycle")
+        val thisMonth = today.withDayOfMonth(1)
         suspend fun answer(query: PeriodLoadQuery): CyclePeriodData =
-            if (query.range == TimeRange.MONTH) {
+            if (!query.selectedDate.isBefore(thisMonth)) {
                 // Held in flight; by the time it answers, a newer load won.
                 gate.await()
                 CyclePeriodData(data = staleData, missingPermissions = emptySet())
@@ -266,14 +259,14 @@ class CycleViewModelTest {
 
         val vm = viewModel(repo)
         runCurrent()
-        vm.selectRange(TimeRange.WEEK)
+        vm.previousPeriod()
         advanceUntilIdle()
         gate.complete(Unit)
         advanceUntilIdle()
 
-        // The week load won: the month's late answer is dropped, not painted.
+        // The previous month's load won: this month's late answer is dropped, not painted.
         val state = vm.uiState.value
-        assertEquals(TimeRange.WEEK, state.selectedRange)
+        assertTrue(state.selectedDate.isBefore(thisMonth))
         assertEquals(freshData, state.data)
         assertEquals(1, state.display.summary.totalEntryCount)
         assertFalse(state.isLoading)
