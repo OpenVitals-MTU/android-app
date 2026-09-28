@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
@@ -438,7 +439,7 @@ private fun SleepStatisticsSectionContent(
                 InsightStat(
                     title = stringResource(R.string.stat_nights_logged),
                     value = unitFormatter.count(totals.nights),
-                    unit = stringResource(R.string.unit_nights),
+                    unit = pluralStringResource(R.plurals.unit_nights, totals.nights),
                     icon = Icons.Outlined.CheckCircle,
                     accentColor = SleepColor,
                 ),

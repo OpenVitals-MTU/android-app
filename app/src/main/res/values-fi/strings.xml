@@ -719,11 +719,21 @@
     <string name="unit_reps">toistoa</string>
     <string name="unit_pushes">työntöä</string>
     <string name="unit_floors">kerrosta</string>
-    <string name="unit_days">päivää</string>
-    <string name="unit_nights">yötä</string>
-    <string name="unit_tests">testiä</string>
+    <plurals name="unit_days">
+        <item quantity="one">päivä</item>
+        <item quantity="other">päivää</item>
+    </plurals>
+    <plurals name="unit_nights">
+        <item quantity="one">yö</item>
+        <item quantity="other">yötä</item>
+    </plurals>
+    <plurals name="unit_tests">
+        <item quantity="one">testi</item>
+        <item quantity="other">testiä</item>
+    </plurals>
     <string name="unit_total">yhteensä</string>
     <string name="unit_grams">g</string>
+    <string name="unit_bpm">bpm</string>
     <string name="section_activities">Aktiviteetit</string>
     <string name="section_activity_type_stats">Aktiviteettityypeittäin</string>
     <plurals name="activity_type_stats_activity_count">

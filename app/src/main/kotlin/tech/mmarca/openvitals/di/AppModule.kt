@@ -8,8 +8,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
+import tech.mmarca.openvitals.core.presentation.CurrentLocaleStrings
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.local.OpenVitalsDatabase
@@ -100,11 +102,17 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideUnitFormatter(preferencesRepository: PreferencesRepository): UnitFormatter =
-        UnitFormatter(
+    fun provideUnitFormatter(
+        @ApplicationContext context: Context,
+        preferencesRepository: PreferencesRepository,
+    ): UnitFormatter {
+        val strings = CurrentLocaleStrings(context)
+        return UnitFormatter(
             unitSystemProvider = { preferencesRepository.unitSystem },
             unitOverrideProvider = { preferencesRepository.unitOverride(it) },
+            heartRateUnitProvider = { strings.get(R.string.unit_bpm) },
         )
+    }
 
     @Provides
     @Singleton

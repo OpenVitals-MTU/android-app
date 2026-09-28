@@ -170,7 +170,7 @@ internal fun ActivityRecordingLiveSensorStats(
                     LiveSensorStat(
                         label = stringResource(R.string.activity_recording_live_heart_rate),
                         value = unitFormatter.count(bpm),
-                        unit = "bpm",
+                        unit = stringResource(R.string.unit_bpm),
                         modifier = Modifier.weight(1f),
                     )
                 }

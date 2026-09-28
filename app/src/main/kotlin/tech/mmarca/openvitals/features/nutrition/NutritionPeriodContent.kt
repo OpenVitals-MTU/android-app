@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
@@ -744,7 +745,7 @@ private fun NutritionStatisticsGrid(
             InsightStat(
                 title = stringResource(R.string.metric_logged_days),
                 value = unitFormatter.count(display.loggedDays),
-                unit = stringResource(R.string.unit_days),
+                unit = pluralStringResource(R.plurals.unit_days, display.loggedDays),
                 icon = Icons.Outlined.CheckCircle,
                 accentColor = metricData.color,
             ),

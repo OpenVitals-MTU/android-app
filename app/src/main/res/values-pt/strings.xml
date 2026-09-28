@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">OpenVitals</string>
     <string name="cd_back">Voltar</string>
     <string name="cd_settings">Definições</string>
@@ -583,11 +583,25 @@
     <string name="unit_reps">reps</string>
     <string name="unit_pushes">impulsos</string>
     <string name="unit_floors">andares</string>
-    <string name="unit_days">dias</string>
-    <string name="unit_nights">noites</string>
-    <string name="unit_tests">testes</string>
+    <!-- Unit words only: the number is drawn beside them. -->
+    <plurals name="unit_days" tools:ignore="ImpliedQuantity">
+        <item quantity="one">dia</item>
+        <item quantity="many">dias</item>
+        <item quantity="other">dias</item>
+    </plurals>
+    <plurals name="unit_nights" tools:ignore="ImpliedQuantity">
+        <item quantity="one">noite</item>
+        <item quantity="many">noites</item>
+        <item quantity="other">noites</item>
+    </plurals>
+    <plurals name="unit_tests" tools:ignore="ImpliedQuantity">
+        <item quantity="one">teste</item>
+        <item quantity="many">testes</item>
+        <item quantity="other">testes</item>
+    </plurals>
     <string name="unit_total">total</string>
     <string name="unit_grams">g</string>
+    <string name="unit_bpm">bpm</string>
     <string name="section_activities">Atividades</string>
     <string name="section_activity_type_stats">Por tipo de atividade</string>
     <plurals name="activity_type_stats_activity_count">

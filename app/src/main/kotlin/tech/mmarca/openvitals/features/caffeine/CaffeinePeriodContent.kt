@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import java.time.LocalDate
 import java.time.ZoneId
@@ -355,7 +356,7 @@ private fun CaffeineStatistics(
             InsightStat(
                 title = stringResource(R.string.metric_logged_days),
                 value = unitFormatter.count(insights.loggedDays),
-                unit = stringResource(R.string.unit_days),
+                unit = pluralStringResource(R.plurals.unit_days, insights.loggedDays),
                 icon = Icons.Outlined.CheckCircle,
                 accentColor = accent,
             ),
@@ -369,7 +370,7 @@ private fun CaffeineStatistics(
             InsightStat(
                 title = stringResource(R.string.caffeine_safe_streak),
                 value = unitFormatter.count(insights.safeSleepStreak),
-                unit = stringResource(R.string.unit_days),
+                unit = pluralStringResource(R.plurals.unit_days, insights.safeSleepStreak),
                 icon = Icons.Outlined.LocalFireDepartment,
                 accentColor = accent,
             ),

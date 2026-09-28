@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
@@ -123,7 +124,7 @@ internal fun HydrationSummary(
         MetricCard(
             title = stringResource(R.string.metric_logged_days),
             value = unitFormatter.count(summary.trackedDays),
-            unit = stringResource(R.string.unit_days),
+            unit = pluralStringResource(R.plurals.unit_days, summary.trackedDays),
             icon = Icons.Outlined.LocalDrink,
             accentColor = HydrationColor,
             subtitle = stringResource(R.string.summary_days_in_range, unitFormatter.count(summary.loggedDays)),
@@ -149,21 +150,21 @@ internal fun HydrationStatistics(
             InsightStat(
                 title = stringResource(R.string.stat_goal_streak),
                 value = unitFormatter.count(summary.currentGoalStreakDays),
-                unit = stringResource(R.string.unit_days),
+                unit = pluralStringResource(R.plurals.unit_days, summary.currentGoalStreakDays),
                 icon = Icons.Outlined.LocalFireDepartment,
                 accentColor = HydrationColor,
             ),
             InsightStat(
                 title = stringResource(R.string.stat_goals_met),
                 value = unitFormatter.count(summary.goalMetDays),
-                unit = stringResource(R.string.unit_days),
+                unit = pluralStringResource(R.plurals.unit_days, summary.goalMetDays),
                 icon = Icons.Outlined.CheckCircle,
                 accentColor = HydrationColor,
             ),
             InsightStat(
                 title = stringResource(R.string.stat_longest_goal_streak),
                 value = unitFormatter.count(summary.longestGoalStreakDays),
-                unit = stringResource(R.string.unit_days),
+                unit = pluralStringResource(R.plurals.unit_days, summary.longestGoalStreakDays),
                 icon = Icons.Outlined.CalendarMonth,
                 accentColor = HydrationColor,
             ),

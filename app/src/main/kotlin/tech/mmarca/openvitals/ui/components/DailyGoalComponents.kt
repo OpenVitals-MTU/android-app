@@ -207,7 +207,7 @@ fun DailyGoalStatistics(
             InsightStat(
                 title = stringResource(R.string.stat_goals_met),
                 value = unitFormatter.count(progress.goalMetDays),
-                unit = stringResource(R.string.unit_days),
+                unit = pluralStringResource(R.plurals.unit_days, progress.goalMetDays),
                 icon = Icons.Outlined.CheckCircle,
                 accentColor = accentColor,
             ),
@@ -238,14 +238,14 @@ fun DailyGoalStatistics(
             InsightStat(
                 title = stringResource(R.string.stat_goal_streak),
                 value = unitFormatter.count(progress.currentStreakDays()),
-                unit = stringResource(R.string.unit_days),
+                unit = pluralStringResource(R.plurals.unit_days, progress.currentStreakDays()),
                 icon = Icons.Outlined.LocalFireDepartment,
                 accentColor = accentColor,
             ),
             InsightStat(
                 title = stringResource(R.string.stat_longest_goal_streak),
                 value = unitFormatter.count(progress.longestStreakDays),
-                unit = stringResource(R.string.unit_days),
+                unit = pluralStringResource(R.plurals.unit_days, progress.longestStreakDays),
                 icon = Icons.Outlined.CalendarMonth,
                 accentColor = accentColor,
             ),

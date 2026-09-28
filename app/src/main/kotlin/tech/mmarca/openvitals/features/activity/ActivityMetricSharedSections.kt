@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.activity
 
+import androidx.compose.ui.res.pluralStringResource
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 
 import androidx.compose.foundation.layout.Arrangement
@@ -283,7 +284,7 @@ internal fun ActivityPeriodStatisticsGrid(
             InsightStat(
                 title = stringResource(R.string.stat_active_days),
                 value = unitFormatter.count(activeDays),
-                unit = stringResource(R.string.unit_days),
+                unit = pluralStringResource(R.plurals.unit_days, activeDays),
                 icon = Icons.Outlined.CheckCircle,
                 accentColor = accentColor,
             ),
