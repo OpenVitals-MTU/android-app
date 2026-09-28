@@ -663,9 +663,9 @@ internal fun DashboardData.toSnapshot(
                 )
             } else {
                 val displayValue = menstruationPeriodDays?.takeIf { it > 0 }
-                    ?.let { DisplayValue(unitFormatter.count(it), context.getString(R.string.unit_days)) }
+                    ?.let { DisplayValue(unitFormatter.count(it), context.resources.getQuantityString(R.plurals.unit_days, it)) }
                     ?: ovulationTestCount?.takeIf { it > 0 }
-                        ?.let { DisplayValue(unitFormatter.count(it), context.getString(R.string.unit_tests)) }
+                        ?.let { DisplayValue(unitFormatter.count(it), context.resources.getQuantityString(R.plurals.unit_tests, it)) }
                     ?: latestBasalBodyTemperatureCelsius?.let(unitFormatter::temperature)
                 snapshot(displayValue)
             }

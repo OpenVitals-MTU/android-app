@@ -683,11 +683,27 @@
     <string name="unit_reps">powt.</string>
     <string name="unit_pushes">pchnięć</string>
     <string name="unit_floors">pięter</string>
-    <string name="unit_days">dni</string>
-    <string name="unit_nights">nocy</string>
-    <string name="unit_tests">testów</string>
+    <plurals name="unit_days">
+        <item quantity="one">dzień</item>
+        <item quantity="few">dni</item>
+        <item quantity="many">dni</item>
+        <item quantity="other">dnia</item>
+    </plurals>
+    <plurals name="unit_nights">
+        <item quantity="one">noc</item>
+        <item quantity="few">noce</item>
+        <item quantity="many">nocy</item>
+        <item quantity="other">nocy</item>
+    </plurals>
+    <plurals name="unit_tests">
+        <item quantity="one">test</item>
+        <item quantity="few">testy</item>
+        <item quantity="many">testów</item>
+        <item quantity="other">testu</item>
+    </plurals>
     <string name="unit_total">łącznie</string>
     <string name="unit_grams">g</string>
+    <string name="unit_bpm">bpm</string>
     <string name="section_activities">Aktywności</string>
     <string name="section_activity_type_stats">Wg typu aktywności</string>
     <plurals name="activity_type_stats_activity_count">
@@ -1428,7 +1444,7 @@
     <string name="onboarding_privacy_title">Prywatność przede wszystkim</string>
     <string name="onboarding_privacy_body">Bez konta. Dane zostają na urządzeniu. Bez chmury, bez analityki, bez reklam.</string>
     <string name="health_disclaimer_title">Zastrzeżenie zdrowotne</string>
-    <string name="health_disclaimer_body">OpenVitals służy wyłącznie do ogólnego dbania o zdrowie i celów informacyjnych. Nie jest wyrobem medycznym i nie udziela porad medycznych. Nie diagnozuje, nie leczy, nie łagodzi ani nie zapobiega żadnej chorobie ani stanowi zdrowia. W sprawach porady medycznej, diagnozy lub leczenia zawsze konsultuj się z wykwalifikowanym pracownikiem ochrony zdrowia.</string>
+    <string name="health_disclaimer_body">OpenVitals służy wyłącznie do ogólnego dbania o zdrowie i celów informacyjnych. Nie jest wyrobem medycznym i nie udziela porad medycznych. Nie jest przeznaczony do diagnozowania, leczenia, wyleczenia ani zapobiegania jakimkolwiek chorobom lub stanom zdrowia. W sprawach porady medycznej, diagnozy lub leczenia zawsze konsultuj się z wykwalifikowanym pracownikiem ochrony zdrowia.</string>
     <string name="onboarding_health_connect_title">Oparte na Health Connect</string>
     <string name="onboarding_health_connect_body">Odczytuje z bezpiecznego magazynu zdrowia Androida na urządzeniu i zapisuje utworzone przez Ciebie wpisy z powrotem do Health Connect. Działa ze wszystkimi danymi zaimportowanymi do Health Connect.</string>
     <string name="onboarding_unable_open_permissions">Nie można otworzyć uprawnień Health Connect.</string>
@@ -2560,7 +2576,7 @@
     <string name="privacy_policy_title">Polityka prywatności</string>
     <string name="privacy_policy_body_1">OpenVitals odczytuje dane z Health Connect, aby pokazywać na Twoim urządzeniu kroki, treningi, sen, tętno, wagę, kalorie, nawodnienie, odżywianie, mindfulness i parametry życiowe. Wpisy, które sam zapisujesz, w tym importowane trasy GPX/KML/KMZ i pliki FIT, są zapisywane w Health Connect.</string>
     <string name="privacy_policy_body_2">Ta aplikacja nie wysyła Twoich danych zdrowotnych do chmury, nie zawiera reklam i nie udostępnia danych osobom trzecim.</string>
-    <string name="privacy_policy_body_3">OpenVitals nie jest wyrobem medycznym i nie diagnozuje, nie leczy, nie łagodzi ani nie zapobiega żadnej chorobie ani stanowi medycznemu. Nie zastępuje porady, diagnozy ani leczenia przez wykwalifikowanego pracownika ochrony zdrowia.</string>
+    <string name="privacy_policy_body_3">OpenVitals nie jest wyrobem medycznym i nie jest przeznaczony do diagnozowania, leczenia, wyleczenia ani zapobiegania jakimkolwiek chorobom lub stanom zdrowia. Nie zastępuje porady, diagnozy ani leczenia przez wykwalifikowanego pracownika ochrony zdrowia.</string>
     <string name="body_energy_reason_strong_calibration">Intensywność tętna ma silną kalibrację.</string>
     <string name="body_energy_reason_observed_or_age">Intensywność tętna korzysta z kalibracji obserwowanej lub według wieku.</string>
     <string name="body_energy_reason_incomplete_calibration">Kalibracja jest niepełna, więc szacunki automatyczne są ostrożne.</string>

@@ -523,11 +523,24 @@
     <string name="unit_reps">rip.</string>
     <string name="unit_pushes">spinte</string>
     <string name="unit_floors">piani</string>
-    <string name="unit_days">giorni</string>
-    <string name="unit_nights">notti</string>
-    <string name="unit_tests">test</string>
+    <plurals name="unit_days">
+        <item quantity="one">giorno</item>
+        <item quantity="many">giorni</item>
+        <item quantity="other">giorni</item>
+    </plurals>
+    <plurals name="unit_nights">
+        <item quantity="one">notte</item>
+        <item quantity="many">notti</item>
+        <item quantity="other">notti</item>
+    </plurals>
+    <plurals name="unit_tests">
+        <item quantity="one">test</item>
+        <item quantity="many">test</item>
+        <item quantity="other">test</item>
+    </plurals>
     <string name="unit_total">totale</string>
     <string name="unit_grams">g</string>
+    <string name="unit_bpm">bpm</string>
     <string name="section_activities">Attività</string>
     <string name="section_activity_type_stats">Per tipo di attività</string>
     <plurals name="activity_type_stats_activity_count">

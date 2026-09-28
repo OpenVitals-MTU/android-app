@@ -523,11 +523,21 @@
     <string name="unit_reps">kordust</string>
     <string name="unit_pushes">lükkeid</string>
     <string name="unit_floors">korrust</string>
-    <string name="unit_days">päeva</string>
-    <string name="unit_nights">ööd</string>
-    <string name="unit_tests">testi</string>
+    <plurals name="unit_days">
+        <item quantity="one">päev</item>
+        <item quantity="other">päeva</item>
+    </plurals>
+    <plurals name="unit_nights">
+        <item quantity="one">öö</item>
+        <item quantity="other">ööd</item>
+    </plurals>
+    <plurals name="unit_tests">
+        <item quantity="one">test</item>
+        <item quantity="other">testi</item>
+    </plurals>
     <string name="unit_total">kokku</string>
     <string name="unit_grams">g</string>
+    <string name="unit_bpm">bpm</string>
     <string name="section_activities">Treeningud</string>
     <string name="section_activity_type_stats">Treeningu tüübi järgi</string>
     <plurals name="activity_type_stats_activity_count">
@@ -1005,7 +1015,7 @@
     <string name="onboarding_privacy_title">Privaatsus esikohal</string>
     <string name="onboarding_privacy_body">Kontot ei ole vaja. Andmed jäävad sinu seadmesse. Pilve üleslaadimist, analüütikat ega reklaame ei ole.</string>
     <string name="health_disclaimer_title">Terviseteatis</string>
-    <string name="health_disclaimer_body">OpenVitals on mõeldud ainult üldiseks heaolu- ja teabekasutuseks. See ei ole meditsiiniseade ega anna meditsiinilist nõu. See ei diagnoosi, ravi ega ennetab ühtegi haigust ega terviseseisundit. Meditsiinilise nõu, diagnoosi või ravi saamiseks pöördu alati kvalifitseeritud tervishoiutöötaja poole.</string>
+    <string name="health_disclaimer_body">OpenVitals on mõeldud ainult üldiseks heaolu- ja teabekasutuseks. See ei ole meditsiiniseade ega anna meditsiinilist nõu. See ei diagnoosi, ravi, tervenda ega enneta ühtegi haigust ega terviseseisundit. Meditsiinilise nõu, diagnoosi või ravi saamiseks pöördu alati kvalifitseeritud tervishoiutöötaja poole.</string>
     <string name="onboarding_health_connect_title">Toetatud Health Connecti poolt</string>
     <string name="onboarding_health_connect_body">Loeb andmeid turvalisest seadmesisesest Androidi terviseandmehoidlast ja salvestab sinu loodud kirjed tagasi Health Connectisse. Töötab kõigi Health Connectisse imporditud andmetega.</string>
     <string name="onboarding_unable_open_permissions">Health Connecti lube ei õnnestunud avada.</string>
@@ -1720,7 +1730,7 @@
     <string name="privacy_policy_title">Privaatsuspoliitika</string>
     <string name="privacy_policy_body_1">OpenVitals loeb andmeid Health Connectist, et näidata sinu seadmes samme, treeninguid, und, pulssi, kaalu, kaloreid, vedelikutarbimist, toitumist, teadvelolekut ja elunäitajaid. Kirjed, mida sa ise logid, sealhulgas imporditud GPX/KML/KMZ marsruudid ja imporditud FIT-failid, kirjutatakse Health Connectisse.</string>
     <string name="privacy_policy_body_2">See rakendus ei laadi sinu terviseandmeid pilveteenusesse, ei sisalda reklaame ega jaga andmeid kolmandate osapooltega.</string>
-    <string name="privacy_policy_body_3">OpenVitals ei ole meditsiiniseade ega diagnoosi, ravi ega ennetab ühtegi haigust ega terviseseisundit. See ei asenda kvalifitseeritud tervishoiutöötaja meditsiinilist nõuannet, diagnoosi ega ravi.</string>
+    <string name="privacy_policy_body_3">OpenVitals ei ole meditsiiniseade ega diagnoosi, ravi, tervenda ega enneta ühtegi haigust ega terviseseisundit. See ei asenda kvalifitseeritud tervishoiutöötaja meditsiinilist nõuannet, diagnoosi ega ravi.</string>
     <string name="settings_apple_health_import_routes_incomplete">Tervisandmed imporditi, kuid mõned treeningmarsruudid jäid kättesaamatuks, kuna ZIP-fail lõppes ootamatult. Impordiaruandes on loetletud asjaomased tegevused, mida saab käsitsi taastada.</string>
     <string name="body_energy_reason_strong_calibration">Pulsipõhisel intensiivsusel on tugev kalibreering.</string>
     <string name="body_energy_reason_observed_or_age">Pulsipõhine intensiivsus kasutab mõõdetud või vanusepõhist kalibreeringut.</string>
@@ -2605,7 +2615,7 @@
     <string name="workout_plan_goal_steps">%1$d sammu</string>
     <string name="workout_plan_goal_kcal">%1$.0f kcal</string>
     <string name="workout_plan_targets_kept">Sihid: %1$s</string>
-    <string name="workout_plan_target_heart_rate">SLS %1$d–%2$d lööki/min</string>
+    <string name="workout_plan_target_heart_rate">SLS %1$d–%2$d bpm</string>
     <string name="workout_plan_target_power">Võimsus %1$d–%2$d W</string>
     <string name="workout_plan_target_speed">Kiirus %1$.1f–%2$.1f km/h</string>
     <string name="workout_plan_target_cadence">Sagedus %1$d–%2$d p/min</string>

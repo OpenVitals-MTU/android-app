@@ -4,6 +4,7 @@ import androidx.compose.runtime.remember
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.annotation.PluralsRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -446,7 +448,7 @@ internal fun HeartRateSummaryStatisticsContent(
         icon = Icons.Outlined.Favorite,
         accentColor = HeartColor,
         countTitleRes = R.string.metric_logged_days,
-        countUnitRes = R.string.unit_days,
+        countUnitPluralsRes = R.plurals.unit_days,
         period = period,
         baselineCurrentValue = average,
         baselineValues = baselineSummaries.map { BaselineValue(it.date, it.avgBpm.toDouble()) },
@@ -479,7 +481,7 @@ internal fun RestingHeartRateStatisticsContent(
         icon = Icons.Outlined.FavoriteBorder,
         accentColor = HeartColor,
         countTitleRes = R.string.metric_logged_days,
-        countUnitRes = R.string.unit_days,
+        countUnitPluralsRes = R.plurals.unit_days,
         period = period,
         baselineCurrentValue = average,
         baselineValues = baselineEntries.map { BaselineValue(it.date, it.bpm.toDouble()) },
@@ -512,7 +514,7 @@ internal fun HrvStatisticsContent(
         icon = Icons.Outlined.FavoriteBorder,
         accentColor = HeartColor,
         countTitleRes = R.string.metric_logged_days,
-        countUnitRes = R.string.unit_days,
+        countUnitPluralsRes = R.plurals.unit_days,
         period = period,
         baselineCurrentValue = average,
         baselineValues = baselineEntries.map { BaselineValue(it.date, it.rmssdMs) },
@@ -1077,7 +1079,7 @@ internal fun LazyListScope.heartNumericStatistics(
     icon: ImageVector,
     accentColor: Color,
     countTitleRes: Int = R.string.stat_readings,
-    countUnitRes: Int? = null,
+    @PluralsRes countUnitPluralsRes: Int? = null,
     period: DatePeriod? = null,
     baselineCurrentValue: Double? = null,
     baselineValues: List<BaselineValue> = emptyList(),
@@ -1095,7 +1097,7 @@ internal fun LazyListScope.heartNumericStatistics(
             icon = icon,
             accentColor = accentColor,
             countTitleRes = countTitleRes,
-            countUnitRes = countUnitRes,
+            countUnitPluralsRes = countUnitPluralsRes,
             period = period,
             baselineCurrentValue = baselineCurrentValue,
             baselineValues = baselineValues,
@@ -1116,7 +1118,7 @@ internal fun HeartNumericStatisticsContent(
     icon: ImageVector,
     accentColor: Color,
     countTitleRes: Int = R.string.stat_readings,
-    countUnitRes: Int? = null,
+    @PluralsRes countUnitPluralsRes: Int? = null,
     period: DatePeriod? = null,
     baselineCurrentValue: Double? = null,
     baselineValues: List<BaselineValue> = emptyList(),
@@ -1149,7 +1151,7 @@ internal fun HeartNumericStatisticsContent(
                 InsightStat(
                     title = stringResource(countTitleRes),
                     value = unitFormatter.count(readings),
-                    unit = countUnitRes?.let { stringResource(it) }.orEmpty(),
+                    unit = countUnitPluralsRes?.let { pluralStringResource(it, readings) }.orEmpty(),
                     icon = Icons.Outlined.CheckCircle,
                     accentColor = accentColor,
                 ),

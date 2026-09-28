@@ -674,11 +674,21 @@
     <string name="unit_reps">回</string>
     <string name="unit_pushes">プッシュ</string>
     <string name="unit_floors">階</string>
-    <string name="unit_days">日</string>
-    <string name="unit_nights">晩</string>
-    <string name="unit_tests">回</string>
+    <plurals name="unit_days">
+        <item quantity="one">日</item>
+        <item quantity="other">日</item>
+    </plurals>
+    <plurals name="unit_nights">
+        <item quantity="one">晩</item>
+        <item quantity="other">晩</item>
+    </plurals>
+    <plurals name="unit_tests">
+        <item quantity="one">回</item>
+        <item quantity="other">回</item>
+    </plurals>
     <string name="unit_total">合計</string>
     <string name="unit_grams">g</string>
+    <string name="unit_bpm">bpm</string>
     <string name="section_activities">アクティビティ</string>
     <string name="section_activity_type_stats">種類別</string>
     <string name="section_planned_workouts">予定のワークアウト</string>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">OpenVitals</string>
     <string name="cd_back">Назад</string>
     <string name="cd_settings">Настройки</string>
@@ -656,11 +656,28 @@
     <string name="unit_reps">повторений</string>
     <string name="unit_pushes">толчков</string>
     <string name="unit_floors">этажей</string>
-    <string name="unit_days">дней</string>
-    <string name="unit_nights">ночей</string>
-    <string name="unit_tests">тестов</string>
+    <!-- Unit words only: the number is drawn beside them. -->
+    <plurals name="unit_days" tools:ignore="ImpliedQuantity">
+        <item quantity="one">день</item>
+        <item quantity="few">дня</item>
+        <item quantity="many">дней</item>
+        <item quantity="other">дня</item>
+    </plurals>
+    <plurals name="unit_nights" tools:ignore="ImpliedQuantity">
+        <item quantity="one">ночь</item>
+        <item quantity="few">ночи</item>
+        <item quantity="many">ночей</item>
+        <item quantity="other">ночи</item>
+    </plurals>
+    <plurals name="unit_tests" tools:ignore="ImpliedQuantity">
+        <item quantity="one">тест</item>
+        <item quantity="few">теста</item>
+        <item quantity="many">тестов</item>
+        <item quantity="other">теста</item>
+    </plurals>
     <string name="unit_total">всего</string>
     <string name="unit_grams">г</string>
+    <string name="unit_bpm">уд/мин</string>
     <string name="section_activities">Активности</string>
     <string name="section_activity_type_stats">По типу активности</string>
     <plurals name="activity_type_stats_activity_count">
@@ -1380,7 +1397,7 @@
     <string name="onboarding_privacy_title">Конфиденциальность прежде всего</string>
     <string name="onboarding_privacy_body">Регистрация не требуется. Данные остаются на вашем устройстве. Нет загрузки в облако, аналитики и рекламы.</string>
     <string name="health_disclaimer_title">Медицинская оговорка</string>
-    <string name="health_disclaimer_body">OpenVitals предназначен только для общего оздоровительного и информационного использования. Это не медицинское устройство, и приложение не предоставляет медицинских рекомендаций. Оно не диагностирует, не лечит и не предотвращает заболевания или медицинские состояния. За медицинской консультацией, диагностикой или лечением всегда обращайтесь к квалифицированному медицинскому специалисту.</string>
+    <string name="health_disclaimer_body">OpenVitals предназначен только для общего оздоровительного и информационного использования. Это не медицинское устройство, и приложение не предоставляет медицинских рекомендаций. Оно не предназначено для диагностики, лечения, излечения или профилактики каких-либо заболеваний или состояний здоровья. За медицинской консультацией, диагностикой или лечением всегда обращайтесь к квалифицированному медицинскому специалисту.</string>
     <string name="onboarding_health_connect_title">Работает на базе Health Connect</string>
     <string name="onboarding_health_connect_body">Считывает данные из защищённого локального хранилища здоровья Android и сохраняет созданные вами записи обратно в Health Connect. Работает со всеми данными, импортированными в Health Connect.</string>
     <string name="onboarding_unable_open_permissions">Не удалось открыть разрешения Health Connect.</string>

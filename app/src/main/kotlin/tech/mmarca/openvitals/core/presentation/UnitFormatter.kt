@@ -10,6 +10,8 @@ class UnitFormatter(
     private val unitSystemProvider: () -> UnitSystem,
     private val localeProvider: () -> Locale = { Locale.getDefault() },
     private val unitOverrideProvider: (UnitQuantity) -> UnitSystem? = { null },
+    /** "bpm" in the app's language; some languages use their own abbreviation. */
+    private val heartRateUnitProvider: () -> String = { "bpm" },
 ) {
     fun unitSystem(): UnitSystem = unitSystemProvider()
 
@@ -88,7 +90,9 @@ class UnitFormatter(
     fun percent(value: Double, decimals: Int = 1): DisplayValue =
         DisplayValue(decimal(value, decimals), "%")
 
-    fun heartRate(bpm: Long): DisplayValue = DisplayValue(bpm.toString(), "bpm")
+    fun heartRate(bpm: Long): DisplayValue = DisplayValue(bpm.toString(), heartRateUnit())
+
+    fun heartRateUnit(): String = heartRateUnitProvider()
 
     fun hrv(milliseconds: Double): DisplayValue = DisplayValue(decimal(milliseconds, 1), "ms")
 

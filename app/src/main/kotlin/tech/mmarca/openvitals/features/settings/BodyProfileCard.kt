@@ -93,13 +93,13 @@ internal fun BodyProfileCard(
             BodyProfileNumberField(
                 label = stringResource(R.string.body_energy_calibration_resting_hr),
                 value = draft.restingHeartRateBpm,
-                suffix = "bpm",
+                suffix = stringResource(R.string.unit_bpm),
                 onValue = { draft = draft.copy(restingHeartRateBpm = it) },
             )
             BodyProfileNumberField(
                 label = stringResource(R.string.body_energy_calibration_max_hr),
                 value = draft.maxHeartRateBpm,
-                suffix = "bpm",
+                suffix = stringResource(R.string.unit_bpm),
                 onValue = { draft = draft.copy(maxHeartRateBpm = it) },
             )
             BodyProfileSexField(

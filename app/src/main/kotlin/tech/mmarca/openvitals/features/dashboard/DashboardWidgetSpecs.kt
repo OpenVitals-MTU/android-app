@@ -411,9 +411,9 @@ private fun CycleWidgetDisplay.toDisplayValue(unitFormatter: UnitFormatter): Dis
     when (this) {
         is CycleWidgetDisplay.RecordedDay -> DisplayValue(stringResource(R.string.widget_cycle_day, day), "")
         is CycleWidgetDisplay.MenstruationDays ->
-            DisplayValue(unitFormatter.count(days), stringResource(R.string.unit_days))
+            DisplayValue(unitFormatter.count(days), pluralStringResource(R.plurals.unit_days, days))
         is CycleWidgetDisplay.OvulationTests ->
-            DisplayValue(unitFormatter.count(count), stringResource(R.string.unit_tests))
+            DisplayValue(unitFormatter.count(count), pluralStringResource(R.plurals.unit_tests, count))
         is CycleWidgetDisplay.BasalTemperature ->
             unitFormatter.temperature(celsius)
     }

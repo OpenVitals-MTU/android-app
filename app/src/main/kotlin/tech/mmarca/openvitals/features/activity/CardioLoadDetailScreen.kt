@@ -267,7 +267,7 @@ private fun CardioLoadNumbersCard(
                         },
                     ),
                     value = estimate.restingHeartRateBpm
-                        ?.let { DisplayValue(unitFormatter.count(it), "bpm") }
+                        ?.let { DisplayValue(unitFormatter.count(it), stringResource(R.string.unit_bpm)) }
                         ?: DisplayValue(stringResource(R.string.no_data), ""),
                 ),
                 DetailMetric(
@@ -279,7 +279,7 @@ private fun CardioLoadNumbersCard(
                         },
                     ),
                     value = estimate.maxHeartRateBpm
-                        ?.let { DisplayValue(unitFormatter.count(it), "bpm") }
+                        ?.let { DisplayValue(unitFormatter.count(it), stringResource(R.string.unit_bpm)) }
                         ?: DisplayValue(stringResource(R.string.no_data), ""),
                 ),
                 DetailMetric(

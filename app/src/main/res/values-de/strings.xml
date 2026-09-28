@@ -522,11 +522,21 @@
     <string name="unit_pushes">Schübe</string>
     <string name="unit_reps">Wdh.</string>
     <string name="unit_floors">Etagen</string>
-    <string name="unit_days">Tage</string>
-    <string name="unit_nights">Nächte</string>
-    <string name="unit_tests">Tests</string>
+    <plurals name="unit_days">
+        <item quantity="one">Tag</item>
+        <item quantity="other">Tage</item>
+    </plurals>
+    <plurals name="unit_nights">
+        <item quantity="one">Nacht</item>
+        <item quantity="other">Nächte</item>
+    </plurals>
+    <plurals name="unit_tests">
+        <item quantity="one">Test</item>
+        <item quantity="other">Tests</item>
+    </plurals>
     <string name="unit_total">gesamt</string>
     <string name="unit_grams">g</string>
+    <string name="unit_bpm">bpm</string>
     <string name="section_activities">Aktivitäten</string>
     <string name="section_activity_type_stats">Nach Aktivitätstyp</string>
     <plurals name="activity_type_stats_activity_count">

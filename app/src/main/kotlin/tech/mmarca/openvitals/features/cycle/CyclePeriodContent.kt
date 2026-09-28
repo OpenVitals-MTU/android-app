@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.DeviceThermostat
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import java.time.LocalDate
 import tech.mmarca.openvitals.R
@@ -194,14 +195,14 @@ private fun CycleStatisticsGrid(display: CycleDisplayState, unitFormatter: UnitF
             InsightStat(
                 title = stringResource(R.string.metric_period_days),
                 value = unitFormatter.count(summary.periodDays),
-                unit = stringResource(R.string.unit_days),
+                unit = pluralStringResource(R.plurals.unit_days, summary.periodDays),
                 icon = Icons.Outlined.CalendarMonth,
                 accentColor = CycleColor,
             ),
             InsightStat(
                 title = stringResource(R.string.metric_ovulation_tests),
                 value = unitFormatter.count(summary.ovulationTestCount),
-                unit = stringResource(R.string.unit_tests),
+                unit = pluralStringResource(R.plurals.unit_tests, summary.ovulationTestCount),
                 icon = Icons.Outlined.CheckCircle,
                 accentColor = CycleColor,
             ),

@@ -221,7 +221,7 @@ internal fun recordingDashboardStats(
             } else {
                 waiting
             },
-            unit = "bpm",
+            unit = stringResource(R.string.unit_bpm),
         )
     val cadence = state.currentCyclingCadenceRpm ?: state.currentRunningCadenceRpm
     val speed = state.currentSensorSpeedMetersPerSecond
