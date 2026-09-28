@@ -14,7 +14,6 @@ enum class PeriodRangePreferenceKey(
     HYDRATION("detail_range_hydration", TimeRange.WEEK),
     NUTRITION("detail_range_nutrition", TimeRange.WEEK),
     MINDFULNESS("detail_range_mindfulness", TimeRange.WEEK),
-    CYCLE("detail_range_cycle", TimeRange.MONTH),
     // The day first: active caffeine and tonight's forecast are why the screen is opened.
     CAFFEINE("detail_range_caffeine", TimeRange.DAY),
 }
