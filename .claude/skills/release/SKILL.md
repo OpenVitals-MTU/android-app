@@ -57,9 +57,12 @@ matches the filenames.
 3. **`README.md`** - add highlight bullets for headline features; update any
    claims the release changes (e.g. the language list when a locale lands).
 4. **`fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`** - one
-   per Play listing locale: `en-US`, `es-ES`, `de-DE`, `it-IT`, `et`.
-   Hard limit 500 characters, ASCII, single paragraph. Known follow-up: a
-   `pt-PT` listing locale does not exist yet, so no Portuguese file.
+   per Play listing locale, all 14: `en-US`, `cs-CZ`, `de-DE`, `es-ES`, `et`,
+   `fi-FI`, `fr-FR`, `gl-ES`, `it-IT`, `ja-JP`, `pl-PL`, `pt-PT`, `ru-RU`,
+   `zh-CN`. Hard limit 500 characters, single paragraph. Write each in its
+   own language and script (UTF-8; the ASCII rule is for `CHANGELOG.md`
+   only), with the feature names from that locale's `strings.xml`. French
+   says "Santé Connect", as the app does.
 
 ## 3. Run the release
 
