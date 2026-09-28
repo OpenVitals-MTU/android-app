@@ -3304,4 +3304,15 @@
         <item quantity="other">%1$d días importados</item>
     </plurals>
     <string name="cycle_journal_import_failed">No se importó nada: el archivo no es una exportación del diario.</string>
+    <string name="cycle_choose_prompt">¿Qué quieres registrar?</string>
+    <string name="cycle_choice_bleeding">Sangrado</string>
+    <string name="cycle_choice_bleeding_summary">Flujo menstrual, manchado o ninguno</string>
+    <string name="cycle_choice_feeling">Cómo te sientes</string>
+    <string name="cycle_choice_feeling_summary">Dolor, ánimo, energía, síntomas y una nota</string>
+    <string name="cycle_choice_pregnancy_test_summary">Negativo, positivo o línea tenue</string>
+    <string name="cycle_choice_ovulation_test_summary">Negativo, alto, positivo o inconcluso</string>
+    <string name="cycle_choice_sexual_activity_summary">Con protección, sin protección o desconocido</string>
+    <string name="cycle_choice_bbt_summary">Tu temperatura al despertar y qué pudo alterarla</string>
+    <string name="cycle_choice_cervical_mucus_summary">Aspecto, cantidad y sensación</string>
+    <string name="cycle_choice_full_day_log">Registrar todo el día</string>
 </resources>

@@ -38,7 +38,7 @@ Status legend: **exists** already in OpenVitals · **new** built for this design
 | Pregnancy test (hCG) | Negative, positive, faint or uncertain. | journal (no Health Connect type) | new |
 | Sexual activity | Protected, unprotected, unknown. | `SexualActivityRecord` | exists |
 | Cycle start | A flow day after more than one free day starts a cycle. | derived | adapted |
-| One sheet for the whole day | Everything above is entered and saved together, with a discard guard. | — | adapted: the entry screen becomes a day log |
+| One thing at a time | A chooser lists what can be logged; each card opens the day log on that section alone. The full sheet stays one tap away and is still the editor for a day that has entries. Everything is saved together, with a discard guard. | — | adapted: a chooser in front of the day log |
 
 ### 2. Cycle management
 

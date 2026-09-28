@@ -3328,4 +3328,15 @@
         <item quantity="other">Импортировано %1$d дня</item>
     </plurals>
     <string name="cycle_journal_import_failed">Ничего не импортировано: файл не является экспортом журнала.</string>
+    <string name="cycle_choose_prompt">Что вы хотите записать?</string>
+    <string name="cycle_choice_bleeding">Кровотечение</string>
+    <string name="cycle_choice_bleeding_summary">Менструальные выделения, мажущие выделения или нет</string>
+    <string name="cycle_choice_feeling">Самочувствие</string>
+    <string name="cycle_choice_feeling_summary">Боль, настроение, энергия, симптомы и заметка</string>
+    <string name="cycle_choice_pregnancy_test_summary">Отрицательный, положительный или слабая полоска</string>
+    <string name="cycle_choice_ovulation_test_summary">Отрицательный, высокий, положительный или неопределённый</string>
+    <string name="cycle_choice_sexual_activity_summary">Защищённый, незащищённый или неизвестно</string>
+    <string name="cycle_choice_bbt_summary">Температура после пробуждения и что могло на неё повлиять</string>
+    <string name="cycle_choice_cervical_mucus_summary">Вид, количество и ощущение</string>
+    <string name="cycle_choice_full_day_log">Записать всё за день</string>
 </resources>

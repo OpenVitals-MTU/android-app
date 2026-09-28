@@ -60,6 +60,10 @@ data class CycleTodayDisplay(
 ) {
     val hasCycleHistory: Boolean
         get() = totalCycles > 0
+
+    /** Whether today already holds bleeding or a journal observation. */
+    val hasLoggedSomething: Boolean
+        get() = bleeding != null || journal?.hasObservations == true
 }
 
 /** The current cycle's morning temperatures and the shift rule's verdict. */

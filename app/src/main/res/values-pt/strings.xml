@@ -3298,4 +3298,15 @@
         <item quantity="other">%1$d dias importados</item>
     </plurals>
     <string name="cycle_journal_import_failed">Nada importado: o ficheiro não é uma exportação do diário.</string>
+    <string name="cycle_choose_prompt">O que queres registar?</string>
+    <string name="cycle_choice_bleeding">Sangramento</string>
+    <string name="cycle_choice_bleeding_summary">Fluxo menstrual, perdas ligeiras ou nenhum</string>
+    <string name="cycle_choice_feeling">Como te sentes</string>
+    <string name="cycle_choice_feeling_summary">Dor, humor, energia, sintomas e uma nota</string>
+    <string name="cycle_choice_pregnancy_test_summary">Negativo, positivo ou linha ténue</string>
+    <string name="cycle_choice_ovulation_test_summary">Negativo, alto, positivo ou inconclusivo</string>
+    <string name="cycle_choice_sexual_activity_summary">Com proteção, sem proteção ou desconhecido</string>
+    <string name="cycle_choice_bbt_summary">A tua temperatura ao acordar e o que a pode ter alterado</string>
+    <string name="cycle_choice_cervical_mucus_summary">Aspeto, quantidade e sensação</string>
+    <string name="cycle_choice_full_day_log">Registar tudo para o dia</string>
 </resources>

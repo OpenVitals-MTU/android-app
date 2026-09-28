@@ -262,8 +262,9 @@ internal fun isSupportedOpenVitalsRoute(route: String): Boolean {
     if (route == Screen.ActivityEntry.createRoute()) return true
     if (route == Screen.HydrationEntry.route) return true
     if (route == Screen.FoodEntry.route) return true
-    // The cycle widget opens today's day log; a dated route would go stale after midnight.
-    if (route == Screen.CycleEntry.route) return true
+    // The cycle widget asks what to log today; a dated route would go stale after midnight.
+    // Widgets drawn before the chooser existed still carry the day-log route.
+    if (route == Screen.CycleEntryChooser.route || route == Screen.CycleEntry.route) return true
     val hydrationDrinkLogPrefix = "manual_entry/hydration/log/"
     if (route.startsWith(hydrationDrinkLogPrefix)) {
         return Uri.decode(route.removePrefix(hydrationDrinkLogPrefix)).isNotBlank()

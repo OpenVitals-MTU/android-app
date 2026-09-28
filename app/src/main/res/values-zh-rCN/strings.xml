@@ -3289,4 +3289,15 @@
         <item quantity="other">已导入 %1$d 天</item>
     </plurals>
     <string name="cycle_journal_import_failed">未导入任何内容：该文件不是日志导出。</string>
+    <string name="cycle_choose_prompt">你想记录什么？</string>
+    <string name="cycle_choice_bleeding">出血</string>
+    <string name="cycle_choice_bleeding_summary">经血量、点滴出血或无</string>
+    <string name="cycle_choice_feeling">身体感受</string>
+    <string name="cycle_choice_feeling_summary">疼痛、心情、精力、症状和备注</string>
+    <string name="cycle_choice_pregnancy_test_summary">阴性、阳性或浅淡</string>
+    <string name="cycle_choice_ovulation_test_summary">阴性、高、阳性或无法确定</string>
+    <string name="cycle_choice_sexual_activity_summary">有保护、无保护或未知</string>
+    <string name="cycle_choice_bbt_summary">晨起体温以及可能干扰它的因素</string>
+    <string name="cycle_choice_cervical_mucus_summary">外观、量和感觉</string>
+    <string name="cycle_choice_full_day_log">记录一整天</string>
 </resources>

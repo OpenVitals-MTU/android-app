@@ -28,6 +28,7 @@ import tech.mmarca.openvitals.features.cycle.reminders.CycleReminderSettings
 import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.navigation.CYCLE_ENTRY_DATE_ARG
 import tech.mmarca.openvitals.navigation.CYCLE_ENTRY_PRESET_ARG
+import tech.mmarca.openvitals.navigation.CYCLE_ENTRY_SECTION_ARG
 import tech.mmarca.openvitals.navigation.CycleEntryPreset
 
 enum class CycleEntryError {
@@ -44,6 +45,8 @@ enum class CycleEntryError {
 @Immutable
 data class CycleEntryUiState(
     val date: LocalDate = LocalDate.now(),
+    /** The one section to show. Null shows them all. */
+    val section: CycleEntrySection? = null,
     val form: CycleDayForm = CycleDayForm(),
     val loadedForm: CycleDayForm = CycleDayForm(),
     val offeredSymptoms: List<CycleSymptom> = ObservationCatalog.symptomsFor(emptySet()),
@@ -68,6 +71,13 @@ data class CycleEntryUiState(
     /** True when an unsaved day log would be lost. */
     val shouldConfirmDiscard: Boolean
         get() = hasChanges && !isSavingEntry
+
+    /** True when what this screen can write needs a Health Connect permission that is missing. */
+    val lacksWritePermission: Boolean
+        get() = when (val shown = section) {
+            null -> grantedKinds.isEmpty()
+            else -> shown.writeKinds.any { it !in grantedKinds }
+        }
 }
 
 @HiltViewModel
@@ -93,7 +103,10 @@ class CycleEntryViewModel @Inject constructor(
     private var pendingPreset: String? = savedStateHandle[CYCLE_ENTRY_PRESET_ARG]
 
     private val _uiState = MutableStateFlow(
-        CycleEntryUiState(date = requestedDate?.coerceAtMost(LocalDate.now()) ?: LocalDate.now()),
+        CycleEntryUiState(
+            date = requestedDate?.coerceAtMost(LocalDate.now()) ?: LocalDate.now(),
+            section = CycleEntrySection.fromRoute(savedStateHandle[CYCLE_ENTRY_SECTION_ARG]),
+        ),
     )
     val uiState: StateFlow<CycleEntryUiState> = _uiState.asStateFlow()
 

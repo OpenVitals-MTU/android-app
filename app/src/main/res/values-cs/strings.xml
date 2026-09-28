@@ -3328,4 +3328,15 @@
         <item quantity="other">Importováno %1$d dní</item>
     </plurals>
     <string name="cycle_journal_import_failed">Nic se neimportovalo: soubor není export deníku.</string>
+    <string name="cycle_choose_prompt">Co chcete zaznamenat?</string>
+    <string name="cycle_choice_bleeding">Krvácení</string>
+    <string name="cycle_choice_bleeding_summary">Intenzita menstruace, špinění nebo žádné</string>
+    <string name="cycle_choice_feeling">Jak se cítíte</string>
+    <string name="cycle_choice_feeling_summary">Bolest, nálada, energie, příznaky a poznámka</string>
+    <string name="cycle_choice_pregnancy_test_summary">Negativní, pozitivní nebo slabá čárka</string>
+    <string name="cycle_choice_ovulation_test_summary">Negativní, vysoký, pozitivní nebo neprůkazný</string>
+    <string name="cycle_choice_sexual_activity_summary">S ochranou, bez ochrany nebo neznámé</string>
+    <string name="cycle_choice_bbt_summary">Teplota po probuzení a co ji mohlo ovlivnit</string>
+    <string name="cycle_choice_cervical_mucus_summary">Vzhled, množství a pocit</string>
+    <string name="cycle_choice_full_day_log">Zaznamenat vše za den</string>
 </resources>

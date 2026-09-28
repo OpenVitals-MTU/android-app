@@ -101,6 +101,6 @@ class HomeCycleWidgetStateTest {
 
     @Test
     fun `the log link is the bare day-log route`() {
-        assertEquals(Screen.CycleEntry.route, homeCycleWidgetEntryRoute())
+        assertEquals(Screen.CycleEntryChooser.route, homeCycleWidgetEntryRoute())
     }
 }

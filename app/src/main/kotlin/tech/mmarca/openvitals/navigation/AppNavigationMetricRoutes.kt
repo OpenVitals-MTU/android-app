@@ -96,6 +96,7 @@ internal fun MetricRouteContent(
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
     onEditVitalsMeasurement: (VitalsMeasurementType, String) -> Unit,
     onLogCycleEntry: (LocalDate) -> Unit = {},
+    onChooseCycleEntry: () -> Unit = {},
     onStartPeriod: () -> Unit = {},
     onOpenCycleSettings: () -> Unit = {},
 ) {
@@ -223,6 +224,7 @@ internal fun MetricRouteContent(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onLogCycleEntry = onLogCycleEntry,
+                onChooseCycleEntry = onChooseCycleEntry,
                 onStartPeriod = onStartPeriod,
                 onOpenCycleSettings = onOpenCycleSettings,
             )

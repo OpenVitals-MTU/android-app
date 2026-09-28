@@ -200,7 +200,7 @@ internal fun CycleTodayObservationsCard(
     modifier: Modifier = Modifier,
 ) {
     val journal = today.journal
-    val hasSomething = today.bleeding != null || journal?.hasObservations == true
+    val hasSomething = today.hasLoggedSomething
     OpenVitalsCard(modifier = modifier.fillMaxWidth(), onClick = onOpenDayLog) {
         Column(modifier = Modifier.padding(LayoutMetrics.cardPadding), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Row(

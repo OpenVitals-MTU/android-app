@@ -3328,4 +3328,15 @@
         <item quantity="other">Zaimportowano %1$d dnia</item>
     </plurals>
     <string name="cycle_journal_import_failed">Nic nie zaimportowano: plik nie jest eksportem dziennika.</string>
+    <string name="cycle_choose_prompt">Co chcesz zapisać?</string>
+    <string name="cycle_choice_bleeding">Krwawienie</string>
+    <string name="cycle_choice_bleeding_summary">Krwawienie miesiączkowe, plamienie lub brak</string>
+    <string name="cycle_choice_feeling">Jak się czujesz</string>
+    <string name="cycle_choice_feeling_summary">Ból, nastrój, energia, objawy i notatka</string>
+    <string name="cycle_choice_pregnancy_test_summary">Negatywny, pozytywny lub słaba kreska</string>
+    <string name="cycle_choice_ovulation_test_summary">Negatywny, wysoki, pozytywny lub niejednoznaczny</string>
+    <string name="cycle_choice_sexual_activity_summary">Z zabezpieczeniem, bez zabezpieczenia lub nieznane</string>
+    <string name="cycle_choice_bbt_summary">Temperatura po przebudzeniu i co mogło ją zaburzyć</string>
+    <string name="cycle_choice_cervical_mucus_summary">Wygląd, ilość i odczucie</string>
+    <string name="cycle_choice_full_day_log">Zapisz wszystko z tego dnia</string>
 </resources>

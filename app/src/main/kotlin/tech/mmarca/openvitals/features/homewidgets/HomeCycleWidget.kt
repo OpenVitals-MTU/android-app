@@ -188,8 +188,8 @@ private fun Preferences.isoDate(key: Preferences.Key<String>): LocalDate? =
 internal fun cycleDayFor(start: LocalDate, today: LocalDate): Int? =
     (ChronoUnit.DAYS.between(start, today) + 1).toInt().takeIf { it in 1..CycleCalculations.MaxDisplayableCycleDay }
 
-/** Today's day log, resolved when the app opens: a dated route would go stale after midnight. */
-internal fun homeCycleWidgetEntryRoute(): String = Screen.CycleEntry.route
+/** What to log today, resolved when the app opens: a dated route would go stale after midnight. */
+internal fun homeCycleWidgetEntryRoute(): String = Screen.CycleEntryChooser.route
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)

@@ -3360,4 +3360,15 @@
         <item quantity="other">%1$d日分を取り込みました</item>
     </plurals>
     <string name="cycle_journal_import_failed">何も取り込めませんでした。このファイルは記録の書き出しではありません。</string>
+    <string name="cycle_choose_prompt">何を記録しますか？</string>
+    <string name="cycle_choice_bleeding">出血</string>
+    <string name="cycle_choice_bleeding_summary">月経の量、少量出血、またはなし</string>
+    <string name="cycle_choice_feeling">体調と気分</string>
+    <string name="cycle_choice_feeling_summary">痛み、気分、エネルギー、症状、メモ</string>
+    <string name="cycle_choice_pregnancy_test_summary">陰性、陽性、または薄い線</string>
+    <string name="cycle_choice_ovulation_test_summary">陰性、高い、陽性、または判定不能</string>
+    <string name="cycle_choice_sexual_activity_summary">避妊あり、避妊なし、または不明</string>
+    <string name="cycle_choice_bbt_summary">起床時の体温と、影響した可能性のあること</string>
+    <string name="cycle_choice_cervical_mucus_summary">見た目、量、感覚</string>
+    <string name="cycle_choice_full_day_log">1日分をまとめて記録</string>
 </resources>

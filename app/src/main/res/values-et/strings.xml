@@ -3280,4 +3280,15 @@
         <item quantity="other">%1$d päeva imporditud</item>
     </plurals>
     <string name="cycle_journal_import_failed">Midagi ei imporditud: fail ei ole päeviku eksport.</string>
+    <string name="cycle_choose_prompt">Mida soovid kirja panna?</string>
+    <string name="cycle_choice_bleeding">Veritsus</string>
+    <string name="cycle_choice_bleeding_summary">Menstruatsiooni voolus, määrimine või puudub</string>
+    <string name="cycle_choice_feeling">Kuidas end tunned</string>
+    <string name="cycle_choice_feeling_summary">Valu, tuju, energia, sümptomid ja märkus</string>
+    <string name="cycle_choice_pregnancy_test_summary">Negatiivne, positiivne või nõrk joon</string>
+    <string name="cycle_choice_ovulation_test_summary">Negatiivne, kõrge, positiivne või ebaselge</string>
+    <string name="cycle_choice_sexual_activity_summary">Kaitsega, kaitseta või teadmata</string>
+    <string name="cycle_choice_bbt_summary">Sinu ärkamisaegne kehatemperatuur ja mis võis seda mõjutada</string>
+    <string name="cycle_choice_cervical_mucus_summary">Välimus, kogus ja tunne</string>
+    <string name="cycle_choice_full_day_log">Pane kirja kogu päev</string>
 </resources>
