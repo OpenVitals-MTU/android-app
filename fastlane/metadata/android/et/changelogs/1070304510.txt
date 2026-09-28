@@ -1,0 +1,1 @@
+Keeleparandused: sammuring ei näita enam ingliskeelset „steps“ ning päevad, ööd ja testid sobivad nüüd arvuga („1 päev“, mitte „1 päeva“). Terviseteatis vastab taas originaalile. See Google Play leht on nüüd kõigis rakenduse 14 keeles, uue kirjelduse ja ekraanipiltidega.

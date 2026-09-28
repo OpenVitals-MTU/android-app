@@ -1,5 +1,49 @@
 # Changelog
 
+## 2.11.1 - 2026-09-28
+
+### English
+
+- **Your language, everywhere.** The steps ring on the dashboard read "steps of 8,000" in English in every language; it now uses your language. Heart rate shows your language's own unit where it has one, such as lpm in Spanish, ppm in Galician and tep/min in Czech.
+- **Counts that agree with the number.** Days, nights and tests take the right form for the count in every language: "1 day", not "1 days".
+- **Google Play in every app language.** The store listing now has a description and eight screenshots in all 14 languages the app speaks.
+- **Fixes:** the health disclaimer in Czech, Polish, Russian and Estonian matches the English again; Czech says "tep/min" throughout, which also fits the heart rate chart axis.
+
+### Espanol
+
+- **Tu idioma, en todas partes.** El anillo de pasos del panel decia "steps of 8,000" en ingles en todos los idiomas; ahora usa tu idioma. La frecuencia cardiaca muestra la unidad propia de tu idioma cuando la tiene, como lpm en espanol, ppm en gallego y tep/min en checo.
+- **Recuentos que concuerdan con el numero.** Dias, noches y pruebas toman la forma correcta para el numero en todos los idiomas: "1 dia", no "1 dias".
+- **Google Play en todos los idiomas de la app.** La ficha de la tienda tiene ahora descripcion y ocho capturas en los 14 idiomas de la app.
+- **Correcciones:** el aviso de salud en checo, polaco, ruso y estonio vuelve a coincidir con el ingles; el checo usa "tep/min" en todas partes, que tambien cabe en el eje del grafico de frecuencia cardiaca.
+
+### Deutsch
+
+- **Deine Sprache, ueberall.** Der Schrittring im Dashboard zeigte in jeder Sprache "steps of 8,000" auf Englisch; jetzt steht er in deiner Sprache. Die Herzfrequenz zeigt die Einheit deiner Sprache, wo es eine eigene gibt, etwa lpm auf Spanisch, ppm auf Galicisch und tep/min auf Tschechisch.
+- **Zaehlungen passend zur Zahl.** Tage, Naechte und Tests nehmen in jeder Sprache die richtige Form fuer die Zahl an: "1 Tag", nicht "1 Tage".
+- **Google Play in jeder App-Sprache.** Der Store-Eintrag hat jetzt eine Beschreibung und acht Screenshots in allen 14 Sprachen der App.
+- **Korrekturen:** der Gesundheitshinweis auf Tschechisch, Polnisch, Russisch und Estnisch entspricht wieder dem Englischen; Tschechisch sagt ueberall "tep/min", das auch auf die Achse des Herzfrequenz-Diagramms passt.
+
+### Italiano
+
+- **La tua lingua, ovunque.** L'anello dei passi nella dashboard diceva "steps of 8,000" in inglese in ogni lingua; ora usa la tua lingua. La frequenza cardiaca mostra l'unita della tua lingua quando ne ha una propria, come lpm in spagnolo, ppm in galiziano e tep/min in ceco.
+- **Conteggi che concordano con il numero.** Giorni, notti e test prendono in ogni lingua la forma giusta per il numero: "1 giorno", non "1 giorni".
+- **Google Play in ogni lingua dell'app.** La scheda dello store ha ora una descrizione e otto screenshot in tutte le 14 lingue dell'app.
+- **Correzioni:** l'avviso sulla salute in ceco, polacco, russo ed estone torna a corrispondere all'inglese; il ceco usa "tep/min" ovunque, che entra anche nell'asse del grafico della frequenza cardiaca.
+
+### Eesti
+
+- **Sinu keel, igal pool.** Tooplaadi sammuring naitas igas keeles ingliskeelset "steps of 8,000"; nuud on see sinu keeles. Pulss naitab sinu keele uhikut, kui keelel on oma, naiteks lpm hispaania, ppm galeegi ja tep/min tsehhi keeles.
+- **Arvud, mis sobivad kokku.** Paevad, ood ja testid votavad igas keeles arvule vastava kuju: "1 paev", mitte "1 paeva".
+- **Google Play igas rakenduse keeles.** Poe lehel on nuud kirjeldus ja kaheksa ekraanipilti koigis rakenduse 14 keeles.
+- **Parandused:** terviseteatis tsehhi, poola, vene ja eesti keeles vastab taas ingliskeelsele; tsehhi keel kasutab koikjal "tep/min", mis mahub ka pulsigraafiku teljele.
+
+### Portugues
+
+- **A tua lingua, em todo o lado.** O anel de passos do painel dizia "steps of 8,000" em ingles em todas as linguas; agora usa a tua lingua. A frequencia cardiaca mostra a unidade propria da tua lingua quando existe, como lpm em espanhol, ppm em galego e tep/min em checo.
+- **Contagens que concordam com o numero.** Dias, noites e testes tomam em todas as linguas a forma certa para o numero: "1 dia", nao "1 dias".
+- **Google Play em todas as linguas da aplicacao.** A pagina da loja tem agora descricao e oito capturas de ecra nas 14 linguas da aplicacao.
+- **Correcoes:** o aviso de saude em checo, polaco, russo e estonio volta a corresponder ao ingles; o checo usa "tep/min" em todo o lado, que tambem cabe no eixo do grafico de frequencia cardiaca.
+
 ## 2.11.0 - 2026-09-28
 
 ### English

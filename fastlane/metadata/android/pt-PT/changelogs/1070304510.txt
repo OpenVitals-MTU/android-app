@@ -1,0 +1,1 @@
+Correções de idioma: o anel de passos já não mostra «steps» em inglês, e os dias, noites e testes concordam com o número («1 dia», não «1 dias»). Esta página do Google Play está agora em português, com nova descrição e novas capturas de ecrã.

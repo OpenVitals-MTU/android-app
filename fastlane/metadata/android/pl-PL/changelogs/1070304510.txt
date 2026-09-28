@@ -1,0 +1,1 @@
+Poprawki językowe: pierścień kroków nie pokazuje już angielskiego „steps”, dni, noce i testy mają formę zgodną z liczbą („1 dzień”, a nie „1 dni”), a zastrzeżenie zdrowotne znów odpowiada oryginałowi. Ta strona w Google Play jest teraz po polsku, z nowym opisem i zrzutami ekranu.
