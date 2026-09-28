@@ -78,6 +78,7 @@ Status legend: **exists** already in OpenVitals · **new** built for this design
 | Late cycle | Grace days after the latest estimated date, 10:00. | new |
 | Visibility | Concealed (neutral copy, default), descriptive, custom title and body. Lock-screen copy is always neutral. | new |
 | Re-arm after reboot, update, clock and zone change | Same as the app's other reminders. | new |
+| Pill | Daily at the set time on taking days. The scheme is taking days plus pause days, repeating from a pack's first day (`PillPlan` in the cycle preferences). Skipped once today is marked as taken, from the cycle screen or the notification's Taken action; taken days live in `pill_intakes`. Own switch, outside the master; same visibility rule. Phone-to-phone sync carries the scheme (newer edit wins) and the taken days (union); the reminder switch and time stay on their phone. Not in the JSON backup yet. | new |
 
 ### 6. Home-screen widget
 
@@ -96,6 +97,7 @@ Status legend: **exists** already in OpenVitals · **new** built for this design
 | Feature | Detail | Status |
 |---|---|---|
 | Setup | A Cycle settings section holds contexts, age band and reminders; the cycle screen links to it when nothing is set. | new |
+| One range | The screen is a month calendar over today's cards, so the Day/Week/Month/Year selector is hidden and the range is fixed to the month. The arrows and the date picker move the calendar. | adapted (2026-09-28) |
 | Tracking contexts | PMS, PMDD, endometriosis (observation group); PCOS, perimenopause, thyroid (timing group). | new |
 | Age band | Optional, picks the variability prior. | new |
 | Temperature unit | Celsius or Fahrenheit. | exists: unit overrides |

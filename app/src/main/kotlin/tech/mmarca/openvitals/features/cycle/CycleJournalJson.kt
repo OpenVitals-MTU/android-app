@@ -22,6 +22,7 @@ import tech.mmarca.openvitals.domain.model.BbtDisturbance
 import tech.mmarca.openvitals.domain.model.CervicalSensation
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.domain.model.HcgTestResult
+import tech.mmarca.openvitals.domain.model.PillPlan
 
 /**
  * The cycle journal as JSON objects, shared by the phone-to-phone sync and
@@ -80,6 +81,32 @@ object CycleJournalJson {
             contexts = json.names("contexts").mapNotNullTo(mutableSetOf()) { TrackingContext.fromId(it) },
             ageBand = AgeBand.fromId(json.nameOrNull("ageBand")),
         )
+    }.getOrNull()
+
+    /** The scheme only. The reminder switch and time stay on their phone, like the cycle reminders. */
+    fun pillPlan(plan: PillPlan): JsonObject = buildJsonObject {
+        put("enabled", plan.enabled)
+        put("activeDays", plan.activeDays)
+        put("pauseDays", plan.pauseDays)
+        plan.packStart?.let { put("packStart", it.toString()) }
+        put("updatedAt", plan.updatedAt.toEpochMilli())
+    }
+
+    /** A plan with default reminder fields; the caller keeps its own. */
+    fun pillPlanOrNull(json: JsonObject): PillPlan? = runCatching {
+        PillPlan(
+            enabled = json["enabled"]?.jsonPrimitive?.boolean ?: false,
+            activeDays = json.intOrNull("activeDays") ?: PillPlan().activeDays,
+            pauseDays = json.intOrNull("pauseDays") ?: PillPlan().pauseDays,
+            packStart = json.nameOrNull("packStart")?.let(LocalDate::parse),
+            updatedAt = json["updatedAt"]?.jsonPrimitive?.long?.let(Instant::ofEpochMilli) ?: Instant.EPOCH,
+        ).normalized()
+    }.getOrNull()
+
+    fun pillIntake(date: LocalDate): JsonObject = buildJsonObject { put("date", date.toString()) }
+
+    fun pillIntakeOrNull(json: JsonObject): LocalDate? = runCatching {
+        LocalDate.parse(json.getValue("date").jsonPrimitive.content)
     }.getOrNull()
 
     private fun JsonObject.intOrNull(key: String): Int? = this[key]?.takeIf { it !is JsonNull }?.jsonPrimitive?.int

@@ -68,6 +68,21 @@ class OpenVitalsDatabaseMigrationTest {
     }
 
     @Test
+    fun `version thirteen adds the pill intakes table`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+
+        OpenVitalsDatabase.MIGRATION_13_14.migrate(db)
+
+        assertEquals(13, OpenVitalsDatabase.MIGRATION_13_14.startVersion)
+        assertEquals(14, OpenVitalsDatabase.MIGRATION_13_14.endVersion)
+        verify {
+            db.execSQL(
+                match { it.contains("CREATE TABLE IF NOT EXISTS `pill_intakes`") && it.contains("PRIMARY KEY(`date`)") },
+            )
+        }
+    }
+
+    @Test
     fun `version nine adds the garmin sleep minutes table`() {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
 

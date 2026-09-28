@@ -10,6 +10,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
 import tech.mmarca.openvitals.data.repository.contract.CyclePreferences
+import tech.mmarca.openvitals.data.repository.contract.PillIntakeRepository
 import tech.mmarca.openvitals.features.devicesync.store.CompositeSyncStore
 import tech.mmarca.openvitals.features.devicesync.store.CycleJournalSyncStore
 import tech.mmarca.openvitals.features.devicesync.store.CycleJournalSyncTypes
@@ -58,6 +59,7 @@ class DeviceSyncViewModel @Inject constructor(
     private val originRepository: SyncedRecordOriginRepository,
     private val cycleJournalRepository: CycleJournalRepository,
     private val cyclePreferences: CyclePreferences,
+    private val pillIntakeRepository: PillIntakeRepository,
     private val reportStore: DeviceSyncReportStore,
     private val recordingController: ActivityRecordingController,
     private val dispatchers: DispatcherProvider,
@@ -310,6 +312,7 @@ class DeviceSyncViewModel @Inject constructor(
             val journalStore = CycleJournalSyncStore(
                 journal = cycleJournalRepository,
                 preferences = cyclePreferences,
+                pillIntakes = pillIntakeRepository,
                 windowStart = window.first,
                 windowEnd = window.second,
             )

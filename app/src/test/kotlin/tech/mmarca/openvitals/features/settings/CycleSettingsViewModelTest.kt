@@ -14,6 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.contract.FakeCycleJournalRepository
+import tech.mmarca.openvitals.data.repository.contract.FakePillIntakeRepository
 import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.domain.cycle.AgeBand
 import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
@@ -21,6 +22,7 @@ import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
 import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.domain.model.CycleReminderConfig
+import tech.mmarca.openvitals.domain.model.PillPlan
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.features.cycle.cycleJournalExportJson
 import tech.mmarca.openvitals.features.cycle.parseCycleJournalExport
@@ -51,6 +53,21 @@ class CycleSettingsViewModelTest {
         assertEquals(setOf(TrackingContext.PCOS), vm.uiState.value.profile.contexts)
         assertEquals(1, reminders.applied)
         verify(exactly = 1) { widgets.refreshNow() }
+    }
+
+    @Test
+    fun `a pill plan change is stored, normalized and re-plans the reminders`() {
+        val preferences = FakePreferences()
+        val reminders = FakeCycleReminderSettings()
+        val vm = viewModel(preferences = preferences, reminders = reminders)
+
+        vm.setPillEnabled(true)
+        vm.setPillPauseDays(99)
+
+        assertEquals(true, preferences.pillPlan().enabled)
+        assertEquals(today, preferences.pillPlan().packStart)
+        assertEquals(PillPlan.PauseDaysRange.last, vm.uiState.value.pill.pauseDays)
+        assertEquals(2, reminders.applied)
     }
 
     @Test
@@ -172,6 +189,7 @@ class CycleSettingsViewModelTest {
         preferences = preferences,
         bodyProfilePreferences = preferences,
         journal = journal,
+        pillIntakes = FakePillIntakeRepository(),
         reminders = reminders,
         homeWidgetRefreshScheduler = widgets,
     )

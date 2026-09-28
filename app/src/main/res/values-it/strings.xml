@@ -3309,4 +3309,26 @@
     <string name="cycle_choice_bbt_summary">La tua temperatura al risveglio e cosa può averla alterata</string>
     <string name="cycle_choice_cervical_mucus_summary">Aspetto, quantità e sensazione</string>
     <string name="cycle_choice_full_day_log">Registra tutto per la giornata</string>
+    <string name="cycle_pill_title">Pillola anticoncezionale</string>
+    <string name="cycle_pill_track">Registra la pillola</string>
+    <string name="cycle_pill_track_body">Mostra a che giorno della confezione sei. Disattivato per impostazione predefinita.</string>
+    <string name="cycle_pill_active_days">Giorni di assunzione</string>
+    <string name="cycle_pill_pause_days">Giorni di pausa</string>
+    <string name="cycle_pill_scheme_hint">Schemi comuni: 21 + 7, 24 + 4 o 28 senza pausa.</string>
+    <string name="cycle_pill_pack_start">Primo giorno di una confezione</string>
+    <string name="cycle_pill_reminder">Promemoria giornaliero</string>
+    <string name="cycle_pill_reminder_body">Nei giorni di assunzione, all\'ora che scegli. Tace quando segni la pillola di oggi come presa. Mostra ciò che mostrano i promemoria del ciclo.</string>
+    <string name="cycle_pill_day_active">Giorno %1$d di %2$d, assunzione</string>
+    <string name="cycle_pill_day_pause">Giorno di pausa %1$d di %2$d</string>
+    <string name="cycle_pill_next_pack">La prossima confezione inizia il %1$s</string>
+    <string name="cycle_pill_before_start">La prima confezione inizia il %1$s</string>
+    <string name="cycle_pill_taken_today">Presa oggi</string>
+    <string name="cycle_pill_not_taken">Non ancora presa</string>
+    <string name="cycle_pill_mark_taken">Segna come presa</string>
+    <string name="cycle_pill_undo_taken">Annulla</string>
+    <string name="cycle_reminder_pill_title">Pillola</string>
+    <string name="cycle_reminder_pill_body">È ora della pillola. Giorno %1$d di %2$d.</string>
+    <string name="cycle_reminder_pill_body_plain">È ora della pillola.</string>
+    <string name="cycle_reminder_pill_concealed_body">Il tuo promemoria programmato.</string>
+    <string name="cycle_reminder_pill_taken_action">Presa</string>
 </resources>

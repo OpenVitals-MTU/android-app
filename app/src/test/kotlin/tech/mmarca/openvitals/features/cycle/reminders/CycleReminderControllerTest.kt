@@ -23,7 +23,9 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.data.repository.contract.FakeCycleJournalRepository
+import tech.mmarca.openvitals.data.repository.contract.FakePillIntakeRepository
 import tech.mmarca.openvitals.data.repository.contract.FakePreferences
+import tech.mmarca.openvitals.domain.model.PillPlan
 import tech.mmarca.openvitals.domain.cycle.CycleEstimate
 import tech.mmarca.openvitals.domain.cycle.CycleEstimateResult
 import tech.mmarca.openvitals.domain.cycle.CycleStatistics
@@ -48,6 +50,7 @@ class CycleReminderControllerTest {
     private val preferences = FakePreferences()
     private val cycleRepository = mockk<CycleRepository>()
     private val journal = FakeCycleJournalRepository()
+    private val pillIntakes = FakePillIntakeRepository()
     private val hc = mockk<HealthConnectManager>()
     private val notificationService = mockk<CycleReminderNotificationService>(relaxed = true)
     private val alarmManager = mockk<CycleReminderAlarmManager>(relaxed = true)
@@ -82,8 +85,62 @@ class CycleReminderControllerTest {
         advance()
 
         CycleReminderType.entries.forEach { verify { alarmManager.cancel(it) } }
-        verify { notificationService.cancelAll() }
+        verify { notificationService.cancelCycleReminders() }
         verify(exactly = 0) { alarmManager.schedule(any(), any()) }
+    }
+
+    @Test
+    fun `the pill alarm follows its own switch, not the master`() = runTest {
+        preferences.setPillPlan(PillPlan(enabled = true, packStart = today.minusDays(3)))
+
+        controller().applyConfig(all.copy(enabled = false))
+        advance()
+
+        verify { alarmManager.schedule(CycleReminderType.PILL, any()) }
+        verify { alarmManager.cancel(CycleReminderType.DAILY_CHECK_IN) }
+    }
+
+    @Test
+    fun `the pill alarm shows the reminder on a taking day that is not taken`() = runTest {
+        preferences.setPillPlan(PillPlan(enabled = true, packStart = today.minusDays(3)))
+
+        controller().handleReminderAlarm(CycleReminderType.PILL)
+        advance()
+
+        verify { notificationService.show(CycleReminderType.PILL, any(), any()) }
+    }
+
+    @Test
+    fun `the pill alarm stays quiet once today is taken and re-plans for tomorrow`() = runTest {
+        preferences.setPillPlan(PillPlan(enabled = true, packStart = today.minusDays(3)))
+        pillIntakes.setTaken(today, true)
+
+        controller().handleReminderAlarm(CycleReminderType.PILL)
+        advance()
+
+        verify(exactly = 0) { notificationService.show(CycleReminderType.PILL, any(), any()) }
+        verify { alarmManager.schedule(CycleReminderType.PILL, match { it.toLocalDate() == today.plusDays(1) }) }
+    }
+
+    @Test
+    fun `a pause day never shows the pill reminder`() = runTest {
+        preferences.setPillPlan(PillPlan(enabled = true, activeDays = 21, pauseDays = 7, packStart = today.minusDays(22)))
+
+        controller().handleReminderAlarm(CycleReminderType.PILL)
+        advance()
+
+        verify(exactly = 0) { notificationService.show(CycleReminderType.PILL, any(), any()) }
+    }
+
+    @Test
+    fun `the Taken action marks today and dismisses the notification`() = runTest {
+        preferences.setPillPlan(PillPlan(enabled = true, packStart = today.minusDays(3)))
+
+        controller().markPillTaken(today)
+        advance()
+
+        org.junit.Assert.assertTrue(pillIntakes.isTaken(today))
+        verify { notificationService.cancel(CycleReminderType.PILL) }
     }
 
     @Test
@@ -191,6 +248,7 @@ class CycleReminderControllerTest {
         preferences = preferences,
         cycleRepository = cycleRepository,
         journal = journal,
+        pillIntakes = pillIntakes,
         hc = hc,
         notificationService = notificationService,
         alarmManager = alarmManager,

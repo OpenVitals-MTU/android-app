@@ -3371,4 +3371,26 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
     <string name="cycle_choice_bbt_summary">A túa temperatura ao espertar e que puido alterala</string>
     <string name="cycle_choice_cervical_mucus_summary">Aspecto, cantidade e sensación</string>
     <string name="cycle_choice_full_day_log">Rexistrar todo o día</string>
+    <string name="cycle_pill_title">Pílula anticonceptiva</string>
+    <string name="cycle_pill_track">Rexistrar a pílula</string>
+    <string name="cycle_pill_track_body">Mostra en que día do envase estás. Desactivado por defecto.</string>
+    <string name="cycle_pill_active_days">Días de toma</string>
+    <string name="cycle_pill_pause_days">Días de descanso</string>
+    <string name="cycle_pill_scheme_hint">Pautas habituais: 21 + 7, 24 + 4 ou 28 sen descanso.</string>
+    <string name="cycle_pill_pack_start">Primeiro día dun envase</string>
+    <string name="cycle_pill_reminder">Recordatorio diario</string>
+    <string name="cycle_pill_reminder_body">Os días de toma, á hora que escollas. Cala cando marcas a de hoxe como tomada. Mostra o mesmo que os recordatorios do ciclo.</string>
+    <string name="cycle_pill_day_active">Día %1$d de %2$d, toma</string>
+    <string name="cycle_pill_day_pause">Día de descanso %1$d de %2$d</string>
+    <string name="cycle_pill_next_pack">O seguinte envase comeza o %1$s</string>
+    <string name="cycle_pill_before_start">O primeiro envase comeza o %1$s</string>
+    <string name="cycle_pill_taken_today">Tomada hoxe</string>
+    <string name="cycle_pill_not_taken">Aínda non tomada</string>
+    <string name="cycle_pill_mark_taken">Marcar como tomada</string>
+    <string name="cycle_pill_undo_taken">Desfacer</string>
+    <string name="cycle_reminder_pill_title">Pílula</string>
+    <string name="cycle_reminder_pill_body">Hora de tomar a pílula. Día %1$d de %2$d.</string>
+    <string name="cycle_reminder_pill_body_plain">Hora de tomar a pílula.</string>
+    <string name="cycle_reminder_pill_concealed_body">O teu recordatorio programado.</string>
+    <string name="cycle_reminder_pill_taken_action">Tomada</string>
 </resources>

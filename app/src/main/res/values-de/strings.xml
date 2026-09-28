@@ -3291,4 +3291,26 @@
     <string name="cycle_choice_bbt_summary">Deine Aufwachtemperatur und was sie gestört haben könnte</string>
     <string name="cycle_choice_cervical_mucus_summary">Aussehen, Menge und Empfinden</string>
     <string name="cycle_choice_full_day_log">Alles für den Tag eintragen</string>
+    <string name="cycle_pill_title">Antibabypille</string>
+    <string name="cycle_pill_track">Pille erfassen</string>
+    <string name="cycle_pill_track_body">Zeigt, an welchem Tag der Packung du bist. Standardmäßig aus.</string>
+    <string name="cycle_pill_active_days">Einnahmetage</string>
+    <string name="cycle_pill_pause_days">Pausentage</string>
+    <string name="cycle_pill_scheme_hint">Übliche Schemata: 21 + 7, 24 + 4 oder 28 ohne Pause.</string>
+    <string name="cycle_pill_pack_start">Erster Tag einer Packung</string>
+    <string name="cycle_pill_reminder">Tägliche Erinnerung</string>
+    <string name="cycle_pill_reminder_body">An Einnahmetagen zur gewählten Zeit. Still, sobald der heutige Tag als eingenommen markiert ist. Zeigt, was die Zyklus-Erinnerungen zeigen.</string>
+    <string name="cycle_pill_day_active">Tag %1$d von %2$d, Einnahme</string>
+    <string name="cycle_pill_day_pause">Pausentag %1$d von %2$d</string>
+    <string name="cycle_pill_next_pack">Nächste Packung beginnt am %1$s</string>
+    <string name="cycle_pill_before_start">Erste Packung beginnt am %1$s</string>
+    <string name="cycle_pill_taken_today">Heute eingenommen</string>
+    <string name="cycle_pill_not_taken">Noch nicht eingenommen</string>
+    <string name="cycle_pill_mark_taken">Als eingenommen markieren</string>
+    <string name="cycle_pill_undo_taken">Rückgängig</string>
+    <string name="cycle_reminder_pill_title">Pille</string>
+    <string name="cycle_reminder_pill_body">Zeit für deine Pille. Tag %1$d von %2$d.</string>
+    <string name="cycle_reminder_pill_body_plain">Zeit für deine Pille.</string>
+    <string name="cycle_reminder_pill_concealed_body">Deine geplante Erinnerung.</string>
+    <string name="cycle_reminder_pill_taken_action">Eingenommen</string>
 </resources>

@@ -3371,4 +3371,26 @@
     <string name="cycle_choice_bbt_summary">起床時の体温と、影響した可能性のあること</string>
     <string name="cycle_choice_cervical_mucus_summary">見た目、量、感覚</string>
     <string name="cycle_choice_full_day_log">1日分をまとめて記録</string>
+    <string name="cycle_pill_title">経口避妊薬（ピル）</string>
+    <string name="cycle_pill_track">ピルを記録</string>
+    <string name="cycle_pill_track_body">シートの何日目かを表示します。初期設定ではオフです。</string>
+    <string name="cycle_pill_active_days">服用日数</string>
+    <string name="cycle_pill_pause_days">休薬日数</string>
+    <string name="cycle_pill_scheme_hint">一般的なパターン：21 + 7、24 + 4、または休薬なしの28。</string>
+    <string name="cycle_pill_pack_start">シートの1日目</string>
+    <string name="cycle_pill_reminder">毎日のリマインダー</string>
+    <string name="cycle_pill_reminder_body">服用日に選んだ時刻に通知します。今日の服用を記録すると鳴りません。表示内容は周期リマインダーの設定に従います。</string>
+    <string name="cycle_pill_day_active">%2$d日中%1$d日目、服用</string>
+    <string name="cycle_pill_day_pause">休薬%2$d日中%1$d日目</string>
+    <string name="cycle_pill_next_pack">次のシートは%1$sから</string>
+    <string name="cycle_pill_before_start">最初のシートは%1$sから</string>
+    <string name="cycle_pill_taken_today">今日は服用済み</string>
+    <string name="cycle_pill_not_taken">まだ服用していません</string>
+    <string name="cycle_pill_mark_taken">服用済みにする</string>
+    <string name="cycle_pill_undo_taken">元に戻す</string>
+    <string name="cycle_reminder_pill_title">ピル</string>
+    <string name="cycle_reminder_pill_body">ピルを飲む時間です。%2$d日中%1$d日目。</string>
+    <string name="cycle_reminder_pill_body_plain">ピルを飲む時間です。</string>
+    <string name="cycle_reminder_pill_concealed_body">設定したリマインダーです。</string>
+    <string name="cycle_reminder_pill_taken_action">服用済み</string>
 </resources>

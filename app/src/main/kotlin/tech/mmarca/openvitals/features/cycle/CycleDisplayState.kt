@@ -14,6 +14,8 @@ import tech.mmarca.openvitals.domain.cycle.RecordedCycle
 import tech.mmarca.openvitals.domain.cycle.SymptomPattern
 import tech.mmarca.openvitals.domain.cycle.ThermalShiftResult
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
+import tech.mmarca.openvitals.domain.model.PillDay
+import tech.mmarca.openvitals.domain.model.PillPlan
 import tech.mmarca.openvitals.domain.model.DayBleedingChoice
 
 @Immutable
@@ -57,6 +59,8 @@ data class CycleTodayDisplay(
     val totalCycles: Int = 0,
     /** Whether a context or an age band was declared. Drives the setup card. */
     val hasProfile: Boolean = false,
+    /** Null when the pill is not tracked. */
+    val pill: PillTodayDisplay? = null,
 ) {
     val hasCycleHistory: Boolean
         get() = totalCycles > 0
@@ -65,6 +69,15 @@ data class CycleTodayDisplay(
     val hasLoggedSomething: Boolean
         get() = bleeding != null || journal?.hasObservations == true
 }
+
+/** Today's place in the pill scheme. A null [day] means the first pack has not started. */
+@Immutable
+data class PillTodayDisplay(
+    val plan: PillPlan,
+    val today: LocalDate,
+    val day: PillDay?,
+    val taken: Boolean,
+)
 
 /** The current cycle's morning temperatures and the shift rule's verdict. */
 @Immutable

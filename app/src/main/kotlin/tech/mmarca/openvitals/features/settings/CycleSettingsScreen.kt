@@ -100,6 +100,22 @@ fun CycleSettingsScreen(
         }
         item { SettingsCardSpacer() }
         item {
+            CyclePillCard(
+                state = state,
+                viewModel = viewModel,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onRequestNotificationPermission = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        viewModel.onNotificationPermissionResult(granted = true)
+                    }
+                },
+                modifier = gutter,
+            )
+        }
+        item { SettingsCardSpacer() }
+        item {
             CycleJournalBackupCard(
                 message = state.backupMessage,
                 importedDays = state.importedDays,

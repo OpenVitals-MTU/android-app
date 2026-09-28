@@ -3300,4 +3300,26 @@
     <string name="cycle_choice_bbt_summary">晨起体温以及可能干扰它的因素</string>
     <string name="cycle_choice_cervical_mucus_summary">外观、量和感觉</string>
     <string name="cycle_choice_full_day_log">记录一整天</string>
+    <string name="cycle_pill_title">避孕药</string>
+    <string name="cycle_pill_track">记录避孕药</string>
+    <string name="cycle_pill_track_body">显示当前是本板的第几天。默认关闭。</string>
+    <string name="cycle_pill_active_days">服药天数</string>
+    <string name="cycle_pill_pause_days">停药天数</string>
+    <string name="cycle_pill_scheme_hint">常见方案：21 + 7、24 + 4，或 28 天不停药。</string>
+    <string name="cycle_pill_pack_start">本板第一天</string>
+    <string name="cycle_pill_reminder">每日提醒</string>
+    <string name="cycle_pill_reminder_body">服药日在你选择的时间提醒。今天标记为已服用后即静音。显示内容与周期提醒一致。</string>
+    <string name="cycle_pill_day_active">第 %1$d 天，共 %2$d 天，服药</string>
+    <string name="cycle_pill_day_pause">停药第 %1$d 天，共 %2$d 天</string>
+    <string name="cycle_pill_next_pack">下一板从 %1$s 开始</string>
+    <string name="cycle_pill_before_start">第一板从 %1$s 开始</string>
+    <string name="cycle_pill_taken_today">今天已服用</string>
+    <string name="cycle_pill_not_taken">尚未服用</string>
+    <string name="cycle_pill_mark_taken">标记为已服用</string>
+    <string name="cycle_pill_undo_taken">撤销</string>
+    <string name="cycle_reminder_pill_title">避孕药</string>
+    <string name="cycle_reminder_pill_body">该服药了。第 %1$d 天，共 %2$d 天。</string>
+    <string name="cycle_reminder_pill_body_plain">该服药了。</string>
+    <string name="cycle_reminder_pill_concealed_body">你设置的提醒。</string>
+    <string name="cycle_reminder_pill_taken_action">已服用</string>
 </resources>

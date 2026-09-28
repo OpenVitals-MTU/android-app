@@ -35,6 +35,7 @@ object CyclePresentationMapper {
         currentCycleTemperatures: List<BasalBodyTemperatureEntry> = emptyList(),
         profile: CycleTrackingProfile = CycleTrackingProfile(),
         today: LocalDate = LocalDate.now(),
+        pill: PillTodayDisplay? = null,
     ): CycleDisplayState {
         val selectedPeriod = displayPeriodFor(
             range = query.range,
@@ -71,7 +72,7 @@ object CyclePresentationMapper {
             trackedDates = trackedDates,
             sampleCount = data.entryCount() + journalEntries.count { it.hasObservations },
             sources = data.allSources(),
-            today = todayDisplay(statistics, data, allByDate, profile, today, zone),
+            today = todayDisplay(statistics, data, allByDate, profile, today, zone, pill),
             history = statistics?.let { LongitudinalCycleStatsCalculator.calculate(it.cycles, today) }
                 ?: LongitudinalCycleStats.Empty,
             thermal = thermalDisplay(statistics, currentCycleTemperatures, allByDate, zone),
@@ -92,6 +93,7 @@ object CyclePresentationMapper {
         profile: CycleTrackingProfile,
         today: LocalDate,
         zone: ZoneId,
+        pill: PillTodayDisplay?,
     ): CycleTodayDisplay {
         val journal = journalByDate[today]
         val phase = statistics?.currentPhase
@@ -125,6 +127,7 @@ object CyclePresentationMapper {
             recentIntervalLengths = statistics?.recentIntervalLengths.orEmpty(),
             totalCycles = statistics?.cycles?.size ?: 0,
             hasProfile = profile.contexts.isNotEmpty() || profile.ageBand != null,
+            pill = pill,
         )
     }
 

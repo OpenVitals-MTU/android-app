@@ -12,6 +12,8 @@ import tech.mmarca.openvitals.data.local.bodyenergy.BodyEnergyTimelineDao
 import tech.mmarca.openvitals.data.local.cycle.CycleExclusionEntity
 import tech.mmarca.openvitals.data.local.cycle.CycleJournalDao
 import tech.mmarca.openvitals.data.local.cycle.CycleJournalEntryEntity
+import tech.mmarca.openvitals.data.local.cycle.PillIntakeDao
+import tech.mmarca.openvitals.data.local.cycle.PillIntakeEntity
 import tech.mmarca.openvitals.data.local.food.FoodDao
 import tech.mmarca.openvitals.data.local.food.FoodEntity
 import tech.mmarca.openvitals.data.local.food.FoodNutrientEntity
@@ -42,6 +44,7 @@ import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
         FoodNutrientEntity::class,
         CycleJournalEntryEntity::class,
         CycleExclusionEntity::class,
+        PillIntakeEntity::class,
     ],
     version = OpenVitalsDatabase.VERSION,
     exportSchema = true,
@@ -65,9 +68,11 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
 
     abstract fun cycleJournalDao(): CycleJournalDao
 
+    abstract fun pillIntakeDao(): PillIntakeDao
+
     companion object {
         /** Raise it with a new migration in [ALL_MIGRATIONS], and commit the schema file Room then writes. */
-        const val VERSION = 13
+        const val VERSION = 14
 
         val MIGRATION_1_3 = beverageMigration(1)
         val MIGRATION_2_3 = beverageMigration(2)
@@ -140,6 +145,13 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
             }
         }
 
+        /** The days the pill was marked as taken. Creation only; nothing to backfill. */
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                createPillIntakesTable(db)
+            }
+        }
+
         /**
          * Every migration, in one place. The database builder takes this list, so a migration
          * cannot be written and then left out of it.
@@ -158,6 +170,7 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                 MIGRATION_10_11,
                 MIGRATION_11_12,
                 MIGRATION_12_13,
+                MIGRATION_13_14,
             )
 
         private fun beverageMigration(startVersion: Int): Migration =
@@ -323,6 +336,18 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                     `nutrient` TEXT NOT NULL,
                     `value` REAL NOT NULL,
                     PRIMARY KEY(`food_id`, `nutrient`)
+                )
+                """.trimIndent()
+            )
+        }
+
+        private fun createPillIntakesTable(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `pill_intakes` (
+                    `date` TEXT NOT NULL,
+                    `taken_at_millis` INTEGER NOT NULL,
+                    PRIMARY KEY(`date`)
                 )
                 """.trimIndent()
             )

@@ -3,6 +3,8 @@ package tech.mmarca.openvitals.data.repository
 import android.content.Context
 import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -14,6 +16,7 @@ import tech.mmarca.openvitals.domain.cycle.AgeBand
 import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
 import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.CycleReminderConfig
+import tech.mmarca.openvitals.domain.model.PillPlan
 import tech.mmarca.openvitals.domain.model.CycleReminderVisibility
 
 /**
@@ -72,6 +75,34 @@ class CyclePreferencesRepository @Inject constructor(
         }
     }
 
+    override fun pillPlan(): PillPlan = PillPlan(
+        enabled = prefs.getBoolean(KEY_PILL_ENABLED, false),
+        activeDays = prefs.getInt(KEY_PILL_ACTIVE_DAYS, PillPlan().activeDays),
+        pauseDays = prefs.getInt(KEY_PILL_PAUSE_DAYS, PillPlan().pauseDays),
+        packStart = prefs.getString(KEY_PILL_PACK_START, null)?.let { stored ->
+            runCatching { LocalDate.parse(stored) }.getOrNull()
+        },
+        reminderEnabled = prefs.getBoolean(KEY_PILL_REMINDER_ENABLED, true),
+        reminderTime = prefs.getString(KEY_PILL_REMINDER_TIME, null)?.let { stored ->
+            runCatching { LocalTime.parse(stored) }.getOrNull()
+        } ?: PillPlan.DefaultReminderTime,
+        updatedAt = Instant.ofEpochMilli(prefs.getLong(KEY_PILL_UPDATED_AT, 0L)),
+    ).normalized()
+
+    override fun setPillPlan(plan: PillPlan) {
+        val normalized = plan.normalized()
+        prefs.edit {
+            putBoolean(KEY_PILL_ENABLED, normalized.enabled)
+            putInt(KEY_PILL_ACTIVE_DAYS, normalized.activeDays)
+            putInt(KEY_PILL_PAUSE_DAYS, normalized.pauseDays)
+            val start = normalized.packStart
+            if (start == null) remove(KEY_PILL_PACK_START) else putString(KEY_PILL_PACK_START, start.toString())
+            putBoolean(KEY_PILL_REMINDER_ENABLED, normalized.reminderEnabled)
+            putString(KEY_PILL_REMINDER_TIME, normalized.reminderTime.toString())
+            putLong(KEY_PILL_UPDATED_AT, normalized.updatedAt.toEpochMilli())
+        }
+    }
+
     override fun clearCyclePreferences() {
         prefs.edit { clear() }
         profile.value = CycleTrackingProfile()
@@ -99,5 +130,12 @@ class CyclePreferencesRepository @Inject constructor(
         const val KEY_VISIBILITY = "reminder_visibility"
         const val KEY_CUSTOM_TITLE = "reminder_custom_title"
         const val KEY_CUSTOM_BODY = "reminder_custom_body"
+        const val KEY_PILL_ENABLED = "pill_enabled"
+        const val KEY_PILL_ACTIVE_DAYS = "pill_active_days"
+        const val KEY_PILL_PAUSE_DAYS = "pill_pause_days"
+        const val KEY_PILL_PACK_START = "pill_pack_start"
+        const val KEY_PILL_REMINDER_ENABLED = "pill_reminder_enabled"
+        const val KEY_PILL_REMINDER_TIME = "pill_reminder_time"
+        const val KEY_PILL_UPDATED_AT = "pill_updated_at_millis"
     }
 }
