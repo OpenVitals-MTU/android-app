@@ -60,7 +60,7 @@ fun CycleEntryScreen(
     viewModel: CycleEntryViewModel,
     unitFormatter: UnitFormatter,
     onEntrySaved: () -> Unit = {},
-    onLeave: () -> Unit = {},
+    onLeave: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val unitSystem = unitFormatter.unitSystem(UnitQuantity.TEMPERATURE)

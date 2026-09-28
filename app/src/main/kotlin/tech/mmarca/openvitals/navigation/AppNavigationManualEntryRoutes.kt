@@ -271,6 +271,7 @@ internal fun NavGraphBuilder.manualEntryRoutes(
             viewModel = cycleEntryViewModel,
             unitFormatter = unitFormatter,
             onEntrySaved = onEntrySavedAndPopBack,
+            onLeave = { navController.popBackStack() },
         )
     }
 
