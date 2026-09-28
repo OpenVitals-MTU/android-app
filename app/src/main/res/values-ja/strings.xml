@@ -3092,7 +3092,6 @@
     <string name="cycle_today_note">メモ: %1$s</string>
     <string name="cycle_log_today">今日を記録</string>
     <string name="cycle_edit_today">観察を編集</string>
-    <string name="cycle_start_period">月経開始を記録</string>
     <string name="cycle_stats_title">周期のまとめ</string>
     <string name="cycle_stats_avg_length">平均の長さ: %1$d日</string>
     <string name="cycle_stats_total">記録された周期: %1$d</string>

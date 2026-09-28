@@ -16,6 +16,7 @@ import java.time.LocalDate
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.rememberMetricDetailSectionOrdering
 import tech.mmarca.openvitals.domain.cycle.LongitudinalCycleItem
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricAction
@@ -30,11 +31,12 @@ fun CycleScreen(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onLogCycleEntry: (LocalDate) -> Unit = {},
     onChooseCycleEntry: () -> Unit = {},
-    onStartPeriod: () -> Unit = {},
     onOpenCycleSettings: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val resources = LocalResources.current
+    // The sections are the user's to arrange, as on the other metric screens.
+    val sectionContext = rememberMetricDetailSectionOrdering()
     var exclusionTarget by remember { mutableStateOf<LongitudinalCycleItem?>(null) }
     var showBackfill by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<CycleObservation?>(null) }
@@ -48,7 +50,6 @@ fun CycleScreen(
         onOpenDayLog = onLogCycleEntry,
         onChooseLog = onChooseCycleEntry,
         onTogglePillTaken = viewModel::setPillTaken,
-        onStartPeriod = onStartPeriod,
         onAddPastPeriod = { showBackfill = true },
         onOpenSettings = onOpenCycleSettings,
         onManageExclusion = { exclusionTarget = it },
@@ -75,6 +76,7 @@ fun CycleScreen(
             onSelectDay = viewModel::selectDate,
             weekPeriodMode = state.weekPeriodMode,
             syncPaused = hcUx.syncPaused,
+            sectionListState = sectionContext.listState,
             primaryAction = MetricAction(
                 labelRes = R.string.cycle_log_action,
                 icon = Icons.Outlined.Add,
@@ -88,6 +90,7 @@ fun CycleScreen(
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 observations = observationsFor(state.data, resources, state.journalEntries, unitFormatter),
                 actions = actions,
+                sectionContext = sectionContext,
             )
         }
     }

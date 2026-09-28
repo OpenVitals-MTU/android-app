@@ -38,9 +38,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.cycle.reminders.FakeCycleReminderSettings
 import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.navigation.CYCLE_ENTRY_DATE_ARG
-import tech.mmarca.openvitals.navigation.CYCLE_ENTRY_PRESET_ARG
 import tech.mmarca.openvitals.navigation.CYCLE_ENTRY_SECTION_ARG
-import tech.mmarca.openvitals.navigation.CycleEntryPreset
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 /** The day log: what loads, what saves, and what is refused. */
@@ -265,23 +263,6 @@ class CycleEntryViewModelTest {
         coVerify(exactly = 1) { repository.loadDayLog(today.minusDays(2)) }
     }
 
-    @Test fun `the period-start preset preselects light flow on an empty day`() = runTest {
-        val repository = repository()
-        val handle = SavedStateHandle(mapOf(CYCLE_ENTRY_PRESET_ARG to CycleEntryPreset.PERIOD_START))
-        val vm = viewModel(repository, handle = handle)
-        vm.start()
-        advanceUntilIdle()
-
-        assertEquals(BleedingOption.LIGHT, vm.uiState.value.form.bleeding)
-        assertNull(vm.uiState.value.loadedForm.bleeding)
-        assertTrue(vm.uiState.value.hasChanges)
-
-        // Switching the day drops the preset: it applies to the first load only.
-        vm.updateDate(today.minusDays(1))
-        advanceUntilIdle()
-        assertNull(vm.uiState.value.form.bleeding)
-    }
-
     @Test fun `a section in the route focuses the day log on it`() = runTest {
         val handle = SavedStateHandle(mapOf(CYCLE_ENTRY_SECTION_ARG to CycleEntrySection.BASAL_BODY_TEMPERATURE.routeValue))
         val focused = viewModel(repository(), handle = handle)
@@ -291,25 +272,4 @@ class CycleEntryViewModelTest {
         assertNull(unknown.uiState.value.section)
     }
 
-    @Test fun `the period-start preset never overrides recorded bleeding`() = runTest {
-        val flow = MenstruationFlowEntry(
-            time = today.atTime(LocalTime.NOON).atZone(zone).toInstant(),
-            flow = CycleRecordValues.FLOW_HEAVY,
-            source = "OpenVitals",
-            id = "own",
-            isOpenVitalsEntry = true,
-        )
-        val handle = SavedStateHandle(mapOf(CYCLE_ENTRY_PRESET_ARG to CycleEntryPreset.PERIOD_START))
-        val own = viewModel(repository(log = CycleDayLog(date = today, ownFlow = flow)), handle = handle)
-        own.start()
-        advanceUntilIdle()
-        assertEquals(BleedingOption.HEAVY, own.uiState.value.form.bleeding)
-        assertFalse(own.uiState.value.hasChanges)
-
-        val foreign = viewModel(repository(log = CycleDayLog(date = today, foreignFlowLevel = CycleRecordValues.FLOW_MEDIUM)), handle = handle)
-        foreign.start()
-        advanceUntilIdle()
-        assertNull(foreign.uiState.value.form.bleeding)
-        assertFalse(foreign.uiState.value.hasChanges)
-    }
 }

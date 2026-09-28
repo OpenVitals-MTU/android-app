@@ -3027,7 +3027,6 @@
     <string name="cycle_today_note">Nota: %1$s</string>
     <string name="cycle_log_today">Registrar hoy</string>
     <string name="cycle_edit_today">Editar observaciones</string>
-    <string name="cycle_start_period">Registrar inicio de la regla</string>
     <string name="cycle_stats_title">Tus ciclos de un vistazo</string>
     <string name="cycle_stats_avg_length">Duración media: %1$d días</string>
     <string name="cycle_stats_total">Ciclos registrados: %1$d</string>

@@ -8,24 +8,26 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DeviceThermostat
 import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material.icons.outlined.Today
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import java.time.LocalDate
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.cycle.LongitudinalCycleItem
 import tech.mmarca.openvitals.domain.insights.DataValueKind
 import tech.mmarca.openvitals.domain.insights.dataConfidence
-import tech.mmarca.openvitals.domain.model.DayBleedingChoice
+import tech.mmarca.openvitals.domain.preferences.MetricDetailSectionId
 import tech.mmarca.openvitals.ui.components.DataConfidenceCard
 import tech.mmarca.openvitals.ui.components.InsightStat
 import tech.mmarca.openvitals.ui.components.InsightStatGrid
 import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
 import tech.mmarca.openvitals.ui.components.SectionHeader
+import tech.mmarca.openvitals.ui.components.renderOrderedMetricDetailSections
 import tech.mmarca.openvitals.ui.theme.CycleColor
 import tech.mmarca.openvitals.ui.theme.LayoutMetrics
 import tech.mmarca.openvitals.ui.theme.Spacing
@@ -37,7 +39,6 @@ internal data class CycleContentActions(
     val onChooseLog: () -> Unit = {},
     /** Marks or unmarks today's pill. */
     val onTogglePillTaken: (Boolean) -> Unit = {},
-    val onStartPeriod: () -> Unit = {},
     val onAddPastPeriod: () -> Unit = {},
     val onOpenSettings: () -> Unit = {},
     val onManageExclusion: (LongitudinalCycleItem) -> Unit = {},
@@ -45,68 +46,69 @@ internal data class CycleContentActions(
     val onRequestDelete: (CycleObservation) -> Unit = {},
 )
 
+/**
+ * The cycle screen's sections, in the order the user arranged. The default
+ * puts today first: the cycle day, the calendar, what was logged today, the
+ * pill, then the entries, the estimate, and the rest.
+ */
 internal fun LazyListScope.cyclePeriodContent(
     state: CycleUiState,
     period: DatePeriod,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     observations: List<CycleObservation>,
+    sectionContext: MetricDetailSectionContext,
     actions: CycleContentActions = CycleContentActions(),
 ) {
     val display = state.display
+    val today = display.today
     val sectionModifier = Modifier
         .fillMaxWidth()
         .padding(horizontal = LayoutMetrics.screenGutter, vertical = Spacing.xs)
 
-    cycleTodaySections(display.today, dateTimeFormatterProvider, actions, sectionModifier)
-
-    if (display.hasData) {
-        cycleDataConfidence(display = display, period = period)
-        cycleStatistics(display = display, unitFormatter = unitFormatter)
-        item(key = "cycle-calendar-header") { SectionHeader(stringResource(R.string.section_cycle_calendar)) }
-        item(key = "cycle-calendar") {
-            CycleCalendarCard(
-                days = display.calendarDays,
-                period = period,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                modifier = sectionModifier,
-                onSelectDay = actions.onOpenDayLog,
-            )
+    renderOrderedMetricDetailSections(sectionContext) {
+        section(MetricDetailSectionId.CYCLE_TODAY) {
+            CycleHeroCard(today = today, dateTimeFormatterProvider = dateTimeFormatterProvider, modifier = sectionModifier)
         }
-    } else if (!state.isLoading) {
-        item(key = "cycle-empty") {
-            MetricCardPlaceholder(
-                title = stringResource(R.string.metric_cycle_tracking),
-                icon = Icons.Outlined.CalendarMonth,
-                accentColor = CycleColor,
-                message = stringResource(R.string.message_no_cycle_period),
-                modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter, vertical = Spacing.sm),
-            )
+        section(MetricDetailSectionId.CYCLE_CALENDAR, display.hasData || !state.isLoading) {
+            if (display.hasData) {
+                SectionHeader(stringResource(R.string.section_cycle_calendar))
+                CycleCalendarCard(
+                    days = display.calendarDays,
+                    period = period,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    modifier = sectionModifier,
+                    onSelectDay = actions.onOpenDayLog,
+                )
+            } else {
+                MetricCardPlaceholder(
+                    title = stringResource(R.string.metric_cycle_tracking),
+                    icon = Icons.Outlined.CalendarMonth,
+                    accentColor = CycleColor,
+                    message = stringResource(R.string.message_no_cycle_period),
+                    modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter, vertical = Spacing.sm),
+                )
+            }
         }
-    }
-
-    if (display.today.hasCycleHistory) {
-        item(key = "cycle-history-header") { SectionHeader(stringResource(R.string.section_cycle_history)) }
-        item(key = "cycle-history") {
-            CycleHistoryCard(
-                stats = display.history,
-                dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onManageExclusion = actions.onManageExclusion,
+        // Only a day with entries; an empty day is logged from the Log action.
+        section(MetricDetailSectionId.CYCLE_OBSERVATIONS, today.hasLoggedSomething) {
+            CycleTodayObservationsCard(
+                today = today,
+                onOpenDayLog = { actions.onOpenDayLog(today.today) },
                 modifier = sectionModifier,
             )
         }
-        item(key = "cycle-thermal-header") { SectionHeader(stringResource(R.string.section_cycle_thermal)) }
-        item(key = "cycle-thermal") {
-            CycleThermalCard(thermal = display.thermal, unitFormatter = unitFormatter, modifier = sectionModifier)
+        today.pill?.let { pill ->
+            section(MetricDetailSectionId.CYCLE_PILL) {
+                CyclePillCard(
+                    pill = pill,
+                    dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onToggleTaken = actions.onTogglePillTaken,
+                    modifier = sectionModifier,
+                )
+            }
         }
-        item(key = "cycle-patterns-header") { SectionHeader(stringResource(R.string.section_cycle_patterns)) }
-        item(key = "cycle-patterns") {
-            CyclePatternsCard(patterns = display.patterns, modifier = sectionModifier)
-        }
-    }
-
-    if (observations.isNotEmpty()) {
-        item(key = "cycle-entries") {
+        section(MetricDetailSectionId.CYCLE_ENTRIES, observations.isNotEmpty()) {
             PaginatedEntryList(
                 title = stringResource(R.string.section_entries),
                 entries = observations,
@@ -123,122 +125,101 @@ internal fun LazyListScope.cyclePeriodContent(
                 )
             }
         }
-    }
-}
-
-/** Today first: the recorded day, the phase, what was logged, the estimate, and a sourced card. */
-private fun LazyListScope.cycleTodaySections(
-    today: CycleTodayDisplay,
-    dateTimeFormatterProvider: DateTimeFormatterProvider,
-    actions: CycleContentActions,
-    sectionModifier: Modifier,
-) {
-    item(key = "cycle-hero") {
-        CycleHeroCard(today = today, dateTimeFormatterProvider = dateTimeFormatterProvider, modifier = sectionModifier)
-    }
-    item(key = "cycle-today-observations") {
-        // An empty day asks what to log; a day with entries opens them all.
-        CycleTodayObservationsCard(
-            today = today,
-            onOpenDayLog = { if (today.hasLoggedSomething) actions.onOpenDayLog(today.today) else actions.onChooseLog() },
-            modifier = sectionModifier,
-        )
-    }
-    today.pill?.let { pill ->
-        item(key = "cycle-pill") {
-            CyclePillCard(
-                pill = pill,
+        section(MetricDetailSectionId.CYCLE_ESTIMATE) {
+            CycleEstimateCard(
+                today = today,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
-                onToggleTaken = actions.onTogglePillTaken,
+                onAddPastPeriod = actions.onAddPastPeriod,
                 modifier = sectionModifier,
             )
         }
-    }
-    if (today.bleeding !is DayBleedingChoice.Flow) {
-        item(key = "cycle-start-period") {
-            CycleStartPeriodButton(onClick = actions.onStartPeriod, modifier = sectionModifier)
+        section(MetricDetailSectionId.CYCLE_TIP, today.tip != null || today.fact != null) {
+            CycleDailyCard(today = today, modifier = sectionModifier)
         }
-    }
-    item(key = "cycle-daily-card") {
-        CycleDailyCard(today = today, modifier = sectionModifier)
-    }
-    item(key = "cycle-estimate") {
-        CycleEstimateCard(
-            today = today,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            onAddPastPeriod = actions.onAddPastPeriod,
-            modifier = sectionModifier,
-        )
-    }
-    if (today.recentIntervalLengths.isNotEmpty()) {
-        item(key = "cycle-stats") { CycleStatsCard(today = today, modifier = sectionModifier) }
-    }
-    if (!today.hasProfile) {
-        item(key = "cycle-setup") { CycleSetupCard(onOpenSettings = actions.onOpenSettings, modifier = sectionModifier) }
+        section(MetricDetailSectionId.CYCLE_STATISTICS, display.hasData || today.recentIntervalLengths.isNotEmpty()) {
+            if (today.recentIntervalLengths.isNotEmpty()) {
+                CycleStatsCard(today = today, modifier = sectionModifier)
+            }
+            if (display.hasData) {
+                CycleDataConfidenceCard(display = display, period = period)
+                CycleStatisticsGrid(display = display, unitFormatter = unitFormatter)
+            }
+        }
+        section(MetricDetailSectionId.CYCLE_SETUP, !today.hasProfile) {
+            CycleSetupCard(onOpenSettings = actions.onOpenSettings, modifier = sectionModifier)
+        }
+        section(MetricDetailSectionId.CYCLE_HISTORY, today.hasCycleHistory) {
+            SectionHeader(stringResource(R.string.section_cycle_history))
+            CycleHistoryCard(
+                stats = display.history,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onManageExclusion = actions.onManageExclusion,
+                modifier = sectionModifier,
+            )
+        }
+        section(MetricDetailSectionId.CYCLE_THERMAL, today.hasCycleHistory) {
+            SectionHeader(stringResource(R.string.section_cycle_thermal))
+            CycleThermalCard(thermal = display.thermal, unitFormatter = unitFormatter, modifier = sectionModifier)
+        }
+        section(MetricDetailSectionId.CYCLE_PATTERNS, today.hasCycleHistory) {
+            SectionHeader(stringResource(R.string.section_cycle_patterns))
+            CyclePatternsCard(patterns = display.patterns, modifier = sectionModifier)
+        }
     }
 }
 
-private fun LazyListScope.cycleDataConfidence(
-    display: CycleDisplayState,
-    period: DatePeriod,
-) {
+@Composable
+private fun CycleDataConfidenceCard(display: CycleDisplayState, period: DatePeriod) {
     if (period.start == period.end) return
-
-    item(key = "cycle-confidence") {
-        DataConfidenceCard(
-            confidence = dataConfidence(
-                period = period,
-                trackedDates = display.trackedDates,
-                sampleCount = display.sampleCount,
-                sources = display.sources,
-                valueKind = DataValueKind.MEASURED,
-            ),
-            accentColor = CycleColor,
-            modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter, vertical = Spacing.sm),
-        )
-    }
+    DataConfidenceCard(
+        confidence = dataConfidence(
+            period = period,
+            trackedDates = display.trackedDates,
+            sampleCount = display.sampleCount,
+            sources = display.sources,
+            valueKind = DataValueKind.MEASURED,
+        ),
+        accentColor = CycleColor,
+        modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter, vertical = Spacing.sm),
+    )
 }
 
 /** The browsed period's counts. The cycle day and the mean length live in the today cards. */
-private fun LazyListScope.cycleStatistics(
-    display: CycleDisplayState,
-    unitFormatter: UnitFormatter,
-) {
-    item(key = "cycle-statistics-header") { SectionHeader(stringResource(R.string.section_statistics)) }
-    item(key = "cycle-statistics") {
-        val summary = display.summary
-        InsightStatGrid(
-            stats = listOf(
-                InsightStat(
-                    title = stringResource(R.string.metric_period_days),
-                    value = unitFormatter.count(summary.periodDays),
-                    unit = stringResource(R.string.unit_days),
-                    icon = Icons.Outlined.CalendarMonth,
-                    accentColor = CycleColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.metric_ovulation_tests),
-                    value = unitFormatter.count(summary.ovulationTestCount),
-                    unit = stringResource(R.string.unit_tests),
-                    icon = Icons.Outlined.CheckCircle,
-                    accentColor = CycleColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.stat_bbt_readings),
-                    value = unitFormatter.count(summary.bbtReadingCount),
-                    unit = "",
-                    icon = Icons.Outlined.DeviceThermostat,
-                    accentColor = CycleColor,
-                ),
-                InsightStat(
-                    title = stringResource(R.string.section_entries),
-                    value = unitFormatter.count(summary.totalEntryCount),
-                    unit = "",
-                    icon = Icons.Outlined.Star,
-                    accentColor = CycleColor,
-                ),
+@Composable
+private fun CycleStatisticsGrid(display: CycleDisplayState, unitFormatter: UnitFormatter) {
+    SectionHeader(stringResource(R.string.section_statistics))
+    val summary = display.summary
+    InsightStatGrid(
+        stats = listOf(
+            InsightStat(
+                title = stringResource(R.string.metric_period_days),
+                value = unitFormatter.count(summary.periodDays),
+                unit = stringResource(R.string.unit_days),
+                icon = Icons.Outlined.CalendarMonth,
+                accentColor = CycleColor,
             ),
-            modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter, vertical = Spacing.sm),
-        )
-    }
+            InsightStat(
+                title = stringResource(R.string.metric_ovulation_tests),
+                value = unitFormatter.count(summary.ovulationTestCount),
+                unit = stringResource(R.string.unit_tests),
+                icon = Icons.Outlined.CheckCircle,
+                accentColor = CycleColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.stat_bbt_readings),
+                value = unitFormatter.count(summary.bbtReadingCount),
+                unit = "",
+                icon = Icons.Outlined.DeviceThermostat,
+                accentColor = CycleColor,
+            ),
+            InsightStat(
+                title = stringResource(R.string.section_entries),
+                value = unitFormatter.count(summary.totalEntryCount),
+                unit = "",
+                icon = Icons.Outlined.Star,
+                accentColor = CycleColor,
+            ),
+        ),
+        modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter, vertical = Spacing.sm),
+    )
 }

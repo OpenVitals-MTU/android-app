@@ -3042,7 +3042,6 @@
     <string name="cycle_today_note">Заметка: %1$s</string>
     <string name="cycle_log_today">Отметить сегодня</string>
     <string name="cycle_edit_today">Изменить наблюдения</string>
-    <string name="cycle_start_period">Отметить начало менструации</string>
     <string name="cycle_stats_title">Ваши циклы вкратце</string>
     <string name="cycle_stats_avg_length">Средняя длина: %1$d дн.</string>
     <string name="cycle_stats_total">Отмеченных циклов: %1$d</string>

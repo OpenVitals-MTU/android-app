@@ -98,6 +98,7 @@ Status legend: **exists** already in OpenVitals · **new** built for this design
 |---|---|---|
 | Setup | A Cycle settings section holds contexts, age band and reminders; the cycle screen links to it when nothing is set. | new |
 | One range | The screen is a month calendar over today's cards, so the Day/Week/Month/Year selector is hidden and the range is fixed to the month. The arrows and the date picker move the calendar. | adapted (2026-09-28) |
+| Arranged sections | The screen uses the shared metric section order (`MetricDetailSectionId.CYCLE_*`), so the app bar's arrange toggle reorders it like any metric screen. Default: cycle day, calendar, today's observations (only when something is logged), pill (when tracked), entries, estimate, tip, statistics, setup, history, thermal, patterns. The one-tap "period started" button is gone: the Log action's Bleeding card is the way in, and the period-start preset went with it. | adapted (2026-09-28) |
 | Tracking contexts | PMS, PMDD, endometriosis (observation group); PCOS, perimenopause, thyroid (timing group). | new |
 | Age band | Optional, picks the variability prior. | new |
 | Temperature unit | Celsius or Fahrenheit. | exists: unit overrides |

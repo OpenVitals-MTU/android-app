@@ -3012,7 +3012,6 @@
     <string name="cycle_today_note">Notiz: %1$s</string>
     <string name="cycle_log_today">Heute erfassen</string>
     <string name="cycle_edit_today">Beobachtungen bearbeiten</string>
-    <string name="cycle_start_period">Periodenbeginn eintragen</string>
     <string name="cycle_stats_title">Deine Zyklen auf einen Blick</string>
     <string name="cycle_stats_avg_length">Durchschnittliche Länge: %1$d Tage</string>
     <string name="cycle_stats_total">Erfasste Zyklen: %1$d</string>

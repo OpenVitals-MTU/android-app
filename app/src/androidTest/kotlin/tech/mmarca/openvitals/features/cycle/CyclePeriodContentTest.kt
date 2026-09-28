@@ -18,7 +18,10 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
+import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.domain.preferences.DefaultMetricDetailSectionOrder
+import tech.mmarca.openvitals.ui.components.rememberMetricDetailSectionListState
 import tech.mmarca.openvitals.domain.cycle.CycleEstimate
 import tech.mmarca.openvitals.domain.cycle.CycleEstimateResult
 import tech.mmarca.openvitals.domain.cycle.RecordedCycle
@@ -71,9 +74,6 @@ class CyclePeriodContentTest {
 
         scrollTo(hasText(string(R.string.cycle_estimate_disclaimer)))
         composeRule.onNodeWithText(string(R.string.cycle_estimate_disclaimer)).assertIsDisplayed()
-        // The period-start button is offered while today has no flow.
-        scrollTo(hasText(string(R.string.cycle_start_period)))
-        composeRule.onNodeWithText(string(R.string.cycle_start_period)).assertIsDisplayed()
     }
 
     @Test
@@ -149,6 +149,13 @@ class CyclePeriodContentTest {
     ) {
         composeRule.setContent {
             OpenVitalsTheme {
+                val sectionContext = MetricDetailSectionContext(
+                    listState = rememberMetricDetailSectionListState(),
+                    order = DefaultMetricDetailSectionOrder,
+                    isEditingSections = false,
+                    onMoveSectionToTarget = { _, _ -> },
+                    onMoveSection = { _, _ -> },
+                )
                 LazyColumn {
                     cyclePeriodContent(
                         state = state,
@@ -156,6 +163,7 @@ class CyclePeriodContentTest {
                         unitFormatter = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC }),
                         dateTimeFormatterProvider = DateTimeFormatterProvider(),
                         observations = observations,
+                        sectionContext = sectionContext,
                     )
                 }
             }

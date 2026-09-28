@@ -272,7 +272,6 @@ internal fun NavGraphBuilder.manualEntryRoutes(
         route = Screen.CycleEntry.route + CYCLE_ENTRY_QUERY_PATTERN,
         arguments = listOf(
             navArgument(CYCLE_ENTRY_DATE_ARG) { type = NavType.StringType; nullable = true; defaultValue = null },
-            navArgument(CYCLE_ENTRY_PRESET_ARG) { type = NavType.StringType; nullable = true; defaultValue = null },
             navArgument(CYCLE_ENTRY_SECTION_ARG) { type = NavType.StringType; nullable = true; defaultValue = null },
         ),
     ) {
