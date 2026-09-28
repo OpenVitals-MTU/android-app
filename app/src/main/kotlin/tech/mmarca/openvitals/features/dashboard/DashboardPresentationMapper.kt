@@ -73,7 +73,8 @@ object DashboardPresentationMapper {
     ): DashboardWidgetDisplayModel? = when (widgetId) {
         DashboardWidgetId.STEPS -> metricWidget(
             id = widgetId,
-            value = DisplayValue(unitFormatter.count(data.steps), "steps"),
+            // The spec adds the translated unit; this mapper has no resources.
+            value = DisplayValue(unitFormatter.count(data.steps), ""),
             style = DashboardWidgetStyle.CIRCLE,
             progress = goalProgressModel(
                 current = data.steps.toDouble(),

@@ -231,7 +231,11 @@ internal fun dashboardWidgetSpecs(
                 addMetric(
                     id = widgetId,
                     title = title,
-                    value = model.value,
+                    value = if (widgetId == DashboardWidgetId.STEPS) {
+                        model.value.copy(unit = stringResource(R.string.unit_steps))
+                    } else {
+                        model.value
+                    },
                     icon = meta.icon,
                     accentColor = meta.accentColor,
                     progress = model.progress?.toWidgetProgress(),
