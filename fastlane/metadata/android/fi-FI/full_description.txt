@@ -1,0 +1,35 @@
+OpenVitals on yksityinen terveyssovellus Androidille. Se näyttää Health Connect -tietosi yhdessä paikassa: aktiivisuus, uni, sydän, keho, elintoiminnot, ravinto, nesteytys, kofeiini, mindfulness ja halutessasi kuukautiskierron seuranta.
+
+Tietosi pysyvät puhelimessasi. Sovellus ei vaadi tiliä, eikä siinä ole pilvisynkronointia, mainoksia tai analytiikkaa. Sillä ei myöskään ole internet-oikeutta. OpenVitals lukee Health Connectia vasta, kun annat luvan, ja kirjoittaa sinne vain tallentamasi merkinnät.
+
+Mitä voit tehdä
+
+* Katso päiväsi yhteenvedosta ja järjestä ruudut haluamaasi järjestykseen
+* Tarkastele jokaista mittaria päivän, viikon, kuukauden tai vuoden ajalta. Mukana ovat trendit, tavoitteet ja henkilökohtainen perustasosi
+* Tarkista päivän valmius, kehon energia, harjoitusvalmius, stressi, HRV-tila, kardiokuormitus ja unipisteet. Jokaiselle on selkeä selitys siitä, miten se lasketaan
+* Kirjaa suoraan Health Connectiin juomat, ruoat, treenit, mindfulness-harjoitukset, paino, rasvaprosentti, verenpaine, happisaturaatio, lämpötila ja muita tietoja
+* Seuraa kofeiinia: aktiivinen määrä, päivän yläraja ja nukkumaanmenon ennuste
+* Tallenna GPS-treenejä: reaaliaikaiset tiedot, offline-kartat sekä Bluetooth-syke-, kadenssi- ja tehoanturit
+* Tuo Apple Health -vientejä sekä GPX-, KML-, KMZ-, TCX-, FIT- ja CSV-tiedostoja
+* Koosta PDF-terveysraportti ja jaa se lääkärillesi
+* Seuraa kiertoasi: kuukautiset, oireet, peruslämpö, arvio seuraavista kuukautisista ja pillerimuistutukset
+* Synkronoi tuetut Garmin-kellot suoraan Bluetoothilla
+* Kopioi tietoja kahden puhelimen välillä Bluetoothilla ilman tiliä ja verkkoa
+* Ansaitse merkkejä askelista, matkasta, kerroksista, treeneistä, nesteytyksestä, unesta ja mindfulnessista
+* Ota käyttöön muistutukset juomisesta, mindfulnessista ja kierrostasi
+* Valitse metriset tai brittiläiset yksiköt, vaalea, tumma tai AMOLED-teema ja yksi 14 kielestä
+
+Miksi OpenVitals
+
+* Yksityinen alusta alkaen: ei tiliä, ei pilveä, ei mainoksia, ei seurantaa
+* Health Connect pysyy ensisijaisena tietolähteenä. Sovellus säilyttää puhelimellasi vain ne kellon mittaukset ja kierron muistiinpanot, joita Health Connect ei voi tallentaa
+* Valitset jokaisen luvan itse ja voit muuttaa sitä myöhemmin
+* Avoin lähdekoodi: koodi, julkaisutiedot ja asennustiedostot ovat julkisia
+
+Vaatimukset
+
+OpenVitals tarvitsee Health Connectin. Android 14:ssä ja uudemmissa se on osa järjestelmää. Android 13:ssa ja vanhemmissa asenna Health Connect -sovellus Google Play -kaupasta.
+
+Terveysvastuuvapauslauseke
+
+OpenVitals on tarkoitettu vain yleiseen hyvinvointiin ja tiedoksi. Se ei ole lääkinnällinen laite eikä anna lääketieteellisiä neuvoja. Se ei diagnosoi, hoida, paranna eikä ehkäise mitään sairautta tai terveydentilaa. Kierron arviot eivät ole ehkäisymenetelmä. Käänny aina pätevän terveydenhuollon ammattilaisen puoleen, kun tarvitset lääketieteellistä neuvoa, diagnoosia tai hoitoa.

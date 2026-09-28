@@ -1,41 +1,35 @@
-OpenVitals è una dashboard Android privata per Health Connect. Ti aiuta a consultare attività, sonno, cuore, corpo, idratazione, nutrizione, mindfulness, parametri vitali e dati opzionali sul ciclo in un'app locale.
+OpenVitals è una dashboard privata per la salute su Android. Mostra i tuoi dati di Health Connect in un unico posto: attività, sonno, cuore, corpo, parametri vitali, nutrizione, idratazione, caffeina, consapevolezza e, se vuoi, tracciamento del ciclo.
 
-I tuoi dati sanitari restano sul dispositivo. OpenVitals non ha account, sincronizzazione cloud, pubblicità, SDK di analisi o permesso Internet a livello di app. La dashboard legge Health Connect solo dopo che hai concesso le autorizzazioni. Le voci manuali vengono scritte in Health Connect solo quando le salvi esplicitamente.
+I tuoi dati restano sul telefono. Nessun account, nessuna sincronizzazione cloud, nessuna pubblicità e nessuna analisi. Inoltre, l'app non ha il permesso di accedere a Internet. OpenVitals legge Health Connect solo dopo che gli hai concesso l'accesso, e scrive solo le voci che salvi.
 
 Cosa puoi fare
 
-* Visualizzare una dashboard giornaliera di Health Connect con schede salute e fitness raggruppate
-* Esplorare schermate di dettaglio per periodo con viste Giorno, Settimana, Mese e Anno
-* Consultare Daily Readiness con Body Energy, Training Readiness, stato HRV, minuti di intensità, stress fisiologico, obiettivi adattivi e spiegazioni locali
-* Consultare passi, distanza, calorie, piani saliti, dislivello e allenamenti
-* Consultare sessioni di sonno, durata e fasi del sonno
-* Consultare frequenza cardiaca, frequenza a riposo, HRV, pressione sanguigna, SpO2, frequenza respiratoria, temperatura corporea, VO2 max, metriche corporee, bevande, idratazione, caffeina, nutrizione e mindfulness quando disponibili
-* Consultare il Fat-Free Mass Index (FFMI) quando sono disponibili peso, altezza e grasso corporeo
-* Aggiungere e modificare direttamente in Health Connect le voci create da OpenVitals per bevande, misure corporee, parametri vitali, mindfulness e attività
-* Registrare bevande da preset o personalizzate con idratazione, caffeina e valori nutrizionali selezionati
-* Seguire badge obiettivo per attività, distanza, piani, allenamenti, idratazione, sonno e mindfulness
-* Importare percorsi GPX, KML, KMZ e FIT, visualizzarli in anteprima e salvare allenamenti con percorso
-* Importare record supportati da esportazioni Apple Health in Health Connect
-* Registrare attività GPS con pausa, ripresa, fine, annullamento, anteprima percorso, distanza, dislivello, tempo in movimento, dashboard configurabile, modalità Focus, schermo sempre attivo e notifica persistente
-* Collegare sensori Bluetooth LE sperimentali per frequenza cardiaca, cadenza, potenza e footpod durante la registrazione, incluso il monitoraggio cardiaco per allenamenti di forza e a ripetizioni supportati
-* Stimare calorie attive e totali per attività importate o registrate prima del salvataggio
-* Attivare promemoria opzionali per l'idratazione con orari attivi e pausa al raggiungimento dell'obiettivo giornaliero
-* Scegliere una settimana attività fissa Lun-Dom o gli ultimi 7 giorni mobili
-* Scegliere unità metriche o imperiali
-* Concedere le autorizzazioni sensibili per il ciclo solo quando vuoi visualizzare quei dati
+* Guarda la tua giornata in una dashboard che puoi riordinare
+* Esplora ogni metrica per giorno, settimana, mese o anno, con tendenze, obiettivi e la tua linea di base personale
+* Controlla Prontezza giornaliera, Energia corporea, Prontezza allenamento, stress, stato HRV, carico cardio e punteggio sonno, ognuno con una spiegazione semplice di come viene calcolato
+* Registra bevande, cibo, allenamenti, consapevolezza, peso, grasso corporeo, pressione sanguigna, ossigeno nel sangue, temperatura e molto altro, direttamente in Health Connect
+* Tieni d'occhio la caffeina: quantità attiva, limite giornaliero e previsione per l'ora di andare a letto
+* Registra allenamenti GPS con statistiche in tempo reale, mappe offline e sensori Bluetooth di frequenza cardiaca, cadenza e potenza
+* Importa esportazioni di Apple Health e file GPX, KML, KMZ, TCX, FIT e CSV
+* Crea un report sulla salute in PDF da condividere con il tuo medico
+* Segui il tuo ciclo: mestruazioni, sintomi, temperatura basale corporea, stima delle prossime mestruazioni e promemoria della pillola
+* Sincronizza gli orologi Garmin compatibili direttamente via Bluetooth
+* Copia i dati tra due telefoni via Bluetooth, senza account e senza rete
+* Ottieni medaglie per passi, distanza, piani, allenamenti, idratazione, sonno e consapevolezza
+* Attiva i promemoria per idratazione, consapevolezza e ciclo
+* Scegli unità metriche o imperiali, un tema chiaro, scuro o AMOLED e una delle 14 lingue
 
 Perché OpenVitals
 
-* Privata per progettazione: nessun account, cloud, annuncio o analisi
-* Incentrata sulla dashboard: la schermata iniziale è in sola lettura finché non scegli di aggiungere una voce
-* Health Connect come fonte di verità: OpenVitals non mantiene un database sanitario separato
-* Autorizzazioni chiare: configurazione in un tocco o categorie singole, modificabili in seguito
-* Open source: codice, note di rilascio e build sono disponibili per la revisione
+* Privacy fin dalla progettazione: nessun account, nessun cloud, nessuna pubblicità, nessun tracciamento
+* Health Connect resta la fonte di riferimento. Solo le misurazioni dell'orologio e le note sul ciclo che Health Connect non può salvare vengono conservate nell'app, sul tuo telefono
+* Scegli tu ogni autorizzazione e puoi cambiarla in seguito
+* Open source: il codice, le note di rilascio e le build sono pubblici
 
 Requisiti
 
-OpenVitals richiede Health Connect. Su Android 14 e versioni successive, Health Connect fa parte di Android. Su Android 13 e versioni precedenti, installa separatamente l'app Health Connect.
+OpenVitals richiede Health Connect. Health Connect è integrato in Android 14 e versioni successive. Su Android 13 e versioni precedenti, installa l'app Health Connect da Google Play.
 
-Avvertenza sanitaria
+Avviso sulla salute
 
-OpenVitals è pensata solo per benessere generale e uso informativo. Non è un dispositivo medico e non fornisce consigli medici. Non diagnostica, tratta, cura o previene malattie o condizioni mediche. Consulta sempre un professionista sanitario qualificato per consigli, diagnosi o trattamenti medici.
+OpenVitals è destinato esclusivamente al benessere generale e a scopo informativo. Non è un dispositivo medico e non fornisce consigli medici. Non diagnostica, tratta, cura né previene alcuna malattia o condizione medica. Le stime del ciclo non sono un metodo contraccettivo. Consulta sempre un professionista sanitario qualificato per consigli medici, diagnosi o trattamenti.

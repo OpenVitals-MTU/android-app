@@ -1,0 +1,35 @@
+OpenVitals é un panel de saúde privado para Android. Mostra os teus datos de Health Connect nun só lugar: actividade, sono, corazón, corpo, constantes vitais, nutrición, hidratación, cafeína, atención plena e, se queres, seguimento do ciclo.
+
+Os teus datos quedan no teléfono. Sen conta, sen sincronización na nube, sen anuncios e sen analíticas. Ademais, a app non ten permiso de internet. OpenVitals só le Health Connect despois de que lle concedas acceso, e só escribe as entradas que ti gardas.
+
+Que podes facer
+
+* Mira o teu día nun panel que podes reordenar
+* Explora cada métrica por día, semana, mes ou ano, con tendencias, obxectivos e a túa liña base persoal
+* Consulta Preparación diaria, Enerxía corporal, Preparación para adestrar, estrés, estado da VFC (HRV), carga cardio e puntuación do sono, todos cunha explicación clara de como se calculan
+* Rexistra bebidas, comida, adestramentos, atención plena, peso, graxa corporal, presión arterial, osíxeno en sangue, temperatura e moito máis, directamente en Health Connect
+* Controla a túa cafeína: cantidade activa, límite diario e previsión para a hora de deitarse
+* Grava adestramentos GPS con estatísticas en directo, mapas sen conexión e sensores Bluetooth de frecuencia cardíaca, cadencia e potencia
+* Importa exportacións de Apple Health e ficheiros GPX, KML, KMZ, TCX, FIT e CSV
+* Crea un informe de saúde en PDF para compartir co teu médico
+* Segue o teu ciclo: períodos, síntomas, temperatura basal, estimación do seguinte período e recordatorios da pílula
+* Sincroniza reloxos Garmin compatibles directamente por Bluetooth
+* Copia datos entre dous teléfonos por Bluetooth, sen conta e sen rede
+* Gaña insignias por pasos, distancia, andares, adestramentos, hidratación, sono e atención plena
+* Activa recordatorios de bebidas, de atención plena e do ciclo
+* Escolle unidades métricas ou imperiais, un tema claro, escuro ou AMOLED e un dos 14 idiomas
+
+Por que OpenVitals
+
+* Privada por deseño: sen conta, sen nube, sen anuncios, sen rastrexo
+* Health Connect segue sendo a fonte de referencia. Só as medicións do reloxo e as notas do ciclo que Health Connect non pode gardar quedan na app, no teu teléfono
+* Ti escolles cada permiso e podes cambialo despois
+* Código aberto: o código, as notas de versión e as compilacións son públicos
+
+Requisitos
+
+OpenVitals necesita Health Connect. Health Connect vén integrado en Android 14 e versións posteriores. En Android 13 e anteriores, instala a app Health Connect desde Google Play.
+
+Aviso de saúde
+
+OpenVitals é só para benestar xeral e uso informativo. Non é un dispositivo médico e non ofrece consello médico. Non diagnostica, trata, cura nin prevén ningunha enfermidade ou condición médica. As estimacións do ciclo non son un método anticonceptivo. Consulta sempre un profesional sanitario cualificado para consello médico, diagnóstico ou tratamento.

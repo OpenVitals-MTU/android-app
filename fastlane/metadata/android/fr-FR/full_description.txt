@@ -1,0 +1,35 @@
+OpenVitals est un tableau de bord santé privé pour Android. Il réunit vos données Santé Connect (Health Connect) en un seul endroit : activité, sommeil, cœur, corps, constantes vitales, nutrition, hydratation, caféine, pleine conscience et, si vous le souhaitez, suivi du cycle.
+
+Vos données restent sur votre téléphone. Pas de compte, pas de synchronisation cloud, pas de publicité, pas d'analyse d'usage. De plus, l'application n'a pas d'autorisation Internet. OpenVitals ne lit Santé Connect qu'après votre accord, et n'y écrit que les entrées que vous enregistrez.
+
+Ce que vous pouvez faire
+
+* Visualisez votre journée sur un tableau de bord que vous pouvez réorganiser
+* Explorez chaque mesure par jour, semaine, mois ou année, avec tendances, objectifs et votre référence personnelle
+* Consultez la Forme du jour, l'Énergie corporelle, l'Aptitude à l'entraînement, le stress, le statut VFC (HRV), la charge cardio et le score de sommeil, chacun avec une explication claire de son calcul
+* Enregistrez boissons, aliments, entraînements, pleine conscience, poids, masse grasse, tension artérielle, oxygène sanguin, température et plus encore, directement dans Santé Connect
+* Surveillez votre caféine : quantité active, limite quotidienne et prévision au coucher
+* Enregistrez vos entraînements GPS avec statistiques en direct, cartes hors ligne et capteurs Bluetooth de fréquence cardiaque, de cadence et de puissance
+* Importez des exports Apple Santé et des fichiers GPX, KML, KMZ, TCX, FIT et CSV
+* Créez un rapport de santé en PDF à partager avec votre médecin
+* Suivez votre cycle : règles, symptômes, température basale, estimation des prochaines règles et rappels de pilule
+* Synchronisez les montres Garmin compatibles directement en Bluetooth
+* Copiez vos données entre deux téléphones en Bluetooth, sans compte ni réseau
+* Gagnez des badges pour les pas, la distance, les étages, les entraînements, l'hydratation, le sommeil et la pleine conscience
+* Activez les rappels de boisson, de pleine conscience et du cycle
+* Choisissez les unités métriques ou impériales, un thème clair, sombre ou AMOLED et une langue parmi 14
+
+Pourquoi OpenVitals
+
+* Confidentialité dès la conception : pas de compte, pas de cloud, pas de publicité, pas de pistage
+* Santé Connect reste la source de référence. Seules les mesures de la montre et les notes de cycle que Santé Connect ne peut pas stocker sont conservées dans l'application, sur votre téléphone
+* Vous choisissez chaque autorisation et pouvez la modifier plus tard
+* Open source : le code, les notes de version et les versions compilées sont publics
+
+Configuration requise
+
+OpenVitals nécessite Santé Connect. Santé Connect est intégré à Android 14 et versions ultérieures. Sous Android 13 et versions antérieures, installez l'application Santé Connect depuis Google Play.
+
+Avertissement de santé
+
+OpenVitals est destiné uniquement au bien-être général et à l'information. Ce n'est pas un dispositif médical et il ne fournit pas d'avis médical. Il ne diagnostique, ne traite, ne guérit ni ne prévient aucune maladie ou affection médicale. Les estimations du cycle ne sont pas une méthode de contraception. Consultez toujours un professionnel de santé qualifié pour tout avis médical, diagnostic ou traitement.
