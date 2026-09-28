@@ -63,6 +63,16 @@ matches the filenames.
    own language and script (UTF-8; the ASCII rule is for `CHANGELOG.md`
    only), with the feature names from that locale's `strings.xml`. French
    says "Santé Connect", as the app does.
+   - Each note is what a user of that language sees change. A fix that only
+     touched the Czech strings goes in the Czech note, not the German one;
+     the `en-US` note may summarise all of them.
+   - `en-US`, `de-DE`, `es-ES`, `it-IT` and `et` had listings before 2.11.1;
+     the other nine came with it. Do not call an older listing "new".
+   - Japanese and Chinese have no plural forms: leave plural fixes out there.
+   - Check before running the script (all 14 present, none over 500):
+     ```bash
+     code=<versionCode>; for d in fastlane/metadata/android/*/; do f="${d}changelogs/$code.txt"; test -f "$f" || echo "missing $f"; python3 -c "import sys; n=len(open(sys.argv[1],encoding='utf-8').read().rstrip(chr(10))); print(sys.argv[1], n, 'TOO LONG' if n > 500 else '')" "$f" 2>/dev/null; done
+     ```
 
 ## 3. Run the release
 
@@ -77,8 +87,12 @@ docs, fastlane and the release machinery), tags `vX.Y.Z` with
 `docs/releases/X.Y.Z.md` as the annotation, and pushes `main` plus the tag.
 
 Verify the printed `Released vX.Y.Z (versionCode N)` matches the fastlane
-changelog filenames; if a nightly stole the code, rename the files and amend
-before anyone pulls.
+changelog filenames; if a nightly stole the code, rename all 14 files and
+amend before anyone pulls:
+
+```bash
+for f in fastlane/metadata/android/*/changelogs/OLD.txt; do git mv "$f" "${f%OLD.txt}NEW.txt"; done
+```
 
 CI (Woodpecker) takes it from the tag: signed APK, signed debug APK, and AAB
 on the Codeberg release; Play production upload from the approved deployment,
