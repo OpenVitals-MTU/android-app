@@ -33,8 +33,8 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 ## Highlights
 
 - Summary dashboard for activity, recovery, beverages, nutrition, body, heart, vitals, mindfulness, and optional cycle data
-- PDF health report export built fully on-device, with charts, statistics, and clinical sections for blood pressure, glucose, workouts, and sleep
-- Manual cycle logging with derived period days and next-period predictions, stored only in Health Connect
+- PDF health report export built fully on-device, with charts, statistics, and clinical sections for blood pressure, glucose, workouts, sleep, and cycle tracking
+- Cycle tracking with a day log logged one thing at a time, next-period ranges built from your own history, local cycle reminders, a contraceptive pill scheme with a daily reminder, a home-screen widget, and a journal backup; Health Connect keeps its records and the journal stays on the phone
 - Period detail screens with `Day / Week / Month / Year` navigation and reorderable metric sections
 - Charts that speak to a screen reader: a summary per chart, one element per day, and zoom and scrub offered as actions
 - Daily goal cards that say how far ahead or behind the period is and what each remaining day needs to average to land on goal, and a goal ring on each day of the Month view
@@ -108,7 +108,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Health Connect availability checks, including unsupported device/profile handling and provider-update messaging
 - Feature-gated Mindfulness support when the installed Health Connect provider exposes `FEATURE_MINDFULNESS_SESSION`
 - Data Importers setting for supported Apple Health `export.xml` or `export.zip` records, FIT activity/course/workout files, and column-mapped CSV files for body measurements, vitals and steps
-- Cycle tracking with its own dashboard section, period calendar, flow, ovulation, cervical mucus, and basal body temperature views after Health Connect cycle permissions are granted
+- Cycle tracking with a day log (bleeding, pain, mood, energy, symptoms, notes, pregnancy and ovulation tests, sexual activity, basal body temperature, cervical mucus), a month calendar with the estimated window, a contraceptive pill scheme, local reminders, a home-screen widget, phone-to-phone sync of the journal, and a JSON backup, after Health Connect cycle permissions are granted
 - Metric/Imperial unit preference in Settings, backed by shared display formatters
 - Shared detail-screen scaffold with pull-to-refresh, range selection, period navigation, and calendar date picking
 - Explicit manual entry logging for beverages with hydration, caffeine, and nutrition defaults, carbohydrates, activities with optional GPX/KML/KMZ route import, FIT activity/course/workout review from Settings, offline PMTiles/Mapsforge maps, GPS recording, high-contrast outdoor recording, or experimental Bluetooth LE sensors, body measurements, vitals, and mindfulness sessions, written directly to Health Connect

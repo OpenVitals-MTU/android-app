@@ -38,7 +38,7 @@ From the local journal (Room, `cycle_journal_entries`), because Health Connect h
 
 ## The day log
 
-"+ Log" → Cycle, the cycle screen's "Log today" button, the calendar, and the home widget all open one day-log screen for a date. It shows bleeding first (not recorded, none, spotting, light, medium, heavy), then the three scales, then symptoms and notes behind a disclosure, then body observations (temperature with time and disturbances, cervical sensation, mucus, ovulation test, sexual activity). Blank means not logged.
+"+ Log" → Cycle, the cycle screen's Log action and the home widget open a chooser: one card each for bleeding, how you feel, a pregnancy test, an ovulation test, sexual activity, basal body temperature and cervical mucus. A card opens the day log on that section alone; "Log everything for the day" opens the full log. The calendar, the entry list's pencil and the Today card of a day that already has entries open the full log for that date: bleeding first (not recorded, none, spotting, light, medium, heavy), then the three scales, then symptoms and notes behind a disclosure, then body observations (temperature with time and disturbances, cervical sensation, mucus, ovulation test, sexual activity). Blank means not logged.
 
 Saving reconciles each Health Connect record kind separately: a record OpenVitals owns is updated or deleted, a new value is inserted, and an unchanged value is left alone. Records written by other apps are shown as read-only context and are never modified. Journal fields go to the local table. Leaving with unsaved changes asks first.
 
@@ -46,17 +46,19 @@ Menstruation period intervals are derived, not logged. After a flow change the a
 
 ## Cycle screen
 
-The screen is a metric detail scaffold with day, week, month, and year periods. The top of every period shows:
+The screen is a metric detail scaffold fixed to the month: the arrows and the date picker move the calendar, and the sections can be arranged from the app bar like on any other metric screen. In the default order it shows:
 
 - **Hero**: recorded cycle day and the date it counts from, or an invitation to log the first period.
 - **Phase**: menstrual, follicular, ovulatory transition, luteal, or a transition window with the reason it cannot be placed.
-- **Today**: what is logged today, or a nudge to log.
+- **Calendar**: recorded flow, spotting, the estimated window outline, cycle-start markers and observation dots. Tapping a day opens its day log.
+- **Today**: what is logged today. Hidden on an empty day, which is logged from the Log action.
+- **Pill**: which day of the pack it is and whether today's pill is taken, when the pill is tracked.
 - **Estimate**: the next period window with a bar showing where today sits, or why there is no estimate yet.
 - **Tip or fact**: one phase tip picked by date, declared contexts, and recent symptoms, or a cycle fact with its source. The choice is stable within a day.
 - **Stats**: count, mean, and range of recorded cycles.
 - **Setup**: a link to cycle settings when no context or age band is set.
 
-Below that, per period: the calendar (recorded flow, spotting, estimated window outline, cycle-start marker, observation dots), the cycle history bars against a 21 to 35 day reference band with a per-cycle detail sheet, the thermal chart with a coverline when a shift is confirmed, symptom patterns per phase, and the observation list. Tapping a calendar day opens its day log.
+Below that: the observation list, the cycle history bars against a 21 to 35 day reference band with a per-cycle detail sheet, the thermal chart with a coverline when a shift is confirmed, and symptom patterns per phase.
 
 ## Estimator
 
@@ -85,6 +87,7 @@ Settings → Cycle holds:
 - **Tracking contexts**: PMS, PMDD, endometriosis (add symptom suggestions to the day log); PCOS, perimenopause, thyroid (widen the estimate).
 - **Age band**: picks the variability prior. A birth year in the body profile sets it; the picker is the fallback when there is none.
 - **Reminders**: see [Reminders](reminders.md).
+- **Contraceptive pill**: days taking and days pausing (21 and 7 by default), the first day of a pack, and a daily reminder at a chosen time on taking days, quiet once today is marked as taken. The scheme lives in the cycle preferences; the taken days in `pill_intakes`.
 - **Delete cycle journal**: wipes the journal, the exclusions and every cycle setting on the device after a confirmation. Health Connect records stay.
 
 All of it is local. Nothing here is written to Health Connect.
@@ -105,4 +108,4 @@ Cycle permissions are managed as their own Health Connect category. The screen a
 
 ## Privacy
 
-Cycle data stays in Health Connect and in the app's local database on the device. The journal, the exclusions, and the declared contexts and age band move with the cycle category of phone-to-phone sync, like Health Connect records do; see [Sync with another phone](device-sync.md). Reminder settings stay on the phone whose alarms they are. Notifications default to a neutral text. OpenVitals has no internet permission.
+Cycle data stays in Health Connect and in the app's local database on the device. The journal, the exclusions, the declared contexts and age band, the pill scheme and the taken days move with the cycle category of phone-to-phone sync, like Health Connect records do; see [Sync with another phone](device-sync.md). Reminder settings stay on the phone whose alarms they are. Notifications default to a neutral text. OpenVitals has no internet permission.
