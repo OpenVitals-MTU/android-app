@@ -1,0 +1,35 @@
+OpenVitals je soukromý přehled zdraví pro Android. Ukazuje vaše data z Health Connect na jednom místě: aktivitu, spánek, srdce, tělo, vitální funkce, výživu, hydrataci, kofein, všímavost a volitelně také sledování cyklu.
+
+Vaše data zůstávají v telefonu. Žádný účet, žádná synchronizace s cloudem, žádné reklamy ani analytika. Aplikace navíc nemá oprávnění k internetu. OpenVitals čte data z Health Connect až poté, co mu udělíte přístup, a zapisuje jen záznamy, které uložíte.
+
+Co můžete dělat
+
+* Prohlédněte si svůj den v přehledu, kde si můžete měnit pořadí karet
+* Procházejte každou metriku po dnech, týdnech, měsících nebo letech, s trendy, cíli a vaší základní hodnotou
+* Zjistěte svou denní připravenost, tělesnou energii, připravenost k tréninku, stres, stav HRV, kardio zátěž a skóre spánku, vždy se srozumitelným vysvětlením, jak se počítají
+* Zapisujte nápoje, jídlo, tréninky, všímavost, hmotnost, tělesný tuk, krevní tlak, okysličení krve, teplotu a další údaje přímo do Health Connect
+* Hlídejte si kofein: aktivní množství, denní limit a předpověď k času usínání
+* Zaznamenávejte tréninky s GPS, živými statistikami, offline mapami a senzory srdečního tepu, kadence a výkonu přes Bluetooth
+* Importujte exporty Apple Health a soubory GPX, KML, KMZ, TCX, FIT a CSV
+* Vytvořte zdravotní zprávu v PDF a sdílejte ji se svým lékařem
+* Sledujte svůj cyklus: menstruaci, příznaky, bazální teplotu, odhad příští menstruace a připomínky pilulky
+* Synchronizujte podporované hodinky Garmin přímo přes Bluetooth
+* Kopírujte data mezi dvěma telefony přes Bluetooth, bez účtu a bez sítě
+* Získávejte odznaky za kroky, vzdálenost, patra, tréninky, hydrataci, spánek a všímavost
+* Zapněte si připomenutí nápojů, všímavosti a cyklu
+* Vyberte si metrické nebo imperiální jednotky, světlý, tmavý nebo AMOLED motiv a jeden ze 14 jazyků
+
+Proč OpenVitals
+
+* Soukromí od základu: žádný účet, žádný cloud, žádné reklamy, žádné sledování
+* Hlavním zdrojem dat zůstává Health Connect. Jen měření z hodinek a poznámky k cyklu, které Health Connect uložit neumí, se ukládají v aplikaci ve vašem telefonu
+* Každé oprávnění si zvolíte sami a později ho můžete změnit
+* Open source: zdrojový kód, poznámky k vydání i sestavení jsou veřejné
+
+Požadavky
+
+OpenVitals potřebuje Health Connect. Je součástí Androidu 14 a novějších verzí. V Androidu 13 a starších verzích si nainstalujte aplikaci Health Connect z Google Play.
+
+Zdravotní upozornění
+
+OpenVitals slouží jen k obecné péči o zdraví a k informačním účelům. Není zdravotnickým prostředkem a neposkytuje lékařské rady. Není určen k diagnostice, léčbě, vyléčení ani prevenci žádné nemoci či zdravotní potíže. Odhady cyklu nejsou antikoncepční metodou. O lékařskou radu, diagnózu či léčbu vždy požádejte kvalifikovaného zdravotníka.
