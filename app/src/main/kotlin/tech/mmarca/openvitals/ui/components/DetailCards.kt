@@ -237,7 +237,8 @@ fun OpenVitalsButton(
             modifier = modifier,
             enabled = interactionEnabled,
             colors = colors ?: ButtonDefaults.outlinedButtonColors(),
-            border = border,
+            // Null here would draw no outline at all, so a caller without its own border gets Material's.
+            border = border ?: ButtonDefaults.outlinedButtonBorder(interactionEnabled),
             contentPadding = contentPadding,
             shape = shape,
         ) {
