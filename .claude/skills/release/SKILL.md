@@ -113,11 +113,15 @@ either way: Zulip readers see it first too.
   app-repo-only details); add or update `docs/features/*.md` pages for new
   features and register new pages in `docs/features/_meta.ts`; fix any pages
   the release made stale. Commit `docs: X.Y.Z - <headline>` and push.
-- **`../landing-page`**: update the copy in `lib/messages.ts` (the
-  `features.cards` grid and any card the release touches) when a headline
-  feature warrants it. Edit both locales, `en` and `es`. The repo has no git
-  identity: commit with `-c user.name=Manuel -c user.email=manuel@mmarca.tech`.
-  Commit `content: <what changed>, for X.Y.Z` and push.
+- **`../landing-page`**: update the copy (the `features.cards` grid and any
+  card the release touches) when a headline feature warrants it. Each of the
+  14 languages is one file, `lib/locales/<code>.ts`; `en.ts` is the source.
+  Edit all 14, with the app's terms from that locale's `strings.xml` (French
+  says "Santé Connect"). Check with `npm run typecheck`; there is no system
+  Node, so use a portable one or the CI result. A push to `main` deploys to
+  openvitals.health. The repo has no git identity: commit with
+  `-c user.name=Manuel -c user.email=manuel@mmarca.tech`. Commit
+  `content: <what changed>, for X.Y.Z` and push.
 
 ## 5. Gotchas that have actually happened
 
