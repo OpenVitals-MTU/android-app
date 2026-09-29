@@ -155,15 +155,16 @@ class FoodEntryViewModelTest {
         coEvery { nutrition.writeNutritionEntry(capture(request)) } returns "id"
         val vm = FoodEntryViewModel(foodRepo(listOf(banana)), nutrition)
         advanceUntilIdle()
-        val eightAm = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).plusHours(8).toInstant()
+        // Midnight is today and never in the future, so logFood keeps it as given.
+        val midnight = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()
 
-        vm.logFood(banana, amountGrams = 60.0, entryTime = eightAm)
+        vm.logFood(banana, amountGrams = 60.0, entryTime = midnight)
         advanceUntilIdle()
 
         val written = request.captured
         assertEquals("Banana", written.name)
         assertEquals("banana", written.foodId)
-        assertEquals(eightAm, written.time)
+        assertEquals(midnight, written.time)
         assertEquals(52.5, written.nutrientValues.getValue(NutritionNutrient.ENERGY), 1e-9)
         assertEquals(13.5, written.nutrientValues.getValue(NutritionNutrient.TOTAL_CARBOHYDRATE), 1e-9)
         assertTrue(vm.uiState.value.saveCompleted)
