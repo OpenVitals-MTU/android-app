@@ -30,6 +30,9 @@ enum class HealthConnectFeature {
     CSV_IMPORT,
     HEALTH_REPORT,
     WORKOUT_PLANS,
+    MEDICAL_RECORDS,
+    MEDICAL_RECORDS_BROWSE,
+    MEDICAL_IMPORT,
     ;
 
     fun requiredReadPermissions(manager: HealthConnectManager): Set<String> = when (this) {
@@ -64,6 +67,12 @@ enum class HealthConnectFeature {
         HEALTH_REPORT -> emptySet()
         // Empty where Health Connect lacks planned exercise, so the screen shows its own state.
         WORKOUT_PLANS -> manager.plannedExercisePermissions
+        // All thirteen are asked at once. The screen still renders on a partial grant.
+        MEDICAL_RECORDS -> manager.medicalRecordsPermissions
+        // The category and record screens: the records home asks, these do not repeat it.
+        MEDICAL_RECORDS_BROWSE -> emptySet()
+        // The wizard asks for write itself, before it reads anything, like the CSV import.
+        MEDICAL_IMPORT -> emptySet()
     }
 
     fun missingReadPermissions(

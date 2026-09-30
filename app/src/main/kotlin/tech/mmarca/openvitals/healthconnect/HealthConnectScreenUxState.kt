@@ -49,7 +49,9 @@ fun buildHealthConnectScreenUxState(
         unacknowledgedMissing.isNotEmpty() &&
         feature != HealthConnectFeature.DASHBOARD &&
         feature != HealthConnectFeature.MANUAL_ENTRY &&
-        feature != HealthConnectFeature.DATA_IMPORT
+        feature != HealthConnectFeature.DATA_IMPORT &&
+        // The records home asks itself, leaving out what Health Connect no longer asks for.
+        feature != HealthConnectFeature.MEDICAL_RECORDS
 
     return HealthConnectScreenUxState(
         feature = feature,

@@ -216,6 +216,7 @@ internal interface AppleHealthXmlEventConsumer {
     fun onWorkout(workout: AppleWorkout)
     fun onCorrelation(correlation: AppleCorrelation)
     fun onActivitySummary()
+    fun onClinicalRecord(entry: AppleClinicalRecordIndexEntry) = Unit
 }
 
 private class AppleHealthXmlHandler(
@@ -308,6 +309,16 @@ private class AppleHealthXmlHandler(
                 consumer?.onParsedType("ActivitySummary")
                 consumer?.onActivitySummary()
             }
+            // Not a Health Connect record: the medical import reads these, with the files they name.
+            "ClinicalRecord" -> consumer?.onClinicalRecord(
+                AppleClinicalRecordIndexEntry(
+                    type = attributes.value("type"),
+                    sourceName = attributes.value("sourceName"),
+                    sourceUrl = attributes.value("sourceURL"),
+                    fhirVersion = attributes.value("fhirVersion"),
+                    resourceFilePath = attributes.value("resourceFilePath"),
+                ),
+            )
         }
     }
 

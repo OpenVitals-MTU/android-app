@@ -25,6 +25,17 @@ class ScreenErrorTest {
         assertEquals(ScreenError.PermissionDenied, error)
     }
 
+    @Test fun `a missing Health Connect feature becomes FeatureUnavailable, even wrapped`() {
+        val error = RuntimeException("Load failed", FeatureUnavailableException("medical records")).toScreenError()
+        assertEquals(ScreenError.FeatureUnavailable, error)
+    }
+
+    @Test fun `any other unsupported operation keeps its message`() {
+        // Only our own exception means "this device lacks the feature".
+        val error = UnsupportedOperationException("not in this list").toScreenError()
+        assertEquals(ScreenError.Message("not in this list"), error)
+    }
+
     @Test fun `a non-permission failure keeps its message`() {
         val error = IllegalStateException("the provider hung up").toScreenError()
         assertEquals(ScreenError.Message("the provider hung up"), error)

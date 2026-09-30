@@ -7,6 +7,8 @@ import tech.mmarca.openvitals.features.devicesync.protocol.SyncProgress
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncReport
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncRole
 import tech.mmarca.openvitals.features.devicesync.store.CycleJournalSyncTypes
+import tech.mmarca.openvitals.features.devicesync.store.MedicalHeldBack
+import tech.mmarca.openvitals.features.devicesync.store.MedicalRecordsSyncTypes
 
 /** How far back the user chose to sync. */
 enum class SyncRange { DAYS_30, MONTHS_6, YEAR_1, ALL }
@@ -172,6 +174,9 @@ enum class DeviceSyncCategory(val types: List<String>) {
             CycleJournalSyncTypes.PILL_INTAKE,
         ),
     ),
+
+    /** FHIR records in Health Connect. They sync in full, whatever the range. */
+    MEDICAL(MedicalRecordsSyncTypes.all),
 }
 
 /** The wizard's whole state, rendered step by step by the screen. */
@@ -190,6 +195,8 @@ data class DeviceSyncState(
     val selectedTypes: Set<String> = emptySet(),
     val progress: SyncProgress? = null,
     val report: SyncReport? = null,
+    /** Set when the Patient check held back the other phone's medical records. */
+    val medicalHeldBack: MedicalHeldBack? = null,
     /** The shareable report text (for Copy/Share), set when a report is produced. */
     val reportText: String = "",
     /** The persisted report of the last sync, so a failure from yesterday can still be sent. */

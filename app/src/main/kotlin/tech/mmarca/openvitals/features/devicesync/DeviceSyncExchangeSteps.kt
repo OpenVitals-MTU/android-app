@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Checklist
@@ -39,6 +40,9 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncPhase
+import tech.mmarca.openvitals.features.devicesync.protocol.SyncReport
+import tech.mmarca.openvitals.features.devicesync.store.MedicalHeldBack
+import tech.mmarca.openvitals.features.devicesync.store.MedicalRecordsSyncTypes
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.theme.Spacing
 
@@ -124,10 +128,19 @@ internal fun DeviceSyncTypesStep(
                         }
                     },
                 )
-                Text(
-                    text = stringResource(category.labelRes()),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(category.labelRes()),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    if (category == DeviceSyncCategory.MEDICAL) {
+                        Text(
+                            text = stringResource(R.string.device_sync_medical_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         }
         item {
@@ -157,6 +170,7 @@ private fun DeviceSyncCategory.labelRes(): Int = when (this) {
     DeviceSyncCategory.HYDRATION -> R.string.device_sync_category_hydration
     DeviceSyncCategory.MINDFULNESS -> R.string.device_sync_category_mindfulness
     DeviceSyncCategory.CYCLE -> R.string.device_sync_category_cycle
+    DeviceSyncCategory.MEDICAL -> R.string.medical_records_title
 }
 
 /** Step 6 — the live transfer. */
@@ -316,7 +330,8 @@ internal fun DeviceSyncReportStep(state: DeviceSyncState, onDone: () -> Unit) {
                 DeviceSyncStatRow(stringResource(R.string.device_sync_refused), report.refused)
             }
         }
-        items(report.typeSummaries) { summary ->
+        medicalReportItems(report, state.medicalHeldBack)
+        items(report.typeSummaries.filter { it.recordType != MedicalRecordsSyncTypes.RECORD }) { summary ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -344,6 +359,28 @@ internal fun DeviceSyncReportStep(state: DeviceSyncState, onDone: () -> Unit) {
                 onClick = onDone,
             )
         }
+    }
+}
+
+/** The medical records line, and why they were held back. Other types keep the generic rows. */
+private fun LazyListScope.medicalReportItems(report: SyncReport, heldBack: MedicalHeldBack?) {
+    report.typeSummaries.firstOrNull { it.recordType == MedicalRecordsSyncTypes.RECORD }?.let { medical ->
+        item {
+            Text(
+                text = stringResource(
+                    R.string.device_sync_medical_line,
+                    medical.imported,
+                    medical.duplicateSkipped,
+                    medical.refused,
+                    medical.received - medical.imported - medical.duplicateSkipped - medical.refused,
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+            )
+        }
+    }
+    if (heldBack != null) {
+        item { DeviceSyncBanner(stringResource(R.string.device_sync_medical_held_back)) }
     }
 }
 

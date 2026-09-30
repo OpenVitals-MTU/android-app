@@ -5,6 +5,9 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import java.time.LocalDate
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.domain.medical.ManualRecordKind
+import tech.mmarca.openvitals.domain.model.MedicalCategory
+import tech.mmarca.openvitals.domain.model.MedicalRecordRef
 
 const val ACTIVITY_DETAIL_ID_ARG = "activityId"
 
@@ -35,6 +38,13 @@ const val WORKOUT_PLAN_ID_ARG = "workoutPlanId"
 const val WORKOUT_PLAN_SAVED_RESULT = "workoutPlanSavedId"
 const val ACTIVITY_ENTRY_TYPE_ARG = "activityTypeId"
 const val SLEEP_DETAIL_ID_ARG = "sleepId"
+const val MEDICAL_CATEGORY_ARG = "category"
+const val MEDICAL_SOURCE_ARG = "sourceId"
+const val MEDICAL_TYPE_ARG = "resourceType"
+const val MEDICAL_ID_ARG = "resourceId"
+const val MEDICAL_ENTRY_KIND_ARG = "kind"
+const val MEDICAL_ENTRY_ID_ARG = "id"
+const val MEDICAL_IMPORT_URI_ARG = "uri"
 const val METRIC_ID_ARG = "metricId"
 const val BODY_MEASUREMENT_TYPE_ARG = "bodyMeasurementType"
 const val BODY_ENTRY_ID_ARG = "bodyEntryId"
@@ -206,11 +216,40 @@ sealed class Screen(
     data object SettingsBodyEnergy : Screen("settings/body_energy", R.string.settings_recovery_group_title)
     data object SettingsDataImport : Screen("settings/data_import", R.string.settings_data_transfer_group_title)
     data object SettingsCsvImport : Screen("settings/data_import/csv", R.string.settings_csv_import_screen_title)
+    data object SettingsMedicalImport : Screen("settings/data_import/medical", R.string.medical_import_title) {
+        /** The route with an optional file to read straight away, such as an analysed Apple Health export. */
+        val routePattern: String = "$route?$MEDICAL_IMPORT_URI_ARG={$MEDICAL_IMPORT_URI_ARG}"
+
+        fun createRoute(uri: String? = null): String = if (uri == null) route else "$route?$MEDICAL_IMPORT_URI_ARG=${Uri.encode(uri)}"
+    }
     data object SettingsReportExport : Screen("settings/data_import/report", R.string.report_builder_title)
     data object SettingsDeviceSync : Screen("settings/device_sync", R.string.settings_device_sync_group_title)
     data object SettingsHealthConnect : Screen("settings/health_connect", R.string.settings_health_connect_group_title)
     data object SettingsPermissions : Screen("settings/permissions", R.string.settings_health_connect_group_title)
     data object SettingsDebugDiagnostics : Screen("settings/debug_diagnostics", R.string.settings_debug_diagnostics_group_title)
+    data object MedicalRecords : Screen("medical_records", R.string.medical_records_title)
+
+    /** The screen titles itself with the category's name. */
+    data object MedicalRecordCategory : Screen("medical_records/category/{$MEDICAL_CATEGORY_ARG}", R.string.medical_records_title) {
+        fun createRoute(category: MedicalCategory): String = "medical_records/category/${category.name}"
+    }
+    data object MedicalRecordDetail : Screen(
+        "medical_records/record/{$MEDICAL_SOURCE_ARG}/{$MEDICAL_TYPE_ARG}/{$MEDICAL_ID_ARG}",
+        R.string.medical_record_title,
+    ) {
+        fun createRoute(ref: MedicalRecordRef): String =
+            "medical_records/record/${Uri.encode(ref.dataSourceId)}/${Uri.encode(ref.resourceType)}/${Uri.encode(ref.resourceId)}"
+    }
+    data object MedicalSources : Screen("medical_records/sources", R.string.medical_sources_title)
+    data object MedicalDocuments : Screen("medical_records/documents", R.string.medical_documents_title)
+
+    /** Adds a manual record, or edits one when [MEDICAL_ENTRY_ID_ARG] names it. The screen titles itself. */
+    data object MedicalRecordEntry : Screen("medical_records/entry/{$MEDICAL_ENTRY_KIND_ARG}", R.string.medical_entry_add_action) {
+        val routePattern: String = "$route?$MEDICAL_ENTRY_ID_ARG={$MEDICAL_ENTRY_ID_ARG}"
+
+        fun createRoute(kind: ManualRecordKind, id: String? = null): String =
+            "medical_records/entry/${kind.name}" + (id?.let { "?$MEDICAL_ENTRY_ID_ARG=${Uri.encode(it)}" } ?: "")
+    }
     data object WatchDevice : Screen("watch/{$WATCH_DEVICE_ID_ARG}") {
         fun createRoute(watchDeviceId: String): String =
             "watch/${Uri.encode(watchDeviceId)}"
@@ -326,6 +365,13 @@ sealed class Screen(
                 SettingsHealthConnect,
                 SettingsPermissions,
                 SettingsDebugDiagnostics,
+                MedicalRecords,
+                MedicalRecordCategory,
+                MedicalRecordDetail,
+                MedicalSources,
+                MedicalDocuments,
+                MedicalRecordEntry,
+                SettingsMedicalImport,
                 WatchDevice,
                 WatchData,
                 WatchNotifications,

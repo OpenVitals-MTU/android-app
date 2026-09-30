@@ -38,6 +38,34 @@ class HealthConnectFeatureTest {
         every { requestableWritePermissions } returns emptySet()
         every { dataImportWritePermissions } returns emptySet()
         every { plannedExercisePermissions } returns setOf("planned-read", "planned-write")
+        every { medicalRecordsPermissions } returns setOf("medical-read", "medical-write")
+    }
+
+    @Test
+    fun medicalRecordsBrowseScreensAskForNothing() {
+        // The records home asks. The category and record screens must not repeat it.
+        assertEquals(emptySet<String>(), HealthConnectFeature.MEDICAL_RECORDS_BROWSE.requiredReadPermissions(manager()))
+    }
+
+    @Test
+    fun medicalRecordsFeatureAsksForEveryMedicalPermission() {
+        val permissions = HealthConnectFeature.MEDICAL_RECORDS.requiredReadPermissions(manager())
+        assertEquals(setOf("medical-read", "medical-write"), permissions)
+    }
+
+    @Test
+    fun medicalRecordsHomeShowsItsOwnPromptNotTheShells() {
+        // The shell would re-ask for permissions Health Connect no longer asks for.
+        val state = buildHealthConnectScreenUxState(
+            feature = HealthConnectFeature.MEDICAL_RECORDS,
+            manager = manager(),
+            availability = HealthConnectAvailability.AVAILABLE,
+            syncEnabled = true,
+            grantedPermissions = setOf("medical-write"),
+            showDoubleCancelRecovery = false,
+        )
+        assertFalse(state.showContextualPermissionPrompt)
+        assertEquals(setOf("medical-read"), state.missingReadPermissions)
     }
 
     @Test

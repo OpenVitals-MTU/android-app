@@ -119,6 +119,14 @@ class HealthConnectManager @Inject constructor(
     private val changesReader = HealthConnectChangesReader(readerSupport)
     private val syncRecordsReader = SyncRecordsReader(readerSupport)
 
+    // Exposed whole: one wrapper per call would pass this file's size limit.
+    private val medicalRecordsClient = HealthConnectMedicalRecordsClient(::client)
+    internal val medicalRecordsReader = MedicalRecordsHealthReader(
+        readerSupport, medicalRecordsClient, context.packageName, ::isMedicalRecordsAvailable,
+    )
+    internal val medicalRecordsWriter =
+        MedicalRecordsWriter(medicalRecordsClient, syncGate::requireEnabled, ::isMedicalRecordsAvailable)
+
     val corePermissions: Set<String> get() = permissionService.corePermissions
     val routePermissions: Set<String> get() = permissionService.routePermissions
     val permissionSetVersion: Int get() = HealthConnectPermissionService.PERMISSION_SET_VERSION
@@ -138,6 +146,7 @@ class HealthConnectManager @Inject constructor(
     val dataImportWritePermissions: Set<String> get() = permissionService.dataImportWritePermissions
     val cyclePermissions: Set<String> get() = permissionService.cyclePermissions
     val plannedExercisePermissions: Set<String> get() = permissionService.plannedExercisePermissions
+    val medicalRecordsPermissions: Set<String> get() = permissionService.medicalRecordsPermissions
     val cycleWritePermissions: Set<String> get() = permissionService.cycleWritePermissions
 
     fun onboardingPermissionCatalog(): OnboardingPermissionCatalog =
@@ -173,6 +182,9 @@ class HealthConnectManager @Inject constructor(
 
     fun isPlannedExerciseAvailable(): Boolean =
         permissionService.isPlannedExerciseAvailable()
+
+    fun isMedicalRecordsAvailable(): Boolean =
+        permissionService.isMedicalRecordsAvailable()
 
     /**
      * False in the background without the background-read grant. Health Connect then answers

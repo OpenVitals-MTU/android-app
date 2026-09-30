@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import dagger.Module
 import dagger.Provides
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import tech.mmarca.openvitals.R
@@ -23,6 +23,7 @@ import tech.mmarca.openvitals.data.local.food.FoodDao
 import tech.mmarca.openvitals.data.local.garmin.GarminSleepMinuteDao
 import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
 import tech.mmarca.openvitals.data.local.heartratecache.HeartRateDayCacheDao
+import tech.mmarca.openvitals.data.local.medical.MedicalDocumentDao
 import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginDao
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
@@ -69,6 +70,11 @@ object AppModule {
     @Singleton
     fun providePillIntakeDao(database: OpenVitalsDatabase): PillIntakeDao =
         database.pillIntakeDao()
+
+    @Provides
+    @Singleton
+    fun provideMedicalDocumentDao(database: OpenVitalsDatabase): MedicalDocumentDao =
+        database.medicalDocumentDao()
 
     @Provides
     @Singleton

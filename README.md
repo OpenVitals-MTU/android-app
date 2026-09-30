@@ -33,7 +33,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 ## Highlights
 
 - Summary dashboard for activity, recovery, beverages, nutrition, body, heart, vitals, mindfulness, and optional cycle data
-- PDF health report export built fully on-device, with charts, statistics, and clinical sections for blood pressure, glucose, workouts, sleep, and cycle tracking
+- PDF health report export built fully on-device, with charts, statistics, and clinical sections for blood pressure, glucose, workouts, sleep, cycle tracking, and medical records
 - Cycle tracking with a day log logged one thing at a time, next-period ranges built from your own history, local cycle reminders, a contraceptive pill scheme with a daily reminder, a home-screen widget, and a journal backup; Health Connect keeps its records and the journal stays on the phone
 - Period detail screens with `Day / Week / Month / Year` navigation and reorderable metric sections
 - Charts that speak to a screen reader: a summary per chart, one element per day, and zoom and scrub offered as actions
@@ -61,6 +61,7 @@ OpenVitals helps you review Health Connect data, record or import workouts, impo
 - Experimental Garmin watch support over Bluetooth only, on both Garmin transports so older watches such as the Instinct 2X sync too: file sync with a dashboard watch tile, scheduled automatic sync chosen per watch, notification forwarding with ringing calls, an always-connected companion mode with live heart rate and steps, weather from a phone weather app, calendar on the watch, music controls from the wrist, find-my-phone both ways, GPS ephemeris hand-over, points sent to the watch's saved locations, the watch's own settings tree, alarms for older watches that have none, body weight relayed from a paired Garmin scale, and sleep stages estimated on the phone for watches that record none - no vendor account, no internet permission
 - App language support with an in-app language picker for system default, English, Czech, Spanish, French, Galician, German, Italian, Japanese, Estonian, Finnish, Polish, Portuguese, Russian, and Simplified Chinese
 - Apple Health export import for supported activity, heart, body, hydration, and vitals records, with background progress and chunked processing for large exports
+- Medical records from Health Connect, shown as received: vaccines, allergies, lab results and nine more categories, imported from FHIR files or an Apple Health export's clinical records after a review step, vaccines, allergies, medications and conditions typed in by hand, exported as one FHIR file, the imported file kept on the phone if you choose, and deleted when OpenVitals added them
 - CSV import with hand-mapped columns for body measurements, vitals and steps - a smart scale's history, a temperature log, a step export - with an optional end-time column giving each steps row its span
 - Health Connect 1.2.0-alpha06 coverage for newer activity records and recording permissions
 - Wheelchair activity and wheelchair push tracking when Health Connect data is available
@@ -128,6 +129,7 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
 - Nutrition: calories in, meals, macros, caffeine, and selected nutrient totals from Health Connect nutrition records
 - Mindfulness: session list and total duration when supported by Health Connect, plus timer-based and manual session logging with bell previews and optional looping background sounds
 - Cycle tracking: period days, flow levels, ovulation tests, cervical mucus observations, and basal body temperature when Health Connect cycle permissions are granted
+- Medical records: the twelve Health Connect FHIR categories, on Android 14 and newer where Health Connect offers them
 - Entry and session lists are reached from the relevant metric detail screen rather than a global records browser
 
 ## Privacy
@@ -141,9 +143,10 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
   - Activity & sleep: required for the dashboard
   - Heart & recovery, Body, Activity extras, Nutrition & hydration, Mindfulness, and Vitals: optional
   - Cycle tracking: sensitive optional access, grouped separately so you can grant or skip it explicitly
+  - Medical records: asked for only inside the Medical records area, never with other permissions, one permission per category
   - Manual entry write access: available from one-tap onboarding or when you use Add entry or a metric entry screen that needs it
 - Permissions can be managed later in Settings
-- Health Connect remains the source of truth; OpenVitals does not store health records locally
+- Health Connect remains the source of truth; OpenVitals does not store health records locally. The one exception is a medical file you choose to keep from an import, which stays in the app's private storage and is never backed up
 - Imported Apple Health export records are written to Health Connect and are not uploaded to an OpenVitals service
 
 The merged app manifest does not request the `INTERNET` permission.

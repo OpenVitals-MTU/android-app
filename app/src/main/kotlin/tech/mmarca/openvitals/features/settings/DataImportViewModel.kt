@@ -10,6 +10,7 @@ import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
+import tech.mmarca.openvitals.data.repository.contract.MedicalRecordsRepository
 import tech.mmarca.openvitals.data.repository.contract.RecordingPreferences
 import tech.mmarca.openvitals.data.repository.contract.UnitPreferences
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryType
@@ -83,6 +84,8 @@ data class DataImportUiState(
     val grantedPermissions: Set<String> = emptySet(),
     val dataImportWritePermissions: Set<String> = emptySet(),
     val routeImportWritePermissions: Set<String> = emptySet(),
+    /** Medical records exist only on Android 14 and newer with the Health Connect feature. */
+    val medicalImportAvailable: Boolean = false,
     val isAnalyzingAppleHealth: Boolean = false,
     val isImportingAppleHealth: Boolean = false,
     val appleHealthAnalysisProgress: AppleHealthImportProgress? = null,
@@ -125,6 +128,7 @@ class DataImportViewModel @Inject constructor(
     private val routeFileImporter: RouteFileImporter,
     private val fitHrvImportService: FitHrvImportService,
     private val routeFolderScanner: RouteFolderScanner,
+    private val medicalRecords: MedicalRecordsRepository? = null,
 ) : ViewModel() {
     companion object {
         private const val TAG = "DataImportViewModel"
@@ -164,9 +168,13 @@ class DataImportViewModel @Inject constructor(
                 grantedPermissions = granted,
                 dataImportWritePermissions = repository.dataImportWritePermissions,
                 routeImportWritePermissions = activityRepository.activityWritePermissions(),
+                medicalImportAvailable = medicalRecords?.isAvailable() == true,
             )
         }
     }
+
+    /** The Apple Health export last analysed, which the medical import reads for its clinical records. */
+    fun appleHealthExportUri(): Uri? = pendingAppleHealthImportUri
 
     /** The grant sheet closed; whatever it granted decides what the cards offer. */
     fun onPermissionsResult() {

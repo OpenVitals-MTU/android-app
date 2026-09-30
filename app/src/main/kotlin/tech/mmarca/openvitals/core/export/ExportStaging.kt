@@ -19,6 +19,18 @@ fun File.stageExport(fileName: String, write: (OutputStream) -> Unit): File {
     return exportFile
 }
 
+/**
+ * Like [stageExport], but first deletes every earlier file here, whatever its age.
+ * For exports too sensitive to keep for a day, such as medical records.
+ */
+fun File.stageSoleExport(fileName: String, write: (OutputStream) -> Unit): File {
+    mkdirs()
+    listFiles()?.filter { it.isFile }?.forEach { file -> runCatching { file.delete() } }
+    val exportFile = File(this, fileName)
+    exportFile.outputStream().use(write)
+    return exportFile
+}
+
 /** Best-effort: the user asked for an export, not for cache hygiene. */
 private fun File.deleteOldExports() {
     val cutoffMillis = System.currentTimeMillis() - ExportRetentionMillis

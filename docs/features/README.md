@@ -29,6 +29,7 @@ Use the [feature map](feature-map.md) when you need the route/widget/package map
 - [Hydration](hydration.md): hydration period detail, entry history, goals, and reminder controls.
 - [Mindfulness](mindfulness.md): mindfulness period detail, session history, goals, reminders, and manual-entry relationship.
 - [Cycle tracking](cycle-tracking.md): supported Health Connect cycle records in dashboard and period detail views.
+- [Medical records](medical-records.md): FHIR medical records in Health Connect, shown as received, with FHIR and Apple Health import and FHIR export.
 - [Statistics](statistics.md): period ranges, comparisons, baselines, confidence, and trends across detail screens.
 
 ## Logging, Import, And Recording

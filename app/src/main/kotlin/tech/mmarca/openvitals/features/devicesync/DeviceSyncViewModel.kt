@@ -10,10 +10,15 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
 import tech.mmarca.openvitals.data.repository.contract.CyclePreferences
+import tech.mmarca.openvitals.data.repository.contract.MedicalRecordsRepository
 import tech.mmarca.openvitals.data.repository.contract.PillIntakeRepository
 import tech.mmarca.openvitals.features.devicesync.store.CompositeSyncStore
 import tech.mmarca.openvitals.features.devicesync.store.CycleJournalSyncStore
 import tech.mmarca.openvitals.features.devicesync.store.CycleJournalSyncTypes
+import tech.mmarca.openvitals.features.devicesync.store.MedicalHeldBack
+import tech.mmarca.openvitals.features.devicesync.store.MedicalRecordsSyncStore
+import tech.mmarca.openvitals.features.devicesync.store.MedicalRecordsSyncTypes
+import tech.mmarca.openvitals.features.devicesync.store.medicalSyncReportText
 import tech.mmarca.openvitals.features.homewidgets.refreshPlacedHomeWidgets
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -60,6 +65,7 @@ class DeviceSyncViewModel @Inject constructor(
     private val cycleJournalRepository: CycleJournalRepository,
     private val cyclePreferences: CyclePreferences,
     private val pillIntakeRepository: PillIntakeRepository,
+    private val medicalRecords: MedicalRecordsRepository,
     private val reportStore: DeviceSyncReportStore,
     private val recordingController: ActivityRecordingController,
     private val dispatchers: DispatcherProvider,
@@ -123,7 +129,7 @@ class DeviceSyncViewModel @Inject constructor(
                     healthReadPermission(suffix) in granted &&
                         healthWritePermission(suffix) in granted
                 }
-                .keys + CycleJournalSyncTypes.all
+                .keys + CycleJournalSyncTypes.all + medicalTypes()
             _uiState.update { state ->
                 state.copy(
                     availableTypes = available,
@@ -133,6 +139,19 @@ class DeviceSyncViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    /**
+     * Medical records need write access and one readable category. The wizard never asks
+     * for them: the medical area does, the first time it opens.
+     */
+    private suspend fun medicalTypes(): List<String> = try {
+        val ready = medicalRecords.isAvailable() && medicalRecords.canWrite() && medicalRecords.readableCategories().isNotEmpty()
+        if (ready) MedicalRecordsSyncTypes.all else emptyList()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        emptyList()
     }
 
     fun onBluetoothPermissionsDenied() {
@@ -316,10 +335,12 @@ class DeviceSyncViewModel @Inject constructor(
                 windowStart = window.first,
                 windowEnd = window.second,
             )
+            val medicalStore = MedicalRecordsSyncStore(medicalRecords)
             val store = CompositeSyncStore(
                 listOf(
                     syncableRecordTypes.toSet() to healthConnectStore,
                     CycleJournalSyncTypes.all.toSet() to journalStore,
+                    MedicalRecordsSyncTypes.all.toSet() to medicalStore,
                 ),
             )
             val session = SyncSession(
@@ -356,7 +377,7 @@ class DeviceSyncViewModel @Inject constructor(
                         "abort=${report.abortReason}",
                 )
                 if (gen != generation) return@launch
-                persistReport(report)
+                persistReport(report, medicalStore.heldBack)
                 // Records just arrived; the widgets must not stay on pre-sync numbers.
                 runCatching { refreshPlacedHomeWidgets(context) }
                 if (gen != generation) return@launch
@@ -366,6 +387,7 @@ class DeviceSyncViewModel @Inject constructor(
                     it.copy(
                         step = DeviceSyncStep.REPORT,
                         report = report,
+                        medicalHeldBack = medicalStore.heldBack,
                         error = if (codesDiffer) DeviceSyncError.CODES_DIFFER else it.error,
                     )
                 }
@@ -420,8 +442,8 @@ class DeviceSyncViewModel @Inject constructor(
         codeAnswer?.complete(matches)
     }
 
-    private suspend fun persistReport(report: SyncReport) {
-        val text = buildSyncReportText(report, generatedAt = Instant.now())
+    private suspend fun persistReport(report: SyncReport, medicalHeldBack: MedicalHeldBack? = null) {
+        val text = buildSyncReportText(report, generatedAt = Instant.now()) + medicalSyncReportText(report, medicalHeldBack)
         _uiState.update { it.copy(reportText = text) }
         reportStore.writeReport(text)
     }

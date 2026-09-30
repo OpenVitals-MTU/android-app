@@ -137,7 +137,9 @@ class ReportDataLoader @Inject constructor(
     ): ReportData = withContext(dispatchers.io) {
         val granted = grantedPermissionsIfAvailable()
 
-        val effectiveStart = hc.historyReadStart(request.start, request.end, granted)
+        // The history limit covers Health Connect's fitness data. With no metric there is nothing to limit,
+        // and a report of medical records alone keeps the range the user chose.
+        val effectiveStart = if (request.metrics.isEmpty()) request.start else hc.historyReadStart(request.start, request.end, granted)
         val truncated = effectiveStart != request.start
 
         val requested = request.metrics

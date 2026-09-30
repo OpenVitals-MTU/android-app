@@ -79,6 +79,7 @@ data class ReportPdfLabels(
     val workoutTypeLabel: (exerciseType: Int) -> String,
     val pageLabel: (page: Int, pageCount: Int) -> String,
     val cycle: ReportPdfCycleLabels,
+    val medical: ReportPdfMedicalLabels? = null,
 )
 
 /** Locale- and unit-aware number rendering, provided by the caller. */
@@ -323,6 +324,12 @@ class ReportPdfWriter(
                 ReportMetricStatus.SKIPPED -> items += statusItem(labels.statusSkipped)
                 ReportMetricStatus.MISSING_PERMISSION -> items += statusItem(labels.statusMissingPermission)
             }
+        }
+        val medicalLabels = labels.medical
+        if (data.medical != null && medicalLabels != null) {
+            val title = LayoutItem(ReportBlock.MetricTitle(medicalLabels.title), lineHeight(metricTitlePaint) + 8f, keepWithNext = true)
+            val notice = { text: String -> LayoutItem(ReportBlock.Notice(text), staticLayout(text, noticePaint, width - 10).height + 8f) }
+            items += medicalItems(data.medical, medicalLabels, title, notice, headerHeight(), rowHeight())
         }
         return items
     }

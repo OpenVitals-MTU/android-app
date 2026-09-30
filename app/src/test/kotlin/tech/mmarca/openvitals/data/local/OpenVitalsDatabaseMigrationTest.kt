@@ -83,6 +83,23 @@ class OpenVitalsDatabaseMigrationTest {
     }
 
     @Test
+    fun `version fourteen adds the medical document tables and their indices`() {
+        val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+
+        OpenVitalsDatabase.MIGRATION_14_15.migrate(db)
+
+        assertEquals(14, OpenVitalsDatabase.MIGRATION_14_15.startVersion)
+        assertEquals(15, OpenVitalsDatabase.MIGRATION_14_15.endVersion)
+        verify {
+            db.execSQL(match { it.contains("CREATE TABLE IF NOT EXISTS `medical_documents`") && it.contains("PRIMARY KEY(`id`)") })
+            db.execSQL(match { it.contains("CREATE UNIQUE INDEX IF NOT EXISTS `index_medical_documents_sha256`") })
+            db.execSQL(match { it.contains("CREATE TABLE IF NOT EXISTS `medical_document_records`") })
+            // Room checks indices when it opens the database, so the migration must make them too.
+            db.execSQL(match { it.contains("CREATE INDEX IF NOT EXISTS `index_medical_document_records_data_source_id_resource_type_resource_id`") })
+        }
+    }
+
+    @Test
     fun `version nine adds the garmin sleep minutes table`() {
         val db = mockk<SupportSQLiteDatabase>(relaxed = true)
 

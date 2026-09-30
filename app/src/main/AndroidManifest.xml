@@ -96,6 +96,21 @@
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
 
+    <!-- Health Connect medical records (FHIR). Asked only inside the medical records area. -->
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_VACCINES" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_ALLERGIES_INTOLERANCES" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_CONDITIONS" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_MEDICATIONS" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_LABORATORY_RESULTS" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_PROCEDURES" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_VISITS" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_VITAL_SIGNS" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_PREGNANCY" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_SOCIAL_HISTORY" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_PERSONAL_DETAILS" />
+    <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_PRACTITIONER_DETAILS" />
+    <uses-permission android:name="android.permission.health.WRITE_MEDICAL_DATA" />
+
     <!-- Live activity recording permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -176,6 +191,12 @@
         and nothing reports it. Install-time permission, no prompt.
     -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!--
+        Scans the QR code of a SMART Health Card in the medical records import.
+        Asked only when the user taps Scan. Frames are read on the phone and never
+        stored. A photo of the code can be picked instead, so no camera is needed.
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <!-- CoMaps' live-navigation provider is read-protected by a permission the
          installed CoMaps FLAVOUR declares (`${applicationId}.permission.…`), so
@@ -201,6 +222,9 @@
         android:name="android.hardware.wifi"
         tools:node="remove" />
 
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
     <uses-feature
         android:name="android.hardware.location.gps"
         android:required="false" />

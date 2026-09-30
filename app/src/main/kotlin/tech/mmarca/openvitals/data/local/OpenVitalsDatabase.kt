@@ -23,6 +23,9 @@ import tech.mmarca.openvitals.data.local.garmin.GarminWellnessDao
 import tech.mmarca.openvitals.data.local.garmin.GarminWellnessSampleEntity
 import tech.mmarca.openvitals.data.local.heartratecache.HeartRateDayCacheDao
 import tech.mmarca.openvitals.data.local.heartratecache.HeartRateDayEntity
+import tech.mmarca.openvitals.data.local.medical.MedicalDocumentDao
+import tech.mmarca.openvitals.data.local.medical.MedicalDocumentEntity
+import tech.mmarca.openvitals.data.local.medical.MedicalDocumentRecordEntity
 import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginDao
 import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginEntity
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyAggregateEntity
@@ -45,6 +48,8 @@ import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
         CycleJournalEntryEntity::class,
         CycleExclusionEntity::class,
         PillIntakeEntity::class,
+        MedicalDocumentEntity::class,
+        MedicalDocumentRecordEntity::class,
     ],
     version = OpenVitalsDatabase.VERSION,
     exportSchema = true,
@@ -70,9 +75,11 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
 
     abstract fun pillIntakeDao(): PillIntakeDao
 
+    abstract fun medicalDocumentDao(): MedicalDocumentDao
+
     companion object {
         /** Raise it with a new migration in [ALL_MIGRATIONS], and commit the schema file Room then writes. */
-        const val VERSION = 14
+        const val VERSION = 15
 
         val MIGRATION_1_3 = beverageMigration(1)
         val MIGRATION_2_3 = beverageMigration(2)
@@ -152,6 +159,13 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
             }
         }
 
+        /** The files kept from medical imports, and the records each one gave. Creation only. */
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                createMedicalDocumentTables(db)
+            }
+        }
+
         /**
          * Every migration, in one place. The database builder takes this list, so a migration
          * cannot be written and then left out of it.
@@ -171,6 +185,7 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                 MIGRATION_11_12,
                 MIGRATION_12_13,
                 MIGRATION_13_14,
+                MIGRATION_14_15,
             )
 
         private fun beverageMigration(startVersion: Int): Migration =
@@ -338,6 +353,40 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                     PRIMARY KEY(`food_id`, `nutrient`)
                 )
                 """.trimIndent()
+            )
+        }
+
+        private fun createMedicalDocumentTables(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `medical_documents` (
+                    `id` TEXT NOT NULL,
+                    `file_name` TEXT NOT NULL,
+                    `mime_type` TEXT NOT NULL,
+                    `size_bytes` INTEGER NOT NULL,
+                    `sha256` TEXT NOT NULL,
+                    `imported_at_millis` INTEGER NOT NULL,
+                    `source_name` TEXT,
+                    `stored_name` TEXT NOT NULL,
+                    PRIMARY KEY(`id`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_medical_documents_sha256` ON `medical_documents` (`sha256`)")
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `medical_document_records` (
+                    `document_id` TEXT NOT NULL,
+                    `data_source_id` TEXT NOT NULL,
+                    `resource_type` TEXT NOT NULL,
+                    `resource_id` TEXT NOT NULL,
+                    PRIMARY KEY(`document_id`, `data_source_id`, `resource_type`, `resource_id`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_medical_document_records_data_source_id_resource_type_resource_id` " +
+                    "ON `medical_document_records` (`data_source_id`, `resource_type`, `resource_id`)"
             )
         }
 

@@ -19,6 +19,8 @@ import tech.mmarca.openvitals.data.repository.GarminWellnessRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HealthRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HeartRepositoryImpl
 import tech.mmarca.openvitals.data.repository.HydrationRepositoryImpl
+import tech.mmarca.openvitals.data.repository.MedicalDocumentsRepositoryImpl
+import tech.mmarca.openvitals.data.repository.MedicalRecordsRepositoryImpl
 import tech.mmarca.openvitals.data.repository.MindfulnessRepositoryImpl
 import tech.mmarca.openvitals.data.repository.NutritionRepositoryImpl
 import tech.mmarca.openvitals.data.repository.SleepRepositoryImpl
@@ -37,6 +39,8 @@ import tech.mmarca.openvitals.data.repository.contract.GarminWellnessRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
+import tech.mmarca.openvitals.data.repository.contract.MedicalDocumentsRepository
+import tech.mmarca.openvitals.data.repository.contract.MedicalRecordsRepository
 import tech.mmarca.openvitals.data.repository.contract.MindfulnessRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
@@ -94,6 +98,14 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindMindfulnessRepository(impl: MindfulnessRepositoryImpl): MindfulnessRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindMedicalRecordsRepository(impl: MedicalRecordsRepositoryImpl): MedicalRecordsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindMedicalDocumentsRepository(impl: MedicalDocumentsRepositoryImpl): MedicalDocumentsRepository
 
     @Binds
     @Singleton

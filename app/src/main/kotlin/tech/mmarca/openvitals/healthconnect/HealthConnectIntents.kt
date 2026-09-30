@@ -28,32 +28,47 @@ fun openHealthConnectPermissionSettings(context: Context): Boolean {
     }
 }
 
+/** Health Connect's data screens, where the user can delete records another app wrote. */
+fun openHealthConnectDataSettings(context: Context): Boolean {
+    val intents = listOfNotNull(
+        manageDataIntent(),
+        settingsIntent(),
+        context.packageManager.getLaunchIntentForPackage(HC_PACKAGE),
+    ).map { it.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT) }
+    return intents.any { intent ->
+        if (context !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(intent) }.isSuccess
+    }
+}
+
 private fun healthConnectPermissionSettingsIntents(context: Context): List<Intent> {
     val appPermissionsIntent = Intent(ACTION_MANAGE_HEALTH_PERMISSIONS).apply {
         putExtra(Intent.EXTRA_PACKAGE_NAME, context.packageName)
     }
-    val settingsIntent = Intent(
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            ACTION_PLATFORM_HEALTH_CONNECT_SETTINGS
-        } else {
-            ACTION_APK_HEALTH_CONNECT_SETTINGS
-        }
-    )
-    val manageDataIntent = Intent(
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            ACTION_PLATFORM_MANAGE_HEALTH_DATA
-        } else {
-            ACTION_APK_MANAGE_HEALTH_DATA
-        }
-    )
     val launchIntent = context.packageManager.getLaunchIntentForPackage(HC_PACKAGE)
 
     return listOfNotNull(
         appPermissionsIntent,
-        settingsIntent,
-        manageDataIntent,
+        settingsIntent(),
+        manageDataIntent(),
         launchIntent,
     ).map { intent ->
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
     }
 }
+
+private fun settingsIntent() = Intent(
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        ACTION_PLATFORM_HEALTH_CONNECT_SETTINGS
+    } else {
+        ACTION_APK_HEALTH_CONNECT_SETTINGS
+    }
+)
+
+private fun manageDataIntent() = Intent(
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        ACTION_PLATFORM_MANAGE_HEALTH_DATA
+    } else {
+        ACTION_APK_MANAGE_HEALTH_DATA
+    }
+)

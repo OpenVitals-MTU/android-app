@@ -40,6 +40,8 @@ Supported imports cover activity, heart, body, hydration, nutrition, sleep, mind
 
 Unsupported or incompatible records are skipped with diagnostics rather than forcing partial data into the wrong Health Connect type.
 
+Clinical records are not part of this import. The analysis counts the export's `ClinicalRecord` entries, and where Health Connect offers medical records, a card under the Apple Health card says how many. It opens the medical records import on the same file, with its own review and patient check. See [Medical records](medical-records.md).
+
 Workout imports include `WorkoutStatistics` totals when available. Walking speed records map to Health Connect speed samples. Apple workout GPX route geometry is written as a Health Connect exercise route when a workout references a route file and the route has at least two valid points.
 
 Apple GPX route timestamps are not trusted for Health Connect writes because they can be duplicated or outside the workout interval. OpenVitals synthesizes strictly increasing route point times inside the workout start/end window, weighted by cumulative route distance, at the millisecond precision Health Connect stores route locations with; this keeps paused or stationary GPS segments (repeated identical coordinates) from collapsing onto the same timestamp, which would otherwise break route reads and re-import duplicate detection. Placeholder all-zero altitude values are omitted.

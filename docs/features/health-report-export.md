@@ -14,6 +14,7 @@ The builder lives in Settings, Import & export, Health report.
 
 1. **Pick metrics.** All exportable metrics the installed Health Connect provider supports are listed, grouped by section (Activity, Sleep, Nutrition, Body, Heart, Vitals, Mindfulness). Select all, clear, or tick individual metrics.
 2. **Pick detail and range.** Detail is daily, weekly, or monthly buckets. The range is a preset lookback (30, 90, 180, or 365 days ending today) or a custom start and end date. Custom ranges are capped at two years so reads stay fast.
+   Where Health Connect offers medical records, a **Medical records** option sits under the metrics. It is never ticked by Select all. A report can hold medical records alone.
 3. **Build.** Progress shows the metric currently being read, and the build can be cancelled. Metrics are read one group at a time; a metric that fails or times out costs its own section, never the report.
 4. **Share or save.** The finished PDF can be shared to any app or saved through the system file picker. Changing anything in the configuration invalidates the finished file, so the PDF on disk always matches the selection on screen.
 
@@ -34,6 +35,8 @@ Some metrics carry more structure than a daily number, and their sections show i
 - **Body temperature**: every individual reading, listed — a fever diary, not just a trend.
 - **Cycle tracking**: the chart is the cycle day, restarting at each recorded period start. Under it: completed cycles with mean, median, spread and range of length and mean bleeding days; bleeding, spotting and intermenstrual days in the range; pain days on and off bleeding, severe days and the mean score; one row per cycle (start, end, length, bleeding days, peak flow, pain days, excluded); each symptom's count on and off bleeding days; the notes in order; and a line saying these are recorded observations, not a diagnosis. The subjective fields come from the app's own journal, the rest from Health Connect.
 
+**Medical records**, when chosen, come last. Allergies, conditions and medications are standing facts, so every record shows, with its recorded status. Vaccines and lab results show when their date falls in the report's range, labs with their value and the flag the lab set. Each row names its source, and a category with nothing says so. Records are shown as received; nothing is computed from them. See [Medical records](medical-records.md).
+
 The first page carries the OpenVitals masthead, when the report was generated, and the exact range and detail level. Every page is numbered.
 
 ## Honest About What's Missing
@@ -44,6 +47,7 @@ The report says so, in print, when something could not be included:
 - Without the Health Connect history permission, providers only serve the last 30 days; the report clamps its range and says so.
 - A cancelled build marks unread sections as skipped rather than pretending they were empty.
 - A metric whose read failed or timed out gets a "could not be read" line instead of silently vanishing.
+- The medical section asks for no permission, since a request must never mix medical and fitness permissions. It uses the medical access already given, and names the categories that hold only OpenVitals' own records, or none, for lack of it. The history limit covers fitness data only, so a report of medical records alone keeps the range chosen.
 
 ## Metrics Not Offered
 
