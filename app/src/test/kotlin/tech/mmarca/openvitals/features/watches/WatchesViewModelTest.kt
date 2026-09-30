@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.watches
 
+import tech.mmarca.openvitals.devices.core.pairing.CompanionFilter
 import android.content.Context
 import io.mockk.every
 import io.mockk.just
@@ -60,7 +61,11 @@ class WatchesViewModelTest {
             calls.add("removeBond:$address")
         }
 
-        override suspend fun associateCompanion(address: String, displayName: String?): Boolean {
+        override suspend fun associateCompanion(
+            address: String,
+            displayName: String?,
+            filter: CompanionFilter,
+        ): Boolean {
             calls.add("associate:$address")
             return associateResult
         }

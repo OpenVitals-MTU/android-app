@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.sensors.ble
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothClass
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
@@ -11,11 +12,17 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Build
 import android.os.ParcelUuid
+import android.os.Parcelable
 import android.util.Log
+import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -84,6 +91,7 @@ class BleSensorCoordinator @Inject constructor(
     val discoveredDevices: StateFlow<List<BleDiscoveredDevice>> = _discoveredDevices.asStateFlow()
 
     private var scanCallback: ScanCallback? = null
+    private var sdpReceiver: BroadcastReceiver? = null
     private val scanResults = ConcurrentHashMap<String, BleDiscoveredDevice>()
 
     /** Per-integration classifiers: scan-time evidence, and the `(integration, kind)` verdict. */
@@ -297,7 +305,8 @@ class BleSensorCoordinator @Inject constructor(
             scanCallback = null
             return
         }
-        bondedDevices().forEach { device ->
+        val bonded = bondedDevices()
+        bonded.forEach { device ->
             scanResults.putIfAbsent(
                 device.address.uppercase(),
                 BleDiscoveredDevice(
@@ -305,10 +314,59 @@ class BleSensorCoordinator @Inject constructor(
                     name = device.name,
                     rssi = null,
                     suggestedCapabilities = emptySet(),
+                    classicServiceUuids = device.uuids.toUuidStrings(),
+                    isWristWatchClass = device.bluetoothClass?.deviceClass ==
+                        BluetoothClass.Device.WEARABLE_WRIST_WATCH,
                 ),
             )
         }
         publishScanResults()
+        refreshBondedServices(bonded)
+    }
+
+    /**
+     * The bond's service list is cached from pairing, before any app on the
+     * device listened. A fresh SDP query lets a classifier see the services
+     * running now. Audio/video bonds (headsets, cars) are skipped: nothing a
+     * classifier claims lives there, and paging them is noise.
+     */
+    @SuppressLint("MissingPermission")
+    private fun refreshBondedServices(bonded: List<BluetoothDevice>) {
+        val candidates = bonded.filter {
+            it.type == BluetoothDevice.DEVICE_TYPE_DUAL &&
+                it.bluetoothClass?.majorDeviceClass != BluetoothClass.Device.Major.AUDIO_VIDEO
+        }
+        if (candidates.isEmpty()) return
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val device = intent.parcelable<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE) ?: return
+                val uuids = intent.parcelableArray(BluetoothDevice.EXTRA_UUID)
+                    ?.filterIsInstance<ParcelUuid>()
+                    ?.toTypedArray()
+                    .toUuidStrings()
+                if (uuids.isEmpty()) return
+                val address = device.address.uppercase()
+                val existing = scanResults[address] ?: return
+                scanResults[address] = existing.copy(
+                    classicServiceUuids = existing.classicServiceUuids + uuids,
+                )
+                publishScanResults()
+            }
+        }
+        sdpReceiver = receiver
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter(BluetoothDevice.ACTION_UUID),
+            ContextCompat.RECEIVER_EXPORTED,
+        )
+        candidates.forEach { device ->
+            try {
+                device.fetchUuidsWithSdp()
+            } catch (error: SecurityException) {
+                Log.w(TAG, "SDP refresh refused: ${error.message}")
+            }
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -317,6 +375,8 @@ class BleSensorCoordinator @Inject constructor(
             bluetoothAdapter?.bluetoothLeScanner?.stopScan(callback)
         }
         scanCallback = null
+        sdpReceiver?.let { receiver -> runCatching { context.unregisterReceiver(receiver) } }
+        sdpReceiver = null
     }
 
     @SuppressLint("MissingPermission")
@@ -424,6 +484,9 @@ class BleSensorCoordinator @Inject constructor(
             suggestedCapabilities = (existing?.suggestedCapabilities.orEmpty() + serviceCapabilities).toSet(),
             // Sticky across advertisements: one sighting of the member service settles it.
             advertisesSyncService = advertisesSync || (existing?.advertisesSyncService ?: false),
+            // Bond evidence comes from the bonded list and SDP, never an advertisement.
+            classicServiceUuids = existing?.classicServiceUuids.orEmpty(),
+            isWristWatchClass = existing?.isWristWatchClass ?: false,
         )
         publishScanResults()
     }
@@ -554,3 +617,22 @@ class BleSensorCoordinator @Inject constructor(
         private const val CONNECT_SCAN_RETRY_MS = 30_000L
     }
 }
+
+private fun Array<ParcelUuid>?.toUuidStrings(): Set<String> =
+    this?.map { it.uuid.toString().lowercase() }?.toSet().orEmpty()
+
+@Suppress("DEPRECATION")
+private inline fun <reified T : Parcelable> Intent.parcelable(key: String): T? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        getParcelableExtra(key, T::class.java)
+    } else {
+        getParcelableExtra(key)
+    }
+
+@Suppress("DEPRECATION")
+private fun Intent.parcelableArray(key: String): Array<out Parcelable>? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        getParcelableArrayExtra(key, ParcelUuid::class.java)
+    } else {
+        getParcelableArrayExtra(key)
+    }

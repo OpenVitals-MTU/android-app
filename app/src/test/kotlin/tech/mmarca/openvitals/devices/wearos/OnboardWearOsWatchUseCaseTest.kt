@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.devices.wearos
 
+import tech.mmarca.openvitals.devices.core.pairing.CompanionFilter
 import android.content.Context
 import io.mockk.every
 import io.mockk.mockk
@@ -22,10 +23,16 @@ private class FakePairing : WatchPairingPort {
     var associateResult = true
     var associateError: Exception? = null
     var seenAssociateAddress: String? = null
+    var seenAssociateFilter: CompanionFilter? = null
     var seenDisassociateAddress: String? = null
 
-    override suspend fun associateCompanion(address: String, displayName: String?): Boolean {
+    override suspend fun associateCompanion(
+        address: String,
+        displayName: String?,
+        filter: CompanionFilter,
+    ): Boolean {
         seenAssociateAddress = address
+        seenAssociateFilter = filter
         associateError?.let { throw it }
         return associateResult
     }
@@ -70,6 +77,8 @@ class OnboardWearOsWatchUseCaseTest {
 
         assertTrue(outcome.associated)
         assertEquals("A8:D1:62:BE:3A:3B", pairing.seenAssociateAddress)
+        // The address may be the Classic bond's; a BLE-only dialog would search forever.
+        assertEquals(CompanionFilter.BLE_OR_CLASSIC, pairing.seenAssociateFilter)
         val device = repo.devices.single()
         assertEquals(BleDeviceKind.WATCH, device.kind)
         assertEquals(DeviceIntegration.WEAROS, device.integration)

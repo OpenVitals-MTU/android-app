@@ -75,8 +75,11 @@ class BleWatchPairing @Inject constructor(
         }
     }
 
-    override suspend fun associateCompanion(address: String, displayName: String?): Boolean =
-        companionPairing.associate(address, displayName)
+    override suspend fun associateCompanion(
+        address: String,
+        displayName: String?,
+        filter: CompanionFilter,
+    ): Boolean = companionPairing.associate(address, displayName, filter)
 
     override suspend fun disassociateCompanion(address: String) {
         companionPairing.disassociate(address)

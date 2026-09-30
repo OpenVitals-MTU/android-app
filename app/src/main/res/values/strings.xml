@@ -3698,4 +3698,12 @@
         <item quantity="other">%1$d days imported</item>
     </plurals>
     <string name="cycle_journal_import_failed">Nothing imported: the file is not a journal export.</string>
+    <string name="settings_watch_wearos_status_section">Wear OS App Status</string>
+    <string name="settings_watch_wearos_bt_paired">Watch paired with this phone</string>
+    <string name="settings_watch_wearos_bt_not_paired">No paired Wear OS watch found</string>
+    <string name="settings_watch_wearos_app_running">OpenVitals Wear OS app is running on watch</string>
+    <string name="settings_watch_wearos_app_no_answer">No answer: the watch is out of range, or the OpenVitals app on it is not running</string>
+    <string name="settings_watch_wearos_bt_permission">OpenVitals needs the Nearby devices permission to reach the watch.</string>
+    <string name="settings_watch_wearos_check_app">Validate Wear OS App</string>
+    <string name="settings_watch_wearos_checking">Checking Wear OS app…</string>
 </resources>

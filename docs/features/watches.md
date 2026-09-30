@@ -11,7 +11,24 @@ OpenVitals has experimental support for wrist devices. Settings, Watches pairs a
 Support differs sharply by make:
 
 - **Garmin** watches are read over Garmin's own Bluetooth protocol. Sync, the watch-only data screen, notification forwarding, the watch's settings tree, and find-my-watch are all Garmin features.
-- **WearOS** watches (and other smartwatches recognized by name) can be registered so OpenVitals knows they exist, but nothing above applies to them. Their recorded data reaches the app through Health Connect, and their live heart rate through standard Bluetooth LE, exactly as before.
+- **WearOS** watches can be registered so OpenVitals knows they exist. OpenVitals includes a Wear OS companion app (`:wear`), and the phone app checks whether the watch is paired and whether the OpenVitals Wear OS app on it answers. Recorded data reaches the app through Health Connect, and live heart rate through standard Bluetooth LE.
+
+## Wear OS Companion App
+
+OpenVitals includes a Wear OS companion app (`:wear`) that runs directly on wrist devices.
+
+The companion app communicates with the phone app over standard Android Bluetooth RFCOMM sockets using a dedicated service UUID (`4838d728-6e5a-4b95-a29d-a60032338301`). This design uses standard Android OS (AOSP) APIs only, maintaining 100% open-source compatibility suitable for F-Droid without depending on closed-source Google Play Services libraries.
+
+The watch app runs `WearAppService`, a `connectedDevice` foreground service with an ongoing "Phone link" notification, so it stays reachable after the app is closed. It starts once the watch app has the Nearby devices permission (`BLUETOOTH_CONNECT`, asked on first launch), reopens its listener when Bluetooth comes back on, and answers a `PING` line with `PONG`. `WearBootReceiver` starts it again after a watch restart or an app update, as long as the permission is granted.
+
+When opening a paired Wear OS watch on its device screen in Settings, Watches:
+- **Paired**: OpenVitals looks for the watch among the phone's bonded devices. The address stored at onboarding comes from the BLE scan, and Wear OS watches advertise with a private address, so the match falls back to the name (a trailing ` LE` ignored) and then to the only bonded smartwatch.
+- **Found when adding**: the Watches scan offers a bonded device as a Wear OS watch when its name is a known smartwatch family, its Bluetooth class is a wrist watch, or its service list names the OpenVitals Wear OS app. The service list Android caches at pairing predates the app, so the scan re-queries it (SDP) for bonded dual-mode devices that are not audio devices. A watch with an unknown name is therefore found once the OpenVitals Wear OS app runs on it.
+- **App answers**: the phone pings the watch over RFCOMM, giving up after 8 seconds. No answer means the watch is off or out of range, or the watch app is not running; a bond alone is never shown as connected.
+- **Permission**: without Nearby devices on the phone, the card shows a grant callout instead of a status.
+- **Check again**: the "Validate Wear OS App" button re-runs the check.
+
+The UUID and the `PING`/`PONG` words live in both modules; `WearOsLinkParityTest` fails when they drift.
 
 ## Experimental Status
 
