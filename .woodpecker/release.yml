@@ -125,6 +125,7 @@ steps:
           aab_path="$$(find "app/build/outputs/bundle/$${OPENVITALS_AAB_VARIANT_DIR}" -maxdepth 1 -name '*.aab' | head -n 1)"
           test -n "$${aab_path}"
           cp "$${aab_path}" ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}"
+          (cd .woodpecker/tmp && sha256sum "$${OPENVITALS_AAB_BASENAME}" > "$${OPENVITALS_AAB_BASENAME}.sha256")
         fi
       # Nightly keeps a single stable download page, so the `nightly` tag is force-moved
       # to this commit over git (the release API key doubles as the git push credential).
@@ -223,28 +224,29 @@ steps:
       - . .woodpecker/tmp/release-context.env
       - test -n "$${CODEBERG_RELEASE_API_KEY}"
       - chmod +x scripts/publish-codeberg-release.sh
+      # The app bundle goes last. It is there for a Play upload by hand, when Play
+      # refuses the upload from this pipeline. This step does not wait for the Play step.
       - |
+        set -- \
+          ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}" \
+          ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}.sha256"
         if [ "$${OPENVITALS_BUILD_DEBUG_APK}" = "true" ]; then
-          scripts/publish-codeberg-release.sh \
-            "$${OPENVITALS_RELEASE_TAG}" \
-            .woodpecker/tmp/release-title.txt \
-            .woodpecker/tmp/release-notes.md \
-            "$${OPENVITALS_RELEASE_PRERELEASE}" \
-            "$${OPENVITALS_RELEASE_TARGET}" \
-            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}" \
-            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}.sha256" \
+          set -- "$${@}" \
             ".woodpecker/tmp/$${OPENVITALS_DEBUG_APK_BASENAME}" \
             ".woodpecker/tmp/$${OPENVITALS_DEBUG_APK_BASENAME}.sha256"
-        else
-          scripts/publish-codeberg-release.sh \
-            "$${OPENVITALS_RELEASE_TAG}" \
-            .woodpecker/tmp/release-title.txt \
-            .woodpecker/tmp/release-notes.md \
-            "$${OPENVITALS_RELEASE_PRERELEASE}" \
-            "$${OPENVITALS_RELEASE_TARGET}" \
-            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}" \
-            ".woodpecker/tmp/$${OPENVITALS_APK_BASENAME}.sha256"
         fi
+        if [ "$${OPENVITALS_BUILD_AAB}" = "true" ]; then
+          set -- "$${@}" \
+            ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}" \
+            ".woodpecker/tmp/$${OPENVITALS_AAB_BASENAME}.sha256"
+        fi
+        scripts/publish-codeberg-release.sh \
+          "$${OPENVITALS_RELEASE_TAG}" \
+          .woodpecker/tmp/release-title.txt \
+          .woodpecker/tmp/release-notes.md \
+          "$${OPENVITALS_RELEASE_PRERELEASE}" \
+          "$${OPENVITALS_RELEASE_TARGET}" \
+          "$${@}"
     when:
       - event: manual
       - event: cron

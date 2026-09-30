@@ -151,12 +151,18 @@ are two Codeberg release outputs:
   `OpenVitals-nightly.apk` and `OpenVitals-nightly-debug.apk` to the fixed
   Codeberg `nightly` prerelease. The same run builds `:app:bundleNightly` and
   uploads the signed AAB to the Google Play open testing track, whose Play
-  Developer API track name is `beta`.
+  Developer API track name is `beta`. The AAB is also attached to the `nightly`
+  prerelease as `OpenVitals-nightly.aab`.
 - A pushed `vX.Y.Z` or `VX.Y.Z` tag builds `:app:assembleRelease` and
   `:app:assembleDebug`, then publishes `OpenVitals-vX.Y.Z.apk` and
   `OpenVitals-vX.Y.Z-debug.apk` to its own versioned Codeberg prerelease, which
   can be promoted after validation by an approved Woodpecker deployment to
-  `production`.
+  `production`. The tag build also runs `:app:bundleRelease` and attaches
+  `OpenVitals-vX.Y.Z.aab`. It does not upload to Play.
+
+Each attached AAB has a `.sha256` file beside it. The AAB is there for a Play
+upload by hand, when Play refuses the upload from the pipeline. The Codeberg
+publish step does not wait for the Play step, so the AAB is attached even then.
 
 Nightly and release APKs use the release-style production application ID,
 minification, packaging, and signing model. Published Debug APKs use the
