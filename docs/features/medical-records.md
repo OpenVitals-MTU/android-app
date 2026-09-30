@@ -4,7 +4,7 @@
 > **Audience:** Users and contributors.
 > **Implementation:** `features/medical`, `features/imports/medical`, `domain/medical`, `domain/usecase/ImportMedicalRecordsUseCase.kt`, `domain/usecase/ExportMedicalRecordsUseCase.kt`, `domain/usecase/SaveManualMedicalRecordUseCase.kt`, `healthconnect/MedicalRecords*`, `data/repository/MedicalRecordsRepositoryImpl.kt`, `data/repository/MedicalDocumentsRepositoryImpl.kt`, `data/local/medical`.
 > **Navigation:** `Screen.MedicalRecords`, `Screen.MedicalRecordCategory`, `Screen.MedicalRecordDetail`, `Screen.MedicalSources`, `Screen.MedicalDocuments`, `Screen.MedicalRecordEntry`, `Screen.SettingsMedicalImport`; widget `MEDICAL_RECORDS`.
-> **Related:** [Feature map](feature-map.md), [Apple Health import](apple-health-import.md), [Permissions](../app/permissions.md), [Health Connect](../app/health-connect.md), [Health report export](health-report-export.md), [Privacy](../app/privacy.md), [Proposal](../proposals/medical-records.md).
+> **Related:** [Feature map](feature-map.md), [Apple Health import](apple-health-import.md), [Permissions](../app/permissions.md), [Health Connect](../app/health-connect.md), [Health report export](health-report-export.md), [Privacy](../app/privacy.md), [Proposal](../proposals/medical-records.md), [What is left](../proposals/medical-records-left.md).
 
 Medical records shows, imports, adds and exports the medical records Health Connect holds: vaccines, allergies, lab results and more. Health Connect stores them in the FHIR format, the standard health systems exchange records in. Everything happens on the phone.
 
