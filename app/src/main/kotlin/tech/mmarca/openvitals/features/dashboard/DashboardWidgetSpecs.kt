@@ -42,6 +42,7 @@ import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Bed
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.MedicalInformation
 import androidx.compose.material.icons.outlined.Watch
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
@@ -142,6 +143,7 @@ import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 import tech.mmarca.openvitals.ui.theme.NutritionColor
 import tech.mmarca.openvitals.ui.theme.SleepColor
 import tech.mmarca.openvitals.ui.theme.StepsColor
+import tech.mmarca.openvitals.ui.theme.MedicalRecordsColor
 import tech.mmarca.openvitals.ui.theme.VitalsColor
 import tech.mmarca.openvitals.ui.theme.WeightColor
 import tech.mmarca.openvitals.ui.theme.WheelchairPushesColor
@@ -201,6 +203,21 @@ internal fun dashboardWidgetSpecs(
                                     )
                                 }
                             },
+                            onClick = openMetric(widgetId),
+                        )
+                    },
+                )
+            }
+            model.id == DashboardWidgetId.MEDICAL_RECORDS -> {
+                add(
+                    DashboardWidgetSpec(widgetId, title) { modifier ->
+                        DashboardPillWidget(
+                            title = title,
+                            value = DisplayValue("", ""),
+                            icon = meta.icon,
+                            accentColor = meta.accentColor,
+                            message = stringResource(R.string.medical_records_tile_browse),
+                            modifier = modifier,
                             onClick = openMetric(widgetId),
                         )
                     },
@@ -462,6 +479,7 @@ private fun dashboardWidgetTitle(widgetId: DashboardWidgetId): String =
             DashboardWidgetId.MINDFULNESS -> R.string.metric_mindfulness
             DashboardWidgetId.CYCLE -> R.string.metric_cycle
             DashboardWidgetId.WATCH -> R.string.metric_watch
+            DashboardWidgetId.MEDICAL_RECORDS -> R.string.medical_records_title
             DashboardWidgetId.WORKOUT -> R.string.metric_workout
         },
     )
@@ -519,6 +537,7 @@ private fun dashboardWidgetMeta(widgetId: DashboardWidgetId): DashboardWidgetMet
         DashboardWidgetId.MINDFULNESS -> DashboardWidgetMeta(Icons.Outlined.SelfImprovement, MindfulnessColor)
         DashboardWidgetId.CYCLE -> DashboardWidgetMeta(Icons.Outlined.CalendarMonth, CycleColor)
         DashboardWidgetId.WATCH -> DashboardWidgetMeta(Icons.Outlined.Watch, VitalsColor)
+        DashboardWidgetId.MEDICAL_RECORDS -> DashboardWidgetMeta(Icons.Outlined.MedicalInformation, MedicalRecordsColor)
         DashboardWidgetId.WORKOUT -> DashboardWidgetMeta(Icons.AutoMirrored.Outlined.DirectionsRun, WorkoutColor)
     }
 

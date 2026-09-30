@@ -297,6 +297,12 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
+    // Reads the QR code of a SMART Health Card from an image or a PDF page.
+    implementation(libs.zxing.core)
+    // The live preview and frames for scanning a SMART Health Card with the camera.
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
 
     // Background work
     implementation(libs.androidx.work.runtime.ktx)

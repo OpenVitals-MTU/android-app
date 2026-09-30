@@ -100,6 +100,26 @@ Declared for explicit save, edit/delete, recording, and supported import workflo
 - `android.permission.health.WRITE_INTERMENSTRUAL_BLEEDING`
 - `android.permission.health.WRITE_SEXUAL_ACTIVITY`
 
+## Medical Records Permissions
+
+Health Connect medical records are FHIR resources: vaccines, allergies, conditions, lab results, and more. These permissions exist only on Android 14 and newer with the Health Connect medical records feature. Elsewhere OpenVitals never asks for them.
+
+They are asked for in one request, only inside the medical records area, and never together with fitness permissions. Health Connect then shows its own medical records permission screen. A screen with some categories declined still works: it lists the records OpenVitals wrote, which write access lets it read. Health Connect stops asking for a permission the user refused twice. The records home then leaves it out of the re-ask, and offers Health Connect's settings when nothing else is left.
+
+- `android.permission.health.READ_MEDICAL_DATA_VACCINES`
+- `android.permission.health.READ_MEDICAL_DATA_ALLERGIES_INTOLERANCES`
+- `android.permission.health.READ_MEDICAL_DATA_CONDITIONS`
+- `android.permission.health.READ_MEDICAL_DATA_MEDICATIONS`
+- `android.permission.health.READ_MEDICAL_DATA_LABORATORY_RESULTS`
+- `android.permission.health.READ_MEDICAL_DATA_PROCEDURES`
+- `android.permission.health.READ_MEDICAL_DATA_VISITS`
+- `android.permission.health.READ_MEDICAL_DATA_VITAL_SIGNS`
+- `android.permission.health.READ_MEDICAL_DATA_PREGNANCY`
+- `android.permission.health.READ_MEDICAL_DATA_SOCIAL_HISTORY`
+- `android.permission.health.READ_MEDICAL_DATA_PERSONAL_DETAILS`
+- `android.permission.health.READ_MEDICAL_DATA_PRACTITIONER_DETAILS`
+- `android.permission.health.WRITE_MEDICAL_DATA`: used only for imports, manual entries, and phone-to-phone sync the user starts.
+
 ## Health Connect Access Modes
 
 - `android.permission.health.READ_HEALTH_DATA_HISTORY`: used when the user grants access to older records.
@@ -113,6 +133,7 @@ Declared for explicit save, edit/delete, recording, and supported import workflo
 - `android.permission.HIGH_SAMPLING_RATE_SENSORS`: supports higher-rate sensor access for activity recording on devices that expose it.
 - `android.permission.POST_NOTIFICATIONS`: used for activity recording, Apple Health import progress, watch sync progress, and reminder notifications.
 - `android.permission.RECEIVE_BOOT_COMPLETED`: used to reschedule reminders after reboot or app update.
+- `android.permission.CAMERA`: used only to scan the QR code of a SMART Health Card in the medical records import. Requested when the user taps Scan a QR code. Each frame is read on the device and dropped; none is saved or sent. A photo of the code can be picked instead.
 - `android.permission.READ_CALENDAR`: used only to feed a paired Garmin watch's calendar glance. Requested when the per-watch "Calendar on watch" toggle (off by default) is switched on, read only while answering a watch that asked, and the events go to the watch over Bluetooth and nowhere else. There is no `INTERNET` permission to send them anywhere further.
 
 ## Bluetooth Permissions

@@ -1,0 +1,105 @@
+{
+  "resourceType": "Bundle",
+  "type": "document",
+  "identifier": { "system": "urn:ietf:rfc:3986", "value": "urn:uuid:6e1fb74a-742b-4c7b-8487-171dacb88766" },
+  "timestamp": "2024-02-01T10:00:00Z",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000001",
+      "resource": {
+        "resourceType": "Composition",
+        "status": "final",
+        "type": { "coding": [{ "system": "http://loinc.org", "code": "60591-5", "display": "Patient summary Document" }] },
+        "subject": { "reference": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000002" },
+        "date": "2024-02-01T10:00:00Z",
+        "title": "Patient Summary",
+        "author": [{ "reference": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000008" }]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000002",
+      "resource": {
+        "resourceType": "Patient",
+        "name": [{ "family": "García López", "given": ["María", "José"] }],
+        "birthDate": "1978-11-03"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000003",
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "clinicalStatus": {
+          "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical", "code": "active" }]
+        },
+        "code": { "coding": [{ "system": "http://snomed.info/sct", "code": "373270004", "display": "Penicillin" }] },
+        "patient": { "reference": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000002" },
+        "reaction": [{ "manifestation": [{ "text": "Rash" }] }]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000004",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "contained": [
+          {
+            "resourceType": "Medication",
+            "id": "med1",
+            "code": { "text": "Metformin 850 mg tablet" },
+            "ingredient": [{ "itemReference": { "reference": "#sub1" } }]
+          },
+          {
+            "resourceType": "Substance",
+            "id": "sub1",
+            "code": { "text": "Metformin hydrochloride" }
+          }
+        ],
+        "status": "active",
+        "medicationReference": { "reference": "#med1" },
+        "subject": { "reference": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000002" },
+        "dosage": [{ "text": "One tablet twice a day" }]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000005",
+      "resource": {
+        "resourceType": "Condition",
+        "clinicalStatus": {
+          "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active" }]
+        },
+        "code": { "coding": [{ "system": "http://snomed.info/sct", "code": "44054006", "display": "Type 2 diabetes" }] },
+        "subject": { "reference": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000002" },
+        "onsetDateTime": "2015-06"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000006",
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "not a valid id",
+        "status": "completed",
+        "vaccineCode": { "text": "Influenza 2023-2024" },
+        "patient": { "reference": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000002" },
+        "occurrenceDateTime": "2023-10-15",
+        "performer": [{ "actor": { "reference": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000008" } }]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000007",
+      "resource": {
+        "resourceType": "Observation",
+        "status": "final",
+        "code": { "coding": [{ "system": "http://loinc.org", "code": "29463-7", "display": "Body weight" }] },
+        "subject": { "reference": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000002" },
+        "effectiveDateTime": "2024-01-10",
+        "valueQuantity": { "value": 82.5, "unit": "kg", "system": "http://unitsofmeasure.org", "code": "kg" }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:1b3f0a2e-0000-4000-8000-000000000008",
+      "resource": {
+        "resourceType": "Practitioner",
+        "name": [{ "family": "Ruiz", "given": ["Elena"], "prefix": ["Dra."] }]
+      }
+    }
+  ]
+}

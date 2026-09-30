@@ -129,6 +129,8 @@ data class AppleHealthImportAnalysisResult(
     val typeSummaries: List<AppleHealthImportTypeSummary>,
     val diagnostics: List<AppleHealthImportDiagnostic>,
     val shareableReportText: String,
+    /** `ClinicalRecord` entries in export.xml. They go to Health Connect as medical records, through the medical import. */
+    val clinicalRecordCount: Int = 0,
 ) {
     val parsedElements: Int
         get() = parsedRecords + parsedWorkouts + parsedCorrelations + parsedActivitySummaries
@@ -269,6 +271,15 @@ internal fun MutableMap<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImpor
         )
     }
 }
+
+/** One `ClinicalRecord` element of export.xml: Apple's index of a FHIR file in `clinical-records/`. */
+internal data class AppleClinicalRecordIndexEntry(
+    val type: String?,
+    val sourceName: String?,
+    val sourceUrl: String?,
+    val fhirVersion: String?,
+    val resourceFilePath: String?,
+)
 
 internal data class AppleParsedExport(
     val records: List<AppleRecord>,

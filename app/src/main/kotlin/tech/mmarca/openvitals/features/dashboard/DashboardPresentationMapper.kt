@@ -32,6 +32,7 @@ object DashboardPresentationMapper {
         bodyEnergySetupCompleted: Boolean = false,
         includeUnsupported: Boolean = false,
         watch: WatchWidgetDisplay? = null,
+        medicalRecordsAvailable: Boolean = false,
     ): DashboardDisplayState {
         val sleepGoalMs = (dailyGoals.sleepHours * 60.0 * 60.0 * 1000.0).toLong()
         val supportedMetrics = data.supportedMetrics
@@ -51,6 +52,7 @@ object DashboardPresentationMapper {
                     isLoading = widgetId in loadingWidgets,
                     bodyEnergySetupCompleted = bodyEnergySetupCompleted,
                     watch = watch,
+                    medicalRecordsAvailable = medicalRecordsAvailable,
                 ) ?: return@forEach
                 if (!isSupported) unsupportedIds += widgetId
                 put(widgetId, widget)
@@ -70,6 +72,7 @@ object DashboardPresentationMapper {
         isLoading: Boolean,
         bodyEnergySetupCompleted: Boolean,
         watch: WatchWidgetDisplay? = null,
+        medicalRecordsAvailable: Boolean = false,
     ): DashboardWidgetDisplayModel? = when (widgetId) {
         DashboardWidgetId.STEPS -> metricWidget(
             id = widgetId,
@@ -416,6 +419,9 @@ object DashboardPresentationMapper {
         DashboardWidgetId.WATCH -> watch?.let {
             DashboardWidgetDisplayModel(id = widgetId, watch = it, isLoading = isLoading)
         }
+        // No feature, no tile: a null here also keeps it out of edit mode's tray.
+        DashboardWidgetId.MEDICAL_RECORDS ->
+            if (medicalRecordsAvailable) DashboardWidgetDisplayModel(id = widgetId) else null
         DashboardWidgetId.WORKOUT -> null
     }
 

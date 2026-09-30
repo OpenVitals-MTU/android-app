@@ -43,6 +43,9 @@ val FollicularPhaseColor = StepsColor
 val OvulatoryPhaseColor = FloorsColor
 val LutealPhaseColor = SleepColor
 
+/** Medical records borrow the distance blue: a calm, clinical accent with its contrast already checked. */
+val MedicalRecordsColor = DistanceColor
+
 // Surface variants
 val SurfaceDark = Color(0xFF1A1C1E)
 val SurfaceContainerDark = Color(0xFF2B2D30)

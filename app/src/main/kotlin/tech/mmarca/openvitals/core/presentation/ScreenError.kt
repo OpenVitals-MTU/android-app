@@ -17,7 +17,13 @@ sealed interface ScreenError {
     data object MissingArgument : ScreenError
     data object PermissionDenied : ScreenError
     data object HealthConnectUnavailable : ScreenError
+
+    /** A Health Connect feature this device lacks, such as medical records before Android 14. */
+    data object FeatureUnavailable : ScreenError
 }
+
+/** Thrown before a call that needs a Health Connect feature this device lacks. */
+class FeatureUnavailableException(message: String) : UnsupportedOperationException(message)
 
 /**
  * The one rule for "this failed because a permission is missing": a
@@ -26,6 +32,11 @@ sealed interface ScreenError {
 fun Throwable.isPermissionFailure(): Boolean =
     generateSequence(this) { it.cause.takeIf { cause -> cause !== it } }
         .any { it is SecurityException }
+
+/** A [FeatureUnavailableException] anywhere in the cause chain. */
+fun Throwable.isFeatureUnavailable(): Boolean =
+    generateSequence(this) { it.cause.takeIf { cause -> cause !== it } }
+        .any { it is FeatureUnavailableException }
 
 fun Throwable.toScreenError(
     @StringRes fallback: Int = R.string.screen_error_generic,
@@ -64,6 +75,7 @@ fun ScreenError?.resolve(): String? = when (this) {
     ScreenError.MissingArgument -> stringResource(R.string.screen_error_missing_argument)
     ScreenError.PermissionDenied -> stringResource(R.string.screen_error_permission_denied)
     ScreenError.HealthConnectUnavailable -> stringResource(R.string.screen_error_health_connect_unavailable)
+    ScreenError.FeatureUnavailable -> stringResource(R.string.screen_error_feature_unavailable)
 }
 
 data class ScreenErrorContext(
@@ -81,6 +93,7 @@ object ScreenErrorHandler {
         warn(context.logTag, context.logMessage, throwable)
         // A missing permission stays a type: the screens turn it into a grant affordance.
         if (throwable.isPermissionFailure()) return ScreenError.PermissionDenied
+        if (throwable.isFeatureUnavailable()) return ScreenError.FeatureUnavailable
         return throwable.message
             ?.takeIf { it.isNotBlank() }
             ?.let(ScreenError::Message)

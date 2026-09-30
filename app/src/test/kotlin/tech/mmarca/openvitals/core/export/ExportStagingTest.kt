@@ -78,6 +78,17 @@ class ExportStagingTest {
     }
 
     @Test
+    fun `a sole export deletes every earlier file, however fresh`() {
+        val directory = featureDirectory("medical_exports").apply { mkdirs() }
+        val earlier = File(directory, "earlier.json").apply { writeText("x") }
+
+        val file = directory.stageSoleExport("new.json") { output -> output.write("y".toByteArray()) }
+
+        assertFalse(earlier.exists())
+        assertEquals(listOf(file), directory.listFiles().orEmpty().filter { it.isFile })
+    }
+
+    @Test
     fun `a locked or vanished file does not abort the export`() {
         // Best-effort pruning: the user asked for an export, not for cache hygiene.
         val directory = featureDirectory(RouteExportCacheDirectory).apply { mkdirs() }

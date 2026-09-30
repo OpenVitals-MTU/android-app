@@ -45,6 +45,9 @@ enum class DashboardWidgetId {
 
     /** A paired watch. Device state, not a metric. */
     WATCH,
+
+    /** The way into medical records. Static: it reads nothing. */
+    MEDICAL_RECORDS,
 }
 
 const val DashboardWidgetGridColumns = 2
@@ -91,6 +94,7 @@ val DefaultDashboardWidgetIds: List<DashboardWidgetId> = listOf(
     DashboardWidgetId.BODY_TEMPERATURE,
     DashboardWidgetId.MINDFULNESS,
     DashboardWidgetId.CYCLE,
+    DashboardWidgetId.MEDICAL_RECORDS,
 )
 
 fun customizableDashboardWidgetIds(widgetIds: List<DashboardWidgetId>): List<DashboardWidgetId> =
@@ -101,7 +105,7 @@ fun customizableDashboardWidgetIds(widgetIds: List<DashboardWidgetId>): List<Das
  * alongside read as new. Nothing is added here later.
  */
 private val WidgetIdsKnownBeforeTracking: Set<String> =
-    (DashboardWidgetId.entries - DashboardWidgetId.WATCH).mapTo(mutableSetOf()) { it.name }
+    (DashboardWidgetId.entries - DashboardWidgetId.WATCH - DashboardWidgetId.MEDICAL_RECORDS).mapTo(mutableSetOf()) { it.name }
 
 /**
  * The saved layout with any never-offered widget appended. The known-ids
@@ -261,6 +265,6 @@ fun DashboardWidgetId.toDashboardMetricOrNull(): DashboardMetric? = when (this) 
     DashboardWidgetId.CARDIO_LOAD -> DashboardMetric.WEEKLY_CARDIO_LOAD
     DashboardWidgetId.MINDFULNESS -> DashboardMetric.MINDFULNESS
     DashboardWidgetId.CYCLE -> DashboardMetric.CYCLE
-    // Device state, never gated.
-    DashboardWidgetId.WATCH -> null
+    // Device state and the medical records entry, never gated by the provider.
+    DashboardWidgetId.WATCH, DashboardWidgetId.MEDICAL_RECORDS -> null
 }

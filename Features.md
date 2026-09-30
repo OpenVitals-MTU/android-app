@@ -234,6 +234,18 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - View watch pairing state, last sync time, and paired-watch management.
 - Watch-recorded activities, sleep, heart rate, and other supported measures are viewed on the normal metric screens once written to Health Connect.
 
+### Medical Records
+
+- View the medical records Health Connect holds, where Health Connect offers them (Android 14 and newer with a recent Health Connect module).
+- Open the records home from a static dashboard tile that reads nothing.
+- View twelve categories in two blocks, care and sensitive, each with its record count.
+- View a declined category's records that OpenVitals added itself, with a note that other apps' records need access.
+- View a category's records newest first, each with its title, date, source and status, entered-in-error included.
+- View a record's main fields, its source, and its raw FHIR, with codes as words and references resolved to names.
+- View lab and vital values with their unit and reference range as text, and a High or Low flag only when the lab set it.
+- Records are never interpreted and nothing is computed from their values.
+- Include a medical records section in the PDF health report: every allergy, condition and medication with its status, and the vaccines and lab results dated in the range, with what access kept out.
+
 ### Health Connect And Sources
 
 - View data from Health Connect-compatible sources.
@@ -432,6 +444,27 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Set alarms on an older Garmin watch that has no settings tree: a list kept on the phone and sent to the watch as one file.
 - Rename, disable, or remove a paired watch.
 - File syncs are always user-initiated; there is no background or scheduled watch sync.
+
+### Medical Records
+
+- Ask for all thirteen medical permissions once, the first time the area opens, in a request that holds no other permission.
+- Re-ask from the records home for what is missing, leaving out permissions Health Connect no longer asks for; when none are left, open Health Connect's settings instead.
+- Import a FHIR file (one resource, a Bundle, or NDJSON) or an Apple Health export's clinical records through a five-step wizard: pick, review, confirm, import, result.
+- Review each source's counts before anything is written, with unsupported types and records that would be refused listed.
+- Stop until the user confirms when the file names someone other than the person already in Health Connect.
+- Repair files without ids, with contained records, or with links between entries, and list each repair in the report.
+- Re-importing the same file updates the same records; sources another app holds start left out.
+- Copy or save the import report, which includes record content.
+- Export everything, one category, or one record as one FHIR Bundle that keeps each record's source, then share or save it.
+- Add a vaccine, an allergy, a medication or a condition by hand, from the records home or the matching category, with free-text names and an optional code.
+- Write the owner's Patient record once, with the first entry: from a Patient record the app can read, or from a name typed once.
+- Edit a record typed in, keeping any fields the form does not show.
+- Keep a copy of the imported file on the phone, chosen per import and off by default; an Apple Health export keeps only its clinical records, packed as one zip.
+- List saved documents with their date, size and record count, and open, save, share or delete each; deleting a file keeps its records.
+- Open the original document from a record that came from a kept file.
+- Delete a record OpenVitals added, after a confirmation.
+- Delete a source OpenVitals added and all its records, after a confirmation that names the record count.
+- Records other apps added are read-only; a button opens Health Connect's data screens.
 
 ### View-Only Or External-Only Data
 

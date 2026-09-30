@@ -156,6 +156,7 @@ class AppleHealthImportService
                 typeSummaries = summaries,
                 diagnostics = diagnostics,
                 shareableReportText = reportText,
+                clinicalRecordCount = analysisState.clinicalRecords,
             )
         }
 
@@ -449,6 +450,13 @@ class AppleHealthImportService
                     detail = "Apple activity rings and stand hours have no direct writable Health Connect record.",
                 )
                 maybeReportProgress()
+            }
+
+            var clinicalRecords = 0
+                private set
+
+            override fun onClinicalRecord(entry: AppleClinicalRecordIndexEntry) {
+                clinicalRecords += 1
             }
 
             override fun progressSnapshot(phase: AppleHealthImportPhase): AppleHealthImportProgress =

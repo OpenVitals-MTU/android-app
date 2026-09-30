@@ -55,3 +55,5 @@ Settings and project metadata can point users toward support and community resou
 ## Health Disclaimer
 
 OpenVitals insights are wellness context. Scores, readiness estimates, cardio load, Body Energy, and sleep explanations are not medical diagnosis or treatment advice.
+
+Medical records are shown as they were received. OpenVitals does not interpret them, and the health disclaimer says so.

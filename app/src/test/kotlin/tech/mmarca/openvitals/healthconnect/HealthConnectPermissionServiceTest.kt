@@ -458,6 +458,43 @@ class HealthConnectPermissionServiceTest {
         assertThat(calls).isEqualTo(1)
     }
 
+    // Medical records.
+
+    // On Android 14+ a grant is seen only for a managed permission. Every other set is
+    // asked for somewhere, and medical permissions are asked only in the medical area.
+    @Test
+    fun `medical permissions are managed only, and only with the feature`() {
+        val service = service(availableFeatures = setOf(MedicalCategoryMapping.FEATURE))
+
+        assertThat(service.isMedicalRecordsAvailable()).isTrue()
+        assertThat(service.medicalRecordsPermissions).hasSize(13)
+        assertThat(service.managedPermissions).containsAtLeastElementsIn(service.medicalRecordsPermissions)
+        val askedSets = listOf(
+            "allPermissions" to service.allPermissions,
+            "requestableManagedPermissions" to service.requestableManagedPermissions,
+            "onboardingRequestablePermissions" to service.onboardingRequestablePermissions,
+            "requestableAllPermissions" to service.requestableAllPermissions,
+            "requestableWritePermissions" to service.requestableWritePermissions,
+            "dataImportWritePermissions" to service.dataImportWritePermissions,
+            "minimumOnboardingPermissions" to service.minimumOnboardingPermissions,
+            "phase3Permissions" to service.phase3Permissions,
+            "phase4Permissions" to service.phase4Permissions,
+            "onboarding catalog" to service.onboardingPermissionCatalog().requiredPermissions,
+        )
+        askedSets.forEach { (name, set) ->
+            assertWithMessage(name).that(set.filter { it.contains("MEDICAL") }).isEmpty()
+        }
+    }
+
+    @Test
+    fun `without the feature no medical permission is managed`() {
+        val service = service(availableFeatures = emptySet())
+
+        assertThat(service.isMedicalRecordsAvailable()).isFalse()
+        assertThat(service.medicalRecordsPermissions).isEmpty()
+        assertThat(service.managedPermissions.filter { it.contains("MEDICAL") }).isEmpty()
+    }
+
     // Harness.
 
     private fun optIn(enabled: Boolean) = service(

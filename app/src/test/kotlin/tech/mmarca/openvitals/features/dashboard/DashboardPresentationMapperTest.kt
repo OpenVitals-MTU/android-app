@@ -19,6 +19,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import java.time.Instant
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -341,14 +342,16 @@ class DashboardPresentationMapperTest {
             dateTimeFormatterProvider = dateTimeFormatterProvider,
         )
 
-        // Every known widget materialises except WORKOUT (its own section) and WATCH (no watch passed).
+        // Every known widget materialises except WORKOUT (its own section), WATCH (no watch passed)
+        // and MEDICAL_RECORDS (the feature is off by default).
         assertEquals(DashboardWidgetStyle.CIRCLE, display.widgets[DashboardWidgetId.STEPS]?.style)
         assertEquals(
             DashboardWidgetStyle.CIRCLE,
             display.widgets[DashboardWidgetId.WEEKLY_CARDIO_LOAD]?.style,
         )
         assertEquals(
-            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT - DashboardWidgetId.WATCH,
+            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT - DashboardWidgetId.WATCH -
+                DashboardWidgetId.MEDICAL_RECORDS,
             display.widgets.keys.toList(),
         )
         // Including the ones a narrower mapper used to drop entirely.
@@ -372,7 +375,8 @@ class DashboardPresentationMapperTest {
 
         // No readings: the tiles are still there, empty, and the hero rings never disappear.
         assertEquals(
-            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT - DashboardWidgetId.WATCH,
+            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT - DashboardWidgetId.WATCH -
+                DashboardWidgetId.MEDICAL_RECORDS,
             display.widgets.keys.toList(),
         )
         assertNotNull(display.widgets[DashboardWidgetId.STEPS])
@@ -596,7 +600,8 @@ class DashboardPresentationMapperTest {
         )
 
         assertEquals(
-            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT - DashboardWidgetId.WATCH,
+            DashboardWidgetId.entries - DashboardWidgetId.WORKOUT - DashboardWidgetId.WATCH -
+                DashboardWidgetId.MEDICAL_RECORDS,
             display.widgets.keys.toList(),
         )
         assertEquals(display.widgets.keys, display.unsupportedIds)
@@ -613,6 +618,27 @@ class DashboardPresentationMapperTest {
 
         assertNull(display.widgets[DashboardWidgetId.SPO2])
         assertEquals(emptySet<DashboardWidgetId>(), display.unsupportedIds)
+    }
+
+    @Test
+    fun build_medicalRecordsTile_followsTheFeatureAndNeverSinks() {
+        val data = DashboardData(date = LocalDate.now())
+
+        val on = DashboardPresentationMapper.build(
+            data = data,
+            dailyGoals = dailyGoals,
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
+            medicalRecordsAvailable = true,
+        )
+        val offInEditMode = build(data, includeUnsupported = true)
+
+        val tile = requireNotNull(on.widgets[DashboardWidgetId.MEDICAL_RECORDS])
+        // Static: nothing to lack, so it never reads as an empty tile to sort last.
+        assertFalse(tile.showsNoDataMessage())
+        assertFalse(tile.isDemotableEmptyTile())
+        // Without the feature it is not offered at all, not even in the add tray.
+        assertNull(offInEditMode.widgets[DashboardWidgetId.MEDICAL_RECORDS])
     }
 
     private fun build(

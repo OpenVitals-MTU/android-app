@@ -53,8 +53,12 @@ class ReportExportService @Inject constructor(
     private val loader: ReportDataLoader,
     private val unitFormatter: UnitFormatter,
     private val preferencesRepository: PreferencesRepository,
+    private val medicalReport: ReportMedicalLoader,
 ) {
     fun supportedMetrics(): Set<ReportMetric> = loader.supportedReportMetrics()
+
+    /** Whether the device offers medical records, so the builder can offer their section. */
+    fun medicalRecordsAvailable(): Boolean = medicalReport.isAvailable()
 
     fun requestablePermissionsFor(metrics: Set<ReportMetric>): Set<String> =
         loader.requestablePermissionsFor(metrics)
@@ -66,6 +70,7 @@ class ReportExportService @Inject constructor(
         end: LocalDate,
         onProgress: (ReportProgress) -> Unit,
         cancellation: ReportCancellation,
+        includeMedicalRecords: Boolean = false,
     ): File {
         val request = ReportRequest(
             metrics = metrics,
@@ -74,8 +79,16 @@ class ReportExportService @Inject constructor(
             end = end,
             sleepWindow = preferencesRepository.sleepWindowFlow.value,
             weekMode = preferencesRepository.activityWeekModeFlow.value,
+            includeMedicalRecords = includeMedicalRecords,
         )
-        val data = loader.load(request, onProgress, cancellation)
+        val loaded = loader.load(request, onProgress, cancellation)
+        // The range the report prints, so "in the range" means the same dates everywhere. Parsing stays off the main thread.
+        val medical = if (includeMedicalRecords && !loaded.cancelled) {
+            withContext(Dispatchers.Default) { medicalReport.load(loaded.effectiveStart, end) }
+        } else {
+            null
+        }
+        val data = loaded.copy(medical = medical)
         return withContext(Dispatchers.IO) {
             val writer = ReportPdfWriter(
                 labels = buildLabels(data),
@@ -218,6 +231,7 @@ class ReportExportService @Inject constructor(
             workoutTypeLabel = { exerciseTypeLabel(context, it) },
             pageLabel = { page, count -> context.getString(R.string.report_pdf_page_of, page, count) },
             cycle = cycleLabels(context),
+            medical = medicalLabels(context).takeIf { data.medical != null },
         )
     }
 

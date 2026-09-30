@@ -76,7 +76,7 @@ enum class ReportGranularity {
     MONTHLY,
 }
 
-/** What the user asked for. [start]..[end] are inclusive local dates. */
+/** What the user asked for. [start]..[end] are inclusive local dates. [includeMedicalRecords] adds the medical section. */
 data class ReportRequest(
     val metrics: Set<ReportMetric>,
     val granularity: ReportGranularity,
@@ -84,6 +84,7 @@ data class ReportRequest(
     val end: LocalDate,
     val sleepWindow: SleepWindow = SleepWindow.Default,
     val weekMode: ActivityWeekMode = ActivityWeekMode.MONDAY_TO_SUNDAY,
+    val includeMedicalRecords: Boolean = false,
 )
 
 /**
@@ -323,6 +324,37 @@ data class ReportCycleDetail(
 ) : ReportMetricDetail
 
 /**
+ * One medical record in the report, as received. [date] is the FHIR date as written. [status]
+ * is the FHIR code. [value] and [flag] are a lab result's, as the lab set them.
+ */
+data class ReportMedicalRow(
+    val title: String?,
+    val resourceType: String,
+    val date: String?,
+    val status: String?,
+    val source: String?,
+    val value: String? = null,
+    val flag: String? = null,
+)
+
+/**
+ * The medical records section. Allergies, conditions and medications are standing facts, so
+ * every record shows. Vaccines and lab results show when their date falls in the range.
+ * [ownOnly] categories lack read access and hold only this app's records; [leftOut] ones
+ * could not be read at all; [failed] ones failed to read.
+ */
+data class ReportMedicalSection(
+    val vaccines: List<ReportMedicalRow>,
+    val allergies: List<ReportMedicalRow>,
+    val medications: List<ReportMedicalRow>,
+    val conditions: List<ReportMedicalRow>,
+    val labResults: List<ReportMedicalRow>,
+    val ownOnly: Set<MedicalCategory> = emptySet(),
+    val leftOut: Set<MedicalCategory> = emptySet(),
+    val failed: Set<MedicalCategory> = emptySet(),
+)
+
+/**
  * Everything the PDF renderer consumes. [effectiveStart] is later than the
  * requested start when the history permission clamps reads.
  */
@@ -335,4 +367,5 @@ data class ReportData(
     val cancelled: Boolean,
     val results: List<ReportMetricResult>,
     val generatedAt: Instant,
+    val medical: ReportMedicalSection? = null,
 )

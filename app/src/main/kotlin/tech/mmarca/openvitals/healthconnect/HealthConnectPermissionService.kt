@@ -254,6 +254,10 @@ internal class HealthConnectPermissionService(
     )
 
         // MenstruationPeriodRecord shares WRITE_MENSTRUATION with the flow record.
+    /** Asked only inside the medical records area, never with fitness permissions. Empty without the feature. */
+    val medicalRecordsPermissions: Set<String>
+        get() = if (isMedicalRecordsAvailable()) MedicalCategoryMapping.allPermissions else emptySet()
+
     val cycleWritePermissions: Set<String> = setOf(
         HealthPermission.getWritePermission(MenstruationFlowRecord::class),
         HealthPermission.getWritePermission(MenstruationPeriodRecord::class),
@@ -457,7 +461,9 @@ internal class HealthConnectPermissionService(
             vitalsWritePermissions +
             mindfulnessWritePermissions +
             cycleWritePermissions +
-            dataImportWritePermissions
+            dataImportWritePermissions +
+            // Here only, so a grant is seen. Out of every set that is asked for.
+            medicalRecordsPermissions
 
     fun grantModeFor(permission: String): PermissionGrantMode =
         if (permission in manualOnlyPermissions) {
@@ -520,6 +526,12 @@ internal class HealthConnectPermissionService(
         isFeatureAvailable(
             feature = HealthConnectFeatures.FEATURE_PLANNED_EXERCISE,
             logName = "plannedExercise",
+        )
+
+    fun isMedicalRecordsAvailable(): Boolean =
+        isFeatureAvailable(
+            feature = MedicalCategoryMapping.FEATURE,
+            logName = "personalHealthRecord",
         )
 
     private fun isFeatureAvailable(feature: Int, logName: String): Boolean {

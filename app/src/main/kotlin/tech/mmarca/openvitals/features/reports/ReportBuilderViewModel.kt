@@ -40,11 +40,15 @@ data class ReportBuilderState(
     val progressMetricTitle: String? = null,
     val stagedFile: File? = null,
     val error: Boolean = false,
+    /** The device offers medical records, so their section can be added. */
+    val medicalAvailable: Boolean = false,
+    val includeMedical: Boolean = false,
 ) {
     val customRangeValid: Boolean get() = !customStart.isAfter(customEnd)
 
+    /** A medical section alone makes a report too. */
     val canBuild: Boolean
-        get() = selectedMetrics.isNotEmpty() && (lookbackDays != null || customRangeValid)
+        get() = (selectedMetrics.isNotEmpty() || (includeMedical && medicalAvailable)) && (lookbackDays != null || customRangeValid)
 
     val metricsBySection: Map<ReportSection, List<ReportMetric>>
         get() = supportedMetrics.groupBy { it.section }
@@ -77,10 +81,13 @@ class ReportBuilderViewModel @Inject constructor(
     private fun refreshSupportedMetrics() {
         val supported = exportService.supportedMetrics()
             .sortedWith(compareBy({ it.section.ordinal }, { it.ordinal }))
+        val medicalAvailable = exportService.medicalRecordsAvailable()
         _uiState.update { state ->
             state.copy(
                 supportedMetrics = supported,
                 selectedMetrics = state.selectedMetrics.intersect(supported.toSet()),
+                medicalAvailable = medicalAvailable,
+                includeMedical = state.includeMedical && medicalAvailable,
             )
         }
     }
@@ -96,6 +103,9 @@ class ReportBuilderViewModel @Inject constructor(
             },
         )
     }
+
+    /** Kept apart from the metrics: "Select all" never adds medical records. */
+    fun toggleMedical() = configure { it.copy(includeMedical = !it.includeMedical) }
 
     fun selectAllMetrics() = configure { it.copy(selectedMetrics = it.supportedMetrics.toSet()) }
 
@@ -166,6 +176,7 @@ class ReportBuilderViewModel @Inject constructor(
                         }
                     },
                     cancellation = cancel,
+                    includeMedicalRecords = state.includeMedical && state.medicalAvailable,
                 )
                 _uiState.update { it.copy(step = ReportBuilderStep.DONE, stagedFile = file) }
             } catch (error: CancellationException) {

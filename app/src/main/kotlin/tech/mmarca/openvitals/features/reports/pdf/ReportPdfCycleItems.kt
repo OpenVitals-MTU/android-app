@@ -145,8 +145,8 @@ internal fun cycleItems(
     return items
 }
 
-/** A header that repeats after a page break, then striped rows; nothing for an empty list. */
-private fun table(
+/** A header that repeats after a page break, then striped rows; nothing for an empty list. Shared by the sections outside the writer. */
+internal fun table(
     header: List<String>,
     columns: List<Float>,
     rows: List<List<String>>,

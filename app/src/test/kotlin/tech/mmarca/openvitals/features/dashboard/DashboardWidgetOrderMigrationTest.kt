@@ -40,15 +40,21 @@ class DashboardWidgetOrderMigrationTest {
             persist = recorder::persist,
         )
 
-        // The default order puts the watch after the hero rings, before SLEEP.
+        // The default order puts the watch after the hero rings, before SLEEP, and medical records after CYCLE.
         assertEquals(
-            listOf(DashboardWidgetId.STEPS, DashboardWidgetId.WATCH, DashboardWidgetId.SLEEP, DashboardWidgetId.CYCLE),
+            listOf(
+                DashboardWidgetId.STEPS,
+                DashboardWidgetId.WATCH,
+                DashboardWidgetId.SLEEP,
+                DashboardWidgetId.CYCLE,
+                DashboardWidgetId.MEDICAL_RECORDS,
+            ),
             result,
         )
         // Only the new id moved: the kept widgets stay in the user's order.
         assertEquals(
             listOf(DashboardWidgetId.STEPS.name, DashboardWidgetId.SLEEP.name, DashboardWidgetId.CYCLE.name),
-            recorder.order?.filterNot { it == DashboardWidgetId.WATCH.name },
+            recorder.order?.filterNot { it == DashboardWidgetId.WATCH.name || it == DashboardWidgetId.MEDICAL_RECORDS.name },
         )
         assertEquals(allIds, recorder.known)
     }

@@ -43,6 +43,7 @@ class ReportBuilderViewModelTest {
         every { service.supportedMetrics() } returns ReportMetric.entries.toSet()
         every { service.metricTitle(any()) } answers { firstArg<ReportMetric>().name }
         every { service.requestablePermissionsFor(any()) } returns emptySet()
+        every { service.medicalRecordsAvailable() } returns false
     }
 
     @After
@@ -60,12 +61,48 @@ class ReportBuilderViewModelTest {
         advanceUntilIdle()
 
         assertEquals(ReportBuilderStep.CONFIGURE, viewModel.uiState.value.step)
-        coVerify(exactly = 0) { service.build(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { service.build(any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test fun `medical records alone make a report where the device offers them`() = runTest {
+        every { service.medicalRecordsAvailable() } returns true
+        coEvery { service.build(any(), any(), any(), any(), any(), any(), any()) } returns File("/tmp/openvitals-report-test.pdf")
+        val viewModel = viewModel()
+
+        viewModel.toggleMedical()
+        assertTrue(viewModel.uiState.value.canBuild)
+        viewModel.buildReport()
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            service.build(
+                metrics = emptySet(),
+                granularity = any(),
+                start = any(),
+                end = any(),
+                onProgress = any(),
+                cancellation = any(),
+                includeMedicalRecords = true,
+            )
+        }
+    }
+
+    @Test fun `select all leaves medical records out, and a device without them never offers them`() = runTest {
+        every { service.medicalRecordsAvailable() } returns true
+        val offered = viewModel()
+        offered.selectAllMetrics()
+        assertFalse(offered.uiState.value.includeMedical)
+
+        every { service.medicalRecordsAvailable() } returns false
+        val notOffered = viewModel()
+        notOffered.toggleMedical()
+        assertFalse(notOffered.uiState.value.medicalAvailable)
+        assertFalse(notOffered.uiState.value.canBuild)
     }
 
     @Test fun `a successful build lands on DONE with the staged file`() = runTest {
         val staged = File("/tmp/openvitals-report-test.pdf")
-        coEvery { service.build(any(), any(), any(), any(), any(), any()) } coAnswers {
+        coEvery { service.build(any(), any(), any(), any(), any(), any(), any()) } coAnswers {
             arg<(ReportProgress) -> Unit>(4).invoke(ReportProgress(1, 2, ReportMetric.STEPS))
             staged
         }
@@ -109,7 +146,7 @@ class ReportBuilderViewModelTest {
     }
 
     @Test fun `a failed build returns to CONFIGURE with the error flag`() = runTest {
-        coEvery { service.build(any(), any(), any(), any(), any(), any()) } throws IllegalStateException("boom")
+        coEvery { service.build(any(), any(), any(), any(), any(), any(), any()) } throws IllegalStateException("boom")
         val viewModel = viewModel()
         viewModel.toggleMetric(ReportMetric.STEPS)
 
@@ -124,7 +161,7 @@ class ReportBuilderViewModelTest {
 
     @Test fun `cancel flips the cancellation flag the service was handed`() = runTest {
         var handed: ReportCancellation? = null
-        coEvery { service.build(any(), any(), any(), any(), any(), any()) } coAnswers {
+        coEvery { service.build(any(), any(), any(), any(), any(), any(), any()) } coAnswers {
             val cancellation = arg<ReportCancellation>(5)
             handed = cancellation
             // A real build outlives the cancel tap; without this the fake finishes first.
@@ -141,7 +178,7 @@ class ReportBuilderViewModelTest {
     }
 
     @Test fun `any configuration change invalidates a finished report`() = runTest {
-        coEvery { service.build(any(), any(), any(), any(), any(), any()) } returns File("r.pdf")
+        coEvery { service.build(any(), any(), any(), any(), any(), any(), any()) } returns File("r.pdf")
         val viewModel = viewModel()
         viewModel.toggleMetric(ReportMetric.STEPS)
         viewModel.buildReport()
@@ -193,7 +230,7 @@ class ReportBuilderViewModelTest {
     }
 
     @Test fun `new report clears the finished state`() = runTest {
-        coEvery { service.build(any(), any(), any(), any(), any(), any()) } returns File("r.pdf")
+        coEvery { service.build(any(), any(), any(), any(), any(), any(), any()) } returns File("r.pdf")
         val viewModel = viewModel()
         viewModel.toggleMetric(ReportMetric.STEPS)
         viewModel.buildReport()

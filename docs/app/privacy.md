@@ -73,13 +73,24 @@ Weather shown on the watch comes from a weather app on the phone that broadcasts
 
 Sync copies Health Connect records from one phone to another over a paired Bluetooth Classic link. One phone is made discoverable and the other scans for it. The user chooses how far back to sync and which data categories to accept. Before any record moves, the phones agree on a fresh key and both show the same six digits; the user confirms on both that they match, which rules out a device in between. The records then travel encrypted with that key (AES-256-GCM), on top of Bluetooth's own encryption. The key is never stored. No server or account is involved at any point. See [Sync with another phone](../features/device-sync.md).
 
-## Health Records
+## Health Connect Records
 
 Health Connect is the source of truth. OpenVitals reads Health Connect records to show dashboard summaries, detail screens, readiness, statistics, achievements, and insights.
 
 Manual entries are saved back to Health Connect only when the user chooses to save them. Supported Apple Health export records are written to Health Connect only when the user imports an export file from Settings. OpenVitals-created records can be edited later; records created by other apps remain read-only.
 
 Apple Health exports are copied into app-private local storage and analyzed there before the user chooses which categories to import. The staged compressed copy is reused for the pending background import, cleared after a successful import or analysis failure, replaced by a newly selected export, and removed with the app's private data. A copy from an analysis the user never finished is removed at the next app start once it is a day old, unless an import is queued or running. Import reports are generated locally when the user runs an import and chooses to copy or download the report. These troubleshooting reports intentionally include full importer logs, selected categories, diagnostics, and exception details, so users should review them before sharing outside their device.
+
+## Medical Records
+
+Health Connect stores medical records as FHIR resources, on Android 14 and newer with its medical records feature. See the [proposal](../proposals/medical-records.md) until the feature page exists.
+
+- The 13 medical permissions are asked for in one request, only inside the medical records area, never with fitness permissions. They join `managedPermissions` so a grant is seen, and stay out of every set that onboarding or Settings asks for.
+- Records are shown as Health Connect holds them. Nothing is computed from them, and a value is flagged only when the source flagged it.
+- Imports and exports are file based. Nothing is fetched from a server. The import report includes record content, and the result step says to review it before sharing.
+- A SMART Health Card can also be scanned with the camera. `CAMERA` is asked for only when Scan is tapped; frames are analysed in memory and never stored. A card's signature is not checked, since that needs the issuer's keys from the network, and its records are tagged as not verified.
+- OpenVitals keeps no copy of records. The one exception is a saved document: an imported file the user chose to keep, in app-private storage with a Room index, not backed up.
+- Phone-to-phone sync carries medical records in full when the category is selected on both phones. Saved documents stay on the phone.
 
 ## Sensitive Data
 

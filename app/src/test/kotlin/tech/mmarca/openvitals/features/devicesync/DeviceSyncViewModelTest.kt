@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.devicesync
 
 import tech.mmarca.openvitals.data.repository.contract.FakeCycleJournalRepository
+import tech.mmarca.openvitals.data.repository.contract.FakeMedicalRecordsRepository
 import tech.mmarca.openvitals.data.repository.contract.FakePillIntakeRepository
 import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncByteTransport
@@ -45,6 +46,7 @@ import tech.mmarca.openvitals.features.devicesync.protocol.SyncReport
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncRole
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncSession
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncSessionConfig
+import tech.mmarca.openvitals.features.devicesync.store.MedicalRecordsSyncTypes
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingController
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingState
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -76,7 +78,7 @@ class DeviceSyncViewModelTest {
         unmockkStatic(Log::class)
     }
 
-    private fun viewModel() = DeviceSyncViewModel(
+    private fun viewModel(medicalRecords: FakeMedicalRecordsRepository = FakeMedicalRecordsRepository()) = DeviceSyncViewModel(
         context = mockk<Context>(relaxed = true),
         bluetooth = bluetooth,
         healthConnectManager = mockk(relaxed = true),
@@ -85,10 +87,25 @@ class DeviceSyncViewModelTest {
         cycleJournalRepository = FakeCycleJournalRepository(),
         cyclePreferences = FakePreferences(),
         pillIntakeRepository = FakePillIntakeRepository(),
+        medicalRecords = medicalRecords,
         reportStore = mockk(relaxed = true),
         recordingController = recordingController,
         dispatchers = mainDispatcherRule.dispatcherProvider,
     )
+
+    // Medical records.
+
+    @Test
+    fun `medical records are offered with write access and a readable category, and never asked for`() = runTest {
+        fun offered(medical: FakeMedicalRecordsRepository) =
+            MedicalRecordsSyncTypes.RECORD in viewModel(medical).uiState.value.availableTypes
+
+        assertTrue(offered(FakeMedicalRecordsRepository()))
+        assertFalse(offered(FakeMedicalRecordsRepository(writable = false)))
+        assertFalse(offered(FakeMedicalRecordsRepository(readable = emptySet())))
+        assertFalse(offered(FakeMedicalRecordsRepository(available = false)))
+        assertTrue(viewModel().healthPermissionsToRequest().none { "MEDICAL" in it })
+    }
 
     // The guest's dial.
 
@@ -208,6 +225,7 @@ class DeviceSyncViewModelTest {
             cycleJournalRepository = FakeCycleJournalRepository(),
             cyclePreferences = FakePreferences(),
             pillIntakeRepository = FakePillIntakeRepository(),
+            medicalRecords = FakeMedicalRecordsRepository(),
             reportStore = mockk(relaxed = true),
             recordingController = recordingController,
             dispatchers = dispatchers,

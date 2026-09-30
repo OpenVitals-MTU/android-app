@@ -505,6 +505,7 @@ internal fun dashboardTileDestination(
     DashboardWidgetId.CARDIO_LOAD -> CardioLoadDetailRoute.withSelectedDay(selectedDate)
     // Device state: opens the watches list, and carries no day.
     DashboardWidgetId.WATCH -> Screen.SettingsWatches.route
+    DashboardWidgetId.MEDICAL_RECORDS -> Screen.MedicalRecords.route
     else -> Screen.Metric.createRoute(metricId.name).withSelectedDay(selectedDate)
 }
 

@@ -766,6 +766,7 @@ fun AppNavigation(
                 },
                 onRouteFilesImported = ::markDashboardDirty,
             )
+            medicalRecordsRoutes(navController, dateTimeFormatterProvider)
         }
     }
     HealthConnectNewPermissionsPrompt()
@@ -830,5 +831,6 @@ private fun metricTitleRes(metricId: DashboardWidgetId): Int =
         DashboardWidgetId.MINDFULNESS -> R.string.metric_mindfulness
         DashboardWidgetId.CYCLE -> R.string.metric_cycle
         DashboardWidgetId.WATCH -> R.string.metric_watch
+        DashboardWidgetId.MEDICAL_RECORDS -> R.string.medical_records_title
     }
 

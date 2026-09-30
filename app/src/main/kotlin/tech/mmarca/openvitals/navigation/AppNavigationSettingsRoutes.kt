@@ -120,6 +120,9 @@ internal fun NavGraphBuilder.settingsRoutes(
                     launchSingleTop = true
                 }
             },
+            onOpenMedicalImport = { uri ->
+                navController.navigate(Screen.SettingsMedicalImport.createRoute(uri)) { launchSingleTop = true }
+            },
         )
     }
 

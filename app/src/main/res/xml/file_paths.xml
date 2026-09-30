@@ -12,4 +12,10 @@
     <cache-path
         name="report_exports"
         path="report_exports/" />
+    <cache-path
+        name="medical_exports"
+        path="medical_exports/" />
+    <files-path
+        name="medical_documents"
+        path="medical_documents/" />
 </paths>

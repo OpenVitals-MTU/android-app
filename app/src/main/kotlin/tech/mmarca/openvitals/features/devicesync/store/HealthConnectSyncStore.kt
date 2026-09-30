@@ -240,4 +240,4 @@ internal fun persistableOrigin(originPackage: String?, localPackageName: String)
     originPackage?.takeIf { it.isNotBlank() && it != localPackageName }
 
 /** Payload-byte ceiling per chunk, so a batch crosses a slow RFCOMM link inside the ack timeout. */
-private const val ChunkPayloadByteCap = 256 * 1024
+internal const val ChunkPayloadByteCap = 256 * 1024

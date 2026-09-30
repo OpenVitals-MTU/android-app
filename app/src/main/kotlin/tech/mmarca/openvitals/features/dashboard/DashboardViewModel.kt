@@ -36,6 +36,7 @@ import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyRepository
 import tech.mmarca.openvitals.data.repository.contract.BodyEnergyTimelineQuery
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
+import tech.mmarca.openvitals.data.repository.contract.MedicalRecordsRepository
 import tech.mmarca.openvitals.domain.usecase.LoadDashboardDayUseCase
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.sync.BodyEnergyChainSyncService
@@ -158,6 +159,7 @@ class DashboardViewModel @Inject constructor(
     private val garminRealtimeStore: GarminRealtimeStore? = null,
     private val homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler? = null,
     private val chainSyncService: BodyEnergyChainSyncService? = null,
+    private val medicalRecords: MedicalRecordsRepository? = null,
 ) : ViewModel() {
 
     val minimumOnboardingPermissions get() = repository.minimumOnboardingPermissions
@@ -719,6 +721,7 @@ class DashboardViewModel @Inject constructor(
             ),
             // Only edit mode shows unsupported metrics, in the add tray.
             includeUnsupported = _uiState.value.isEditingDashboard,
+            medicalRecordsAvailable = medicalRecords?.isAvailable() == true,
         )
             // A reload marks every tile loading. Without the last answers, the sort would reshuffle.
             .withLastDemoted(_uiState.value.display.lastDemoted)

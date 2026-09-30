@@ -24,6 +24,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.features.imports.medical.AppleClinicalRecordsCard
+import tech.mmarca.openvitals.features.imports.medical.MedicalImportCard
 import tech.mmarca.openvitals.core.performance.offMainIo
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportCategory
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.FitImportMimeTypes
@@ -46,6 +48,8 @@ fun DataImportScreen(
     onRouteFilesImported: () -> Unit = {},
     onOpenCsvImport: () -> Unit = {},
     onOpenReportExport: () -> Unit = {},
+    /** Opens the medical import, with the analysed Apple Health export when there is one. */
+    onOpenMedicalImport: (String?) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -145,6 +149,8 @@ fun DataImportScreen(
         onPickFitFolder = { fitFolderPicker.launch(null) },
         onOpenCsvImport = onOpenCsvImport,
         onOpenReportExport = onOpenReportExport,
+        onOpenMedicalImport = { onOpenMedicalImport(null) },
+        onImportAppleClinicalRecords = { onOpenMedicalImport(viewModel.appleHealthExportUri()?.toString()) },
     )
 
     LazyColumn(contentPadding = PaddingValues(vertical = LayoutMetrics.screenGutter)) {
@@ -169,6 +175,8 @@ data class DataImportActions(
     val onPickFitFolder: () -> Unit,
     val onOpenCsvImport: () -> Unit,
     val onOpenReportExport: () -> Unit,
+    val onOpenMedicalImport: () -> Unit = {},
+    val onImportAppleClinicalRecords: () -> Unit = {},
 )
 
 private fun LazyListScope.dataImportCards(
@@ -201,6 +209,18 @@ private fun LazyListScope.dataImportCards(
             onSaveReport = actions.onSaveReport,
             modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
         )
+    }
+    // Clinical records are medical records: their own import, review and permission request.
+    val clinicalRecords = state.appleHealthImportAnalysis?.clinicalRecordCount ?: 0
+    if (state.medicalImportAvailable && clinicalRecords > 0 && !state.isAnalyzingAppleHealth) {
+        item { SettingsCardSpacer() }
+        item {
+            AppleClinicalRecordsCard(
+                count = clinicalRecords,
+                onImport = actions.onImportAppleClinicalRecords,
+                modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
+            )
+        }
     }
     item { SettingsCardSpacer() }
     item {
@@ -249,6 +269,15 @@ private fun LazyListScope.dataImportCards(
             onOpenCsvImport = actions.onOpenCsvImport,
             modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
         )
+    }
+    if (state.medicalImportAvailable) {
+        item { SettingsCardSpacer() }
+        item {
+            MedicalImportCard(
+                onOpen = actions.onOpenMedicalImport,
+                modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
+            )
+        }
     }
     item { SettingsCardSpacer() }
     item {

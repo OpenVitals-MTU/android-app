@@ -670,8 +670,8 @@ internal fun DashboardData.toSnapshot(
                 snapshot(displayValue)
             }
         }
-        // Device state, not a day's reading.
-        DashboardWidgetId.WATCH -> snapshot(null)
+        // Device state and the medical records entry, not a day's reading.
+        DashboardWidgetId.WATCH, DashboardWidgetId.MEDICAL_RECORDS -> snapshot(null)
     }
 }
 
@@ -716,12 +716,14 @@ fun DashboardWidgetId.homeMetricTitleRes(): Int = when (this) {
     DashboardWidgetId.MINDFULNESS -> R.string.metric_mindfulness
     DashboardWidgetId.CYCLE -> R.string.metric_cycle
     DashboardWidgetId.WATCH -> R.string.metric_watch
+    DashboardWidgetId.MEDICAL_RECORDS -> R.string.medical_records_title
 }
 
 /** CYCLE has its own concealed-by-default widget; a placed metric tile for it keeps rendering. */
 fun homeMetricWidgetCatalog(): List<DashboardWidgetId> =
     DashboardWidgetId.entries.filterNot {
-        it == DashboardWidgetId.CARDIO_LOAD || it == DashboardWidgetId.CAFFEINE || it == DashboardWidgetId.CYCLE
+        it == DashboardWidgetId.CARDIO_LOAD || it == DashboardWidgetId.CAFFEINE || it == DashboardWidgetId.CYCLE ||
+            it == DashboardWidgetId.MEDICAL_RECORDS
     }
 
 private fun String?.toDashboardWidgetIdOrNull(): DashboardWidgetId? =

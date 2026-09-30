@@ -89,6 +89,7 @@ fun ReportBuilderScreen(
                 state = state,
                 metricTitle = viewModel::metricTitle,
                 onToggleMetric = viewModel::toggleMetric,
+                onToggleMedical = viewModel::toggleMedical,
                 onSelectAll = viewModel::selectAllMetrics,
                 onClear = viewModel::clearMetrics,
                 onSetGranularity = viewModel::setGranularity,
@@ -118,6 +119,7 @@ internal fun ReportConfigureStep(
     onSetCustomStart: (LocalDate) -> Unit,
     onSetCustomEnd: (LocalDate) -> Unit,
     onBuild: () -> Unit,
+    onToggleMedical: () -> Unit = {},
 ) {
     val permissionLauncher = rememberHealthConnectPermissionLauncher()
     var showStartPicker by remember { mutableStateOf(false) }
@@ -170,6 +172,10 @@ internal fun ReportConfigureStep(
                     }
                 }
             }
+        }
+
+        if (state.medicalAvailable) {
+            item { ReportMedicalOption(checked = state.includeMedical, onToggle = onToggleMedical) }
         }
 
         item {

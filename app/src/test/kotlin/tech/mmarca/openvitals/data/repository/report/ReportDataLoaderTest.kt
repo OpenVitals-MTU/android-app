@@ -235,6 +235,14 @@ class ReportDataLoaderTest {
         coVerify(exactly = 1) { hydration.loadDailyHydration(end.minusDays(29), end) }
     }
 
+    @Test fun `a report without metrics keeps its range, since there is no fitness read to limit`() = runTest {
+        val data = loader(granted = everyPermission - historyPermission)
+            .load(request().copy(includeMedicalRecords = true))
+
+        assertEquals(request().start, data.effectiveStart)
+        assertNull(data.truncatedToDays)
+    }
+
     @Test fun `no clamp when the provider does not define the history permission`() = runTest {
         coEvery { hydration.loadDailyHydration(any(), any()) } returns emptyList()
 
