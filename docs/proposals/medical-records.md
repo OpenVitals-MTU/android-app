@@ -1,6 +1,6 @@
 # Medical Records Through Health Connect
 
-> **Status:** Proposal draft, 2026-09-25. Revised on 2026-09-26 after a review pass, and on 2026-09-29 after a check against the code and the spike on the test phone. Step 1.0 (the spike) and slices 1.1a (the FHIR core), 1.1b (the screens and the tile), 1.1c (the import wizard), 1.1d (Apple Health clinical records), 1.1e (export and delete) and 1.1f (docs, the re-ask, screenshot tests, and removing the spike screen) are built. Step 1.1 is complete, and so are steps 1.2 (manual entry), 1.3 (the PDF report section), 1.4 (saved documents) and 1.5 (phone-to-phone sync). Phase 1 is built. Of phase 2, features 2a (SMART Health Cards, with a camera scanner), 2b (CDA documents), 2c (the Estonian health portal export) and 2f (Apple DSTU2 records) are built too. 2d, 2e and 2g are left for later.
+> **Status:** Proposal draft, 2026-09-25. Revised on 2026-09-26 after a review pass, and on 2026-09-29 after a check against the code and the spike on the test phone. Step 1.0 (the spike) and slices 1.1a (the FHIR core), 1.1b (the screens and the tile), 1.1c (the import wizard), 1.1d (Apple Health clinical records), 1.1e (export and delete) and 1.1f (docs, the re-ask, screenshot tests, and removing the spike screen) are built. Step 1.1 is complete, and so are steps 1.2 (manual entry), 1.3 (the PDF report section), 1.4 (saved documents) and 1.5 (phone-to-phone sync). Phase 1 is built. Of phase 2, features 2a (SMART Health Cards, with a camera scanner), 2b (CDA documents), 2c (the Estonian health portal export) and 2f (Apple DSTU2 records) are built too. 2d, 2e and 2g are left for later. All of it reached main on 2026-09-30 (pull request #339). [What is left](medical-records-left.md) lists the open work.
 > **Sources:** the Android Medical Records guides, the Jetpack `connect-client` 1.2.0-alpha06 sources, the Play policy pages, the SMART Health Cards and HL7 CDA specifications, and the current app code. Links are at the end.
 > **Scope:** phase 1 is import ("upload"), view, export ("download"), and manual entry of FHIR records through OpenVitals, with Health Connect as the store, plus optional saved documents and phone-to-phone sync. Phase 2 adds document parsers, each a feature of its own.
 > **Implementation map:** [Feature map](../features/feature-map.md), [Feature playbook](../engineering/feature-playbook.md), [Health Connect](../app/health-connect.md), [Permissions](../app/permissions.md), [Privacy](../app/privacy.md).
@@ -633,13 +633,15 @@ Suggested order, most deterministic first. Each gets its own proposal page befor
 
 The camera QR scanner, first planned for later, was added with 2a on 2026-09-30.
 
+[What is left](medical-records-left.md) says what 2d, 2e and 2g wait for, and which built parts still need a check on real data.
+
 ## Open Questions
 
 1. **Apple `export_cda.xml`** (feature 2b). What it holds is unverified. Check a real export before the CDA mapper reads it.
 2. **Play refusal** (step 1.0 onward). Decided if it happens. A store flavor dimension is the likely path.
 3. **PDF text library** (feature 2d). Settled in the 2d proposal.
 
-Everything else is recorded in [Decisions Taken](#decisions-taken).
+Everything else is recorded in [Decisions Taken](#decisions-taken). The open work list is [What is left](medical-records-left.md).
 
 ## Risks
 
