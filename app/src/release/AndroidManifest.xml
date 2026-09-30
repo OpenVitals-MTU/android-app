@@ -1,0 +1,51 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Play builds (release, nightly) leave out medical records until Play
+         accepts these permissions. BuildConfig.MEDICAL_RECORDS hides the feature.
+         CAMERA is only for the SMART Health Card scanner. -->
+    <uses-permission
+        android:name="android.permission.health.READ_MEDICAL_DATA_VACCINES"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.health.READ_MEDICAL_DATA_ALLERGIES_INTOLERANCES"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.health.READ_MEDICAL_DATA_CONDITIONS"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.health.READ_MEDICAL_DATA_MEDICATIONS"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.health.READ_MEDICAL_DATA_LABORATORY_RESULTS"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.health.READ_MEDICAL_DATA_PROCEDURES"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.health.READ_MEDICAL_DATA_VISITS"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.health.READ_MEDICAL_DATA_VITAL_SIGNS"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.health.READ_MEDICAL_DATA_PREGNANCY"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.health.READ_MEDICAL_DATA_SOCIAL_HISTORY"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.health.READ_MEDICAL_DATA_PERSONAL_DETAILS"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.health.READ_MEDICAL_DATA_PRACTITIONER_DETAILS"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.health.WRITE_MEDICAL_DATA"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.CAMERA"
+        tools:node="remove" />
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        tools:node="remove" />
+</manifest>

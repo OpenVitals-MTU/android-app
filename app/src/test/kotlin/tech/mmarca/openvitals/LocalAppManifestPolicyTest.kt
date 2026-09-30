@@ -4,6 +4,7 @@ import java.io.File
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tech.mmarca.openvitals.healthconnect.MedicalCategoryMapping
 
 class LocalAppManifestPolicyTest {
 
@@ -56,6 +57,29 @@ class LocalAppManifestPolicyTest {
         val manifest = File("src/main/AndroidManifest.xml").readText()
 
         assertFalse(Regex("""android:scheme\s*=\s*"file"""").containsMatchIn(manifest))
+    }
+
+    @Test
+    fun `Play builds remove every medical records permission`() {
+        // Release and nightly share this manifest. See app/build.gradle.kts.
+        val main = File("src/main/AndroidManifest.xml").readText()
+        val release = File("src/release/AndroidManifest.xml").readText()
+        val declared = manifestTags(main, "uses-permission")
+            .filter { !it.removesNode() }
+            .mapNotNull { Regex("""android:name="([^"]+)"""").find(it)?.groupValues?.get(1) }
+            .filter { "MEDICAL_DATA" in it || it == "android.permission.CAMERA" }
+        val removed = manifestTags(release, "uses-permission").filter { it.removesNode() }
+
+        assertTrue(
+            "The main manifest must declare every medical permission the app asks for.",
+            declared.containsAll(MedicalCategoryMapping.allPermissions),
+        )
+        declared.forEach { permission ->
+            assertTrue(
+                "$permission must be removed in src/release/AndroidManifest.xml.",
+                removed.any { it.names(permission) },
+            )
+        }
     }
 
     private fun manifestTags(manifest: String, tagName: String): List<String> =
