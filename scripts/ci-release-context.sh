@@ -113,6 +113,12 @@ else
     else
         build_debug_apk="true"
         debug_apk_basename="OpenVitals-$release_tag-debug.apk"
+        # A tag build also makes the app bundle and attaches it to the Codeberg release,
+        # for a Play upload by hand. It does not publish to Play: only a deployment does.
+        bundle_task=":app:bundleRelease"
+        aab_variant_dir="release"
+        aab_basename="OpenVitals-$release_tag.aab"
+        build_aab="true"
         previous_configured_version_code="$((configured_version_code - 1))"
         expected_version_code="$(sh scripts/version-code.sh next --floor "$previous_configured_version_code")"
         if [ "$expected_version_code" != "$configured_version_code" ]; then
@@ -151,10 +157,11 @@ if [ "$release_channel" = "release" ]; then
             > "$notes_file"
         if [ "$build_debug_apk" = "true" ]; then
             printf '%s\n' "- Signed Debug APK ($apk_abi_filters)" >> "$notes_file"
-            printf '%s\n' "- SHA-256 checksums" >> "$notes_file"
-        else
-            printf '%s\n' "- SHA-256 checksum" >> "$notes_file"
         fi
+        if [ "$build_aab" = "true" ]; then
+            printf '%s\n' "- Signed app bundle (AAB), for a Google Play upload by hand" >> "$notes_file"
+        fi
+        printf '%s\n' "- SHA-256 checksums" >> "$notes_file"
     fi
 else
     printf '%s\n' \
@@ -169,10 +176,11 @@ else
         > "$notes_file"
     if [ "$build_debug_apk" = "true" ]; then
         printf '%s\n' "- Signed Debug APK ($apk_abi_filters)" >> "$notes_file"
-        printf '%s\n' "- SHA-256 checksums" >> "$notes_file"
-    else
-        printf '%s\n' "- SHA-256 checksum" >> "$notes_file"
     fi
+    if [ "$build_aab" = "true" ]; then
+        printf '%s\n' "- Signed app bundle (AAB), for a Google Play upload by hand" >> "$notes_file"
+    fi
+    printf '%s\n' "- SHA-256 checksums" >> "$notes_file"
 fi
 
 if [ -n "$version_code" ]; then
