@@ -495,6 +495,19 @@ class HealthConnectPermissionServiceTest {
         assertThat(service.managedPermissions.filter { it.contains("MEDICAL") }).isEmpty()
     }
 
+    // Play builds turn medical records off even where Health Connect has them.
+    @Test
+    fun `a build without medical records hides the feature`() {
+        val service = service(
+            availableFeatures = setOf(MedicalCategoryMapping.FEATURE),
+            medicalRecordsEnabled = false,
+        )
+
+        assertThat(service.isMedicalRecordsAvailable()).isFalse()
+        assertThat(service.medicalRecordsPermissions).isEmpty()
+        assertThat(service.managedPermissions.filter { it.contains("MEDICAL") }).isEmpty()
+    }
+
     // Harness.
 
     private fun optIn(enabled: Boolean) = service(
@@ -506,6 +519,7 @@ class HealthConnectPermissionServiceTest {
         availableFeatures: Set<Int> = emptySet(),
         unknownStatusFeatures: Set<Int> = emptySet(),
         mindfulnessIntegrationEnabled: Boolean = true,
+        medicalRecordsEnabled: Boolean = true,
         availability: HealthConnectAvailability = HealthConnectAvailability.AVAILABLE,
         onFeatureStatusCall: () -> Unit = {},
     ): HealthConnectPermissionService {
@@ -534,6 +548,7 @@ class HealthConnectPermissionServiceTest {
             availabilityService = availabilityService,
             diagnostics = diagnostics,
             mindfulnessIntegrationEnabled = { mindfulnessIntegrationEnabled },
+            medicalRecordsEnabled = medicalRecordsEnabled,
         )
     }
 

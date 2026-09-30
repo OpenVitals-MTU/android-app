@@ -104,6 +104,9 @@ android {
         versionCode = versionCodeOverride.orElse(baseVersionCode).get()
         versionName = versionNameOverride.orElse(baseVersionName).get()
         buildConfigField("boolean", "OPENVITALS_DIAGNOSTICS", "false")
+        // Off in the Play builds (release, nightly) until Play accepts the medical
+        // permissions. Their manifest, src/release/AndroidManifest.xml, removes them.
+        buildConfigField("boolean", "MEDICAL_RECORDS", "false")
         if (apkAbiFilters.isNotEmpty()) {
             ndk {
                 abiFilters.addAll(apkAbiFilters)
@@ -127,6 +130,7 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             buildConfigField("boolean", "OPENVITALS_DIAGNOSTICS", "true")
+            buildConfigField("boolean", "MEDICAL_RECORDS", "true")
             if (signDebugWithReleaseKey && hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -193,6 +197,10 @@ android {
     sourceSets {
         getByName("main") {
             res.srcDir(translationCoverageResDir)
+        }
+        // Nightly also goes to Play, so it drops the same permissions as release.
+        getByName("nightly") {
+            manifest.srcFile("src/release/AndroidManifest.xml")
         }
     }
 
