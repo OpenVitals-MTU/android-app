@@ -5,6 +5,23 @@
         android:name="android.hardware.type.watch"
         android:required="true" />
 
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+
+    <!-- The RFCOMM listener the phone pings. Legacy pair up to API 30, runtime grant from 31. -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- The listener outlives the activity as a connectedDevice foreground service. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -16,6 +33,21 @@
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
+
+        <service
+            android:name=".WearAppService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+
+        <!-- Restarts the phone link after a reboot or an update; no-op without the Bluetooth grant. -->
+        <receiver
+            android:name=".WearBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <activity
             android:name=".MainActivity"

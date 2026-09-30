@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.devices.garmin
 
+import tech.mmarca.openvitals.devices.core.pairing.CompanionFilter
 import android.content.Context
 import io.mockk.every
 import io.mockk.mockk
@@ -33,7 +34,11 @@ private class FakePairing : WatchPairingPort {
         calls.add("removeBond:$address")
     }
 
-    override suspend fun associateCompanion(address: String, displayName: String?): Boolean {
+    override suspend fun associateCompanion(
+        address: String,
+        displayName: String?,
+        filter: CompanionFilter,
+    ): Boolean {
         calls.add("associate:$address")
         return associateResult
     }

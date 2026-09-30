@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">OpenVitals Wear</string>
+    <string name="link_channel_name">Phone link</string>
+    <string name="link_notification_text">Reachable by OpenVitals on your phone</string>
 </resources>

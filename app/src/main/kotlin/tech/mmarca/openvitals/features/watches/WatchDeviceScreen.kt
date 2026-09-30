@@ -140,6 +140,11 @@ fun WatchDeviceScreen(
         contract = ActivityResultContracts.RequestPermission(),
     ) { viewModel.refreshCoMapsPermission() }
 
+    // Nearby devices (API 31+): without it the phone cannot see the bond or open the link.
+    val bluetoothPermission = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted -> if (granted) viewModel.checkWearOsStatus() }
+
     val ephemerisPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let(viewModel::importAgps) }
@@ -166,6 +171,19 @@ fun WatchDeviceScreen(
             isBikeComputer = isBikeComputer,
             onRename = { showRenameDialog = true },
         )
+
+        if (device.isWearosWatch) {
+            SectionHeader(stringResource(R.string.settings_watch_wearos_status_section))
+            WearOsStatusCard(
+                status = state.wearOsStatus,
+                error = state.wearOsError,
+                isChecking = state.isCheckingWearOsStatus,
+                onCheck = viewModel::checkWearOsStatus,
+                onGrantBluetooth = {
+                    bluetoothPermission.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
+                },
+            )
+        }
 
         if (isGarmin) {
             ActionsRow(

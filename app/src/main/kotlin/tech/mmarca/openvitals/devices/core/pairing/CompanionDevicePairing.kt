@@ -4,6 +4,7 @@ import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.le.ScanFilter
 import android.companion.AssociationRequest
+import android.companion.BluetoothDeviceFilter
 import android.companion.BluetoothLeDeviceFilter
 import android.companion.CompanionDeviceManager
 import android.content.Context
@@ -87,7 +88,11 @@ class CompanionDevicePairing @Inject constructor(
      * Asks the OS to associate [address], showing the system dialog. True when
      * allowed; false on decline and on every degraded path.
      */
-    suspend fun associate(address: String, @Suppress("UNUSED_PARAMETER") displayName: String? = null): Boolean {
+    suspend fun associate(
+        address: String,
+        @Suppress("UNUSED_PARAMETER") displayName: String? = null,
+        filter: CompanionFilter = CompanionFilter.BLE,
+    ): Boolean {
         if (!BluetoothAdapter.checkBluetoothAddress(address)) {
             Log.w(TAG, "associate: invalid address")
             return false
@@ -126,7 +131,9 @@ class CompanionDevicePairing @Inject constructor(
             }
 
             // A Garmin watch is reached over BLE, so filter by scan, not classic MAC.
-            val request =
+            // A Wear OS watch may be registered under its Classic bond address,
+            // which no BLE scan sees: without the Classic filter the dialog searches forever.
+            val builder =
                 AssociationRequest.Builder()
                     .addDeviceFilter(
                         BluetoothLeDeviceFilter.Builder()
@@ -134,7 +141,10 @@ class CompanionDevicePairing @Inject constructor(
                             .build(),
                     )
                     .setSingleDevice(true)
-                    .build()
+            if (filter == CompanionFilter.BLE_OR_CLASSIC) {
+                builder.addDeviceFilter(BluetoothDeviceFilter.Builder().setAddress(address).build())
+            }
+            val request = builder.build()
 
             Log.i(TAG, "associate: requesting association")
             try {
