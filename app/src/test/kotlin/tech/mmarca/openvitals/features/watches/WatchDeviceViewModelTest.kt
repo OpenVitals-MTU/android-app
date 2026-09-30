@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.watches
 
+import tech.mmarca.openvitals.devices.core.pairing.CompanionFilter
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import io.mockk.coEvery
@@ -35,6 +36,10 @@ import tech.mmarca.openvitals.devices.garmin.GarminTransportProbe
 import tech.mmarca.openvitals.devices.garmin.GarminTransportVariant
 import tech.mmarca.openvitals.devices.garmin.OnboardGarminWatchUseCase
 import tech.mmarca.openvitals.devices.wearos.OnboardWearOsWatchUseCase
+import tech.mmarca.openvitals.devices.wearos.WearOsCompanionManager
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import io.mockk.coEvery
+import io.mockk.coVerify
 import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
@@ -61,7 +66,11 @@ class WatchDeviceViewModelTest {
             synchronized(calls) { calls.add("removeBond:$address") }
         }
 
-        override suspend fun associateCompanion(address: String, displayName: String?) = true
+        override suspend fun associateCompanion(
+            address: String,
+            displayName: String?,
+            filter: CompanionFilter,
+        ) = true
 
         override suspend fun disassociateCompanion(address: String) {
             synchronized(calls) { calls.add("disassociate:$address") }
@@ -116,7 +125,10 @@ class WatchDeviceViewModelTest {
         integration = DeviceIntegration.GARMIN,
     )
 
-    private fun viewModel(deviceId: String) = WatchDeviceViewModel(
+    private fun viewModel(
+        deviceId: String,
+        wearOsCompanionManager: WearOsCompanionManager = mockk(relaxed = true),
+    ) = WatchDeviceViewModel(
         savedStateHandle = SavedStateHandle(mapOf(WATCH_DEVICE_ID_ARG to deviceId)),
         deviceRepository = repo,
         stateStore = stateStore,
@@ -148,6 +160,7 @@ class WatchDeviceViewModelTest {
         healthConnectManager = healthConnectManager,
         // The cleanup after a removal runs on the default dispatcher. Here it runs at once.
         dispatchers = mainDispatcherRule.dispatcherProvider,
+        wearOsCompanionManager = wearOsCompanionManager,
     )
 
     @Test
@@ -360,5 +373,29 @@ class WatchDeviceViewModelTest {
 
         // A schedule outliving the watch would wake the radio for nothing.
         verify { autoSyncScheduler.forget(watch.id) }
+    }
+
+    @Test
+    fun `a missing Bluetooth permission on the Wear OS check is a grant affordance, checked once`() = runTest {
+        val watch = repo.addDevice(
+            displayName = "Galaxy Watch8",
+            address = "7F:12:34:56:78:9A",
+            bluetoothName = "Galaxy Watch8 (3A3B) LE",
+            capabilities = emptySet(),
+            kind = BleDeviceKind.WATCH,
+            integration = DeviceIntegration.WEAROS,
+        )
+        val manager = mockk<WearOsCompanionManager>()
+        coEvery { manager.checkWearOsWatchStatus(any(), any()) } throws SecurityException("BLUETOOTH_CONNECT")
+        val vm = viewModel(watch.id, manager)
+        backgroundScope.launch { vm.uiState.collect { } }
+        runCurrent()
+
+        assertEquals(ScreenError.PermissionDenied, vm.uiState.value.wearOsError)
+        assertFalse(vm.uiState.value.isCheckingWearOsStatus)
+        // A failed check leaves no timestamp; it must not retry on every emission.
+        coVerify(exactly = 1) {
+            manager.checkWearOsWatchStatus("7F:12:34:56:78:9A", "Galaxy Watch8 (3A3B) LE")
+        }
     }
 }

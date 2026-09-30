@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.devices.wearos
 import javax.inject.Inject
 import javax.inject.Singleton
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
+import tech.mmarca.openvitals.devices.core.pairing.CompanionFilter
 import tech.mmarca.openvitals.devices.core.pairing.WatchPairingPort
 import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
@@ -37,7 +38,8 @@ class OnboardWearOsWatchUseCase @Inject constructor(
     ): WearOsOnboardOutcome {
         onStep?.invoke(WearOsOnboardStep.ASSOCIATING)
         val associated = try {
-            pairing.associateCompanion(device.address, displayName)
+            // The address may be the Classic bond's, found in the bonded list.
+            pairing.associateCompanion(device.address, displayName, CompanionFilter.BLE_OR_CLASSIC)
         } catch (_: Exception) {
             // The association is best-effort; the watch onboards regardless.
             false

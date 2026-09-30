@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // Identify the device manufacturer and instantiate the correct manager
         val manufacturer = Build.MANUFACTURER.lowercase()
         sensorManager = when {
@@ -46,13 +46,12 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // test for sensor permission
-        if (checkSelfPermission(Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.BODY_SENSORS), 1)
-        } else {
-            Log.d("TAG___", "ALREADY GRANTED")
-            sensorManager.startListening()
+        // Sensors, plus what the phone link needs. Each one starts its part once granted.
+        val missing = requiredPermissions().filter {
+            checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
         }
+        if (missing.isNotEmpty()) requestPermissions(missing.toTypedArray(), PERMISSIONS_REQUEST)
+        if (Manifest.permission.BODY_SENSORS !in missing) sensorManager.startListening()
 
         setContent {
             MaterialTheme {
@@ -78,9 +77,19 @@ class MainActivity : ComponentActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 1 && grantResults.getOrNull(0) == PackageManager.PERMISSION_GRANTED) {
-            sensorManager.startListening()
+        if (requestCode != PERMISSIONS_REQUEST) return
+        val granted = permissions.filterIndexed { index, _ ->
+            grantResults.getOrNull(index) == PackageManager.PERMISSION_GRANTED
         }
+        if (Manifest.permission.BODY_SENSORS in granted) sensorManager.startListening()
+        WearAppService.startIfPermitted(this)
+    }
+
+    private fun requiredPermissions(): List<String> = buildList {
+        add(Manifest.permission.BODY_SENSORS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) add(Manifest.permission.BLUETOOTH_CONNECT)
+        // The link's ongoing notification; the service runs without it, just unseen.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
     }
 
     override fun onPause() {
@@ -92,8 +101,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Also catches a grant made in the system settings.
+        WearAppService.startIfPermitted(this)
         if (::sensorManager.isInitialized && checkSelfPermission(Manifest.permission.BODY_SENSORS) == PackageManager.PERMISSION_GRANTED) {
             sensorManager.startListening()
         }
+    }
+
+    private companion object {
+        const val PERMISSIONS_REQUEST = 1
     }
 }

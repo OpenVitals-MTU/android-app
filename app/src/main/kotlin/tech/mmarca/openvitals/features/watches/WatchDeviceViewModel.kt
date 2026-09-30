@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
 import tech.mmarca.openvitals.devices.garmin.GarminAgpsImport
 import tech.mmarca.openvitals.devices.garmin.GarminAgpsKind
@@ -27,6 +29,8 @@ import tech.mmarca.openvitals.devices.garmin.GarminCapability
 import tech.mmarca.openvitals.devices.garmin.GarminDeviceStateStore
 import tech.mmarca.openvitals.devices.garmin.OnboardGarminWatchUseCase
 import tech.mmarca.openvitals.devices.wearos.OnboardWearOsWatchUseCase
+import tech.mmarca.openvitals.devices.wearos.WearOsCompanionManager
+import tech.mmarca.openvitals.devices.wearos.WearOsCompanionStatus
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.navigation.WATCH_DEVICE_ID_ARG
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
@@ -76,6 +80,13 @@ data class WatchDeviceUiState(
     val agps: GarminAgpsState = GarminAgpsState(),
     /** The result of the last ephemeris import, until the next one. */
     @StringRes val agpsMessage: Int? = null,
+    /** Wear OS connection and app responsiveness state. */
+    val wearOsStatus: WearOsCompanionStatus =
+        WearOsCompanionStatus(),
+    /** True while a Wear OS status check / ping is in flight. */
+    val isCheckingWearOsStatus: Boolean = false,
+    /** Why the last Wear OS check failed. [ScreenError.PermissionDenied] gets a grant affordance. */
+    val wearOsError: ScreenError? = null,
 ) {
     /** Whether the watch declared [capability]. Unknown means show: a never-synced watch has no list. */
     fun supports(capability: GarminCapability): Boolean =
@@ -111,6 +122,7 @@ class WatchDeviceViewModel @Inject constructor(
     private val garminLocalData: tech.mmarca.openvitals.devices.garmin.GarminLocalData,
     private val healthConnectManager: tech.mmarca.openvitals.healthconnect.HealthConnectManager,
     private val dispatchers: tech.mmarca.openvitals.core.performance.DispatcherProvider,
+    private val wearOsCompanionManager: WearOsCompanionManager,
 ) : ViewModel() {
 
     val deviceId: String = savedStateHandle.get<String>(WATCH_DEVICE_ID_ARG).orEmpty()
@@ -155,6 +167,20 @@ class WatchDeviceViewModel @Inject constructor(
         .combine(agpsStore.agps) { state, agps -> state.copy(agps = agps) }
         .stateInViewModel(initial = WatchDeviceUiState())
 
+    /** The first check runs once the device has loaded; later ones are by hand. */
+    private var wearOsAutoChecked = false
+
+    init {
+        viewModelScope.launch {
+            uiState.collect { state ->
+                if (!wearOsAutoChecked && state.device?.isWearosWatch == true) {
+                    wearOsAutoChecked = true
+                    checkWearOsStatus()
+                }
+            }
+        }
+    }
+
     /** Takes in an ephemeris file. Its contents say what it is; the message says why not. */
     fun importAgps(uri: android.net.Uri) {
         viewModelScope.launch {
@@ -175,6 +201,27 @@ class WatchDeviceViewModel @Inject constructor(
     fun forgetAgps(kind: GarminAgpsKind) {
         agpsStore.forget(kind)
         localState.update { it.copy(agpsMessage = null) }
+    }
+
+    /** Checks whether the Wear OS watch is paired and its OpenVitals app answers. */
+    fun checkWearOsStatus() {
+        val device = uiState.value.device ?: return
+        if (!device.isWearosWatch || localState.value.isCheckingWearOsStatus) return
+        localState.update { it.copy(isCheckingWearOsStatus = true) }
+        viewModelScope.launch {
+            try {
+                val status = wearOsCompanionManager.checkWearOsWatchStatus(
+                    targetAddress = device.address,
+                    targetName = device.bluetoothName,
+                )
+                localState.update { it.copy(wearOsStatus = status, wearOsError = null) }
+            } catch (e: Exception) {
+                val error = e.toScreenError(logTag = TAG, logMessage = "Wear OS status check failed")
+                localState.update { it.copy(wearOsError = error) }
+            } finally {
+                localState.update { it.copy(isCheckingWearOsStatus = false) }
+            }
+        }
     }
 
     /** Companion mode. The bridge owns the pref, presence observation and the held link together. */
@@ -364,3 +411,5 @@ class WatchDeviceViewModel @Inject constructor(
         return state.asStateFlow()
     }
 }
+
+private const val TAG = "WatchDeviceViewModel"

@@ -22,6 +22,8 @@ import tech.mmarca.openvitals.devices.garmin.GarminWatchSyncService
 import tech.mmarca.openvitals.devices.garmin.garminFileStore
 import tech.mmarca.openvitals.devices.media.AndroidPhoneMediaSource
 import tech.mmarca.openvitals.devices.media.PhoneMediaSource
+import tech.mmarca.openvitals.devices.wearos.BluetoothWearOsNodePort
+import tech.mmarca.openvitals.devices.wearos.WearOsNodePort
 
 /** Wiring for the `devices/` layer, kept apart so [AppModule] carries no watch knowledge. */
 @Module
@@ -43,6 +45,10 @@ abstract class DevicesModule {
     @Binds
     @Singleton
     abstract fun bindGarminRadio(impl: GarminGattRadio): GarminRadio
+
+    @Binds
+    @Singleton
+    abstract fun bindWearOsNodePort(impl: BluetoothWearOsNodePort): WearOsNodePort
 
     companion object {
 
