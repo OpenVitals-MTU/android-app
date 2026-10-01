@@ -119,6 +119,7 @@ import tech.mmarca.openvitals.domain.model.ActivityRecordingMarker
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.CoMapsNavigationState
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.domain.model.cyclingExercises
 import tech.mmarca.openvitals.features.activity.maps.OfflineRouteMapOrPreview
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardField
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingDashboardItem
@@ -252,7 +253,7 @@ internal fun recordingDashboardStats(
             label = stringResource(R.string.activity_entry_recording_speed),
         ),
         ActivityRecordingDashboardField.DISTANCE to RecordingDashboardStat(
-            value = unitFormatter.distance(state.distanceMeters),
+            value = unitFormatter.distance(state.liveDistanceMeters),
             label = stringResource(R.string.activity_entry_recording_distance),
         ),
         ActivityRecordingDashboardField.DURATION to RecordingDashboardStat(
@@ -264,11 +265,11 @@ internal fun recordingDashboardStats(
             label = stringResource(R.string.activity_entry_recording_moving_time),
         ),
         ActivityRecordingDashboardField.AVERAGE_SPEED to RecordingDashboardStat(
-            value = unitFormatter.averageSpeed(state.distanceMeters, totalTime.toMillis()),
+            value = unitFormatter.averageSpeed(state.liveDistanceMeters, totalTime.toMillis()),
             label = stringResource(R.string.activity_entry_recording_average_speed),
         ),
         ActivityRecordingDashboardField.AVERAGE_MOVING_SPEED to RecordingDashboardStat(
-            value = unitFormatter.averageSpeed(state.distanceMeters, movingTime.toMillis()),
+            value = unitFormatter.averageSpeed(state.liveDistanceMeters, movingTime.toMillis()),
             label = stringResource(R.string.activity_entry_recording_average_moving_speed),
         ),
         ActivityRecordingDashboardField.MAX_SPEED to RecordingDashboardStat(
@@ -296,9 +297,21 @@ internal fun availableRecordingDashboardFields(
     coMapsGuidance: Boolean = false,
 ): List<ActivityRecordingDashboardField> = buildList {
     if (state.recordingKind == ActivityRecordingKind.TIMED) {
+        // Bike sensors measure these without GPS.
+        val bikeSensorFields = state.exerciseType?.let { it in cyclingExercises } == true
         add(ActivityRecordingDashboardField.HEART_RATE)
+        if (bikeSensorFields) {
+            add(ActivityRecordingDashboardField.CADENCE)
+            add(ActivityRecordingDashboardField.SPEED)
+            add(ActivityRecordingDashboardField.DISTANCE)
+        }
         add(ActivityRecordingDashboardField.DURATION)
         add(ActivityRecordingDashboardField.MOVING_TIME)
+        if (bikeSensorFields) {
+            add(ActivityRecordingDashboardField.AVERAGE_SPEED)
+            add(ActivityRecordingDashboardField.AVERAGE_MOVING_SPEED)
+            add(ActivityRecordingDashboardField.MAX_SPEED)
+        }
         add(ActivityRecordingDashboardField.POWER)
     } else {
         add(ActivityRecordingDashboardField.HEART_RATE)

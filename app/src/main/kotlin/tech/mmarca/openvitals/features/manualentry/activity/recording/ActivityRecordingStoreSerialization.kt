@@ -45,6 +45,9 @@ internal fun SharedPreferences.restoreRecordingState(): ActivityRecordingState {
         manualLaps = getString(KeyManualLaps, null).orEmpty().decodeRecordingLaps(),
         markers = getString(KeyMarkers, null).orEmpty().decodeRecordingMarkers(),
         distanceMeters = getFloat(KeyDistanceMeters, 0f).toDouble(),
+        sensorDistanceMeters = getFloat(KeySensorDistanceMeters, MissingFloat)
+            .takeIf { it != MissingFloat }
+            ?.toDouble(),
         elevationGainedMeters = getFloat(KeyElevationMeters, 0f).toDouble(),
         elevationLostMeters = getFloat(KeyElevationLostMeters, 0f).toDouble(),
         barometerElevationGainedMeters = getFloat(KeyBarometerElevationGainedMeters, 0f).toDouble(),
@@ -108,6 +111,7 @@ internal fun SharedPreferences.storeRecordingMetadata(state: ActivityRecordingSt
         putString(KeyManualLaps, state.manualLaps.encodeRecordingLaps())
         putString(KeyMarkers, state.markers.encodeRecordingMarkers())
         putFloat(KeyDistanceMeters, state.distanceMeters.toFloat())
+        putFloat(KeySensorDistanceMeters, state.sensorDistanceMeters?.toFloat() ?: MissingFloat)
         putFloat(KeyElevationMeters, state.elevationGainedMeters.toFloat())
         putFloat(KeyElevationLostMeters, state.elevationLostMeters.toFloat())
         putFloat(KeyBarometerElevationGainedMeters, state.barometerElevationGainedMeters.toFloat())

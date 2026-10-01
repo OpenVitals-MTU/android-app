@@ -2,9 +2,15 @@ package tech.mmarca.openvitals.features.manualentry.activity.recording
 
 import android.content.pm.ServiceInfo
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import tech.mmarca.openvitals.domain.model.BleSensorCapability
+import tech.mmarca.openvitals.domain.model.sensorCapabilitiesForExercise
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityEntryType
 import tech.mmarca.openvitals.features.manualentry.activity.ActivityRepetitionUnit
+import tech.mmarca.openvitals.features.manualentry.activity.DefaultActivityEntryTypes
+import tech.mmarca.openvitals.features.manualentry.activity.supportsStepCounting
 
 /** The two decision tables of the recording service. They were private members with no test. */
 class ActivityRecordingServiceRulesTest {
@@ -99,6 +105,36 @@ class ActivityRecordingServiceRulesTest {
                 recordingForegroundServiceType(case.kind, case.countsSteps, case.ble, case.sdk),
             )
         }
+    }
+
+    @Test
+    fun `a stationary bike never turns on GPS and reads its sensors`() {
+        val bike = DefaultActivityEntryTypes.single { it.id == "stationary_bike" }
+
+        // No GPS switch and no pre-start fix on the setup screen.
+        assertFalse(bike.supportsGpsRoute)
+        assertEquals(ActivityRecordingKind.TIMED, bike.recordingKind())
+        ActivityRecordingStatus.entries.forEach { status ->
+            assertFalse("$status", recordingSensorPlan(status, bike.recordingKind(), bike).location)
+        }
+        val serviceType = recordingForegroundServiceType(bike.recordingKind(), countsSteps = false, hasBleDevices = true, sdkInt = 35)
+        assertEquals(0, serviceType and ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+        // Start never asks for location and passes no fix on.
+        assertEquals(
+            ActivityRecordingStartAction.StartRecording(initialFix = null, restSeconds = 0L, withoutGps = false),
+            activityRecordingStartAction(
+                supportsStepCounting = bike.supportsStepCounting,
+                hasActivityRecognitionPermission = false,
+                supportsGpsRoute = bike.supportsGpsRoute,
+                recordingWithoutGps = false,
+                hasPrecisePermission = false,
+                hrrTest = false,
+                recordingSensor = bike.recordingSensor,
+                latestPreciseFix = null,
+                restSecondsText = "",
+            ),
+        )
+        assertTrue(BleSensorCapability.CYCLING_SPEED_DISTANCE in sensorCapabilitiesForExercise(bike.exerciseType))
     }
 
     private data class Case(

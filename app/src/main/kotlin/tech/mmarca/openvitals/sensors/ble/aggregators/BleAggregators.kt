@@ -36,7 +36,7 @@ internal abstract class BleSampleAggregator<Input, Output>(
         return output
     }
 
-    fun reset() {
+    open fun reset() {
         previous = null
         output = null
         lastReceivedAt = null
@@ -92,11 +92,21 @@ internal class BleCyclingSpeedAggregator(
 ) : BleSampleAggregator<BleWheelData, Double>(
     staleOutput = 0.0,
 ) {
+    /** Metres the wheel turned since the first reading after a reset. Null before that reading. */
+    var distanceMeters: Double? = null
+        private set
+
     fun setWheelCircumferenceMeters(value: Double) {
         wheelCircumferenceMeters = value
     }
 
+    override fun reset() {
+        super.reset()
+        distanceMeters = null
+    }
+
     override fun computeValue(now: Instant, current: BleWheelData) {
+        if (distanceMeters == null) distanceMeters = 0.0
         val previous = previousValue() ?: return
         val timeDiffMs = BleUintUtils.diff(
             current.wheelRevolutionsTime.toLong(),
@@ -113,7 +123,16 @@ internal class BleCyclingSpeedAggregator(
             previous.wheelRevolutionsCount,
             BleUintUtils.UINT32_MAX,
         )
-        output = wheelCircumferenceMeters * wheelDiff / (timeDiffMs / 1000.0)
+        val speed = wheelCircumferenceMeters * wheelDiff / (timeDiffMs / 1000.0)
+        output = speed
+        // A corrupt count would add thousands of kilometres.
+        if (speed <= MaxPlausibleWheelSpeedMetersPerSecond) {
+            distanceMeters = (distanceMeters ?: 0.0) + wheelCircumferenceMeters * wheelDiff
+        }
+    }
+
+    private companion object {
+        const val MaxPlausibleWheelSpeedMetersPerSecond = 40.0
     }
 }
 

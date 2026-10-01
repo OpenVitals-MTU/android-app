@@ -1165,6 +1165,41 @@ class ActivityEntryViewModelTest {
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING, prefs.lastActivityExerciseType)
     }
 
+    @Test fun `a timed ride fills the review form with the wheel sensor distance`() = runTest {
+        val repo = activityRepo(canWrite = true)
+        val recorder = mockk<ActivityRecordingController>()
+        every { recorder.finishedRecording() } returns null
+        every { recorder.clearFinishedRecording() } just Runs
+        val start = Instant.parse("2026-05-26T08:30:00Z")
+        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
+        every { recorder.coMapsNavigation } returns
+            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
+        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
+        every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY,
+            recordingKind = ActivityRecordingKind.TIMED,
+            activityTypeId = "stationary_bike",
+            startTime = start,
+            endTime = start.plusSeconds(30 * 60),
+            points = emptyList(),
+            pauseIntervals = emptyList(),
+            distanceMeters = 12_340.0,
+            elevationGainedMeters = 0.0,
+        )
+        val vm = ActivityEntryViewModel(
+            repository = repo,
+            activityRecorder = recorder,
+            clock = Clock.fixed(start, ZoneId.of("UTC")),
+        )
+        advanceUntilIdle()
+
+        vm.finishGpsRecording(ActivityEntryUnits.uniform(UnitSystem.METRIC))
+        advanceUntilIdle()
+
+        assertEquals("stationary_bike", vm.uiState.value.selectedActivityType.id)
+        assertEquals("12.34", vm.uiState.value.distanceText)
+    }
+
     @Test fun `finished recording draft is restored by a new activity entry view model`() = runTest {
         val repo = activityRepo(canWrite = true)
         val draftStore = ActivityRecordingDraftStore()

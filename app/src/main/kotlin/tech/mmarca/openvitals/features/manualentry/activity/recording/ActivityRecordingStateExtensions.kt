@@ -5,11 +5,56 @@ import java.time.Duration
 import java.time.Instant
 import tech.mmarca.openvitals.domain.insights.RouteElevation
 import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
+import tech.mmarca.openvitals.domain.model.BleRecordingMetrics
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 
 /** Whether focus mode has a session to focus on: an idle or repetition session has none. */
 internal val ActivityRecordingState.canUseFocusMode: Boolean
     get() = isActive && recordingKind != ActivityRecordingKind.REPETITION
+
+/** The distance to show and save: the wheel sensor's once it reported, else the GPS one. */
+internal val ActivityRecordingState.liveDistanceMeters: Double
+    get() = sensorDistanceMeters ?: distanceMeters
+
+/**
+ * Takes in one sensor reading. [previousWheelMeters] is the wheel total read
+ * before it in this recording. Wheel distance and top speed count only while
+ * recording, so turns made during a pause are left out.
+ */
+internal fun ActivityRecordingState.withBleMetrics(
+    metrics: BleRecordingMetrics,
+    previousWheelMeters: Double?,
+): ActivityRecordingState {
+    val recording = status == ActivityRecordingStatus.RECORDING
+    val sensorSpeed = metrics.cyclingSpeedMetersPerSecond ?: metrics.runningSpeedMetersPerSecond
+    val wheelMeters = metrics.cyclingDistanceMeters
+    return copy(
+        currentHeartRateBpm = metrics.heartRateBpm,
+        currentCyclingCadenceRpm = metrics.cyclingCadenceRpm,
+        currentPowerWatts = metrics.powerWatts,
+        currentSensorSpeedMetersPerSecond = sensorSpeed,
+        currentRunningCadenceRpm = metrics.runningCadenceRpm,
+        bleHeartRateNoSignal = metrics.heartRateNoSignal && metrics.heartRateBpm == null,
+        bleDeviceStatuses = metrics.deviceStatuses.ifEmpty { bleDeviceStatuses },
+        sensorDistanceMeters = if (recording && wheelMeters != null) {
+            (sensorDistanceMeters ?: 0.0) + wheelDistanceGain(previousWheelMeters, wheelMeters)
+        } else {
+            sensorDistanceMeters
+        },
+        maxSpeedMetersPerSecond = if (recording && sensorSpeed != null && sensorSpeed <= MaxPlausibleSpeedMetersPerSecond) {
+            maxOf(maxSpeedMetersPerSecond, sensorSpeed)
+        } else {
+            maxSpeedMetersPerSecond
+        },
+    )
+}
+
+/** Metres gained since [previous]. A lower total means the sensor reconnected and started again at 0. */
+internal fun wheelDistanceGain(previous: Double?, current: Double): Double = when {
+    previous == null -> 0.0
+    current >= previous -> current - previous
+    else -> current
+}
 
 fun ActivityRecordingState.elapsedDuration(now: Instant = Instant.now()): Duration {
     val start = startTime ?: return Duration.ZERO

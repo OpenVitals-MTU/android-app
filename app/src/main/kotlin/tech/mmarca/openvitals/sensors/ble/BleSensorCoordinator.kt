@@ -491,6 +491,7 @@ class BleSensorCoordinator @Inject constructor(
             cyclingCadenceRpm = cadenceConnection?.cyclingCadenceAggregator?.current(now),
             powerWatts = powerConnection?.powerAggregator?.current(now),
             cyclingSpeedMetersPerSecond = speedConnection?.cyclingSpeedAggregator?.current(now),
+            cyclingDistanceMeters = speedConnection?.cyclingSpeedAggregator?.distanceMeters,
             runningSpeedMetersPerSecond = running?.first,
             runningCadenceRpm = running?.second,
             deviceStatuses = statuses,

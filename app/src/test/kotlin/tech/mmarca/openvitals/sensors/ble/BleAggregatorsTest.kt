@@ -52,6 +52,39 @@ class BleAggregatorsTest {
     }
 
     @Test
+    fun cyclingSpeedAggregator_addsWheelDistanceFromRevolutions() {
+        val aggregator = BleCyclingSpeedAggregator(wheelCircumferenceMeters = 2.1)
+        val t0 = Instant.parse("2024-01-01T12:00:00Z")
+        assertNull(aggregator.distanceMeters)
+        aggregator.add(t0, BleWheelData(wheelRevolutionsCount = 100, wheelRevolutionsTime = 0))
+        assertEquals(0.0, aggregator.distanceMeters!!, 1e-9)
+        aggregator.add(t0.plusSeconds(1), BleWheelData(wheelRevolutionsCount = 102, wheelRevolutionsTime = 1024))
+        // A stopped wheel adds nothing.
+        aggregator.add(t0.plusSeconds(2), BleWheelData(wheelRevolutionsCount = 102, wheelRevolutionsTime = 1024))
+        aggregator.add(t0.plusSeconds(3), BleWheelData(wheelRevolutionsCount = 105, wheelRevolutionsTime = 3072))
+        assertEquals(5 * 2.1, aggregator.distanceMeters!!, 1e-9)
+    }
+
+    @Test
+    fun cyclingSpeedAggregator_resetClearsWheelDistance() {
+        val aggregator = BleCyclingSpeedAggregator(wheelCircumferenceMeters = 2.1)
+        val t0 = Instant.parse("2024-01-01T12:00:00Z")
+        aggregator.add(t0, BleWheelData(wheelRevolutionsCount = 100, wheelRevolutionsTime = 0))
+        aggregator.add(t0.plusSeconds(1), BleWheelData(wheelRevolutionsCount = 102, wheelRevolutionsTime = 1024))
+        aggregator.reset()
+        assertNull(aggregator.distanceMeters)
+    }
+
+    @Test
+    fun cyclingSpeedAggregator_skipsAnImplausibleRevolutionJump() {
+        val aggregator = BleCyclingSpeedAggregator(wheelCircumferenceMeters = 2.1)
+        val t0 = Instant.parse("2024-01-01T12:00:00Z")
+        aggregator.add(t0, BleWheelData(wheelRevolutionsCount = 100, wheelRevolutionsTime = 0))
+        aggregator.add(t0.plusSeconds(1), BleWheelData(wheelRevolutionsCount = 100_000, wheelRevolutionsTime = 1024))
+        assertEquals(0.0, aggregator.distanceMeters!!, 1e-9)
+    }
+
+    @Test
     fun cyclingSpeedAggregator_returnsZeroWhenWheelStops() {
         val aggregator = BleCyclingSpeedAggregator(wheelCircumferenceMeters = 2.1)
         val t0 = Instant.parse("2024-01-01T12:00:00Z")

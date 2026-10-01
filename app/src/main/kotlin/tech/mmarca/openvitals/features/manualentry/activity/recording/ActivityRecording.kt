@@ -151,6 +151,8 @@ data class ActivityRecordingState(
     val markers: List<ActivityRecordingMarker> = emptyList(),
     val latestUiPoint: ExerciseRoutePoint? = null,
     val distanceMeters: Double = 0.0,
+    /** From a wheel sensor. Once set, it is the ride's distance instead of the GPS one. */
+    val sensorDistanceMeters: Double? = null,
     val elevationGainedMeters: Double = 0.0,
     val elevationLostMeters: Double = 0.0,
     val barometerElevationGainedMeters: Double = 0.0,
@@ -304,6 +306,8 @@ class ActivityRecordingController @Inject constructor(
     }
     private val _state = MutableStateFlow(recordingStore.restore())
     private var recordingGeneration = 0L
+    /** The wheel sensor's last total and the recording it was read in. */
+    private var wheelReading: Pair<Long, Double>? = null
     private var restCompletionJob: Job? = null
     private var planStepJob: Job? = null
     val state: StateFlow<ActivityRecordingState> = _state.asStateFlow()
@@ -863,16 +867,10 @@ class ActivityRecordingController @Inject constructor(
     }
 
     private fun acceptBleMetricsInternal(current: ActivityRecordingState, metrics: BleRecordingMetrics) {
-        val next = current.copy(
-            currentHeartRateBpm = metrics.heartRateBpm,
-            currentCyclingCadenceRpm = metrics.cyclingCadenceRpm,
-            currentPowerWatts = metrics.powerWatts,
-            currentSensorSpeedMetersPerSecond = metrics.cyclingSpeedMetersPerSecond
-                ?: metrics.runningSpeedMetersPerSecond,
-            currentRunningCadenceRpm = metrics.runningCadenceRpm,
-            bleHeartRateNoSignal = metrics.heartRateNoSignal && metrics.heartRateBpm == null,
-            bleDeviceStatuses = metrics.deviceStatuses.ifEmpty { current.bleDeviceStatuses },
-        )
+        // Tagged with the recording, so a new one never counts the wheel turns before its start.
+        val previousWheelMeters = wheelReading?.takeIf { it.first == recordingGeneration }?.second
+        wheelReading = metrics.cyclingDistanceMeters?.let { recordingGeneration to it }
+        val next = current.withBleMetrics(metrics, previousWheelMeters)
         // BLE sensors re-emit unchanged values; do not re-serialize for them.
         if (next == current) return
         updateAndPersist(next, throttlePersist = true)
@@ -1036,7 +1034,7 @@ class ActivityRecordingController @Inject constructor(
             routeBreakIndexes = routeBreakIndexes,
             manualLaps = closedManualLaps(end),
             markers = markers,
-            distanceMeters = distanceMeters,
+            distanceMeters = liveDistanceMeters,
             // The filtered figure the dashboard showed, not the raw running sum.
             elevationGainedMeters = displayElevationGainedMeters(),
             repetitionCount = repetitionCount,
@@ -1780,6 +1778,7 @@ internal const val KeyRouteBreakIndexes = "route_break_indexes"
 internal const val KeyManualLaps = "manual_laps"
 internal const val KeyMarkers = "markers"
 internal const val KeyDistanceMeters = "distance_meters"
+internal const val KeySensorDistanceMeters = "sensor_distance_meters"
 internal const val KeyElevationMeters = "elevation_meters"
 internal const val KeyElevationLostMeters = "elevation_lost_meters"
 internal const val KeyBarometerElevationGainedMeters = "barometer_elevation_gained_meters"

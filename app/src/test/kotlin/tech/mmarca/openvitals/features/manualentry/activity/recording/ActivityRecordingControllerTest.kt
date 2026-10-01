@@ -216,6 +216,26 @@ class ActivityRecordingControllerTest {
         verify { ble.stopRecording() }
     }
 
+    @Test fun `a timed ride counts wheel distance outside pauses and saves it`() {
+        val recorder = controller()
+        recorder.startRecording(stationaryBike, null)
+
+        // The first total is the baseline: turns before the start do not count.
+        recorder.acceptBleMetrics(BleRecordingMetrics(cyclingDistanceMeters = 50.0))
+        recorder.acceptBleMetrics(BleRecordingMetrics(cyclingDistanceMeters = 150.0))
+        recorder.pauseRecording()
+        recorder.acceptBleMetrics(BleRecordingMetrics(cyclingDistanceMeters = 180.0))
+        // A pause writes the state at once, so a killed process keeps the distance.
+        val restored = controller(bleSensorCoordinator = bleCoordinator())
+        assertEquals(100.0, restored.state.value.sensorDistanceMeters!!, 1e-3)
+
+        recorder.resumeRecording()
+        recorder.acceptBleMetrics(BleRecordingMetrics(cyclingDistanceMeters = 200.0))
+        assertEquals(120.0, recorder.state.value.sensorDistanceMeters!!, 1e-9)
+
+        assertEquals(120.0, recorder.finishRecording()!!.distanceMeters, 1e-9)
+    }
+
     /** The restore half. The controller re-subscribes to BLE metrics on construction but never calls `startRecording()` again. */
     @Test fun `a recording restored after process death comes up already recording`() {
         val first = controller()
