@@ -29,7 +29,11 @@ import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.data.repository.contract.SessionDistancePreferences
 import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.ExerciseRouteData
+import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.domain.model.ExerciseRouteStatus
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
@@ -273,6 +277,19 @@ class ActivityRepositoryGatingTest {
     }
 
     @Test
+    fun `loadWorkoutsWithMetrics takes the route distance only when the setting is on`() = runTest {
+        val hc = hc(granted = setOf(exercisePermission, distancePermission))
+
+        val on = ActivityRepositoryImpl(hc, sessionDistancePreferences = distancePreferences(preferRoute = true))
+            .loadWorkoutsWithMetrics(workoutStart, workoutEnd)
+        val off = ActivityRepositoryImpl(hc, sessionDistancePreferences = distancePreferences(preferRoute = false))
+            .loadWorkoutsWithMetrics(workoutStart, workoutEnd)
+
+        assertEquals(1_111.95, on.single().totalDistanceMeters!!, 0.1)
+        assertEquals(5000.0, off.single().totalDistanceMeters!!, 0.0)
+    }
+
+    @Test
     fun `loadWorkoutsWithMetrics skips the read entirely without the exercise permission`() = runTest {
         val hc = hc(granted = setOf(distancePermission, speedPermission))
 
@@ -405,8 +422,25 @@ class ActivityRepositoryGatingTest {
                     source = "provider",
                     totalDistanceMeters = if (includeDistance) 5000.0 else null,
                     averageSpeedMetersPerSecond = if (includeSpeed) 3.2 else null,
+                    route = ExerciseRouteData(
+                        status = ExerciseRouteStatus.DATA,
+                        points = listOf(routePoint(arg(0), longitude = 0.0), routePoint(arg(1), longitude = 0.01)),
+                    ),
                 ),
             )
         }
+    }
+
+    private fun routePoint(time: Instant, longitude: Double) = ExerciseRoutePoint(
+        time = time,
+        latitude = 0.0,
+        longitude = longitude,
+        altitudeMeters = null,
+        horizontalAccuracyMeters = null,
+        verticalAccuracyMeters = null,
+    )
+
+    private fun distancePreferences(preferRoute: Boolean) = object : SessionDistancePreferences {
+        override var preferRouteDistance = preferRoute
     }
 }

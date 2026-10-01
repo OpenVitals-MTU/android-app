@@ -36,6 +36,8 @@ import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
+import tech.mmarca.openvitals.data.repository.contract.SessionDistancePreferences
+import tech.mmarca.openvitals.domain.model.withRouteDistance
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.historyReadStart
 import java.time.Instant
@@ -52,6 +54,7 @@ class ActivityRepositoryImpl @Inject constructor(
     private val preferencesRepository: PreferencesRepository? = null,
     private val markerRepository: ActivityMarkerRepository? = null,
     private val coMapsNavigationRepository: CoMapsNavigationRepository? = null,
+    private val sessionDistancePreferences: SessionDistancePreferences? = null,
 ) : ActivityRepository {
 
     companion object {
@@ -318,8 +321,11 @@ class ActivityRepositoryImpl @Inject constructor(
             end = endInstant,
             includeDistance = readDistancePermission in granted,
             includeSpeed = readSpeedPermission in granted,
-        )
+        ).map { it.withPreferredDistance() }
     }
+
+    private fun ExerciseData.withPreferredDistance(): ExerciseData =
+        if (sessionDistancePreferences?.preferRouteDistance == true) withRouteDistance() else this
 
     override suspend fun loadWorkout(id: String): ExerciseData? {
         val granted = grantedPermissionsIfAvailable()
@@ -342,7 +348,7 @@ class ActivityRepositoryImpl @Inject constructor(
             includeStepsCadence = readStepsCadencePermission in granted,
             includeCyclingCadence = readCyclingCadencePermission in granted,
             includeHeartRate = readHeartRatePermission in granted,
-        )
+        )?.withPreferredDistance()
     }
 
     override suspend fun loadWorkoutForEdit(id: String): ExerciseData? {

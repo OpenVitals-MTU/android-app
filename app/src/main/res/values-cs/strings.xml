@@ -1796,6 +1796,8 @@
     <string name="settings_activity_recording_off">Vypnuto</string>
     <string name="settings_step_distance_title">Vzdálenost z kroků</string>
     <string name="settings_step_distance_body">Pro aplikace, které zaznamenávají kroky, ale ne vzdálenost: odhadne vzdálenost jako počet kroků krát délka vašeho kroku a uloží ji do Health Connect. Doplní se jen dny, které mají kroky a zároveň nemají vzdálenost z jiného zdroje.</string>
+    <string name="settings_route_distance_title">Vzdálenost z GPS tras</string>
+    <string name="settings_route_distance_body">Pro aplikace, které ukládají GPS trasu, ale vzdálenost odhadují z kroků: trénink s trasou převezme vzdálenost, tempo a rychlost z trasy. Tréninky bez trasy si ponechají zaznamenanou vzdálenost. Trasy z jiných aplikací vyžadují v Health Connect oprávnění Trasy cvičení.</string>
     <string name="settings_step_distance_stride_label">Délka kroku</string>
     <string name="settings_dashboard_sort_empty_title">Řadit prázdné dlaždice na konec</string>
     <string name="settings_dashboard_sort_empty_body">Mimo režim úprav se dlaždice bez nedávných dat přesunou za ty s daty. Vypněte, pokud chcete vždy zachovat přesné uspořádání.</string>

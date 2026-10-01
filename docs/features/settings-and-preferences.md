@@ -46,6 +46,7 @@ Metric-specific settings include:
 
 - Favorite or latest activity defaults used by activity entry and recording setup.
 - Split distance used by activity splits.
+- Distance from GPS routes, off by default: a workout with a route takes the route's length as its distance. See [Activity metrics](activity-metrics.md#workout-distance).
 - Activity recording preferences, including keep-screen-on.
 - Calorie data mode, including optional OpenVitals total-calorie calculation when Health Connect totals are missing.
 - Hydration goal, set with a stepper in the app's unit system.

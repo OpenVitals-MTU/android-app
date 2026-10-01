@@ -2268,6 +2268,8 @@
     <string name="settings_unit_quantity_blood_glucose">Veresuhkur</string>
     <string name="settings_step_distance_title">Vahemaa sammudest</string>
     <string name="settings_step_distance_body">Rakenduste jaoks, mis salvestavad samme, kuid mitte vahemaad: vahemaa hinnatakse sammude ja sinu sammu pikkuse korrutisena ning salvestatakse Health Connectisse. Täidetakse ainult päevad, kus on sammud, kuid pole vahemaad ühestki teisest allikast.</string>
+    <string name="settings_route_distance_title">Vahemaa GPS-marsruutidest</string>
+    <string name="settings_route_distance_body">Rakenduste jaoks, mis salvestavad GPS-marsruudi, kuid hindavad vahemaad sammude järgi: marsruudiga treening võtab vahemaa, tempo ja kiiruse marsruudilt. Marsruudita treeningud säilitavad salvestatud vahemaa. Teiste rakenduste marsruutide jaoks on Health Connectis vaja Treeningmarsruutide luba.</string>
     <string name="settings_step_distance_stride_label">Sammu pikkus</string>
     <string name="settings_dashboard_sort_empty_title">Järjesta tühjad paanid viimaseks</string>
     <string name="settings_dashboard_sort_empty_body">Väljaspool muutmisrežiimi liiguvad hiljutiste andmeteta paanid andmetega paanide taha. Lülita välja, et alati säilitada oma täpne paigutus.</string>

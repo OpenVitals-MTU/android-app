@@ -1675,6 +1675,8 @@
     <string name="settings_activity_recording_off">Desativado</string>
     <string name="settings_step_distance_title">Distância a partir dos passos</string>
     <string name="settings_step_distance_body">Para aplicações que registam passos mas não distância: estimar a distância como passos vezes o comprimento do passo e guardá-la no Health Connect. Só são preenchidos dias com passos e sem distância de qualquer outra fonte.</string>
+    <string name="settings_route_distance_title">Distância a partir de rotas GPS</string>
+    <string name="settings_route_distance_body">Para aplicações que guardam uma rota GPS mas estimam a distância a partir dos passos: um treino com rota obtém a distância, o ritmo e a velocidade da rota. Os treinos sem rota mantêm a distância registada. As rotas de outras aplicações precisam da permissão Rotas de exercício no Health Connect.</string>
     <string name="settings_step_distance_stride_label">Comprimento do passo</string>
     <string name="settings_dashboard_sort_empty_title">Ordenar mosaicos vazios no fim</string>
     <string name="settings_dashboard_sort_empty_body">Fora do modo de edição, os mosaicos sem dados recentes passam para trás dos que têm alguns. Desative para manter sempre a sua disposição exata.</string>

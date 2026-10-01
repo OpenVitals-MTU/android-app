@@ -223,6 +223,42 @@ class ActivityBackfillTest {
         assertEquals(95.0, result.averageCyclingCadenceRpm ?: 0.0, 0.001)
     }
 
+    // The Gadgetbridge case: a step-based estimate of about half the GPS distance.
+    @Test
+    fun `route distance replaces a recorded distance`() {
+        val workout = workout(
+            totalDistanceMeters = 500.0,
+            route = ExerciseRouteData(
+                status = ExerciseRouteStatus.DATA,
+                points = listOf(
+                    // Out of order on purpose: the route is summed in time order.
+                    routePoint(seconds = 60, latitude = 0.0, longitude = 0.01),
+                    routePoint(seconds = 0, latitude = 0.0, longitude = 0.0),
+                ),
+            ),
+        )
+
+        assertEquals(1_111.95, workout.withRouteDistance().totalDistanceMeters ?: 0.0, 0.1)
+    }
+
+    @Test
+    fun `route distance keeps the recorded distance without a readable route`() {
+        val points = listOf(
+            routePoint(seconds = 0, latitude = 0.0, longitude = 0.0),
+            routePoint(seconds = 60, latitude = 0.0, longitude = 0.01),
+        )
+        val routes = listOf(
+            ExerciseRouteData(),
+            ExerciseRouteData(status = ExerciseRouteStatus.CONSENT_REQUIRED),
+            ExerciseRouteData(status = ExerciseRouteStatus.DATA, points = points.take(1)),
+        )
+
+        routes.forEach { route ->
+            val result = workout(totalDistanceMeters = 500.0, route = route).withRouteDistance()
+            assertEquals(500.0, result.totalDistanceMeters ?: 0.0, 0.001)
+        }
+    }
+
     private fun workout(
         totalDistanceMeters: Double? = null,
         elevationGainedMeters: Double? = null,

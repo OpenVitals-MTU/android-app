@@ -2245,6 +2245,8 @@
     <string name="settings_unit_quantity_blood_glucose">Blutzucker</string>
     <string name="settings_step_distance_title">Distanz aus Schritten</string>
     <string name="settings_step_distance_body">Für Apps, die Schritte, aber keine Distanz aufzeichnen: Die Distanz wird als Schritte mal Schrittlänge geschätzt und in Health Connect gespeichert. Nur Tage mit Schritten und ohne Distanz aus einer anderen Quelle werden aufgefüllt.</string>
+    <string name="settings_route_distance_title">Distanz aus GPS-Routen</string>
+    <string name="settings_route_distance_body">Für Apps, die eine GPS-Route speichern, die Distanz aber aus Schritten schätzen: Ein Training mit Route übernimmt Distanz, Tempo und Geschwindigkeit aus der Route. Trainings ohne Route behalten ihre aufgezeichnete Distanz. Routen anderer Apps brauchen in Health Connect die Berechtigung Trainingsrouten.</string>
     <string name="settings_step_distance_stride_label">Schrittlänge</string>
     <string name="settings_dashboard_sort_empty_title">Leere Kacheln nach hinten sortieren</string>
     <string name="settings_dashboard_sort_empty_body">Außerhalb des Bearbeitungsmodus rücken Kacheln ohne aktuelle Daten hinter die mit Daten. Deaktivieren, um immer deine genaue Anordnung zu behalten.</string>

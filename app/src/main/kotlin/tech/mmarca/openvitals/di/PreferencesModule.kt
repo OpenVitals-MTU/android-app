@@ -7,6 +7,7 @@ import dagger.hilt.components.SingletonComponent
 import tech.mmarca.openvitals.data.repository.CyclePreferencesRepository
 import tech.mmarca.openvitals.data.repository.MedicalRecordsPreferencesRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.SessionDistancePreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivitySplitPreferences
 import tech.mmarca.openvitals.data.repository.contract.CyclePreferences
 import tech.mmarca.openvitals.data.repository.contract.MedicalRecordsPreferences
@@ -25,6 +26,7 @@ import tech.mmarca.openvitals.data.repository.contract.HydrationGoalPreferences
 import tech.mmarca.openvitals.data.repository.contract.MindfulnessTimerPreferences
 import tech.mmarca.openvitals.data.repository.contract.NutritionDisplayPreferences
 import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
+import tech.mmarca.openvitals.data.repository.contract.SessionDistancePreferences
 import tech.mmarca.openvitals.data.repository.contract.SleepWindowPreferences
 
 /**
@@ -97,4 +99,8 @@ abstract class PreferencesModule {
     /** Its own store, for the same reason. */
     @Binds
     abstract fun bindMedicalRecordsPreferences(impl: MedicalRecordsPreferencesRepository): MedicalRecordsPreferences
+
+    /** Its own store, for the same reason. */
+    @Binds
+    abstract fun bindSessionDistancePreferences(impl: SessionDistancePreferencesRepository): SessionDistancePreferences
 }

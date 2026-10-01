@@ -2404,6 +2404,8 @@
     <string name="settings_app_lock_body">Wymagaj odblokowania urządzenia, aby otworzyć OpenVitals.</string>
     <string name="settings_step_distance_title">Dystans z kroków</string>
     <string name="settings_step_distance_body">Dla aplikacji, które zapisują kroki, ale nie dystans: oszacuj dystans jako kroki razy długość Twojego kroku i zapisz go w Health Connect. Uzupełniane są tylko dni z krokami i bez dystansu z żadnego innego źródła.</string>
+    <string name="settings_route_distance_title">Dystans z tras GPS</string>
+    <string name="settings_route_distance_body">Dla aplikacji, które zapisują trasę GPS, ale szacują dystans z kroków: trening z trasą bierze dystans, tempo i prędkość z trasy. Treningi bez trasy zachowują zapisany dystans. Trasy z innych aplikacji wymagają uprawnienia Trasy ćwiczeń w Health Connect.</string>
     <string name="settings_csv_import_issue_multiple_timestamps">Tylko jedna kolumna może zawierać datę i godzinę.</string>
     <string name="settings_csv_import_issue_no_metric">Wybierz co najmniej jedną kolumnę do importu.</string>
     <string name="settings_csv_import_issue_duplicate_metric">Dwie kolumny są przypisane do tego samego pomiaru.</string>

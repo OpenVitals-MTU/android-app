@@ -1795,6 +1795,8 @@
     <string name="settings_activity_recording_off">关闭</string>
     <string name="settings_step_distance_title">由步数推算距离</string>
     <string name="settings_step_distance_body">对于记录步数但不记录距离的应用：将距离估算为步数乘以步长并保存到 Health Connect。仅填充有步数且无其他来源距离的天。</string>
+    <string name="settings_route_distance_title">由 GPS 路线计算距离</string>
+    <string name="settings_route_distance_body">适用于保存 GPS 路线但根据步数估算距离的应用：有路线的锻炼会根据路线计算距离、配速和速度。没有路线的锻炼保留记录的距离。读取其他应用的路线需要在 Health Connect 中授予“锻炼路线”权限。</string>
     <string name="settings_step_distance_stride_label">步长</string>
     <string name="settings_dashboard_sort_empty_title">空磁贴排到最后</string>
     <string name="settings_dashboard_sort_empty_body">编辑模式外，无近期数据的磁贴移到有数据磁贴的后面。关闭则始终保持你的精确排列。</string>

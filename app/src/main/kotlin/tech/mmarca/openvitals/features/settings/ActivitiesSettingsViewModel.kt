@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.core.geo.HgtTileKey
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
+import tech.mmarca.openvitals.data.repository.contract.SessionDistancePreferences
 import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.ActivitySplitDistance
@@ -39,6 +40,7 @@ data class ActivitiesSettingsUiState(
     val distanceUnitSystem: UnitSystem = UnitSystem.METRIC,
     val stepDistanceBackfillEnabled: Boolean = false,
     val strideLengthMeters: Double = StrideLength.defaultMeters,
+    val preferRouteDistance: Boolean = false,
     val activityRecordingPreferences: ActivityRecordingPreferences = ActivityRecordingPreferences(),
     val offlineMapPacks: List<OfflineMapPack> = emptyList(),
     val activeOfflineMapFormat: OfflineMapPackFormat? = null,
@@ -62,6 +64,7 @@ class ActivitiesSettingsViewModel @Inject constructor(
     private val offlineMapImportWorkController: OfflineMapImportWorkController,
     private val elevationTileRepository: ElevationTileRepository,
     private val coMapsNavigationRepository: CoMapsNavigationRepository,
+    private val sessionDistancePreferences: SessionDistancePreferences,
 ) : ViewModel() {
     companion object {
         private const val TAG = "ActivitiesSettingsViewModel"
@@ -89,6 +92,7 @@ class ActivitiesSettingsViewModel @Inject constructor(
                 ?: preferencesRepository.unitSystem,
             stepDistanceBackfillEnabled = preferencesRepository.stepDistanceBackfillEnabled,
             strideLengthMeters = preferencesRepository.strideLengthMeters,
+            preferRouteDistance = sessionDistancePreferences.preferRouteDistance,
             activityRecordingPreferences = preferencesRepository.activityRecordingPreferences(),
             elevationCorrectionEnabled = preferencesRepository.elevationCorrectionEnabled,
         )
@@ -179,6 +183,11 @@ class ActivitiesSettingsViewModel @Inject constructor(
                     )
                 }
         }
+    }
+
+    fun setPreferRouteDistance(enabled: Boolean) {
+        sessionDistancePreferences.preferRouteDistance = enabled
+        _uiState.value = _uiState.value.copy(preferRouteDistance = enabled)
     }
 
     fun setElevationCorrectionEnabled(enabled: Boolean) {

@@ -2241,6 +2241,8 @@
     <string name="settings_unit_quantity_blood_glucose">Glucosa en sangre</string>
     <string name="settings_step_distance_title">Distancia a partir de pasos</string>
     <string name="settings_step_distance_body">Para apps que registran pasos pero no distancia: estima la distancia como pasos por tu longitud de paso y la guarda en Health Connect. Solo se completan los días con pasos y sin distancia de ninguna otra fuente.</string>
+    <string name="settings_route_distance_title">Distancia a partir de rutas GPS</string>
+    <string name="settings_route_distance_body">Para apps que guardan una ruta GPS pero estiman la distancia a partir de pasos: un entrenamiento con ruta toma la distancia, el ritmo y la velocidad de la ruta. Los entrenamientos sin ruta conservan su distancia registrada. Las rutas de otras apps necesitan el permiso Rutas de ejercicio en Health Connect.</string>
     <string name="settings_step_distance_stride_label">Longitud de paso</string>
     <string name="settings_dashboard_sort_empty_title">Ordenar las tarjetas vacías al final</string>
     <string name="settings_dashboard_sort_empty_body">Fuera del modo de edición, las tarjetas sin datos recientes se colocan detrás de las que sí tienen. Desactívalo para mantener siempre tu orden exacto.</string>
