@@ -60,6 +60,41 @@ class BleDeviceRepositoryTest {
     }
 
     @Test
+    fun `a wheel circumference below the default survives storage unchanged`() {
+        newRepository().addDevice(
+            displayName = "Speed",
+            address = "AA:BB:CC:DD:EE:03",
+            bluetoothName = null,
+            capabilities = setOf(BleSensorCapability.CYCLING_SPEED_DISTANCE),
+            wheelCircumferenceMm = 2000,
+        )
+
+        assertEquals(2000, newRepository().devices.single().wheelCircumferenceMm)
+    }
+
+    @Test
+    fun `a wheel circumference outside the range is clamped to the nearest limit`() {
+        val repo = newRepository()
+        val tooSmall = repo.addDevice(
+            displayName = "Small",
+            address = "AA:BB:CC:DD:EE:03",
+            bluetoothName = null,
+            capabilities = setOf(BleSensorCapability.CYCLING_SPEED_DISTANCE),
+            wheelCircumferenceMm = 100,
+        )
+        val tooLarge = repo.addDevice(
+            displayName = "Large",
+            address = "AA:BB:CC:DD:EE:04",
+            bluetoothName = null,
+            capabilities = setOf(BleSensorCapability.CYCLING_CADENCE),
+            wheelCircumferenceMm = 9000,
+        )
+
+        assertEquals(BleSensorDevice.MinWheelCircumferenceMm, tooSmall.wheelCircumferenceMm)
+        assertEquals(BleSensorDevice.MaxWheelCircumferenceMm, tooLarge.wheelCircumferenceMm)
+    }
+
+    @Test
     fun `updateBatteryLevel stores a changed value`() {
         val repo = newRepository()
         val device = repo.addStrap()

@@ -1085,6 +1085,7 @@
     <string name="settings_sensors_select_capability">Wähle mindestens eine Funktion.</string>
     <string name="settings_sensors_no_live_data">Dieses Gerät sendet keine Live-Daten. Schalte auf einer Uhr die Herzfrequenzübertragung ein und suche erneut.</string>
     <string name="settings_sensors_wheel_circumference">Radumfang (mm)</string>
+    <string name="settings_sensors_wheel_circumference_hint">Gib eine ganze Zahl von %1$d bis %2$d ein.</string>
     <string name="activity_recording_sensors_title">Sensoren</string>
     <string name="activity_recording_sensors_add_in_settings">Sensoren in den Einstellungen hinzufügen</string>
     <string name="activity_recording_sensors_connected">Verbunden</string>

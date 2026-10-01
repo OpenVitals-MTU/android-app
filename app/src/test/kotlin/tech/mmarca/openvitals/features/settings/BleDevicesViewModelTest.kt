@@ -134,6 +134,75 @@ class BleDevicesViewModelTest {
         assertFalse(vm.uiState.value.showAddFlow)
     }
 
+    /** A speed sensor saved with the default circumference. */
+    private fun addSpeedSensor() = repo.addDevice(
+        displayName = "Speed",
+        address = "11:22:33:44:55:66",
+        bluetoothName = "Speed",
+        capabilities = setOf(BleSensorCapability.CYCLING_SPEED_DISTANCE),
+        wheelCircumferenceMm = 2100,
+    )
+
+    @Test
+    fun `editing keeps a circumference below the default exactly as typed`() = runTest {
+        // A user report: 2000 mm came back as 2100 mm, so the sensor could not be calibrated.
+        val device = addSpeedSensor()
+        val vm = viewModel()
+        vm.openEditDevice(device.id)
+
+        vm.updateEditWheelCircumference("2000")
+        vm.saveEditedDevice()
+
+        assertEquals(2000, repo.devices.single().wheelCircumferenceMm)
+        assertNull(vm.uiState.value.editingDeviceId)
+    }
+
+    @Test
+    fun `an unusable circumference blocks Save instead of being replaced`() = runTest {
+        val device = addSpeedSensor()
+        val vm = viewModel()
+        vm.openEditDevice(device.id)
+
+        vm.updateEditWheelCircumference("2.000")
+        vm.saveEditedDevice()
+
+        assertTrue(vm.uiState.value.wheelCircumferenceInvalid)
+        assertEquals(device.id, vm.uiState.value.editingDeviceId)
+        assertEquals(2100, repo.devices.single().wheelCircumferenceMm)
+
+        vm.updateEditWheelCircumference("2000")
+        assertFalse(vm.uiState.value.wheelCircumferenceInvalid)
+    }
+
+    @Test
+    fun `adding a speed sensor with an out-of-range circumference saves nothing`() = runTest {
+        discoverResult = setOf(BleSensorCapability.CYCLING_SPEED_DISTANCE)
+        val vm = viewModel()
+        vm.openAddFlow()
+        vm.selectDiscoveredDevice(
+            discovered(suggested = setOf(BleSensorCapability.CYCLING_SPEED_DISTANCE)),
+        )
+        vm.updateAddWheelCircumference("100")
+
+        vm.saveAddedDevice()
+
+        assertTrue(vm.uiState.value.wheelCircumferenceInvalid)
+        assertTrue(vm.uiState.value.showAddFlow)
+        assertTrue(repo.devices.isEmpty())
+    }
+
+    @Test
+    fun `parseWheelCircumferenceMm accepts whole numbers from 500 to 3000 only`() {
+        assertEquals(500, parseWheelCircumferenceMm("500"))
+        assertEquals(3000, parseWheelCircumferenceMm("3000"))
+        assertEquals(2000, parseWheelCircumferenceMm(" 2000 "))
+        assertNull(parseWheelCircumferenceMm("499"))
+        assertNull(parseWheelCircumferenceMm("3001"))
+        assertNull(parseWheelCircumferenceMm("2.000"))
+        assertNull(parseWheelCircumferenceMm("2000 mm"))
+        assertNull(parseWheelCircumferenceMm(""))
+    }
+
     @Test
     fun `non-speed sensors are saved without a wheel circumference`() = runTest {
         discoverResult = setOf(BleSensorCapability.HEART_RATE)

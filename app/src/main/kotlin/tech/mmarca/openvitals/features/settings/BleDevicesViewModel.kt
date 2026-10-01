@@ -39,6 +39,8 @@ data class BleDevicesUiState(
     val editCapabilities: Set<BleSensorCapability> = emptySet(),
     val editEnabled: Boolean = true,
     val editWheelCircumferenceMm: String = "",
+    /** Set when Save found the typed circumference unusable; cleared on the next edit. */
+    val wheelCircumferenceInvalid: Boolean = false,
     /** Resource id rather than text: this copy is translated like the rest. */
     @StringRes val errorMessage: Int? = null,
     val showAddFlow: Boolean = false,
@@ -46,6 +48,12 @@ data class BleDevicesUiState(
     val enabledDeviceCount: Int
         get() = devices.count { it.enabled }
 }
+
+/** The typed wheel circumference, or null unless it is a whole number of mm in the allowed range. */
+internal fun parseWheelCircumferenceMm(text: String): Int? =
+    text.trim().toIntOrNull()?.takeIf {
+        it in BleSensorDevice.MinWheelCircumferenceMm..BleSensorDevice.MaxWheelCircumferenceMm
+    }
 
 @HiltViewModel
 class BleDevicesViewModel @Inject constructor(
@@ -89,6 +97,7 @@ class BleDevicesViewModel @Inject constructor(
                 addDisplayName = "",
                 addCapabilities = emptySet(),
                 addWheelCircumferenceMm = BleSensorDevice.DefaultWheelCircumferenceMm.toString(),
+                wheelCircumferenceInvalid = false,
                 capabilityConflicts = emptyMap(),
                 errorMessage = null,
             )
@@ -103,6 +112,7 @@ class BleDevicesViewModel @Inject constructor(
                 selectedDevice = null,
                 discoveredCapabilities = emptySet(),
                 isDiscoveringCapabilities = false,
+                wheelCircumferenceInvalid = false,
                 errorMessage = null,
             )
         }
@@ -173,7 +183,7 @@ class BleDevicesViewModel @Inject constructor(
     }
 
     fun updateAddWheelCircumference(value: String) {
-        localState.update { it.copy(addWheelCircumferenceMm = value) }
+        localState.update { it.copy(addWheelCircumferenceMm = value, wheelCircumferenceInvalid = false) }
     }
 
     fun saveAddedDevice() {
@@ -193,8 +203,8 @@ class BleDevicesViewModel @Inject constructor(
             return
         }
         val wheelCircumference = if (BleSensorCapability.CYCLING_SPEED_DISTANCE in state.addCapabilities) {
-            state.addWheelCircumferenceMm.toIntOrNull()
-                ?: BleSensorDevice.DefaultWheelCircumferenceMm
+            parseWheelCircumferenceMm(state.addWheelCircumferenceMm)
+                ?: return flagWheelCircumference()
         } else {
             null
         }
@@ -220,6 +230,7 @@ class BleDevicesViewModel @Inject constructor(
                 editEnabled = device.enabled,
                 editWheelCircumferenceMm = device.wheelCircumferenceMm?.toString()
                     ?: BleSensorDevice.DefaultWheelCircumferenceMm.toString(),
+                wheelCircumferenceInvalid = false,
                 capabilityConflicts = deviceRepository.capabilityConflicts(device.capabilities, device.id),
                 errorMessage = null,
             )
@@ -231,6 +242,7 @@ class BleDevicesViewModel @Inject constructor(
             it.copy(
                 editingDeviceId = null,
                 capabilityConflicts = emptyMap(),
+                wheelCircumferenceInvalid = false,
                 errorMessage = null,
             )
         }
@@ -262,7 +274,7 @@ class BleDevicesViewModel @Inject constructor(
     }
 
     fun updateEditWheelCircumference(value: String) {
-        localState.update { it.copy(editWheelCircumferenceMm = value) }
+        localState.update { it.copy(editWheelCircumferenceMm = value, wheelCircumferenceInvalid = false) }
     }
 
     fun saveEditedDevice() {
@@ -273,8 +285,8 @@ class BleDevicesViewModel @Inject constructor(
             return
         }
         val wheelCircumference = if (BleSensorCapability.CYCLING_SPEED_DISTANCE in state.editCapabilities) {
-            state.editWheelCircumferenceMm.toIntOrNull()
-                ?: BleSensorDevice.DefaultWheelCircumferenceMm
+            parseWheelCircumferenceMm(state.editWheelCircumferenceMm)
+                ?: return flagWheelCircumference()
         } else {
             null
         }
@@ -297,6 +309,11 @@ class BleDevicesViewModel @Inject constructor(
 
     fun setDeviceEnabled(deviceId: String, enabled: Boolean) {
         deviceRepository.setDeviceEnabled(deviceId, enabled)
+    }
+
+    /** Keeps the dialog open so the user can fix the value; never swaps in another one. */
+    private fun flagWheelCircumference() {
+        localState.update { it.copy(wheelCircumferenceInvalid = true) }
     }
 
     override fun onCleared() {

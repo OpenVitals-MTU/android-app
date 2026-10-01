@@ -1237,6 +1237,7 @@
     <string name="settings_sensors_select_capability">请至少选择一项功能。</string>
     <string name="settings_sensors_no_live_data">此设备未广播任何实时数据。在手表上开启心率广播，然后重新扫描。</string>
     <string name="settings_sensors_wheel_circumference">轮径（毫米）</string>
+    <string name="settings_sensors_wheel_circumference_hint">请输入 %1$d 到 %2$d 之间的整数。</string>
     <string name="activity_recording_sensors_title">传感器</string>
     <string name="activity_recording_sensors_add_in_settings">在设置中添加传感器</string>
     <string name="activity_recording_sensors_connected">已连接</string>

@@ -1593,6 +1593,7 @@
     <string name="settings_sensors_select_capability">機能を 1 つ以上選択してください。</string>
     <string name="settings_sensors_no_live_data">このデバイスはライブデータを送信していません。ウォッチの場合は心拍のブロードキャストをオンにして、もう一度スキャンしてください。</string>
     <string name="settings_sensors_wheel_circumference">ホイール周長 (mm)</string>
+    <string name="settings_sensors_wheel_circumference_hint">%1$d〜%2$d の整数を入力してください。</string>
     <string name="activity_recording_sensors_title">センサー</string>
     <string name="activity_recording_sensors_add_in_settings">設定でセンサーを追加</string>
     <string name="activity_recording_sensors_connected">接続済み</string>
