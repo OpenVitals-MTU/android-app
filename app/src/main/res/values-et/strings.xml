@@ -1085,6 +1085,7 @@
     <string name="settings_sensors_select_capability">Vali vähemalt üks võimekus.</string>
     <string name="settings_sensors_no_live_data">See seade ei edasta ühtegi reaalajas näitu. Kellas lülita sisse pulsi edastamine ja otsi uuesti.</string>
     <string name="settings_sensors_wheel_circumference">Ratta ümbermõõt (mm)</string>
+    <string name="settings_sensors_wheel_circumference_hint">Sisesta täisarv vahemikus %1$d kuni %2$d.</string>
     <string name="activity_recording_sensors_title">Andurid</string>
     <string name="activity_recording_sensors_add_in_settings">Lisa andureid seadetes</string>
     <string name="activity_recording_sensors_connected">Ühendatud</string>

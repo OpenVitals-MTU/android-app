@@ -1562,6 +1562,7 @@
     <string name="settings_sensors_select_capability">Wybierz co najmniej jedną możliwość.</string>
     <string name="settings_sensors_no_live_data">To urządzenie nie nadaje żadnych danych na żywo. Na zegarku włącz nadawanie tętna i zeskanuj ponownie.</string>
     <string name="settings_sensors_wheel_circumference">Obwód koła (mm)</string>
+    <string name="settings_sensors_wheel_circumference_hint">Wpisz liczbę całkowitą od %1$d do %2$d.</string>
     <string name="activity_recording_sensors_title">Czujniki</string>
     <string name="activity_recording_sensors_add_in_settings">Dodaj czujniki w Ustawieniach</string>
     <string name="activity_recording_sensors_connected">Połączono</string>

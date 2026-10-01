@@ -107,7 +107,7 @@ data class BleSensorDevice(
         copy(
             displayName = displayName.trim().ifBlank { bluetoothName.orEmpty().ifBlank { address } },
             wheelCircumferenceMm = wheelCircumferenceMm?.coerceIn(
-                DefaultWheelCircumferenceMm,
+                MinWheelCircumferenceMm,
                 MaxWheelCircumferenceMm,
             ),
             batteryPercent = batteryPercent?.coerceIn(0, 100),
@@ -115,6 +115,9 @@ data class BleSensorDevice(
 
     companion object {
         const val DefaultWheelCircumferenceMm = 2_100
+
+        /** Below a 12-inch kids' wheel (about 940 mm), so users can calibrate small wheels. */
+        const val MinWheelCircumferenceMm = 500
         const val MaxWheelCircumferenceMm = 3_000
     }
 }

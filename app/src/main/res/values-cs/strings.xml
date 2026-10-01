@@ -1222,6 +1222,7 @@
     <string name="settings_sensors_select_capability">Vyberte alespoň jednu možnost.</string>
     <string name="settings_sensors_no_live_data">Toto zařízení nevysílá žádná živá data. U hodinek zapněte vysílání srdečního tepu a vyhledejte je znovu.</string>
     <string name="settings_sensors_wheel_circumference">Obvod kola (mm)</string>
+    <string name="settings_sensors_wheel_circumference_hint">Zadejte celé číslo od %1$d do %2$d.</string>
     <string name="activity_recording_sensors_title">Senzory</string>
     <string name="activity_recording_sensors_add_in_settings">Senzory přidáte v Nastavení</string>
     <string name="activity_recording_sensors_connected">Připojeno</string>

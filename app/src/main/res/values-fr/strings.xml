@@ -1230,6 +1230,7 @@
     <string name="settings_sensors_select_capability">Sélectionnez au moins une fonction.</string>
     <string name="settings_sensors_no_live_data">Cet appareil ne diffuse aucune donnée en direct. Sur une montre, activez la diffusion de la fréquence cardiaque, puis relancez la recherche.</string>
     <string name="settings_sensors_wheel_circumference">Circonférence de roue (mm)</string>
+    <string name="settings_sensors_wheel_circumference_hint">Saisissez un nombre entier entre %1$d et %2$d.</string>
     <string name="activity_recording_sensors_title">Capteurs</string>
     <string name="activity_recording_sensors_add_in_settings">Ajoutez des capteurs dans les Réglages</string>
     <string name="activity_recording_sensors_connected">Connecté</string>

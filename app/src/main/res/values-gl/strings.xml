@@ -1593,6 +1593,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_sensors_select_capability">Selecciona polo menos unha capacidade.</string>
     <string name="settings_sensors_no_live_data">Este dispositivo non está emitindo datos en directo. Nun reloxo, activa a emisión de frecuencia cardíaca e volve buscar.</string>
     <string name="settings_sensors_wheel_circumference">Circunferencia da roda (mm)</string>
+    <string name="settings_sensors_wheel_circumference_hint">Introduce un número enteiro entre %1$d e %2$d.</string>
     <string name="activity_recording_sensors_title">Sensores</string>
     <string name="activity_recording_sensors_add_in_settings">Engade sensores en Axustes</string>
     <string name="activity_recording_sensors_connected">Conectado</string>

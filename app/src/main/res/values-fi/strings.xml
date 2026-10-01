@@ -1590,6 +1590,7 @@
     <string name="settings_sensors_select_capability">Valitse vähintään yksi ominaisuus.</string>
     <string name="settings_sensors_no_live_data">Tämä laite ei lähetä reaaliaikaisia tietoja. Ota kellossa sykkeen lähetys käyttöön ja hae uudelleen.</string>
     <string name="settings_sensors_wheel_circumference">Renkaan ympärysmitta (mm)</string>
+    <string name="settings_sensors_wheel_circumference_hint">Anna kokonaisluku väliltä %1$d–%2$d.</string>
     <string name="activity_recording_sensors_title">Anturit</string>
     <string name="activity_recording_sensors_add_in_settings">Lisää antureita Asetuksissa</string>
     <string name="activity_recording_sensors_connected">Yhdistetty</string>

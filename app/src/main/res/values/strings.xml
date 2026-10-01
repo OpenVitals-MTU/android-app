@@ -1584,6 +1584,7 @@
     <string name="settings_sensors_select_capability">Select at least one capability.</string>
     <string name="settings_sensors_no_live_data">This device is not broadcasting any live data. On a watch, turn on heart rate broadcast, then scan again.</string>
     <string name="settings_sensors_wheel_circumference">Wheel circumference (mm)</string>
+    <string name="settings_sensors_wheel_circumference_hint">Enter a whole number from %1$d to %2$d.</string>
     <string name="activity_recording_sensors_title">Sensors</string>
     <string name="activity_recording_sensors_add_in_settings">Add sensors in Settings</string>
     <string name="activity_recording_sensors_connected">Connected</string>

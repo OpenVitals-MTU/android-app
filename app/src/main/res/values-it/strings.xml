@@ -1088,6 +1088,7 @@
     <string name="settings_sensors_select_capability">Seleziona almeno una funzione.</string>
     <string name="settings_sensors_no_live_data">Questo dispositivo non sta trasmettendo dati in tempo reale. Su un orologio, attiva la trasmissione della frequenza cardiaca e ripeti la ricerca.</string>
     <string name="settings_sensors_wheel_circumference">Circonferenza della ruota (mm)</string>
+    <string name="settings_sensors_wheel_circumference_hint">Inserisci un numero intero tra %1$d e %2$d.</string>
     <string name="activity_recording_sensors_title">Sensori</string>
     <string name="activity_recording_sensors_add_in_settings">Aggiungi sensori alle impostazioni</string>
     <string name="activity_recording_sensors_connected">Connesso</string>
