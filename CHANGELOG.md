@@ -1,5 +1,43 @@
 # Changelog
 
+## 2.11.2 - 2026-10-01
+
+### English
+
+- **Bike sensors without GPS.** A ride on a stationary bike, or a ride with GPS off, now shows cadence, speed, distance, average speed and max speed from your Bluetooth bike sensors. Before, these fields were hidden.
+- **Distance from the wheel sensor.** A wheel speed sensor now counts distance from wheel turns while you record. Pauses do not count, and a sensor that reconnects neither loses nor doubles the distance. Once the sensor reports, its distance and top speed are used instead of the GPS ones on the recording screen, the notification, voice announcements and the saved workout; GPS still draws the route. A ride without a route fills the review form with the sensor distance.
+- **Fixes:** outlined buttons draw their border; before, they looked like plain text.
+
+### Espanol
+
+- **Sensores de bicicleta sin GPS.** Una salida en bicicleta estatica, o con el GPS apagado, muestra ahora cadencia, velocidad, distancia, velocidad media y velocidad maxima de tus sensores Bluetooth de bicicleta. Antes estos campos estaban ocultos.
+- **Distancia del sensor de rueda.** Un sensor de velocidad de rueda cuenta ahora la distancia por las vueltas de la rueda mientras grabas. Las pausas no cuentan, y un sensor que se reconecta no la pierde ni la duplica. En cuanto el sensor envia datos, su distancia y su velocidad maxima se usan en lugar de las del GPS en la pantalla de grabacion, la notificacion, los avisos de voz y el entrenamiento guardado; el GPS sigue dibujando la ruta. Una salida sin ruta rellena el formulario de revision con la distancia del sensor.
+- **Correcciones:** los botones con contorno dibujan su borde; antes parecian texto sin mas.
+
+### Deutsch
+
+- **Radsensoren ohne GPS.** Eine Fahrt auf dem Heimtrainer oder mit ausgeschaltetem GPS zeigt jetzt Trittfrequenz, Geschwindigkeit, Distanz, Durchschnitts- und Hoechstgeschwindigkeit von deinen Bluetooth-Radsensoren. Bisher waren diese Felder ausgeblendet.
+- **Distanz vom Radsensor.** Ein Geschwindigkeitssensor am Rad zaehlt die Distanz jetzt ueber die Radumdrehungen, solange du aufzeichnest. Pausen zaehlen nicht, und ein Sensor, der sich neu verbindet, verliert oder verdoppelt nichts. Sobald der Sensor Daten sendet, gelten seine Distanz und Hoechstgeschwindigkeit statt der GPS-Werte: auf dem Aufzeichnungsbildschirm, in der Benachrichtigung, den Sprachansagen und im gespeicherten Training; GPS zeichnet weiter die Route. Eine Fahrt ohne Route fuellt das Pruefformular mit der Sensordistanz.
+- **Korrekturen:** umrandete Buttons zeichnen ihren Rahmen; bisher sahen sie aus wie reiner Text.
+
+### Italiano
+
+- **Sensori bici senza GPS.** Un'uscita in cyclette, o con il GPS spento, mostra ora cadenza, velocita, distanza, velocita media e velocita massima dai tuoi sensori Bluetooth per bici. Prima questi campi erano nascosti.
+- **Distanza dal sensore della ruota.** Un sensore di velocita sulla ruota ora conta la distanza dai giri della ruota mentre registri. Le pause non contano, e un sensore che si riconnette non la perde ne la raddoppia. Appena il sensore invia dati, la sua distanza e la sua velocita massima prendono il posto di quelle del GPS nella schermata di registrazione, nella notifica, negli annunci vocali e nell'allenamento salvato; il GPS disegna ancora il percorso. Un'uscita senza percorso compila il modulo di revisione con la distanza del sensore.
+- **Correzioni:** i pulsanti con contorno disegnano il loro bordo; prima sembravano semplice testo.
+
+### Eesti
+
+- **Rattaandurid ilma GPS-ita.** Soit velotrenazooril voi valja lulitatud GPS-iga naitab nuud sinu Bluetoothi rattaanduritelt sagedust, kiirust, vahemaad, keskmist kiirust ja maksimaalset kiirust. Varem olid need valjad peidetud.
+- **Vahemaa rattaandurilt.** Ratta kiirusandur loeb nuud salvestamise ajal vahemaad rattapoorete jargi. Pausid ei loe, ja uuesti uhenduv andur ei kaota ega kahekordista vahemaad. Kui andur saadab andmeid, kasutatakse GPS-i asemel selle vahemaad ja tippkiirust: salvestuskuval, teavituses, haalteadetes ja salvestatud treeningus; GPS joonistab endiselt marsruudi. Marsruudita soit taidab ulevaatusvormi anduri vahemaaga.
+- **Parandused:** aarisega nupud joonistavad oma aarise; varem nagid need valja nagu tavaline tekst.
+
+### Portugues
+
+- **Sensores de bicicleta sem GPS.** Uma volta em bicicleta estatica, ou com o GPS desligado, mostra agora cadencia, velocidade, distancia, velocidade media e velocidade maxima dos teus sensores Bluetooth de bicicleta. Antes, estes campos estavam ocultos.
+- **Distancia do sensor da roda.** Um sensor de velocidade na roda conta agora a distancia pelas voltas da roda enquanto gravas. As pausas nao contam, e um sensor que volta a ligar-se nao a perde nem a duplica. Assim que o sensor envia dados, a sua distancia e a sua velocidade maxima substituem as do GPS no ecra de gravacao, na notificacao, nos avisos de voz e no treino guardado; o GPS continua a desenhar o percurso. Uma volta sem percurso preenche o formulario de revisao com a distancia do sensor.
+- **Correcoes:** os botoes delineados mostram o seu contorno; antes pareciam texto simples.
+
 ## 2.11.1 - 2026-09-28
 
 ### English
