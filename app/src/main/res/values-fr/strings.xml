@@ -1796,6 +1796,8 @@
     <string name="settings_activity_recording_off">Désactivé</string>
     <string name="settings_step_distance_title">Distance à partir des pas</string>
     <string name="settings_step_distance_body">Pour les apps qui enregistrent les pas mais pas la distance : estimer la distance en multipliant les pas par la longueur de votre pas et l\'enregistrer dans Santé Connect. Seuls les jours avec des pas et sans distance d\'aucune autre source sont complétés.</string>
+    <string name="settings_route_distance_title">Distance à partir des itinéraires GPS</string>
+    <string name="settings_route_distance_body">Pour les apps qui enregistrent un itinéraire GPS mais estiment la distance à partir des pas : un entraînement avec itinéraire prend sa distance, son allure et sa vitesse de l\'itinéraire. Les entraînements sans itinéraire gardent leur distance enregistrée. Les itinéraires d\'autres apps nécessitent l\'autorisation Itinéraires d\'exercice dans Santé Connect.</string>
     <string name="settings_step_distance_stride_label">Longueur du pas</string>
     <string name="settings_dashboard_sort_empty_title">Tuiles vides en dernier</string>
     <string name="settings_dashboard_sort_empty_body">Hors du mode édition, les tuiles sans données récentes passent derrière celles qui en ont. Désactivez pour toujours conserver votre disposition exacte.</string>

@@ -2280,6 +2280,8 @@
     <string name="settings_unit_quantity_blood_glucose">Glucosio nel sangue</string>
     <string name="settings_step_distance_title">Distanza dai passi</string>
     <string name="settings_step_distance_body">Per le app che registrano i passi ma non la distanza: stima la distanza come passi per la lunghezza del passo e la salva in Health Connect. Vengono riempiti solo i giorni con passi e senza distanza da nessun\'altra fonte.</string>
+    <string name="settings_route_distance_title">Distanza dai percorsi GPS</string>
+    <string name="settings_route_distance_body">Per le app che salvano un percorso GPS ma stimano la distanza dai passi: un allenamento con percorso prende distanza, ritmo e velocità dal percorso. Gli allenamenti senza percorso mantengono la distanza registrata. I percorsi di altre app richiedono il permesso Percorsi di esercizio in Health Connect.</string>
     <string name="settings_step_distance_stride_label">Lunghezza del passo</string>
     <string name="settings_dashboard_sort_empty_title">Riquadri vuoti in fondo</string>
     <string name="settings_dashboard_sort_empty_body">Fuori dalla modalità di modifica, i riquadri senza dati recenti si spostano dietro quelli che ne hanno. Disattiva per mantenere sempre la tua disposizione esatta.</string>

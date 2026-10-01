@@ -58,6 +58,8 @@
     <string name="onboarding_hc_category_activity_desc">Lue ja tallenna:\n* Askeleet ja etäisyys\n* Toiminta\n* Poltetut kalorit\n* Kiivetyt kerrokset ja korkeus\n* Pyörätuolin työnnöt\n* Nopeus, teho ja kadenssi\n* VO2 max</string>
     <string name="settings_step_distance_title">Matka askeleista</string>
     <string name="settings_step_distance_body">Sovelluksille jotka tallentavat askeleet mutta eivät etäisyyttä: arvioi matka kaavalla askeleesi kertaa askelpituutesi ja tallenna se Health Connectiin. Vain päivät jotka sisältävät askelia mutta eivät etäisyyttä mistään muista lähteistä käyttävät tätä.</string>
+    <string name="settings_route_distance_title">Matka GPS-reiteistä</string>
+    <string name="settings_route_distance_body">Sovelluksille, jotka tallentavat GPS-reitin mutta arvioivat matkan askeleista: reitillinen treeni saa matkan, tahdin ja nopeuden reitiltä. Treenit ilman reittiä pitävät tallennetun matkansa. Muiden sovellusten reitit vaativat Health Connectissa Harjoitusreitit-luvan.</string>
     <string name="achievements_best_steps">Parhaat askeleet</string>
     <string name="achievements_category_daily_steps">Päivittäiset askeleet</string>
     <string name="achievements_daily_steps_requirement">%1$s askelta yhden päivän aikana</string>

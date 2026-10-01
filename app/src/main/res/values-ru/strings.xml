@@ -2092,6 +2092,8 @@
     <string name="settings_activity_recording_off">Выключено</string>
     <string name="settings_step_distance_title">Расстояние по шагам</string>
     <string name="settings_step_distance_body">Для приложений, которые записывают шаги, но не расстояние: оценивать расстояние как количество шагов, умноженное на длину шага, и сохранять его в Health Connect. Заполняются только дни, в которых есть шаги и отсутствует расстояние из других источников.</string>
+    <string name="settings_route_distance_title">Расстояние по GPS-маршрутам</string>
+    <string name="settings_route_distance_body">Для приложений, которые сохраняют GPS-маршрут, но оценивают расстояние по шагам: тренировка с маршрутом берёт расстояние, темп и скорость из маршрута. Тренировки без маршрута сохраняют записанное расстояние. Для маршрутов из других приложений нужно разрешение «Маршруты тренировок» в Health Connect.</string>
     <string name="settings_step_distance_stride_label">Длина шага</string>
     <string name="settings_dashboard_sort_empty_title">Перемещать пустые плитки в конец</string>
     <string name="settings_dashboard_sort_empty_body">Вне режима редактирования плитки без свежих данных перемещаются за плитки с данными. Выключите эту настройку, чтобы всегда сохранять точный порядок.</string>

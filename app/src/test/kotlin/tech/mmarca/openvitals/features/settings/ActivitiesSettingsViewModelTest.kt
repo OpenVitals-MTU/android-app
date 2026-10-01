@@ -22,12 +22,14 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.core.geo.HgtResolution
 import tech.mmarca.openvitals.core.geo.HgtTileKey
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.SessionDistancePreferences
 import tech.mmarca.openvitals.data.sync.StepDistanceBackfillService
 import tech.mmarca.openvitals.domain.preferences.ActivityRecordingPreferences
 import tech.mmarca.openvitals.domain.preferences.StrideLength
@@ -136,6 +138,19 @@ class ActivitiesSettingsViewModelTest {
         assertFalse(vm.uiState.value.elevationCorrectionEnabled)
     }
 
+    @Test fun `the route distance setting is read and written through its own store`() = runTest {
+        val distancePrefs = object : SessionDistancePreferences {
+            override var preferRouteDistance = true
+        }
+        val vm = viewModel(sessionDistancePreferences = distancePrefs)
+        assertTrue(vm.uiState.value.preferRouteDistance)
+
+        vm.setPreferRouteDistance(false)
+
+        assertFalse(distancePrefs.preferRouteDistance)
+        assertFalse(vm.uiState.value.preferRouteDistance)
+    }
+
     @Test fun `importing an elevation tile reports the result and clears the busy flag`() = runTest {
         val repository = elevationTileRepository()
         val tile = elevationTile()
@@ -207,6 +222,7 @@ class ActivitiesSettingsViewModelTest {
         offlineMapRepository: OfflineMapRepository = offlineMapRepository(),
         offlineMapImportWorkController: OfflineMapImportWorkController = offlineMapImportController(),
         elevationTileRepository: ElevationTileRepository = elevationTileRepository(),
+        sessionDistancePreferences: SessionDistancePreferences = mockk(relaxed = true),
     ): ActivitiesSettingsViewModel =
         ActivitiesSettingsViewModel(
             preferencesRepository = preferencesRepository,
@@ -215,6 +231,7 @@ class ActivitiesSettingsViewModelTest {
             offlineMapImportWorkController = offlineMapImportWorkController,
             elevationTileRepository = elevationTileRepository,
             coMapsNavigationRepository = mockk(relaxed = true),
+            sessionDistancePreferences = sessionDistancePreferences,
         )
 
     private fun prefs(): PreferencesRepository =

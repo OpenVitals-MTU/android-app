@@ -2151,6 +2151,8 @@
     <string name="settings_activity_recording_off">オフ</string>
     <string name="settings_step_distance_title">歩数から距離を算出</string>
     <string name="settings_step_distance_body">歩数は記録するが距離は記録しないアプリ向けに、歩数 × 歩幅で距離を推定して Health Connect に保存します。歩数があり、他のソースからの距離がない日のみ補完されます。</string>
+    <string name="settings_route_distance_title">GPS ルートから距離を算出</string>
+    <string name="settings_route_distance_body">GPS ルートを保存しながら距離を歩数から推定するアプリ向けです。ルートのあるワークアウトは、距離・ペース・速度をルートから求めます。ルートのないワークアウトは記録された距離のままです。他のアプリのルートには、Health Connect で「運動ルート」の権限が必要です。</string>
     <string name="settings_step_distance_stride_label">歩幅</string>
     <string name="settings_dashboard_sort_empty_title">空のタイルを後ろに並べる</string>
     <string name="settings_dashboard_sort_empty_body">編集モード以外では、最近のデータがないタイルはデータのあるタイルの後ろに移動します。オフにすると常に配置がそのまま保たれます。</string>

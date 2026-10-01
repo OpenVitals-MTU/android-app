@@ -490,6 +490,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 
 - Choose the favorite/default activity behavior used by activity entry.
 - Use the latest activity or a route-capable default activity type as the favorite activity source.
+- Take a workout's distance from its GPS route instead of the distance records, off by default. Pace and speed follow; workouts without a readable route keep their recorded distance.
 
 ### Calories Settings
 

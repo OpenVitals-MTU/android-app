@@ -20,6 +20,19 @@ internal fun ExerciseData.withRouteBackfilledMetrics(): ExerciseData {
     )
 }
 
+/**
+ * The route's length replaces the recorded distance, for apps that store an estimate
+ * next to a GPS route. Without a readable route, the workout is unchanged.
+ */
+internal fun ExerciseData.withRouteDistance(): ExerciseData {
+    val points = route.takeIf { it.status == ExerciseRouteStatus.DATA }?.points.orEmpty()
+    val routeMeters = points.sortedBy { it.time }
+        .zipWithNext { start, end -> start.distanceMetersTo(end) }
+        .sum()
+    if (!routeMeters.isFinite() || routeMeters < MinBackfillDistanceMeters) return this
+    return copy(totalDistanceMeters = routeMeters)
+}
+
 internal fun ExerciseData.withSampleBackfilledMetrics(
     heartRateSamples: List<HeartRateSample>,
     speedSamples: List<SpeedSample>,

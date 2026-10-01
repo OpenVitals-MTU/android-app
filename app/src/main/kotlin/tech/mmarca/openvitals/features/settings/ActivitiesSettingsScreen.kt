@@ -74,6 +74,14 @@ private fun LazyListScope.activitiesSettingsCards(
     }
     item { SettingsCardSpacer() }
     item {
+        RouteDistanceCard(
+            enabled = state.preferRouteDistance,
+            onEnabledChange = viewModel::setPreferRouteDistance,
+            modifier = Modifier.padding(horizontal = LayoutMetrics.screenGutter),
+        )
+    }
+    item { SettingsCardSpacer() }
+    item {
         ActivityRecordingPreferencesCard(
             preferences = state.activityRecordingPreferences,
             onChange = viewModel::updateActivityRecordingPreferences,

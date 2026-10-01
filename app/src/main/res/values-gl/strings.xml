@@ -2151,6 +2151,8 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_activity_recording_off">Desactivado</string>
     <string name="settings_step_distance_title">Distancia a partir dos pasos</string>
     <string name="settings_step_distance_body">Para apps que rexistran pasos pero non distancia: estima a distancia como pasos por lonxitude de paso e gárdaa en Health Connect. Só se completan os días con pasos e sen distancia doutra fonte.</string>
+    <string name="settings_route_distance_title">Distancia a partir de rutas GPS</string>
+    <string name="settings_route_distance_body">Para apps que gardan unha ruta GPS pero estiman a distancia a partir dos pasos: un adestramento con ruta toma a distancia, o ritmo e a velocidade da ruta. Os adestramentos sen ruta conservan a súa distancia rexistrada. As rutas doutras apps precisan o permiso Rutas de exercicio en Health Connect.</string>
     <string name="settings_step_distance_stride_label">Lonxitude do paso</string>
     <string name="settings_dashboard_sort_empty_title">Ordenar as tarxetas baleiras ao final</string>
     <string name="settings_dashboard_sort_empty_body">Fóra do modo de edición, as tarxetas sen datos recentes pasan detrás das que teñen algún. Desactívao para manter sempre a túa disposición exacta.</string>
