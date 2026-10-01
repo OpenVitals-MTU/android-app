@@ -113,6 +113,7 @@ androidx-test-espresso-core = { group = "androidx.test.espresso", name = "espres
 
 # Wear Compose (used only by :wear)
 androidx-wear-compose-material3 = { group = "androidx.wear.compose", name = "compose-material3", version.ref = "wear-compose" }
+androidx-wear-compose-navigation = { group = "androidx.wear.compose", name = "compose-navigation", version.ref = "wear-compose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -2,4 +2,40 @@
     <string name="app_name">OpenVitals Wear</string>
     <string name="link_channel_name">Phone link</string>
     <string name="link_notification_text">Reachable by OpenVitals on your phone</string>
+
+    <string name="metric_no_value">--</string>
+    <string name="metric_steps">Steps</string>
+    <string name="metric_heart_rate">Heart rate</string>
+    <string name="metric_distance">Distance</string>
+    <string name="metric_active_calories">Active calories</string>
+    <string name="unit_steps">steps</string>
+    <string name="unit_bpm">bpm</string>
+    <string name="unit_km">km</string>
+    <string name="unit_kcal">kcal</string>
+    <string name="steps_goal">of %1$s</string>
+
+    <string name="dashboard_today">Today</string>
+    <string name="dashboard_start_activity">Start activity</string>
+
+    <string name="heart_low">Low</string>
+    <string name="heart_high">High</string>
+
+    <string name="activity_walk">Walk</string>
+    <string name="activity_run">Run</string>
+    <string name="activity_cycle">Cycling</string>
+    <string name="activity_hike">Hike</string>
+    <string name="activity_workout">Workout</string>
+
+    <string name="recording_paused">Paused</string>
+    <string name="recording_pause">Pause</string>
+    <string name="recording_resume">Resume</string>
+    <string name="recording_stop">Stop</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_phone">Phone</string>
+    <string name="settings_phone_connected">Connected</string>
+    <string name="settings_phone_not_connected">Not connected</string>
+    <string name="settings_sensor_access">Sensor access</string>
+    <string name="settings_sensor_access_granted">Granted</string>
+    <string name="settings_sensor_access_missing">Not granted</string>
 </resources>
