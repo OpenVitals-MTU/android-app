@@ -11,6 +11,7 @@
     <string name="unit_steps">steps</string>
     <string name="unit_bpm">bpm</string>
     <string name="unit_km">km</string>
+    <string name="unit_mi">mi</string>
     <string name="unit_kcal">kcal</string>
     <string name="steps_goal">of %1$s</string>
 
@@ -38,4 +39,7 @@
     <string name="settings_sensor_access">Sensor access</string>
     <string name="settings_sensor_access_granted">Granted</string>
     <string name="settings_sensor_access_missing">Not granted</string>
+    <string name="settings_units">Units</string>
+    <string name="settings_units_metric">Metric</string>
+    <string name="settings_units_imperial">Imperial</string>
 </resources>

@@ -29,8 +29,10 @@ import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import tech.mmarca.openvitals.wear.R
 import tech.mmarca.openvitals.wear.RecordingUiState
+import tech.mmarca.openvitals.wear.UnitSystem
 import tech.mmarca.openvitals.wear.ui.components.MetricValueRow
-import tech.mmarca.openvitals.wear.ui.components.formatKilometers
+import tech.mmarca.openvitals.wear.ui.components.distanceUnitLabel
+import tech.mmarca.openvitals.wear.ui.components.formatDistance
 import tech.mmarca.openvitals.wear.ui.preview.SampleData
 import tech.mmarca.openvitals.wear.ui.preview.WearPreviews
 import tech.mmarca.openvitals.wear.ui.theme.Emphasis
@@ -41,6 +43,7 @@ import tech.mmarca.openvitals.wear.ui.theme.WorkoutColor
 @Composable
 fun RecordingScreen(
     state: RecordingUiState,
+    unitSystem: UnitSystem,
     onTogglePause: () -> Unit,
     onStop: () -> Unit,
 ) {
@@ -93,8 +96,8 @@ fun RecordingScreen(
                     )
                 }
                 MetricValueRow(
-                    value = state.distanceMeters?.let(::formatKilometers),
-                    unit = stringResource(R.string.unit_km),
+                    value = state.distanceMeters?.let { formatDistance(it, unitSystem) },
+                    unit = stringResource(distanceUnitLabel(unitSystem)),
                     valueStyle = MaterialTheme.typography.titleMedium,
                 )
             }
@@ -128,7 +131,7 @@ fun RecordingScreen(
 private fun RecordingScreenPreview() {
     OpenVitalsWearTheme {
         AppScaffold {
-            RecordingScreen(SampleData.recording, onTogglePause = {}, onStop = {})
+            RecordingScreen(SampleData.recording, UnitSystem.METRIC, onTogglePause = {}, onStop = {})
         }
     }
 }
@@ -138,7 +141,12 @@ private fun RecordingScreenPreview() {
 private fun RecordingScreenPausedPreview() {
     OpenVitalsWearTheme {
         AppScaffold {
-            RecordingScreen(SampleData.recording.copy(paused = true), onTogglePause = {}, onStop = {})
+            RecordingScreen(
+                SampleData.recording.copy(paused = true),
+                UnitSystem.METRIC,
+                onTogglePause = {},
+                onStop = {},
+            )
         }
     }
 }

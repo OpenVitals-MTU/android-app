@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Sensors
 import androidx.compose.material.icons.outlined.Smartphone
+import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -21,6 +22,7 @@ import androidx.wear.compose.material3.lazy.rememberTransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import tech.mmarca.openvitals.wear.R
 import tech.mmarca.openvitals.wear.SettingsUiState
+import tech.mmarca.openvitals.wear.UnitSystem
 import tech.mmarca.openvitals.wear.ui.preview.SampleData
 import tech.mmarca.openvitals.wear.ui.preview.WearPreviews
 import tech.mmarca.openvitals.wear.ui.theme.OpenVitalsWearTheme
@@ -28,8 +30,10 @@ import tech.mmarca.openvitals.wear.ui.theme.OpenVitalsWearTheme
 @Composable
 fun SettingsScreen(
     state: SettingsUiState,
+    unitSystem: UnitSystem,
     onPhoneClick: () -> Unit,
     onSensorAccessClick: () -> Unit,
+    onUnitsClick: () -> Unit,
 ) {
     val listState = rememberTransformingLazyColumnState()
     val transformationSpec = rememberTransformationSpec()
@@ -92,6 +96,29 @@ fun SettingsScreen(
                     transformation = SurfaceTransformation(transformationSpec),
                 )
             }
+            item {
+                // Shows the value the phone chose; the watch has no picker of its own.
+                Button(
+                    onClick = onUnitsClick,
+                    label = { Text(stringResource(R.string.settings_units)) },
+                    secondaryLabel = {
+                        Text(
+                            stringResource(
+                                when (unitSystem) {
+                                    UnitSystem.METRIC -> R.string.settings_units_metric
+                                    UnitSystem.IMPERIAL -> R.string.settings_units_imperial
+                                },
+                            ),
+                        )
+                    },
+                    icon = { Icon(Icons.Outlined.Straighten, contentDescription = null) },
+                    colors = ButtonDefaults.filledTonalButtonColors(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, transformationSpec),
+                    transformation = SurfaceTransformation(transformationSpec),
+                )
+            }
         }
     }
 }
@@ -101,7 +128,13 @@ fun SettingsScreen(
 private fun SettingsScreenPreview() {
     OpenVitalsWearTheme {
         AppScaffold {
-            SettingsScreen(SampleData.settings, onPhoneClick = {}, onSensorAccessClick = {})
+            SettingsScreen(
+                SampleData.settings,
+                UnitSystem.METRIC,
+                onPhoneClick = {},
+                onSensorAccessClick = {},
+                onUnitsClick = {},
+            )
         }
     }
 }

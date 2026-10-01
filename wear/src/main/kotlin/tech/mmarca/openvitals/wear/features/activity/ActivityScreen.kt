@@ -22,10 +22,12 @@ import androidx.wear.compose.material3.ProgressIndicatorDefaults
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import tech.mmarca.openvitals.wear.R
+import tech.mmarca.openvitals.wear.UnitSystem
 import tech.mmarca.openvitals.wear.VitalsUiState
 import tech.mmarca.openvitals.wear.ui.components.MetricValueRow
+import tech.mmarca.openvitals.wear.ui.components.distanceUnitLabel
 import tech.mmarca.openvitals.wear.ui.components.formatCount
-import tech.mmarca.openvitals.wear.ui.components.formatKilometers
+import tech.mmarca.openvitals.wear.ui.components.formatDistance
 import tech.mmarca.openvitals.wear.ui.preview.SampleData
 import tech.mmarca.openvitals.wear.ui.preview.WearPreviews
 import tech.mmarca.openvitals.wear.ui.theme.Emphasis
@@ -34,7 +36,7 @@ import tech.mmarca.openvitals.wear.ui.theme.StepsColor
 
 /** Today's movement: steps against the goal as a bezel ring, distance and calories below. */
 @Composable
-fun ActivityScreen(state: VitalsUiState) {
+fun ActivityScreen(state: VitalsUiState, unitSystem: UnitSystem) {
     val goalFraction = if (state.stepGoal > 0) {
         ((state.steps ?: 0) / state.stepGoal.toFloat()).coerceIn(0f, 1f)
     } else {
@@ -77,8 +79,8 @@ fun ActivityScreen(state: VitalsUiState) {
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     MetricValueRow(
-                        value = state.distanceMeters?.let(::formatKilometers),
-                        unit = stringResource(R.string.unit_km),
+                        value = state.distanceMeters?.let { formatDistance(it, unitSystem) },
+                        unit = stringResource(distanceUnitLabel(unitSystem)),
                         valueStyle = MaterialTheme.typography.titleMedium,
                     )
                     MetricValueRow(
@@ -97,7 +99,7 @@ fun ActivityScreen(state: VitalsUiState) {
 private fun ActivityScreenPreview() {
     OpenVitalsWearTheme {
         AppScaffold {
-            ActivityScreen(SampleData.vitals)
+            ActivityScreen(SampleData.vitals, UnitSystem.METRIC)
         }
     }
 }

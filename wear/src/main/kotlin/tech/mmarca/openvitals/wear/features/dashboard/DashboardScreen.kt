@@ -24,10 +24,12 @@ import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.rememberTransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
 import tech.mmarca.openvitals.wear.R
+import tech.mmarca.openvitals.wear.UnitSystem
 import tech.mmarca.openvitals.wear.VitalsUiState
 import tech.mmarca.openvitals.wear.ui.components.MetricTile
+import tech.mmarca.openvitals.wear.ui.components.distanceUnitLabel
 import tech.mmarca.openvitals.wear.ui.components.formatCount
-import tech.mmarca.openvitals.wear.ui.components.formatKilometers
+import tech.mmarca.openvitals.wear.ui.components.formatDistance
 import tech.mmarca.openvitals.wear.ui.preview.SampleData
 import tech.mmarca.openvitals.wear.ui.preview.WearPreviews
 import tech.mmarca.openvitals.wear.ui.theme.ActiveCaloriesColor
@@ -39,6 +41,7 @@ import tech.mmarca.openvitals.wear.ui.theme.StepsColor
 @Composable
 fun DashboardScreen(
     state: VitalsUiState,
+    unitSystem: UnitSystem,
     onOpenHeart: () -> Unit,
     onOpenActivity: () -> Unit,
     onStartActivity: () -> Unit,
@@ -98,8 +101,8 @@ fun DashboardScreen(
             item {
                 MetricTile(
                     title = stringResource(R.string.metric_distance),
-                    value = state.distanceMeters?.let(::formatKilometers),
-                    unit = stringResource(R.string.unit_km),
+                    value = state.distanceMeters?.let { formatDistance(it, unitSystem) },
+                    unit = stringResource(distanceUnitLabel(unitSystem)),
                     icon = Icons.Outlined.Straighten,
                     accentColor = DistanceColor,
                     onClick = onOpenActivity,
@@ -144,7 +147,7 @@ fun DashboardScreen(
 private fun DashboardScreenPreview() {
     OpenVitalsWearTheme {
         AppScaffold {
-            DashboardScreen(SampleData.vitals, {}, {}, {}, {})
+            DashboardScreen(SampleData.vitals, UnitSystem.METRIC, {}, {}, {}, {})
         }
     }
 }
@@ -154,7 +157,17 @@ private fun DashboardScreenPreview() {
 private fun DashboardScreenEmptyPreview() {
     OpenVitalsWearTheme {
         AppScaffold {
-            DashboardScreen(VitalsUiState(), {}, {}, {}, {})
+            DashboardScreen(VitalsUiState(), UnitSystem.METRIC, {}, {}, {}, {})
+        }
+    }
+}
+
+@WearPreviews
+@Composable
+private fun DashboardScreenImperialPreview() {
+    OpenVitalsWearTheme {
+        AppScaffold {
+            DashboardScreen(SampleData.vitals, UnitSystem.IMPERIAL, {}, {}, {}, {})
         }
     }
 }

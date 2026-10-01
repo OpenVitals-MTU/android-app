@@ -7,7 +7,23 @@ data class WearUiState(
     val vitals: VitalsUiState = VitalsUiState(),
     val recording: RecordingUiState = RecordingUiState(),
     val settings: SettingsUiState = SettingsUiState(),
+    val preferences: WearPreferences = WearPreferences(),
 )
+
+/**
+ * Display settings the watch does not own: the phone app is where they are
+ * chosen, and a later sync writes them here. Readings stay metric; only
+ * their display changes.
+ */
+data class WearPreferences(
+    val unitSystem: UnitSystem = UnitSystem.METRIC,
+)
+
+/** Same two values as the phone app's `UnitSystem`. */
+enum class UnitSystem {
+    METRIC,
+    IMPERIAL,
+}
 
 data class VitalsUiState(
     val heartRateBpm: Int? = null,

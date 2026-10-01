@@ -47,6 +47,7 @@ fun OpenVitalsWearApp(state: WearUiState) {
                 composable(Routes.DASHBOARD) {
                     DashboardScreen(
                         state = state.vitals,
+                        unitSystem = state.preferences.unitSystem,
                         onOpenHeart = { navController.navigate(Routes.HEART) },
                         onOpenActivity = { navController.navigate(Routes.ACTIVITY) },
                         onStartActivity = { navController.navigate(Routes.ACTIVITY_PICKER) },
@@ -57,7 +58,7 @@ fun OpenVitalsWearApp(state: WearUiState) {
                     HeartScreen(state = state.vitals)
                 }
                 composable(Routes.ACTIVITY) {
-                    ActivityScreen(state = state.vitals)
+                    ActivityScreen(state = state.vitals, unitSystem = state.preferences.unitSystem)
                 }
                 composable(Routes.ACTIVITY_PICKER) {
                     ActivityPickerScreen(
@@ -74,6 +75,7 @@ fun OpenVitalsWearApp(state: WearUiState) {
                 composable(Routes.RECORDING) {
                     RecordingScreen(
                         state = state.recording.copy(activityType = activityType, paused = paused),
+                        unitSystem = state.preferences.unitSystem,
                         onTogglePause = { paused = !paused },
                         onStop = { navController.popBackStack() },
                     )
@@ -81,8 +83,10 @@ fun OpenVitalsWearApp(state: WearUiState) {
                 composable(Routes.SETTINGS) {
                     SettingsScreen(
                         state = state.settings,
+                        unitSystem = state.preferences.unitSystem,
                         onPhoneClick = {},
                         onSensorAccessClick = {},
+                        onUnitsClick = {},
                     )
                 }
             }
