@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry.activity.recording
 
 import androidx.compose.ui.geometry.Offset
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import java.time.Duration
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -231,6 +232,24 @@ class ActivityRecordingDashboardTest {
         assertEquals(
             listOf(heartRate, duration, movingTime, power),
             availableRecordingDashboardFields(state),
+        )
+    }
+
+    @Test fun `availableRecordingDashboardFields a timed ride offers the bike sensor tiles`() {
+        val state = ActivityRecordingState(
+            recordingKind = ActivityRecordingKind.TIMED,
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY,
+        )
+        val fields = availableRecordingDashboardFields(state)
+        assertTrue(cadence in fields)
+        assertTrue(speed in fields)
+        assertTrue(distance in fields)
+        assertTrue(ActivityRecordingDashboardField.MAX_SPEED in fields)
+        assertFalse(ActivityRecordingDashboardField.ELEVATION_GAIN in fields)
+        // The default layout now keeps its speed, cadence and distance tiles.
+        assertEquals(
+            ActivityRecordingDashboardLayout.DefaultFields,
+            ActivityRecordingDashboardLayout().withAvailableFields(fields).fields,
         )
     }
 

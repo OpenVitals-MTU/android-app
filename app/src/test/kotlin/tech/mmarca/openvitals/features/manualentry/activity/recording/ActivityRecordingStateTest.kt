@@ -3,7 +3,9 @@ package tech.mmarca.openvitals.features.manualentry.activity.recording
 import java.time.Duration
 import java.time.Instant
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
+import tech.mmarca.openvitals.domain.model.BleRecordingMetrics
 
 class ActivityRecordingStateTest {
 
@@ -81,5 +83,45 @@ class ActivityRecordingStateTest {
         assertEquals(0.0, idleState.effectiveCurrentSpeedMetersPerSecond(start.plusSeconds(20)), 0.0)
         assertEquals(0.0, poorGpsState.effectiveCurrentSpeedMetersPerSecond(start.plusSeconds(21)), 0.0)
         assertEquals(6.0, idleState.effectiveCurrentSpeedMetersPerSecond(start.plusSeconds(5)), 0.0)
+    }
+
+    @Test fun `the wheel sensor distance wins over GPS once it reports`() {
+        val state = ActivityRecordingState(status = ActivityRecordingStatus.RECORDING, distanceMeters = 40.0)
+        assertEquals(40.0, state.liveDistanceMeters, 0.0)
+
+        val next = state.withBleMetrics(BleRecordingMetrics(cyclingDistanceMeters = 0.0), previousWheelMeters = null)
+        assertEquals(0.0, next.liveDistanceMeters, 0.0)
+    }
+
+    @Test fun `wheel distance adds up only while recording`() {
+        val recording = ActivityRecordingState(status = ActivityRecordingStatus.RECORDING, sensorDistanceMeters = 100.0)
+        val wheel = BleRecordingMetrics(cyclingDistanceMeters = 530.0)
+
+        assertEquals(130.0, recording.withBleMetrics(wheel, previousWheelMeters = 500.0).sensorDistanceMeters!!, 1e-9)
+        // The first reading of a recording sets the baseline.
+        assertEquals(100.0, recording.withBleMetrics(wheel, previousWheelMeters = null).sensorDistanceMeters!!, 1e-9)
+        val paused = recording.copy(status = ActivityRecordingStatus.PAUSED)
+        assertEquals(100.0, paused.withBleMetrics(wheel, previousWheelMeters = 500.0).sensorDistanceMeters!!, 1e-9)
+        // No sensor, no sensor distance: GPS keeps it.
+        val idle = ActivityRecordingState(status = ActivityRecordingStatus.RECORDING)
+        assertNull(idle.withBleMetrics(BleRecordingMetrics(), previousWheelMeters = null).sensorDistanceMeters)
+    }
+
+    @Test fun `wheel distance gain survives a sensor reconnect`() {
+        assertEquals(0.0, wheelDistanceGain(previous = null, current = 12.0), 0.0)
+        assertEquals(4.2, wheelDistanceGain(previous = 10.0, current = 14.2), 1e-9)
+        // The sensor total started again at 0.
+        assertEquals(6.3, wheelDistanceGain(previous = 1_200.0, current = 6.3), 1e-9)
+    }
+
+    @Test fun `the speed sensor sets the top speed while recording`() {
+        val state = ActivityRecordingState(status = ActivityRecordingStatus.RECORDING, maxSpeedMetersPerSecond = 8.0)
+
+        assertEquals(11.0, state.withBleMetrics(BleRecordingMetrics(cyclingSpeedMetersPerSecond = 11.0), null).maxSpeedMetersPerSecond, 0.0)
+        assertEquals(8.0, state.withBleMetrics(BleRecordingMetrics(cyclingSpeedMetersPerSecond = 6.0), null).maxSpeedMetersPerSecond, 0.0)
+        // A glitch reading is not a top speed.
+        assertEquals(8.0, state.withBleMetrics(BleRecordingMetrics(cyclingSpeedMetersPerSecond = 90.0), null).maxSpeedMetersPerSecond, 0.0)
+        val paused = state.copy(status = ActivityRecordingStatus.PAUSED)
+        assertEquals(8.0, paused.withBleMetrics(BleRecordingMetrics(cyclingSpeedMetersPerSecond = 11.0), null).maxSpeedMetersPerSecond, 0.0)
     }
 }

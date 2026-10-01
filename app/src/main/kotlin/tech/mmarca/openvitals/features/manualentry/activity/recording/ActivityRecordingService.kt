@@ -565,7 +565,7 @@ class ActivityRecordingService : Service() {
             }
         }
         val movingTime = formatNotificationElapsed(state.movingDuration(now))
-        val distance = unitFormatter.distance(state.distanceMeters).text
+        val distance = unitFormatter.distance(state.liveDistanceMeters).text
         val gpsStatus = getString(state.gpsStatusLabelRes(now))
         return when (state.status) {
             ActivityRecordingStatus.RECORDING -> getString(

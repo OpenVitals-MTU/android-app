@@ -193,7 +193,12 @@ internal fun ActivityRecordingState.withAcceptedLocation(
         elevationGainedMeters = elevationGainedMeters + elevationIncrement,
         elevationLostMeters = elevationLostMeters + elevationLossIncrement,
         currentSpeedMetersPerSecond = currentSpeedMetersPerSecond,
-        maxSpeedMetersPerSecond = maxOf(maxSpeedMetersPerSecond, currentSpeedMetersPerSecond),
+        // A speed sensor sets the top speed; GPS spikes would beat it.
+        maxSpeedMetersPerSecond = if (currentSensorSpeedMetersPerSecond != null) {
+            maxSpeedMetersPerSecond
+        } else {
+            maxOf(maxSpeedMetersPerSecond, currentSpeedMetersPerSecond)
+        },
         gpsStatus = ActivityGpsStatus.FIX,
         keepScreenOnDuringRecording = recordingPreferences.keepScreenOnDuringRecording,
         autoIdleEnabled = recordingPreferences.autoIdleEnabled,

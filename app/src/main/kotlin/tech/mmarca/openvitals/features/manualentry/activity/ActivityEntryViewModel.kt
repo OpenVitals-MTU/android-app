@@ -1219,7 +1219,7 @@ class ActivityEntryViewModel(
                 recordedCoMapsSamples = snapshot.coMapsNavigationSamples,
             )
         } else {
-            applyRecordingWithoutRoute(snapshot)
+            applyRecordingWithoutRoute(snapshot, units)
         }
         recordingDraftStore?.store(_uiState.value)
     }
@@ -1402,7 +1402,7 @@ class ActivityEntryViewModel(
         )
     }
 
-    private fun applyRecordingWithoutRoute(snapshot: ActivityRecordingSnapshot) {
+    private fun applyRecordingWithoutRoute(snapshot: ActivityRecordingSnapshot, units: ActivityEntryUnits) {
         val currentState = _uiState.value
         val start = snapshot.startTime.atZone(clock.zone)
         val durationMinutes = ceil(
@@ -1414,9 +1414,11 @@ class ActivityEntryViewModel(
             ?: DefaultActivityEntryTypes.firstOrNull { it.exerciseType == snapshot.exerciseType && !it.isRepetitionLike }
             ?: DefaultActivityEntryTypes.firstOrNull { it.exerciseType == snapshot.exerciseType }
             ?: currentState.selectedActivityType
+        // A wheel sensor measures distance without a position.
+        val sensorDistanceMeters = snapshot.distanceMeters.takeIf { it > 0.0 && selectedActivityType.supportsDistance }
         val calorieEstimate = activityCalorieEstimate(
             activityType = selectedActivityType,
-            distanceMeters = null,
+            distanceMeters = sensorDistanceMeters,
             durationMinutesText = durationMinutes.toString(),
         ).takeIf {
             currentState.activeCaloriesText.isBlank() && currentState.totalCaloriesText.isBlank()
@@ -1450,8 +1452,7 @@ class ActivityEntryViewModel(
             startDateText = DateTimeFormatter.ISO_LOCAL_DATE.format(start),
             startTimeText = TimeFormatter.format(start.toLocalTime()),
             durationMinutesText = durationMinutes.toString(),
-            // Distance is the one thing a GPS-less recording cannot know.
-            distanceText = "",
+            distanceText = sensorDistanceMeters?.toDistanceInputText(units.distance).orEmpty(),
             // Elevation came from the barometer, which never needed a position.
             elevationText = if (selectedActivityType.supportsElevation && snapshot.elevationGainedMeters > 0.0) {
                 elevationInputText(

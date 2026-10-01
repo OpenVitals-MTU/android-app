@@ -170,7 +170,7 @@ internal class ActivityRecordingAnnouncementTracker {
 
         preferences.voiceAnnouncementDistanceIntervalMeters?.let { meters ->
             if (meters > 0) {
-                val bucket = (state.distanceMeters / meters.toDouble()).toLong()
+                val bucket = (state.liveDistanceMeters / meters.toDouble()).toLong()
                 if (bucket > lastDistanceBucket) {
                     lastDistanceBucket = bucket
                     return state.summaryAnnouncement(now, context, unitFormatter)
@@ -195,8 +195,8 @@ private fun ActivityRecordingState.summaryAnnouncement(
     unitFormatter: UnitFormatter,
 ): String {
     val elapsed = formatRecordingElapsed(elapsedDuration(now))
-    val distance = unitFormatter.distance(distanceMeters).text
-    val averageSpeed = unitFormatter.averageSpeed(distanceMeters, movingDuration(now).toMillis()).text
+    val distance = unitFormatter.distance(liveDistanceMeters).text
+    val averageSpeed = unitFormatter.averageSpeed(liveDistanceMeters, movingDuration(now).toMillis()).text
     val lap = manualLaps.size + 1
     return context.getString(
         R.string.activity_recording_voice_summary,

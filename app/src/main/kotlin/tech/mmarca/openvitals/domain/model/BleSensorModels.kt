@@ -133,6 +133,8 @@ data class BleRecordingMetrics(
     val cyclingCadenceRpm: Long? = null,
     val powerWatts: Double? = null,
     val cyclingSpeedMetersPerSecond: Double? = null,
+    /** Wheel distance since the speed sensor connected. Starts again at 0 after a reconnect. */
+    val cyclingDistanceMeters: Double? = null,
     val runningSpeedMetersPerSecond: Double? = null,
     val runningCadenceRpm: Long? = null,
     val heartRateNoSignal: Boolean = false,
