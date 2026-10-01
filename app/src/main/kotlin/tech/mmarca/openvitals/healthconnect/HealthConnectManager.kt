@@ -7,6 +7,7 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.records.Record
 import dagger.hilt.android.qualifiers.ApplicationContext
+import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.performance.AppForegroundGate
 import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
@@ -93,6 +94,7 @@ class HealthConnectManager @Inject constructor(
         availabilityService = availabilityService,
         diagnostics = diagnostics,
         mindfulnessIntegrationEnabled = { mindfulnessGate.isEnabled },
+        medicalRecordsEnabled = BuildConfig.MEDICAL_RECORDS,
     )
     private val readerSupport = HealthConnectReaderSupport(
         clientProvider = ::client,
