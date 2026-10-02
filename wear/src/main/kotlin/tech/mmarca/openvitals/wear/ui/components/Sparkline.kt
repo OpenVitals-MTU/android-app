@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 /** A bare trend line: no axes, no labels. Draws nothing below two samples. */
 @Composable
 fun Sparkline(
-    samples: List<Int>,
+    samples: List<Double>,
     color: Color,
     modifier: Modifier = Modifier,
 ) {
@@ -24,13 +24,13 @@ fun Sparkline(
             val path = Path()
             if (samples.size >= 2) {
                 val min = samples.min()
-                val span = (samples.max() - min).coerceAtLeast(1).toFloat()
+                val span = (samples.max() - min).coerceAtLeast(1.0)
                 val stroke = 2.dp.toPx()
                 val drawableHeight = size.height - stroke
                 val stepX = size.width / (samples.size - 1)
                 samples.forEachIndexed { index, sample ->
                     val x = index * stepX
-                    val y = stroke / 2 + drawableHeight * (1f - (sample - min) / span)
+                    val y = stroke / 2 + drawableHeight * (1f - ((sample - min) / span).toFloat())
                     if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
                 }
             }

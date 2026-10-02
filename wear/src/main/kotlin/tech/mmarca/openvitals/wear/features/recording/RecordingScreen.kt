@@ -30,9 +30,10 @@ import androidx.wear.compose.material3.Text
 import tech.mmarca.openvitals.wear.R
 import tech.mmarca.openvitals.wear.RecordingUiState
 import tech.mmarca.openvitals.wear.UnitSystem
+import tech.mmarca.openvitals.wear.WearMetric
 import tech.mmarca.openvitals.wear.ui.components.MetricValueRow
-import tech.mmarca.openvitals.wear.ui.components.distanceUnitLabel
-import tech.mmarca.openvitals.wear.ui.components.formatDistance
+import tech.mmarca.openvitals.wear.ui.components.formatMetricValue
+import tech.mmarca.openvitals.wear.ui.components.metricUnitLabel
 import tech.mmarca.openvitals.wear.ui.preview.SampleData
 import tech.mmarca.openvitals.wear.ui.preview.WearPreviews
 import tech.mmarca.openvitals.wear.ui.theme.Emphasis
@@ -96,8 +97,10 @@ fun RecordingScreen(
                     )
                 }
                 MetricValueRow(
-                    value = state.distanceMeters?.let { formatDistance(it, unitSystem) },
-                    unit = stringResource(distanceUnitLabel(unitSystem)),
+                    value = state.distanceMeters?.let {
+                        formatMetricValue(WearMetric.DISTANCE, it.toDouble(), unitSystem)
+                    },
+                    unit = stringResource(metricUnitLabel(WearMetric.DISTANCE, unitSystem)),
                     valueStyle = MaterialTheme.typography.titleMedium,
                 )
             }

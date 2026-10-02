@@ -8,18 +8,36 @@
     <string name="metric_heart_rate">Heart rate</string>
     <string name="metric_distance">Distance</string>
     <string name="metric_active_calories">Active calories</string>
+    <string name="metric_floors">Floors</string>
+    <string name="metric_elevation">Elevation gained</string>
+    <string name="metric_blood_oxygen">Blood oxygen</string>
     <string name="unit_steps">steps</string>
     <string name="unit_bpm">bpm</string>
     <string name="unit_km">km</string>
     <string name="unit_mi">mi</string>
     <string name="unit_kcal">kcal</string>
-    <string name="steps_goal">of %1$s</string>
+    <string name="unit_floors">floors</string>
+    <string name="unit_m">m</string>
+    <string name="unit_ft">ft</string>
+    <string name="unit_percent">%</string>
+    <string name="metric_goal">of %1$s</string>
 
     <string name="dashboard_today">Today</string>
     <string name="dashboard_start_activity">Start activity</string>
 
-    <string name="heart_low">Low</string>
-    <string name="heart_high">High</string>
+    <string name="tiles_edit">Edit tiles</string>
+    <string name="tiles_title">Tiles</string>
+    <string name="tiles_sensor_hint">Only metrics this watch can measure are listed.</string>
+
+    <string name="detail_today">Today</string>
+    <string name="detail_week">Last 7 days</string>
+    <string name="detail_no_data">No data yet</string>
+    <string name="stat_low">Low</string>
+    <string name="stat_average">Average</string>
+    <string name="stat_high">High</string>
+    <string name="stat_remaining">To goal</string>
+    <string name="stat_daily_average">Daily average</string>
+    <string name="stat_best_day">Best day</string>
 
     <string name="activity_walk">Walk</string>
     <string name="activity_run">Run</string>

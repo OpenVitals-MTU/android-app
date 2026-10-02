@@ -4,10 +4,28 @@ import tech.mmarca.openvitals.wear.features.recording.ActivityType
 
 /** Everything the screens render. A null value means "no reading yet". */
 data class WearUiState(
-    val vitals: VitalsUiState = VitalsUiState(),
+    /**
+     * The metrics this watch has a sensor for. Only these are offered as
+     * tiles. Every metric until sensor discovery narrows it.
+     */
+    val availableMetrics: Set<WearMetric> = WearMetric.entries.toSet(),
+    /** A metric without an entry renders as "no reading yet". */
+    val metrics: Map<WearMetric, MetricUiState> = emptyMap(),
     val recording: RecordingUiState = RecordingUiState(),
     val settings: SettingsUiState = SettingsUiState(),
     val preferences: WearPreferences = WearPreferences(),
+)
+
+/** One metric's readings, in the base unit documented on [WearMetric]. */
+data class MetricUiState(
+    /** Today's total for a cumulative metric, the latest sample otherwise. */
+    val current: Double? = null,
+    /** A daily goal. Only meaningful for a cumulative metric. */
+    val goal: Double? = null,
+    /** Today, oldest first: hourly totals for a cumulative metric, samples otherwise. */
+    val today: List<Double> = emptyList(),
+    /** The last days, oldest first, today last: daily totals or daily averages. */
+    val week: List<Double> = emptyList(),
 )
 
 /**
@@ -24,16 +42,6 @@ enum class UnitSystem {
     METRIC,
     IMPERIAL,
 }
-
-data class VitalsUiState(
-    val heartRateBpm: Int? = null,
-    /** Recent heart-rate readings, oldest first. */
-    val heartRateSamples: List<Int> = emptyList(),
-    val steps: Int? = null,
-    val stepGoal: Int = 10_000,
-    val distanceMeters: Int? = null,
-    val activeCalories: Int? = null,
-)
 
 data class RecordingUiState(
     val activityType: ActivityType = ActivityType.WALK,

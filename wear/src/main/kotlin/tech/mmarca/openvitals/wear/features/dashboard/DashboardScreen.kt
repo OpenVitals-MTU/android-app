@@ -2,15 +2,13 @@ package tech.mmarca.openvitals.wear.features.dashboard
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.DirectionsWalk
-import androidx.compose.material.icons.outlined.Favorite
-import androidx.compose.material.icons.outlined.LocalFireDepartment
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Straighten
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.Button
@@ -23,27 +21,25 @@ import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.rememberTransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
+import tech.mmarca.openvitals.wear.MetricUiState
 import tech.mmarca.openvitals.wear.R
 import tech.mmarca.openvitals.wear.UnitSystem
-import tech.mmarca.openvitals.wear.VitalsUiState
+import tech.mmarca.openvitals.wear.WearMetric
 import tech.mmarca.openvitals.wear.ui.components.MetricTile
-import tech.mmarca.openvitals.wear.ui.components.distanceUnitLabel
-import tech.mmarca.openvitals.wear.ui.components.formatCount
-import tech.mmarca.openvitals.wear.ui.components.formatDistance
+import tech.mmarca.openvitals.wear.ui.components.formatMetricValue
+import tech.mmarca.openvitals.wear.ui.components.metricUnitLabel
 import tech.mmarca.openvitals.wear.ui.preview.SampleData
 import tech.mmarca.openvitals.wear.ui.preview.WearPreviews
-import tech.mmarca.openvitals.wear.ui.theme.ActiveCaloriesColor
-import tech.mmarca.openvitals.wear.ui.theme.DistanceColor
-import tech.mmarca.openvitals.wear.ui.theme.HeartColor
 import tech.mmarca.openvitals.wear.ui.theme.OpenVitalsWearTheme
-import tech.mmarca.openvitals.wear.ui.theme.StepsColor
 
+/** [tiles] is what the user chose to see, in their order. */
 @Composable
 fun DashboardScreen(
-    state: VitalsUiState,
+    tiles: List<WearMetric>,
+    metrics: Map<WearMetric, MetricUiState>,
     unitSystem: UnitSystem,
-    onOpenHeart: () -> Unit,
-    onOpenActivity: () -> Unit,
+    onOpenMetric: (WearMetric) -> Unit,
+    onEditTiles: () -> Unit,
     onStartActivity: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
@@ -69,15 +65,18 @@ fun DashboardScreen(
                     Text(stringResource(R.string.dashboard_today))
                 }
             }
-            item {
+            items(tiles, key = { it.name }) { metric ->
+                val state = metrics[metric]
                 MetricTile(
-                    title = stringResource(R.string.metric_steps),
-                    value = state.steps?.let(::formatCount),
-                    unit = stringResource(R.string.unit_steps),
-                    subtitle = stringResource(R.string.steps_goal, formatCount(state.stepGoal)),
-                    icon = Icons.AutoMirrored.Outlined.DirectionsWalk,
-                    accentColor = StepsColor,
-                    onClick = onOpenActivity,
+                    title = stringResource(metric.label),
+                    value = state?.current?.let { formatMetricValue(metric, it, unitSystem) },
+                    unit = stringResource(metricUnitLabel(metric, unitSystem)),
+                    subtitle = state?.goal?.let {
+                        stringResource(R.string.metric_goal, formatMetricValue(metric, it, unitSystem))
+                    },
+                    icon = metric.icon,
+                    accentColor = metric.accentColor,
+                    onClick = { onOpenMetric(metric) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .transformedHeight(this, transformationSpec),
@@ -85,41 +84,11 @@ fun DashboardScreen(
                 )
             }
             item {
-                MetricTile(
-                    title = stringResource(R.string.metric_heart_rate),
-                    value = state.heartRateBpm?.toString(),
-                    unit = stringResource(R.string.unit_bpm),
-                    icon = Icons.Outlined.Favorite,
-                    accentColor = HeartColor,
-                    onClick = onOpenHeart,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, transformationSpec),
-                    transformation = SurfaceTransformation(transformationSpec),
-                )
-            }
-            item {
-                MetricTile(
-                    title = stringResource(R.string.metric_distance),
-                    value = state.distanceMeters?.let { formatDistance(it, unitSystem) },
-                    unit = stringResource(distanceUnitLabel(unitSystem)),
-                    icon = Icons.Outlined.Straighten,
-                    accentColor = DistanceColor,
-                    onClick = onOpenActivity,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, transformationSpec),
-                    transformation = SurfaceTransformation(transformationSpec),
-                )
-            }
-            item {
-                MetricTile(
-                    title = stringResource(R.string.metric_active_calories),
-                    value = state.activeCalories?.let(::formatCount),
-                    unit = stringResource(R.string.unit_kcal),
-                    icon = Icons.Outlined.LocalFireDepartment,
-                    accentColor = ActiveCaloriesColor,
-                    onClick = onOpenActivity,
+                Button(
+                    onClick = onEditTiles,
+                    label = { Text(stringResource(R.string.tiles_edit)) },
+                    icon = { Icon(Icons.Outlined.Edit, contentDescription = null) },
+                    colors = ButtonDefaults.filledTonalButtonColors(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .transformedHeight(this, transformationSpec),
@@ -147,7 +116,7 @@ fun DashboardScreen(
 private fun DashboardScreenPreview() {
     OpenVitalsWearTheme {
         AppScaffold {
-            DashboardScreen(SampleData.vitals, UnitSystem.METRIC, {}, {}, {}, {})
+            DashboardScreen(WearMetric.DefaultTiles, SampleData.metrics, UnitSystem.METRIC, {}, {}, {}, {})
         }
     }
 }
@@ -157,7 +126,7 @@ private fun DashboardScreenPreview() {
 private fun DashboardScreenEmptyPreview() {
     OpenVitalsWearTheme {
         AppScaffold {
-            DashboardScreen(VitalsUiState(), UnitSystem.METRIC, {}, {}, {}, {})
+            DashboardScreen(WearMetric.DefaultTiles, emptyMap(), UnitSystem.METRIC, {}, {}, {}, {})
         }
     }
 }
@@ -167,7 +136,7 @@ private fun DashboardScreenEmptyPreview() {
 private fun DashboardScreenImperialPreview() {
     OpenVitalsWearTheme {
         AppScaffold {
-            DashboardScreen(SampleData.vitals, UnitSystem.IMPERIAL, {}, {}, {}, {})
+            DashboardScreen(WearMetric.DefaultTiles, SampleData.metrics, UnitSystem.IMPERIAL, {}, {}, {}, {})
         }
     }
 }
