@@ -1520,12 +1520,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
 • Glicosa en sangue
 • Temperatura da pel, cando sexa compatible (só lectura)</string>
     <string name="onboarding_hc_category_cycle">Seguimento do ciclo</string>
-    <string name="onboarding_hc_category_cycle_desc">Ler e gardar:
-• Fluxo e períodos menstruais
-• Tests de ovulación
-• Moco cervical
-• Sangrado intermenstrual
-• Actividade sexual</string>
+    <string name="onboarding_hc_category_cycle_desc">Ler e gardar: • Fluxo e períodos menstruais • Tests de ovulación • Moco cervical • Sangrado intermenstrual • Actividade sexual</string>
     <string name="onboarding_hc_category_mindfulness">Atención plena</string>
     <string name="onboarding_hc_category_mindfulness_desc">Ler e gardar sesións de atención plena.</string>
     <string name="onboarding_hc_category_additional">Acceso adicional</string>
