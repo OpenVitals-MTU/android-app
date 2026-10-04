@@ -308,12 +308,21 @@ class HydrationViewModelTest {
             id = "logged-food",
             clientRecordId = "openvitals_food_1300_chocolate-id_uuid",
         )
+        // Totals typed into the nutrition form: OpenVitals wrote them, but they are not a drink.
+        val manualNutritionEntry = caffeineEntry.copy(
+            time = start.plusSeconds(360),
+            name = "OpenVitals nutrition",
+            nutrientValues = mapOf(NutritionNutrient.ENERGY to 2150.0, NutritionNutrient.PROTEIN to 120.0),
+            id = "manual-nutrition",
+            clientRecordId = "openvitals_manual_nutrition_1400_uuid",
+        )
         val repo = emptyRepo()
         coEvery { repo.loadHydrationEntries(any(), any()) } returns listOf(hydrationEntry)
         val nutritionRepo = emptyNutritionRepo(
             listOf(
                 caffeineEntry,
                 carbsEntry,
+                manualNutritionEntry,
                 pairedEntry,
                 noClientIdStandaloneEntry,
                 noClientIdPairedEntry,

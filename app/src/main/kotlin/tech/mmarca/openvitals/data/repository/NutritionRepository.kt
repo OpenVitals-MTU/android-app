@@ -95,10 +95,6 @@ class NutritionRepositoryImpl @Inject constructor(
     override suspend fun hasNutritionWritePermission(): Boolean =
         writeNutritionPermission in grantedPermissionsIfAvailable()
 
-    override suspend fun writeCarbsEntry(request: NutritionWriteRequest): String {
-        return writeNutritionEntry(request)
-    }
-
     override suspend fun writeNutritionEntry(request: NutritionWriteRequest): String {
         val granted = grantedPermissionsIfAvailable()
         if (writeNutritionPermission !in granted) {

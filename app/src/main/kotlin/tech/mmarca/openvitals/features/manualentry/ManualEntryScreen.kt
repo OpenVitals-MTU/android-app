@@ -25,7 +25,7 @@ import tech.mmarca.openvitals.ui.components.ScreenAppBar
 fun ManualEntryScreen(
     viewModel: ManualEntryViewModel,
     onOpenHydrationEntry: () -> Unit,
-    onOpenCarbsEntry: () -> Unit,
+    onOpenNutritionEntry: () -> Unit,
     onOpenActivityEntry: () -> Unit,
     onOpenMindfulnessEntry: () -> Unit,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
@@ -39,7 +39,7 @@ fun ManualEntryScreen(
     val specs = manualEntryWidgetSpecs(
         isEditingWidgets = state.isEditingWidgets,
         onOpenHydrationEntry = viewModel::onHydrationWidgetTapped,
-        onOpenCarbsEntry = viewModel::onCarbsWidgetTapped,
+        onOpenNutritionEntry = viewModel::onNutritionWidgetTapped,
         onOpenFoodEntry = viewModel::onFoodWidgetTapped,
         onOpenActivityEntry = viewModel::onActivityWidgetTapped,
         onOpenMindfulnessEntry = viewModel::onMindfulnessWidgetTapped,
@@ -78,10 +78,10 @@ fun ManualEntryScreen(
             onOpenHydrationEntry()
         }
     }
-    LaunchedEffect(state.pendingCarbsEntryNavigation) {
-        if (state.pendingCarbsEntryNavigation) {
-            viewModel.onCarbsEntryNavigationHandled()
-            onOpenCarbsEntry()
+    LaunchedEffect(state.pendingNutritionEntryNavigation) {
+        if (state.pendingNutritionEntryNavigation) {
+            viewModel.onNutritionEntryNavigationHandled()
+            onOpenNutritionEntry()
         }
     }
     LaunchedEffect(state.pendingFoodEntryNavigation) {

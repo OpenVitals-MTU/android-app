@@ -9,14 +9,14 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | validation refuses before the command ever runs | PORTED | BodyMeasurementEntryViewModelTest.kt `invalid body measurement value does not write` | INVALID_VALUE + zero writes; equivalent given Kotlin's boolean state model |
 
 ## /home/manu/Documentos/repos/mobile-app/test/features/manualentry/carbs_entry_command_test.dart
-Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/features/manualentry/nutrition/CarbsEntryViewModelTest.kt
+Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/features/manualentry/nutrition/NutritionEntryViewModelTest.kt
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
-| a command at rest is idle | PORTED | CarbsEntryViewModelTest.kt `a command at rest is idle` | Kotlin file has no initial-state test at all |
-| a successful save settles on success, and is consumed once | PORTED | CarbsEntryViewModelTest.kt `carbs entry writes grams value` | Write, cleared input, saveCompleted, consumed via onSaveCompletedHandled |
-| a failed save carries the failure to the form, not an exception | PORTED | CarbsEntryViewModelTest.kt `a failed save carries the failure to the form, not an exception` | Kotlin additionally sets entryError=WRITE_FAILED by design |
-| editing a field clears the failure the last attempt left behind | PORTED | CarbsEntryViewModelTest.kt `editing a field clears the failure the last attempt left behind` | No error-clearing-on-edit test |
-| validation refuses before the command ever runs | PORTED | CarbsEntryViewModelTest.kt `invalid carbs value does not write` | INVALID_VALUE + zero writes |
+| a command at rest is idle | PORTED | NutritionEntryViewModelTest.kt `a command at rest is idle` | Kotlin file has no initial-state test at all |
+| a successful save settles on success, and is consumed once | PORTED | NutritionEntryViewModelTest.kt `filled fields go into one record and blank ones are left out` | Write, cleared input, saveCompleted, consumed via onSaveCompletedHandled |
+| a failed save carries the failure to the form, not an exception | PORTED | NutritionEntryViewModelTest.kt `a failed save carries the failure to the form, not an exception` | Kotlin additionally sets entryError=WRITE_FAILED by design |
+| editing a field clears the failure the last attempt left behind | PORTED | NutritionEntryViewModelTest.kt `editing a field clears the failure the last attempt left behind` | No error-clearing-on-edit test |
+| validation refuses before the command ever runs | PORTED | NutritionEntryViewModelTest.kt `one invalid field stops the whole entry` | INVALID_VALUE + zero writes |
 
 ## /home/manu/Documentos/repos/mobile-app/test/features/manualentry/hydration_catalog_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/features/manualentry/hydration/HydrationCatalogTest.kt (over the catalog helpers in HydrationEntryFormContent.kt, widened private->internal)
@@ -140,7 +140,7 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | Blood pressure form writes systolic + diastolic on save | PORTED | VitalsMeasurementEntryViewModelTest.kt `blood pressure entry writes systolic and diastolic values` | |
 | Blood pressure form blocks the write when systolic <= diastolic | PORTED | VitalsMeasurementEntryViewModelTest.kt `invalid vitals value does not write` | Uses 70/90 (systolic < diastolic), same guard |
 | Hydration form shows the tracker card, not container presets | DIVERGED | HydrationEntryFormTest.kt `hydrationEntryForm_rendersTrackerCard` | Only asserts the tracker tag exists; absence of container chips/custom-amount field and presence of catalog search unasserted |
-| re-checks the write permission when the screen resumes | PORTED | CarbsEntryResumeTest: `aPermissionGrantedWhileAwayIsPickedUpWhenTheScreenComesBack` | Compose instrumentation; runs on a device, not in CI |
+| re-checks the write permission when the screen resumes | PORTED | NutritionEntryResumeTest: `aPermissionGrantedWhileAwayIsPickedUpWhenTheScreenComesBack` | Compose instrumentation; runs on a device, not in CI |
 
 ## /home/manu/Documentos/repos/mobile-app/test/features/manualentry/manual_entry_screen_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/features/manualentry/ManualEntryViewModelTest.kt

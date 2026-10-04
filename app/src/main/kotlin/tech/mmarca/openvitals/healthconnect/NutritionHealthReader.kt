@@ -23,6 +23,7 @@ import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionNutrientUnit
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
 import tech.mmarca.openvitals.domain.model.OpenVitalsFoodClientRecordPrefix
+import tech.mmarca.openvitals.domain.model.OpenVitalsManualNutritionClientRecordPrefix
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -193,9 +194,6 @@ internal class NutritionHealthReader(
             }
         }
 
-    suspend fun writeCarbsEntry(request: NutritionWriteRequest): String =
-        writeNutritionEntry(request)
-
     suspend fun writeNutritionEntry(request: NutritionWriteRequest): String = withContext(Dispatchers.IO) {
         val nutrientValues = request.nutrientValues
         require(nutrientValues.isNotEmpty()) {
@@ -222,6 +220,7 @@ internal class NutritionHealthReader(
             ?: request.foodId
                 ?.takeIf { it.isNotBlank() }
                 ?.let { foodId -> foodNutritionClientRecordId(foodId, startTime) }
+            ?: manualNutritionClientRecordId(startTime).takeIf { request.isManualNutritionEntry }
             ?: "openvitals_nutrition_${startTime.toEpochMilli()}_${UUID.randomUUID()}"
         val record = NutritionRecord(
             startTime = startTime,
@@ -349,6 +348,10 @@ private const val HydrationNutritionClientRecordIdPrefix = "openvitals_hydration
 
 internal fun hydrationNutritionClientRecordId(hydrationClientRecordId: String): String =
     "$HydrationNutritionClientRecordIdPrefix$hydrationClientRecordId"
+
+/** The beverage screens skip this prefix, so a typed nutrition entry never shows up as a drink. */
+internal fun manualNutritionClientRecordId(time: Instant): String =
+    "$OpenVitalsManualNutritionClientRecordPrefix${time.toEpochMilli()}_${UUID.randomUUID()}"
 
 /** The beverage screens skip this prefix, so a food never shows up as a drink. */
 internal fun foodNutritionClientRecordId(foodId: String, time: Instant): String =

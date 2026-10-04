@@ -158,8 +158,6 @@ private object UnusedNutritionRepository : NutritionRepository {
 
     override suspend fun loadNutritionEntries(start: LocalDate, end: LocalDate) = error("unused")
 
-    override suspend fun writeCarbsEntry(request: NutritionWriteRequest): String = error("unused")
-
     override suspend fun writeNutritionEntry(request: NutritionWriteRequest): String = error("unused")
 
     override suspend fun deleteNutritionEntry(id: String) = error("unused")

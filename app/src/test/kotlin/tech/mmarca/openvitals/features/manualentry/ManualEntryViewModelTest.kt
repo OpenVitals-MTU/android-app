@@ -45,6 +45,17 @@ class ManualEntryViewModelTest {
         assertEquals(listOf(ManualEntryWidgetId.HYDRATION), vm.uiState.value.widgets)
     }
 
+    @Test fun `a saved order keeps the carbs tile as the nutrition tile`() = runTest {
+        val vm = ManualEntryViewModel(
+            prefs(storedWidgetOrder = listOf(ManualEntryWidgetId.HYDRATION.name, "CARBS")),
+        )
+
+        assertEquals(
+            listOf(ManualEntryWidgetId.HYDRATION, ManualEntryWidgetId.NUTRITION),
+            vm.uiState.value.widgets,
+        )
+    }
+
     @Test fun `manual entry widget edit toggles`() = runTest {
         val vm = ManualEntryViewModel(prefs())
 
@@ -86,15 +97,15 @@ class ManualEntryViewModelTest {
         assertFalse(vm.uiState.value.pendingHydrationEntryNavigation)
     }
 
-    @Test fun `carbs, activity, mindfulness and cycle taps open their screens`() = runTest {
+    @Test fun `nutrition, activity, mindfulness and cycle taps open their screens`() = runTest {
         val vm = ManualEntryViewModel(prefs())
 
-        vm.onCarbsWidgetTapped()
+        vm.onNutritionWidgetTapped()
         vm.onActivityWidgetTapped()
         vm.onMindfulnessWidgetTapped()
         vm.onCycleWidgetTapped()
 
-        assertTrue(vm.uiState.value.pendingCarbsEntryNavigation)
+        assertTrue(vm.uiState.value.pendingNutritionEntryNavigation)
         assertTrue(vm.uiState.value.pendingActivityEntryNavigation)
         assertTrue(vm.uiState.value.pendingMindfulnessEntryNavigation)
         assertTrue(vm.uiState.value.pendingCycleEntryNavigation)

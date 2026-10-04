@@ -14,7 +14,7 @@ import tech.mmarca.openvitals.features.manualentry.vitals.*
 enum class ManualEntryWidgetId {
     HYDRATION,
     FOOD,
-    CARBS,
+    NUTRITION,
     ACTIVITY,
     MINDFULNESS,
     WEIGHT,
@@ -32,7 +32,7 @@ enum class ManualEntryWidgetId {
 val DefaultManualEntryWidgetIds: List<ManualEntryWidgetId> = listOf(
     ManualEntryWidgetId.HYDRATION,
     ManualEntryWidgetId.FOOD,
-    ManualEntryWidgetId.CARBS,
+    ManualEntryWidgetId.NUTRITION,
     ManualEntryWidgetId.ACTIVITY,
     ManualEntryWidgetId.WORKOUT_PLANS,
     ManualEntryWidgetId.MINDFULNESS,
@@ -50,13 +50,18 @@ val DefaultManualEntryWidgetIds: List<ManualEntryWidgetId> = listOf(
 fun customizableManualEntryWidgetIds(widgetIds: List<ManualEntryWidgetId>): List<ManualEntryWidgetId> =
     widgetIds.distinct()
 
+/** Tiles that were renamed, so a saved order keeps them. The carbs tile became one for every nutrient. */
+private val storedWidgetIdRenames: Map<String, String> = mapOf(
+    "CARBS" to ManualEntryWidgetId.NUTRITION.name,
+)
+
 fun manualEntryWidgetIdsFromStored(storedIds: List<String>?): List<ManualEntryWidgetId> {
     if (storedIds == null) return DefaultManualEntryWidgetIds
     if (storedIds.isEmpty()) return emptyList()
 
     val parsedIds = storedIds
         .mapNotNull { storedId ->
-            runCatching { ManualEntryWidgetId.valueOf(storedId) }.getOrNull()
+            runCatching { ManualEntryWidgetId.valueOf(storedWidgetIdRenames[storedId] ?: storedId) }.getOrNull()
         }
         .let(::customizableManualEntryWidgetIds)
 

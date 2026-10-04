@@ -31,7 +31,7 @@ data class ManualEntryUiState(
     val widgets: List<ManualEntryWidgetId> = DefaultManualEntryWidgetIds,
     val isEditingWidgets: Boolean = false,
     val pendingHydrationEntryNavigation: Boolean = false,
-    val pendingCarbsEntryNavigation: Boolean = false,
+    val pendingNutritionEntryNavigation: Boolean = false,
     val pendingFoodEntryNavigation: Boolean = false,
     val pendingActivityEntryNavigation: Boolean = false,
     val pendingBodyEntryNavigation: BodyMeasurementType? = null,
@@ -62,12 +62,12 @@ class ManualEntryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(pendingHydrationEntryNavigation = false)
     }
 
-    fun onCarbsWidgetTapped() {
-        _uiState.value = _uiState.value.copy(pendingCarbsEntryNavigation = true)
+    fun onNutritionWidgetTapped() {
+        _uiState.value = _uiState.value.copy(pendingNutritionEntryNavigation = true)
     }
 
-    fun onCarbsEntryNavigationHandled() {
-        _uiState.value = _uiState.value.copy(pendingCarbsEntryNavigation = false)
+    fun onNutritionEntryNavigationHandled() {
+        _uiState.value = _uiState.value.copy(pendingNutritionEntryNavigation = false)
     }
 
     fun onFoodWidgetTapped() {

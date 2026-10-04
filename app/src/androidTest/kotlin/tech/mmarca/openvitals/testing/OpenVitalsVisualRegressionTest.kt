@@ -85,7 +85,7 @@ class OpenVitalsVisualRegressionTest {
     fun manualEntryGrid_matchesCurrentBaseline() {
         val visibleIds = listOf(
             ManualEntryWidgetId.HYDRATION,
-            ManualEntryWidgetId.CARBS,
+            ManualEntryWidgetId.NUTRITION,
             ManualEntryWidgetId.ACTIVITY,
             ManualEntryWidgetId.MINDFULNESS,
             ManualEntryWidgetId.WEIGHT,
@@ -99,7 +99,7 @@ class OpenVitalsVisualRegressionTest {
                 val specs = manualEntryWidgetSpecs(
                     isEditingWidgets = false,
                     onOpenHydrationEntry = {},
-                    onOpenCarbsEntry = {},
+                    onOpenNutritionEntry = {},
                     onOpenActivityEntry = {},
                     onOpenMindfulnessEntry = {},
                     onOpenBodyMeasurementEntry = {},

@@ -27,8 +27,8 @@ import tech.mmarca.openvitals.features.manualentry.hydration.HydrationEntryScree
 import tech.mmarca.openvitals.features.manualentry.hydration.HydrationEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.mindfulness.MindfulnessEntryScreen
 import tech.mmarca.openvitals.features.manualentry.mindfulness.MindfulnessEntryViewModel
-import tech.mmarca.openvitals.features.manualentry.nutrition.CarbsEntryScreen
-import tech.mmarca.openvitals.features.manualentry.nutrition.CarbsEntryViewModel
+import tech.mmarca.openvitals.features.manualentry.nutrition.NutritionEntryScreen
+import tech.mmarca.openvitals.features.manualentry.nutrition.NutritionEntryViewModel
 import tech.mmarca.openvitals.features.manualentry.vitals.VitalsMeasurementEntryScreen
 import tech.mmarca.openvitals.features.manualentry.vitals.VitalsMeasurementEntryViewModel
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
@@ -59,8 +59,8 @@ internal fun NavGraphBuilder.manualEntryRoutes(
                 onOpenHydrationEntry = {
                     navController.navigate(Screen.HydrationEntry.route)
                 },
-                onOpenCarbsEntry = {
-                    navController.navigate(Screen.CarbsEntry.route)
+                onOpenNutritionEntry = {
+                    navController.navigate(Screen.NutritionEntry.route)
                 },
                 onOpenFoodEntry = {
                     navController.navigate(Screen.FoodEntry.route)
@@ -157,10 +157,10 @@ internal fun NavGraphBuilder.manualEntryRoutes(
         )
     }
 
-    composable(Screen.CarbsEntry.route) {
-        val carbsEntryViewModel = hiltViewModel<CarbsEntryViewModel>()
-        CarbsEntryScreen(
-            viewModel = carbsEntryViewModel,
+    composable(Screen.NutritionEntry.route) {
+        val nutritionEntryViewModel = hiltViewModel<NutritionEntryViewModel>()
+        NutritionEntryScreen(
+            viewModel = nutritionEntryViewModel,
             unitFormatter = unitFormatter,
             onEntrySaved = onEntrySaved,
         )

@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry.nutrition
 
 import android.content.res.Resources
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionNutrientUnit
+import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.nutrition.titleRes
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
@@ -45,6 +47,8 @@ import tech.mmarca.openvitals.ui.theme.Spacing
 /** Health Connect refuses a larger value per nutrient. */
 internal const val MaxNutrientInputValue = 10000.0
 
+private const val GramsPerOunce = 28.349523125
+
 private val NutrientRowGap = 6.dp
 private val NutrientButtonIconSize = 18.dp
 private val NutrientChooserMaxHeight = 420.dp
@@ -56,7 +60,7 @@ internal fun isValidNutrientInputValue(value: Double): Boolean =
         value.isFinite()
 
 /** One nutrient of a food or drink being edited. The text is what the user typed. */
-internal data class NutrientInputRow(
+data class NutrientInputRow(
     val nutrient: NutritionNutrient,
     val amountText: String = "",
 )
@@ -94,11 +98,36 @@ internal fun List<NutrientInputRow>.parsedNutrientValues(): Map<NutritionNutrien
 internal fun String.toNutrientInputValueOrNull(): Double? =
     replace(',', '.').toDoubleOrNull()?.takeIf(::isValidNutrientInputValue)
 
+/** Imperial users type gram nutrients in ounces. Energy stays kcal, and mg/µg nutrients stay metric. */
+internal fun NutritionNutrient.entersInOunces(unitSystem: UnitSystem): Boolean =
+    unitSystem == UnitSystem.IMPERIAL && unit == NutritionNutrientUnit.MASS_GRAMS
+
+/** What the user typed, in the metric unit Health Connect stores. Null when it does not parse or is out of range. */
+internal fun NutrientInputRow.metricValueOrNull(unitSystem: UnitSystem): Double? {
+    val typed = amountText.replace(',', '.').toDoubleOrNull() ?: return null
+    val metric = if (nutrient.entersInOunces(unitSystem)) typed * GramsPerOunce else typed
+    return metric.takeIf(::isValidNutrientInputValue)
+}
+
+/** [parsedNutrientValues] for a form that takes imperial input; the values come back metric. */
+internal fun List<NutrientInputRow>.parsedMetricNutrientValues(
+    unitSystem: UnitSystem,
+): Map<NutritionNutrient, Double>? {
+    val filled = filter { it.amountText.isNotBlank() }
+    val values = filled.mapNotNull { row ->
+        row.metricValueOrNull(unitSystem)?.let { row.nutrient to it }
+    }
+    return values.toMap().takeIf { it.size == filled.size }
+}
+
+/** [onRemove] null keeps the row: the nutrition form's main nutrients are always there. */
 @Composable
 internal fun NutrientAmountRow(
     row: NutrientInputRow,
     onAmountChanged: (String) -> Unit,
-    onRemove: () -> Unit,
+    onRemove: (() -> Unit)?,
+    unitSystem: UnitSystem = UnitSystem.METRIC,
+    enabled: Boolean = true,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -113,18 +142,21 @@ internal fun NutrientAmountRow(
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.weight(1f),
             )
-            IconButton(onClick = onRemove) {
-                Icon(
-                    imageVector = Icons.Outlined.Delete,
-                    contentDescription = stringResource(R.string.action_delete),
-                )
+            if (onRemove != null) {
+                IconButton(onClick = onRemove, enabled = enabled) {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = stringResource(R.string.action_delete),
+                    )
+                }
             }
         }
         OutlinedTextField(
             value = row.amountText,
             onValueChange = onAmountChanged,
-            label = { Text(nutrientAmountLabel(row.nutrient)) },
-            isError = row.amountText.isNotBlank() && row.amountText.toNutrientInputValueOrNull() == null,
+            enabled = enabled,
+            label = { Text(nutrientAmountLabel(row.nutrient, unitSystem)) },
+            isError = row.amountText.isNotBlank() && row.metricValueOrNull(unitSystem) == null,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier
@@ -139,6 +171,7 @@ internal fun AddNutrientButton(
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    @StringRes labelRes: Int = R.string.hydration_custom_drink_add_nutrient,
 ) {
     OpenVitalsOutlinedButton(
         onClick = onClick,
@@ -151,7 +184,7 @@ internal fun AddNutrientButton(
             modifier = Modifier.size(NutrientButtonIconSize),
         )
         Text(
-            text = stringResource(R.string.hydration_custom_drink_add_nutrient),
+            text = stringResource(labelRes),
             modifier = Modifier.padding(start = NutrientRowGap),
         )
     }
@@ -216,9 +249,10 @@ private fun NutrientChoiceRow(
 }
 
 @Composable
-private fun nutrientAmountLabel(nutrient: NutritionNutrient): String =
-    when (nutrient.unit) {
-        NutritionNutrientUnit.ENERGY_KCAL -> stringResource(R.string.hydration_custom_drink_amount_kcal)
-        NutritionNutrientUnit.MASS_GRAMS,
-        NutritionNutrientUnit.MASS_ADAPTIVE -> stringResource(R.string.hydration_custom_drink_amount_grams)
+private fun nutrientAmountLabel(nutrient: NutritionNutrient, unitSystem: UnitSystem): String =
+    when {
+        nutrient.unit == NutritionNutrientUnit.ENERGY_KCAL ->
+            stringResource(R.string.hydration_custom_drink_amount_kcal)
+        nutrient.entersInOunces(unitSystem) -> stringResource(R.string.nutrition_entry_amount_ounces)
+        else -> stringResource(R.string.hydration_custom_drink_amount_grams)
     }

@@ -127,7 +127,7 @@ class OpenVitalsConnectedFlowTest {
         val removed = mutableListOf<ManualEntryWidgetId>()
         val visibleIds = listOf(
             ManualEntryWidgetId.HYDRATION,
-            ManualEntryWidgetId.CARBS,
+            ManualEntryWidgetId.NUTRITION,
             ManualEntryWidgetId.ACTIVITY,
             ManualEntryWidgetId.MINDFULNESS,
             ManualEntryWidgetId.WEIGHT,
@@ -139,7 +139,7 @@ class OpenVitalsConnectedFlowTest {
                 val specs = manualEntryWidgetSpecs(
                     isEditingWidgets = isEditingWidgets,
                     onOpenHydrationEntry = { opened = "hydration" },
-                    onOpenCarbsEntry = { opened = "carbs" },
+                    onOpenNutritionEntry = { opened = "nutrition" },
                     onOpenActivityEntry = { opened = "activity" },
                     onOpenMindfulnessEntry = { opened = "mindfulness" },
                     onOpenBodyMeasurementEntry = { opened = it.name },
@@ -159,8 +159,8 @@ class OpenVitalsConnectedFlowTest {
         composeRule.onNodeWithText(string(R.string.manual_entry_hydration_label)).performClick()
         composeRule.runOnIdle { assertEquals("hydration", opened) }
 
-        composeRule.onNodeWithText(string(R.string.metric_carbs)).performClick()
-        composeRule.runOnIdle { assertEquals("carbs", opened) }
+        composeRule.onNodeWithText(string(R.string.screen_nutrition)).performClick()
+        composeRule.runOnIdle { assertEquals("nutrition", opened) }
 
         composeRule.onNodeWithText(string(R.string.manual_entry_activity_title)).performClick()
         composeRule.runOnIdle { assertEquals("activity", opened) }

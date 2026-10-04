@@ -196,6 +196,21 @@ class HydrationDrinkUsageTest {
     }
 
     @Test
+    fun `frequentHydrationDrinkOptions ignores a typed nutrition entry, even one named like a drink`() {
+        val drinks = listOf(drink("coffee", name = "Coffee"))
+
+        val result = frequentHydrationDrinkOptions(
+            drinks = drinks,
+            hydrationEntries = emptyList(),
+            nutritionEntries = listOf(
+                nutrition(t0, clientRecordId = "openvitals_manual_nutrition_${t0.toEpochMilli()}_u1", name = "Coffee"),
+            ),
+        )
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
     fun `frequentHydrationDrinkOptions ignores entries from other apps`() {
         val result = frequentHydrationDrinkOptions(
             drinks = listOf(drink("a", name = "Cola")),
