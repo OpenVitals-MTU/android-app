@@ -411,7 +411,7 @@ class DashboardViewModelTest {
         assertNull(vm.uiState.value.data?.elevationGainedMeters)
     }
 
-    @Test fun `floorsClimbed zero is non-null — permission granted no stair data`() = runTest {
+    @Test fun `floorsClimbed zero is non-null, permission granted no stair data`() = runTest {
         val data = DashboardData(date = today, floorsClimbed = 0)
         val loader = mockDashboardDataLoader()
         loader.answersEveryPassWith(data)

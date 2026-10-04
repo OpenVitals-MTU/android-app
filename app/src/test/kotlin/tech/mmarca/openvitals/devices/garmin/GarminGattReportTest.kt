@@ -5,7 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Port of the Flutter build's `garmin_gatt_report_test.dart` — fixtures identical. */
+/** Port of the Flutter build's `garmin_gatt_report_test.dart`: fixtures identical. */
 class GarminGattReportTest {
 
     private fun report(

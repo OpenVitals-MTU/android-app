@@ -122,7 +122,7 @@ class SleepSessionMergingTest {
 
         val merged = mergeSleepSessions(listOf(whole, partial)).single()
 
-        // 8h28m in bed minus the 5 awake minutes — the same number the day view shows.
+        // 8h28m in bed minus the 5 awake minutes: the same number the day view shows.
         assertEquals(Duration.ofHours(8).plusMinutes(23).toMillis(), merged.durationMs)
         assertEquals(merged.durationMs, sleepDurationMsFromStages(merged.stages, 0L))
     }
@@ -264,7 +264,7 @@ class SleepSessionMergingTest {
 
     @Test
     fun `mergeSleepSessions keeps two different-source sessions that overlap under the ratio`() {
-        // Only ~50% of the shorter session overlaps — genuinely distinct, kept.
+        // Only ~50% of the shorter session overlaps: genuinely distinct, kept.
         val first = sleep(
             id = "source-a",
             source = "source-a",

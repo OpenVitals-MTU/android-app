@@ -169,7 +169,7 @@ class GarminHttpProxyTest {
             rawRequest("https://api.gcs.garmin.com/weather/v2/forecast/hour?duration=6", useDataXfer = true),
         )!!
 
-        // No inline body — an id and a size instead.
+        // No inline body: an id and a size instead.
         val response = rawResponse(reply)
         assertNull(protobufField(response, 3))
         val xfer = readProtobuf(protobufField(response, 4)!!.bytes!!)

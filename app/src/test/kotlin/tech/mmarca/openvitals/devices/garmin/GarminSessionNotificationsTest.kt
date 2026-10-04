@@ -186,7 +186,7 @@ class GarminSessionNotificationsTest {
         s.session.handleBytes(NotifyWatch.subscription(enable = true))
 
         s.handler!!.post(phoneNotification())
-        // The announcement carries no text — only the id and the category.
+        // The announcement carries no text, only the id and the category.
         val announcement = s.watch.ofType(GarminMessageId.NOTIFICATION_UPDATE).single()
         assertEquals(9, announcement.payload.size)
 

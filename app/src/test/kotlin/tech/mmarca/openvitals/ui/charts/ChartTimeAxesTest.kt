@@ -309,7 +309,7 @@ class ChartTimeAxesTest {
     }
 
     @Test
-    fun `only the real entries carry dots — the anchor and hold are synthetic`() {
+    fun `only the real entries carry dots, the anchor and hold are synthetic`() {
         // The trailing hold at "now" and the midnight anchor shape the line but must not be marked as entries (#250).
         val points = cumulativeDayPlotPoints(
             fractions = listOf(0.2f to 1.0, 0.4f to 3.0),

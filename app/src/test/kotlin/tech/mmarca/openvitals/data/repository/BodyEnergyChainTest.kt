@@ -301,7 +301,7 @@ class BodyEnergyChainTest {
             seedStoredDay(r, today.minusDays(back.toLong()))
         }
 
-        // Same inputs, so the same end score — nothing downstream changed.
+        // Same inputs, so the same end score: nothing downstream changed.
         load(r, today.minusDays(3), refreshMode = RefreshMode.FORCE)
 
         assertEquals(

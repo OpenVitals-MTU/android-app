@@ -44,7 +44,7 @@ class BucketedSeriesTest {
     }
 
     @Test fun `splits samples into separate buckets and orders them by time`() {
-        // One in [0,5), one in [10,15) — the [5,10) bucket is empty and omitted.
+        // One in [0,5), one in [10,15): the [5,10) bucket is empty and omitted.
         val result = run(listOf(sample(1, 50.0), sample(12, 70.0)), 5)
         assertEquals(2, result.size)
         assertTrue(result[0].time.isBefore(result[1].time))

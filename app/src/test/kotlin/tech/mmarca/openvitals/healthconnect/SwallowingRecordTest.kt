@@ -46,7 +46,7 @@ class SwallowingRecordTest {
     private val workoutStart: Instant = Instant.parse("2026-06-22T06:05:00Z")
     private val workoutEnd: Instant = Instant.parse("2026-06-22T06:41:00Z")
 
-    /** One record, 17.48 hours long, a sample every minute — as the real one was. */
+    /** One record, 17.48 hours long, a sample every minute, as the real one was. */
     private fun swallowingRecord(): HeartRateRecord {
         val samples = generateSequence(recordStart) { it.plusSeconds(60) }
             .takeWhile { it.isBefore(recordEnd) }

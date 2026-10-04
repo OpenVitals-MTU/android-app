@@ -165,7 +165,7 @@ class SleepPresentationMapperTest {
             crossDailyHrv = emptyList(),
         )
 
-        // Every night of the week is still a point — a zero-hour one.
+        // Every night of the week is still a point: a zero-hour one.
         assertEquals(7, display.durationPoints.size)
         assertTrue(display.durationPoints.all { it.hours == 0.0 })
         assertEquals(7, display.overviewDays.size)

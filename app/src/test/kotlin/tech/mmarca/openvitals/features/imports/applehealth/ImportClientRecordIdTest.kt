@@ -54,7 +54,7 @@ class ImportClientRecordIdTest {
         goldens.forEach { (parts, expected) ->
             val prefix = parts.substringBefore('|')
             assertEquals(
-                "clientRecordId changed for $parts — every record a previous release " +
+                "clientRecordId changed for $parts: every record a previous release " +
                     "wrote would become unreachable",
                 expected,
                 buildStableClientRecordId(prefix, parts),

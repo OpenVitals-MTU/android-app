@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** The watch's location asks — the gate its weather fetch waits behind. */
+/** The watch's location asks: the gate its weather fetch waits behind. */
 class GarminCoreLocationTest {
 
     private val tallinn = GarminPhoneLocation(
@@ -87,7 +87,7 @@ class GarminCoreLocationTest {
         val followUp = responder.handle(ask)!!.followUp!!
         val core = protobufField(readProtobuf(followUp), GarminSmartService.CORE)!!.bytes!!
         val notification = protobufField(readProtobuf(core), 7)!!.bytes!!
-        // One pushed LocationData — the stream is live, not merely granted.
+        // One pushed LocationData: the stream is live, not merely granted.
         assertEquals(1, readProtobuf(notification).count { it.field == 1 })
     }
 

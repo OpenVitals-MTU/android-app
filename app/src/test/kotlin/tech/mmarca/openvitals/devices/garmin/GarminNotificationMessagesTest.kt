@@ -395,7 +395,7 @@ class GarminNotificationMessagesTest {
                 0x01, 0x00, 0x00, 0x00,
                 0x01, 0x10, 0x00, // TITLE
                 0x63, 0xFF, 0xFF, // unknown
-                0x03, 0x10, 0x00, // MESSAGE — deliberately not reached
+                0x03, 0x10, 0x00, // MESSAGE: deliberately not reached
             ),
         ) as GarminNotificationControl
 

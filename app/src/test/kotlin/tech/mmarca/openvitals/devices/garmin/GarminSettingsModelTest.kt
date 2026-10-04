@@ -116,7 +116,7 @@ class GarminSettingsModelTest {
         assertEquals("Customize", screen.title)
         assertEquals(
             listOf(
-                GarminEntryKind.TOGGLE, // Status — no target, value lives in the state
+                GarminEntryKind.TOGGLE, // Status: no target, value lives in the state
                 GarminEntryKind.TIME, // target type 3
                 GarminEntryKind.OPTIONS, // target type 1
                 GarminEntryKind.OPTIONS,

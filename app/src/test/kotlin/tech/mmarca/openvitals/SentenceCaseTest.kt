@@ -32,7 +32,7 @@ class SentenceCaseTest {
         val flattened = ThirdPartyProductNames.filterNot { phrase -> phrase in text }
 
         assertWithMessage(
-            "these are Garmin's product names, not our copy — the sentence-case " +
+            "these are Garmin's product names, not our copy: the sentence-case " +
                 "rule does not reach them",
         )
             .that(flattened)

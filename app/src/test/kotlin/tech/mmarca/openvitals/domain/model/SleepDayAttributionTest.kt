@@ -30,10 +30,10 @@ class SleepDayAttributionTest {
         stages = listOf(SleepStage(start, end, SleepStage.STAGE_LIGHT)),
     )
 
-    // Bed 22:40 on the 16th, up 06:17 on the 17th — a cross-midnight night.
+    // Bed 22:40 on the 16th, up 06:17 on the 17th, a cross-midnight night.
     private val crossMidnight = session("x", t(16, 22, 40), t(17, 6, 17))
 
-    // Bed 01:38 on the 16th, up 07:32 on the 16th — begins and ends the same day.
+    // Bed 01:38 on the 16th, up 07:32 on the 16th; it begins and ends the same day.
     private val sameDay = session("s", t(16, 1, 38), t(16, 7, 32))
 
     private fun forDay(day: Int): List<SleepData> = sleepSessionsForRange(
@@ -65,7 +65,7 @@ class SleepDayAttributionTest {
     }
 
     @Test fun `a daytime session becomes a nap on its date and is not dropped`() {
-        // Begins 14:00 — in the daytime gap [10:00, 18:00), so a nap, not the night.
+        // Begins 14:00, in the daytime gap [10:00, 18:00), so a nap, not the night.
         val nap = session("nap", t(18, 14, 0), t(18, 15, 0))
         assertEquals(
             emptyList<String>(),

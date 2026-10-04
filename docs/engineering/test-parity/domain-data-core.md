@@ -354,8 +354,8 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/model/Heal
 | DashboardData stores floorsClimbed when provided | PORTED | HealthDataTest.kt: `DashboardData stores floorsClimbed when provided` | — |
 | DashboardData defaults elevationGainedMeters to null | PORTED | HealthDataTest.kt: `DashboardData defaults elevationGainedMeters to null` | — |
 | DashboardData stores elevationGainedMeters when provided | PORTED | HealthDataTest.kt: `DashboardData stores elevationGainedMeters when provided` | — |
-| DailySteps floorsClimbed zero is non-null — permission granted no data | PORTED | HealthDataTest.kt: `DailySteps floorsClimbed zero is non-null — permission granted no data` | — |
-| DailySteps elevationGainedMeters zero is non-null — permission granted no data | PORTED | HealthDataTest.kt: `DailySteps elevationGainedMeters zero is non-null — permission granted no data` | — |
+| DailySteps floorsClimbed zero is non-null — permission granted no data | PORTED | HealthDataTest.kt: `DailySteps floorsClimbed zero is non-null, permission granted no data` | — |
+| DailySteps elevationGainedMeters zero is non-null — permission granted no data | PORTED | HealthDataTest.kt: `DailySteps elevationGainedMeters zero is non-null, permission granted no data` | — |
 
 ## test/domain/model/heart_rate_aggregated_samples_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/model/HeartRateAggregatedSamplesTest.kt

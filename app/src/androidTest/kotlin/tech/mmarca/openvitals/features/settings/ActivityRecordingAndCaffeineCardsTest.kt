@@ -107,7 +107,7 @@ class ActivityRecordingAndCaffeineCardsTest {
         ).forEach { labelRes ->
             composeRule.onNodeWithText(string(labelRes)).performScrollTo().assertIsDisplayed()
         }
-        // The stored, non-default half-life — not the model default.
+        // The stored, non-default half-life, not the model default.
         composeRule.onNodeWithText("420").performScrollTo().assertIsDisplayed()
 
         composeRule.onNodeWithText(string(R.string.action_save)).performScrollTo().performClick()

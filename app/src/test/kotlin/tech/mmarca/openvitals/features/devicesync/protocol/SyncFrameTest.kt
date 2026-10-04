@@ -59,7 +59,7 @@ class SyncFrameTest {
             ByteArray(300) { (it % 256).toByte() },
         ).encode()
 
-        // Feed one byte at a time — the worst case for a byte-stream reader.
+        // Feed one byte at a time: the worst case for a byte-stream reader.
         val collected = mutableListOf<SyncFrame>()
         encoded.forEach { byte -> collected += reader.addChunk(byteArrayOf(byte)) }
 

@@ -369,7 +369,7 @@ class ActivityViewModelTest {
         assertEquals(70.0, days.sumOf { it.elevationGainedMeters ?: 0.0 }, 0.01)
     }
 
-    @Test fun `mixed A3 data — some days have fields some do not`() = runTest {
+    @Test fun `mixed A3 data, some days have fields some do not`() = runTest {
         val steps = listOf(
             DailySteps(today.minusDays(1), 6_000L, 4_800.0, floorsClimbed = null),
             DailySteps(today, 8_000L, 6_400.0, floorsClimbed = 7),
@@ -397,7 +397,7 @@ class ActivityViewModelTest {
         assertTrue(vm.uiState.value.dailySteps.any { it.floorsClimbed != null })
     }
 
-    @Test fun `floorsClimbed null means permission not granted — chart hidden for any range`() = runTest {
+    @Test fun `floorsClimbed null means permission not granted, chart hidden for any range`() = runTest {
         val steps = listOf(DailySteps(today, 5_000L, 4_000.0, floorsClimbed = null))
         val repo = emptyRepo()
         coEvery { repo.loadDailySteps(any(), any()) } returns steps

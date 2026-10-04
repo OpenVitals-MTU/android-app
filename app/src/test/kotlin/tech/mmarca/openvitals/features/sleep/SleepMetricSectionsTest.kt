@@ -51,7 +51,7 @@ class SleepMetricSectionsTest {
             SleepStageDurations(awakeMs = 0L, remMs = 0L, lightMs = fourHours, deepMs = fourHours),
         )
 
-        // Half light, half deep — and awake/REM, never recorded, get no row.
+        // Half light, half deep. Awake and REM, never recorded, get no row.
         assertEquals(2, shares.size)
         assertEquals(
             setOf(SleepStage.STAGE_LIGHT, SleepStage.STAGE_DEEP),

@@ -12,7 +12,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
-/** Port of the Flutter build's `garmin_file_store_test.dart` — fixtures identical. */
+/** Port of the Flutter build's `garmin_file_store_test.dart`: fixtures identical. */
 class GarminFileStoreTest {
 
     @get:Rule

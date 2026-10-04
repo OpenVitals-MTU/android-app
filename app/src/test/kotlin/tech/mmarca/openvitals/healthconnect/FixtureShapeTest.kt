@@ -94,7 +94,7 @@ class FixtureShapeTest {
 
         assertEquals(
             "The set of INVENTED record types has changed. Every other record here " +
-                "derives its shape from real data — that is the whole point.",
+                "derives its shape from real data: that is the whole point.",
             setOf("power", "cyclingCadence"),
             synthetic,
         )

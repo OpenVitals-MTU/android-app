@@ -213,7 +213,7 @@ class MetricDetailScaffoldScrollAnchorTest {
         }
 
         // The paused banner is persistent: when sync pauses, exactly one item
-        // enters the list, and its text is visible at the top — unlike the old
+        // enters the list, and its text is visible at the top, unlike the old
         // transient banner, it stays.
         val itemsBefore = composeRule.itemCount(listState)
         syncPaused = true

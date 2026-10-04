@@ -9,7 +9,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Port of the Flutter build's `garmin_messages_test.dart` — fixtures identical. */
+/** Port of the Flutter build's `garmin_messages_test.dart`: fixtures identical. */
 class GarminMessagesTest {
 
     private fun b(vararg xs: Int) = ByteArray(xs.size) { xs[it].toByte() }
@@ -49,7 +49,7 @@ class GarminMessagesTest {
 
     @Test
     fun `an unmapped sub-type is null not an error`() {
-        // Golf scorecard (128,55) — a real type this app does not handle.
+        // Golf scorecard (128,55): a real type this app does not handle.
         assertNull(GarminFileType.fromCodes(128, 55))
     }
 
@@ -100,8 +100,8 @@ class GarminMessagesTest {
 
     @Test
     fun `drops unmapped types and the all-zero sentinel`() {
-        val data = entry(index = 5, dataType = 128, subType = 49) + // sleep — kept
-            entry(index = 6, dataType = 128, subType = 55) + // golf — unmapped
+        val data = entry(index = 5, dataType = 128, subType = 49) + // sleep: kept
+            entry(index = 6, dataType = 128, subType = 55) + // golf: unmapped
             entry(index = 0, dataType = 0, subType = 0, number = 0, size = 0) // pad
 
         val entries = GarminDirectory.parse(data)
@@ -183,7 +183,7 @@ class GarminMessagesTest {
     @Test
     fun `a trailing partial record is ignored`() {
         val data = entry(index = 5, dataType = 128, subType = 4) +
-            b(0x01, 0x02, 0x03) // 3 stray bytes — not a whole record
+            b(0x01, 0x02, 0x03) // 3 stray bytes, not a whole record
         val listing = GarminDirectory.parseWithDiagnostics(data)
 
         assertEquals(1, listing.entries.size)

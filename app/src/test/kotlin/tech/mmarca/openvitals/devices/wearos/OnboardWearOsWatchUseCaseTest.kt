@@ -34,7 +34,7 @@ private class FakePairing : WatchPairingPort {
         seenDisassociateAddress = address
     }
 
-    // A WearOS watch never bonds — these must never be called.
+    // A WearOS watch never bonds: these must never be called.
     override suspend fun bond(address: String): WatchBondResult =
         error("WearOS onboarding must not bond")
 

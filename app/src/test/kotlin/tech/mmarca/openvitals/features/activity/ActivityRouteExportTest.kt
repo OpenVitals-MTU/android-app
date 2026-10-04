@@ -54,7 +54,7 @@ class ActivityRouteExportTest {
 
         val gpx = output.toString(Charsets.UTF_8.name())
         assertTrue(gpx.contains("""creator="OpenVitals""""))
-        // Instant.toString drops the zero fraction — no `.000Z` anywhere.
+        // Instant.toString drops the zero fraction: no `.000Z` anywhere.
         assertFalse(gpx.contains(".000Z"))
         assertTrue(gpx.contains("<time>2026-05-26T08:30:00Z</time>"))
         val parsed = RouteFileParser.parse(gpx, fileName = "morning-run.gpx")

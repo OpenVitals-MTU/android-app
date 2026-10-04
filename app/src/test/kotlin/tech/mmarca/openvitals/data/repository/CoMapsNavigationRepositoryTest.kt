@@ -137,7 +137,7 @@ class CoMapsNavigationRepositoryTest {
         // First recording: a live change makes the route believable.
         repo.watchLiveOf(CoMapsLiveEvent(row, live = true, observing = true, initial = false))
 
-        // Ten seconds later a NEW watch opens — still inside the old window.
+        // Ten seconds later a NEW watch opens, still inside the old window.
         clock = clock.plusSeconds(10)
         val fresh = repo.watchLiveOf(
             CoMapsLiveEvent(row, live = false, observing = true, initial = true),

@@ -189,7 +189,7 @@ class AggregatingFakeHealthConnectClient(
 
         for (metric in metrics) {
             val spec = SPECS[metric] ?: error(
-                "No aggregation emulated for $metric. Add it to SPECS — otherwise a test is " +
+                "No aggregation emulated for $metric. Add it to SPECS, otherwise a test is " +
                     "silently asserting against a metric nobody computed.",
             )
             val records = recordsOf(spec.recordType)
@@ -233,7 +233,7 @@ class AggregatingFakeHealthConnectClient(
             throw IllegalStateException(
                 "connect-client no longer exposes $getter on ${javaClass.simpleName}. The " +
                     "aggregating fake reads the request through Kotlin's internal name " +
-                    "mangling; androidx has moved it. Fix this rather than working around it — " +
+                    "mangling; androidx has moved it. Fix this rather than working around it: " +
                     "a fake that aggregates the wrong metrics is worse than one that fails.",
                 it,
             )
