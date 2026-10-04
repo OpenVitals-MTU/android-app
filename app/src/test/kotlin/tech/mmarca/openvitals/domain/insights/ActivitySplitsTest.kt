@@ -311,50 +311,75 @@ class ActivitySplitsTest {
         assertEquals(120.0, elapsedSeconds(result.splits.last()), 0.5)
     }
 
+    /**
+     * One fix every [spacingMeters] along [distanceMeters] at 3.33 m/s, the altitude following
+     * [altitudeAt]. The splits run the route through the elevation filter, which smooths a
+     * 4-fix route away; this is the sampling a recording actually has.
+     */
+    private fun denseRoute(
+        distanceMeters: Double,
+        spacingMeters: Double,
+        altitudeAt: (Double) -> Double,
+    ): List<ExerciseRoutePoint> =
+        (0..(distanceMeters / spacingMeters).toInt()).map { i ->
+            val east = i * spacingMeters
+            point(east * 0.3, east, altitudeMeters = altitudeAt(east))
+        }
+
+    /**
+     * A climb is banked a few fixes after it happens, so a boundary mid-climb may move one
+     * 5 m step plus the smoothing lag into the next split. The total is exact.
+     */
+    private val climbAttributionMeters = 8.0
+
+    private fun ActivitySplits.gainSum(): Double = splits.sumOf { it.elevationGainMeters ?: 0.0 }
+
+    private fun ActivitySplits.lossSum(): Double = splits.sumOf { it.elevationLossMeters ?: 0.0 }
+
     @Test
     fun `elevation gain and loss come from the route altitudes`() {
-        // Up 20 m over the first km, back down 8 m over the second.
-        val workout = workout(
-            totalDistanceMeters = 2000.0,
-            endTime = at(600),
-            routePoints = listOf(
-                point(0, 0.0, altitudeMeters = 100.0),
-                point(150, 500.0, altitudeMeters = 110.0),
-                point(300, 1000.0, altitudeMeters = 120.0),
-                point(450, 1500.0, altitudeMeters = 116.0),
-                point(600, 2000.0, altitudeMeters = 112.0),
-            ),
-        )
+        // Up 100 m over the first km, back down 40 m over the second.
+        val route = denseRoute(2000.0, 4.0) { east ->
+            if (east <= 1000.0) 100.0 + east / 10.0 else 200.0 - (east - 1000.0) / 25.0
+        }
+        val workout = workout(totalDistanceMeters = 2000.0, endTime = at(600), routePoints = route)
 
         val result = compute(workout)
 
-        assertEquals(20.0, result.splits[0].elevationGainMeters!!, 0.01)
+        assertEquals(100.0, result.splits[0].elevationGainMeters!!, climbAttributionMeters)
         assertEquals(0.0, result.splits[0].elevationLossMeters!!, 0.01)
-        assertEquals(0.0, result.splits[1].elevationGainMeters!!, 0.01)
-        assertEquals(8.0, result.splits[1].elevationLossMeters!!, 0.01)
+        assertEquals(40.0, result.splits[1].elevationLossMeters!!, climbAttributionMeters)
+        assertEquals(RouteElevation.routeElevationGain(route), result.gainSum(), 0.01)
+        assertEquals(RouteElevation.routeElevationLoss(route), result.lossSum(), 0.01)
     }
 
     @Test
     fun `altitude at a mid-segment boundary is interpolated, and no interior fix is lost from the next split`() {
-        // The 1 km boundary is halfway between the 750 m fix (110 m) and the 1250 m fix (130 m).
-        // Split 1 gains 20 m, split 2 gains 10 m.
-        val workout = workout(
-            totalDistanceMeters = 2000.0,
-            endTime = at(600),
-            routePoints = listOf(
-                point(0, 0.0, altitudeMeters = 100.0),
-                point(225, 750.0, altitudeMeters = 110.0),
-                point(375, 1250.0, altitudeMeters = 130.0),
-                point(600, 2000.0, altitudeMeters = 130.0),
-            ),
-        )
+        // Fixes every 7 m, so the 1 km boundary falls between two. The climb from 100 m to 200 m
+        // runs 700-1300 m: half of it before the boundary, half after.
+        val route = denseRoute(1995.0, 7.0) { east ->
+            100.0 + ((east - 700.0) / 6.0).coerceIn(0.0, 100.0)
+        }
+        val workout = workout(totalDistanceMeters = 1995.0, endTime = at(600), routePoints = route)
 
         val result = compute(workout)
 
-        assertEquals(20.0, result.splits[0].elevationGainMeters!!, 0.05)
-        // 120 m at the boundary -> 130 m at the 1250 m fix -> flat to the end.
-        assertEquals(10.0, result.splits[1].elevationGainMeters!!, 0.05)
-        assertEquals(0.0, result.splits[1].elevationLossMeters!!, 0.05)
+        assertEquals(50.0, result.splits[0].elevationGainMeters!!, climbAttributionMeters)
+        assertEquals(50.0, result.splits[1].elevationGainMeters!!, climbAttributionMeters)
+        assertEquals(0.0, result.splits[1].elevationLossMeters!!, 0.01)
+        assertEquals(RouteElevation.routeElevationGain(route), result.gainSum(), 0.01)
+    }
+
+    @Test
+    fun `GPS altitude noise on a flat route is not banked as climb in every split`() {
+        // Plus-minus 4 m of jitter: summing raw rises gave each kilometer ~400 m of climb.
+        val route = denseRoute(3000.0, 10.0) { east -> 100.0 + if ((east / 10.0).toInt() % 2 == 0) 4.0 else -4.0 }
+        val workout = workout(totalDistanceMeters = 3000.0, endTime = at(900), routePoints = route)
+
+        val result = compute(workout)
+
+        assertEquals(3, result.splits.size)
+        result.splits.forEach { split -> assertEquals(0.0, split.elevationGainMeters!!, 0.01) }
     }
 
     @Test

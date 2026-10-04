@@ -148,7 +148,8 @@ internal fun buildActivitySplits(
     val sortedRoutePoints = routePoints.sortedBy { it.time }
 
     val laps = usableLaps(workout)
-    val routeNodes = routeNodes(sortedRoutePoints)
+    // Settled over the whole route first: raw per-node rises banked GPS noise in every split.
+    val routeNodes = routeNodes(RouteElevation.withSettledAltitudes(sortedRoutePoints))
     val speedNodes = speedNodes(speeds)
     val totalDistance = workout.totalDistanceMeters ?: 0.0
     val lapDistance = laps.fold(0.0) { sum, lap -> sum + max(0.0, lap.lengthMeters ?: 0.0) }

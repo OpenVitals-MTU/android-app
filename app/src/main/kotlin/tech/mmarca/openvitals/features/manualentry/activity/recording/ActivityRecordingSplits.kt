@@ -4,6 +4,7 @@ import java.time.Duration
 import java.time.Instant
 import kotlin.math.floor
 import tech.mmarca.openvitals.core.geo.haversineMeters
+import tech.mmarca.openvitals.domain.insights.RouteElevation
 import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
 import tech.mmarca.openvitals.domain.model.ExerciseLapData
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
@@ -33,7 +34,7 @@ internal fun activityRecordingIntervalSplits(
     points: List<ExerciseRoutePoint>,
     routeBreakIndexes: List<Int>,
 ): List<ActivityRecordingSplit> =
-    points.toContinuousRouteSegments(routeBreakIndexes)
+    RouteElevation.withSettledAltitudes(points).toContinuousRouteSegments(routeBreakIndexes)
         .mapIndexedNotNull { index, segment ->
             segment.toRouteSegmentSplit(index = index + 1)
         }
@@ -46,12 +47,13 @@ internal fun activityRecordingLapSplits(
     activeEndTime: Instant? = null,
 ): List<ActivityRecordingSplit> {
     if (recordingStartTime == null || laps.isEmpty()) return emptyList()
+    val settledPoints = RouteElevation.withSettledAltitudes(points)
     val closedSplits = laps
         .sortedBy { it.startTime }
         .mapIndexedNotNull { index, lap ->
             lap.toSplit(
                 index = index + 1,
-                points = points,
+                points = settledPoints,
                 routeBreakIndexes = routeBreakIndexes,
             )
         }
@@ -64,7 +66,7 @@ internal fun activityRecordingLapSplits(
             distanceMeters = null,
         ).toSplit(
             index = closedSplits.size + 1,
-            points = points,
+            points = settledPoints,
             routeBreakIndexes = routeBreakIndexes,
         )
     } else {
@@ -77,8 +79,9 @@ internal fun exerciseLapSplits(
     laps: List<ExerciseLapData>,
     points: List<ExerciseRoutePoint>,
     routeBreakIndexes: List<Int> = emptyList(),
-): List<ActivityRecordingSplit> =
-    laps
+): List<ActivityRecordingSplit> {
+    val settledPoints = RouteElevation.withSettledAltitudes(points)
+    return laps
         .sortedBy { it.startTime }
         .map { lap ->
             ActivityRecordingLap(
@@ -90,10 +93,11 @@ internal fun exerciseLapSplits(
         .mapIndexedNotNull { index, lap ->
             lap.toSplit(
                 index = index + 1,
-                points = points,
+                points = settledPoints,
                 routeBreakIndexes = routeBreakIndexes,
             )
         }
+}
 
 internal fun activityRecordingRouteDistanceMeters(
     points: List<ExerciseRoutePoint>,
@@ -112,7 +116,7 @@ internal fun activityRecordingTimeSplits(
     val firstTime = points.firstOrNull()?.time ?: return emptyList()
     val buckets = linkedMapOf<Int, MutableSplitStats>()
 
-    points.toContinuousRouteSegments(routeBreakIndexes).forEach { segment ->
+    RouteElevation.withSettledAltitudes(points).toContinuousRouteSegments(routeBreakIndexes).forEach { segment ->
         segment.zipWithNext().forEach { (start, end) ->
             val elapsedMillis = Duration.between(start.time, end.time).toMillis()
             if (elapsedMillis <= 0L) return@forEach
@@ -168,7 +172,7 @@ internal fun activityRecordingDistanceSplits(
     val buckets = linkedMapOf<Int, MutableSplitStats>()
     var routeDistanceMeters = 0.0
 
-    points.toContinuousRouteSegments(routeBreakIndexes).forEach { segment ->
+    RouteElevation.withSettledAltitudes(points).toContinuousRouteSegments(routeBreakIndexes).forEach { segment ->
         segment.zipWithNext().forEach { (start, end) ->
             val elapsedMillis = Duration.between(start.time, end.time).toMillis()
             if (elapsedMillis <= 0L) return@forEach
@@ -357,15 +361,18 @@ private fun Double.speedFor(elapsedMillis: Double): Double {
     return if (this > 0.0 && elapsedSeconds > 0.0) this / elapsedSeconds else 0.0
 }
 
+/**
+ * The rise between two points. Every split builder hands in points from
+ * [RouteElevation.withSettledAltitudes], whose altitudes move only on a banked
+ * change: summing raw rises banked GPS noise in every split.
+ */
 private fun ExerciseRoutePoint.climbMetersTo(other: ExerciseRoutePoint): Double {
     val startAltitude = altitudeMeters ?: return 0.0
     val endAltitude = other.altitudeMeters ?: return 0.0
-    val delta = endAltitude - startAltitude
-    return if (delta >= MinSplitClimbMeters) delta else 0.0
+    return (endAltitude - startAltitude).coerceAtLeast(0.0)
 }
 
 private fun ExerciseRoutePoint.distanceMetersTo(other: ExerciseRoutePoint): Double =
     haversineMeters(latitude, longitude, other.latitude, other.longitude)
 
-private const val MinSplitClimbMeters = 1.0
 private const val SplitEpsilon = 0.000001

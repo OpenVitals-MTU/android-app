@@ -268,18 +268,23 @@ internal fun GpsRecordingTabs(
                         activeEndTime = now,
                     )
                 } else {
-                    activityRecordingIntervalSplits(state.points, state.routeBreakIndexes)
+                    // Splits run the elevation filter over the whole route; not once a second.
+                    remember(state.points, state.routeBreakIndexes) {
+                        activityRecordingIntervalSplits(state.points, state.routeBreakIndexes)
+                    }
                 },
                 emptyMessage = stringResource(R.string.activity_entry_recording_no_intervals),
                 unitFormatter = unitFormatter,
                 label = { split -> stringResource(R.string.activity_entry_recording_split_interval, split.index) },
             )
             ActivityRecordingTab.BY_TIME -> RecordingSplitsTab(
-                splits = activityRecordingTimeSplits(
-                    points = state.points,
-                    routeBreakIndexes = state.routeBreakIndexes,
-                    splitMillis = timeSplitMinutes * 60_000L,
-                ),
+                splits = remember(state.points, state.routeBreakIndexes, timeSplitMinutes) {
+                    activityRecordingTimeSplits(
+                        points = state.points,
+                        routeBreakIndexes = state.routeBreakIndexes,
+                        splitMillis = timeSplitMinutes * 60_000L,
+                    )
+                },
                 emptyMessage = stringResource(R.string.activity_entry_recording_no_time_splits),
                 unitFormatter = unitFormatter,
                 label = { split ->
@@ -295,11 +300,13 @@ internal fun GpsRecordingTabs(
                 },
             )
             ActivityRecordingTab.BY_DISTANCE -> RecordingSplitsTab(
-                splits = activityRecordingDistanceSplits(
-                    points = state.points,
-                    routeBreakIndexes = state.routeBreakIndexes,
-                    splitMeters = distanceSplitMeters,
-                ),
+                splits = remember(state.points, state.routeBreakIndexes, distanceSplitMeters) {
+                    activityRecordingDistanceSplits(
+                        points = state.points,
+                        routeBreakIndexes = state.routeBreakIndexes,
+                        splitMeters = distanceSplitMeters,
+                    )
+                },
                 emptyMessage = stringResource(R.string.activity_entry_recording_no_distance_splits),
                 unitFormatter = unitFormatter,
                 label = { split ->

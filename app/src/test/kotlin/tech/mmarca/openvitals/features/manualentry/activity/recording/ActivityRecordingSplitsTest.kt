@@ -4,6 +4,7 @@ import java.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tech.mmarca.openvitals.domain.insights.RouteElevation
 import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
 import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 
@@ -33,9 +34,9 @@ class ActivityRecordingSplitsTest {
     @Test fun `time splits include active incomplete split`() {
         val points = listOf(
             point(seconds = 0, latitude = 0.0, altitude = 0.0),
-            point(seconds = 60, latitude = 0.001, altitude = 2.0),
-            point(seconds = 120, latitude = 0.002, altitude = 4.0),
-            point(seconds = 180, latitude = 0.003, altitude = 4.0),
+            point(seconds = 60, latitude = 0.001, altitude = 10.0),
+            point(seconds = 120, latitude = 0.002, altitude = 20.0),
+            point(seconds = 180, latitude = 0.003, altitude = 20.0),
         )
 
         val splits = activityRecordingTimeSplits(
@@ -47,7 +48,37 @@ class ActivityRecordingSplitsTest {
         assertEquals(2, splits.size)
         assertEquals(120_000L, splits[0].elapsedMillis)
         assertEquals(60_000L, splits[1].elapsedMillis)
-        assertEquals(4.0, splits[0].climbMeters, 0.1)
+        // Four fixes are too few for the filter to settle by the boundary; the whole still adds up.
+        assertEquals(20.0, splits.sumOf { it.climbMeters }, 0.1)
+    }
+
+    @Test fun `GPS altitude noise is not banked as climb in every split`() {
+        // One fix a second, plus-minus 4 m: summing raw rises gave each minute ~240 m of climb.
+        val points = (0L until 600L).map { second ->
+            point(seconds = second, latitude = second * 0.00003, altitude = if (second % 2 == 0L) 4.0 else -4.0)
+        }
+
+        val timeSplits = activityRecordingTimeSplits(points, emptyList(), splitMillis = 60_000L)
+        val distanceSplits = activityRecordingDistanceSplits(points, emptyList(), splitMeters = 500.0)
+        val intervalSplits = activityRecordingIntervalSplits(points, emptyList())
+
+        assertEquals(10, timeSplits.size)
+        (timeSplits + distanceSplits + intervalSplits).forEach { split ->
+            assertEquals(0.0, split.climbMeters, 0.01)
+        }
+    }
+
+    @Test fun `split climbs add up to the recording's elevation gain`() {
+        // A 60 m climb over ten minutes with 3 m of jitter, cut by the minute.
+        val points = (0L until 600L).map { second ->
+            val jitter = if (second % 3 == 0L) 3.0 else -1.5
+            point(seconds = second, latitude = second * 0.00003, altitude = 100.0 + second / 10.0 + jitter)
+        }
+
+        val splits = activityRecordingTimeSplits(points, emptyList(), splitMillis = 60_000L)
+
+        assertEquals(RouteElevation.routeElevationGain(points), splits.sumOf { it.climbMeters }, 0.01)
+        assertEquals(60.0, splits.sumOf { it.climbMeters }, 6.0)
     }
 
     @Test fun `time splits do not calculate across route breaks`() {
