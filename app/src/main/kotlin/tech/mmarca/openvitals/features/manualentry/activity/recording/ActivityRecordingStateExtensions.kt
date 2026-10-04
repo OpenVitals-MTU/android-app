@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.manualentry.activity.recording
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import java.time.Duration
 import java.time.Instant
+import kotlin.math.abs
 import tech.mmarca.openvitals.domain.insights.RouteElevation
 import tech.mmarca.openvitals.domain.model.ActivityRecordingLap
 import tech.mmarca.openvitals.domain.model.BleRecordingMetrics
@@ -161,6 +162,33 @@ fun ActivityRecordingState.displayElevationGainedMeters(): Double =
     } else {
         RouteElevation.routeElevationGain(points)
     }
+
+/**
+ * The barometer accumulator, one reading at a time. Pure: the controller owns
+ * the sensor. The anchor moves only once a smoothed step clears
+ * [MinBarometerElevationStepMeters], and a reading too far from it to be a
+ * movement re-anchors without banking anything.
+ */
+internal fun ActivityRecordingState.withBarometerAltitude(altitudeMeters: Double): ActivityRecordingState {
+    val previousAltitude = lastBarometerAltitudeMeters
+        ?.takeIf { abs(altitudeMeters - it) <= MaxBarometerJumpMeters }
+        ?: return copy(hasBarometerElevation = true, lastBarometerAltitudeMeters = altitudeMeters)
+
+    val smoothedAltitude = previousAltitude + ((altitudeMeters - previousAltitude) * BarometerSmoothingAlpha)
+    val delta = smoothedAltitude - previousAltitude
+    val gainedMeters = if (delta >= MinBarometerElevationStepMeters) delta else 0.0
+    val lostMeters = if (delta <= -MinBarometerElevationStepMeters) -delta else 0.0
+    return copy(
+        hasBarometerElevation = true,
+        barometerElevationGainedMeters = barometerElevationGainedMeters + gainedMeters,
+        barometerElevationLostMeters = barometerElevationLostMeters + lostMeters,
+        lastBarometerAltitudeMeters = if (gainedMeters > 0.0 || lostMeters > 0.0) {
+            smoothedAltitude
+        } else {
+            previousAltitude
+        },
+    )
+}
 
 fun ActivityRecordingState.closedManualLaps(endTime: Instant): List<ActivityRecordingLap> {
     if (manualLaps.isEmpty()) return emptyList()

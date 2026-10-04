@@ -55,7 +55,9 @@ The moment the effort stopped is saved to Health Connect as a rest segment runni
 
 GPS vertical readings are noisy, and adding up every small rise between points inflates elevation gain badly. OpenVitals instead smooths the route and requires a real change before it counts, so the reported gain matches the climbing that actually happened.
 
-Barometer readings were already filtered and are preferred when the device has one. The same filter is applied to imported route files, so a recorded and an imported version of the same outing agree.
+How big a change has to be depends on how sure the phone is of each fix. Indoors, under trees, or beside tall structures the altitude can be tens of meters off while the position still looks usable, so a point needs a change at least as large as its own reported error, and a fix less certain than 20 m does not count towards the climb at all. Routes without vertical accuracy, such as imported GPX files, use the fixed threshold.
+
+Barometer readings were already filtered and are preferred when the device has one. A reading outside the range of real air pressure, or one implying a jump of more than 50 m between two readings, is treated as a sensor fault: it re-anchors the filter instead of counting as climb. The same filter is applied to imported route files, so a recorded and an imported version of the same outing agree.
 
 When elevation tiles are imported and correction is on, a finished recording takes its altitudes from the tiles and its gain is recomputed from them, the same way an imported file is. The live figure on the recording screen is still the sensor's; the corrected one appears on the review form. See [Elevation correction](elevation-correction.md).
 

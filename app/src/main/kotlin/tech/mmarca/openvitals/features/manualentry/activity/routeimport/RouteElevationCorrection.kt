@@ -12,7 +12,8 @@ import tech.mmarca.openvitals.features.activity.elevation.ElevationTileRepositor
 /**
  * Swaps every point's altitude for the DEM value from [lookup]. Null as soon
  * as one point has none: a route half on the DEM and half on a drifting
- * barometer would be worse than either.
+ * barometer would be worse than either. The fix's vertical accuracy goes with
+ * the GPS altitude it described; the elevation filter would distrust the DEM.
  */
 internal fun correctRouteAltitudes(
     points: List<ExerciseRoutePoint>,
@@ -22,7 +23,7 @@ internal fun correctRouteAltitudes(
     val corrected = ArrayList<ExerciseRoutePoint>(points.size)
     for (point in points) {
         val altitude = lookup(point.latitude, point.longitude) ?: return null
-        corrected += point.copy(altitudeMeters = altitude)
+        corrected += point.copy(altitudeMeters = altitude, verticalAccuracyMeters = null)
     }
     return corrected
 }

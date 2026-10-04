@@ -1356,40 +1356,14 @@ class ActivityRecordingController @Inject constructor(
         val current = _state.value
         if (current.status != ActivityRecordingStatus.RECORDING || current.recordingKind != ActivityRecordingKind.GPS_ROUTE) return
         if (!preferencesRepository.activityRecordingPreferences().barometerClimbEnabled) return
+        // A 0 hPa glitch reads as 44 km up, and 30 % of it would be banked as climb.
+        if (pressureHpa !in MinPlausiblePressureHpa..MaxPlausiblePressureHpa) return
 
         val altitudeMeters = android.hardware.SensorManager.getAltitude(
             android.hardware.SensorManager.PRESSURE_STANDARD_ATMOSPHERE,
             pressureHpa,
         ).toDouble()
-        val smoothedAltitude = current.lastBarometerAltitudeMeters?.let { previous ->
-            previous + ((altitudeMeters - previous) * BarometerSmoothingAlpha)
-        } ?: altitudeMeters
-        val previousAltitude = current.lastBarometerAltitudeMeters
-        if (previousAltitude == null) {
-            updateAndPersist(
-                current.copy(
-                    hasBarometerElevation = true,
-                    lastBarometerAltitudeMeters = smoothedAltitude,
-                )
-            )
-            return
-        }
-
-        val delta = smoothedAltitude - previousAltitude
-        val gainedMeters = if (delta >= MinBarometerElevationStepMeters) delta else 0.0
-        val lostMeters = if (delta <= -MinBarometerElevationStepMeters) -delta else 0.0
-        updateAndPersist(
-            current.copy(
-                hasBarometerElevation = true,
-                barometerElevationGainedMeters = current.barometerElevationGainedMeters + gainedMeters,
-                barometerElevationLostMeters = current.barometerElevationLostMeters + lostMeters,
-                lastBarometerAltitudeMeters = if (gainedMeters > 0.0 || lostMeters > 0.0) {
-                    smoothedAltitude
-                } else {
-                    previousAltitude
-                },
-            )
-        )
+        updateAndPersist(current.withBarometerAltitude(altitudeMeters))
     }
 
     private fun updateGpsStatus(location: Location) {
@@ -1751,6 +1725,11 @@ internal const val MinSampleIntervalMillis = 500L
 internal const val MinElevationGainIncrementMeters = 1.0
 internal const val BarometerSmoothingAlpha = 0.3
 internal const val MinBarometerElevationStepMeters = 3.0
+// Everest summit to below the Dead Sea, with margin; outside it the sensor is wrong.
+internal const val MinPlausiblePressureHpa = 300f
+internal const val MaxPlausiblePressureHpa = 1_100f
+// Readings arrive several times a second, and the anchor lags by at most ~10 m.
+internal const val MaxBarometerJumpMeters = 50.0
 internal const val RestTimerBellVolume = 0.42f
 internal const val HrrTargetHitsToEndEffort = 2
 internal const val PlanStepCueVibrationMillis = 150L
