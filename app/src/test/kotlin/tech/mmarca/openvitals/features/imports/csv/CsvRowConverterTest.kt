@@ -70,27 +70,14 @@ private fun withingsMapping(
 private fun row(fields: List<String>, rowNumber: Int = 2): CsvRow =
     CsvRow(rowNumber = rowNumber, fields = fields)
 
-private fun weightMapping(interpretation: CsvValueInterpretation): CsvImportMapping =
-    CsvImportMapping(
-        columns = listOf(
-            CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
-            CsvColumnMapping(
-                columnIndex = 1,
-                role = CsvColumnRole.METRIC,
-                metric = CsvImportMetric.WEIGHT,
-                interpretation = interpretation,
-            ),
-        ),
-        dateTime = CsvDateTimeSettings(
-            format = CsvDateTimeFormat.YEAR_FIRST,
-            zone = CsvTimeZoneMode.UTC,
-        ),
-    )
-
 /** A mapping of one timestamp column plus one metric column. */
 private fun singleMetricMapping(
     metric: CsvImportMetric,
     interpretation: CsvValueInterpretation,
+    dateTime: CsvDateTimeSettings = CsvDateTimeSettings(
+        format = CsvDateTimeFormat.YEAR_FIRST,
+        zone = CsvTimeZoneMode.UTC,
+    ),
 ): CsvImportMapping = CsvImportMapping(
     columns = listOf(
         CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
@@ -101,10 +88,21 @@ private fun singleMetricMapping(
             interpretation = interpretation,
         ),
     ),
-    dateTime = CsvDateTimeSettings(
+    dateTime = dateTime,
+)
+
+private fun weightMapping(
+    interpretation: CsvValueInterpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
+    dateTime: CsvDateTimeSettings = CsvDateTimeSettings(
         format = CsvDateTimeFormat.YEAR_FIRST,
         zone = CsvTimeZoneMode.UTC,
     ),
+): CsvImportMapping = singleMetricMapping(CsvImportMetric.WEIGHT, interpretation, dateTime)
+
+private val PlusTwo = CsvDateTimeSettings(
+    format = CsvDateTimeFormat.YEAR_FIRST,
+    zone = CsvTimeZoneMode.FIXED_OFFSET,
+    fixedOffset = ZoneOffset.ofHours(2),
 )
 
 private fun convertOne(
@@ -187,66 +185,35 @@ class CsvRowConverterTest {
 
     @Test
     fun `a weight in pounds converts to kilograms`() {
-        val conversion = convertCsvRow(
-            row = row(listOf("2026-07-01 08:12:00", "172.8")),
-            mapping = weightMapping(CsvDirectValue(CsvUnit.POUNDS)),
-        )
+        val converted = convertOne("172.8", CsvImportMetric.WEIGHT, CsvDirectValue(CsvUnit.POUNDS))
 
-        val weight = conversion.records.single().record as WeightRecord
+        val weight = converted.record as WeightRecord
         assertEquals(78.38, weight.weight.inKilograms, 0.01)
     }
 
     @Test
     fun `a height in centimetres is stored in metres`() {
-        val conversion = convertCsvRow(
-            row = row(listOf("2026-07-01 08:12:00", "183")),
-            mapping = singleMetricMapping(CsvImportMetric.HEIGHT, CsvDirectValue(CsvUnit.CENTIMETERS)),
-        )
+        val converted = convertOne("183", CsvImportMetric.HEIGHT, CsvDirectValue(CsvUnit.CENTIMETERS))
 
-        val height = conversion.records.single().record as HeightRecord
+        val height = converted.record as HeightRecord
         assertEquals(1.83, height.height.inMeters, 0.0001)
     }
 
     @Test
-    fun `an unparsable timestamp rejects the whole row`() {
-        val conversion = convertCsvRow(
-            row = row(listOf("not a date", "78.4", "15.2", "3.1", "55.0", "42.3", "")),
-            mapping = withingsMapping(),
+    fun `a missing or unparsable timestamp, or a row too short for the mapping, rejects the whole row`() {
+        val rows = mapOf(
+            CsvImportDiagnosticReason.MISSING_TIMESTAMP to listOf("", "78.4", "15.2", "3.1", "55.0", "42.3", ""),
+            CsvImportDiagnosticReason.UNPARSABLE_TIMESTAMP to
+                listOf("not a date", "78.4", "15.2", "3.1", "55.0", "42.3", ""),
+            CsvImportDiagnosticReason.WRONG_FIELD_COUNT to listOf("2026-07-01 08:12:00", "78.4"),
         )
 
-        assertTrue(conversion.records.isEmpty())
-        assertEquals(
-            CsvImportDiagnosticReason.UNPARSABLE_TIMESTAMP,
-            conversion.diagnostics.single().reason,
-        )
-    }
+        val outcomes = rows.mapValues { (_, fields) ->
+            val conversion = convertCsvRow(row = row(fields), mapping = withingsMapping())
+            conversion.records.size to conversion.diagnostics.map { it.reason }
+        }
 
-    @Test
-    fun `an empty timestamp cell rejects the whole row`() {
-        val conversion = convertCsvRow(
-            row = row(listOf("", "78.4", "15.2", "3.1", "55.0", "42.3", "")),
-            mapping = withingsMapping(),
-        )
-
-        assertTrue(conversion.records.isEmpty())
-        assertEquals(
-            CsvImportDiagnosticReason.MISSING_TIMESTAMP,
-            conversion.diagnostics.single().reason,
-        )
-    }
-
-    @Test
-    fun `a row shorter than the mapped columns is rejected as malformed`() {
-        val conversion = convertCsvRow(
-            row = row(listOf("2026-07-01 08:12:00", "78.4")),
-            mapping = withingsMapping(),
-        )
-
-        assertTrue(conversion.records.isEmpty())
-        assertEquals(
-            CsvImportDiagnosticReason.WRONG_FIELD_COUNT,
-            conversion.diagnostics.single().reason,
-        )
+        assertEquals(rows.mapValues { (reason, _) -> 0 to listOf(reason) }, outcomes)
     }
 
     @Test
@@ -308,22 +275,7 @@ class CsvRowConverterTest {
     fun `the record carries the resolved instant and its wall-clock offset`() {
         val conversion = convertCsvRow(
             row = row(listOf("2026-07-01 08:12:00", "78.4")),
-            mapping = CsvImportMapping(
-                columns = listOf(
-                    CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
-                    CsvColumnMapping(
-                        columnIndex = 1,
-                        role = CsvColumnRole.METRIC,
-                        metric = CsvImportMetric.WEIGHT,
-                        interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
-                    ),
-                ),
-                dateTime = CsvDateTimeSettings(
-                    format = CsvDateTimeFormat.YEAR_FIRST,
-                    zone = CsvTimeZoneMode.FIXED_OFFSET,
-                    fixedOffset = ZoneOffset.ofHours(2),
-                ),
-            ),
+            mapping = weightMapping(dateTime = PlusTwo),
         )
 
         val record = conversion.records.single().record as WeightRecord
@@ -334,17 +286,8 @@ class CsvRowConverterTest {
     // buildCsvClientRecordId.
 
     @Test
-    fun `the id is namespaced to csv so it cannot collide with apple_health`() {
-        val id = buildCsvClientRecordId(
-            targetType = "WeightRecord",
-            utc = Instant.parse("2026-07-01T06:12:00Z"),
-        )
-
-        assertTrue(id.startsWith("csv_weightrecord_"))
-    }
-
-    @Test
-    fun `the id is byte-identical to the Flutter build's`() {
+    fun `the id is namespaced to csv and byte-identical to the Flutter build's`() {
+        // The csv_ prefix keeps it apart from apple_health ids.
         // Pinned against Dart: sha256("WeightRecord|1782886320000"), first 16 bytes as hex.
         // Flutter-build imports dedup against exactly this string.
         assertEquals(
@@ -360,7 +303,7 @@ class CsvRowConverterTest {
     fun `the same measurement in pounds and kilograms yields the same id`() {
         val metric = convertCsvRow(
             row = row(listOf("2026-07-01 08:12:00", "78.4")),
-            mapping = weightMapping(CsvDirectValue(CsvUnit.KILOGRAMS)),
+            mapping = weightMapping(),
         ).records.single()
         val imperial = convertCsvRow(
             row = row(listOf("2026-07-01 08:12:00", "172.84")),
@@ -375,11 +318,11 @@ class CsvRowConverterTest {
         // The upsert contract: excluding the value from the id makes a corrected file overwrite.
         val before = convertCsvRow(
             row = row(listOf("2026-07-01 08:12:00", "78.4")),
-            mapping = weightMapping(CsvDirectValue(CsvUnit.KILOGRAMS)),
+            mapping = weightMapping(),
         ).records.single()
         val after = convertCsvRow(
             row = row(listOf("2026-07-01 08:12:00", "78.6")),
-            mapping = weightMapping(CsvDirectValue(CsvUnit.KILOGRAMS)),
+            mapping = weightMapping(),
         ).records.single()
 
         assertEquals(before.clientRecordId, after.clientRecordId)
@@ -498,7 +441,7 @@ class CsvRowConverterTest {
     fun `a temperature of 300 is rejected as implausible`() {
         // A Fahrenheit column mapped as Celsius, most likely.
         val conversion = convertCsvRow(
-            row = CsvRow(rowNumber = 2, fields = listOf("2023-10-09 07:08:01", "300")),
+            row = row(listOf("2023-10-09 07:08:01", "300")),
             mapping = singleMetricMapping(CsvImportMetric.BODY_TEMPERATURE, CsvDirectValue(CsvUnit.CELSIUS)),
         )
 
@@ -701,7 +644,7 @@ class CsvRowConverterTest {
     fun `the span covers the earliest and latest row, not the file order`() {
         val range = previewInstantRange(
             rows = previewRows,
-            mapping = weightMapping(CsvDirectValue(CsvUnit.KILOGRAMS)),
+            mapping = weightMapping(),
         )
 
         assertEquals(LocalDateTime.of(2026, 7, 1, 8, 12), range!!.first)
@@ -717,23 +660,13 @@ class CsvRowConverterTest {
             listOf("03/07/2026", "78.2"),
         )
 
-        fun mappingFor(format: CsvDateTimeFormat): CsvImportMapping = CsvImportMapping(
-            columns = listOf(
-                CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
-                CsvColumnMapping(
-                    columnIndex = 1,
-                    role = CsvColumnRole.METRIC,
-                    metric = CsvImportMetric.WEIGHT,
-                    interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
-                ),
-            ),
-            dateTime = CsvDateTimeSettings(format = format, zone = CsvTimeZoneMode.UTC),
-        )
+        fun mappingFor(format: CsvDateTimeFormat): CsvImportMapping =
+            weightMapping(dateTime = CsvDateTimeSettings(format = format, zone = CsvTimeZoneMode.UTC))
 
         val dayFirst = previewInstantRange(rows = ambiguous, mapping = mappingFor(CsvDateTimeFormat.DAY_FIRST))
         val monthFirst = previewInstantRange(rows = ambiguous, mapping = mappingFor(CsvDateTimeFormat.MONTH_FIRST))
 
-        // Day-first: three days in July. Month-first: three months, Jan–Mar.
+        // Day-first: three days in July. Month-first: three months, January to March.
         assertEquals(7, dayFirst!!.first.monthValue)
         assertEquals(7, dayFirst.second.monthValue)
         assertEquals(1, monthFirst!!.first.monthValue)
@@ -748,7 +681,7 @@ class CsvRowConverterTest {
                 listOf("not a date", "78.5"),
                 listOf("", "78.6"),
             ),
-            mapping = weightMapping(CsvDirectValue(CsvUnit.KILOGRAMS)),
+            mapping = weightMapping(),
         )
 
         assertEquals(LocalDateTime.of(2026, 7, 1, 8, 12), range!!.first)
@@ -760,7 +693,7 @@ class CsvRowConverterTest {
         assertNull(
             previewInstantRange(
                 rows = listOf(listOf("not a date", "78.4")),
-                mapping = weightMapping(CsvDirectValue(CsvUnit.KILOGRAMS)),
+                mapping = weightMapping(),
             ),
         )
     }
@@ -770,16 +703,7 @@ class CsvRowConverterTest {
         assertNull(
             previewInstantRange(
                 rows = previewRows,
-                mapping = CsvImportMapping(
-                    columns = listOf(
-                        CsvColumnMapping(
-                            columnIndex = 1,
-                            role = CsvColumnRole.METRIC,
-                            metric = CsvImportMetric.WEIGHT,
-                            interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
-                        ),
-                    ),
-                ),
+                mapping = CsvImportMapping(columns = weightMapping().columns.drop(1)),
             ),
         )
     }
@@ -789,22 +713,7 @@ class CsvRowConverterTest {
         // A +02:00 file says 08:12 on the wall; showing 06:12 would look like a bug.
         val range = previewInstantRange(
             rows = listOf(listOf("2026-07-01 08:12:00", "78.4")),
-            mapping = CsvImportMapping(
-                columns = listOf(
-                    CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
-                    CsvColumnMapping(
-                        columnIndex = 1,
-                        role = CsvColumnRole.METRIC,
-                        metric = CsvImportMetric.WEIGHT,
-                        interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
-                    ),
-                ),
-                dateTime = CsvDateTimeSettings(
-                    format = CsvDateTimeFormat.YEAR_FIRST,
-                    zone = CsvTimeZoneMode.FIXED_OFFSET,
-                    fixedOffset = ZoneOffset.ofHours(2),
-                ),
-            ),
+            mapping = weightMapping(dateTime = PlusTwo),
         )
 
         assertEquals(8, range!!.first.hour)

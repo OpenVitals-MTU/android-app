@@ -235,27 +235,13 @@ class GarminGncsHandlerTest {
         }
 
     @Test
-    fun `the queue holds sixty-four, because a held link sees far more than a wrist shows`() =
+    fun `the queue holds sixty-four and evicts the oldest, because a held link sees far more than a wrist shows`() =
         runTest {
             val (handler, _) = enabledHandler()
-            for (id in 1L..65L) {
-                handler.post(notification(id))
-            }
-            assertEquals(64, handler.queued.size)
-            assertEquals(2L, handler.queued.first().id)
-        }
+            (1L..65L).forEach { handler.post(notification(it)) }
 
-    @Test
-    fun `a full queue evicts the oldest`() = runTest {
-        val (handler, _) = enabledHandler(maxQueued = 10)
-        for (id in 1L..11L) {
-            handler.post(notification(id))
+            assertEquals((2L..65L).toList(), handler.queued.map { it.id })
         }
-        assertEquals(
-            listOf(2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L, 11L),
-            handler.queued.map { it.id },
-        )
-    }
 
     @Test
     fun `an evicted notification dismissed later is still withdrawn from the watch`() = runTest {
@@ -389,11 +375,10 @@ class GarminGncsHandlerTest {
         assertEquals(listOf(0, 300, 600), chunks.map { it.offset })
 
         // Every chunk's CRC covers everything sent so far, not just itself.
-        var running = 0
-        for (chunk in chunks) {
-            running = GarminCrc.compute(chunk.chunk, initialCrc = running)
-            assertEquals(running, chunk.crc)
-        }
+        val cumulative = chunks
+            .runningFold(0) { crc, chunk -> GarminCrc.compute(chunk.chunk, initialCrc = crc) }
+            .drop(1)
+        assertEquals(cumulative, chunks.map { it.crc })
         // And the parts reassemble into exactly what was declared.
         val assembled = chunks.flatMap { it.chunk.toList() }
         assertEquals(chunks.first().totalSize, assembled.size)
@@ -500,30 +485,29 @@ class GarminGncsHandlerTest {
     }
 
     @Test
-    fun `ABORT stops the transfer without sending anything further`() = runTest {
-        val (handler, wire) = midTransfer()
-        handler.handleDataStatus(transferStatus(GarminNotificationTransferStatus.ABORT))
-        assertTrue(wire.frames.isEmpty())
-    }
-
-    @Test
-    fun `a CRC mismatch abandons rather than retrying, because retrying would send the same bytes`() =
+    fun `ABORT, a CRC mismatch and an OFFSET_MISMATCH abandon the transfer without sending anything further`() =
         runTest {
-            val (handler, wire) = midTransfer()
-            handler.handleDataStatus(
-                transferStatus(GarminNotificationTransferStatus.CRC_MISMATCH),
-            )
-            assertTrue(wire.frames.isEmpty())
-        }
+            // A CRC retry would send the same bytes, and OFFSET_MISMATCH names no offset to recover to.
+            // A later OK finds nothing in flight, so the transfer was dropped, not paused.
+            val framesSent = listOf(
+                GarminNotificationTransferStatus.ABORT,
+                GarminNotificationTransferStatus.CRC_MISMATCH,
+                GarminNotificationTransferStatus.OFFSET_MISMATCH,
+            ).associateWith { status ->
+                val (handler, wire) = midTransfer()
+                handler.handleDataStatus(transferStatus(status))
+                handler.handleDataStatus(ok)
+                wire.frames.size
+            }
 
-    @Test
-    fun `an OFFSET_MISMATCH abandons, because the status names no offset to recover to`() =
-        runTest {
-            val (handler, wire) = midTransfer()
-            handler.handleDataStatus(
-                transferStatus(GarminNotificationTransferStatus.OFFSET_MISMATCH),
+            assertEquals(
+                mapOf(
+                    GarminNotificationTransferStatus.ABORT to 0,
+                    GarminNotificationTransferStatus.CRC_MISMATCH to 0,
+                    GarminNotificationTransferStatus.OFFSET_MISMATCH to 0,
+                ),
+                framesSent,
             )
-            assertTrue(wire.frames.isEmpty())
         }
 
     @Test

@@ -290,35 +290,25 @@ class SleepViewModelTest {
 
     // previousPeriod.
 
-    @Test fun `previousPeriod DAY moves back one day`() = runTest {
+    @Test fun `previousPeriod moves back one period of the selected range`() = runTest {
         val vm = sleepViewModel(emptyRepo())
-        vm.selectRange(TimeRange.DAY)
-        val before = vm.uiState.value.selectedDate
-        vm.previousPeriod()
-        assertEquals(before.minusDays(1), vm.uiState.value.selectedDate)
-    }
 
-    @Test fun `previousPeriod WEEK moves back one week`() = runTest {
-        val vm = sleepViewModel(emptyRepo())
-        val before = vm.uiState.value.selectedDate
-        vm.previousPeriod()
-        assertEquals(before.minusWeeks(1), vm.uiState.value.selectedDate)
-    }
+        val steppedBack = listOf(TimeRange.DAY, TimeRange.WEEK, TimeRange.MONTH, TimeRange.YEAR).associateWith { range ->
+            vm.selectRange(range)
+            vm.selectDate(today)
+            vm.previousPeriod()
+            vm.uiState.value.selectedDate
+        }
 
-    @Test fun `previousPeriod MONTH moves back one month`() = runTest {
-        val vm = sleepViewModel(emptyRepo())
-        vm.selectRange(TimeRange.MONTH)
-        val before = vm.uiState.value.selectedDate
-        vm.previousPeriod()
-        assertEquals(before.minusMonths(1), vm.uiState.value.selectedDate)
-    }
-
-    @Test fun `previousPeriod YEAR moves back one year`() = runTest {
-        val vm = sleepViewModel(emptyRepo())
-        vm.selectRange(TimeRange.YEAR)
-        val before = vm.uiState.value.selectedDate
-        vm.previousPeriod()
-        assertEquals(before.minusYears(1), vm.uiState.value.selectedDate)
+        assertEquals(
+            mapOf(
+                TimeRange.DAY to today.minusDays(1),
+                TimeRange.WEEK to today.minusWeeks(1),
+                TimeRange.MONTH to today.minusMonths(1),
+                TimeRange.YEAR to today.minusYears(1),
+            ),
+            steppedBack,
+        )
     }
 
     // nextPeriod.
@@ -333,17 +323,6 @@ class SleepViewModelTest {
         assertEquals(before, vm.uiState.value.selectedDate)
     }
 
-    @Test fun `nextPeriod DAY advances from a past day`() = runTest {
-        val vm = sleepViewModel(emptyRepo())
-        vm.selectRange(TimeRange.DAY)
-        vm.selectDate(today.minusDays(2))
-        val before = vm.uiState.value.selectedDate
-
-        vm.nextPeriod()
-
-        assertEquals(before.plusDays(1), vm.uiState.value.selectedDate)
-    }
-
     @Test fun `nextPeriod WEEK advances from a past anchor`() = runTest {
         val vm = sleepViewModel(emptyRepo())
         vm.selectDate(pastAnchor)
@@ -356,16 +335,14 @@ class SleepViewModelTest {
 
     // selectDate.
 
-    @Test fun `selectDate clamps future date to today`() = runTest {
+    @Test fun `selectDate keeps a past date and clamps a future one to today`() = runTest {
         val vm = sleepViewModel(emptyRepo())
-        vm.selectDate(today.plusDays(5))
-        assertEquals(today, vm.uiState.value.selectedDate)
-    }
 
-    @Test fun `selectDate accepts past date unchanged`() = runTest {
-        val vm = sleepViewModel(emptyRepo())
         vm.selectDate(pastAnchor)
-        assertEquals(pastAnchor, vm.uiState.value.selectedDate)
+        val afterPast = vm.uiState.value.selectedDate
+        vm.selectDate(today.plusDays(5))
+
+        assertEquals(listOf(pastAnchor, today), listOf(afterPast, vm.uiState.value.selectedDate))
     }
 
     // Daily goal.

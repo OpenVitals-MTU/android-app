@@ -73,13 +73,9 @@ class NotificationFilterTest {
     }
 
     @Test
-    fun `an ongoing notification is dropped, so a media player cannot pump the watch`() {
+    fun `an ongoing or foreground-service notification is dropped, so a media player cannot pump the watch`() {
         assertThat(verdict(candidate(ongoing = true)))
             .isEqualTo(NotificationFilter.Verdict.ONGOING)
-    }
-
-    @Test
-    fun `a foreground-service notification is dropped for the same reason`() {
         assertThat(verdict(candidate(foregroundService = true)))
             .isEqualTo(NotificationFilter.Verdict.ONGOING)
     }

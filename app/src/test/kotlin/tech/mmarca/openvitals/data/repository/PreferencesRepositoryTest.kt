@@ -182,17 +182,11 @@ class PreferencesRepositoryTest {
         assertEquals(UnitSystem.IMPERIAL, repo.unitSystemFlow.value)
     }
 
-    @Test fun `an explicit choice never consults the provider`() {
-        val prefs = seededPrefs(mapOf("unit_system" to "METRIC"))
+    @Test fun `an explicit choice never consults the provider and is never rewritten`() {
+        val prefs = seededPrefs(mapOf("unit_system" to "IMPERIAL"))
         val repo = PreferencesRepository(contextFor(prefs)) {
             throw AssertionError("resolved an explicit choice against the OS")
         }
-        assertEquals(UnitSystemPreference.METRIC, repo.unitSystemPreference)
-        assertEquals(UnitSystem.METRIC, repo.unitSystem)
-    }
-
-    @Test fun `a stored explicit choice is never rewritten`() {
-        val (repo, prefs) = newRepo(mapOf("unit_system" to "IMPERIAL"))
         assertEquals(UnitSystemPreference.IMPERIAL, repo.unitSystemPreference)
         assertEquals(UnitSystem.IMPERIAL, repo.unitSystem)
         assertEquals("IMPERIAL", prefs.getString("unit_system", null))
@@ -228,16 +222,12 @@ class PreferencesRepositoryTest {
     }
 
     @Test fun `the rest of the world starts out metric`() {
-        listOf(
-            Locale("en", "GB"),
-            Locale("de", "DE"),
-            Locale("fr", "FR"),
-            Locale("ja", "JP"),
-        ).forEach { locale ->
-            withDefaultLocale(locale) {
-                assertEquals(locale.toString(), UnitSystem.METRIC, newRepo().first.unitSystem)
-            }
-        }
+        val locales = listOf(Locale("en", "GB"), Locale("de", "DE"), Locale("fr", "FR"), Locale("ja", "JP"))
+
+        assertEquals(
+            locales.associateWith { UnitSystem.METRIC },
+            locales.associateWith { withDefaultLocale(it) { newRepo().first.unitSystem } },
+        )
     }
 
     @Test fun `a locale with no country is metric, not a crash`() {
@@ -263,9 +253,10 @@ class PreferencesRepositoryTest {
 
     @Test fun `overrides start unset so display matches the base setting`() {
         val (repo, _) = newRepo()
-        UnitQuantity.entries.forEach { quantity ->
-            assertNull(quantity.name, repo.unitOverride(quantity))
-        }
+        assertEquals(
+            UnitQuantity.entries.associateWith { null },
+            UnitQuantity.entries.associateWith { repo.unitOverride(it) },
+        )
         assertTrue(repo.unitOverridesFlow.value.isEmpty())
     }
 
@@ -280,7 +271,7 @@ class PreferencesRepositoryTest {
     @Test fun `every quantity stores under its documented key`() {
         val (repo, prefs) = newRepo()
         UnitQuantity.entries.forEach { repo.setUnitOverride(it, UnitSystem.METRIC) }
-        listOf(
+        val keys = listOf(
             "unit_override_distance",
             "unit_override_elevation",
             "unit_override_weight",
@@ -288,7 +279,9 @@ class PreferencesRepositoryTest {
             "unit_override_temperature",
             "unit_override_hydration",
             "unit_override_blood_glucose",
-        ).forEach { key -> assertEquals(key, "METRIC", prefs.getString(key, null)) }
+        )
+
+        assertEquals(keys.associateWith { "METRIC" }, keys.associateWith { prefs.getString(it, null) })
     }
 
     @Test fun `clearing an override removes the stored key`() {
@@ -337,23 +330,15 @@ class PreferencesRepositoryTest {
     // region enum-backed reactive values
 
     @Test fun `unitSystemPreference set and read notifies both flows`() {
-        val (repo, _) = newRepo()
-        // Toggle to whichever value differs from the default, so the emission is a change.
-        val target = if (repo.unitSystem == UnitSystem.METRIC) {
-            UnitSystemPreference.IMPERIAL
-        } else {
-            UnitSystemPreference.METRIC
-        }
-        repo.unitSystemPreference = target
-        assertEquals(target, repo.unitSystemPreference)
-        assertEquals(target, repo.unitSystemPreferenceFlow.value)
-        val resolved = if (target == UnitSystemPreference.IMPERIAL) {
-            UnitSystem.IMPERIAL
-        } else {
-            UnitSystem.METRIC
-        }
-        assertEquals(resolved, repo.unitSystem)
-        assertEquals(resolved, repo.unitSystemFlow.value)
+        // A metric system default, so choosing imperial is a change on both flows.
+        val repo = PreferencesRepository(contextFor(seededPrefs())) { UnitSystem.METRIC }
+
+        repo.unitSystemPreference = UnitSystemPreference.IMPERIAL
+
+        assertEquals(UnitSystemPreference.IMPERIAL, repo.unitSystemPreference)
+        assertEquals(UnitSystemPreference.IMPERIAL, repo.unitSystemPreferenceFlow.value)
+        assertEquals(UnitSystem.IMPERIAL, repo.unitSystem)
+        assertEquals(UnitSystem.IMPERIAL, repo.unitSystemFlow.value)
     }
 
     @Test fun `appThemeMode and sleep window round-trip via a fresh instance`() {

@@ -3,7 +3,6 @@ package tech.mmarca.openvitals.features.activity
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
-import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.domain.insights.PeriodComparisonDirection
 import tech.mmarca.openvitals.domain.model.ActivityProgressPoint
 import tech.mmarca.openvitals.domain.model.DailyNutrition
@@ -13,7 +12,6 @@ import java.time.LocalDate
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -31,30 +29,33 @@ class ActivityPresentationMapperTest {
     private val day4 = LocalDate.of(2026, 5, 7)
     private val day5 = LocalDate.of(2026, 5, 8)
 
-    private fun metricDisplayOf(
-        metric: ActivityMetric,
-        rows: List<DailySteps>,
-        dailyGoal: Double,
+    private val dayQuery = PeriodLoadQuery(
+        range = TimeRange.DAY,
+        anchorDate = day5,
+        weekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
+    )
+
+    private fun displayFor(
+        metric: ActivityMetric = ActivityMetric.STEPS,
+        dailySteps: List<DailySteps> = emptyList(),
+        dailyGoal: Double = metric.dailyGoalKey.defaultValue,
+        query: PeriodLoadQuery = weekQuery,
+        previousDailySteps: List<DailySteps> = emptyList(),
+        nutrition: List<DailyNutrition> = emptyList(),
+        previousNutrition: List<DailyNutrition> = emptyList(),
+        activityProgress: List<ActivityProgressPoint> = emptyList(),
     ) = ActivityPresentationMapper.build(
-        query = weekQuery,
+        query = query,
         metric = metric,
         dailyGoal = dailyGoal,
-        dailySteps = rows,
-        previousDailySteps = emptyList(),
+        dailySteps = dailySteps,
+        previousDailySteps = previousDailySteps,
         baselineDailySteps = emptyList(),
-        nutrition = emptyList(),
-        previousNutrition = emptyList(),
+        nutrition = nutrition,
+        previousNutrition = previousNutrition,
         baselineNutrition = emptyList(),
-        activityProgress = emptyList(),
+        activityProgress = activityProgress,
     ).metric
-
-    private fun stepsDisplay(
-        rows: List<DailySteps>,
-        dailyGoal: Double = MetricDailyGoalKey.STEPS.defaultValue,
-    ) = metricDisplayOf(ActivityMetric.STEPS, rows, dailyGoal)
-
-    private fun floorsDisplay(rows: List<DailySteps>) =
-        metricDisplayOf(ActivityMetric.FLOORS, rows, 10.0)
 
     private fun dailySteps(
         date: LocalDate,
@@ -92,39 +93,16 @@ class ActivityPresentationMapperTest {
         )
     }
 
-    @Test fun `steps display populates values for week period`() {
-        val dailySteps = listOf(
-            DailySteps(anchorDate.minusDays(1), 6_000L, 4_800.0),
-            DailySteps(anchorDate, 8_000L, 6_400.0),
-        )
-
-        val display = ActivityPresentationMapper.build(
-            query = weekQuery,
-            metric = ActivityMetric.STEPS,
-            dailyGoal = MetricDailyGoalKey.STEPS.defaultValue,
-            dailySteps = dailySteps,
-            previousDailySteps = emptyList(),
-            baselineDailySteps = emptyList(),
-            nutrition = emptyList(),
-            previousNutrition = emptyList(),
-            baselineNutrition = emptyList(),
-            activityProgress = emptyList(),
-        ).metric
-
-        assertTrue(display.hasData)
-        assertEquals(listOf(6_000.0, 8_000.0), display.values)
-        assertEquals(2, display.activeDays)
-    }
-
     @Test fun `steps display sums values and counts only the days with movement`() {
-        val display = stepsDisplay(
-            listOf(
+        val display = displayFor(
+            dailySteps = listOf(
                 dailySteps(day3, steps = 9_000L),
                 dailySteps(day4, steps = 0L),
                 dailySteps(day5, steps = 7_000L),
-            )
+            ),
         )
 
+        assertTrue(display.hasData)
         assertEquals(listOf(9_000.0, 0.0, 7_000.0), display.values)
         assertEquals(16_000.0, display.values.sum(), 0.0)
         assertEquals(9_000.0, display.values.maxOrNull()!!, 0.0)
@@ -135,12 +113,12 @@ class ActivityPresentationMapperTest {
     }
 
     @Test fun `the daily average divides by active days, not calendar days`() {
-        val display = stepsDisplay(
-            listOf(
+        val display = displayFor(
+            dailySteps = listOf(
                 dailySteps(day3, steps = 9_000L),
                 dailySteps(day4, steps = 0L),
                 dailySteps(day5, steps = 7_000L),
-            )
+            ),
         )
 
         // 16 000 over the two days that moved, not over the three in the window.
@@ -149,27 +127,19 @@ class ActivityPresentationMapperTest {
     }
 
     @Test fun `steps display compares against the previous period total`() {
-        val display = ActivityPresentationMapper.build(
-            query = weekQuery,
-            metric = ActivityMetric.STEPS,
-            dailyGoal = MetricDailyGoalKey.STEPS.defaultValue,
+        val display = displayFor(
             dailySteps = listOf(dailySteps(day5, steps = 10_000L)),
             previousDailySteps = listOf(dailySteps(day3, steps = 8_000L)),
-            baselineDailySteps = emptyList(),
-            nutrition = emptyList(),
-            previousNutrition = emptyList(),
-            baselineNutrition = emptyList(),
-            activityProgress = emptyList(),
-        ).metric
+        )
 
         assertEquals(8_000.0, display.previousTotal, 0.0)
         assertEquals(10_000.0, display.periodComparison!!.currentValue, 0.0)
         assertEquals(PeriodComparisonDirection.UP, display.periodComparison!!.direction)
     }
 
-    @Test fun `steps goal progress counts the days that reached the target`() {
-        val display = stepsDisplay(
-            listOf(
+    @Test fun `steps display computes goal progress`() {
+        val display = displayFor(
+            dailySteps = listOf(
                 dailySteps(day3, steps = 9_000L),
                 dailySteps(day4, steps = 100L),
                 dailySteps(day5, steps = 8_000L),
@@ -183,48 +153,23 @@ class ActivityPresentationMapperTest {
     }
 
     @Test fun `a week with no rows has no data, a day always does`() {
-        assertFalse(stepsDisplay(emptyList()).hasData)
+        val week = displayFor(dailySteps = emptyList())
+        assertFalse(week.hasData)
+        assertTrue(week.values.isEmpty())
 
-        val day = ActivityPresentationMapper.build(
-            query = PeriodLoadQuery(
-                range = TimeRange.DAY,
-                anchorDate = day5,
-                weekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-            ),
-            metric = ActivityMetric.STEPS,
-            dailyGoal = MetricDailyGoalKey.STEPS.defaultValue,
-            dailySteps = emptyList(),
-            previousDailySteps = emptyList(),
-            baselineDailySteps = emptyList(),
-            nutrition = emptyList(),
-            previousNutrition = emptyList(),
-            baselineNutrition = emptyList(),
-            activityProgress = emptyList(),
-        ).metric
-        assertTrue(day.hasData)
+        assertTrue(displayFor(query = dayQuery).hasData)
     }
 
     @Test fun `a day is described by its intraday samples`() {
-        val display = ActivityPresentationMapper.build(
-            query = PeriodLoadQuery(
-                range = TimeRange.DAY,
-                anchorDate = day5,
-                weekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-            ),
-            metric = ActivityMetric.STEPS,
-            dailyGoal = MetricDailyGoalKey.STEPS.defaultValue,
+        val display = displayFor(
+            query = dayQuery,
             dailySteps = listOf(dailySteps(day5, steps = 5_000L)),
-            previousDailySteps = emptyList(),
-            baselineDailySteps = emptyList(),
-            nutrition = emptyList(),
-            previousNutrition = emptyList(),
-            baselineNutrition = emptyList(),
             activityProgress = listOf(
                 progressPoint(8, totalSteps = 0L),
                 progressPoint(9, totalSteps = 1_200L),
                 progressPoint(10, totalSteps = 5_000L),
             ),
-        ).metric
+        )
 
         // The zero-valued sample does not count.
         assertEquals(2, display.sampleCount)
@@ -233,25 +178,15 @@ class ActivityPresentationMapperTest {
     }
 
     @Test fun `intraday points are dropped for a metric the device never sampled`() {
-        val display = ActivityPresentationMapper.build(
-            query = PeriodLoadQuery(
-                range = TimeRange.DAY,
-                anchorDate = day5,
-                weekPeriodMode = WeekPeriodMode.MONDAY_TO_SUNDAY,
-            ),
+        val display = displayFor(
             metric = ActivityMetric.FLOORS,
-            dailyGoal = 10.0,
+            query = dayQuery,
             dailySteps = listOf(dailySteps(day5, floorsClimbed = 4)),
-            previousDailySteps = emptyList(),
-            baselineDailySteps = emptyList(),
-            nutrition = emptyList(),
-            previousNutrition = emptyList(),
-            baselineNutrition = emptyList(),
             activityProgress = listOf(
                 progressPoint(9, totalSteps = 100L),
                 progressPoint(10, totalFloorsClimbed = 4),
             ),
-        ).metric
+        )
 
         // Only the point that carries a floors reading survives.
         assertEquals(1, display.intradayPoints.size)
@@ -259,46 +194,50 @@ class ActivityPresentationMapperTest {
     }
 
     @Test fun `calories burned reads the nutrition slice, not daily steps`() {
-        val display = ActivityPresentationMapper.build(
-            query = weekQuery,
+        val display = displayFor(
             metric = ActivityMetric.CALORIES_BURNED,
             dailyGoal = 2_000.0,
             dailySteps = listOf(dailySteps(day5, steps = 9_999L)),
-            previousDailySteps = emptyList(),
-            baselineDailySteps = emptyList(),
             nutrition = listOf(nutrition(day3, 2_100.0), nutrition(day5, 2_300.0)),
             previousNutrition = listOf(nutrition(day3, 2_000.0)),
-            baselineNutrition = emptyList(),
-            activityProgress = emptyList(),
-        ).metric
+        )
 
         assertEquals(listOf(2_100.0, 2_300.0), display.values)
+        assertEquals(2, display.activeDays)
         assertEquals(2_000.0, display.previousTotal, 0.0)
         assertTrue(display.hasData)
+        // The goal fold reads the same slice: both days clear the 2000 kcal target.
+        assertEquals(2, display.goalProgress!!.goalMetDays)
+    }
+
+    @Test fun `calories burned display has no data when nutrition has no burned calories`() {
+        val display = displayFor(
+            metric = ActivityMetric.CALORIES_BURNED,
+            nutrition = listOf(nutrition(anchorDate, 0.0)),
+        )
+
+        assertFalse(display.hasData)
+        assertEquals(listOf(0.0), display.values)
     }
 
     @Test fun `a nullable metric has no data until a row actually carries it`() {
-        val never = floorsDisplay(listOf(dailySteps(day3), dailySteps(day4)))
+        val never = displayFor(ActivityMetric.FLOORS, listOf(dailySteps(day3), dailySteps(day4)))
         assertFalse(never.hasData)
 
         // A recorded zero is data; an absent column is not.
-        val zero = floorsDisplay(listOf(dailySteps(day3, floorsClimbed = 0)))
+        val zero = displayFor(ActivityMetric.FLOORS, listOf(dailySteps(day3, floorsClimbed = 0)))
         assertTrue(zero.hasData)
         assertEquals(0, zero.activeDays)
     }
 
     @Test fun `steps has data whenever rows exist, distance needs a positive one`() {
         // Steps: the column is never null, so a zero row is a real, chartable zero.
-        assertTrue(stepsDisplay(listOf(dailySteps(day3))).hasData)
+        assertTrue(displayFor(ActivityMetric.STEPS, listOf(dailySteps(day3))).hasData)
 
         // Distance diverges from Flutter on purpose: a zero-distance row is no reading.
-        assertFalse(metricDisplayOf(ActivityMetric.DISTANCE, listOf(dailySteps(day3)), 5_000.0).hasData)
+        assertFalse(displayFor(ActivityMetric.DISTANCE, listOf(dailySteps(day3))).hasData)
         assertTrue(
-            metricDisplayOf(
-                ActivityMetric.DISTANCE,
-                listOf(dailySteps(day3, distanceMeters = 1.0)),
-                5_000.0,
-            ).hasData,
+            displayFor(ActivityMetric.DISTANCE, listOf(dailySteps(day3, distanceMeters = 1.0))).hasData,
         )
     }
 
@@ -314,15 +253,25 @@ class ActivityPresentationMapperTest {
                 wheelchairPushes = 1_500L,
             )
         )
+        val metrics = listOf(
+            ActivityMetric.STEPS,
+            ActivityMetric.DISTANCE,
+            ActivityMetric.FLOORS,
+            ActivityMetric.ACTIVE_CALORIES,
+            ActivityMetric.ELEVATION,
+            ActivityMetric.WHEELCHAIR_PUSHES,
+        )
 
-        assertEquals(listOf(9_000.0), metricDisplayOf(ActivityMetric.STEPS, rows, 8_000.0).values)
-        assertEquals(listOf(6_500.0), metricDisplayOf(ActivityMetric.DISTANCE, rows, 5_000.0).values)
-        assertEquals(listOf(12.0), metricDisplayOf(ActivityMetric.FLOORS, rows, 10.0).values)
-        assertEquals(listOf(480.0), metricDisplayOf(ActivityMetric.ACTIVE_CALORIES, rows, 400.0).values)
-        assertEquals(listOf(95.0), metricDisplayOf(ActivityMetric.ELEVATION, rows, 100.0).values)
         assertEquals(
-            listOf(1_500.0),
-            metricDisplayOf(ActivityMetric.WHEELCHAIR_PUSHES, rows, 1_000.0).values,
+            mapOf(
+                ActivityMetric.STEPS to listOf(9_000.0),
+                ActivityMetric.DISTANCE to listOf(6_500.0),
+                ActivityMetric.FLOORS to listOf(12.0),
+                ActivityMetric.ACTIVE_CALORIES to listOf(480.0),
+                ActivityMetric.ELEVATION to listOf(95.0),
+                ActivityMetric.WHEELCHAIR_PUSHES to listOf(1_500.0),
+            ),
+            metrics.associateWith { displayFor(it, rows).values },
         )
     }
 
@@ -330,107 +279,5 @@ class ActivityPresentationMapperTest {
         val keys = ActivityMetric.entries.map { it.dailyGoalKey }.toSet()
 
         assertEquals(ActivityMetric.entries.size, keys.size)
-    }
-
-    @Test fun `steps display has no data for empty week period`() {
-        val display = ActivityPresentationMapper.build(
-            query = weekQuery,
-            metric = ActivityMetric.STEPS,
-            dailyGoal = MetricDailyGoalKey.STEPS.defaultValue,
-            dailySteps = emptyList(),
-            previousDailySteps = emptyList(),
-            baselineDailySteps = emptyList(),
-            nutrition = emptyList(),
-            previousNutrition = emptyList(),
-            baselineNutrition = emptyList(),
-            activityProgress = emptyList(),
-        ).metric
-
-        assertFalse(display.hasData)
-        assertTrue(display.values.isEmpty())
-    }
-
-    @Test fun `steps display computes goal progress`() {
-        val dailySteps = listOf(DailySteps(anchorDate, 12_000L, 9_600.0))
-
-        val display = ActivityPresentationMapper.build(
-            query = weekQuery,
-            metric = ActivityMetric.STEPS,
-            dailyGoal = 10_000.0,
-            dailySteps = dailySteps,
-            previousDailySteps = emptyList(),
-            baselineDailySteps = emptyList(),
-            nutrition = emptyList(),
-            previousNutrition = emptyList(),
-            baselineNutrition = emptyList(),
-            activityProgress = emptyList(),
-        ).metric
-
-        assertNotNull(display.goalProgress)
-        assertEquals(1, display.goalProgress!!.goalMetDays)
-    }
-
-    @Test fun `calories burned display populates values for week period`() {
-        val nutrition = listOf(
-            DailyNutrition(anchorDate.minusDays(1), hydrationLiters = 0.0, caloriesBurnedKcal = 500.0),
-            DailyNutrition(anchorDate, hydrationLiters = 0.0, caloriesBurnedKcal = 700.0),
-        )
-
-        val display = ActivityPresentationMapper.build(
-            query = weekQuery,
-            metric = ActivityMetric.CALORIES_BURNED,
-            dailyGoal = MetricDailyGoalKey.CALORIES_OUT_KCAL.defaultValue,
-            dailySteps = emptyList(),
-            previousDailySteps = emptyList(),
-            baselineDailySteps = emptyList(),
-            nutrition = nutrition,
-            previousNutrition = emptyList(),
-            baselineNutrition = emptyList(),
-            activityProgress = emptyList(),
-        ).metric
-
-        assertTrue(display.hasData)
-        assertEquals(listOf(500.0, 700.0), display.values)
-        assertEquals(2, display.activeDays)
-    }
-
-    @Test fun `calories burned display has no data when nutrition has no burned calories`() {
-        val nutrition = listOf(DailyNutrition(anchorDate, hydrationLiters = 0.0, caloriesBurnedKcal = 0.0))
-
-        val display = ActivityPresentationMapper.build(
-            query = weekQuery,
-            metric = ActivityMetric.CALORIES_BURNED,
-            dailyGoal = MetricDailyGoalKey.CALORIES_OUT_KCAL.defaultValue,
-            dailySteps = emptyList(),
-            previousDailySteps = emptyList(),
-            baselineDailySteps = emptyList(),
-            nutrition = nutrition,
-            previousNutrition = emptyList(),
-            baselineNutrition = emptyList(),
-            activityProgress = emptyList(),
-        ).metric
-
-        assertFalse(display.hasData)
-        assertTrue(display.values.all { it == 0.0 })
-    }
-
-    @Test fun `calories burned display computes goal progress`() {
-        val nutrition = listOf(DailyNutrition(anchorDate, hydrationLiters = 0.0, caloriesBurnedKcal = 2_500.0))
-
-        val display = ActivityPresentationMapper.build(
-            query = weekQuery,
-            metric = ActivityMetric.CALORIES_BURNED,
-            dailyGoal = 2_000.0,
-            dailySteps = emptyList(),
-            previousDailySteps = emptyList(),
-            baselineDailySteps = emptyList(),
-            nutrition = nutrition,
-            previousNutrition = emptyList(),
-            baselineNutrition = emptyList(),
-            activityProgress = emptyList(),
-        ).metric
-
-        assertNotNull(display.goalProgress)
-        assertEquals(1, display.goalProgress!!.goalMetDays)
     }
 }

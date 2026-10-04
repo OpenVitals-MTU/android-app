@@ -143,11 +143,6 @@ class UnitFormatterTest {
         assertEquals("37.0 deg C", formatter.temperature(37.0).text)
     }
 
-    @Test fun `without an override a quantity follows the base system`() {
-        val formatter = formatter(UnitSystem.IMPERIAL)
-        assertEquals("1.0 mi", formatter.distance(1_609.344).text)
-    }
-
     @Test fun `a metric override pins a quantity under an imperial base`() {
         val formatter = formatter(
             UnitSystem.IMPERIAL,

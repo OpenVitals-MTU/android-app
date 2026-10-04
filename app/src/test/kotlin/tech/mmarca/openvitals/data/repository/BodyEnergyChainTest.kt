@@ -655,6 +655,7 @@ class BodyEnergyChainTest {
     @Test
     fun `the reset rewinds the watch fit watermark so the gains can relearn`() = runTest {
         // Without this the model relearns from 1.0 while the watermark says every sample is consumed.
+        // The calibration is the default, with no personal gains: the early return used to skip it.
         prefs.bodyEnergyWatchFitWatermarkMillis = now.toEpochMilli()
 
         load(repo(), today)
@@ -686,17 +687,6 @@ class BodyEnergyChainTest {
         load(repo(), today)
 
         assertEquals(watermark, prefs.bodyEnergyWatchFitWatermarkMillis)
-    }
-
-    @Test
-    fun `the watermark rewinds even when there were no personal gains to reset`() = runTest {
-        // A model still at 1.0 has the most to relearn; the early return used to skip it.
-        prefs.bodyEnergyWatchFitWatermarkMillis = now.toEpochMilli()
-        prefs.setBodyEnergyCalibration(BodyEnergyCalibration())
-
-        load(repo(), today)
-
-        assertEquals(0L, prefs.bodyEnergyWatchFitWatermarkMillis)
     }
 
     @Test

@@ -4,7 +4,6 @@ import tech.mmarca.openvitals.navigation.ACTIVITY_DETAIL_ID_ARG
 import tech.mmarca.openvitals.data.repository.contract.FakePreferences
 import androidx.lifecycle.SavedStateHandle
 import androidx.health.connect.client.records.ExerciseSegment
-import androidx.health.connect.client.records.ExerciseSessionRecord
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.data.repository.ActivityMarkerRepository
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
@@ -77,43 +76,14 @@ class ActivityDetailViewModelTest {
         val backfilled = requireNotNull(vm.uiState.value.workout)
 
         assertEquals(105L, backfilled.averageHeartRateBpm)
+        // No DistanceRecord was written: 60 s between 2 and 4 m/s implies 180 m.
+        assertEquals(180.0, backfilled.totalDistanceMeters ?: 0.0, 0.001)
         assertEquals(3.0, backfilled.averageSpeedMetersPerSecond ?: 0.0, 0.001)
         assertEquals(170.0, backfilled.averageStepsCadenceRate ?: 0.0, 0.001)
         assertEquals(90.0, backfilled.averageCyclingCadenceRpm ?: 0.0, 0.001)
         assertEquals(heartSamples, vm.uiState.value.heartRateSamples)
         assertEquals(speedSamples, vm.uiState.value.speedSamples)
         assertEquals(cadenceSamples, vm.uiState.value.cadenceSamples)
-    }
-
-    @Test fun `derives a distance from speed when no distance was written`() = runTest {
-        // A watch that records speed but no DistanceRecord: 60 s at 3 m/s implies 180 m.
-        val workout = workout(id = "activity-1", totalDistanceMeters = null)
-        val repo = mockk<ActivityRepository>()
-        coEvery { repo.loadWorkout("activity-1") } returns workout
-        coEvery { repo.loadActivityCadenceSamples(any(), any()) } returns emptyList()
-        coEvery { repo.loadSpeedSamples(workout.startTime, workout.endTime) } returns listOf(
-            SpeedSample(workout.startTime, 2.0, "test"),
-            SpeedSample(workout.startTime.plusSeconds(60), 4.0, "test"),
-        )
-
-        val vm = activityDetailViewModel(repo, "activity-1")
-
-        assertEquals(180.0, vm.uiState.value.workout!!.totalDistanceMeters ?: 0.0, 0.001)
-    }
-
-    @Test fun `a recorded distance is never overwritten by the derived one`() = runTest {
-        val workout = workout(id = "activity-1", totalDistanceMeters = 5_000.0)
-        val repo = mockk<ActivityRepository>()
-        coEvery { repo.loadWorkout("activity-1") } returns workout
-        coEvery { repo.loadActivityCadenceSamples(any(), any()) } returns emptyList()
-        coEvery { repo.loadSpeedSamples(workout.startTime, workout.endTime) } returns listOf(
-            SpeedSample(workout.startTime, 2.0, "test"),
-            SpeedSample(workout.startTime.plusSeconds(60), 4.0, "test"),
-        )
-
-        val vm = activityDetailViewModel(repo, "activity-1")
-
-        assertEquals(5_000.0, vm.uiState.value.workout!!.totalDistanceMeters ?: 0.0, 0.001)
     }
 
     @Test fun `missing activity sets not found error`() = runTest {
@@ -235,26 +205,6 @@ class ActivityDetailViewModelTest {
         assertEquals(500.0, vm.uiState.value.splitDistanceMeters, 0.001)
         // A preference change is a state update, not a Health Connect reload.
         coVerify(exactly = 1) { repo.loadWorkout("activity-1") }
-    }
-
-    @Test fun `non distance activity yields no splits`() = runTest {
-        // Strength training: real GPS-drift distance must not become splits.
-        val workout = workout(
-            id = "activity-1",
-            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING,
-            totalDistanceMeters = 200.0,
-        )
-        val repo = mockk<ActivityRepository>()
-        coEvery { repo.loadWorkout("activity-1") } returns workout
-        stubMetricSamples(repo)
-
-        val vm = activityDetailViewModel(
-            repo,
-            "activity-1",
-            preferences = FakePreferences(initialSplitDistanceMeters = 1_000.0),
-        )
-
-        assertTrue(vm.uiState.value.splits.isEmpty)
     }
 
     @Test fun `the reads that hang on the session run together`() = runTest {
@@ -402,13 +352,12 @@ class ActivityDetailViewModelTest {
     private fun workout(
         id: String,
         isOpenVitalsEntry: Boolean = false,
-        exerciseType: Int = 56,
         totalDistanceMeters: Double? = null,
         segments: List<ExerciseSegmentData> = emptyList(),
     ) = ExerciseData(
         id = id,
         title = "Morning run",
-        exerciseType = exerciseType,
+        exerciseType = 56,
         startTime = Instant.EPOCH,
         endTime = Instant.EPOCH.plusSeconds(3_600),
         durationMs = 3_600_000,

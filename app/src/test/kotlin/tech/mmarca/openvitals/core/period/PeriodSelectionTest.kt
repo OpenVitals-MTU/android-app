@@ -111,40 +111,24 @@ class PeriodSelectionTest {
         assertEquals(LocalDate.of(2026, 5, 31), period.end)
     }
 
-    @Test fun `displayPeriodFor supports rolling last seven days`() {
-        val period = displayPeriodFor(
-            range = TimeRange.WEEK,
-            anchorDate = today,
-            today = today,
-            weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
+    @Test fun `displayPeriodFor rolling mode ends each window on the anchor`() {
+        val ranges = listOf(TimeRange.WEEK, TimeRange.MONTH, TimeRange.YEAR)
+
+        assertEquals(
+            mapOf(
+                TimeRange.WEEK to DatePeriod(today.minusDays(6), today),
+                TimeRange.MONTH to DatePeriod(today.minusDays(29), today),
+                TimeRange.YEAR to DatePeriod(today.minusDays(364), today),
+            ),
+            ranges.associateWith {
+                displayPeriodFor(
+                    range = it,
+                    anchorDate = today,
+                    today = today,
+                    weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
+                )
+            },
         )
-
-        assertEquals(today.minusDays(6), period.start)
-        assertEquals(today, period.end)
-    }
-
-    @Test fun `displayPeriodFor supports rolling last thirty days`() {
-        val period = displayPeriodFor(
-            range = TimeRange.MONTH,
-            anchorDate = today,
-            today = today,
-            weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
-        )
-
-        assertEquals(today.minusDays(29), period.start)
-        assertEquals(today, period.end)
-    }
-
-    @Test fun `displayPeriodFor supports rolling last three hundred sixty five days`() {
-        val period = displayPeriodFor(
-            range = TimeRange.YEAR,
-            anchorDate = today,
-            today = today,
-            weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
-        )
-
-        assertEquals(today.minusDays(364), period.start)
-        assertEquals(today, period.end)
     }
 
     @Test fun `calendar mode keeps calendar month and year windows`() {

@@ -36,11 +36,6 @@ class ScreenErrorTest {
         assertEquals(ScreenError.Message("not in this list"), error)
     }
 
-    @Test fun `a non-permission failure keeps its message`() {
-        val error = IllegalStateException("the provider hung up").toScreenError()
-        assertEquals(ScreenError.Message("the provider hung up"), error)
-    }
-
     @Test fun `a failure with no message shows our own sentence, which is translated`() {
         val error = RuntimeException("").toScreenError(R.string.screen_error_load_activity)
         assertEquals(ScreenError.Text(R.string.screen_error_load_activity), error)
@@ -103,11 +98,5 @@ class ScreenErrorTest {
         }
 
         assertEquals(ScreenError.Message("timeout"), handledError)
-    }
-
-    @Test fun `message error holds text`() {
-        val error: ScreenError = ScreenError.Message("custom")
-        assertTrue(error is ScreenError.Message)
-        assertEquals("custom", (error as ScreenError.Message).text)
     }
 }

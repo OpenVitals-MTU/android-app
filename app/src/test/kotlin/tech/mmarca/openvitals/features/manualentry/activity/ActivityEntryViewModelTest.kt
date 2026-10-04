@@ -25,7 +25,6 @@ import io.mockk.every
 import io.mockk.Runs
 import io.mockk.just
 import io.mockk.mockk
-import io.mockk.runs
 import io.mockk.verify
 import java.io.File
 import java.nio.ByteBuffer
@@ -49,7 +48,6 @@ import tech.mmarca.openvitals.core.geo.HgtResolution
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.features.activity.elevation.ElevationTileRepository
-import tech.mmarca.openvitals.features.workoutplans.toRepetitionSetInputs
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.domain.model.ActivityPauseInterval
 import tech.mmarca.openvitals.domain.model.ActivityWriteRequest
@@ -166,10 +164,7 @@ class ActivityEntryViewModelTest {
 
     @Test fun `activity entry exposes field errors and skips write for invalid values`() = runTest {
         val repo = activityRepo(canWrite = true)
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         advanceUntilIdle()
 
         vm.startManualEntry()
@@ -186,10 +181,7 @@ class ActivityEntryViewModelTest {
 
     @Test fun `selecting activity clears metric fields that activity does not use`() = runTest {
         val repo = activityRepo(canWrite = true)
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         advanceUntilIdle()
 
         vm.startManualEntry()
@@ -531,57 +523,12 @@ class ActivityEntryViewModelTest {
         assertNull(request.stepsCount)
     }
 
-    @Test fun `missing activity write permission prevents write`() = runTest {
-        val repo = activityRepo(canWrite = false)
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
-        advanceUntilIdle()
-
-        vm.startManualEntry()
-        advanceUntilIdle()
-        vm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
-        advanceUntilIdle()
-
-        assertEquals(ActivityEntryError.MISSING_WRITE_PERMISSION, vm.uiState.value.entryError)
-        coVerify(exactly = 0) { repo.writeActivityEntry(any()) }
-    }
-
-    @Test fun `activity entry writes request when permission is granted`() = runTest {
-        val repo = activityRepo(canWrite = true)
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
-        advanceUntilIdle()
-
-        vm.startManualEntry()
-        advanceUntilIdle()
-        vm.updateDistance("5")
-        vm.refreshPermission()
-        advanceUntilIdle()
-        vm.addEntry(ActivityEntryUnits.uniform(UnitSystem.METRIC))
-        advanceUntilIdle()
-
-        coVerify {
-            repo.writeActivityEntry(match<ActivityWriteRequest> { request ->
-                abs((request.distanceMeters ?: 0.0) - 5000.0) < 0.001
-            })
-        }
-        assertFalse(vm.uiState.value.isSavingEntry)
-        assertTrue(vm.uiState.value.saveCompleted)
-    }
-
     @Test fun `the bare route opens the start hub with today's and upcoming plans`() = runTest {
         val today = plannedPullUpPlan()
         val later = today.copy(id = "later", startTime = today.startTime.plusSeconds(2 * 86_400), endTime = today.endTime.plusSeconds(2 * 86_400))
         val past = today.copy(id = "past", startTime = today.startTime.minusSeconds(86_400), endTime = today.endTime.minusSeconds(86_400))
         val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(later, past, today))
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         advanceUntilIdle()
 
         assertEquals(ActivityEntryMode.START_HUB, vm.uiState.value.mode)
@@ -593,7 +540,7 @@ class ActivityEntryViewModelTest {
     @Test fun `the legacy plan launch mode also lands on the hub`() = runTest {
         val vm = ActivityEntryViewModel(
             repository = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan())),
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+            clock = MorningClock,
             launchMode = tech.mmarca.openvitals.navigation.Screen.ActivityEntryMode.PLAN,
         )
         advanceUntilIdle()
@@ -621,10 +568,7 @@ class ActivityEntryViewModelTest {
     }
 
     @Test fun `a missing plan id falls back to the hub and says so`() = runTest {
-        val vm = ActivityEntryViewModel(
-            repository = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan())),
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan())))
         advanceUntilIdle()
 
         vm.startWithPlan("gone")
@@ -638,10 +582,7 @@ class ActivityEntryViewModelTest {
 
     @Test fun `logging from a hub plan prefills the set structure and links the plan`() = runTest {
         val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan()))
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         advanceUntilIdle()
 
         vm.logFromPlan("planned-id")
@@ -681,10 +622,7 @@ class ActivityEntryViewModelTest {
                 ),
             ),
         )
-        val vm = ActivityEntryViewModel(
-            repository = activityRepo(canWrite = true, plannedWorkouts = listOf(plank)),
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(activityRepo(canWrite = true, plannedWorkouts = listOf(plank)))
         advanceUntilIdle()
 
         vm.logFromPlan("plank-plan")
@@ -697,10 +635,7 @@ class ActivityEntryViewModelTest {
     @Test fun `reapplyPlan after the builder returns re-prefills from the new id`() = runTest {
         val original = plannedPullUpPlan()
         val edited = original.copy(id = "new-id", title = "Pull-up ladder v2")
-        val vm = ActivityEntryViewModel(
-            repository = activityRepo(canWrite = true, plannedWorkouts = listOf(original, edited)),
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(activityRepo(canWrite = true, plannedWorkouts = listOf(original, edited)))
         advanceUntilIdle()
         vm.logFromPlan("planned-id")
 
@@ -756,10 +691,7 @@ class ActivityEntryViewModelTest {
     }
 
     @Test fun `missing planned read permission is surfaced on the hub`() = runTest {
-        val vm = ActivityEntryViewModel(
-            repository = activityRepo(canWrite = true, canReadPlans = false),
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(activityRepo(canWrite = true, canReadPlans = false))
         advanceUntilIdle()
 
         assertEquals(ActivityEntryMode.START_HUB, vm.uiState.value.mode)
@@ -769,10 +701,7 @@ class ActivityEntryViewModelTest {
 
     @Test fun `activity entry writes the linked plan id`() = runTest {
         val repo = activityRepo(canWrite = true, plannedWorkouts = listOf(plannedPullUpPlan()))
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         advanceUntilIdle()
 
         vm.logFromPlan("planned-id")
@@ -787,10 +716,7 @@ class ActivityEntryViewModelTest {
 
     @Test fun `save as plan writes a one-block plan and asks to open the builder`() = runTest {
         val repo = activityRepo(canWrite = true)
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         advanceUntilIdle()
 
         vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
@@ -829,10 +755,7 @@ class ActivityEntryViewModelTest {
 
     @Test fun `save as plan without a title uses the type's default title`() = runTest {
         val repo = activityRepo(canWrite = true)
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         advanceUntilIdle()
 
         vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "push_ups" })
@@ -852,10 +775,7 @@ class ActivityEntryViewModelTest {
 
     @Test fun `missing planned workout permission is surfaced when saving as plan`() = runTest {
         val repo = activityRepo(canWrite = true, canWritePlan = false)
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         advanceUntilIdle()
 
         vm.selectActivityType(DefaultActivityEntryTypes.first { it.id == "pull_ups" })
@@ -1031,7 +951,7 @@ class ActivityEntryViewModelTest {
             activityRecorder = recorderMock(),
             recordingDraftStore = ActivityRecordingDraftStore(),
             recordingPreferences = activityPrefs(),
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+            clock = MorningClock,
         )
         advanceUntilIdle()
 
@@ -1053,10 +973,7 @@ class ActivityEntryViewModelTest {
     }
 
     @Test fun `a mixed-exercise type composes steps from picked exercises`() = runTest {
-        val vm = ActivityEntryViewModel(
-            repository = activityRepo(canWrite = true),
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(activityRepo(canWrite = true))
         advanceUntilIdle()
 
         vm.startManualEntry()
@@ -1091,7 +1008,7 @@ class ActivityEntryViewModelTest {
             recordingPreferences = activityPrefs(
                 lastActivityExerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
             ),
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+            clock = MorningClock,
         )
         advanceUntilIdle()
 
@@ -1106,7 +1023,7 @@ class ActivityEntryViewModelTest {
                 favoriteActivityExerciseType = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
                 lastActivityExerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
             ),
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+            clock = MorningClock,
         )
         advanceUntilIdle()
 
@@ -1115,10 +1032,7 @@ class ActivityEntryViewModelTest {
 
     @Test fun `manual activity entry does not estimate calories`() = runTest {
         val repo = activityRepo(canWrite = true)
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         advanceUntilIdle()
 
         vm.startManualEntry()
@@ -1131,14 +1045,8 @@ class ActivityEntryViewModelTest {
     @Test fun `recorded activity without enough route points estimates calories`() = runTest {
         val repo = activityRepo(canWrite = true)
         val prefs = activityPrefs()
-        val recorder = mockk<ActivityRecordingController>()
-        every { recorder.finishedRecording() } returns null
-        every { recorder.clearFinishedRecording() } just Runs
         val start = Instant.parse("2026-05-26T08:30:00Z")
-        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
-        every { recorder.coMapsNavigation } returns
-            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
-        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
+        val recorder = recorderMock()
         every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
             exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
             startTime = start,
@@ -1167,14 +1075,8 @@ class ActivityEntryViewModelTest {
 
     @Test fun `a timed ride fills the review form with the wheel sensor distance`() = runTest {
         val repo = activityRepo(canWrite = true)
-        val recorder = mockk<ActivityRecordingController>()
-        every { recorder.finishedRecording() } returns null
-        every { recorder.clearFinishedRecording() } just Runs
         val start = Instant.parse("2026-05-26T08:30:00Z")
-        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
-        every { recorder.coMapsNavigation } returns
-            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
-        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
+        val recorder = recorderMock()
         every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
             exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY,
             recordingKind = ActivityRecordingKind.TIMED,
@@ -1203,23 +1105,9 @@ class ActivityEntryViewModelTest {
     @Test fun `finished recording draft is restored by a new activity entry view model`() = runTest {
         val repo = activityRepo(canWrite = true)
         val draftStore = ActivityRecordingDraftStore()
-        val recorder = mockk<ActivityRecordingController>()
-        every { recorder.finishedRecording() } returns null
-        every { recorder.clearFinishedRecording() } just Runs
         val start = Instant.parse("2026-05-26T08:30:00Z")
-        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
-        every { recorder.coMapsNavigation } returns
-            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
-        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
-        every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
-            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
-            startTime = start,
-            endTime = start.plusSeconds(45 * 60),
-            points = listOf(routePoint(start), routePoint(start.plusSeconds(45 * 60), latitude = 59.01)),
-            pauseIntervals = emptyList(),
-            distanceMeters = 1200.0,
-            elevationGainedMeters = 12.0,
-        )
+        val recorder = recorderMock()
+        every { recorder.finishRecording() } returns unsavedRecording(start)
         val firstVm = ActivityEntryViewModel(
             repository = repo,
             activityRecorder = recorder,
@@ -1250,21 +1138,8 @@ class ActivityEntryViewModelTest {
     @Test fun `after the process is killed the review form comes back from the recording kept on disk`() = runTest {
         val repo = activityRepo(canWrite = true)
         val start = Instant.parse("2026-05-26T08:30:00Z")
-        val recorder = mockk<ActivityRecordingController>()
-        every { recorder.clearFinishedRecording() } just Runs
-        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
-        every { recorder.coMapsNavigation } returns
-            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
-        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
-        every { recorder.finishedRecording() } returns ActivityRecordingSnapshot(
-            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
-            startTime = start,
-            endTime = start.plusSeconds(45 * 60),
-            points = listOf(routePoint(start), routePoint(start.plusSeconds(45 * 60), latitude = 59.01)),
-            pauseIntervals = emptyList(),
-            distanceMeters = 1200.0,
-            elevationGainedMeters = 12.0,
-        )
+        val recorder = recorderMock()
+        every { recorder.finishedRecording() } returns unsavedRecording(start)
 
         // A fresh process: the in-memory draft store is empty.
         val vm = ActivityEntryViewModel(
@@ -1282,14 +1157,8 @@ class ActivityEntryViewModelTest {
 
     @Test fun `finished walking route recording keeps recorded steps`() = runTest {
         val repo = activityRepo(canWrite = true)
-        val recorder = mockk<ActivityRecordingController>()
-        every { recorder.finishedRecording() } returns null
-        every { recorder.clearFinishedRecording() } just Runs
         val start = Instant.parse("2026-05-26T08:30:00Z")
-        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
-        every { recorder.coMapsNavigation } returns
-            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
-        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
+        val recorder = recorderMock()
         every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
             exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
             activityTypeId = DefaultActivityEntryTypes.first {
@@ -1329,14 +1198,8 @@ class ActivityEntryViewModelTest {
         val prefs = activityPrefs()
         // The corrector reads the repository itself; only the switch matters here.
         val elevationPrefs = mockk<PreferencesRepository> { every { elevationCorrectionEnabled } returns true }
-        val recorder = mockk<ActivityRecordingController>()
-        every { recorder.finishedRecording() } returns null
-        every { recorder.clearFinishedRecording() } just Runs
         val start = Instant.parse("2026-05-26T08:30:00Z")
-        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
-        every { recorder.coMapsNavigation } returns
-            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
-        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
+        val recorder = recorderMock()
         every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
             exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
             startTime = start,
@@ -1371,14 +1234,8 @@ class ActivityEntryViewModelTest {
     @Test fun `saving a restored recording draft clears it`() = runTest {
         val repo = activityRepo(canWrite = true)
         val draftStore = ActivityRecordingDraftStore()
-        val recorder = mockk<ActivityRecordingController>()
-        every { recorder.finishedRecording() } returns null
-        every { recorder.clearFinishedRecording() } just Runs
         val start = Instant.parse("2026-05-26T08:30:00Z")
-        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
-        every { recorder.coMapsNavigation } returns
-            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
-        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
+        val recorder = recorderMock()
         every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
             exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
             startTime = start,
@@ -1415,25 +1272,9 @@ class ActivityEntryViewModelTest {
     @Test fun `discarding a finished recording draft clears it and returns to the start hub`() = runTest {
         val repo = activityRepo(canWrite = true)
         val draftStore = ActivityRecordingDraftStore()
-        val recorder = mockk<ActivityRecordingController>()
-        every { recorder.finishedRecording() } returns null
-        every { recorder.clearFinishedRecording() } just Runs
         val start = Instant.parse("2026-05-26T08:30:00Z")
-        every { recorder.state } returns MutableStateFlow(ActivityRecordingState())
-        every { recorder.coMapsNavigation } returns
-            MutableStateFlow<CoMapsNavigationState>(CoMapsNavigationState.Disabled)
-        every { recorder.coMapsRoute } returns MutableStateFlow<CoMapsRoutePolyline?>(null)
-        every { recorder.stopBlePreview() } returns Unit
-        every { recorder.clearPreparedRecording() } returns Unit
-        every { recorder.finishRecording() } returns ActivityRecordingSnapshot(
-            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
-            startTime = start,
-            endTime = start.plusSeconds(45 * 60),
-            points = listOf(routePoint(start), routePoint(start.plusSeconds(45 * 60), latitude = 59.01)),
-            pauseIntervals = emptyList(),
-            distanceMeters = 1200.0,
-            elevationGainedMeters = 12.0,
-        )
+        val recorder = recorderMock()
+        every { recorder.finishRecording() } returns unsavedRecording(start)
         val vm = ActivityEntryViewModel(
             repository = repo,
             activityRecorder = recorder,
@@ -1456,10 +1297,7 @@ class ActivityEntryViewModelTest {
 
     @Test fun `activity entry keeps full write permissions when optional fields change`() = runTest {
         val repo = activityRepo(canWrite = true)
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         advanceUntilIdle()
 
         vm.startManualEntry()
@@ -1589,14 +1427,12 @@ class ActivityEntryViewModelTest {
             completedWhileWriting = viewModel?.uiState?.value?.saveCompleted
             "activity-id"
         }
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         viewModel = vm
         advanceUntilIdle()
         vm.startManualEntry()
         advanceUntilIdle()
+        vm.updateDistance("5")
 
         assertFalse(vm.uiState.value.isSavingEntry)
         assertFalse(vm.uiState.value.saveCompleted)
@@ -1610,7 +1446,10 @@ class ActivityEntryViewModelTest {
         assertTrue(vm.uiState.value.saveCompleted)
         assertNull(vm.uiState.value.entryError)
         assertNull(vm.uiState.value.detailError)
-        coVerify(exactly = 1) { repo.writeActivityEntry(any()) }
+        // The form's 5 km reaches the request in meters.
+        coVerify(exactly = 1) {
+            repo.writeActivityEntry(match<ActivityWriteRequest> { abs((it.distanceMeters ?: 0.0) - 5000.0) < 0.001 })
+        }
 
         vm.onSaveCompletedHandled()
 
@@ -1622,10 +1461,7 @@ class ActivityEntryViewModelTest {
             canWrite = true,
             writeFailure = IllegalStateException("Health Connect said no."),
         )
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         advanceUntilIdle()
         vm.startManualEntry()
         advanceUntilIdle()
@@ -1641,10 +1477,7 @@ class ActivityEntryViewModelTest {
 
     @Test fun `a refused write permission is a verdict, not a failed save`() = runTest {
         val repo = activityRepo(canWrite = false)
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         advanceUntilIdle()
         vm.startManualEntry()
         advanceUntilIdle()
@@ -1663,10 +1496,7 @@ class ActivityEntryViewModelTest {
 
     @Test fun `refreshPermission probes the repository and publishes the verdict`() = runTest {
         val repo = activityRepo(canWrite = true)
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.isCheckingPermission)
@@ -1688,10 +1518,7 @@ class ActivityEntryViewModelTest {
             canWrite = true,
             permissionFailure = IllegalStateException("Probe exploded."),
         )
-        val vm = ActivityEntryViewModel(
-            repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(repo)
         advanceUntilIdle()
 
         assertFalse(vm.uiState.value.isCheckingPermission)
@@ -1742,7 +1569,7 @@ class ActivityEntryViewModelTest {
         )
         val vm = ActivityEntryViewModel(
             repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+            clock = MorningClock,
             editActivityId = "activity-id",
         )
         advanceUntilIdle()
@@ -1763,7 +1590,7 @@ class ActivityEntryViewModelTest {
         coEvery { repo.updateActivityEntry(any(), any()) } returns Unit
         val vm = ActivityEntryViewModel(
             repository = repo,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+            clock = MorningClock,
             editActivityId = "activity-id",
         )
         advanceUntilIdle()
@@ -1860,10 +1687,7 @@ class ActivityEntryViewModelTest {
     }
 
     @Test fun `a new entry decides every total`() = runTest {
-        val vm = ActivityEntryViewModel(
-            repository = activityRepo(canWrite = true),
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
-        )
+        val vm = manualViewModel(activityRepo(canWrite = true))
         advanceUntilIdle()
 
         assertNull(vm.uiState.value.editedMetrics())
@@ -1969,7 +1793,7 @@ class ActivityEntryViewModelTest {
         val vm = ActivityEntryViewModel(
             repository = repo,
             routeFileImporter = importer,
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+            clock = MorningClock,
         )
         advanceUntilIdle()
 
@@ -2130,7 +1954,7 @@ class ActivityEntryViewModelTest {
             repository = activityRepo(canWrite = true),
             activityRecorder = recorder,
             recordingPreferences = activityPrefs(),
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+            clock = MorningClock,
         )
 
     @Test fun `a started recording succeeds and republishes the session`() = runTest {
@@ -2202,7 +2026,7 @@ class ActivityEntryViewModelTest {
             activityRecorder = recorder,
             recordingDraftStore = draftStore,
             recordingPreferences = activityPrefs(),
-            clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC")),
+            clock = MorningClock,
         )
         advanceUntilIdle()
         vm.startGpsRecording()
@@ -2320,7 +2144,11 @@ class ActivityEntryViewModelTest {
             verticalAccuracyMeters = null,
         )
 
+    private fun manualViewModel(repository: ActivityRepository) =
+        ActivityEntryViewModel(repository = repository, clock = MorningClock)
+
     private companion object {
+        private val MorningClock: Clock = Clock.fixed(Instant.parse("2026-05-26T08:30:00Z"), ZoneId.of("UTC"))
         private val ActivityWritePermissions = setOf(
             "write_activity",
             "write_route",
@@ -2332,51 +2160,6 @@ class ActivityEntryViewModelTest {
         private val PlannedWorkoutWritePermissions = setOf(
             "read_planned",
             "write_planned",
-        )
-    }
-
-    @Test fun `toRepetitionSetInputs ignores timed active steps instead of treating them as rest`() {
-        val plan = plannedPullUpPlan().copy(
-            blocks = listOf(
-                PlannedExerciseBlockData(
-                    repetitions = 1,
-                    description = null,
-                    steps = listOf(
-                        PlannedExerciseStepData(
-                            exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT,
-                            exercisePhase = androidx.health.connect.client.records.PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
-                            description = "Push-ups",
-                            completion = PlannedExerciseCompletion.Repetitions(10),
-                        ),
-                        PlannedExerciseStepData(
-                            exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST,
-                            exercisePhase = androidx.health.connect.client.records.PlannedExerciseStep.EXERCISE_PHASE_REST,
-                            description = null,
-                            completion = PlannedExerciseCompletion.DurationSeconds(60),
-                        ),
-                        PlannedExerciseStepData(
-                            exerciseType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK,
-                            exercisePhase = androidx.health.connect.client.records.PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
-                            description = null,
-                            completion = PlannedExerciseCompletion.DurationSeconds(45),
-                        ),
-                    ),
-                ),
-            ),
-        )
-
-        val sets = plan.toRepetitionSetInputs(ownSegmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_OTHER_WORKOUT)
-
-        assertEquals(
-            listOf(
-                ActivityRepetitionSetInput(repetitionsText = "10", restMinutesText = "60", label = "Push-ups"),
-                ActivityRepetitionSetInput(
-                    repetitionsText = "45",
-                    segmentType = ExerciseSegment.EXERCISE_SEGMENT_TYPE_PLANK,
-                    isDuration = true,
-                ),
-            ),
-            sets,
         )
     }
 

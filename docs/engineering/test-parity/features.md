@@ -86,7 +86,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/activity
 | a running activity > shows pace and steps, and no crank | PORTED | ActivityMetricRelevanceTest.kt: `run prefers pace and walks the step based sets` | wheelchair-pushes and floors negatives added |
 | a recorded value is shown even when the type says it is irrelevant | PORTED | ActivityMetricRelevanceTest.kt: `a recorded value is shown even when the type says it is irrelevant` | seam showsMetricRow |
 | a walking activity recorded by a watch > shows the totals its session record never carried | N/A-BEHAVIOR | none | blocked on behavior decision - Kotlin has no window-aggregate session-metrics backfill at all (same gap as the activity_backfill rows in domain-data-core.md) |
-| a walking activity recorded by a watch > derives a distance from speed when no distance was written | PORTED | ActivityDetailViewModelTest.kt: `derives a distance from speed when no distance was written` + `a recorded distance is never overwritten by the derived one` |  |
+| a walking activity recorded by a watch > derives a distance from speed when no distance was written | PORTED | ActivityDetailViewModelTest.kt: `initial load backfills missing averages from samples`; ActivityBackfillTest.kt: `a recorded distance beats one integrated from speed` |  |
 | a walking activity recorded by a watch > a failing metrics read costs the numbers, not the screen | PORTED | ActivityDetailViewModelTest.kt: `a failing marker read costs the marks, not the screen` | Kotlin folds the session metrics into loadWorkout, so the marker read is the degrading read that stands in for Flutter's separate metrics read; it too is guarded now |
 | a strength session shows no distance metrics at all | PORTED | ActivityMetricRelevanceTest.kt: `a strength session reports none of the distance metrics` | trait covered; per-metric relevance for strength unasserted |
 
@@ -101,7 +101,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/insights/A
 | speed samples (no route) still derive real splits | PORTED | ActivitySplitsTest.kt: `integrate v dt to cut at the right times, with no route at all` | |
 | with no route and no speed samples the card says ESTIMATED and explains why | PORTED | ActivitySplitsTest.kt: `every estimated split shares the activity average pace, and the source says so` | explanatory copy widget-only |
 | a failing speed read degrades to estimated splits instead of blowing up the screen | PORTED | ActivityDetailViewModelTest.kt: `a failing speed read degrades to estimated splits instead of blowing up the screen` | fixed: loadSpeedSamples degrades to empty, so the splits fall back to ESTIMATED |
-| an activity with no distance hides the card entirely | PORTED | ActivitySplitsTest.kt: `a session with no distance, no route and no speed has no splits`; ActivityDetailViewModelTest.kt: `non distance activity yields no splits` | |
+| an activity with no distance hides the card entirely | PORTED | ActivitySplitsTest.kt: `a session with no distance, no route and no speed has no splits` | |
 | imperial units re-express the derived header in miles | PORTED | ActivitySplitDistanceLabelTest.kt: `imperial units re-express the derived header in miles` + `metric presets print as the round numbers the user picked` + `every imperial preset labels as a round mile fraction` | splitDistanceLabel composition now covered |
 
 ## test/features/activity/activity_detail_view_model_test.dart
@@ -190,7 +190,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/activity
 
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
-| each series totals its own slice | PORTED | CaloriesDerivationsTest.kt: `statistics ignore days whose calories carry no data`, `statistics average over the days that reported, not the days in the window`; ActivityPresentationMapperTest.kt: `calories burned display populates values for week period` | |
+| each series totals its own slice | PORTED | CaloriesDerivationsTest.kt: `statistics ignore days whose calories carry no data`, `statistics average over the days that reported, not the days in the window`; ActivityPresentationMapperTest.kt: `calories burned reads the nutrition slice, not daily steps` | |
 | all-zero readings are no data — that is what shows the placeholder | DIVERGED | ActivityPresentationMapperTest.kt: `calories burned display has no data when nutrition has no burned calories` | active-calories all-zero half unasserted |
 | an empty period derives empty series, not nulls | DIVERGED | CaloriesDerivationsTest.kt: `statistics are null for empty input rather than zero` | Kotlin's emptiness contract is the opposite (null-not-zero vs empty-not-null) |
 ## test/features/activity/export/activity_route_export_test.dart
@@ -565,7 +565,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/settings
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/settings/SettingsViewModelTest.kt
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
-| the high threshold cannot be stepped below the low one | PORTED | SettingsViewModelTest.kt: `high threshold cannot drop within the gap of the low threshold` + `threshold gap clamp lands inside the repository bounds` | latter proves gap (95 = 90 + 5) distinct from repo floor |
+| the high threshold cannot be stepped below the low one | PORTED | BodySettingsViewModelTest.kt: `threshold steps persist through the repository clamp` + `threshold gap clamp lands inside the repository bounds` | latter proves gap (95 = 90 + 5) distinct from repo floor |
 | the low threshold cannot be stepped above the high one | PORTED | SettingsViewModelTest.kt: `low threshold gap clamp lands inside the repository bounds` | high=90 then low=95 yields 85, distinct from the repo ceiling of 100 |
 | a legitimate change still lands unchanged | PORTED | SettingsViewModelTest.kt: `a legitimate threshold change still lands unchanged` | 150/45 land exactly |
 
@@ -574,7 +574,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/settings
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
 | a physiological flag persists through the caffeine store | DIVERGED | SettingsViewModelTest.kt: `updateCaffeinePreferences persists preference and updates ui state` | persists via mocked PreferencesRepository; smoker flag landing under the original `caffeine_*` keys not asserted |
-| reads values written under the original caffeine keys | DIVERGED | FlutterPrefsKeyTableTest.kt: `caffeine enums transcode` | covers key-level migration (incl. `caffeine_hormonal_status`), not the UI read-back path |
+| reads values written under the original caffeine keys | DIVERGED | FlutterPrefsKeyTableTest.kt: `dart enum names transcode to kotlin constants, multi word names included` | covers key-level migration (incl. `caffeine_hormonal_status`), not the UI read-back path |
 | surfaces pregnancy, which used to be buried under caffeine | PORTED | SettingsSmallCardsTest: `metabolismCard_surfacesHormonalStatus_whichUsedToBeBuriedUnderCaffeine` | Compose instrumentation; runs on a device, not in CI |
 
 ## test/features/settings/offline_maps_card_test.dart

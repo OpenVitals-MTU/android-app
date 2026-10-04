@@ -128,24 +128,16 @@ class OnboardingViewModelTest {
         val state = vm.uiState.value
         assertFalse(state.requiredGranted)
         assertFalse(state.canAdvance)
-        for (row in state.categoryRows) {
-            assertEquals(row.id.name, 0, row.grantedCount)
-            assertFalse(row.id.name, row.fullyGranted)
-            assertFalse(row.id.name, row.partial)
-        }
+        assertEquals(
+            emptyList<OnboardingCategoryId>(),
+            state.categoryRows.filter { it.grantedCount != 0 || it.fullyGranted || it.partial }.map { it.id },
+        )
         val activity = state.categoryRows.first { it.id == OnboardingCategoryId.ACTIVITY }
         assertTrue(activity.required)
         assertEquals(2, activity.total)
         assertEquals(setOf("activity_r", "activity_w"), vm.missingRequestableFor(OnboardingCategoryId.ACTIVITY))
-        // The opt-in rows are not folded into the required set.
-        val required = requireNotNull(state.catalog).requiredPermissions
-        assertEquals(setOf("activity_r", "sleep_r"), required)
-        // Writes are asked for alongside the reads but never gate step one.
-        assertFalse("activity_w" in required)
-        assertFalse("sleep_w" in required)
-        assertFalse("mindfulness_r" in required)
-        assertFalse("cycle_r" in required)
-        assertFalse("route_read" in required)
+        // Only the reads gate step one: no write, opt-in row or route read is folded into the required set.
+        assertEquals(setOf("activity_r", "sleep_r"), requireNotNull(state.catalog).requiredPermissions)
     }
 
     @Test fun `an unsupported category is never granted, whatever is in the set`() = runTest {

@@ -8,53 +8,27 @@ class FlutterPrefsKeyTableTest {
     // region Enum transcoding (Dart lowerCamel to Kotlin SCREAMING)
 
     @Test
-    fun `unit system transcodes`() {
-        assertThat(mappedMainValue("unit_system", "metric"))
-            .isEqualTo(TargetValue.StringValue("METRIC"))
-        assertThat(mappedMainValue("unit_system", "imperial"))
-            .isEqualTo(TargetValue.StringValue("IMPERIAL"))
-    }
+    fun `dart enum names transcode to kotlin constants, multi word names included`() {
+        val expected = mapOf(
+            ("unit_system" to "metric") to "METRIC",
+            ("unit_system" to "imperial") to "IMPERIAL",
+            ("app_theme_mode" to "system") to "SYSTEM",
+            ("app_theme_mode" to "amoled") to "AMOLED",
+            ("activity_week_mode" to "mondayToSunday") to "MONDAY_TO_SUNDAY",
+            ("activity_week_mode" to "last7Days") to "LAST_7_DAYS",
+            ("chart_aggregation_mode" to "off") to "OFF",
+            ("chart_aggregation_mode" to "min5") to "MIN5",
+            ("chart_aggregation_mode" to "min30") to "MIN30",
+            ("caffeine_sleep_sensitivity" to "insomnia") to "INSOMNIA",
+            ("caffeine_alcohol_use" to "occasional") to "OCCASIONAL",
+            ("caffeine_habituation" to "moderate") to "MODERATE",
+            ("caffeine_cyp1a2_genotype" to "slow") to "SLOW",
+            ("caffeine_ahr_genotype" to "fast") to "FAST",
+            ("caffeine_hormonal_status" to "oralContraceptive") to "ORAL_CONTRACEPTIVE",
+        )
 
-    @Test
-    fun `app theme mode transcodes`() {
-        assertThat(mappedMainValue("app_theme_mode", "system"))
-            .isEqualTo(TargetValue.StringValue("SYSTEM"))
-        assertThat(mappedMainValue("app_theme_mode", "amoled"))
-            .isEqualTo(TargetValue.StringValue("AMOLED"))
-    }
-
-    @Test
-    fun `activity week mode transcodes multi word names`() {
-        assertThat(mappedMainValue("activity_week_mode", "mondayToSunday"))
-            .isEqualTo(TargetValue.StringValue("MONDAY_TO_SUNDAY"))
-        assertThat(mappedMainValue("activity_week_mode", "last7Days"))
-            .isEqualTo(TargetValue.StringValue("LAST_7_DAYS"))
-    }
-
-    @Test
-    fun `chart aggregation mode transcodes`() {
-        assertThat(mappedMainValue("chart_aggregation_mode", "off"))
-            .isEqualTo(TargetValue.StringValue("OFF"))
-        assertThat(mappedMainValue("chart_aggregation_mode", "min5"))
-            .isEqualTo(TargetValue.StringValue("MIN5"))
-        assertThat(mappedMainValue("chart_aggregation_mode", "min30"))
-            .isEqualTo(TargetValue.StringValue("MIN30"))
-    }
-
-    @Test
-    fun `caffeine enums transcode`() {
-        assertThat(mappedMainValue("caffeine_sleep_sensitivity", "insomnia"))
-            .isEqualTo(TargetValue.StringValue("INSOMNIA"))
-        assertThat(mappedMainValue("caffeine_alcohol_use", "occasional"))
-            .isEqualTo(TargetValue.StringValue("OCCASIONAL"))
-        assertThat(mappedMainValue("caffeine_habituation", "moderate"))
-            .isEqualTo(TargetValue.StringValue("MODERATE"))
-        assertThat(mappedMainValue("caffeine_cyp1a2_genotype", "slow"))
-            .isEqualTo(TargetValue.StringValue("SLOW"))
-        assertThat(mappedMainValue("caffeine_ahr_genotype", "fast"))
-            .isEqualTo(TargetValue.StringValue("FAST"))
-        assertThat(mappedMainValue("caffeine_hormonal_status", "oralContraceptive"))
-            .isEqualTo(TargetValue.StringValue("ORAL_CONTRACEPTIVE"))
+        assertThat(expected.keys.associateWith { (key, value) -> mappedMainValue(key, value) })
+            .isEqualTo(expected.mapValues { TargetValue.StringValue(it.value) })
     }
 
     @Test
@@ -80,25 +54,25 @@ class FlutterPrefsKeyTableTest {
 
     @Test
     fun `detail ranges transcode time range names`() {
-        for (key in listOf(
+        val keys = listOf(
             "detail_range_steps", "detail_range_calories", "detail_range_activities",
             "detail_range_sleep", "detail_range_heart", "detail_range_body",
             "detail_range_hydration", "detail_range_nutrition", "detail_range_mindfulness",
-        )) {
-            assertThat(mappedMainValue(key, "day")).isEqualTo(TargetValue.StringValue("DAY"))
-            assertThat(mappedMainValue(key, "week")).isEqualTo(TargetValue.StringValue("WEEK"))
-            assertThat(mappedMainValue(key, "month")).isEqualTo(TargetValue.StringValue("MONTH"))
-            assertThat(mappedMainValue(key, "year")).isEqualTo(TargetValue.StringValue("YEAR"))
-        }
+        )
+        val dartNames = listOf("day", "week", "month", "year")
+        val kotlinNames = listOf("DAY", "WEEK", "MONTH", "YEAR").map { TargetValue.StringValue(it) }
+
+        assertThat(keys.associateWith { key -> dartNames.map { mappedMainValue(key, it) } })
+            .isEqualTo(keys.associateWith { kotlinNames })
     }
 
     @Test
     fun `dart hrr range key is renamed to the kotlin key`() {
-        val mapping = FlutterPrefsKeyTable.map("detail_range_hrr", "month")
-        val write = (mapping as KeyMapping.Write).writes.single()
-        assertThat(write.file).isEqualTo(TargetPrefsFile.MAIN)
-        assertThat(write.key).isEqualTo("detail_range_heart_rate_recovery")
-        assertThat(write.value).isEqualTo(TargetValue.StringValue("MONTH"))
+        assertThat(FlutterPrefsKeyTable.map("detail_range_hrr", "month")).isEqualTo(
+            KeyMapping.Write(
+                TargetWrite(TargetPrefsFile.MAIN, "detail_range_heart_rate_recovery", TargetValue.StringValue("MONTH")),
+            ),
+        )
     }
 
     @Test
@@ -170,20 +144,18 @@ class FlutterPrefsKeyTableTest {
     @Test
     fun `ble registry routes to its own file under the devices key verbatim`() {
         val payload = """[{"id":"x","kind":"watch","integration":"garmin"}]"""
-        val mapping = FlutterPrefsKeyTable.map("ble_sensor_devices", payload)
-        val write = (mapping as KeyMapping.Write).writes.single()
-        assertThat(write.file).isEqualTo(TargetPrefsFile.BLE_DEVICES)
-        assertThat(write.key).isEqualTo("devices")
-        assertThat(write.value).isEqualTo(TargetValue.StringValue(payload))
+        assertThat(FlutterPrefsKeyTable.map("ble_sensor_devices", payload)).isEqualTo(
+            KeyMapping.Write(TargetWrite(TargetPrefsFile.BLE_DEVICES, "devices", TargetValue.StringValue(payload))),
+        )
     }
 
     @Test
     fun `activity markers route to the marker file keeping their key`() {
-        val mapping = FlutterPrefsKeyTable.map("activity_markers_abc123", "{}")
-        val write = (mapping as KeyMapping.Write).writes.single()
-        assertThat(write.file).isEqualTo(TargetPrefsFile.ACTIVITY_MARKERS)
-        assertThat(write.key).isEqualTo("activity_markers_abc123")
-        assertThat(write.value).isEqualTo(TargetValue.StringValue("{}"))
+        assertThat(FlutterPrefsKeyTable.map("activity_markers_abc123", "{}")).isEqualTo(
+            KeyMapping.Write(
+                TargetWrite(TargetPrefsFile.ACTIVITY_MARKERS, "activity_markers_abc123", TargetValue.StringValue("{}")),
+            ),
+        )
     }
 
     @Test
@@ -198,27 +170,24 @@ class FlutterPrefsKeyTableTest {
 
     @Test
     fun `unportable and bookkeeping keys are dropped`() {
-        for (key in listOf(
+        val keys = listOf(
             "dashboard_widget_order",
             "dashboard_ring_order",
             "dashboard_hidden_widgets",
             "kotlin_data_migrated",
             "flutter_data_migrated",
             "bodyEnergyPrefsTimelinePurged.v1",
-        )) {
-            assertThat(FlutterPrefsKeyTable.map(key, "anything"))
-                .isInstanceOf(KeyMapping.Drop::class.java)
-        }
+        )
+
+        assertThat(keys.associateWith { FlutterPrefsKeyTable.map(it, "anything") is KeyMapping.Drop })
+            .isEqualTo(keys.associateWith { true })
     }
 
     @Test
     fun `body energy setup epoch is honored as a typed copy`() {
         // The Flutter-era body-energy preferences are honored wholesale.
-        val mapping = FlutterPrefsKeyTable.map("body_energy_setup_epoch", 1721000000L)
-        assertThat(mapping).isInstanceOf(KeyMapping.Write::class.java)
-        val write = (mapping as KeyMapping.Write).writes.single()
-        assertThat(write.key).isEqualTo("body_energy_setup_epoch")
-        assertThat(write.value).isEqualTo(TargetValue.IntValue(1721000000))
+        assertThat(mappedMainValue("body_energy_setup_epoch", 1721000000L))
+            .isEqualTo(TargetValue.IntValue(1721000000))
     }
 
     @Test

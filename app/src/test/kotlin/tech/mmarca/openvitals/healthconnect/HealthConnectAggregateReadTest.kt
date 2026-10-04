@@ -27,6 +27,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -387,10 +388,7 @@ class HealthConnectAggregateReadTest {
 
         // The read went out in more than one request, none wider than the slice.
         assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(1)
-        client.groupByDurationRequestRanges.forEach { (start, end) ->
-            val days = java.time.Duration.between(start, end).toDays()
-            assertThat(days).isAtMost(DailyAggregateMaxQueryDays)
-        }
+        assertThat(widestRequest(client).toDays()).isAtMost(DailyAggregateMaxQueryDays)
         // And the stitched series still carries both ends of the range.
         assertThat(series.single { it.date == firstDay }.caloriesBurnedKcal).isWithin(1e-6).of(1_800.0)
         assertThat(series.single { it.date == date }.caloriesBurnedKcal).isWithin(1e-6).of(2_200.0)
@@ -415,9 +413,7 @@ class HealthConnectAggregateReadTest {
             .readDailyHydration(startDate = firstDay, endDate = date)
 
         assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(1)
-        client.groupByDurationRequestRanges.forEach { (start, end) ->
-            assertThat(java.time.Duration.between(start, end).toDays()).isAtMost(DailyAggregateMaxQueryDays)
-        }
+        assertThat(widestRequest(client).toDays()).isAtMost(DailyAggregateMaxQueryDays)
         // Zero-filled, and both ends of the range survive the stitching.
         assertThat(series).hasSize(301)
         assertThat(series.single { it.date == firstDay }.liters).isWithin(1e-6).of(0.5)
@@ -427,32 +423,15 @@ class HealthConnectAggregateReadTest {
     /** Same budget for heart rate: a year of hourly BPM buckets must go out tiled and stitch back. */
     @Test
     fun `readDailyHeartRateAggregates chunks a long range and stitches the series back together`() = runTest(testDispatcher) {
-        val zone = ZoneId.systemDefault()
         val firstDay = date.minusDays(300)
-        fun hr(day: LocalDate, bpm: Long) = HeartRateRecord(
-            startTime = day.atStartOfDay(zone).toInstant().plusSeconds(12 * 3_600),
-            startZoneOffset = null,
-            endTime = day.atStartOfDay(zone).toInstant().plusSeconds(12 * 3_600 + 60),
-            endZoneOffset = null,
-            samples = listOf(
-                HeartRateRecord.Sample(
-                    time = day.atStartOfDay(zone).toInstant().plusSeconds(12 * 3_600),
-                    beatsPerMinute = bpm,
-                ),
-            ),
-            metadata = Metadata.autoRecorded(watch),
-        )
-        val client = seeded(hr(firstDay, 58L), hr(date, 72L))
+        val client = seeded(heartRate(firstDay, 12, 58L), heartRate(date, 12, 72L))
 
-        val series = HeartHealthReader(support(client), "tech.mmarca.openvitals")
+        val series = HeartHealthReader(support(client), APP_PACKAGE)
             .readDailyHeartRateAggregates(startDate = firstDay, endDate = date)
             .map { it.summary }
 
         assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(1)
-        client.groupByDurationRequestRanges.forEach { (start, end) ->
-            val days = java.time.Duration.between(start, end).toDays()
-            assertThat(days).isAtMost(HourlyAggregateMaxQueryDays)
-        }
+        assertThat(widestRequest(client).toDays()).isAtMost(HourlyAggregateMaxQueryDays)
         assertThat(series.single { it.date == firstDay }.avgBpm).isEqualTo(58L)
         assertThat(series.single { it.date == date }.avgBpm).isEqualTo(72L)
     }
@@ -467,21 +446,7 @@ class HealthConnectAggregateReadTest {
         val zone = ZoneId.systemDefault()
         val dayStart = date.atStartOfDay(zone).toInstant()
         // One background sample per hour at 70 bpm, except the workout hour.
-        val background = (0L until 24L).filter { it != 19L }.map { hour ->
-            HeartRateRecord(
-                startTime = dayStart.plusSeconds(hour * 3_600),
-                startZoneOffset = null,
-                endTime = dayStart.plusSeconds(hour * 3_600 + 60),
-                endZoneOffset = null,
-                samples = listOf(
-                    HeartRateRecord.Sample(
-                        time = dayStart.plusSeconds(hour * 3_600),
-                        beatsPerMinute = 70L,
-                    ),
-                ),
-                metadata = Metadata.autoRecorded(watch),
-            )
-        }
+        val background = (0L until 24L).filter { it != 19L }.map { hour -> heartRate(date, hour, 70L) }
         // Five minutes at 1 Hz and 140 bpm inside hour 19: 300 samples against 23.
         val workout = HeartRateRecord(
             startTime = dayStart.plusSeconds(19L * 3_600),
@@ -512,26 +477,12 @@ class HealthConnectAggregateReadTest {
     /** A late sync must change the day it lands on, and only that day, or the cache serves a stale average. */
     @Test
     fun `readDailyHeartRateAggregates counts samples and re-signs only the day that changed`() = runTest(testDispatcher) {
-        val zone = ZoneId.systemDefault()
         val yesterday = date.minusDays(1)
-        fun hr(day: LocalDate, hour: Long, bpm: Long) = HeartRateRecord(
-            startTime = day.atStartOfDay(zone).toInstant().plusSeconds(hour * 3_600),
-            startZoneOffset = null,
-            endTime = day.atStartOfDay(zone).toInstant().plusSeconds(hour * 3_600 + 60),
-            endZoneOffset = null,
-            samples = listOf(
-                HeartRateRecord.Sample(
-                    time = day.atStartOfDay(zone).toInstant().plusSeconds(hour * 3_600),
-                    beatsPerMinute = bpm,
-                ),
-            ),
-            metadata = Metadata.autoRecorded(watch),
-        )
-        val client = seeded(hr(yesterday, 9, 60L), hr(date, 9, 70L), hr(date, 10, 72L))
+        val client = seeded(heartRate(yesterday, 9, 60L), heartRate(date, 9, 70L), heartRate(date, 10, 72L))
         val reader = HeartHealthReader(support(client), APP_PACKAGE)
 
         val before = reader.readDailyHeartRateAggregates(yesterday, date).associateBy { it.summary.date }
-        client.insertRecords(listOf(hr(date, 11, 74L)))
+        client.insertRecords(listOf(heartRate(date, 11, 74L)))
         val after = reader.readDailyHeartRateAggregates(yesterday, date).associateBy { it.summary.date }
 
         assertThat(before.getValue(date).sampleCount).isEqualTo(2L)
@@ -545,8 +496,6 @@ class HealthConnectAggregateReadTest {
     fun `readDailyHeartRateAverages gives each day in the read its own minute-bucketed mean`() = runTest(testDispatcher) {
         val zone = ZoneId.systemDefault()
         val yesterday = date.minusDays(1)
-        val dayStart = date.atStartOfDay(zone).toInstant()
-        val workoutMinutes = 8L * 60 until 8L * 60 + 23
         val quietDay = HeartRateRecord(
             startTime = yesterday.atStartOfDay(zone).toInstant(),
             startZoneOffset = null,
@@ -560,28 +509,7 @@ class HealthConnectAggregateReadTest {
             },
             metadata = Metadata.autoRecorded(watch),
         )
-        val background = HeartRateRecord(
-            startTime = dayStart,
-            startZoneOffset = null,
-            endTime = dayStart.plusSeconds(10L * 3_600),
-            endZoneOffset = null,
-            samples = (0L until 10L * 60).filter { it !in workoutMinutes }.map { minute ->
-                HeartRateRecord.Sample(time = dayStart.plusSeconds(minute * 60), beatsPerMinute = 60L)
-            },
-            metadata = Metadata.autoRecorded(watch),
-        )
-        val workoutStart = dayStart.plusSeconds(workoutMinutes.first * 60)
-        val workout = HeartRateRecord(
-            startTime = workoutStart,
-            startZoneOffset = null,
-            endTime = workoutStart.plusSeconds(23L * 60),
-            endZoneOffset = null,
-            samples = (0L until 23L * 60).map { second ->
-                HeartRateRecord.Sample(time = workoutStart.plusSeconds(second), beatsPerMinute = 130L)
-            },
-            metadata = Metadata.autoRecorded(watch),
-        )
-        val client = seeded(quietDay, background, workout)
+        val client = seeded(quietDay, *minuteSeriesWithWorkout())
 
         val averages = HeartHealthReader(support(client), APP_PACKAGE).readDailyHeartRateAverages(yesterday, date)
 
@@ -594,33 +522,7 @@ class HealthConnectAggregateReadTest {
     /** The Today tile must match the detail screen, even inside a workout hour. */
     @Test
     fun `readAvgHeartRate weights each minute once, even inside a 1 Hz workout hour`() = runTest(testDispatcher) {
-        val zone = ZoneId.systemDefault()
-        val dayStart = date.atStartOfDay(zone).toInstant()
-        val workoutMinutes = 8L * 60 until 8L * 60 + 23
-        // One sample a minute at 60 bpm from 00:00 to 10:00, except during the workout.
-        val background = HeartRateRecord(
-            startTime = dayStart,
-            startZoneOffset = null,
-            endTime = dayStart.plusSeconds(10L * 3_600),
-            endZoneOffset = null,
-            samples = (0L until 10L * 60).filter { it !in workoutMinutes }.map { minute ->
-                HeartRateRecord.Sample(time = dayStart.plusSeconds(minute * 60), beatsPerMinute = 60L)
-            },
-            metadata = Metadata.autoRecorded(watch),
-        )
-        // 23 minutes at 1 Hz and 130 bpm from 08:00: 1,380 samples in one hour.
-        val workoutStart = dayStart.plusSeconds(workoutMinutes.first * 60)
-        val workout = HeartRateRecord(
-            startTime = workoutStart,
-            startZoneOffset = null,
-            endTime = workoutStart.plusSeconds(23L * 60),
-            endZoneOffset = null,
-            samples = (0L until 23L * 60).map { second ->
-                HeartRateRecord.Sample(time = workoutStart.plusSeconds(second), beatsPerMinute = 130L)
-            },
-            metadata = Metadata.autoRecorded(watch),
-        )
-        val client = seeded(background, workout)
+        val client = seeded(*minuteSeriesWithWorkout())
 
         val avg = HeartHealthReader(support(client), APP_PACKAGE).readAvgHeartRate(date)
 
@@ -688,14 +590,11 @@ class HealthConnectAggregateReadTest {
         )
         val client = seeded(resting(firstDay, 51L), resting(date, 55L))
 
-        val series = HeartHealthReader(support(client), "tech.mmarca.openvitals")
+        val series = HeartHealthReader(support(client), APP_PACKAGE)
             .readDailyRestingHR(startDate = firstDay, endDate = date)
 
         assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(1)
-        client.groupByDurationRequestRanges.forEach { (start, end) ->
-            val days = java.time.Duration.between(start, end).toDays()
-            assertThat(days).isAtMost(DailyAggregateMaxQueryDays)
-        }
+        assertThat(widestRequest(client).toDays()).isAtMost(DailyAggregateMaxQueryDays)
         assertThat(series.single { it.date == firstDay }.bpm).isEqualTo(51L)
         assertThat(series.single { it.date == date }.bpm).isEqualTo(55L)
     }
@@ -704,20 +603,7 @@ class HealthConnectAggregateReadTest {
     fun `readHeartRateSamplesForInsights splits every day into budgeted requests`() = runTest(testDispatcher) {
         val zone = ZoneId.systemDefault()
         val firstDay = date.minusDays(1)
-        fun hr(day: LocalDate, hour: Long, bpm: Long) = HeartRateRecord(
-            startTime = day.atStartOfDay(zone).toInstant().plusSeconds(hour * 3_600),
-            startZoneOffset = null,
-            endTime = day.atStartOfDay(zone).toInstant().plusSeconds(hour * 3_600 + 60),
-            endZoneOffset = null,
-            samples = listOf(
-                HeartRateRecord.Sample(
-                    time = day.atStartOfDay(zone).toInstant().plusSeconds(hour * 3_600),
-                    beatsPerMinute = bpm,
-                ),
-            ),
-            metadata = Metadata.autoRecorded(watch),
-        )
-        val client = seeded(hr(firstDay, 9, 61L), hr(date, 15, 88L))
+        val client = seeded(heartRate(firstDay, 9, 61L), heartRate(date, 15, 88L))
 
         val samples = HeartHealthReader(support(client), APP_PACKAGE)
             .readHeartRateSamplesForInsights(
@@ -728,10 +614,7 @@ class HealthConnectAggregateReadTest {
         // A whole day of one-minute buckets in one request hit TransactionTooLargeException
         // and degraded to empty, so cardio load fell back to step estimates.
         val budget = HeartRateInsightBucketDuration.multipliedBy(MaxInsightAggregateBuckets)
-        assertThat(client.groupByDurationRequestRanges).isNotEmpty()
-        client.groupByDurationRequestRanges.forEach { (start, end) ->
-            assertThat(java.time.Duration.between(start, end)).isAtMost(budget)
-        }
+        assertThat(widestRequest(client)).isAtMost(budget)
         // Two days, more than one request each.
         assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(2)
         assertThat(samples.map { it.beatsPerMinute }).containsExactly(61L, 88L).inOrder()
@@ -774,6 +657,54 @@ class HealthConnectAggregateReadTest {
         distance = Length.meters(meters),
         metadata = Metadata.autoRecorded(watch),
     )
+
+    /** One heart-rate sample at [hour] o'clock local on [day], as a one-minute record. */
+    private fun heartRate(day: LocalDate, hour: Long, bpm: Long): HeartRateRecord {
+        val time = day.atStartOfDay(ZoneId.systemDefault()).toInstant().plusSeconds(hour * 3_600)
+        return HeartRateRecord(
+            startTime = time,
+            startZoneOffset = null,
+            endTime = time.plusSeconds(60),
+            endZoneOffset = null,
+            samples = listOf(HeartRateRecord.Sample(time = time, beatsPerMinute = bpm)),
+            metadata = Metadata.autoRecorded(watch),
+        )
+    }
+
+    /**
+     * On [date]: one sample a minute at 60 bpm from 00:00 to 10:00, except for a 23-minute
+     * workout from 08:00 at 1 Hz and 130 bpm, 1,380 samples in one hour.
+     */
+    private fun minuteSeriesWithWorkout(): Array<Record> {
+        val dayStart = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+        val workoutMinutes = 8L * 60 until 8L * 60 + 23
+        val background = HeartRateRecord(
+            startTime = dayStart,
+            startZoneOffset = null,
+            endTime = dayStart.plusSeconds(10L * 3_600),
+            endZoneOffset = null,
+            samples = (0L until 10L * 60).filter { it !in workoutMinutes }.map { minute ->
+                HeartRateRecord.Sample(time = dayStart.plusSeconds(minute * 60), beatsPerMinute = 60L)
+            },
+            metadata = Metadata.autoRecorded(watch),
+        )
+        val workoutStart = dayStart.plusSeconds(workoutMinutes.first * 60)
+        val workout = HeartRateRecord(
+            startTime = workoutStart,
+            startZoneOffset = null,
+            endTime = workoutStart.plusSeconds(23L * 60),
+            endZoneOffset = null,
+            samples = (0L until 23L * 60).map { second ->
+                HeartRateRecord.Sample(time = workoutStart.plusSeconds(second), beatsPerMinute = 130L)
+            },
+            metadata = Metadata.autoRecorded(watch),
+        )
+        return arrayOf(background, workout)
+    }
+
+    /** The widest time range any one aggregate request asked for. */
+    private fun widestRequest(client: AggregatingFakeHealthConnectClient): Duration =
+        client.groupByDurationRequestRanges.maxOf { (start, end) -> Duration.between(start, end) }
 
     private suspend fun progress(
         client: HealthConnectClient,

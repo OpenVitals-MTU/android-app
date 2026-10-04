@@ -131,10 +131,7 @@ class DashboardDataLoaderTest {
 
     @Test fun `loadDashboard keeps successful metrics when another metric is rate limited`() = runTest {
         val date = LocalDate.of(2026, 5, 16)
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(stepsPermission, distancePermission)
-        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission, distancePermission)
+        val hc = grantingHc(granted = setOf(stepsPermission, distancePermission))
         coEvery { hc.readSteps(date) } throws RuntimeException(
             "Request rejected. Rate limited request quota has been exceeded.",
         )
@@ -154,10 +151,7 @@ class DashboardDataLoaderTest {
 
     @Test fun `average heart rate dashboard metric uses aggregate without raw samples`() = runTest {
         val date = LocalDate.of(2026, 6, 27)
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(heartRatePermission)
-        coEvery { hc.grantedPermissions() } returns setOf(heartRatePermission)
+        val hc = grantingHc(granted = setOf(heartRatePermission))
         coEvery { hc.readAvgHeartRate(date) } returns 72L
 
         val data = dashboardDataLoader(hc).loadDashboard(
@@ -178,10 +172,7 @@ class DashboardDataLoaderTest {
 
     @Test fun `dashboard metric cancellation propagates`() = runTest {
         val date = LocalDate.of(2026, 6, 27)
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(heartRatePermission)
-        coEvery { hc.grantedPermissions() } returns setOf(heartRatePermission)
+        val hc = grantingHc(granted = setOf(heartRatePermission))
         coEvery { hc.readAvgHeartRate(date) } throws CancellationException("cancelled")
 
         try {
@@ -199,10 +190,7 @@ class DashboardDataLoaderTest {
 
     @Test fun `one loadDashboard call reads granted permissions once`() = runTest {
         val date = LocalDate.of(2026, 6, 27)
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(stepsPermission)
-        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission)
+        val hc = grantingHc(granted = setOf(stepsPermission))
         coEvery { hc.readSteps(date) } returns 8_765L
 
         val data = dashboardDataLoader(hc).loadDashboard(
@@ -218,10 +206,7 @@ class DashboardDataLoaderTest {
 
     @Test fun `loadDashboard reads Health Connect on repeat loads`() = runTest {
         val date = LocalDate.of(2026, 6, 23)
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(stepsPermission)
-        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission)
+        val hc = grantingHc(granted = setOf(stepsPermission))
         coEvery { hc.readSteps(date) } returns 8_000L
         val query = DashboardQuery(
             date = date,
@@ -251,10 +236,7 @@ class DashboardDataLoaderTest {
             end = "2026-05-04T08:13:00Z",
             duration = Duration.ofHours(7).plusMinutes(3),
         )
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(sleepPermission)
-        coEvery { hc.grantedPermissions() } returns setOf(sleepPermission)
+        val hc = grantingHc(granted = setOf(sleepPermission))
         coEvery { hc.readSleepData(any(), any(), any()) } returns SleepReadData(
             sessions = listOf(nextDaySleep, eveningSleep),
             dailyAggregateDurations = emptyList(),
@@ -288,10 +270,7 @@ class DashboardDataLoaderTest {
             end = "2026-05-04T06:05:00Z",
             duration = Duration.ofHours(8),
         )
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(sleepPermission)
-        coEvery { hc.grantedPermissions() } returns setOf(sleepPermission)
+        val hc = grantingHc(granted = setOf(sleepPermission))
         coEvery { hc.readSleepData(any(), any(), any()) } returns SleepReadData(
             sessions = listOf(fitbitSleep, googleFitSleep),
             dailyAggregateDurations = listOf(
@@ -315,10 +294,7 @@ class DashboardDataLoaderTest {
 
     @Test fun `loadDashboard skips hidden dashboard metrics`() = runTest {
         val date = LocalDate.of(2026, 5, 16)
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(stepsPermission, distancePermission)
-        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission, distancePermission)
+        val hc = grantingHc(granted = setOf(stepsPermission, distancePermission))
         coEvery { hc.readSteps(date) } returns 9876L
 
         val data = dashboardDataLoader(hc).loadDashboard(
@@ -335,10 +311,10 @@ class DashboardDataLoaderTest {
 
     @Test fun `loadDashboard reports missing permissions only for visible metrics`() = runTest {
         val date = LocalDate.of(2026, 5, 16)
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(stepsPermission, distancePermission, sleepPermission)
-        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission)
+        val hc = grantingHc(
+            granted = setOf(stepsPermission),
+            managed = setOf(stepsPermission, distancePermission, sleepPermission),
+        )
         coEvery { hc.readSteps(date) } returns 9876L
 
         val data = dashboardDataLoader(hc).loadDashboard(
@@ -367,10 +343,7 @@ class DashboardDataLoaderTest {
             end = "2026-05-16T08:30:00Z",
             duration = Duration.ofMinutes(30),
         )
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(exercisePermission)
-        coEvery { hc.grantedPermissions() } returns setOf(exercisePermission)
+        val hc = grantingHc(granted = setOf(exercisePermission))
         coEvery { hc.readExerciseSessions(any(), any()) } returns listOf(latestWorkout, earlierWorkout)
 
         val data = dashboardDataLoader(hc).loadDashboard(
@@ -387,18 +360,7 @@ class DashboardDataLoaderTest {
 
     @Test fun `loadDashboard reads plain Health Connect total calories by default`() = runTest {
         val date = LocalDate.of(2026, 6, 5)
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(
-            totalCaloriesPermission,
-            activeCaloriesPermission,
-            bmrPermission,
-        )
-        coEvery { hc.grantedPermissions() } returns setOf(
-            totalCaloriesPermission,
-            activeCaloriesPermission,
-            bmrPermission,
-        )
+        val hc = grantingHc(granted = setOf(totalCaloriesPermission, activeCaloriesPermission, bmrPermission))
         coEvery {
             hc.readDailyNutrition(date, date, includeHydration = false, includeEstimatedCalories = false)
         } returns listOf(
@@ -426,10 +388,7 @@ class DashboardDataLoaderTest {
 
     @Test fun `loadDashboard reads caffeine from daily macros when requested`() = runTest {
         val date = LocalDate.of(2026, 6, 5)
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(nutritionPermission)
-        coEvery { hc.grantedPermissions() } returns setOf(nutritionPermission)
+        val hc = grantingHc(granted = setOf(nutritionPermission))
         coEvery { hc.readDailyMacros(date, date) } returns listOf(
             DailyMacros(
                 date = date,
@@ -451,20 +410,9 @@ class DashboardDataLoaderTest {
 
     @Test fun `loadDashboard enables OpenVitals calorie calculations when preference is on`() = runTest {
         val date = LocalDate.of(2026, 6, 5)
-        val hc = mockk<HealthConnectManager>()
         val prefs = mockk<PreferencesRepository>()
         every { prefs.showOpenVitalsCalculatedCalories } returns true
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(
-            totalCaloriesPermission,
-            activeCaloriesPermission,
-            bmrPermission,
-        )
-        coEvery { hc.grantedPermissions() } returns setOf(
-            totalCaloriesPermission,
-            activeCaloriesPermission,
-            bmrPermission,
-        )
+        val hc = grantingHc(granted = setOf(totalCaloriesPermission, activeCaloriesPermission, bmrPermission))
         coEvery {
             hc.readDailyNutrition(date, date, includeHydration = false, includeEstimatedCalories = true)
         } returns listOf(
@@ -492,16 +440,12 @@ class DashboardDataLoaderTest {
 
     @Test fun `loadDashboard reports active calories and BMR permissions when OpenVitals calorie calculations are on`() = runTest {
         val date = LocalDate.of(2026, 6, 5)
-        val hc = mockk<HealthConnectManager>()
         val prefs = mockk<PreferencesRepository>()
         every { prefs.showOpenVitalsCalculatedCalories } returns true
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(
-            totalCaloriesPermission,
-            activeCaloriesPermission,
-            bmrPermission,
+        val hc = grantingHc(
+            granted = setOf(totalCaloriesPermission),
+            managed = setOf(totalCaloriesPermission, activeCaloriesPermission, bmrPermission),
         )
-        coEvery { hc.grantedPermissions() } returns setOf(totalCaloriesPermission)
         coEvery {
             hc.readDailyNutrition(date, date, includeHydration = false, includeEstimatedCalories = false)
         } returns emptyList()
@@ -522,10 +466,7 @@ class DashboardDataLoaderTest {
     @Test fun `loadDashboard shows latest weight even when no selected-day weight exists`() = runTest {
         val date = LocalDate.of(2026, 5, 16)
         val weightTime = Instant.parse("2026-04-02T08:30:00Z")
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(weightPermission)
-        coEvery { hc.grantedPermissions() } returns setOf(weightPermission)
+        val hc = grantingHc(granted = setOf(weightPermission))
         coEvery { hc.readLatestWeight() } returns WeightEntry(
             time = weightTime,
             weightKg = 82.4,
@@ -547,10 +488,7 @@ class DashboardDataLoaderTest {
     @Test fun `loadDashboard shows latest height with measurement time`() = runTest {
         val date = LocalDate.of(2026, 5, 16)
         val heightTime = Instant.parse("2025-12-10T07:45:00Z")
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(heightPermission)
-        coEvery { hc.grantedPermissions() } returns setOf(heightPermission)
+        val hc = grantingHc(granted = setOf(heightPermission))
         coEvery { hc.readLatestHeightEntry() } returns HeightEntry(
             time = heightTime,
             heightCm = 178.0,
@@ -572,10 +510,7 @@ class DashboardDataLoaderTest {
         val date = LocalDate.of(2026, 5, 16)
         val start = Instant.parse("2026-05-16T05:00:00Z")
         val end = Instant.parse("2026-05-17T05:00:00Z")
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(menstruationPermission)
-        coEvery { hc.grantedPermissions() } returns setOf(menstruationPermission)
+        val hc = grantingHc(granted = setOf(menstruationPermission))
         coEvery { hc.readMenstruationPeriods(any(), any()) } returns listOf(
             MenstruationPeriodEntry(
                 startTime = start,
@@ -600,10 +535,7 @@ class DashboardDataLoaderTest {
 
     @Test fun `weekly cardio load uses rolling last seven days`() = runTest {
         val date = LocalDate.of(2026, 6, 2)
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(stepsPermission, distancePermission)
-        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission, distancePermission)
+        val hc = grantingHc(granted = setOf(stepsPermission, distancePermission))
         coEvery {
             hc.readDailySteps(
                 startDate = any(),
@@ -644,10 +576,7 @@ class DashboardDataLoaderTest {
 
     @Test fun `weekly cardio load reads the daily series without distance when only steps are granted`() = runTest {
         val date = LocalDate.of(2026, 6, 2)
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(stepsPermission, distancePermission)
-        coEvery { hc.grantedPermissions() } returns setOf(stepsPermission)
+        val hc = grantingHc(granted = setOf(stepsPermission), managed = setOf(stepsPermission, distancePermission))
         coEvery {
             hc.readDailySteps(
                 startDate = any(),
@@ -692,18 +621,7 @@ class DashboardDataLoaderTest {
         val date = LocalDate.of(2026, 6, 2)
         val zone = ZoneId.systemDefault()
         val heartRateSampleStart = date.minusDays(13)
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(
-            stepsPermission,
-            distancePermission,
-            heartRatePermission,
-        )
-        coEvery { hc.grantedPermissions() } returns setOf(
-            stepsPermission,
-            distancePermission,
-            heartRatePermission,
-        )
+        val hc = grantingHc(granted = setOf(stepsPermission, distancePermission, heartRatePermission))
         coEvery {
             hc.readDailySteps(
                 startDate = any(),
@@ -760,23 +678,15 @@ class DashboardDataLoaderTest {
                 source = "watch",
             )
         }
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(
-            stepsPermission,
-            distancePermission,
-            activeCaloriesPermission,
-            exercisePermission,
-            heartRatePermission,
-            restingHeartRatePermission,
-        )
-        coEvery { hc.grantedPermissions() } returns setOf(
-            stepsPermission,
-            distancePermission,
-            activeCaloriesPermission,
-            exercisePermission,
-            heartRatePermission,
-            restingHeartRatePermission,
+        val hc = grantingHc(
+            granted = setOf(
+                stepsPermission,
+                distancePermission,
+                activeCaloriesPermission,
+                exercisePermission,
+                heartRatePermission,
+                restingHeartRatePermission,
+            ),
         )
         coEvery {
             hc.readDailySteps(
@@ -806,10 +716,7 @@ class DashboardDataLoaderTest {
 
     @Test fun `loadDashboard reads personal baselines for resting heart rate and HRV`() = runTest {
         val date = LocalDate.of(2026, 6, 10)
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(restingHeartRatePermission, hrvPermission)
-        coEvery { hc.grantedPermissions() } returns setOf(restingHeartRatePermission, hrvPermission)
+        val hc = grantingHc(granted = setOf(restingHeartRatePermission, hrvPermission))
         coEvery { hc.readRestingHeartRateSamples(any(), any()) } returns listOf(
             RestingHeartRateSample(
                 time = Instant.parse("2026-06-10T05:00:00Z"),
@@ -859,10 +766,7 @@ class DashboardDataLoaderTest {
     @Test fun `loadDashboard calculates BMI from latest health connect body entries`() = runTest {
         val date = LocalDate.of(2026, 6, 23)
         val time = Instant.parse("2026-06-23T08:00:00Z")
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns setOf(weightPermission, heightPermission)
-        coEvery { hc.grantedPermissions() } returns setOf(weightPermission, heightPermission)
+        val hc = grantingHc(granted = setOf(weightPermission, heightPermission))
         coEvery { hc.readLatestWeight() } returns WeightEntry(
             time = time,
             weightKg = 80.0,
@@ -973,10 +877,7 @@ class DashboardDataLoaderTest {
             bodyTemperaturePermission,
             bloodGlucosePermission,
         )
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
-        every { hc.managedPermissions } returns permissions
-        coEvery { hc.grantedPermissions() } returns permissions
+        val hc = grantingHc(granted = permissions)
         coEvery { hc.readAvgHeartRate(date) } returns 68L
         coEvery { hc.readLatestBloodPressure(date) } returns BloodPressureEntry(
             time = time,
@@ -1043,11 +944,8 @@ class DashboardDataLoaderTest {
 
     /** A manager whose overnight reads honor the window they are handed, so a day-clamped read returns nothing. */
     private fun overnightVitalsHc(readings: List<VitalsReading>): HealthConnectManager {
-        val hc = mockk<HealthConnectManager>()
-        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        val hc = grantingHc(granted = overnightPermissions)
         every { hc.isSkinTemperatureAvailable() } returns true
-        every { hc.managedPermissions } returns overnightPermissions
-        coEvery { hc.grantedPermissions() } returns overnightPermissions
 
         fun inWindow(start: Instant, end: Instant): List<VitalsReading> = readings
             .filter { !it.time.isBefore(start) && it.time.isBefore(end) }
@@ -1082,6 +980,16 @@ class DashboardDataLoaderTest {
             }
         }
         return hc
+    }
+
+    /** A manager on which Health Connect is available, offering [managed] and granting [granted]. */
+    private fun grantingHc(
+        granted: Set<String>,
+        managed: Set<String> = granted,
+    ): HealthConnectManager = mockk<HealthConnectManager>().also { hc ->
+        every { hc.availability() } returns HealthConnectAvailability.AVAILABLE
+        every { hc.managedPermissions } returns managed
+        coEvery { hc.grantedPermissions() } returns granted
     }
 
     private fun atLocal(date: LocalDate, hour: Int): Instant =

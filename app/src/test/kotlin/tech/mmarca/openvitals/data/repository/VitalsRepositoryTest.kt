@@ -163,17 +163,10 @@ class VitalsRepositoryTest {
 
     @Test fun `cached daily points are served without hitting Health Connect`() = runTest {
         val hc = hc()
-        val dao = mockk<tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao>()
-        coEvery { dao.cursor(any()) } answers {
-            tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity(firstArg(), "token", null)
-        }
-        coEvery { dao.cursor(VitalsCacheFingerprintKey) } returns null
-        coEvery { dao.aggregatesBetween(any(), any(), any()) } returns emptyList()
-        coEvery {
-            dao.aggregatesBetween(tech.mmarca.openvitals.data.sync.VitalsCacheKeys.SPO2, any(), any())
-        } returns listOf(
-            tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyAggregateEntity(
-                metric = tech.mmarca.openvitals.data.sync.VitalsCacheKeys.SPO2,
+        val dao = syncedCacheDao()
+        coEvery { dao.aggregatesBetween(VitalsCacheKeys.SPO2, any(), any()) } returns listOf(
+            VitalsDailyAggregateEntity(
+                metric = VitalsCacheKeys.SPO2,
                 epochDay = today.minusDays(1).toEpochDay(),
                 valueSum = 97.0 * 4,
                 secondarySum = null,
@@ -191,13 +184,12 @@ class VitalsRepositoryTest {
         coVerify(exactly = 0) { hc.readDailySpO2(any(), any()) }
     }
 
-    private fun cachedSpO2Dao(fingerprint: String?): tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao {
-        val dao = mockk<tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao>()
-        coEvery { dao.cursor(any()) } answers {
-            tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity(firstArg(), "token", null)
-        }
+    /** A cache whose every metric has a sync cursor and no rows; stub a metric's rows on top. */
+    private fun syncedCacheDao(fingerprint: String? = null): VitalsDailyCacheDao {
+        val dao = mockk<VitalsDailyCacheDao>()
+        coEvery { dao.cursor(any()) } answers { VitalsSyncCursorEntity(firstArg(), "token", null) }
         coEvery { dao.cursor(VitalsCacheFingerprintKey) } returns fingerprint?.let {
-            tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity(VitalsCacheFingerprintKey, it, null)
+            VitalsSyncCursorEntity(VitalsCacheFingerprintKey, it, null)
         }
         coEvery { dao.aggregatesBetween(any(), any(), any()) } returns emptyList()
         return dao
@@ -206,7 +198,7 @@ class VitalsRepositoryTest {
     @Test fun `a cache built in another time zone is not served`() = runTest {
         // Its days were cut at another midnight. The sync rebuilds it; until then reads go live.
         val hc = hc()
-        val repository = VitalsRepositoryImpl(hc, cacheDao = cachedSpO2Dao(fingerprint = "v1|Pacific/Auckland|0"))
+        val repository = VitalsRepositoryImpl(hc, cacheDao = syncedCacheDao(fingerprint = "v1|Pacific/Auckland|0"))
 
         repository.loadVitalsPeriod(weekQuery(), VitalsPeriodMetric.ALL)
 
@@ -215,7 +207,7 @@ class VitalsRepositoryTest {
 
     @Test fun `a forced refresh asks Health Connect, not the cache`() = runTest {
         val hc = hc()
-        val repository = VitalsRepositoryImpl(hc, cacheDao = cachedSpO2Dao(fingerprint = null))
+        val repository = VitalsRepositoryImpl(hc, cacheDao = syncedCacheDao())
 
         repository.loadVitalsPeriod(weekQuery(), VitalsPeriodMetric.ALL, RefreshMode.FORCE)
 
@@ -248,9 +240,7 @@ class VitalsRepositoryTest {
 
     @Test fun `loadDailyVitals serves the cache when the sync cursor covers the range`() = runTest {
         val hc = hc()
-        val dao = mockk<VitalsDailyCacheDao>()
-        coEvery { dao.cursor(any()) } answers { VitalsSyncCursorEntity(firstArg(), "token", null) }
-        coEvery { dao.cursor(VitalsCacheFingerprintKey) } returns null
+        val dao = syncedCacheDao()
         coEvery { dao.aggregatesBetween(VitalsCacheKeys.SPO2, any(), any()) } returns listOf(
             VitalsDailyAggregateEntity(
                 metric = VitalsCacheKeys.SPO2,
@@ -292,10 +282,7 @@ class VitalsRepositoryTest {
 
     @Test fun `loadDailyVitals ignores the cache for ranges older than the sync lookback`() = runTest {
         val hc = hc()
-        val dao = mockk<VitalsDailyCacheDao>()
-        coEvery { dao.cursor(any()) } answers { VitalsSyncCursorEntity(firstArg(), "token", null) }
-        coEvery { dao.cursor(VitalsCacheFingerprintKey) } returns null
-        coEvery { hc.readDailySpO2(any(), any()) } returns emptyList()
+        val dao = syncedCacheDao()
         val repository = VitalsRepositoryImpl(hc, cacheDao = dao)
 
         repository.loadDailyVitals(
@@ -343,9 +330,7 @@ class VitalsRepositoryTest {
 
     @Test fun `loadDailyBloodPressure maps secondarySum into diastolic from the cache`() = runTest {
         val hc = hc()
-        val dao = mockk<VitalsDailyCacheDao>()
-        coEvery { dao.cursor(any()) } answers { VitalsSyncCursorEntity(firstArg(), "token", null) }
-        coEvery { dao.cursor(VitalsCacheFingerprintKey) } returns null
+        val dao = syncedCacheDao()
         coEvery { dao.aggregatesBetween(VitalsCacheKeys.BLOOD_PRESSURE, any(), any()) } returns listOf(
             VitalsDailyAggregateEntity(
                 metric = VitalsCacheKeys.BLOOD_PRESSURE,

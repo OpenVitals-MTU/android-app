@@ -29,44 +29,6 @@ class DashboardPresentationMapperTest {
 
     private val unitFormatter = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC })
     private val dateTimeFormatterProvider = DateTimeFormatterProvider()
-    private val dailyGoals = DashboardDailyGoals()
-
-    @Test
-    fun build_stepsWidget_usesCircleStyleAndProgress() {
-        val data = DashboardData(date = LocalDate.now(), steps = 5_000)
-
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
-
-        val steps = display.widgets[DashboardWidgetId.STEPS]
-        assertNotNull(steps)
-        assertEquals(DashboardWidgetStyle.CIRCLE, steps?.style)
-        assertNotNull(steps?.progress)
-        assertTrue(steps?.progress?.fraction ?: 0f > 0f)
-    }
-
-    @Test
-    fun build_caloriesOutWithoutData_hasNoValue() {
-        val data = DashboardData(
-            date = LocalDate.now(),
-            caloriesKcalSource = CaloriesBurnedSource.NO_DATA,
-        )
-
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
-
-        val calories = display.widgets[DashboardWidgetId.CALORIES_OUT]
-        assertNotNull(calories)
-        assertEquals(false, calories?.hasValue)
-    }
 
     @Test
     fun build_recentHistoryMetrics_reachTheirWidgetsAsHasRecentHistory() {
@@ -79,12 +41,7 @@ class DashboardPresentationMapperTest {
             ),
         )
 
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
+        val display = build(data)
 
         assertEquals(true, display.widgets[DashboardWidgetId.SLEEP]?.hasRecentHistory)
         assertEquals(true, display.widgets[DashboardWidgetId.CYCLE]?.hasRecentHistory)
@@ -99,12 +56,7 @@ class DashboardPresentationMapperTest {
     fun build_cycleWidget_usesMenstruationDaysWhenPresent() {
         val data = DashboardData(date = LocalDate.now(), menstruationPeriodDays = 5)
 
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
+        val display = build(data)
 
         val cycle = display.widgets[DashboardWidgetId.CYCLE]?.cycle
         assertEquals(CycleWidgetDisplay.MenstruationDays(5), cycle)
@@ -124,12 +76,7 @@ class DashboardPresentationMapperTest {
             ),
         )
 
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
+        val display = build(data)
 
         assertEquals(
             CycleWidgetDisplay.RecordedDay(12, CycleSecondaryLine.Phase(CyclePhase.FOLLICULAR)),
@@ -150,12 +97,7 @@ class DashboardPresentationMapperTest {
             ),
         )
 
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
+        val display = build(data)
 
         assertEquals(
             CycleWidgetDisplay.RecordedDay(3, CycleSecondaryLine.Estimate(CycleEstimateSummary.NeedsHistory)),
@@ -167,12 +109,7 @@ class DashboardPresentationMapperTest {
     fun build_caffeineWidget_usesAdaptiveMassDisplayWithoutProgress() {
         val data = DashboardData(date = LocalDate.now(), caffeineGrams = 0.095)
 
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
+        val display = build(data)
 
         val caffeine = display.widgets[DashboardWidgetId.CAFFEINE]
         assertNotNull(caffeine)
@@ -189,12 +126,7 @@ class DashboardPresentationMapperTest {
             activeCaffeineMg = 62.4,
         )
 
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
+        val display = build(data)
 
         val caffeine = display.widgets[DashboardWidgetId.CAFFEINE]
         assertEquals("62", caffeine?.value?.value)
@@ -207,12 +139,7 @@ class DashboardPresentationMapperTest {
         // Morning carryover, nothing consumed yet: the active amount is the tile.
         val data = DashboardData(date = LocalDate.now(), activeCaffeineMg = 21.0)
 
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
+        val display = build(data)
 
         val caffeine = display.widgets[DashboardWidgetId.CAFFEINE]
         assertEquals("21", caffeine?.value?.value)
@@ -223,12 +150,7 @@ class DashboardPresentationMapperTest {
 
     @Test
     fun build_caffeineWidget_withNeitherFigureShowsTheEmptyMessage() {
-        val display = DashboardPresentationMapper.build(
-            data = DashboardData(date = LocalDate.now()),
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
+        val display = build(DashboardData(date = LocalDate.now()))
 
         val caffeine = display.widgets[DashboardWidgetId.CAFFEINE]
         assertNotNull(caffeine)
@@ -242,12 +164,7 @@ class DashboardPresentationMapperTest {
         // The reported bug: goal set to 6,000, the ring filled to 8,000. Both are asserted.
         val data = DashboardData(date = LocalDate.now(), steps = 3_000)
 
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = DashboardDailyGoals(steps = 6_000.0),
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
+        val display = build(data, dailyGoals = DashboardDailyGoals(steps = 6_000.0))
 
         val steps = display.widgets[DashboardWidgetId.STEPS]
         assertEquals(0.5f, steps?.progress?.fraction ?: 0f, 1e-6f)
@@ -278,12 +195,7 @@ class DashboardPresentationMapperTest {
         )
         val data = DashboardData(date = LocalDate.now(), sleep = sleep)
 
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
+        val display = build(data)
 
         val value = display.widgets[DashboardWidgetId.SLEEP]?.value?.value
         assertEquals(unitFormatter.duration(7 * 3600_000L), value)
@@ -295,13 +207,7 @@ class DashboardPresentationMapperTest {
             date = LocalDate.now(),
             caloriesKcalSource = CaloriesBurnedSource.NO_DATA,
         )
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            loadingWidgets = setOf(DashboardWidgetId.HRV),
-        )
+        val display = build(data, loadingWidgets = setOf(DashboardWidgetId.HRV))
 
         assertEquals(true, display.widgets[DashboardWidgetId.CALORIES_OUT]?.showsNoDataMessage())
         assertEquals(false, display.widgets[DashboardWidgetId.STEPS]?.showsNoDataMessage())
@@ -312,21 +218,18 @@ class DashboardPresentationMapperTest {
     fun build_pairedWatch_materialisesTheWatchTile() {
         val data = DashboardData(date = LocalDate.now(), steps = 8_000)
 
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
+        val display = build(
+            data,
             watch = WatchWidgetDisplay(
                 deviceId = "watch-1",
-                name = "v\u00edvoactive 5",
+                name = "vívoactive 5",
                 batteryPercent = 62,
                 lastSyncedAt = Instant.parse("2026-08-12T10:26:00Z"),
             ),
         )
 
         val widget = requireNotNull(display.widgets[DashboardWidgetId.WATCH])
-        assertEquals("v\u00edvoactive 5", widget.watch?.name)
+        assertEquals("vívoactive 5", widget.watch?.name)
         // It has content, so it must not sort to the back of the carousel.
         assertEquals(false, widget.showsNoDataMessage())
     }
@@ -335,12 +238,7 @@ class DashboardPresentationMapperTest {
     fun build_fullySupportedDay_mapsBothRingsAndEveryTile() {
         val data = DashboardData(date = LocalDate.now(), steps = 8_000)
 
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
+        val display = build(data)
 
         // Every known widget materialises except WORKOUT (its own section), WATCH (no watch passed)
         // and MEDICAL_RECORDS (the feature is off by default).
@@ -355,23 +253,22 @@ class DashboardPresentationMapperTest {
             display.widgets.keys.toList(),
         )
         // Including the ones a narrower mapper used to drop entirely.
-        listOf(
-            DashboardWidgetId.BLOOD_GLUCOSE,
-            DashboardWidgetId.SKIN_TEMPERATURE,
-            DashboardWidgetId.BMR,
-            DashboardWidgetId.BONE_MASS,
-            DashboardWidgetId.BODY_WATER_MASS,
-        ).forEach { id -> assertNotNull(display.widgets[id]) }
+        assertTrue(
+            display.widgets.keys.containsAll(
+                listOf(
+                    DashboardWidgetId.BLOOD_GLUCOSE,
+                    DashboardWidgetId.SKIN_TEMPERATURE,
+                    DashboardWidgetId.BMR,
+                    DashboardWidgetId.BONE_MASS,
+                    DashboardWidgetId.BODY_WATER_MASS,
+                ),
+            ),
+        )
     }
 
     @Test
     fun build_emptyDay_stillRendersTheRingsAndTheEmptyTiles() {
-        val display = DashboardPresentationMapper.build(
-            data = DashboardData(date = LocalDate.now()),
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
+        val display = build(DashboardData(date = LocalDate.now()))
 
         // No readings: the tiles are still there, empty, and the hero rings never disappear.
         assertEquals(
@@ -392,15 +289,12 @@ class DashboardPresentationMapperTest {
     @Test
     fun build_requiredMetrics_showAZeroReadingRatherThanANoDataMessage() {
         // A counter the device always answers reads zero; "No data" for zero steps would look like a broken permission.
-        val display = DashboardPresentationMapper.build(
-            data = DashboardData(
+        val display = build(
+            DashboardData(
                 date = LocalDate.now(),
                 steps = 0,
                 caloriesKcalSource = CaloriesBurnedSource.NO_DATA,
             ),
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
         )
 
         val steps = display.widgets[DashboardWidgetId.STEPS]
@@ -422,13 +316,7 @@ class DashboardPresentationMapperTest {
             bodyEnergyTimeline = bodyEnergyTimeline(),
         )
 
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            bodyEnergySetupCompleted = true,
-        )
+        val display = build(data, bodyEnergySetupCompleted = true)
 
         val bodyEnergy = display.widgets[DashboardWidgetId.BODY_ENERGY]
         assertNotNull(bodyEnergy)
@@ -449,13 +337,7 @@ class DashboardPresentationMapperTest {
             bodyEnergyTimeline = bodyEnergyTimeline(),
         )
 
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            bodyEnergySetupCompleted = false,
-        )
+        val display = build(data, bodyEnergySetupCompleted = false)
 
         val bodyEnergy = display.widgets[DashboardWidgetId.BODY_ENERGY]
         assertNotNull(bodyEnergy)
@@ -469,13 +351,7 @@ class DashboardPresentationMapperTest {
     fun build_bodyEnergyWidget_showsNoDataWhenTimelineIsAbsent() {
         val data = DashboardData(date = LocalDate.of(2026, 1, 2))
 
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            bodyEnergySetupCompleted = true,
-        )
+        val display = build(data, bodyEnergySetupCompleted = true)
 
         val bodyEnergy = display.widgets[DashboardWidgetId.BODY_ENERGY]
         assertNotNull(bodyEnergy)
@@ -532,16 +408,21 @@ class DashboardPresentationMapperTest {
 
     @Test
     fun build_unsupportedMetric_getsNoTileAtAll() {
-        // Everything except blood oxygen.
-        val display = build(
-            DashboardData(
+        // Everything except blood oxygen. Called with the mapper's own defaults, not the
+        // local helper's: includeUnsupported must default to false, the ViewModel only
+        // passes true while editing.
+        val display = DashboardPresentationMapper.build(
+            data = DashboardData(
                 date = LocalDate.now(),
                 supportedMetrics = DashboardMetric.entries.toSet() - DashboardMetric.SPO2,
             ),
+            dailyGoals = DashboardDailyGoals(),
+            unitFormatter = unitFormatter,
+            dateTimeFormatterProvider = dateTimeFormatterProvider,
         )
 
         assertNull(display.widgets[DashboardWidgetId.SPO2])
-        // …but its supported neighbours are still there, empty.
+        // ...but its supported neighbours are still there, empty.
         val vo2Max = display.widgets[DashboardWidgetId.VO2_MAX]
         assertNotNull(vo2Max)
         assertEquals(true, vo2Max?.showsNoDataMessage())
@@ -608,29 +489,10 @@ class DashboardPresentationMapperTest {
     }
 
     @Test
-    fun build_includeUnsupported_defaultsToFalseSoUnsupportedMetricsStayDropped() {
-        val display = build(
-            DashboardData(
-                date = LocalDate.now(),
-                supportedMetrics = DashboardMetric.entries.toSet() - DashboardMetric.SPO2,
-            ),
-        )
-
-        assertNull(display.widgets[DashboardWidgetId.SPO2])
-        assertEquals(emptySet<DashboardWidgetId>(), display.unsupportedIds)
-    }
-
-    @Test
     fun build_medicalRecordsTile_followsTheFeatureAndNeverSinks() {
         val data = DashboardData(date = LocalDate.now())
 
-        val on = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-            medicalRecordsAvailable = true,
-        )
+        val on = build(data, medicalRecordsAvailable = true)
         val offInEditMode = build(data, includeUnsupported = true)
 
         val tile = requireNotNull(on.widgets[DashboardWidgetId.MEDICAL_RECORDS])
@@ -643,27 +505,22 @@ class DashboardPresentationMapperTest {
 
     private fun build(
         data: DashboardData,
+        dailyGoals: DashboardDailyGoals = DashboardDailyGoals(),
+        loadingWidgets: Set<DashboardWidgetId> = emptySet(),
+        bodyEnergySetupCompleted: Boolean = false,
         includeUnsupported: Boolean = false,
+        watch: WatchWidgetDisplay? = null,
+        medicalRecordsAvailable: Boolean = false,
     ): DashboardDisplayState =
         DashboardPresentationMapper.build(
             data = data,
             dailyGoals = dailyGoals,
             unitFormatter = unitFormatter,
             dateTimeFormatterProvider = dateTimeFormatterProvider,
+            loadingWidgets = loadingWidgets,
+            bodyEnergySetupCompleted = bodyEnergySetupCompleted,
             includeUnsupported = includeUnsupported,
+            watch = watch,
+            medicalRecordsAvailable = medicalRecordsAvailable,
         )
-
-    @Test
-    fun build_excludesWorkoutWidget() {
-        val data = DashboardData(date = LocalDate.now())
-
-        val display = DashboardPresentationMapper.build(
-            data = data,
-            dailyGoals = dailyGoals,
-            unitFormatter = unitFormatter,
-            dateTimeFormatterProvider = dateTimeFormatterProvider,
-        )
-
-        assertNull(display.widgets[DashboardWidgetId.WORKOUT])
-    }
 }

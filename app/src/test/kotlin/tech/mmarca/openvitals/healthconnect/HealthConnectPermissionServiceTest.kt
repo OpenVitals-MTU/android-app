@@ -21,7 +21,6 @@ import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import com.google.common.truth.Truth.assertThat
-import com.google.common.truth.Truth.assertWithMessage
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -133,14 +132,6 @@ class HealthConnectPermissionServiceTest {
     // Feature gating.
 
     @Test
-    fun `mindfulness is excluded from phase2 and the requestable writes when unavailable`() {
-        val service = service(availableFeatures = emptySet())
-
-        assertThat(service.phase2Permissions).doesNotContain(READ_MINDFULNESS)
-        assertThat(service.requestableWritePermissions).doesNotContain(WRITE_MINDFULNESS)
-    }
-
-    @Test
     fun `mindfulness is included when the provider reports the feature available`() {
         val service = service(availableFeatures = setOf(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION))
 
@@ -150,18 +141,12 @@ class HealthConnectPermissionServiceTest {
     // 1.9.0 moved the availability check into the getters. Per-call guards had been forgotten,
     // so an unsupported device asked for a permission it could never be granted.
     @Test
-    fun `mindfulness permissions are empty when the provider lacks the feature`() {
-        val service = service(availableFeatures = emptySet())
-
-        assertThat(service.mindfulnessPermissions).isEmpty()
-        assertThat(service.mindfulnessWritePermissions).isEmpty()
-    }
-
-    @Test
     fun `an unavailable mindfulness leaks into NO permission set`() {
         val service = service(availableFeatures = emptySet())
 
-        val sets = listOf(
+        val sets = mapOf(
+            "mindfulnessPermissions" to service.mindfulnessPermissions,
+            "mindfulnessWritePermissions" to service.mindfulnessWritePermissions,
             "allPermissions" to service.allPermissions,
             "managedPermissions" to service.managedPermissions,
             "requestableManagedPermissions" to service.requestableManagedPermissions,
@@ -171,11 +156,8 @@ class HealthConnectPermissionServiceTest {
             "requestableWritePermissions" to service.requestableWritePermissions,
             "minimumOnboardingPermissions" to service.minimumOnboardingPermissions,
         )
-        sets.forEach { (name, set) ->
-            assertWithMessage(name)
-                .that(set.filter { it.contains("MINDFULNESS") })
-                .isEmpty()
-        }
+        assertThat(sets.mapValues { (_, set) -> set.filter { it.contains("MINDFULNESS") } })
+            .isEqualTo(sets.mapValues { emptyList<String>() })
         // The onboarding catalog drops the category rather than offering an empty row.
         assertThat(service.onboardingPermissionCatalog().category(OnboardingCategoryId.MINDFULNESS))
             .isNull()
@@ -219,31 +201,6 @@ class HealthConnectPermissionServiceTest {
         )
         assertThat(both.isMindfulnessSessionAvailable()).isTrue()
         assertThat(both.onboardingPermissionCatalog().mindfulnessSupportedByDevice).isTrue()
-    }
-
-    @Test
-    fun `a phone whose provider lacks the feature is offered no opt-in at all`() {
-        // A toggle the device cannot honour must not be shown.
-        val unsupported = service(
-            availableFeatures = emptySet(),
-            mindfulnessIntegrationEnabled = true,
-        )
-
-        assertThat(unsupported.isMindfulnessSessionSupportedByDevice()).isFalse()
-        assertThat(unsupported.isMindfulnessSessionAvailable()).isFalse()
-        assertThat(unsupported.onboardingPermissionCatalog().mindfulnessSupportedByDevice).isFalse()
-    }
-
-    @Test
-    fun `Health Connect being unavailable reports no device support`() {
-        val noProvider = service(
-            availableFeatures = setOf(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION),
-            mindfulnessIntegrationEnabled = true,
-            availability = HealthConnectAvailability.NOT_SUPPORTED,
-        )
-
-        assertThat(noProvider.isMindfulnessSessionSupportedByDevice()).isFalse()
-        assertThat(noProvider.onboardingPermissionCatalog().mindfulnessSupportedByDevice).isFalse()
     }
 
     // Onboarding asks Activity and Sleep for read and write, but only the reads gate step one.
@@ -321,6 +278,7 @@ class HealthConnectPermissionServiceTest {
     fun `with it on, and a device that supports it, we ask as before`() {
         val service = optIn(enabled = true)
 
+        assertThat(service.isMindfulnessSessionAvailable()).isTrue()
         assertThat(service.mindfulnessPermissions).isNotEmpty()
         assertThat(service.mindfulnessWritePermissions).isNotEmpty()
         assertThat(service.allPermissions.filter { it.contains("MINDFULNESS") }).isNotEmpty()
@@ -365,22 +323,14 @@ class HealthConnectPermissionServiceTest {
     }
 
     @Test
-    fun `both halves say yes, and the feature comes back`() {
-        val service = service(
-            availableFeatures = setOf(HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION),
-            mindfulnessIntegrationEnabled = true,
-        )
-
-        assertThat(service.isMindfulnessSessionAvailable()).isTrue()
-        assertThat(service.mindfulnessPermissions).isNotEmpty()
-    }
-
-    @Test
     fun `the user says yes but the device does not, still no`() {
         val service = service(availableFeatures = emptySet(), mindfulnessIntegrationEnabled = true)
 
         assertThat(service.isMindfulnessSessionAvailable()).isFalse()
         assertThat(service.mindfulnessPermissions).isEmpty()
+        // A toggle the device cannot honour must not be shown.
+        assertThat(service.isMindfulnessSessionSupportedByDevice()).isFalse()
+        assertThat(service.onboardingPermissionCatalog().mindfulnessSupportedByDevice).isFalse()
     }
 
     // Optional-feature availability.
@@ -442,6 +392,9 @@ class HealthConnectPermissionServiceTest {
         assertThat(service.isHealthDataHistoryAvailable()).isFalse()
         assertThat(service.isBackgroundHealthDataReadAvailable()).isFalse()
         assertThat(service.additionalDataAccessPermissions).isEmpty()
+        // Nor is the device reported as supporting the mindfulness opt-in.
+        assertThat(service.isMindfulnessSessionSupportedByDevice()).isFalse()
+        assertThat(service.onboardingPermissionCatalog().mindfulnessSupportedByDevice).isFalse()
     }
 
     // The raw getFeatureStatus answer is cached and every getter uses the cache.
@@ -453,8 +406,9 @@ class HealthConnectPermissionServiceTest {
             onFeatureStatusCall = { calls += 1 },
         )
 
-        repeat(5) { assertThat(service.isSkinTemperatureAvailable()).isTrue() }
+        val answers = List(5) { service.isSkinTemperatureAvailable() }
 
+        assertThat(answers).isEqualTo(List(5) { true })
         assertThat(calls).isEqualTo(1)
     }
 
@@ -469,7 +423,7 @@ class HealthConnectPermissionServiceTest {
         assertThat(service.isMedicalRecordsAvailable()).isTrue()
         assertThat(service.medicalRecordsPermissions).hasSize(13)
         assertThat(service.managedPermissions).containsAtLeastElementsIn(service.medicalRecordsPermissions)
-        val askedSets = listOf(
+        val askedSets = mapOf(
             "allPermissions" to service.allPermissions,
             "requestableManagedPermissions" to service.requestableManagedPermissions,
             "onboardingRequestablePermissions" to service.onboardingRequestablePermissions,
@@ -481,9 +435,8 @@ class HealthConnectPermissionServiceTest {
             "phase4Permissions" to service.phase4Permissions,
             "onboarding catalog" to service.onboardingPermissionCatalog().requiredPermissions,
         )
-        askedSets.forEach { (name, set) ->
-            assertWithMessage(name).that(set.filter { it.contains("MEDICAL") }).isEmpty()
-        }
+        assertThat(askedSets.mapValues { (_, set) -> set.filter { it.contains("MEDICAL") } })
+            .isEqualTo(askedSets.mapValues { emptyList<String>() })
     }
 
     @Test
@@ -560,8 +513,6 @@ class HealthConnectPermissionServiceTest {
 
         val READ_MINDFULNESS: String =
             HealthPermission.getReadPermission(MindfulnessSessionRecord::class)
-        val WRITE_MINDFULNESS: String =
-            HealthPermission.getWritePermission(MindfulnessSessionRecord::class)
         val READ_SKIN_TEMPERATURE: String =
             HealthPermission.getReadPermission(SkinTemperatureRecord::class)
 

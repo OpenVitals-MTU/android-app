@@ -8,7 +8,6 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Splitting a night window's sessions into the night and its naps, and the wall-clock duration of the night. */
@@ -121,37 +120,35 @@ class SleepNightSplitTest {
     // sleepSessionsUnionMs.
 
     @Test fun `sleepSessionsUnionMs counts overlapping intervals shared time once`() {
-        val a = s("a", t(2026, 7, 14, 1, 15), t(2026, 7, 14, 6, 40))
-        val b = s("b", t(2026, 7, 14, 1, 16), t(2026, 7, 14, 7, 28))
-        assertEquals(
-            Duration.ofHours(6).plusMinutes(13).toMillis(),
-            sleepSessionsUnionMs(listOf(a, b)),
+        val cases = mapOf(
+            "overlapping" to listOf(
+                s("a", t(2026, 7, 14, 1, 15), t(2026, 7, 14, 6, 40)),
+                s("b", t(2026, 7, 14, 1, 16), t(2026, 7, 14, 7, 28)),
+            ),
+            "disjoint" to listOf(
+                s("a", t(2026, 7, 14, 1, 0), t(2026, 7, 14, 3, 0)),
+                s("b", t(2026, 7, 14, 5, 0), t(2026, 7, 14, 6, 30)),
+            ),
+            "touching" to listOf(
+                s("a", t(2026, 7, 14, 1, 0), t(2026, 7, 14, 3, 0)),
+                s("b", t(2026, 7, 14, 3, 0), t(2026, 7, 14, 4, 0)),
+            ),
+            "contained" to listOf(
+                s("outer", t(2026, 7, 14, 1, 0), t(2026, 7, 14, 9, 0)),
+                s("inner", t(2026, 7, 14, 3, 0), t(2026, 7, 14, 4, 0)),
+            ),
+            "empty" to emptyList<SleepData>(),
         )
-    }
 
-    @Test fun `sleepSessionsUnionMs of disjoint intervals equals the sum of their spans`() {
-        val a = s("a", t(2026, 7, 14, 1, 0), t(2026, 7, 14, 3, 0)) // 2h
-        val b = s("b", t(2026, 7, 14, 5, 0), t(2026, 7, 14, 6, 30)) // 1h30
         assertEquals(
-            Duration.ofHours(3).plusMinutes(30).toMillis(),
-            sleepSessionsUnionMs(listOf(a, b)),
+            mapOf(
+                "overlapping" to Duration.ofHours(6).plusMinutes(13).toMillis(),
+                "disjoint" to Duration.ofHours(3).plusMinutes(30).toMillis(),
+                "touching" to Duration.ofHours(3).toMillis(),
+                "contained" to Duration.ofHours(8).toMillis(),
+                "empty" to 0L,
+            ),
+            cases.mapValues { sleepSessionsUnionMs(it.value) },
         )
-    }
-
-    @Test fun `sleepSessionsUnionMs merges adjacent (touching) intervals without a gap`() {
-        val a = s("a", t(2026, 7, 14, 1, 0), t(2026, 7, 14, 3, 0))
-        val b = s("b", t(2026, 7, 14, 3, 0), t(2026, 7, 14, 4, 0))
-        assertEquals(Duration.ofHours(3).toMillis(), sleepSessionsUnionMs(listOf(a, b)))
-    }
-
-    @Test fun `sleepSessionsUnionMs adds nothing for a fully-contained interval`() {
-        val outer = s("outer", t(2026, 7, 14, 1, 0), t(2026, 7, 14, 9, 0))
-        val inner = s("inner", t(2026, 7, 14, 3, 0), t(2026, 7, 14, 4, 0))
-        assertEquals(Duration.ofHours(8).toMillis(), sleepSessionsUnionMs(listOf(outer, inner)))
-    }
-
-    @Test fun `sleepSessionsUnionMs of empty input is zero`() {
-        assertEquals(0L, sleepSessionsUnionMs(emptyList()))
-        assertTrue(sleepSessionsUnionMs(emptyList()) == 0L)
     }
 }

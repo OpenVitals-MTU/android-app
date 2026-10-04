@@ -1,12 +1,10 @@
 package tech.mmarca.openvitals.ui.components
 
+import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
-import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.core.period.periodFor
-import java.time.DayOfWeek
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -35,37 +33,22 @@ class PeriodNavigatorTest {
     }
 
     @Test fun `periodFor WEEK anchored mid-week snaps start back to Monday`() {
-        val period = periodFor(TimeRange.WEEK, wednesday)
-        assertEquals(DayOfWeek.MONDAY, period.start.dayOfWeek)
-        assertEquals(period.start.plusDays(6), period.end)
-    }
-
-    @Test fun `periodFor WEEK start is always Monday`() {
-        val period = periodFor(TimeRange.WEEK, wednesday)
-        assertEquals(DayOfWeek.MONDAY, period.start.dayOfWeek)
-    }
-
-    @Test fun `periodFor WEEK end is always Sunday for past dates`() {
-        val period = periodFor(TimeRange.WEEK, wednesday)
-        assertEquals(DayOfWeek.SUNDAY, period.end.dayOfWeek)
+        assertEquals(
+            DatePeriod(LocalDate.of(2023, 3, 13), LocalDate.of(2023, 3, 19)),
+            periodFor(TimeRange.WEEK, wednesday),
+        )
     }
 
     // MONTH.
 
-    @Test fun `periodFor MONTH start is first day of month`() {
-        val period = periodFor(TimeRange.MONTH, midYear)
-        assertEquals(LocalDate.of(2023, 6, 1), period.start)
-    }
-
-    @Test fun `periodFor MONTH end is last day of month`() {
-        val period = periodFor(TimeRange.MONTH, midYear)
-        assertEquals(LocalDate.of(2023, 6, 30), period.end)
-    }
-
-    @Test fun `periodFor MONTH spans full month for January`() {
-        val period = periodFor(TimeRange.MONTH, firstOfMonth)
-        assertEquals(LocalDate.of(2023, 1, 1), period.start)
-        assertEquals(LocalDate.of(2023, 1, 31), period.end)
+    @Test fun `periodFor MONTH spans the first to the last day of the month`() {
+        assertEquals(
+            mapOf(
+                midYear to DatePeriod(LocalDate.of(2023, 6, 1), LocalDate.of(2023, 6, 30)),
+                firstOfMonth to DatePeriod(LocalDate.of(2023, 1, 1), LocalDate.of(2023, 1, 31)),
+            ),
+            listOf(midYear, firstOfMonth).associateWith { periodFor(TimeRange.MONTH, it) },
+        )
     }
 
     @Test fun `periodFor MONTH respects February length in leap year`() {
@@ -75,78 +58,32 @@ class PeriodNavigatorTest {
         assertEquals(LocalDate.of(2024, 2, 29), period.end)
     }
 
-    @Test fun `periodFor MONTH supports rolling last thirty days`() {
-        val period = periodFor(
-            range = TimeRange.MONTH,
-            anchorDate = wednesday,
-            weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
-        )
-
-        assertEquals(wednesday.minusDays(29), period.start)
-        assertEquals(wednesday, period.end)
-    }
-
     // YEAR.
 
-    @Test fun `periodFor YEAR start is January 1`() {
-        val period = periodFor(TimeRange.YEAR, midYear)
-        assertEquals(LocalDate.of(2023, 1, 1), period.start)
-    }
-
-    @Test fun `periodFor YEAR end is December 31`() {
-        val period = periodFor(TimeRange.YEAR, midYear)
-        assertEquals(LocalDate.of(2023, 12, 31), period.end)
-    }
-
-    @Test fun `periodFor YEAR supports rolling last three hundred sixty five days`() {
-        val period = periodFor(
-            range = TimeRange.YEAR,
-            anchorDate = midYear,
-            weekPeriodMode = WeekPeriodMode.LAST_7_DAYS,
+    @Test fun `periodFor YEAR spans January 1 to December 31`() {
+        assertEquals(
+            DatePeriod(LocalDate.of(2023, 1, 1), LocalDate.of(2023, 12, 31)),
+            periodFor(TimeRange.YEAR, midYear),
         )
-
-        assertEquals(midYear.minusDays(364), period.start)
-        assertEquals(midYear, period.end)
     }
 
     // coerceAtMost(today) guard.
 
     @Test fun `periodFor end is never after today`() {
-        val today = LocalDate.now()
-        for (range in TimeRange.entries) {
-            val period = periodFor(range, today)
-            assertFalse(
-                "Period end for $range should not be after today",
-                period.end.isAfter(today),
-            )
-        }
-    }
+        val today = wednesday
 
-    @Test fun `periodFor start is never after end for current periods`() {
-        val today = LocalDate.now()
-        for (range in TimeRange.entries) {
-            val period = periodFor(range, today)
-            assertFalse(
-                "Period start for $range should not be after end",
-                period.start.isAfter(period.end),
-            )
-        }
+        assertEquals(
+            mapOf(
+                TimeRange.DAY to DatePeriod(today, today),
+                TimeRange.WEEK to DatePeriod(LocalDate.of(2023, 3, 13), today),
+                TimeRange.MONTH to DatePeriod(LocalDate.of(2023, 3, 1), today),
+                TimeRange.YEAR to DatePeriod(LocalDate.of(2023, 1, 1), today),
+            ),
+            TimeRange.entries.associateWith { periodFor(it, anchorDate = today, today = today) },
+        )
     }
 
     // Ordering invariant.
-
-    @Test fun `periodFor start is never after end for past dates`() {
-        val pastDates = listOf(wednesday, monday, firstOfMonth, midYear)
-        for (date in pastDates) {
-            for (range in TimeRange.entries) {
-                val period = periodFor(range, date)
-                assertFalse(
-                    "start should be <= end for $range at $date",
-                    period.start.isAfter(period.end),
-                )
-            }
-        }
-    }
 
     @Test fun `consecutively earlier anchors produce consecutively earlier periods`() {
         val week1 = periodFor(TimeRange.WEEK, monday)

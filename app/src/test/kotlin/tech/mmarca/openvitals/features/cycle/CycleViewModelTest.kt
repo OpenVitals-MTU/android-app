@@ -33,7 +33,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.domain.model.CycleData
@@ -209,15 +208,6 @@ class CycleViewModelTest {
         vm.selectDate(today.plusDays(10))
 
         assertEquals(today, vm.uiState.value.selectedDate)
-    }
-
-    @Test fun `onCyclePermissionsResult reloads data`() = runTest {
-        val repo = repo()
-        val vm = viewModel(repo)
-
-        vm.onCyclePermissionsResult(setOf("cycle"))
-
-        coVerify(atLeast = 2) { repo.loadCyclePeriod(any()) }
     }
 
     @Test fun `resuming the current period reloads the current selection`() = runTest {

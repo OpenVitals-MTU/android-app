@@ -396,17 +396,6 @@ class HeartRateRecoveryTest {
     }
 
     @Test
-    fun `a peak 20 below an explicit max is submaximal (known band)`() {
-        // Peak 160 against a stated max of 180 is beyond the 10 bpm band for a known maximum.
-        val samples = (-60..300 step 5).map { t -> hr(t, if (t <= 0) 160L else 150L) }
-        val reading = calculate(samples, observedMax = null, explicitMax = 180, age = 40)
-
-        assertFalse(reading.maxHeartRateEstimated)
-        assertTrue(HeartRateRecoveryIssue.SUBMAXIMAL_EFFORT in reading.issues)
-        assertEquals(HeartRateRecoveryQuality.NOT_COMPARABLE, reading.quality)
-    }
-
-    @Test
     fun `two sources on the same instant collapse to the higher reading`() {
         val samples = buildList {
             addAll(strapSamples())

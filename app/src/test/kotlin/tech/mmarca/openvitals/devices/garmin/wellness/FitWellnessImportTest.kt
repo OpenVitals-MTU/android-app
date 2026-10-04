@@ -12,8 +12,6 @@ import androidx.health.connect.client.records.StepsRecord
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
-import kotlin.math.abs
-import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -974,21 +972,9 @@ class FitWellnessImportTest {
     }
 
     @Test
-    fun `the day's first record keeps the legacy day-keyed id`() {
-        // Daily records `garmin_fit_steps_<yyyy-mm-dd>` are still in Health Connect.
-        // Reusing the id makes the first bucket overwrite the stale one.
-        val import = counterImport(
-            stepsCumulative = listOf(
-                local(2024, 1, 18, 6) to 300,
-                local(2024, 1, 18, 10) to 900,
-            ),
-        )
-
-        assertEquals("garmin_fit_steps_2024-01-18", steps(import).first().clientRecordId)
-    }
-
-    @Test
     fun `the legacy day key is handed out once not re-handed each sync`() {
+        // Daily records `garmin_fit_steps_<yyyy-mm-dd>` are still in Health Connect.
+        // Reusing the id makes the day's first bucket overwrite the stale one.
         // One-shot: recomputing the first bucket every sync would move the id and lose minutes.
         val first = counterImport(
             stepsCumulative = listOf(
@@ -1066,9 +1052,7 @@ class FitWellnessImportTest {
             "both counters must share one grid, or their records drift apart across re-syncs",
             calorieDerivedStepIds.containsAll(steps(import).map { it.clientRecordId }),
         )
-        val kilocalories = calories.sumOf { it.energy.inKilocalories }
-        assertEquals(80, kilocalories.roundToInt())
-        assertTrue(abs(kilocalories - 80.0) < 0.001)
+        assertEquals(80.0, calories.sumOf { it.energy.inKilocalories }, 0.001)
     }
 }
 
