@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,15 +54,19 @@ internal fun ActivityRouteAnalysisCard(
     if (routePoints.size < 2 && markers.isEmpty()) return
 
     var selectedTab by rememberSaveable { mutableStateOf(SavedActivityAnalysisTab.STATS) }
-    val timeSplits = activityRecordingTimeSplits(
-        points = routePoints,
-        routeBreakIndexes = emptyList(),
-        splitMillis = SavedTimeSplitMinutes * 60_000L,
-    )
-    val intervalSplits = if (workout.laps.isNotEmpty()) {
-        exerciseLapSplits(workout.laps, routePoints)
-    } else {
-        activityRecordingIntervalSplits(routePoints, emptyList())
+    val timeSplits = remember(routePoints) {
+        activityRecordingTimeSplits(
+            points = routePoints,
+            routeBreakIndexes = emptyList(),
+            splitMillis = SavedTimeSplitMinutes * 60_000L,
+        )
+    }
+    val intervalSplits = remember(routePoints, workout.laps) {
+        if (workout.laps.isNotEmpty()) {
+            exerciseLapSplits(workout.laps, routePoints)
+        } else {
+            activityRecordingIntervalSplits(routePoints, emptyList())
+        }
     }
 
     OpenVitalsCard(

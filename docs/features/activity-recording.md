@@ -59,6 +59,8 @@ How big a change has to be depends on how sure the phone is of each fix. Indoors
 
 Barometer readings were already filtered and are preferred when the device has one. A reading outside the range of real air pressure, or one implying a jump of more than 50 m between two readings, is treated as a sensor fault: it re-anchors the filter instead of counting as climb. The same filter is applied to imported route files, so a recorded and an imported version of the same outing agree.
 
+The climb shown for each split, on the recording screen and in a saved activity's splits, comes from the same filtered route, so the splits add up to the total. A climb is counted a few seconds after it happens, so a split boundary in the middle of a climb can move a few meters of it into the next split.
+
 When elevation tiles are imported and correction is on, a finished recording takes its altitudes from the tiles and its gain is recomputed from them, the same way an imported file is. The live figure on the recording screen is still the sensor's; the corrected one appears on the review form. See [Elevation correction](elevation-correction.md).
 
 ## Entry Point

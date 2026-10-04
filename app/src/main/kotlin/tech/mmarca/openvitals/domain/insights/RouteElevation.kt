@@ -27,7 +27,7 @@ object RouteElevation {
 
     data class Change(val gain: Double, val loss: Double)
 
-    private class Sample(val altitude: Double, val stepMeters: Double)
+    private class Sample(val index: Int, val altitude: Double, val stepMeters: Double)
 
     /** Cumulative ascent in meters, ignoring nulls and non-finite values. */
     fun elevationGainFromAltitudes(altitudes: Iterable<Double?>): Double =
@@ -49,20 +49,39 @@ object RouteElevation {
     fun routeElevationLoss(points: List<ExerciseRoutePoint>): Double =
         accumulate(points.toSamples()).loss
 
+    /**
+     * The route with each altitude replaced by where the filter had settled
+     * at that point: a staircase that moves only when a change is banked. Its
+     * rises sum to [routeElevationGain] and its falls to [routeElevationLoss],
+     * so splits cut from it add up to the whole. Run it over the whole route,
+     * not per split, or each split starts the filter afresh. Points before the
+     * first usable altitude keep none; later ones carry the settled value.
+     */
+    fun withSettledAltitudes(points: List<ExerciseRoutePoint>): List<ExerciseRoutePoint> {
+        val settled = arrayOfNulls<Double>(points.size)
+        accumulate(points.toSamples(), settled)
+        var carried: Double? = null
+        return points.mapIndexed { i, point ->
+            carried = settled[i] ?: carried
+            point.copy(altitudeMeters = carried)
+        }
+    }
+
     private fun Iterable<Double?>.toSamples(): Sequence<Sample> =
         asSequence()
-            .filterNotNull()
-            .filter { it.isFinite() }
-            .map { Sample(it, MIN_STEP_METERS) }
+            .withIndex()
+            .mapNotNull { (i, altitude) ->
+                altitude?.takeIf { it.isFinite() }?.let { Sample(i, it, MIN_STEP_METERS) }
+            }
 
     private fun List<ExerciseRoutePoint>.toSamples(): Sequence<Sample> =
-        asSequence().mapNotNull { point ->
+        asSequence().withIndex().mapNotNull { (i, point) ->
             val altitude = point.altitudeMeters?.takeIf { it.isFinite() } ?: return@mapNotNull null
             val uncertainty = point.altitudeUncertaintyMeters()
             when {
-                uncertainty == null -> Sample(altitude, MIN_STEP_METERS)
+                uncertainty == null -> Sample(i, altitude, MIN_STEP_METERS)
                 uncertainty > MAX_ALTITUDE_UNCERTAINTY_METERS -> null
-                else -> Sample(altitude, maxOf(MIN_STEP_METERS, uncertainty))
+                else -> Sample(i, altitude, maxOf(MIN_STEP_METERS, uncertainty))
             }
         }
 
@@ -78,7 +97,8 @@ object RouteElevation {
         return maxOf(vertical, horizontal)
     }
 
-    private fun accumulate(samples: Sequence<Sample>): Change {
+    /** [settled], when given, receives the reference after each sample, by the sample's index. */
+    private fun accumulate(samples: Sequence<Sample>, settled: Array<Double?>? = null): Change {
         var smoothed: Double? = null
         var reference: Double? = null
         var last: Sample? = null
@@ -92,6 +112,7 @@ object RouteElevation {
             val currentReference = reference
             if (currentReference == null) {
                 reference = nextSmoothed
+                settled?.set(sample.index, nextSmoothed)
                 continue
             }
             val delta = nextSmoothed - currentReference
@@ -103,6 +124,7 @@ object RouteElevation {
                 reference = nextSmoothed
             }
             // Anything smaller is noise: the reference does not move.
+            settled?.set(sample.index, reference)
         }
 
         // Settle the smoothing lag against the final raw altitude: on a short
@@ -113,8 +135,10 @@ object RouteElevation {
             val residual = finalSample.altitude - finalReference
             if (residual >= finalSample.stepMeters) {
                 gain += residual
+                settled?.set(finalSample.index, finalSample.altitude)
             } else if (residual <= -finalSample.stepMeters) {
                 loss += -residual
+                settled?.set(finalSample.index, finalSample.altitude)
             }
         }
 

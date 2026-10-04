@@ -173,4 +173,22 @@ class RouteElevationTest {
             0.0,
         )
     }
+
+    @Test
+    fun `settled altitudes rise and fall by exactly the route's gain and loss`() {
+        // Splits are cut from this profile, so they must add up to the saved figure.
+        val route = fixes(
+            listOf(null, null) + noisyClimb(300.0, 1800, sigma = 3.0) + noisyClimb(-120.0, 1800, seed = 12).map { it!! + 300.0 },
+            verticalAccuracy = 4.0,
+            horizontalAccuracy = 4.0,
+        )
+
+        val settled = RouteElevation.withSettledAltitudes(route)
+        val steps = settled.mapNotNull { it.altitudeMeters }.zipWithNext { a, b -> b - a }
+
+        assertEquals(route.size, settled.size)
+        assertEquals(null, settled[0].altitudeMeters)
+        assertEquals(RouteElevation.routeElevationGain(route), steps.filter { it > 0 }.sum(), 1e-6)
+        assertEquals(RouteElevation.routeElevationLoss(route), -steps.filter { it < 0 }.sum(), 1e-6)
+    }
 }
