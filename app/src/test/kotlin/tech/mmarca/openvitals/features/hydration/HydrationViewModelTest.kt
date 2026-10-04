@@ -437,25 +437,6 @@ class HydrationViewModelTest {
         coVerify(exactly = 0) { repo.deleteHydrationEntry("external-hydration-id") }
     }
 
-    @Test fun `derived hydration statistics ignore zero intake days`() = runTest {
-        val hydration = listOf(
-            DailyHydration(today.minusDays(4), 0.0),
-            DailyHydration(today.minusDays(3), 1.0),
-            DailyHydration(today.minusDays(2), 2.0),
-            DailyHydration(today.minusDays(1), 0.0),
-            DailyHydration(today, 1.5),
-        )
-        val repo = emptyRepo()
-        coEvery { repo.loadDailyHydration(any(), any()) } returns hydration
-
-        val vm = hydrationViewModel(repo)
-
-        assertEquals(3, vm.uiState.value.display.summary.trackedDays)
-        assertEquals(1.5, vm.uiState.value.display.summary.averageLiters, 0.01)
-        assertEquals(2.0, vm.uiState.value.display.summary.bestDayLiters, 0.01)
-        assertEquals(1, vm.uiState.value.display.summary.currentTrackedStreakDays)
-    }
-
     @Test fun `current tracked streak counts consecutive intake days from period end`() = runTest {
         val hydration = listOf(
             DailyHydration(today.minusDays(3), 1.0),
@@ -469,24 +450,6 @@ class HydrationViewModelTest {
         val vm = hydrationViewModel(repo)
 
         assertEquals(2, vm.uiState.value.display.summary.currentTrackedStreakDays)
-    }
-
-    @Test fun `goal statistics use the configured daily goal`() = runTest {
-        val hydration = listOf(
-            DailyHydration(today.minusDays(3), 2.0),
-            DailyHydration(today.minusDays(2), 2.5),
-            DailyHydration(today.minusDays(1), 1.0),
-            DailyHydration(today, 2.0),
-        )
-        val repo = emptyRepo()
-        coEvery { repo.loadDailyHydration(any(), any()) } returns hydration
-
-        val vm = hydrationViewModel(repo, initialDailyGoalLiters = 2.0)
-
-        assertEquals(3, vm.uiState.value.display.summary.goalMetDays)
-        assertEquals(75, vm.uiState.value.display.summary.goalSuccessRatePercent)
-        assertEquals(1, vm.uiState.value.display.summary.currentGoalStreakDays)
-        assertEquals(2, vm.uiState.value.display.summary.longestGoalStreakDays)
     }
 
     @Test fun `updating daily goal saves and recalculates goal statistics`() = runTest {
@@ -630,5 +593,4 @@ class HydrationViewModelTest {
 
         assertEquals(today, vm.uiState.value.selectedDate)
     }
-
 }

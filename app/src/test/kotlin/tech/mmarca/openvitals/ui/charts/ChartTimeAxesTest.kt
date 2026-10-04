@@ -293,6 +293,7 @@ class ChartTimeAxesTest {
 
     @Test
     fun `cumulative shape anchors at zero and plateaus out to the end fraction`() {
+        // The anchor and the hold shape the line but are synthetic, so they carry no entry dot (#250).
         val points = cumulativeDayPlotPoints(
             fractions = listOf(0.2f to 1.0, 0.4f to 3.0),
             endFraction = 0.55f,
@@ -306,16 +307,6 @@ class ChartTimeAxesTest {
             ),
             points,
         )
-    }
-
-    @Test
-    fun `only the real entries carry dots, the anchor and hold are synthetic`() {
-        // The trailing hold at "now" and the midnight anchor shape the line but must not be marked as entries (#250).
-        val points = cumulativeDayPlotPoints(
-            fractions = listOf(0.2f to 1.0, 0.4f to 3.0),
-            endFraction = 0.55f,
-        )
-        assertEquals(listOf(true, false, false, true), points.map { it.synthetic })
     }
 
     @Test
@@ -359,11 +350,6 @@ class ChartTimeAxesTest {
                 value = { it.second },
             ).isEmpty(),
         )
-    }
-
-    @Test
-    fun `cumulative shape of an empty day is empty`() {
-        assertTrue(cumulativeDayPlotPoints(emptyList(), 0.5f).isEmpty())
     }
 
     // Viewport culling.

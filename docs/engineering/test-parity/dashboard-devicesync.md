@@ -105,7 +105,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/dashboar
 | no tiles at all when the device supports nothing | PORTED | DashboardPresentationMapperTest.kt: `build_deviceSupportsNothing_producesNoTilesAtAll` | Kotlin is stricter than Flutter: its two hero rings are ordinary widgets, so nothing renders at all rather than two empty rings |
 | includeUnsupported > materialises metrics absent from supportedMetrics | PORTED | DashboardPresentationMapperTest.kt: `build_includeUnsupported_materialisesMetricsAbsentFromSupportedMetrics` | `DashboardDisplayState.unsupportedIds` carries the materialised ids (widget ids, where Flutter uses metric names) |
 | includeUnsupported > materialises every metric when the device supports nothing | PORTED | DashboardPresentationMapperTest.kt: `build_includeUnsupported_materialisesEveryMetricWhenTheDeviceSupportsNothing` | every id except the deliberate WORKOUT exclusion, all of them unsupported |
-| includeUnsupported > defaults to false: unsupported metrics stay dropped | PORTED | DashboardPresentationMapperTest.kt: `build_includeUnsupported_defaultsToFalseSoUnsupportedMetricsStayDropped` | the ViewModel only passes true while editing |
+| includeUnsupported > defaults to false: unsupported metrics stay dropped | PORTED | DashboardPresentationMapperTest.kt: `build_unsupportedMetric_getsNoTileAtAll` | the ViewModel only passes true while editing |
 | Body Energy tile > renders currentScore and the Start/+/- subtitle when set up | PORTED | DashboardPresentationMapperTest.kt: `build_bodyEnergyWidget_rendersCurrentScoreAndStartChargedDrainedSubtitle` | dashboard tile mapping only; no bodyenergy production file touched |
 | Body Energy tile > shows "Not set up" when the timeline is absent | PORTED | DashboardPresentationMapperTest.kt: `build_bodyEnergyWidget_isNotSetUpUntilCalibrationCompletes` + `build_bodyEnergyWidget_showsNoDataWhenTimelineIsAbsent` | Kotlin gates on the calibration flag rather than timeline presence; both branches pinned |
 | tile destinations match Kotlin > heart and vitals tiles each open their own metric screen | PORTED | DashboardTileDestinationTest: `heartAndVitalsTilesEachOpenTheirOwnMetricScreen` | Compose instrumentation; runs on a device, not in CI |
@@ -117,7 +117,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/dashboar
 
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
-| migrateDashboardLayoutKeys > translates a legacy title to its id | N/A-FRAMEWORK | — | Flutter-only legacy title persistence; Kotlin persists enum names (its own legacy case: `dashboard widgets ignore legacy browse saved id`) |
+| migrateDashboardLayoutKeys > translates a legacy title to its id | N/A-FRAMEWORK | — | Flutter-only legacy title persistence; Kotlin persists enum names (its own legacy case: `dashboard widgets ignore unknown saved ids`) |
 | migrateDashboardLayoutKeys > leaves ids alone, so migrating twice is a no-op | N/A-FRAMEWORK | — | Flutter-only migration |
 | migrateDashboardLayoutKeys > keeps a key it cannot resolve | N/A-FRAMEWORK | — | Flutter-only; note Kotlin *drops* unknown ids instead |
 | migrateDashboardLayoutKeys > collapses a title and its id to one entry | N/A-FRAMEWORK | — | Flutter-only migration |

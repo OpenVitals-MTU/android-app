@@ -17,6 +17,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
+import tech.mmarca.openvitals.devices.weather.WeatherSnapshot
 
 /**
  * Sync happy path and resilience, against a fake watch that speaks the real wire format.
@@ -292,6 +293,50 @@ class GarminSessionTest {
         heldSyncOwner = owner,
     ).also { it.start() }
 
+    /** A session that answers the watch's weather from [weather] and keeps listening, as the companion link does. */
+    private fun weatherSession(
+        scope: CoroutineScope,
+        watch: FakeWatch,
+        weather: () -> WeatherSnapshot?,
+    ): GarminSession = GarminSession(
+        scope = scope,
+        send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
+        bluetoothName = "Pixel 6 Pro",
+        manufacturer = "Google",
+        model = "raven",
+        hooks = GarminSessionHooks(weatherProvider = weather),
+        keepAnsweringAfterSync = true,
+    ).also { it.start() }
+
+    /** A hot Valencia afternoon: 303 K is 30 degrees C. */
+    private fun valenciaWeather() = WeatherSnapshot(
+        timestamp = 1_786_600_800L,
+        location = "Valencia",
+        currentTempKelvin = 303,
+        todayMinTempKelvin = 295,
+        todayMaxTempKelvin = 306,
+        currentConditionCode = 800,
+        currentHumidity = 45,
+        windSpeedKmh = 10.0,
+        windDirectionDegrees = 180,
+        uvIndex = 7.5,
+        precipProbability = 5,
+        dewPointKelvin = 289,
+        feelsLikeTempKelvin = 305,
+        latitude = 39.47,
+        longitude = -0.376,
+    )
+
+    /** The watch announcing one FIT file (5009), laid out as a directory record. */
+    private fun fileAvailable(index: Int, subType: Int, number: Int, size: Long, timestamp: Long): ByteArray =
+        GarminGfdiFrame.build(
+            GarminMessageId.FILE_AVAILABLE,
+            GarminByteWriter()
+                .writeShort(index).writeByte(128).writeByte(subType).writeShort(number)
+                .writeByte(0).writeByte(0).writeInt(size).writeInt(timestamp)
+                .toBytes(),
+        )
+
     private fun directory(vararg entries: IntArray): ByteArray {
         val w = GarminByteWriter()
         for ((index, dataType, subType, number) in entries.map {
@@ -470,25 +515,27 @@ class GarminSessionTest {
     }
 
     @Test
-    fun `answers the introduction and the auth challenge`() = runTest {
-        val watch = happyWatch()
-        runSync(watch)
-
-        val responses = watch.received
-            .filter { it.messageType == GarminMessageId.RESPONSE }
-            .map { payloadShort(it) }
-        assertTrue(GarminMessageId.DEVICE_INFORMATION in responses)
-        assertTrue(GarminMessageId.AUTH_NEGOTIATION in responses)
-    }
-
-    @Test
     fun `records what the watch said about itself`() = runTest {
         val watch = happyWatch()
-        val files = runSync(watch)
+        val session = session(this, watch)
+        pump(watch, session)
+        session.done.await()
 
         // The transport needs maxPacketSize; the rest is for diagnostics.
+        assertEquals(
+            GarminDeviceInformation(
+                protocolVersion = 120,
+                productNumber = 4315,
+                unitNumber = 123456,
+                softwareVersion = 1915,
+                maxPacketSize = 500,
+                bluetoothFriendlyName = "vívoactive 5",
+                deviceName = "vivoactive5",
+                deviceModel = "vívoactive 5",
+            ),
+            session.deviceInformation,
+        )
         assertEquals(GarminMessageId.RESPONSE, watch.received.first().messageType)
-        assertTrue(files.isNotEmpty())
     }
 
     @Test
@@ -661,29 +708,9 @@ class GarminSessionTest {
             .filter { it.messageType == GarminMessageId.DOWNLOAD_REQUEST }
             .map { payloadShort(it) }
         assertEquals(listOf(0), requested)
-    }
-
-    @Test
-    fun `a held file the watch still offers is NOT archived unread`() = runTest {
-        val watch = FakeWatch(
-            files = mapOf(
-                0 to directory(intArrayOf(5, 128, 49, 1)),
-                5 to b(1, 2, 3),
-            ),
-        )
-
-        runSync(watch, alreadySynced = setOf(key(128, 49, 1)))
-
         // A key collision once told the watch to drop undownloaded monitoring.
         // Archive only what this session downloaded.
-        val archived = watch.received
-            .filter { it.messageType == GarminMessageId.SET_FILE_FLAGS }
-            .map { payloadShort(it) }
-        assertTrue(archived.isEmpty())
-        val requested = watch.received
-            .filter { it.messageType == GarminMessageId.DOWNLOAD_REQUEST }
-            .map { payloadShort(it) }
-        assertEquals(listOf(0), requested)
+        assertTrue(watch.received.none { it.messageType == GarminMessageId.SET_FILE_FLAGS })
     }
 
     @Test
@@ -739,15 +766,7 @@ class GarminSessionTest {
         pump(watch, session)
 
         // The empty directory leaves the session in its grace wait, where an announcement arrives.
-        watch.outbox.add(
-            GarminGfdiFrame.build(
-                GarminMessageId.FILE_AVAILABLE,
-                GarminByteWriter()
-                    .writeShort(9).writeByte(128).writeByte(32).writeShort(5)
-                    .writeByte(0).writeByte(0).writeInt(3L).writeInt(0L)
-                    .toBytes(),
-            ),
-        )
+        watch.outbox.add(fileAvailable(index = 9, subType = 32, number = 5, size = 3, timestamp = 0))
         pump(watch, session)
 
         val files = session.done.await()
@@ -771,15 +790,7 @@ class GarminSessionTest {
         )
         val session = session(this, watch, alreadySynced = setOf("128/32/7/${GarminTime.GARMIN_EPOCH_SECONDS + 1000}/3"))
         pump(watch, session)
-        watch.outbox.add(
-            GarminGfdiFrame.build(
-                GarminMessageId.FILE_AVAILABLE,
-                GarminByteWriter()
-                    .writeShort(9).writeByte(128).writeByte(32).writeShort(7)
-                    .writeByte(0).writeByte(0).writeInt(3L).writeInt(1000L)
-                    .toBytes(),
-            ),
-        )
+        watch.outbox.add(fileAvailable(index = 9, subType = 32, number = 7, size = 3, timestamp = 1000))
         pump(watch, session)
 
         val files = session.done.await()
@@ -790,32 +801,7 @@ class GarminSessionTest {
     @Test
     fun `a weather ask is answered with definitions then records`() = runTest {
         val watch = FakeWatch(files = mapOf(0 to directory()))
-        val weather = tech.mmarca.openvitals.devices.weather.WeatherSnapshot(
-            timestamp = 1_786_600_800L,
-            location = "Valencia",
-            currentTempKelvin = 303,
-            todayMinTempKelvin = 295,
-            todayMaxTempKelvin = 306,
-            currentConditionCode = 800,
-            currentHumidity = 45,
-            windSpeedKmh = 10.0,
-            windDirectionDegrees = 180,
-            uvIndex = 7.5,
-            precipProbability = 5,
-            dewPointKelvin = 289,
-            feelsLikeTempKelvin = 305,
-            latitude = 39.47,
-            longitude = -0.376,
-        )
-        val session = GarminSession(
-            scope = this,
-            send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
-            bluetoothName = "Pixel 6 Pro",
-            manufacturer = "Google",
-            model = "raven",
-            hooks = GarminSessionHooks(weatherProvider = { weather }),
-            keepAnsweringAfterSync = true,
-        ).also { it.start() }
+        val session = weatherSession(this, watch) { valenciaWeather() }
         pump(watch, session)
 
         // The watch opens its glance: format 0, position, 12 hours, please.
@@ -884,33 +870,8 @@ class GarminSessionTest {
     @Test
     fun `fresh weather is pushed after the capabilities exchange`() = runTest {
         val watch = FakeWatch(files = mapOf(0 to directory()))
-        val session = GarminSession(
-            scope = this,
-            send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
-            bluetoothName = "Pixel 6 Pro",
-            manufacturer = "Google",
-            model = "raven",
-            hooks = GarminSessionHooks(weatherProvider = {
-                tech.mmarca.openvitals.devices.weather.WeatherSnapshot(
-                    timestamp = 1_786_600_800L,
-                    location = "Tallinn",
-                    currentTempKelvin = 291,
-                    todayMinTempKelvin = 286,
-                    todayMaxTempKelvin = 293,
-                    currentConditionCode = 803,
-                    currentHumidity = 70,
-                    windSpeedKmh = 20.0,
-                    windDirectionDegrees = 250,
-                    uvIndex = 3.0,
-                    precipProbability = 30,
-                    dewPointKelvin = 284,
-                    feelsLikeTempKelvin = 289,
-                    latitude = 59.437,
-                    longitude = 24.7536,
-                )
-            }),
-            keepAnsweringAfterSync = true,
-        ).also { it.start() }
+        // Mostly cloudy (803), not Valencia's clear sky: the push encodes a second condition code.
+        val session = weatherSession(this, watch) { valenciaWeather().copy(location = "Tallinn", currentConditionCode = 803) }
         pump(watch, session)
 
         // Every capability bit set, and the push follows with no 5014 ask: the link will be gone in seconds.
@@ -931,15 +892,7 @@ class GarminSessionTest {
     @Test
     fun `no weather push at a watch without the glance`() = runTest {
         val watch = FakeWatch(files = mapOf(0 to directory()))
-        val session = GarminSession(
-            scope = this,
-            send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
-            bluetoothName = "Pixel 6 Pro",
-            manufacturer = "Google",
-            model = "raven",
-            hooks = GarminSessionHooks(weatherProvider = { error("must not even be consulted") }),
-            keepAnsweringAfterSync = true,
-        ).also { it.start() }
+        val session = weatherSession(this, watch) { error("must not even be consulted") }
         pump(watch, session)
 
         // No capability bits at all: pushing would only earn a NAK.
@@ -960,15 +913,7 @@ class GarminSessionTest {
     @Test
     fun `a weather ask with nothing fresh is left unanswered`() = runTest {
         val watch = FakeWatch(files = mapOf(0 to directory()))
-        val session = GarminSession(
-            scope = this,
-            send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
-            bluetoothName = "Pixel 6 Pro",
-            manufacturer = "Google",
-            model = "raven",
-            hooks = GarminSessionHooks(weatherProvider = { null }),
-            keepAnsweringAfterSync = true,
-        ).also { it.start() }
+        val session = weatherSession(this, watch) { null }
         pump(watch, session)
 
         watch.outbox.add(
@@ -990,27 +935,11 @@ class GarminSessionTest {
     fun `a held link hands an announced file to its owner instead of downloading`() = runTest {
         val watch = FakeWatch(files = mapOf(9 to b(1, 2, 3)))
         val owner = FakeHeldSyncOwner()
-        val session = GarminSession(
-            scope = this,
-            send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
-            bluetoothName = "Pixel 6 Pro",
-            manufacturer = "Google",
-            model = "raven",
-            // The held notification link: no file syncing of its own.
-            syncFiles = false,
-            heldSyncOwner = owner,
-        ).also { it.start() }
+        // The held notification link: no file syncing of its own.
+        val session = heldSession(this, watch, owner = owner)
         pump(watch, session)
 
-        watch.outbox.add(
-            GarminGfdiFrame.build(
-                GarminMessageId.FILE_AVAILABLE,
-                GarminByteWriter()
-                    .writeShort(9).writeByte(128).writeByte(32).writeShort(5)
-                    .writeByte(0).writeByte(0).writeInt(3L).writeInt(0L)
-                    .toBytes(),
-            ),
-        )
+        watch.outbox.add(fileAvailable(index = 9, subType = 32, number = 5, size = 3, timestamp = 0))
         drain(watch, session)
 
         // A FILE_AVAILABLE message is only handed to the owner; the held link
@@ -1026,27 +955,11 @@ class GarminSessionTest {
     fun `a held link hands a synchronization announcement to its owner`() = runTest {
         val watch = FakeWatch(files = mapOf(0 to directory()))
         val owner = FakeHeldSyncOwner()
-        val session = GarminSession(
-            scope = this,
-            send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
-            bluetoothName = "Pixel 6 Pro",
-            manufacturer = "Google",
-            model = "raven",
-            syncFiles = false,
-            heldSyncOwner = owner,
-        ).also { it.start() }
+        val session = heldSession(this, watch, owner = owner)
         pump(watch, session)
 
-        watch.outbox.add(
-            GarminGfdiFrame.build(
-                GarminMessageId.SYNCHRONIZATION,
-                GarminByteWriter()
-                    .writeByte(2)
-                    .writeByte(8)
-                    .writeLong(1L shl 26) // SLEEP: a category worth syncing.
-                    .toBytes(),
-            ),
-        )
+        // SLEEP: a category worth syncing.
+        watch.outbox.add(syncAnnouncement())
         drain(watch, session)
 
         assertEquals(1, watch.received.count { it.messageType == GarminMessageId.FILTER })
@@ -1068,27 +981,10 @@ class GarminSessionTest {
             ),
         )
         val owner = FakeHeldSyncOwner()
-        val session = GarminSession(
-            scope = this,
-            send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
-            bluetoothName = "Pixel 6 Pro",
-            manufacturer = "Google",
-            model = "raven",
-            syncFiles = false,
-            heldSyncOwner = owner,
-        ).also { it.start() }
+        val session = heldSession(this, watch, owner = owner)
         pump(watch, session)
 
-        watch.outbox.add(
-            GarminGfdiFrame.build(
-                GarminMessageId.SYNCHRONIZATION,
-                GarminByteWriter()
-                    .writeByte(2)
-                    .writeByte(8)
-                    .writeLong(1L shl 26)
-                    .toBytes(),
-            ),
-        )
+        watch.outbox.add(syncAnnouncement())
         drain(watch, session)
 
         assertEquals(listOf(file.toList()), owner.kept.map { it.bytes.toList() })
@@ -1288,12 +1184,11 @@ class GarminSessionTest {
         runSync(watch)
 
         // Device information and auth get one reply each: the response is the acknowledgement.
-        for (type in listOf(
-            GarminMessageId.DEVICE_INFORMATION,
-            GarminMessageId.AUTH_NEGOTIATION,
-        )) {
-            assertEquals("type $type", 1, responsesAbout(watch, type).size)
-        }
+        assertEquals(
+            mapOf(GarminMessageId.DEVICE_INFORMATION to 1, GarminMessageId.AUTH_NEGOTIATION to 1),
+            listOf(GarminMessageId.DEVICE_INFORMATION, GarminMessageId.AUTH_NEGOTIATION)
+                .associateWith { responsesAbout(watch, it).size },
+        )
     }
 
     @Test
@@ -1597,15 +1492,7 @@ class GarminSessionTest {
     fun `an announced empty legacy listing is handed to the owner for a full sync`() = runTest {
         val watch = FakeWatch(files = mapOf(0 to directory()))
         val owner = FakeHeldSyncOwner()
-        val session = GarminSession(
-            scope = this,
-            send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
-            bluetoothName = "Pixel 6 Pro",
-            manufacturer = "Google",
-            model = "raven",
-            syncFiles = false,
-            heldSyncOwner = owner,
-        ).also { it.start() }
+        val session = heldSession(this, watch, owner = owner)
         pump(watch, session)
 
         watch.outbox.add(fileSyncAnnouncement())
@@ -1686,14 +1573,7 @@ class GarminSessionTest {
     fun `a session with NO handler still replies DISABLED so sync find and settings sessions are unchanged`() =
         runTest {
             val watch = FakeWatch(files = emptyMap())
-            val session = GarminSession(
-                scope = this,
-                send = { frame -> watch.onFrame(GarminGfdiFrame.parse(frame)) },
-                bluetoothName = "Pixel 6 Pro",
-                manufacturer = "Google",
-                model = "raven",
-                syncFiles = false,
-            ).also { it.start() }
+            val session = heldSession(this, watch, owner = null)
 
             val subscription = GarminByteWriter()
                 .writeByte(1) // enable
@@ -1793,13 +1673,7 @@ class GarminSessionTest {
         val session = heldSession(this, watch, owner = null)
         pump(watch, session)
         watch.interruptions += syncAnnouncement()
-        watch.interruptions += GarminGfdiFrame.build(
-            GarminMessageId.FILE_AVAILABLE,
-            GarminByteWriter()
-                .writeShort(9).writeByte(128).writeByte(4).writeShort(1)
-                .writeByte(0).writeByte(0).writeInt(64).writeInt(1000)
-                .toBytes(),
-        )
+        watch.interruptions += fileAvailable(index = 9, subType = 4, number = 1, size = 64, timestamp = 1000)
 
         val result = uploadThrough(watch, session, ByteArray(21) { it.toByte() })
 

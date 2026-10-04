@@ -213,7 +213,7 @@ Kotlin counterpart: none (no Compose UI test for the activity entry screen; near
 |---|---|---|---|
 | start hub > offers plans, record and manual logging; route import is not here | PORTED | ActivityStartHubTest: `offersPlansRecordAndManualLoggingAndKeepsFileImportOut` | Compose instrumentation; runs on a device, not in CI |
 | start hub > shows the permission explainer and a Grant action when the write permission is missing | PORTED | ActivityStartHubTest: `noPlansSaysSoAndAMissingPermissionOffersTheGrant` | Compose instrumentation; runs on a device, not in CI |
-| start hub > a source action requests the write permission first | N/A-WIDGET | — | UI wiring of permission request on tap; write refusal itself covered by ActivityEntryViewModelTest `missing activity write permission prevents write` |
+| start hub > a source action requests the write permission first | N/A-WIDGET | — | UI wiring of permission request on tap; write refusal itself covered by ActivityEntryViewModelTest `a refused write permission is a verdict, not a failed save` |
 | start hub > Grant does not itself open a form | PORTED | ActivityStartHubTest: `noPlansSaysSoAndAMissingPermissionOffersTheGrant` | Compose instrumentation; runs on a device, not in CI |
 | entry card > renders the Kotlin sections in order | PORTED | ActivityEntryCardTest: `rendersEverySectionAWorkoutNeedsToBeDescribed` | Compose instrumentation; runs on a device, not in CI |
 | entry card > the feeling chips are the four emoji, and toggle off | PORTED | ActivityEntryCardTest: `theFeelingChipsAreTheFourEmojiAndTapAgainClearsTheChoice` | Compose instrumentation; runs on a device, not in CI |
@@ -253,8 +253,8 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | buildWriteRequest allows walking without steps | PORTED | ActivityEntryViewModelTest.kt `buildWriteRequest allows walking without steps` | |
 | activity entry exposes field errors and skips write for invalid values | PORTED | ActivityEntryViewModelTest.kt `activity entry exposes field errors and skips write for invalid values` | |
 | selecting activity clears metric fields that activity does not use | PORTED | ActivityEntryViewModelTest.kt `selecting activity clears metric fields that activity does not use` | |
-| missing activity write permission prevents write | PORTED | ActivityEntryViewModelTest.kt `missing activity write permission prevents write` | |
-| activity entry writes request when permission is granted | PORTED | ActivityEntryViewModelTest.kt `activity entry writes request when permission is granted` | Kotlin asserts saveCompleted flag instead of CommandSuccess |
+| missing activity write permission prevents write | PORTED | ActivityEntryViewModelTest.kt `a refused write permission is a verdict, not a failed save` | |
+| activity entry writes request when permission is granted | PORTED | ActivityEntryViewModelTest.kt `the save runs, succeeds, and is consumed exactly once` | Kotlin asserts saveCompleted flag instead of CommandSuccess |
 | selecting planned workout prefills editable set structure | PORTED | ActivityEntryViewModelTest.kt `selecting planned workout prefills editable set structure` | |
 | start from existing plan auto-applies the only available plan | PORTED | ActivityEntryViewModelTest.kt `start from existing plan auto-applies the only available plan` | |
 | start from existing plan keeps picker when multiple activity types exist | PORTED | ActivityEntryViewModelTest.kt `start from existing plan keeps picker when multiple activity types exist` | |
@@ -594,7 +594,7 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | a drink at 06:00 sits a QUARTER of the way across the DAY | DIVERGED | ChartTimeAxesTest.kt `axisFractionOf places a moment against the whole span and clamps outside it` | whole-span fraction helper covered generically; hydration day-chart wiring untested |
 | the line is the running total, plotted at each drink's real hour | DIVERGED | ChartTimeAxesTest.kt `cumulative shape anchors at zero and plateaus out to the end fraction` | running-total shape covered on the generic helper; per-drink totals from real entries untested |
 | TODAY ends the chart at now, not at midnight | DIVERGED | ChartTimeAxesTest.kt `cumulative shape anchors at zero and plateaus out to the end fraction` | plateau to an endFraction below 1.0 covered; the today-vs-past endFraction decision in HydrationPeriodContent.kt untested |
-| a day with nothing logged says so, and draws no line | PORTED | ChartTimeAxesTest.kt `cumulative shape of an empty day is empty` | empty input yields no plot points, same substance |
+| a day with nothing logged says so, and draws no line | PORTED | ChartTimeAxesTest.kt `every shape survives an empty day` | empty input yields no plot points, same substance |
 
 ## /home/manu/Documentos/repos/mobile-app/test/features/hydration/hydration_screen_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/androidTest/kotlin/tech/mmarca/openvitals/features/hydration/HydrationScreenWeekTest.kt (partial); logic overlap in HydrationViewModelTest.kt and PeriodSelectionDriverTest.kt
@@ -703,7 +703,7 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 |---|---|---|---|
 | cumulativeMindfulness banks the minutes when a session ENDS | PORTED | MindfulnessIntradayChartTest.kt: `cumulativeMindfulness banks the minutes when a session ENDS` | seam: cumulativeMindfulnessPoints private->internal |
 | a zero-length session never enters the curve | N/A-BEHAVIOR | — | blocked on behavior decision - Kotlin maps every session (durationMs.coerceAtLeast(0)), so a zero-length sit yields a flat point instead of being dropped |
-| a day with a session draws a plot, an empty day does not (testWidgets) | DIVERGED | ChartTimeAxesTest.kt `axisFractionOf places a moment against the whole span and clamps outside it`, `cumulative shape of an empty day is empty` | day-fraction placement and empty-day emptiness covered generically; the mindfulness card wiring (plot presence, 12:00 label) is Compose-only and untested |
+| a day with a session draws a plot, an empty day does not (testWidgets) | DIVERGED | ChartTimeAxesTest.kt `axisFractionOf places a moment against the whole span and clamps outside it`, `every shape survives an empty day` | day-fraction placement and empty-day emptiness covered generically; the mindfulness card wiring (plot presence, 12:00 label) is Compose-only and untested |
 
 ## /home/manu/Documentos/repos/mobile-app/test/features/mindfulness/mindfulness_screen_test.dart
 Kotlin counterpart: none (no Compose UI tests for mindfulness in app/src/androidTest)

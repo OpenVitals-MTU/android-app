@@ -283,19 +283,6 @@ class GarminNotificationForwarderTest {
     }
 
     @Test
-    fun `a watch that walks out of range is reconnected to`() = runTest {
-        val f = build()
-        f.forwarder.post(notification(1))
-        runCurrent()
-        elapse(2_000)
-        f.links.single().drop()
-        elapse(20_000)
-
-        assertEquals(2, f.links.size)
-        assertTrue(f.forwarder.isLinkOpen)
-    }
-
-    @Test
     fun `a notification the watch never subscribed for survives the link dropping`() = runTest {
         // The handler dies with its link and the forwarder has already dropped the item from its queue.
         // Without taking the unannounced ones back, a watch that walks away loses the notification.
@@ -316,7 +303,9 @@ class GarminNotificationForwarderTest {
         first.drop()
         elapse(20_000)
 
+        // The watch that walked out of range is reconnected to, and the new link carries it.
         assertEquals(2, f.links.size)
+        assertTrue(f.forwarder.isLinkOpen)
         assertTrue(f.links.last().pushed.map { it.id }.contains(1L))
     }
 
@@ -446,24 +435,13 @@ class GarminNotificationForwarderTest {
     }
 
     @Test
-    fun `a sync holding the radio defers the notification instead of interrupting it`() =
-        runTest {
-            val lease = FakeLease().apply { holder = GarminRadioOwners.SYNC }
-            val f = build(lease = lease)
-            f.forwarder.post(notification(1))
-            runCurrent()
-            elapse(2_000)
-
-            assertTrue("the sync must not be interrupted", f.links.isEmpty())
-        }
-
-    @Test
     fun `the deferred notification is sent once the sync releases the radio`() = runTest {
         val lease = FakeLease().apply { holder = GarminRadioOwners.SYNC }
         val f = build(lease = lease)
         f.forwarder.post(notification(1))
         runCurrent()
         elapse(2_000)
+        assertTrue("the sync must not be interrupted", f.links.isEmpty())
 
         lease.holder = null // the sync finished
         elapse(15_000)

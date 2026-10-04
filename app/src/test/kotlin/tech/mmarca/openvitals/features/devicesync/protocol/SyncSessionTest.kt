@@ -513,26 +513,10 @@ class SyncSessionTest {
         )
         val guestStore = FakeRecordStore()
 
-        // The guest selects only StepsRecord; the host still sends everything for negotiated types.
-        val (hostReport, _) = runPair(
-            hostStore,
-            guestStore,
-            guestSelected = listOf("StepsRecord"),
-        )
+        // The guest selects only StepsRecord. The host still sends its heart rate; the guest refuses it.
+        val (hostReport, guestReport) = runPair(hostStore, guestStore, guestSelected = listOf("StepsRecord"))
 
         assertTrue(hostReport.completed)
-        assertTrue("s1" in guestStore.keys)
-    }
-
-    @Test
-    fun `a type this phone did not pick is refused, even when the other phone sends it`() = runTest {
-        val hostStore = FakeRecordStore(
-            listOf(item("s1", type = "StepsRecord"), item("h1", type = "HeartRateRecord")),
-        )
-        val guestStore = FakeRecordStore()
-
-        val (_, guestReport) = runPair(hostStore, guestStore, guestSelected = listOf("StepsRecord"))
-
         assertEquals(setOf("s1"), guestStore.keys)
         assertEquals(1, guestReport.imported)
         assertEquals(1, guestReport.refused)

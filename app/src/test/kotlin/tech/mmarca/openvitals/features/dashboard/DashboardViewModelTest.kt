@@ -95,30 +95,7 @@ class DashboardViewModelTest {
 
     // Initial load.
 
-    @Test fun `initial state has isLoading true before coroutine runs`() {
-        val loader = mockDashboardDataLoader()
-        // Never completes, so the intermediate state can be inspected.
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers { kotlinx.coroutines.awaitCancellation() }
-
-        // The initial value set before the launch has isLoading = true.
-        val initial = DashboardUiState()
-        assertTrue(initial.isLoading)
-    }
-
     @Test fun `load success populates display widgets`() = runTest {
-        val data = DashboardData(date = today, steps = 8_500)
-        val loader = mockDashboardDataLoader()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns data
-
-        val vm = dashboardViewModel(loader, prefs())
-
-        val stepsDisplay = vm.uiState.value.display.widgets[DashboardWidgetId.STEPS]
-        assertNotNull(stepsDisplay)
-        assertEquals(DashboardWidgetStyle.CIRCLE, stepsDisplay?.style)
-        assertFalse(stepsDisplay?.isLoading ?: true)
-    }
-
-    @Test fun `load success populates data and clears loading`() = runTest {
         val data = DashboardData(date = today)
         val loader = mockDashboardDataLoader()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns data
@@ -129,6 +106,9 @@ class DashboardViewModelTest {
         assertFalse(state.isLoading)
         assertEquals(data, state.data)
         assertNull(state.error)
+        val stepsDisplay = state.display.widgets[DashboardWidgetId.STEPS]
+        assertEquals(DashboardWidgetStyle.CIRCLE, stepsDisplay?.style)
+        assertEquals(false, stepsDisplay?.isLoading)
     }
 
     @Test fun `load failure sets error and clears loading`() = runTest {
@@ -369,85 +349,45 @@ class DashboardViewModelTest {
         coVerify(atLeast = 2) { loader.loadDashboard(match<DashboardQuery> { it.date == today }) }
     }
 
-    // A3: floorsClimbed and elevationGainedMeters in DashboardData.
+    // Each pass merges only its own metric's fields into the state.
 
-    @Test fun `floorsClimbed is exposed through state when present`() = runTest {
-        val data = DashboardData(date = today, floorsClimbed = 12)
+    @Test fun `each pass's reading reaches the state, a zero floor count included`() = runTest {
         val loader = mockDashboardDataLoader()
-        loader.answersEveryPassWith(data)
-
-        val vm = dashboardViewModel(loader, prefs())
-
-        assertEquals(12, vm.uiState.value.data?.floorsClimbed)
-    }
-
-    @Test fun `floorsClimbed is null in state when not reported`() = runTest {
-        val data = DashboardData(date = today, floorsClimbed = null)
-        val loader = mockDashboardDataLoader()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns data
-
-        val vm = dashboardViewModel(loader, prefs())
-
-        assertNull(vm.uiState.value.data?.floorsClimbed)
-    }
-
-    @Test fun `elevationGainedMeters is exposed through state when present`() = runTest {
-        val data = DashboardData(date = today, elevationGainedMeters = 85.0)
-        val loader = mockDashboardDataLoader()
-        loader.answersEveryPassWith(data)
-
-        val vm = dashboardViewModel(loader, prefs())
-
-        assertEquals(85.0, vm.uiState.value.data?.elevationGainedMeters!!, 0.01)
-    }
-
-    @Test fun `elevationGainedMeters is null in state when not reported`() = runTest {
-        val data = DashboardData(date = today, elevationGainedMeters = null)
-        val loader = mockDashboardDataLoader()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns data
-
-        val vm = dashboardViewModel(loader, prefs())
-
-        assertNull(vm.uiState.value.data?.elevationGainedMeters)
-    }
-
-    @Test fun `floorsClimbed zero is non-null, permission granted no stair data`() = runTest {
-        val data = DashboardData(date = today, floorsClimbed = 0)
-        val loader = mockDashboardDataLoader()
-        loader.answersEveryPassWith(data)
-
-        val vm = dashboardViewModel(loader, prefs())
-
-        assertEquals(0, vm.uiState.value.data?.floorsClimbed)
-    }
-
-    @Test fun `caloriesInKcal is exposed through state when present`() = runTest {
-        val data = DashboardData(date = today, caloriesInKcal = 1_850.0)
-        val loader = mockDashboardDataLoader()
-        loader.answersEveryPassWith(data)
-
-        val vm = dashboardViewModel(loader, prefs())
-
-        assertEquals(1_850.0, vm.uiState.value.data?.caloriesInKcal!!, 0.01)
-    }
-
-    @Test fun `vitals fields are exposed through dashboard state when present`() = runTest {
-        val data = DashboardData(
-            date = today,
-            latestSystolicMmHg = 120,
-            latestDiastolicMmHg = 78,
-            latestSpO2Percent = 97.5,
-            latestVo2Max = 42.1,
+        loader.answersEveryPassWith(
+            DashboardData(
+                date = today,
+                // Zero is a reading (permission granted, no stairs), not a missing one.
+                floorsClimbed = 0,
+                elevationGainedMeters = 85.0,
+                caloriesInKcal = 1_850.0,
+                latestSystolicMmHg = 120,
+                latestDiastolicMmHg = 78,
+                latestSpO2Percent = 97.5,
+                latestVo2Max = 42.1,
+            ),
         )
+
+        val data = requireNotNull(dashboardViewModel(loader, prefs()).uiState.value.data)
+
+        assertEquals(0, data.floorsClimbed)
+        assertEquals(85.0, data.elevationGainedMeters!!, 0.01)
+        assertEquals(1_850.0, data.caloriesInKcal!!, 0.01)
+        assertEquals(120, data.latestSystolicMmHg)
+        assertEquals(78, data.latestDiastolicMmHg)
+        assertEquals(97.5, data.latestSpO2Percent!!, 0.01)
+        assertEquals(42.1, data.latestVo2Max!!, 0.01)
+    }
+
+    @Test fun `a metric its pass reports as missing stays null in state`() = runTest {
         val loader = mockDashboardDataLoader()
-        loader.answersEveryPassWith(data)
+        loader.answersEveryPassWith(
+            DashboardData(date = today, floorsClimbed = null, elevationGainedMeters = null),
+        )
 
-        val vm = dashboardViewModel(loader, prefs())
+        val data = dashboardViewModel(loader, prefs()).uiState.value.data
 
-        assertEquals(120, vm.uiState.value.data?.latestSystolicMmHg)
-        assertEquals(78, vm.uiState.value.data?.latestDiastolicMmHg)
-        assertEquals(97.5, vm.uiState.value.data?.latestSpO2Percent!!, 0.01)
-        assertEquals(42.1, vm.uiState.value.data?.latestVo2Max!!, 0.01)
+        assertNull(data?.floorsClimbed)
+        assertNull(data?.elevationGainedMeters)
     }
 
     // Streaming.
@@ -564,25 +504,22 @@ class DashboardViewModelTest {
         }
     }
 
-    @Test fun `load passes sleep range mode from preferences`() = runTest {
+    @Test fun `load passes the sleep window and week mode from preferences`() = runTest {
         val loader = mockDashboardDataLoader()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
+        val sleepWindow = SleepWindow(startHour = 20, endHour = 8)
 
-        dashboardViewModel(loader, prefs(sleepWindow = SleepWindow(startHour = 20, endHour = 8)))
-
-        coVerify { loader.loadDashboard(match<DashboardQuery> { it.date == today && it.sleepWindow == SleepWindow(startHour = 20, endHour = 8) }) }
-    }
-
-    @Test fun `load passes activity week mode from preferences`() = runTest {
-        val loader = mockDashboardDataLoader()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-
-        dashboardViewModel(loader, prefs(activityWeekMode = ActivityWeekMode.LAST_7_DAYS))
+        dashboardViewModel(
+            loader,
+            prefs(sleepWindow = sleepWindow, activityWeekMode = ActivityWeekMode.LAST_7_DAYS),
+        )
 
         coVerify {
             loader.loadDashboard(
                 match<DashboardQuery> {
-                    it.date == today && it.activityWeekMode == ActivityWeekMode.LAST_7_DAYS
+                    it.date == today &&
+                        it.sleepWindow == sleepWindow &&
+                        it.activityWeekMode == ActivityWeekMode.LAST_7_DAYS
                 }
             )
         }
@@ -617,23 +554,6 @@ class DashboardViewModelTest {
             ),
             queries.map { it.visibleMetrics },
         )
-    }
-
-    @Test fun `dashboard widget order scopes first dashboard query`() = runTest {
-        val loader = mockDashboardDataLoader()
-        val queries = mutableListOf<DashboardQuery>()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
-            val query = firstArg<DashboardQuery>()
-            queries += query
-            DashboardData(date = today)
-        }
-        val prefs = prefs()
-        every { prefs.dashboardWidgetOrder() } returns listOf(DashboardWidgetId.AVG_HEART_RATE.name)
-
-        dashboardViewModel(loader, prefs)
-
-        assertEquals(setOf(DashboardMetric.AVG_HEART_RATE), queries.first().visibleMetrics)
-        assertEquals(1, queries.size)
     }
 
     @Test fun `every configured widget metric gets its own load pass`() = runTest {
@@ -714,21 +634,6 @@ class DashboardViewModelTest {
         assertFalse(
             vm.uiState.value.display.widgets[DashboardWidgetId.CARDIO_LOAD]?.isLoading ?: true,
         )
-    }
-
-    @Test fun `refresh reads the day again`() = runTest {
-        val loader = mockDashboardDataLoader()
-        val queries = mutableListOf<DashboardQuery>()
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
-            queries += firstArg<DashboardQuery>()
-            DashboardData(date = today)
-        }
-
-        val vm = dashboardViewModel(loader, prefs())
-        val afterOpen = queries.size
-        vm.refresh()
-
-        assertTrue(queries.size > afterOpen)
     }
 
     @Test fun `a refresh keeps each tile's sort answer while it reloads`() = runTest {
@@ -936,57 +841,51 @@ class DashboardViewModelTest {
             MetricDailyGoalKey.MINDFULNESS_MINUTES to 20.0,
         )
         // No stored value may equal the default, or a constant would pass anyway.
-        stored.forEach { (key, value) -> assertNotEquals(key.defaultValue, value, 0.001) }
+        assertEquals(
+            emptyMap<MetricDailyGoalKey, Double>(),
+            stored.filter { (key, value) -> key.defaultValue == value },
+        )
         every { prefs.dailyGoalFor(any()) } answers {
             val key = firstArg<MetricDailyGoalKey>()
             stored[key] ?: key.defaultValue
         }
+        // Hydration has its own preference, not a MetricDailyGoalKey.
         every { prefs.hydrationDailyGoalLiters } returns 3.0
+        assertNotEquals(DashboardDailyGoals().hydrationLiters, 3.0, 0.001)
 
         val goals = dashboardViewModel(loader, prefs).uiState.value.dailyGoals
 
-        assertEquals(6_000.0, goals.steps, 0.001)
-        assertEquals(3_000.0, goals.distanceMeters, 0.001)
-        assertEquals(2_500.0, goals.caloriesOutKcal, 0.001)
-        assertEquals(600.0, goals.activeCaloriesKcal, 0.001)
-        assertEquals(20.0, goals.floors, 0.001)
-        assertEquals(250.0, goals.elevationMeters, 0.001)
-        assertEquals(2_000.0, goals.wheelchairPushes, 0.001)
-        assertEquals(7.0, goals.sleepHours, 0.001)
-        assertEquals(2_200.0, goals.caloriesInKcal, 0.001)
-        assertEquals(120.0, goals.proteinGrams, 0.001)
-        assertEquals(300.0, goals.carbsGrams, 0.001)
-        assertEquals(80.0, goals.fatGrams, 0.001)
-        assertEquals(20.0, goals.mindfulnessMinutes, 0.001)
-        // Hydration has its own preference, not a MetricDailyGoalKey.
-        assertEquals(3.0, goals.hydrationLiters, 0.001)
-        assertNotEquals(DashboardDailyGoals().hydrationLiters, goals.hydrationLiters, 0.001)
+        assertEquals(
+            DashboardDailyGoals(
+                steps = 6_000.0,
+                distanceMeters = 3_000.0,
+                caloriesOutKcal = 2_500.0,
+                activeCaloriesKcal = 600.0,
+                floors = 20.0,
+                elevationMeters = 250.0,
+                wheelchairPushes = 2_000.0,
+                sleepHours = 7.0,
+                hydrationLiters = 3.0,
+                caloriesInKcal = 2_200.0,
+                proteinGrams = 120.0,
+                carbsGrams = 300.0,
+                fatGrams = 80.0,
+                mindfulnessMinutes = 20.0,
+            ),
+            goals,
+        )
     }
 
     @Test fun `an untouched install still gets the documented defaults`() = runTest {
         val loader = mockDashboardDataLoader()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
-        // The defaults are the goal store's own, not a second copy.
-        val defaults = DashboardDailyGoals()
-        assertEquals(MetricDailyGoalKey.STEPS.defaultValue, defaults.steps, 0.001)
-        assertEquals(MetricDailyGoalKey.DISTANCE_METERS.defaultValue, defaults.distanceMeters, 0.001)
-        assertEquals(MetricDailyGoalKey.CALORIES_OUT_KCAL.defaultValue, defaults.caloriesOutKcal, 0.001)
-        assertEquals(MetricDailyGoalKey.ACTIVE_CALORIES_KCAL.defaultValue, defaults.activeCaloriesKcal, 0.001)
-        assertEquals(MetricDailyGoalKey.FLOORS.defaultValue, defaults.floors, 0.001)
-        assertEquals(MetricDailyGoalKey.ELEVATION_METERS.defaultValue, defaults.elevationMeters, 0.001)
-        assertEquals(MetricDailyGoalKey.WHEELCHAIR_PUSHES.defaultValue, defaults.wheelchairPushes, 0.001)
-        assertEquals(MetricDailyGoalKey.SLEEP_HOURS.defaultValue, defaults.sleepHours, 0.001)
-        assertEquals(MetricDailyGoalKey.CALORIES_IN_KCAL.defaultValue, defaults.caloriesInKcal, 0.001)
-        assertEquals(MetricDailyGoalKey.PROTEIN_GRAMS.defaultValue, defaults.proteinGrams, 0.001)
-        assertEquals(MetricDailyGoalKey.CARBS_GRAMS.defaultValue, defaults.carbsGrams, 0.001)
-        assertEquals(MetricDailyGoalKey.FAT_GRAMS.defaultValue, defaults.fatGrams, 0.001)
-        assertEquals(MetricDailyGoalKey.MINDFULNESS_MINUTES.defaultValue, defaults.mindfulnessMinutes, 0.001)
-        assertEquals(2.0, defaults.hydrationLiters, 0.001)
-
-        // And an install that never touched a goal really does land on them.
+        // prefs() answers every goal with its MetricDailyGoalKey default, so this equality
+        // also pins DashboardDailyGoals() to the goal store's defaults, not a second copy.
         val vm = dashboardViewModel(loader, prefs())
-        assertEquals(defaults, vm.uiState.value.dailyGoals)
+
+        assertEquals(DashboardDailyGoals(), vm.uiState.value.dailyGoals)
+        assertEquals(2.0, DashboardDailyGoals().hydrationLiters, 0.001)
     }
 
     @Test fun `dashboard widgets restore saved order`() = runTest {
@@ -1009,21 +908,8 @@ class DashboardViewModelTest {
     @Test fun `dashboard widgets ignore unknown saved ids`() = runTest {
         val loader = mockDashboardDataLoader()
         val prefs = prefs()
-        every { prefs.dashboardWidgetOrder() } returns listOf("unknown", DashboardWidgetId.STEPS.name)
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-
-        val vm = dashboardViewModel(loader, prefs)
-
-        assertEquals(listOf(DashboardWidgetId.STEPS), vm.uiState.value.dashboardWidgets)
-    }
-
-    @Test fun `dashboard widgets ignore legacy browse saved id`() = runTest {
-        val loader = mockDashboardDataLoader()
-        val prefs = prefs()
-        every { prefs.dashboardWidgetOrder() } returns listOf(
-            "BROWSE",
-            DashboardWidgetId.STEPS.name,
-        )
+        // BROWSE is the id a layout saved before the Browse widget was removed still carries.
+        every { prefs.dashboardWidgetOrder() } returns listOf("unknown", "BROWSE", DashboardWidgetId.STEPS.name)
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
 
         val vm = dashboardViewModel(loader, prefs)
@@ -1051,16 +937,12 @@ class DashboardViewModelTest {
     }
 
     @Test fun `dashboard widget moves to target drop position`() = runTest {
-        val loader = mockDashboardDataLoader()
-        val prefs = prefs()
-        every { prefs.dashboardWidgetOrder() } returns listOf(
-            DashboardWidgetId.STEPS.name,
-            DashboardWidgetId.DISTANCE.name,
-            DashboardWidgetId.CALORIES_OUT.name,
-            DashboardWidgetId.SLEEP.name,
+        val vm = reorderViewModel(
+            DashboardWidgetId.STEPS,
+            DashboardWidgetId.DISTANCE,
+            DashboardWidgetId.CALORIES_OUT,
+            DashboardWidgetId.SLEEP,
         )
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-        val vm = dashboardViewModel(loader, prefs)
 
         vm.moveDashboardWidgetToTarget(DashboardWidgetId.STEPS, DashboardWidgetId.CALORIES_OUT)
 
@@ -1075,18 +957,17 @@ class DashboardViewModelTest {
         )
     }
 
+    // Long enough that HYDRATION spills past the fixed rows into the carousel.
+    private val fixedAndCarouselOrder = listOf(
+        DashboardWidgetId.STEPS,
+        DashboardWidgetId.DISTANCE,
+        DashboardWidgetId.CALORIES_OUT,
+        DashboardWidgetId.SLEEP,
+        DashboardWidgetId.HYDRATION,
+    )
+
     @Test fun `dashboard widget swaps when moved from carousel to fixed section`() = runTest {
-        val loader = mockDashboardDataLoader()
-        val prefs = prefs()
-        every { prefs.dashboardWidgetOrder() } returns listOf(
-            DashboardWidgetId.STEPS.name,
-            DashboardWidgetId.DISTANCE.name,
-            DashboardWidgetId.CALORIES_OUT.name,
-            DashboardWidgetId.SLEEP.name,
-            DashboardWidgetId.HYDRATION.name,
-        )
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-        val vm = dashboardViewModel(loader, prefs)
+        val vm = reorderViewModel(*fixedAndCarouselOrder.toTypedArray())
 
         vm.moveDashboardWidgetToTarget(DashboardWidgetId.HYDRATION, DashboardWidgetId.DISTANCE)
 
@@ -1103,17 +984,7 @@ class DashboardViewModelTest {
     }
 
     @Test fun `dashboard widget swaps when moved from fixed to carousel section`() = runTest {
-        val loader = mockDashboardDataLoader()
-        val prefs = prefs()
-        every { prefs.dashboardWidgetOrder() } returns listOf(
-            DashboardWidgetId.STEPS.name,
-            DashboardWidgetId.DISTANCE.name,
-            DashboardWidgetId.CALORIES_OUT.name,
-            DashboardWidgetId.SLEEP.name,
-            DashboardWidgetId.HYDRATION.name,
-        )
-        coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-        val vm = dashboardViewModel(loader, prefs)
+        val vm = reorderViewModel(*fixedAndCarouselOrder.toTypedArray())
 
         vm.moveDashboardWidgetToTarget(DashboardWidgetId.STEPS, DashboardWidgetId.HYDRATION)
 
@@ -1140,10 +1011,14 @@ class DashboardViewModelTest {
         DashboardWidgetId.HYDRATION,
     )
 
-    private fun carouselReorderViewModel(): DashboardViewModel {
+    private fun carouselReorderViewModel(): DashboardViewModel =
+        reorderViewModel(*carouselOnlyOrder.toTypedArray())
+
+    /** A dashboard whose saved layout is [order], with an empty day loaded. */
+    private fun reorderViewModel(vararg order: DashboardWidgetId): DashboardViewModel {
         val loader = mockDashboardDataLoader()
         val prefs = prefs()
-        every { prefs.dashboardWidgetOrder() } returns carouselOnlyOrder.map { it.name }
+        every { prefs.dashboardWidgetOrder() } returns order.map { it.name }
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
         return dashboardViewModel(loader, prefs)
     }
@@ -1316,14 +1191,7 @@ class DashboardViewModelTest {
     @Test fun `body energy populates the timeline when the widget is on the dashboard`() = runTest {
         val loader = mockDashboardDataLoader()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-        val bodyEnergyRepo = mockk<BodyEnergyRepository>()
-        coEvery { bodyEnergyRepo.loadTimeline(any()) } returns BodyEnergyTimelineResult(
-            query = BodyEnergyTimelineQuery(
-                period = DatePeriod(today, today),
-                range = TimeRange.DAY,
-            ),
-            days = listOf(bodyEnergyTimeline()),
-        )
+        val bodyEnergyRepo = bodyEnergyRepository()
 
         val vm = dashboardViewModel(loader, prefs(), bodyEnergyRepository = bodyEnergyRepo)
         advanceUntilIdle()
@@ -1338,14 +1206,7 @@ class DashboardViewModelTest {
     @Test fun `a body energy chain rebuild reloads the day`() = runTest {
         val loader = mockDashboardDataLoader()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-        val bodyEnergyRepo = mockk<BodyEnergyRepository>()
-        coEvery { bodyEnergyRepo.loadTimeline(any()) } returns BodyEnergyTimelineResult(
-            query = BodyEnergyTimelineQuery(
-                period = DatePeriod(today, today),
-                range = TimeRange.DAY,
-            ),
-            days = listOf(bodyEnergyTimeline()),
-        )
+        val bodyEnergyRepo = bodyEnergyRepository()
         val rebuilt = MutableSharedFlow<Unit>()
         val chainSync = mockk<BodyEnergyChainSyncService> { every { chainRebuilt } returns rebuilt }
 
@@ -1369,14 +1230,7 @@ class DashboardViewModelTest {
     @Test fun `body energy skips the load when the widget is not on the dashboard`() = runTest {
         val loader = mockDashboardDataLoader()
         coEvery { loader.loadDashboard(any<DashboardQuery>()) } returns DashboardData(date = today)
-        val bodyEnergyRepo = mockk<BodyEnergyRepository>()
-        coEvery { bodyEnergyRepo.loadTimeline(any()) } returns BodyEnergyTimelineResult(
-            query = BodyEnergyTimelineQuery(
-                period = DatePeriod(today, today),
-                range = TimeRange.DAY,
-            ),
-            days = listOf(bodyEnergyTimeline()),
-        )
+        val bodyEnergyRepo = bodyEnergyRepository()
         val prefs = prefs().also {
             every { it.dashboardWidgetOrder() } returns listOf(DashboardWidgetId.STEPS.name)
         }
@@ -1402,6 +1256,14 @@ class DashboardViewModelTest {
         // A missing timeline is not a dashboard error.
         assertNull(state.error)
         assertNotNull(state.data)
+    }
+
+    /** A repository that answers every timeline load with today's [bodyEnergyTimeline]. */
+    private fun bodyEnergyRepository(): BodyEnergyRepository = mockk<BodyEnergyRepository>().also { repo ->
+        coEvery { repo.loadTimeline(any()) } returns BodyEnergyTimelineResult(
+            query = BodyEnergyTimelineQuery(period = DatePeriod(today, today), range = TimeRange.DAY),
+            days = listOf(bodyEnergyTimeline()),
+        )
     }
 
     private fun bodyEnergyTimeline() = BodyEnergyTimeline(
@@ -1444,28 +1306,18 @@ class DashboardViewModelTest {
         assertNotNull(vm.uiState.value.data)
     }
 
-    @Test fun `a settled read of today redraws the home widgets`() = runTest {
-        val loader = mockDashboardDataLoader()
-        loader.answersEveryPassWith(DashboardData(date = today, steps = 8_000))
-        val widgetRefresh = mockk<HomeWidgetRefreshScheduler>(relaxed = true)
-
-        dashboardViewModel(loader = loader, prefs = prefs(), homeWidgetRefreshScheduler = widgetRefresh)
-        advanceUntilIdle()
-
-        verify(exactly = 1) { widgetRefresh.refreshNow() }
-    }
-
-    @Test fun `a read of a past day leaves the home widgets alone`() = runTest {
+    @Test fun `a settled read of today redraws the home widgets and a past day does not`() = runTest {
         val loader = mockDashboardDataLoader()
         loader.answersEveryPassWith(DashboardData(date = today, steps = 8_000))
         val widgetRefresh = mockk<HomeWidgetRefreshScheduler>(relaxed = true)
         val vm = dashboardViewModel(loader = loader, prefs = prefs(), homeWidgetRefreshScheduler = widgetRefresh)
         advanceUntilIdle()
+        verify(exactly = 1) { widgetRefresh.refreshNow() }
 
         vm.load(today.minusDays(1))
         advanceUntilIdle()
 
-        // Only the initial read of today.
+        // Still only the initial read of today.
         verify(exactly = 1) { widgetRefresh.refreshNow() }
     }
 

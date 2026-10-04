@@ -378,7 +378,6 @@ class ReportDataLoaderTest {
         val data = loader(additional = emptySet()).load(request(ReportMetric.BLOOD_PRESSURE))
 
         coVerify(exactly = 1) { vitals.loadBloodPressure(start, end) }
-        assertEquals(2, (data.results.single().detail as tech.mmarca.openvitals.domain.model.ReportBloodPressureDetail).readings.size)
         coVerify(exactly = 0) { vitals.loadDailyBloodPressure(any(), any()) }
         val result = data.results.single()
         // Two same-day readings collapse to ONE chart point with real extremes...

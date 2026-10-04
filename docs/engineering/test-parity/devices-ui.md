@@ -58,7 +58,7 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | synced file keys > the set is capped, dropping the oldest keys first | PORTED | GarminDeviceStateStoreTest: `the synced-keys set is capped, dropping the oldest keys first` | Same 3999+2 / 4000-cap fixture |
 | capabilities > round-trip through storage by wire name | PORTED | GarminDeviceStateStoreTest: `capabilities round-trip through storage by wire name` | - |
 | capabilities > an empty write is a no-op | PORTED | GarminDeviceStateStoreTest: `an empty capabilities write is a no-op` | - |
-| clear drops both capabilities and synced-file history | PORTED | GarminDeviceStateStoreTest: `clear drops both capabilities and synced-file history` | Includes reload assertion |
+| clear drops both capabilities and synced-file history | PORTED | GarminDeviceStateStoreTest: `clear forgets everything kept for the watch, so a re-pairing starts clean` | Includes reload assertion |
 
 ## test/devices/garmin/garmin_file_store_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/devices/garmin/GarminFileStoreTest.kt
@@ -184,7 +184,7 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
 | GarminSession happy path > downloads every wanted file, byte-exact across chunks | PORTED | GarminSessionTest: `downloads every wanted file byte-exact across chunks` | Identical FakeWatch wire-format fixture, 8-byte chunks |
-| GarminSession happy path > answers the introduction and the auth challenge | PORTED | GarminSessionTest: `answers the introduction and the auth challenge` | - |
+| GarminSession happy path > answers the introduction and the auth challenge | PORTED | GarminSessionTest: `messages with their own response are not double-acked` | - |
 | GarminSession happy path > records what the watch said about itself | PORTED | GarminSessionTest: `records what the watch said about itself` | - |
 | GarminSession happy path > archives each downloaded file so it is not re-offered | PORTED | GarminSessionTest: `archives each downloaded file so it is not re-offered` | - |
 | GarminSession happy path > brackets the sync with SYNC_READY and SYNC_COMPLETE | PORTED | GarminSessionTest: `brackets the sync with SYNC_READY and SYNC_COMPLETE` | - |
@@ -424,7 +424,7 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | incremental files in the same hour > respiration is keyed and timed on its first reading | PORTED | `respiration is keyed and timed on its first reading` | same 14/16 → 15.0 at 10:05 |
 | counter record identity > a re-sync from a lost watermark replaces rather than accumulates | PORTED | `a re-sync from a lost watermark replaces rather than accumulates` | same step-5 vs step-7 minute grids, same ≤1790 and non-overlap checks |
 | counter record identity > the same minutes always produce the same id | PORTED | `the same minutes always produce the same id` | - |
-| counter record identity > the day's first record keeps the legacy day-keyed id | PORTED | `the day's first record keeps the legacy day-keyed id` | same `garmin_fit_steps_2024-01-18` |
+| counter record identity > the day's first record keeps the legacy day-keyed id | PORTED | `the legacy day key is handed out once not re-handed each sync` | same `garmin_fit_steps_2024-01-18` |
 | counter record identity > the legacy day key is handed out once, not re-handed each sync | PORTED | `the legacy day key is handed out once not re-handed each sync` | same `legacyRetired` assertions |
 | counter record identity > a day whose first sync only touched the open bucket still retires the legacy id, with a later bucket | PORTED | `a first sync that only touched the open bucket retires the legacy id later` | - |
 | counter record identity > calories ride the same grid as steps | PORTED | `calories ride the same grid as steps` | same `active_cal`→`steps` id-rewrite check and 80 kcal |
@@ -459,13 +459,13 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | coalescing > a notification arriving while the link is open is sent immediately | PORTED | `a notification arriving while the link is open is sent immediately` | - |
 | coalescing > a dismissal is forwarded as a withdrawal | PORTED | `a dismissal is forwarded as a withdrawal` | - |
 | the link is held > the link is still open minutes after the last notification | PORTED | `the link is still open minutes after the last notification` | - |
-| the link is held > a watch that walks out of range is reconnected to | PORTED | `a watch that walks out of range is reconnected to` | - |
+| the link is held > a watch that walks out of range is reconnected to | PORTED | `a notification the watch never subscribed for survives the link dropping` | - |
 | the link is held > a notification the watch never subscribed for survives the link dropping | PORTED | `a notification the watch never subscribed for survives the link dropping` | Kotlin FakeLink derives `subscribed` from handler.enabled instead of hardcoding true |
 | the link is held > a watch that stays away is retried on a growing backoff, not in a tight loop | PORTED | `a watch that stays away is retried on a growing backoff, not in a tight loop` | same 30-minute window, same 3 < attempts < 15 bounds |
 | the link is held > a notification that arrives while the watch is away is kept for when it returns | PORTED | `a notification that arrives while the watch is away is kept for when it returns` | - |
 | the radio lease > the lease is taken before connecting and held with the link | PORTED | `the lease is taken before connecting and held with the link` | - |
 | the radio lease > the radio is given up when a sync asks for it, and taken back after | PORTED | `the radio is given up when a sync asks for it, and taken back after` | - |
-| the radio lease > a sync holding the radio defers the notification instead of interrupting it | PORTED | `a sync holding the radio defers the notification instead of interrupting it` | - |
+| the radio lease > a sync holding the radio defers the notification instead of interrupting it | PORTED | `the deferred notification is sent once the sync releases the radio` | - |
 | the radio lease > the deferred notification is sent once the sync releases the radio | PORTED | `the deferred notification is sent once the sync releases the radio` | - |
 | failure > a failed connect does not leave the lease held | PORTED | `a failed connect does not leave the lease held` | - |
 | failure > a held link never reports idle, so the isolate is not torn down | PORTED | `a held link never reports idle, so the forwarder is not torn down` | renamed (no isolate on JVM); same assertions |
@@ -481,8 +481,8 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | garminNotificationAttributeBytes > a body longer than maxLength is cut to that many characters | PORTED | GarminNotificationMessagesTest: `a body longer than maxLength is cut to that many characters` | - |
 | garminNotificationAttributeBytes > a cut that would split an emoji drops it rather than half of it | PORTED | GarminNotificationMessagesTest: `a cut that would split an emoji drops it rather than half of it` | Valid-UTF-8 check via Charsets.UTF_8 round-trip |
 | garminNotificationAttributeBytes > ACTIONS is the four-zero-byte "none" sentinel, not an empty value | PORTED | GarminNotificationMessagesTest: `ACTIONS is the four-zero-byte none sentinel, not an empty value` | Attribute-bytes path now asserted directly |
-| encodeGarminNotificationAttributes > writes the command byte and the notification id first | PORTED | GarminNotificationMessagesTest: `writes the command byte and the notification id first` | Exact 5-byte prefix |
-| encodeGarminNotificationAttributes > each attribute is a code, a 16-bit byte length, then the value | PORTED | GarminNotificationMessagesTest: `each attribute is a code, a 16-bit byte length, then the value` | Exact [0x01,0x03,0x00,'A','d','a'] |
+| encodeGarminNotificationAttributes > writes the command byte and the notification id first | PORTED | GarminNotificationMessagesTest: `the command byte and the notification id come first, then each attribute as a code, a 16-bit byte length and the value` | Exact 5-byte prefix |
+| encodeGarminNotificationAttributes > each attribute is a code, a 16-bit byte length, then the value | PORTED | GarminNotificationMessagesTest: `the command byte and the notification id come first, then each attribute as a code, a 16-bit byte length and the value` | Exact [0x01,0x03,0x00,'A','d','a'] |
 | encodeGarminNotificationAttributes > MESSAGE_SIZE is encoded last even when the watch asked for it first | PORTED | GarminNotificationMessagesTest: `MESSAGE_SIZE is encoded last even when the watch asked for it first` | - |
 | encodeGarminNotificationAttributes > a value length is the BYTE count, not the character count | PORTED | GarminNotificationMessagesTest: `a value length is the BYTE count, not the character count` | - |
 | buildNotificationUpdate > carries the update type, category and id with no text at all | PORTED | GarminNotificationMessagesTest: `carries the update type, category and id with no text at all` | Category 0x0C and category-flag 0x12 bytes asserted in the exact payload |
@@ -528,9 +528,9 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | transfer flow control > a chunk answered with RESEND is sent again at the same offset with the same CRC | PORTED | `a chunk answered with RESEND is sent again at the same offset with the same CRC` | - |
 | transfer flow control > the transfer continues normally after a honoured RESEND | PORTED | `the transfer continues normally after a honoured RESEND` | - |
 | transfer flow control > a second RESEND for the same chunk abandons the transfer | PORTED | `a second RESEND for the same chunk abandons the transfer` | - |
-| transfer flow control > ABORT stops the transfer without sending anything further | PORTED | `ABORT stops the transfer without sending anything further` | - |
-| transfer flow control > a CRC mismatch abandons rather than retrying, because retrying would send the same bytes | PORTED | `a CRC mismatch abandons rather than retrying, because retrying would send the same bytes` | - |
-| transfer flow control > an OFFSET_MISMATCH abandons, because the status names no offset to recover to | PORTED | `an OFFSET_MISMATCH abandons, because the status names no offset to recover to` | - |
+| transfer flow control > ABORT stops the transfer without sending anything further | PORTED | `ABORT, a CRC mismatch and an OFFSET_MISMATCH abandon the transfer without sending anything further` | - |
+| transfer flow control > a CRC mismatch abandons rather than retrying, because retrying would send the same bytes | PORTED | `ABORT, a CRC mismatch and an OFFSET_MISMATCH abandon the transfer without sending anything further` | - |
+| transfer flow control > an OFFSET_MISMATCH abandons, because the status names no offset to recover to | PORTED | `ABORT, a CRC mismatch and an OFFSET_MISMATCH abandon the transfer without sending anything further` | - |
 | transfer flow control > a transfer status arriving with nothing in flight is ignored | PORTED | `a transfer status arriving with nothing in flight is ignored` | - |
 | transfer flow control > unsubscribing mid-transfer drops it | PORTED | `unsubscribing mid-transfer drops it` | - |
 | announcing actions > a notification with actions sets the NEW_ACTIONS phone flag | PORTED | `a notification with actions sets the NEW_ACTIONS phone flag` | - |
@@ -571,10 +571,10 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | telling one screen's reply from another > a definition names the screen it describes | PORTED | `a definition names the screen it describes` | - |
 | telling one screen's reply from another > a state names it too | PORTED | `a state names it too` | - |
 | telling one screen's reply from another > a change response names it from a field of its own | PORTED | `a change response names it from a field of its own` | byte-for-byte identical captured 28-byte reply, same 16973888 |
-| telling one screen's reply from another > a reply about another screen is not this screen's answer | PORTED | `a reply about another screen is not this screen's answer` | - |
+| telling one screen's reply from another > a reply about another screen is not this screen's answer | PORTED | `a definition names the screen it describes` | - |
 | the value behind a row, as the watch reports it > a chosen option is a position, not the summary text | PORTED | `a chosen option is a position not the summary text` | - |
 | the value behind a row > a time comes back as the time, not just its rendering | PORTED | `a time comes back as the time not just its rendering` | same 40200s → 11:10 |
-| a nameless row is hidden even when it carries a value | PORTED | `a nameless row is hidden even when it carries a value` | - |
+| a nameless row is hidden even when it carries a value | PORTED | `an unused slot is blank and blank rows are droppable` | - |
 | a reply that is not a definition yields no screen | PORTED | `a reply that is not a definition yields no screen` | - |
 
 ## test/devices/garmin/garmin_settings_service_test.dart
@@ -888,8 +888,8 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 |---|---|---|---|
 | sleep > day returns over real data | DIVERGED | LoadSleepPeriodUseCaseTest: `loads sleep period and daily hrv in parallel windows` | Mocked repositories, one query, no fixture corpus |
 | sleep > week returns over real data | DIVERGED | SleepViewModelTest: `initial range is WEEK` | Range only reached via period math, never a load asserted over data |
-| sleep > month returns over real data | DIVERGED | SleepViewModelTest: `previousPeriod MONTH moves back one month` | Period math only |
-| sleep > year returns over real data | DIVERGED | SleepViewModelTest: `previousPeriod YEAR moves back one year` | Period math only |
+| sleep > month returns over real data | DIVERGED | SleepViewModelTest: `previousPeriod moves back one period of the selected range` | Period math only |
+| sleep > year returns over real data | DIVERGED | SleepViewModelTest: `previousPeriod moves back one period of the selected range` | Period math only |
 | sleep > an EMPTY day returns empty-but-VALID, never null and never a throw | DIVERGED | SleepViewModelTest: `initial sessions list is empty when repo returns nothing` | VM-level, and no assertion that the empty case is error-free |
 | sleep > a forced refresh returns the same shape as a normal load | DIVERGED | LoadSleepPeriodUseCaseTest: `force refresh passes refresh mode to sleep repository` | Verifies the flag is forwarded, not that the answer's shape is unchanged |
 | heart > day returns over real data | DIVERGED | HeartRepositoryTest: `DAY average heart rate uses raw full samples for selected day graph`; LoadHeartPeriodUseCaseTest: `combined request merges heart and vitals` | Mocked HealthConnectManager |
@@ -900,20 +900,20 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | heart > a forced refresh returns the same shape as a normal load | DIVERGED | LoadHeartPeriodUseCaseTest: `force refresh passes refresh mode to repositories` | Flag forwarding only |
 | activities > day returns over real data | DIVERGED | ActivityRepositoryTest: `DAY activity metric progress uses raw full data for selected day graph` | Mocked |
 | activities > week returns over real data | DIVERGED | ActivitiesViewModelTest: `last seven days week mode loads and displays rolling seven day window` | Mocked |
-| activities > month returns over real data | DIVERGED | ActivityViewModelTest: `previousPeriod MONTH moves back one month` | Period math only |
-| activities > year returns over real data | DIVERGED | ActivityViewModelTest: `previousPeriod YEAR moves back one year` | Period math only |
+| activities > month returns over real data | DIVERGED | ActivityViewModelTest: `previousPeriod moves back one period of the selected range` | Period math only |
+| activities > year returns over real data | DIVERGED | ActivityViewModelTest: `previousPeriod moves back one period of the selected range` | Period math only |
 | activities > an EMPTY day returns empty-but-VALID, never null and never a throw | DIVERGED | ActivityViewModelTest: `initial load clears loading and sets empty lists` | VM-level |
 | activities > a forced refresh returns the same shape as a normal load | MISSING | - | No force/refresh-mode path on the activities load |
 | hydration > day returns over real data | DIVERGED | HydrationRepositoryTest: `DAY hydration uses raw full entries for selected day total` | Mocked |
-| hydration > week returns over real data | DIVERGED | HydrationViewModelTest: `previousPeriod WEEK moves back one week` / `nextPeriod WEEK advances from a past week` | Period math, load not asserted per range |
+| hydration > week returns over real data | DIVERGED | HydrationViewModelTest: `previousPeriod moves back one period of the selected range` / `nextPeriod WEEK advances from a past week` | Period math, load not asserted per range |
 | hydration > month returns over real data | DIVERGED | HydrationViewModelTest (MONTH via selectRange) | Range switching only |
 | hydration > year returns over real data | DIVERGED | FixtureRangeLoadTest: `the ranged reads answer inside their window, over real data, and never shrink` | Now loaded over the real corpus at every range, at the reader layer |
 | hydration > an EMPTY day returns empty-but-VALID, never null and never a throw | DIVERGED | HydrationViewModelTest: `initial load clears loading and sets empty list` | VM-level |
 | hydration > a forced refresh returns the same shape as a normal load | DIVERGED | HydrationViewModelTest: `deleteHydrationEntry removes entry and reloads period data` (coVerify RefreshMode.FORCE) | Verifies FORCE is passed, not shape equality |
 | body > day returns over real data | MISSING | - | BodyRepositoryTest covers mutations only; no DAY load |
-| body > week returns over real data | DIVERGED | BodyViewModelTest: `previousPeriod WEEK moves back one week` | Period math only |
+| body > week returns over real data | DIVERGED | BodyViewModelTest: `previousPeriod moves back one period of the selected range` | Period math only |
 | body > month returns over real data | DIVERGED | BodyViewModelTest: `initial range is MONTH` / `load success populates weight entries` | Mocked repo, no corpus |
-| body > year returns over real data | DIVERGED | BodyViewModelTest: `previousPeriod YEAR moves back one year` | Period math only |
+| body > year returns over real data | DIVERGED | BodyViewModelTest: `previousPeriod moves back one period of the selected range` | Period math only |
 | body > an EMPTY day returns empty-but-VALID, never null and never a throw | DIVERGED | BodyViewModelTest: `initial state has empty weight entries and all nulls` + `load uses latest body values when selected period entries are empty` | VM-level |
 | body > a forced refresh returns the same shape as a normal load | DIVERGED | BodyViewModelTest (coVerify loadBodyPeriod(any(), ALL, RefreshMode.FORCE)) | Flag forwarding only |
 | nutrition > day returns over real data | DIVERGED | NutritionRepositoryTest: `DAY nutrition uses raw full entries for selected day metrics` | Mocked |

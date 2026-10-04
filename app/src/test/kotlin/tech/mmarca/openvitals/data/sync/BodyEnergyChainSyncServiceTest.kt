@@ -158,6 +158,13 @@ class BodyEnergyChainSyncServiceTest {
             ),
             repository.requested,
         )
+        // So the stored days form a connected chain: each opens where its predecessor closed.
+        val days = store.storedDaysBetween(today.minusDays(4), today.minusDays(1))
+        assertEquals(4, days.size)
+        assertEquals(
+            days.dropLast(1).map { bodyEnergySeedScore(it.endScore) },
+            days.drop(1).map { it.startScore },
+        )
     }
 
     @Test
@@ -172,33 +179,6 @@ class BodyEnergyChainSyncServiceTest {
         service.syncAll(force = true)
 
         assertTrue(today in repository.requested)
-    }
-
-    @Test
-    fun `the walked days form a connected chain`() = runTest {
-        service().syncAll()
-
-        val days = store.storedDaysBetween(today.minusDays(4), today.minusDays(1))
-        assertEquals(4, days.size)
-        for (i in 1 until days.size) {
-            assertEquals(bodyEnergySeedScore(days[i - 1].endScore), days[i].startScore)
-        }
-    }
-
-    @Test
-    fun `a second pass inside the throttle window does no work`() = runTest {
-        val service = service()
-        service.syncAll()
-        val firstPass = repository.requested.size
-
-        now = now.plusSeconds(5 * 60)
-        service.syncAll()
-
-        assertEquals(
-            "every screen open calls syncAll; it must not re-walk",
-            firstPass,
-            repository.requested.size,
-        )
     }
 
     @Test
@@ -457,6 +437,7 @@ class BodyEnergyChainSyncServiceTest {
         now = now.plusSeconds(2 * 60)
         service.syncAll(force = true)
 
+        // Force is about the throttle only: the two stored, fresh days are still skipped.
         assertEquals(
             "oldest first, and only the days that went missing",
             listOf(today.minusDays(2), today.minusDays(1)),
@@ -467,6 +448,8 @@ class BodyEnergyChainSyncServiceTest {
 
     @Test
     fun `an unforced call inside the throttle leaves the holes alone`() = runTest {
+        // Every screen open calls syncAll; inside the throttle it must not re-walk,
+        // not even to fill the days that went missing.
         val service = service()
         service.syncAll()
         store.invalidateForward(today.minusDays(2), today)
@@ -477,19 +460,6 @@ class BodyEnergyChainSyncServiceTest {
 
         assertTrue(repository.requested.isEmpty())
         assertEquals(2, dao.countDays())
-    }
-
-    @Test
-    fun `force does not override the freshness skip`() = runTest {
-        // Force is about the throttle only. A stored, fresh day is still skipped.
-        val service = service()
-        service.syncAll()
-        repository.requested.clear()
-
-        now = now.plusSeconds(2 * 60)
-        service.syncAll(force = true)
-
-        assertTrue(repository.requested.isEmpty())
     }
 
     private companion object {

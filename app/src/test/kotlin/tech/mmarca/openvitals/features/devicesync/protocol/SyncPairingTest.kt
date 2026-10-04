@@ -78,11 +78,9 @@ class SyncPairingTest {
 
     @Test
     fun `the code is always six digits, zero-padded`() {
-        repeat(20) {
-            val code = deriveSyncSessionKeys(generateSyncKeyPair(), guest.publicKey, transcript).code
+        val codes = List(20) { deriveSyncSessionKeys(generateSyncKeyPair(), guest.publicKey, transcript).code }
 
-            assertTrue(code, Regex("^\\d{6}$").matches(code))
-        }
+        assertEquals(emptyList<String>(), codes.filterNot { Regex("^\\d{6}$").matches(it) })
     }
 
     @Test

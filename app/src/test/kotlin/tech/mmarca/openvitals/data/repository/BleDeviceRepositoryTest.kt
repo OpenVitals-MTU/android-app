@@ -288,7 +288,7 @@ class BleDeviceRepositoryTest {
     }
 
     @Test
-    fun `kind and lastSyncedAt survive a storage round-trip`() {
+    fun `kind, integration and lastSyncedAt survive a storage round-trip`() {
         val repo = newRepository()
         val watch = repo.addDevice(
             displayName = "vívoactive 5",
@@ -297,20 +297,6 @@ class BleDeviceRepositoryTest {
             capabilities = emptySet(),
             kind = BleDeviceKind.WATCH,
         )
-        val syncedAt = Instant.parse("2026-07-21T09:30:00Z")
-        repo.markSynced(watch.id, syncedAt)
-
-        // A second repository over the same prefs is the round-trip.
-        val reloaded = newRepository().devices.single()
-
-        assertEquals(BleDeviceKind.WATCH, reloaded.kind)
-        assertTrue(reloaded.isWatch)
-        assertEquals(syncedAt, reloaded.lastSyncedAt)
-    }
-
-    @Test
-    fun `a bike computer survives a persistence round-trip`() {
-        val repo = newRepository()
         repo.addDevice(
             displayName = "Edge 840",
             address = "E0:48:24:D5:F7:20",
@@ -319,17 +305,6 @@ class BleDeviceRepositoryTest {
             kind = BleDeviceKind.BIKE_COMPUTER,
             integration = DeviceIntegration.GARMIN,
         )
-
-        val reloaded = newRepository().devices.single()
-
-        assertEquals(BleDeviceKind.BIKE_COMPUTER, reloaded.kind)
-        assertTrue(reloaded.isBikeComputer)
-        assertTrue(reloaded.isGarminGfdi)
-    }
-
-    @Test
-    fun `the integration survives a persistence round-trip`() {
-        val repo = newRepository()
         repo.addDevice(
             displayName = "Galaxy Watch8",
             address = "A8:D1:62:BE:3A:3B",
@@ -338,13 +313,20 @@ class BleDeviceRepositoryTest {
             kind = BleDeviceKind.WATCH,
             integration = DeviceIntegration.WEAROS,
         )
+        val syncedAt = Instant.parse("2026-07-21T09:30:00Z")
+        repo.markSynced(watch.id, syncedAt)
 
-        // A fresh repo over the same prefs re-reads from storage.
-        val reloaded = newRepository().devices.single()
+        // A second repository over the same prefs is the round-trip.
+        val reloaded = newRepository().devices
 
-        assertEquals(DeviceIntegration.WEAROS, reloaded.integration)
-        assertTrue(reloaded.isWearosWatch)
-        assertFalse(reloaded.isGarminWatch)
+        assertEquals(
+            listOf(
+                Triple(BleDeviceKind.WATCH, null, syncedAt),
+                Triple(BleDeviceKind.BIKE_COMPUTER, DeviceIntegration.GARMIN, null),
+                Triple(BleDeviceKind.WATCH, DeviceIntegration.WEAROS, null),
+            ),
+            reloaded.map { Triple(it.kind, it.integration, it.lastSyncedAt) },
+        )
     }
 
     @Test

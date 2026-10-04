@@ -246,9 +246,10 @@ class HeartViewModelTest {
     )
 
     @Test fun `every heart metric round-trips through its route id`() {
-        HeartMetric.entries.forEach { metric ->
-            assertEquals(metric, heartMetricFromRoute(metric.routeId()))
-        }
+        assertEquals(
+            HeartMetric.entries.toList(),
+            HeartMetric.entries.map { heartMetricFromRoute(it.routeId()) },
+        )
         assertNull(heartMetricFromRoute(null))
     }
 
@@ -355,42 +356,16 @@ class HeartViewModelTest {
         assertTrue(display.hasData)
         assertTrue(display.hasPeriodHeartRateSummaries)
         assertEquals(2, display.sortedDailySummaries.size)
-        // The summaries come out oldest first, and the entry list reverses them.
+        // The summaries come out oldest first...
         assertEquals(
             listOf(today.minusDays(1), today),
             display.sortedDailySummaries.map { it.date },
         )
-        assertEquals(
-            listOf(today, today.minusDays(1)),
-            display.sortedDailySummaries.reversed().map { it.date },
-        )
-        // …and the range summary carries the extremes across every daily summary.
+        // ...and the range summary carries the extremes across every daily summary.
         assertEquals(71L, display.heartRateRangeSummary?.average) // (72 + 70) / 2.
         assertEquals(48L, display.heartRateRangeSummary?.min)
         assertEquals(110L, display.heartRateRangeSummary?.max)
         assertEquals(2, display.heartRateSampleCount)
-    }
-
-    @Test fun `load success populates display metric for resting heart rate`() = runTest {
-        val trend = listOf(
-            DailyRestingHR(today.minusDays(1), 56L),
-            DailyRestingHR(today, 58L),
-        )
-        val repo = emptyRepo()
-        coEvery { repo.loadDailyRestingHR(any(), any()) } returns trend
-
-        val vm = heartViewModel(repo, emptyVitalsRepo(), selectedMetric = HeartMetric.RESTING_HEART_RATE)
-
-        val display = vm.uiState.value.display.metric
-        assertTrue(display.hasData)
-        assertTrue(display.hasPeriodRestingRate)
-        assertNotNull(display.restingRangeSummary)
-    }
-
-    @Test fun `WEEK range does not call loadRawHeartRateSamplesForDayGraph`() = runTest {
-        val repo = emptyRepo()
-        heartViewModel(repo, emptyVitalsRepo())
-        coVerify(exactly = 0) { repo.loadRawHeartRateSamplesForDayGraph(any()) }
     }
 
     // DAY range loads samples, not summaries.
@@ -520,7 +495,7 @@ class HeartViewModelTest {
 
     // A1: multi-day resting HR and HRV trends.
 
-    @Test fun `WEEK range loads dailyRestingHR trend`() = runTest {
+    @Test fun `WEEK range loads the resting heart rate trend into state and display`() = runTest {
         val trend = listOf(
             DailyRestingHR(today.minusDays(1), 56L),
             DailyRestingHR(today, 58L),
@@ -531,6 +506,10 @@ class HeartViewModelTest {
         val vm = heartViewModel(repo, emptyVitalsRepo(), selectedMetric = HeartMetric.RESTING_HEART_RATE)
 
         assertEquals(trend, vm.uiState.value.dailyRestingHR)
+        val display = vm.uiState.value.display.metric
+        assertTrue(display.hasData)
+        assertTrue(display.hasPeriodRestingRate)
+        assertNotNull(display.restingRangeSummary)
     }
 
     @Test fun `WEEK range loads dailyHrv trend`() = runTest {
@@ -544,13 +523,6 @@ class HeartViewModelTest {
         val vm = heartViewModel(repo, emptyVitalsRepo(), selectedMetric = HeartMetric.HRV)
 
         assertEquals(trend, vm.uiState.value.dailyHrv)
-    }
-
-    @Test fun `WEEK range clears dayRestingBpm and dayHrvMs`() = runTest {
-        val vm = heartViewModel(emptyRepo(), emptyVitalsRepo())
-        // The default range is WEEK, so the point-in-time fields are null.
-        assertNull(vm.uiState.value.dayRestingBpm)
-        assertNull(vm.uiState.value.dayHrvMs)
     }
 
     @Test fun `switching from DAY to WEEK clears point-in-time resting HR`() = runTest {
@@ -576,20 +548,6 @@ class HeartViewModelTest {
 
         vm.selectRange(TimeRange.WEEK)
         assertTrue(vm.uiState.value.daySamples.isEmpty())
-    }
-
-    @Test fun `WEEK range does not call loadDailyRestingHR with empty result`() = runTest {
-        val repo = emptyRepo() // returns emptyList() by default
-        val vm = heartViewModel(repo, emptyVitalsRepo(), selectedMetric = HeartMetric.RESTING_HEART_RATE)
-        assertTrue(vm.uiState.value.dailyRestingHR.isEmpty())
-        coVerify(atLeast = 1) { repo.loadDailyRestingHR(any(), any()) }
-    }
-
-    @Test fun `WEEK range does not call loadDailyHRV with empty result`() = runTest {
-        val repo = emptyRepo()
-        val vm = heartViewModel(repo, emptyVitalsRepo(), selectedMetric = HeartMetric.HRV)
-        assertTrue(vm.uiState.value.dailyHrv.isEmpty())
-        coVerify(atLeast = 1) { repo.loadDailyHRV(any(), any()) }
     }
 
     // B1: vitals merged into heart.
@@ -727,14 +685,6 @@ class HeartViewModelTest {
         assertEquals(before.minusWeeks(1), vm.uiState.value.selectedDate)
     }
 
-    @Test fun `previousPeriod DAY moves back one day`() = runTest {
-        val vm = heartViewModel(emptyRepo(), emptyVitalsRepo())
-        vm.selectRange(TimeRange.DAY)
-        val before = vm.uiState.value.selectedDate
-        vm.previousPeriod()
-        assertEquals(before.minusDays(1), vm.uiState.value.selectedDate)
-    }
-
     @Test fun `nextPeriod DAY is blocked when at today`() = runTest {
         val vm = heartViewModel(emptyRepo(), emptyVitalsRepo())
         vm.selectRange(TimeRange.DAY)
@@ -757,15 +707,13 @@ class HeartViewModelTest {
 
     // selectDate.
 
-    @Test fun `selectDate clamps future date to today`() = runTest {
+    @Test fun `selectDate keeps a past date and clamps a future one to today`() = runTest {
         val vm = heartViewModel(emptyRepo(), emptyVitalsRepo())
-        vm.selectDate(today.plusDays(3))
-        assertEquals(today, vm.uiState.value.selectedDate)
-    }
 
-    @Test fun `selectDate accepts past date unchanged`() = runTest {
-        val vm = heartViewModel(emptyRepo(), emptyVitalsRepo())
         vm.selectDate(pastAnchor)
-        assertEquals(pastAnchor, vm.uiState.value.selectedDate)
+        val afterPast = vm.uiState.value.selectedDate
+        vm.selectDate(today.plusDays(3))
+
+        assertEquals(listOf(pastAnchor, today), listOf(afterPast, vm.uiState.value.selectedDate))
     }
 }

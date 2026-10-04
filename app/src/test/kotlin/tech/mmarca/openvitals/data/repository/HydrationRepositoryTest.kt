@@ -15,7 +15,9 @@ import io.mockk.mockk
 import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -25,6 +27,17 @@ import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 class HydrationRepositoryTest {
+
+    @Before
+    fun setUp() {
+        mockkStatic(Log::class)
+        every { Log.w(any(), any<String>(), any()) } returns 0
+    }
+
+    @After
+    fun tearDown() {
+        unmockkStatic(Log::class)
+    }
 
     private val hydrationPermission = HealthPermission.getReadPermission(HydrationRecord::class)
     private val hydrationWritePermission = HealthPermission.getWritePermission(HydrationRecord::class)
@@ -141,16 +154,11 @@ class HydrationRepositoryTest {
             coEvery { hc.updateHydrationEntry("hydration-id", request) } returns change("hydration-client-id")
             coEvery { hc.updateHydrationNutritionEntry(any()) } throws IllegalStateException("rate limited")
         }
-        mockkStatic(Log::class)
-        every { Log.w(any(), any<String>(), any()) } returns 0
 
-        try {
-            HydrationRepositoryImpl(hc).updateHydrationEntry("hydration-id", request)
-        } finally {
-            unmockkStatic(Log::class)
-        }
+        // Returning normally is the assertion: the failed follow-up was attempted and swallowed.
+        HydrationRepositoryImpl(hc).updateHydrationEntry("hydration-id", request)
 
-        coVerify { hc.updateHydrationEntry("hydration-id", request) }
+        coVerify { hc.updateHydrationNutritionEntry(change("hydration-client-id")) }
     }
 
     private fun hc(

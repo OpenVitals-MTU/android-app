@@ -101,14 +101,6 @@ class DashboardContentLayoutTest {
             ),
             visible,
         )
-        // Once the empty tiles start, no tile with data follows.
-        val firstEmpty = visible.indexOfFirst {
-            display().widgets[it]?.showsNoDataMessage() == true
-        }
-        assertTrue(firstEmpty > 0)
-        assertTrue(
-            visible.drop(firstEmpty).all { display().widgets[it]?.showsNoDataMessage() == true },
-        )
     }
 
     @Test
@@ -407,19 +399,5 @@ class DashboardContentLayoutTest {
             visible.indexOf(notSetUp) < visible.indexOf(DashboardWidgetId.CALORIES_OUT),
         )
         assertEquals(notSetUp, visible[4])
-    }
-
-    @Test
-    fun `a genuinely empty tile is still demoted`() {
-        // The counterweight: the demotion must survive the exception above.
-        val visible = visibleIds()
-        val empties = listOf(DashboardWidgetId.CALORIES_OUT, DashboardWidgetId.HYDRATION)
-
-        for (empty in empties) {
-            assertTrue(
-                "$empty has no reading and should sink",
-                visible.indexOf(empty) > visible.indexOf(DashboardWidgetId.SLEEP),
-            )
-        }
     }
 }

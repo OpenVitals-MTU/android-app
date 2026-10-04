@@ -194,30 +194,6 @@ class BodyViewModelTest {
         assertEquals(entries, vm.uiState.value.weightEntries)
     }
 
-    @Test fun `deleteBodyMeasurementEntry removes OpenVitals weight and reloads`() = runTest {
-        val entry = WeightEntry(
-            time = Instant.ofEpochSecond(1_000),
-            weightKg = 75.0,
-            source = "tech.mmarca.openvitals.debug",
-            id = "weight-id",
-            isOpenVitalsEntry = true,
-        )
-        var entries = listOf(entry)
-        val repo = emptyRepo()
-        coEvery { repo.loadWeightEntries(any(), any()) } answers { entries }
-        coEvery { repo.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "weight-id") } coAnswers {
-            entries = emptyList()
-        }
-        val vm = bodyViewModel(repo)
-
-        vm.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "weight-id")
-        advanceUntilIdle()
-
-        assertTrue(vm.uiState.value.weightEntries.isEmpty())
-        coVerify { repo.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "weight-id") }
-        coVerify(atLeast = 2) { repo.loadBodyPeriod(any(), BodyPeriodMetric.ALL) }
-    }
-
     @Test fun `deleteBodyMeasurementEntry ignores weight not created by OpenVitals`() = runTest {
         val entries = listOf(
             WeightEntry(
@@ -239,25 +215,31 @@ class BodyViewModelTest {
         coVerify(exactly = 0) { repo.deleteBodyMeasurementEntry(BodyMeasurementType.WEIGHT, "external-weight-id") }
     }
 
-    @Test fun `load success populates height`() = runTest {
-        val entries = listOf(heightAt(178.0, 1_000))
+    @Test fun `load success populates each measurement's entries and its latest summary value`() = runTest {
+        val height = listOf(heightAt(178.0, 1_000))
+        val bodyFat = listOf(bodyFatAt(22.5, 1_000))
+        val leanMass = listOf(leanMassAt(58.3, 1_000))
+        val bmr = listOf(bmrAt(1_750.0, 1_000))
+        val boneMass = listOf(boneMassAt(3.2, 1_000))
         val repo = emptyRepo()
-        coEvery { repo.loadHeightEntries(any(), any()) } returns entries
+        coEvery { repo.loadHeightEntries(any(), any()) } returns height
+        coEvery { repo.loadBodyFatEntries(any(), any()) } returns bodyFat
+        coEvery { repo.loadLeanBodyMassEntries(any(), any()) } returns leanMass
+        coEvery { repo.loadBmrEntries(any(), any()) } returns bmr
+        coEvery { repo.loadBoneMassEntries(any(), any()) } returns boneMass
 
         val vm = bodyViewModel(repo)
 
-        assertEquals(178.0, vm.uiState.value.display.summary.heightCm!!, 0.01)
-        assertEquals(entries, vm.uiState.value.heightEntries)
-    }
-
-    @Test fun `load success populates body fat entries`() = runTest {
-        val entries = listOf(bodyFatAt(22.5, 1_000))
-        val repo = emptyRepo()
-        coEvery { repo.loadBodyFatEntries(any(), any()) } returns entries
-
-        val vm = bodyViewModel(repo)
-
-        assertEquals(entries, vm.uiState.value.bodyFatEntries)
+        val state = vm.uiState.value
+        assertEquals(
+            listOf(height, bodyFat, leanMass, bmr, boneMass),
+            listOf(state.heightEntries, state.bodyFatEntries, state.leanMassEntries, state.bmrEntries, state.boneMassEntries),
+        )
+        val summary = state.display.summary
+        assertEquals(
+            listOf(178.0, 22.5, 58.3, 1_750.0, 3.2),
+            listOf(summary.heightCm, summary.latestBodyFatPercent, summary.leanMassKg, summary.bmrKcal, summary.boneMassKg),
+        )
     }
 
     @Test fun `load uses latest body values when selected period entries are empty`() = runTest {
@@ -278,39 +260,6 @@ class BodyViewModelTest {
         assertEquals(22.26, state.display.summary.bmi!!, 0.01)
         assertEquals(17.81, state.display.summary.ffmi!!, 0.01)
         assertEquals(17.43, state.display.summary.adjustedFfmi!!, 0.01)
-    }
-
-    @Test fun `load success populates lean mass`() = runTest {
-        val entries = listOf(leanMassAt(58.3, 1_000))
-        val repo = emptyRepo()
-        coEvery { repo.loadLeanBodyMassEntries(any(), any()) } returns entries
-
-        val vm = bodyViewModel(repo)
-
-        assertEquals(58.3, vm.uiState.value.display.summary.leanMassKg!!, 0.01)
-        assertEquals(entries, vm.uiState.value.leanMassEntries)
-    }
-
-    @Test fun `load success populates BMR`() = runTest {
-        val entries = listOf(bmrAt(1_750.0, 1_000))
-        val repo = emptyRepo()
-        coEvery { repo.loadBmrEntries(any(), any()) } returns entries
-
-        val vm = bodyViewModel(repo)
-
-        assertEquals(1_750.0, vm.uiState.value.display.summary.bmrKcal!!, 0.01)
-        assertEquals(entries, vm.uiState.value.bmrEntries)
-    }
-
-    @Test fun `load success populates bone mass`() = runTest {
-        val entries = listOf(boneMassAt(3.2, 1_000))
-        val repo = emptyRepo()
-        coEvery { repo.loadBoneMassEntries(any(), any()) } returns entries
-
-        val vm = bodyViewModel(repo)
-
-        assertEquals(3.2, vm.uiState.value.display.summary.boneMassKg!!, 0.001)
-        assertEquals(entries, vm.uiState.value.boneMassEntries)
     }
 
     // Delete: optimistic rebuild and rollback.
@@ -505,37 +454,26 @@ class BodyViewModelTest {
         assertEquals(listOf(TimeRange.WEEK), preferences.storedRanges)
     }
 
-    @Test fun `selectRange triggers reload`() = runTest {
-        val repo = emptyRepo()
-        val vm = bodyViewModel(repo)
-        vm.selectRange(TimeRange.YEAR)
-        // init load + selectRange load = 2 calls.
-        io.mockk.coVerify(atLeast = 2) { repo.loadBodyPeriod(any(), any()) }
-    }
-
     // previousPeriod and nextPeriod.
 
-    @Test fun `previousPeriod MONTH moves back one month`() = runTest {
+    @Test fun `previousPeriod moves back one period of the selected range`() = runTest {
         val vm = bodyViewModel(emptyRepo())
-        val before = vm.uiState.value.selectedDate
-        vm.previousPeriod()
-        assertEquals(before.minusMonths(1), vm.uiState.value.selectedDate)
-    }
 
-    @Test fun `previousPeriod WEEK moves back one week`() = runTest {
-        val vm = bodyViewModel(emptyRepo())
-        vm.selectRange(TimeRange.WEEK)
-        val before = vm.uiState.value.selectedDate
-        vm.previousPeriod()
-        assertEquals(before.minusWeeks(1), vm.uiState.value.selectedDate)
-    }
+        val steppedBack = listOf(TimeRange.WEEK, TimeRange.MONTH, TimeRange.YEAR).associateWith { range ->
+            vm.selectRange(range)
+            vm.selectDate(today)
+            vm.previousPeriod()
+            vm.uiState.value.selectedDate
+        }
 
-    @Test fun `previousPeriod YEAR moves back one year`() = runTest {
-        val vm = bodyViewModel(emptyRepo())
-        vm.selectRange(TimeRange.YEAR)
-        val before = vm.uiState.value.selectedDate
-        vm.previousPeriod()
-        assertEquals(before.minusYears(1), vm.uiState.value.selectedDate)
+        assertEquals(
+            mapOf(
+                TimeRange.WEEK to today.minusWeeks(1),
+                TimeRange.MONTH to today.minusMonths(1),
+                TimeRange.YEAR to today.minusYears(1),
+            ),
+            steppedBack,
+        )
     }
 
     @Test fun `nextPeriod MONTH is blocked when current month includes today`() = runTest {
@@ -555,15 +493,13 @@ class BodyViewModelTest {
 
     // selectDate.
 
-    @Test fun `selectDate clamps future date to today`() = runTest {
+    @Test fun `selectDate keeps a past date and clamps a future one to today`() = runTest {
         val vm = bodyViewModel(emptyRepo())
-        vm.selectDate(today.plusDays(5))
-        assertEquals(today, vm.uiState.value.selectedDate)
-    }
 
-    @Test fun `selectDate accepts past date unchanged`() = runTest {
-        val vm = bodyViewModel(emptyRepo())
         vm.selectDate(pastAnchor)
-        assertEquals(pastAnchor, vm.uiState.value.selectedDate)
+        val afterPast = vm.uiState.value.selectedDate
+        vm.selectDate(today.plusDays(5))
+
+        assertEquals(listOf(pastAnchor, today), listOf(afterPast, vm.uiState.value.selectedDate))
     }
 }

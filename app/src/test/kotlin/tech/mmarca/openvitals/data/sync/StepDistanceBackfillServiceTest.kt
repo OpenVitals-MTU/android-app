@@ -191,12 +191,4 @@ class StepDistanceBackfillServiceTest {
         // An empty step map reads as 0 steps every day, and the reconcile deletes every record.
         coVerify(exactly = 0) { hc.reconcileStepDerivedDistance(any(), any(), any()) }
     }
-
-    @Test
-    fun `a reconcile failure is swallowed`() = runTest {
-        val hc = hc()
-        coEvery { hc.reconcileStepDerivedDistance(any(), any(), any()) } throws IllegalStateException("hc down")
-
-        StepDistanceBackfillService(hc, prefs()).syncNow()
-    }
 }

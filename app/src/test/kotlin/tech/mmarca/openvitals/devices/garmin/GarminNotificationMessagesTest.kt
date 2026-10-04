@@ -140,24 +140,18 @@ class GarminNotificationMessagesTest {
     }
 
     @Test
-    fun `writes the command byte and the notification id first`() {
+    fun `the command byte and the notification id come first, then each attribute as a code, a 16-bit byte length and the value`() {
         val blob = encodeGarminNotificationAttributes(
-            notification = notification(id = 0x11223344L),
-            requested = linkedMapOf(GarminNotificationAttribute.TITLE to 0),
-        )
-        // GET_NOTIFICATION_ATTRIBUTES, then the id little-endian.
-        assertArrayEquals(b(0x00, 0x44, 0x33, 0x22, 0x11), blob.copyOfRange(0, 5))
-    }
-
-    @Test
-    fun `each attribute is a code, a 16-bit byte length, then the value`() {
-        val blob = encodeGarminNotificationAttributes(
-            notification = notification(title = "Ada"),
+            notification = notification(id = 0x11223344L, title = "Ada"),
             requested = linkedMapOf(GarminNotificationAttribute.TITLE to 0),
         )
         assertArrayEquals(
-            b(0x01, 0x03, 0x00, 0x41, 0x64, 0x61),
-            blob.copyOfRange(5, blob.size),
+            b(
+                0x00, // GET_NOTIFICATION_ATTRIBUTES
+                0x44, 0x33, 0x22, 0x11, // id, little-endian
+                0x01, 0x03, 0x00, 0x41, 0x64, 0x61, // TITLE, 3 bytes, "Ada"
+            ),
+            blob,
         )
     }
 

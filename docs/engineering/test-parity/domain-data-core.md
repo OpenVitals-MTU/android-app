@@ -338,24 +338,24 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/model/Heal
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
 | durationMinutes truncates sub-minute remainder | PORTED | HealthDataTest.kt: `durationMinutes truncates sub-minute remainder` | — |
-| durationMinutes is zero for sub-minute duration | PORTED | HealthDataTest.kt: `durationMinutes is zero for sub-minute duration` | — |
-| durationMinutes is exact for whole-minute duration | PORTED | HealthDataTest.kt: `durationMinutes is exact for whole-minute duration` | — |
+| durationMinutes is zero for sub-minute duration | PORTED | HealthDataTest.kt: `durationMinutes truncates sub-minute remainder` | — |
+| durationMinutes is exact for whole-minute duration | PORTED | HealthDataTest.kt: `durationMinutes truncates sub-minute remainder` | — |
 | durationHours returns fractional hours | PORTED | HealthDataTest.kt: `durationHours returns fractional hours` | — |
 | durationHours is zero for zero duration | PORTED | HealthDataTest.kt: `durationHours is zero for zero duration` | — |
 | SleepStage durationMs equals end minus start epoch millis | PORTED | HealthDataTest.kt: `SleepStage durationMs equals end minus start epoch millis` | — |
-| DailySteps defaults all optional fields to null | PORTED | HealthDataTest.kt: `DailySteps defaults all optional fields to null` | — |
-| DailySteps stores all optional fields when provided | PORTED | HealthDataTest.kt: `DailySteps stores all optional fields when provided` | — |
+| DailySteps defaults all optional fields to null | PORTED | HealthDataTest.kt: `DailySteps optional fields default to null and a provided zero stays zero` | — |
+| DailySteps stores all optional fields when provided | PORTED | HealthDataTest.kt: `DailySteps optional fields default to null and a provided zero stays zero` | — |
 | ActivityProgressPoint defaults detailed optional fields to null | PORTED | HealthDataTest.kt: `ActivityProgressPoint defaults detailed optional fields to null` | — |
-| ActivityProgressPoint stores detailed optional fields | PORTED | HealthDataTest.kt: `ActivityProgressPoint stores detailed optional fields` | — |
-| DashboardData defaults weight to null | PORTED | HealthDataTest.kt: `DashboardData defaults weight to null` | — |
-| DashboardData stores latest weight with time when provided | PORTED | HealthDataTest.kt: `DashboardData stores latest weight with time when provided` | — |
-| DashboardData stores latest height with time when provided | PORTED | HealthDataTest.kt: `DashboardData stores latest height with time when provided` | — |
-| DashboardData defaults floorsClimbed to null | PORTED | HealthDataTest.kt: `DashboardData defaults floorsClimbed to null` | — |
-| DashboardData stores floorsClimbed when provided | PORTED | HealthDataTest.kt: `DashboardData stores floorsClimbed when provided` | — |
-| DashboardData defaults elevationGainedMeters to null | PORTED | HealthDataTest.kt: `DashboardData defaults elevationGainedMeters to null` | — |
-| DashboardData stores elevationGainedMeters when provided | PORTED | HealthDataTest.kt: `DashboardData stores elevationGainedMeters when provided` | — |
-| DailySteps floorsClimbed zero is non-null — permission granted no data | PORTED | HealthDataTest.kt: `DailySteps floorsClimbed zero is non-null, permission granted no data` | — |
-| DailySteps elevationGainedMeters zero is non-null — permission granted no data | PORTED | HealthDataTest.kt: `DailySteps elevationGainedMeters zero is non-null, permission granted no data` | — |
+| ActivityProgressPoint stores detailed optional fields | PORTED | HealthDataTest.kt: `ActivityProgressPoint defaults detailed optional fields to null` | — |
+| DashboardData defaults weight to null | PORTED | HealthDataTest.kt: `DashboardData optional readings default to null` | — |
+| DashboardData stores latest weight with time when provided | PORTED | HealthDataTest.kt: `DashboardData optional readings default to null` | — |
+| DashboardData stores latest height with time when provided | PORTED | HealthDataTest.kt: `DashboardData optional readings default to null` | — |
+| DashboardData defaults floorsClimbed to null | PORTED | HealthDataTest.kt: `DashboardData optional readings default to null` | — |
+| DashboardData stores floorsClimbed when provided | PORTED | HealthDataTest.kt: `DashboardData optional readings default to null` | — |
+| DashboardData defaults elevationGainedMeters to null | PORTED | HealthDataTest.kt: `DashboardData optional readings default to null` | — |
+| DashboardData stores elevationGainedMeters when provided | PORTED | HealthDataTest.kt: `DashboardData optional readings default to null` | — |
+| DailySteps floorsClimbed zero is non-null — permission granted no data | PORTED | HealthDataTest.kt: `DailySteps optional fields default to null and a provided zero stays zero` | — |
+| DailySteps elevationGainedMeters zero is non-null — permission granted no data | PORTED | HealthDataTest.kt: `DailySteps optional fields default to null and a provided zero stays zero` | — |
 
 ## test/domain/model/heart_rate_aggregated_samples_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/model/HeartRateAggregatedSamplesTest.kt
@@ -376,9 +376,9 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/model/Hear
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/imports/csv/CsvRowConverterTest.kt (partial; Kotlin has no shared buildImportClientRecordId — csv and apple_health keep separate builders in CsvRowConverter.kt / AppleHealthImportConversionSupport.kt)
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
-| buildImportClientRecordId > an id is namespace, slugged prefix and 32 hex characters | DIVERGED | CsvRowConverterTest.kt: `the id is namespaced to csv so it cannot collide with apple_health` | asserts only the `csv_weightrecord_` prefix (32-hex tail implied only by the golden test); no regex / shared-builder assertion |
+| buildImportClientRecordId > an id is namespace, slugged prefix and 32 hex characters | DIVERGED | CsvRowConverterTest.kt: `the id is namespaced to csv and byte-identical to the Flutter build's` | pins one whole id byte-for-byte (`csv_weightrecord_` prefix and 32-hex tail); no regex / shared-builder assertion |
 | buildImportClientRecordId > the same parts always produce the same id | DIVERGED | CsvRowConverterTest.kt: `the same measurement in pounds and kilograms yields the same id` | determinism asserted only for the csv builder via convertCsvRow, not a generic shared builder |
-| buildImportClientRecordId > a csv id never collides with an apple_health id for the same parts | DIVERGED | CsvRowConverterTest.kt: `the id is namespaced to csv so it cannot collide with apple_health` | asserts csv prefix only; never builds the apple_health id for the same parts and compares |
+| buildImportClientRecordId > a csv id never collides with an apple_health id for the same parts | DIVERGED | CsvRowConverterTest.kt: `the id is namespaced to csv and byte-identical to the Flutter build's` | asserts csv prefix only; never builds the apple_health id for the same parts and compares |
 | buildImportClientRecordId > different parts produce different ids | DIVERGED | CsvRowConverterTest.kt: `a different instant yields a different id`, `two metrics at the same instant get different ids` | csv-only, via converter API rather than the id builder |
 | buildImportClientRecordId > an empty prefix still yields a three-part id | PORTED | ImportClientRecordIdTest.kt: `an empty prefix still yields a three-part id` | — |
 | toStableIdSegment > a mixed-case type name slugs to lowercase | PORTED | ImportClientRecordIdTest.kt: `a mixed-case type name slugs to lowercase` | — |
@@ -409,10 +409,10 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/model/Slee
 | dailySleepSummary — night only, wall-clock > duration is wall-clock, not the stored time-asleep durationMs | PORTED | SleepNightSplitTest.kt: `dailySleepSummary duration is wall-clock, not the stored time-asleep durationMs` | — |
 | dailySleepSummary — night only, wall-clock > overlapping night sessions count shared time once (union, not sum) | PORTED | SleepNightSplitTest.kt: `dailySleepSummary counts overlapping night sessions once (union, not sum)` | — |
 | sleepSessionsUnionMs > overlapping intervals count their shared time once | PORTED | SleepNightSplitTest.kt: `sleepSessionsUnionMs counts overlapping intervals shared time once` | — |
-| sleepSessionsUnionMs > disjoint intervals equal the sum of their spans | PORTED | SleepNightSplitTest.kt: `sleepSessionsUnionMs of disjoint intervals equals the sum of their spans` | — |
-| sleepSessionsUnionMs > adjacent (touching) intervals merge without a gap | PORTED | SleepNightSplitTest.kt: `sleepSessionsUnionMs merges adjacent (touching) intervals without a gap` | — |
-| sleepSessionsUnionMs > a fully-contained interval adds nothing | PORTED | SleepNightSplitTest.kt: `sleepSessionsUnionMs adds nothing for a fully-contained interval` | — |
-| sleepSessionsUnionMs > empty input is zero | PORTED | SleepNightSplitTest.kt: `sleepSessionsUnionMs of empty input is zero` | — |
+| sleepSessionsUnionMs > disjoint intervals equal the sum of their spans | PORTED | SleepNightSplitTest.kt: `sleepSessionsUnionMs counts overlapping intervals shared time once` | — |
+| sleepSessionsUnionMs > adjacent (touching) intervals merge without a gap | PORTED | SleepNightSplitTest.kt: `sleepSessionsUnionMs counts overlapping intervals shared time once` | — |
+| sleepSessionsUnionMs > a fully-contained interval adds nothing | PORTED | SleepNightSplitTest.kt: `sleepSessionsUnionMs counts overlapping intervals shared time once` | — |
+| sleepSessionsUnionMs > empty input is zero | PORTED | SleepNightSplitTest.kt: `sleepSessionsUnionMs counts overlapping intervals shared time once` | — |
 
 ## test/domain/model/sleep_session_merging_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/model/SleepSessionMergingTest.kt
@@ -587,7 +587,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/data/migration/ (
 | type fidelity > a Kotlin Float goal survives as a Dart double | PORTED | FlutterPrefsKeyTableTest.kt: `doubles become kotlin floats` | inverse mirror of the same float/double bridge |
 | type fidelity > a Kotlin Set<String> survives as getStringList | PORTED | FlutterPrefsKeyTableTest.kt: `string lists become string sets` | inverse mirror of the set/list bridge |
 | type fidelity > a Kotlin Long survives as a Dart int | PORTED | FlutterPrefsKeyTableTest.kt: `keys kotlin reads with getLong stay long` / `dart ints become kotlin ints` | inverse mirror of the long/int bridge |
-| enum value transcoding > SCREAMING_SNAKE enum names become the Dart lowerCamelCase names | PORTED | FlutterPrefsKeyTableTest.kt: `unit system transcodes`, `activity week mode transcodes multi word names`, `caffeine enums transcode`, `detail ranges transcode time range names` | inverse mirror of the same name transcoding |
+| enum value transcoding > SCREAMING_SNAKE enum names become the Dart lowerCamelCase names | PORTED | FlutterPrefsKeyTableTest.kt: `dart enum names transcode to kotlin constants, multi word names included`, `dart enum names transcode to kotlin constants, multi word names included`, `dart enum names transcode to kotlin constants, multi word names included`, `detail ranges transcode time range names` | inverse mirror of the same name transcoding |
 | enum value transcoding > app_language maps the Kotlin BCP-47 tag onto the Dart enum name | PORTED | FlutterPrefsKeyTableTest.kt: `app language maps dart names to kotlin storage values` | inverse mirror |
 | enum value transcoding > Kotlin's tagless SYSTEM language maps onto AppLanguage.system | PORTED | FlutterPrefsKeyTableTest.kt: `app language maps dart names to kotlin storage values` / `app language tolerates stale kotlin storage values` | SYSTEM sentinel covered in both directions |
 | enum value transcoding > an enum value with no Dart counterpart is skipped, not written | PORTED | FlutterPrefsKeyTableTest.kt: `unknown enum values are skipped not written` | inverse mirror |
@@ -765,7 +765,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/data/repository/B
 | the algorithm-change gain reset > rewinds the watch fit watermark so the gains can actually relearn | PORTED | BodyEnergyChainTest.kt: `the reset rewinds the watch fit watermark so the gains can relearn` | — |
 | the algorithm-change gain reset > rewinds the watermark on an install already at this algorithm version | PORTED | BodyEnergyChainTest.kt: `the watermark rewinds on an install already at this algorithm version` | — |
 | the algorithm-change gain reset > and does not rewind it again once that epoch is recorded | PORTED | BodyEnergyChainTest.kt: `the watermark is not rewound again once that epoch is recorded` | — |
-| the algorithm-change gain reset > rewinds the watermark even when there were no personal gains to reset | PORTED | BodyEnergyChainTest.kt: `the watermark rewinds even when there were no personal gains to reset` | — |
+| the algorithm-change gain reset > rewinds the watermark even when there were no personal gains to reset | PORTED | BodyEnergyChainTest.kt: `the reset rewinds the watch fit watermark so the gains can relearn` | — |
 | the algorithm-change gain reset > leaves the manual heart zones and profile alone | PORTED | BodyEnergyChainTest.kt: `the reset leaves the manual heart zones alone` | Same assertions (zones + gain); Flutter name mentions profile but asserts none |
 | the algorithm-change gain reset > does not undo a gain learned after it ran | PORTED | BodyEnergyChainTest.kt: `the reset does not undo a gain learned after it ran` | — |
 
@@ -931,9 +931,9 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/healthconnect/Hea
 | phased permission sets > phase3 == vitals reads; phase4 == cycle reads | PORTED | HealthConnectPermissionServiceTest.kt: `phase3 == vitals reads, phase4 == cycle reads` | — |
 | phased permission sets > manual-only == route permissions and drives grant mode | PORTED | HealthConnectPermissionServiceTest.kt: `manual-only == route permissions, and drives the grant mode` | Kotlin additionally pins the READ_EXERCISE_ROUTES wire string, which is a private const in the service |
 | phased permission sets > managed permissions include reads, writes and route | PORTED | HealthConnectPermissionServiceTest.kt: `managed permissions include reads, writes and the route` | — |
-| feature gating > mindfulness excluded from phase2 / requestable writes when unavailable | PORTED | HealthConnectPermissionServiceTest.kt: `mindfulness is excluded from phase2 and the requestable writes when unavailable` | — |
+| feature gating > mindfulness excluded from phase2 / requestable writes when unavailable | PORTED | HealthConnectPermissionServiceTest.kt: `an unavailable mindfulness leaks into NO permission set` | — |
 | feature gating > mindfulness included when the feature flag is set | PORTED | HealthConnectPermissionServiceTest.kt: `mindfulness is included when the provider reports the feature available` | — |
-| feature gating > mindfulness permissions are empty when the provider lacks it | PORTED | HealthConnectPermissionServiceTest.kt: `mindfulness permissions are empty when the provider lacks the feature` | — |
+| feature gating > mindfulness permissions are empty when the provider lacks it | PORTED | HealthConnectPermissionServiceTest.kt: `an unavailable mindfulness leaks into NO permission set` | — |
 | feature gating > an unavailable mindfulness leaks into NO permission set | PORTED | HealthConnectPermissionServiceTest.kt: `an unavailable mindfulness leaks into NO permission set` | the 1.9.0 regression is now pinned on its own side: eight composed sets plus the onboarding catalog, which drops the category rather than offering an empty row |
 | feature gating > an AVAILABLE mindfulness still stays out of the required set | PORTED | HealthConnectPermissionServiceTest.kt: `an AVAILABLE mindfulness still stays out of the required set` | asserted against both required sets Kotlin has — minimumOnboardingPermissions and the catalog's requiredPermissions |
 | feature gating > the device answer and the opt-in are separate flags | DIVERGED | HealthConnectPermissionServiceTest.kt: `the device answer and the opt-in are folded into one flag` | blocked on behavior decision: isMindfulnessSessionAvailable() folds the opt-in in FIRST and the catalog's mindfulnessSupportedByDevice reports that same folded answer, so a supporting device whose user has not opted in is indistinguishable from an unsupporting one. The fold is pinned instead of the Dart split |
@@ -971,7 +971,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/healthconnect/Hea
 | turning it off costs mindfulness and nothing else | PORTED | HealthConnectPermissionServiceTest.kt: `turning it off costs mindfulness and nothing else` | — |
 | fold into device answer > a device that says YES is still refused while the user has not | DIVERGED | HealthConnectPermissionServiceTest.kt: `a device that says YES is still refused while the user has not` | the refusal is ported exactly, along with Dart's "only mindfulness is withheld" check via skin temperature; Dart's companion `mindfulnessSupportedByDevice isTrue` cannot hold — see the folded-flag row above |
 | fold into device answer > a device that says NO is not offered the opt-in at all | PORTED | HealthConnectPermissionServiceTest.kt: `a device that says NO is not offered the opt-in at all` | both flags read false here, so the fold makes no difference to this case |
-| fold into device answer > both halves say yes, and the feature comes back | PORTED | HealthConnectPermissionServiceTest.kt: `both halves say yes, and the feature comes back` | — |
+| fold into device answer > both halves say yes, and the feature comes back | PORTED | HealthConnectPermissionServiceTest.kt: `with it on, and a device that supports it, we ask as before` | — |
 | fold into device answer > the user says yes but the device does not — still no | PORTED | HealthConnectPermissionServiceTest.kt: `the user says yes but the device does not, still no` | — |
 
 ## test/data/source/sync/bluetooth_sync_service_test.dart
@@ -1071,8 +1071,8 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/data/sync/BodyEne
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
 | a cold window is walked oldest first, and today is left alone | PORTED | BodyEnergyChainSyncServiceTest.kt: `a cold window is walked oldest first, and today is left alone` | exact-list equality implies today excluded |
-| the walked days form a connected chain | PORTED | BodyEnergyChainSyncServiceTest.kt: `the walked days form a connected chain` | — |
-| a second pass inside the throttle window does no work | PORTED | BodyEnergyChainSyncServiceTest.kt: `a second pass inside the throttle window does no work` | — |
+| the walked days form a connected chain | PORTED | BodyEnergyChainSyncServiceTest.kt: `a cold window is walked oldest first, and today is left alone` | — |
+| a second pass inside the throttle window does no work | PORTED | BodyEnergyChainSyncServiceTest.kt: `an unforced call inside the throttle leaves the holes alone` | — |
 | past the throttle, already-stored fresh days are still skipped | PORTED | BodyEnergyChainSyncServiceTest.kt: `past the throttle, already-stored fresh days are still skipped` | — |
 | a changed calibration purges the chain rather than ageing it out | PORTED | BodyEnergyChainSyncServiceTest.kt: `a changed calibration purges the chain rather than ageing it out` | — |
 | without the heart-rate permission it does nothing | PORTED | BodyEnergyChainSyncServiceTest.kt: `without the heart-rate permission it does nothing` | — |
@@ -1084,7 +1084,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/data/sync/BodyEne
 | a later pass skips settled days and revisits only unsettled ones | PORTED | BodyEnergyChainSyncServiceTest.kt: `a later pass skips settled days and revisits only unsettled ones` | — |
 | a forced pass > bypasses the throttle, so a watch sync is acted on immediately | PORTED | BodyEnergyChainSyncServiceTest.kt: `a forced pass bypasses the throttle, so a watch sync is acted on at once` | — |
 | a forced pass > an unforced call inside the throttle leaves the holes alone | PORTED | BodyEnergyChainSyncServiceTest.kt: `an unforced call inside the throttle leaves the holes alone` | — |
-| a forced pass > force does not override the freshness skip | PORTED | BodyEnergyChainSyncServiceTest.kt: `force does not override the freshness skip` | — |
+| a forced pass > force does not override the freshness skip | PORTED | BodyEnergyChainSyncServiceTest.kt: `a forced pass bypasses the throttle, so a watch sync is acted on at once` | — |
 
 ## test/data/sync/calories_history_sync_service_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/data/sync/CaloriesHistorySyncServiceTest.kt
@@ -1199,9 +1199,9 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/core/period/Perio
 | previousPeriodFor returns previous calendar period | PORTED | PeriodSelectionTest.kt: `previousPeriodFor returns previous calendar period` | — |
 | previousPeriodFor returns the previous rolling month window | PORTED | PeriodSelectionTest.kt: `previousPeriodFor returns the previous rolling month window` | — |
 | displayPeriodFor keeps full Monday to Sunday week mid week | PORTED | PeriodSelectionTest.kt: `displayPeriodFor keeps full Monday to Sunday week even when today is mid week` | — |
-| displayPeriodFor supports rolling last seven days | PORTED | PeriodSelectionTest.kt: `displayPeriodFor supports rolling last seven days` | — |
-| displayPeriodFor supports rolling last thirty days | PORTED | PeriodSelectionTest.kt: `displayPeriodFor supports rolling last thirty days` | — |
-| displayPeriodFor supports rolling last three hundred sixty five days | PORTED | PeriodSelectionTest.kt: `displayPeriodFor supports rolling last three hundred sixty five days` | — |
+| displayPeriodFor supports rolling last seven days | PORTED | PeriodSelectionTest.kt: `displayPeriodFor rolling mode ends each window on the anchor` | — |
+| displayPeriodFor supports rolling last thirty days | PORTED | PeriodSelectionTest.kt: `displayPeriodFor rolling mode ends each window on the anchor` | — |
+| displayPeriodFor supports rolling last three hundred sixty five days | PORTED | PeriodSelectionTest.kt: `displayPeriodFor rolling mode ends each window on the anchor` | — |
 | calendar mode keeps calendar month and year windows | PORTED | PeriodSelectionTest.kt: `calendar mode keeps calendar month and year windows` | — |
 
 ## test/core/period/period_title_test.dart

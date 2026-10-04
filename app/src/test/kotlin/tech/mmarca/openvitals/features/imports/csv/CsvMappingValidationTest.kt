@@ -19,22 +19,25 @@ private fun mappingOf(
     ),
 ): CsvImportMapping = CsvImportMapping(columns = columns, dateTime = dateTime)
 
+private fun timestampAt(index: Int) = CsvColumnMapping(columnIndex = index, role = CsvColumnRole.TIMESTAMP)
+
+private fun metricAt(
+    index: Int,
+    metric: CsvImportMetric,
+    interpretation: CsvValueInterpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
+) = CsvColumnMapping(
+    columnIndex = index,
+    role = CsvColumnRole.METRIC,
+    metric = metric,
+    interpretation = interpretation,
+)
+
 class CsvMappingValidationTest {
 
     @Test
     fun `a complete mapping reports no issues`() {
         val issues = validateCsvMapping(
-            mappingOf(
-                listOf(
-                    CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
-                    CsvColumnMapping(
-                        columnIndex = 1,
-                        role = CsvColumnRole.METRIC,
-                        metric = CsvImportMetric.WEIGHT,
-                        interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
-                    ),
-                ),
-            ),
+            mappingOf(listOf(timestampAt(0), metricAt(1, CsvImportMetric.WEIGHT))),
             Sample,
         )
 
@@ -44,16 +47,7 @@ class CsvMappingValidationTest {
     @Test
     fun `a mapping with no timestamp column reports it`() {
         val issues = validateCsvMapping(
-            mappingOf(
-                listOf(
-                    CsvColumnMapping(
-                        columnIndex = 1,
-                        role = CsvColumnRole.METRIC,
-                        metric = CsvImportMetric.WEIGHT,
-                        interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
-                    ),
-                ),
-            ),
+            mappingOf(listOf(metricAt(1, CsvImportMetric.WEIGHT))),
             Sample,
         )
 
@@ -63,12 +57,7 @@ class CsvMappingValidationTest {
     @Test
     fun `two timestamp columns report the conflict`() {
         val issues = validateCsvMapping(
-            mappingOf(
-                listOf(
-                    CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
-                    CsvColumnMapping(columnIndex = 1, role = CsvColumnRole.TIMESTAMP),
-                ),
-            ),
+            mappingOf(listOf(timestampAt(0), timestampAt(1))),
             Sample,
         )
 
@@ -78,7 +67,7 @@ class CsvMappingValidationTest {
     @Test
     fun `a mapping with no metric column reports it`() {
         val issues = validateCsvMapping(
-            mappingOf(listOf(CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP))),
+            mappingOf(listOf(timestampAt(0))),
             Sample,
         )
 
@@ -90,19 +79,9 @@ class CsvMappingValidationTest {
         val issues = validateCsvMapping(
             mappingOf(
                 listOf(
-                    CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
-                    CsvColumnMapping(
-                        columnIndex = 1,
-                        role = CsvColumnRole.METRIC,
-                        metric = CsvImportMetric.WEIGHT,
-                        interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
-                    ),
-                    CsvColumnMapping(
-                        columnIndex = 2,
-                        role = CsvColumnRole.METRIC,
-                        metric = CsvImportMetric.WEIGHT,
-                        interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
-                    ),
+                    timestampAt(0),
+                    metricAt(1, CsvImportMetric.WEIGHT),
+                    metricAt(2, CsvImportMetric.WEIGHT),
                 ),
             ),
             Sample,
@@ -116,13 +95,8 @@ class CsvMappingValidationTest {
         val issues = validateCsvMapping(
             mappingOf(
                 listOf(
-                    CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
-                    CsvColumnMapping(
-                        columnIndex = 2,
-                        role = CsvColumnRole.METRIC,
-                        metric = CsvImportMetric.BODY_FAT,
-                        interpretation = CsvMassShareOfWeight(CsvUnit.KILOGRAMS),
-                    ),
+                    timestampAt(0),
+                    metricAt(2, CsvImportMetric.BODY_FAT, CsvMassShareOfWeight(CsvUnit.KILOGRAMS)),
                 ),
             ),
             Sample,
@@ -136,13 +110,8 @@ class CsvMappingValidationTest {
         val issues = validateCsvMapping(
             mappingOf(
                 listOf(
-                    CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
-                    CsvColumnMapping(
-                        columnIndex = 2,
-                        role = CsvColumnRole.METRIC,
-                        metric = CsvImportMetric.BODY_FAT,
-                        interpretation = CsvDirectValue(CsvUnit.PERCENT),
-                    ),
+                    timestampAt(0),
+                    metricAt(2, CsvImportMetric.BODY_FAT, CsvDirectValue(CsvUnit.PERCENT)),
                 ),
             ),
             Sample,
@@ -155,15 +124,7 @@ class CsvMappingValidationTest {
     fun `a date format matching no sampled row reports it`() {
         val issues = validateCsvMapping(
             mappingOf(
-                listOf(
-                    CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
-                    CsvColumnMapping(
-                        columnIndex = 1,
-                        role = CsvColumnRole.METRIC,
-                        metric = CsvImportMetric.WEIGHT,
-                        interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
-                    ),
-                ),
+                listOf(timestampAt(0), metricAt(1, CsvImportMetric.WEIGHT)),
                 dateTime = CsvDateTimeSettings(format = CsvDateTimeFormat.EPOCH_SECONDS),
             ),
             Sample,
@@ -176,15 +137,7 @@ class CsvMappingValidationTest {
     fun `an undecidable day month order is reported while the format is still automatic`() {
         val issues = validateCsvMapping(
             mappingOf(
-                listOf(
-                    CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
-                    CsvColumnMapping(
-                        columnIndex = 1,
-                        role = CsvColumnRole.METRIC,
-                        metric = CsvImportMetric.WEIGHT,
-                        interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
-                    ),
-                ),
+                listOf(timestampAt(0), metricAt(1, CsvImportMetric.WEIGHT)),
                 dateTime = CsvDateTimeSettings(),
             ),
             listOf(
@@ -201,15 +154,7 @@ class CsvMappingValidationTest {
         // Once the user has said which ordering it is, repeating the question would block the mapping.
         val issues = validateCsvMapping(
             mappingOf(
-                listOf(
-                    CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
-                    CsvColumnMapping(
-                        columnIndex = 1,
-                        role = CsvColumnRole.METRIC,
-                        metric = CsvImportMetric.WEIGHT,
-                        interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
-                    ),
-                ),
+                listOf(timestampAt(0), metricAt(1, CsvImportMetric.WEIGHT)),
                 dateTime = CsvDateTimeSettings(
                     format = CsvDateTimeFormat.DAY_FIRST,
                     zone = CsvTimeZoneMode.UTC,
@@ -261,17 +206,7 @@ class CsvMappingValidationTest {
 
     @Test
     fun `only the mapped metrics permissions are required`() {
-        val mapping = mappingOf(
-            listOf(
-                CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
-                CsvColumnMapping(
-                    columnIndex = 1,
-                    role = CsvColumnRole.METRIC,
-                    metric = CsvImportMetric.WEIGHT,
-                    interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
-                ),
-            ),
-        )
+        val mapping = mappingOf(listOf(timestampAt(0), metricAt(1, CsvImportMetric.WEIGHT)))
 
         assertEquals(
             setOf("android.permission.health.WRITE_WEIGHT"),
@@ -283,19 +218,9 @@ class CsvMappingValidationTest {
     fun `a body-composition mapping requires one permission per metric`() {
         val mapping = mappingOf(
             listOf(
-                CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
-                CsvColumnMapping(
-                    columnIndex = 1,
-                    role = CsvColumnRole.METRIC,
-                    metric = CsvImportMetric.WEIGHT,
-                    interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
-                ),
-                CsvColumnMapping(
-                    columnIndex = 2,
-                    role = CsvColumnRole.METRIC,
-                    metric = CsvImportMetric.BONE_MASS,
-                    interpretation = CsvDirectValue(CsvUnit.KILOGRAMS),
-                ),
+                timestampAt(0),
+                metricAt(1, CsvImportMetric.WEIGHT),
+                metricAt(2, CsvImportMetric.BONE_MASS),
             ),
         )
 
@@ -338,14 +263,9 @@ class CsvMappingValidationTest {
     )
 
     private fun stepsColumns(endRole: CsvColumnRole = CsvColumnRole.END_TIMESTAMP) = listOf(
-        CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
+        timestampAt(0),
         CsvColumnMapping(columnIndex = 1, role = endRole),
-        CsvColumnMapping(
-            columnIndex = 2,
-            role = CsvColumnRole.METRIC,
-            metric = CsvImportMetric.STEPS,
-            interpretation = CsvDirectValue(CsvUnit.COUNT),
-        ),
+        metricAt(2, CsvImportMetric.STEPS, CsvDirectValue(CsvUnit.COUNT)),
     )
 
     @Test

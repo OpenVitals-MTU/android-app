@@ -209,7 +209,8 @@ class GarminSettingsModelTest {
 
     @Test
     fun `an unused slot is blank and blank rows are droppable`() {
-        // A real alarm list came back as twenty untitled rows plus "Add Alarm".
+        // A real alarm list came back as twenty untitled rows plus "Add Alarm". After a delete the
+        // freed slots also carry a leftover summary; the missing title alone makes a row blank.
         val screen = parseGarminSettingsScreen(
             definitionReply(
                 screenId = 68,
@@ -307,12 +308,16 @@ class GarminSettingsModelTest {
 
     @Test
     fun `a definition names the screen it describes`() {
+        // The watch retransmits, so the alarm list's definition (68) once arrived while one alarm's
+        // screen (65600) was pending and was taken as the answer. Each reply must name its own screen.
         assertEquals(
-            65600,
-            GarminSettingsService.screenIdOf(
-                definitionReply(screenId = 65600),
-                GarminSettingsService.DEFINITION_RESPONSE_FIELD,
-            ),
+            mapOf(65600 to 65600, 68 to 68),
+            listOf(65600, 68).associateWith {
+                GarminSettingsService.screenIdOf(
+                    definitionReply(screenId = it),
+                    GarminSettingsService.DEFINITION_RESPONSE_FIELD,
+                )
+            },
         )
     }
 
@@ -343,17 +348,6 @@ class GarminSettingsModelTest {
                 GarminSettingsService.CHANGE_RESPONSE_FIELD,
             ),
         )
-    }
-
-    @Test
-    fun `a reply about another screen is not this screen's answer`() {
-        // The watch retransmits, so the alarm list's definition arrived while one alarm's screen
-        // was pending and was taken as the answer.
-        val list = GarminSettingsService.screenIdOf(
-            definitionReply(screenId = 68),
-            GarminSettingsService.DEFINITION_RESPONSE_FIELD,
-        )
-        assertTrue(list != 65600)
     }
 
     // The value behind a row, as the watch reports it.
@@ -418,15 +412,6 @@ class GarminSettingsModelTest {
     }
 
     // Degenerate replies.
-
-    @Test
-    fun `a nameless row is hidden even when it carries a value`() {
-        // After a delete the freed slots came back with a leftover summary and no title.
-        val screen = parseGarminSettingsScreen(
-            definitionReply(screenId = 68, entries = listOf(entry(id = 2))),
-        )!!
-        assertTrue(screen.entries.single().isBlank)
-    }
 
     @Test
     fun `a reply that is not a definition yields no screen`() {

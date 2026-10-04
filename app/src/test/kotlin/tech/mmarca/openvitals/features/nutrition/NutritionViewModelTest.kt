@@ -64,9 +64,10 @@ class NutritionViewModelTest {
     }
 
     @Test fun `every nutrition metric round-trips through its route id`() {
-        NutritionMetric.entries.forEach { metric ->
-            assertEquals(metric, nutritionMetricFromRoute(metric.routeId()))
-        }
+        assertEquals(
+            NutritionMetric.entries.toList(),
+            NutritionMetric.entries.map { metric -> nutritionMetricFromRoute(metric.routeId()) },
+        )
     }
 
     @Test fun `initial range is WEEK`() = runTest {
@@ -171,16 +172,6 @@ class NutritionViewModelTest {
 
     @Test fun `resuming the current period reloads it`() = runTest {
         val repo = emptyRepo()
-        coEvery { repo.loadNutritionPeriod(any()) } coAnswers {
-            val query = firstArg<PeriodLoadQuery>()
-            val windows = query.windows
-            NutritionPeriodData(
-                dailyMacros = emptyList(),
-                previousDailyMacros = emptyList(),
-                baselineDailyMacros = emptyList(),
-                entries = repo.loadNutritionEntries(windows.current.start, windows.current.end),
-            )
-        }
         val vm = viewModel(repo)
 
         vm.resumeCurrentPeriod(refreshCurrent = true)
@@ -221,17 +212,14 @@ class NutritionViewModelTest {
     }
 
     @Test fun `year range loads raw meal entries`() = runTest {
+        val entries = listOf(meal("a"))
         val repo = emptyRepo()
-        viewModel(repo, initialRange = TimeRange.YEAR)
+        coEvery { repo.loadNutritionEntries(any(), any()) } returns entries
 
-        coVerify(exactly = 1) { repo.loadNutritionEntries(any(), any()) }
-    }
+        // A year on a macro metric still carries the raw meals, not only the daily totals.
+        val vm = viewModel(repo, selectedMetric = NutritionMetric.PROTEIN, initialRange = TimeRange.YEAR)
 
-    @Test fun `macro metrics load raw meal entries`() = runTest {
-        val repo = emptyRepo()
-        viewModel(repo, selectedMetric = NutritionMetric.PROTEIN)
-
-        coVerify(exactly = 1) { repo.loadNutritionEntries(any(), any()) }
+        assertEquals(entries, vm.uiState.value.entries)
     }
 
     @Test fun `nextPeriod DAY is blocked when selectedDate is today`() = runTest {
@@ -283,16 +271,6 @@ class NutritionViewModelTest {
         val repo = emptyRepo()
         coEvery { repo.loadNutritionEntries(any(), any()) } returns entries
         coEvery { repo.deleteNutritionEntry("a") } returns Unit
-        coEvery { repo.loadNutritionPeriod(any()) } coAnswers {
-            val query = firstArg<PeriodLoadQuery>()
-            val windows = query.windows
-            NutritionPeriodData(
-                dailyMacros = emptyList(),
-                previousDailyMacros = emptyList(),
-                baselineDailyMacros = emptyList(),
-                entries = repo.loadNutritionEntries(windows.current.start, windows.current.end),
-            )
-        }
         val vm = viewModel(repo)
 
         // The reload returns the trimmed list, as Health Connect would after the delete.

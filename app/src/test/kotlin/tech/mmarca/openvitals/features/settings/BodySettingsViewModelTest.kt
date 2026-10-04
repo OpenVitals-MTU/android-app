@@ -51,52 +51,21 @@ class BodySettingsViewModelTest {
         unmockkStatic(Log::class)
     }
 
-    @Test fun `setNightStartHour persists preference and updates ui state`() = runTest {
+    @Test fun `night window hours persist wrapped onto the 24-hour clock`() = runTest {
         val prefs = prefs()
         val vm = viewModel(preferencesRepository = prefs)
 
-        vm.setNightStartHour(20)
-
-        verify { prefs.nightStartHour = 20 }
-        assertEquals(20, vm.uiState.value.nightStartHour)
-    }
-
-    @Test fun `setNightStartHour wraps around midnight`() = runTest {
-        val prefs = prefs()
-        val vm = viewModel(preferencesRepository = prefs)
-
-        vm.setNightStartHour(-1)
-
-        verify { prefs.nightStartHour = 23 }
-        assertEquals(23, vm.uiState.value.nightStartHour)
-    }
-
-    @Test fun `setNightEndHour persists preference and updates ui state`() = runTest {
-        val prefs = prefs()
-        val vm = viewModel(preferencesRepository = prefs)
-
+        val startHours = listOf(20, -1).associateWith { hour ->
+            vm.setNightStartHour(hour)
+            vm.uiState.value.nightStartHour
+        }
         vm.setNightEndHour(24)
 
-        verify { prefs.nightEndHour = 0 }
+        assertEquals(mapOf(20 to 20, -1 to 23), startHours)
         assertEquals(0, vm.uiState.value.nightEndHour)
-    }
-
-    @Test fun `high threshold cannot drop within the gap of the low threshold`() = runTest {
-        val vm = viewModel(preferencesRepository = prefs())
-
-        // Low defaults to 50, gap 5: 40 is gap-clamped to 55, then the repository floor (80) wins.
-        vm.setHighHeartRateThresholdBpm(40)
-
-        assertEquals(80, vm.uiState.value.highHeartRateThresholdBpm)
-    }
-
-    @Test fun `low threshold cannot rise within the gap of the high threshold`() = runTest {
-        val vm = viewModel(preferencesRepository = prefs())
-
-        // High defaults to 120, gap 5: 130 is gap-clamped to 115, then the repository ceiling (100) wins.
-        vm.setLowHeartRateThresholdBpm(130)
-
-        assertEquals(100, vm.uiState.value.lowHeartRateThresholdBpm)
+        verify { prefs.nightStartHour = 20 }
+        verify { prefs.nightStartHour = 23 }
+        verify { prefs.nightEndHour = 0 }
     }
 
     @Test fun `low threshold gap clamp lands inside the repository bounds`() = runTest {
@@ -133,9 +102,13 @@ class BodySettingsViewModelTest {
     @Test fun `threshold steps persist through the repository clamp`() = runTest {
         val vm = viewModel(preferencesRepository = prefs())
 
+        // Clear of the gap, the repository bounds win (high 80..220, low 30..100).
+        // The card shows the stored value, not the asked one.
         vm.setHighHeartRateThresholdBpm(500)
+        vm.setLowHeartRateThresholdBpm(130)
 
         assertEquals(220, vm.uiState.value.highHeartRateThresholdBpm)
+        assertEquals(100, vm.uiState.value.lowHeartRateThresholdBpm)
     }
 
     @Test fun `updateBodyProfile writes measurements only on change and with permission`() = runTest {

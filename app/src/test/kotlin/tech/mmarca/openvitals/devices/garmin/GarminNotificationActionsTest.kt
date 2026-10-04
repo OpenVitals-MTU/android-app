@@ -202,26 +202,21 @@ class GarminNotificationActionsTest {
 
     // Encoding the ACTIONS attribute.
 
+    /** Encodes one watch action per (kind, label); the encoder reads nothing else. */
+    private fun encode(vararg actions: Pair<GarminNotificationActionKind, String>): ByteArray =
+        encodeGarminNotificationActions(
+            actions.map { (kind, label) ->
+                GarminNotificationAction(kind = kind, label = label, androidIndex = 0)
+            },
+        )
+
     @Test
     fun `no actions encodes as the four-zero-byte sentinel`() {
-        assertArrayEquals(
-            byteArrayOf(0, 0, 0, 0),
-            encodeGarminNotificationActions(emptyList()),
-        )
+        assertArrayEquals(byteArrayOf(0, 0, 0, 0), encode())
     }
 
     @Test
     fun `each action is a code, an icon position, a length and a label`() {
-        val bytes = encodeGarminNotificationActions(
-            listOf(
-                GarminNotificationAction(
-                    kind = GarminNotificationActionKind.CUSTOM_1,
-                    label = "Ok",
-                    androidIndex = 0,
-                ),
-            ),
-        )
-
         assertArrayEquals(
             byteArrayOf(
                 1, // one action
@@ -230,86 +225,43 @@ class GarminNotificationActionsTest {
                 2, // label length
                 0x4F, 0x6B, // "Ok"
             ),
-            bytes,
+            encode(GarminNotificationActionKind.CUSTOM_1 to "Ok"),
         )
     }
 
     @Test
     fun `dismiss carries the LEFT icon position, which is where the watch draws it`() {
-        val bytes = encodeGarminNotificationActions(
-            listOf(
-                GarminNotificationAction(
-                    kind = GarminNotificationActionKind.DISMISS,
-                    label = "X",
-                    androidIndex = -1,
-                ),
-            ),
-        )
+        val bytes = encode(GarminNotificationActionKind.DISMISS to "X")
         assertEquals(98, bytes[1].toInt() and 0xFF) // DISMISS_NOTIFICATION
         assertEquals(GarminActionIconPosition.LEFT.bit, bytes[2].toInt())
     }
 
     @Test
     fun `reply carries the BOTTOM icon position`() {
-        val bytes = encodeGarminNotificationActions(
-            listOf(
-                GarminNotificationAction(
-                    kind = GarminNotificationActionKind.REPLY,
-                    label = "R",
-                    androidIndex = 0,
-                    isReply = true,
-                ),
-            ),
-        )
+        val bytes = encode(GarminNotificationActionKind.REPLY to "R")
         assertEquals(95, bytes[1].toInt() and 0xFF) // REPLY_MESSAGES
         assertEquals(GarminActionIconPosition.BOTTOM.bit, bytes[2].toInt())
     }
 
     @Test
     fun `the label length is BYTES, so a non-ASCII label still parses`() {
-        val bytes = encodeGarminNotificationActions(
-            listOf(
-                GarminNotificationAction(
-                    kind = GarminNotificationActionKind.CUSTOM_1,
-                    label = "áé",
-                    androidIndex = 0,
-                ),
-            ),
-        )
+        val bytes = encode(GarminNotificationActionKind.CUSTOM_1 to "áé")
         assertEquals("two characters, four UTF-8 bytes", 4, bytes[3].toInt())
     }
 
     @Test
     fun `an absurdly long label is trimmed rather than wrapping the length byte`() {
         // A length byte cannot carry more than 255; wrapping would read the next code as label text.
-        val bytes = encodeGarminNotificationActions(
-            listOf(
-                GarminNotificationAction(
-                    kind = GarminNotificationActionKind.CUSTOM_1,
-                    label = "x".repeat(400),
-                    androidIndex = 0,
-                ),
-            ),
-        )
+        val bytes = encode(GarminNotificationActionKind.CUSTOM_1 to "x".repeat(400))
         assertEquals(255, bytes[3].toInt() and 0xFF)
         assertEquals(4 + 255, bytes.size)
     }
 
     @Test
     fun `several actions pack one after another`() {
-        val bytes = encodeGarminNotificationActions(
-            listOf(
-                GarminNotificationAction(
-                    kind = GarminNotificationActionKind.DISMISS,
-                    label = "a",
-                    androidIndex = -1,
-                ),
-                GarminNotificationAction(
-                    kind = GarminNotificationActionKind.CUSTOM_1,
-                    label = "bb",
-                    androidIndex = 0,
-                ),
-            ),
+        val bytes = encode(
+            GarminNotificationActionKind.DISMISS to "a",
+            GarminNotificationActionKind.CUSTOM_1 to "bb",
         )
         assertEquals(2, bytes[0].toInt())
         // count + (3 + 1) + (3 + 2)

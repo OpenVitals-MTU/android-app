@@ -94,19 +94,25 @@ class GarminDeviceStateStoreTest {
     }
 
     @Test
-    fun `clear drops both capabilities and synced-file history`() {
-        // Forgetting a watch means a re-pairing starts clean.
+    fun `clear forgets everything kept for the watch, so a re-pairing starts clean`() {
         store.recordSyncedFileKeys(deviceId, listOf("128/49/1"))
         store.recordCapabilities(deviceId, setOf(GarminCapability.SYNC))
+        store.setStayConnected(deviceId, false)
+        store.setAutoSyncInterval(deviceId, AutoSyncInterval.EVERY_2_HOURS)
+        store.setAlarms(deviceId, listOf(GarminAlarm(hour = 7, minute = 0)))
+        store.recordSentAlarms(deviceId, listOf(GarminAlarm(hour = 7, minute = 0)))
 
         store.clear(deviceId)
 
-        assertTrue(store.syncedFileKeys(deviceId).isEmpty())
-        assertTrue(store.capabilities(deviceId).isEmpty())
         // The keys are gone from storage, not only the in-memory view.
         val reloaded = GarminDeviceStateStore(prefs)
         assertTrue(reloaded.syncedFileKeys(deviceId).isEmpty())
         assertTrue(reloaded.capabilities(deviceId).isEmpty())
+        // Re-pairing is a fresh watch, and a fresh watch gets the default.
+        assertTrue(reloaded.stayConnected(deviceId))
+        assertEquals(AutoSyncInterval.OFF, reloaded.autoSyncInterval(deviceId))
+        assertTrue(reloaded.alarms(deviceId).isEmpty())
+        assertNull(reloaded.sentAlarms(deviceId))
     }
 
     @Test
@@ -144,25 +150,6 @@ class GarminDeviceStateStoreTest {
 
         // The default loses to a choice: a wearer who turned the link off must not get it back.
         assertFalse(GarminDeviceStateStore(prefs).stayConnected(deviceId))
-    }
-
-    @Test
-    fun `forgetting a watch takes its stay-connected choice with it`() {
-        store.setStayConnected(deviceId, false)
-
-        store.clear(deviceId)
-
-        // Re-pairing is a fresh watch, and a fresh watch gets the default.
-        assertTrue(GarminDeviceStateStore(prefs).stayConnected(deviceId))
-    }
-
-    @Test
-    fun `clear drops the automatic sync schedule too`() {
-        store.setAutoSyncInterval(deviceId, AutoSyncInterval.EVERY_2_HOURS)
-
-        store.clear(deviceId)
-
-        assertEquals(AutoSyncInterval.OFF, GarminDeviceStateStore(prefs).autoSyncInterval(deviceId))
     }
 
     @Test
@@ -213,16 +200,5 @@ class GarminDeviceStateStoreTest {
 
         // An empty list that was sent is not the same as nothing sent.
         assertEquals(emptyList<GarminAlarm>(), store.sentAlarms(deviceId))
-    }
-
-    @Test
-    fun `forgetting the watch forgets its alarms`() {
-        store.setAlarms(deviceId, listOf(GarminAlarm(hour = 7, minute = 0)))
-        store.recordSentAlarms(deviceId, listOf(GarminAlarm(hour = 7, minute = 0)))
-
-        store.clear(deviceId)
-
-        assertTrue(store.alarms(deviceId).isEmpty())
-        assertNull(store.sentAlarms(deviceId))
     }
 }
