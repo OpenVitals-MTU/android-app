@@ -91,7 +91,6 @@ class HydrationEntryViewModelTest {
         every { repo.nutritionWritePermissions } returns setOf("write_nutrition")
         coEvery { repo.hasNutritionWritePermission() } returns canWrite
         coEvery { repo.writeNutritionEntry(any()) } returns "nutrition-record-id"
-        coEvery { repo.writeCarbsEntry(any()) } returns "nutrition-record-id"
         coEvery { repo.loadNutritionEntries(any(), any()) } returns nutritionEntries
     }
 

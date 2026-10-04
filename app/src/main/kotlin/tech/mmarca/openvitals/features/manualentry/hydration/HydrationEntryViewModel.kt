@@ -672,9 +672,6 @@ private object NoopNutritionRepository : NutritionRepository {
 
     override suspend fun hasNutritionWritePermission(): Boolean = true
 
-    override suspend fun writeCarbsEntry(request: NutritionWriteRequest): String =
-        error("Nutrition repository is not configured.")
-
     override suspend fun writeNutritionEntry(request: NutritionWriteRequest): String =
         error("Nutrition repository is not configured.")
 

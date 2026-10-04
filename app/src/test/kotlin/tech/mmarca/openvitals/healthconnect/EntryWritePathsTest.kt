@@ -241,6 +241,36 @@ class EntryWritePathsTest {
         assertThat(banana.totalCarbohydrate!!.inGrams).isWithin(1e-9).of(27.0)
     }
 
+    // Typed nutrition.
+
+    @Test
+    fun `typed totals are one record, marked so the beverage screens can skip it`() = onTheTestClock {
+        val nutrition = NutritionHealthReader(support(), APP_PACKAGE)
+
+        nutrition.writeNutritionEntry(
+            NutritionWriteRequest(
+                time = NOON,
+                nutrientValues = mapOf(
+                    NutritionNutrient.ENERGY to 2150.0,
+                    NutritionNutrient.PROTEIN to 120.0,
+                    NutritionNutrient.TOTAL_FAT to 70.0,
+                    NutritionNutrient.TOTAL_CARBOHYDRATE to 240.0,
+                ),
+                isManualNutritionEntry = true,
+            ),
+        )
+
+        val totals = all(NutritionRecord::class).single()
+        assertThat(totals.metadata.clientRecordId).startsWith("openvitals_manual_nutrition_")
+        assertThat(totals.metadata.clientRecordId).doesNotContain("openvitals_nutrition_")
+        assertThat(totals.name).isEqualTo("OpenVitals nutrition")
+        assertThat(totals.energy!!.inKilocalories).isWithin(1e-9).of(2150.0)
+        assertThat(totals.protein!!.inGrams).isWithin(1e-9).of(120.0)
+        assertThat(totals.totalFat!!.inGrams).isWithin(1e-9).of(70.0)
+        assertThat(totals.totalCarbohydrate!!.inGrams).isWithin(1e-9).of(240.0)
+        assertThat(totals.dietaryFiber).isNull()
+    }
+
     // Hydration.
 
     @Test

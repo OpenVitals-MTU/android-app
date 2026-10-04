@@ -26,7 +26,7 @@ import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
  * Granting a permission happens in another app. A form that keeps saying "permission needed"
  * after the user comes back looks broken.
  */
-class CarbsEntryResumeTest {
+class NutritionEntryResumeTest {
 
     @get:Rule
     val composeRule = createComposeRule()
@@ -34,28 +34,28 @@ class CarbsEntryResumeTest {
     @Test
     fun aPermissionGrantedWhileAwayIsPickedUpWhenTheScreenComesBack() {
         val repository = FakeNutritionRepository(canWrite = false)
-        val viewModel = CarbsEntryViewModel(repository)
+        val viewModel = NutritionEntryViewModel(repository)
         val owner = TestLifecycleOwner()
 
         composeRule.setContent {
             CompositionLocalProvider(LocalLifecycleOwner provides owner) {
                 OpenVitalsTheme {
-                    CarbsEntryScreen(viewModel = viewModel, unitFormatter = FORMATTER)
+                    NutritionEntryScreen(viewModel = viewModel, unitFormatter = FORMATTER)
                 }
             }
         }
         // Started but not resumed: the screen shows what it knew when built.
         moveTo(owner, Lifecycle.State.STARTED)
-        awaitText(string(R.string.carbs_entry_permission_needed))
+        awaitText(string(R.string.nutrition_entry_permission_needed))
 
         // The user leaves, grants the permission, and comes back.
         repository.canWrite = true
         moveTo(owner, Lifecycle.State.RESUMED)
 
-        awaitText(string(R.string.carbs_entry_subtitle))
-        composeRule.onNodeWithText(string(R.string.carbs_entry_subtitle)).assertIsDisplayed()
+        awaitText(string(R.string.nutrition_entry_subtitle))
+        composeRule.onNodeWithText(string(R.string.nutrition_entry_subtitle)).assertIsDisplayed()
         composeRule
-            .onNodeWithText(string(R.string.carbs_entry_permission_needed))
+            .onNodeWithText(string(R.string.nutrition_entry_permission_needed))
             .assertDoesNotExist()
     }
 
@@ -89,9 +89,6 @@ class CarbsEntryResumeTest {
         override suspend fun loadDailyMacros(start: LocalDate, end: LocalDate) = error("unused")
 
         override suspend fun loadNutritionEntries(start: LocalDate, end: LocalDate) =
-            error("unused")
-
-        override suspend fun writeCarbsEntry(request: NutritionWriteRequest): String =
             error("unused")
 
         override suspend fun writeNutritionEntry(request: NutritionWriteRequest): String =

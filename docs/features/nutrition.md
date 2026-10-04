@@ -3,7 +3,7 @@
 > **Status:** Current implemented behavior.
 > **Audience:** Users and contributors.
 > **Implementation:** `features/nutrition`, `features/manualentry/nutrition`, `data/repository/NutritionRepository.kt`.
-> **Navigation:** `Screen.Nutrition`, `Screen.CarbsEntry`, `Screen.FoodEntry`, `Screen.Metric`; widgets `CALORIES_IN`, `PROTEIN`, `CARBS`, `FAT`; entry widgets `FOOD`, `CARBS`.
+> **Navigation:** `Screen.Nutrition`, `Screen.NutritionEntry`, `Screen.FoodEntry`, `Screen.Metric`; widgets `CALORIES_IN`, `PROTEIN`, `CARBS`, `FAT`; entry widgets `FOOD`, `NUTRITION`.
 > **Related:** [Feature map](feature-map.md), [Manual entry of metrics](manual-entry-metrics.md), [Food logging](food-logging.md), [Preloaded beverage nutrition reference](preloaded-beverage-nutrition.md).
 
 The nutrition feature owns period-based nutrition detail screens for intake metrics read from Health Connect.
@@ -32,7 +32,7 @@ Nutrition metrics follow the canonical period-detail pattern:
 - Over a week, month or year the nutrient tiles lead with a **daily average**; see below.
 - Reorderable detail sections.
 
-Nutrition records remain in Health Connect. OpenVitals writes nutrition records through explicit entry flows: food logging, carbohydrate entry and beverage logging. The nutrition detail screens remain read-oriented.
+Nutrition records remain in Health Connect. OpenVitals writes nutrition records through explicit entry flows: food logging, the nutrition entry form and beverage logging. The nutrition detail screens remain read-oriented.
 
 ## Daily Averages Over A Period
 
@@ -68,6 +68,6 @@ calendar, never from the length of the value list. See
 
 ## Related Features
 
-- [`manual-entry-metrics.md`](manual-entry-metrics.md): carbohydrate entry.
+- [`manual-entry-metrics.md`](manual-entry-metrics.md): the nutrition entry form.
 - [`beverage-logging-and-caffeine.md`](beverage-logging-and-caffeine.md): beverage nutrition defaults.
 - [`preloaded-beverage-nutrition.md`](preloaded-beverage-nutrition.md): preset beverage reference data.

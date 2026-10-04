@@ -3,6 +3,12 @@ package tech.mmarca.openvitals.domain.model
 import java.time.Instant
 import java.time.LocalDate
 
+/**
+ * The client-record-id prefix of a record typed into the nutrition entry form. It must not
+ * start with `openvitals_nutrition_`: the beverage screens read that prefix as a drink.
+ */
+const val OpenVitalsManualNutritionClientRecordPrefix = "openvitals_manual_nutrition_"
+
 data class DailyNutrition(
     val date: LocalDate,
     val hydrationLiters: Double,
@@ -137,16 +143,9 @@ data class NutritionWriteRequest(
     val endTime: Instant? = null,
     /** Above the stored version to replace a record that has the same client id. */
     val clientRecordVersion: Long = 0,
-) {
-    constructor(time: Instant, carbsGrams: Double) : this(
-        time = time,
-        nutrientValues = mapOf(NutritionNutrient.TOTAL_CARBOHYDRATE to carbsGrams),
-        name = "OpenVitals carbs",
-    )
-
-    val carbsGrams: Double
-        get() = nutrientValues[NutritionNutrient.TOTAL_CARBOHYDRATE] ?: 0.0
-}
+    /** Typed into the nutrition entry form. Marks the record as neither a drink nor a food. */
+    val isManualNutritionEntry: Boolean = false,
+)
 
 data class DailyMacros(
     val date: LocalDate,

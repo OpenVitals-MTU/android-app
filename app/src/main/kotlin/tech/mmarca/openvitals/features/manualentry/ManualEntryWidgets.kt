@@ -258,7 +258,7 @@ internal fun LazyListScope.hiddenManualEntryWidgets(
 internal fun manualEntryWidgetSpecs(
     isEditingWidgets: Boolean,
     onOpenHydrationEntry: () -> Unit,
-    onOpenCarbsEntry: () -> Unit,
+    onOpenNutritionEntry: () -> Unit,
     onOpenActivityEntry: () -> Unit,
     onOpenMindfulnessEntry: () -> Unit,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
@@ -285,12 +285,12 @@ internal fun manualEntryWidgetSpecs(
             onOpen = onOpenFoodEntry,
         ),
         metricTileWidgetSpec(
-            id = ManualEntryWidgetId.CARBS,
-            titleRes = R.string.metric_carbs,
+            id = ManualEntryWidgetId.NUTRITION,
+            titleRes = R.string.screen_nutrition,
             icon = Icons.Outlined.Restaurant,
             accentColor = NutritionColor,
             isEditingWidgets = isEditingWidgets,
-            onOpen = onOpenCarbsEntry,
+            onOpen = onOpenNutritionEntry,
         ),
         metricTileWidgetSpec(
             id = ManualEntryWidgetId.ACTIVITY,

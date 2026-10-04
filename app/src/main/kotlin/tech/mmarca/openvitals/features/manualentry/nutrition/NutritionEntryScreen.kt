@@ -8,41 +8,44 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.time.Instant
 import tech.mmarca.openvitals.R
-import tech.mmarca.openvitals.features.manualentry.rememberManualEntryWritePermissionRequester
-import tech.mmarca.openvitals.features.manualentry.ManualEntryWritePermissionCallout
 import tech.mmarca.openvitals.core.presentation.ScreenError
-import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.resolve
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.features.manualentry.ManualEntryTimestampFields
+import tech.mmarca.openvitals.features.manualentry.ManualEntryWritePermissionCallout
+import tech.mmarca.openvitals.features.manualentry.rememberManualEntryWritePermissionRequester
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.theme.NutritionColor
 
-private const val GramsPerOunce = 28.349523125
-
 @Composable
-fun CarbsEntryScreen(
-    viewModel: CarbsEntryViewModel,
+fun NutritionEntryScreen(
+    viewModel: NutritionEntryViewModel,
     unitFormatter: UnitFormatter,
     onEntrySaved: () -> Unit = {},
 ) {
@@ -61,15 +64,17 @@ fun CarbsEntryScreen(
         viewModel.refreshPermission()
     }
 
+    val unitSystem = unitFormatter.unitSystem()
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
         item {
-            CarbsEntryCard(
+            NutritionEntryCard(
                 state = state,
-                unitSystem = unitFormatter.unitSystem(),
-                onInputChanged = viewModel::updateInput,
-                onAddEntry = {
-                    viewModel.addEntry(canonicalCarbsGrams(state.inputText, unitFormatter.unitSystem()))
-                },
+                unitSystem = unitSystem,
+                onAmountChanged = viewModel::updateAmount,
+                onAddNutrient = viewModel::addNutrient,
+                onRemoveNutrient = viewModel::removeNutrient,
+                onTimestampChanged = viewModel::updateTimestamp,
+                onAddEntry = { viewModel.addEntry(unitSystem) },
                 onRequestWritePermission = {
                     requestWritePermissions.launch(state.writePermissions)
                 },
@@ -80,17 +85,29 @@ fun CarbsEntryScreen(
 }
 
 @Composable
-private fun CarbsEntryCard(
-    state: CarbsEntryUiState,
+private fun NutritionEntryCard(
+    state: NutritionEntryUiState,
     unitSystem: UnitSystem,
-    onInputChanged: (String) -> Unit,
+    onAmountChanged: (NutritionNutrient, String) -> Unit,
+    onAddNutrient: (NutritionNutrient) -> Unit,
+    onRemoveNutrient: (NutritionNutrient) -> Unit,
+    onTimestampChanged: (Instant) -> Unit,
     onAddEntry: () -> Unit,
     onRequestWritePermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val title = stringResource(R.string.metric_carbs)
-    val unitLabel = carbsInputUnitLabel(unitSystem)
-    val enabled = state.canWrite && !state.isSavingEntry && !state.isCheckingPermission
+    val nutrientComparator = nutrientTitleComparator(LocalContext.current.resources)
+    var nutrientChooserOpen by rememberSaveable { mutableStateOf(false) }
+    val fieldsEnabled = !state.isSavingEntry
+    val canSave = state.canWrite && !state.isSavingEntry && !state.isCheckingPermission
+    // The main nutrients keep their order; the added ones read alphabetically below them.
+    val primaryRows = state.rows.filter { it.nutrient in PrimaryNutritionEntryNutrients }
+    val addedRows = remember(state.rows, nutrientComparator) {
+        state.rows
+            .filterNot { it.nutrient in PrimaryNutritionEntryNutrients }
+            .sortedByTitle(nutrientComparator)
+    }
+
     OpenVitalsCard(
         modifier = modifier.fillMaxWidth(),
     ) {
@@ -114,11 +131,11 @@ private fun CarbsEntryCard(
                         .weight(1f),
                 ) {
                     Text(
-                        text = title,
+                        text = stringResource(R.string.screen_nutrition),
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Text(
-                        text = stringResource(R.string.carbs_entry_subtitle),
+                        text = stringResource(R.string.nutrition_entry_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -127,24 +144,45 @@ private fun CarbsEntryCard(
 
             if (!state.canWrite && !state.isCheckingPermission) {
                 ManualEntryWritePermissionCallout(
-                    body = stringResource(R.string.carbs_entry_permission_needed),
+                    body = stringResource(R.string.nutrition_entry_permission_needed),
                     onGrant = onRequestWritePermission,
                 )
             }
 
-            OutlinedTextField(
-                value = state.inputText,
-                onValueChange = onInputChanged,
-                enabled = !state.isSavingEntry,
-                singleLine = true,
-                label = { Text(stringResource(R.string.carbs_entry_value_label, unitLabel)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            ManualEntryTimestampFields(
+                timestamp = state.timestamp,
+                enabled = fieldsEnabled,
+                onTimestampChanged = onTimestampChanged,
                 modifier = Modifier.fillMaxWidth(),
+            )
+
+            primaryRows.forEach { row ->
+                NutrientAmountRow(
+                    row = row,
+                    onAmountChanged = { text -> onAmountChanged(row.nutrient, text) },
+                    onRemove = null,
+                    unitSystem = unitSystem,
+                    enabled = fieldsEnabled,
+                )
+            }
+            addedRows.forEach { row ->
+                NutrientAmountRow(
+                    row = row,
+                    onAmountChanged = { text -> onAmountChanged(row.nutrient, text) },
+                    onRemove = { onRemoveNutrient(row.nutrient) },
+                    unitSystem = unitSystem,
+                    enabled = fieldsEnabled,
+                )
+            }
+            AddNutrientButton(
+                enabled = fieldsEnabled && state.addableNutrients.isNotEmpty(),
+                onClick = { nutrientChooserOpen = true },
+                labelRes = R.string.nutrition_entry_add_another_nutrient,
             )
 
             OpenVitalsButton(
                 onClick = onAddEntry,
-                enabled = enabled,
+                enabled = canSave,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(
@@ -153,45 +191,43 @@ private fun CarbsEntryCard(
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
-                    text = stringResource(R.string.carbs_entry_add),
+                    text = stringResource(R.string.nutrition_entry_add),
                     modifier = Modifier.padding(start = 6.dp),
                 )
             }
 
             state.entryError?.let { entryError ->
                 Text(
-                    text = carbsEntryErrorText(entryError, state.writeError),
+                    text = nutritionEntryErrorText(entryError, state.writeError),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
             }
         }
     }
+
+    if (nutrientChooserOpen) {
+        NutrientChooserDialog(
+            availableNutrients = state.addableNutrients.sortedWith(nutrientComparator),
+            onDismiss = { nutrientChooserOpen = false },
+            onSelectNutrient = { nutrient ->
+                onAddNutrient(nutrient)
+                nutrientChooserOpen = false
+            },
+        )
+    }
 }
 
 @Composable
-private fun carbsEntryErrorText(
-    error: CarbsEntryError,
+private fun nutritionEntryErrorText(
+    error: NutritionEntryError,
     writeError: ScreenError?,
 ): String = when (error) {
-    CarbsEntryError.INVALID_VALUE -> stringResource(R.string.carbs_entry_invalid_value)
-    CarbsEntryError.MISSING_WRITE_PERMISSION -> stringResource(R.string.carbs_entry_permission_needed)
-    CarbsEntryError.WRITE_FAILED -> stringResource(
-        R.string.carbs_entry_write_failed,
+    NutritionEntryError.NO_VALUES -> stringResource(R.string.nutrition_entry_no_values)
+    NutritionEntryError.INVALID_VALUE -> stringResource(R.string.nutrition_entry_invalid_value)
+    NutritionEntryError.MISSING_WRITE_PERMISSION -> stringResource(R.string.nutrition_entry_permission_needed)
+    NutritionEntryError.WRITE_FAILED -> stringResource(
+        R.string.nutrition_entry_write_failed,
         writeError.resolve() ?: stringResource(R.string.unknown_error),
     )
 }
-
-internal fun canonicalCarbsGrams(input: String, unitSystem: UnitSystem): Double? {
-    val value = input.trim().replace(',', '.').toDoubleOrNull() ?: return null
-    return when (unitSystem) {
-        UnitSystem.METRIC -> value
-        UnitSystem.IMPERIAL -> value * GramsPerOunce
-    }
-}
-
-private fun carbsInputUnitLabel(unitSystem: UnitSystem): String =
-    when (unitSystem) {
-        UnitSystem.METRIC -> "g"
-        UnitSystem.IMPERIAL -> "oz"
-    }

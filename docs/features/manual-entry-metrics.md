@@ -18,7 +18,7 @@ OpenVitals supports explicit logging for:
 
 - Beverages/hydration, including drink/container choices, custom amounts, caffeine-aware presets, and selected nutrition defaults.
 - Foods from a catalog the user builds: each food has a name, an amount, a category and nutrients; a logged portion scales the nutrients and is saved as a Health Connect nutrition record.
-- Carbohydrate totals as Health Connect nutrition records.
+- Nutrition totals typed in directly: energy, protein, total fat and total carbohydrate on one form, plus any other nutrient Health Connect stores (fiber, sugar, fats, vitamins, minerals) added from a chooser. One save writes one Health Connect nutrition record; blank fields are left out, and the date and time can be set back to log earlier days. Caffeine is not offered, because it is logged as a drink. Imperial users type gram nutrients in ounces; the record is always stored in grams. These records are not drinks, so the beverage screens skip them.
 - Activity sessions, optionally with routes, distance, elevation, calories, repetitions, title, and notes.
 - Mindfulness sessions through a timer or manual duration.
 - Body measurements such as weight, height, and body fat.
