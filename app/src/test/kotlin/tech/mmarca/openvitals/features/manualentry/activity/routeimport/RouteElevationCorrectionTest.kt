@@ -45,6 +45,16 @@ class RouteElevationCorrectionTest {
         assertEquals(points.map { it.time }, corrected.map { it.time })
     }
 
+    @Test fun `the GPS vertical accuracy goes with the GPS altitude`() {
+        // Kept, it would have the elevation filter distrust or drop the DEM altitude.
+        val points = listOf(point(0, 10.0).copy(horizontalAccuracyMeters = 30.0, verticalAccuracyMeters = 45.0))
+
+        val corrected = correctRouteAltitudes(points) { _, _ -> 5.0 }!!.single()
+
+        assertNull(corrected.verticalAccuracyMeters)
+        assertEquals(30.0, corrected.horizontalAccuracyMeters!!, 0.0)
+    }
+
     @Test fun `one uncovered point drops the whole correction`() {
         val points = listOf(point(0, 10.0), point(1, 12.0), point(2, 10.0))
 

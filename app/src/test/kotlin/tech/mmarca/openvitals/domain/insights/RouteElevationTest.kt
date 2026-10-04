@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.domain.insights
 
+import java.time.Instant
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.ln
@@ -9,6 +10,7 @@ import kotlin.random.Random
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
 
 /** Summing raw per-point rises turned a 750 m climb into ~15 km: GPS vertical noise was banked thousands of times. */
 class RouteElevationTest {
@@ -100,5 +102,75 @@ class RouteElevationTest {
         assertEquals(0.0, RouteElevation.elevationGainFromAltitudes(emptyList()), 0.0)
         assertEquals(0.0, RouteElevation.elevationGainFromAltitudes(listOf(null, null)), 0.0)
         assertEquals(0.0, RouteElevation.elevationGainFromAltitudes(listOf<Double?>(42.0)), 0.0)
+    }
+
+    /** One fix a second, carrying the accuracies the phone reported for it. */
+    private fun fixes(
+        altitudes: List<Double?>,
+        verticalAccuracy: Double?,
+        horizontalAccuracy: Double?,
+        startSecond: Long = 0L,
+    ): List<ExerciseRoutePoint> = altitudes.mapIndexed { i, altitude ->
+        ExerciseRoutePoint(
+            time = Instant.parse("2026-10-04T10:00:00Z").plusSeconds(startSecond + i),
+            latitude = 48.0,
+            longitude = 11.0,
+            altitudeMeters = altitude,
+            horizontalAccuracyMeters = horizontalAccuracy,
+            verticalAccuracyMeters = verticalAccuracy,
+        )
+    }
+
+    @Test
+    fun `a flat walk through a building does not climb Everest`() {
+        // 45 min under open sky, then 15 min indoors where the altitude swings by tens of meters.
+        // The fixed 5 m step banked several km here; the fixes said how little to trust them.
+        val outside = fixes(noisyClimb(0.0, 2700, sigma = 3.0, seed = 3), verticalAccuracy = 4.0, horizontalAccuracy = 4.0)
+        val indoors = fixes(
+            noisyClimb(0.0, 900, sigma = 40.0, seed = 4),
+            verticalAccuracy = 40.0,
+            horizontalAccuracy = 25.0,
+            startSecond = 2700,
+        )
+        val walk = outside + indoors
+
+        assertTrue(RouteElevation.elevationGainFromAltitudes(walk.map { it.altitudeMeters }) > 1_000.0)
+        // The building adds nothing to what the open-sky part reports on its own.
+        assertEquals(RouteElevation.routeElevationGain(outside), RouteElevation.routeElevationGain(walk), 1.0)
+    }
+
+    @Test
+    fun `an under-reported vertical accuracy is floored at the horizontal one`() {
+        // Phones claim 15 m vertically indoors while the horizontal fix is already 28 m off.
+        val indoors = fixes(noisyClimb(0.0, 900, sigma = 40.0, seed = 5), verticalAccuracy = 15.0, horizontalAccuracy = 28.0)
+        assertTrue(RouteElevation.routeElevationGain(indoors) < 30.0)
+    }
+
+    @Test
+    fun `a step grows with the fix's own uncertainty`() {
+        // Under trees: 10 m of vertical noise, honestly reported, would bank km at a 5 m step.
+        val underTrees = fixes(noisyClimb(0.0, 3600, sigma = 10.0, seed = 6), verticalAccuracy = 6.0, horizontalAccuracy = 15.0)
+        assertTrue(RouteElevation.elevationGainFromAltitudes(underTrees.map { it.altitudeMeters }) > 1_000.0)
+        assertTrue(RouteElevation.routeElevationGain(underTrees) < 300.0)
+    }
+
+    @Test
+    fun `a real climb with reported accuracy is still measured`() {
+        val climb = fixes(noisyClimb(300.0, 3600, sigma = 5.0), verticalAccuracy = 10.0, horizontalAccuracy = 8.0)
+        assertEquals(300.0, RouteElevation.routeElevationGain(climb), 40.0)
+        val sparse = fixes(List(50) { i -> 750.0 * (i / 49.0) }, verticalAccuracy = 8.0, horizontalAccuracy = 5.0)
+        assertTrue(RouteElevation.routeElevationGain(sparse) > 680.0)
+    }
+
+    @Test
+    fun `a route without vertical accuracy is filtered as before`() {
+        // GPX imports and DEM-corrected altitudes carry none; their altitudes are taken as they are.
+        val altitudes = noisyClimb(300.0, 3600)
+        val route = fixes(altitudes, verticalAccuracy = null, horizontalAccuracy = 25.0)
+        assertEquals(
+            RouteElevation.elevationGainFromAltitudes(altitudes),
+            RouteElevation.routeElevationGain(route),
+            0.0,
+        )
     }
 }
