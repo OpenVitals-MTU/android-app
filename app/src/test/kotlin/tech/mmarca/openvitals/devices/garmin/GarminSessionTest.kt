@@ -194,7 +194,7 @@ class GarminSessionTest {
 
     /**
      * A watch that serves an EMPTY listing first, then announces it holds
-     * sleep data — the shape observed on a real vívoactive 5.
+     * sleep data: the shape observed on a real vívoactive 5.
      */
     private class AnnouncingWatch(
         files: Map<Int, ByteArray>,
@@ -360,7 +360,7 @@ class GarminSessionTest {
         return session.done.await()
     }
 
-    /** Pumps queued frames only — no re-introduction; for follow-up traffic. */
+    /** Pumps queued frames only: no re-introduction; for follow-up traffic. */
     private suspend fun drain(watch: FakeWatch, session: GarminSession) {
         var guard = 0
         while (watch.outbox.isNotEmpty()) {
@@ -849,7 +849,7 @@ class GarminSessionTest {
         drain(watch, session)
         val data = watch.received.filter { it.messageType == GarminMessageId.FIT_DATA }
         assertEquals(1, data.size)
-        // Slot 0, current report, 30°C — the records really carry the weather.
+        // Slot 0, current report, 30°C: the records really carry the weather.
         assertEquals(0, data.single().payload[0].toInt())
         assertEquals(0, data.single().payload[1].toInt())
         assertEquals(30, data.single().payload[2].toInt())
@@ -1202,8 +1202,8 @@ class GarminSessionTest {
         val watch = FakeWatch(
             files = mapOf(
                 0 to directory(
-                    intArrayOf(5, 128, 55, 1), // golf scorecard — unmapped
-                    intArrayOf(6, 128, 49, 2), // sleep — wanted
+                    intArrayOf(5, 128, 55, 1), // golf scorecard: unmapped
+                    intArrayOf(6, 128, 49, 2), // sleep: wanted
                 ),
                 6 to b(1, 2, 3),
             ),
@@ -1230,7 +1230,7 @@ class GarminSessionTest {
         val config = watch.received
             .filter { it.messageType == GarminMessageId.CONFIGURATION }
         assertEquals(2, config.size)
-        // [byte length][bitmap] — 15 bytes, matching what the watch sends.
+        // [byte length][bitmap]: 15 bytes, matching what the watch sends.
         for (frame in config) {
             assertEquals(15, frame.payload.first().toInt())
             assertEquals(16, frame.payload.size)
@@ -1250,7 +1250,7 @@ class GarminSessionTest {
         assertEquals(1, replies.size)
         // [short type][status][notificationStatus][enable][unk]. The short form made the watch ask every second.
         assertEquals(6, replies.single().payload.size)
-        // DISABLED — we forward none.
+        // DISABLED: we forward none.
         assertEquals(1, replies.single().payload[3].toInt())
     }
 
@@ -1393,7 +1393,7 @@ class GarminSessionTest {
     fun `an announcement with nothing we want does not re-read`() = runTest {
         val watch = AnnouncingWatch(
             files = mapOf(0 to directory()),
-            // Bit 1 is SETTINGS — not one of the categories worth acting on.
+            // Bit 1 is SETTINGS, not one of the categories worth acting on.
             bitmask = 1L shl 1,
         )
 

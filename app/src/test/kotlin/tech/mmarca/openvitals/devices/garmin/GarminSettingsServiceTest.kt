@@ -9,7 +9,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
-/** Port of the Flutter build's `garmin_settings_service_test.dart` — fixtures identical. */
+/** Port of the Flutter build's `garmin_settings_service_test.dart`: fixtures identical. */
 class GarminSettingsServiceTest {
 
     private fun b(vararg xs: Int) = ByteArray(xs.size) { xs[it].toByte() }
@@ -118,7 +118,7 @@ class GarminSettingsServiceTest {
     }
 
     @Test
-    fun `SUCCESS is ZERO here — the opposite of the find service`() {
+    fun `SUCCESS is ZERO here, the opposite of the find service`() {
         fun reply(status: Int?): ByteArray {
             val w = ProtobufWriter()
             if (status != null) w.varint(1, status)

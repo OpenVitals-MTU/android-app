@@ -147,7 +147,7 @@ class ChartScrubberGestureTest {
     private companion object {
         const val CHART = "chart-scrubber-under-test"
 
-        /** Left edge, middle, right edge — so a landing index is unambiguous. */
+        /** Left edge, middle, right edge, so a landing index is unambiguous. */
         val THREE_TARGETS = listOf(
             ScrubTarget(xFraction = 0f, yFraction = 0.5f, primary = "first"),
             ScrubTarget(xFraction = 0.5f, yFraction = 0.5f, primary = "middle"),

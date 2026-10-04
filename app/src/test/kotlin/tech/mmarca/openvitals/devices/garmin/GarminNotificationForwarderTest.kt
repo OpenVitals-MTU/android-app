@@ -156,7 +156,7 @@ class GarminNotificationForwarderTest {
     fun `ensureLink opens and holds with nothing queued`() = runTest {
         val fixture = build()
 
-        // Companion mode: the link IS the feature — no notification needed.
+        // Companion mode: the link IS the feature; no notification needed.
         fixture.forwarder.ensureLink()
         elapse(10)
 

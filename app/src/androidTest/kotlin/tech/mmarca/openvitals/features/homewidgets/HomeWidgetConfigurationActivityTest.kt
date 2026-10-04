@@ -92,7 +92,7 @@ class HomeWidgetConfigurationActivityTest {
                     .map { position -> listView.adapter.getItem(position) as String }
             }
 
-            // The whole catalog, in catalog order — no more, no fewer.
+            // The whole catalog, in catalog order: no more, no fewer.
             assertEquals(expectedLabels, labels)
             scenario.onActivity { activity ->
                 assertEquals(string(R.string.home_metric_widget_config_title), activity.title)

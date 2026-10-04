@@ -27,7 +27,7 @@ class MetricAccentContrastTest {
 
         assertWithMessage(
             "accents are drawn as chart strokes and icons, so WCAG 1.4.11's 3:1 " +
-                "applies against BOTH static surfaces — re-measure before brightening one",
+                "applies against BOTH static surfaces: re-measure before brightening one",
         )
             .that(failures)
             .isEmpty()
@@ -78,7 +78,7 @@ class MetricAccentContrastTest {
     }
 
     private companion object {
-        /** WCAG 1.4.11 — graphical objects and user-interface components. */
+        /** WCAG 1.4.11: graphical objects and user-interface components. */
         const val GraphicalObjectFloor = 3.0
 
         /** `LightColorScheme.surface`. */

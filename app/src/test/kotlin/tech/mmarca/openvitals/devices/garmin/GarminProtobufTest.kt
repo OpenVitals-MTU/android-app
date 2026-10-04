@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 
-/** Port of the Flutter build's `garmin_protobuf_test.dart` — fixtures identical. */
+/** Port of the Flutter build's `garmin_protobuf_test.dart`: fixtures identical. */
 class GarminProtobufTest {
 
     private fun b(vararg xs: Int) = ByteArray(xs.size) { xs[it].toByte() }
@@ -102,7 +102,7 @@ class GarminProtobufTest {
     }
 
     @Test
-    fun `OK is 100 — a zero status is NOT success`() {
+    fun `OK is 100, a zero status is NOT success`() {
         fun replyWithStatus(status: Int): ByteArray {
             val response = ProtobufWriter().varint(1, status).toBytes()
             val service = ProtobufWriter().nested(2, response).toBytes()
@@ -115,7 +115,7 @@ class GarminProtobufTest {
     }
 
     @Test
-    fun `an EMPTY response is acceptance — the real watch sends no status`() {
+    fun `an EMPTY response is acceptance, the real watch sends no status`() {
         // From a vívoactive 5: `62 02 12 00` is find_response with no status, and the watch was ringing.
         assertEquals(
             GarminFindOutcome.OK,

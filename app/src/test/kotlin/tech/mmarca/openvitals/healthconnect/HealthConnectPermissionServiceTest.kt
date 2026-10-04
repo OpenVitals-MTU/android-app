@@ -351,7 +351,7 @@ class HealthConnectPermissionServiceTest {
 
         assertThat(service.isMindfulnessSessionAvailable()).isFalse()
         assertThat(service.mindfulnessPermissions).isEmpty()
-        // Only mindfulness is withheld — the rest of the device's answer stands.
+        // Only mindfulness is withheld: the rest of the device's answer stands.
         assertThat(service.isSkinTemperatureAvailable()).isTrue()
         assertThat(service.vitalsPermissions).contains(READ_SKIN_TEMPERATURE)
     }

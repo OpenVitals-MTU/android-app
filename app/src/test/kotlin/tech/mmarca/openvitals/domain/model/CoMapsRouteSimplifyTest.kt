@@ -21,7 +21,7 @@ class CoMapsRouteSimplifyTest {
     }
 
     @Test fun `a straight stretch collapses to its endpoints`() {
-        // 101 points down one line of longitude — a motorway due south.
+        // 101 points down one line of longitude: a motorway due south.
         val points = DoubleArray(101 * 2) { index ->
             if (index % 2 == 0) 59.0 + (index / 2) * latMeter * 100 else 24.0
         }

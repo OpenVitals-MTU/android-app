@@ -16,7 +16,7 @@ import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 
-/** Port of the Flutter build's `garmin_ml_transport_test.dart` — fixtures identical. */
+/** Port of the Flutter build's `garmin_ml_transport_test.dart`: fixtures identical. */
 class GarminMlTransportTest {
 
     private companion object {

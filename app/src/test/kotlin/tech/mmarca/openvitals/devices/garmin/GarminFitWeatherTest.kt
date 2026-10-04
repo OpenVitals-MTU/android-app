@@ -66,7 +66,7 @@ class GarminFitWeatherTest {
         val fields = (0 until count).map {
             Triple(reader.readByte(), reader.readByte(), reader.readByte())
         }
-        // (number, size, baseType) — weather_report through timestamp.
+        // (number, size, baseType): weather_report through timestamp.
         assertEquals(
             listOf(
                 Triple(0, 1, 0x00), Triple(1, 1, 0x01), Triple(2, 1, 0x00),
@@ -131,7 +131,7 @@ class GarminFitWeatherTest {
         reader.readBytes(2 + 1 + 1 + 2 + 2 + 1 + 1 + 1)
         val bytes = reader.readBytes(15)
         assertEquals(0, bytes[14].toInt()) // always NUL-terminated
-        // Decodes cleanly — no replacement character from a split codepoint.
+        // Decodes cleanly: no replacement character from a split codepoint.
         val decoded = String(bytes.takeWhile { it != 0.toByte() }.toByteArray())
         assertTrue(decoded.startsWith("Vitoria-Gaste"))
         assertTrue('�' !in decoded)

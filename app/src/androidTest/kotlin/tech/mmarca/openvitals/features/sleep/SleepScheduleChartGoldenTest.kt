@@ -168,7 +168,7 @@ class SleepScheduleChartGoldenTest {
                 date = date,
                 inBedStart = bed,
                 inBedEnd = wake,
-                // ~50 min of stages at the tail of a 7h30m night — well under half.
+                // ~50 min of stages at the tail of a 7h30m night, well under half.
                 stages = stagesFrom(wake.minusSeconds(50L * 60L), 50L),
             )
         }

@@ -145,10 +145,10 @@ class ChartCurveTest {
 
         val result = movingAverageY(points)
 
-        assertEquals(5f, result[0].y, 1e-4f) // (0+10)/2 — window clamped at the start
+        assertEquals(5f, result[0].y, 1e-4f) // (0+10)/2: window clamped at the start
         assertEquals(10f, result[1].y, 1e-4f) // (0+10+20)/3
         assertEquals(20f, result[2].y, 1e-4f)
-        assertEquals(35f, result[4].y, 1e-4f) // (30+40)/2 — clamped at the end
+        assertEquals(35f, result[4].y, 1e-4f) // (30+40)/2: clamped at the end
         // x is never touched.
         result.forEachIndexed { index, offset -> assertEquals(points[index].x, offset.x, 0f) }
     }

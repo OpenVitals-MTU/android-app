@@ -639,7 +639,7 @@ class CsvRowConverterTest {
     }
 
     @Test
-    fun `an end on or before the start is rejected — TimeFrom and TimeTo swapped`() {
+    fun `an end on or before the start is rejected, TimeFrom and TimeTo swapped`() {
         val swapped = convertCsvRow(
             row = row(listOf("2026-07-01 09:00:00", "2026-07-01 08:00:00", "1500")),
             mapping = stepsMapping(),

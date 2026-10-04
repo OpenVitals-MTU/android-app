@@ -96,7 +96,7 @@ class CyclePresentationMapperTest {
             ),
         )
 
-        // 2nd, 3rd, 4th — three days, from one record.
+        // 2nd, 3rd, 4th: three days, from one record.
         assertEquals(3, display.summary.periodDays)
         assertEquals(1, display.summary.totalEntryCount)
         assertEquals(

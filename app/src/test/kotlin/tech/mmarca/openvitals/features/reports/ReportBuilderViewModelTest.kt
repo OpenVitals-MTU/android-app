@@ -241,7 +241,7 @@ class ReportBuilderViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(ReportBuilderStep.CONFIGURE, state.step)
         assertNull(state.stagedFile)
-        // The selection survives — only the artifact is gone.
+        // The selection survives; only the artifact is gone.
         assertEquals(setOf(ReportMetric.STEPS), state.selectedMetrics)
     }
 }

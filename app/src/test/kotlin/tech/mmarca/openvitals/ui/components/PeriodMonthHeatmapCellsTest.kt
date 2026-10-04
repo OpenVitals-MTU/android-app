@@ -50,7 +50,7 @@ class PeriodMonthHeatmapCellsTest {
             rolling = true,
         ).filter { it.date != null }
 
-        // The grid is exactly the 30-day window — not one calendar month of it.
+        // The grid is exactly the 30-day window, not one calendar month of it.
         assertEquals(LocalDate.of(2026, 6, 21), cells.first().date)
         assertEquals(LocalDate.of(2026, 7, 20), cells.last().date)
         assertEquals(30, cells.size)

@@ -56,7 +56,7 @@ class SleepReportTest {
             zone,
         )!!
 
-        // 23:30 and 00:30 average to midnight — a plain mean would say noon.
+        // 23:30 and 00:30 average to midnight; a plain mean would say noon.
         assertEquals(0, detail.averageBedtimeMinutes)
         assertEquals(7 * 60 + 30, detail.averageWakeMinutes)
     }
@@ -99,7 +99,7 @@ class SleepReportTest {
         assertEquals(25.0, mix.remPct, 1e-9)
         assertEquals(50.0, mix.lightPct, 1e-9)
         assertEquals(0.0, mix.awakePct, 1e-9)
-        // The unreliable night still appears in the table — just without stage cells.
+        // The unreliable night still appears in the table, just without stage cells.
         assertEquals(2, detail.nights.size)
         assertNull(detail.nights.last().deepMs)
         assertNull(detail.nights.last().remMs)
@@ -130,7 +130,7 @@ class SleepReportTest {
         )!!
 
         val night = detail.nights.single()
-        // The night is filed under its WAKE date — that's the morning you talk about.
+        // The night is filed under its WAKE date: that's the morning you talk about.
         assertEquals(java.time.LocalDate.of(2026, 6, 2), night.date)
         assertEquals(start, night.bedtime)
         assertEquals(Duration.ofHours(3).toMillis(), night.deepMs)

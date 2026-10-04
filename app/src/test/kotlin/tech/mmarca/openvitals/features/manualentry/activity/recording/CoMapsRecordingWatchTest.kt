@@ -34,7 +34,7 @@ class CoMapsRecordingWatchTest {
 
     private class FakeRepository(private val provider: Flow<CoMapsNavigationState>) :
         CoMapsNavigationRepository {
-        /** How many subscriptions the feed is holding — must never exceed one. */
+        /** How many subscriptions the feed is holding: must never exceed one. */
         var subscriptions = 0
 
         override suspend fun readLive(): CoMapsNavigationState = CoMapsNavigationState.NotNavigating

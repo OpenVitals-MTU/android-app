@@ -215,7 +215,7 @@ class HealthConnectAggregateReadTest {
         )
 
         assertThat(first).isEqualTo(LocalDate.of(2026, 1, 2))
-        // Midpoint 11:00 on Jan 3 — inside the day the bucket actually covers.
+        // Midpoint 11:00 on Jan 3, inside the day the bucket actually covers.
         assertThat(second).isEqualTo(LocalDate.of(2026, 1, 3))
     }
 

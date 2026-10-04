@@ -140,12 +140,12 @@ class HealthDataTest {
         assertEquals(120.0, data.elevationGainedMeters!!, 0.01)
     }
 
-    @Test fun `DailySteps floorsClimbed zero is non-null — permission granted no data`() {
+    @Test fun `DailySteps floorsClimbed zero is non-null, permission granted no data`() {
         val day = DailySteps(date = LocalDate.of(2026, 1, 1), steps = 0L, distanceMeters = 0.0, floorsClimbed = 0)
         assertEquals(0, day.floorsClimbed)
     }
 
-    @Test fun `DailySteps elevationGainedMeters zero is non-null — permission granted no data`() {
+    @Test fun `DailySteps elevationGainedMeters zero is non-null, permission granted no data`() {
         val day = DailySteps(date = LocalDate.of(2026, 1, 1), steps = 0L, distanceMeters = 0.0, elevationGainedMeters = 0.0)
         assertEquals(0.0, day.elevationGainedMeters!!, 0.0)
     }

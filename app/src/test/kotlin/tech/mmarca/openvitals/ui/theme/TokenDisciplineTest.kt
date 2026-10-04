@@ -81,7 +81,7 @@ class TokenDisciplineTest {
         /** `16.dp`, but not `Spacing.lg` and not a decimal like `3.5.dp`. */
         val BareDp = Regex("""(?<![\w.])\d+\.dp""")
 
-        /** `private val Foo = 16.dp` — a definition, not a call-site literal. */
+        /** `private val Foo = 16.dp`: a definition, not a call-site literal. */
         val NamedDefinition =
             Regex("""(private\s+|internal\s+)?(const\s+)?val\s+\w+(\s*:\s*\w+)?\s*=\s*[\d.]+\.?(dp|f)?,?\s*(//.*)?""")
 

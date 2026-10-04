@@ -8,7 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
-/** Port of the Flutter build's `garmin_primitives_test.dart` — fixtures identical. */
+/** Port of the Flutter build's `garmin_primitives_test.dart`: fixtures identical. */
 class GarminPrimitivesTest {
 
     private fun b(vararg xs: Int) = ByteArray(xs.size) { xs[it].toByte() }

@@ -120,7 +120,7 @@ class BodyDisplayDerivationsTest {
         val bmi = metric(withHeight, R.string.metric_bmi)
         assertEquals(22.5, bmi.values.single().value, 0.01)
         assertEquals(22.5, bmi.dayValues.single().value, 0.01)
-        // FFMI never gets a series, in Flutter or here — only a latest value.
+        // FFMI never gets a series, in Flutter or here, only a latest value.
         assertTrue(metric(withHeight, R.string.metric_ffmi).values.isEmpty())
     }
 

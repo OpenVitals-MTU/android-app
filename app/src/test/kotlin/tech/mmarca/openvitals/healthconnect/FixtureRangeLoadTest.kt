@@ -192,7 +192,7 @@ class FixtureRangeLoadTest {
     /** Midday, so a date compares inside its own day whatever the offset. */
     private fun LocalDate.midday(): Instant = atStartOfDay(ZONE).plusHours(12).toInstant()
 
-    /** The last day the corpus has a workout on — see the class doc on `today`. */
+    /** The last day the corpus has a workout on: see the class doc on `today`. */
     private fun corpusLastDay(): LocalDate = HcFixture.exercise().maxOf { it.startTime }.date()
 
     private fun corpusFirstDay(): LocalDate = HcFixture.exercise().minOf { it.startTime }.date()

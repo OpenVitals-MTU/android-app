@@ -354,7 +354,7 @@ class CsvMappingValidationTest {
     }
 
     @Test
-    fun `steps without an end column is still importable — rows default to a one-minute span`() {
+    fun `steps without an end column is still importable, rows default to a one-minute span`() {
         val issues = validateCsvMapping(
             mappingOf(stepsColumns(endRole = CsvColumnRole.IGNORE)),
             stepsSample,

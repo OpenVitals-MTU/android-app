@@ -65,7 +65,7 @@ class BleDeviceRepositoryFlutterPayloadTest {
         assertThat(sensor.enabled).isTrue()
         assertThat(sensor.batteryPercent).isEqualTo(85)
 
-        // The watch entry parses too — its unknown fields are simply ignored.
+        // The watch entry parses too: its unknown fields are simply ignored.
         val watch = devices.first { it.id == "watch-1" }
         assertThat(watch.displayName).isEqualTo("vívoactive 5")
         assertThat(watch.capabilities).isEmpty()

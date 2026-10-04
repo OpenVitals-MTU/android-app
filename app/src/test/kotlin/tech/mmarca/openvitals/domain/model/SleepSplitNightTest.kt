@@ -89,7 +89,7 @@ class SleepSplitNightTest {
             listOf(stage(SleepStage.STAGE_LIGHT, t(19, 14, 0), t(19, 14, 40))),
         )
         val stages = combineNightStages(listOf(segment1, nap), maxGap = SleepNapGap)
-        // Only the night's own stages — nothing spanning the >3h gap to the nap.
+        // Only the night's own stages: nothing spanning the >3h gap to the nap.
         assertFalse(stages.any { it.stageType == SleepStage.STAGE_OUT_OF_BED })
     }
 

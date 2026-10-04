@@ -251,7 +251,7 @@ class BodyEnergyTimelineTest {
                 restingHeartRateBpm = restfulResting,
                 observedMaxHeartRateBpm = restfulMax,
                 progress = listOf(
-                    // Cumulative steps: 0 by 14:00, 4000 by 15:00 — no kcal series.
+                    // Cumulative steps: 0 by 14:00, 4000 by 15:00; no kcal series.
                     ActivityProgressPoint(
                         time = dayStart.plus(Duration.ofHours(14)),
                         totalSteps = 0L,
@@ -346,7 +346,7 @@ class BodyEnergyTimelineTest {
         val samples = heartRateSamples(start, end, bpm = 72)
         val progress = activityProgress(List(8) { 80.0 }, fromHour = 8)
 
-        // Seeded full, so neither variant reaches the floor — see below.
+        // Seeded full, so neither variant reaches the floor: see below.
         val neutral = calculateBodyEnergyTimeline(
             inputs(
                 now = end,
@@ -732,7 +732,7 @@ class BodyEnergyTimelineTest {
             )
         }
 
-        // 75 bpm is 15 above resting — outside the old band, inside this one.
+        // 75 bpm is 15 above resting: outside the old band, inside this one.
         assertTrue(chargesAwake(at(75)))
         // 88 bpm is 21% of reserve but 28 above resting and in the top stress tier.
         assertFalse(chargesAwake(at(88)))

@@ -14,7 +14,7 @@ internal object TranslationResources {
     /** The pseudo-quantity a plain `<string>` is filed under. */
     const val PLAIN = "value"
 
-    /** `values/` — the source of truth every locale is measured against. */
+    /** `values/`: the source of truth every locale is measured against. */
     val baseDirectory: File = File("src/main/res/values")
 
     /** `values/` plus every `values-XX/` that actually ships a strings.xml. */

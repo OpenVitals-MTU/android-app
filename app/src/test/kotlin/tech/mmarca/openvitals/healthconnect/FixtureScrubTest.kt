@@ -45,7 +45,7 @@ class FixtureScrubTest {
             "The fixture leaks real identifying strings into a PUBLIC repo, and git " +
                 "history cannot un-commit them:\n  ${found.joinToString("\n  ")}\n" +
                 "Fix tool/health_fixture/build.py and regenerate. Do NOT hand-edit the " +
-                "fixture — the next regeneration would put it straight back.",
+                "fixture: the next regeneration would put it straight back.",
             found.isEmpty(),
         )
     }
@@ -79,7 +79,7 @@ class FixtureScrubTest {
                 val lat = point.asJsonObject["lat"].asDouble
                 val lon = point.asJsonObject["lon"].asDouble
                 assertTrue(
-                    "A route point ($lat, $lon) is outside the synthetic bbox — the " +
+                    "A route point ($lat, $lon) is outside the synthetic bbox: the " +
                         "GPS re-anchoring did not happen, and this is a real place " +
                         "someone was.",
                     lat in 55.0..57.0,
@@ -100,7 +100,7 @@ class FixtureScrubTest {
                 listOf("title", "notes").forEach { field ->
                     val value = record[field]?.takeIf { !it.isJsonNull }?.asString ?: return@forEach
                     assertTrue(
-                        "$key.$field is \"$value\" — that is not one of the canned " +
+                        "$key.$field is \"$value\": that is not one of the canned " +
                             "replacements, so a real note or title reached the fixture.",
                         canned.contains(value),
                     )

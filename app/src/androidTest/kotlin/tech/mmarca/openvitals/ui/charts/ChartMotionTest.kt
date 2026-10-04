@@ -112,7 +112,7 @@ class ChartMotionTest {
         assertTrue("through intermediate frames, not a jump", seen.size > 2)
     }
 
-    /** True when any pixel differs — the skeleton pulses alpha, nothing else. */
+    /** True when any pixel differs: the skeleton pulses alpha, nothing else. */
     private fun android.graphics.Bitmap.differsFrom(other: android.graphics.Bitmap): Boolean {
         if (width != other.width || height != other.height) return true
         val mine = IntArray(width * height)

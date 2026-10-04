@@ -33,7 +33,7 @@ class LoadCoordinatorTest {
         }
         advanceUntilIdle()
 
-        // The first load finally answers — with the wrong period's data.
+        // The first load finally answers, with the wrong period's data.
         gate.complete(Unit)
         advanceUntilIdle()
 
