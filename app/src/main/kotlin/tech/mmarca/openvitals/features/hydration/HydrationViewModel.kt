@@ -20,6 +20,7 @@ import tech.mmarca.openvitals.domain.model.DailyHydration
 import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.HydrationEntryRecordType
 import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
+import tech.mmarca.openvitals.domain.model.LegacyOpenVitalsCarbsEntryName
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.OpenVitalsFoodClientRecordPrefix
@@ -50,8 +51,6 @@ private const val MinHydrationDailyGoalLiters = 0.25
 private const val MaxHydrationDailyGoalLiters = 10.0
 private const val OpenVitalsStandaloneNutritionPrefix = "openvitals_nutrition_"
 private const val OpenVitalsPairedHydrationNutritionPrefix = "openvitals_hydration_nutrition_"
-/** The carbs-only form wrote records under this name, with the drink-like prefix. */
-private const val LegacyOpenVitalsCarbsEntryName = "OpenVitals carbs"
 
 @Immutable
 data class HydrationUiState(

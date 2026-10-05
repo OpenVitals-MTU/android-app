@@ -9,7 +9,10 @@ import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.domain.query.NutritionPeriodData
+import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
+import tech.mmarca.openvitals.domain.model.HydrationEntry
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -52,9 +55,11 @@ class NutritionViewModelTest {
         repo: NutritionRepository,
         selectedMetric: NutritionMetric = NutritionMetric.CALORIES_IN,
         initialRange: TimeRange = TimeRange.WEEK,
+        hydrationRepository: HydrationRepository = mockk(),
     ) = FakePreferences(initialRange = initialRange).let { preferences ->
         NutritionViewModel(
             repository = repo,
+            hydrationRepository = hydrationRepository,
             periodPreferences = preferences,
             dailyGoalPreferences = preferences,
             nutritionDisplayPreferences = preferences,
@@ -295,6 +300,81 @@ class NutritionViewModelTest {
         assertEquals(listOf("a", "b"), vm.uiState.value.entries.map { it.id })
         assertEquals(ScreenError.Message("denied"), vm.uiState.value.error)
     }
+
+    // Editing.
+
+    @Test fun `a typed entry opens the nutrition form`() = runTest {
+        val typed = meal("typed").copy(clientRecordId = "openvitals_manual_nutrition_1_u")
+        val repo = emptyRepo()
+        coEvery { repo.loadNutritionEntries(any(), any()) } returns listOf(typed)
+        val vm = viewModel(repo)
+
+        vm.editEntry("typed")
+
+        assertEquals(NutritionEditTarget.TypedEntry("typed"), vm.uiState.value.pendingEdit)
+        vm.onEditHandled()
+        assertNull(vm.uiState.value.pendingEdit)
+    }
+
+    @Test fun `a drink opens the drink, found by the client id its two records share`() = runTest {
+        val coffee = meal("coffee-nutrition").copy(
+            clientRecordId = "openvitals_hydration_nutrition_openvitals_hydration_1_drink_coffee_u",
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadNutritionEntries(any(), any()) } returns listOf(coffee)
+        val hydrationRepository = mockk<HydrationRepository>()
+        coEvery { hydrationRepository.loadHydrationEntries(any(), any()) } returns listOf(
+            water(id = "other-water", clientRecordId = "openvitals_hydration_2_u"),
+            water(id = "coffee-water", clientRecordId = "openvitals_hydration_1_drink_coffee_u"),
+        )
+        val vm = viewModel(repo, hydrationRepository = hydrationRepository)
+
+        vm.editEntry("coffee-nutrition")
+
+        assertEquals(NutritionEditTarget.Drink("coffee-water"), vm.uiState.value.pendingEdit)
+    }
+
+    @Test fun `a drink whose water record is gone says it cannot be edited`() = runTest {
+        val coffee = meal("coffee-nutrition").copy(
+            clientRecordId = "openvitals_hydration_nutrition_openvitals_hydration_1_drink_coffee_u",
+        )
+        val repo = emptyRepo()
+        coEvery { repo.loadNutritionEntries(any(), any()) } returns listOf(coffee)
+        val hydrationRepository = mockk<HydrationRepository>()
+        coEvery { hydrationRepository.loadHydrationEntries(any(), any()) } returns emptyList()
+        val vm = viewModel(repo, hydrationRepository = hydrationRepository)
+
+        vm.editEntry("coffee-nutrition")
+
+        assertNull(vm.uiState.value.pendingEdit)
+        assertEquals(ScreenError.Text(R.string.screen_error_entry_not_editable), vm.uiState.value.error)
+    }
+
+    @Test fun `a food, a foreign meal or an unknown id opens nothing`() = runTest {
+        val repo = emptyRepo()
+        coEvery { repo.loadNutritionEntries(any(), any()) } returns listOf(
+            meal("food").copy(clientRecordId = "openvitals_food_1_banana_u"),
+            meal("foreign", isOpenVitals = false).copy(clientRecordId = "openvitals_manual_nutrition_1_u"),
+        )
+        val vm = viewModel(repo)
+
+        vm.editEntry("food")
+        vm.editEntry("foreign")
+        vm.editEntry("missing")
+
+        assertNull(vm.uiState.value.pendingEdit)
+        assertNull(vm.uiState.value.error)
+    }
+
+    private fun water(id: String, clientRecordId: String) = HydrationEntry(
+        startTime = Instant.now(),
+        endTime = Instant.now().plusSeconds(1),
+        liters = 0.25,
+        source = "test",
+        id = id,
+        clientRecordId = clientRecordId,
+        isOpenVitalsEntry = true,
+    )
 
     @Test fun `a foreign or unidentified entry is never deleted`() = runTest {
         val repo = emptyRepo()

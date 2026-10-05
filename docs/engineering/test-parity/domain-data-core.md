@@ -1241,12 +1241,12 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/manualen
 | volume > round-trips a typed imperial amount back to the same text | PORTED | MeasurementInputTest.kt: `volume round-trips a typed imperial amount back to the same text` | — |
 | volume > bounds are rendered in the field's unit | PORTED | HydrationAmountBoundsTest: `theAllowedAmountRangeIsStatedInTheFieldsOwnUnit` | Compose instrumentation; runs on a device, not in CI |
 | carbs > labels grams or ounces | N/A-FRAMEWORK | — | labels in Compose resources |
-| carbs > ounces convert to grams | DIVERGED | NutritionEntryViewModelTest.kt: `the range check applies to the metric value`, `imperial gram nutrients are typed in ounces and written in grams` | invalid-input → null case untested |
+| carbs > ounces convert to grams | DROPPED | NutritionEntryViewModelTest.kt: `amounts are grams and kcal whatever the unit system, as the nutrition screens show them` | The nutrition form takes grams and kcal in every unit system, matching the nutrition screens, which always show grams |
 | body > weight: pounds convert to kilograms | PORTED | MeasurementInputTest.kt: `body weight pounds convert to kilograms` | seam: canonicalBodyMeasurementValue private->internal |
 | body > height: inches convert to centimetres | PORTED | MeasurementInputTest.kt: `body height inches convert to centimetres` | — |
 | temperature > labels degrees without the degree sign, as Kotlin does | N/A-FRAMEWORK | — | labels in Compose resources |
 | temperature > Fahrenheit converts to Celsius | PORTED | MeasurementInputTest.kt: `temperature Fahrenheit converts to Celsius` | seam: canonicalVitalsValue private->internal |
-| a metric formatter never rewrites what the user typed | DIVERGED | HydrationEntryFormContentTest.kt: `metric hydration input is milliliters`; NutritionEntryViewModelTest.kt: `the range check applies to the metric value` | metric identity covered only for hydration and carbs, not weight/height/temperature |
+| a metric formatter never rewrites what the user typed | DIVERGED | HydrationEntryFormContentTest.kt: `metric hydration input is milliliters`; NutritionEntryViewModelTest.kt: `amounts are grams and kcal whatever the unit system, as the nutrition screens show them` | metric identity covered only for hydration and carbs, not weight/height/temperature |
 
 ## test/core/presentation/metric_detail_sections_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/core/presentation/MetricDetailSectionOrderViewModelTest.kt, app/src/test/kotlin/tech/mmarca/openvitals/domain/preferences/MetricDetailSectionIdTest.kt

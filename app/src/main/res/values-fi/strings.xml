@@ -542,7 +542,6 @@
     <string name="body_entry_write_failed">Kehon mittausta ei voitu tallentaa: %1$s</string>
     <string name="nutrition_entry_subtitle">Merkinnät tallennetaan suoraan Health Connectiin. Täytä vain tiedossasi olevat määrät.</string>
     <string name="nutrition_entry_permission_needed">Ravintomerkintöjen lisäämiseen OpenVitals tarvitsee Health Connectin kirjoitusoikeuden. Sovellus ei tallenna näitä tietoja; merkinnät tallennetaan Health Connectiin.</string>
-    <string name="nutrition_entry_amount_ounces">Määrä (oz)</string>
     <string name="nutrition_entry_add">Kirjaa ravintomerkintä</string>
     <string name="nutrition_entry_add_another_nutrient">Lisää toinen ravintoaine</string>
     <string name="nutrition_entry_no_values">Anna vähintään yksi määrä.</string>

@@ -6,6 +6,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.features.manualentry.hydration.pairedHydrationClientRecordIdOrNull
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
@@ -19,12 +21,14 @@ import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.WeekPeriodMode
 import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.NutritionEntry
+import tech.mmarca.openvitals.data.repository.contract.HydrationRepository
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
 import tech.mmarca.openvitals.data.repository.contract.NutritionDisplayPreferences
 import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
 import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
 import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,11 +50,14 @@ data class NutritionUiState(
     val entries: List<NutritionEntry> = emptyList(),
     val display: NutritionDisplayState = NutritionDisplayState(),
     val error: ScreenError? = null,
+    /** Set by [NutritionViewModel.editEntry]; the screen navigates, then clears it. */
+    val pendingEdit: NutritionEditTarget? = null,
 )
 
 @HiltViewModel
 class NutritionViewModel @Inject constructor(
     private val repository: NutritionRepository,
+    private val hydrationRepository: HydrationRepository,
     private val periodPreferences: PeriodPreferences,
     private val dailyGoalPreferences: DailyGoalPreferences,
     private val nutritionDisplayPreferences: NutritionDisplayPreferences,
@@ -178,6 +185,45 @@ class NutritionViewModel @Inject constructor(
                 _uiState.value = previous.copy(error = error.toScreenError())
             }
         }
+    }
+
+    /**
+     * Opens the edit for an entry. A typed entry opens the nutrition form. A drink opens the
+     * drink: its nutrients follow the water, so editing them alone would split the pair. The
+     * drink's water record is found by the client id the two share, on the day they start.
+     */
+    fun editEntry(entryId: String) {
+        val entry = _uiState.value.entries.firstOrNull { it.id == entryId } ?: return
+        when (entry.editKind()) {
+            null -> Unit
+            NutritionEntryEditKind.TYPED -> {
+                _uiState.value = _uiState.value.copy(pendingEdit = NutritionEditTarget.TypedEntry(entry.id))
+            }
+            NutritionEntryEditKind.DRINK -> viewModelScope.launch {
+                val hydrationClientRecordId = entry.clientRecordId?.pairedHydrationClientRecordIdOrNull()
+                val day = entry.time.atZone(ZoneId.systemDefault()).toLocalDate()
+                runCatching {
+                    hydrationRepository.loadHydrationEntries(day, day)
+                }.onSuccess { hydrationEntries ->
+                    val drink = hydrationEntries.firstOrNull { hydrationEntry ->
+                        hydrationEntry.isOpenVitalsEntry &&
+                            hydrationEntry.id.isNotBlank() &&
+                            hydrationEntry.clientRecordId == hydrationClientRecordId
+                    }
+                    _uiState.value = if (drink != null) {
+                        _uiState.value.copy(pendingEdit = NutritionEditTarget.Drink(drink.id))
+                    } else {
+                        _uiState.value.copy(error = ScreenError.Text(R.string.screen_error_entry_not_editable))
+                    }
+                }.onFailure { error ->
+                    _uiState.value = _uiState.value.copy(error = error.toScreenError())
+                }
+            }
+        }
+    }
+
+    fun onEditHandled() {
+        _uiState.value = _uiState.value.copy(pendingEdit = null)
     }
 
     fun load() {

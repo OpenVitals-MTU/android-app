@@ -486,7 +486,6 @@
     <string name="body_entry_write_failed">身体測定を保存できませんでした: %1$s</string>
     <string name="nutrition_entry_subtitle">記録は Health Connect に直接保存されます。分かる量だけ入力してください。</string>
     <string name="nutrition_entry_permission_needed">栄養の記録を追加するには、OpenVitals に Health Connect の書き込み権限が必要です。アプリはこのデータを保持せず、記録は Health Connect に保存されます。</string>
-    <string name="nutrition_entry_amount_ounces">量 (oz)</string>
     <string name="nutrition_entry_add">栄養の記録を保存</string>
     <string name="nutrition_entry_add_another_nutrient">別の栄養素を追加</string>
     <string name="nutrition_entry_no_values">少なくとも 1 つの量を入力してください。</string>

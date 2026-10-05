@@ -523,6 +523,12 @@ class HealthConnectManager @Inject constructor(
     suspend fun readNutritionEntries(start: Instant, end: Instant): List<NutritionEntry> =
         nutritionReader.readNutritionEntries(start, end)
 
+    suspend fun readNutritionEntry(id: String): NutritionEntry? =
+        nutritionReader.readNutritionEntry(id)
+
+    suspend fun updateNutritionEntry(id: String, request: NutritionWriteRequest) =
+        withSyncEnabled { nutritionReader.updateNutritionEntry(id, request) }
+
     suspend fun writeNutritionEntry(request: NutritionWriteRequest): String =
         withSyncEnabled { nutritionReader.writeNutritionEntry(request) }
 

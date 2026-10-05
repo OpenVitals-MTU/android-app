@@ -9,6 +9,12 @@ import java.time.LocalDate
  */
 const val OpenVitalsManualNutritionClientRecordPrefix = "openvitals_manual_nutrition_"
 
+/**
+ * The name the old carbs-only form gave its records. Their client id has the drink-like
+ * `openvitals_nutrition_` prefix, so the beverage screens tell them apart by this name.
+ */
+const val LegacyOpenVitalsCarbsEntryName = "OpenVitals carbs"
+
 data class DailyNutrition(
     val date: LocalDate,
     val hydrationLiters: Double,
@@ -145,6 +151,8 @@ data class NutritionWriteRequest(
     val clientRecordVersion: Long = 0,
     /** Typed into the nutrition entry form. Marks the record as neither a drink nor a food. */
     val isManualNutritionEntry: Boolean = false,
+    /** The client id of the record this one replaces, kept so an edit does not change its kind. */
+    val clientRecordId: String? = null,
 )
 
 data class DailyMacros(

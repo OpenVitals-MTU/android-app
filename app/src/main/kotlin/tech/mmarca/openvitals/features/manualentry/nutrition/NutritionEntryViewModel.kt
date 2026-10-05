@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.manualentry.nutrition
 
 import androidx.compose.runtime.Immutable
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -12,12 +13,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
-import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.features.nutrition.NutritionEntryEditKind
+import tech.mmarca.openvitals.features.nutrition.editKind
+import tech.mmarca.openvitals.navigation.NUTRITION_ENTRY_ID_ARG
 
 /** Always on the form, in this order. */
 internal val PrimaryNutritionEntryNutrients: List<NutritionNutrient> = listOf(
@@ -45,6 +49,10 @@ data class NutritionEntryUiState(
     val rows: List<NutrientInputRow> = PrimaryNutritionEntryNutrients.map(::NutrientInputRow),
     /** Null means now. */
     val timestamp: Instant? = null,
+    /** The record being edited; null when logging a new entry. */
+    val editRecordId: String? = null,
+    /** False until the edited record has filled the form, so a save cannot blank it. */
+    val isEditEntryLoaded: Boolean = false,
     val writePermissions: Set<String> = emptySet(),
     val canWrite: Boolean = false,
     val isCheckingPermission: Boolean = true,
@@ -55,22 +63,33 @@ data class NutritionEntryUiState(
 ) {
     val addableNutrients: List<NutritionNutrient>
         get() = AddableNutritionEntryNutrients - rows.map { it.nutrient }.toSet()
+
+    val isEditMode: Boolean
+        get() = editRecordId != null
+
+    val canSave: Boolean
+        get() = canWrite && !isSavingEntry && !isCheckingPermission && (!isEditMode || isEditEntryLoaded)
 }
 
 /**
  * One Health Connect nutrition record from typed amounts: the main macros plus any other
- * nutrient the user adds. Blank fields are left out of the record.
+ * nutrient the user adds. Blank fields are left out of the record. Opened with a record id,
+ * the form edits that record in place instead.
  */
 @HiltViewModel
 class NutritionEntryViewModel @Inject constructor(
     private val repository: NutritionRepository,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(NutritionEntryUiState())
+    private val _uiState = MutableStateFlow(
+        NutritionEntryUiState(editRecordId = savedStateHandle.get<String>(NUTRITION_ENTRY_ID_ARG)),
+    )
     val uiState: StateFlow<NutritionEntryUiState>
         get() = _uiState.asStateFlow()
 
     init {
         refreshPermission()
+        loadEditEntry()
     }
 
     fun refreshPermission() {
@@ -125,13 +144,14 @@ class NutritionEntryViewModel @Inject constructor(
         )
     }
 
-    fun addEntry(unitSystem: UnitSystem) {
+    fun addEntry() {
         val current = _uiState.value
+        if (current.isEditMode && !current.isEditEntryLoaded) return
         if (!current.canWrite) {
             failEntry(NutritionEntryError.MISSING_WRITE_PERMISSION)
             return
         }
-        val nutrientValues = current.rows.parsedMetricNutrientValues(unitSystem)
+        val nutrientValues = current.rows.parsedNutrientValues()
         if (nutrientValues == null) {
             failEntry(NutritionEntryError.INVALID_VALUE)
             return
@@ -152,13 +172,17 @@ class NutritionEntryViewModel @Inject constructor(
             runCatching {
                 // Save means saved: a screen closed mid-write must not lose the record.
                 withContext(NonCancellable) {
-                    repository.writeNutritionEntry(
-                        NutritionWriteRequest(
-                            time = time,
-                            nutrientValues = nutrientValues,
-                            isManualNutritionEntry = true,
-                        )
+                    val request = NutritionWriteRequest(
+                        time = time,
+                        nutrientValues = nutrientValues,
+                        isManualNutritionEntry = true,
                     )
+                    val editRecordId = current.editRecordId
+                    if (editRecordId == null) {
+                        repository.writeNutritionEntry(request)
+                    } else {
+                        repository.updateNutritionEntry(editRecordId, request)
+                    }
                 }
             }.onSuccess {
                 _uiState.value = _uiState.value.copy(
@@ -183,6 +207,35 @@ class NutritionEntryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(saveCompleted = false)
     }
 
+    private fun loadEditEntry() {
+        val recordId = _uiState.value.editRecordId ?: return
+        viewModelScope.launch {
+            runCatching {
+                repository.loadNutritionEntry(recordId)
+            }.onSuccess { entry ->
+                if (entry == null || entry.editKind() != NutritionEntryEditKind.TYPED) {
+                    _uiState.value = _uiState.value.copy(
+                        entryError = NutritionEntryError.WRITE_FAILED,
+                        writeError = ScreenError.Text(R.string.screen_error_entry_not_editable),
+                    )
+                    return@onSuccess
+                }
+                _uiState.value = _uiState.value.copy(
+                    rows = entry.nutrientValues.toNutritionEntryRows(),
+                    timestamp = entry.time,
+                    isEditEntryLoaded = true,
+                    entryError = null,
+                    writeError = null,
+                )
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    entryError = NutritionEntryError.WRITE_FAILED,
+                    writeError = error.toScreenError(),
+                )
+            }
+        }
+    }
+
     private fun editForm(transform: (List<NutrientInputRow>) -> List<NutrientInputRow>) {
         val current = _uiState.value
         _uiState.value = current.copy(
@@ -196,4 +249,17 @@ class NutritionEntryViewModel @Inject constructor(
     private fun failEntry(error: NutritionEntryError) {
         _uiState.value = _uiState.value.copy(entryError = error, writeError = null)
     }
+}
+
+/**
+ * The form for a stored record: the main nutrients always, then every other one the record
+ * holds. A nutrient the form would not offer still gets a row, so a save does not drop it.
+ */
+internal fun Map<NutritionNutrient, Double>.toNutritionEntryRows(): List<NutrientInputRow> {
+    fun row(nutrient: NutritionNutrient) = NutrientInputRow(
+        nutrient = nutrient,
+        amountText = this[nutrient]?.let(::nutrientInputText).orEmpty(),
+    )
+    val others = keys.filterNot { it in PrimaryNutritionEntryNutrients }.sortedBy { it.ordinal }
+    return PrimaryNutritionEntryNutrients.map(::row) + others.map(::row)
 }

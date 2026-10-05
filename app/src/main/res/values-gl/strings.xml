@@ -486,7 +486,6 @@
     <string name="body_entry_write_failed">Non se puido gardar a medida corporal: %1$s</string>
     <string name="nutrition_entry_subtitle">As entradas gárdanse directamente en Health Connect. Enche só as cantidades que coñezas.</string>
     <string name="nutrition_entry_permission_needed">Para engadir entradas de nutrición, OpenVitals necesita permiso de escritura en Health Connect. A app non almacenará estes datos; as entradas gárdanse en Health Connect.</string>
-    <string name="nutrition_entry_amount_ounces">Cantidade (oz)</string>
     <string name="nutrition_entry_add">Rexistrar entrada de nutrición</string>
     <string name="nutrition_entry_add_another_nutrient">Engadir outro nutriente</string>
     <string name="nutrition_entry_no_values">Introduce polo menos unha cantidade.</string>

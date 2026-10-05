@@ -91,6 +91,7 @@ internal fun MetricRouteContent(
     onOpenTrainingReadinessDetails: (java.time.LocalDate) -> Unit = {},
     onOpenStressDetails: (java.time.LocalDate) -> Unit = {},
     onEditHydrationEntry: (String) -> Unit,
+    onEditNutritionEntry: (String) -> Unit = {},
     onOpenCaffeineDrink: (String, LocalDate) -> Unit = { _, _ -> },
     onEditMindfulnessSession: (String) -> Unit,
     onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit,
@@ -116,6 +117,8 @@ internal fun MetricRouteContent(
                 viewModel = nutritionViewModel,
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onEditNutritionEntry = onEditNutritionEntry,
+                onEditHydrationEntry = onEditHydrationEntry,
             )
         }
         is MetricRouteDestination.ActivityDetail -> {
@@ -396,27 +399,37 @@ private fun NutritionMetricRouteScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditNutritionEntry: (String) -> Unit,
+    onEditHydrationEntry: (String) -> Unit,
 ) {
     when (metric) {
         NutritionMetric.CALORIES_IN -> CaloriesInScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
+            onEditNutritionEntry = onEditNutritionEntry,
+            onEditHydrationEntry = onEditHydrationEntry,
         )
         NutritionMetric.PROTEIN -> ProteinScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
+            onEditNutritionEntry = onEditNutritionEntry,
+            onEditHydrationEntry = onEditHydrationEntry,
         )
         NutritionMetric.CARBS -> CarbsScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
+            onEditNutritionEntry = onEditNutritionEntry,
+            onEditHydrationEntry = onEditHydrationEntry,
         )
         NutritionMetric.FAT -> FatScreen(
             viewModel,
             unitFormatter,
             dateTimeFormatterProvider,
+            onEditNutritionEntry = onEditNutritionEntry,
+            onEditHydrationEntry = onEditHydrationEntry,
         )
     }
 }

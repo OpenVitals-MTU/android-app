@@ -76,6 +76,7 @@ internal fun LazyListScope.nutritionContent(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     chartDaySelection: ChartDaySelection,
     onDeleteEntry: (String) -> Unit = {},
+    onEditEntry: (String) -> Unit = {},
 ) {
     val display = state.display
     val metricsData = display.overviewNutrients.map { it.toUiModel(unitFormatter) }
@@ -141,6 +142,7 @@ internal fun LazyListScope.nutritionContent(
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         onDeleteEntry = onDeleteEntry,
+                        onEditEntry = onEditEntry,
                     )
                 }
             }
@@ -168,6 +170,7 @@ internal fun LazyListScope.nutritionContent(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onDeleteEntry = onDeleteEntry,
+                onEditEntry = onEditEntry,
             )
         }
     }
@@ -184,6 +187,7 @@ internal fun LazyListScope.nutritionMetricContent(
     onDecreaseGoal: () -> Unit,
     onIncreaseGoal: () -> Unit,
     onDeleteEntry: (String) -> Unit = {},
+    onEditEntry: (String) -> Unit = {},
 ) {
     val display = state.display
     val metricData = display.metric.toUiModel(unitFormatter)
@@ -243,6 +247,7 @@ internal fun LazyListScope.nutritionMetricContent(
                         unitFormatter = unitFormatter,
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
                         onDeleteEntry = onDeleteEntry,
+                        onEditEntry = onEditEntry,
                     )
                 }
             }
@@ -287,6 +292,7 @@ internal fun LazyListScope.nutritionMetricContent(
                 unitFormatter = unitFormatter,
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 onDeleteEntry = onDeleteEntry,
+                onEditEntry = onEditEntry,
             )
         }
     }
@@ -540,6 +546,7 @@ private fun NutritionEntriesContent(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onDeleteEntry: (String) -> Unit = {},
+    onEditEntry: (String) -> Unit = {},
 ) {
     PaginatedEntryList(
         title = title,
@@ -552,6 +559,11 @@ private fun NutritionEntriesContent(
             // Only a record this app wrote, with an id, can be deleted here.
             onDelete = if (entry.isOpenVitalsEntry && entry.id.isNotBlank()) {
                 { onDeleteEntry(entry.id) }
+            } else {
+                null
+            },
+            onEdit = if (entry.editKind() != null) {
+                { onEditEntry(entry.id) }
             } else {
                 null
             },

@@ -474,7 +474,6 @@
     <string name="body_entry_write_failed">Не удалось сохранить измерение тела: %1$s</string>
     <string name="nutrition_entry_subtitle">Записи сохраняются напрямую в Health Connect. Заполните только известные вам количества.</string>
     <string name="nutrition_entry_permission_needed">Чтобы добавлять записи питания, OpenVitals требуется разрешение Health Connect на запись. Приложение не хранит эти данные; записи сохраняются в Health Connect.</string>
-    <string name="nutrition_entry_amount_ounces">Количество (унц.)</string>
     <string name="nutrition_entry_add">Сохранить запись питания</string>
     <string name="nutrition_entry_add_another_nutrient">Добавить ещё одно питательное вещество</string>
     <string name="nutrition_entry_no_values">Введите хотя бы одно количество.</string>

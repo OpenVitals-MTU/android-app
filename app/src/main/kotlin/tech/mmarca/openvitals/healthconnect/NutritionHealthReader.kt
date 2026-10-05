@@ -172,26 +172,12 @@ internal class NutritionHealthReader(
                 timeRangeFilter = TimeRangeFilter.between(start, end),
                 ascendingOrder = false,
                 pageSize = 200,
-            ).map { record ->
-                val nutrientValues = record.nutritionNutrientValues()
-                NutritionEntry(
-                    time = record.startTime,
-                    endTime = record.endTime,
-                    mealType = record.mealType,
-                    name = record.name,
-                    energyKcal = nutrientValues[NutritionNutrient.ENERGY],
-                    proteinGrams = nutrientValues[NutritionNutrient.PROTEIN],
-                    carbsGrams = nutrientValues[NutritionNutrient.TOTAL_CARBOHYDRATE],
-                    fatGrams = nutrientValues[NutritionNutrient.TOTAL_FAT],
-                    fiberGrams = nutrientValues[NutritionNutrient.DIETARY_FIBER],
-                    sugarGrams = nutrientValues[NutritionNutrient.SUGAR],
-                    source = SyncedSourceOverlay.displaySource(record.metadata),
-                    nutrientValues = nutrientValues,
-                    id = record.metadata.id,
-                    clientRecordId = record.metadata.clientRecordId,
-                    isOpenVitalsEntry = isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName),
-                )
-            }
+            ).map { record -> record.toNutritionEntry() }
+        }
+
+    suspend fun readNutritionEntry(id: String): NutritionEntry? =
+        support.withNullableLogging("readNutritionEntry[$id]") {
+            support.client().readRecord(NutritionRecord::class, id).record.toNutritionEntry()
         }
 
     suspend fun writeNutritionEntry(request: NutritionWriteRequest): String = withContext(Dispatchers.IO) {
@@ -214,9 +200,11 @@ internal class NutritionHealthReader(
             ?.takeIf { it.isAfter(startTime) }
             ?: startTime.plusSeconds(1)
         val zone = ZoneId.systemDefault()
-        val clientRecordId = request.associatedHydrationClientRecordId
+        val clientRecordId = request.clientRecordId
             ?.takeIf { it.isNotBlank() }
-            ?.let(::hydrationNutritionClientRecordId)
+            ?: request.associatedHydrationClientRecordId
+                ?.takeIf { it.isNotBlank() }
+                ?.let(::hydrationNutritionClientRecordId)
             ?: request.foodId
                 ?.takeIf { it.isNotBlank() }
                 ?.let { foodId -> foodNutritionClientRecordId(foodId, startTime) }
@@ -284,6 +272,27 @@ internal class NutritionHealthReader(
     }
 
     /**
+     * Replaces a record this app wrote with the edited values. The same client id with a higher
+     * version replaces it in place: an update by record id would drop the client id, and the
+     * prefix in it is what keeps a typed entry off the beverage screens. The name stays, so an
+     * old carbs entry stays recognisable too.
+     */
+    suspend fun updateNutritionEntry(id: String, request: NutritionWriteRequest) = withContext(Dispatchers.IO) {
+        val existing = support.client().readRecord(NutritionRecord::class, id).record
+        existing.requireOpenVitalsOrigin(appPackageName)
+        val clientRecordId = requireNotNull(existing.metadata.clientRecordId?.takeIf { it.isNotBlank() }) {
+            "Only a nutrition record with a client id can be edited."
+        }
+        writeNutritionEntry(
+            request.copy(
+                name = existing.name,
+                clientRecordId = clientRecordId,
+                clientRecordVersion = existing.metadata.clientRecordVersion + 1,
+            ),
+        )
+    }
+
+    /**
      * Makes a drink's nutrition record follow an edit of its hydration record: the same shift
      * in time, and nutrients scaled with the volume. It used to stay behind, so an edited
      * coffee kept its caffeine at the old time and amount. Does nothing for plain water.
@@ -339,6 +348,27 @@ internal class NutritionHealthReader(
             clientRecordIdsList = emptyList(),
         )
         clientRecordId
+    }
+
+    private fun NutritionRecord.toNutritionEntry(): NutritionEntry {
+        val nutrientValues = nutritionNutrientValues()
+        return NutritionEntry(
+            time = startTime,
+            endTime = endTime,
+            mealType = mealType,
+            name = name,
+            energyKcal = nutrientValues[NutritionNutrient.ENERGY],
+            proteinGrams = nutrientValues[NutritionNutrient.PROTEIN],
+            carbsGrams = nutrientValues[NutritionNutrient.TOTAL_CARBOHYDRATE],
+            fatGrams = nutrientValues[NutritionNutrient.TOTAL_FAT],
+            fiberGrams = nutrientValues[NutritionNutrient.DIETARY_FIBER],
+            sugarGrams = nutrientValues[NutritionNutrient.SUGAR],
+            source = SyncedSourceOverlay.displaySource(metadata),
+            nutrientValues = nutrientValues,
+            id = metadata.id,
+            clientRecordId = metadata.clientRecordId,
+            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
+        )
     }
 }
 

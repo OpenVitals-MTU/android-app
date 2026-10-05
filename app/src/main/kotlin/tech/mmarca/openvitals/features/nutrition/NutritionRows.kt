@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.nutrition
 
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
@@ -31,7 +33,10 @@ import tech.mmarca.openvitals.ui.theme.NutritionColor
 import java.time.ZoneId
 import kotlin.math.roundToInt
 
-/** A logged meal. An OpenVitals meal swipes to delete; foreign records are read-only. */
+/**
+ * A logged meal. An OpenVitals meal swipes to delete, and a typed entry or a drink has an
+ * edit button; foreign records are read-only.
+ */
 @Composable
 internal fun NutritionEntryRow(
     entry: NutritionEntry,
@@ -39,13 +44,14 @@ internal fun NutritionEntryRow(
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onDelete: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    onEdit: (() -> Unit)? = null,
 ) {
     if (onDelete == null) {
-        NutritionEntryRowContent(entry, unitFormatter, dateTimeFormatterProvider, modifier)
+        NutritionEntryRowContent(entry, unitFormatter, dateTimeFormatterProvider, onEdit, modifier)
         return
     }
     SwipeToDeleteEntryRow(onDelete = onDelete, modifier = modifier) {
-        NutritionEntryRowContent(entry, unitFormatter, dateTimeFormatterProvider)
+        NutritionEntryRowContent(entry, unitFormatter, dateTimeFormatterProvider, onEdit)
     }
 }
 
@@ -54,6 +60,7 @@ private fun NutritionEntryRowContent(
     entry: NutritionEntry,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEdit: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val start = entry.time.atZone(ZoneId.systemDefault())
@@ -98,6 +105,15 @@ private fun NutritionEntryRowContent(
                 )
                 Spacer(Modifier.height(4.dp))
                 SourceChip(source = entry.source)
+            }
+            if (onEdit != null) {
+                OpenVitalsIconButton(onClick = onEdit) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = stringResource(R.string.cd_edit_entry),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }

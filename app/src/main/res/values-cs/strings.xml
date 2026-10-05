@@ -398,7 +398,6 @@
     <string name="body_entry_write_failed">Tělesné měření se nepodařilo uložit: %1$s</string>
     <string name="nutrition_entry_subtitle">Záznamy se ukládají přímo do Health Connect. Vyplňte jen množství, která znáte.</string>
     <string name="nutrition_entry_permission_needed">K přidávání záznamů výživy potřebuje OpenVitals oprávnění k zápisu do Health Connect. Aplikace tato data neukládá; záznamy se ukládají v Health Connect.</string>
-    <string name="nutrition_entry_amount_ounces">Množství (oz)</string>
     <string name="nutrition_entry_add">Zapsat záznam výživy</string>
     <string name="nutrition_entry_add_another_nutrient">Přidat další živinu</string>
     <string name="nutrition_entry_no_values">Zadejte alespoň jedno množství.</string>

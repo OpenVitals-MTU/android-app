@@ -50,6 +50,7 @@ const val BODY_MEASUREMENT_TYPE_ARG = "bodyMeasurementType"
 const val BODY_ENTRY_ID_ARG = "bodyEntryId"
 const val HYDRATION_ENTRY_ID_ARG = "hydrationEntryId"
 const val HYDRATION_DRINK_ID_ARG = "hydrationDrinkId"
+const val NUTRITION_ENTRY_ID_ARG = "nutritionEntryId"
 const val MINDFULNESS_ENTRY_ID_ARG = "mindfulnessEntryId"
 const val CAFFEINE_ENTRY_ID_ARG = "caffeineEntryId"
 const val VITALS_MEASUREMENT_TYPE_ARG = "vitalsMeasurementType"
@@ -104,6 +105,9 @@ sealed class Screen(
         fun createRoute(drinkId: String): String = "manual_entry/hydration/log/${Uri.encode(drinkId)}"
     }
     data object NutritionEntry : Screen("manual_entry/nutrition", R.string.screen_nutrition_entry)
+    data object NutritionEntryEdit : Screen("manual_entry/nutrition/edit/{$NUTRITION_ENTRY_ID_ARG}", R.string.screen_nutrition_entry) {
+        fun createRoute(entryId: String): String = "manual_entry/nutrition/edit/${Uri.encode(entryId)}"
+    }
     data object FoodEntry : Screen("manual_entry/food", R.string.screen_food_entry)
     data object ActivityEntry : Screen(
         "manual_entry/activity" +
@@ -323,6 +327,7 @@ sealed class Screen(
                 HydrationEntryEdit,
                 HydrationEntryLogDrink,
                 NutritionEntry,
+                NutritionEntryEdit,
                 FoodEntry,
                 ActivityEntry,
                 WorkoutPlans,
