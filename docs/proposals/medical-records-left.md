@@ -49,8 +49,7 @@ It also prints an id fingerprint. Keep it before a change to the CDA code and co
 
 Do these when the feature ships, not before.
 
-- **Play builds leave the feature out for now.** Play wants the app under an organization account before it accepts the medical permissions. Until then, release and nightly builds remove the thirteen permissions and CAMERA (`app/src/release/AndroidManifest.xml`), and `BuildConfig.MEDICAL_RECORDS` is false there, so no screen shows the feature. Debug and ci builds keep it. To turn it on after the move: set `MEDICAL_RECORDS` to true in `defaultConfig`, delete the release manifest and the `nightly` source set in `app/build.gradle.kts`, and delete the test `Play builds remove every medical records permission`.
-- **Google Play declaration.** The thirteen medical permissions are in the main manifest. The nightly upload to Play stops until the Health Connect declaration covers them. The proposal holds the [draft justification](medical-records.md#google-play). Review the Data safety form in the same sitting, for the medical data types and the camera.
+- **Google Play declaration.** The thirteen medical permissions are now in the manifest on main. The nightly upload to Play stops until the Health Connect declaration covers them. The proposal holds the [draft justification](medical-records.md#google-play). Review the Data safety form in the same sitting, for the medical data types and the camera.
 - **Changelog and landing page.** A changelog entry and the landing page feature cards.
 - **If Play refuses a category.** Not decided. A store flavor without the refused permissions is the likely path.
 
