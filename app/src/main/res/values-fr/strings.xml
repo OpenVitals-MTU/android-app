@@ -992,6 +992,8 @@
     <string name="hydration_entry_no_hydration">Aucun effet sur l\'hydratation</string>
     <string name="hydration_custom_drink_amount_grams">Quantité (g)</string>
     <string name="hydration_custom_drink_amount_kcal">Quantité (kcal)</string>
+    <string name="nutrient_amount_milligrams">Quantité (mg)</string>
+    <string name="nutrient_amount_micrograms">Quantité (µg)</string>
     <string name="hydration_custom_drink_invalid">Saisissez un nom de boisson, une quantité et des quantités de nutriments positives.</string>
     <string name="hydration_invalid_amount">Saisissez une quantité supérieure à zéro et ne dépassant pas 100 L.</string>
     <string name="hydration_drink_amount_label">Quantité (%1$s)</string>

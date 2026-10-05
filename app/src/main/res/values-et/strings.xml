@@ -906,6 +906,8 @@
     <string name="hydration_entry_no_hydration">Vedelikutarbimisele mõju puudub</string>
     <string name="hydration_custom_drink_amount_grams">Kogus (g)</string>
     <string name="hydration_custom_drink_amount_kcal">Kogus (kcal)</string>
+    <string name="nutrient_amount_milligrams">Kogus (mg)</string>
+    <string name="nutrient_amount_micrograms">Kogus (µg)</string>
     <string name="hydration_custom_drink_invalid">Sisesta joogi nimi, kogus ja positiivsed toitainekogused.</string>
     <string name="hydration_invalid_amount">Sisesta kogus, mis on suurem kui null ja mitte üle 100 l.</string>
     <string name="hydration_drink_amount_label">Kogus (%1$s)</string>

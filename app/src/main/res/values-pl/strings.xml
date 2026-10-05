@@ -1300,6 +1300,8 @@
     <string name="hydration_entry_no_hydration">Brak wpływu na nawodnienie</string>
     <string name="hydration_custom_drink_amount_grams">Ilość (g)</string>
     <string name="hydration_custom_drink_amount_kcal">Ilość (kcal)</string>
+    <string name="nutrient_amount_milligrams">Ilość (mg)</string>
+    <string name="nutrient_amount_micrograms">Ilość (µg)</string>
     <string name="hydration_custom_drink_invalid">Podaj nazwę napoju, ilość i dodatnie ilości składników odżywczych.</string>
     <string name="hydration_invalid_amount">Podaj ilość większą od zera i nie większą niż 100 l.</string>
     <string name="hydration_drink_amount_label">Ilość (%1$s)</string>

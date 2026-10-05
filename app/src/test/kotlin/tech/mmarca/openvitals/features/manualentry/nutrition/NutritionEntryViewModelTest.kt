@@ -87,7 +87,7 @@ class NutritionEntryViewModelTest {
         vm.updateAmount(NutritionNutrient.ENERGY, "2150")
         vm.updateAmount(NutritionNutrient.PROTEIN, "120,5")
         vm.addNutrient(NutritionNutrient.SODIUM)
-        vm.updateAmount(NutritionNutrient.SODIUM, "2.3")
+        vm.updateAmount(NutritionNutrient.SODIUM, "2300")
         vm.addEntry()
         advanceUntilIdle()
 
@@ -160,10 +160,24 @@ class NutritionEntryViewModelTest {
         )
     }
 
-    @Test fun `a stored amount fills its field without a trailing zero or rounding`() {
-        assertEquals("120", nutrientInputText(120.0))
-        assertEquals("120.5", nutrientInputText(120.5))
-        assertEquals("0.00012", nutrientInputText(0.00012))
+    @Test fun `a vitamin typed in micrograms is stored in grams and edits back in micrograms`() = runTest {
+        val repo = nutritionRepo()
+        val request = slot<NutritionWriteRequest>()
+        coEvery { repo.writeNutritionEntry(capture(request)) } returns "record-id"
+        val vm = viewModel(repo)
+        advanceUntilIdle()
+
+        vm.addNutrient(NutritionNutrient.VITAMIN_K)
+        vm.updateAmount(NutritionNutrient.VITAMIN_K, "15")
+        vm.addEntry()
+        advanceUntilIdle()
+
+        assertEquals(0.000015, request.captured.nutrientValues.getValue(NutritionNutrient.VITAMIN_K), 1e-12)
+        assertEquals(
+            "15",
+            mapOf(NutritionNutrient.VITAMIN_K to 0.000015).toNutritionEntryRows()
+                .single { it.nutrient == NutritionNutrient.VITAMIN_K }.amountText,
+        )
     }
 
     @Test fun `an empty form does not write`() = runTest {

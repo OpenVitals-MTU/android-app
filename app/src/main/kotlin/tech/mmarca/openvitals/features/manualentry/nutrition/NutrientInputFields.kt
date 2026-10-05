@@ -34,7 +34,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
-import tech.mmarca.openvitals.domain.model.NutritionNutrientUnit
 import tech.mmarca.openvitals.features.nutrition.titleRes
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsSurface
@@ -57,6 +56,64 @@ internal fun isValidNutrientInputValue(value: Double): Boolean =
         value <= MaxNutrientInputValue &&
         value.isFinite()
 
+/**
+ * The unit a nutrient is typed in: the one nutrition labels print. What is stored stays
+ * grams (kcal for energy); only the typing moves the decimal point. Vitamins used to be
+ * typed in grams, so a label's 15 µg of vitamin K went in as 15 g.
+ */
+enum class NutrientInputUnit(internal val decimalShift: Int) {
+    KCAL(0),
+    GRAM(0),
+    MILLIGRAM(3),
+    MICROGRAM(6),
+}
+
+internal val NutritionNutrient.inputUnit: NutrientInputUnit
+    get() = when (this) {
+        NutritionNutrient.ENERGY,
+        NutritionNutrient.ENERGY_FROM_FAT -> NutrientInputUnit.KCAL
+        NutritionNutrient.PROTEIN,
+        NutritionNutrient.TOTAL_CARBOHYDRATE,
+        NutritionNutrient.TOTAL_FAT,
+        NutritionNutrient.DIETARY_FIBER,
+        NutritionNutrient.SUGAR,
+        NutritionNutrient.MONOUNSATURATED_FAT,
+        NutritionNutrient.POLYUNSATURATED_FAT,
+        NutritionNutrient.SATURATED_FAT,
+        NutritionNutrient.TRANS_FAT,
+        NutritionNutrient.UNSATURATED_FAT -> NutrientInputUnit.GRAM
+        NutritionNutrient.CHOLESTEROL,
+        NutritionNutrient.NIACIN,
+        NutritionNutrient.PANTOTHENIC_ACID,
+        NutritionNutrient.RIBOFLAVIN,
+        NutritionNutrient.THIAMIN,
+        NutritionNutrient.VITAMIN_B6,
+        NutritionNutrient.VITAMIN_C,
+        NutritionNutrient.VITAMIN_E,
+        NutritionNutrient.CALCIUM,
+        NutritionNutrient.CHLORIDE,
+        NutritionNutrient.COPPER,
+        NutritionNutrient.IRON,
+        NutritionNutrient.MAGNESIUM,
+        NutritionNutrient.MANGANESE,
+        NutritionNutrient.PHOSPHORUS,
+        NutritionNutrient.POTASSIUM,
+        NutritionNutrient.SODIUM,
+        NutritionNutrient.ZINC,
+        NutritionNutrient.CAFFEINE -> NutrientInputUnit.MILLIGRAM
+        NutritionNutrient.BIOTIN,
+        NutritionNutrient.FOLATE,
+        NutritionNutrient.FOLIC_ACID,
+        NutritionNutrient.VITAMIN_A,
+        NutritionNutrient.VITAMIN_B12,
+        NutritionNutrient.VITAMIN_D,
+        NutritionNutrient.VITAMIN_K,
+        NutritionNutrient.CHROMIUM,
+        NutritionNutrient.IODINE,
+        NutritionNutrient.MOLYBDENUM,
+        NutritionNutrient.SELENIUM -> NutrientInputUnit.MICROGRAM
+    }
+
 /** One nutrient of a food or drink being edited. The text is what the user typed. */
 data class NutrientInputRow(
     val nutrient: NutritionNutrient,
@@ -77,7 +134,7 @@ internal fun Map<NutritionNutrient, Double>.toNutrientInputRows(
 ): List<NutrientInputRow> =
     entries
         .sortedWith { first, second -> comparator.compare(first.key, second.key) }
-        .map { (nutrient, value) -> NutrientInputRow(nutrient = nutrient, amountText = value.toString()) }
+        .map { (nutrient, value) -> NutrientInputRow(nutrient = nutrient, amountText = nutrient.inputText(value)) }
 
 internal fun List<NutrientInputRow>.sortedByTitle(
     comparator: Comparator<NutritionNutrient>,
@@ -88,17 +145,27 @@ internal fun List<NutrientInputRow>.sortedByTitle(
 internal fun List<NutrientInputRow>.parsedNutrientValues(): Map<NutritionNutrient, Double>? {
     val filled = filter { it.amountText.isNotBlank() }
     val values = filled.mapNotNull { row ->
-        row.amountText.toNutrientInputValueOrNull()?.let { row.nutrient to it }
+        row.storedValueOrNull()?.let { row.nutrient to it }
     }
     return values.toMap().takeIf { it.size == filled.size }
 }
 
-internal fun String.toNutrientInputValueOrNull(): Double? =
-    replace(',', '.').toDoubleOrNull()?.takeIf(::isValidNutrientInputValue)
+/**
+ * What the typed amount stores as: grams, or kcal for energy. Null when it does not parse or
+ * is out of range. The decimal point moves exactly, so 15 µg is 0.000015 g, not 1.4999…e-5.
+ */
+internal fun NutrientInputRow.storedValueOrNull(): Double? =
+    amountText.trim().replace(',', '.').toBigDecimalOrNull()
+        ?.movePointLeft(nutrient.inputUnit.decimalShift)
+        ?.toDouble()
+        ?.takeIf(::isValidNutrientInputValue)
 
-/** A stored amount as the form shows it: 120.0 reads "120", 0.00012 stays "0.00012". */
-internal fun nutrientInputText(value: Double): String =
-    BigDecimal.valueOf(value).stripTrailingZeros().toPlainString()
+/** A stored amount in the field's unit: 0.000015 g of vitamin K reads "15", 120.0 g reads "120". */
+internal fun NutritionNutrient.inputText(storedValue: Double): String =
+    BigDecimal.valueOf(storedValue)
+        .movePointRight(inputUnit.decimalShift)
+        .stripTrailingZeros()
+        .toPlainString()
 
 /** [onRemove] null keeps the row: the nutrition form's main nutrients are always there. */
 @Composable
@@ -135,7 +202,7 @@ internal fun NutrientAmountRow(
             onValueChange = onAmountChanged,
             enabled = enabled,
             label = { Text(nutrientAmountLabel(row.nutrient)) },
-            isError = row.amountText.isNotBlank() && row.amountText.toNutrientInputValueOrNull() == null,
+            isError = row.amountText.isNotBlank() && row.storedValueOrNull() == null,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier
@@ -229,8 +296,9 @@ private fun NutrientChoiceRow(
 
 @Composable
 private fun nutrientAmountLabel(nutrient: NutritionNutrient): String =
-    when (nutrient.unit) {
-        NutritionNutrientUnit.ENERGY_KCAL -> stringResource(R.string.hydration_custom_drink_amount_kcal)
-        NutritionNutrientUnit.MASS_GRAMS,
-        NutritionNutrientUnit.MASS_ADAPTIVE -> stringResource(R.string.hydration_custom_drink_amount_grams)
+    when (nutrient.inputUnit) {
+        NutrientInputUnit.KCAL -> stringResource(R.string.hydration_custom_drink_amount_kcal)
+        NutrientInputUnit.GRAM -> stringResource(R.string.hydration_custom_drink_amount_grams)
+        NutrientInputUnit.MILLIGRAM -> stringResource(R.string.nutrient_amount_milligrams)
+        NutrientInputUnit.MICROGRAM -> stringResource(R.string.nutrient_amount_micrograms)
     }

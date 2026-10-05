@@ -1280,6 +1280,8 @@
     <string name="hydration_entry_no_hydration">Не влияет на гидратацию</string>
     <string name="hydration_custom_drink_amount_grams">Количество (г)</string>
     <string name="hydration_custom_drink_amount_kcal">Количество (ккал)</string>
+    <string name="nutrient_amount_milligrams">Количество (мг)</string>
+    <string name="nutrient_amount_micrograms">Количество (мкг)</string>
     <string name="hydration_custom_drink_invalid">Введите название напитка, его количество и положительные значения питательных веществ.</string>
     <string name="hydration_invalid_amount">Введите количество больше нуля и не более 100 л.</string>
     <string name="hydration_drink_amount_label">Количество (%1$s)</string>
