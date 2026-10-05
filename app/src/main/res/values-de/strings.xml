@@ -905,6 +905,8 @@
     <string name="hydration_entry_no_hydration">Keine Hydrierung</string>
     <string name="hydration_custom_drink_amount_grams">Menge (g)</string>
     <string name="hydration_custom_drink_amount_kcal">Menge (kcal)</string>
+    <string name="nutrient_amount_milligrams">Menge (mg)</string>
+    <string name="nutrient_amount_micrograms">Menge (µg)</string>
     <string name="hydration_custom_drink_invalid">Gib einen Getränkenamen, eine Menge und positive Nährstoffmengen ein.</string>
     <string name="hydration_invalid_amount">Gib eine Menge größer als null und höchstens 100 l ein.</string>
     <string name="hydration_drink_amount_label">Menge (%1$s)</string>

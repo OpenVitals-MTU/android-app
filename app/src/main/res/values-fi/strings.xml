@@ -1328,6 +1328,8 @@
     <string name="hydration_entry_no_hydration">Ei nesteytysvaikutusta</string>
     <string name="hydration_custom_drink_amount_grams">Määrä (g)</string>
     <string name="hydration_custom_drink_amount_kcal">Määrä (kcal)</string>
+    <string name="nutrient_amount_milligrams">Määrä (mg)</string>
+    <string name="nutrient_amount_micrograms">Määrä (µg)</string>
     <string name="hydration_custom_drink_invalid">Anna juoman nimi, määrä ja positiiviset ravintoainemäärät.</string>
     <string name="hydration_invalid_amount">Anna määrä, joka on suurempi kuin nolla ja enintään 100 l.</string>
     <string name="hydration_drink_amount_label">Määrä (%1$s)</string>

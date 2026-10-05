@@ -258,7 +258,7 @@ class NutritionEntryViewModel @Inject constructor(
 internal fun Map<NutritionNutrient, Double>.toNutritionEntryRows(): List<NutrientInputRow> {
     fun row(nutrient: NutritionNutrient) = NutrientInputRow(
         nutrient = nutrient,
-        amountText = this[nutrient]?.let(::nutrientInputText).orEmpty(),
+        amountText = this[nutrient]?.let(nutrient::inputText).orEmpty(),
     )
     val others = keys.filterNot { it in PrimaryNutritionEntryNutrients }.sortedBy { it.ordinal }
     return PrimaryNutritionEntryNutrients.map(::row) + others.map(::row)

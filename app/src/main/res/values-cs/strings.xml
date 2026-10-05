@@ -989,6 +989,8 @@
     <string name="hydration_entry_no_hydration">Bez vlivu na hydrataci</string>
     <string name="hydration_custom_drink_amount_grams">Množství (g)</string>
     <string name="hydration_custom_drink_amount_kcal">Množství (kcal)</string>
+    <string name="nutrient_amount_milligrams">Množství (mg)</string>
+    <string name="nutrient_amount_micrograms">Množství (µg)</string>
     <string name="hydration_custom_drink_invalid">Zadejte název nápoje, množství a kladná množství živin.</string>
     <string name="hydration_invalid_amount">Zadejte množství větší než nula a nejvýše 100 l.</string>
     <string name="hydration_drink_amount_label">Množství (%1$s)</string>

@@ -19,6 +19,8 @@ There are no preloaded foods. The user makes each one with **New food**:
 
 Any nutrient Health Connect supports can be added: energy, the macros, fibre, sugar, the fat types, vitamins, minerals, and caffeine. A food needs at least one nutrient; a portion with none would have nothing to write.
 
+Each nutrient is typed in the unit a nutrition label prints for it: kcal for energy, g for the macros, fibre, sugar and fats, mg for vitamin C, vitamin E, the B vitamins other than B12, cholesterol, caffeine and most minerals, and µg for vitamins A, D, K and B12, folate, folic acid, biotin, chromium, iodine, molybdenum and selenium. The stored value is grams either way. The same units apply to custom drinks and the nutrition entry form.
+
 The catalog lives in Room, in `foods` and `food_nutrients`. Deleting a food hides it; the row stays. Foods without a category are listed first, then each category in order. A search field appears once the list is long.
 
 ## Logging A Portion

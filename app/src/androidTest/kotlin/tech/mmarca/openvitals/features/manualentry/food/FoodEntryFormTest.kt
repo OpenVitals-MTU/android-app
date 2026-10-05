@@ -130,7 +130,7 @@ class FoodEntryFormTest {
         composeRule.onNodeWithText(string(R.string.food_edit_food_title)).assertIsDisplayed()
         // The edit form arrives filled.
         composeRule.onNodeWithTag("food_name").assertTextContains(BANANA)
-        composeRule.onNodeWithTag("nutrient_amount_ENERGY").performScrollTo().assertTextContains("105.0")
+        composeRule.onNodeWithTag("nutrient_amount_ENERGY").performScrollTo().assertTextContains("105")
         composeRule.onNodeWithText(string(R.string.action_cancel)).performClick()
 
         composeRule.onNodeWithContentDescription(string(R.string.cd_food_actions)).performScrollTo().performClick()

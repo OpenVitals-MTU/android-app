@@ -998,6 +998,8 @@
     <string name="hydration_entry_no_hydration">无补水影响</string>
     <string name="hydration_custom_drink_amount_grams">数量 (克)</string>
     <string name="hydration_custom_drink_amount_kcal">数量 (千卡)</string>
+    <string name="nutrient_amount_milligrams">数量 (毫克)</string>
+    <string name="nutrient_amount_micrograms">数量 (微克)</string>
     <string name="hydration_custom_drink_invalid">请输入饮品名称、数量和正数营养素。</string>
     <string name="hydration_invalid_amount">请输入大于零且不超过 100 升的数量。</string>
     <string name="hydration_drink_amount_label">数量 (%1$s)</string>

@@ -1279,6 +1279,8 @@
     <string name="hydration_entry_no_hydration">水分補給への寄与なし</string>
     <string name="hydration_custom_drink_amount_grams">量 (g)</string>
     <string name="hydration_custom_drink_amount_kcal">量 (kcal)</string>
+    <string name="nutrient_amount_milligrams">量 (mg)</string>
+    <string name="nutrient_amount_micrograms">量 (µg)</string>
     <string name="hydration_custom_drink_invalid">飲み物の名前、量、正の栄養素量を入力してください。</string>
     <string name="hydration_invalid_amount">0 より大きく 100 L 以下の量を入力してください。</string>
     <string name="hydration_drink_amount_label">量 (%1$s)</string>
