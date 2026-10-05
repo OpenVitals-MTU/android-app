@@ -401,7 +401,6 @@
     <string name="body_entry_write_failed">Impossible d\'enregistrer la mesure corporelle : %1$s</string>
     <string name="nutrition_entry_subtitle">Les entrées sont enregistrées directement dans Santé Connect. Ne remplissez que les quantités que vous connaissez.</string>
     <string name="nutrition_entry_permission_needed">Pour ajouter des entrées nutritionnelles, OpenVitals a besoin de l\'autorisation d\'écriture dans Santé Connect. L\'app ne stockera pas ces données ; les entrées sont enregistrées dans Santé Connect.</string>
-    <string name="nutrition_entry_amount_ounces">Quantité (oz)</string>
     <string name="nutrition_entry_add">Enregistrer l\'entrée nutritionnelle</string>
     <string name="nutrition_entry_add_another_nutrient">Ajouter un autre nutriment</string>
     <string name="nutrition_entry_no_values">Saisissez au moins une quantité.</string>

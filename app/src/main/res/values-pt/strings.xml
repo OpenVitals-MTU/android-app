@@ -398,7 +398,6 @@
     <string name="body_entry_write_failed">Não foi possível guardar a medição corporal: %1$s</string>
     <string name="nutrition_entry_subtitle">Os registos são guardados diretamente no Health Connect. Preencha apenas as quantidades que conhece.</string>
     <string name="nutrition_entry_permission_needed">Para adicionar registos de nutrição, o OpenVitals precisa de permissão de escrita do Health Connect. A aplicação não armazena estes dados; os registos são guardados no Health Connect.</string>
-    <string name="nutrition_entry_amount_ounces">Quantidade (oz)</string>
     <string name="nutrition_entry_add">Guardar registo de nutrição</string>
     <string name="nutrition_entry_add_another_nutrient">Adicionar outro nutriente</string>
     <string name="nutrition_entry_no_values">Introduza pelo menos uma quantidade.</string>

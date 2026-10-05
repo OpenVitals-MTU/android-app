@@ -503,7 +503,6 @@
     <string name="body_entry_write_failed">Could not save body measurement: %1$s</string>
     <string name="nutrition_entry_subtitle">Entries are saved directly to Health Connect. Fill in only the amounts you have.</string>
     <string name="nutrition_entry_permission_needed">To add nutrition entries, OpenVitals needs Health Connect write permission. The app will not store this data; entries are saved in Health Connect.</string>
-    <string name="nutrition_entry_amount_ounces">Amount (oz)</string>
     <string name="nutrition_entry_add">Log nutrition entry</string>
     <string name="nutrition_entry_add_another_nutrient">Add another nutrient</string>
     <string name="nutrition_entry_no_values">Enter at least one amount.</string>

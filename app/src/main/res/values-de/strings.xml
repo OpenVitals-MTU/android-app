@@ -345,7 +345,6 @@
     <string name="body_entry_write_failed">Körpermessung konnte nicht gespeichert werden: %1$s</string>
     <string name="nutrition_entry_subtitle">Einträge werden direkt in Health Connect gespeichert. Fülle nur die Mengen aus, die du kennst.</string>
     <string name="nutrition_entry_permission_needed">Zum Hinzufügen von Ernährungseinträgen benötigt OpenVitals die Health-Connect-Schreibberechtigung. Die App speichert diese Daten nicht; Einträge werden in Health Connect gespeichert.</string>
-    <string name="nutrition_entry_amount_ounces">Menge (oz)</string>
     <string name="nutrition_entry_add">Ernährungseintrag erfassen</string>
     <string name="nutrition_entry_add_another_nutrient">Weiteren Nährstoff hinzufügen</string>
     <string name="nutrition_entry_no_values">Gib mindestens eine Menge ein.</string>

@@ -675,5 +675,10 @@ private object NoopNutritionRepository : NutritionRepository {
     override suspend fun writeNutritionEntry(request: NutritionWriteRequest): String =
         error("Nutrition repository is not configured.")
 
+    override suspend fun loadNutritionEntry(id: String): NutritionEntry? = null
+
+    override suspend fun updateNutritionEntry(id: String, request: NutritionWriteRequest) =
+        error("Nutrition repository is not configured.")
+
     override suspend fun deleteNutritionEntry(id: String) = Unit
 }

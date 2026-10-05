@@ -504,7 +504,6 @@
     <string name="body_entry_write_failed">Nie udało się zapisać pomiaru ciała: %1$s</string>
     <string name="nutrition_entry_subtitle">Wpisy są zapisywane bezpośrednio w Health Connect. Wypełnij tylko znane ci ilości.</string>
     <string name="nutrition_entry_permission_needed">Aby dodawać wpisy odżywiania, OpenVitals potrzebuje uprawnienia zapisu Health Connect. Aplikacja nie przechowuje tych danych; wpisy są zapisywane w Health Connect.</string>
-    <string name="nutrition_entry_amount_ounces">Ilość (oz)</string>
     <string name="nutrition_entry_add">Zapisz wpis odżywiania</string>
     <string name="nutrition_entry_add_another_nutrient">Dodaj kolejny składnik odżywczy</string>
     <string name="nutrition_entry_no_values">Wpisz co najmniej jedną ilość.</string>

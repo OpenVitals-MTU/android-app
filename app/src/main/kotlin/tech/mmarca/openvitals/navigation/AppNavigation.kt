@@ -577,6 +577,9 @@ fun AppNavigation(
                     onEditHydrationEntry = { entryId ->
                         navController.navigate(Screen.HydrationEntryEdit.createRoute(entryId))
                     },
+                    onEditNutritionEntry = { entryId ->
+                        navController.navigate(Screen.NutritionEntryEdit.createRoute(entryId))
+                    },
                     onOpenCaffeineDrink = { entryId, day ->
                         navController.navigate(Screen.CaffeineDrink.createRoute(entryId, day))
                     },
@@ -638,6 +641,12 @@ fun AppNavigation(
                     viewModel = nutritionViewModel,
                     unitFormatter = unitFormatter,
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
+                    onEditNutritionEntry = { entryId ->
+                        navController.navigate(Screen.NutritionEntryEdit.createRoute(entryId))
+                    },
+                    onEditHydrationEntry = { entryId ->
+                        navController.navigate(Screen.HydrationEntryEdit.createRoute(entryId))
+                    },
                 )
             }
 

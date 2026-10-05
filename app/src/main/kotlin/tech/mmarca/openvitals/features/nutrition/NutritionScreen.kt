@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.features.nutrition
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -27,6 +28,8 @@ fun NutritionScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditNutritionEntry: (String) -> Unit = {},
+    onEditHydrationEntry: (String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val sectionContext = rememberMetricDetailSectionOrdering()
@@ -36,8 +39,17 @@ fun NutritionScreen(
         key = "nutrition",
     )
 
+    // Reloads on return, so an entry edited on another screen shows its new values.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.resumeCurrentPeriod()
+        viewModel.resumeCurrentPeriod(refreshCurrent = true)
+    }
+    LaunchedEffect(state.pendingEdit) {
+        val target = state.pendingEdit ?: return@LaunchedEffect
+        viewModel.onEditHandled()
+        when (target) {
+            is NutritionEditTarget.TypedEntry -> onEditNutritionEntry(target.nutritionRecordId)
+            is NutritionEditTarget.Drink -> onEditHydrationEntry(target.hydrationRecordId)
+        }
     }
 
     WithHealthConnectFeatureScreen(
@@ -68,6 +80,7 @@ fun NutritionScreen(
                 dateTimeFormatterProvider = dateTimeFormatterProvider,
                 chartDaySelection = chartDaySelection,
                 onDeleteEntry = viewModel::deleteNutritionEntry,
+                onEditEntry = viewModel::editEntry,
             )
         }
     }
@@ -78,12 +91,16 @@ fun CaloriesInScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditNutritionEntry: (String) -> Unit = {},
+    onEditHydrationEntry: (String) -> Unit = {},
 ) {
     NutritionMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = NutritionMetric.CALORIES_IN,
+        onEditNutritionEntry = onEditNutritionEntry,
+        onEditHydrationEntry = onEditHydrationEntry,
     )
 }
 
@@ -92,12 +109,16 @@ fun ProteinScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditNutritionEntry: (String) -> Unit = {},
+    onEditHydrationEntry: (String) -> Unit = {},
 ) {
     NutritionMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = NutritionMetric.PROTEIN,
+        onEditNutritionEntry = onEditNutritionEntry,
+        onEditHydrationEntry = onEditHydrationEntry,
     )
 }
 
@@ -106,12 +127,16 @@ fun CarbsScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditNutritionEntry: (String) -> Unit = {},
+    onEditHydrationEntry: (String) -> Unit = {},
 ) {
     NutritionMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = NutritionMetric.CARBS,
+        onEditNutritionEntry = onEditNutritionEntry,
+        onEditHydrationEntry = onEditHydrationEntry,
     )
 }
 
@@ -120,12 +145,16 @@ fun FatScreen(
     viewModel: NutritionViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditNutritionEntry: (String) -> Unit = {},
+    onEditHydrationEntry: (String) -> Unit = {},
 ) {
     NutritionMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = NutritionMetric.FAT,
+        onEditNutritionEntry = onEditNutritionEntry,
+        onEditHydrationEntry = onEditHydrationEntry,
     )
 }
 
@@ -136,13 +165,24 @@ internal fun NutritionMetricScreen(
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     metric: NutritionMetric,
+    onEditNutritionEntry: (String) -> Unit = {},
+    onEditHydrationEntry: (String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val sectionContext = rememberMetricDetailSectionOrdering()
     val chartDaySelection = rememberChartDaySelection(state.selectedRange, state.selectedDate, metric)
 
+    // Reloads on return, so an entry edited on another screen shows its new values.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.resumeCurrentPeriod()
+        viewModel.resumeCurrentPeriod(refreshCurrent = true)
+    }
+    LaunchedEffect(state.pendingEdit) {
+        val target = state.pendingEdit ?: return@LaunchedEffect
+        viewModel.onEditHandled()
+        when (target) {
+            is NutritionEditTarget.TypedEntry -> onEditNutritionEntry(target.nutritionRecordId)
+            is NutritionEditTarget.Drink -> onEditHydrationEntry(target.hydrationRecordId)
+        }
     }
 
     WithHealthConnectFeatureScreen(
@@ -176,6 +216,7 @@ internal fun NutritionMetricScreen(
                 onDecreaseGoal = viewModel::decreaseDailyGoal,
                 onIncreaseGoal = viewModel::increaseDailyGoal,
                 onDeleteEntry = viewModel::deleteNutritionEntry,
+                onEditEntry = viewModel::editEntry,
             )
         }
     }

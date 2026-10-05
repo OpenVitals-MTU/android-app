@@ -346,7 +346,6 @@
     <string name="body_entry_write_failed">Kehamõõtmist ei õnnestunud salvestada: %1$s</string>
     <string name="nutrition_entry_subtitle">Kirjed salvestatakse otse Health Connectisse. Täida ainult need kogused, mida tead.</string>
     <string name="nutrition_entry_permission_needed">Toitumise kirjete lisamiseks vajab OpenVitals Health Connecti kirjutamisõigust. Rakendus ei salvesta neid andmeid ise; kirjed salvestatakse Health Connectisse.</string>
-    <string name="nutrition_entry_amount_ounces">Kogus (oz)</string>
     <string name="nutrition_entry_add">Salvesta toitumise kirje</string>
     <string name="nutrition_entry_add_another_nutrient">Lisa veel üks toitaine</string>
     <string name="nutrition_entry_no_values">Sisesta vähemalt üks kogus.</string>

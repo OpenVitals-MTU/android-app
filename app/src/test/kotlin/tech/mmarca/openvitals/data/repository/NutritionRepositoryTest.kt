@@ -23,6 +23,7 @@ import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
+import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 class NutritionRepositoryTest {
@@ -114,6 +115,32 @@ class NutritionRepositoryTest {
 
         assertTrue(error is SecurityException)
         coVerify(exactly = 0) { hc.deleteNutritionEntry(any()) }
+    }
+
+    @Test
+    fun `updateNutritionEntry throws when write permission is missing`() = runTest {
+        val hc = hc(
+            entries = emptyList(),
+            grantedPermissions = setOf(readNutritionPermission),
+        )
+
+        val error = runCatching {
+            NutritionRepositoryImpl(hc).updateNutritionEntry(
+                "nutrition-id",
+                NutritionWriteRequest(time = Instant.EPOCH, nutrientValues = mapOf(NutritionNutrient.ENERGY to 1.0)),
+            )
+        }.exceptionOrNull()
+
+        assertTrue(error is SecurityException)
+        coVerify(exactly = 0) { hc.updateNutritionEntry(any(), any()) }
+    }
+
+    @Test
+    fun `loadNutritionEntry is null without read permission`() = runTest {
+        val hc = hc(entries = emptyList(), grantedPermissions = setOf(writeNutritionPermission))
+
+        assertEquals(null, NutritionRepositoryImpl(hc).loadNutritionEntry("nutrition-id"))
+        coVerify(exactly = 0) { hc.readNutritionEntry(any()) }
     }
 
     private fun hc(

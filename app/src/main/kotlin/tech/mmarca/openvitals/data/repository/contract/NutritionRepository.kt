@@ -22,5 +22,10 @@ interface NutritionRepository {
 
     suspend fun writeNutritionEntry(request: NutritionWriteRequest): String
 
+    /** Null without read permission, or when the record is gone. */
+    suspend fun loadNutritionEntry(id: String): NutritionEntry?
+
+    suspend fun updateNutritionEntry(id: String, request: NutritionWriteRequest)
+
     suspend fun deleteNutritionEntry(id: String)
 }

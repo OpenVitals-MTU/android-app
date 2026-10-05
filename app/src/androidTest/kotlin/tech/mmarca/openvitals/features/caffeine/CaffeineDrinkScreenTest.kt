@@ -160,5 +160,9 @@ private object UnusedNutritionRepository : NutritionRepository {
 
     override suspend fun writeNutritionEntry(request: NutritionWriteRequest): String = error("unused")
 
+    override suspend fun loadNutritionEntry(id: String) = error("unused")
+
+    override suspend fun updateNutritionEntry(id: String, request: NutritionWriteRequest) = error("unused")
+
     override suspend fun deleteNutritionEntry(id: String) = error("unused")
 }

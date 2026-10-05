@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,10 +33,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.Instant
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.ScreenError
-import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
-import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.manualentry.ManualEntryTimestampFields
 import tech.mmarca.openvitals.features.manualentry.ManualEntryWritePermissionCallout
 import tech.mmarca.openvitals.features.manualentry.rememberManualEntryWritePermissionRequester
@@ -46,7 +45,6 @@ import tech.mmarca.openvitals.ui.theme.NutritionColor
 @Composable
 fun NutritionEntryScreen(
     viewModel: NutritionEntryViewModel,
-    unitFormatter: UnitFormatter,
     onEntrySaved: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -64,17 +62,15 @@ fun NutritionEntryScreen(
         viewModel.refreshPermission()
     }
 
-    val unitSystem = unitFormatter.unitSystem()
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
         item {
             NutritionEntryCard(
                 state = state,
-                unitSystem = unitSystem,
                 onAmountChanged = viewModel::updateAmount,
                 onAddNutrient = viewModel::addNutrient,
                 onRemoveNutrient = viewModel::removeNutrient,
                 onTimestampChanged = viewModel::updateTimestamp,
-                onAddEntry = { viewModel.addEntry(unitSystem) },
+                onAddEntry = viewModel::addEntry,
                 onRequestWritePermission = {
                     requestWritePermissions.launch(state.writePermissions)
                 },
@@ -87,7 +83,6 @@ fun NutritionEntryScreen(
 @Composable
 private fun NutritionEntryCard(
     state: NutritionEntryUiState,
-    unitSystem: UnitSystem,
     onAmountChanged: (NutritionNutrient, String) -> Unit,
     onAddNutrient: (NutritionNutrient) -> Unit,
     onRemoveNutrient: (NutritionNutrient) -> Unit,
@@ -98,8 +93,7 @@ private fun NutritionEntryCard(
 ) {
     val nutrientComparator = nutrientTitleComparator(LocalContext.current.resources)
     var nutrientChooserOpen by rememberSaveable { mutableStateOf(false) }
-    val fieldsEnabled = !state.isSavingEntry
-    val canSave = state.canWrite && !state.isSavingEntry && !state.isCheckingPermission
+    val fieldsEnabled = !state.isSavingEntry && (!state.isEditMode || state.isEditEntryLoaded)
     // The main nutrients keep their order; the added ones read alphabetically below them.
     val primaryRows = state.rows.filter { it.nutrient in PrimaryNutritionEntryNutrients }
     val addedRows = remember(state.rows, nutrientComparator) {
@@ -161,7 +155,6 @@ private fun NutritionEntryCard(
                     row = row,
                     onAmountChanged = { text -> onAmountChanged(row.nutrient, text) },
                     onRemove = null,
-                    unitSystem = unitSystem,
                     enabled = fieldsEnabled,
                 )
             }
@@ -170,7 +163,6 @@ private fun NutritionEntryCard(
                     row = row,
                     onAmountChanged = { text -> onAmountChanged(row.nutrient, text) },
                     onRemove = { onRemoveNutrient(row.nutrient) },
-                    unitSystem = unitSystem,
                     enabled = fieldsEnabled,
                 )
             }
@@ -182,16 +174,18 @@ private fun NutritionEntryCard(
 
             OpenVitalsButton(
                 onClick = onAddEntry,
-                enabled = canSave,
+                enabled = state.canSave,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Add,
+                    imageVector = if (state.isEditMode) Icons.Outlined.Check else Icons.Outlined.Add,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
-                    text = stringResource(R.string.nutrition_entry_add),
+                    text = stringResource(
+                        if (state.isEditMode) R.string.action_save else R.string.nutrition_entry_add,
+                    ),
                     modifier = Modifier.padding(start = 6.dp),
                 )
             }

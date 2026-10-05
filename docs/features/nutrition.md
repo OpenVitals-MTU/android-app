@@ -32,7 +32,14 @@ Nutrition metrics follow the canonical period-detail pattern:
 - Over a week, month or year the nutrient tiles lead with a **daily average**; see below.
 - Reorderable detail sections.
 
-Nutrition records remain in Health Connect. OpenVitals writes nutrition records through explicit entry flows: food logging, the nutrition entry form and beverage logging. The nutrition detail screens remain read-oriented.
+Nutrition records remain in Health Connect. OpenVitals writes nutrition records through explicit entry flows: food logging, the nutrition entry form and beverage logging.
+
+The entry list on the nutrition screens (reached from the Calories in, Protein, Carbs and Fat widgets) lets the user act on what OpenVitals wrote:
+
+- Every OpenVitals entry swipes to delete. Records from other apps are read-only.
+- A typed entry has an edit button that opens the nutrition form with its values and time. Saving replaces the record in place, so it keeps its id and stays off the beverage screens. Old carbs-only entries edit the same way.
+- A drink has an edit button that opens the drink: its nutrients follow the water, so they are not edited apart from it.
+- A logged food portion is delete-only, so the food catalog stays the one place its nutrients are set.
 
 ## Daily Averages Over A Period
 

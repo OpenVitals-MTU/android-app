@@ -20,6 +20,7 @@ import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.testing.FakeHealthConnectClient
 import androidx.health.connect.client.time.TimeRangeFilter
+import androidx.health.connect.client.units.Energy
 import androidx.health.connect.client.units.Mass
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
@@ -269,6 +270,89 @@ class EntryWritePathsTest {
         assertThat(totals.totalFat!!.inGrams).isWithin(1e-9).of(70.0)
         assertThat(totals.totalCarbohydrate!!.inGrams).isWithin(1e-9).of(240.0)
         assertThat(totals.dietaryFiber).isNull()
+    }
+
+    @Test
+    fun `an edited typed entry stays one record, keeps its marker and moves in time`() = onTheTestClock {
+        val nutrition = NutritionHealthReader(support(), APP_PACKAGE)
+        nutrition.writeNutritionEntry(
+            NutritionWriteRequest(
+                time = NOON,
+                nutrientValues = mapOf(NutritionNutrient.ENERGY to 2150.0, NutritionNutrient.PROTEIN to 120.0),
+                isManualNutritionEntry = true,
+            ),
+        )
+        val original = all(NutritionRecord::class).single()
+
+        nutrition.updateNutritionEntry(
+            original.metadata.id,
+            NutritionWriteRequest(
+                time = NOON.plusSeconds(3_600),
+                nutrientValues = mapOf(NutritionNutrient.ENERGY to 2000.0, NutritionNutrient.DIETARY_FIBER to 30.0),
+                isManualNutritionEntry = true,
+            ),
+        )
+
+        val edited = all(NutritionRecord::class).single()
+        assertThat(edited.metadata.id).isEqualTo(original.metadata.id)
+        assertThat(edited.metadata.clientRecordId).isEqualTo(original.metadata.clientRecordId)
+        assertThat(edited.metadata.clientRecordId).startsWith("openvitals_manual_nutrition_")
+        assertThat(edited.startTime).isEqualTo(NOON.plusSeconds(3_600))
+        assertThat(edited.energy!!.inKilocalories).isWithin(1e-9).of(2000.0)
+        assertThat(edited.dietaryFiber!!.inGrams).isWithin(1e-9).of(30.0)
+        // A field left blank in the edit is gone, not kept from before.
+        assertThat(edited.protein).isNull()
+    }
+
+    @Test
+    fun `an old carbs entry keeps its name through an edit, so it stays off the drink list`() = onTheTestClock {
+        val nutrition = NutritionHealthReader(support(), APP_PACKAGE)
+        nutrition.writeNutritionEntry(
+            NutritionWriteRequest(
+                time = NOON,
+                nutrientValues = mapOf(NutritionNutrient.TOTAL_CARBOHYDRATE to 45.0),
+                name = "OpenVitals carbs",
+            ),
+        )
+        val id = all(NutritionRecord::class).single().metadata.id
+
+        nutrition.updateNutritionEntry(
+            id,
+            NutritionWriteRequest(
+                time = NOON,
+                nutrientValues = mapOf(NutritionNutrient.TOTAL_CARBOHYDRATE to 50.0),
+                isManualNutritionEntry = true,
+            ),
+        )
+
+        val edited = all(NutritionRecord::class).single()
+        assertThat(edited.name).isEqualTo("OpenVitals carbs")
+        assertThat(edited.totalCarbohydrate!!.inGrams).isWithin(1e-9).of(50.0)
+    }
+
+    @Test
+    fun `another app's nutrition record cannot be edited`() = onTheTestClock {
+        val foreignId = insertAsAnotherApp(
+            NutritionRecord(
+                startTime = NOON,
+                startZoneOffset = ZoneOffset.UTC,
+                endTime = NOON.plusSeconds(60),
+                endZoneOffset = ZoneOffset.UTC,
+                energy = Energy.kilocalories(500.0),
+                metadata = Metadata.manualEntry(clientRecordId = "their_id"),
+            ),
+        )
+        val nutrition = NutritionHealthReader(support(), APP_PACKAGE)
+
+        val edit = runCatching {
+            nutrition.updateNutritionEntry(
+                foreignId,
+                NutritionWriteRequest(time = NOON, nutrientValues = mapOf(NutritionNutrient.ENERGY to 1.0)),
+            )
+        }
+
+        assertThat(edit.exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(all(NutritionRecord::class).single().energy!!.inKilocalories).isWithin(1e-9).of(500.0)
     }
 
     // Hydration.

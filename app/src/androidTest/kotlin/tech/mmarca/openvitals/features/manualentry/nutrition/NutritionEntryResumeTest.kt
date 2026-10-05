@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -15,10 +16,8 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
-import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.domain.model.NutritionWriteRequest
-import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.testing.string
 import tech.mmarca.openvitals.ui.theme.OpenVitalsTheme
 
@@ -34,13 +33,13 @@ class NutritionEntryResumeTest {
     @Test
     fun aPermissionGrantedWhileAwayIsPickedUpWhenTheScreenComesBack() {
         val repository = FakeNutritionRepository(canWrite = false)
-        val viewModel = NutritionEntryViewModel(repository)
+        val viewModel = NutritionEntryViewModel(repository, SavedStateHandle())
         val owner = TestLifecycleOwner()
 
         composeRule.setContent {
             CompositionLocalProvider(LocalLifecycleOwner provides owner) {
                 OpenVitalsTheme {
-                    NutritionEntryScreen(viewModel = viewModel, unitFormatter = FORMATTER)
+                    NutritionEntryScreen(viewModel = viewModel)
                 }
             }
         }
@@ -94,12 +93,15 @@ class NutritionEntryResumeTest {
         override suspend fun writeNutritionEntry(request: NutritionWriteRequest): String =
             error("unused")
 
+        override suspend fun loadNutritionEntry(id: String) = error("unused")
+
+        override suspend fun updateNutritionEntry(id: String, request: NutritionWriteRequest) =
+            error("unused")
+
         override suspend fun deleteNutritionEntry(id: String) = error("unused")
     }
 
     private companion object {
         const val TIMEOUT_MS = 10_000L
-
-        val FORMATTER = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC })
     }
 }

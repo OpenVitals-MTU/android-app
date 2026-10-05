@@ -401,7 +401,6 @@
     <string name="body_entry_write_failed">无法保存身体测量：%1$s</string>
     <string name="nutrition_entry_subtitle">记录直接保存在 Health Connect 中。只需填写你知道的数量。</string>
     <string name="nutrition_entry_permission_needed">要添加营养记录，OpenVitals 需要 Health Connect 写入权限。应用不会存储此数据；记录保存在 Health Connect 中。</string>
-    <string name="nutrition_entry_amount_ounces">数量 (盎司)</string>
     <string name="nutrition_entry_add">保存营养记录</string>
     <string name="nutrition_entry_add_another_nutrient">添加其他营养素</string>
     <string name="nutrition_entry_no_values">请至少输入一个数量。</string>

@@ -161,8 +161,18 @@ internal fun NavGraphBuilder.manualEntryRoutes(
         val nutritionEntryViewModel = hiltViewModel<NutritionEntryViewModel>()
         NutritionEntryScreen(
             viewModel = nutritionEntryViewModel,
-            unitFormatter = unitFormatter,
             onEntrySaved = onEntrySaved,
+        )
+    }
+
+    composable(
+        route = Screen.NutritionEntryEdit.route,
+        arguments = listOf(navArgument(NUTRITION_ENTRY_ID_ARG) { type = NavType.StringType }),
+    ) {
+        val nutritionEntryViewModel = hiltViewModel<NutritionEntryViewModel>()
+        NutritionEntryScreen(
+            viewModel = nutritionEntryViewModel,
+            onEntrySaved = onEntrySavedAndPopBack,
         )
     }
 
