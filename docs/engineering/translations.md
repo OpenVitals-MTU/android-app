@@ -76,3 +76,9 @@ Run the translation validator before merging Weblate pull requests:
 The validator reports locale files at or below 70% coverage, stale extra keys,
 translated `translatable="false"` resources, plural shape mismatches, and
 placeholder mismatches. It is also part of `./gradlew verifyCi`.
+
+Plural shape follows each language's CLDR categories, listed in
+`CLDR_LANGUAGE_QUANTITIES` in `scripts/verify-translations.py`. Japanese and
+Chinese have only `other`, so they may drop the `one` branch English carries.
+A new language not yet in that table is held to every quantity the base file
+has, so add its CLDR categories when Weblate adds the language.
