@@ -56,14 +56,12 @@ class PermissionsRationaleActivity : ComponentActivity() {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 8.dp),
                             )
-                            if (BuildConfig.MEDICAL_RECORDS) {
-                                Text(
-                                    text = stringResource(R.string.privacy_policy_body_medical),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(top = Spacing.sm),
-                                )
-                            }
+                            Text(
+                                text = stringResource(R.string.privacy_policy_body_medical),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = Spacing.sm),
+                            )
                             Text(
                                 text = stringResource(R.string.privacy_policy_body_3),
                                 style = MaterialTheme.typography.bodyMedium,

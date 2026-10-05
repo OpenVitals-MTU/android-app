@@ -104,8 +104,6 @@ Declared for explicit save, edit/delete, recording, and supported import workflo
 
 Health Connect medical records are FHIR resources: vaccines, allergies, conditions, lab results, and more. These permissions exist only on Android 14 and newer with the Health Connect medical records feature. Elsewhere OpenVitals never asks for them.
 
-For now, only debug builds have them. The Google Play builds (release and nightly) leave them and CAMERA out, and hide the feature. See [what is left](../proposals/medical-records-left.md#release-steps).
-
 They are asked for in one request, only inside the medical records area, and never together with fitness permissions. Health Connect then shows its own medical records permission screen. A screen with some categories declined still works: it lists the records OpenVitals wrote, which write access lets it read. Health Connect stops asking for a permission the user refused twice. The records home then leaves it out of the re-ask, and offers Health Connect's settings when nothing else is left.
 
 - `android.permission.health.READ_MEDICAL_DATA_VACCINES`

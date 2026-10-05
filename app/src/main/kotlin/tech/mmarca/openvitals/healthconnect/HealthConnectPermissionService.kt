@@ -69,7 +69,6 @@ internal class HealthConnectPermissionService(
     private val availabilityService: HealthConnectAvailabilityService,
     private val diagnostics: HealthConnectDiagnostics,
     private val mindfulnessIntegrationEnabled: () -> Boolean = { true },
-    private val medicalRecordsEnabled: Boolean = true,
 ) {
     private val featureStatusCache = mutableMapOf<Int, Int>()
     private val featureStatusCacheLock = Any()
@@ -530,7 +529,7 @@ internal class HealthConnectPermissionService(
         )
 
     fun isMedicalRecordsAvailable(): Boolean =
-        medicalRecordsEnabled && isFeatureAvailable(
+        isFeatureAvailable(
             feature = MedicalCategoryMapping.FEATURE,
             logName = "personalHealthRecord",
         )
