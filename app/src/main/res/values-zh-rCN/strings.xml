@@ -593,15 +593,12 @@
     <string name="unit_pushes">次</string>
     <string name="unit_floors">层</string>
     <plurals name="unit_days">
-        <item quantity="one">天</item>
         <item quantity="other">天</item>
     </plurals>
     <plurals name="unit_nights">
-        <item quantity="one">晚</item>
         <item quantity="other">晚</item>
     </plurals>
     <plurals name="unit_tests">
-        <item quantity="one">次</item>
         <item quantity="other">次</item>
     </plurals>
     <string name="unit_total">总计</string>
