@@ -164,6 +164,16 @@ class BleDeviceRepository @Inject constructor(
         )
     }
 
+    /** Records a Wear OS watch's bonded Classic address. A no-op for an unknown id. */
+    fun setClassicAddress(deviceId: String, classicAddress: String) {
+        if (devices.none { it.id == deviceId }) return
+        persist(
+            devices.map { device ->
+                if (device.id == deviceId) device.copy(classicAddress = classicAddress.uppercase()) else device
+            },
+        )
+    }
+
     private fun persist(nextDevices: List<BleSensorDevice>) {
         prefs.edit {
             putString(KEY_DEVICES, BleDeviceRegistryJson.encode(nextDevices))
@@ -214,6 +224,7 @@ internal object BleDeviceRegistryJson {
                     .put("kind", device.kind.storageName)
                     .put("integration", device.integration?.storageName ?: JSONObject.NULL)
                     .put("lastSyncedAt", device.lastSyncedAt?.toEpochMilli() ?: JSONObject.NULL)
+                    .put("classicAddress", device.classicAddress ?: JSONObject.NULL)
             },
         ).toString()
 
@@ -261,6 +272,10 @@ internal object BleDeviceRegistryJson {
                             lastSyncedAt = item.opt("lastSyncedAt")
                                 .takeIf { it != null && it != JSONObject.NULL }
                                 ?.let { Instant.ofEpochMilli((it as Number).toLong()) },
+                            classicAddress = item.opt("classicAddress")
+                                .takeIf { it != null && it != JSONObject.NULL }
+                                ?.toString()
+                                ?.takeIf { it.isNotBlank() },
                         ).normalized(),
                     )
                 }

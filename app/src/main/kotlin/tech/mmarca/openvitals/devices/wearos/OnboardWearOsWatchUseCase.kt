@@ -22,12 +22,14 @@ data class WearOsOnboardOutcome(
 /**
  * Turns a scanned WearOS watch into a registered `(WATCH, WEAROS)` device.
  * Associate (optional), then register with no capabilities, off the Garmin
- * sync path. Live heart rate comes over GATT, recorded data via Health Connect.
+ * sync path, and keep the bonded Classic address for the status ping. Live
+ * heart rate comes over GATT, recorded data via Health Connect.
  */
 @Singleton
 class OnboardWearOsWatchUseCase @Inject constructor(
     private val pairing: WatchPairingPort,
     private val bleDeviceRepository: BleDeviceRepository,
+    private val nodePort: WearOsNodePort,
 ) {
 
     /** [onStep] fires as the companion dialog is about to be shown. */
@@ -53,7 +55,15 @@ class OnboardWearOsWatchUseCase @Inject constructor(
             kind = BleDeviceKind.WATCH,
             integration = DeviceIntegration.WEAROS,
         )
-        return WearOsOnboardOutcome(device = registered, associated = associated)
+        // Resolved now, while the scan's name still matches the bond's.
+        val classicAddress = runCatching { nodePort.findBondAddress(device.address, device.name) }.getOrNull()
+        val stored = if (classicAddress != null) {
+            bleDeviceRepository.setClassicAddress(registered.id, classicAddress)
+            bleDeviceRepository.devices.first { it.id == registered.id }
+        } else {
+            registered
+        }
+        return WearOsOnboardOutcome(device = stored, associated = associated)
     }
 
     /** Undoes [invoke] at the OS level: drops the association. */

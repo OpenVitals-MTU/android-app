@@ -330,6 +330,25 @@ class BleDeviceRepositoryTest {
     }
 
     @Test
+    fun `a Wear OS watch's Classic address survives a storage round-trip`() {
+        val repo = newRepository()
+        val watch = repo.addDevice(
+            displayName = "Galaxy Watch8",
+            address = "7F:12:34:56:78:9A",
+            bluetoothName = "Galaxy Watch8 (3A3B) LE",
+            capabilities = emptySet(),
+            kind = BleDeviceKind.WATCH,
+            integration = DeviceIntegration.WEAROS,
+        )
+
+        repo.setClassicAddress(watch.id, "a8:d1:62:be:3a:3b")
+        val reloaded = newRepository().devices.single()
+
+        assertEquals("7F:12:34:56:78:9A", reloaded.address)
+        assertEquals("A8:D1:62:BE:3A:3B", reloaded.classicAddress)
+    }
+
+    @Test
     fun registryJson_oldJsonWithoutWatchFieldsRoundTripsAsSensor() {
         // The shape the Kotlin build wrote before watches existed: no kind, integration or lastSyncedAt keys.
         val oldJson = """
@@ -346,6 +365,7 @@ class BleDeviceRepositoryTest {
         assertEquals(BleDeviceKind.SENSOR, device.kind)
         assertNull(device.integration)
         assertNull(device.lastSyncedAt)
+        assertNull(device.classicAddress)
         assertEquals(setOf(BleSensorCapability.HEART_RATE), device.capabilities)
 
         // And it round-trips.

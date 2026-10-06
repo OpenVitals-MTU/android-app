@@ -71,6 +71,12 @@ data class BleSensorDevice(
     val integration: DeviceIntegration? = null,
     /** When recorded files were last pulled. Null for a sensor or a never-synced watch. */
     val lastSyncedAt: Instant? = null,
+    /**
+     * A Wear OS watch's bonded Classic address, found at onboarding. The
+     * [address] is the BLE scan's, often private; the status ping needs this
+     * one. Null when unresolved, and for every other device.
+     */
+    val classicAddress: String? = null,
 ) {
     /** Literally a watch, not a bike computer, so an Edge never gets watch-only UI. */
     val isWatch: Boolean
