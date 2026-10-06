@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.devices.wearos
 
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
@@ -30,6 +31,7 @@ class BluetoothWearOsNodePort @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : WearOsNodePort {
 
+    @SuppressLint("MissingPermission")
     override suspend fun checkStatus(
         targetAddress: String?,
         targetName: String?,
@@ -57,6 +59,7 @@ class BluetoothWearOsNodePort @Inject constructor(
      * cancellation, so a watchdog closes the socket after [PING_TIMEOUT_MS]
      * or when the caller is cancelled, whichever comes first.
      */
+    @SuppressLint("MissingPermission")
     private suspend fun ping(adapter: BluetoothAdapter, device: BluetoothDevice): Boolean =
         coroutineScope {
             val socket = try {

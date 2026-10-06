@@ -19,6 +19,7 @@ import android.util.Log
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Listens for the phone's RFCOMM ping so OpenVitals on the phone can tell the
@@ -32,6 +33,9 @@ class WearAppService : Service() {
     @Volatile
     private var serverSocket: BluetoothServerSocket? = null
     private val isListening = AtomicBoolean(false)
+
+    /** Bumped per listener start, so a thread that is shutting down cannot stop its successor. */
+    private val listenerGeneration = AtomicInteger(0)
 
     /** False when the system refused the foreground start: nothing may listen then. */
     private var isForeground = false
@@ -103,6 +107,7 @@ class WearAppService : Service() {
 
     private fun startRfcommListener() {
         if (isListening.getAndSet(true)) return
+        val generation = listenerGeneration.incrementAndGet()
 
         Thread {
             var socket: BluetoothServerSocket? = null
@@ -123,7 +128,7 @@ class WearAppService : Service() {
                 serverSocket = server
                 Log.i(TAG, "RFCOMM server listening on $OPENVITALS_WEAR_APP_UUID")
 
-                while (isListening.get()) {
+                while (isListening.get() && listenerGeneration.get() == generation) {
                     val client: BluetoothSocket = try {
                         server.accept()
                     } catch (e: IOException) {
@@ -138,7 +143,8 @@ class WearAppService : Service() {
                 // Only this thread's socket: a restart may already hold a new one.
                 runCatching { socket?.close() }
                 if (serverSocket === socket) serverSocket = null
-                isListening.set(false)
+                // A newer listener owns the flag now; leave it alone.
+                if (listenerGeneration.get() == generation) isListening.set(false)
             }
         }.apply {
             name = "WearAppService-rfcomm"
