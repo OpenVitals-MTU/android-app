@@ -2,33 +2,35 @@
 set -eu
 
 git fetch --tags --force origin
-mkdir -p .woodpecker/tmp
+mkdir -p build/release-ci
 
 # Cron nightlies with nothing new to publish exit here so we never mint a
 # versionCode or spend a runner-hour on a duplicate APK. Manual runs always
 # build. See scripts/ci-should-skip-nightly.sh.
-if [ "${CI_PIPELINE_EVENT:-}" = "cron" ] && sh scripts/ci-should-skip-nightly.sh; then
+if [ "${OPENVITALS_RELEASE_EVENT:-}" = "cron" ] && sh scripts/ci-should-skip-nightly.sh; then
     {
         printf 'OPENVITALS_SKIP_NIGHTLY=true\n'
         printf 'OPENVITALS_RELEASE_CHANNEL=nightly\n'
         printf 'OPENVITALS_RELEASE_TAG=nightly\n'
-    } > .woodpecker/tmp/release-context.env
+    } > build/release-ci/release-context.env
     exit 0
 fi
 
 apk_abi_filters="${OPENVITALS_APK_ABI_FILTERS:-armeabi-v7a,arm64-v8a}"
-release_tag="${CI_COMMIT_TAG:-}"
+release_tag=""
 
-if [ "${CI_PIPELINE_EVENT:-}" = "cron" ] || [ "${CI_PIPELINE_EVENT:-}" = "manual" ]; then
+if [ "${OPENVITALS_RELEASE_EVENT:-}" = "cron" ] || [ "${OPENVITALS_RELEASE_EVENT:-}" = "manual" ]; then
     release_tag="nightly"
-elif [ -z "$release_tag" ]; then
-    case "${CI_COMMIT_REF:-}" in
+else
+    case "${GITHUB_REF:-}" in
         refs/tags/*)
-            release_tag="${CI_COMMIT_REF#refs/tags/}"
+            release_tag="${GITHUB_REF#refs/tags/}"
             ;;
         *)
-            if [ "${CI_PIPELINE_EVENT:-}" = "deployment" ]; then
-                release_tag="$(git tag --points-at "${CI_COMMIT_SHA:?}" | grep -E '^[vV][0-9]+\.[0-9]+\.[0-9]+$' | tail -n 1 || true)"
+            # A production run started from a branch rather than the tag: use the
+            # vX.Y.Z tag on that commit, if there is one.
+            if [ "${OPENVITALS_RELEASE_EVENT:-}" = "deployment" ]; then
+                release_tag="$(git tag --points-at "${GITHUB_SHA:?}" | grep -E '^[vV][0-9]+\.[0-9]+\.[0-9]+$' | tail -n 1 || true)"
             fi
             ;;
     esac
@@ -72,10 +74,10 @@ if [ "$release_tag" = "nightly" ]; then
     build_debug_apk="true"
     play_track="beta"
     debug_apk_basename="OpenVitals-nightly-debug.apk"
-    pipeline_number="${CI_PIPELINE_NUMBER:-1}"
+    pipeline_number="${GITHUB_RUN_NUMBER:-1}"
 
     if ! printf '%s\n' "$pipeline_number" | grep -Eq '^[0-9][0-9]*$'; then
-        echo "CI_PIPELINE_NUMBER must be numeric for nightly versionName generation, found $pipeline_number." >&2
+        echo "GITHUB_RUN_NUMBER must be numeric for nightly versionName generation, found $pipeline_number." >&2
         exit 1
     fi
 
@@ -102,7 +104,7 @@ else
         exit 1
     fi
 
-    if [ "${CI_PIPELINE_EVENT:-}" = "deployment" ]; then
+    if [ "${OPENVITALS_RELEASE_EVENT:-}" = "deployment" ]; then
         prerelease="false"
         bundle_task=":app:bundleRelease"
         aab_variant_dir="release"
@@ -113,7 +115,7 @@ else
     else
         build_debug_apk="true"
         debug_apk_basename="OpenVitals-$release_tag-debug.apk"
-        # A tag build also makes the app bundle and attaches it to the Codeberg release,
+        # A tag build also makes the app bundle and attaches it to the GitHub release,
         # for a Play upload by hand. It does not publish to Play: only a deployment does.
         bundle_task=":app:bundleRelease"
         aab_variant_dir="release"
@@ -135,9 +137,9 @@ else
     fi
 fi
 
-printf '%s\n' "$release_title" > .woodpecker/tmp/release-title.txt
+printf '%s\n' "$release_title" > build/release-ci/release-title.txt
 
-notes_file=".woodpecker/tmp/release-notes.md"
+notes_file="build/release-ci/release-notes.md"
 if [ "$release_channel" = "release" ]; then
     : > "$notes_file"
     if git rev-parse -q --verify "refs/tags/$release_tag" >/dev/null; then
@@ -150,7 +152,7 @@ if [ "$release_channel" = "release" ]; then
         printf '%s\n' \
             "$release_title" \
             "" \
-            "Versioned prerelease build from commit ${CI_COMMIT_SHA:?}." \
+            "Versioned prerelease build from commit ${GITHUB_SHA:?}." \
             "" \
             "Assets:" \
             "- Signed release APK ($apk_abi_filters)" \
@@ -167,7 +169,7 @@ else
     printf '%s\n' \
         "$release_title" \
         "" \
-        "Mutable $release_channel build from commit ${CI_COMMIT_SHA:?}." \
+        "Mutable $release_channel build from commit ${GITHUB_SHA:?}." \
         "" \
         "This release keeps a stable download page. The APK and checksum assets are replaced by the next $release_channel build." \
         "" \
@@ -202,11 +204,11 @@ fi
     printf 'OPENVITALS_AAB_BASENAME=%s\n' "$aab_basename"
     printf 'OPENVITALS_APK_ABI_FILTERS=%s\n' "$apk_abi_filters"
     printf 'OPENVITALS_RELEASE_PRERELEASE=%s\n' "$prerelease"
-    printf 'OPENVITALS_RELEASE_TARGET=%s\n' "${CI_COMMIT_SHA:?}"
+    printf 'OPENVITALS_RELEASE_TARGET=%s\n' "${GITHUB_SHA:?}"
     printf 'OPENVITALS_BUILD_AAB=%s\n' "$build_aab"
     printf 'OPENVITALS_BUILD_DEBUG_APK=%s\n' "$build_debug_apk"
     printf 'OPENVITALS_PLAY_TRACK=%s\n' "$play_track"
     printf 'OPENVITALS_VERSION_CODE=%s\n' "$version_code"
     printf 'OPENVITALS_VERSION_NAME=%s\n' "$version_name_override"
     printf 'OPENVITALS_DEBUG_APK_BASENAME=%s\n' "$debug_apk_basename"
-} > .woodpecker/tmp/release-context.env
+} > build/release-ci/release-context.env

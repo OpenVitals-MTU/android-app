@@ -12,13 +12,13 @@ different base.
 
 ## Using it
 
-Both pipelines run `ghcr.io/mmarca-tech/openvitals-android-ci:android-37`
-(pushed 2026-08-04). The package must be **public** on ghcr — the Woodpecker
-runner pulls anonymously, exactly as it did the Flutter era's public
-`mobile-app-ci` image. ghcr creates new packages private, so after the FIRST
+The Gradle jobs in `.github/workflows/` run in
+`ghcr.io/mmarca-tech/openvitals-android-ci:android-37` (pushed 2026-08-04). The
+package must be **public** on ghcr — the workflows pull it anonymously, exactly
+as the Flutter era did its public `mobile-app-ci` image. ghcr creates new packages private, so after the FIRST
 push of a new package name, flip it in the GitHub package settings
 (https://github.com/users/mmarca-tech/packages/container/openvitals-android-ci/settings
-→ Change visibility → Public); a private package fails the pipeline at image
+→ Change visibility → Public); a private package fails the job at image
 pull with `error from registry: unauthorized`. Nothing in the image is secret —
 it is a public base plus the public Android SDK.
 
@@ -28,4 +28,4 @@ To rebuild after a `compileSdk` bump:
    `app/build.gradle.kts`, and in `scripts/ci-android-setup.sh` — they must
    stay in lockstep.
 2. `scripts/build-ci-image.sh --push` (needs `docker login ghcr.io` with a
-   package-write token) and bump the tag in `.woodpecker/*.yml`.
+   package-write token) and bump the `container:` tag in `.github/workflows/*.yml`.

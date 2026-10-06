@@ -11,7 +11,7 @@
 #
 # The post opens with the release's narrative paragraph (the first paragraph
 # after "Released YYYY-MM-DD." in docs/releases/X.Y.Z.md, which is what the tag
-# message carries) and links the Codeberg release and the Play listing.
+# message carries) and links the GitHub release and the Play listing.
 #
 # Re-running a production deployment must not toot twice, so the account's
 # recent statuses are checked for this tag before posting, and the request also
@@ -33,8 +33,8 @@ if [ -z "${MASTODON_ACCESS_TOKEN:-}" ] && [ -z "${MASTODON_DRY_RUN:-}" ]; then
     echo "MASTODON_ACCESS_TOKEN is required" >&2
     exit 1
 fi
-if [ -z "${CI_FORGE_URL:-}" ] || [ -z "${CI_REPO:-}" ]; then
-    echo "CI_FORGE_URL and CI_REPO are required" >&2
+if [ -z "${GITHUB_SERVER_URL:-}" ] || [ -z "${GITHUB_REPOSITORY:-}" ]; then
+    echo "GITHUB_SERVER_URL and GITHUB_REPOSITORY are required" >&2
     exit 1
 fi
 if ! printf '%s\n' "$release_tag" | grep -Eq '^[vV][0-9]+\.[0-9]+\.[0-9]+$'; then
@@ -51,9 +51,9 @@ done
 
 version="${release_tag#[vV]}"
 headline="OpenVitals $version is out."
-release_url="${CI_FORGE_URL%/}/${CI_REPO}/releases/tag/${release_tag}"
+release_url="${GITHUB_SERVER_URL%/}/${GITHUB_REPOSITORY}/releases/tag/${release_tag}"
 play_url="https://play.google.com/store/apps/details?id=tech.mmarca.openvitals"
-links="Codeberg release (APK): $release_url
+links="GitHub release (APK): $release_url
 Google Play: $play_url
 
 #OpenVitals #Android #FOSS #HealthConnect"
@@ -70,7 +70,7 @@ narrative="$(awk '
 
 # Mastodon counts every link as 23 characters whatever its length, so the fixed
 # part is measured with the URLs replaced by 23-character stand-ins; counting
-# the real Codeberg URL threw away ~40 characters of narrative per post.
+# the real release URL threw away ~40 characters of narrative per post.
 url_stand_in="xxxxxxxxxxxxxxxxxxxxxxx"
 links_counted="$(printf '%s' "$links" | sed "s#https\{0,1\}://[^[:space:]]*#$url_stand_in#g")"
 fixed_length="$(printf '%s\n\n\n\n%s' "$headline" "$links_counted" | wc -m)"

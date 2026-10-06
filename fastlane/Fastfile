@@ -44,7 +44,7 @@ platform :android do
       end
 
       # Play refuses a rollout no existing user can upgrade to. Codes that only
-      # ever went to Play carry no Codeberg marker, so the versionCode counter
+      # ever went to Play carry no release marker, so the versionCode counter
       # cannot see them; fail here with the fix instead of letting supply
       # surface a cryptic Google API error.
       max_existing = existing_codes.max

@@ -11,7 +11,7 @@ set -eu
 # pinned Docker image. These goldens are INSTRUMENTATION renders: they need a
 # connected device or emulator, and a baseline is only comparable to renders
 # from the same device model — the committed set was recorded on a Pixel 6 Pro.
-# That is also why CI does not run them (.woodpecker only compiles androidTest);
+# That is also why CI does not run them (the workflows only compile androidTest);
 # they are the refactor's safety net, run by hand around visual work.
 #
 # --update flow: the record run writes every rendering to the device's

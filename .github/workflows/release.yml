@@ -1,0 +1,349 @@
+# Release workflow. Three ways in:
+#
+# - nightly: the 00:00 UTC schedule, or a manual run with target "nightly".
+#   Builds the nightly APK, debug APK and AAB, moves the `nightly` tag, updates
+#   the fixed `nightly` GitHub prerelease, uploads the AAB to Play open testing
+#   and prunes old versioned releases. The schedule skips when there is nothing
+#   new to publish; a manual run always builds.
+# - a pushed vX.Y.Z / VX.Y.Z tag: builds the signed release APK, debug APK and
+#   AAB and publishes them to that tag's GitHub prerelease. No Play upload.
+# - production: a manual run with target "production", started from the vX.Y.Z
+#   tag. Uploads the release AAB to Play production (behind the `production`
+#   environment), marks the GitHub release stable, and announces it on Zulip.
+#
+# scripts/ci-release-context.sh decides everything else from
+# OPENVITALS_RELEASE_EVENT and writes it to build/release-ci/, which the jobs
+# hand to each other as workflow artifacts.
+name: release
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  push:
+    tags: ["v*", "V*"]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "nightly publishes a nightly build; production ships the vX.Y.Z tag this run is started from"
+        type: choice
+        options: [nightly, production]
+        default: nightly
+
+permissions:
+  contents: read
+
+# One nightly at a time, so two runs never mint a versionCode against the same
+# survey. A tag and a production run each get their own lane.
+concurrency:
+  group: release-${{ github.event_name == 'push' && github.ref || inputs.target || 'nightly' }}
+  cancel-in-progress: false
+
+env:
+  # cron | manual | tag | deployment, the vocabulary the release scripts use.
+  OPENVITALS_RELEASE_EVENT: ${{ github.event_name == 'schedule' && 'cron' || github.event_name == 'push' && 'tag' || inputs.target == 'production' && 'deployment' || 'manual' }}
+  FASTLANE_DISABLE_COLORS: "1"
+  FASTLANE_OPT_OUT_USAGE: "1"
+  FASTLANE_SKIP_UPDATE_CHECK: "1"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  context:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.ctx.outputs.skip }}
+      channel: ${{ steps.ctx.outputs.channel }}
+      tag: ${{ steps.ctx.outputs.tag }}
+      event: ${{ steps.ctx.outputs.event }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The nightly skip check and the tag lookup need history and tags.
+          fetch-depth: 0
+      - name: Resolve release context
+        env:
+          # version-code.sh reads release markers through the API.
+          GH_TOKEN: ${{ github.token }}
+        run: sh scripts/ci-release-context.sh
+      - id: ctx
+        run: |
+          . build/release-ci/release-context.env
+          {
+            echo "skip=$OPENVITALS_SKIP_NIGHTLY"
+            echo "channel=$OPENVITALS_RELEASE_CHANNEL"
+            echo "tag=$OPENVITALS_RELEASE_TAG"
+            echo "event=$OPENVITALS_RELEASE_EVENT"
+          } >> "$GITHUB_OUTPUT"
+          if [ "$OPENVITALS_SKIP_NIGHTLY" = "true" ]; then
+            echo "::notice::Skipping: cron nightly has nothing new to publish."
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-context
+          path: build/release-ci/
+          retention-days: 7
+
+  # Prerelease verification, then the signed build, in one job so they share
+  # one Gradle setup.
+  build:
+    needs: context
+    if: needs.context.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    # Same prebaked image as test.yml; bump the tags together.
+    container: ghcr.io/mmarca-tech/openvitals-android-ci:android-37
+    steps:
+      - uses: actions/checkout@v5
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-context
+          path: build/release-ci
+      # Read-only: a signing build never writes the cache other builds restore.
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      # verifyCi aggregates verifyCiUnitTest and verifyCiPreflight. A production
+      # run ships a tag whose own run already passed it.
+      - name: Prerelease verification
+        if: env.OPENVITALS_RELEASE_EVENT != 'deployment'
+        run: |
+          scripts/ci-android-gradle.sh verifyCi
+          git diff --check
+
+      - name: Build signed artifacts
+        env:
+          OPENVITALS_RELEASE_KEYSTORE_BASE64: ${{ secrets.OPENVITALS_RELEASE_KEYSTORE_BASE64 }}
+          OPENVITALS_RELEASE_STORE_PASSWORD: ${{ secrets.OPENVITALS_RELEASE_STORE_PASSWORD }}
+          OPENVITALS_RELEASE_KEY_ALIAS: ${{ secrets.OPENVITALS_RELEASE_KEY_ALIAS }}
+          OPENVITALS_RELEASE_KEY_PASSWORD: ${{ secrets.OPENVITALS_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -eu
+          . build/release-ci/release-context.env
+          test -n "$OPENVITALS_RELEASE_KEYSTORE_BASE64"
+          test -n "$OPENVITALS_RELEASE_STORE_PASSWORD"
+          test -n "$OPENVITALS_RELEASE_KEY_ALIAS"
+          # Outside the workspace, so the keystore never lands in an artifact.
+          keystore_path="$RUNNER_TEMP/openvitals-release.p12"
+          printf '%s' "$OPENVITALS_RELEASE_KEYSTORE_BASE64" | base64 -d > "$keystore_path"
+          export OPENVITALS_RELEASE_STORE_FILE="$keystore_path"
+          export OPENVITALS_RELEASE_KEY_PASSWORD="$OPENVITALS_RELEASE_STORE_PASSWORD"
+          keytool -list -storetype PKCS12 -keystore "$keystore_path" -storepass "$OPENVITALS_RELEASE_STORE_PASSWORD" -alias "$OPENVITALS_RELEASE_KEY_ALIAS" >/dev/null
+          export OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY=true
+          export OPENVITALS_MINIFY_DEBUG_FOR_CI=true
+          if [ -n "${OPENVITALS_VERSION_CODE:-}" ]; then export OPENVITALS_VERSION_CODE; fi
+          if [ -n "${OPENVITALS_VERSION_NAME:-}" ]; then export OPENVITALS_VERSION_NAME; fi
+          test -n "$OPENVITALS_APK_ABI_FILTERS"
+
+          set -- "$OPENVITALS_GRADLE_TASK"
+          if [ "$OPENVITALS_BUILD_AAB" = "true" ]; then
+            set -- "$@" "$OPENVITALS_BUNDLE_TASK"
+          fi
+          if [ "$OPENVITALS_BUILD_DEBUG_APK" = "true" ]; then
+            set -- "$@" ":app:assembleDebug"
+          fi
+          env OPENVITALS_APK_ABI_FILTERS="$OPENVITALS_APK_ABI_FILTERS" scripts/ci-android-gradle.sh --stacktrace "$@"
+
+          out=build/release-ci
+          apk_path="$(find "app/build/outputs/apk/$OPENVITALS_APK_VARIANT_DIR" -maxdepth 1 -name '*.apk' | head -n 1)"
+          test -n "$apk_path"
+          cp "$apk_path" "$out/$OPENVITALS_APK_BASENAME"
+          (cd "$out" && sha256sum "$OPENVITALS_APK_BASENAME" > "$OPENVITALS_APK_BASENAME.sha256")
+          if [ "$OPENVITALS_BUILD_DEBUG_APK" = "true" ]; then
+            debug_apk_path="$(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' | head -n 1)"
+            test -n "$debug_apk_path"
+            cp "$debug_apk_path" "$out/$OPENVITALS_DEBUG_APK_BASENAME"
+            (cd "$out" && sha256sum "$OPENVITALS_DEBUG_APK_BASENAME" > "$OPENVITALS_DEBUG_APK_BASENAME.sha256")
+          fi
+          if [ "$OPENVITALS_BUILD_AAB" = "true" ]; then
+            aab_path="$(find "app/build/outputs/bundle/$OPENVITALS_AAB_VARIANT_DIR" -maxdepth 1 -name '*.aab' | head -n 1)"
+            test -n "$aab_path"
+            cp "$aab_path" "$out/$OPENVITALS_AAB_BASENAME"
+            (cd "$out" && sha256sum "$OPENVITALS_AAB_BASENAME" > "$OPENVITALS_AAB_BASENAME.sha256")
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-build
+          path: build/release-ci/
+          retention-days: 7
+
+  # Nightly keeps a single stable download page, so the `nightly` tag is
+  # force-moved to this commit. The versionCode is recorded to an append-only
+  # ref first, and a code that has gone backwards fails here instead of shipping
+  # an APK that will not install (2026-07). See scripts/move-nightly-tag.sh.
+  nightly-tag:
+    needs: [context, build]
+    if: needs.context.outputs.channel == 'nightly'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-build
+          path: build/release-ci
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          . build/release-ci/release-context.env
+          scripts/move-nightly-tag.sh nightly "$GITHUB_SHA" "OpenVitals nightly $GITHUB_RUN_NUMBER" "$OPENVITALS_VERSION_CODE"
+
+  publish-play-open-testing:
+    needs: [context, nightly-tag]
+    if: needs.context.outputs.channel == 'nightly'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-build
+          path: build/release-ci
+      - env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+          OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW: ${{ vars.OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW }}
+        run: |
+          set -eu
+          . build/release-ci/release-context.env
+          test "$OPENVITALS_PLAY_TRACK" = "beta"
+          test -n "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64"
+          play_key_path="$RUNNER_TEMP/google-play-service-account.json"
+          printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 -d > "$play_key_path"
+          test -s "$play_key_path"
+          aab_path="$GITHUB_WORKSPACE/build/release-ci/$OPENVITALS_AAB_BASENAME"
+          test -f "$aab_path"
+          bundle exec fastlane android open_testing \
+            json_key:"$play_key_path" \
+            aab:"$aab_path" \
+            version_code:"$OPENVITALS_VERSION_CODE"
+
+  publish-play-production:
+    needs: [context, build]
+    if: needs.context.outputs.event == 'deployment'
+    runs-on: ubuntu-latest
+    # Add required reviewers to this environment for an approval gate.
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-build
+          path: build/release-ci
+      - env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+          OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW: ${{ vars.OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW }}
+        run: |
+          set -eu
+          . build/release-ci/release-context.env
+          test "$OPENVITALS_PLAY_TRACK" = "production"
+          test -n "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64"
+          play_key_path="$RUNNER_TEMP/google-play-service-account.json"
+          printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 -d > "$play_key_path"
+          test -s "$play_key_path"
+          aab_path="$GITHUB_WORKSPACE/build/release-ci/$OPENVITALS_AAB_BASENAME"
+          test -f "$aab_path"
+          bundle exec fastlane android production \
+            json_key:"$play_key_path" \
+            aab:"$aab_path" \
+            version_code:"$OPENVITALS_VERSION_CODE"
+
+  # Nightly and tag runs. A tag run skips nightly-tag, hence the explicit check.
+  publish-github-release:
+    needs: [context, build, nightly-tag]
+    if: >-
+      !cancelled()
+      && needs.build.result == 'success'
+      && (needs.nightly-tag.result == 'success' || needs.nightly-tag.result == 'skipped')
+      && needs.context.outputs.event != 'deployment'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-build
+          path: build/release-ci
+      # The app bundle goes last. It is there for a Play upload by hand, when
+      # Play refuses the upload from this workflow. This job does not wait for
+      # the Play job.
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          . build/release-ci/release-context.env
+          out=build/release-ci
+          set -- "$out/$OPENVITALS_APK_BASENAME" "$out/$OPENVITALS_APK_BASENAME.sha256"
+          if [ "$OPENVITALS_BUILD_DEBUG_APK" = "true" ]; then
+            set -- "$@" "$out/$OPENVITALS_DEBUG_APK_BASENAME" "$out/$OPENVITALS_DEBUG_APK_BASENAME.sha256"
+          fi
+          if [ "$OPENVITALS_BUILD_AAB" = "true" ]; then
+            set -- "$@" "$out/$OPENVITALS_AAB_BASENAME" "$out/$OPENVITALS_AAB_BASENAME.sha256"
+          fi
+          scripts/publish-github-release.sh \
+            "$OPENVITALS_RELEASE_TAG" \
+            "$out/release-title.txt" \
+            "$out/release-notes.md" \
+            "$OPENVITALS_RELEASE_PRERELEASE" \
+            "$@"
+
+  prune-github-releases:
+    needs: [context, publish-github-release]
+    if: needs.context.outputs.channel == 'nightly'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DRY_RUN: "false"
+          KEEP_RELEASES: "9"
+        run: scripts/prune-github-releases.sh
+
+  publish-github-stable:
+    needs: [context, publish-play-production]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.context.outputs.tag }}
+        run: gh release edit "$RELEASE_TAG" --prerelease=false --draft=false --latest
+
+  # Same trigger and idempotency story as announce-mastodon, for the Zulip
+  # "releases" channel (full release notes under a vX.Y.Z topic).
+  announce-zulip:
+    needs: [context, publish-github-stable]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-context
+          path: build/release-ci
+      - env:
+          ZULIP_BOT_EMAIL: ${{ secrets.ZULIP_BOT_EMAIL }}
+          ZULIP_BOT_API_KEY: ${{ secrets.ZULIP_BOT_API_KEY }}
+        run: |
+          set -eu
+          . build/release-ci/release-context.env
+          test -n "$ZULIP_BOT_EMAIL"
+          test -n "$ZULIP_BOT_API_KEY"
+          LC_ALL=C.UTF-8 scripts/announce-zulip.sh "$OPENVITALS_RELEASE_TAG" build/release-ci/release-notes.md

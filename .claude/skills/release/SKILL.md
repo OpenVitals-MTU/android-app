@@ -24,18 +24,19 @@ Nightlies and releases share one counter line. It is computed, never chosen:
 sh scripts/version-code.sh next --floor <current baseVersionCode>
 ```
 
-That consults Codeberg release markers plus the append-only `refs/version-code/*`
-mirror (release bodies alone are not a safe database - the nightly release is
-deleted and recreated every build, and a pipeline dying in that window rewinds
-the counter; observed 2026-07). The result MUST exceed whatever nightly users
+That consults GitHub release markers plus the append-only `refs/version-code/*`
+refs (release bodies alone are not a safe database - a deleted release takes
+its marker with it, and on Codeberg a pipeline dying while the nightly release
+was recreated rewound the counter; observed 2026-07). The result MUST exceed whatever nightly users
 have installed, or Play rejects the rollout with "does not allow any existing
 users to upgrade" (this bit 2.6.0's predecessor).
 
 **Race caveat:** a nightly can mint a code between your preview and the release
-run. Only the `nightly` cron (around 02:06 local time) and manual runs of
-`.woodpecker/release.yml` build nightlies; a push to main runs tests only. Near
-02:00, or while a manual run is going, check the pipelines first
-(`https://ci.codeberg.org/api/repos/16841/pipelines?per_page=5`). Either way,
+run. Only the release workflow's schedule (00:00 UTC, often started some
+minutes late by GitHub) and manual runs of `.github/workflows/release.yml`
+build nightlies; a push to main runs tests only. Near midnight UTC, or while a
+manual run is going, check the runs first
+(`https://github.com/OpenVitals-MTU/android-app/actions/workflows/release.yml`). Either way,
 compute the code and name the fastlane files immediately before running the
 release script, and afterwards verify the script's printed `versionCode`
 matches the filenames.
@@ -52,8 +53,8 @@ matches the filenames.
    narrative paragraph saying what the release is about, then
    `### Added` / `### Changed` / `### Fixed`, then the standard footer: same
    package name and signing certificate note, and the distribution flow
-   (Codeberg release assets, Play upload from the approved Woodpecker
-   deployment).
+   (GitHub release assets, Play upload from the approved production run of
+   the release workflow).
 3. **`README.md`** - add highlight bullets for headline features; update any
    claims the release changes (e.g. the language list when a locale lands).
 4. **`fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`** - one
@@ -94,15 +95,16 @@ amend before anyone pulls:
 for f in fastlane/metadata/android/*/changelogs/OLD.txt; do git mv "$f" "${f%OLD.txt}NEW.txt"; done
 ```
 
-CI (Woodpecker) takes it from the tag: signed APK, signed debug APK, and AAB
-on the Codeberg release; Play production upload from the approved deployment,
-which also posts the full notes to the Zulip `releases` channel
-(`scripts/announce-zulip.sh`).
+CI (GitHub Actions) takes it from the tag: signed APK, signed debug APK, and
+AAB on the GitHub release. Play production upload comes from a manual run of
+the release workflow with target `production`, started from the tag and
+approved through the `production` environment; it also posts the full notes to
+the Zulip `releases` channel (`scripts/announce-zulip.sh`).
 
 The Mastodon toot is disabled since 2.9.1: the `announce-mastodon` step is
-commented out in `.woodpecker/release.yml`. If it comes back, the toot's body
+commented out in `.github/workflows/release.yml`. If it comes back, the toot's body
 is the narrative paragraph of `docs/releases/X.Y.Z.md` - the paragraph right
-after `Released YYYY-MM-DD.` - cut to fit 500 characters with the Codeberg and
+after `Released YYYY-MM-DD.` - cut to fit 500 characters with the GitHub release and
 Play links. Write that paragraph to read well on its own and front-load it
 either way: Zulip readers see it first too.
 

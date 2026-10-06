@@ -1,0 +1,42 @@
+# Phone app gate. A change that only touches the wear module or its workflow
+# skips this one; wear-test.yml covers it. Shared build files (root Gradle,
+# catalog, CI scripts) run both.
+name: test
+
+on:
+  pull_request:
+    paths-ignore: &wear_only
+      - "wear/**"
+      - ".github/workflows/wear-test.yml"
+  push:
+    branches: [main]
+    paths-ignore: *wear_only
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # One Gradle invocation covers everything the workflow verifies. verifyCi is
+  # the root-project aggregate of verifyCiUnitTest (:app:testCiUnitTest) and
+  # verifyCiPreflight (verifyTranslations, :app:lintCi,
+  # :app:checkCiDuplicateClasses, :app:compileCiAndroidTestKotlin). Splitting
+  # these into separate jobs would repeat the setup script, JVM startup, and
+  # Gradle configuration for each.
+  verify:
+    runs-on: ubuntu-latest
+    # Prebaked CI image: cirruslabs/android-sdk:tools plus the Android platform
+    # and build-tools this app compiles against (see ci-image/Dockerfile), so no
+    # sdkmanager runs at CI time. Rebuild + push (scripts/build-ci-image.sh
+    # --push) and bump this tag in every workflow together when compileSdk
+    # moves. The package must stay PUBLIC on ghcr (see ci-image/README.md).
+    container: ghcr.io/mmarca-tech/openvitals-android-ci:android-37
+    steps:
+      - uses: actions/checkout@v5
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: scripts/ci-android-gradle.sh verifyCi
+      - run: git diff --check
