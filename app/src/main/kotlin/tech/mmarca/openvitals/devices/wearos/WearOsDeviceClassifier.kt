@@ -7,9 +7,10 @@ import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
 
 /**
- * Claims a device for WearOS when its name looks like a wrist smartwatch, its
- * bond's class is a wrist watch, or its SDP record lists the OpenVitals Wear
- * OS app. The last one holds whatever the watch is called.
+ * Claims a device for WearOS when its name looks like a wrist smartwatch or
+ * its SDP record lists the OpenVitals Wear OS app. The last one holds whatever
+ * the watch is called. A wrist-watch Bluetooth class alone is not enough:
+ * Garmin, Fitbit and Huawei watches report it too.
  * Classified as `(WEAROS, WATCH)`, off the Garmin sync path.
  */
 class WearOsDeviceClassifier : DeviceClassifier {
@@ -17,7 +18,6 @@ class WearOsDeviceClassifier : DeviceClassifier {
     override fun classify(device: BleDiscoveredDevice): DeviceClassification? =
         if (
             WearOsDeviceNames.isSmartwatchName(device.name) ||
-            device.isWristWatchClass ||
             OpenVitalsAppUuid in device.classicServiceUuids
         ) {
             DeviceClassification(

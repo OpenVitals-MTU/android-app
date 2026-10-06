@@ -8,7 +8,8 @@ data class BondedWatch(val address: String, val name: String?)
  *
  * The registry holds the address from the BLE scan. Wear OS watches advertise
  * with a private address, so the bond usually sits under another one. Order:
- * exact address, then the same name, then the only bonded smartwatch.
+ * exact address, then the same name. No guess beyond that: pinging another
+ * bonded watch would report the wrong one as paired.
  */
 object WearOsBondMatcher {
 
@@ -22,11 +23,8 @@ object WearOsBondMatcher {
                 ?.let { return it }
         }
         val wanted = normalize(targetName)
-        if (wanted != null) {
-            bonded.firstOrNull { normalize(it.name) == wanted }?.let { return it }
-        }
-        // Several smartwatches and no match: pinging a guess could report the wrong watch.
-        return bonded.filter { WearOsDeviceNames.isSmartwatchName(it.name) }.singleOrNull()
+        if (wanted == null) return null
+        return bonded.firstOrNull { normalize(it.name) == wanted }
     }
 
     /** Galaxy Watches advertise "<name> LE" over BLE and "<name>" as the Classic bond. */

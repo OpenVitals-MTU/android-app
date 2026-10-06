@@ -3638,4 +3638,12 @@
     <string name="cycle_reminder_pill_body_plain">该服药了。</string>
     <string name="cycle_reminder_pill_concealed_body">你设置的提醒。</string>
     <string name="cycle_reminder_pill_taken_action">已服用</string>
+    <string name="settings_watch_wearos_status_section">Wear OS 应用状态</string>
+    <string name="settings_watch_wearos_bt_paired">手表已与此手机配对</string>
+    <string name="settings_watch_wearos_bt_not_paired">未找到已配对的 Wear OS 手表</string>
+    <string name="settings_watch_wearos_app_running">手表上的 OpenVitals Wear OS 应用正在运行</string>
+    <string name="settings_watch_wearos_app_no_answer">无响应：手表不在范围内，或手表上的 OpenVitals 应用未运行</string>
+    <string name="settings_watch_wearos_bt_permission">OpenVitals 需要“附近的设备”权限才能连接手表。</string>
+    <string name="settings_watch_wearos_check_app">检查 Wear OS 应用</string>
+    <string name="settings_watch_wearos_checking">正在检查 Wear OS 应用…</string>
 </resources>
