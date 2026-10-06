@@ -47,6 +47,7 @@ import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.MonitorWeight
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.RemoveCircleOutline
 import androidx.compose.material.icons.outlined.Person
@@ -213,6 +214,7 @@ internal val SettingsSection.icon: ImageVector
         SettingsSection.ACTIVITIES -> Icons.AutoMirrored.Outlined.DirectionsRun
         SettingsSection.SENSORS -> Icons.Outlined.Bluetooth
         SettingsSection.WATCHES -> Icons.Outlined.Watch
+        SettingsSection.SCALES -> Icons.Outlined.MonitorWeight
         SettingsSection.NUTRITION -> Icons.Outlined.Restaurant
         SettingsSection.BODY_PROFILE -> Icons.Outlined.Person
         SettingsSection.VITALS -> Icons.Outlined.MonitorHeart
