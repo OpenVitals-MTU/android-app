@@ -558,21 +558,6 @@
             the generic-weather broadcast contract. Exported because
             an external app must reach it; the payload is public weather.
         -->
-        <!--
-            Bound by the OS when the stay-connected watch comes into range
-            (companion-device presence). API 31+; older devices keep companion
-            mode only while the app process lives.
-        -->
-        <service
-            android:name=".devices.garmin.GarminCompanionService"
-            android:exported="true"
-            android:permission="android.permission.BIND_COMPANION_DEVICE_SERVICE"
-            tools:targetApi="s">
-            <intent-filter>
-                <action android:name="android.companion.CompanionDeviceService" />
-            </intent-filter>
-        </service>
-
         <!-- Held for the seconds a weigh-in takes, so the scan runs full time. Runs no logic. -->
         <service
             android:name=".devices.xiaomi.ScaleListeningService"
