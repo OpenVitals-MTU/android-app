@@ -260,6 +260,4 @@ data class BleDiscoveredDevice(
      * lists, lowercase. An app listening on the device shows up here.
      */
     val classicServiceUuids: Set<String> = emptySet(),
-    /** Bonded devices only: the bond's Bluetooth class is a wrist watch. */
-    val isWristWatchClass: Boolean = false,
 )

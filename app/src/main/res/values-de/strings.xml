@@ -3632,4 +3632,12 @@
     <string name="cycle_reminder_pill_body_plain">Zeit für deine Pille.</string>
     <string name="cycle_reminder_pill_concealed_body">Deine geplante Erinnerung.</string>
     <string name="cycle_reminder_pill_taken_action">Eingenommen</string>
+    <string name="settings_watch_wearos_status_section">Status der Wear-OS-App</string>
+    <string name="settings_watch_wearos_bt_paired">Uhr mit diesem Telefon gekoppelt</string>
+    <string name="settings_watch_wearos_bt_not_paired">Keine gekoppelte Wear-OS-Uhr gefunden</string>
+    <string name="settings_watch_wearos_app_running">OpenVitals-Wear-OS-App läuft auf der Uhr</string>
+    <string name="settings_watch_wearos_app_no_answer">Keine Antwort: Die Uhr ist außer Reichweite, oder die OpenVitals-App läuft nicht auf ihr</string>
+    <string name="settings_watch_wearos_bt_permission">OpenVitals braucht die Berechtigung „Geräte in der Nähe“, um die Uhr zu erreichen.</string>
+    <string name="settings_watch_wearos_check_app">Wear-OS-App prüfen</string>
+    <string name="settings_watch_wearos_checking">Wear-OS-App wird geprüft…</string>
 </resources>

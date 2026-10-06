@@ -22,9 +22,8 @@ class WearOsDeviceClassifierTest {
     }
 
     @Test
-    fun `a bond whose class is a wrist watch is a watch, whatever its name`() {
-        val verdict = classifier.classify(discovered("Mystery 42", isWristWatchClass = true))
-        assertEquals(DeviceIntegration.WEAROS, verdict?.integration)
+    fun `an unknown name without the app is not claimed, so a Garmin or Fitbit stays out`() {
+        assertNull(classifier.classify(discovered("Mystery 42")))
     }
 
     @Test
@@ -46,13 +45,11 @@ class WearOsDeviceClassifierTest {
     private fun discovered(
         name: String?,
         classicServiceUuids: Set<String> = emptySet(),
-        isWristWatchClass: Boolean = false,
     ) = BleDiscoveredDevice(
         address = "AA:BB:CC:DD:EE:FF",
         name = name,
         rssi = null,
         suggestedCapabilities = emptySet(),
         classicServiceUuids = classicServiceUuids,
-        isWristWatchClass = isWristWatchClass,
     )
 }

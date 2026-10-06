@@ -3632,4 +3632,12 @@
     <string name="cycle_reminder_pill_body_plain">Aeg tablett võtta.</string>
     <string name="cycle_reminder_pill_concealed_body">Sinu ajastatud meeldetuletus.</string>
     <string name="cycle_reminder_pill_taken_action">Võetud</string>
+    <string name="settings_watch_wearos_status_section">Wear OS rakenduse olek</string>
+    <string name="settings_watch_wearos_bt_paired">Kell on selle telefoniga seotud</string>
+    <string name="settings_watch_wearos_bt_not_paired">Seotud Wear OS kella ei leitud</string>
+    <string name="settings_watch_wearos_app_running">OpenVitalsi Wear OS rakendus töötab kellas</string>
+    <string name="settings_watch_wearos_app_no_answer">Vastust pole: kell on levialast väljas või OpenVitalsi rakendus ei tööta sellel</string>
+    <string name="settings_watch_wearos_bt_permission">OpenVitals vajab kellani jõudmiseks luba „Läheduses olevad seadmed“.</string>
+    <string name="settings_watch_wearos_check_app">Kontrolli Wear OS rakendust</string>
+    <string name="settings_watch_wearos_checking">Wear OS rakenduse kontrollimine…</string>
 </resources>

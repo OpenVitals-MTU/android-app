@@ -3667,4 +3667,12 @@
     <string name="cycle_reminder_pill_body_plain">C\'est l\'heure de votre pilule.</string>
     <string name="cycle_reminder_pill_concealed_body">Votre rappel programmé.</string>
     <string name="cycle_reminder_pill_taken_action">Prise</string>
+    <string name="settings_watch_wearos_status_section">État de l\'appli Wear OS</string>
+    <string name="settings_watch_wearos_bt_paired">Montre associée à ce téléphone</string>
+    <string name="settings_watch_wearos_bt_not_paired">Aucune montre Wear OS associée trouvée</string>
+    <string name="settings_watch_wearos_app_running">L\'appli OpenVitals pour Wear OS fonctionne sur la montre</string>
+    <string name="settings_watch_wearos_app_no_answer">Pas de réponse : la montre est hors de portée, ou l\'appli OpenVitals n\'y fonctionne pas</string>
+    <string name="settings_watch_wearos_bt_permission">OpenVitals a besoin de l\'autorisation Appareils à proximité pour joindre la montre.</string>
+    <string name="settings_watch_wearos_check_app">Vérifier l\'appli Wear OS</string>
+    <string name="settings_watch_wearos_checking">Vérification de l\'appli Wear OS…</string>
 </resources>

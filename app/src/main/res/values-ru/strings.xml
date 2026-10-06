@@ -3703,4 +3703,12 @@
     <string name="cycle_reminder_pill_body_plain">Пора принять таблетку.</string>
     <string name="cycle_reminder_pill_concealed_body">Ваше запланированное напоминание.</string>
     <string name="cycle_reminder_pill_taken_action">Принята</string>
+    <string name="settings_watch_wearos_status_section">Состояние приложения Wear OS</string>
+    <string name="settings_watch_wearos_bt_paired">Часы сопряжены с этим телефоном</string>
+    <string name="settings_watch_wearos_bt_not_paired">Сопряжённые часы с Wear OS не найдены</string>
+    <string name="settings_watch_wearos_app_running">Приложение OpenVitals для Wear OS работает на часах</string>
+    <string name="settings_watch_wearos_app_no_answer">Нет ответа: часы вне зоны действия или приложение OpenVitals на них не запущено</string>
+    <string name="settings_watch_wearos_bt_permission">OpenVitals нужно разрешение «Устройства поблизости», чтобы связаться с часами.</string>
+    <string name="settings_watch_wearos_check_app">Проверить приложение Wear OS</string>
+    <string name="settings_watch_wearos_checking">Проверка приложения Wear OS…</string>
 </resources>

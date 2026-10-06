@@ -3702,4 +3702,12 @@
     <string name="cycle_reminder_pill_body_plain">Čas na pilulku.</string>
     <string name="cycle_reminder_pill_concealed_body">Vaše naplánovaná připomínka.</string>
     <string name="cycle_reminder_pill_taken_action">Užita</string>
+    <string name="settings_watch_wearos_status_section">Stav aplikace Wear OS</string>
+    <string name="settings_watch_wearos_bt_paired">Hodinky jsou spárované s tímto telefonem</string>
+    <string name="settings_watch_wearos_bt_not_paired">Nebyly nalezeny žádné spárované hodinky Wear OS</string>
+    <string name="settings_watch_wearos_app_running">Aplikace OpenVitals pro Wear OS na hodinkách běží</string>
+    <string name="settings_watch_wearos_app_no_answer">Žádná odpověď: hodinky jsou mimo dosah, nebo na nich aplikace OpenVitals neběží</string>
+    <string name="settings_watch_wearos_bt_permission">OpenVitals potřebuje oprávnění Zařízení v okolí, aby se spojil s hodinkami.</string>
+    <string name="settings_watch_wearos_check_app">Ověřit aplikaci Wear OS</string>
+    <string name="settings_watch_wearos_checking">Kontroluji aplikaci Wear OS…</string>
 </resources>
