@@ -7,8 +7,10 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.IntoSet
 import javax.inject.Singleton
 import tech.mmarca.openvitals.devices.core.pairing.BleWatchPairing
+import tech.mmarca.openvitals.devices.core.pairing.CompanionPresenceObserver
 import tech.mmarca.openvitals.devices.core.pairing.WatchPairingPort
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPort
 import tech.mmarca.openvitals.devices.garmin.GarminCounterWatermarkStore
@@ -22,6 +24,12 @@ import tech.mmarca.openvitals.devices.garmin.GarminWatchSyncService
 import tech.mmarca.openvitals.devices.garmin.garminFileStore
 import tech.mmarca.openvitals.devices.media.AndroidPhoneMediaSource
 import tech.mmarca.openvitals.devices.media.PhoneMediaSource
+import tech.mmarca.openvitals.devices.xiaomi.ScaleForeground
+import tech.mmarca.openvitals.devices.xiaomi.ScaleListeningForeground
+import tech.mmarca.openvitals.devices.xiaomi.ScaleScanRadio
+import tech.mmarca.openvitals.devices.xiaomi.SystemScaleScanRadio
+import tech.mmarca.openvitals.devices.xiaomi.XiaomiScaleListener
+import tech.mmarca.openvitals.devices.xiaomi.XiaomiScaleStore
 import tech.mmarca.openvitals.devices.wearos.BluetoothWearOsNodePort
 import tech.mmarca.openvitals.devices.wearos.WearOsNodePort
 
@@ -45,6 +53,19 @@ abstract class DevicesModule {
     @Binds
     @Singleton
     abstract fun bindGarminRadio(impl: GarminGattRadio): GarminRadio
+
+    @Binds
+    @Singleton
+    abstract fun bindScaleScanRadio(impl: SystemScaleScanRadio): ScaleScanRadio
+
+    @Binds
+    @Singleton
+    abstract fun bindScaleForeground(impl: ScaleListeningForeground): ScaleForeground
+
+    // What OpenVitalsCompanionDeviceService tells when an associated device comes into range.
+    @Binds
+    @IntoSet
+    abstract fun bindScalePresenceObserver(impl: XiaomiScaleListener): CompanionPresenceObserver
 
     @Binds
     @Singleton
@@ -76,5 +97,12 @@ abstract class DevicesModule {
         fun provideGarminCounterWatermarkStore(
             @ApplicationContext context: Context,
         ): GarminCounterWatermarkStore = GarminCounterWatermarkStore(context)
+
+        // One instance: the receiver, the worker and the screen read the same state.
+        @Provides
+        @Singleton
+        fun provideXiaomiScaleStore(
+            @ApplicationContext context: Context,
+        ): XiaomiScaleStore = XiaomiScaleStore(context)
     }
 }

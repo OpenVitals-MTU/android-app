@@ -23,6 +23,7 @@ import tech.mmarca.openvitals.data.repository.MedicalDocumentsRepositoryImpl
 import tech.mmarca.openvitals.data.repository.MedicalRecordsRepositoryImpl
 import tech.mmarca.openvitals.data.repository.MindfulnessRepositoryImpl
 import tech.mmarca.openvitals.data.repository.NutritionRepositoryImpl
+import tech.mmarca.openvitals.data.repository.ScaleWeighInRepositoryImpl
 import tech.mmarca.openvitals.data.repository.SleepRepositoryImpl
 import tech.mmarca.openvitals.data.repository.VitalsRepositoryImpl
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
@@ -32,6 +33,7 @@ import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.data.repository.contract.CaffeineRepository
 import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
 import tech.mmarca.openvitals.data.repository.contract.PillIntakeRepository
+import tech.mmarca.openvitals.data.repository.contract.ScaleWeighInRepository
 import tech.mmarca.openvitals.data.repository.contract.CycleRepository
 import tech.mmarca.openvitals.data.repository.contract.FoodRepository
 import tech.mmarca.openvitals.data.repository.contract.GarminSleepMinuteRepository
@@ -132,4 +134,8 @@ abstract class RepositoryModule {
     abstract fun bindGarminSleepMinuteRepository(
         impl: GarminSleepMinuteRepositoryImpl,
     ): GarminSleepMinuteRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindScaleWeighInRepository(impl: ScaleWeighInRepositoryImpl): ScaleWeighInRepository
 }
