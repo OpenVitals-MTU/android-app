@@ -3707,4 +3707,12 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
     <string name="cycle_reminder_pill_body_plain">Hora de tomar a pílula.</string>
     <string name="cycle_reminder_pill_concealed_body">O teu recordatorio programado.</string>
     <string name="cycle_reminder_pill_taken_action">Tomada</string>
+    <string name="settings_watch_wearos_status_section">Estado da app de Wear OS</string>
+    <string name="settings_watch_wearos_bt_paired">Reloxo vinculado con este teléfono</string>
+    <string name="settings_watch_wearos_bt_not_paired">Non se atopou ningún reloxo Wear OS vinculado</string>
+    <string name="settings_watch_wearos_app_running">A app OpenVitals para Wear OS estase a executar no reloxo</string>
+    <string name="settings_watch_wearos_app_no_answer">Sen resposta: o reloxo está fóra de alcance ou a app OpenVitals non se está a executar nel</string>
+    <string name="settings_watch_wearos_bt_permission">OpenVitals precisa o permiso Dispositivos próximos para chegar ao reloxo.</string>
+    <string name="settings_watch_wearos_check_app">Comprobar a app de Wear OS</string>
+    <string name="settings_watch_wearos_checking">Comprobando a app de Wear OS…</string>
 </resources>

@@ -315,8 +315,6 @@ class BleSensorCoordinator @Inject constructor(
                     rssi = null,
                     suggestedCapabilities = emptySet(),
                     classicServiceUuids = device.uuids.toUuidStrings(),
-                    isWristWatchClass = device.bluetoothClass?.deviceClass ==
-                        BluetoothClass.Device.WEARABLE_WRIST_WATCH,
                 ),
             )
         }
@@ -327,16 +325,21 @@ class BleSensorCoordinator @Inject constructor(
     /**
      * The bond's service list is cached from pairing, before any app on the
      * device listened. A fresh SDP query lets a classifier see the services
-     * running now. Audio/video bonds (headsets, cars) are skipped: nothing a
-     * classifier claims lives there, and paging them is noise.
+     * running now. Only unclaimed dual-mode bonds are paged: one a classifier
+     * already claims (a Garmin, a known smartwatch name) gains nothing, and
+     * audio/video, peripheral and imaging bonds never run the app.
      */
     @SuppressLint("MissingPermission")
     private fun refreshBondedServices(bonded: List<BluetoothDevice>) {
         val candidates = bonded.filter {
             it.type == BluetoothDevice.DEVICE_TYPE_DUAL &&
-                it.bluetoothClass?.majorDeviceClass != BluetoothClass.Device.Major.AUDIO_VIDEO
+                it.bluetoothClass?.majorDeviceClass !in NeverRunsTheApp &&
+                scanResults[it.address.uppercase()]
+                    ?.let(::classifyDiscoveredDevice) == DeviceClassification.SENSOR
         }
         if (candidates.isEmpty()) return
+        // A restarted scan registers afresh; the old receiver must not leak.
+        sdpReceiver?.let { old -> runCatching { context.unregisterReceiver(old) } }
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 val device = intent.parcelable<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE) ?: return
@@ -345,11 +348,10 @@ class BleSensorCoordinator @Inject constructor(
                     ?.toTypedArray()
                     .toUuidStrings()
                 if (uuids.isEmpty()) return
-                val address = device.address.uppercase()
-                val existing = scanResults[address] ?: return
-                scanResults[address] = existing.copy(
-                    classicServiceUuids = existing.classicServiceUuids + uuids,
-                )
+                // Atomic per key: an advertisement for the same device lands on the scan thread.
+                scanResults.computeIfPresent(device.address.uppercase()) { _, existing ->
+                    existing.copy(classicServiceUuids = existing.classicServiceUuids + uuids)
+                } ?: return
                 publishScanResults()
             }
         }
@@ -476,8 +478,8 @@ class BleSensorCoordinator @Inject constructor(
         val advertisedUuidStrings = advertisedUuids.map { it.toString() }
         val advertisesSync =
             scanClassifiers.any { it.advertisesSyncService(advertisedUuidStrings) }
-        val existing = scanResults[address]
-        scanResults[address] = BleDiscoveredDevice(
+        // Atomic per key: the SDP receiver updates the same entry on the main thread.
+        scanResults.compute(address) { _, existing -> BleDiscoveredDevice(
             address = address,
             name = device.name ?: existing?.name,
             rssi = result.rssi,
@@ -486,8 +488,7 @@ class BleSensorCoordinator @Inject constructor(
             advertisesSyncService = advertisesSync || (existing?.advertisesSyncService ?: false),
             // Bond evidence comes from the bonded list and SDP, never an advertisement.
             classicServiceUuids = existing?.classicServiceUuids.orEmpty(),
-            isWristWatchClass = existing?.isWristWatchClass ?: false,
-        )
+        ) }
         publishScanResults()
     }
 
@@ -617,6 +618,13 @@ class BleSensorCoordinator @Inject constructor(
         private const val CONNECT_SCAN_RETRY_MS = 30_000L
     }
 }
+
+/** Major classes that never run the OpenVitals Wear OS app. */
+private val NeverRunsTheApp = setOf(
+    BluetoothClass.Device.Major.AUDIO_VIDEO,
+    BluetoothClass.Device.Major.PERIPHERAL,
+    BluetoothClass.Device.Major.IMAGING,
+)
 
 private fun Array<ParcelUuid>?.toUuidStrings(): Set<String> =
     this?.map { it.uuid.toString().lowercase() }?.toSet().orEmpty()

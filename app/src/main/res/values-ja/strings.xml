@@ -3704,4 +3704,12 @@
     <string name="cycle_reminder_pill_body_plain">ピルを飲む時間です。</string>
     <string name="cycle_reminder_pill_concealed_body">設定したリマインダーです。</string>
     <string name="cycle_reminder_pill_taken_action">服用済み</string>
+    <string name="settings_watch_wearos_status_section">Wear OS アプリの状態</string>
+    <string name="settings_watch_wearos_bt_paired">ウォッチはこのスマートフォンとペアリング済みです</string>
+    <string name="settings_watch_wearos_bt_not_paired">ペアリング済みの Wear OS ウォッチが見つかりません</string>
+    <string name="settings_watch_wearos_app_running">ウォッチで OpenVitals Wear OS アプリが動作中です</string>
+    <string name="settings_watch_wearos_app_no_answer">応答がありません：ウォッチが範囲外か、ウォッチの OpenVitals アプリが動作していません</string>
+    <string name="settings_watch_wearos_bt_permission">ウォッチに接続するには、OpenVitals に「付近のデバイス」の権限が必要です。</string>
+    <string name="settings_watch_wearos_check_app">Wear OS アプリを確認</string>
+    <string name="settings_watch_wearos_checking">Wear OS アプリを確認中…</string>
 </resources>

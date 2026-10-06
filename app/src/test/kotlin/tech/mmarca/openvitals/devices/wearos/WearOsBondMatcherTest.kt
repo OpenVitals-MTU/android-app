@@ -34,14 +34,15 @@ class WearOsBondMatcherTest {
     }
 
     @Test
-    fun `with no match the only bonded smartwatch is taken`() {
+    fun `another bonded smartwatch is not taken for the registered one`() {
+        // Watch A was unpaired and watch B bonded: B must not report as A.
         val picked = WearOsBondMatcher.pick(
             bonded = listOf(headphones, pixel),
             targetAddress = "7F:12:34:56:78:9A",
             targetName = "Something else",
         )
 
-        assertEquals(pixel, picked)
+        assertNull(picked)
     }
 
     @Test

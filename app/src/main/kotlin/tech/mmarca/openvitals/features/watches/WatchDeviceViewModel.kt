@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
@@ -167,17 +168,10 @@ class WatchDeviceViewModel @Inject constructor(
         .combine(agpsStore.agps) { state, agps -> state.copy(agps = agps) }
         .stateInViewModel(initial = WatchDeviceUiState())
 
-    /** The first check runs once the device has loaded; later ones are by hand. */
-    private var wearOsAutoChecked = false
-
     init {
+        // The first check runs once the device has loaded; later ones are by hand.
         viewModelScope.launch {
-            uiState.collect { state ->
-                if (!wearOsAutoChecked && state.device?.isWearosWatch == true) {
-                    wearOsAutoChecked = true
-                    checkWearOsStatus()
-                }
-            }
+            if (uiState.first { it.device != null }.device?.isWearosWatch == true) checkWearOsStatus()
         }
     }
 
