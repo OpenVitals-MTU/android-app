@@ -18,6 +18,7 @@ import tech.mmarca.openvitals.devices.garmin.GarminDeviceStateStore
 import tech.mmarca.openvitals.devices.garmin.GarminFileStore
 import tech.mmarca.openvitals.devices.garmin.GarminGattProbe
 import tech.mmarca.openvitals.devices.garmin.GarminGattRadio
+import tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge
 import tech.mmarca.openvitals.devices.garmin.GarminRadio
 import tech.mmarca.openvitals.devices.garmin.GarminTransportProbe
 import tech.mmarca.openvitals.devices.garmin.GarminWatchSyncService
@@ -66,6 +67,10 @@ abstract class DevicesModule {
     @Binds
     @IntoSet
     abstract fun bindScalePresenceObserver(impl: XiaomiScaleListener): CompanionPresenceObserver
+
+    @Binds
+    @IntoSet
+    abstract fun bindWatchPresenceObserver(impl: GarminNotificationBridge): CompanionPresenceObserver
 
     @Binds
     @Singleton

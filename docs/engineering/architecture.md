@@ -366,7 +366,7 @@ The GFDI protocol stack, bottom to top. Everything above the GATT client is tran
 | Session | `GarminSession`, `GarminSessionResponders`, `GarminStageTimers`, `GarminHeldSyncOwner`, `GarminProtobufTransport` |
 | File sync | `GarminWatchSyncService`, `GarminDirectory` (legacy listing), `GarminFileSyncProtocol` and `GarminFileSyncTransfer` (protobuf listing and download), `GarminSyncProtocol`, `GarminFileTypes`, `GarminFileStore`, `GarminDeviceStateStore`, `GarminCounterWatermarkStore`, `GarminActivityImporter` |
 | Wellness import | `wellness/GarminFitWellness` (decode), `wellness/FitWellnessImport` (mapping), `wellness/FitWellnessImporter` (orchestration) |
-| Notifications | `GarminNotificationBridge`, `GarminNotificationForwarder`, `GarminNotificationLink`, `GarminGncsHandler`, `GarminNotificationMessages`, `GarminNotificationActions` |
+| Notifications | `GarminNotificationBridge` (also the watch's `CompanionPresenceObserver`), `GarminNotificationForwarder`, `GarminNotificationLink`, `GarminGncsHandler`, `GarminNotificationMessages`, `GarminNotificationActions` |
 | Settings link | `GarminSettingsLink`, `GarminSettingsService`, `GarminSettingsModel` |
 | Onboarding | `OnboardGarminWatchUseCase`, `GarminDeviceClassifier`, `GarminDeviceNames`, `GarminPhoneIdentity` |
 
