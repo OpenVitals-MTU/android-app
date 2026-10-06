@@ -13,8 +13,8 @@ Create one Weblate component for the Android app UI:
 
 - Project: `OpenVitals`
 - Component: `Android app`
-- Repository: the Codeberg `OpenVitals/android-app` repository
-- VCS mode: `Gitea pull request`
+- Repository: the GitHub `OpenVitals-MTU/android-app` repository
+- VCS mode: `GitHub pull request`
 - File format: `Android String Resource`
 - File mask: `app/src/main/res/values-*/strings.xml`
 - Monolingual base language file: `app/src/main/res/values/strings.xml`
@@ -22,10 +22,10 @@ Create one Weblate component for the Android app UI:
 - Edit base file: disabled
 - License: `AGPL-3.0-or-later`
 
-Add the Codeberg repository webhook target:
+Add the GitHub repository webhook target:
 
 ```text
-https://translate.codeberg.org/hooks/gitea
+https://translate.codeberg.org/hooks/github
 ```
 
 The first component intentionally excludes `debug`, `nightly`, Fastlane

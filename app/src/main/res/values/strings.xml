@@ -2073,7 +2073,7 @@
     <string name="settings_debug_logs_saved">Debug logs saved</string>
     <string name="settings_debug_logs_save_failed">Could not save diagnostics logs</string>
     <string name="settings_privacy_policy_link">View privacy policy</string>
-    <string name="settings_privacy_policy_url" translatable="false">https://codeberg.org/OpenVitals/mobile-app/src/branch/main/PRIVACY.md</string>
+    <string name="settings_privacy_policy_url" translatable="false">https://github.com/OpenVitals-MTU/android-app/blob/main/PRIVACY.md</string>
     <string name="settings_app_lock_title">App lock</string>
     <string name="settings_app_lock_body">Require device unlock to open OpenVitals.</string>
     <string name="app_lock_locked_title">OpenVitals is locked</string>
