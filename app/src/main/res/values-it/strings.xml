@@ -929,7 +929,7 @@
     <string name="message_health_connect_rate_limited">Limite di richieste Health Connect raggiunto. Attendi circa %1$d min e riprova.</string>
     <string name="message_no_workouts_day">Nessun allenamento registrato in questo giorno.</string>
     <string name="message_no_sleep_day">Nessuna sessione di sonno terminata in questo giorno.</string>
-    <string name="message_no_blood_pressure">Nessun dato.</string>
+    <string name="message_no_blood_pressure">Nessun dato</string>
     <string name="message_no_oxygen">Nessuna rilevazione dell\'ossigeno.</string>
     <string name="message_no_vo2_max">Nessun dato</string>
     <string name="message_no_blood_glucose">Nessun dato.</string>
