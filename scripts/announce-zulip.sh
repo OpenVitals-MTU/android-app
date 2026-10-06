@@ -11,8 +11,8 @@
 #
 # The message goes under a topic named after the tag and carries the full
 # release notes (the tag message, minus the versionCode marker comment) plus
-# the Codeberg release and Play links. Zulip caps messages at 10000 characters;
-# longer notes are cut with a pointer to the Codeberg release.
+# the GitHub release and Play links. Zulip caps messages at 10000 characters;
+# longer notes are cut with a pointer to the GitHub release.
 #
 # Re-running a production deployment must not post twice, so the topic is
 # checked for an existing message from the bot before posting.
@@ -34,8 +34,8 @@ if [ -z "${ZULIP_BOT_EMAIL:-}" ] || [ -z "${ZULIP_BOT_API_KEY:-}" ]; then
     echo "ZULIP_BOT_EMAIL and ZULIP_BOT_API_KEY are required" >&2
     exit 1
 fi
-if [ -z "${CI_FORGE_URL:-}" ] || [ -z "${CI_REPO:-}" ]; then
-    echo "CI_FORGE_URL and CI_REPO are required" >&2
+if [ -z "${GITHUB_SERVER_URL:-}" ] || [ -z "${GITHUB_REPOSITORY:-}" ]; then
+    echo "GITHUB_SERVER_URL and GITHUB_REPOSITORY are required" >&2
     exit 1
 fi
 if ! printf '%s\n' "$release_tag" | grep -Eq '^[vV][0-9]+\.[0-9]+\.[0-9]+$'; then
@@ -52,10 +52,10 @@ done
 
 version="${release_tag#[vV]}"
 topic="$release_tag"
-release_url="${CI_FORGE_URL%/}/${CI_REPO}/releases/tag/${release_tag}"
+release_url="${GITHUB_SERVER_URL%/}/${GITHUB_REPOSITORY}/releases/tag/${release_tag}"
 play_url="https://play.google.com/store/apps/details?id=tech.mmarca.openvitals"
 links="**Downloads**
-- Codeberg release (signed APK, AAB, checksums): $release_url
+- GitHub release (signed APK, AAB, checksums): $release_url
 - Google Play: $play_url"
 
 # Drop the versionCode marker comment and trailing blank lines.
@@ -67,7 +67,7 @@ room=$((limit - $(printf '%s' "$fixed" | wc -m) - 80))
 if [ "$(printf '%s' "$notes" | wc -m)" -gt "$room" ]; then
     notes="$(printf '%s' "$notes" | cut -c1-"$room")
 [...]
-Full notes on the Codeberg release."
+Full notes on the GitHub release."
 fi
 
 content="$(printf '**OpenVitals %s is out.**\n\n%s\n\n%s' "$version" "$notes" "$links")"

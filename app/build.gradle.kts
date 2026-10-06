@@ -64,7 +64,7 @@ val localAppleHealthExportPath = providers.gradleProperty("appleHealthExport")
 // refs on origin show bases up to 107030443. So Google Play open testing
 // serves AAB code 1070304430, and the last Flutter nightly's Codeberg/F-Droid
 // APKs shipped 1070304431/1070304432. None of that is visible to the marker
-// survey in scripts/version-code.sh — Play-only codes have no Codeberg marker,
+// survey in scripts/version-code.sh — Play-only codes have no release marker,
 // and the 9-digit base markers sit below any 10-digit floor — so THIS floor is
 // the defense and must clear every code any channel has ever served. Anything
 // at or below those codes is a DOWNGRADE: Play rejects the rollout ("does not

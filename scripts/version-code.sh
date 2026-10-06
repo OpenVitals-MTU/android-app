@@ -3,7 +3,7 @@ set -eu
 
 DEFAULT_FLOOR=107030327
 MARKER_NAME="OpenVitals-Version-Code"
-# Append-only mirror of the counter, pushed by scripts/update-codeberg-tag.py.
+# Append-only mirror of the counter, pushed by scripts/move-nightly-tag.sh.
 #
 # Release bodies alone are not a safe database. The nightly release is DELETED and
 # recreated on every nightly build (the tag move cannot force-push a tag a release
@@ -13,19 +13,20 @@ MARKER_NAME="OpenVitals-Version-Code"
 # one already installed -- which Android refuses with a bare "App not installed".
 # Observed 2026-07: 107030418 fell back to 107030415.
 #
-# Git refs are append-only, anonymous-readable, and touched by neither the tag move
-# nor scripts/prune-codeberg-releases.sh, so they survive what release bodies do not.
+# The nightly release on GitHub is edited in place rather than deleted, but release
+# bodies can still be lost (a release deleted by hand, or by
+# scripts/prune-github-releases.sh). Git refs are append-only, anonymous-readable,
+# and touched by neither, so they survive what release bodies do not.
 VERSION_CODE_REF_PREFIX="refs/version-code"
-# Codeberg answers this endpoint with intermittent 5xx (a 504 while writing this).
-# An unretried blip aborts the release pipeline, so back off the same way
-# scripts/publish-codeberg-release.sh does.
+# An unretried API blip aborts the release workflow, so back off on 5xx and
+# dropped connections.
 CURL_RETRY_OPTS="--retry 5 --retry-delay 2 --retry-all-errors"
 
 usage() {
     cat >&2 <<EOF
 Usage:
-  scripts/version-code.sh next [--floor N] [--forge-url URL] [--repo owner/repo]
-  scripts/version-code.sh for-tag <tag> [--floor N] [--forge-url URL] [--repo owner/repo]
+  scripts/version-code.sh next [--floor N] [--repo owner/repo]
+  scripts/version-code.sh for-tag <tag> [--floor N] [--repo owner/repo]
   scripts/version-code.sh marker <versionCode>
   scripts/version-code.sh ref <versionCode>
 
@@ -74,15 +75,27 @@ print_ref() {
 }
 
 git_url() {
-    forge_url="$1"
-    repo="$2"
-    printf '%s/%s.git\n' "${forge_url%/}" "$repo"
+    repo="$1"
+    printf '%s/%s.git\n' "${server_url%/}" "$repo"
 }
 
 api_base() {
-    forge_url="$1"
-    repo="$2"
-    printf '%s/api/v1/repos/%s\n' "${forge_url%/}" "$repo"
+    repo="$1"
+    printf '%s/repos/%s\n' "${api_url%/}" "$repo"
+}
+
+# Anonymous GitHub API calls share a 60-an-hour limit per IP, which hosted
+# runners exhaust. Send the workflow token when there is one.
+api_get() {
+    token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+    if [ -n "$token" ]; then
+        curl -fsS $CURL_RETRY_OPTS \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $token" \
+            "$1"
+    else
+        curl -fsS $CURL_RETRY_OPTS -H "Accept: application/vnd.github+json" "$1"
+    fi
 }
 
 extract_codes() {
@@ -132,7 +145,7 @@ ref_codes() {
         sed -n "s#^.*[[:space:]]$VERSION_CODE_REF_PREFIX/\([1-9][0-9]*\)\$#\1#p" || true
 }
 
-# Surveys the refs/version-code/* mirror and the Codeberg release markers. Codes
+# Surveys the refs/version-code/* mirror and the GitHub release markers. Codes
 # that exist solely on Google Play are still invisible here (the Flutter era's
 # Play AABs carried base*10 while its markers and refs recorded the 9-digit
 # base), and this step has no Play credentials to ask. The baseVersionCode floor
@@ -141,15 +154,14 @@ ref_codes() {
 # before uploading.
 max_known_code() {
     floor="$1"
-    forge_url="$2"
-    repo="$3"
+    repo="$2"
 
     max_code="$floor"
 
     # The ref mirror first: it is the one store that survives the nightly release
     # being deleted, so it is also the one that must be consulted even when the
     # API is unreachable.
-    codes="$(ref_codes "$(git_url "$forge_url" "$repo")" || true)"
+    codes="$(ref_codes "$(git_url "$repo")" || true)"
     if [ -n "$codes" ]; then
         while IFS= read -r code; do
             [ -n "$code" ] || continue
@@ -166,10 +178,10 @@ EOF_REF_CODES
         return 0
     fi
 
-    base="$(api_base "$forge_url" "$repo")"
+    base="$(api_base "$repo")"
     page=1
     while :; do
-        page_json="$(curl -fsS $CURL_RETRY_OPTS "$base/releases?page=$page&limit=50")"
+        page_json="$(api_get "$base/releases?page=$page&per_page=100")"
         page_count="$(printf '%s' "$page_json" | python3 -c 'import json, sys; print(len(json.load(sys.stdin)))')"
         [ "$page_count" -gt 0 ] || break
 
@@ -194,8 +206,7 @@ EOF_CODES
 code_for_tag() {
     tag="$1"
     floor="$2"
-    forge_url="$3"
-    repo="$4"
+    repo="$3"
 
     require_integer "floor" "$floor"
 
@@ -204,8 +215,8 @@ code_for_tag() {
         return 0
     fi
 
-    base="$(api_base "$forge_url" "$repo")"
-    release_json="$(curl -fsS $CURL_RETRY_OPTS "$base/releases/tags/$tag" 2>/dev/null || true)"
+    base="$(api_base "$repo")"
+    release_json="$(api_get "$base/releases/tags/$tag" 2>/dev/null || true)"
     if [ -n "$release_json" ]; then
         code="$(printf '%s' "$release_json" | extract_code_for_tag "$tag" || true)"
         if [ -n "$code" ]; then
@@ -225,8 +236,9 @@ mode="${1:-}"
 shift || true
 
 floor="${OPENVITALS_VERSION_CODE_FLOOR:-$DEFAULT_FLOOR}"
-forge_url="${FORGE_URL:-${CI_FORGE_URL:-https://codeberg.org}}"
-repo="${CODEBERG_REPO:-${CI_REPO:-OpenVitals/mobile-app}}"
+server_url="${GITHUB_SERVER_URL:-https://github.com}"
+api_url="${GITHUB_API_URL:-https://api.github.com}"
+repo="${GITHUB_REPOSITORY:-OpenVitals-MTU/android-app}"
 tag=""
 
 case "$mode" in
@@ -264,10 +276,6 @@ while [ "$#" -gt 0 ]; do
             floor="${2:-}"
             shift 2
             ;;
-        --forge-url)
-            forge_url="${2:-}"
-            shift 2
-            ;;
         --repo)
             repo="${2:-}"
             shift 2
@@ -283,10 +291,10 @@ require_integer "floor" "$floor"
 
 case "$mode" in
     next)
-        previous="$(max_known_code "$floor" "$forge_url" "$repo")"
+        previous="$(max_known_code "$floor" "$repo")"
         print_version_code "$((previous + 1))"
         ;;
     for-tag)
-        code_for_tag "$tag" "$floor" "$forge_url" "$repo"
+        code_for_tag "$tag" "$floor" "$repo"
         ;;
 esac

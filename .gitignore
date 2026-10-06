@@ -33,9 +33,6 @@ captures/
 *.pfx
 *.pkcs12
 keystore.properties
-.woodpecker/*.env
-.woodpecker/secrets/
-.woodpecker/tmp/
 !gradle/wrapper/gradle-wrapper.jar
 
 # Generated

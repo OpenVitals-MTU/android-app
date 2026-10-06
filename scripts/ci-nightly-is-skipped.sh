@@ -2,7 +2,7 @@
 # Exit 0 when resolve-release-context recorded a skipped cron nightly; else 1.
 set -eu
 
-env_file=".woodpecker/tmp/release-context.env"
+env_file="build/release-ci/release-context.env"
 if [ ! -f "$env_file" ]; then
     exit 1
 fi

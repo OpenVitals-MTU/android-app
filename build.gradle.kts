@@ -31,8 +31,7 @@ tasks.named<UpdateDaemonJvm>("updateDaemonJvm") {
 }
 
 val hasAndroidSerial = providers.environmentVariable("ANDROID_SERIAL").isPresent
-val isCiEnvironment = providers.environmentVariable("CI").isPresent ||
-    providers.environmentVariable("WOODPECKER").isPresent
+val isCiEnvironment = providers.environmentVariable("CI").isPresent
 
 tasks.register("verifyAndroidTest") {
     group = "verification"
@@ -69,7 +68,7 @@ tasks.register("verifyCiPreflight") {
 }
 
 // Phone app only. The wear module has its own gate (verifyWearCi) and its own
-// pipeline (.woodpecker/wear-test.yml), so a watch failure never blocks a phone PR.
+// pipeline (.github/workflows/wear-test.yml), so a watch failure never blocks a phone PR.
 tasks.register("verifyCi") {
     group = "verification"
     description = "Runs phone app CI verification without connected-device instrumentation tests."

@@ -8,11 +8,11 @@
 # - HEAD has no commits after the latest versioned vX.Y.Z / VX.Y.Z release.
 set -eu
 
-if [ "${CI_PIPELINE_EVENT:-}" != "cron" ]; then
+if [ "${OPENVITALS_RELEASE_EVENT:-}" != "cron" ]; then
     exit 1
 fi
 
-head_sha="$(git rev-parse "${CI_COMMIT_SHA:?}")"
+head_sha="$(git rev-parse "${GITHUB_SHA:?}")"
 
 if git rev-parse -q --verify refs/tags/nightly >/dev/null 2>&1; then
     nightly_sha="$(git rev-parse "refs/tags/nightly^{commit}")"
