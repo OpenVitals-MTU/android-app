@@ -28,6 +28,27 @@ MIN_TRANSLATION_COVERAGE = 0.70
 # business; anything outside this set is a typo.
 CLDR_PLURAL_QUANTITIES = {"zero", "one", "two", "few", "many", "other"}
 
+# The cardinal categories CLDR assigns each shipped language. A base quantity
+# the language does not have is not missing: Japanese and Chinese have only
+# "other", and Weblate drops the "one" branch English carries. A language not
+# listed here is held to every quantity the base file has.
+CLDR_LANGUAGE_QUANTITIES = {
+    "cs": {"one", "few", "many", "other"},
+    "de": {"one", "other"},
+    "es": {"one", "many", "other"},
+    "et": {"one", "other"},
+    "fi": {"one", "other"},
+    "fr": {"one", "many", "other"},
+    "gl": {"one", "other"},
+    "it": {"one", "many", "other"},
+    "iw": {"one", "two", "other"},
+    "ja": {"other"},
+    "pl": {"one", "few", "many", "other"},
+    "pt": {"one", "many", "other"},
+    "ru": {"one", "few", "many", "other"},
+    "zh": {"other"},
+}
+
 
 @dataclasses.dataclass(frozen=True)
 class ResourceEntry:
@@ -96,6 +117,12 @@ def parse_resource_file(path: pathlib.Path) -> tuple[dict[str, ResourceEntry], l
     return entries, errors
 
 
+def locale_language(path: pathlib.Path) -> str:
+    """The language of a values-<qualifier> directory: zh-rCN -> zh, b+sr+Latn -> sr."""
+    qualifier = path.parent.name.removeprefix("values-").removeprefix("b+")
+    return re.split(r"[-+]", qualifier, maxsplit=1)[0]
+
+
 def compare_placeholders(
     path: pathlib.Path,
     name: str,
@@ -104,8 +131,11 @@ def compare_placeholders(
 ) -> list[str]:
     errors: list[str] = []
 
+    language_quantities = CLDR_LANGUAGE_QUANTITIES.get(locale_language(path))
     for key, base_value in base.values.items():
         if key not in translated.values:
+            if base.kind == "plurals" and language_quantities is not None and key not in language_quantities:
+                continue
             errors.append(f"{path}: {name} is missing plural quantity {key}")
             continue
 
