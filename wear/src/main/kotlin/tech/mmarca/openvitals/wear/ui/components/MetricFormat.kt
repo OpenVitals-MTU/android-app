@@ -11,6 +11,9 @@ import tech.mmarca.openvitals.wear.WearMetric
 private const val MetersPerKilometer = 1000.0
 private const val MetersPerMile = 1609.344
 private const val FeetPerMeter = 3.28084
+private const val PoundsPerKilogram = 2.20462
+private const val MillilitresPerFluidOunce = 29.5735
+private const val MinutesPerHour = 60
 
 fun formatCount(value: Int): String = NumberFormat.getIntegerInstance().format(value)
 
@@ -28,8 +31,29 @@ fun formatMetricValue(metric: WearMetric, value: Double, unitSystem: UnitSystem)
             UnitSystem.METRIC -> formatCount(value.roundToInt())
             UnitSystem.IMPERIAL -> formatCount((value * FeetPerMeter).roundToInt())
         }
+        WearMetric.SLEEP -> formatHoursMinutes(value)
+        WearMetric.WEIGHT -> when (unitSystem) {
+            UnitSystem.METRIC -> formatOneDecimal(value)
+            UnitSystem.IMPERIAL -> formatOneDecimal(value * PoundsPerKilogram)
+        }
+        WearMetric.HYDRATION -> when (unitSystem) {
+            UnitSystem.METRIC -> formatCount(value.roundToInt())
+            UnitSystem.IMPERIAL -> formatCount((value / MillilitresPerFluidOunce).roundToInt())
+        }
         else -> formatCount(value.roundToInt())
     }
+
+/** [kilograms] in the unit system's body weight unit, one decimal. */
+fun formatWeight(kilograms: Double, unitSystem: UnitSystem): String =
+    formatMetricValue(WearMetric.WEIGHT, kilograms, unitSystem)
+
+/** "7:05" for 425 minutes. */
+fun formatHoursMinutes(minutes: Double): String {
+    val total = minutes.roundToInt()
+    return String.format(Locale.getDefault(), "%d:%02d", total / MinutesPerHour, total % MinutesPerHour)
+}
+
+fun formatOneDecimal(value: Double): String = String.format(Locale.getDefault(), "%.1f", value)
 
 @StringRes
 fun metricUnitLabel(metric: WearMetric, unitSystem: UnitSystem): Int =
@@ -47,4 +71,16 @@ fun metricUnitLabel(metric: WearMetric, unitSystem: UnitSystem): Int =
             UnitSystem.IMPERIAL -> R.string.unit_ft
         }
         WearMetric.BLOOD_OXYGEN -> R.string.unit_percent
+        WearMetric.VO2_MAX -> R.string.unit_vo2_max
+        WearMetric.RESTING_HEART_RATE -> R.string.unit_bpm
+        WearMetric.HRV -> R.string.unit_ms
+        WearMetric.SLEEP -> R.string.unit_hours
+        WearMetric.HYDRATION -> when (unitSystem) {
+            UnitSystem.METRIC -> R.string.unit_ml
+            UnitSystem.IMPERIAL -> R.string.unit_fl_oz
+        }
+        WearMetric.WEIGHT -> when (unitSystem) {
+            UnitSystem.METRIC -> R.string.unit_kg
+            UnitSystem.IMPERIAL -> R.string.unit_lb
+        }
     }

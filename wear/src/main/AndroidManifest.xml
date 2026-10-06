@@ -5,7 +5,17 @@
         android:name="android.hardware.type.watch"
         android:required="true" />
 
-    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <!-- Heart rate and single beats. Wear OS 6 (API 36) replaced BODY_SENSORS
+         with per-type health permissions; see health/HealthPermissions.kt. -->
+    <uses-permission
+        android:name="android.permission.BODY_SENSORS"
+        android:maxSdkVersion="35" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+
+    <!-- Health Services answers capability queries and spot measurements. -->
+    <queries>
+        <package android:name="com.google.android.wearable.healthservices" />
+    </queries>
 
     <!-- The RFCOMM listener the phone pings. Legacy pair up to API 30, runtime grant from 31. -->
     <uses-permission
@@ -52,12 +62,43 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:taskAffinity="">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".tiles.MainVitalsTileService"
+            android:label="@string/tile_main_vitals_label"
+            android:description="@string/tile_main_vitals_description"
+            android:icon="@mipmap/ic_launcher"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@mipmap/ic_launcher" />
+        </service>
+
+        <service
+            android:name=".tiles.QuickLogTileService"
+            android:label="@string/tile_quick_log_label"
+            android:description="@string/tile_quick_log_description"
+            android:icon="@drawable/ic_tile_water"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@mipmap/ic_launcher" />
+        </service>
     </application>
 
 </manifest>

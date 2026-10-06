@@ -1,4 +1,4 @@
-package tech.mmarca.openvitals.wear.features.recording
+package tech.mmarca.openvitals.wear.features.measure
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,17 +27,19 @@ import tech.mmarca.openvitals.wear.health.WearCapabilities
 import tech.mmarca.openvitals.wear.ui.preview.SampleData
 import tech.mmarca.openvitals.wear.ui.preview.WearPreviews
 import tech.mmarca.openvitals.wear.ui.theme.OpenVitalsWearTheme
-import tech.mmarca.openvitals.wear.ui.theme.WorkoutColor
 
 /**
- * The workouts Health Services can record on this watch. A watch that
- * cannot record any gets an explanation instead of a list.
+ * The spot measurements this watch supports. A measurement without a sensor
+ * is not listed at all, so nothing here can be tapped only to fail.
  */
 @Composable
-fun ActivityPickerScreen(capabilities: WearCapabilities, onPick: (ActivityType) -> Unit) {
+fun MeasureListScreen(
+    capabilities: WearCapabilities,
+    onMeasure: (Measurement) -> Unit,
+) {
     val listState = rememberTransformingLazyColumnState()
     val transformationSpec = rememberTransformationSpec()
-    val supported = ActivityType.entries.filter { it in capabilities.workouts }
+    val supported = Measurement.entries.filter { it in capabilities.measurements }
 
     ScreenScaffold(scrollState = listState) { contentPadding ->
         TransformingLazyColumn(state = listState, contentPadding = contentPadding) {
@@ -48,15 +50,14 @@ fun ActivityPickerScreen(capabilities: WearCapabilities, onPick: (ActivityType) 
                         .transformedHeight(this, transformationSpec),
                     transformation = SurfaceTransformation(transformationSpec),
                 ) {
-                    Text(stringResource(R.string.dashboard_start_activity))
+                    Text(stringResource(R.string.measure_title))
                 }
             }
-            if (!capabilities.probed) {
-                item { CircularProgressIndicator() }
-            } else if (supported.isEmpty()) {
-                item {
+            when {
+                !capabilities.probed -> item { CircularProgressIndicator() }
+                supported.isEmpty() -> item {
                     Text(
-                        text = stringResource(R.string.recording_none_supported),
+                        text = stringResource(R.string.measure_none_supported),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -65,18 +66,21 @@ fun ActivityPickerScreen(capabilities: WearCapabilities, onPick: (ActivityType) 
                             .padding(horizontal = 12.dp),
                     )
                 }
-            }
-            items(supported) { type ->
-                Button(
-                    onClick = { onPick(type) },
-                    label = { Text(stringResource(type.label)) },
-                    icon = { Icon(type.icon, contentDescription = null, tint = WorkoutColor) },
-                    colors = ButtonDefaults.filledTonalButtonColors(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, transformationSpec),
-                    transformation = SurfaceTransformation(transformationSpec),
-                )
+                else -> items(supported) { measurement ->
+                    Button(
+                        onClick = { onMeasure(measurement) },
+                        label = { Text(stringResource(measurement.label)) },
+                        secondaryLabel = { Text(stringResource(measurement.description)) },
+                        icon = {
+                            Icon(measurement.icon, contentDescription = null, tint = measurement.accentColor)
+                        },
+                        colors = ButtonDefaults.filledTonalButtonColors(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .transformedHeight(this, transformationSpec),
+                        transformation = SurfaceTransformation(transformationSpec),
+                    )
+                }
             }
         }
     }
@@ -84,10 +88,20 @@ fun ActivityPickerScreen(capabilities: WearCapabilities, onPick: (ActivityType) 
 
 @WearPreviews
 @Composable
-private fun ActivityPickerScreenPreview() {
+private fun MeasureListScreenPreview() {
     OpenVitalsWearTheme {
         AppScaffold {
-            ActivityPickerScreen(SampleData.capabilities, onPick = {})
+            MeasureListScreen(SampleData.capabilities, onMeasure = {})
+        }
+    }
+}
+
+@WearPreviews
+@Composable
+private fun MeasureListScreenNoneSupportedPreview() {
+    OpenVitalsWearTheme {
+        AppScaffold {
+            MeasureListScreen(WearCapabilities(probed = true), onMeasure = {})
         }
     }
 }

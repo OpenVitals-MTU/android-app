@@ -11,6 +11,12 @@
     <string name="metric_floors">Floors</string>
     <string name="metric_elevation">Elevation gained</string>
     <string name="metric_blood_oxygen">Blood oxygen</string>
+    <string name="metric_vo2_max">VO₂ max</string>
+    <string name="metric_resting_heart_rate">Resting heart rate</string>
+    <string name="metric_hrv">Heart rate variability</string>
+    <string name="metric_sleep">Sleep</string>
+    <string name="metric_hydration">Water</string>
+    <string name="metric_weight">Weight</string>
     <string name="unit_steps">steps</string>
     <string name="unit_bpm">bpm</string>
     <string name="unit_km">km</string>
@@ -20,6 +26,20 @@
     <string name="unit_m">m</string>
     <string name="unit_ft">ft</string>
     <string name="unit_percent">%</string>
+    <string name="unit_vo2_max">ml/kg/min</string>
+    <string name="unit_ms">ms</string>
+    <string name="unit_hours">h</string>
+    <string name="unit_ml">ml</string>
+    <string name="unit_fl_oz">fl oz</string>
+    <string name="unit_kg">kg</string>
+    <string name="unit_lb">lb</string>
+    <string name="unit_mmhg">mmHg</string>
+    <string name="unit_hpa">hPa</string>
+    <string name="unit_kmh">km/h</string>
+    <string name="unit_mph">mph</string>
+    <string name="unit_pace_km">/km</string>
+    <string name="unit_pace_mi">/mi</string>
+    <string name="percent_value">%1$d %%</string>
     <string name="metric_goal">of %1$s</string>
 
     <string name="dashboard_today">Today</string>
@@ -28,6 +48,20 @@
     <string name="tiles_edit">Edit tiles</string>
     <string name="tiles_title">Tiles</string>
     <string name="tiles_sensor_hint">Only metrics this watch can measure are listed.</string>
+    <string name="tiles_active_header">Active Tiles</string>
+    <string name="tiles_available_header">Add Tiles</string>
+    <string name="tiles_reset_default">Reset default</string>
+    <string name="tiles_reorder_hint">Long-press a tile and drag it to reorder. Tap to remove.</string>
+
+    <string name="tile_main_vitals_label">OpenVitals Today</string>
+    <string name="tile_main_vitals_description">Quick view of today\'s vitals and metrics.</string>
+    <string name="tile_quick_log_label">OpenVitals Quick log</string>
+    <string name="tile_quick_log_description">Log a glass of water with one tap, measure your heart rate or open the quick log.</string>
+
+    <string name="action_done">Done</string>
+    <string name="action_back">Back</string>
+    <string name="action_retry">Try again</string>
+    <string name="action_save">Save</string>
 
     <string name="detail_today">Today</string>
     <string name="detail_week">Last 7 days</string>
@@ -38,6 +72,62 @@
     <string name="stat_remaining">To goal</string>
     <string name="stat_daily_average">Daily average</string>
     <string name="stat_best_day">Best day</string>
+    <string name="stat_resting">Resting</string>
+    <string name="detail_heart_zones">Zones today</string>
+    <string name="detail_sleep_stages">Sleep stages</string>
+
+    <string name="zone_very_light">Very light</string>
+    <string name="zone_light">Light</string>
+    <string name="zone_moderate">Moderate</string>
+    <string name="zone_hard">Hard</string>
+    <string name="zone_maximum">Maximum</string>
+    <string name="zone_label">Zone %1$d · %2$s</string>
+    <string name="zone_below">Below zone 1</string>
+
+    <string name="sleep_awake">Awake</string>
+    <string name="sleep_rem">REM</string>
+    <string name="sleep_light">Light</string>
+    <string name="sleep_deep">Deep</string>
+
+    <string name="measure_title">Measure</string>
+    <string name="measure_now">Measure now</string>
+    <string name="measure_start">Start</string>
+    <string name="measure_grant">Allow</string>
+    <string name="measure_open_settings">Open settings</string>
+    <string name="measure_none_supported">This watch has no sensor for spot measurements.</string>
+    <string name="measure_heart_rate">Heart rate</string>
+    <string name="measure_heart_rate_description">About 15 seconds</string>
+    <string name="measure_hrv">Heart rate variability</string>
+    <string name="measure_hrv_description">1 minute, sitting still</string>
+    <string name="measure_air_pressure">Air pressure</string>
+    <string name="measure_air_pressure_description">Barometer and altitude</string>
+    <string name="measure_instruction_still">Keep the watch snug on your wrist and hold still.</string>
+    <string name="measure_instruction_still_minute">Sit down, rest your arm and stay still for a minute.</string>
+    <string name="measure_instruction_none">Takes a few seconds.</string>
+    <string name="measure_hint_detecting">Detecting…</string>
+    <string name="measure_hint_off_body">Put the watch on your wrist</string>
+    <string name="measure_altitude">≈ %1$s %2$s altitude</string>
+    <string name="measure_error_not_supported">This watch cannot take this measurement.</string>
+    <string name="measure_error_permission">OpenVitals needs access to heart rate data.</string>
+    <string name="measure_error_off_body">The watch is not on your wrist.</string>
+    <string name="measure_error_no_signal">No reliable reading. Tighten the band and try again.</string>
+    <string name="measure_error_failed">The measurement could not be started.</string>
+
+    <string name="quicklog_title">Log</string>
+    <string name="quicklog_add_water">Water +%1$s %2$s</string>
+    <string name="quicklog_water_today">%1$s / %2$s %3$s</string>
+    <string name="quicklog_blood_pressure">Blood pressure</string>
+    <string name="quicklog_blood_pressure_value">%1$s/%2$s mmHg</string>
+    <string name="quicklog_systolic">Systolic</string>
+    <string name="quicklog_diastolic">Diastolic</string>
+    <string name="quicklog_minutes">%1$d min</string>
+    <string name="quicklog_not_logged">Not logged yet</string>
+    <string name="quicklog_recent">Recent</string>
+
+    <string name="breathe_title">Breathe</string>
+    <string name="breathe_description">1 minute guided breathing</string>
+    <string name="breathe_in">Breathe in</string>
+    <string name="breathe_out">Breathe out</string>
 
     <string name="activity_walk">Walk</string>
     <string name="activity_run">Run</string>
@@ -49,6 +139,12 @@
     <string name="recording_pause">Pause</string>
     <string name="recording_resume">Resume</string>
     <string name="recording_stop">Stop</string>
+    <string name="recording_stop_confirm">End workout?</string>
+    <string name="recording_pace">Pace</string>
+    <string name="recording_speed">Speed</string>
+    <string name="recording_none_supported">This watch cannot record workouts.</string>
+    <string name="summary_duration">Duration</string>
+    <string name="summary_average_heart_rate">Avg heart rate</string>
 
     <string name="settings_title">Settings</string>
     <string name="settings_phone">Phone</string>

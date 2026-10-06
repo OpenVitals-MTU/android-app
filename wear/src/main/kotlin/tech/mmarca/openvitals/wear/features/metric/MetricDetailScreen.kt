@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -21,6 +22,8 @@ import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.AppScaffold
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ListSubHeader
@@ -31,19 +34,27 @@ import androidx.wear.compose.material3.Text
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.roundToInt
 import tech.mmarca.openvitals.wear.MetricKind
 import tech.mmarca.openvitals.wear.MetricUiState
 import tech.mmarca.openvitals.wear.R
+import tech.mmarca.openvitals.wear.SleepStage
 import tech.mmarca.openvitals.wear.UnitSystem
 import tech.mmarca.openvitals.wear.WearMetric
+import tech.mmarca.openvitals.wear.WearPreferences
 import tech.mmarca.openvitals.wear.ui.components.BarChart
+import tech.mmarca.openvitals.wear.ui.components.BarSegment
+import tech.mmarca.openvitals.wear.ui.components.LegendRow
 import tech.mmarca.openvitals.wear.ui.components.MetricValueRow
 import tech.mmarca.openvitals.wear.ui.components.Sparkline
+import tech.mmarca.openvitals.wear.ui.components.StackedBar
+import tech.mmarca.openvitals.wear.ui.components.formatHoursMinutes
 import tech.mmarca.openvitals.wear.ui.components.formatMetricValue
 import tech.mmarca.openvitals.wear.ui.components.metricUnitLabel
 import tech.mmarca.openvitals.wear.ui.preview.SampleData
 import tech.mmarca.openvitals.wear.ui.preview.WearPreviews
 import tech.mmarca.openvitals.wear.ui.theme.Emphasis
+import tech.mmarca.openvitals.wear.ui.theme.HeartZoneColors
 import tech.mmarca.openvitals.wear.ui.theme.OpenVitalsWearTheme
 
 private val ChartHeight = 44.dp
@@ -60,15 +71,49 @@ fun MetricDetailScreen(
     metric: WearMetric,
     state: MetricUiState,
     unitSystem: UnitSystem,
+    maxHeartRate: Int = WearPreferences().maxHeartRate,
+    restingHeartRate: Double? = null,
+    sleepStages: Map<SleepStage, Double> = emptyMap(),
+    /** Starts a spot measurement of this metric; null when the watch cannot measure it. */
+    onMeasure: (() -> Unit)? = null,
 ) {
     val listState = rememberTransformingLazyColumnState()
     val unit = stringResource(metricUnitLabel(metric, unitSystem))
-    val stats = remember(metric, state) { metricStats(metric, state) }
+    val stats = remember(metric, state, restingHeartRate) { metricStats(metric, state, restingHeartRate) }
+    val zoneShares = remember(metric, state.today, maxHeartRate) {
+        if (metric == WearMetric.HEART_RATE) heartRateZoneShares(state.today, maxHeartRate) else emptyList()
+    }
 
     ScreenScaffold(scrollState = listState) { contentPadding ->
         TransformingLazyColumn(state = listState, contentPadding = contentPadding) {
             item {
                 MetricHero(metric = metric, state = state, unit = unit, unitSystem = unitSystem)
+            }
+            if (onMeasure != null) {
+                item {
+                    Button(
+                        onClick = onMeasure,
+                        label = { Text(stringResource(R.string.measure_now)) },
+                        icon = { Icon(metric.icon, contentDescription = null, tint = metric.accentColor) },
+                        colors = ButtonDefaults.filledTonalButtonColors(),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+            if (metric == WearMetric.SLEEP && sleepStages.isNotEmpty()) {
+                item { ListSubHeader { Text(stringResource(R.string.detail_sleep_stages)) } }
+                item {
+                    BreakdownSection(
+                        rows = SleepStage.entries.map { stage ->
+                            BreakdownRow(
+                                color = stage.color,
+                                label = stringResource(stage.label),
+                                value = formatHoursMinutes(sleepStages[stage] ?: 0.0),
+                                share = (sleepStages[stage] ?: 0.0).toFloat(),
+                            )
+                        },
+                    )
+                }
             }
             if (state.today.size >= 2) {
                 item { ListSubHeader { Text(stringResource(R.string.detail_today)) } }
@@ -81,6 +126,21 @@ fun MetricDetailScreen(
                         MetricKind.CUMULATIVE -> BarChart(state.today, metric.accentColor, chartModifier)
                         MetricKind.SAMPLED -> Sparkline(state.today, metric.accentColor, chartModifier)
                     }
+                }
+            }
+            if (zoneShares.any { it > 0f }) {
+                item { ListSubHeader { Text(stringResource(R.string.detail_heart_zones)) } }
+                item {
+                    BreakdownSection(
+                        rows = zoneShares.mapIndexed { zone, share ->
+                            BreakdownRow(
+                                color = HeartZoneColors[zone],
+                                label = stringResource(HeartZoneLabels[zone]),
+                                value = stringResource(R.string.percent_value, (share * 100).roundToInt()),
+                                share = share,
+                            )
+                        },
+                    )
                 }
             }
             items(stats) { stat ->
@@ -172,6 +232,27 @@ private fun MetricHero(
     }
 }
 
+private data class BreakdownRow(val color: Color, val label: String, val value: String, val share: Float)
+
+/** A stacked bar with one legend line per part, for heart rate zones and sleep stages. */
+@Composable
+private fun BreakdownSection(rows: List<BreakdownRow>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = SectionPadding),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        StackedBar(
+            segments = rows.map { BarSegment(it.share, it.color) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 4.dp),
+        )
+        rows.forEach { LegendRow(color = it.color, label = it.label, value = it.value) }
+    }
+}
+
 @Composable
 private fun StatRow(label: String, value: String, unit: String) {
     Row(
@@ -217,8 +298,11 @@ private fun DayLabels(count: Int) {
 private data class MetricStat(@param:StringRes val label: Int, val value: Double)
 
 /** The stats that make sense for the metric's kind, from the data that is there. */
-private fun metricStats(metric: WearMetric, state: MetricUiState): List<MetricStat> =
+private fun metricStats(metric: WearMetric, state: MetricUiState, restingHeartRate: Double?): List<MetricStat> =
     buildList {
+        if (metric == WearMetric.HEART_RATE && restingHeartRate != null) {
+            add(MetricStat(R.string.stat_resting, restingHeartRate))
+        }
         when (metric.kind) {
             MetricKind.SAMPLED -> if (state.today.isNotEmpty()) {
                 add(MetricStat(R.string.stat_low, state.today.min()))
@@ -257,6 +341,8 @@ private fun MetricDetailScreenSampledPreview() {
                 WearMetric.HEART_RATE,
                 SampleData.metrics.getValue(WearMetric.HEART_RATE),
                 UnitSystem.METRIC,
+                restingHeartRate = 58.0,
+                onMeasure = {},
             )
         }
     }
@@ -268,6 +354,21 @@ private fun MetricDetailScreenEmptyPreview() {
     OpenVitalsWearTheme {
         AppScaffold {
             MetricDetailScreen(WearMetric.ELEVATION, MetricUiState(), UnitSystem.METRIC)
+        }
+    }
+}
+
+@WearPreviews
+@Composable
+private fun MetricDetailScreenSleepPreview() {
+    OpenVitalsWearTheme {
+        AppScaffold {
+            MetricDetailScreen(
+                WearMetric.SLEEP,
+                SampleData.metrics.getValue(WearMetric.SLEEP),
+                UnitSystem.METRIC,
+                sleepStages = SampleData.sleepStages,
+            )
         }
     }
 }

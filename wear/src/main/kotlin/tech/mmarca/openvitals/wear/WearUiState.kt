@@ -1,6 +1,8 @@
 package tech.mmarca.openvitals.wear
 
+import tech.mmarca.openvitals.wear.features.quicklog.LoggedEntry
 import tech.mmarca.openvitals.wear.features.recording.ActivityType
+import tech.mmarca.openvitals.wear.health.WearCapabilities
 
 /** Everything the screens render. A null value means "no reading yet". */
 data class WearUiState(
@@ -14,6 +16,12 @@ data class WearUiState(
     val recording: RecordingUiState = RecordingUiState(),
     val settings: SettingsUiState = SettingsUiState(),
     val preferences: WearPreferences = WearPreferences(),
+    /** What the watch can measure; gates measurement buttons and workouts. */
+    val capabilities: WearCapabilities = WearCapabilities(),
+    /** Last night's minutes per stage, as synced from the phone. */
+    val sleepStages: Map<SleepStage, Double> = emptyMap(),
+    /** Quick logs and spot measurements made on this watch, oldest first. */
+    val entries: List<LoggedEntry> = emptyList(),
 )
 
 /** One metric's readings, in the base unit documented on [WearMetric]. */
@@ -35,6 +43,10 @@ data class MetricUiState(
  */
 data class WearPreferences(
     val unitSystem: UnitSystem = UnitSystem.METRIC,
+    /** Top of the heart rate zones. The phone will know the user's age; until then a fixed guess. */
+    val maxHeartRate: Int = 190,
+    /** Daily water goal in millilitres. */
+    val waterGoalMl: Int = 2_000,
 )
 
 /** Same two values as the phone app's `UnitSystem`. */
@@ -48,6 +60,10 @@ data class RecordingUiState(
     val elapsedSeconds: Long = 0,
     val heartRateBpm: Int? = null,
     val distanceMeters: Int? = null,
+    val caloriesKcal: Int? = null,
+    val elevationGainMeters: Int? = null,
+    val speedMetersPerSecond: Double? = null,
+    val averageHeartRateBpm: Int? = null,
     val paused: Boolean = false,
 )
 
