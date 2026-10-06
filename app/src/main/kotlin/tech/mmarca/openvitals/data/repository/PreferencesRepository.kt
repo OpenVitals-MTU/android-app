@@ -1342,7 +1342,7 @@ class PreferencesRepository @Inject constructor(
          * The "Last updated" date of PRIVACY.md. A user who accepted another value is asked
          * again. Change both together; PrivacyPolicyVersionTest fails when they differ.
          */
-        const val CURRENT_PRIVACY_POLICY_VERSION = "2026-09-30"
+        const val CURRENT_PRIVACY_POLICY_VERSION = "2026-10-06"
         private const val KEY_LAST_ACTIVITY_EXERCISE_TYPE = "last_activity_exercise_type"
         private const val KEY_FAVORITE_ACTIVITY_EXERCISE_TYPE = "favorite_activity_exercise_type"
         private const val KEY_DASHBOARD_WIDGET_ORDER = "dashboard_widget_order"

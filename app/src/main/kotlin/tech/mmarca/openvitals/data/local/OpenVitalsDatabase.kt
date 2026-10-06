@@ -26,6 +26,8 @@ import tech.mmarca.openvitals.data.local.heartratecache.HeartRateDayEntity
 import tech.mmarca.openvitals.data.local.medical.MedicalDocumentDao
 import tech.mmarca.openvitals.data.local.medical.MedicalDocumentEntity
 import tech.mmarca.openvitals.data.local.medical.MedicalDocumentRecordEntity
+import tech.mmarca.openvitals.data.local.scale.ScaleWeighInDao
+import tech.mmarca.openvitals.data.local.scale.ScaleWeighInEntity
 import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginDao
 import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginEntity
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyAggregateEntity
@@ -50,6 +52,7 @@ import tech.mmarca.openvitals.data.local.vitalscache.VitalsSyncCursorEntity
         PillIntakeEntity::class,
         MedicalDocumentEntity::class,
         MedicalDocumentRecordEntity::class,
+        ScaleWeighInEntity::class,
     ],
     version = OpenVitalsDatabase.VERSION,
     exportSchema = true,
@@ -77,9 +80,11 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
 
     abstract fun medicalDocumentDao(): MedicalDocumentDao
 
+    abstract fun scaleWeighInDao(): ScaleWeighInDao
+
     companion object {
         /** Raise it with a new migration in [ALL_MIGRATIONS], and commit the schema file Room then writes. */
-        const val VERSION = 15
+        const val VERSION = 16
 
         val MIGRATION_1_3 = beverageMigration(1)
         val MIGRATION_2_3 = beverageMigration(2)
@@ -166,6 +171,13 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
             }
         }
 
+        /** The weigh-ins a scale broadcast, as it measured them. Creation only; nothing to backfill. */
+        val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                createScaleWeighInsTable(db)
+            }
+        }
+
         /**
          * Every migration, in one place. The database builder takes this list, so a migration
          * cannot be written and then left out of it.
@@ -186,6 +198,7 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                 MIGRATION_12_13,
                 MIGRATION_13_14,
                 MIGRATION_14_15,
+                MIGRATION_15_16,
             )
 
         private fun beverageMigration(startVersion: Int): Migration =
@@ -387,6 +400,25 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
             db.execSQL(
                 "CREATE INDEX IF NOT EXISTS `index_medical_document_records_data_source_id_resource_type_resource_id` " +
                     "ON `medical_document_records` (`data_source_id`, `resource_type`, `resource_id`)"
+            )
+        }
+
+        private fun createScaleWeighInsTable(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `scale_weigh_ins` (
+                    `scale_timestamp` INTEGER NOT NULL,
+                    `profile` INTEGER NOT NULL,
+                    `time_millis` INTEGER NOT NULL,
+                    `weight_kg` REAL,
+                    `heart_rate_bpm` INTEGER,
+                    `impedance_low_ohm` REAL,
+                    `impedance_high_ohm` REAL,
+                    `updated_millis` INTEGER NOT NULL,
+                    `written_millis` INTEGER,
+                    PRIMARY KEY(`scale_timestamp`, `profile`)
+                )
+                """.trimIndent()
             )
         }
 

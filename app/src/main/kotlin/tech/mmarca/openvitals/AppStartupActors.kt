@@ -9,6 +9,7 @@ import tech.mmarca.openvitals.devices.garmin.GarminLocalData
 import tech.mmarca.openvitals.devices.garmin.GarminMusicRelay
 import tech.mmarca.openvitals.devices.garmin.GarminNavigationRelay
 import tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge
+import tech.mmarca.openvitals.devices.xiaomi.XiaomiScaleListener
 import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
 import tech.mmarca.openvitals.features.watches.WatchAutoSyncScheduler
@@ -17,7 +18,7 @@ import tech.mmarca.openvitals.features.watches.WatchAutoSyncScheduler
  * What the app starts at every process start that the first screen does not wait for.
  *
  * The Application asks for this through `dagger.Lazy` and builds it on a background
- * thread. As plain injected fields, these nine pulled about 70 graph types into
+ * thread. As plain injected fields, the first nine pulled about 70 graph types into
  * `super.onCreate()` on the main thread, with a handler thread, ten preference
  * stores and a file read among them.
  */
@@ -32,6 +33,7 @@ class AppStartupActors @Inject constructor(
     private val homeWidgetRefreshScheduler: HomeWidgetRefreshScheduler,
     private val appleHealthImportWorkController: AppleHealthImportWorkController,
     private val garminLocalData: GarminLocalData,
+    private val xiaomiScaleListener: XiaomiScaleListener,
 ) {
     /** [observeProcessLifecycle] must add its observer on the main thread. This runs off it. */
     fun start(observeProcessLifecycle: (LifecycleObserver) -> Unit) {
@@ -50,5 +52,7 @@ class AppStartupActors @Inject constructor(
         appleHealthImportWorkController.clearAbandonedStagedExport()
         // Watch files and sleep minutes age out even when no watch syncs any more.
         garminLocalData.pruneOnAppStart()
+        // A reboot or Bluetooth going off drops the scan that hears the scale.
+        xiaomiScaleListener.onAppStart()
     }
 }

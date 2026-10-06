@@ -18,9 +18,9 @@ The repo now has one Android app module for the local app. The goal is to keep b
 - Feature repositories: in place for activity, sleep, heart, body, body energy, caffeine, hydration, nutrition, mindfulness, cycle, and vitals
 - Dashboard: still a dedicated day-based summary screen, not a period-detail screen
 - Manual entry: separate from the dashboard and writes explicit user-entered records directly to Health Connect
-- Room is at schema version 15. It holds derived summary caches plus the tables Health Connect cannot represent (`garmin_wellness_samples`, `garmin_sleep_minutes`, `synced_record_origins`, the food catalog, the cycle journal, cycle exclusions, pill intakes, and the index of kept medical documents); Health Connect remains the source of truth for everything it has a record type for
-- WorkManager is used for user-started Apple Health imports, offline map imports, and the opt-in periodic watch sync
-- Device integration lives under [`devices`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices): the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, and notification forwarding
+- Room is at schema version 16. It holds derived summary caches plus the tables Health Connect cannot represent (`garmin_wellness_samples`, `garmin_sleep_minutes`, `synced_record_origins`, the food catalog, the cycle journal, cycle exclusions, pill intakes, the index of kept medical documents, and the weigh-ins a scale broadcast); Health Connect remains the source of truth for everything it has a record type for
+- WorkManager is used for user-started Apple Health imports, offline map imports, the home widget refresh, the opt-in periodic watch sync, and the re-arm of the scale listener
+- Device integration lives under [`devices`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices): the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, notification forwarding, and the listener for a bathroom scale that only broadcasts
 - Phone-to-phone Health Connect sync lives under [`features/devicesync`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/devicesync) and runs over Bluetooth Classic RFCOMM
 - A one-time Flutter-to-Kotlin data migrator lives under [`data/migration`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/migration) and runs from `OpenVitalsApp.onCreate()`
 
@@ -33,7 +33,7 @@ Most importantly, body and entry/session browsing now live in metric-owned detai
 | `comaps/` | the CoMaps navigation provider: the `ContentResolver` source and the guidance feed |
 | `core/` | app-wide primitives: `period`, `presentation`, `stats`, `geo`, `fit`, `performance`, `diagnostics`, `export` (share staging), `permissions` (OS runtime permissions) |
 | `data/` | `local` (Room), `repository` (feature-facing repositories + `contract` interfaces), `sync` (history/backfill services), `migration` (one-time Flutter import) |
-| `devices/` | device integration: `core` (ports, radio lease, pairing), `garmin` (GFDI stack), `wearos`, `notifications` (notification listener), `media` (the phone's players, for music controls), `weather` (the weather a watch asks for) |
+| `devices/` | device integration: `core` (ports, radio lease, pairing), `garmin` (GFDI stack), `wearos`, `notifications` (notification listener), `media` (the phone's players, for music controls), `weather` (the weather a watch asks for), `xiaomi` (the S400 scale: broadcast decoding, the background listener and the weigh-in import) |
 | `di/` | `AppModule`, `RepositoryModule`, `PreferencesModule`, `RemindersModule`, `DevicesModule` |
 | `domain/` | pure code: `model`, `insights`, `preferences`, `query`, `usecase`, `cycle`, `dashboard` (the aggregator), `report` (report roll-ups), `medical` (FHIR parsing, id repair, source grouping, the patient check, record summaries, the export bundle) |
 | `features/` | one package per user-facing feature area |
@@ -207,7 +207,7 @@ Some repositories are now split into a `data/repository/contract/` interface and
 
 ### Local storage
 
-[`OpenVitalsDatabase`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/local/OpenVitalsDatabase.kt) is at `VERSION = 15`, with migrations declared in its companion object and listed once, in `ALL_MIGRATIONS`, which the database builder takes. Room exports the schema of each version to [`app/schemas`](../../app/schemas); the files are committed.
+[`OpenVitalsDatabase`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/local/OpenVitalsDatabase.kt) is at `VERSION = 16`, with migrations declared in its companion object and listed once, in `ALL_MIGRATIONS`, which the database builder takes. Room exports the schema of each version to [`app/schemas`](../../app/schemas); the files are committed.
 
 To change the schema: raise `VERSION`, write the migration, add it to `ALL_MIGRATIONS`, build once, and commit the new schema file. `OpenVitalsDatabaseSchemaTest` fails until all of that is done: it replays every migration's statements and compares the tables they leave with the exported schema. It can do that on the JVM because the migrations only create and drop tables. A migration that alters a table needs a real database, so add `room-testing` and a `MigrationTestHelper` test with it; the exported schemas are what that helper reads.
 
@@ -224,6 +224,7 @@ To change the schema: raise `VERSION`, write the migration, add it to `ALL_MIGRA
 | `cycle_journal_entries`, `cycle_exclusions` | `data/local/cycle` | the cycle day log Health Connect has no record type for (pain, mood, energy, symptoms, notes, pregnancy test, temperature disturbances, cervical sensation) and the cycles kept out of the estimate, added in migration 12 → 13 |
 | `pill_intakes` | `data/local/cycle` | the days the contraceptive pill was marked as taken; the scheme itself is a cycle preference, added in migration 13 → 14 |
 | `medical_documents`, `medical_document_records` | `data/local/medical` | the files kept from medical imports, stored under `files/medical_documents`, and the Health Connect records each one gave; a file is data Health Connect cannot hold, and the records stay in Health Connect. Added in migration 14 → 15 |
+| `scale_weigh_ins` | `data/local/scale` | each weigh-in a scale broadcast, as measured: weight, heart rate and the two body impedances. Health Connect has no type for impedance, and a weigh-in heard with the app closed must outlive a refused write. Added in migration 15 → 16 |
 
 `garmin_wellness_samples` is the one table that is not a cache. It is the system of record for the series a Garmin watch produces that Health Connect has no record type for (stress, Body Battery, watch sleep scores). Its schema is `(metric, time_millis, value)` with `(metric, time_millis)` as the primary key, so re-syncing an overlapping window rewrites rows instead of duplicating them.
 
@@ -300,11 +301,12 @@ Current feature packages:
 - [`features/nutrition`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/nutrition)
 - [`features/readiness`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/readiness)
 - [`features/recovery`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/recovery)
+- [`features/scales`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/scales)
 - [`features/settings`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/settings)
 - [`features/watches`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/watches)
 - [`features/workoutplans`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/workoutplans) — plan list/builder; `WorkoutPlanStepMapping.kt` is the one seam between Health Connect plans and the activity form's step rows
 
-Three of these are not metric features and follow their own shape: `features/watches` is the watch UI over the `devices` layer, `features/devicesync` is a phone-to-phone sync wizard, and `features/imports/*` are import workflows.
+Four of these are not metric features and follow their own shape: `features/watches` is the watch UI over the `devices` layer, `features/scales` is the settings screen for the scale listener in `devices/xiaomi`, `features/devicesync` is a phone-to-phone sync wizard, and `features/imports/*` are import workflows.
 
 One practical note: `features/activity` currently contains two screen families:
 
@@ -339,7 +341,7 @@ An activity file therefore yields empty wellness carriers and a wellness file yi
 
 ## Device Layer
 
-`devices/` is a layer, not a feature. It owns everything that talks to a physical device over Bluetooth and exposes ports that features consume. It has no Compose code and no navigation. The user-facing screens live in `features/watches`.
+`devices/` is a layer, not a feature. It owns everything that talks to a physical device over Bluetooth and exposes ports that features consume. It has no Compose code and no navigation. The user-facing screens live in `features/watches` and `features/scales`.
 
 ### `devices/core`
 
@@ -348,7 +350,7 @@ Vendor-neutral ports plus the two things every integration shares.
 - [`RadioLease.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices/core/RadioLease.kt) — `object RadioLeases`, a process-wide lease keyed **per Bluetooth address**. Two holders on different peripherals is allowed by design; two holders on the same peripheral is not.
 - [`RadioLeaseUse.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices/core/RadioLeaseUse.kt) — `withRadioLease(address, owner) { ... }`, `RadioLeaseBusyException`, and `object RadioLeaseOwner` with the four owner tags: `SYNC`, `FIND`, `SETTINGS`, `NOTIFICATIONS`. They are strings rather than an enum because they appear in logcat.
 - `DeviceClassification.kt` / `DeviceScanClassifier.kt` — `DeviceClassifier` and `DeviceScanClassifier` function interfaces; the first non-null classification wins, otherwise the device is a plain sensor.
-- `core/pairing/` — `WatchPairingPort` (bond, unbond, associate, disassociate), its `BleWatchPairing` implementation, `CompanionDevicePairing` around `CompanionDeviceManager`, and `OpenVitalsCompanionDeviceService`.
+- `core/pairing/` — `WatchPairingPort` (bond, unbond, associate, disassociate), its `BleWatchPairing` implementation, `CompanionDevicePairing` around `CompanionDeviceManager`, `OpenVitalsCompanionDeviceService`, and `CompanionPresenceObserver`. The service is declared first in the manifest and is therefore the app's primary companion service, the only one Android tells that an associated device appeared; it passes that to every observer bound `@IntoSet` in `di/DevicesModule.kt`.
 - `core/sync/DeviceSyncPort.kt` — `canSync(device)` plus a progress-reporting `sync(...)`, so the watch UI never names a vendor.
 
 ### `devices/garmin`
@@ -391,13 +393,39 @@ Notes worth carrying:
 
 Classification and onboarding only. There is no protocol: `OnboardWearOsWatchUseCase` has a single `ASSOCIATING` step, and the device is registered with no capabilities.
 
+### `devices/xiaomi`
+
+The Xiaomi Body Composition Scale S400. The scale takes no connection: it broadcasts each weigh-in as MiBeacon v5 frames in the service data of `0xFE95`, sealed with AES-CCM under a bind key the Xiaomi account issued when the scale was paired. The user pastes that key once; the app never sees the account.
+
+| Layer | Files |
+|---|---|
+| Decoding, transport-free | `AesCcm` (RFC 3610 on the AES block cipher: Android ships no CCM), `S400Beacon` (header rules, nonce, the weigh-in object, the scan-filter bytes) |
+| Health Connect mapping | `S400WeighInImport` (record kinds, ids, record time) |
+| Listening | `ScaleScanRadio` (the only file touching `android.bluetooth.le`), `ScaleScanReceiver`, `XiaomiScaleListener` (also the `CompanionPresenceObserver`), `ScaleListeningService` and its `ScaleForeground` port, `ScaleListenerWorker`, `ScaleLog` |
+| Pipeline | `ScaleWeighInIngest` (decode, fold into Room, write), `ScaleWeighInWriter` (Room to Health Connect, retries, delete) |
+| State | `XiaomiScaleStore` (key, address, user slot, last failure) |
+
+Notes worth carrying:
+
+- The scan is the system's, started with a `PendingIntent`. It outlives the process, and the system starts `ScaleScanReceiver` for each broadcast that passes the filter. The filter is matched in the Bluetooth chip: `0xFE95` service data, the product id, the "encrypted object" control bits, and the scale's address once known. The scale's idle beacons and a neighbour's scale wake nobody.
+- Measured on an S400: the scale advertises idle beacons from the moment someone steps on, and sends the result only once it has finished measuring, as two frames repeated for about a second each, some twenty seconds in. Its timestamp is true UTC. A scale that does not recognise the person shows "----" and broadcasts no result at all.
+- Two seconds on the air is too short for a background scan, which the system runs a tenth of the time, and a twentieth with the screen off on Android 13 and later. So the scale is associated as a companion device (`XiaomiScaleListener.allowSystemWake`, through `CompanionDevicePairing`). When Android reports it awake, the listener opens a window of `WEIGH_IN_WINDOW_MILLIS`: it starts `ScaleListeningService`, a foreground service that runs no logic, restarts the scan so it runs at foreground speed from its first moment, and closes both when both frames are in or the window runs out. Verified on a dozing Pixel with the process dead: wake at 0 s, both frames at 23 s. Android tells only the app's primary companion service, `OpenVitalsCompanionDeviceService`, which is why that one passes the event to the observers.
+- Each frame is still folded into its row as it arrives and the weigh-in is written again if it grows, so a frame missed on a phone that was not woken, or on Android 10 and 11, still saves what was heard.
+- Room comes before Health Connect. The scale says each weigh-in once, and a background write cannot ask for a permission. A weigh-in Health Connect has not taken stays pending and is retried on the next frame, at app start, by the worker and when the Scales screen opens.
+- A weigh-in is `(scale timestamp, user slot)`. Record ids are built from those two and from no address, since ids travel to other phones. `clientRecordVersion` is the row's `updated_millis`, so a fuller rewrite replaces the earlier records.
+- Only what the key authenticates counts. An unsealed object is ignored, and the first sealed frame the key opens binds the scale's address and the user's slot. A frame from another slot is someone else's body: it is dropped, and only the slot number is kept so the screen can offer to switch.
+- A reboot, or Bluetooth going off, drops the scan, and no broadcast tells a closed app that Bluetooth is back. `XiaomiScaleListener` arms it again at every process start, and `ScaleListenerWorker` every half hour.
+- Android 12 and later listen with the app closed. Android 10 and 11 would need background location for that, which the app does not ask for, so there weigh-ins arrive while the app is open.
+- Body composition is an estimate from Sun et al. (2003) in `domain/insights/BioimpedanceComposition`, not what the scale displays. No basal metabolic rate is written: a second source would evict `BmrEstimateService`'s daily estimate on weigh-in days.
+- Never log the key, a decrypted payload, a measurement or the address.
+
 ### `devices/notifications`
 
 `OpenVitalsNotificationListenerService` is the platform `NotificationListenerService`. It reads posted notifications, filters them through the pure `NotificationFilter`, buffers them in the memory-only `NotificationStore`, and hands them to `GarminNotificationBridge`. It touches no Bluetooth; the bridge owns the forwarding. Nothing is written to a file or a database.
 
 ### Hilt wiring
 
-`di/DevicesModule.kt` is the only module for this layer. It binds `BleWatchPairing` to `WatchPairingPort` and `GarminWatchSyncService` to `DeviceSyncPort`, binds `AndroidPhoneMediaSource` to `PhoneMediaSource`, and provides the GATT probe, the two `SharedPreferences`-backed stores and the one `GarminFileStore`. Everything else is constructor injection. There are no `@Module` declarations inside `devices/` itself; keep it that way. `DevicesLayeringTest` fails on one.
+`di/DevicesModule.kt` is the only module for this layer. It binds `BleWatchPairing` to `WatchPairingPort` and `GarminWatchSyncService` to `DeviceSyncPort`, binds `AndroidPhoneMediaSource` to `PhoneMediaSource`, binds `SystemScaleScanRadio` to `ScaleScanRadio` and `ScaleListeningForeground` to `ScaleForeground`, adds `XiaomiScaleListener` to the `CompanionPresenceObserver` set, and provides the GATT probe, the two Garmin `SharedPreferences`-backed stores, the one `GarminFileStore` and the one `XiaomiScaleStore`. Everything else is constructor injection. There are no `@Module` declarations inside `devices/` itself; keep it that way. `DevicesLayeringTest` fails on one.
 
 Live BLE sensor streaming during activity recording still lives in `sensors/ble`. Phone-to-phone sync is `features/devicesync`, below.
 
@@ -449,7 +477,7 @@ Dashboard metric cards route to metric-specific detail destinations. Metrics tha
 
 Manual entry is a separate screen family from the dashboard. It is the only app area that should initiate *user-entered* Health Connect writes. The Add entry picker is reached through contextual create actions on the dashboard and supported metric screens, not as a primary browsing destination.
 
-The other write paths are all imports or transfers rather than typed entry: `features/imports/applehealth`, `features/imports/csv`, `features/devicesync`, and the Garmin wellness import. They share one write door, `AppleHealthImportRepository.insertImportedRecords`, so deterministic `clientRecordId` upserts behave identically across them. Medical records (FHIR) are the exception. They have no `clientRecordId`, so they are written through `healthconnect/MedicalRecordsWriter`, where a record's data source, type and id make a rewrite an update.
+The other write paths are all imports or transfers rather than typed entry: `features/imports/applehealth`, `features/imports/csv`, `features/devicesync`, the Garmin wellness import, and the scale's weigh-ins. They share one write door, `AppleHealthImportRepository.insertImportedRecords`, so deterministic `clientRecordId` upserts behave identically across them. Medical records (FHIR) are the exception. They have no `clientRecordId`, so they are written through `healthconnect/MedicalRecordsWriter`, where a record's data source, type and id make a rewrite an update.
 
 Current files:
 
@@ -509,7 +537,7 @@ Current files:
 
 For availability and permission state these screens should keep using `HealthRepository`, not feature repositories.
 
-Settings is one route per section, and each section builds only its own ViewModel: `DisplaySettingsViewModel`, `ActivitiesSettingsViewModel` (recording, offline maps, elevation tiles), `NutritionSettingsViewModel`, `BodySettingsViewModel` (shared by Body profile and Recovery, because the profile, the zones and the night window all feed the Body Energy chain), `DataImportViewModel`, and the bespoke Watches and Sync with another phone screens. `SettingsViewModel` keeps only the root, Health Connect, Vitals and Diagnostics: availability, permissions, and a few switches. A new section gets its own ViewModel and screen; do not grow `SettingsViewModel`.
+Settings is one route per section, and each section builds only its own ViewModel: `DisplaySettingsViewModel`, `ActivitiesSettingsViewModel` (recording, offline maps, elevation tiles), `NutritionSettingsViewModel`, `BodySettingsViewModel` (shared by Body profile and Recovery, because the profile, the zones and the night window all feed the Body Energy chain), `DataImportViewModel`, and the bespoke Watches, Scales (`ScalesViewModel`) and Sync with another phone screens. `SettingsViewModel` keeps only the root, Health Connect, Vitals and Diagnostics: availability, permissions, and a few switches. A new section gets its own ViewModel and screen; do not grow `SettingsViewModel`.
 
 ### Health Connect screen shell
 
@@ -537,6 +565,8 @@ The contention is resolved by refusing, not by queueing: the sync wizard reports
 
 The scheduled watch sync inherits that decision rather than escaping it. `WatchAutoSyncWorker` is a plain `CoroutineWorker`, never an expedited or foreground one: work the user did not start must not be able to take the single slot, and it has no business posting a notification about itself. It gets WorkManager's ordinary ten-minute window, which is ample for a watch that syncs every half hour, and it refuses on the same `GarminWatchSyncService.sync` recording gate everything else does.
 
+The bathroom scale is the one service the app starts without a tap. When Android reports the associated scale awake, `XiaomiScaleListener` starts `ScaleListeningService` (`connectedDevice`, silent notification) for at most 45 seconds, because a background app's scan is too slow to catch a result that is on the air for two seconds. Someone stepping on a scale is the user's action; nothing else in the app may copy this. It respects the slot: `ScaleListeningForeground.raise` starts nothing when the app is already at foreground importance, which is the case while a recording, an import or a phone sync holds it, and the scan already runs full time then. Its half-hourly `ScaleListenerWorker` is a plain worker for the same reason the watch one is.
+
 ### 2. One BLE radio, leased per address
 
 Every subsystem that opens a BLE link to a device goes through `RadioLeases`. The four owners are `SYNC`, `FIND`, `SETTINGS`, and `NOTIFICATIONS`, and on a given address they mutually exclude: a file sync, a find-my-watch ring, an open settings link, and the notification forwarder cannot hold the same watch at once.
@@ -550,6 +580,8 @@ The lease is not just a mutex. Three properties matter:
 
 Live BLE sensor streaming during activity recording lives in `sensors/ble` and targets sensors, not watches; it is excluded from watch work by rule 1 rather than by the lease. New device work must take a lease, and must pick one of the existing owner tags rather than inventing a fifth without a reason.
 
+A lease guards a link. The scale listener opens none: it only scans, and a scan shares the radio with any link. It takes no lease.
+
 ### 3. Health Connect reads and record mapping stay behind `healthconnect/*HealthReader`
 
 The per-area readers in [`healthconnect`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect) — `ActivityHealthReader`, `SleepHealthReader`, `HeartHealthReader`, `BodyHealthReader`, `VitalsHealthReader`, `HydrationHealthReader`, `NutritionHealthReader`, `MindfulnessHealthReader`, `CycleHealthReader`, `MedicalRecordsHealthReader` — own the record types, the reads, and the mapping into app models. The medical reader and `MedicalRecordsWriter` reach Health Connect through `MedicalRecordsClient`, because the Jetpack medical classes build platform objects in their constructors and a JVM test cannot create them. `HealthConnectMedicalRecordsClient` is the only class that touches them. Repositories consume readers; features consume repositories. No feature should call the AndroidX client or hold a raw `Record` in screen state.
@@ -557,7 +589,7 @@ The per-area readers in [`healthconnect`](../../app/src/main/kotlin/tech/mmarca/
 Two bounded exceptions exist today and should stay bounded:
 
 - **Constant vocabularies.** Display code may reference Health Connect's constant sets where the app has no reason to mirror them — `ExerciseSessionRecord` exercise types, `ExerciseSegment`, `MealType`, `SexualActivityRecord` protection values. That is naming, not data access.
-- **Write and import paths.** Importers and sync legitimately build `Record` instances. Each concentrates that in one place (`features/imports/applehealth`, `features/imports/csv`, `features/imports/garmin`, `features/devicesync/store/SyncRecordCodec.kt`, `devices/garmin/wellness/FitWellnessImport.kt`) and writes through `AppleHealthImportRepository.insertImportedRecords`, which is what makes deterministic `clientRecordId` upserts consistent across all of them. Medical records write through `MedicalRecordsWriter` instead.
+- **Write and import paths.** Importers and sync legitimately build `Record` instances. Each concentrates that in one place (`features/imports/applehealth`, `features/imports/csv`, `features/imports/garmin`, `features/devicesync/store/SyncRecordCodec.kt`, `devices/garmin/wellness/FitWellnessImport.kt`, `devices/xiaomi/S400WeighInImport.kt`) and writes through `AppleHealthImportRepository.insertImportedRecords`, which is what makes deterministic `clientRecordId` upserts consistent across all of them. Medical records write through `MedicalRecordsWriter` instead.
 
 **A writer reads strictly.** The readers return a fallback (an empty list, a null) when a read fails, is rate limited, or sync is paused. That suits a screen, which wants an empty state. It is wrong for code that saves what it read: a cache rebuild, a derived-record reconcile. Such code wraps its reads in `withStrictHealthConnectReads { ... }` ([`HealthConnectReaderSupport.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectReaderSupport.kt)). Inside it every guarded read throws instead, in child coroutines too, so the pass aborts before it writes. `VitalsHistorySyncService`, `StepDistanceBackfillService`, `BmrEstimateService` and `BodyEnergyChainSyncService` do this. A new writer must too. So does code that puts what it read into a document the user keeps: `ReportDataLoader` reads strictly, so a rate-limited metric shows as failed in the report and not as "No data in this range". `MedicalRecordsHealthReader` has no fallback at all: every read throws, so a medical screen never shows "no records" for a failed read.
 
@@ -580,6 +612,7 @@ A blocked main thread is an "app isn't responding" dialog. A broadcast receiver 
 - **No `runBlocking` in `app/src/main`.** `NoRunBlockingRatchetTest` holds the allow-list.
 - **A receiver never holds a broadcast for a Health Connect read.** `UpdatingHomeWidgetReceiver` lets Glance redraw from stored state and hands the read to `HomeWidgetRefreshScheduler.refreshNow()`. Do not call `goAsync()` in a Glance receiver: Glance already took the pending result, so a second call returns null.
 - **A widget tap writes first.** `runQuickBeverageTap` does the write, then the tile update. The label revert runs on `HomeWidgetScope`, after the broadcast ends. Its time budget stops the wait, never the write.
+- **A scale broadcast is stored first.** `ScaleWeighInIngest` folds the frame into Room, then writes to Health Connect on its own scope. The receiver waits at most eight seconds for that. A write that takes longer finishes after the broadcast, and one that fails is retried later.
 - **Composables `remember` any pass over samples.** A day of 1 Hz heart rate is about 86,000 samples. Sort, min, max and average belong in `remember(samples)` or in the mapper.
 
 When the dialog does appear, Android keeps the trace. `AnrExitInfo` reads it into the report email and the debug log export. On a device: `adb shell dumpsys activity exit-info tech.mmarca.openvitals`.
@@ -742,9 +775,10 @@ For example, [`MetricCard.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/
 Room-backed caching is intentionally narrow: the vitals daily cache, the heart-rate day averages and the beverage catalog, not raw Health Connect records.
 The dashboard and daily readiness read Health Connect on every load.
 The watch and sync tables (`garmin_wellness_samples`, `garmin_sleep_minutes`, `synced_record_origins`) exist only because Health Connect has no record type for those series; they are not a precedent for mirroring records Health Connect can already hold.
+`scale_weigh_ins` holds a weight and a heart rate beside the impedances Health Connect has no type for. That is not a mirror either: the row is what a weigh-in heard in the background waits in until a write is possible, and a later recomputation of body composition needs the weight measured with that impedance.
 
 WorkManager is used for the Apple Health import worker and the offline map import worker because those workflows can be long-running and user-visible.
-It is also used for the one scheduled job in the app: [`WatchAutoSyncWorker`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/watches/WatchAutoSyncWorker.kt), the per-watch automatic sync a user opts into on the watch's device screen. That worker schedules the sync; it does not implement one. It resolves `DeviceSyncController` and runs exactly the sequence a tap runs, so there is still only one watch-sync path.
+It is also used for the scheduled jobs: the home widget refresh, [`ScaleListenerWorker`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices/xiaomi/ScaleListenerWorker.kt), which only re-arms the scale scan and retries pending weigh-ins, and [`WatchAutoSyncWorker`](../../app/src/main/kotlin/tech/mmarca/openvitals/features/watches/WatchAutoSyncWorker.kt), the per-watch automatic sync a user opts into on the watch's device screen. That worker schedules the sync; it does not implement one. It resolves `DeviceSyncController` and runs exactly the sequence a tap runs, so there is still only one watch-sync path.
 
 Everything else about device work is unchanged: a watch sync and a phone-to-phone sync hold their own coroutine scope, the phone-to-phone one is foreground and user-initiated, and neither has a background variant. `WatchAutoSyncWorker` runs with no foreground service at all, deliberately (see the foreground-slot rule). Do not read it as a general background-sync layer, and do not design new features as if one or a raw-record database already exists.
 

@@ -44,7 +44,7 @@ These features already show the intended direction.
 
 Beyond the metric screens, the app now carries three subsystems that are not metric features and do not follow the period-detail pattern:
 
-- `devices/` — the device layer: the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, and notification forwarding. `features/watches` is its UI.
+- `devices/` — the device layer: the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, notification forwarding, and the listener for a bathroom scale that only broadcasts (`devices/xiaomi`: woken by Android as a companion device, it holds a short foreground service for the two seconds the result is on the air). `features/watches` and `features/scales` are its UI.
 - `features/devicesync/` — phone-to-phone Health Connect sync over Bluetooth Classic RFCOMM.
 - `data/migration/` — a one-time Flutter-to-Kotlin data importer that runs in two phases from `OpenVitalsApp.onCreate()`. Its ordering around `super.onCreate()` is load-bearing; read the architecture doc before touching startup.
 
@@ -89,13 +89,13 @@ When adding a new detail feature, follow this shape:
 Do not break these without an explicit decision. They are app-wide, and each has a section in [docs/engineering/architecture.md](docs/engineering/architecture.md).
 
 - **No `INTERNET` permission.** The manifest removes `INTERNET`, `ACCESS_NETWORK_STATE`, and `ACCESS_WIFI_STATE`. Phone-to-phone sync is Bluetooth Classic specifically so this stays true. Never add a dependency that needs a socket.
-- **One foreground service at a time.** Activity recording, the Apple Health import, and phone sync contend for the single foreground slot and refuse rather than queue.
-- **One BLE radio, leased per address.** Everything that opens a BLE link takes a lease from `devices/core/RadioLease.kt` under one of the four owner tags: `SYNC`, `FIND`, `SETTINGS`, `NOTIFICATIONS`. A lease is re-entrant per tag, so `SYNC` work (a sync, a file upload) also serialises on `GarminWatchSyncService.syncMutex`.
+- **One foreground service at a time.** Activity recording, the Apple Health import, and phone sync contend for the single foreground slot and refuse rather than queue. The one service the app starts without a tap is the scale's 45-second `ScaleListeningService`, when Android reports the associated scale awake; it starts nothing while the app is already in the foreground.
+- **One BLE radio, leased per address.** Everything that opens a BLE link takes a lease from `devices/core/RadioLease.kt` under one of the four owner tags: `SYNC`, `FIND`, `SETTINGS`, `NOTIFICATIONS`. A lease is re-entrant per tag, so `SYNC` work (a sync, a file upload) also serialises on `GarminWatchSyncService.syncMutex`. A scan opens no link and takes no lease.
 - **A missing permission is `ScreenError.PermissionDenied`.** Use `isPermissionFailure()` / `toScreenError()`; never pattern-match exception messages. The screens render this as a grant affordance.
 - **Health Connect reads and record mapping live behind `healthconnect/*HealthReader`.** Writes go through `AppleHealthImportRepository.insertImportedRecords` with a deterministic `clientRecordId`. Medical records (FHIR) have no `clientRecordId`: they go through `healthconnect/MedicalRecordsWriter`, where a record's data source, type and id make a rewrite an update.
 - **Nothing waits on the main thread.** No `runBlocking` in `app/src/main` (`NoRunBlockingRatchetTest` holds the allow-list). A receiver never holds a broadcast for a Health Connect read. Composables `remember` any pass over samples.
 - **Every locale ships complete.** A new string goes to `values/strings.xml` and to every `values-*/strings.xml`, with the plural shape each locale needs; `python3 scripts/verify-translations.py` checks them. See [translations.md](docs/engineering/translations.md) and the translation-gate note in [development.md](docs/engineering/development.md).
-- **Room is at version 15.** A new entity means a `MIGRATION_15_16` and a bump, not `fallbackToDestructiveMigration`.
+- **Room is at version 16.** A new entity means a `MIGRATION_16_17` and a bump, not `fallbackToDestructiveMigration`.
 - **The docs are checked against the code.** `ArchitectureDocTest` fails when a Room table, the Room version or a package is missing from the docs. `HealthConnectLayeringTest` and `DevicesLayeringTest` hold two layering rules. `FileSizeRatchetTest` stops a file passing 800 lines, and `FunctionLengthRatchetTest` stops a new function passing 150. When one fails, fix the code or the doc in the same commit.
 
 ## Implementation Rules

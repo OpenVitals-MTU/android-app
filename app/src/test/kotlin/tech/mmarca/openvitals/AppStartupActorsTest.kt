@@ -13,6 +13,7 @@ import tech.mmarca.openvitals.devices.garmin.GarminLocalData
 import tech.mmarca.openvitals.devices.garmin.GarminMusicRelay
 import tech.mmarca.openvitals.devices.garmin.GarminNavigationRelay
 import tech.mmarca.openvitals.devices.garmin.GarminNotificationBridge
+import tech.mmarca.openvitals.devices.xiaomi.XiaomiScaleListener
 import tech.mmarca.openvitals.features.homewidgets.HomeWidgetRefreshScheduler
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportWorkController
 import tech.mmarca.openvitals.features.watches.WatchAutoSyncScheduler
@@ -28,9 +29,10 @@ class AppStartupActorsTest {
     private val widgets = mockk<HomeWidgetRefreshScheduler>(relaxed = true)
     private val appleHealth = mockk<AppleHealthImportWorkController>(relaxed = true)
     private val garminData = mockk<GarminLocalData>(relaxed = true)
+    private val scale = mockk<XiaomiScaleListener>(relaxed = true)
 
     private fun subject() = AppStartupActors(
-        reminders, origins, bridge, navigation, music, autoSync, widgets, appleHealth, garminData,
+        reminders, origins, bridge, navigation, music, autoSync, widgets, appleHealth, garminData, scale,
     )
 
     @Test
@@ -45,6 +47,7 @@ class AppStartupActorsTest {
         verify(exactly = 1) { widgets.reconcile() }
         verify(exactly = 1) { appleHealth.clearAbandonedStagedExport() }
         verify(exactly = 1) { garminData.pruneOnAppStart() }
+        verify(exactly = 1) { scale.onAppStart() }
     }
 
     @Test
