@@ -1,7 +1,7 @@
 # Design system conformance
 
 The OpenVitals design system lives in its own repository (`../design-system`,
-`codeberg.org/OpenVitals/design-system`). It is the golden: `tokens/*.css` hold
+`github.com/OpenVitals-MTU/design-system`). It is the golden: `tokens/*.css` hold
 the scales, `docs/audit-1.md` records why several values are what they are, and
 `docs/accessibility.md` sets the floors. This page records how this app maps
 onto it and what is deliberately outstanding.

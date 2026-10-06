@@ -50,7 +50,7 @@ Diagnostics builds export raw process logcat (no tag filtering or redaction) fro
 
 ## Support Links
 
-Settings and project metadata can point users toward support and community resources such as Zulip, Codeberg, or donation links.
+Settings and project metadata can point users toward support and community resources such as Zulip, GitHub, or donation links.
 
 ## Health Disclaimer
 
