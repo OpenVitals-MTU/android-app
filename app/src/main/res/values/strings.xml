@@ -605,6 +605,8 @@
     <string name="settings_watch_auto_sync_2h">2 h</string>
     <string name="settings_watch_stay_connected">Stay connected</string>
     <string name="settings_watch_stay_connected_body">Keeps a link to the watch whenever it is in range. The watch can then fetch weather, find this phone, and hand over new recordings the moment they finish — at some cost to watch and phone battery.</string>
+    <string name="settings_watch_high_mtu">Large Bluetooth packets</string>
+    <string name="settings_watch_high_mtu_body">Asks the watch for larger Bluetooth packets, which makes a sync much faster. Turn it off if the watch keeps dropping the link or a sync never gets going.</string>
     <string name="garmin_find_phone_channel">Find my phone</string>
     <string name="garmin_find_phone_title">Your watch is looking for this phone</string>
     <string name="garmin_find_phone_body">Tap to stop ringing.</string>
@@ -3255,6 +3257,14 @@
     <string name="settings_watch_metric_recovery_time">Recovery time</string>
     <string name="settings_watch_metric_training_readiness">Training readiness</string>
     <string name="settings_watch_metric_training_load">Training load</string>
+    <string name="settings_watch_metric_ftp">Functional threshold power</string>
+    <string name="settings_watch_metric_lactate_threshold">Lactate threshold</string>
+    <string name="settings_watch_metric_lactate_threshold_hr">at %1$d bpm</string>
+    <string name="settings_watch_metric_hill_score">Hill score</string>
+    <string name="settings_watch_metric_hill_score_parts">Strength %1$d, endurance %2$d</string>
+    <string name="settings_watch_metric_endurance_score">Endurance score</string>
+    <string name="settings_watch_metric_restless_moments">Restless moments</string>
+    <string name="settings_watch_metric_watts">%1$d W</string>
     <string name="settings_watch_average_prefix">%1$s average</string>
     <plurals name="dashboard_watch_more">
         <item quantity="one">+%1$d more</item>

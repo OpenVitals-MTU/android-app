@@ -75,10 +75,6 @@ private class FitFileReader(
     private val fileBytes: ByteArray,
     private val startOffset: Int,
 ) {
-    private val definitions = mutableMapOf<Int, FitMessageDefinition>()
-    private val messages = mutableListOf<FitMessage>()
-    private var lastTimestampRaw: Long? = null
-
     fun read(): FitFileMessages {
         val headerSize = fileBytes[startOffset].toUnsignedInt()
         require(headerSize >= FitMinimumHeaderSize && startOffset + headerSize <= fileBytes.size) {
@@ -93,28 +89,47 @@ private class FitFileReader(
         require(dataEnd <= fileBytes.size) {
             "FIT file data section is incomplete."
         }
-        val reader = FitDataReader(fileBytes, dataStart, dataEnd.toInt())
-        while (reader.hasRemaining()) {
-            readRecord(reader)
-        }
+        val messages = FitRecordDecoder().read(fileBytes, dataStart, dataEnd.toInt())
         val next = (dataEnd + FitCrcSize).coerceAtMost(fileBytes.size.toLong()).toInt()
         return FitFileMessages(messages = messages, nextOffset = next)
     }
+}
 
-    private fun readRecord(reader: FitDataReader) {
+/**
+ * Decodes a bare record stream: definitions and data with no file header or
+ * CRC, which is what a Garmin watch pushes over GFDI as FIT_DEFINITION and
+ * FIT_DATA messages. Definitions and the last timestamp persist across
+ * calls, so a data payload may follow its definition payload in a later
+ * message. [FitDecoder.readFile] runs one of these per file.
+ */
+class FitRecordDecoder {
+    private val definitions = mutableMapOf<Int, FitMessageDefinition>()
+    private var lastTimestampRaw: Long? = null
+
+    /** The data messages in [bytes] from [start] to [end]. Definitions are kept, not returned. */
+    fun read(bytes: ByteArray, start: Int = 0, end: Int = bytes.size): List<FitMessage> {
+        val reader = FitDataReader(bytes, start, end)
+        val messages = mutableListOf<FitMessage>()
+        while (reader.hasRemaining()) {
+            readRecord(reader, messages)
+        }
+        return messages
+    }
+
+    private fun readRecord(reader: FitDataReader, messages: MutableList<FitMessage>) {
         val header = reader.readUnsignedByte()
         if (header and FitCompressedHeaderFlag != 0) {
             val localMessageType = (header ushr FitCompressedLocalMessageTypeShift) and
                 FitCompressedLocalMessageTypeMask
             val timestamp = compressedTimestamp(header and FitCompressedTimestampMask)
-            readDataMessage(localMessageType, timestamp, reader)
+            readDataMessage(localMessageType, timestamp, reader, messages)
             return
         }
         val localMessageType = header and FitNormalLocalMessageTypeMask
         if (header and FitDefinitionMessageFlag != 0) {
             definitions[localMessageType] = readDefinitionMessage(header, reader)
         } else {
-            readDataMessage(localMessageType, compressedTimestamp = null, reader)
+            readDataMessage(localMessageType, compressedTimestamp = null, reader, messages)
         }
     }
 
@@ -157,6 +172,7 @@ private class FitFileReader(
         localMessageType: Int,
         compressedTimestamp: Long?,
         reader: FitDataReader,
+        messages: MutableList<FitMessage>,
     ) {
         val definition = definitions[localMessageType]
             ?: throw IllegalArgumentException("FIT data message has no definition.")

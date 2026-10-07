@@ -24,6 +24,17 @@ class GarminDeviceStateStoreTest {
     }
 
     @Test
+    fun `large packets are on until switched off for that address`() {
+        assertTrue(store.highMtu("AA:BB:CC:DD:EE:FF"))
+
+        store.setHighMtu("aa:bb:cc:dd:ee:ff", false)
+
+        // The address is the key, whatever its case; another watch keeps the default.
+        assertFalse(GarminDeviceStateStore(prefs).highMtu("AA:BB:CC:DD:EE:FF"))
+        assertTrue(store.highMtu("11:22:33:44:55:66"))
+    }
+
+    @Test
     fun `synced file keys start empty and round-trip through storage`() {
         assertTrue(store.syncedFileKeys(deviceId).isEmpty())
 
