@@ -1023,6 +1023,14 @@
     <string name="message_no_vo2_max">无最大摄氧量读数。</string>
     <string name="message_no_blood_glucose">无血糖读数。</string>
     <string name="message_no_skin_temperature">无皮肤温度读数。</string>
+    <string name="skin_temperature_variation_title">相对基线的变化</string>
+    <string name="skin_temperature_variation_caption">皮肤温度相对设备设定的基线变化了多少。不是绝对温度。</string>
+    <string name="skin_temperature_row_with_baseline">相对基线 %1$s · 基线 %2$s</string>
+    <string name="skin_temperature_row_without_baseline">相对基线 %1$s</string>
+    <string name="skin_temperature_no_variation">未记录变化</string>
+    <string name="skin_temperature_baseline_not_provided">来源未提供</string>
+    <string name="skin_temperature_baseline_newest">来自最新记录</string>
+    <string name="stat_vs_usual_average">与常规均值相比</string>
     <string name="message_cycle_browse">查看并记录你的周期、症状和预估。</string>
     <string name="dashboard_add_widgets">添加小组件</string>
     <string name="dashboard_all_widgets_added">所有小组件已在概览中。</string>

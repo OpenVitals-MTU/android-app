@@ -1308,6 +1308,14 @@
     <string name="message_no_vo2_max">Измерения VO2 max отсутствуют.</string>
     <string name="message_no_blood_glucose">Измерения глюкозы в крови отсутствуют.</string>
     <string name="message_no_skin_temperature">Измерения температуры кожи отсутствуют.</string>
+    <string name="skin_temperature_variation_title">Отклонение от базового уровня</string>
+    <string name="skin_temperature_variation_caption">Насколько температура кожи отклонилась от базового уровня, заданного устройством. Это не абсолютная температура.</string>
+    <string name="skin_temperature_row_with_baseline">%1$s от базового уровня · базовый уровень %2$s</string>
+    <string name="skin_temperature_row_without_baseline">%1$s от базового уровня</string>
+    <string name="skin_temperature_no_variation">Отклонение не записано</string>
+    <string name="skin_temperature_baseline_not_provided">Источник не предоставляет</string>
+    <string name="skin_temperature_baseline_newest">Из последней записи</string>
+    <string name="stat_vs_usual_average">Отн. обычного среднего</string>
     <string name="message_cycle_browse">Просматривайте и отмечайте свой цикл, симптомы и оценки.</string>
     <string name="dashboard_add_widgets">Добавить виджеты</string>
     <string name="dashboard_all_widgets_added">Все виджеты уже добавлены в сводку.</string>

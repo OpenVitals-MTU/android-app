@@ -1020,6 +1020,14 @@
     <string name="message_no_vo2_max">Aucune mesure de VO2 max.</string>
     <string name="message_no_blood_glucose">Aucune mesure de glycémie.</string>
     <string name="message_no_skin_temperature">Aucune mesure de température cutanée.</string>
+    <string name="skin_temperature_variation_title">Écart à la référence</string>
+    <string name="skin_temperature_variation_caption">De combien la température cutanée s\'est écartée de la référence fixée par l\'appareil. Pas une température absolue.</string>
+    <string name="skin_temperature_row_with_baseline">%1$s par rapport à la référence · référence %2$s</string>
+    <string name="skin_temperature_row_without_baseline">%1$s par rapport à la référence</string>
+    <string name="skin_temperature_no_variation">Aucun écart enregistré</string>
+    <string name="skin_temperature_baseline_not_provided">Non fournie par la source</string>
+    <string name="skin_temperature_baseline_newest">Du dernier enregistrement</string>
+    <string name="stat_vs_usual_average">Vs moyenne habituelle</string>
     <string name="message_cycle_browse">Voyez et notez votre cycle, vos symptômes et les estimations.</string>
     <string name="dashboard_add_widgets">Ajouter des widgets</string>
     <string name="dashboard_all_widgets_added">Tous les widgets sont déjà dans le résumé.</string>

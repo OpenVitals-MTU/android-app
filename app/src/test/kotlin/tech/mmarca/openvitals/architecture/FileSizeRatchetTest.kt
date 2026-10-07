@@ -62,7 +62,7 @@ class FileSizeRatchetTest {
             "features/caffeine/CaffeineScreen.kt" to 1460,
             "features/manualentry/activity/ActivityEntryViewModel.kt" to 1600,
             "features/imports/applehealth/AppleHealthImportService.kt" to 1500,
-            "features/heart/HeartMetricSharedSections.kt" to 1450,
+            "features/heart/HeartMetricSharedSections.kt" to 1400,
             "data/repository/PreferencesRepository.kt" to 1450,
             "features/body/BodyMetricContent.kt" to 1300,
             "devices/garmin/wellness/GarminFitWellness.kt" to 1250,

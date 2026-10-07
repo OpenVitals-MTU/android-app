@@ -932,6 +932,14 @@
     <string name="message_no_vo2_max">Nessun dato</string>
     <string name="message_no_blood_glucose">Nessun dato.</string>
     <string name="message_no_skin_temperature">Nessun dato.</string>
+    <string name="skin_temperature_variation_title">Scostamento dal riferimento</string>
+    <string name="skin_temperature_variation_caption">Di quanto la temperatura cutanea si è discostata dal riferimento fissato dal dispositivo. Non è una temperatura assoluta.</string>
+    <string name="skin_temperature_row_with_baseline">%1$s dal riferimento · riferimento %2$s</string>
+    <string name="skin_temperature_row_without_baseline">%1$s dal riferimento</string>
+    <string name="skin_temperature_no_variation">Nessuno scostamento registrato</string>
+    <string name="skin_temperature_baseline_not_provided">Non fornito dalla fonte</string>
+    <string name="skin_temperature_baseline_newest">Dall\'ultima registrazione</string>
+    <string name="stat_vs_usual_average">Vs media abituale</string>
     <string name="message_cycle_browse">Vedi e registra il tuo ciclo, i sintomi e le stime.</string>
     <string name="dashboard_add_widgets">Aggiungi widget</string>
     <string name="dashboard_all_widgets_added">Tutti i widget sono già nel riepilogo.</string>
