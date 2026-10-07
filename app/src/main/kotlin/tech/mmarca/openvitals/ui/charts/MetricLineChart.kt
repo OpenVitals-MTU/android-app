@@ -27,7 +27,6 @@ import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -46,10 +45,8 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 import kotlin.math.abs
 import kotlin.math.ceil
-import kotlin.math.max
 
 data class MetricLinePoint(
     val date: LocalDate,
@@ -207,6 +204,7 @@ fun <T> DayTimelineLinePlot(
     pointRadius: Dp = 3.5.dp,
     drawPoints: Boolean = true,
     zoomKey: Any? = null,
+    guides: List<ChartGuideLine> = emptyList(),
     /** Spoken before the shape of the series: the metric's name. */
     title: String? = null,
 ) {
@@ -255,6 +253,7 @@ fun <T> DayTimelineLinePlot(
                 pointRadius = pointRadius,
                 // Dots on averaged points read as false precision.
                 drawPoints = if (bucketMinutes != null) false else drawPoints,
+                guides = guides,
                 band = band,
                 viewport = zoom.viewport,
                 multiTouch = zoom.multiTouch,
@@ -289,6 +288,8 @@ fun MetricLineChart(
     seriesLabel: String? = title,
     averagePeriodPoints: Boolean = true,
     valueFormatter: (Double) -> String = ::formatCompactAxisValue,
+    axisRange: LineAxisRange = LineAxisRange.Padded,
+    guides: List<ChartGuideLine> = emptyList(),
 ) {
     val chartPoints = if (averagePeriodPoints && selectedRange != TimeRange.DAY) {
         dailyAverageLinePoints(points)
@@ -308,6 +309,8 @@ fun MetricLineChart(
         selectedDate = selectedDate,
         onDateSelected = onDateSelected,
         valueFormatter = valueFormatter,
+        axisRange = axisRange,
+        guides = guides,
     )
 }
 
@@ -327,6 +330,8 @@ fun <T> MetricLineChart(
     onDateSelected: ((LocalDate) -> Unit)? = null,
     seriesLabel: String? = title,
     valueFormatter: (Double) -> String = ::formatCompactAxisValue,
+    axisRange: LineAxisRange = LineAxisRange.Padded,
+    guides: List<ChartGuideLine> = emptyList(),
 ) {
     MetricLineChart(
         title = title,
@@ -341,6 +346,8 @@ fun <T> MetricLineChart(
         onDateSelected = onDateSelected,
         seriesLabel = seriesLabel,
         valueFormatter = valueFormatter,
+        axisRange = axisRange,
+        guides = guides,
     )
 }
 
@@ -357,13 +364,16 @@ fun MetricLineChart(
     selectedDate: LocalDate? = null,
     onDateSelected: ((LocalDate) -> Unit)? = null,
     valueFormatter: (Double) -> String = ::formatCompactAxisValue,
+    axisRange: LineAxisRange = LineAxisRange.Padded,
+    /** Dashed reference lines under the data, in the metric's unit. */
+    guides: List<ChartGuideLine> = emptyList(),
 ) {
     // Once per data change. These passes used to run on every recomposition, and a pinch or a
     // day selection recomposes the chart many times over the same points.
     val frame = remember(series, period, selectedRange) { metricLineChartFrame(series, period, selectedRange) }
         ?: return
     val visibleSeries = frame.series
-    val (axisMin, axisMax) = paddedLineAxisRange(frame.minValue, frame.maxValue)
+    val (axisMin, axisMax) = axisRange.resolve(frame.minValue, frame.maxValue)
     val axisDates = remember(period) { datesInPeriod(period) }
     // A year of days gives 365 slots for twelve month names. Borrow the bar
     // chart's twelve buckets instead.
@@ -458,6 +468,9 @@ fun MetricLineChart(
                                     axisColor = axisColor,
                                     strokeWidth = 1.dp.toPx(),
                                 )
+                                drawChartGuides(guides) { value ->
+                                    size.height * (1f - ((value - axisMin) / (axisMax - axisMin)).toFloat().coerceIn(0f, 1f))
+                                }
                                 drawLineSelectedDateHighlight(
                                     selectedRange = selectedRange,
                                     selectedDate = selectedDate,
@@ -676,17 +689,7 @@ private fun DrawScope.drawMetricLinePlot(
         )
 
         // Guides first, so the data is drawn on them.
-        val dash = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 6.dp.toPx()))
-        guides.forEach { guide ->
-            val y = yFor(guide.value)
-            drawLine(
-                color = guide.color,
-                start = Offset(0f, y),
-                end = Offset(size.width, y),
-                strokeWidth = 2.dp.toPx(),
-                pathEffect = dash,
-            )
-        }
+        drawChartGuides(guides, ::yFor)
 
         val geometry = cache.build(
             points = points,
@@ -861,33 +864,6 @@ internal fun metricLineChartFrame(
     return MetricLineChartFrame(visible, minValue, maxValue)
 }
 
-/** A point's place in the plot: x and y in 0..1, y measured from the top. */
-internal fun metricLinePointFraction(
-    point: MetricLinePoint,
-    selectedRange: TimeRange,
-    period: DatePeriod,
-    dayStart: Instant,
-    dayDurationMillis: Long,
-    periodDayCount: Int,
-    minValue: Double,
-    maxValue: Double,
-): Offset {
-    val range = (maxValue - minValue).coerceAtLeast(1.0)
-    val xFraction = if (selectedRange == TimeRange.DAY) {
-        val pointTime = point.time ?: point.date.atStartOfDay(ZoneId.systemDefault()).toInstant()
-        val elapsed = Duration.between(dayStart, pointTime).toMillis().coerceIn(0L, dayDurationMillis)
-        elapsed.toFloat() / dayDurationMillis
-    } else {
-        val daysFromStart = ChronoUnit.DAYS.between(period.start, point.date)
-            .coerceIn(0L, (periodDayCount - 1).toLong())
-        (daysFromStart + 0.5f) / periodDayCount
-    }
-    return Offset(
-        x = xFraction,
-        y = 1f - ((point.value - minValue) / range).toFloat().coerceIn(0f, 1f),
-    )
-}
-
 private fun DrawScope.drawMetricLineSeries(
     fractions: List<Offset>,
     color: Color,
@@ -951,43 +927,3 @@ internal fun visibleDecimatedOffsets(positioned: List<Offset>, width: Float): Li
     val visible = if (lo == 0 && hi == n - 1) positioned else positioned.subList(lo, hi + 1)
     return decimateOffsets(visible, ceil(width).toInt())
 }
-
-private fun DrawScope.drawLineSelectedDateHighlight(
-    selectedRange: TimeRange,
-    selectedDate: LocalDate?,
-    period: DatePeriod,
-    axisDates: List<LocalDate>,
-    color: Color,
-    viewport: ChartViewport,
-) {
-    if (!selectedRange.supportsChartDaySelection() || selectedDate == null || selectedDate !in period.start..period.end) {
-        return
-    }
-    val index = axisDates.indexOf(selectedDate)
-    if (index < 0 || axisDates.isEmpty()) return
-
-    // Through the viewport, so the highlight stays on its day when pinched.
-    val left = size.width * viewport.visibleFraction(index.toFloat() / axisDates.size)
-    val slotWidth = size.width / (axisDates.size * viewport.span)
-    drawRect(
-        color = color,
-        topLeft = Offset(left, 0f),
-        size = Size(slotWidth, size.height),
-    )
-}
-
-private fun paddedLineAxisRange(minValue: Double, maxValue: Double): Pair<Double, Double> {
-    // The line charts' own padding rule, kept so every existing axis stays put.
-    val range = maxValue - minValue
-    val padding = if (range == 0.0) {
-        max(abs(maxValue) * 0.05, 1.0)
-    } else {
-        range * 0.08
-    }
-    return (minValue - padding) to (maxValue + padding)
-}
-
-private fun datesInPeriod(period: DatePeriod): List<LocalDate> =
-    generateSequence(period.start) { date ->
-        date.plusDays(1).takeUnless { it.isAfter(period.end) }
-    }.toList()

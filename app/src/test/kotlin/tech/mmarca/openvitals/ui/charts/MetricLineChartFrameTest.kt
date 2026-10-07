@@ -10,6 +10,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.ui.components.LineAxisRange
 import tech.mmarca.openvitals.ui.components.MetricLinePoint
 import tech.mmarca.openvitals.ui.components.MetricLineSeries
 import tech.mmarca.openvitals.ui.components.metricLineChartFrame
@@ -73,5 +74,48 @@ class MetricLineChartFrameTest {
 
         assertEquals(3.5f / 7f, fraction.x, 1e-6f)
         assertEquals(0f, fraction.y, 1e-6f)
+    }
+
+    @Test
+    fun `a series narrower than one unit still fills its axis`() {
+        // A tenth of a degree, a mmol/L: the top of the data sat a third of the way up, under its own label.
+        val fraction = metricLinePointFraction(
+            point = MetricLinePoint(monday, value = 0.4),
+            selectedRange = TimeRange.WEEK,
+            period = week,
+            dayStart = Instant.EPOCH,
+            dayDurationMillis = 1L,
+            periodDayCount = 7,
+            minValue = 0.0,
+            maxValue = 0.4,
+        )
+
+        assertEquals(0f, fraction.y, 1e-6f)
+    }
+
+    @Test
+    fun `the padded axis keeps the line charts' own rule`() {
+        val (min, max) = LineAxisRange.Padded.resolve(60.0, 72.0)
+        assertEquals(60.0 - 12.0 * 0.08, min, 1e-9)
+        assertEquals(72.0 + 12.0 * 0.08, max, 1e-9)
+
+        val (flatMin, flatMax) = LineAxisRange.Padded.resolve(5.0, 5.0)
+        assertEquals(4.0, flatMin, 1e-9)
+        assertEquals(6.0, flatMax, 1e-9)
+    }
+
+    @Test
+    fun `a zero-centred axis is symmetric, so the middle label is zero`() {
+        val (min, max) = LineAxisRange.ZeroCentred.resolve(-0.3, 0.7)
+        assertEquals(-0.756, min, 1e-9)
+        assertEquals(0.756, max, 1e-9)
+        assertEquals(0.0, (min + max) / 2, 1e-9)
+    }
+
+    @Test
+    fun `a zero-centred axis gives a flat zero series room`() {
+        val (min, max) = LineAxisRange.ZeroCentred.resolve(0.0, 0.0)
+        assertEquals(-0.108, min, 1e-9)
+        assertEquals(0.108, max, 1e-9)
     }
 }
