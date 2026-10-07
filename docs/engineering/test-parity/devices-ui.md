@@ -625,6 +625,13 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | degenerate inputs do not throw | PORTED | ChartCurveTest: `degenerate inputs yield no segments and do not throw` | - |
 | — | KOTLIN-ONLY | ChartCurveTest: `does not overshoot a trough when the next sample is far away` | uneven x spacing: the Fritsch-Carlson sign-change rule was missing and a skin temperature day overshot its low |
 
+## Kotlin-only: app/src/test/kotlin/tech/mmarca/openvitals/ui/charts/MetricLineChartFrameTest.kt
+| Flutter case | Status | Kotlin test | Note |
+|---|---|---|---|
+| — | KOTLIN-ONLY | MetricLineChartFrameTest: `points outside the period and values that are not numbers are left out of the range`, `nothing in the period, or a day with one instant, draws no line`, `a point sits in the middle of its day's slot, and the highest value at the top` | what the line chart works out once per data change |
+| — | KOTLIN-ONLY | MetricLineChartFrameTest: `a series narrower than one unit still fills its axis` | the y range was floored at one unit; a ±0.3 degree day sat under its own labels |
+| — | KOTLIN-ONLY | MetricLineChartFrameTest: `the padded axis keeps the line charts' own rule`, `a zero-centred axis is symmetric, so the middle label is zero`, `a zero-centred axis gives a flat zero series room` | `LineAxisRange`: Padded is the old rule, ZeroCentred is for a signed variation |
+
 ## test/ui/charts/chart_decimation_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/ui/charts/ChartDecimationTest.kt
 | Flutter case | Status | Kotlin test | Note |
