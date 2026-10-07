@@ -4,6 +4,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VitalsDailySynthesisTest {
@@ -51,5 +52,7 @@ class VitalsDailySynthesisTest {
         assertEquals(0.35, entry.averageDeltaCelsius!!, 0.0001)
         assertNull(entry.baselineCelsius)
         assertEquals(entry.startTime, entry.endTime)
+        // A day point is a summary; it never carries samples.
+        assertTrue(entry.deltas.isEmpty())
     }
 }
