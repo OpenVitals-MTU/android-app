@@ -77,7 +77,6 @@ import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
 import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
-import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.domain.model.SpO2Entry
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.domain.model.Vo2MaxEntry
@@ -574,10 +573,6 @@ internal fun spO2Stats(entries: List<SpO2Entry>): VitalReadingStats? =
         average = entries.timeBucketedAverageOrNull(time = { it.time }, value = { it.percent }),
     )
 
-internal fun skinTemperatureStats(entries: List<SkinTemperatureEntry>): VitalReadingStats? =
-    // readings counts every entry, including the delta-less ones the chart drops.
-    vitalReadingStats(entries.mapNotNull { it.averageDeltaCelsius }, entries.size)
-
 @Composable
 internal fun BloodPressureStatisticsContent(
     entries: List<BloodPressureEntry>,
@@ -817,35 +812,6 @@ internal fun BloodGlucoseStatisticsContent(
     )
 }
 
-@Composable
-internal fun SkinTemperatureStatisticsContent(
-    entries: List<SkinTemperatureEntry>,
-    previousEntries: List<SkinTemperatureEntry>,
-    baselineEntries: List<SkinTemperatureEntry>,
-    period: DatePeriod,
-    selectedRange: TimeRange,
-    unitFormatter: UnitFormatter,
-) {
-    val stats = skinTemperatureStats(entries) ?: return
-    val average = stats.average
-    val previousValues = previousEntries.mapNotNull { it.averageDeltaCelsius }
-    HeartNumericStatisticsContent(
-        unitFormatter = unitFormatter,
-        average = unitFormatter.temperatureDelta(average),
-        low = unitFormatter.temperatureDelta(stats.low),
-        high = unitFormatter.temperatureDelta(stats.high),
-        readings = stats.readings,
-        comparison = previousValues.averageOrNull()?.let { periodComparison(average, it) },
-        selectedRange = selectedRange,
-        comparisonValueFormatter = { unitFormatter.temperatureDelta(it) },
-        icon = Icons.Outlined.DeviceThermostat,
-        accentColor = temperatureColor,
-        period = period,
-        baselineCurrentValue = average,
-        baselineValues = baselineEntries.mapNotNull { it.skinTemperatureBaselineValue() },
-    )
-}
-
 internal fun LazyListScope.heartRateSampleStatistics(
     samples: List<HeartRateSample>,
     previousAverage: Long?,
@@ -1045,27 +1011,6 @@ internal fun LazyListScope.bloodGlucoseStatistics(
         )
     }
 }
-
-internal fun LazyListScope.skinTemperatureStatistics(
-    entries: List<SkinTemperatureEntry>,
-    previousEntries: List<SkinTemperatureEntry>,
-    baselineEntries: List<SkinTemperatureEntry>,
-    period: DatePeriod,
-    selectedRange: TimeRange,
-    unitFormatter: UnitFormatter,
-) {
-    item {
-        SkinTemperatureStatisticsContent(
-            entries = entries,
-            previousEntries = previousEntries,
-            baselineEntries = baselineEntries,
-            period = period,
-            selectedRange = selectedRange,
-            unitFormatter = unitFormatter,
-        )
-    }
-}
-
 
 internal fun LazyListScope.heartNumericStatistics(
     unitFormatter: UnitFormatter,
@@ -1379,17 +1324,3 @@ internal fun BloodGlucoseEntry.bloodGlucoseBaselineValue(): BaselineValue =
         date = time.atZone(ZoneId.systemDefault()).toLocalDate(),
         value = millimolesPerLiter,
     )
-
-internal fun SkinTemperatureEntry.skinTemperatureBaselineValue(): BaselineValue? =
-    averageDeltaCelsius?.let { delta ->
-        BaselineValue(
-            date = time.atZone(ZoneId.systemDefault()).toLocalDate(),
-            value = delta,
-        )
-    }
-
-internal fun SkinTemperatureEntry.skinTemperatureValue(unitFormatter: UnitFormatter): String =
-    averageDeltaCelsius
-        ?.let { unitFormatter.temperatureDelta(it).text }
-        ?: baselineCelsius?.let { unitFormatter.temperature(it).text }
-        ?: ""

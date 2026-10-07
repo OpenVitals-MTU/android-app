@@ -1386,6 +1386,14 @@
     <string name="message_no_vo2_max">Ei VO2 max -lukemaa.</string>
     <string name="message_no_blood_glucose">Ei verensokerilukemaa.</string>
     <string name="message_no_skin_temperature">Ei ihon lämpötilan lukemaa.</string>
+    <string name="skin_temperature_variation_title">Poikkeama perustasosta</string>
+    <string name="skin_temperature_variation_caption">Kuinka paljon ihon lämpötila poikkesi laitteen asettamasta perustasosta. Ei absoluuttinen lämpötila.</string>
+    <string name="skin_temperature_row_with_baseline">%1$s perustasosta · perustaso %2$s</string>
+    <string name="skin_temperature_row_without_baseline">%1$s perustasosta</string>
+    <string name="skin_temperature_no_variation">Poikkeamaa ei tallennettu</string>
+    <string name="skin_temperature_baseline_not_provided">Lähde ei tarjoa</string>
+    <string name="skin_temperature_baseline_newest">Uusimmasta merkinnästä</string>
+    <string name="stat_vs_usual_average">Vs. tavallinen keskiarvo</string>
     <string name="message_cycle_browse">Tarkastele ja kirjaa kiertosi, oireesi ja arviot.</string>
     <string name="dashboard_add_widgets">Lisää widgettejä</string>
     <string name="dashboard_all_widgets_added">Kaikki widgetit ovat jo yhteenvedossa.</string>
