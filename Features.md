@@ -564,13 +564,14 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 
 ### Scale Settings
 
-- Set up a scale by pasting its Bluetooth key; the first weigh-in tells the app which scale and which of its users is yours.
-- See whether the phone is listening, and grant the permission or switch on Bluetooth when it is not.
-- Allow Android to wake OpenVitals for the scale, through Android's companion-device dialog.
+- Add a scale the way a watch is added: a card list, an add dialog, and a device view behind the card.
+- Find the scale through Android's companion-device dialog, which names it and lets Android wake OpenVitals for it, then paste its Bluetooth key.
+- The first weigh-in tells the app which of the scale's users is yours.
+- See on the card and the device view whether the phone is listening, and grant the permission, switch on Bluetooth, or let Android wake the app again when it is not.
 - See the last weigh-in, and whether any weigh-in is still waiting to be saved.
 - Grant the Health Connect write permissions the scale can use.
 - Take over another of the scale's user slots when it files a weigh-in under one.
-- Change the key after the scale was paired again, or remove the scale.
+- Rename the scale, change the key after the scale was paired again, or remove the scale.
 
 ### Sync With Another Phone Settings
 

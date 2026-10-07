@@ -8,7 +8,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import java.time.Instant
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -50,9 +49,8 @@ class ScaleWeighInIngestTest {
     /** 497.6 ohm at 250 kHz, same weigh-in. */
     private val secondFrame = advert("4859d53b0bd6ef0b25db72785e7e2f46d6000000d8642df6")
 
-    private val store = XiaomiScaleStore(FakeSharedPreferences()).also { it.setBindKey(key) }
+    private val store = XiaomiScaleStore(FakeSharedPreferences()).also { it.setUp(address, "Scale", key) }
     private val weighIns = FakeScaleWeighInRepository()
-    private val listener = mockk<XiaomiScaleListener>(relaxed = true)
 
     private val written = mutableListOf<List<Record>>()
     private var writeFailure: Exception? = null
@@ -86,19 +84,16 @@ class ScaleWeighInIngestTest {
         store = store,
         weighIns = weighIns,
         writer = writer,
-        listener = listener,
         scope = backgroundScope,
         // Twenty seconds after the scale stamped the weigh-in.
         now = { Instant.ofEpochSecond(scaleTimestamp + 20) },
     )
 
     @Test
-    fun `the first frame the key opens binds the scale and saves the weigh-in`() = runTest {
+    fun `the first frame the key opens says which of the scale's users this is, and saves the weigh-in`() = runTest {
         ingest().ingest(listOf(weightFrame))
 
-        assertEquals(address to 1, store.config.value.address to store.config.value.profile)
-        // From here on only this scale's broadcasts need to wake the app.
-        verify(exactly = 1) { listener.arm(restart = true) }
+        assertEquals(1, store.config.value.profile)
         assertEquals(ScaleReading(69.9, 92, impedanceLowOhm = 543.2), weighIns.all.single().reading)
         assertEquals(Instant.ofEpochSecond(scaleTimestamp), weighIns.all.single().time)
         assertEquals(
@@ -130,13 +125,12 @@ class ScaleWeighInIngestTest {
         ingest.ingest(listOf(weightFrame))
 
         assertEquals(1, written.size)
-        verify(exactly = 1) { listener.arm(restart = true) }
     }
 
     @Test
     fun `another scale and another person leave nothing behind`() = runTest {
-        // Bound to this scale, but as the person in its second user slot.
-        store.bind(address, profile = 2)
+        // This scale, but the person in its second user slot.
+        store.setProfile(2)
         val ingest = ingest()
 
         ingest.ingest(listOf(advert(weightFrame.serviceData.toHexString(), from = "84:46:93:64:A5:E6")))
@@ -153,17 +147,30 @@ class ScaleWeighInIngestTest {
     @Test
     fun `a key that stopped fitting is flagged until a frame opens again`() = runTest {
         val ingest = ingest()
-        store.setBindKey(ByteArray(16) { 7 })
+        store.changeKey(ByteArray(16) { 7 })
 
         ingest.ingest(listOf(weightFrame))
         assertTrue(store.config.value.keyRejected)
         assertEquals(emptyList<Any>(), weighIns.all)
 
-        store.setBindKey(key)
+        store.changeKey(key)
         store.setKeyRejected(true)
         ingest.ingest(listOf(secondFrame))
 
         assertFalse(store.config.value.keyRejected)
+    }
+
+    @Test
+    fun `the user slot is learned once, not moved by a later weigh-in`() = runTest {
+        val ingest = ingest()
+        ingest.ingest(listOf(weightFrame))
+
+        // Someone else steps on this scale: it files them under slot 2. Built for this test with the scale's key.
+        ingest.ingest(listOf(advert("4859d53b209a029d137973bdf79cc0351f0000000f3d98df")))
+
+        assertEquals(1, store.config.value.profile)
+        assertEquals(2, store.config.value.ignoredProfile?.profile)
+        assertEquals(1, weighIns.all.size)
     }
 
     @Test

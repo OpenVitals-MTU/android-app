@@ -51,6 +51,18 @@ class OsPermissionsService @Inject constructor(
         },
     )
 
+    /** What a scale needs: only the scan grant. It takes no connection, and its service runs without the notification grant. */
+    fun scaleSetupCatalog(): OsPermissionCatalog = OsPermissionCatalog(
+        rows = listOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                row(OsPermissionId.BLUETOOTH, Manifest.permission.BLUETOOTH_SCAN)
+            } else {
+                // Below API 31 a BLE scan is gated on location.
+                row(OsPermissionId.LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
+            },
+        ),
+    )
+
     fun isGranted(permission: String): Boolean =
         ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
 

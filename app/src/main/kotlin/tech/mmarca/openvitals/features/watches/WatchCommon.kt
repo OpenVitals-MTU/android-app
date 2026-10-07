@@ -50,30 +50,6 @@ import tech.mmarca.openvitals.ui.theme.Spacing
 
 /** Pieces the device view and the watch-data screen share. */
 
-/** The round glyph for a watch. [icon] overrides the face for a bike computer. */
-@Composable
-internal fun WatchAvatar(
-    size: Int = 40,
-    icon: ImageVector? = null,
-) {
-    Box(
-        modifier = Modifier
-            .size(size.dp)
-            .background(
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                shape = CircleShape,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon ?: Icons.Outlined.Watch,
-            contentDescription = null,
-            modifier = Modifier.size((size * 0.55f).dp),
-            tint = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
-    }
-}
-
 /** One icon action in the action band. Actions are verbs; settings are rows further down. */
 @Composable
 internal fun WatchAction(
@@ -109,41 +85,6 @@ internal fun WatchAction(
     }
 }
 
-/** A label/value row for a stored watch metric, with optional supporting text. */
-@Composable
-internal fun WatchValueRow(
-    label: String,
-    value: String,
-    supporting: String? = null,
-) {
-    OpenVitalsCard {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = label, style = MaterialTheme.typography.bodyLarge)
-                if (supporting != null) {
-                    Text(
-                        text = supporting,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.width(Spacing.lg))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.SemiBold,
-                ),
-            )
-        }
-    }
-}
-
 /** `7h 50m`, `17 min`, `45s`: the coarsest unit that still says something. */
 internal fun formatWatchDuration(duration: Duration): String {
     val minutes = duration.toMinutes()
@@ -154,20 +95,6 @@ internal fun formatWatchDuration(duration: Duration): String {
     }
     if (minutes > 0) return "$minutes min"
     return "${duration.seconds}s"
-}
-
-/** A sync timestamp: the time for today, the date once older. */
-internal fun formatWatchSyncTime(
-    at: Instant,
-    zone: ZoneId = ZoneId.systemDefault(),
-    today: LocalDate = LocalDate.now(),
-): String {
-    val local = at.atZone(zone)
-    return if (local.toLocalDate() == today) {
-        DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).format(local)
-    } else {
-        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT).format(local)
-    }
 }
 
 /** The Sensors screen's capability label, re-declared here (it is private there). */

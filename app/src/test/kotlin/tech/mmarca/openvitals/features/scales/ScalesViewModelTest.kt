@@ -10,85 +10,116 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
-import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.permissions.OsPermissionsService
 import tech.mmarca.openvitals.data.repository.contract.FakeScaleWeighInRepository
-import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
+import tech.mmarca.openvitals.devices.core.pairing.CompanionDevice
 import tech.mmarca.openvitals.devices.xiaomi.ScaleListenerStatus
-import tech.mmarca.openvitals.devices.xiaomi.ScaleRecordKind
-import tech.mmarca.openvitals.devices.xiaomi.ScaleWeighInWriter
-import tech.mmarca.openvitals.devices.xiaomi.ScaleWritePermissions
 import tech.mmarca.openvitals.devices.xiaomi.XiaomiScaleListener
 import tech.mmarca.openvitals.devices.xiaomi.XiaomiScaleStore
-import tech.mmarca.openvitals.domain.insights.BodyCompositionInput
-import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.domain.model.OsPermissionCatalog
+import tech.mmarca.openvitals.domain.model.OsPermissionId
+import tech.mmarca.openvitals.domain.model.OsPermissionRow
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
-/** The screen's own decisions. The listening and the saving are the device layer's, and tested there. */
+/** The add flow's decisions. The listening and the saving are the device layer's, and tested there. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ScalesViewModelTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    private val scale = CompanionDevice("8C:D0:B2:F6:BE:EF", "Xiaomi Scale S400 BEEF")
     private val store = XiaomiScaleStore(FakeSharedPreferences())
+    private var found: CompanionDevice? = scale
     private val listener = mockk<XiaomiScaleListener>(relaxed = true) {
         every { status } returns MutableStateFlow(ScaleListenerStatus.LISTENING)
-        every { useKey(any()) } answers { store.setBindKey(firstArg()) }
+        coEvery { findScale() } answers { found }
+        every { setUp(any(), any(), any()) } answers { store.setUp(firstArg<CompanionDevice>().address, secondArg(), thirdArg()) }
     }
-    private val writer = mockk<ScaleWeighInWriter>(relaxed = true) {
-        coEvery { missingProfileInputs() } returns setOf(BodyCompositionInput.SEX)
-    }
-    private val healthRepository = mockk<HealthRepository> {
-        coEvery { grantedPermissions() } returns setOf(ScaleRecordKind.WEIGHT.writePermission)
+    private var scanGranted = true
+    private val osPermissions = mockk<OsPermissionsService> {
+        every { scaleSetupCatalog() } answers {
+            OsPermissionCatalog(listOf(OsPermissionRow(OsPermissionId.BLUETOOTH, listOf("scan"), granted = scanGranted)))
+        }
     }
 
     private fun viewModel() = ScalesViewModel(
         store = store,
         listener = listener,
-        writer = writer,
         weighIns = FakeScaleWeighInRepository(),
-        healthRepository = healthRepository,
-        unitFormatter = UnitFormatter(unitSystemProvider = { UnitSystem.METRIC }),
-        dateTimeFormatters = DateTimeFormatterProvider(),
+        osPermissionsService = osPermissions,
     )
 
     @Test
-    fun `text that is not a key is flagged and never reaches the listener`() = runTest {
+    fun `a missing grant puts the checklist before the add dialog`() = runTest {
+        scanGranted = false
         val viewModel = viewModel()
         backgroundScope.launch(mainDispatcherRule.testDispatcher) { viewModel.uiState.collect {} }
 
-        viewModel.onKeyInputChange("not a key")
-        viewModel.saveKey()
+        viewModel.startAdd()
+        assertTrue(viewModel.uiState.value.showPermissionsGate)
+        assertFalse(viewModel.uiState.value.showAddFlow)
 
-        assertTrue(viewModel.uiState.value.keyInputInvalid)
-        assertTrue(viewModel.uiState.value.showKeyField)
-        verify(exactly = 0) { listener.useKey(any()) }
-
-        // Typing again withdraws the complaint.
-        viewModel.onKeyInputChange("0")
-        assertFalse(viewModel.uiState.value.keyInputInvalid)
+        viewModel.openAddFlow()
+        assertFalse(viewModel.uiState.value.showPermissionsGate)
+        assertTrue(viewModel.uiState.value.showAddFlow)
     }
 
     @Test
-    fun `a key starts the listening, leaves the field, and shows what is still missing`() = runTest {
+    fun `a scale Android did not find leaves the first step with its complaint`() = runTest {
+        found = null
         val viewModel = viewModel()
         backgroundScope.launch(mainDispatcherRule.testDispatcher) { viewModel.uiState.collect {} }
+        viewModel.startAdd()
 
-        viewModel.onKeyInputChange("0728974d657a4b60964c1b1677f35f7c")
-        viewModel.saveKey()
+        viewModel.findScale()
 
         val state = viewModel.uiState.value
-        verify(exactly = 1) { listener.useKey(any()) }
-        assertTrue(state.hasKey)
-        assertFalse(state.showKeyField)
+        assertEquals(AddScaleStep.FIND, state.addStep)
+        assertTrue(state.findFailed)
+        assertFalse(state.isFinding)
+    }
+
+    @Test
+    fun `a found scale opens the key step under its advertised name, and a bad key is refused`() = runTest {
+        val viewModel = viewModel()
+        backgroundScope.launch(mainDispatcherRule.testDispatcher) { viewModel.uiState.collect {} }
+        viewModel.startAdd()
+
+        viewModel.findScale()
+        assertEquals(AddScaleStep.KEY, viewModel.uiState.value.addStep)
+        assertEquals("Xiaomi Scale S400 BEEF", viewModel.uiState.value.nameInput)
+
+        viewModel.onKeyInputChange("not a key")
+        viewModel.saveScale()
+
+        assertTrue(viewModel.uiState.value.keyInputInvalid)
+        assertTrue(viewModel.uiState.value.showAddFlow)
+        verify(exactly = 0) { listener.setUp(any(), any(), any()) }
+    }
+
+    @Test
+    fun `saving adds the scale under the name given and closes the dialog`() = runTest {
+        val viewModel = viewModel()
+        backgroundScope.launch(mainDispatcherRule.testDispatcher) { viewModel.uiState.collect {} }
+        viewModel.startAdd()
+        viewModel.findScale()
+
+        viewModel.onNameInputChange("  Bathroom ")
+        viewModel.onKeyInputChange("0728974d657a4b60964c1b1677f35f7c")
+        viewModel.saveScale()
+
+        val state = viewModel.uiState.value
+        verify(exactly = 1) { listener.setUp(scale, "Bathroom", any()) }
+        assertFalse(state.showAddFlow)
+        assertEquals("Bathroom", state.scale?.name)
         // The key does not linger in screen state.
         assertEquals("", state.keyInput)
-        assertEquals(ScaleWritePermissions - ScaleRecordKind.WEIGHT.writePermission, state.missingWritePermissions)
-        assertEquals(setOf(BodyCompositionInput.SEX), state.missingProfileInputs)
+        assertNull(state.found)
     }
 }
