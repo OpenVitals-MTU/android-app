@@ -623,6 +623,7 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | never overshoots below the lowest sample | PORTED | ChartCurveTest: `never overshoots beyond the extreme samples` | - |
 | draws a vertical riser straight rather than looping through it | PORTED | ChartCurveTest: `draws a vertical riser straight rather than looping through it` | Kotlin additionally asserts the segment is a Line |
 | degenerate inputs do not throw | PORTED | ChartCurveTest: `degenerate inputs yield no segments and do not throw` | - |
+| — | KOTLIN-ONLY | ChartCurveTest: `does not overshoot a trough when the next sample is far away` | uneven x spacing: the Fritsch-Carlson sign-change rule was missing and a skin temperature day overshot its low |
 
 ## test/ui/charts/chart_decimation_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/ui/charts/ChartDecimationTest.kt
