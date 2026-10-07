@@ -3687,6 +3687,15 @@
     <string name="settings_watch_wearos_bt_permission">OpenVitals ha bisogno dell\'autorizzazione Dispositivi nelle vicinanze per raggiungere l\'orologio.</string>
     <string name="settings_watch_wearos_check_app">Verifica l\'app Wear OS</string>
     <string name="settings_watch_wearos_checking">Verifica dell\'app Wear OS…</string>
+    <string name="settings_watch_wearos_sync_section">Sincronizzazione frequenza cardiaca</string>
+    <string name="settings_watch_wearos_sync_body">L’app OpenVitals sull’orologio registra la frequenza cardiaca e ne conserva una settimana. La sincronizzazione copia i nuovi campioni in Health Connect.</string>
+    <string name="settings_watch_wearos_sync_now">Sincronizza frequenza cardiaca</string>
+    <string name="settings_watch_wearos_syncing">Sincronizzazione della frequenza cardiaca…</string>
+    <string name="settings_watch_wearos_synced_none">Nessun nuovo campione di frequenza cardiaca</string>
+    <plurals name="settings_watch_wearos_synced_samples">
+        <item quantity="one">%1$d campione di frequenza cardiaca sincronizzato</item>
+        <item quantity="other">%1$d campioni di frequenza cardiaca sincronizzati</item>
+    </plurals>
     <string name="scale_notification_channel">Pesate della bilancia</string>
     <string name="scale_notification_title">Lettura della pesata</string>
     <string name="settings_scales_empty_title">Nessuna bilancia configurata</string>

@@ -3658,6 +3658,15 @@
     <string name="settings_watch_wearos_bt_permission">OpenVitals tarvitsee Lähellä olevat laitteet -luvan tavoittaakseen kellon.</string>
     <string name="settings_watch_wearos_check_app">Tarkista Wear OS -sovellus</string>
     <string name="settings_watch_wearos_checking">Tarkistetaan Wear OS -sovellusta…</string>
+    <string name="settings_watch_wearos_sync_section">Sykkeen synkronointi</string>
+    <string name="settings_watch_wearos_sync_body">Kellon OpenVitals-sovellus tallentaa sykettä ja säilyttää viikon verran. Synkronointi kopioi uudet näytteet Health Connectiin.</string>
+    <string name="settings_watch_wearos_sync_now">Synkronoi syke</string>
+    <string name="settings_watch_wearos_syncing">Synkronoidaan sykettä…</string>
+    <string name="settings_watch_wearos_synced_none">Ei uusia sykenäytteitä</string>
+    <plurals name="settings_watch_wearos_synced_samples">
+        <item quantity="one">%1$d sykenäyte synkronoitu</item>
+        <item quantity="other">%1$d sykenäytettä synkronoitu</item>
+    </plurals>
     <string name="scale_notification_channel">Vaa’an punnitukset</string>
     <string name="scale_notification_title">Luetaan punnitusta</string>
     <string name="settings_scales_empty_title">Vaakaa ei ole määritetty</string>

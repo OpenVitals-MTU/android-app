@@ -352,7 +352,7 @@ Vendor-neutral ports plus the two things every integration shares.
 - [`RadioLeaseUse.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices/core/RadioLeaseUse.kt) — `withRadioLease(address, owner) { ... }`, `RadioLeaseBusyException`, and `object RadioLeaseOwner` with the four owner tags: `SYNC`, `FIND`, `SETTINGS`, `NOTIFICATIONS`. They are strings rather than an enum because they appear in logcat.
 - `DeviceClassification.kt` / `DeviceScanClassifier.kt` — `DeviceClassifier` and `DeviceScanClassifier` function interfaces; the first non-null classification wins, otherwise the device is a plain sensor.
 - `core/pairing/` — `WatchPairingPort` (bond, unbond, associate, disassociate), its `BleWatchPairing` implementation, `CompanionDevicePairing` around `CompanionDeviceManager`, `OpenVitalsCompanionDeviceService`, and `CompanionPresenceObserver`. The service is declared first in the manifest and is therefore the app's primary companion service, the only one Android tells that an associated device appeared; it passes that to every observer bound `@IntoSet` in `di/DevicesModule.kt`.
-- `core/sync/DeviceSyncPort.kt` — `canSync(device)` plus a progress-reporting `sync(...)`, so the watch UI never names a vendor.
+- `core/sync/DeviceSyncPort.kt` — `canSync(device)` plus a progress-reporting `sync(...)`, so the watch UI never names a vendor. Each integration binds its own port `@IntoSet`; `CompositeDeviceSyncPort` is the one the sync controller sees and hands a device to the port that claims it.
 
 ### `devices/garmin`
 
@@ -394,7 +394,20 @@ Notes worth carrying:
 
 ### `devices/wearos`
 
-Classification and onboarding only. There is no protocol: `OnboardWearOsWatchUseCase` has a single `ASSOCIATING` step, and the device is registered with no capabilities.
+A Wear OS watch is a registered device plus a Bluetooth Classic link to the OpenVitals watch app (`:wear`). There is no vendor protocol to speak: the watch runs our own app, and the phone talks to it over an RFCOMM socket on AOSP APIs only.
+
+- `WearOsDeviceClassifier` / `WearOsDeviceNames` — claims a scanned device as `(WEAROS, WATCH)` when its name is a known smartwatch family or its SDP record lists the OpenVitals app UUID. A wrist-watch Bluetooth class alone is not enough.
+- `OnboardWearOsWatchUseCase` — a single optional `ASSOCIATING` step, no bond and no probe; the device is registered with no capabilities, off the Garmin sync path. The bond itself comes from Android's Bluetooth settings, or from the vendor's onboarding.
+- `WearOsNodePort` — the port: pairing and reachability of the watch app. `WearOsAppStatus` is `NOT_PAIRED`, `NO_ANSWER` or `APP_RUNNING`; a bond alone is never shown as connected.
+- `BluetoothWearOsNodePort` — the implementation. `WearOsBondMatcher` finds the bonded Classic entry for the registered watch (exact address, then name with a trailing ` LE` stripped: the scan address is a BLE private address), then one `PING`/`PONG` exchange with an eight-second watchdog. RFCOMM is Classic, so no radio lease is taken.
+- `WearOsCompanionManager` — the thin facade the watch screen calls.
+- `WearLinkProtocol` — the line protocol over that socket: `PING`/`PONG`, and `HR_SINCE <epochMillis> <limit>` answered with `HR <epochMillis> <bpm>` lines and `END <count> <more>`. One request per connection. The file is copied verbatim into `:wear`; `WearOsLinkParityTest` fails when the two copies differ by more than the package line. There is no shared Gradle module on purpose: the watch build must stay independent of the phone's.
+- `WearOsWatchSyncService` — the `DeviceSyncPort` for Wear OS. Pulls heart rate pages from the watch's cursor (`WearOsSyncCursorStore`, the newest sample time per device), writes each page through `AppleHealthImportRepository.insertImportedRecords` before asking for the next, and advances the cursor after each write, so a sync that dies mid-way resumes where it stopped. Refuses while an activity recording holds the foreground slot. `Succeeded.fileCount` carries the sample count.
+- `WearOsHeartRateImport` — pure mapping: one `HeartRateRecord` per clock hour, keyed `wearos_hr_<first sample millis>`, so a re-pull upserts. The watch keeps a week of samples and prunes on its own; nothing is deleted on the phone's behalf.
+
+On the watch, `WearAppService` hosts both the RFCOMM listener and `HeartRateRecorder`, a batched `TYPE_HEART_RATE` listener that keeps one sample per ten seconds in `HeartRateStore` (plain SQLite). Its foreground type is `connectedDevice`, plus `health` once the heart rate grant is in. Android 16 gates the sensor behind `android.permission.health.READ_HEART_RATE`, not `BODY_SENSORS`; `WearPermissions` picks the right one per release.
+
+The UUID and the protocol words live in both modules; `WearOsLinkParityTest` fails when they drift. Verified on 2026-10-07 with a Galaxy Watch8 and a phone that never ran Galaxy Wearable: the watch accepted a plain second-phone bond, and the ping answered.
 
 ### `devices/xiaomi`
 

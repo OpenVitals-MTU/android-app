@@ -16,15 +16,19 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
+import java.io.BufferedWriter
 import java.io.IOException
-import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Listens for the phone's RFCOMM ping so OpenVitals on the phone can tell the
- * app is alive. A `connectedDevice` foreground service: a plain background
- * service is stopped about a minute after the activity closes.
+ * The watch's end of the phone link, and the heart rate recorder's host.
+ *
+ * Listens for the phone's RFCOMM requests (`WearLinkProtocol`) so OpenVitals
+ * on the phone can tell the app is alive and fetch what the watch recorded. A
+ * foreground service: a plain background service is stopped about a minute
+ * after the activity closes. Its type is `connectedDevice`, plus `health`
+ * while the heart rate sensor is in use.
  *
  * The phone side is `app/.../devices/wearos/BluetoothWearOsNodePort`.
  */
@@ -40,6 +44,9 @@ class WearAppService : Service() {
     /** False when the system refused the foreground start: nothing may listen then. */
     private var isForeground = false
 
+    private lateinit var store: HeartRateStore
+    private lateinit var recorder: HeartRateRecorder
+
     /** Bluetooth off closes the server socket; on again reopens it. */
     private val bluetoothStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -54,6 +61,8 @@ class WearAppService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        store = HeartRateStore(this)
+        recorder = HeartRateRecorder(this, store)
         isForeground = startInForeground()
         if (!isForeground) {
             stopSelf()
@@ -66,16 +75,26 @@ class WearAppService : Service() {
             registerReceiver(bluetoothStateReceiver, filter)
         }
         startRfcommListener()
+        startRecordingIfPermitted()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // onCreate already stopped a service the system refused; do not restart it.
         if (!isForeground) return START_NOT_STICKY
         startRfcommListener()
+        // A grant made after the start: the type set grows to include health.
+        if (!recorder.isRunning && WearPermissions.hasHeartRate(this)) {
+            startInForeground()
+            startRecordingIfPermitted()
+        }
         return START_STICKY
     }
 
-    /** False when the system refuses, e.g. BLUETOOTH_CONNECT not granted on API 34+. */
+    /**
+     * False when the system refuses, e.g. BLUETOOTH_CONNECT not granted on
+     * API 34+. Calling it again with the heart rate grant in place adds the
+     * `health` type to the running service.
+     */
     private fun startInForeground(): Boolean {
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
@@ -91,18 +110,26 @@ class WearAppService : Service() {
             .setContentText(getString(R.string.link_notification_text))
             .setOngoing(true)
             .build()
+        var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && WearPermissions.hasHeartRate(this)) {
+            types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+        }
         return try {
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE,
-            )
+            startForeground(NOTIFICATION_ID, notification, types)
             true
         } catch (e: Exception) {
             // SecurityException for the missing grant, or a start from the background.
             Log.e(TAG, "Cannot run the phone link in the foreground", e)
             false
         }
+    }
+
+    private fun startRecordingIfPermitted() {
+        if (!WearPermissions.hasHeartRate(this)) {
+            Log.i(TAG, "Heart rate not granted; link only")
+            return
+        }
+        recorder.start()
     }
 
     private fun startRfcommListener() {
@@ -119,14 +146,14 @@ class WearAppService : Service() {
                     return@Thread
                 }
                 val server = try {
-                    adapter.listenUsingRfcommWithServiceRecord(SERVICE_NAME, OPENVITALS_WEAR_APP_UUID)
+                    adapter.listenUsingRfcommWithServiceRecord(SERVICE_NAME, WearLinkProtocol.SERVICE_UUID)
                 } catch (e: SecurityException) {
                     Log.e(TAG, "Missing Bluetooth permission for RFCOMM server", e)
                     return@Thread
                 }
                 socket = server
                 serverSocket = server
-                Log.i(TAG, "RFCOMM server listening on $OPENVITALS_WEAR_APP_UUID")
+                Log.i(TAG, "RFCOMM server listening on ${WearLinkProtocol.SERVICE_UUID}")
 
                 while (isListening.get() && listenerGeneration.get() == generation) {
                     val client: BluetoothSocket = try {
@@ -158,15 +185,28 @@ class WearAppService : Service() {
         runCatching { serverSocket?.close() }
     }
 
+    /** One request per connection. The phone closes after the reply; so do we. */
     private fun handleClientConnection(socket: BluetoothSocket) {
         Thread {
             try {
-                val request = socket.inputStream.bufferedReader(Charsets.UTF_8).readLine()
-                if (request?.trim() == PING) {
-                    socket.outputStream.write("$PONG\n".toByteArray(Charsets.UTF_8))
-                    socket.outputStream.flush()
-                    Log.i(TAG, "Responded PONG to ping request")
+                val request = socket.inputStream.bufferedReader(Charsets.UTF_8).readLine() ?: return@Thread
+                val out = socket.outputStream.bufferedWriter(Charsets.UTF_8)
+                when {
+                    WearLinkProtocol.isPing(request) -> {
+                        out.write(WearLinkProtocol.PONG)
+                        out.newLine()
+                        Log.i(TAG, "Answered ping")
+                    }
+                    else -> {
+                        val heartRate = WearLinkProtocol.parseHeartRateRequest(request)
+                        if (heartRate != null) {
+                            sendHeartRate(out, heartRate)
+                        } else {
+                            Log.w(TAG, "Unknown request: ${request.take(40)}")
+                        }
+                    }
                 }
+                out.flush()
             } catch (e: IOException) {
                 Log.w(TAG, "Error handling client connection: ${e.message}")
             } finally {
@@ -175,8 +215,24 @@ class WearAppService : Service() {
         }.start()
     }
 
+    private fun sendHeartRate(out: BufferedWriter, request: WearLinkProtocol.HeartRateRequest) {
+        // One more than asked tells whether the limit cut the reply.
+        val samples = store.since(request.sinceEpochMillis, request.limit + 1)
+        val page = samples.take(request.limit)
+        for (sample in page) {
+            out.write(WearLinkProtocol.formatSample(sample.epochMillis, sample.bpm))
+            out.newLine()
+        }
+        out.write(WearLinkProtocol.formatEnd(page.size, more = samples.size > page.size))
+        out.newLine()
+        Log.i(TAG, "Sent ${page.size} heart rate samples since ${request.sinceEpochMillis}")
+    }
+
     override fun onDestroy() {
-        if (isForeground) unregisterReceiver(bluetoothStateReceiver)
+        if (isForeground) {
+            unregisterReceiver(bluetoothStateReceiver)
+            recorder.stop()
+        }
         stopRfcommListener()
         super.onDestroy()
     }
@@ -187,20 +243,9 @@ class WearAppService : Service() {
         private const val CHANNEL_ID = "phone_link"
         private const val NOTIFICATION_ID = 1
 
-        /** Must match `BluetoothWearOsNodePort` on the phone; `WearOsLinkParityTest` holds them together. */
-        val OPENVITALS_WEAR_APP_UUID: UUID = UUID.fromString("4838d728-6e5a-4b95-a29d-a60032338301")
-        private const val PING = "PING"
-        private const val PONG = "PONG"
-
-        /** The link needs BLUETOOTH_CONNECT from API 31; before that it is install-time. */
-        fun hasBluetoothPermission(context: Context): Boolean =
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-                context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) ==
-                android.content.pm.PackageManager.PERMISSION_GRANTED
-
-        /** Starts the listener once the grant is there; a no-op without it. */
+        /** Starts the link once the Bluetooth grant is there; a no-op without it. */
         fun startIfPermitted(context: Context) {
-            if (!hasBluetoothPermission(context)) return
+            if (!WearPermissions.hasBluetooth(context)) return
             runCatching { context.startForegroundService(Intent(context, WearAppService::class.java)) }
                 .onFailure { Log.e(TAG, "Cannot start the phone link", it) }
         }

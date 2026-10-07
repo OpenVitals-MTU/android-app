@@ -185,6 +185,8 @@ fun WatchDeviceScreen(
                     bluetoothPermission.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
                 },
             )
+            SectionHeader(stringResource(R.string.settings_watch_wearos_sync_section))
+            WearOsSyncCard(device = device, sync = state.sync, onSync = viewModel::syncNow)
         }
 
         if (isGarmin) {
@@ -422,10 +424,10 @@ private fun StatusCard(
     isBikeComputer: Boolean,
     onRename: () -> Unit,
 ) {
-    // A WearOS watch has no sync, so the status line names the device.
+    // A WearOS watch never synced is named; synced, it reads like a Garmin, minus the file count.
     val statusLine = buildString {
         val syncedAt = device.lastSyncedAt
-        if (!isGarmin) {
+        if (!isGarmin && syncedAt == null) {
             append(device.bluetoothName ?: device.address)
         } else if (syncedAt == null) {
             append(stringResource(R.string.settings_watch_never_synced))
@@ -438,7 +440,7 @@ private fun StatusCard(
             )
             // Only after a sync this session; the count is not persisted.
             val files = sync.lastFileCount
-            if (files != null && files > 0) {
+            if (isGarmin && files != null && files > 0) {
                 append(" · ")
                 append(
                     pluralStringResource(

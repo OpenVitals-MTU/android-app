@@ -1,5 +1,12 @@
 <resources>
     <string name="app_name">OpenVitals Wear</string>
     <string name="link_channel_name">Phone link</string>
-    <string name="link_notification_text">Reachable by OpenVitals on your phone</string>
+    <string name="link_notification_text">Recording heart rate · reachable by OpenVitals on your phone</string>
+    <string name="status_heart_rate_not_granted">Heart rate access is off</string>
+    <string name="status_heart_rate_waiting">Waiting for a heart rate…</string>
+    <string name="status_heart_rate_bpm">%1$d bpm</string>
+    <string name="status_samples_stored">%1$d samples on the watch</string>
+    <string name="status_link_listening">Phone link on</string>
+    <string name="status_link_not_granted">Phone link needs Nearby devices</string>
+    <string name="action_grant">Allow</string>
 </resources>

@@ -3728,6 +3728,17 @@
     <string name="settings_watch_wearos_bt_permission">OpenVitals potřebuje oprávnění Zařízení v okolí, aby se spojil s hodinkami.</string>
     <string name="settings_watch_wearos_check_app">Ověřit aplikaci Wear OS</string>
     <string name="settings_watch_wearos_checking">Kontroluji aplikaci Wear OS…</string>
+    <string name="settings_watch_wearos_sync_section">Synchronizace tepové frekvence</string>
+    <string name="settings_watch_wearos_sync_body">Aplikace OpenVitals na hodinkách zaznamenává tepovou frekvenci a uchovává týden dat. Synchronizace zkopíruje nové vzorky do Health Connect.</string>
+    <string name="settings_watch_wearos_sync_now">Synchronizovat tep</string>
+    <string name="settings_watch_wearos_syncing">Synchronizace tepu…</string>
+    <string name="settings_watch_wearos_synced_none">Žádné nové vzorky tepu</string>
+    <plurals name="settings_watch_wearos_synced_samples">
+        <item quantity="one">%1$d vzorek tepu synchronizován</item>
+        <item quantity="few">%1$d vzorky tepu synchronizovány</item>
+        <item quantity="many">%1$d vzorku tepu synchronizováno</item>
+        <item quantity="other">%1$d vzorků tepu synchronizováno</item>
+    </plurals>
     <string name="scale_notification_channel">Vážení z váhy</string>
     <string name="scale_notification_title">Načítá se vaše vážení</string>
     <string name="settings_scales_empty_title">Žádná váha není nastavena</string>

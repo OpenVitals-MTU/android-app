@@ -11,7 +11,7 @@ OpenVitals has experimental support for wrist devices. Settings, Watches pairs a
 Support differs sharply by make:
 
 - **Garmin** watches are read over Garmin's own Bluetooth protocol. Sync, the watch-only data screen, notification forwarding, the watch's settings tree, and find-my-watch are all Garmin features.
-- **WearOS** watches can be registered so OpenVitals knows they exist. OpenVitals includes a Wear OS companion app (`:wear`), and the phone app checks whether the watch is paired and whether the OpenVitals Wear OS app on it answers. Recorded data reaches the app through Health Connect, and live heart rate through standard Bluetooth LE.
+- **WearOS** watches run the OpenVitals Wear OS companion app (`:wear`). The phone app checks whether the watch is paired and whether the watch app answers, and syncs the heart rate the watch app recorded into Health Connect. No vendor app is needed on the phone once the watch is paired.
 
 ## Wear OS Companion App
 
@@ -29,6 +29,18 @@ When opening a paired Wear OS watch on its device screen in Settings, Watches:
 - **Check again**: the "Validate Wear OS App" button re-runs the check.
 
 The UUID and the `PING`/`PONG` words live in both modules; `WearOsLinkParityTest` fails when they drift.
+
+### Heart Rate Sync
+
+The watch app records heart rate on its own, from the moment it is granted heart rate access, with the screen off and the app closed: the same foreground service that answers the phone keeps the sensor on, batched so the watch wakes once every few minutes rather than once per beat. It keeps one sample every ten seconds and a week of history, pruning older samples itself.
+
+On the phone, the Heart Rate Sync card on the watch's device screen has a Sync heart rate button. A sync asks the watch for everything newer than the last sample already written, one page of up to 2000 samples at a time, writes each page to Health Connect as one heart rate record per clock hour before asking for the next, and remembers how far it got after each page. A sync interrupted half-way therefore resumes where it stopped, and a page written twice updates rather than duplicates. The card reports how many samples the run brought, or that there was nothing new. A sync is refused while an activity is being recorded, as for Garmin.
+
+On Android 16 the heart rate sensor sits behind the Health Connect `READ_HEART_RATE` permission rather than `BODY_SENSORS`; the watch app asks for the right one, then for the background grant, on first launch. Without the grant the link still answers, and the watch screen says heart rate access is off.
+
+Not yet: automatic sync on a schedule, steps and other series, and live heart rate over the link. Recorded data from the vendor app, if it is installed, still reaches OpenVitals through Health Connect as before.
+
+Verified on 2026-10-07 with a Galaxy Watch8 (Wear OS on Android 16) and a GrapheneOS Pixel 6 Pro that never ran Galaxy Wearable: the watch accepted a plain bond from the phone's Bluetooth settings (it appears twice in the list, once per radio; either entry bonds both), the phone's cached service list then carried the OpenVitals UUID, and the status card got its answer. The bond is Android's, not the vendor app's, so the plan to onboard with the vendor app, install OpenVitals on the watch and then uninstall the vendor app rests on something that holds. Not yet verified: the bond and the watch service surviving a reboot, and Samsung's battery manager leaving a sideloaded service alone overnight. The watch app is installed over adb; see [development.md](../engineering/development.md#installing-the-watch-app-without-play).
 
 ## Experimental Status
 
@@ -321,7 +333,7 @@ See [Privacy](../app/privacy.md) and [Permissions](../app/permissions.md) for th
 - Older single-link transport watches cannot sync.
 - There is no background sync. Every sync is one the user asked for.
 - The Connected and Not connected labels reflect whether the watch is switched on in OpenVitals, not whether a Bluetooth link is open right now.
-- WearOS watches are registered only. Sync, watch data, notification forwarding, watch settings, find, and sending a point are Garmin-only.
+- WearOS watches sync heart rate only, and only by hand. Watch data, notification forwarding, watch settings, find, sending a point and the automatic sync schedule are Garmin-only.
 - Music controls are confirmed on one Garmin model. A volume change made on the phone reaches the watch only with the next player change.
 - Sending the alarm list has not yet been confirmed on a watch. Whether an empty list clears the watch's alarms is unknown.
 - Sending a point has not yet been confirmed on a watch. Only one point is sent at a time, and points already on the watch cannot be listed, edited, or removed from the phone.

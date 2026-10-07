@@ -10,7 +10,7 @@ import tech.mmarca.openvitals.domain.model.DeviceIntegration
 class WearOsDeviceClassifierTest {
 
     private val classifier = WearOsDeviceClassifier()
-    private val appUuid = BluetoothWearOsNodePort.OPENVITALS_WEAR_APP_UUID.toString().lowercase()
+    private val appUuid = WearLinkProtocol.SERVICE_UUID.toString().lowercase()
 
     @Test
     fun `a bond listing the OpenVitals Wear OS app is a watch, whatever its name`() {

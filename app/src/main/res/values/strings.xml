@@ -3724,6 +3724,15 @@
     <string name="settings_watch_wearos_bt_permission">OpenVitals needs the Nearby devices permission to reach the watch.</string>
     <string name="settings_watch_wearos_check_app">Validate Wear OS App</string>
     <string name="settings_watch_wearos_checking">Checking Wear OS app…</string>
+    <string name="settings_watch_wearos_sync_section">Heart Rate Sync</string>
+    <string name="settings_watch_wearos_sync_body">The OpenVitals app on the watch records your heart rate and keeps a week of it. Sync copies the new samples into Health Connect.</string>
+    <string name="settings_watch_wearos_sync_now">Sync heart rate</string>
+    <string name="settings_watch_wearos_syncing">Syncing heart rate…</string>
+    <string name="settings_watch_wearos_synced_none">No new heart rate samples</string>
+    <plurals name="settings_watch_wearos_synced_samples">
+        <item quantity="one">%1$d heart rate sample synced</item>
+        <item quantity="other">%1$d heart rate samples synced</item>
+    </plurals>
     <string name="scale_notification_channel">Scale weigh-ins</string>
     <string name="scale_notification_title">Reading your weigh-in</string>
     <string name="settings_scales_empty_title">No scale set up</string>

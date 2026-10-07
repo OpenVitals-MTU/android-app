@@ -34,8 +34,20 @@ data class WearOsCompanionStatus(
         get() = appStatus == WearOsAppStatus.APP_RUNNING
 }
 
+/** One heart rate sample the watch recorded. */
+data class WearOsHeartRateSample(val time: Instant, val beatsPerMinute: Int)
+
+/** One page of a heart rate pull. [hasMore] means the watch cut the reply at its limit. */
+data class WearOsHeartRatePage(
+    val samples: List<WearOsHeartRateSample>,
+    val hasMore: Boolean,
+)
+
+/** The watch could not be reached, or answered with something other than the protocol. */
+class WearOsLinkException(message: String, cause: Throwable? = null) : Exception(message, cause)
+
 /**
- * Port for querying a Wear OS watch's pairing and app responsiveness.
+ * Port for talking to the OpenVitals app on a Wear OS watch.
  *
  * A missing Bluetooth permission surfaces as a [SecurityException], so the
  * screen can turn it into a grant affordance.
@@ -50,4 +62,15 @@ interface WearOsNodePort {
         targetAddress: String? = null,
         targetName: String? = null,
     ): WearOsCompanionStatus
+
+    /**
+     * Heart rate samples newer than [since], oldest first, up to the watch's
+     * page limit. Null when no bonded watch matches. Throws
+     * [WearOsLinkException] when the watch does not answer.
+     */
+    suspend fun pullHeartRate(
+        targetAddress: String?,
+        targetName: String?,
+        since: Instant,
+    ): WearOsHeartRatePage?
 }

@@ -62,6 +62,29 @@ reads `OPENVITALS_WEAR_VERSION_CODE` and `OPENVITALS_WEAR_VERSION_NAME` the way
 the phone build reads its own overrides, and fails the build when the code is
 outside the watch range.
 
+#### Installing the watch app without Play
+
+There is no F-Droid client for Wear OS and a watch cannot install an APK by
+itself, so the watch app is sideloaded over adb. The watch's Wi-Fi works
+without a phone or a Google account.
+
+On the watch: Settings, Developer options (tap the software version five
+times), Wireless debugging, Pair new device. Then, once per computer:
+
+```bash
+adb pair <watch-ip>:<pairing-port> <code>
+adb connect <watch-ip>:<port>          # the port Wireless debugging shows
+./gradlew :wear:assembleDebug
+adb -s <watch-ip>:<port> install -r wear/build/outputs/apk/debug/wear-debug.apk
+```
+
+Debug over Bluetooth is not an option: it proxies through the vendor's phone
+app, which the Wear OS plan removes. adb's own mDNS discovery finds nothing
+next to a system Avahi daemon; run adb with `ADB_MDNS_OPENSCREEN=1`, or read
+the address from `avahi-browse -rt _adb-tls-connect._tcp`. The debug watch app
+installs as `tech.mmarca.openvitals.debug`, so it pairs with the debug phone
+app.
+
 ### Translation Gate
 
 For translation-only changes, the fast local check is:

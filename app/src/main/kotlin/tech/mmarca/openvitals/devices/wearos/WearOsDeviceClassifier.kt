@@ -29,4 +29,4 @@ class WearOsDeviceClassifier : DeviceClassifier {
         }
 }
 
-private val OpenVitalsAppUuid = BluetoothWearOsNodePort.OPENVITALS_WEAR_APP_UUID.toString().lowercase()
+private val OpenVitalsAppUuid = WearLinkProtocol.SERVICE_UUID.toString().lowercase()

@@ -9,7 +9,6 @@ import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import java.time.Instant
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -20,8 +19,9 @@ import kotlinx.coroutines.withContext
 
 /**
  * Bluetooth Classic RFCOMM implementation of [WearOsNodePort], on AOSP APIs
- * only. Finds the bonded watch and pings the OpenVitals Wear OS app listening
- * on [OPENVITALS_WEAR_APP_UUID]. The watch side is `wear/.../WearAppService`.
+ * only. Finds the bonded watch and speaks [WearLinkProtocol] to the OpenVitals
+ * Wear OS app listening on its service UUID, one request per connection. The
+ * watch side is `wear/.../WearAppService`.
  *
  * RFCOMM is Classic, not BLE, so no radio lease is taken; phone-to-phone
  * sync works the same way.
@@ -36,15 +36,16 @@ class BluetoothWearOsNodePort @Inject constructor(
         targetAddress: String?,
         targetName: String?,
     ): WearOsCompanionStatus = withContext(Dispatchers.IO) {
-        val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter
-        if (adapter == null || !adapter.isEnabled) return@withContext notPaired()
+        val (adapter, match) = bondedWatch(targetAddress, targetName) ?: return@withContext notPaired()
 
-        // A missing BLUETOOTH_CONNECT propagates: the screen shows the grant affordance.
-        val bonded = adapter.bondedDevices.orEmpty().map { BondedWatch(it.address, it.name) }
-        val match = WearOsBondMatcher.pick(bonded, targetAddress, targetName)
-            ?: return@withContext notPaired()
-
-        val answered = ping(adapter, adapter.getRemoteDevice(match.address))
+        val answered = try {
+            val reply = exchange(adapter, adapter.getRemoteDevice(match.address), WearLinkProtocol.PING, PING_TIMEOUT_MS) { line ->
+                if (line.trim() == WearLinkProtocol.PONG) LineOutcome.DONE else LineOutcome.SKIP
+            }
+            reply.completed
+        } catch (e: WearOsLinkException) {
+            false
+        }
         WearOsCompanionStatus(
             isPaired = true,
             connectedNodeName = match.name ?: match.address,
@@ -54,45 +55,104 @@ class BluetoothWearOsNodePort @Inject constructor(
         )
     }
 
+    @SuppressLint("MissingPermission")
+    override suspend fun pullHeartRate(
+        targetAddress: String?,
+        targetName: String?,
+        since: Instant,
+    ): WearOsHeartRatePage? = withContext(Dispatchers.IO) {
+        val (adapter, match) = bondedWatch(targetAddress, targetName) ?: return@withContext null
+
+        val samples = ArrayList<WearOsHeartRateSample>()
+        var end: WearLinkProtocol.End? = null
+        val request = WearLinkProtocol.formatHeartRateRequest(
+            since.toEpochMilli(),
+            WearLinkProtocol.MAX_SAMPLES_PER_REQUEST,
+        )
+        val reply = exchange(adapter, adapter.getRemoteDevice(match.address), request, PULL_TIMEOUT_MS) { line ->
+            WearLinkProtocol.parseSample(line)?.let {
+                samples += WearOsHeartRateSample(Instant.ofEpochMilli(it.epochMillis), it.bpm)
+                return@exchange LineOutcome.SKIP
+            }
+            end = WearLinkProtocol.parseEnd(line)
+            if (end != null) LineOutcome.DONE else LineOutcome.SKIP
+        }
+        val terminator = end
+        if (!reply.completed || terminator == null) {
+            throw WearOsLinkException("The watch stopped answering before the end of the page.")
+        }
+        WearOsHeartRatePage(samples = samples, hasMore = terminator.more)
+    }
+
+    /** The adapter and the bonded entry for the registered watch, or null when there is none. */
+    @SuppressLint("MissingPermission")
+    private fun bondedWatch(targetAddress: String?, targetName: String?): Pair<BluetoothAdapter, BondedWatch>? {
+        val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter
+        if (adapter == null || !adapter.isEnabled) return null
+        // A missing BLUETOOTH_CONNECT propagates: the screen shows the grant affordance.
+        val bonded = adapter.bondedDevices.orEmpty().map { BondedWatch(it.address, it.name) }
+        val match = WearOsBondMatcher.pick(bonded, targetAddress, targetName) ?: return null
+        return adapter to match
+    }
+
+    private enum class LineOutcome { SKIP, DONE }
+
+    private class Exchange(val completed: Boolean)
+
     /**
-     * One PING, one PONG. `connect()` and `readLine()` block and ignore
-     * cancellation, so a watchdog closes the socket after [PING_TIMEOUT_MS]
-     * or when the caller is cancelled, whichever comes first.
+     * One request, one reply. Writes [request], then feeds every reply line to
+     * [onLine] until it says [LineOutcome.DONE] or the watch closes the socket.
+     * `connect()` and `readLine()` block and ignore cancellation, so a watchdog
+     * closes the socket after [timeoutMs] or when the caller is cancelled,
+     * whichever comes first. Throws [WearOsLinkException] when nothing came back.
      */
     @SuppressLint("MissingPermission")
-    private suspend fun ping(adapter: BluetoothAdapter, device: BluetoothDevice): Boolean =
-        coroutineScope {
-            val socket = try {
-                device.createRfcommSocketToServiceRecord(OPENVITALS_WEAR_APP_UUID)
-            } catch (e: IOException) {
-                Log.d(TAG, "No RFCOMM socket for ${device.address}: ${e.message}")
-                return@coroutineScope false
-            }
-            val watchdog = launch {
-                try {
-                    delay(PING_TIMEOUT_MS)
-                } finally {
-                    runCatching { socket.close() }
-                }
-            }
+    private suspend fun exchange(
+        adapter: BluetoothAdapter,
+        device: BluetoothDevice,
+        request: String,
+        timeoutMs: Long,
+        onLine: (String) -> LineOutcome,
+    ): Exchange = coroutineScope {
+        val socket = try {
+            device.createRfcommSocketToServiceRecord(WearLinkProtocol.SERVICE_UUID)
+        } catch (e: IOException) {
+            Log.d(TAG, "No RFCOMM socket for ${device.address}: ${e.message}")
+            throw WearOsLinkException("The watch has no OpenVitals link.", e)
+        }
+        val watchdog = launch {
             try {
-                // A running discovery slows the connect down. Cancelling it needs
-                // BLUETOOTH_SCAN, which the ping itself does not.
-                runCatching { adapter.cancelDiscovery() }
-                socket.connect()
-                socket.outputStream.write("$PING\n".toByteArray(Charsets.UTF_8))
-                socket.outputStream.flush()
-                val reply = socket.inputStream.bufferedReader(Charsets.UTF_8).readLine()
-                reply?.trim() == PONG
-            } catch (e: IOException) {
-                // Off, out of range, app not listening, or the watchdog closed the socket.
-                Log.d(TAG, "No answer from ${device.address}: ${e.message}")
-                false
+                delay(timeoutMs)
             } finally {
-                watchdog.cancel()
                 runCatching { socket.close() }
             }
         }
+        try {
+            // A running discovery slows the connect down. Cancelling it needs
+            // BLUETOOTH_SCAN, which the exchange itself does not.
+            runCatching { adapter.cancelDiscovery() }
+            socket.connect()
+            socket.outputStream.write("$request\n".toByteArray(Charsets.UTF_8))
+            socket.outputStream.flush()
+            val reader = socket.inputStream.bufferedReader(Charsets.UTF_8)
+            var completed = false
+            while (true) {
+                val line = reader.readLine() ?: break
+                if (onLine(line) == LineOutcome.DONE) {
+                    completed = true
+                    break
+                }
+            }
+            Exchange(completed)
+        } catch (e: IOException) {
+            // Off, out of range, app not listening, or the watchdog closed the socket.
+            Log.d(TAG, "No answer from ${device.address}: ${e.message}")
+            throw WearOsLinkException("The watch did not answer.", e)
+        } finally {
+            watchdog.cancel()
+            runCatching { socket.close() }
+        }
+    }
 
     private fun notPaired() = WearOsCompanionStatus(
         isPaired = false,
@@ -106,9 +166,7 @@ class BluetoothWearOsNodePort @Inject constructor(
         /** Connect (paging plus service lookup) and the exchange together. */
         private const val PING_TIMEOUT_MS = 8_000L
 
-        /** Must match `WearAppService` on the watch; `WearOsLinkParityTest` holds them together. */
-        val OPENVITALS_WEAR_APP_UUID: UUID = UUID.fromString("4838d728-6e5a-4b95-a29d-a60032338301")
-        const val PING = "PING"
-        const val PONG = "PONG"
+        /** A full page over RFCOMM is well under a second; the connect dominates. */
+        private const val PULL_TIMEOUT_MS = 30_000L
     }
 }

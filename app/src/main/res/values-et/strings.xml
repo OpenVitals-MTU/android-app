@@ -3658,6 +3658,15 @@
     <string name="settings_watch_wearos_bt_permission">OpenVitals vajab kellani jõudmiseks luba „Läheduses olevad seadmed“.</string>
     <string name="settings_watch_wearos_check_app">Kontrolli Wear OS rakendust</string>
     <string name="settings_watch_wearos_checking">Wear OS rakenduse kontrollimine…</string>
+    <string name="settings_watch_wearos_sync_section">Pulsi sünkroonimine</string>
+    <string name="settings_watch_wearos_sync_body">Kella OpenVitalsi rakendus salvestab pulssi ja hoiab nädala andmeid. Sünkroonimine kopeerib uued näidud Health Connecti.</string>
+    <string name="settings_watch_wearos_sync_now">Sünkrooni pulss</string>
+    <string name="settings_watch_wearos_syncing">Pulsi sünkroonimine…</string>
+    <string name="settings_watch_wearos_synced_none">Uusi pulsinäite pole</string>
+    <plurals name="settings_watch_wearos_synced_samples">
+        <item quantity="one">%1$d pulsinäit sünkroonitud</item>
+        <item quantity="other">%1$d pulsinäitu sünkroonitud</item>
+    </plurals>
     <string name="scale_notification_channel">Kaalu kaalumised</string>
     <string name="scale_notification_title">Kaalumise lugemine</string>
     <string name="settings_scales_empty_title">Kaalu pole seadistatud</string>
