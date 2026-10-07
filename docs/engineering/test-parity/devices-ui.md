@@ -437,6 +437,8 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | counter record identity > a day whose first sync only touched the open bucket still retires the legacy id, with a later bucket | PORTED | `a first sync that only touched the open bucket retires the legacy id later` | - |
 | counter record identity > calories ride the same grid as steps | PORTED | `calories ride the same grid as steps` | same `active_cal`→`steps` id-rewrite check and 80 kcal |
 
+| — | KOTLIN-ONLY | FitWellnessExtrasTest: `Pulse Ox in the monitor file becomes one record per reading, apart from the snapshot's`, `five-minute HRV values ride beside the nightly summary, in ms`, `thresholds and scores land as watch-only samples at the watch's time`, `restless moments are keyed to the night, and dropped without one`, `a file with only extras is not empty, and later files win the snapshots` | the series from files already pulled: spo2 (269), hrv_value (371), functional_metrics (356), hill_score (402), endurance_score (403), sleep_restless_moments (382) |
+
 ## test/devices/garmin/garmin_notification_actions_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/devices/garmin/GarminNotificationActionsTest.kt
 | Flutter case | Status | Kotlin test | Note |

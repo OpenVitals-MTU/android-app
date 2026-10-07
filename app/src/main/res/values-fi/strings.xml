@@ -3195,6 +3195,14 @@
     <string name="settings_watch_metric_recovery_time">Palautumisaika</string>
     <string name="settings_watch_metric_training_readiness">Harjoitusvalmius</string>
     <string name="settings_watch_metric_training_load">Harjoituskuormitus</string>
+    <string name="settings_watch_metric_ftp">Toiminnallinen kynnysteho</string>
+    <string name="settings_watch_metric_lactate_threshold">Laktaattikynnys</string>
+    <string name="settings_watch_metric_lactate_threshold_hr">sykkeellä %1$d bpm</string>
+    <string name="settings_watch_metric_hill_score">Mäkipisteet</string>
+    <string name="settings_watch_metric_hill_score_parts">Voima %1$d, kestävyys %2$d</string>
+    <string name="settings_watch_metric_endurance_score">Kestävyyspisteet</string>
+    <string name="settings_watch_metric_restless_moments">Levottomat hetket</string>
+    <string name="settings_watch_metric_watts">%1$d W</string>
     <string name="settings_watch_average_prefix">%1$s keskimäärin</string>
     <plurals name="dashboard_watch_more">
         <item quantity="one">+%1$d lisää</item>

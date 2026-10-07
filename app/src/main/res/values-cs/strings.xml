@@ -2852,6 +2852,14 @@
     <string name="settings_watch_metric_recovery_time">Doba zotavení</string>
     <string name="settings_watch_metric_training_readiness">Připravenost k tréninku</string>
     <string name="settings_watch_metric_training_load">Tréninková zátěž</string>
+    <string name="settings_watch_metric_ftp">Funkční prahový výkon</string>
+    <string name="settings_watch_metric_lactate_threshold">Laktátový práh</string>
+    <string name="settings_watch_metric_lactate_threshold_hr">při %1$d tepech/min</string>
+    <string name="settings_watch_metric_hill_score">Skóre do kopce</string>
+    <string name="settings_watch_metric_hill_score_parts">Síla %1$d, vytrvalost %2$d</string>
+    <string name="settings_watch_metric_endurance_score">Skóre vytrvalosti</string>
+    <string name="settings_watch_metric_restless_moments">Neklidné chvíle</string>
+    <string name="settings_watch_metric_watts">%1$d W</string>
     <string name="settings_watch_average_prefix">průměr %1$s</string>
     <plurals name="dashboard_watch_more">
         <item quantity="one">+%1$d další</item>

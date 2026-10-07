@@ -3189,6 +3189,14 @@
     <string name="settings_watch_metric_recovery_time">回復時間</string>
     <string name="settings_watch_metric_training_readiness">トレーニング準備度</string>
     <string name="settings_watch_metric_training_load">トレーニング負荷</string>
+    <string name="settings_watch_metric_ftp">機能的閾値パワー</string>
+    <string name="settings_watch_metric_lactate_threshold">乳酸性閾値</string>
+    <string name="settings_watch_metric_lactate_threshold_hr">%1$d bpm 時</string>
+    <string name="settings_watch_metric_hill_score">ヒルスコア</string>
+    <string name="settings_watch_metric_hill_score_parts">筋力 %1$d、持久力 %2$d</string>
+    <string name="settings_watch_metric_endurance_score">持久力スコア</string>
+    <string name="settings_watch_metric_restless_moments">落ち着きのない時間</string>
+    <string name="settings_watch_metric_watts">%1$d W</string>
     <string name="settings_watch_average_prefix">平均 %1$s</string>
     <string name="import_leave_title">インポートを中止しますか？</string>
     <string name="import_leave_body">この画面を離れるとインポートが中止されます。すでにインポートされたデータは残り、後でもう一度実行できます。</string>

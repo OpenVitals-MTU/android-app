@@ -2724,6 +2724,14 @@
     <string name="settings_watch_metric_recovery_time">Tempo de recuperação</string>
     <string name="settings_watch_metric_training_readiness">Prontidão para treinar</string>
     <string name="settings_watch_metric_training_load">Carga de treino</string>
+    <string name="settings_watch_metric_ftp">Potência limiar funcional</string>
+    <string name="settings_watch_metric_lactate_threshold">Limiar de lactato</string>
+    <string name="settings_watch_metric_lactate_threshold_hr">a %1$d bpm</string>
+    <string name="settings_watch_metric_hill_score">Pontuação de subidas</string>
+    <string name="settings_watch_metric_hill_score_parts">Força %1$d, resistência %2$d</string>
+    <string name="settings_watch_metric_endurance_score">Pontuação de resistência</string>
+    <string name="settings_watch_metric_restless_moments">Momentos de agitação</string>
+    <string name="settings_watch_metric_watts">%1$d W</string>
     <string name="settings_watch_average_prefix">Média de %1$s</string>
     <plurals name="dashboard_watch_more">
         <item quantity="one">+%1$d mais</item>

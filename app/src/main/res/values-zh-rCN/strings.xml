@@ -2853,6 +2853,14 @@
     <string name="settings_watch_metric_recovery_time">恢复时间</string>
     <string name="settings_watch_metric_training_readiness">训练就绪度</string>
     <string name="settings_watch_metric_training_load">训练负荷</string>
+    <string name="settings_watch_metric_ftp">功能阈值功率</string>
+    <string name="settings_watch_metric_lactate_threshold">乳酸阈值</string>
+    <string name="settings_watch_metric_lactate_threshold_hr">心率 %1$d bpm 时</string>
+    <string name="settings_watch_metric_hill_score">爬坡得分</string>
+    <string name="settings_watch_metric_hill_score_parts">力量 %1$d，耐力 %2$d</string>
+    <string name="settings_watch_metric_endurance_score">耐力得分</string>
+    <string name="settings_watch_metric_restless_moments">不安稳时刻</string>
+    <string name="settings_watch_metric_watts">%1$d W</string>
     <string name="settings_watch_average_prefix">平均 %1$s</string>
     <plurals name="dashboard_watch_more">
         <item quantity="one">另有 %1$d 项</item>
