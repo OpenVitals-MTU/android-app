@@ -21,6 +21,32 @@ class GarminMessagesTest {
     private fun payloadShort(payload: ByteArray, at: Int = 0): Int =
         (payload[at].toInt() and 0xFF) or ((payload[at + 1].toInt() and 0xFF) shl 8)
 
+    // FIT definition and data pushed by the watch.
+
+    @Test
+    fun `FIT definition and data frames decode to their own messages, payload intact`() {
+        val definition = b(0x40, 0, 0, 1, 0, 1, 23, 4, 0x8C)
+        val data = b(0x00, 0x08, 0x00, 0x00, 0x00)
+
+        val decodedDefinition = roundTrip(GarminGfdiFrame.build(GarminMessageId.FIT_DEFINITION, definition))
+        val decodedData = roundTrip(GarminGfdiFrame.build(GarminMessageId.FIT_DATA, data))
+
+        assertArrayEquals(definition, (decodedDefinition as GarminFitDefinition).payload)
+        assertArrayEquals(data, (decodedData as GarminFitData).payload)
+        // Each gets the companion's status rather than the generic ACK.
+        assertTrue(GarminMessageId.FIT_DEFINITION in garminSelfAcknowledgedTypes)
+        assertTrue(GarminMessageId.FIT_DATA in garminSelfAcknowledgedTypes)
+    }
+
+    @Test
+    fun `a FIT status is an ACK followed by the APPLIED code`() {
+        val frame = GarminGfdiFrame.parse(buildFitStatus(GarminMessageId.FIT_DATA))
+
+        assertEquals(GarminMessageId.RESPONSE, frame.messageType)
+        assertEquals(GarminMessageId.FIT_DATA, payloadShort(frame.payload))
+        assertArrayEquals(b(GarminStatus.ACK.code, 0), frame.payload.copyOfRange(2, 4))
+    }
+
     // GarminTime.
 
     @Test

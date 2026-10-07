@@ -600,6 +600,8 @@
     <string name="settings_watch_auto_sync_2h">2 godz.</string>
     <string name="settings_watch_stay_connected">Pozostań połączony</string>
     <string name="settings_watch_stay_connected_body">Utrzymuje połączenie z zegarkiem zawsze, gdy jest w zasięgu. Zegarek może wtedy pobierać pogodę, znajdować ten telefon i przekazywać nowe nagrania zaraz po ich zakończeniu — kosztem baterii zegarka i telefonu.</string>
+    <string name="settings_watch_high_mtu">Duże pakiety Bluetooth</string>
+    <string name="settings_watch_high_mtu_body">Prosi zegarek o większe pakiety Bluetooth, dzięki czemu synchronizacja jest znacznie szybsza. Wyłącz, jeśli zegarek ciągle traci połączenie lub synchronizacja nigdy nie rusza.</string>
     <string name="garmin_find_phone_channel">Znajdź mój telefon</string>
     <string name="garmin_find_phone_title">Twój zegarek szuka tego telefonu</string>
     <string name="garmin_find_phone_body">Dotknij, aby przestać dzwonić.</string>
@@ -3235,6 +3237,14 @@
     <string name="settings_watch_metric_recovery_time">Czas regeneracji</string>
     <string name="settings_watch_metric_training_readiness">Gotowość treningowa</string>
     <string name="settings_watch_metric_training_load">Obciążenie treningowe</string>
+    <string name="settings_watch_metric_ftp">Funkcjonalna moc progowa</string>
+    <string name="settings_watch_metric_lactate_threshold">Próg mleczanowy</string>
+    <string name="settings_watch_metric_lactate_threshold_hr">przy %1$d bpm</string>
+    <string name="settings_watch_metric_hill_score">Wynik podjazdów</string>
+    <string name="settings_watch_metric_hill_score_parts">Siła %1$d, wytrzymałość %2$d</string>
+    <string name="settings_watch_metric_endurance_score">Wynik wytrzymałości</string>
+    <string name="settings_watch_metric_restless_moments">Niespokojne momenty</string>
+    <string name="settings_watch_metric_watts">%1$d W</string>
     <string name="settings_watch_average_prefix">%1$s średnio</string>
     <plurals name="dashboard_watch_more">
         <item quantity="one">+%1$d więcej</item>

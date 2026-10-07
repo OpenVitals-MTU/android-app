@@ -49,6 +49,8 @@ data class WatchDeviceUiState(
     val isDetectingSensors: Boolean = false,
     /** Companion mode: hold the link whenever the watch is in range. */
     val stayConnected: Boolean = false,
+    /** Links ask the watch for large Bluetooth packets. Off is the workaround for a watch that misbehaves with them. */
+    val highMtu: Boolean = true,
     /** How often the watch syncs on its own, or OFF for by-hand only. */
     val autoSync: AutoSyncInterval = AutoSyncInterval.OFF,
     /**
@@ -151,6 +153,7 @@ class WatchDeviceViewModel @Inject constructor(
             sync = sync,
             find = find,
             stayConnected = stateStore.stayConnected(deviceId),
+            highMtu = device?.let { stateStore.highMtu(it.address) } ?: true,
             autoSync = autoSyncScheduler.interval(deviceId),
             liveReadings = stateStore.liveReadings(deviceId),
             musicControls = stateStore.musicControls(deviceId),
@@ -301,6 +304,13 @@ class WatchDeviceViewModel @Inject constructor(
         notificationBridge.onStayConnectedChanged(deviceId, enabled)
         // Poke the combine so the switch reflects the change immediately.
         localState.update { it.copy(stayConnected = enabled) }
+    }
+
+    /** Whether links ask the watch for large packets. Keyed by the watch's address, as the store is. */
+    fun setHighMtu(enabled: Boolean) {
+        val address = uiState.value.device?.address ?: return
+        stateStore.setHighMtu(address, enabled)
+        localState.update { it.copy(highMtu = enabled) }
     }
 
     /** Picks the auto-sync interval. The scheduler owns the stored choice and the periodic work. */

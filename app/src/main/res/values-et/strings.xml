@@ -447,6 +447,8 @@
     <string name="settings_home_widget_refresh_2h">2 h</string>
     <string name="settings_watch_stay_connected">Püsi ühenduses</string>
     <string name="settings_watch_stay_connected_body">Hoiab kellaga ühendust alati, kui see on levialas. Nii saab kell tuua ilmateate, leida selle telefoni ja anda uued salvestused üle kohe, kui need valmivad. See kulutab veidi kella ja telefoni akut.</string>
+    <string name="settings_watch_high_mtu">Suured Bluetoothi paketid</string>
+    <string name="settings_watch_high_mtu_body">Küsib kellalt suuremaid Bluetoothi pakette, mis teeb sünkroonimise palju kiiremaks. Lülita välja, kui kell kaotab pidevalt ühenduse või sünkroonimine ei käivitu kunagi.</string>
     <string name="garmin_find_phone_channel">Leia mu telefon</string>
     <string name="garmin_find_phone_title">Sinu kell otsib seda telefoni</string>
     <string name="garmin_find_phone_body">Puuduta helisemise lõpetamiseks.</string>
@@ -2713,6 +2715,14 @@
     <string name="settings_watch_metric_recovery_time">Taastumisaeg</string>
     <string name="settings_watch_metric_training_readiness">Treeninguvalmidus</string>
     <string name="settings_watch_metric_training_load">Treeningukoormus</string>
+    <string name="settings_watch_metric_ftp">Funktsionaalne lävivõimsus</string>
+    <string name="settings_watch_metric_lactate_threshold">Laktaadilävi</string>
+    <string name="settings_watch_metric_lactate_threshold_hr">%1$d lööki/min juures</string>
+    <string name="settings_watch_metric_hill_score">Mäeskoor</string>
+    <string name="settings_watch_metric_hill_score_parts">Jõud %1$d, vastupidavus %2$d</string>
+    <string name="settings_watch_metric_endurance_score">Vastupidavusskoor</string>
+    <string name="settings_watch_metric_restless_moments">Rahutud hetked</string>
+    <string name="settings_watch_metric_watts">%1$d W</string>
     <string name="settings_watch_average_prefix">%1$s keskmine</string>
     <plurals name="dashboard_watch_more">
         <item quantity="one">+%1$d veel</item>

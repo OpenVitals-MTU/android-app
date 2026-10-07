@@ -36,7 +36,7 @@ import tech.mmarca.openvitals.devices.garmin.FitCounterWatermark
 /** Health Connect file type for a Garmin sleep FIT file (`file_id.type`). */
 const val FIT_FILE_TYPE_SLEEP: Int = 49
 
-private fun importMetadata(clientRecordId: String): Metadata =
+internal fun importMetadata(clientRecordId: String): Metadata =
     Metadata.manualEntry(
         clientRecordId = clientRecordId,
         device = Device(type = Device.TYPE_PHONE),

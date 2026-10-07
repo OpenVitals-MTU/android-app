@@ -347,10 +347,11 @@ class GarminSettingsLink private constructor(
             weatherProvider: (() -> tech.mmarca.openvitals.devices.weather.WeatherSnapshot?)? = null,
             agpsSource: GarminAgpsSource? = null,
             calendarProvider: ((beginEpochSeconds: Long, endEpochSeconds: Long) -> List<GarminCalendarEvent>?)? = null,
+            highMtu: Boolean = true,
         ): GarminSettingsLink {
             acquireOrWait(lease, address)
 
-            val gatt = GarminGattClient(context, address)
+            val gatt = GarminGattClient(context, address, highMtu = highMtu)
             val ready = CompletableDeferred<Unit>()
 
             var transport: GarminFrameTransport? = null

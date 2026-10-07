@@ -351,6 +351,7 @@ fun WatchDeviceScreen(
                     if (enabled) viewModel.coMapsPermissionName()?.let(coMapsPermission::launch)
                 },
             )
+            HighMtuCard(state = state, onToggle = viewModel::setHighMtu)
             EphemerisCard(
                 state = state,
                 onImport = { ephemerisPicker.launch(arrayOf("*/*")) },

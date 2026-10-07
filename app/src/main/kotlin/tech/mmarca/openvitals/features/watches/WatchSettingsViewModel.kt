@@ -95,6 +95,7 @@ class WatchSettingsLinks @VisibleForTesting internal constructor(
                         null
                     }
                 },
+                highMtu = stateStore.highMtu(device.address),
             )
         },
     )

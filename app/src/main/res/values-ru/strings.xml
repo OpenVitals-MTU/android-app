@@ -572,6 +572,8 @@
     <string name="settings_watch_auto_sync_2h">2 ч</string>
     <string name="settings_watch_stay_connected">Оставаться подключённым</string>
     <string name="settings_watch_stay_connected_body">Поддерживать связь с часами, пока они находятся в зоне действия. Тогда часы смогут получать погоду, находить этот телефон и передавать новые записи сразу после их завершения — за счёт некоторого расхода заряда часов и телефона.</string>
+    <string name="settings_watch_high_mtu">Крупные пакеты Bluetooth</string>
+    <string name="settings_watch_high_mtu_body">Запрашивает у часов более крупные пакеты Bluetooth, что заметно ускоряет синхронизацию. Отключите, если часы раз за разом теряют связь или синхронизация никак не начинается.</string>
     <string name="garmin_find_phone_channel">Найти мой телефон</string>
     <string name="garmin_find_phone_title">Часы ищут этот телефон</string>
     <string name="garmin_find_phone_body">Нажмите, чтобы прекратить звонок.</string>
@@ -3152,6 +3154,14 @@
     <string name="settings_watch_metric_recovery_time">Время восстановления</string>
     <string name="settings_watch_metric_training_readiness">Готовность к тренировке</string>
     <string name="settings_watch_metric_training_load">Тренировочная нагрузка</string>
+    <string name="settings_watch_metric_ftp">Функциональная пороговая мощность</string>
+    <string name="settings_watch_metric_lactate_threshold">Лактатный порог</string>
+    <string name="settings_watch_metric_lactate_threshold_hr">при %1$d уд/мин</string>
+    <string name="settings_watch_metric_hill_score">Оценка подъёмов</string>
+    <string name="settings_watch_metric_hill_score_parts">Сила %1$d, выносливость %2$d</string>
+    <string name="settings_watch_metric_endurance_score">Оценка выносливости</string>
+    <string name="settings_watch_metric_restless_moments">Беспокойные моменты</string>
+    <string name="settings_watch_metric_watts">%1$d Вт</string>
     <string name="settings_watch_average_prefix">Среднее значение: %1$s</string>
     <plurals name="dashboard_watch_more">
         <item quantity="one">Ещё: %1$d</item>

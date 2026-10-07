@@ -166,7 +166,9 @@ class GarminNotificationBridge @Inject constructor(
             manufacturer = identity.manufacturer,
             model = identity.model,
             lease = SharedGarminRadioLease,
-            openLink = { request -> GarminBleNotificationLink.open(context, scope, request) },
+            openLink = { request ->
+                GarminBleNotificationLink.open(context, scope, request, highMtu = stateStore.highMtu(request.address))
+            },
             onAction = ::performAction,
             appLabel = ::appLabel,
             onFindPhone = { seconds -> findPhoneRinger.start(seconds) },

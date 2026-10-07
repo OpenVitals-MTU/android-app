@@ -153,6 +153,18 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
         prefs.writeStringList(sentAlarmsPrefsKey(deviceId), alarms.map(::encodeAlarm))
     }
 
+    /**
+     * Whether links to the watch at [address] ask for a large MTU. Default on.
+     * Keyed by Bluetooth address rather than device id:
+     * every link opener knows the address, and not all know the device id.
+     */
+    fun highMtu(address: String): Boolean =
+        prefs.getBoolean(highMtuPrefsKey(address), true)
+
+    fun setHighMtu(address: String, enabled: Boolean) {
+        prefs.edit { putBoolean(highMtuPrefsKey(address), enabled) }
+    }
+
     fun clear(deviceId: String) {
         clearSyncedFileKeys(deviceId)
         prefs.edit {
@@ -170,6 +182,8 @@ class GarminDeviceStateStore(private val prefs: SharedPreferences) {
     }
 
     private fun syncedKeysPrefsKey(deviceId: String) = "ble_synced_files_$deviceId"
+
+    private fun highMtuPrefsKey(address: String) = "garmin_high_mtu_${address.uppercase()}"
 
     private fun capabilitiesPrefsKey(deviceId: String) = "garmin_capabilities_$deviceId"
 

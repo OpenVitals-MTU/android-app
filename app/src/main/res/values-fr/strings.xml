@@ -505,6 +505,8 @@
     <string name="settings_home_widget_refresh_2h">2 h</string>
     <string name="settings_watch_stay_connected">Rester connecté</string>
     <string name="settings_watch_stay_connected_body">Maintient une liaison avec la montre dès qu\'elle est à portée. La montre peut alors récupérer la météo, retrouver ce téléphone et transmettre les nouveaux enregistrements dès qu\'ils se terminent — au prix d\'une consommation de batterie accrue sur la montre et le téléphone.</string>
+    <string name="settings_watch_high_mtu">Grands paquets Bluetooth</string>
+    <string name="settings_watch_high_mtu_body">Demande à la montre des paquets Bluetooth plus grands, ce qui accélère nettement la synchronisation. Désactivez-le si la montre perd sans cesse la connexion ou si une synchronisation ne démarre jamais.</string>
     <string name="garmin_find_phone_channel">Localiser mon téléphone</string>
     <string name="garmin_find_phone_title">Votre montre cherche ce téléphone</string>
     <string name="garmin_find_phone_body">Touchez pour arrêter la sonnerie.</string>
@@ -2848,6 +2850,14 @@
     <string name="settings_watch_metric_recovery_time">Temps de récupération</string>
     <string name="settings_watch_metric_training_readiness">Préparation à l\'entraînement</string>
     <string name="settings_watch_metric_training_load">Charge d\'entraînement</string>
+    <string name="settings_watch_metric_ftp">Puissance seuil fonctionnelle</string>
+    <string name="settings_watch_metric_lactate_threshold">Seuil lactique</string>
+    <string name="settings_watch_metric_lactate_threshold_hr">à %1$d bpm</string>
+    <string name="settings_watch_metric_hill_score">Score de côte</string>
+    <string name="settings_watch_metric_hill_score_parts">Force %1$d, endurance %2$d</string>
+    <string name="settings_watch_metric_endurance_score">Score d\'endurance</string>
+    <string name="settings_watch_metric_restless_moments">Moments d\'agitation</string>
+    <string name="settings_watch_metric_watts">%1$d W</string>
     <string name="settings_watch_average_prefix">Moyenne %1$s</string>
     <plurals name="dashboard_watch_more">
         <item quantity="one">+%1$d autre</item>

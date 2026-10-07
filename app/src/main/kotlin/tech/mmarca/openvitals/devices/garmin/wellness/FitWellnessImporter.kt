@@ -73,12 +73,17 @@ class FitWellnessImporter @Inject constructor(
             wellness.metrics?.let { records += fitMetricsImportRecords(it) }
             records += fitNapImportRecords(wellness.naps)
             wellness.healthSnapshot?.let { records += fitHealthSnapshotImportRecords(it) }
+            records += fitExtrasImportRecords(wellness.extras)
             wellness.weights.forEach { records += fitWeightImportRecords(it) }
 
             // Counters are mapped once at the end: an interval needs the reading before it.
             wellness.monitoring?.let { counters = counters.merge(fitMonitoringCounters(it)) }
 
             watchOnly += watchOnlySamples(wellness)
+            watchOnly += fitExtrasWatchOnlySamples(
+                wellness.extras,
+                nightStart = wellness.sleep?.start ?: wellness.sleepMinutes.firstOrNull()?.time,
+            )
         }
 
         writeRecords(records)

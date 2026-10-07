@@ -130,6 +130,18 @@ class GarminSessionTest {
             return GarminGfdiFrame.build(GarminMessageId.CONFIGURATION, w.toBytes())
         }
 
+        /** The FIT `capabilities` layout a watch pushes when it sends no CONFIGURATION. */
+        fun fitCapabilityDefinition(): ByteArray = GarminGfdiFrame.build(
+            GarminMessageId.FIT_DEFINITION,
+            byteArrayOf(0x40, 0, 0, 1, 0, 1, 23, 4, 0x8C.toByte()),
+        )
+
+        /** Its data: `connectivity_supported` with SYNC set. */
+        fun fitCapabilityData(): ByteArray = GarminGfdiFrame.build(
+            GarminMessageId.FIT_DATA,
+            byteArrayOf(0x00, (1 shl GarminCapability.SYNC.bit).toByte(), 0, 0, 0),
+        )
+
         private fun supportedTypes(): ByteArray {
             val w = GarminByteWriter()
                 .writeShort(GarminMessageId.SUPPORTED_FILE_TYPES_REQUEST)
@@ -588,6 +600,35 @@ class GarminSessionTest {
             }
             assertTrue(types >= 0)
             assertTrue("SYNC_READY follows the file-types ask", ready > types)
+        }
+
+    @Test
+    fun `a watch that declares its capabilities as FIT records instead of CONFIGURATION still starts up`() =
+        runTest {
+            // Such a watch declares connectivity_supported in FIT; without reading it the handshake waits forever.
+            val watch = happyWatch()
+            val session = session(this, watch)
+            watch.outbox.add(watch.deviceInformation())
+            watch.outbox.add(watch.authNegotiation())
+            watch.outbox.add(watch.fitCapabilityDefinition())
+            watch.outbox.add(watch.fitCapabilityData())
+            drain(watch, session)
+
+            assertEquals(setOf(GarminCapability.SYNC), session.capabilities)
+            assertTrue(watch.received.any { it.messageType == GarminMessageId.SUPPORTED_FILE_TYPES_REQUEST })
+            assertTrue(
+                watch.received.any {
+                    it.messageType == GarminMessageId.SYSTEM_EVENT &&
+                        it.payload[0].toInt() == GarminSystemEventType.SYNC_READY.ordinal
+                },
+            )
+            // Both FIT messages got the companion's status: ACK plus the APPLIED code.
+            for (type in listOf(GarminMessageId.FIT_DEFINITION, GarminMessageId.FIT_DATA)) {
+                val status = responsesAbout(watch, type).single()
+                assertEquals(GarminStatus.ACK.code, status.payload[2].toInt())
+                assertEquals(0, status.payload[3].toInt())
+            }
+            assertEquals(2, session.done.await().size)
         }
 
     @Test

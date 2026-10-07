@@ -60,6 +60,8 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | capabilities > an empty write is a no-op | PORTED | GarminDeviceStateStoreTest: `an empty capabilities write is a no-op` | - |
 | clear drops both capabilities and synced-file history | PORTED | GarminDeviceStateStoreTest: `clear forgets everything kept for the watch, so a re-pairing starts clean` | Includes reload assertion |
 
+| — | KOTLIN-ONLY | GarminDeviceStateStoreTest: `large packets are on until switched off for that address` | the high-MTU switch is keyed by Bluetooth address |
+
 ## test/devices/garmin/garmin_file_store_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/devices/garmin/GarminFileStoreTest.kt
 | Flutter case | Status | Kotlin test | Note |
@@ -103,6 +105,8 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | inbound message decoding > a non-OK download status does not proceed | PORTED | GarminMessagesTest: `a non-OK download status does not proceed` | - |
 | inbound message decoding > a file-transfer data chunk exposes offset, crc and payload | PORTED | GarminMessagesTest: `a file-transfer data chunk exposes offset crc and payload` | Same 0xBEEF/2048 fixture |
 | inbound message decoding > an out-of-vocabulary message decodes to unhandled, not an error | PORTED | GarminMessagesTest: `an out-of-vocabulary message decodes to unhandled not an error` | Same 5041 fixture |
+
+| — | KOTLIN-ONLY | GarminMessagesTest: `FIT definition and data frames decode to their own messages, payload intact`, `a FIT status is an ACK followed by the APPLIED code` | the FIT messages a watch pushes, and the companion's status for them |
 
 ## test/devices/garmin/garmin_ml_transport_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/devices/garmin/GarminMlTransportTest.kt
@@ -220,6 +224,10 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | the notification conversation end to end > a multi-chunk body arrives in order and reassembles exactly | PORTED | GarminSessionNotificationsTest: `a multi-chunk body arrives in order and reassembles exactly` | Same 700-char body, contiguous-offset asserts |
 | the notification conversation end to end > a held notification is announced AFTER the subscription status, never before | PORTED | GarminSessionNotificationsTest: `a held notification is announced AFTER the subscription status, never before` | - |
 | the notification conversation end to end > a control request that arrives before any notification sends only the status | PORTED | GarminSessionNotificationsTest: `a control request that arrives before any notification sends only the status` | - |
+
+| — | KOTLIN-ONLY | GarminSessionTest: `a watch that declares its capabilities as FIT records instead of CONFIGURATION still starts up` | the handshake for a watch that never sends CONFIGURATION |
+| — | KOTLIN-ONLY | GarminFitCapabilitiesTest: `bit i of connectivity_supported is capability i`, `a record that is not capabilities, or data before its definition, declares nothing`, `a zero mask is the uint32z invalid value and declares nothing` | the bitmap read from the FIT `capabilities` record |
+| — | KOTLIN-ONLY | GarminGattClientRetryTest: `a stack error is redialled, and the second dial carries on`, `three stack errors end the dial`, `a dial nobody answers is not redialled` | the redial after a stack error |
 
 ## test/devices/garmin/onboard_garmin_watch_use_case_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/devices/garmin/OnboardGarminWatchUseCaseTest.kt
@@ -428,6 +436,8 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | counter record identity > the legacy day key is handed out once, not re-handed each sync | PORTED | `the legacy day key is handed out once not re-handed each sync` | same `legacyRetired` assertions |
 | counter record identity > a day whose first sync only touched the open bucket still retires the legacy id, with a later bucket | PORTED | `a first sync that only touched the open bucket retires the legacy id later` | - |
 | counter record identity > calories ride the same grid as steps | PORTED | `calories ride the same grid as steps` | same `active_cal`→`steps` id-rewrite check and 80 kcal |
+
+| — | KOTLIN-ONLY | FitWellnessExtrasTest: `Pulse Ox in the monitor file becomes one record per reading, apart from the snapshot's`, `five-minute HRV values ride beside the nightly summary, in ms`, `thresholds and scores land as watch-only samples at the watch's time`, `restless moments are keyed to the night, and dropped without one`, `a file with only extras is not empty, and later files win the snapshots` | the series from files already pulled: spo2 (269), hrv_value (371), functional_metrics (356), hill_score (402), endurance_score (403), sleep_restless_moments (382) |
 
 ## test/devices/garmin/garmin_notification_actions_test.dart
 Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/kotlin/tech/mmarca/openvitals/devices/garmin/GarminNotificationActionsTest.kt

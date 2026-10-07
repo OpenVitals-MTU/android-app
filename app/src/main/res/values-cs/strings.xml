@@ -499,6 +499,8 @@
     <string name="settings_home_widget_refresh_2h">2 h</string>
     <string name="settings_watch_stay_connected">Zůstat připojeno</string>
     <string name="settings_watch_stay_connected_body">Udržuje spojení s hodinkami, kdykoli jsou v dosahu. Hodinky pak mohou stahovat počasí, najít tento telefon a předat nové záznamy hned, jak skončí — za cenu vyšší spotřeby baterie hodinek i telefonu.</string>
+    <string name="settings_watch_high_mtu">Velké Bluetooth pakety</string>
+    <string name="settings_watch_high_mtu_body">Žádá hodinky o větší Bluetooth pakety, díky čemuž je synchronizace mnohem rychlejší. Vypněte, pokud hodinky stále ztrácejí spojení nebo se synchronizace nikdy nerozběhne.</string>
     <string name="garmin_find_phone_channel">Najít můj telefon</string>
     <string name="garmin_find_phone_title">Vaše hodinky hledají tento telefon</string>
     <string name="garmin_find_phone_body">Klepnutím vyzvánění zastavíte.</string>
@@ -2850,6 +2852,14 @@
     <string name="settings_watch_metric_recovery_time">Doba zotavení</string>
     <string name="settings_watch_metric_training_readiness">Připravenost k tréninku</string>
     <string name="settings_watch_metric_training_load">Tréninková zátěž</string>
+    <string name="settings_watch_metric_ftp">Funkční prahový výkon</string>
+    <string name="settings_watch_metric_lactate_threshold">Laktátový práh</string>
+    <string name="settings_watch_metric_lactate_threshold_hr">při %1$d tepech/min</string>
+    <string name="settings_watch_metric_hill_score">Skóre do kopce</string>
+    <string name="settings_watch_metric_hill_score_parts">Síla %1$d, vytrvalost %2$d</string>
+    <string name="settings_watch_metric_endurance_score">Skóre vytrvalosti</string>
+    <string name="settings_watch_metric_restless_moments">Neklidné chvíle</string>
+    <string name="settings_watch_metric_watts">%1$d W</string>
     <string name="settings_watch_average_prefix">průměr %1$s</string>
     <plurals name="dashboard_watch_more">
         <item quantity="one">+%1$d další</item>

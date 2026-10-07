@@ -98,7 +98,7 @@ class GarminGattRadio @Inject constructor(
         listenAfter: Duration,
         onProgress: ((DeviceSyncProgress) -> Unit)?,
     ): GarminPullResult = onSessionThread {
-        val client = GarminGattClient(context, device.address)
+        val client = GarminGattClient(context, device.address, highMtu = stateStore.highMtu(device.address))
         var transport: GarminFrameTransport? = null
         val handshakeReady = CompletableDeferred<Unit>()
         val session = GarminSession(
@@ -268,7 +268,7 @@ class GarminGattRadio @Inject constructor(
         timeout: Duration,
         cancelled: CompletableDeferred<Unit>?,
     ): Boolean = onSessionThread {
-        val client = GarminGattClient(context, address)
+        val client = GarminGattClient(context, address, highMtu = stateStore.highMtu(address))
         var transport: GarminFrameTransport? = null
         val ready = CompletableDeferred<Unit>()
         // The watch reports a find it ended itself. Without this the phone shows
@@ -383,7 +383,7 @@ class GarminGattRadio @Inject constructor(
         tag: String,
         body: suspend (GarminSession) -> T,
     ): T? = onSessionThread {
-        val client = GarminGattClient(context, address)
+        val client = GarminGattClient(context, address, highMtu = stateStore.highMtu(address))
         var transport: GarminFrameTransport? = null
         val ready = CompletableDeferred<Unit>()
         val session = GarminSession(
@@ -432,8 +432,12 @@ class GarminGattRadio @Inject constructor(
         /** How long a watch gets to finish its handshake before a find gives up. */
         val HANDSHAKE_TIMEOUT = 15.seconds
 
-        /** A whole-sync safety net; the session's stage timers fail sooner. */
-        val SYNC_TIMEOUT = 3.minutes
+        /**
+         * A whole-sync safety net, wide enough for a first sync of a watch that
+         * holds months of activities on the legacy transport. The session's
+         * stage timers catch a stall long before this does.
+         */
+        val SYNC_TIMEOUT = 30.minutes
 
         /** A best-effort cancel must not hold the link hostage. */
         val FIND_CANCEL_TIMEOUT = 3.seconds

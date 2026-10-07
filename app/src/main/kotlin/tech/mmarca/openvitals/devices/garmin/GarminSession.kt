@@ -84,6 +84,9 @@ class GarminSession(
     /** Whether the post-capabilities start-up sequence has gone out. */
     private var initialised = false
 
+    /** Capabilities a watch declares as FIT records, when it sends no CONFIGURATION. */
+    private val fitCapabilities = GarminFitCapabilities()
+
     /** Whether weather has been pushed this session. */
     private var weatherPushed = false
 
@@ -262,45 +265,18 @@ class GarminSession(
                 )
                 send(buildConfigurationResponse())
                 // Some watches send CONFIGURATION again mid-session. Every one is
-                // answered; the start-up sequence below runs once.
-                if (initialised) {
-                    pushWeatherOnce()
-                    return
-                }
-                initialised = true
-                // The companion's post-capabilities sequence, in its order: the file
-                // types ask, the settings, the clock, then SYNC_READY. The watch
-                // serves no files until it knows what we support.
-                send(buildSupportedFileTypesRequest())
-                // Sent on every connection. The weather flag enables the watch's weather feature.
-                send(
-                    buildDeviceSettings(
-                        listOf(
-                            GarminDeviceSetting.AUTO_UPLOAD_ENABLED to true,
-                            GarminDeviceSetting.WEATHER_CONDITIONS_ENABLED to true,
-                            GarminDeviceSetting.WEATHER_ALERTS_ENABLED to false,
-                        ),
-                    ),
-                )
-                if (hooks.setupWizardPending || GarminCapability.REQUEST_PAIR_FLOW in capabilities) {
-                    // Fresh watch on the pairing wizard: the trio a companion sends on first connect.
-                    GarminLog.log("[GARMIN-SYNC] fresh watch asked for the pair flow; completing setup")
-                    send(buildSystemEvent(GarminSystemEventType.PAIR_COMPLETE))
-                    send(buildSystemEvent(GarminSystemEventType.SYNC_COMPLETE))
-                    send(buildSystemEvent(GarminSystemEventType.SETUP_WIZARD_COMPLETE))
-                    hooks.onSetupWizardCompleted?.invoke()
-                }
-                // The clock nudge a companion sends on every connection.
-                send(buildSystemEvent(GarminSystemEventType.TIME_UPDATED))
-                // Unconditional: older firmware waits for it before it subscribes
-                // for notifications or lists files, whatever it said about file types.
-                send(buildSystemEvent(GarminSystemEventType.SYNC_READY))
-                if (hooks.hostForeground?.invoke() == true) {
-                    GarminLog.log("[GARMIN-SYNC] telling the watch the app is in the foreground")
-                    notifyHostForeground(true)
-                }
-                hooks.onHandshakeReady?.invoke()
-                pushWeatherOnce()
+                // answered; the start-up sequence runs once.
+                completeInitialisation()
+            }
+
+            is GarminFitDefinition -> {
+                send(buildFitStatus(GarminMessageId.FIT_DEFINITION))
+                fitCapabilities.define(message.payload)
+            }
+
+            is GarminFitData -> {
+                send(buildFitStatus(GarminMessageId.FIT_DATA))
+                fitCapabilities.capabilitiesIn(message.payload)?.let { onFitCapabilities(it) }
             }
 
             is GarminNotificationSubscription -> {
@@ -452,6 +428,64 @@ class GarminSession(
                 )
             }
         }
+    }
+
+    /**
+     * The companion's post-capabilities sequence, once per session: the file
+     * types ask, the settings, the clock, then SYNC_READY. The watch serves
+     * no files until it knows what we support.
+     */
+    private suspend fun completeInitialisation() {
+        if (initialised) {
+            pushWeatherOnce()
+            return
+        }
+        initialised = true
+        // The companion's post-capabilities sequence, in its order: the file
+        // types ask, the settings, the clock, then SYNC_READY. The watch
+        // serves no files until it knows what we support.
+        send(buildSupportedFileTypesRequest())
+        // Sent on every connection. The weather flag enables the watch's weather feature.
+        send(
+            buildDeviceSettings(
+                listOf(
+                    GarminDeviceSetting.AUTO_UPLOAD_ENABLED to true,
+                    GarminDeviceSetting.WEATHER_CONDITIONS_ENABLED to true,
+                    GarminDeviceSetting.WEATHER_ALERTS_ENABLED to false,
+                ),
+            ),
+        )
+        if (hooks.setupWizardPending || GarminCapability.REQUEST_PAIR_FLOW in capabilities) {
+            // Fresh watch on the pairing wizard: the trio a companion sends on first connect.
+            GarminLog.log("[GARMIN-SYNC] fresh watch asked for the pair flow; completing setup")
+            send(buildSystemEvent(GarminSystemEventType.PAIR_COMPLETE))
+            send(buildSystemEvent(GarminSystemEventType.SYNC_COMPLETE))
+            send(buildSystemEvent(GarminSystemEventType.SETUP_WIZARD_COMPLETE))
+            hooks.onSetupWizardCompleted?.invoke()
+        }
+        // The clock nudge a companion sends on every connection.
+        send(buildSystemEvent(GarminSystemEventType.TIME_UPDATED))
+        // Unconditional: older firmware waits for it before it subscribes
+        // for notifications or lists files, whatever it said about file types.
+        send(buildSystemEvent(GarminSystemEventType.SYNC_READY))
+        if (hooks.hostForeground?.invoke() == true) {
+            GarminLog.log("[GARMIN-SYNC] telling the watch the app is in the foreground")
+            notifyHostForeground(true)
+        }
+        hooks.onHandshakeReady?.invoke()
+        pushWeatherOnce()
+    }
+
+    /**
+     * Capabilities a watch declares as FIT records instead of a CONFIGURATION
+     * message. Without this the handshake waits on a message that never
+     * comes. A configured watch keeps its bitmap.
+     */
+    private suspend fun onFitCapabilities(declared: Set<GarminCapability>) {
+        if (initialised) return
+        capabilities = declared
+        GarminLog.log("[GARMIN-CAPS] from FIT: ${declared.joinToString(", ") { it.wireName }}")
+        completeInitialisation()
     }
 
     private suspend fun requestDirectory() {

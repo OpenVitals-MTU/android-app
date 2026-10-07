@@ -24,8 +24,17 @@ class GarminWellnessMetricTest {
             GarminWellnessMetric.SLEEP_PRESSURE to "sleep_pressure",
             GarminWellnessMetric.SLEEP_NEED_NORMAL_MINUTES to "sleep_need_normal_minutes",
             GarminWellnessMetric.SLEEP_NEED_MINUTES to "sleep_need_minutes",
+            // Added after the Flutter build; no drift rows to match, so only their spelling is pinned.
+            GarminWellnessMetric.SLEEP_RESTLESS_MOMENTS to "sleep_restless_moments",
+            GarminWellnessMetric.FUNCTIONAL_THRESHOLD_POWER to "functional_threshold_power",
+            GarminWellnessMetric.LACTATE_THRESHOLD_POWER to "lactate_threshold_power",
+            GarminWellnessMetric.LACTATE_THRESHOLD_HEART_RATE to "lactate_threshold_heart_rate",
+            GarminWellnessMetric.HILL_SCORE to "hill_score",
+            GarminWellnessMetric.HILL_STRENGTH to "hill_strength",
+            GarminWellnessMetric.HILL_ENDURANCE to "hill_endurance",
+            GarminWellnessMetric.ENDURANCE_SCORE to "endurance_score",
         )
-        assertEquals(14, GarminWellnessMetric.entries.size)
+        assertEquals(22, GarminWellnessMetric.entries.size)
         expected.forEach { (metric, storageName) ->
             assertEquals(storageName, metric.storageName)
         }
