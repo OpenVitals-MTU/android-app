@@ -69,6 +69,17 @@ class UnitFormatterTest {
         assertEquals("+2.7 deg F", formatter(UnitSystem.IMPERIAL).temperatureDelta(1.5).text)
     }
 
+    @Test fun `a temperature delta that rounds to zero prints unsigned`() {
+        // The dashboard tile read "-0.0 deg C" for a hair below zero.
+        val metric = formatter(UnitSystem.METRIC)
+        assertEquals("0.0 deg C", metric.temperatureDelta(-0.04).text)
+        assertEquals("0.0 deg C", metric.temperatureDelta(0.04).text)
+        assertEquals("0.0 deg C", metric.temperatureDelta(-0.0).text)
+        assertEquals("+0.3 deg C", metric.temperatureDelta(0.26).text)
+        assertEquals("-0.1 deg C", metric.temperatureDelta(-0.06).text)
+        assertEquals("0.0 deg F", formatter(UnitSystem.IMPERIAL).temperatureDelta(-0.02).text)
+    }
+
     @Test fun `metric blood glucose uses mmol per liter`() {
         assertEquals("5.6 mmol/L", formatter(UnitSystem.METRIC).bloodGlucose(5.6).text)
     }
