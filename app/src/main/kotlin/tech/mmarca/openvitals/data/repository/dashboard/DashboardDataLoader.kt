@@ -458,7 +458,10 @@ class DashboardDataLoader @Inject constructor(
             readSkinTemperaturePermission,
             "skin temperature",
         ) {
+            // The newest entry that carries a delta, as the overview card reads it: a
+            // record with only a baseline is not a reading and must not blank the tile.
             hc.readSkinTemperatureEntries(nightStart, dayEnd)
+                .filter { it.averageDeltaCelsius != null }
                 .maxByOrNull { it.time }
                 ?.averageDeltaCelsius
         }
