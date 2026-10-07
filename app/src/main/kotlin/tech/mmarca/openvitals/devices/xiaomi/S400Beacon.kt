@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.devices.xiaomi
 
+import tech.mmarca.openvitals.devices.core.ServiceDataFilter
 import tech.mmarca.openvitals.domain.model.ScaleReading
 
 /** One decoded broadcast of the scale: whose weigh-in it belongs to, and what it adds. */
@@ -67,11 +68,19 @@ object S400Beacon {
      * with, and the mask that picks it out: an encrypted object, from that
      * product. The scale's idle beacons fail it, so they wake nobody.
      */
-    val scanFilters: List<ScanFilterBytes> = PRODUCT_IDS.map { productId ->
+    val scanFilters: List<ServiceDataFilter> = PRODUCT_IDS.map { productId ->
         val measurement = CONTROL_ENCRYPTED or CONTROL_HAS_OBJECT
-        ScanFilterBytes(
+        ServiceDataFilter(
             data = byteArrayOf(measurement.toByte(), 0, productId.toByte(), (productId ushr 8).toByte()),
             mask = byteArrayOf(measurement.toByte(), 0, 0xFF.toByte(), 0xFF.toByte()),
+        )
+    }
+
+    /** Any frame of each product, idle beacons included: what finds a scale that is merely awake. */
+    val discoveryFilters: List<ServiceDataFilter> = PRODUCT_IDS.map { productId ->
+        ServiceDataFilter(
+            data = byteArrayOf(0, 0, productId.toByte(), (productId ushr 8).toByte()),
+            mask = byteArrayOf(0, 0, 0xFF.toByte(), 0xFF.toByte()),
         )
     }
 
@@ -176,13 +185,4 @@ object S400Beacon {
 
     private fun ByteArray.u32(at: Int): Long =
         u16(at).toLong() or (u16(at + 2).toLong() shl 16)
-}
-
-/** A scan filter on service data: the bytes to find, under the bits that matter. */
-class ScanFilterBytes(val data: ByteArray, val mask: ByteArray) {
-
-    /** Whether [serviceData] would pass this filter. The radio applies the same test in hardware. */
-    fun matches(serviceData: ByteArray): Boolean =
-        serviceData.size >= data.size &&
-            data.indices.all { (serviceData[it].toInt() and mask[it].toInt()) == (data[it].toInt() and mask[it].toInt()) }
 }

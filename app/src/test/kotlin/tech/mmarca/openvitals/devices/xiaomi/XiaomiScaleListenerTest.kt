@@ -29,6 +29,7 @@ import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.contract.FakeScaleWeighInRepository
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
+import tech.mmarca.openvitals.devices.core.pairing.CompanionDevice
 import tech.mmarca.openvitals.devices.core.pairing.CompanionDevicePairing
 import tech.mmarca.openvitals.domain.model.ScaleReading
 
@@ -106,8 +107,7 @@ class XiaomiScaleListenerTest {
 
     @Test
     fun `an app start listens again, keeps the half-hourly re-arm, and retries what is waiting`() {
-        store.setBindKey(key)
-        store.bind("8C:D0:B2:F6:BE:EF", profile = 1)
+        store.setUp(scale, "Scale", key)
         val request = slot<PeriodicWorkRequest>()
 
         listener.onAppStart()
@@ -128,28 +128,13 @@ class XiaomiScaleListenerTest {
 
     @Test
     fun `Bluetooth being off is a status, and the re-arm stays scheduled to catch it coming back`() {
-        store.setBindKey(key)
+        store.setUp(scale, "Scale", key)
         radio.answer = ScaleListenerStatus.BLUETOOTH_OFF
 
         assertEquals(ScaleListenerStatus.BLUETOOTH_OFF, listener.arm())
 
         assertEquals(ScaleListenerStatus.BLUETOOTH_OFF, listener.status.value)
         verify(exactly = 1) { workManager.enqueueUniquePeriodicWork(any(), any(), any()) }
-    }
-
-    @Test
-    fun `Android can be asked to watch for the scale once the scale is known`() = runTest {
-        store.setBindKey(key)
-        coEvery { companion.associate(any(), any(), any()) } returns true
-        every { companion.isAssociated("8C:D0:B2:F6:BE:EF") } returns true
-
-        assertFalse("no scale to name yet", listener.allowSystemWake())
-        assertFalse(listener.isWokenBySystem())
-
-        store.bind("8C:D0:B2:F6:BE:EF", profile = 1)
-
-        assertTrue(listener.allowSystemWake())
-        assertTrue(listener.isWokenBySystem())
     }
 
     private val scale = "8C:D0:B2:F6:BE:EF"
@@ -160,9 +145,25 @@ class XiaomiScaleListenerTest {
     }
 
     @Test
+    fun `adding a scale goes through Android's dialog, which also makes Android watch for it`() = runTest {
+        coEvery { companion.discover(any(), any()) } returns CompanionDevice(scale, "Xiaomi Scale S400 BEEF")
+        every { companion.isAssociated(scale) } returns true
+
+        val found = listener.findScale()!!
+        listener.setUp(found, name = "Bathroom", key = key)
+
+        coVerify(exactly = 1) { companion.discover(S400Beacon.SERVICE_UUID, S400Beacon.discoveryFilters) }
+        assertEquals("Bathroom" to scale, store.config.value.name to store.config.value.address)
+        assertEquals(listOf(scale to true), radio.arms)
+        assertTrue(listener.isWokenBySystem())
+        // The association can be revoked in Android's settings; the device screen can ask again.
+        coEvery { companion.associate(scale, any(), any()) } returns true
+        assertTrue(listener.allowSystemWake())
+    }
+
+    @Test
     fun `the scale waking holds the foreground and a fresh scan until both frames are in`() = runTest {
-        store.setBindKey(key)
-        store.bind(scale, profile = 1)
+        store.setUp(scale, "Scale", key)
         val listener = listener(TestScope(testScheduler))
 
         // Android hands the address over in lower case.
@@ -182,8 +183,7 @@ class XiaomiScaleListenerTest {
 
     @Test
     fun `a weigh-in that never completes gives the foreground back when its window runs out`() = runTest {
-        store.setBindKey(key)
-        store.bind(scale, profile = 1)
+        store.setUp(scale, "Scale", key)
         // Yesterday's weigh-in is complete, and is not what this window waits for.
         hear(ScaleReading(70.1, 80, 540.0, 495.0), scaleTimestamp = 1744164205)
         val listener = listener(TestScope(testScheduler))
@@ -200,8 +200,7 @@ class XiaomiScaleListenerTest {
 
     @Test
     fun `one window per weigh-in, and none for a device that is not the scale`() = runTest {
-        store.setBindKey(key)
-        store.bind(scale, profile = 1)
+        store.setUp(scale, "Scale", key)
         val listener = listener(TestScope(testScheduler))
 
         // A watch is a companion device too, and Android reports every one to every service.
@@ -224,20 +223,19 @@ class XiaomiScaleListenerTest {
     }
 
     @Test
-    fun `a new key listens for any scale afresh, and removing the scale stops everything`() {
-        store.setBindKey(key)
-        store.bind("8C:D0:B2:F6:BE:EF", profile = 1)
+    fun `a new key keeps the scale, and removing the scale stops everything`() {
+        store.setUp(scale, "Scale", key)
+        store.setKeyRejected(true)
 
-        listener.useKey(ByteArray(16) { 9 })
+        listener.changeKey(ByteArray(16) { 9 })
 
-        // The old scale's address went with the old key.
-        assertEquals(listOf<Pair<String?, Boolean>>(null to true), radio.arms)
+        assertEquals(scale, store.config.value.address)
+        assertFalse(store.config.value.keyRejected)
 
-        store.bind("8C:D0:B2:F6:BE:EF", profile = 1)
         listener.forget()
 
         // Android must stop watching for a scale the app no longer knows.
-        verify(exactly = 1) { companion.disassociate("8C:D0:B2:F6:BE:EF") }
+        verify(exactly = 1) { companion.disassociate(scale) }
         assertEquals(1, radio.disarms)
         verify(exactly = 1) { workManager.cancelUniqueWork(XiaomiScaleListener.WORK_NAME) }
         assertNull(store.bindKey())

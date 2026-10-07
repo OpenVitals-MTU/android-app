@@ -22,6 +22,7 @@ import java.time.Duration
 import kotlin.math.roundToLong
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.GarminWellnessMetric
+import tech.mmarca.openvitals.ui.components.DeviceValueRow
 import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
@@ -107,7 +108,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.todayItems(metrics: W
     }
     if (stress != null) {
         item(key = "stress") {
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_stress),
                 supporting = averageOf(metrics.stressToday)?.let {
                     stringResource(R.string.settings_watch_average_prefix, it)
@@ -118,7 +119,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.todayItems(metrics: W
     }
     if (energy != null) {
         item(key = "body-energy") {
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_body_battery),
                 supporting = metrics.bodyEnergyToday.maxOfOrNull { it.value }?.toString(),
                 value = "${energy.value}",
@@ -131,7 +132,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.todayItems(metrics: W
             val today = (moderate ?: 0) + 2 * (vigorous ?: 0)
             // The goal is weekly; the watch's running total resets nightly.
             val week = metrics.intensityMinutesWeek ?: today
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_intensity_minutes),
                 supporting = stringResource(
                     R.string.settings_watch_metric_intensity_goal,
@@ -156,7 +157,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.lastNightItems(metric
     }
     if (score != null) {
         item(key = "sleep-score") {
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_sleep_score),
                 value = "${score.value}",
             )
@@ -164,7 +165,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.lastNightItems(metric
     }
     if (awake != null) {
         item(key = "awake") {
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_awake),
                 value = formatWatchDuration(Duration.ofSeconds(awake)),
             )
@@ -172,7 +173,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.lastNightItems(metric
     }
     if (awakenings != null) {
         item(key = "awakenings") {
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_awakenings),
                 value = "$awakenings",
             )
@@ -197,7 +198,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.lastNightItems(metric
                     comparison.usualText,
                 )
             }
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_sleep_coach),
                 supporting = supporting,
                 value = reading.neededText,
@@ -250,7 +251,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.trainingItems(metrics
     }
     if (recovery != null) {
         item(key = "recovery") {
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_recovery_time),
                 value = formatWatchDuration(Duration.ofMinutes(recovery)),
             )
@@ -258,7 +259,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.trainingItems(metrics
     }
     if (readiness != null) {
         item(key = "readiness") {
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_training_readiness),
                 value = "$readiness",
             )
@@ -267,7 +268,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.trainingItems(metrics
     if (acute != null) {
         item(key = "acute-load") {
             val chronic = metrics.valueOf(GarminWellnessMetric.TRAINING_LOAD_CHRONIC)
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_training_load),
                 supporting = chronic?.toString(),
                 value = "$acute",

@@ -10,6 +10,7 @@ import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.features.devicesync.DeviceSyncScreen
 import tech.mmarca.openvitals.features.imports.csv.CsvImportScreen
 import tech.mmarca.openvitals.features.reports.ReportBuilderScreen
+import tech.mmarca.openvitals.features.scales.ScaleDeviceScreen
 import tech.mmarca.openvitals.features.scales.ScalesSettingsScreen
 import tech.mmarca.openvitals.features.settings.ActivitiesSettingsScreen
 import tech.mmarca.openvitals.features.settings.BodyProfileSettingsScreen
@@ -68,15 +69,18 @@ internal fun NavGraphBuilder.settingsRoutes(
         )
     }
 
-    // A bespoke screen: the scale's key, whether the phone is listening, and the last weigh-in.
+    // A bespoke screen: the scale's card plus the add flow, like the watches, and its device view.
     composable(Screen.SettingsScales.route) {
         ScalesSettingsScreen(
             viewModel = hiltViewModel(),
-            onOpenBodyProfile = {
-                navController.navigate(Screen.SettingsBodyProfile.route) {
-                    launchSingleTop = true
-                }
-            },
+            onOpenScale = { navController.navigate(Screen.ScaleDevice.route) { launchSingleTop = true } },
+        )
+    }
+    composable(Screen.ScaleDevice.route) {
+        ScaleDeviceScreen(
+            viewModel = hiltViewModel(),
+            onOpenBodyProfile = { navController.navigate(Screen.SettingsBodyProfile.route) { launchSingleTop = true } },
+            onRemoved = { navController.popBackStack() },
         )
     }
 

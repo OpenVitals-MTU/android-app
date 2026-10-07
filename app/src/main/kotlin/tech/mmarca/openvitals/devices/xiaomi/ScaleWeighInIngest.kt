@@ -31,7 +31,6 @@ class ScaleWeighInIngest(
     private val store: XiaomiScaleStore,
     private val weighIns: ScaleWeighInRepository,
     private val writer: ScaleWeighInWriter,
-    private val listener: XiaomiScaleListener,
     private val scope: CoroutineScope,
     private val now: () -> Instant,
 ) {
@@ -41,9 +40,8 @@ class ScaleWeighInIngest(
         store: XiaomiScaleStore,
         weighIns: ScaleWeighInRepository,
         writer: ScaleWeighInWriter,
-        listener: XiaomiScaleListener,
         dispatchers: DispatcherProvider,
-    ) : this(store, weighIns, writer, listener, CoroutineScope(SupervisorJob() + dispatchers.io), Instant::now)
+    ) : this(store, weighIns, writer, CoroutineScope(SupervisorJob() + dispatchers.io), Instant::now)
 
     // Broadcasts arrive faster than a write finishes. One at a time, in order.
     private val ingesting = Mutex()
@@ -77,9 +75,9 @@ class ScaleWeighInIngest(
 
     /** True when the broadcast added something to a weigh-in. */
     private suspend fun fold(advert: ScaleAdvert): Boolean {
-        val key = store.bindKey() ?: return false
         val config = store.config.value
-        if (config.address != null && !config.address.equals(advert.address, ignoreCase = true)) return false
+        val key = store.bindKey()?.takeIf { config.isSetUp } ?: return false
+        if (!config.address.equals(advert.address, ignoreCase = true)) return false
         // The scale says everything many times over.
         if (advert.serviceData.contentEquals(lastServiceData)) return false
         lastServiceData = advert.serviceData
@@ -100,11 +98,10 @@ class ScaleWeighInIngest(
         if (frame.reading.isEmpty) return false
         ScaleLog.log(if (frame.reading.weightKg != null) "frame heard: weight" else "frame heard: second impedance")
 
-        if (!config.isBound) {
-            // The key opened it, so this is the user's scale and, stepping on it now, the user.
-            store.bind(advert.address.uppercase(), frame.profile)
-            // From here on only this scale's broadcasts need to wake the app.
-            listener.arm(restart = true)
+        if (config.profile == null) {
+            // The scale knows its users by slot and never says which is whose. The first weigh-in
+            // the key opens is the user's own: it was taken to finish the setup.
+            store.setProfile(frame.profile)
         } else if (frame.profile != config.profile) {
             // Someone else in the household. Their measurements are not this phone's to keep.
             store.noteIgnoredProfile(frame.profile, now().toEpochMilli())
