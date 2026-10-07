@@ -567,11 +567,31 @@ internal fun LazyListScope.skinTemperatureContent(
     val display = state.display.metric
     if (display.hasVitalsEntries) {
         val chartEntries = skinTemperatureChartEntries(state.skinTemperature)
+        // The samples only travel for a day window; a line needs two of them.
+        val zone = ZoneId.systemDefault()
+        val daySamples = skinTemperatureDaySamples(
+            entries = state.skinTemperature,
+            dayStart = period.start.atStartOfDay(zone).toInstant(),
+            dayEnd = period.start.plusDays(1).atStartOfDay(zone).toInstant(),
+        )
         renderChartMetricSections(
             sectionContext = sectionContext,
             selectedRange = state.selectedRange,
             period = period,
             selectedDate = chartDaySelection.selectedDate,
+            intradayChart = if (daySamples.size >= 2) {
+                {
+                    SkinTemperatureDayChart(
+                        date = period.start,
+                        samples = daySamples,
+                        unitFormatter = unitFormatter,
+                        dateTimeFormatterProvider = dateTimeFormatterProvider,
+                        modifier = metricModifier(),
+                    )
+                }
+            } else {
+                null
+            },
             periodChart = if (chartEntries.isNotEmpty()) {
                 {
                     MetricLineChart(
