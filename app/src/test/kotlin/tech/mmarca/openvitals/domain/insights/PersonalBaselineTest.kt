@@ -82,6 +82,51 @@ class PersonalBaselineTest {
     }
 
     @Test
+    fun dropsZeroAndNegativeDaysByDefault() {
+        // A zero day on a count metric is a day nothing was logged.
+        val values = listOf(-0.2, 0.0, 0.1, 0.3, 0.5)
+            .mapIndexed { index, value ->
+                BaselineValue(referenceDate.minusDays(index.toLong()), value)
+            }
+
+        val insight = checkNotNull(
+            personalBaselineInsight(
+                currentValue = 0.3,
+                values = values,
+                referenceDate = referenceDate,
+                windows = listOf(30),
+            ),
+        )
+
+        assertEquals(3, insight.primarySummary.sampleCount)
+        assertEquals(0.3, insight.primarySummary.average, 0.0001)
+    }
+
+    @Test
+    fun keepsZeroAndNegativeDaysForASignedMetric() {
+        // A skin temperature variation below its baseline is a reading, not a gap.
+        val values = listOf(-0.2, 0.0, 0.1, 0.3, 0.5)
+            .mapIndexed { index, value ->
+                BaselineValue(referenceDate.minusDays(index.toLong()), value)
+            }
+
+        val insight = checkNotNull(
+            personalBaselineInsight(
+                currentValue = -0.4,
+                values = values,
+                referenceDate = referenceDate,
+                windows = listOf(30),
+                includeNonPositive = true,
+            ),
+        )
+
+        assertEquals(5, insight.primarySummary.sampleCount)
+        assertEquals(0.14, insight.primarySummary.average, 0.0001)
+        assertEquals(-0.54, insight.deviation, 0.0001)
+        assertEquals(BaselineStatus.UNUSUAL_LOW, insight.status)
+    }
+
+    @Test
     fun returnsNullWhenThereAreNotEnoughSamples() {
         val values = listOf(
             BaselineValue(referenceDate, 10.0),
