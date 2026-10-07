@@ -11,79 +11,34 @@
 
 Privacy-first Health Connect dashboard, activity tracker, and manual entry app for Android.
 
-OpenVitals helps you review Health Connect data, record or import workouts, import supported Apple Health exports, and add supported manual entries without creating an account or sending health data to an OpenVitals server. The dashboard is read-only by default; writes happen only when you explicitly save or import records back to Health Connect.
+OpenVitals reads from Health Connect and gives you one place to review the data already there, add your own records, record activities, import existing data, and work with recovery and readiness metrics locally.
+
+The dashboard is read-only by default. Writes to Health Connect happen only through actions you start or enable, such as saving, recording, importing or syncing data.
+
+No OpenVitals account is required, and the app has no `INTERNET` permission. OpenVitals is open source under AGPL-3.0-or-later.
 
 ## Install
 
-| Channel | Link | Best for |
-| --- | --- | --- |
-| Google Play | [Install or join testing](https://play.google.com/store/apps/details?id=tech.mmarca.openvitals) |  |
-| GitHub releases | [Download signed release and debug APKs](https://github.com/OpenVitals-MTU/android-app/releases) | |
-| Source | [GitHub](https://github.com/OpenVitals-MTU/android-app) | |
+| Channel | Link |
+| --- | --- |
+| Google Play | [Install or join testing](https://play.google.com/store/apps/details?id=tech.mmarca.openvitals) |
+| F-Droid | [Install from F-Droid](https://f-droid.org/en/packages/tech.mmarca.openvitals/) |
+| GitHub releases | [Download signed release and debug APKs](https://github.com/OpenVitals-MTU/android-app/releases) |
+| Source | [Build it yourself](#build-from-source) |
 
-## Why OpenVitals
+## What you can do with OpenVitals
 
-- No account, no ads, no analytics SDKs, no cloud health-data sync
-- No app-level `INTERNET` permission in the merged app manifest
-- Health Connect remains the source of truth
-- Manual entries are written only after an explicit save action
-- Sensitive cycle data is requested only as an explicit Health Connect permission category
-- Open source under AGPL-3.0-or-later
+- Review most metrics by day, week, month or year, with charts, history, source information and period statistics. Charts also expose summaries and navigation to screen readers.
+- Log by hand: drinks and hydration, food and nutrition, activities, mindfulness, cycle records, weight, height, body fat, blood pressure, SpO2, respiratory rate and body temperature. Records with a matching Health Connect type are written there; some cycle-journal data stays local because Health Connect has no record type for it.
+- Record activities with GPS, offline maps and Bluetooth sensors. Routes and workouts can also be imported, and guided workout plans can be run from the phone.
+- Read recovery views derived on the phone: Daily Readiness, Body Energy and Training Readiness, together with HRV status, physiological stress, adaptive goals and explanation screens based on the data available.
+- Bring in Apple Health exports, CSV data, route and workout files, and supported medical records.
+- Generate PDF health reports fully on-device, with charts, statistics and sections for supported health data.
+- Track your cycle with a local day journal, estimates, reminders, pill tracking, backup and a home-screen widget alongside the records kept in Health Connect.
+- Put widgets on the home screen for readiness, Body Energy, vitals, selected metrics and quick beverage logging.
+- Choose metric or imperial units, and pick the app language from fourteen translations or follow the system.
 
-## Highlights
-
-- Summary dashboard for activity, recovery, beverages, nutrition, body, heart, vitals, mindfulness, and optional cycle data
-- PDF health report export built fully on-device, with charts, statistics, and clinical sections for blood pressure, glucose, workouts, sleep, cycle tracking, and medical records
-- Cycle tracking with a day log logged one thing at a time, next-period ranges built from your own history, local cycle reminders, a contraceptive pill scheme with a daily reminder, a home-screen widget, and a journal backup; Health Connect keeps its records and the journal stays on the phone
-- Period detail screens with `Day / Week / Month / Year` navigation and reorderable metric sections
-- Charts that speak to a screen reader: a summary per chart, one element per day, and zoom and scrub offered as actions
-- Daily goal cards that say how far ahead or behind the period is and what each remaining day needs to average to land on goal, and a goal ring on each day of the Month view
-- Body measurements charted as a trend line over a fitted scale, and nutrition periods led by a daily average rather than a total nobody eats by
-- Daily Readiness with Body Energy, Training Readiness, physiological stress, HRV status, intensity minutes, adaptive goals, and local explanation screens
-- Body Energy that reads how well a night was slept - efficiency, time awake, deep and REM share - and not only how long it lasted
-- Refreshed UI/UX with clearer Summary-first navigation, metric screens, and entry flows
-- Health Connect permission onboarding with clear data categories and a one-tap full setup option
-- Manual logging for beverages with hydration, caffeine, and nutrition defaults, an optional period a caffeinated drink was drunk over, nutrition entries with calories, protein, carbs, fat and any other Health Connect nutrient, editable from the Nutrition screen, body measurements, vitals, mindfulness sessions with notes, and activities
-- Food logging from a catalog you build yourself - name, amount, category and any of Health Connect's nutrients - with each portion saved as one nutrition record, and every nutrient typed in the unit its label prints (µg, mg, g or kcal)
-- An optional basal metabolic rate estimate (Mifflin-St Jeor) written to Health Connect one day at a time, off by default, that leaves days another source covers alone
-- Opt-in hydration reminders with active hours, daily-goal pause logic, and automatic hiding after saved hydration entries
-- Achievement badges for activity, distance, floors, workouts, hydration, sleep, and mindfulness
-- Home screen widgets for readiness, Body energy, today's vitals, chosen metrics and quick beverage logging, refreshed from Health Connect every 15, 30, 60 or 120 minutes as you choose
-- A Start over card in Settings > Recovery that wipes the Body energy, Recovery and Expenditure history OpenVitals worked out itself and rebuilds it from Health Connect
-- GPX/KML/KMZ route import, FIT activity/course/workout import one file at a time with review or a whole folder written straight to Health Connect, offline PMTiles/Mapsforge map packs with two-finger rotation and a camera that follows the recording, and GPS activity recording with review before saving
-- Elevation correction for imported routes, watch activities and phone recordings from SRTM elevation tiles stored on the phone, so a drifting barometer no longer inflates altitude and gain
-- Elevation gain that ignores indoor GPS altitude noise and barometer glitches, with a climb per split that adds up to the workout's total
-- Blood pressure categories named by the guideline you choose - ACC/AHA 2017, ESH 2023, ESC 2024 or ISH 2020 - with the thresholds and sources shown on the blood pressure screen
-- Workout plans built once and started as guided runs: blocks of exercises with reps or seconds goals, sets, weight and rest per exercise, rests and rounds, reps counted by the phone where it can (push-ups and squats on the proximity sensor, pull-ups and jumps on the accelerometer), timed steps counting down on a ring, spoken cues that duck your music, and plans stored in Health Connect so ones from other apps can be started too
-- Workout export without the route - TCX, FIT or CSV with type, times, duration, distance, calories and heart rate - from every workout detail screen
-- Configurable activity recording dashboard with Focus mode, high-contrast outdoor mode, keep-screen-on support, strength training heart-rate monitoring, and experimental Bluetooth LE sensor integration, with speed, cadence and wheel-sensor distance on rides without GPS
-- Live CoMaps turn-by-turn guidance while recording GPS activities, with the planned route, turn arrows, and destination drawn on the offline map, and guidance optionally saved with the activity on-device
-- CoMaps guidance on a Garmin watch whenever CoMaps is navigating, on its own per-watch switch and independent of activity recording
-- Experimental Garmin watch support over Bluetooth only, on both Garmin transports so older watches such as the Instinct 2X sync too: file sync with a dashboard watch tile, scheduled automatic sync chosen per watch, notification forwarding with ringing calls, an always-connected companion mode with live heart rate and steps, weather from a phone weather app, calendar on the watch, music controls from the wrist, find-my-phone both ways, GPS ephemeris hand-over, points sent to the watch's saved locations, the watch's own settings tree, alarms for older watches that have none, body weight relayed from a paired Garmin scale, and sleep stages estimated on the phone for watches that record none - no vendor account, no internet permission
-- Bathroom scale support for the Xiaomi Body Composition Scale S400: every weigh-in saved to Health Connect as it happens, with the app open or closed, decoded from the scale's own Bluetooth broadcast with the key from your Xiaomi account - weight and heart rate as measured, body fat, lean mass and body water estimated on the phone, no connection to the scale, no internet permission
-- A Wear OS App Status card for a Wear OS watch, showing whether the watch is paired and whether the OpenVitals Wear OS app on it answers; the watch app is still in development
-- App language support with an in-app language picker for system default, English, Czech, Spanish, French, Galician, German, Italian, Japanese, Estonian, Finnish, Polish, Portuguese, Russian, and Simplified Chinese
-- Apple Health export import for supported activity, heart, body, hydration, and vitals records, with background progress and chunked processing for large exports
-- Medical records from Health Connect, shown as received: vaccines, allergies, lab results and nine more categories, imported from FHIR files or an Apple Health export's clinical records after a review step, vaccines, allergies, medications and conditions typed in by hand, exported as one FHIR file, the imported file kept on the phone if you choose, and deleted when OpenVitals added them
-- CSV import with hand-mapped columns for body measurements, vitals and steps - a smart scale's history, a temperature log, a step export - with an optional end-time column giving each steps row its span
-- Health Connect 1.2.0-alpha06 coverage for newer activity records and recording permissions
-- Wheelchair activity and wheelchair push tracking when Health Connect data is available
-- Dedicated Calories detail screen with total, active, and BMR calorie context
-- Body composition insights including Fat-Free Mass Index (FFMI) when weight, height, and body fat are available
-- Activities and Sleep detail screens with integrated overview cards and direct metric links
-- Metric and imperial unit support
-
-## Help Improve It
-
-OpenVitals is still early. Useful feedback is specific: device model, Android version, Health Connect provider version, which permissions were granted, and what screen or workflow failed.
-
-- Try the latest beta from Google Play or GitHub releases
-- Report bugs and feature requests on [GitHub issues](https://github.com/OpenVitals-MTU/android-app/issues)
-- Translate OpenVitals in your language on [Codeberg Translate](https://translate.codeberg.org/projects/openvitals/android-app/)
-- Ask questions and discuss support on [OpenVitals Zulip](http://openvitals.zulipchat.com/)
-- Star or follow the project on [GitHub](https://github.com/OpenVitals-MTU/android-app)
-- Share screenshots or notes from real Health Connect setups, especially route recording and manual entry flows
-- Support ongoing development on [Liberapay](https://liberapay.com/manuel.mmarca.tech/donate)
+For the detailed feature inventory, see the [feature guide](https://docs.openvitals.health/app/features).
 
 ## Screenshots
 
@@ -98,62 +53,146 @@ OpenVitals is still early. Useful feedback is specific: device model, Android ve
     <img width="23%" alt="Beverage entry" src="docs/images/beverageEntry.png">
 </div>
 
-## Features
+More screenshots are on the [docs site](https://docs.openvitals.health/screenshots).
 
-- Summary dashboard with grouped sections for activity, recovery, beverages, nutrition, body, heart, vitals, mindfulness, and optional cycle data
-- Refreshed Material 3 app shell with Settings and Achievements in the top bar plus dashboard quick actions for logging and starting activities
-- Dedicated debug app variant with a separate application ID and diagnostics for troubleshooting
-- Period-based detail screens with `Day / Week / Month / Year` navigation and reorderable metric sections
-- Feature screens for Activity, Activities, Calories, Sleep, Heart & Vitals, Body, Beverages, Caffeine, Nutrition, Mindfulness, Cycle, Manual entry, Onboarding, and Settings
-- Categorized Health Connect onboarding permissions, with one-tap full setup, category-by-category review, and cycle data grouped as an explicit sensitive category
-- Write-permission requests available during one-tap setup or from Add entry and metric entry screens, while dashboard views stay read-only
-- Daily Readiness, Body Energy, Training Readiness, and Stress Tracking screens with rule-based local explanations and confidence context
-- Achievement screen with Fitbit-inspired badges and progress for daily steps, lifetime distance, floors, workouts, hydration, sleep, and mindfulness
-- Health Connect availability checks, including unsupported device/profile handling and provider-update messaging
-- Feature-gated Mindfulness support when the installed Health Connect provider exposes `FEATURE_MINDFULNESS_SESSION`
-- Data Importers setting for supported Apple Health `export.xml` or `export.zip` records, FIT activity/course/workout files, and column-mapped CSV files for body measurements, vitals and steps
-- Cycle tracking with a day log (bleeding, pain, mood, energy, symptoms, notes, pregnancy and ovulation tests, sexual activity, basal body temperature, cervical mucus), a month calendar with the estimated window, a contraceptive pill scheme, local reminders, a home-screen widget, phone-to-phone sync of the journal, and a JSON backup, after Health Connect cycle permissions are granted
-- Metric/Imperial unit preference in Settings, backed by shared display formatters
-- Shared detail-screen scaffold with pull-to-refresh, range selection, period navigation, and calendar date picking
-- Explicit manual entry logging for beverages with hydration, caffeine, and nutrition defaults, nutrition entries for any Health Connect nutrient, activities with optional GPX/KML/KMZ route import, FIT activity/course/workout review from Settings, offline PMTiles/Mapsforge maps, GPS recording, high-contrast outdoor recording, or experimental Bluetooth LE sensors, body measurements, vitals, and mindfulness sessions, written directly to Health Connect
-- Experimental Garmin watch integration: user-initiated file sync into Health Connect and local watch-only metrics, a dashboard watch tile with a sync button, an optional always-connected mode with live heart rate and steps, notification forwarding with a per-app blocklist and ringing calls, weather and calendar glances fed from the phone, the phone's music controlled from the wrist, find-my-phone in both directions, imported GPS ephemeris hand-over, points sent to the watch's saved locations for navigation, alarms for older watches that have no settings tree, and the watch's own settings tree rendered live
-- Experimental bathroom scale support: a Xiaomi Body Composition Scale S400 added as a companion device, each weigh-in heard with the app open or closed and written to Health Connect as weight, heart rate and estimated body composition, weigh-ins of other users left out
+## Devices and integrations
+
+### Garmin watches
+
+[Garmin support](https://docs.openvitals.health/features/smartwatches) is experimental. A paired watch talks to OpenVitals over Bluetooth, with no Garmin account required. OpenVitals itself has no `INTERNET` permission.
+
+Supported synced data is written to Health Connect where OpenVitals has a matching mapping and Health Connect has a suitable record type. Garmin-only measurements such as Body Battery and watch stress stay in OpenVitals on the phone.
+
+<details>
+<summary>Current Garmin support</summary>
+
+- Sync recorded activity, sleep and wellness files over Bluetooth, manually or with optional periodic sync.
+- Both Garmin transport paths are supported, including older watches such as the Instinct 2X.
+- A dashboard watch tile shows the paired watch and provides sync controls.
+- Activities are written to Health Connect with routes and recorded series where available.
+- Sleep, heart rate, resting heart rate, HRV, respiratory rate, VO2 max, BMR, steps, distance, active calories and supported weight data are written to Health Connect where supported.
+- Body weight from a paired Garmin scale can be relayed through the watch integration.
+- Watch-only data includes stress, Body Battery, intensity minutes, sleep score and sleep need, recovery time, Garmin training readiness, and acute/chronic training load.
+- For watches that provide sleep but no stages, OpenVitals can estimate the stages on the phone.
+- An optional stay-connected mode keeps the Bluetooth link open and shows live heart rate and steps.
+- Forward phone notifications and ringing calls to the watch, with per-app blocking and supported notification actions.
+- Weather can come from a weather app on the phone; calendar and media controls are optional.
+- Find the watch from the phone, or ring the phone from the watch.
+- Read and change the watch's settings tree and alarms where supported. Older watches without a settings tree can use alarms kept on the phone and sent to the watch.
+- Send an imported GPS ephemeris file to the watch.
+- Send named coordinates to the watch's saved locations.
+
+</details>
+
+### Bathroom scale
+
+Experimental [support for the Xiaomi Body Composition Scale S400](https://docs.openvitals.health/features/scales). Every weigh-in is saved to Health Connect as it happens, with the app open or closed, decoded from the scale's own Bluetooth broadcast with the key from your Xiaomi account. Weight and heart rate are saved as measured; body fat, lean mass and body water are estimated on the phone. OpenVitals never connects to the scale and never contacts Xiaomi.
+
+### Bluetooth sensors
+
+Activity recording can use [Bluetooth LE sensors](https://docs.openvitals.health/features/ble-sensors) for heart rate, cycling power, speed and cadence. Wheel-sensor distance can be used on rides without GPS.
+
+A connected heart-rate sensor can also be used during strength training and for the [heart-rate recovery test](https://docs.openvitals.health/features/heart-rate-recovery).
+
+### CoMaps
+
+While [CoMaps](https://docs.openvitals.health/features/comaps-navigation-context) is navigating, OpenVitals can show its turn guidance on the offline activity map during a recording, and optionally save the guidance with the activity on-device.
+
+Guidance can also be sent to a paired Garmin watch on its own switch, independently of activity recording.
+
+### Wear OS watches
+
+A [Wear OS watch](https://docs.openvitals.health/features/smartwatches) can be registered in OpenVitals, and a dashboard card shows whether it is paired and whether the OpenVitals Wear OS app on it answers. The watch app is still in development. Recorded data reaches the phone through Health Connect rather than through the direct Garmin sync path.
+
+### Sync with another phone
+
+OpenVitals can [copy selected Health Connect records](https://docs.openvitals.health/features/device-sync) between two nearby phones over Bluetooth. If the cycle category is selected, its local journal, excluded cycles and declared cycle context are carried with it too.
+
+Both phones show the same six-digit code before anything is transferred. The records are then encrypted for that sync session.
+
+You choose the time range and data categories to copy. Medical records are an exception: when selected, they sync in full regardless of the chosen range.
+
+Re-running a sync does not create duplicate records.
 
 ## Current coverage
 
-- Activity: steps, distance, total calories burned, optional total-calorie estimates, active calories, BMR context, floors climbed, elevation gain, wheelchair pushes, workout sessions, and cardio load
-- Sleep: sessions, duration, sleep stages, sleep-stage time graphs, sleep score, sleep efficiency, and period overview cards
-- Recovery: Daily Readiness, Body Energy, Training Readiness, HRV status, intensity minutes, physiological stress, adaptive goal context, and local explanation screens
-- Heart: heart rate samples and summaries, resting heart rate, HRV
-- Vitals: blood pressure, SpO2, respiratory rate, body temperature, VO2 max
-- Body: weight, BMI, body fat, lean mass, Fat-Free Mass Index (FFMI), bone mass, body water mass, basal metabolic rate
-- Manual entry: beverage/hydration entries with drink presets, caffeine, nutrition defaults, and custom amounts; nutrition entries with calories, protein, carbs, fat and any other Health Connect nutrient; activity sessions with optional GPX/KML/KMZ route import, FIT activity/course/workout review from Settings, offline PMTiles/Mapsforge maps, GPS recording, configurable recording dashboard, Focus mode, high-contrast outdoor mode, strength training heart-rate monitoring, or experimental Bluetooth LE sensors; mindfulness sessions; weight; height; body fat; blood pressure; SpO2; respiratory rate; body temperature; and heart rate variability (HRV)
-- Beverages and caffeine: daily and period hydration totals, active caffeine estimates, bedtime guidance, source and time-of-day insights, Health Connect-backed drink logging with preset or custom drinks, tap-to-save container presets, editable per-container serving sizes, and optional reminders
-- Achievements: badge progress for activity, distance, floors, workouts, hydration, sleep, and mindfulness milestones
-- Nutrition: calories in, meals, macros, caffeine, and selected nutrient totals from Health Connect nutrition records
-- Mindfulness: session list and total duration when supported by Health Connect, plus timer-based and manual session logging with bell previews and optional looping background sounds
-- Cycle tracking: period days, flow levels, ovulation tests, cervical mucus observations, and basal body temperature when Health Connect cycle permissions are granted
-- Medical records: the twelve Health Connect FHIR categories, on Android 14 and newer where Health Connect offers them
-- Entry and session lists are reached from the relevant metric detail screen rather than a global records browser
+OpenVitals currently has screens or data handling for:
+
+- Activity and workouts
+- Sleep and recovery
+- Heart and vitals
+- Body measurements
+- Nutrition, hydration and caffeine
+- Mindfulness
+- Cycle tracking
+- Goals
+- Achievements
+- Medical records
+- Garmin-only wellness data
+
+<details>
+<summary>What is covered in each area</summary>
+
+- **Activity and workouts:** steps, distance, active and total calories, floors, elevation, wheelchair pushes, exercise sessions, routes, cardio load, speed, power and cadence where available.
+- **Sleep and recovery:** sleep sessions and stages, sleep score, sleep efficiency, OpenVitals-derived Daily Readiness, Body Energy and Training Readiness, HRV status, intensity minutes and physiological stress.
+- **Heart and vitals:** heart rate, resting heart rate, HRV, blood pressure, SpO2, respiratory rate, body temperature, skin temperature, blood glucose and VO2 max. Some of these are view-only in the manual-entry UI.
+- **Body:** weight, height, BMI, body fat, lean body mass, BMR, bone mass, body water and Fat-Free Mass Index (FFMI) context where the required measurements are available.
+- **Nutrition, hydration and caffeine:** drinks, hydration, meals, calories, macros, caffeine and the additional Health Connect nutrients present in the data.
+- **Mindfulness:** session history, totals, goals and timer/manual logging where the installed Health Connect provider supports mindfulness records.
+- **Cycle tracking:** periods and flow, ovulation tests, cervical mucus, basal body temperature, intermenstrual bleeding and sexual activity. The local journal also keeps data that Health Connect has no record type for, such as pain, mood, energy, symptoms and notes.
+- **Goals:** configurable daily goals for supported activity metrics, workout minutes, hydration, sleep, nutrition and mindfulness.
+- **Achievements:** badges and progress for daily steps, lifetime distance, floors and other supported achievement categories.
+- **Medical records:** the Health Connect medical-record categories available on Android 14 and newer with a recent Health Connect module. Records are shown as stored; OpenVitals does not interpret their clinical meaning.
+- **Garmin-only data:** stress, Body Battery, intensity minutes, watch sleep metrics, recovery time, Garmin training readiness and acute/chronic training load when the paired watch supplies them.
+
+</details>
+
+A fuller breakdown of what can be viewed, entered, edited, imported or exported is in the [feature guide](https://docs.openvitals.health/app/features).
 
 ## Privacy
 
-- No account required
-- No cloud sync of health data
-- No ads
-- No analytics SDKs
-- No Google Play Services dependency for app functionality
-- Permissions are requested by clear Health Connect categories:
-  - Activity & sleep: required for the dashboard
-  - Heart & recovery, Body, Activity extras, Nutrition & hydration, Mindfulness, and Vitals: optional
-  - Cycle tracking: sensitive optional access, grouped separately so you can grant or skip it explicitly
-  - Medical records: asked for only inside the Medical records area, never with other permissions, one permission per category
-  - Manual entry write access: available from one-tap onboarding or when you use Add entry or a metric entry screen that needs it
-- Permissions can be managed later in Settings
-- Health Connect remains the source of truth; OpenVitals does not store health records locally. The one exception is a medical file you choose to keep from an import, which stays in the app's private storage and is never backed up
-- Imported Apple Health export records are written to Health Connect and are not uploaded to an OpenVitals service
+- No account and no OpenVitals server receiving health data.
+- No ads or analytics SDKs.
+- The shipping app has no Android `INTERNET` permission.
+- No Google Play Services dependency is required for app functionality.
+- OpenVitals opts out of Android cloud backup.
+- Health Connect remains the source of truth wherever it has a record type.
+- The dashboard is read-only by default; writes happen only through actions you explicitly start or enable.
+- Bluetooth is used for sensors, paired watches, the scale and phone-to-phone sync. Data sent over Bluetooth goes only to devices or phones you pair or use with those features.
+- Files are exported or shared only when you choose to do so.
 
-The merged app manifest does not request the `INTERNET` permission.
+Health Connect access is split into categories rather than requested as one block:
+
+- **Activity & sleep:** used by the dashboard.
+- **Heart & recovery, Body, Activity extras, Nutrition & hydration, Mindfulness, and Vitals:** optional categories.
+- **Cycle tracking:** separate sensitive access that can be granted or skipped explicitly.
+- **Medical records:** kept separate from the other Health Connect permissions and requested only when you enter the Medical records area.
+- **Manual-entry write access:** available during one-tap setup or requested when an entry flow needs it.
+
+Permissions can be changed later in Settings.
+
+OpenVitals does keep some app-only data locally where Health Connect cannot represent it, as well as caches and files used by features you enable.
+
+<details>
+<summary>Local data</summary>
+
+This includes things such as:
+
+- derived summary caches and Body Energy history;
+- food and drink catalogues;
+- Garmin-only wellness data and temporary per-minute watch data used for sleep processing;
+- the readings of each bathroom scale weigh-in;
+- the parts of the cycle journal that Health Connect cannot store, along with cycle exclusions and pill intakes;
+- metadata used by device sync;
+- downloaded watch files, recordings not yet saved, staged Apple Health imports, imported offline maps and elevation tiles;
+- medical documents you explicitly choose to keep;
+- the last phone-to-phone sync report.
+
+These are stored in app-private storage on the device. Some local data can leave that storage only through an action you explicitly start; for example, cycle-journal data can be copied to another phone when the cycle category is selected in phone-to-phone sync.
+
+</details>
+
+See the [privacy policy](https://docs.openvitals.health/app/privacy) for the full text.
 
 ## Platform requirements
 
@@ -171,6 +210,36 @@ Health Connect platform notes:
 - Health Connect is not supported in work profiles
 - Mindfulness sessions require a Health Connect provider version that supports `FEATURE_MINDFULNESS_SESSION`
 - The app uses `androidx.health.connect:connect-client` 1.2.0-alpha06 so AndroidX maps newer activity, mindfulness, and aggregation APIs to the current platform permissions
+
+## Documentation
+
+The user documentation lives at [docs.openvitals.health](https://docs.openvitals.health/):
+
+- [Install](https://docs.openvitals.health/app/install), [getting started](https://docs.openvitals.health/app/getting-started), [Health Connect setup](https://docs.openvitals.health/app/health-connect), [permissions](https://docs.openvitals.health/app/permissions), [privacy](https://docs.openvitals.health/app/privacy) and [FAQ](https://docs.openvitals.health/app/faq)
+- [Feature guide](https://docs.openvitals.health/features): one page per feature, grouped by what you do with the app
+- [Feature map](https://docs.openvitals.health/features/feature-map): map from features to routes, widgets, and packages
+- [How-to guides](https://docs.openvitals.health/how-to): step-by-step workflows such as offline maps and elevation tiles
+- [Build from source](https://docs.openvitals.health/developers/build) and [contributing](https://docs.openvitals.health/developers/contributing)
+- [Support](https://docs.openvitals.health/support)
+
+Engineering docs stay in this repository:
+
+- [`docs/engineering/architecture.md`](docs/engineering/architecture.md): current architecture and target direction
+- [`docs/engineering/development.md`](docs/engineering/development.md): local build, verification, CI, and Windows cleanup notes
+- [`docs/engineering/feature-playbook.md`](docs/engineering/feature-playbook.md): checklist for adding a new metric feature
+- [`AGENTS.md`](AGENTS.md): implementation guidance for future coding agents
+
+## Help Improve It
+
+OpenVitals is still early. Useful feedback is specific: device model, Android version, Health Connect provider version, which permissions were granted, and what screen or workflow failed.
+
+- Try the latest beta from Google Play or GitHub releases
+- Report bugs and feature requests on [GitHub issues](https://github.com/OpenVitals-MTU/android-app/issues)
+- Translate OpenVitals in your language on [Codeberg Translate](https://translate.codeberg.org/projects/openvitals/android-app/)
+- Ask questions and discuss support on [OpenVitals Zulip](http://openvitals.zulipchat.com/)
+- Star or follow the project on [GitHub](https://github.com/OpenVitals-MTU/android-app)
+- Share screenshots or notes from real Health Connect setups, especially route recording and manual entry flows
+- Support ongoing development on [Liberapay](https://liberapay.com/manuel.mmarca.tech/donate)
 
 ## Build from source
 
@@ -197,6 +266,9 @@ To install on a connected device or emulator:
 ./gradlew :app:installDebug
 ```
 
+<details>
+<summary>Windows: cleaning fails with a locked lint cache</summary>
+
 On Windows, Gradle or Android Studio can occasionally keep lint cache jars open under `app/build`. If cleaning fails with a locked `lint-cache` jar, stop Gradle daemons first:
 
 ```powershell
@@ -206,6 +278,8 @@ Get-CimInstance Win32_Process |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 Remove-Item -LiteralPath app/build -Recurse -Force
 ```
+
+</details>
 
 More local development notes are in [`docs/engineering/development.md`](docs/engineering/development.md).
 
@@ -218,42 +292,37 @@ After launching the app:
 
 ## Architecture at a glance
 
-OpenVitals is intentionally simple today:
+The repository has two Gradle modules. `:app` is the phone app; `:wear` is the Wear OS companion app, still in development, with its own CI gate.
 
-- one local Android app module
-- Jetpack Compose UI with Material 3 app shell and theming
-- Navigation Compose
-- `ViewModel` + `StateFlow`
-- Hilt constructor injection for repositories, services, and ViewModels
-- Health Connect AndroidX client wrapped by `HealthConnectManager`
-- WorkManager for user-started Apple Health imports that need to continue outside the Settings screen
-- feature-specific repositories for activity, sleep, heart, body, hydration, caffeine, nutrition, mindfulness, cycle, and vitals
-- local preferences for onboarding completion, acknowledged permissions, unit system, widget order, calorie display mode, caffeine preferences, data import status, timer/background-sound settings, hydration container sizes, and reminders
-- shared presentation formatters for units and date/time labels
+The phone app uses:
 
-The current architecture is documented in more detail in [`docs/engineering/architecture.md`](docs/engineering/architecture.md).
+- Jetpack Compose, Material 3 and Navigation Compose for the UI;
+- `ViewModel`, coroutines and `StateFlow` for screen state;
+- Hilt for dependency injection;
+- the AndroidX Health Connect client behind `HealthConnectManager` and feature-specific repositories;
+- Room for derived caches and data Health Connect cannot represent. Health Connect remains the source of truth for record types it supports;
+- WorkManager for Apple Health imports, offline-map imports and the opt-in periodic Garmin watch-sync job.
+
+Watch and scale integration lives under `devices/`, including the Garmin protocol stack, shared Bluetooth radio handling, companion-device pairing, notification forwarding and the scale listener.
+
+Live Bluetooth LE sensor streaming during activity recording is separate under `sensors/ble/`.
+
+Phone-to-phone Health Connect sync lives under `features/devicesync/` and uses Bluetooth Classic RFCOMM. The CoMaps provider lives under `comaps/` and reads guidance through Android's `ContentResolver`.
+
+See the [architecture documentation](docs/engineering/architecture.md) for the current structure and development direction.
 
 ## Project layout
 
-- [`app/`](app): Android app module
-- [`app/src/main/kotlin/tech/mmarca/openvitals/core/period/`](app/src/main/kotlin/tech/mmarca/openvitals/core/period): app-local period/date-window primitives
+- [`app/`](app): Android phone app module
+- [`wear/`](wear): Wear OS companion app module
 - [`app/src/main/kotlin/tech/mmarca/openvitals/features/`](app/src/main/kotlin/tech/mmarca/openvitals/features): feature screens, state, and ViewModels
 - [`app/src/main/kotlin/tech/mmarca/openvitals/data/repository/`](app/src/main/kotlin/tech/mmarca/openvitals/data/repository): repositories over Health Connect reads and preferences
+- [`app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/`](app/src/main/kotlin/tech/mmarca/openvitals/healthconnect): Health Connect readers, writers and the permission shell
+- [`app/src/main/kotlin/tech/mmarca/openvitals/devices/`](app/src/main/kotlin/tech/mmarca/openvitals/devices): Garmin, Wear OS and scale device layer
 - [`app/src/main/kotlin/tech/mmarca/openvitals/core/`](app/src/main/kotlin/tech/mmarca/openvitals/core): app-local period, performance, and presentation primitives
 - [`app/src/main/kotlin/tech/mmarca/openvitals/domain/`](app/src/main/kotlin/tech/mmarca/openvitals/domain): app-local models, insight calculations, and preference enums
 - [`app/src/main/kotlin/tech/mmarca/openvitals/ui/components/`](app/src/main/kotlin/tech/mmarca/openvitals/ui/components): shared UI scaffolding and navigation components
 - [`docs/`](docs): app guide, feature guide, engineering docs, how-to guides, proposals, reference material, and release notes
-
-## Documentation
-
-- [`docs/app/README.md`](docs/app/README.md): user guide, permissions, privacy, FAQ, screenshots, and support
-- [`docs/features/README.md`](docs/features/README.md): grouped feature guide
-- [`docs/features/feature-map.md`](docs/features/feature-map.md): map from features to routes, widgets, and packages
-- [`docs/engineering/development.md`](docs/engineering/development.md): local build, verification, CI, and Windows cleanup notes
-- [`docs/engineering/architecture.md`](docs/engineering/architecture.md): current architecture and target direction
-- [`docs/engineering/feature-playbook.md`](docs/engineering/feature-playbook.md): checklist for adding a new metric feature
-- [`AGENTS.md`](AGENTS.md): implementation guidance for future coding agents
-
 
 ## License
 
