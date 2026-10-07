@@ -446,6 +446,8 @@
     <string name="settings_home_widget_refresh_2h">2 Std.</string>
     <string name="settings_watch_stay_connected">Verbunden bleiben</string>
     <string name="settings_watch_stay_connected_body">Hält die Verbindung zur Uhr, wann immer sie in Reichweite ist. Die Uhr kann dann Wetter abrufen, dieses Telefon finden und neue Aufzeichnungen sofort übergeben, sobald sie fertig sind. Das kostet etwas Uhren- und Telefonakku.</string>
+    <string name="settings_watch_high_mtu">Große Bluetooth-Pakete</string>
+    <string name="settings_watch_high_mtu_body">Fordert von der Uhr größere Bluetooth-Pakete an, was die Synchronisierung deutlich beschleunigt. Ausschalten, wenn die Uhr die Verbindung immer wieder verliert oder eine Synchronisierung nie in Gang kommt.</string>
     <string name="garmin_find_phone_channel">Mein Telefon finden</string>
     <string name="garmin_find_phone_title">Deine Uhr sucht dieses Telefon</string>
     <string name="garmin_find_phone_body">Tippen, um das Klingeln zu beenden.</string>

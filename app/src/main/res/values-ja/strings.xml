@@ -590,6 +590,8 @@
     <string name="settings_home_widget_refresh_2h">2 時間</string>
     <string name="settings_watch_stay_connected">接続を維持</string>
     <string name="settings_watch_stay_connected_body">ウォッチが範囲内にある間は常に接続を保ちます。ウォッチは天気の取得、このスマートフォンの検索、新しい記録の即時引き渡しができますが、ウォッチとスマートフォンのバッテリーを多少消費します。</string>
+    <string name="settings_watch_high_mtu">大きな Bluetooth パケット</string>
+    <string name="settings_watch_high_mtu_body">ウォッチに大きな Bluetooth パケットを要求し、同期を大幅に速くします。ウォッチの接続が何度も切れる場合や、同期がまったく始まらない場合はオフにしてください。</string>
     <string name="garmin_find_phone_channel">スマートフォンを探す</string>
     <string name="garmin_find_phone_title">ウォッチがこのスマートフォンを探しています</string>
     <string name="garmin_find_phone_body">タップして鳴動を停止。</string>

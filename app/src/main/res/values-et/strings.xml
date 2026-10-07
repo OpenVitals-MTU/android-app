@@ -447,6 +447,8 @@
     <string name="settings_home_widget_refresh_2h">2 h</string>
     <string name="settings_watch_stay_connected">Püsi ühenduses</string>
     <string name="settings_watch_stay_connected_body">Hoiab kellaga ühendust alati, kui see on levialas. Nii saab kell tuua ilmateate, leida selle telefoni ja anda uued salvestused üle kohe, kui need valmivad. See kulutab veidi kella ja telefoni akut.</string>
+    <string name="settings_watch_high_mtu">Suured Bluetoothi paketid</string>
+    <string name="settings_watch_high_mtu_body">Küsib kellalt suuremaid Bluetoothi pakette, mis teeb sünkroonimise palju kiiremaks. Lülita välja, kui kell kaotab pidevalt ühenduse või sünkroonimine ei käivitu kunagi.</string>
     <string name="garmin_find_phone_channel">Leia mu telefon</string>
     <string name="garmin_find_phone_title">Sinu kell otsib seda telefoni</string>
     <string name="garmin_find_phone_body">Puuduta helisemise lõpetamiseks.</string>

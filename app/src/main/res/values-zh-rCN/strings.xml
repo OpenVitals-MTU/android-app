@@ -505,6 +505,8 @@
     <string name="settings_home_widget_refresh_2h">2 小时</string>
     <string name="settings_watch_stay_connected">保持连接</string>
     <string name="settings_watch_stay_connected_body">只要手表在范围内就保持连接。手表因此可以获取天气、寻找本手机，并在新记录完成时立即传递 — 但会增加手表和手机耗电。</string>
+    <string name="settings_watch_high_mtu">大 Bluetooth 数据包</string>
+    <string name="settings_watch_high_mtu_body">向手表请求更大的 Bluetooth 数据包，可大幅加快同步。若手表频繁断开连接，或同步一直无法开始，请关闭此项。</string>
     <string name="garmin_find_phone_channel">查找手机</string>
     <string name="garmin_find_phone_title">你的手表正在寻找此手机</string>
     <string name="garmin_find_phone_body">点击停止响铃。</string>

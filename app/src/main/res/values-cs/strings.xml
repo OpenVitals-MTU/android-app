@@ -499,6 +499,8 @@
     <string name="settings_home_widget_refresh_2h">2 h</string>
     <string name="settings_watch_stay_connected">Zůstat připojeno</string>
     <string name="settings_watch_stay_connected_body">Udržuje spojení s hodinkami, kdykoli jsou v dosahu. Hodinky pak mohou stahovat počasí, najít tento telefon a předat nové záznamy hned, jak skončí — za cenu vyšší spotřeby baterie hodinek i telefonu.</string>
+    <string name="settings_watch_high_mtu">Velké Bluetooth pakety</string>
+    <string name="settings_watch_high_mtu_body">Žádá hodinky o větší Bluetooth pakety, díky čemuž je synchronizace mnohem rychlejší. Vypněte, pokud hodinky stále ztrácejí spojení nebo se synchronizace nikdy nerozběhne.</string>
     <string name="garmin_find_phone_channel">Najít můj telefon</string>
     <string name="garmin_find_phone_title">Vaše hodinky hledají tento telefon</string>
     <string name="garmin_find_phone_body">Klepnutím vyzvánění zastavíte.</string>

@@ -638,6 +638,8 @@
     <string name="settings_watch_auto_sync_2h">2 h</string>
     <string name="settings_watch_stay_connected">Pysy yhdistettynä</string>
     <string name="settings_watch_stay_connected_body">Pitää yhteyden kelloon aina, kun se on kantaman sisällä. Kello voi silloin hakea sään, etsiä tämän puhelimen ja luovuttaa uudet tallennukset heti niiden valmistuttua — kellon ja puhelimen akun kustannuksella.</string>
+    <string name="settings_watch_high_mtu">Suuret Bluetooth-paketit</string>
+    <string name="settings_watch_high_mtu_body">Pyytää kellolta suurempia Bluetooth-paketteja, mikä nopeuttaa synkronointia huomattavasti. Poista käytöstä, jos kellon yhteys katkeilee jatkuvasti tai synkronointi ei koskaan käynnisty.</string>
     <string name="garmin_find_phone_channel">Etsi puhelimeni</string>
     <string name="garmin_find_phone_title">Kellosi etsii tätä puhelinta</string>
     <string name="garmin_find_phone_body">Napauta lopettaaksesi soiton.</string>

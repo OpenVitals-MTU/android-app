@@ -499,6 +499,8 @@
     <string name="settings_home_widget_refresh_2h">2 h</string>
     <string name="settings_watch_stay_connected">Manter ligado</string>
     <string name="settings_watch_stay_connected_body">Mantém a ligação ao relógio sempre que estiver ao alcance. Assim o relógio pode receber a meteorologia, encontrar este telemóvel e entregar novas gravações assim que terminam, à custa de alguma bateria do relógio e do telemóvel.</string>
+    <string name="settings_watch_high_mtu">Pacotes Bluetooth grandes</string>
+    <string name="settings_watch_high_mtu_body">Pede ao relógio pacotes Bluetooth maiores, o que torna a sincronização muito mais rápida. Desative se o relógio perder a ligação vez após vez ou se uma sincronização nunca arrancar.</string>
     <string name="garmin_find_phone_channel">Encontrar o meu telemóvel</string>
     <string name="garmin_find_phone_title">O seu relógio está à procura deste telemóvel</string>
     <string name="garmin_find_phone_body">Toque para parar de tocar.</string>

@@ -600,6 +600,8 @@
     <string name="settings_watch_auto_sync_2h">2 godz.</string>
     <string name="settings_watch_stay_connected">Pozostań połączony</string>
     <string name="settings_watch_stay_connected_body">Utrzymuje połączenie z zegarkiem zawsze, gdy jest w zasięgu. Zegarek może wtedy pobierać pogodę, znajdować ten telefon i przekazywać nowe nagrania zaraz po ich zakończeniu — kosztem baterii zegarka i telefonu.</string>
+    <string name="settings_watch_high_mtu">Duże pakiety Bluetooth</string>
+    <string name="settings_watch_high_mtu_body">Prosi zegarek o większe pakiety Bluetooth, dzięki czemu synchronizacja jest znacznie szybsza. Wyłącz, jeśli zegarek ciągle traci połączenie lub synchronizacja nigdy nie rusza.</string>
     <string name="garmin_find_phone_channel">Znajdź mój telefon</string>
     <string name="garmin_find_phone_title">Twój zegarek szuka tego telefonu</string>
     <string name="garmin_find_phone_body">Dotknij, aby przestać dzwonić.</string>

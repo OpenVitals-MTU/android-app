@@ -590,6 +590,8 @@
     <string name="settings_home_widget_refresh_2h">2 h</string>
     <string name="settings_watch_stay_connected">Manter conectado</string>
     <string name="settings_watch_stay_connected_body">Mantén a ligazón co reloxo sempre que estea ao alcance. O reloxo pode así obter o tempo, atopar este teléfono e entregar as novas gravacións en canto rematan, a cambio de algo de batería do reloxo e do teléfono.</string>
+    <string name="settings_watch_high_mtu">Paquetes Bluetooth grandes</string>
+    <string name="settings_watch_high_mtu_body">Pídelle ao reloxo paquetes Bluetooth máis grandes, o que fai a sincronización moito máis rápida. Desactívao se o reloxo perde a conexión unha e outra vez ou se unha sincronización nunca arrinca.</string>
     <string name="garmin_find_phone_channel">Atopar o meu teléfono</string>
     <string name="garmin_find_phone_title">O teu reloxo está buscando este teléfono</string>
     <string name="garmin_find_phone_body">Toca para deixar de soar.</string>
