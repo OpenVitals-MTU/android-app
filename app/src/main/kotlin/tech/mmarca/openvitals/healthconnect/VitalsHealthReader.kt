@@ -25,6 +25,7 @@ import tech.mmarca.openvitals.domain.model.BodyTempEntry
 import tech.mmarca.openvitals.domain.model.DailyBloodPressurePoint
 import tech.mmarca.openvitals.domain.model.DailyVitalPoint
 import tech.mmarca.openvitals.domain.model.RespiratoryRateEntry
+import tech.mmarca.openvitals.domain.model.SkinTemperatureDeltaSample
 import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.domain.model.SpO2Entry
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
@@ -350,6 +351,9 @@ internal class VitalsHealthReader(
             maxDeltaCelsius = deltasCelsius.maxOrNull(),
             measurementLocation = measurementLocation,
             source = SyncedSourceOverlay.displaySource(metadata),
+            deltas = deltas
+                .map { delta -> SkinTemperatureDeltaSample(delta.time, delta.delta.inCelsius) }
+                .sortedBy { it.time },
         )
     }
 
