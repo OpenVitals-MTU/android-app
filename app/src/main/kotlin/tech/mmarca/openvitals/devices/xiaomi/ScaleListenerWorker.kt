@@ -30,7 +30,7 @@ class ScaleListenerWorker(
             ScaleListenerWorkerEntryPoint::class.java,
         )
         // The scale was removed while this run was queued.
-        if (!entryPoint.xiaomiScaleStore().config.value.hasKey) {
+        if (!entryPoint.xiaomiScaleStore().config.value.isSetUp) {
             WorkManager.getInstance(applicationContext).cancelUniqueWork(XiaomiScaleListener.WORK_NAME)
             return Result.success()
         }

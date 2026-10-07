@@ -210,6 +210,9 @@ sealed class Screen(
     data object SettingsSensors : Screen("settings/sensors", R.string.settings_sensors_group_title)
     data object SettingsWatches : Screen("settings/watches", R.string.settings_watches_group_title)
     data object SettingsScales : Screen("settings/scales", R.string.settings_scales_group_title)
+
+    /** The one scale's device view. Titled by the scale's name, like a watch. */
+    data object ScaleDevice : Screen("scale")
     data object SettingsNutrition : Screen("settings/nutrition", R.string.settings_nutrition_group_title)
     data object SettingsCalories : Screen("settings/calories", R.string.settings_nutrition_group_title)
     data object SettingsCaffeine : Screen("settings/caffeine", R.string.settings_nutrition_group_title)
@@ -356,6 +359,7 @@ sealed class Screen(
                 SettingsSensors,
                 SettingsWatches,
                 SettingsScales,
+                ScaleDevice,
                 SettingsNutrition,
                 SettingsCalories,
                 SettingsCaffeine,

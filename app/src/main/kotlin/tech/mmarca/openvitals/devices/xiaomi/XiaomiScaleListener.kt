@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.data.repository.contract.ScaleWeighInRepository
+import tech.mmarca.openvitals.devices.core.pairing.CompanionDevice
 import tech.mmarca.openvitals.devices.core.pairing.CompanionDevicePairing
 import tech.mmarca.openvitals.devices.core.pairing.CompanionPresenceObserver
 
@@ -82,7 +83,7 @@ class XiaomiScaleListener(
 
     /** Every process start, the one a scale broadcast caused included. Without a scale it does nothing. */
     fun onAppStart() {
-        if (!store.config.value.hasKey) return
+        if (!store.config.value.isSetUp) return
         // Runs from Application.onCreate. Not worth failing app start over.
         runCatching {
             arm()
@@ -97,7 +98,7 @@ class XiaomiScaleListener(
      */
     fun arm(restart: Boolean = false): ScaleListenerStatus {
         val config = store.config.value
-        if (!config.hasKey) return ScaleListenerStatus.OFF
+        if (!config.isSetUp) return ScaleListenerStatus.OFF
         val status = radio.arm(config.address, restart)
         _status.value = status
         // Kept whatever the status: with Bluetooth off, the next run is the retry.
@@ -109,10 +110,27 @@ class XiaomiScaleListener(
         return status
     }
 
-    /** Starts listening with a new key. The scale is learned again from its next weigh-in. */
-    fun useKey(key: ByteArray) {
-        store.setBindKey(key)
+    /**
+     * Android's companion dialog, listing the S400 scales it hears right now:
+     * the one the user picks is associated and watched for presence. Null
+     * when none is found (the scale must be awake) or the user declines.
+     */
+    suspend fun findScale(): CompanionDevice? =
+        companion.discover(S400Beacon.SERVICE_UUID, S400Beacon.discoveryFilters)
+
+    /** Adds the scale the dialog found and starts listening for it. */
+    fun setUp(found: CompanionDevice, name: String, key: ByteArray) {
+        store.setUp(found.address, name, key)
         arm(restart = true)
+    }
+
+    /** A new key for the same scale, after it was paired again in Xiaomi Home. */
+    fun changeKey(key: ByteArray) {
+        store.changeKey(key)
+    }
+
+    fun rename(name: String) {
+        store.rename(name)
     }
 
     /**

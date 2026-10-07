@@ -155,7 +155,7 @@ Garmin watch pairing uses Android's companion device manager. The association is
 - `android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE`
 - `android.permission.REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND`: lets the app start the scale's short listening service when Android reports the associated scale awake. It does nothing without the association.
 
-None shows a permission prompt of its own. The consent is the system dialog that asks whether OpenVitals may access the selected watch or scale. Declining it is supported: the watch is still bonded and still syncs, only without the background priority boost; the scale is heard while the app is open.
+None shows a permission prompt of its own. The consent is the system dialog that asks whether OpenVitals may access the selected watch or scale. Declining it is supported for a watch: it is still bonded and still syncs, only without the background priority boost. For a scale the dialog is the way it is added, so declining adds no scale.
 
 The manifest also declares the `android.software.companion_device_setup` feature as not required, so the app stays installable on devices without companion support. `android.permission.REQUEST_COMPANION_USE_DATA_IN_BACKGROUND` is deliberately not declared, because it governs background network use and OpenVitals has no network access at all.
 

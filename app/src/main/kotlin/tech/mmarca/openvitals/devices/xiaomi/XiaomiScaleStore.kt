@@ -18,10 +18,12 @@ data class IgnoredScaleProfile(val profile: Int, val atMillis: Long)
  * is read through [XiaomiScaleStore.bindKey] and never travels in state.
  */
 data class XiaomiScaleConfig(
-    val hasKey: Boolean = false,
-    /** The scale's Bluetooth address, learned from the first weigh-in the key opened. */
+    private val hasKey: Boolean = false,
+    /** The scale's Bluetooth address, from Android's companion dialog. */
     val address: String? = null,
-    /** The scale's user slot this phone's owner weighs in under. */
+    /** What the user calls the scale; the advertised name until renamed. */
+    val name: String? = null,
+    /** The scale's user slot this phone's owner weighs in under, learned from the first weigh-in. */
     val profile: Int? = null,
     /** The scale kept broadcasting but the key stopped opening it: it was paired again. */
     val keyRejected: Boolean = false,
@@ -30,14 +32,15 @@ data class XiaomiScaleConfig(
     /** The weigh-in the user deleted last. The scale may still be repeating it. */
     val deletedScaleTimestamp: Long? = null,
 ) {
-    /** The key opened a weigh-in, so the scale and its user slot are known. */
-    val isBound: Boolean
-        get() = address != null && profile != null
+    /** A scale was added: its address and key are known. */
+    val isSetUp: Boolean
+        get() = hasKey && address != null
 }
 
 /**
  * The scale's settings, kept out of the device registry: a scale takes no
- * connection, so it has no capabilities, no bond and no sync. One scale.
+ * connection, so it has no capabilities, no bond and no sync. One scale,
+ * identified by the address Android's companion dialog returned.
  * SharedPreferences-backed and never backed up; the bind key stays on this
  * phone.
  */
@@ -53,23 +56,30 @@ class XiaomiScaleStore(private val prefs: SharedPreferences) {
     /** The 16-byte key that opens the scale's broadcasts, or null before one is set. */
     fun bindKey(): ByteArray? = prefs.getString(KEY_BIND_KEY, null)?.let(::parseBindKey)
 
-    /** Stores a new key. What was learned with the old one goes: the key may be another scale's. */
-    fun setBindKey(key: ByteArray) {
+    /** Adds the scale. Whatever an earlier scale left behind goes with it. */
+    fun setUp(address: String, name: String, key: ByteArray) {
         require(key.size == BIND_KEY_BYTES)
         prefs.edit {
             clear()
+            putString(KEY_ADDRESS, address.uppercase())
+            putString(KEY_NAME, name)
             putString(KEY_BIND_KEY, key.toHexString())
         }
         publish()
     }
 
-    fun bind(address: String, profile: Int) {
+    /** A new key for the same scale, after it was paired again in Xiaomi Home. The scale stays known. */
+    fun changeKey(key: ByteArray) {
+        require(key.size == BIND_KEY_BYTES)
         prefs.edit {
-            putString(KEY_ADDRESS, address)
-            putInt(KEY_PROFILE, profile)
-            remove(KEY_IGNORED_PROFILE)
-            remove(KEY_IGNORED_AT)
+            putString(KEY_BIND_KEY, key.toHexString())
+            remove(KEY_REJECTED)
         }
+        publish()
+    }
+
+    fun rename(name: String) {
+        prefs.edit { putString(KEY_NAME, name) }
         publish()
     }
 
@@ -123,6 +133,7 @@ class XiaomiScaleStore(private val prefs: SharedPreferences) {
     private fun read(): XiaomiScaleConfig = XiaomiScaleConfig(
         hasKey = prefs.getString(KEY_BIND_KEY, null)?.let(::parseBindKey) != null,
         address = prefs.getString(KEY_ADDRESS, null),
+        name = prefs.getString(KEY_NAME, null),
         profile = prefs.getInt(KEY_PROFILE, NONE).takeIf { it != NONE },
         keyRejected = prefs.getBoolean(KEY_REJECTED, false),
         writeFailure = prefs.getString(KEY_WRITE_FAILURE, null)
@@ -138,6 +149,7 @@ class XiaomiScaleStore(private val prefs: SharedPreferences) {
         private const val PREFS_FILE = "xiaomi_scale"
         private const val KEY_BIND_KEY = "bind_key"
         private const val KEY_ADDRESS = "address"
+        private const val KEY_NAME = "name"
         private const val KEY_PROFILE = "profile"
         private const val KEY_REJECTED = "key_rejected"
         private const val KEY_WRITE_FAILURE = "write_failure"
