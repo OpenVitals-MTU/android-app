@@ -824,6 +824,30 @@ class DashboardDataLoaderTest {
         assertEquals(47.0, data.latestSkinTemperatureDeltaCelsius ?: 0.0, 0.01)
     }
 
+    @Test fun `a delta-less newest skin temperature record falls back to the newest with a delta`() = runTest {
+        // A record with only a baseline is not a reading. The overview card already skips it; the tile did not.
+        val date = LocalDate.of(2026, 7, 24)
+        val hc = overnightVitalsHc(emptyList())
+        fun entry(time: Instant, delta: Double?) = SkinTemperatureEntry(
+            startTime = time,
+            endTime = time,
+            baselineCelsius = 33.0,
+            averageDeltaCelsius = delta,
+            minDeltaCelsius = delta,
+            maxDeltaCelsius = delta,
+            measurementLocation = 0,
+            source = "watch",
+        )
+        coEvery { hc.readSkinTemperatureEntries(any(), any()) } returns listOf(
+            entry(atLocal(date, 9), delta = null),
+            entry(atLocal(date, 7), delta = -0.3),
+        )
+
+        val data = loadOvernightVitals(hc, date)
+
+        assertEquals(-0.3, data.latestSkinTemperatureDeltaCelsius ?: 0.0, 0.01)
+    }
+
     @Test fun `a non-default night window moves the attribution boundary`() = runTest {
         val date = LocalDate.of(2026, 7, 24)
         val window = SleepWindow(startHour = 21, endHour = 8)
