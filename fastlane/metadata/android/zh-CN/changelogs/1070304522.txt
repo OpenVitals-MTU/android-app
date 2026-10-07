@@ -1,0 +1,1 @@
+体重秤：在设置中添加 Xiaomi Body Composition Scale S400，每次站上去的称重都会立即保存到 Health Connect，无论应用是否打开。体重和心率按测量值保存；体脂、瘦体重和体水量在手机上估算。不连接体重秤，也不使用互联网。Wear OS 手表会显示 OpenVitals 手表应用是否响应。医疗记录已回到 Play 版本。项目已迁移到 GitHub。修复：Garmin 手表回到范围内时，“保持连接”会重新接续。
