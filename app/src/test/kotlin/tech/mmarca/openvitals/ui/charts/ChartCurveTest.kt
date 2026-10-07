@@ -99,6 +99,27 @@ class ChartCurveTest {
         assertTrue(samples.maxOf { it.y } <= 100f + 0.01f)
     }
 
+    @Test fun `does not overshoot a trough when the next sample is far away`() {
+        // Seven readings a minute apart falling to the day's low, then one five hours later:
+        // a skin temperature day. Averaging the steep secant into the low with the long shallow
+        // one out of it sent the curve well under the lowest reading.
+        val samples = sampled(
+            listOf(
+                Offset(524f, 10f),
+                Offset(525f, 30f),
+                Offset(526f, 20f),
+                Offset(527f, 10f),
+                Offset(528f, 40f),
+                Offset(529f, 30f),
+                Offset(530f, 70f),
+                Offset(850f, 0f),
+            ),
+        )
+
+        assertTrue("dipped to ${samples.maxOf { it.y }}", samples.maxOf { it.y } <= 70f + 0.01f)
+        assertTrue(samples.minOf { it.y } >= 0f - 0.01f)
+    }
+
     @Test fun `draws a vertical riser straight rather than looping through it`() {
         // Two readings at the same instant. A spline that tries would loop back on itself.
         val points = listOf(

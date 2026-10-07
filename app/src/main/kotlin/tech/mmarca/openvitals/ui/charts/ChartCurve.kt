@@ -35,11 +35,14 @@ fun monotoneCubicSegments(points: List<Offset>): List<CurveSegment> {
         slopes[i] = if (abs(dx) < Epsilon) 0f else (points[i + 1].y - points[i].y) / dx
     }
 
-    // Tangent at each point: the average of the slopes either side of it.
+    // Tangent at each point: the average of the slopes either side of it. At a
+    // peak or trough (secants of opposite sign) the tangent is flat instead:
+    // averaging there is what let the curve run past the sample, worst when
+    // one secant is steep and short and the other long and shallow.
     val tangents = FloatArray(n)
     tangents[0] = slopes.first()
     for (i in 1 until n - 1) {
-        tangents[i] = (slopes[i - 1] + slopes[i]) / 2f
+        tangents[i] = if (slopes[i - 1] * slopes[i] <= 0f) 0f else (slopes[i - 1] + slopes[i]) / 2f
     }
     tangents[n - 1] = slopes.last()
 
