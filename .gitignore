@@ -53,3 +53,4 @@ OpenVitals Design System/
 # The Gradle homes CI keeps in the workspace (scripts/ci-gradle.sh).
 .gradle-ci/
 .gradle-release/
+*.code-workspace
