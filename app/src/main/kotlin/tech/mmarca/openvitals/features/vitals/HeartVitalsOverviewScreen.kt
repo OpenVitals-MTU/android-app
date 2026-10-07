@@ -52,6 +52,7 @@ import tech.mmarca.openvitals.ui.components.MetricCardPlaceholder
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.MetricDetailScaffold
 import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
+import tech.mmarca.openvitals.ui.components.LineAxisRange
 import tech.mmarca.openvitals.ui.components.MetricLineChart
 import tech.mmarca.openvitals.ui.components.MetricLinePoint
 import tech.mmarca.openvitals.ui.components.SectionHeader
@@ -557,6 +558,8 @@ private fun RespiratoryOverviewChartsContent(
                 time = { it.time },
                 value = { it.averageDeltaCelsius ?: 0.0 },
                 valueFormatter = { unitFormatter.temperatureDelta(it).text },
+                axisRange = LineAxisRange.ZeroCentred,
+                guides = skinTemperatureZeroGuides(),
             )
         }
     }

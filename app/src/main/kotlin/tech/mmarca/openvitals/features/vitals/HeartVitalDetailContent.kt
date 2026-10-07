@@ -17,7 +17,6 @@ import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.MetricDetailSectionContext
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.core.stats.averageOrZero
-import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.features.heart.BodyTemperatureContextCardContent
 import tech.mmarca.openvitals.features.heart.BodyTemperatureStatisticsContent
@@ -28,15 +27,14 @@ import tech.mmarca.openvitals.features.heart.HeartUiState
 import tech.mmarca.openvitals.features.heart.OxygenSaturationContextCardContent
 import tech.mmarca.openvitals.features.heart.RespiratoryRateContextCardContent
 import tech.mmarca.openvitals.features.heart.RespiratoryRateStatisticsContent
-import tech.mmarca.openvitals.features.heart.SkinTemperatureStatisticsContent
 import tech.mmarca.openvitals.features.heart.SpO2StatisticsContent
 import tech.mmarca.openvitals.features.heart.Vo2MaxStatisticsContent
 import tech.mmarca.openvitals.features.heart.metricModifier
 import tech.mmarca.openvitals.features.heart.noHeartMetricData
 import tech.mmarca.openvitals.features.heart.renderChartMetricSections
-import tech.mmarca.openvitals.features.heart.skinTemperatureValue
 import tech.mmarca.openvitals.features.heart.spO2Stats
 import tech.mmarca.openvitals.ui.components.ChartDaySelection
+import tech.mmarca.openvitals.ui.components.LineAxisRange
 import tech.mmarca.openvitals.ui.components.MetricCard
 import tech.mmarca.openvitals.ui.components.MetricLineChart
 import tech.mmarca.openvitals.ui.components.PaginatedEntryList
@@ -558,14 +556,6 @@ internal fun LazyListScope.bloodGlucoseContent(
     }
 }
 
-/** Only the entries that carry a delta, oldest first. */
-internal fun skinTemperatureChartEntries(
-    entries: List<SkinTemperatureEntry>,
-): List<SkinTemperatureEntry> =
-    entries
-        .filter { it.averageDeltaCelsius != null }
-        .sortedBy { it.time }
-
 internal fun LazyListScope.skinTemperatureContent(
     state: HeartUiState,
     period: DatePeriod,
@@ -585,7 +575,7 @@ internal fun LazyListScope.skinTemperatureContent(
             periodChart = if (chartEntries.isNotEmpty()) {
                 {
                     MetricLineChart(
-                        title = stringResource(R.string.metric_skin_temperature),
+                        title = stringResource(R.string.skin_temperature_variation_title),
                         entries = chartEntries,
                         selectedRange = state.selectedRange,
                         period = period,
@@ -605,6 +595,9 @@ internal fun LazyListScope.skinTemperatureContent(
                         time = { it.time },
                         value = { it.averageDeltaCelsius ?: 0.0 },
                         valueFormatter = { unitFormatter.temperatureDelta(it).text },
+                        // A variation reads against zero: warmer above the line, cooler below.
+                        axisRange = LineAxisRange.ZeroCentred,
+                        guides = skinTemperatureZeroGuides(),
                     )
                 }
             } else {
@@ -616,7 +609,7 @@ internal fun LazyListScope.skinTemperatureContent(
                         entries = state.skinTemperature.filter {
                             it.time.atZone(ZoneId.systemDefault()).toLocalDate() == selectedDate
                         },
-                        value = { it.skinTemperatureValue(unitFormatter) },
+                        value = rememberSkinTemperatureRowLabel(unitFormatter),
                         source = { it.source },
                         time = { it.time },
                         dateTimeFormatterProvider = dateTimeFormatterProvider,
@@ -646,7 +639,7 @@ internal fun LazyListScope.skinTemperatureContent(
             entries = {
                 HeartEntryListContent(
                     entries = state.skinTemperature,
-                    value = { it.skinTemperatureValue(unitFormatter) },
+                    value = rememberSkinTemperatureRowLabel(unitFormatter),
                     source = { it.source },
                     time = { it.time },
                     dateTimeFormatterProvider = dateTimeFormatterProvider,

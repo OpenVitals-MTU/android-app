@@ -1307,6 +1307,14 @@
     <string name="message_no_vo2_max">Sen lectura de VO2 máx.</string>
     <string name="message_no_blood_glucose">Sen lectura de glicosa en sangue.</string>
     <string name="message_no_skin_temperature">Sen lectura de temperatura da pel.</string>
+    <string name="skin_temperature_variation_title">Variación respecto á liña base</string>
+    <string name="skin_temperature_variation_caption">Canto se afastou a temperatura da pel da liña base fixada polo dispositivo. Non é unha temperatura absoluta.</string>
+    <string name="skin_temperature_row_with_baseline">%1$s respecto á liña base · liña base %2$s</string>
+    <string name="skin_temperature_row_without_baseline">%1$s respecto á liña base</string>
+    <string name="skin_temperature_no_variation">Sen variación rexistrada</string>
+    <string name="skin_temperature_baseline_not_provided">A fonte non a proporciona</string>
+    <string name="skin_temperature_baseline_newest">Do rexistro máis recente</string>
+    <string name="stat_vs_usual_average">Vs. media habitual</string>
     <string name="message_cycle_browse">Ve e rexistra o teu ciclo, os síntomas e as estimacións.</string>
     <string name="dashboard_add_widgets">Engadir widgets</string>
     <string name="dashboard_all_widgets_added">Todos os widgets xa están no resumo.</string>
