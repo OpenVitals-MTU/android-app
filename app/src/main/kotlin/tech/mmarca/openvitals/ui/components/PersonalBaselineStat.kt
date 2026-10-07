@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.TrendingDown
 import androidx.compose.material.icons.automirrored.outlined.TrendingFlat
@@ -23,6 +24,9 @@ fun personalBaselineInsightStats(
     unitFormatter: UnitFormatter,
     valueFormatter: @Composable (Double) -> DisplayValue,
     accentColor: Color,
+    style: ComparisonDisplayStyle = ComparisonDisplayStyle.PERCENT,
+    /** The deviation tile's title. A metric whose source has its own "baseline" names it differently. */
+    @StringRes deviationTitleRes: Int = R.string.stat_baseline_deviation,
 ): List<InsightStat> {
     if (insight == null) return emptyList()
 
@@ -44,22 +48,27 @@ fun personalBaselineInsightStats(
         )
     }
 
-    val deviation = insight.percentDeviation
-        ?.let { percent ->
-            DisplayValue(
-                value = signedValue(
-                    value = unitFormatter.count(abs(percent).roundToInt()),
-                    status = insight.status,
-                ),
-                unit = stringResource(R.string.unit_percent_symbol),
-            )
-        }
-        ?: valueFormatter(insight.absoluteDeviation).let { absolute ->
-            DisplayValue(
-                value = signedValue(absolute.value, insight.status),
-                unit = absolute.unit,
-            )
-        }
+    // Signed style: the formatter writes the sign, so the value is not signed again here.
+    val deviation = if (style == ComparisonDisplayStyle.SIGNED_VALUE) {
+        valueFormatter(insight.deviation)
+    } else {
+        insight.percentDeviation
+            ?.let { percent ->
+                DisplayValue(
+                    value = signedValue(
+                        value = unitFormatter.count(abs(percent).roundToInt()),
+                        status = insight.status,
+                    ),
+                    unit = stringResource(R.string.unit_percent_symbol),
+                )
+            }
+            ?: valueFormatter(insight.absoluteDeviation).let { absolute ->
+                DisplayValue(
+                    value = signedValue(absolute.value, insight.status),
+                    unit = absolute.unit,
+                )
+            }
+    }
 
     return baselineStats + listOf(
         InsightStat(
@@ -76,7 +85,7 @@ fun personalBaselineInsightStats(
             accentColor = accentColor,
         ),
         InsightStat(
-            title = stringResource(R.string.stat_baseline_deviation),
+            title = stringResource(deviationTitleRes),
             value = deviation.value,
             unit = deviation.unit,
             icon = Icons.Outlined.Star,

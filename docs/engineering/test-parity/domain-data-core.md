@@ -263,6 +263,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/insights/P
 | marksValuesOutsideUsualRangeButBelowAnomalyThreshold | PORTED | PersonalBaselineTest.kt: `marksValuesOutsideUsualRangeButBelowAnomalyThreshold` | — |
 | marksTwoStandardDeviationsAsAnomaly | PORTED | PersonalBaselineTest.kt: `marksTwoStandardDeviationsAsAnomaly` | — |
 | returnsNullWhenThereAreNotEnoughSamples | PORTED | PersonalBaselineTest.kt: `returnsNullWhenThereAreNotEnoughSamples` | — |
+| — | KOTLIN-ONLY | PersonalBaselineTest.kt: `dropsZeroAndNegativeDaysByDefault`, `keepsZeroAndNegativeDaysForASignedMetric` | `includeNonPositive`: a signed metric (skin temperature variation) keeps its negative days |
 
 ## test/domain/insights/route_elevation_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/insights/RouteElevationTest.kt
@@ -1309,6 +1310,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/core/presentation
 | imperial temperature uses fahrenheit | PORTED | UnitFormatterTest.kt: `imperial temperature uses fahrenheit` | — |
 | metric temperature delta keeps celsius delta | PORTED | UnitFormatterTest.kt: `metric temperature delta keeps celsius delta` | — |
 | imperial temperature delta converts to fahrenheit delta | PORTED | UnitFormatterTest.kt: `imperial temperature delta converts to fahrenheit delta` | — |
+| — | KOTLIN-ONLY | UnitFormatterTest.kt: `a temperature delta that rounds to zero prints unsigned` | the dashboard tile read "-0.0 deg C"; sign decided after rounding |
 | metric blood glucose uses mmol per liter | PORTED | UnitFormatterTest.kt: `metric blood glucose uses mmol per liter` | — |
 | imperial blood glucose uses milligrams per deciliter | PORTED | UnitFormatterTest.kt: `imperial blood glucose uses milligrams per deciliter` | — |
 | blood pressure is not converted | PORTED | UnitFormatterTest.kt: `blood pressure is not converted` | — |

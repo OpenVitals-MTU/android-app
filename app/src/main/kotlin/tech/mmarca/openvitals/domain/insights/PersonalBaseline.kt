@@ -51,6 +51,12 @@ fun personalBaselineInsight(
     values: List<BaselineValue>,
     referenceDate: LocalDate,
     windows: List<Int> = PersonalBaselineWindows,
+    /**
+     * Whether zero and negative days count. Off for a quantity where zero means
+     * "nothing logged" (steps, hours); on for a signed one (a variation around 0),
+     * where dropping the negative days would bias every average upward.
+     */
+    includeNonPositive: Boolean = false,
 ): PersonalBaselineInsight? {
     val summaries = windows
         .sorted()
@@ -59,6 +65,7 @@ fun personalBaselineInsight(
                 windowDays = windowDays,
                 values = values,
                 referenceDate = referenceDate,
+                includeNonPositive = includeNonPositive,
             )
         }
 
@@ -76,13 +83,14 @@ private fun baselineSummary(
     windowDays: Int,
     values: List<BaselineValue>,
     referenceDate: LocalDate,
+    includeNonPositive: Boolean,
 ): BaselineSummary? {
     val start = referenceDate.minusDays(windowDays.toLong() - 1)
     val windowValues = values
         .asSequence()
         .filter { it.date in start..referenceDate }
         .map { it.value }
-        .filter { it > 0.0 }
+        .filter { includeNonPositive || it > 0.0 }
         .toList()
 
     if (windowValues.size < MinimumBaselineSamples) return null
