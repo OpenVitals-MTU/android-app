@@ -379,9 +379,9 @@ class ReportExportService @Inject constructor(
                         DisplayValue(unitFormatter.decimal(value, 0), "mmHg")
                     ReportMetric.VO2_MAX -> unitFormatter.vo2Max(value)
                     ReportMetric.RESPIRATORY_RATE -> unitFormatter.respiratoryRate(value)
-                    ReportMetric.BODY_TEMPERATURE,
-                    ReportMetric.SKIN_TEMPERATURE,
-                    -> unitFormatter.temperature(value)
+                    ReportMetric.BODY_TEMPERATURE -> unitFormatter.temperature(value)
+                    // A variation from the device's baseline: signed, and no freezing-point offset in Fahrenheit.
+                    ReportMetric.SKIN_TEMPERATURE -> unitFormatter.temperatureDelta(value)
                     ReportMetric.BLOOD_GLUCOSE -> unitFormatter.bloodGlucose(value)
                 }
                 return if (withUnit) display.text else display.value
