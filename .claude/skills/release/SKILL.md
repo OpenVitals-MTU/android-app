@@ -111,9 +111,13 @@ matches the filenames.
    - `en-US`, `de-DE`, `es-ES`, `it-IT` and `et` had listings before 2.11.1;
      the other nine came with it. Do not call an older listing "new".
    - Japanese and Chinese have no plural forms: leave plural fixes out there.
-   - Check before running the script (all 14 present, none over 500):
+   - Play counts the file as uploaded, trailing newline included: a note of
+     exactly 500 characters plus its newline is rejected as 501 (2.13.0's
+     German note, found only in the production run). Count the whole file
+     and keep every note at 490 or under, so a late edit has room.
+   - Check before running the script (all 14 present, none over 490):
      ```bash
-     code=<versionCode>; for d in fastlane/metadata/android/*/; do f="${d}changelogs/$code.txt"; test -f "$f" || echo "missing $f"; python3 -c "import sys; n=len(open(sys.argv[1],encoding='utf-8').read().rstrip(chr(10))); print(sys.argv[1], n, 'TOO LONG' if n > 500 else '')" "$f" 2>/dev/null; done
+     code=<versionCode>; for d in fastlane/metadata/android/*/; do f="${d}changelogs/$code.txt"; test -f "$f" || echo "missing $f"; python3 -c "import sys; n=len(open(sys.argv[1],encoding='utf-8').read()); print(sys.argv[1], n, 'TOO LONG' if n > 490 else '')" "$f" 2>/dev/null; done
      ```
 
 ## 3. Run the release
