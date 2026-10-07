@@ -68,6 +68,8 @@ import tech.mmarca.openvitals.devices.garmin.GarminSettingsService
 import tech.mmarca.openvitals.devices.garmin.canStorePoints
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.ui.components.DeclareAppBar
+import tech.mmarca.openvitals.ui.components.DeviceAvatar
+import tech.mmarca.openvitals.ui.components.formatDeviceTime
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.rememberHealthConnectPermissionLauncher
 import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
@@ -349,6 +351,7 @@ fun WatchDeviceScreen(
                     if (enabled) viewModel.coMapsPermissionName()?.let(coMapsPermission::launch)
                 },
             )
+            HighMtuCard(state = state, onToggle = viewModel::setHighMtu)
             EphemerisCard(
                 state = state,
                 onImport = { ephemerisPicker.launch(arrayOf("*/*")) },
@@ -430,7 +433,7 @@ private fun StatusCard(
             append(
                 stringResource(
                     R.string.settings_watch_last_synced,
-                    formatWatchSyncTime(syncedAt),
+                    formatDeviceTime(syncedAt),
                 ),
             )
             // Only after a sync this session; the count is not persisted.
@@ -455,7 +458,7 @@ private fun StatusCard(
                 .fillMaxWidth()
                 .padding(Spacing.lg),
         ) {
-            WatchAvatar(
+            DeviceAvatar(
                 size = 44,
                 icon = if (isBikeComputer) Icons.AutoMirrored.Outlined.DirectionsBike else null,
             )

@@ -10,6 +10,8 @@ import tech.mmarca.openvitals.BuildConfig
 import tech.mmarca.openvitals.features.devicesync.DeviceSyncScreen
 import tech.mmarca.openvitals.features.imports.csv.CsvImportScreen
 import tech.mmarca.openvitals.features.reports.ReportBuilderScreen
+import tech.mmarca.openvitals.features.scales.ScaleDeviceScreen
+import tech.mmarca.openvitals.features.scales.ScalesSettingsScreen
 import tech.mmarca.openvitals.features.settings.ActivitiesSettingsScreen
 import tech.mmarca.openvitals.features.settings.BodyProfileSettingsScreen
 import tech.mmarca.openvitals.features.settings.DataImportScreen
@@ -64,6 +66,21 @@ internal fun NavGraphBuilder.settingsRoutes(
                     launchSingleTop = true
                 }
             },
+        )
+    }
+
+    // A bespoke screen: the scale's card plus the add flow, like the watches, and its device view.
+    composable(Screen.SettingsScales.route) {
+        ScalesSettingsScreen(
+            viewModel = hiltViewModel(),
+            onOpenScale = { navController.navigate(Screen.ScaleDevice.route) { launchSingleTop = true } },
+        )
+    }
+    composable(Screen.ScaleDevice.route) {
+        ScaleDeviceScreen(
+            viewModel = hiltViewModel(),
+            onOpenBodyProfile = { navController.navigate(Screen.SettingsBodyProfile.route) { launchSingleTop = true } },
+            onRemoved = { navController.popBackStack() },
         )
     }
 
@@ -160,6 +177,7 @@ private fun settingsSectionRoute(section: SettingsSection): String =
         SettingsSection.ACTIVITIES -> Screen.SettingsActivities.route
         SettingsSection.SENSORS -> Screen.SettingsSensors.route
         SettingsSection.WATCHES -> Screen.SettingsWatches.route
+        SettingsSection.SCALES -> Screen.SettingsScales.route
         SettingsSection.NUTRITION -> Screen.SettingsNutrition.route
         SettingsSection.BODY_PROFILE -> Screen.SettingsBodyProfile.route
         SettingsSection.VITALS -> Screen.SettingsVitals.route

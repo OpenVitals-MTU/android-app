@@ -182,8 +182,9 @@ class GarminBleNotificationLink private constructor(
             scope: CoroutineScope,
             request: GarminNotificationLinkRequest,
             handshakeTimeout: Duration = 15.seconds,
+            highMtu: Boolean = true,
         ): GarminNotificationLink {
-            val gatt = GarminGattClient(context, request.address)
+            val gatt = GarminGattClient(context, request.address, highMtu = highMtu)
             val ready = CompletableDeferred<Unit>()
 
             // The transport exists only after connect; the send callback goes through a holder.

@@ -18,6 +18,7 @@ import tech.mmarca.openvitals.domain.model.SpO2Entry
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.vitals.restingHeartRateValue
 import tech.mmarca.openvitals.features.vitals.skinTemperatureChartEntries
+import tech.mmarca.openvitals.features.vitals.skinTemperatureStats
 
 /** The inline-stats arithmetic, hoisted into pure functions so a unit test can call it. */
 class HeartMetricStatsTest {

@@ -445,6 +445,18 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Rename, disable, or remove a paired watch.
 - File syncs are always user-initiated; there is no background or scheduled watch sync.
 
+### Scale Weigh-Ins
+
+- Hear a Xiaomi Body Composition Scale S400 and save each weigh-in as it happens, with the app open or closed, without connecting to the scale and without network access.
+- Let Android wake OpenVitals when someone steps on the scale (Android 12 and newer), so a weigh-in is saved with the app closed; a short silent notification shows while the result is read. Without that, and on older versions, weigh-ins are saved while the app is open.
+- Write the scale's weight and heart rate to Health Connect.
+- Write body fat, lean body mass and body water mass, estimated from the scale's impedance with published equations and the body profile's height and sex.
+- Keep each weigh-in's readings, the two impedance values included, on the device.
+- Hold a weigh-in Health Connect could not take (a missing permission, paused sync) and write it later.
+- Save what was heard when only part of a weigh-in arrives, such as a weight without impedance.
+- Leave out weigh-ins the scale assigned to another person.
+- Delete the last weigh-in with every record it wrote.
+
 ### Medical Records
 
 - Ask for all thirteen medical permissions once, the first time the area opens, in a request that holds no other permission.
@@ -549,6 +561,17 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Open the watch's own settings tree and its alarms.
 - Find a paired watch.
 - Rename a watch, switch it off without unpairing, or remove it.
+
+### Scale Settings
+
+- Add a scale the way a watch is added: a card list, an add dialog, and a device view behind the card.
+- Find the scale through Android's companion-device dialog, which names it and lets Android wake OpenVitals for it, then paste its Bluetooth key.
+- The first weigh-in tells the app which of the scale's users is yours.
+- See on the card and the device view whether the phone is listening, and grant the permission, switch on Bluetooth, or let Android wake the app again when it is not.
+- See the last weigh-in, and whether any weigh-in is still waiting to be saved.
+- Grant the Health Connect write permissions the scale can use.
+- Take over another of the scale's user slots when it files a weigh-in under one.
+- Rename the scale, change the key after the scale was paired again, or remove the scale.
 
 ### Sync With Another Phone Settings
 

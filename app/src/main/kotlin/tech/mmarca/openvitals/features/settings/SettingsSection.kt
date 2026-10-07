@@ -25,6 +25,10 @@ enum class SettingsSection(
         titleRes = R.string.settings_watches_group_title,
         summaryRes = R.string.settings_watches_group_body,
     ),
+    SCALES(
+        titleRes = R.string.settings_scales_group_title,
+        summaryRes = R.string.settings_scales_group_body,
+    ),
     NUTRITION(
         titleRes = R.string.settings_nutrition_group_title,
         summaryRes = R.string.settings_nutrition_group_body,

@@ -36,6 +36,18 @@ enum class GarminWellnessMetric(val storageName: String) {
     /** Sleep Coach, in minutes: the usual need, and what the night called for. */
     SLEEP_NEED_NORMAL_MINUTES("sleep_need_normal_minutes"),
     SLEEP_NEED_MINUTES("sleep_need_minutes"),
+    /** `sleep_restless_moments`, at the night's start beside the other verdicts. */
+    SLEEP_RESTLESS_MOMENTS("sleep_restless_moments"),
+    /** `functional_metrics`: watts, watts and bpm, as the watch holds them. */
+    FUNCTIONAL_THRESHOLD_POWER("functional_threshold_power"),
+    LACTATE_THRESHOLD_POWER("lactate_threshold_power"),
+    LACTATE_THRESHOLD_HEART_RATE("lactate_threshold_heart_rate"),
+    /** `hill_score`: the score and its two parts, each 0..100. */
+    HILL_SCORE("hill_score"),
+    HILL_STRENGTH("hill_strength"),
+    HILL_ENDURANCE("hill_endurance"),
+    /** `endurance_score`, on Garmin's own scale. */
+    ENDURANCE_SCORE("endurance_score"),
     ;
 
     companion object {

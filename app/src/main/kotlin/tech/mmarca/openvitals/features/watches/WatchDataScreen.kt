@@ -22,6 +22,7 @@ import java.time.Duration
 import kotlin.math.roundToLong
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.model.GarminWellnessMetric
+import tech.mmarca.openvitals.ui.components.DeviceValueRow
 import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
@@ -107,7 +108,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.todayItems(metrics: W
     }
     if (stress != null) {
         item(key = "stress") {
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_stress),
                 supporting = averageOf(metrics.stressToday)?.let {
                     stringResource(R.string.settings_watch_average_prefix, it)
@@ -118,7 +119,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.todayItems(metrics: W
     }
     if (energy != null) {
         item(key = "body-energy") {
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_body_battery),
                 supporting = metrics.bodyEnergyToday.maxOfOrNull { it.value }?.toString(),
                 value = "${energy.value}",
@@ -131,7 +132,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.todayItems(metrics: W
             val today = (moderate ?: 0) + 2 * (vigorous ?: 0)
             // The goal is weekly; the watch's running total resets nightly.
             val week = metrics.intensityMinutesWeek ?: today
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_intensity_minutes),
                 supporting = stringResource(
                     R.string.settings_watch_metric_intensity_goal,
@@ -149,14 +150,15 @@ private fun androidx.compose.foundation.lazy.LazyListScope.lastNightItems(metric
     val awake = metrics.valueOf(GarminWellnessMetric.SLEEP_AWAKE_SECONDS)
     val awakenings = metrics.valueOf(GarminWellnessMetric.SLEEP_AWAKENINGS)
     val needed = metrics.valueOf(GarminWellnessMetric.SLEEP_NEED_MINUTES)
-    if (score == null && awake == null && awakenings == null && needed == null) return
+    val restless = metrics.valueOf(GarminWellnessMetric.SLEEP_RESTLESS_MOMENTS)
+    if (score == null && awake == null && awakenings == null && needed == null && restless == null) return
 
     item(key = "night-header") {
         SectionTitle(stringResource(R.string.settings_watch_data_last_night))
     }
     if (score != null) {
         item(key = "sleep-score") {
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_sleep_score),
                 value = "${score.value}",
             )
@@ -164,7 +166,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.lastNightItems(metric
     }
     if (awake != null) {
         item(key = "awake") {
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_awake),
                 value = formatWatchDuration(Duration.ofSeconds(awake)),
             )
@@ -172,9 +174,17 @@ private fun androidx.compose.foundation.lazy.LazyListScope.lastNightItems(metric
     }
     if (awakenings != null) {
         item(key = "awakenings") {
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_awakenings),
                 value = "$awakenings",
+            )
+        }
+    }
+    metrics.valueOf(GarminWellnessMetric.SLEEP_RESTLESS_MOMENTS)?.let { restless ->
+        item(key = "restless") {
+            DeviceValueRow(
+                label = stringResource(R.string.settings_watch_metric_restless_moments),
+                value = "$restless",
             )
         }
     }
@@ -197,7 +207,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.lastNightItems(metric
                     comparison.usualText,
                 )
             }
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_sleep_coach),
                 supporting = supporting,
                 value = reading.neededText,
@@ -243,14 +253,20 @@ private fun androidx.compose.foundation.lazy.LazyListScope.trainingItems(metrics
     val recovery = metrics.valueOf(GarminWellnessMetric.RECOVERY_TIME)
     val readiness = metrics.valueOf(GarminWellnessMetric.TRAINING_READINESS)
     val acute = metrics.valueOf(GarminWellnessMetric.TRAINING_LOAD_ACUTE)
-    if (recovery == null && readiness == null && acute == null) return
+    val thresholds = listOf(
+        GarminWellnessMetric.FUNCTIONAL_THRESHOLD_POWER,
+        GarminWellnessMetric.LACTATE_THRESHOLD_POWER,
+        GarminWellnessMetric.HILL_SCORE,
+        GarminWellnessMetric.ENDURANCE_SCORE,
+    ).any { metrics.valueOf(it) != null }
+    if (recovery == null && readiness == null && acute == null && !thresholds) return
 
     item(key = "training-header") {
         SectionTitle(stringResource(R.string.settings_watch_data_training))
     }
     if (recovery != null) {
         item(key = "recovery") {
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_recovery_time),
                 value = formatWatchDuration(Duration.ofMinutes(recovery)),
             )
@@ -258,7 +274,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.trainingItems(metrics
     }
     if (readiness != null) {
         item(key = "readiness") {
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_training_readiness),
                 value = "$readiness",
             )
@@ -267,10 +283,56 @@ private fun androidx.compose.foundation.lazy.LazyListScope.trainingItems(metrics
     if (acute != null) {
         item(key = "acute-load") {
             val chronic = metrics.valueOf(GarminWellnessMetric.TRAINING_LOAD_CHRONIC)
-            WatchValueRow(
+            DeviceValueRow(
                 label = stringResource(R.string.settings_watch_metric_training_load),
                 supporting = chronic?.toString(),
                 value = "$acute",
+            )
+        }
+    }
+    thresholdItems(metrics)
+}
+
+/** The thresholds and scores, shown only when the watch sent them. */
+private fun androidx.compose.foundation.lazy.LazyListScope.thresholdItems(metrics: WatchMetrics) {
+    metrics.valueOf(GarminWellnessMetric.FUNCTIONAL_THRESHOLD_POWER)?.let { ftp ->
+        item(key = "ftp") {
+            DeviceValueRow(
+                label = stringResource(R.string.settings_watch_metric_ftp),
+                value = stringResource(R.string.settings_watch_metric_watts, ftp),
+            )
+        }
+    }
+    metrics.valueOf(GarminWellnessMetric.LACTATE_THRESHOLD_POWER)?.let { power ->
+        item(key = "lactate") {
+            val bpm = metrics.valueOf(GarminWellnessMetric.LACTATE_THRESHOLD_HEART_RATE)
+            DeviceValueRow(
+                label = stringResource(R.string.settings_watch_metric_lactate_threshold),
+                supporting = bpm?.let { stringResource(R.string.settings_watch_metric_lactate_threshold_hr, it) },
+                value = stringResource(R.string.settings_watch_metric_watts, power),
+            )
+        }
+    }
+    metrics.valueOf(GarminWellnessMetric.HILL_SCORE)?.let { hill ->
+        item(key = "hill") {
+            val strength = metrics.valueOf(GarminWellnessMetric.HILL_STRENGTH)
+            val endurance = metrics.valueOf(GarminWellnessMetric.HILL_ENDURANCE)
+            DeviceValueRow(
+                label = stringResource(R.string.settings_watch_metric_hill_score),
+                supporting = if (strength != null && endurance != null) {
+                    stringResource(R.string.settings_watch_metric_hill_score_parts, strength, endurance)
+                } else {
+                    null
+                },
+                value = "$hill",
+            )
+        }
+    }
+    metrics.valueOf(GarminWellnessMetric.ENDURANCE_SCORE)?.let { endurance ->
+        item(key = "endurance") {
+            DeviceValueRow(
+                label = stringResource(R.string.settings_watch_metric_endurance_score),
+                value = "$endurance",
             )
         }
     }
@@ -308,6 +370,19 @@ private fun labelFor(metric: GarminWellnessMetric): Int = when (metric) {
     GarminWellnessMetric.TRAINING_LOAD_ACUTE,
     GarminWellnessMetric.TRAINING_LOAD_CHRONIC,
     -> R.string.settings_watch_metric_training_load
+
+    GarminWellnessMetric.SLEEP_RESTLESS_MOMENTS -> R.string.settings_watch_metric_restless_moments
+    GarminWellnessMetric.FUNCTIONAL_THRESHOLD_POWER -> R.string.settings_watch_metric_ftp
+    GarminWellnessMetric.LACTATE_THRESHOLD_POWER,
+    GarminWellnessMetric.LACTATE_THRESHOLD_HEART_RATE,
+    -> R.string.settings_watch_metric_lactate_threshold
+
+    GarminWellnessMetric.HILL_SCORE,
+    GarminWellnessMetric.HILL_STRENGTH,
+    GarminWellnessMetric.HILL_ENDURANCE,
+    -> R.string.settings_watch_metric_hill_score
+
+    GarminWellnessMetric.ENDURANCE_SCORE -> R.string.settings_watch_metric_endurance_score
 
     // Unshown: its scale is undocumented.
     GarminWellnessMetric.SLEEP_PRESSURE -> R.string.settings_watch_data_title

@@ -12,8 +12,30 @@ commit with the release notes, and pushes in one motion.
 ## 0. Pre-flight
 
 - Everything for the release is committed and pushed on `main`; working tree clean.
+  Work merged on GitHub by rebase or squash gets new hashes, so a local feature
+  branch shows "ahead" of `origin/main` while the trees are identical: check
+  `git diff --stat HEAD origin/main` prints nothing, then
+  `git checkout main && git merge --ff-only origin/main`. The script pushes
+  `main`, so release from `main`.
 - Gates are green: `./gradlew :app:testCiUnitTest verifyTranslations :app:compileCiAndroidTestKotlin`.
+  On this laptop that needs `JAVA_HOME=~/.jdks/jbr-21.0.11`, `ANDROID_HOME=~/Android/Sdk`,
+  `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` (`./gradlew --stop` first if a daemon
+  was started without it) and an init script that pins the test workers to
+  English, since they default to Spanish and two test classes are locale-sensitive:
+  `allprojects { tasks.withType<Test>().configureEach { jvmArgs("-Duser.language=en", "-Duser.country=US") } }`
+  passed with `-I`. About a minute when the build cache is warm.
 - Scope the release: `git log --oneline vLAST..HEAD` is the list of what the notes must cover.
+  Read the commit bodies, not only the subjects; the user-facing behaviour is
+  usually described there. Translation merges from Codeberg Translate are in
+  scope too (which locales moved, whether a new one started).
+- Translations: every shipping locale should be at 100%. Count the keys each
+  `values-*/strings.xml` is missing against `values/strings.xml` (translatable
+  ones only) before writing the notes; `verifyTranslations` only enforces 70%.
+  A locale under 70% (Hebrew, `values-iw`, started 2026-10) is not in the
+  picker and must not be announced as a language.
+- `gh` is not installed on this laptop. Check GitHub state with `curl` against
+  `https://api.github.com/repos/OpenVitals-MTU/android-app/...` (anonymous,
+  60 calls an hour) or in the browser.
 
 ## 1. Version code (read this before touching anything)
 
@@ -30,6 +52,14 @@ its marker with it, and on Codeberg a pipeline dying while the nightly release
 was recreated rewound the counter; observed 2026-07). The result MUST exceed whatever nightly users
 have installed, or Play rejects the rollout with "does not allow any existing
 users to upgrade" (this bit 2.6.0's predecessor).
+
+Since the move to GitHub (2026-10), the GitHub releases list holds only
+`nightly` and the releases tagged after the move; the older `vX.Y.Z` tags have
+no GitHub release, so the refs carry the history. To see what the script sees:
+
+```bash
+git ls-remote --refs origin 'refs/version-code/*' | sed 's#.*/##' | sort -n | tail -3
+```
 
 **Race caveat:** a nightly can mint a code between your preview and the release
 run. Only the release workflow's schedule (00:00 UTC, often started some
@@ -52,9 +82,20 @@ matches the filenames.
    TAG MESSAGE. Shape: `# OpenVitals X.Y.Z`, `Released YYYY-MM-DD.`, one
    narrative paragraph saying what the release is about, then
    `### Added` / `### Changed` / `### Fixed`, then the standard footer: same
-   package name and signing certificate note, and the distribution flow
-   (GitHub release assets, Play upload from the approved production run of
-   the release workflow).
+   package name and signing certificate note, and the distribution flow.
+   Since 2.13.0 the footer reads exactly:
+
+   ```
+   The app keeps the same package name and signing certificate, so this installs as a normal update.
+
+   Distribution flow:
+
+   - GitHub release with signed APK, signed debug APK, and signed Android App Bundle assets.
+   - Direct Google Play production upload from the approved production run of the release workflow.
+   ```
+
+   Do not copy the footer from 2.12.0 or earlier: those still name the
+   Codeberg release and the Woodpecker deployment.
 3. **`README.md`** - add highlight bullets for headline features; update any
    claims the release changes (e.g. the language list when a locale lands).
 4. **`fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`** - one
@@ -70,9 +111,13 @@ matches the filenames.
    - `en-US`, `de-DE`, `es-ES`, `it-IT` and `et` had listings before 2.11.1;
      the other nine came with it. Do not call an older listing "new".
    - Japanese and Chinese have no plural forms: leave plural fixes out there.
-   - Check before running the script (all 14 present, none over 500):
+   - Play counts the file as uploaded, trailing newline included: a note of
+     exactly 500 characters plus its newline is rejected as 501 (2.13.0's
+     German note, found only in the production run). Count the whole file
+     and keep every note at 490 or under, so a late edit has room.
+   - Check before running the script (all 14 present, none over 490):
      ```bash
-     code=<versionCode>; for d in fastlane/metadata/android/*/; do f="${d}changelogs/$code.txt"; test -f "$f" || echo "missing $f"; python3 -c "import sys; n=len(open(sys.argv[1],encoding='utf-8').read().rstrip(chr(10))); print(sys.argv[1], n, 'TOO LONG' if n > 500 else '')" "$f" 2>/dev/null; done
+     code=<versionCode>; for d in fastlane/metadata/android/*/; do f="${d}changelogs/$code.txt"; test -f "$f" || echo "missing $f"; python3 -c "import sys; n=len(open(sys.argv[1],encoding='utf-8').read()); print(sys.argv[1], n, 'TOO LONG' if n > 490 else '')" "$f" 2>/dev/null; done
      ```
 
 ## 3. Run the release
@@ -110,22 +155,35 @@ either way: Zulip readers see it first too.
 
 ## 4. Companion repos (after the tag is pushed)
 
-- **`../docs`** (Nextra site): prepend the English section to
-  `docs/releases/changelog.md` (mirrors the CHANGELOG English section, minus
-  app-repo-only details); add or update `docs/features/*.md` pages for new
-  features and register new pages in `docs/features/_meta.ts`; fix any pages
-  the release made stale. Commit `docs: X.Y.Z - <headline>` and push.
+- **`../docs`** (Nextra site): `git fetch` first, since the previous
+  release's commit may already be upstream. Prepend the English section to
+  `docs/releases/changelog.md` (the narrative paragraph from the release
+  notes, then the CHANGELOG English bullets, minus app-repo-only details);
+  add or update `docs/features/*.md` pages for new features and register new
+  pages in `docs/features/_meta.ts`; fix any pages the release made stale.
+  A feature page may already exist when the app links to it (the scales page
+  landed before 2.13.0 because Settings links to it): `ls docs/features`
+  before writing one. Commit `docs: X.Y.Z - <headline>` and push.
 - **`../landing-page`**: update the copy (the `features.cards` grid and any
   card the release touches) when a headline feature warrants it. Each of the
   14 languages is one file, `lib/locales/<code>.ts`; `en.ts` is the source.
   Edit all 14, with the app's terms from that locale's `strings.xml` (French
-  says "Santé Connect"). Check with `npm run typecheck`; there is no system
-  Node, so use a portable one or the CI result. A push to `main` deploys to
-  openvitals.health. The repo has no git identity: commit with
+  says "Santé Connect"). There is a system Node (v26) but no `node_modules`,
+  so `npm run typecheck` picks up a global TypeScript that fails on the
+  repo's `baseUrl` (TS5102), unrelated to the edit. Parse-check the edited
+  files with `node -e` and `stripTypeScriptTypes` from `node:module` instead,
+  or rely on CI. A push to `main` deploys to openvitals.health. The repo has no git identity: commit with
   `-c user.name=Manuel -c user.email=manuel@mmarca.tech`. Commit
   `content: <what changed>, for X.Y.Z` and push.
 
 ## 5. Gotchas that have actually happened
+
+- 2.11.2 and 2.12.0 shipped with a stale distribution footer (Codeberg,
+  Woodpecker) after the GitHub move; the footer is part of the tag message,
+  so it cannot be fixed afterwards. Read the footer, do not paste it.
+- A fix that was hidden rather than announced can need announcing later:
+  Medical records were cut from the Play build in 2.11.2 and 2.12.0 without a
+  note, so 2.13.0 had to say they were back.
 
 - Unescaped `&` in a translated string breaks `verifyTranslations` (XML parse).
 - Every locale, Finnish and Polish included, is at 100% since 2026-09-25. New

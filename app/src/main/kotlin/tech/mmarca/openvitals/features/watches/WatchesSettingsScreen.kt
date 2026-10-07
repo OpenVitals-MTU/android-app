@@ -42,10 +42,11 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.devices.garmin.GarminOnboardStep
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
-import tech.mmarca.openvitals.domain.model.OsPermissionId
-import tech.mmarca.openvitals.domain.model.OsPermissionRow
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
+import tech.mmarca.openvitals.ui.components.DeviceAvatar
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
+import tech.mmarca.openvitals.ui.components.OsPermissionsDialog
+import tech.mmarca.openvitals.ui.components.formatDeviceTime
 import tech.mmarca.openvitals.ui.theme.Spacing
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 
@@ -184,8 +185,11 @@ fun WatchesSettingsScreen(
     }
 
     if (state.showPermissionsGate) {
-        WatchPermissionsDialog(
-            state = state,
+        OsPermissionsDialog(
+            catalog = state.osPermissions,
+            title = stringResource(R.string.watch_permissions_title),
+            body = stringResource(R.string.watch_permissions_body),
+            continueLabel = stringResource(R.string.settings_watches_add),
             onGrantAll = {
                 // Queue the settings walks before the dialog: its callback drains them.
                 viewModel.queueAllSpecialPermissions()
@@ -211,105 +215,6 @@ fun WatchesSettingsScreen(
 
 private val WatchPermissionIconSize = 18.dp
 
-/** The permission checklist shown when adding a watch. Continuing anyway stays available. */
-@Composable
-private fun WatchPermissionsDialog(
-    state: WatchesUiState,
-    onGrantAll: () -> Unit,
-    onGrantRow: (OsPermissionRow) -> Unit,
-    onContinue: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = stringResource(R.string.watch_permissions_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                Text(
-                    text = stringResource(R.string.watch_permissions_body),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                // Ordered once when the dialog opens, so rows do not move under the finger.
-                val rowOrder = remember {
-                    state.osPermissions.rows.sortedBy { it.granted }.map { it.id }
-                }
-                rowOrder.mapNotNull { id -> state.osPermissions.rows.firstOrNull { it.id == id } }
-                    .forEach { row ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = if (row.granted) {
-                                    Icons.Outlined.CheckCircle
-                                } else {
-                                    Icons.Outlined.RadioButtonUnchecked
-                                },
-                                contentDescription = null,
-                                tint = if (row.granted) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                modifier = Modifier.size(WatchPermissionIconSize),
-                            )
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(start = Spacing.md),
-                            ) {
-                                Text(
-                                    text = stringResource(row.titleRes()),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-                                Text(
-                                    text = stringResource(row.descriptionRes()),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            if (!row.granted) {
-                                TextButton(onClick = { onGrantRow(row) }) {
-                                    Text(text = stringResource(R.string.action_grant))
-                                }
-                            }
-                        }
-                    }
-            }
-        },
-        confirmButton = {
-            if (state.osPermissions.allGranted) {
-                TextButton(onClick = onContinue) {
-                    Text(text = stringResource(R.string.settings_watches_add))
-                }
-            } else {
-                TextButton(onClick = onGrantAll) {
-                    Text(text = stringResource(R.string.onboarding_action_grant_all))
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onContinue) {
-                Text(text = stringResource(R.string.watch_permissions_continue))
-            }
-        },
-    )
-}
-
-private fun OsPermissionRow.titleRes(): Int = when (id) {
-    OsPermissionId.BLUETOOTH -> R.string.onboarding_os_bluetooth
-    OsPermissionId.NOTIFICATIONS -> R.string.onboarding_os_notifications
-    OsPermissionId.LOCATION -> R.string.onboarding_os_location
-    OsPermissionId.BATTERY_OPTIMIZATION -> R.string.onboarding_os_battery
-    OsPermissionId.NOTIFICATION_FORWARDING -> R.string.onboarding_os_notification_forwarding
-}
-
-private fun OsPermissionRow.descriptionRes(): Int = when (id) {
-    OsPermissionId.BLUETOOTH -> R.string.onboarding_os_bluetooth_desc
-    OsPermissionId.NOTIFICATIONS -> R.string.onboarding_os_notifications_desc
-    OsPermissionId.LOCATION -> R.string.onboarding_os_location_desc
-    OsPermissionId.BATTERY_OPTIMIZATION -> R.string.onboarding_os_battery_desc
-    OsPermissionId.NOTIFICATION_FORWARDING -> R.string.onboarding_os_notification_forwarding_desc
-}
-
 @Composable
 private fun WatchRow(
     device: BleSensorDevice,
@@ -324,7 +229,7 @@ private fun WatchRow(
                 .clickable(onClick = onOpen)
                 .padding(Spacing.lg),
         ) {
-            WatchAvatar()
+            DeviceAvatar()
             Spacer(modifier = Modifier.width(WatchRowIconGap))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -346,7 +251,7 @@ private fun WatchRow(
                     text = device.lastSyncedAt?.let {
                         stringResource(
                             R.string.settings_watch_last_synced,
-                            formatWatchSyncTime(it),
+                            formatDeviceTime(it),
                         )
                     } ?: stringResource(R.string.settings_watch_never_synced),
                     style = MaterialTheme.typography.labelSmall,

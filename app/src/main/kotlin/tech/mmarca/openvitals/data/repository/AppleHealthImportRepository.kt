@@ -21,6 +21,12 @@ class AppleHealthImportRepository @Inject constructor(
             hc.insertImportedRecords(records)
         }
 
+    /** Deletes this app's records of [recordType] by `clientRecordId`. Unknown ids are ignored. */
+    suspend fun deleteImportedRecordsByClientIds(recordType: KClass<out Record>, clientRecordIds: List<String>) =
+        withContext(dispatchers.io) {
+            hc.deleteImportedRecordsByClientIds(recordType, clientRecordIds)
+        }
+
     suspend fun findMatchingImportedClientRecordIds(
         recordType: KClass<out Record>,
         start: Instant,

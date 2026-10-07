@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
+import tech.mmarca.openvitals.devices.core.pairing.CompanionPresenceObserver
 import tech.mmarca.openvitals.devices.notifications.NotificationMsg
 import tech.mmarca.openvitals.devices.notifications.NotificationStore
 import tech.mmarca.openvitals.devices.notifications.OpenVitalsNotificationListenerService
@@ -42,7 +43,7 @@ class GarminNotificationBridge @Inject constructor(
     private val foregroundGate: tech.mmarca.openvitals.core.performance.AppForegroundGate,
     private val realtimeStore: GarminRealtimeStore,
     private val musicRelay: GarminMusicRelay,
-) {
+) : CompanionPresenceObserver {
 
     private companion object {
         const val TAG = "OVNotifyBridge"
@@ -165,7 +166,9 @@ class GarminNotificationBridge @Inject constructor(
             manufacturer = identity.manufacturer,
             model = identity.model,
             lease = SharedGarminRadioLease,
-            openLink = { request -> GarminBleNotificationLink.open(context, scope, request) },
+            openLink = { request ->
+                GarminBleNotificationLink.open(context, scope, request, highMtu = stateStore.highMtu(request.address))
+            },
             onAction = ::performAction,
             appLabel = ::appLabel,
             onFindPhone = { seconds -> findPhoneRinger.start(seconds) },
@@ -322,7 +325,9 @@ class GarminNotificationBridge @Inject constructor(
         }
     }
 
-    fun onWatchAppeared(address: String) {
+    /** Android reports every associated device here, a bathroom scale included; only a watch is this bridge's. */
+    override fun onCompanionDeviceAppeared(address: String) {
+        if (deviceFor(address)?.isGarminGfdi != true) return
         GarminLog.log("[GARMIN-COMPANION] $address is in range")
         ensureCompanionLink()
     }

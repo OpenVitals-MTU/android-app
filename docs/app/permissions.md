@@ -140,7 +140,7 @@ They are asked for in one request, only inside the medical records area, and nev
 
 OpenVitals uses Bluetooth for three separate things: Bluetooth LE sensors during activity recording, Garmin watches, and phone-to-phone sync. They share the same nearby-device permissions:
 
-- `android.permission.BLUETOOTH_SCAN`: used to find Bluetooth LE sensors, to find a Garmin watch during pairing, and to discover a nearby phone for sync. It is declared with `neverForLocation`, so OpenVitals does not derive location from Bluetooth scan results.
+- `android.permission.BLUETOOTH_SCAN`: used to find Bluetooth LE sensors, to find a Garmin watch during pairing, to discover a nearby phone for sync, and to hear a bathroom scale's broadcasts. It is declared with `neverForLocation`, so OpenVitals does not derive location from Bluetooth scan results.
 - `android.permission.BLUETOOTH_CONNECT`: used to connect to a Bluetooth LE sensor, to talk to a paired watch, and to open the sync connection to another phone.
 - `android.permission.BLUETOOTH_ADVERTISE`: used only by phone-to-phone sync on Android 12 and newer, so this phone can be made discoverable while the other phone looks for it.
 - `android.permission.BLUETOOTH` and `android.permission.BLUETOOTH_ADMIN`: declared for Android 11 and older only (`maxSdkVersion="30"`). Those versions need them to scan, to connect and to list bonded devices. There, a Bluetooth LE scan also needs the location permission, so the add-sensor and add-watch flows ask for it.
@@ -149,16 +149,17 @@ Nearby-device Bluetooth permissions never add internet access. Phone-to-phone sy
 
 ## Companion Device Permissions
 
-Garmin watch pairing uses Android's companion device manager. The association is what lets Android keep OpenVitals alive while the watch is in range, so a file sync that takes minutes is not killed halfway through:
+Garmin watch pairing uses Android's companion device manager. The association is what lets Android keep OpenVitals alive while the watch is in range, so a file sync that takes minutes is not killed halfway through. A bathroom scale can be associated too, so that Android wakes OpenVitals when someone steps on it:
 
 - `android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND`
 - `android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE`
+- `android.permission.REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND`: lets the app start the scale's short listening service when Android reports the associated scale awake. It does nothing without the association.
 
-Neither shows a permission prompt of its own. The consent is the system dialog that asks whether OpenVitals may access the selected watch. Declining it is supported: the watch is still bonded and still syncs, only without the background priority boost.
+None shows a permission prompt of its own. The consent is the system dialog that asks whether OpenVitals may access the selected watch or scale. Declining it is supported for a watch: it is still bonded and still syncs, only without the background priority boost. For a scale the dialog is the way it is added, so declining adds no scale.
 
 The manifest also declares the `android.software.companion_device_setup` feature as not required, so the app stays installable on devices without companion support. `android.permission.REQUEST_COMPANION_USE_DATA_IN_BACKGROUND` is deliberately not declared, because it governs background network use and OpenVitals has no network access at all.
 
-The app declares two companion services Android binds while an associated watch is in range. `.devices.core.pairing.OpenVitalsCompanionDeviceService` runs no logic of its own; the binding exists only to raise the app's process priority during a sync. `.devices.garmin.GarminCompanionService` reacts to the watch coming into range, so that with "Stay connected" switched on the held link returns promptly instead of waiting out a retry timer.
+The app declares one companion service, `.devices.core.pairing.OpenVitalsCompanionDeviceService`, which Android binds while an associated device is in range. The binding raises the app's process priority during a sync, and the service passes "device appeared" on to the parts that act on it: with "Stay connected" switched on the held link to a watch returns promptly instead of waiting out a retry timer, and a bathroom scale waking up starts the short listening service described under Foreground Service Permissions.
 
 ## Notification Access
 
@@ -177,10 +178,10 @@ Notification access is optional and used for two things: forwarding phone notifi
 - `android.permission.WAKE_LOCK`: keeps the CPU running during an activity recording while the screen is off, so timers and sensors keep time. Held while recording and during a timed rest, released on pause and at the end. Android grants it without a prompt.
 - `android.permission.FOREGROUND_SERVICE_LOCATION`: marks the recording service as location-based.
 - `android.permission.FOREGROUND_SERVICE_HEALTH`: marks the recording service as health-related where Android supports it.
-- `android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE`: used by activity recording with connected Bluetooth LE sensors and by the keep-alive service that runs during a phone-to-phone sync transfer.
+- `android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE`: used by activity recording with connected Bluetooth LE sensors, by the keep-alive service that runs during a phone-to-phone sync transfer, and by the scale's listening service, which runs for at most 45 seconds after Android reports the associated scale awake, because the scale's result is on the air for two seconds and a background scan would miss it.
 - `android.permission.FOREGROUND_SERVICE_DATA_SYNC`: marks long-running Apple Health imports as user-started data sync work.
 
-OpenVitals treats the foreground slot as effectively single. Activity recording, an Apple Health import, and a phone-to-phone sync contend for it, so the app does not run them at the same time.
+OpenVitals treats the foreground slot as effectively single. Activity recording, an Apple Health import, and a phone-to-phone sync contend for it, so the app does not run them at the same time. The scale's listening service is the one the app starts without a tap, and it starts nothing while another already holds the slot.
 
 ## Removed Network Permissions
 

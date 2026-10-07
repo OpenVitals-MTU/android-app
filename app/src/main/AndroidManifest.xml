@@ -163,6 +163,14 @@
     -->
     <uses-permission android:name="android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND" />
     <!--
+        Bathroom scale (devices/xiaomi/ScaleListeningService.kt). The scale's
+        result is on the air for two seconds, and a closed app only scans
+        full time while it holds a foreground service. This lets the app
+        start that service when Android reports the associated scale awake.
+        An install-time grant that does nothing without the association.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND" />
+    <!--
         Required by start/stopObservingDevicePresence, which is what actually
         makes the OS bind OpenVitalsCompanionDeviceService when the watch comes
         into range. Without it those calls throw SecurityException and the
@@ -477,10 +485,13 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
 
-        <!-- Bound by the OS while an associated Garmin watch is in range. It
-             runs no logic of its own — the BINDING is the point, because it
+        <!-- Bound by the OS while an associated device is in range. For a
+             Garmin watch the BINDING is the point, because it
              elevates this process's priority so a multi-minute BLE file sync
-             is not killed by the low-memory killer. `exported` and the
+             is not killed by the low-memory killer. Declared first, so it is
+             the primary companion service: the only one Android tells that a
+             device appeared. It passes that on (CompanionPresenceObserver),
+             which is how a bathroom scale waking up reaches devices/xiaomi. `exported` and the
              BIND_COMPANION_DEVICE_SERVICE permission are both required by the
              platform contract: the system alone may bind it. API 31+; below
              that the OS simply never binds it. -->
@@ -534,24 +545,24 @@
             android:exported="false" />
 
         <!--
+            Where the system delivers the bathroom scale's broadcasts, with
+            the app open or not (devices/xiaomi/ScaleScanRadio.kt). Reached
+            only through this app's own explicit PendingIntent.
+        -->
+        <receiver
+            android:name=".devices.xiaomi.ScaleScanReceiver"
+            android:exported="false" />
+
+        <!--
             Weather from a companion app (Breezy Weather et al.) over
             the generic-weather broadcast contract. Exported because
             an external app must reach it; the payload is public weather.
         -->
-        <!--
-            Bound by the OS when the stay-connected watch comes into range
-            (companion-device presence). API 31+; older devices keep companion
-            mode only while the app process lives.
-        -->
+        <!-- Held for the seconds a weigh-in takes, so the scan runs full time. Runs no logic. -->
         <service
-            android:name=".devices.garmin.GarminCompanionService"
-            android:exported="true"
-            android:permission="android.permission.BIND_COMPANION_DEVICE_SERVICE"
-            tools:targetApi="s">
-            <intent-filter>
-                <action android:name="android.companion.CompanionDeviceService" />
-            </intent-filter>
-        </service>
+            android:name=".devices.xiaomi.ScaleListeningService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
 
         <receiver
             android:name=".devices.weather.GenericWeatherReceiver"

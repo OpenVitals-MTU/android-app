@@ -40,6 +40,8 @@ import tech.mmarca.openvitals.data.sync.VitalsHistorySyncService
 import tech.mmarca.openvitals.domain.model.DailyBloodPressurePoint
 import tech.mmarca.openvitals.domain.model.DailyVitalPoint
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.SkinTemperatureDeltaSample
+import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.domain.model.SpO2Entry
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementEntry
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
@@ -315,6 +317,37 @@ class VitalsRepositoryTest {
 
         assertTrue(points.isEmpty())
         coVerify(exactly = 0) { hc.readDailySkinTemperature(any(), any()) }
+    }
+
+    @Test fun `skin temperature samples travel for a day window only`() = runTest {
+        // A record holds a sample a minute. The day view draws them; a 90-day baseline window must not carry them.
+        val hc = hc()
+        val sample = SkinTemperatureDeltaSample(Instant.parse("2026-06-15T08:00:00Z"), -0.3)
+        val entry = SkinTemperatureEntry(
+            startTime = sample.time,
+            endTime = sample.time,
+            baselineCelsius = 33.0,
+            averageDeltaCelsius = -0.3,
+            minDeltaCelsius = -0.3,
+            maxDeltaCelsius = -0.3,
+            measurementLocation = 0,
+            source = "watch",
+            deltas = listOf(sample),
+        )
+        coEvery { hc.readSkinTemperatureEntries(any(), any()) } returns listOf(entry)
+        val repository = VitalsRepositoryImpl(hc)
+
+        val day = repository.loadVitalsPeriod(
+            PeriodLoadQuery(range = TimeRange.DAY, anchorDate = today, today = today),
+            VitalsPeriodMetric.SKIN_TEMPERATURE,
+        )
+        assertEquals(listOf(sample), day.skinTemperature.single().deltas)
+        assertTrue(day.previousSkinTemperature.single().deltas.isEmpty())
+        assertTrue(day.baselineSkinTemperature.single().deltas.isEmpty())
+
+        val week = repository.loadVitalsPeriod(weekQuery(), VitalsPeriodMetric.SKIN_TEMPERATURE)
+        assertTrue(week.skinTemperature.single().deltas.isEmpty())
+        assertEquals(-0.3, week.skinTemperature.single().averageDeltaCelsius!!, 1e-9)
     }
 
     @Test fun `loadDailyVitals rejects the pseudo metrics`() = runTest {

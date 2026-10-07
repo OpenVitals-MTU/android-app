@@ -263,6 +263,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/insights/P
 | marksValuesOutsideUsualRangeButBelowAnomalyThreshold | PORTED | PersonalBaselineTest.kt: `marksValuesOutsideUsualRangeButBelowAnomalyThreshold` | — |
 | marksTwoStandardDeviationsAsAnomaly | PORTED | PersonalBaselineTest.kt: `marksTwoStandardDeviationsAsAnomaly` | — |
 | returnsNullWhenThereAreNotEnoughSamples | PORTED | PersonalBaselineTest.kt: `returnsNullWhenThereAreNotEnoughSamples` | — |
+| — | KOTLIN-ONLY | PersonalBaselineTest.kt: `dropsZeroAndNegativeDaysByDefault`, `keepsZeroAndNegativeDaysForASignedMetric` | `includeNonPositive`: a signed metric (skin temperature variation) keeps its negative days |
 
 ## test/domain/insights/route_elevation_test.dart
 Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/domain/insights/RouteElevationTest.kt
@@ -793,6 +794,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/data/repository/D
 |---|---|---|---|
 | assembles granted metrics and reports missing permissions | PORTED | DashboardDataLoaderTest.kt: `loadDashboard reports missing permissions only for visible metrics` | loadedMetrics assertion lives in `loadDashboard skips hidden dashboard metrics` |
 | overnight vitals are read from the night window, not the day | PORTED | DashboardDataLoaderTest.kt: `overnight vitals read back to the night-window start` | Kotlin is stronger: five overnight metrics plus window-honoring fakes and boundary tests |
+| — | KOTLIN-ONLY | DashboardDataLoaderTest.kt: `a delta-less newest skin temperature record falls back to the newest with a delta` | a record with only a baseline is not a reading; same rule as the overview card |
 | active caffeine > morning carryover from last night is reported for today | PORTED | DashboardDataLoaderParityTest.kt: `morning carryover from last night is reported for today` | drives the yesterday+today point-in-time read and asserts a positive active figure |
 | active caffeine > matches the caffeine screen's currentMg for the same inputs | PORTED | DashboardDataLoaderParityTest.kt: `active caffeine matches the caffeine screen's currentMg for the same inputs` | tile vs `CaffeineInsightCalculator.build(...).currentMg`, same entries, 0.1 mg tolerance |
 | active caffeine > a past day keeps intake semantics: no PK read at all | PORTED | DashboardDataLoaderParityTest.kt: `a past day keeps intake semantics - no point-in-time read at all` | `date == LocalDate.now()` gate: no nutrition-entry read, null activeCaffeineMg |
@@ -840,6 +842,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/data/repository/V
 |---|---|---|---|
 | loadVitalsPeriod (ALL) > fans the seven vitals reads out concurrently, not serially | DIVERGED | VitalsRepositoryTest.kt: `slow metric does not block the others` | Proves parallel isolation but never asserts the seven-way high-water mark |
 | loadVitalsPeriod (ALL) > a stuck read times out into a failure instead of hanging forever | DIVERGED | VitalsRepositoryTest.kt: `daily read that blows its budget lands in timedOutMetrics and stays empty` | Only the per-metric budget is tested; no whole-load budget surfacing a retryable failure |
+| — | KOTLIN-ONLY | VitalsRepositoryTest.kt: `skin temperature samples travel for a day window only` | `SkinTemperatureEntry.deltas` is kept for a day query's current window and stripped from the previous and 90-day baseline windows |
 | loadVitalsPeriod (ALL) > a metric too large to read degrades to empty and is flagged, not fatal | PORTED | VitalsRepositoryTest.kt: `daily read that blows its budget lands in timedOutMetrics and stays empty` | — |
 | loadVitalsPeriod (ALL) > a synced metric reads daily points from the cache, not live | PORTED | VitalsRepositoryTest.kt: `cached daily points are served without hitting Health Connect` | — |
 | daily-cache write-through > a write refreshes the affected day in the cache | DIVERGED | VitalsHistorySyncServiceTest.kt: `patchDays recomputes the given day when a cursor exists` | Recompute tested at sync-service layer; repository write-to-patch wiring untested |
@@ -1309,6 +1312,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/core/presentation
 | imperial temperature uses fahrenheit | PORTED | UnitFormatterTest.kt: `imperial temperature uses fahrenheit` | — |
 | metric temperature delta keeps celsius delta | PORTED | UnitFormatterTest.kt: `metric temperature delta keeps celsius delta` | — |
 | imperial temperature delta converts to fahrenheit delta | PORTED | UnitFormatterTest.kt: `imperial temperature delta converts to fahrenheit delta` | — |
+| — | KOTLIN-ONLY | UnitFormatterTest.kt: `a temperature delta that rounds to zero prints unsigned` | the dashboard tile read "-0.0 deg C"; sign decided after rounding |
 | metric blood glucose uses mmol per liter | PORTED | UnitFormatterTest.kt: `metric blood glucose uses mmol per liter` | — |
 | imperial blood glucose uses milligrams per deciliter | PORTED | UnitFormatterTest.kt: `imperial blood glucose uses milligrams per deciliter` | — |
 | blood pressure is not converted | PORTED | UnitFormatterTest.kt: `blood pressure is not converted` | — |

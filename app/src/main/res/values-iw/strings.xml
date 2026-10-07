@@ -60,4 +60,12 @@
     <string name="workout_plan_step_description_label">תווית (רשות)</string>
     <string name="workout_plan_goal_steps">%1$d צעדים</string>
     <string name="workout_plan_step_weight_label">משקל (ק״ג)</string>
+    <string name="skin_temperature_variation_title">סטייה מקו הבסיס</string>
+    <string name="skin_temperature_variation_caption">עד כמה טמפרטורת העור התרחקה מקו הבסיס שהמכשיר קבע. לא טמפרטורה מוחלטת.</string>
+    <string name="skin_temperature_row_with_baseline">%1$s מקו הבסיס · קו בסיס %2$s</string>
+    <string name="skin_temperature_row_without_baseline">%1$s מקו הבסיס</string>
+    <string name="skin_temperature_no_variation">לא נרשמה סטייה</string>
+    <string name="skin_temperature_baseline_not_provided">לא סופק על ידי המקור</string>
+    <string name="skin_temperature_baseline_newest">מהרשומה החדשה ביותר</string>
+    <string name="stat_vs_usual_average">לעומת הממוצע הרגיל</string>
 </resources>
