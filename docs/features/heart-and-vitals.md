@@ -31,6 +31,27 @@ Vitals metrics:
 - Blood glucose.
 - Skin temperature.
 
+### Skin Temperature
+
+Health Connect stores skin temperature as a signed *variation* from a baseline
+the device set, with the baseline optional and per record, and a record can
+span hours with a sample a minute. The screen keeps the two apart:
+
+- Every value is a variation in signed degrees, under "Variation from baseline".
+  Nothing reconstructs an absolute temperature.
+- Charts are zero-centred (`LineAxisRange.ZeroCentred`) with a dashed zero line.
+  The day view draws the records' samples on the day timeline
+  (`SkinTemperatureDayChart`); samples travel in `SkinTemperatureEntry.deltas`
+  for a day query only.
+- Comparisons are signed degrees, never a percent of a delta
+  (`ComparisonDisplayStyle.SIGNED_VALUE`), and the personal baseline keeps the
+  days below zero (`includeNonPositive`). The deviation tile is "Vs usual average".
+- The device baseline has its own tile: the one the period's records share,
+  else the newest, flagged; "Not provided by source" when there is none. A
+  record without samples is "No variation recorded", never its baseline as a reading.
+- The code lives in `features/vitals/SkinTemperatureSections.kt` and
+  `SkinTemperatureDayChart.kt`.
+
 ## Detail Pattern
 
 Heart and vitals detail screens use the shared metric detail scaffold:
