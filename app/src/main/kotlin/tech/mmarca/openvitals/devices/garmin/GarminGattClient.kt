@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
@@ -44,6 +45,8 @@ class GarminGattClient(
     private val context: Context,
     private val address: String,
     private val onLog: ((String) -> Unit)? = null,
+    /** Ask for a large MTU. Off is the workaround for a watch that misbehaves with big packets. */
+    private val highMtu: Boolean = true,
 ) {
 
     private companion object {
@@ -52,6 +55,10 @@ class GarminGattClient(
 
         /** Long, because a connect right after bonding may find the watch still settling. */
         val CONNECT_TIMEOUT: Duration = 20.seconds
+
+        /** Dials before a stack error is final, and the pause that lets the stack settle between them. */
+        const val CONNECT_ATTEMPTS = 3
+        val CONNECT_SETTLE: Duration = 2.seconds
         val DISCOVER_TIMEOUT: Duration = 10.seconds
         val MTU_TIMEOUT: Duration = 5.seconds
         val SUBSCRIBE_TIMEOUT: Duration = 5.seconds
@@ -82,10 +89,19 @@ class GarminGattClient(
     /** Runs the GFDI re-registration when the watch closes the handle. Invisible to callers. */
     private val healScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    // Single-shot bridges from the GATT callback into coroutines.
-    private val connectedSignal = CompletableDeferred<Unit>()
-    private val servicesSignal = CompletableDeferred<List<BluetoothGattService>>()
-    private val mtuSignal = CompletableDeferred<Int>()
+    // Single-shot bridges from the GATT callback into coroutines. Fresh per dial: a failed one leaves them failed.
+    @Volatile
+    private var connectedSignal = CompletableDeferred<Unit>()
+
+    @Volatile
+    private var servicesSignal = CompletableDeferred<List<BluetoothGattService>>()
+
+    @Volatile
+    private var mtuSignal = CompletableDeferred<Int>()
+
+    /** True once a dial got through. Only then is a drop news to the caller. */
+    @Volatile
+    private var linkUp = false
 
     @Volatile
     private var descriptorWritten: CompletableDeferred<Unit>? = null
@@ -105,6 +121,8 @@ class GarminGattClient(
 
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+            // A hung-up dial can still report; only the current link counts.
+            if (gatt !== this@GarminGattClient.gatt) return
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 val failure = GarminGattClientException("GATT connection failed (status $status)")
                 ml?.close()
@@ -112,13 +130,16 @@ class GarminGattClient(
                 servicesSignal.completeExceptionally(failure)
                 descriptorWritten?.completeExceptionally(failure)
                 writeCompleted?.completeExceptionally(failure)
-                if (!closed) disconnected.tryEmit("GATT status $status")
+                if (linkUp && !closed) disconnected.tryEmit("GATT status $status")
                 return
             }
             when (newState) {
-                BluetoothProfile.STATE_CONNECTED -> connectedSignal.complete(Unit)
+                BluetoothProfile.STATE_CONNECTED -> {
+                    linkUp = true
+                    connectedSignal.complete(Unit)
+                }
                 BluetoothProfile.STATE_DISCONNECTED -> {
-                    if (!closed) {
+                    if (linkUp && !closed) {
                         log("[GARMIN-BLE] link dropped")
                         disconnected.tryEmit("link dropped")
                     }
@@ -310,7 +331,10 @@ class GarminGattClient(
     ) {
         sendCharacteristic = send
         receiveUuid = receive.uuid
-        log("[GARMIN-BLE] using $label receive=${receive.uuid} send=${send.uuid} mtu=$mtu")
+        log(
+            "[GARMIN-BLE] using $label receive=${receive.uuid} send=${send.uuid} " +
+                "mtu=$mtu writeType=${send.writeType}",
+        )
         transport.onMtuChanged(mtu)
         try {
             subscribe(receive)
@@ -375,19 +399,13 @@ class GarminGattClient(
             )
         }
 
-        gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
-        val connectResult = withTimeoutOrNull(CONNECT_TIMEOUT) {
-            runCatching { connectedSignal.await() }
-        }
-        if (connectResult == null || connectResult.isFailure) {
-            close()
-            throw GarminGattClientException("Could not connect")
-        }
-        val currentGatt = gatt ?: throw GarminGattClientException("Not connected")
+        val currentGatt = dial(device)
 
         // A refused MTU request just means smaller writes.
         var mtu = 23
-        if (requestMtu) {
+        if (requestMtu && !highMtu) {
+            log("[GARMIN-BLE] large packets are off for this watch; using the default MTU")
+        } else if (requestMtu) {
             val requested = runCatching { currentGatt.requestMtu(DESIRED_MTU) }
                 .getOrDefault(false)
             if (requested) {
@@ -409,6 +427,49 @@ class GarminGattClient(
             throw GarminGattClientException("Service discovery failed")
         }
         return services to mtu
+    }
+
+    /**
+     * Connects, redialling after a settle pause when the stack reports an error
+     * (133 and its kin), which a fresh dial usually clears. No answer at all is
+     * not retried: the watch is away, and another wait would be as long again.
+     */
+    @SuppressLint("MissingPermission")
+    private suspend fun dial(device: BluetoothDevice): BluetoothGatt {
+        var lastFailure: String? = null
+        for (attempt in 1..CONNECT_ATTEMPTS) {
+            connectedSignal = CompletableDeferred()
+            servicesSignal = CompletableDeferred()
+            mtuSignal = CompletableDeferred()
+            val dialled = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
+            gatt = dialled
+            val outcome = withTimeoutOrNull(CONNECT_TIMEOUT) {
+                runCatching { connectedSignal.await() }
+            }
+            if (outcome?.isSuccess == true) return dialled
+            hangUp(dialled)
+            if (outcome == null) {
+                close()
+                throw GarminGattClientException("Could not connect")
+            }
+            lastFailure = outcome.exceptionOrNull()?.message
+            if (attempt == CONNECT_ATTEMPTS) break
+            log(
+                "[GARMIN-BLE] connect attempt $attempt failed ($lastFailure); " +
+                    "redialling in ${CONNECT_SETTLE.inWholeSeconds}s",
+            )
+            delay(CONNECT_SETTLE)
+        }
+        close()
+        throw GarminGattClientException("Could not connect: $lastFailure")
+    }
+
+    /** Drops a dial that failed, without marking the client closed, so it can redial. */
+    @SuppressLint("MissingPermission")
+    private fun hangUp(dialled: BluetoothGatt) {
+        gatt = null
+        runCatching { dialled.disconnect() }
+        runCatching { dialled.close() }
     }
 
     /** The first receive/send pair in the handle window, as `CommunicatorV2` does. */
@@ -462,8 +523,10 @@ class GarminGattClient(
         val currentGatt = gatt ?: throw GarminGattClientException("Not connected")
         val characteristic = sendCharacteristic
             ?: throw GarminGattClientException("Not connected")
-        // Write-without-response: ML and GFDI carry their own framing and acks,
-        // and confirmations would halve throughput. onCharacteristicWrite paces writes.
+        // The characteristic's own write type: with a response when the watch
+        // offers one, so each chunk is confirmed at the ATT layer. Without one,
+        // a chunk the watch dropped was never known, and the only pacing was a
+        // callback some stacks skip.
         writeMutex.withLock {
             val completion = CompletableDeferred<Unit>()
             writeCompleted = completion
@@ -471,13 +534,11 @@ class GarminGattClient(
                 currentGatt.writeCharacteristic(
                     characteristic,
                     packet,
-                    BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE,
+                    characteristic.writeType,
                 ) == BluetoothStatusCodes.SUCCESS
             } else {
                 @Suppress("DEPRECATION")
                 run {
-                    characteristic.writeType =
-                        BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
                     characteristic.value = packet
                     currentGatt.writeCharacteristic(characteristic)
                 }
