@@ -66,6 +66,18 @@ data class BloodGlucoseEntry(
     val source: String,
 )
 
+/** One timed variation inside a skin temperature record. */
+data class SkinTemperatureDeltaSample(
+    val time: Instant,
+    val deltaCelsius: Double,
+)
+
+/**
+ * A Health Connect skin temperature record: a signed variation from an
+ * optional absolute [baselineCelsius] the device set. A record can span hours
+ * with a sample a minute; [deltas] keeps them where a day view needs the
+ * shape, and is empty where only the summary fields travel.
+ */
 data class SkinTemperatureEntry(
     val startTime: Instant,
     val endTime: Instant,
@@ -75,6 +87,7 @@ data class SkinTemperatureEntry(
     val maxDeltaCelsius: Double?,
     val measurementLocation: Int,
     val source: String,
+    val deltas: List<SkinTemperatureDeltaSample> = emptyList(),
 ) {
     val time: Instant get() = endTime
 }
