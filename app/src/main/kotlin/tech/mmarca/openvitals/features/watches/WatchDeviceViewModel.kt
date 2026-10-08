@@ -207,9 +207,11 @@ class WatchDeviceViewModel @Inject constructor(
         localState.update { it.copy(isCheckingWearOsStatus = true) }
         viewModelScope.launch {
             try {
+                // A stored Classic address is pinged as is. Only a watch onboarded
+                // before it was stored still falls back to the advertised name.
                 val status = wearOsCompanionManager.checkWearOsWatchStatus(
-                    targetAddress = device.address,
-                    targetName = device.bluetoothName,
+                    targetAddress = device.classicAddress ?: device.address,
+                    targetName = device.bluetoothName.takeIf { device.classicAddress == null },
                 )
                 localState.update { it.copy(wearOsStatus = status, wearOsError = null) }
             } catch (e: Exception) {

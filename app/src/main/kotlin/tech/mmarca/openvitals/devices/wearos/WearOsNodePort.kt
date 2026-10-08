@@ -42,12 +42,20 @@ data class WearOsCompanionStatus(
  */
 interface WearOsNodePort {
     /**
-     * [targetAddress] is the registered address, [targetName] the advertised
-     * name. Both are hints: the address stored at onboarding is the BLE scan
-     * address, which on most watches differs from the bonded Classic one.
+     * [targetAddress] is the bonded Classic address when onboarding found it,
+     * else the BLE scan address. [targetName] is only a fallback for watches
+     * registered before the Classic address was stored; with it null, only an
+     * exact address matches.
      */
     suspend fun checkStatus(
         targetAddress: String? = null,
         targetName: String? = null,
     ): WearOsCompanionStatus
+
+    /**
+     * The bonded Classic address of the watch scanned as [address] and
+     * advertised as [name]: the same address, else the same name. Null when
+     * nothing matches, Bluetooth is off or the permission is missing.
+     */
+    suspend fun findBondAddress(address: String, name: String?): String?
 }

@@ -37,6 +37,7 @@ import tech.mmarca.openvitals.devices.garmin.GarminTransportVariant
 import tech.mmarca.openvitals.devices.garmin.OnboardGarminWatchUseCase
 import tech.mmarca.openvitals.devices.wearos.OnboardWearOsWatchUseCase
 import tech.mmarca.openvitals.devices.wearos.WearOsCompanionManager
+import tech.mmarca.openvitals.devices.wearos.WearOsCompanionStatus
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -397,5 +398,25 @@ class WatchDeviceViewModelTest {
         coVerify(exactly = 1) {
             manager.checkWearOsWatchStatus("7F:12:34:56:78:9A", "Galaxy Watch8 (3A3B) LE")
         }
+    }
+
+    @Test
+    fun `a stored Classic address is pinged directly, without the name fallback`() = runTest {
+        val watch = repo.addDevice(
+            displayName = "Galaxy Watch8",
+            address = "7F:12:34:56:78:9A",
+            bluetoothName = "Galaxy Watch8 (3A3B) LE",
+            capabilities = emptySet(),
+            kind = BleDeviceKind.WATCH,
+            integration = DeviceIntegration.WEAROS,
+        )
+        repo.setClassicAddress(watch.id, "A8:D1:62:BE:3A:3B")
+        val manager = mockk<WearOsCompanionManager>()
+        coEvery { manager.checkWearOsWatchStatus(any(), any()) } returns WearOsCompanionStatus()
+        val vm = viewModel(watch.id, manager)
+        backgroundScope.launch { vm.uiState.collect { } }
+        runCurrent()
+
+        coVerify(exactly = 1) { manager.checkWearOsWatchStatus("A8:D1:62:BE:3A:3B", null) }
     }
 }

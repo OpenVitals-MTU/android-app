@@ -18,6 +18,8 @@ private class FakeWearOsNodePort : WearOsNodePort {
         seenTargetName = targetName
         return statusToReturn
     }
+
+    override suspend fun findBondAddress(address: String, name: String?): String? = null
 }
 
 class WearOsCompanionManagerTest {

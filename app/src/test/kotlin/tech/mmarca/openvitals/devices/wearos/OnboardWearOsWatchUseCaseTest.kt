@@ -7,6 +7,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -49,10 +50,27 @@ private class FakePairing : WatchPairingPort {
         error("WearOS onboarding must not touch bonds")
 }
 
+/** Answers the bond lookup with [bondAddress], or throws [bondError]. */
+private class FakeNodePort : WearOsNodePort {
+    var bondAddress: String? = null
+    var bondError: Exception? = null
+    var seenBondLookup: Pair<String, String?>? = null
+
+    override suspend fun checkStatus(targetAddress: String?, targetName: String?): WearOsCompanionStatus =
+        error("Onboarding must not ping")
+
+    override suspend fun findBondAddress(address: String, name: String?): String? {
+        seenBondLookup = address to name
+        bondError?.let { throw it }
+        return bondAddress
+    }
+}
+
 class OnboardWearOsWatchUseCaseTest {
 
     private lateinit var repo: BleDeviceRepository
     private lateinit var pairing: FakePairing
+    private lateinit var nodePort: FakeNodePort
     private lateinit var useCase: OnboardWearOsWatchUseCase
 
     @Before
@@ -61,7 +79,8 @@ class OnboardWearOsWatchUseCaseTest {
         every { context.getSharedPreferences(any(), any()) } returns FakeSharedPreferences()
         repo = BleDeviceRepository(context)
         pairing = FakePairing()
-        useCase = OnboardWearOsWatchUseCase(pairing, repo)
+        nodePort = FakeNodePort()
+        useCase = OnboardWearOsWatchUseCase(pairing, repo, nodePort)
     }
 
     private fun watch() = BleDiscoveredDevice(
@@ -115,6 +134,38 @@ class OnboardWearOsWatchUseCaseTest {
         val device = repo.devices.single()
         assertEquals("Renamed Watch", device.displayName)
         assertTrue(device.isWearosWatch)
+    }
+
+    @Test
+    fun `stores the bonded Classic address found for the scanned watch`() = runTest {
+        nodePort.bondAddress = "a8:d1:62:be:3a:3b"
+        val scanned = watch().copy(address = "7F:12:34:56:78:9A", name = "Galaxy Watch8 (89FZ) LE")
+
+        val outcome = useCase(scanned, displayName = "My Watch")
+
+        assertEquals("7F:12:34:56:78:9A" to "Galaxy Watch8 (89FZ) LE", nodePort.seenBondLookup)
+        // The registry keeps the scan address; the ping goes to the bond.
+        assertEquals("7F:12:34:56:78:9A", outcome.device.address)
+        assertEquals("A8:D1:62:BE:3A:3B", outcome.device.classicAddress)
+        assertEquals("A8:D1:62:BE:3A:3B", repo.devices.single().classicAddress)
+    }
+
+    @Test
+    fun `no matching bond leaves the Classic address empty`() = runTest {
+        val outcome = useCase(watch(), displayName = "My Watch")
+
+        assertNull(outcome.device.classicAddress)
+        assertNull(repo.devices.single().classicAddress)
+    }
+
+    @Test
+    fun `a failed bond lookup still onboards the watch`() = runTest {
+        nodePort.bondError = SecurityException("BLUETOOTH_CONNECT")
+
+        val outcome = useCase(watch(), displayName = "My Watch")
+
+        assertNull(outcome.device.classicAddress)
+        assertTrue(repo.devices.single().isWearosWatch)
     }
 
     @Test

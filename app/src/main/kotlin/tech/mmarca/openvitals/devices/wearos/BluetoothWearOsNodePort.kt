@@ -54,6 +54,21 @@ class BluetoothWearOsNodePort @Inject constructor(
         )
     }
 
+    @SuppressLint("MissingPermission")
+    override suspend fun findBondAddress(address: String, name: String?): String? =
+        withContext(Dispatchers.IO) {
+            val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter
+            if (adapter == null || !adapter.isEnabled) return@withContext null
+            try {
+                val bonded = adapter.bondedDevices.orEmpty().map { BondedWatch(it.address, it.name) }
+                WearOsBondMatcher.pick(bonded, address, name)?.address
+            } catch (e: SecurityException) {
+                // Onboarding goes on without it; the status check falls back to the name.
+                Log.d(TAG, "No bonded list without BLUETOOTH_CONNECT: ${e.message}")
+                null
+            }
+        }
+
     /**
      * One PING, one PONG. `connect()` and `readLine()` block and ignore
      * cancellation, so a watchdog closes the socket after [PING_TIMEOUT_MS]
