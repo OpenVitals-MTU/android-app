@@ -8,7 +8,7 @@ import tech.mmarca.openvitals.devices.core.sync.estimatedSleepSessionRecord
 import tech.mmarca.openvitals.devices.core.sync.sleepNightWindow
 import tech.mmarca.openvitals.domain.insights.SleepStageEstimator
 import tech.mmarca.openvitals.domain.model.SleepMinute
-import tech.mmarca.openvitals.domain.model.SleepMinuteKind
+import tech.mmarca.openvitals.domain.model.WearSleepMinute
 
 /**
  * Turns the per-minute rows the watch recorded into one estimated sleep
@@ -46,7 +46,7 @@ object WearOsSleepImport {
      * offset of its last such minute: a DST change mid-night shifts the
      * window by an hour at most.
      */
-    fun touchedNights(minutes: List<WearOsSleepMinute>, cursor: Instant): Map<LocalDate, ZoneOffset> {
+    fun touchedNights(minutes: List<WearSleepMinute>, cursor: Instant): Map<LocalDate, ZoneOffset> {
         val offsets = LinkedHashMap<LocalDate, ZoneOffset>()
         for (minute in minutes.filter { it.time.isAfter(cursor) }.sortedBy { it.time }) {
             val night = SleepStageEstimator.nightDateOf(minute.time, minute.zoneOffset) ?: continue
@@ -56,7 +56,7 @@ object WearOsSleepImport {
     }
 
     /** The estimator's input for [night]: the minutes inside its window. */
-    fun minutesOfNight(minutes: List<WearOsSleepMinute>, night: LocalDate, offset: ZoneOffset): List<SleepMinute> {
+    fun minutesOfNight(minutes: List<WearSleepMinute>, night: LocalDate, offset: ZoneOffset): List<SleepMinute> {
         val (from, to) = sleepNightWindow(night, offset)
         return minutes
             .filter { !it.time.isBefore(from) && it.time.isBefore(to) }
@@ -65,7 +65,7 @@ object WearOsSleepImport {
 
     /** The record for [night], or null when the minutes hold no night or nothing counted as sleep. */
     fun record(
-        minutes: List<WearOsSleepMinute>,
+        minutes: List<WearSleepMinute>,
         night: LocalDate,
         offset: ZoneOffset,
         version: Long,
@@ -79,17 +79,6 @@ object WearOsSleepImport {
             notes = NOTES,
         )
     }
-
-    private fun WearOsSleepMinute.toSleepMinute(): SleepMinute = SleepMinute(
-        time = time,
-        kind = when (kind) {
-            WearLinkProtocol.MinuteKind.RAW -> SleepMinuteKind.RAW
-            WearLinkProtocol.MinuteKind.AWAKE -> SleepMinuteKind.AWAKE
-            WearLinkProtocol.MinuteKind.UNMEASURABLE -> SleepMinuteKind.UNMEASURABLE
-        },
-        movement = movement,
-        heartRate = heartRate,
-    )
 
     private const val NOTES =
         "Sleep stages estimated by OpenVitals from the heart rate and movement the OpenVitals watch app recorded."

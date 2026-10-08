@@ -48,31 +48,55 @@ class WearLinkProtocolTest {
         assertNull(WearLinkProtocol.parseHeartRateRequest(line))
     }
 
+    private fun minute(bpm: Int?, kind: WearLinkProtocol.MinuteKind = WearLinkProtocol.MinuteKind.RAW) =
+        WearLinkProtocol.SleepMinute(
+            epochMillis = 1_700_000_000_000L,
+            kind = kind,
+            offsetSeconds = 7200,
+            flags = 16,
+            sampleCount = 300,
+            movement10 = 42,
+            bpm = bpm,
+            heartRateSd10 = if (bpm == null) null else 15,
+            heartRateSamples = if (bpm == null) 0 else 6,
+            meanMilliG = intArrayOf(-12, 3, 998),
+            sdMilliG = intArrayOf(3, 4, 5),
+            zAngleMin = 86,
+            zAngleMax = 90,
+            zAngleDelta10 = 7,
+        )
+
     @Test
     fun `a sleep minute round-trips, with and without a heart rate`() {
-        val raw = WearLinkProtocol.SleepMinute(1_700_000_000_000L, WearLinkProtocol.MinuteKind.RAW, 4.2f, 58, 7200)
-        val unworn = WearLinkProtocol.SleepMinute(1_700_000_060_000L, WearLinkProtocol.MinuteKind.UNMEASURABLE, 0f, null, -3600)
+        val raw = minute(58)
+        val unworn = minute(null, WearLinkProtocol.MinuteKind.UNMEASURABLE)
 
-        assertEquals("SM 1700000000000 R 4.2 58 7200", WearLinkProtocol.formatSleepMinute(raw))
+        assertEquals("SM 1700000000000 R 7200 16 300 42 58 15 6 -12 3 998 3 4 5 86 90 7", WearLinkProtocol.formatSleepMinute(raw))
         assertEquals(raw, WearLinkProtocol.parseSleepMinute(WearLinkProtocol.formatSleepMinute(raw)))
-        assertEquals("SM 1700000060000 U 0.0 - -3600", WearLinkProtocol.formatSleepMinute(unworn))
+        assertEquals("SM 1700000000000 U 7200 16 300 42 - - 0 -12 3 998 3 4 5 86 90 7", WearLinkProtocol.formatSleepMinute(unworn))
         assertEquals(unworn, WearLinkProtocol.parseSleepMinute(WearLinkProtocol.formatSleepMinute(unworn)))
+        assertEquals(4.2f, raw.movement)
+        assertEquals(1.5f, raw.heartRateSd)
+        assertEquals(0.7f, raw.zAngleDelta)
     }
 
     @Test
     fun `a sleep minute with an implausible rate keeps the minute and drops the rate`() {
-        val parsed = WearLinkProtocol.parseSleepMinute("SM 1700000000000 A 10.0 300 0")
+        val parsed = WearLinkProtocol.parseSleepMinute("SM 1700000000000 A 7200 20 300 100 300 15 6 0 0 1000 3 3 3 - - -")
 
         assertEquals(WearLinkProtocol.MinuteKind.AWAKE, parsed?.kind)
         assertNull(parsed?.bpm)
+        assertNull(parsed?.zAngleMin)
+        assertTrue(parsed!!.hasFlag(WearLinkProtocol.FLAG_SCREEN_ON))
     }
 
     @Test
     fun `malformed sleep minutes parse to null`() {
-        assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 R 4.2 58"))
-        assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 X 4.2 58 0"))
-        assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 R -1 58 0"))
-        assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 R 4.2 58 99999"))
+        assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 R 7200 16 300 42 58 15 6 -12 3 998 3 4 5 86 90"))
+        assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 X 7200 16 300 42 58 15 6 -12 3 998 3 4 5 86 90 7"))
+        assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 R 7200 16 300 -1 58 15 6 -12 3 998 3 4 5 86 90 7"))
+        assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 R 99999 16 300 42 58 15 6 -12 3 998 3 4 5 86 90 7"))
+        assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 R 7200 16 300 42 58 1.5 6 -12 3 998 3 4 5 86 90 7"))
         assertNull(WearLinkProtocol.parseSleepMinute("HR 1700000000000 58"))
     }
 

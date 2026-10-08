@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.wear
 
-import java.util.Locale
 import java.util.UUID
 
 /**
@@ -22,13 +21,16 @@ import java.util.UUID
  *
  * Reply lines:
  * - `HR <epochMillis> <bpm>` — one heart rate sample.
- * - `SM <epochMillis> <kind> <movement> <bpm> <offsetSeconds>` — one sleep
- *   minute, the estimator's input on the phone: `kind` is `R` (raw: movement
- *   and heart rate, for the phone to classify), `A` (the watch saw the wearer
- *   awake) or `U` (not worn, or no signal); `movement` is the minute's
- *   movement count with one decimal, zero when still; `bpm` is the minute's
- *   mean heart rate or `-`; `offsetSeconds` is the watch's UTC offset, which
- *   decides the night the minute belongs to.
+ * - `SM <epochMillis> <kind> <offsetSeconds> <flags> <n> <mv10> <bpm|-> <hsd10|->
+ *   <hn> <mx> <my> <mz> <sx> <sy> <sz> <zmin|-> <zmax|-> <zd10|->` — one sleep
+ *   minute, the sleep pipeline's input on the phone, every field an integer
+ *   and `-` meaning none. `docs/engineering/sleep-minute-features.md` defines
+ *   each: `kind` is `R` (raw), `A` (awake) or `U` (unmeasurable); `flags` the
+ *   bit field below; `n` the accelerometer samples; `mv10` the movement count
+ *   times ten; `bpm`, `hsd10` and `hn` the minute's heart rate mean, standard
+ *   deviation times ten and sample count; `mx..sz` the per-axis mean and
+ *   standard deviation in milli-g; `zmin`, `zmax` the five-second z-angle
+ *   extremes in degrees and `zd10` its mean change times ten.
  * - `END <count> <more>` — `count` data lines were sent; `more` is `1` when the
  *   limit cut the reply short and another request from the last line's time
  *   would return more.
@@ -39,7 +41,7 @@ import java.util.UUID
 object WearLinkProtocol {
 
     /** Bumped when a change is not backward compatible. Informational for now. */
-    const val VERSION: Int = 2
+    const val VERSION: Int = 3
 
     /** The RFCOMM service record the watch listens on and the phone connects to. */
     val SERVICE_UUID: UUID = UUID.fromString("4838d728-6e5a-4b95-a29d-a60032338301")
@@ -76,14 +78,45 @@ object WearLinkProtocol {
         }
     }
 
-    /** One minute of sleep input. [bpm] is null when the minute carried no heart rate. */
+    /** Bits of the `flags` field. */
+    const val FLAG_CHARGING: Int = 1
+    const val FLAG_OFF_BODY: Int = 2
+    const val FLAG_SCREEN_ON: Int = 4
+    const val FLAG_HR_NO_CONTACT: Int = 8
+    const val FLAG_HR_RECORDING: Int = 16
+    const val FLAG_SPARSE: Int = 32
+
+    /**
+     * One minute of sleep input, as the wire carries it: integers, with the
+     * tenths kept in the name. Null is `-`. [meanMilliG] and [sdMilliG] hold
+     * x, y, z.
+     */
     data class SleepMinute(
         val epochMillis: Long,
         val kind: MinuteKind,
-        val movement: Float,
-        val bpm: Int?,
         val offsetSeconds: Int,
-    )
+        val flags: Int,
+        val sampleCount: Int,
+        val movement10: Int,
+        val bpm: Int?,
+        val heartRateSd10: Int?,
+        val heartRateSamples: Int,
+        val meanMilliG: IntArray,
+        val sdMilliG: IntArray,
+        val zAngleMin: Int?,
+        val zAngleMax: Int?,
+        val zAngleDelta10: Int?,
+    ) {
+        val movement: Float get() = movement10 / 10f
+        val heartRateSd: Float? get() = heartRateSd10?.let { it / 10f }
+        val zAngleDelta: Float? get() = zAngleDelta10?.let { it / 10f }
+
+        fun hasFlag(flag: Int): Boolean = flags and flag != 0
+
+        override fun equals(other: Any?): Boolean = other is SleepMinute && formatSleepMinute(this) == formatSleepMinute(other)
+
+        override fun hashCode(): Int = formatSleepMinute(this).hashCode()
+    }
 
     data class End(val count: Int, val more: Boolean)
 
@@ -117,23 +150,65 @@ object WearLinkProtocol {
         return HeartRateSample(at, bpm)
     }
 
-    fun formatSleepMinute(minute: SleepMinute): String =
-        "$SLEEP_MINUTE ${minute.epochMillis} ${minute.kind.code} " +
-            "${String.format(Locale.ROOT, "%.1f", minute.movement.coerceAtLeast(0f))} " +
-            "${minute.bpm?.toString() ?: NO_VALUE} ${minute.offsetSeconds}"
+    fun formatSleepMinute(m: SleepMinute): String = buildString(96) {
+        append(SLEEP_MINUTE).append(' ').append(m.epochMillis).append(' ').append(m.kind.code).append(' ')
+        append(m.offsetSeconds).append(' ').append(m.flags).append(' ').append(m.sampleCount).append(' ')
+        append(m.movement10).append(' ').append(m.bpm ?: NO_VALUE).append(' ').append(m.heartRateSd10 ?: NO_VALUE).append(' ')
+        append(m.heartRateSamples)
+        for (axis in 0 until 3) append(' ').append(m.meanMilliG[axis])
+        for (axis in 0 until 3) append(' ').append(m.sdMilliG[axis])
+        append(' ').append(m.zAngleMin ?: NO_VALUE).append(' ').append(m.zAngleMax ?: NO_VALUE)
+        append(' ').append(m.zAngleDelta10 ?: NO_VALUE)
+    }
 
     /** Null unless [line] is a well-formed `SM` line. A rate outside the plausible range reads as none. */
     fun parseSleepMinute(line: String): SleepMinute? {
-        val fields = fields(line)
-        if (fields.size != 6 || fields[0] != SLEEP_MINUTE) return null
-        val at = fields[1].toLongOrNull() ?: return null
-        val kind = MinuteKind.fromCode(fields[2]) ?: return null
-        val movement = fields[3].toFloatOrNull() ?: return null
-        val bpm = if (fields[4] == NO_VALUE) null else fields[4].toIntOrNull() ?: return null
-        val offset = fields[5].toIntOrNull() ?: return null
-        if (at <= 0 || !movement.isFinite() || movement < 0f || offset !in -MAX_OFFSET_SECONDS..MAX_OFFSET_SECONDS) return null
-        return SleepMinute(at, kind, movement, bpm?.takeIf { it in MIN_BPM..MAX_BPM }, offset)
+        val f = fields(line)
+        if (f.size != SLEEP_MINUTE_FIELDS || f[0] != SLEEP_MINUTE) return null
+        val at = f[1].toLongOrNull() ?: return null
+        val kind = MinuteKind.fromCode(f[2]) ?: return null
+        val offset = f[3].toIntOrNull() ?: return null
+        val flags = f[4].toIntOrNull() ?: return null
+        val n = f[5].toIntOrNull() ?: return null
+        val movement10 = f[6].toIntOrNull() ?: return null
+        val bpm = optional(f[7]) ?: return null
+        val heartRateSd10 = optional(f[8]) ?: return null
+        val hn = f[9].toIntOrNull() ?: return null
+        val mean = IntArray(3)
+        val sd = IntArray(3)
+        for (axis in 0 until 3) {
+            mean[axis] = f[10 + axis].toIntOrNull() ?: return null
+            sd[axis] = f[13 + axis].toIntOrNull() ?: return null
+        }
+        val zMin = optional(f[16]) ?: return null
+        val zMax = optional(f[17]) ?: return null
+        val zDelta10 = optional(f[18]) ?: return null
+        if (at <= 0 || offset !in -MAX_OFFSET_SECONDS..MAX_OFFSET_SECONDS || flags < 0 || n < 0 || movement10 < 0 || hn < 0) return null
+        return SleepMinute(
+            epochMillis = at,
+            kind = kind,
+            offsetSeconds = offset,
+            flags = flags,
+            sampleCount = n,
+            movement10 = movement10,
+            bpm = bpm.value?.takeIf { it in MIN_BPM..MAX_BPM },
+            heartRateSd10 = heartRateSd10.value,
+            heartRateSamples = hn,
+            meanMilliG = mean,
+            sdMilliG = sd,
+            zAngleMin = zMin.value,
+            zAngleMax = zMax.value,
+            zAngleDelta10 = zDelta10.value,
+        )
     }
+
+    /** An integer or `-`. Null for anything else, so the caller can reject the line. */
+    private class Optional(val value: Int?)
+
+    private fun optional(field: String): Optional? =
+        if (field == NO_VALUE) Optional(null) else field.toIntOrNull()?.let { Optional(it) }
+
+    private const val SLEEP_MINUTE_FIELDS = 19
 
     fun formatEnd(count: Int, more: Boolean): String = "$END $count ${if (more) 1 else 0}"
 

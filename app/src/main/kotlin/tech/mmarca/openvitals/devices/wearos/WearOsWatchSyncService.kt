@@ -18,6 +18,7 @@ import tech.mmarca.openvitals.devices.core.sync.DeviceSyncProgress
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncResult
 import tech.mmarca.openvitals.devices.core.sync.sleepNightWindow
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
+import tech.mmarca.openvitals.domain.model.WearSleepMinute
 import tech.mmarca.openvitals.features.imports.applehealth.isDuplicateClientRecordFailure
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingController
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -142,7 +143,7 @@ class WearOsWatchSyncService(
     /** False when no bonded watch matches. */
     private suspend fun pullSleep(device: BleSensorDevice, progress: Progress): Boolean {
         val cursor = cursors.sleepCursor(device.id)
-        val minutes = ArrayList<WearOsSleepMinute>()
+        val minutes = ArrayList<WearSleepMinute>()
         var since = WearOsSleepImport.pullStart(cursor, zone().rules.getOffset(cursor))
         var pages = 0
         while (true) {

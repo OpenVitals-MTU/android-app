@@ -95,4 +95,6 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.wear.compose.material3)
     testImplementation(libs.junit4)
+    // Real org.json for local tests (the android.jar copy is a throwing stub): the feature vector is JSON.
+    testImplementation(libs.org.json)
 }

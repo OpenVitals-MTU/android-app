@@ -9,7 +9,7 @@ import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import java.time.Instant
-import java.time.ZoneOffset
+import tech.mmarca.openvitals.domain.model.WearSleepMinute
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -93,7 +93,7 @@ class BluetoothWearOsNodePort @Inject constructor(
     ): WearOsSleepMinutePage? = withContext(Dispatchers.IO) {
         val (adapter, match) = bondedWatch(targetAddress, targetName) ?: return@withContext null
 
-        val minutes = ArrayList<WearOsSleepMinute>()
+        val minutes = ArrayList<WearSleepMinute>()
         var end: WearLinkProtocol.End? = null
         val request = WearLinkProtocol.formatSleepMinutesRequest(
             since.toEpochMilli(),
@@ -101,13 +101,7 @@ class BluetoothWearOsNodePort @Inject constructor(
         )
         val reply = exchange(adapter, adapter.getRemoteDevice(match.address), request, PULL_TIMEOUT_MS) { line ->
             WearLinkProtocol.parseSleepMinute(line)?.let {
-                minutes += WearOsSleepMinute(
-                    time = Instant.ofEpochMilli(it.epochMillis),
-                    kind = it.kind,
-                    movement = it.movement,
-                    heartRate = it.bpm?.toFloat(),
-                    zoneOffset = ZoneOffset.ofTotalSeconds(it.offsetSeconds),
-                )
+                minutes += WearOsSleepMinuteMapping.toDomain(it)
                 return@exchange LineOutcome.SKIP
             }
             end = WearLinkProtocol.parseEnd(line)

@@ -23,6 +23,10 @@ import android.util.Log
 class HeartRateRecorder(
     context: Context,
     private val store: HeartRateStore,
+    /** Every stored sample, for the sleep minute recorder. Called on this recorder's thread. */
+    private val onSample: (epochMillis: Long, bpm: Int) -> Unit = { _, _ -> },
+    /** False when the sensor reported no contact, an unreliable reading or 0 bpm. */
+    private val onContact: (epochMillis: Long, contact: Boolean) -> Unit = { _, _ -> },
 ) : SensorEventListener {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -80,20 +84,22 @@ class HeartRateRecorder(
         if (event.sensor.type != Sensor.TYPE_HEART_RATE) return
         // No contact and unreliable readings carry a rate of zero or a flag; both are skipped.
         val bpm = event.values.firstOrNull()?.toInt() ?: return
+        val at = SensorTime.epochMillisOf(event.timestamp)
+        // The cached reading handed to a new listener carries the time the sensor last ran.
+        if (SensorTime.isStale(at)) return
         if (event.accuracy == SensorManager.SENSOR_STATUS_NO_CONTACT ||
             event.accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE ||
             bpm !in WearLinkProtocol.MIN_BPM..WearLinkProtocol.MAX_BPM
         ) {
             noteSkipped(event.accuracy, bpm)
+            onContact(at, false)
             return
         }
 
-        val at = SensorTime.epochMillisOf(event.timestamp)
-        // The cached reading handed to a new listener carries the time the sensor last ran.
-        if (SensorTime.isStale(at)) return
         if (at - lastStoredAt < MIN_SAMPLE_GAP_MILLIS) return
         lastStoredAt = at
         store.insert(at, bpm)
+        onSample(at, bpm)
         Log.d(TAG, "Stored $bpm bpm at $at")
 
         if (at - lastPrunedAt > PRUNE_EVERY_MILLIS) {

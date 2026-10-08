@@ -26,6 +26,7 @@ import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRe
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingState
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingStatus
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.domain.model.WearSleepMinute
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import io.mockk.slot
@@ -89,10 +90,10 @@ class WearOsWatchSyncServiceTest {
     )
 
     private fun raw(time: Instant, movement: Float, heartRate: Float) =
-        WearOsSleepMinute(time, WearLinkProtocol.MinuteKind.RAW, movement, heartRate, zone)
+        WearSleepMinutes.minute(time, movement, heartRate, zone)
 
     /** A night of 2026-10-08: still from 23:00 to 06:00 local, restless around it. */
-    private fun nightMinutes(): List<WearOsSleepMinute> {
+    private fun nightMinutes(): List<WearSleepMinute> {
         val start = Instant.parse("2026-10-07T19:00:00Z")
         val onset = Instant.parse("2026-10-07T21:00:00Z")
         val wake = Instant.parse("2026-10-08T04:00:00Z")

@@ -65,9 +65,14 @@ class WearAppService : Service() {
     override fun onCreate() {
         super.onCreate()
         store = HeartRateStore(this)
-        recorder = HeartRateRecorder(this, store)
         minuteStore = SleepMinuteStore(this)
-        minuteRecorder = SleepMinuteRecorder(this, minuteStore, store, isHeartRateRecording = { recorder.isRunning })
+        minuteRecorder = SleepMinuteRecorder(this, minuteStore, isHeartRateRecording = { recorder.isRunning })
+        recorder = HeartRateRecorder(
+            this,
+            store,
+            onSample = minuteRecorder::noteHeartRate,
+            onContact = minuteRecorder::noteHeartRateContact,
+        )
         isForeground = startInForeground()
         if (!isForeground) {
             stopSelf()

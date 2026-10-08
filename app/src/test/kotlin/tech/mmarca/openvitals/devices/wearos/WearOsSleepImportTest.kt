@@ -10,6 +10,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.devices.core.sync.sleepNightWindow
+import tech.mmarca.openvitals.domain.model.WearSleepMinute
 
 /**
  * The night bookkeeping around the estimator: which nights a pull touched,
@@ -28,11 +29,11 @@ class WearOsSleepImportTest {
     }
 
     private fun raw(time: Instant, movement: Float, heartRate: Float?) =
-        WearOsSleepMinute(time, WearLinkProtocol.MinuteKind.RAW, movement, heartRate, zone)
+        WearSleepMinutes.minute(time, movement, heartRate, zone)
 
     /** A synthetic night: restless evening, seven still hours with a low heart rate, restless morning. */
-    private fun syntheticNight(): List<WearOsSleepMinute> {
-        val minutes = ArrayList<WearOsSleepMinute>()
+    private fun syntheticNight(): List<WearSleepMinute> {
+        val minutes = ArrayList<WearSleepMinute>()
         var time = at(21, 0)
         val onset = at(23, 0)
         val wake = at(6, 0)
@@ -54,7 +55,7 @@ class WearOsSleepImportTest {
         val minutes = listOf(
             raw(at(22), 3f, 60f),
             raw(at(2), 0f, 50f),
-            WearOsSleepMinute(at(3), WearLinkProtocol.MinuteKind.RAW, 0f, 50f, ZoneOffset.ofHours(3)),
+            WearSleepMinutes.minute(at(3), 0f, 50f, ZoneOffset.ofHours(3)),
             raw(at(15), 5f, 70f),
         )
 
