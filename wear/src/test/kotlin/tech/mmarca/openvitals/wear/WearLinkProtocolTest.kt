@@ -38,6 +38,45 @@ class WearLinkProtocolTest {
     }
 
     @Test
+    fun `a sleep minutes request round-trips and clamps its limit`() {
+        val line = WearLinkProtocol.formatSleepMinutesRequest(1_700_000_000_000L, 99_999)
+
+        assertEquals(
+            WearLinkProtocol.SleepMinutesRequest(1_700_000_000_000L, WearLinkProtocol.MAX_MINUTES_PER_REQUEST),
+            WearLinkProtocol.parseSleepMinutesRequest(line),
+        )
+        assertNull(WearLinkProtocol.parseHeartRateRequest(line))
+    }
+
+    @Test
+    fun `a sleep minute round-trips, with and without a heart rate`() {
+        val raw = WearLinkProtocol.SleepMinute(1_700_000_000_000L, WearLinkProtocol.MinuteKind.RAW, 4.2f, 58, 7200)
+        val unworn = WearLinkProtocol.SleepMinute(1_700_000_060_000L, WearLinkProtocol.MinuteKind.UNMEASURABLE, 0f, null, -3600)
+
+        assertEquals("SM 1700000000000 R 4.2 58 7200", WearLinkProtocol.formatSleepMinute(raw))
+        assertEquals(raw, WearLinkProtocol.parseSleepMinute(WearLinkProtocol.formatSleepMinute(raw)))
+        assertEquals("SM 1700000060000 U 0.0 - -3600", WearLinkProtocol.formatSleepMinute(unworn))
+        assertEquals(unworn, WearLinkProtocol.parseSleepMinute(WearLinkProtocol.formatSleepMinute(unworn)))
+    }
+
+    @Test
+    fun `a sleep minute with an implausible rate keeps the minute and drops the rate`() {
+        val parsed = WearLinkProtocol.parseSleepMinute("SM 1700000000000 A 10.0 300 0")
+
+        assertEquals(WearLinkProtocol.MinuteKind.AWAKE, parsed?.kind)
+        assertNull(parsed?.bpm)
+    }
+
+    @Test
+    fun `malformed sleep minutes parse to null`() {
+        assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 R 4.2 58"))
+        assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 X 4.2 58 0"))
+        assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 R -1 58 0"))
+        assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 R 4.2 58 99999"))
+        assertNull(WearLinkProtocol.parseSleepMinute("HR 1700000000000 58"))
+    }
+
+    @Test
     fun `ping tolerates surrounding whitespace`() {
         assertTrue(WearLinkProtocol.isPing(" PING\r"))
     }

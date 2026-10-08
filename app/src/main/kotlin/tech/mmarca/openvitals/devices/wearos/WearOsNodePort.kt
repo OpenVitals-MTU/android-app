@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.devices.wearos
 
 import java.time.Instant
+import java.time.ZoneOffset
 
 /**
  * What the phone can tell about the OpenVitals Wear OS app on a watch.
@@ -43,6 +44,22 @@ data class WearOsHeartRatePage(
     val hasMore: Boolean,
 )
 
+/** One minute of sleep input the watch recorded; see `WearLinkProtocol.SleepMinute`. */
+data class WearOsSleepMinute(
+    val time: Instant,
+    val kind: WearLinkProtocol.MinuteKind,
+    val movement: Float,
+    /** Beats per minute, or null when the minute carried none. */
+    val heartRate: Float?,
+    val zoneOffset: ZoneOffset,
+)
+
+/** One page of a sleep minute pull. [hasMore] means the watch cut the reply at its limit. */
+data class WearOsSleepMinutePage(
+    val minutes: List<WearOsSleepMinute>,
+    val hasMore: Boolean,
+)
+
 /** The watch could not be reached, or answered with something other than the protocol. */
 class WearOsLinkException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
@@ -73,4 +90,15 @@ interface WearOsNodePort {
         targetName: String?,
         since: Instant,
     ): WearOsHeartRatePage?
+
+    /**
+     * Sleep minutes newer than [since], oldest first, up to the watch's page
+     * limit. Null when no bonded watch matches. Throws [WearOsLinkException]
+     * when the watch does not answer.
+     */
+    suspend fun pullSleepMinutes(
+        targetAddress: String?,
+        targetName: String?,
+        since: Instant,
+    ): WearOsSleepMinutePage?
 }

@@ -10,6 +10,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tech.mmarca.openvitals.devices.core.sync.sleepNightWindow
 import tech.mmarca.openvitals.domain.insights.EstimatedSleepSession
 import tech.mmarca.openvitals.domain.insights.EstimatedStage
 import tech.mmarca.openvitals.domain.insights.EstimatedStageSpan

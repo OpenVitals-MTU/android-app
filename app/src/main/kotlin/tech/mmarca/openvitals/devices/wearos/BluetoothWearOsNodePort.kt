@@ -9,6 +9,7 @@ import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import java.time.Instant
+import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -82,6 +83,41 @@ class BluetoothWearOsNodePort @Inject constructor(
             throw WearOsLinkException("The watch stopped answering before the end of the page.")
         }
         WearOsHeartRatePage(samples = samples, hasMore = terminator.more)
+    }
+
+    @SuppressLint("MissingPermission")
+    override suspend fun pullSleepMinutes(
+        targetAddress: String?,
+        targetName: String?,
+        since: Instant,
+    ): WearOsSleepMinutePage? = withContext(Dispatchers.IO) {
+        val (adapter, match) = bondedWatch(targetAddress, targetName) ?: return@withContext null
+
+        val minutes = ArrayList<WearOsSleepMinute>()
+        var end: WearLinkProtocol.End? = null
+        val request = WearLinkProtocol.formatSleepMinutesRequest(
+            since.toEpochMilli(),
+            WearLinkProtocol.MAX_MINUTES_PER_REQUEST,
+        )
+        val reply = exchange(adapter, adapter.getRemoteDevice(match.address), request, PULL_TIMEOUT_MS) { line ->
+            WearLinkProtocol.parseSleepMinute(line)?.let {
+                minutes += WearOsSleepMinute(
+                    time = Instant.ofEpochMilli(it.epochMillis),
+                    kind = it.kind,
+                    movement = it.movement,
+                    heartRate = it.bpm?.toFloat(),
+                    zoneOffset = ZoneOffset.ofTotalSeconds(it.offsetSeconds),
+                )
+                return@exchange LineOutcome.SKIP
+            }
+            end = WearLinkProtocol.parseEnd(line)
+            if (end != null) LineOutcome.DONE else LineOutcome.SKIP
+        }
+        val terminator = end
+        if (!reply.completed || terminator == null) {
+            throw WearOsLinkException("The watch stopped answering before the end of the page.")
+        }
+        WearOsSleepMinutePage(minutes = minutes, hasMore = terminator.more)
     }
 
     /** The adapter and the bonded entry for the registered watch, or null when there is none. */

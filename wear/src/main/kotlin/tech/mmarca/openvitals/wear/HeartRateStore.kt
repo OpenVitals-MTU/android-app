@@ -75,6 +75,13 @@ class HeartRateStore(context: Context) : SQLiteOpenHelper(context, DB_NAME, null
 
     fun count(): Long = android.database.DatabaseUtils.queryNumEntries(readableDatabase, TABLE)
 
+    /** The mean rate of the samples in `[from, to)`, rounded, or null when there are none. */
+    fun averageBetween(fromEpochMillis: Long, toEpochMillis: Long): Int? =
+        readableDatabase.rawQuery(
+            "SELECT AVG($COL_BPM) FROM $TABLE WHERE $COL_TIME >= ? AND $COL_TIME < ?",
+            arrayOf(fromEpochMillis.toString(), toEpochMillis.toString()),
+        ).use { if (it.moveToFirst() && !it.isNull(0)) Math.round(it.getDouble(0)).toInt() else null }
+
     /** Drops what is older than [RETENTION_MILLIS] as of [nowEpochMillis]. */
     fun prune(nowEpochMillis: Long) {
         writableDatabase.delete(TABLE, "$COL_TIME < ?", arrayOf((nowEpochMillis - RETENTION_MILLIS).toString()))

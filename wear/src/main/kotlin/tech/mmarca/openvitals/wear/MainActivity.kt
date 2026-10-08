@@ -39,6 +39,7 @@ import kotlinx.coroutines.delay
 class MainActivity : ComponentActivity() {
 
     private val store by lazy { HeartRateStore(this) }
+    private val minuteStore by lazy { SleepMinuteStore(this) }
 
     private var permissionsVersion by mutableStateOf(0)
 
@@ -63,6 +64,7 @@ class MainActivity : ComponentActivity() {
                     hasBluetooth = { WearPermissions.hasBluetooth(this) },
                     readLatest = { store.latest() },
                     readCount = { store.count() },
+                    readMinuteCount = { minuteStore.count() },
                     onGrant = ::requestMissingPermissions,
                 )
             }
@@ -109,10 +111,12 @@ private fun WatchStatusScreen(
     hasBluetooth: () -> Boolean,
     readLatest: () -> WearLinkProtocol.HeartRateSample?,
     readCount: () -> Long,
+    readMinuteCount: () -> Long,
     onGrant: () -> Unit,
 ) {
     var latest by remember { mutableStateOf<WearLinkProtocol.HeartRateSample?>(null) }
     var count by remember { mutableStateOf(0L) }
+    var minuteCount by remember { mutableStateOf(0L) }
     val heartRateGranted = remember(permissionsVersion) { hasHeartRate() }
     val bluetoothGranted = remember(permissionsVersion) { hasBluetooth() }
 
@@ -121,6 +125,7 @@ private fun WatchStatusScreen(
         while (true) {
             latest = readLatest()
             count = readCount()
+            minuteCount = readMinuteCount()
             delay(3_000)
         }
     }
@@ -153,6 +158,11 @@ private fun WatchStatusScreen(
         )
         Text(
             text = stringResource(R.string.status_samples_stored, count),
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = stringResource(R.string.status_minutes_stored, minuteCount),
             style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
         )

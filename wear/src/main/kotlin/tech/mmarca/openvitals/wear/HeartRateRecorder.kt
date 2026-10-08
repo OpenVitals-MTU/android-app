@@ -88,8 +88,9 @@ class HeartRateRecorder(
             return
         }
 
-        // The event is stamped in elapsed-realtime nanoseconds; a batched one is older than now.
-        val at = epochMillisOf(event.timestamp)
+        val at = SensorTime.epochMillisOf(event.timestamp)
+        // The cached reading handed to a new listener carries the time the sensor last ran.
+        if (SensorTime.isStale(at)) return
         if (at - lastStoredAt < MIN_SAMPLE_GAP_MILLIS) return
         lastStoredAt = at
         store.insert(at, bpm)
@@ -111,12 +112,6 @@ class HeartRateRecorder(
         if (now - lastSkipLogAt < SKIP_LOG_EVERY_MILLIS) return
         lastSkipLogAt = now
         Log.d(TAG, "Skipping readings: accuracy=$accuracy bpm=$bpm")
-    }
-
-    private fun epochMillisOf(elapsedRealtimeNanos: Long): Long {
-        val elapsedNowMillis = SystemClock.elapsedRealtime()
-        val eventElapsedMillis = elapsedRealtimeNanos / 1_000_000L
-        return System.currentTimeMillis() - (elapsedNowMillis - eventElapsedMillis)
     }
 
     private companion object {

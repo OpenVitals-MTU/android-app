@@ -22,7 +22,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * The watch's end of the phone link, and the heart rate recorder's host.
+ * The watch's end of the phone link, and the host of the heart rate and
+ * sleep minute recorders.
  *
  * Listens for the phone's RFCOMM requests (`WearLinkProtocol`) so OpenVitals
  * on the phone can tell the app is alive and fetch what the watch recorded. A
@@ -46,6 +47,8 @@ class WearAppService : Service() {
 
     private lateinit var store: HeartRateStore
     private lateinit var recorder: HeartRateRecorder
+    private lateinit var minuteStore: SleepMinuteStore
+    private lateinit var minuteRecorder: SleepMinuteRecorder
 
     /** Bluetooth off closes the server socket; on again reopens it. */
     private val bluetoothStateReceiver = object : BroadcastReceiver() {
@@ -63,6 +66,8 @@ class WearAppService : Service() {
         super.onCreate()
         store = HeartRateStore(this)
         recorder = HeartRateRecorder(this, store)
+        minuteStore = SleepMinuteStore(this)
+        minuteRecorder = SleepMinuteRecorder(this, minuteStore, store, isHeartRateRecording = { recorder.isRunning })
         isForeground = startInForeground()
         if (!isForeground) {
             stopSelf()
@@ -76,6 +81,8 @@ class WearAppService : Service() {
         }
         startRfcommListener()
         startRecordingIfPermitted()
+        // Needs no grant: the accelerometer is open to every app.
+        minuteRecorder.start()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -199,10 +206,11 @@ class WearAppService : Service() {
                     }
                     else -> {
                         val heartRate = WearLinkProtocol.parseHeartRateRequest(request)
-                        if (heartRate != null) {
-                            sendHeartRate(out, heartRate)
-                        } else {
-                            Log.w(TAG, "Unknown request: ${request.take(40)}")
+                        val minutes = WearLinkProtocol.parseSleepMinutesRequest(request)
+                        when {
+                            heartRate != null -> sendHeartRate(out, heartRate)
+                            minutes != null -> sendSleepMinutes(out, minutes)
+                            else -> Log.w(TAG, "Unknown request: ${request.take(40)}")
                         }
                     }
                 }
@@ -228,10 +236,23 @@ class WearAppService : Service() {
         Log.i(TAG, "Sent ${page.size} heart rate samples since ${request.sinceEpochMillis}")
     }
 
+    private fun sendSleepMinutes(out: BufferedWriter, request: WearLinkProtocol.SleepMinutesRequest) {
+        val minutes = minuteStore.since(request.sinceEpochMillis, request.limit + 1)
+        val page = minutes.take(request.limit)
+        for (minute in page) {
+            out.write(WearLinkProtocol.formatSleepMinute(minute))
+            out.newLine()
+        }
+        out.write(WearLinkProtocol.formatEnd(page.size, more = minutes.size > page.size))
+        out.newLine()
+        Log.i(TAG, "Sent ${page.size} sleep minutes since ${request.sinceEpochMillis}")
+    }
+
     override fun onDestroy() {
         if (isForeground) {
             unregisterReceiver(bluetoothStateReceiver)
             recorder.stop()
+            minuteRecorder.stop()
         }
         stopRfcommListener()
         super.onDestroy()
