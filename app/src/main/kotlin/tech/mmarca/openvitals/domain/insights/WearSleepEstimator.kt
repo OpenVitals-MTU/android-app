@@ -18,7 +18,8 @@ object WearSleepEstimator {
         val wear: WearStateDetector.Config = WearStateDetector.Config(),
         val window: SptWindowDetector.Config = SptWindowDetector.Config(),
         val scorer: SleepWakeScorer.Config = SleepWakeScorer.Config(),
-        val stages: SleepEstimatorConfig = SleepEstimatorConfig(),
+        /** LIDS joins the staging: the Wear OS count is about a fifth of Garmin's, hence the scale. */
+        val stages: SleepEstimatorConfig = SleepEstimatorConfig(lidsWeight = 0.3f, lidsActivityScale = 0.2f),
     )
 
     /** One estimated night with what the wear state and the window said about the rows. */

@@ -74,6 +74,14 @@ data class SleepEstimatorConfig(
     val remShareMax: Float = 0.30f,
     val adaptStep: Float = 0.1f,
     val adaptMaxIterations: Int = 8,
+    /**
+     * How much the smoothed, normalised LIDS (Winnebeck 2018) pulls the
+     * deep score up and the REM score down. Zero leaves staging to heart
+     * rate alone, as fitted on the Garmin nights.
+     */
+    val lidsWeight: Float = 0f,
+    /** Divides the activity before the LIDS conversion: the Wear OS count is about a fifth of Garmin's. */
+    val lidsActivityScale: Float = 1f,
 )
 
 /**
@@ -287,11 +295,12 @@ object SleepStageEstimator {
             val deviation = features.deviation[index] / config.deviationScale
             val variability = (features.variability[index] - features.variabilityMedian) / variabilityScale
             val moving = features.movement[index] > 0f
+            val lids = config.lidsWeight * features.lids[index]
             var deep = -deviation - config.variabilityWeight * variability +
-                (config.deepPriorStart + config.deepPriorSlope * position)
+                (config.deepPriorStart + config.deepPriorSlope * position) + lids
             if (moving) deep -= config.deepMovementPenalty
             var rem = deviation + config.variabilityWeight * variability +
-                (config.remPriorStart + config.remPriorSlope * position)
+                (config.remPriorStart + config.remPriorSlope * position) - lids
             if (moving) rem -= config.remMovementPenalty
             if (index < config.remLatencyMinutes) rem = Float.NEGATIVE_INFINITY
             if (features.sinceWake[index] < config.postWakeLightMinutes) deep = Float.NEGATIVE_INFINITY
@@ -423,6 +432,8 @@ private class StageFeatures(
     val variabilityMedian: Float,
     val movement: FloatArray,
     val sinceWake: IntArray,
+    /** Normalised LIDS per minute; all zero when the weight is zero. */
+    val lids: FloatArray,
 ) {
     companion object {
         fun of(
@@ -481,7 +492,13 @@ private class StageFeatures(
                 }
             }
 
-            return StageFeatures(deviation, variability, variabilityMedian, movement, sinceWake)
+            val lids = if (config.lidsWeight == 0f) {
+                FloatArray(length)
+            } else {
+                Lids.normalised(Lids.of(FloatArray(length) { index -> activity[onset + index] }, config.lidsActivityScale))
+            }
+
+            return StageFeatures(deviation, variability, variabilityMedian, movement, sinceWake, lids)
         }
 
         /** Median of the finite values in `[from, to]`, optionally only where [mask] is true. NaN if none. */
