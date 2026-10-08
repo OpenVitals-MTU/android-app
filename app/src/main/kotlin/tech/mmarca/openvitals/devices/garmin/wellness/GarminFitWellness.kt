@@ -169,7 +169,7 @@ data class FitSleepDemand(
  * Kept apart from the all-day series, which it would blur.
  */
 data class FitHealthSnapshot(
-    /** Blood oxygen `(time, percent)`. The only Pulse Ox this watch writes. */
+    /** Blood oxygen `(time, percent)`. A Pulse Ox watch's all-day readings are in [FitWellnessExtras]. */
     val spo2: List<Pair<Instant, Int>> = emptyList(),
     val respiration: List<Pair<Instant, Double>> = emptyList(),
     val stress: List<Pair<Instant, Int>> = emptyList(),
@@ -212,6 +212,8 @@ data class FitWellness(
      */
     val sleepMinutes: List<FitSleepMinute> = emptyList(),
     val weights: List<FitWeightReading> = emptyList(),
+    /** Pulse Ox, HRV values, thresholds, scores and restless moments. */
+    val extras: FitWellnessExtras = FitWellnessExtras(),
 ) {
     val isEmpty: Boolean
         get() = sleep == null &&
@@ -223,7 +225,8 @@ data class FitWellness(
             sleepDemand == null &&
             healthSnapshot == null &&
             sleepMinutes.isEmpty() &&
-            weights.isEmpty()
+            weights.isEmpty() &&
+            extras.isEmpty
 
     /** True for activity (4), workout (5) and course (6). */
     val isActivityType: Boolean
@@ -254,6 +257,7 @@ fun parseGarminWellness(fitBytes: ByteArray, fileName: String? = null): FitWelln
         healthSnapshot = result.metrics.toHealthSnapshot(),
         // Only weight files carry scale readings; skip a second decode elsewhere.
         weights = if (result.fileType == FitFileTypeWeight) parseWeightReadings(fitBytes) else emptyList(),
+        extras = result.extras,
     )
 }
 
@@ -289,6 +293,7 @@ private class FitWellnessResult(
     val hrv: FitHrvRaw,
     val monitoring: FitMonitoringRaw,
     val metrics: FitMetricsRaw,
+    val extras: FitWellnessExtras,
 ) {
     fun merge(other: FitWellnessResult): FitWellnessResult = FitWellnessResult(
         // First file type wins: a chained stream is one export.
@@ -297,6 +302,7 @@ private class FitWellnessResult(
         hrv = hrv.merge(other.hrv),
         monitoring = monitoring.merge(other.monitoring),
         metrics = metrics.merge(other.metrics),
+        extras = extras.merge(other.extras),
     )
 }
 
@@ -567,6 +573,7 @@ private class GarminWellnessDecoder(private val fileBytes: ByteArray) {
             hrv = FitHrvRaw(),
             monitoring = FitMonitoringRaw(),
             metrics = FitMetricsRaw(),
+            extras = FitWellnessExtras(),
         )
         var offset = 0
         var decodedAnyFile = false
@@ -651,6 +658,7 @@ private class GarminWellnessInterpreter {
     private val monCalories = mutableListOf<FitMonitoringPoint>()
     private val monModerateMinutes = mutableListOf<Pair<Instant, Int>>()
     private val monVigorousMinutes = mutableListOf<Pair<Instant, Int>>()
+    private val extras = FitExtrasInterpreter()
 
     fun interpret(messages: List<FitMessage>): FitWellnessResult {
         // File order matters: monitoring_info must precede its series.
@@ -701,6 +709,7 @@ private class GarminWellnessInterpreter {
                 hsaStress = hsaStress,
                 hsaBodyEnergy = hsaBodyEnergy,
             ),
+            extras = extras.result(),
         )
     }
 
@@ -974,6 +983,8 @@ private class GarminWellnessInterpreter {
                     }
                 }
             }
+
+            else -> extras.interpret(message)
         }
     }
 

@@ -190,11 +190,14 @@ class VitalsRepositoryImpl @Inject constructor(
                 }
                 VitalsPeriodMetric.SKIN_TEMPERATURE -> {
                     val entries = loadPeriodTriplet(windows) { start, end -> loadSkinTemperature(start, end, granted) }
+                    // Only the day view draws the per-minute samples. A 90-day baseline window
+                    // would otherwise hold a sample a minute for every day of it in the UI state.
+                    val keepSamples = query.range == TimeRange.DAY
                     VitalsPeriodData(
                         missingVitalsPermissions = missingPermissions,
-                        skinTemperature = entries.current,
-                        previousSkinTemperature = entries.previous,
-                        baselineSkinTemperature = entries.baseline,
+                        skinTemperature = if (keepSamples) entries.current else entries.current.withoutSkinTemperatureSamples(),
+                        previousSkinTemperature = entries.previous.withoutSkinTemperatureSamples(),
+                        baselineSkinTemperature = entries.baseline.withoutSkinTemperatureSamples(),
                     )
                 }
             }
@@ -435,6 +438,9 @@ class VitalsRepositoryImpl @Inject constructor(
     private suspend fun patchCachedDays(type: VitalsMeasurementType, days: Set<LocalDate>) {
         vitalsSync?.patchDays(type.cacheKey(), days)
     }
+
+    private fun List<SkinTemperatureEntry>.withoutSkinTemperatureSamples(): List<SkinTemperatureEntry> =
+        map { entry -> if (entry.deltas.isEmpty()) entry else entry.copy(deltas = emptyList()) }
 
     private suspend fun <T> loadPeriodTriplet(
         windows: PeriodWindows,

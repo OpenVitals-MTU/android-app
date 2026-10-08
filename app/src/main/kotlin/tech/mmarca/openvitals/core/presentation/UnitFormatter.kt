@@ -5,6 +5,7 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 class UnitFormatter(
     private val unitSystemProvider: () -> UnitSystem,
@@ -71,12 +72,16 @@ class UnitFormatter(
         return DisplayValue(decimal(TemperatureUnits.fromCelsius(celsius, system), decimals), TemperatureUnits.label(system))
     }
 
+    /** A signed difference: no freezing-point offset, and a value that rounds to zero is "0.0", unsigned. */
     fun temperatureDelta(celsius: Double): DisplayValue {
         val system = unitSystem(UnitQuantity.TEMPERATURE)
-        val value = when (system) {
+        val converted = when (system) {
             UnitSystem.METRIC -> celsius
             UnitSystem.IMPERIAL -> celsius * 9.0 / 5.0
         }
+        // Sign and digits must agree after rounding: -0.04 is "0.0", not "-0.0". The
+        // added zero turns IEEE negative zero into positive zero.
+        val value = (converted * 10.0).roundToLong() / 10.0 + 0.0
         val prefix = if (value > 0.0) "+" else ""
         return DisplayValue("$prefix${decimal(value, 1)}", TemperatureUnits.label(system))
     }

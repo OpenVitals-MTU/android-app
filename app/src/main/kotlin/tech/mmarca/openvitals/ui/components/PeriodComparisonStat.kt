@@ -16,6 +16,17 @@ import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+/**
+ * How a change against a reference reads. [PERCENT] suits a quantity with a
+ * meaningful zero (steps, hours). A signed quantity that lives around zero,
+ * like a temperature variation, reads as [SIGNED_VALUE]: a percent of a
+ * near-zero reference is arbitrary, "-652 %" for a tenth of a degree.
+ */
+enum class ComparisonDisplayStyle {
+    PERCENT,
+    SIGNED_VALUE,
+}
+
 @Composable
 fun previousPeriodInsightStat(
     comparison: PeriodComparison,
@@ -23,6 +34,7 @@ fun previousPeriodInsightStat(
     unitFormatter: UnitFormatter,
     valueFormatter: @Composable (Double) -> DisplayValue,
     accentColor: Color,
+    style: ComparisonDisplayStyle = ComparisonDisplayStyle.PERCENT,
 ): InsightStat {
     val title = stringResource(
         when (selectedRange) {
@@ -32,8 +44,11 @@ fun previousPeriodInsightStat(
             TimeRange.YEAR -> R.string.stat_vs_previous_year
         }
     )
-    val display = comparison.percentChange
-        ?.let { percent ->
+    // Signed style: the formatter writes the sign, so the value is not signed again here.
+    val display = if (style == ComparisonDisplayStyle.SIGNED_VALUE) {
+        valueFormatter(comparison.change)
+    } else {
+        comparison.percentChange?.let { percent ->
             DisplayValue(
                 value = signedValue(
                     value = unitFormatter.count(abs(percent.roundToInt())),
@@ -42,12 +57,13 @@ fun previousPeriodInsightStat(
                 unit = stringResource(R.string.unit_percent_symbol),
             )
         }
-        ?: valueFormatter(comparison.absoluteChange).let { absolute ->
-            DisplayValue(
-                value = signedValue(absolute.value, comparison.direction),
-                unit = absolute.unit,
-            )
-        }
+            ?: valueFormatter(comparison.absoluteChange).let { absolute ->
+                DisplayValue(
+                    value = signedValue(absolute.value, comparison.direction),
+                    unit = absolute.unit,
+                )
+            }
+    }
 
     return InsightStat(
         title = title,

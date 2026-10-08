@@ -370,6 +370,12 @@ data class GarminFileAvailable(
     val entry: GarminDirectoryEntry,
 ) : GarminInboundMessage()
 
+/** FIT definition records the watch pushes (5011): the layouts of the data that follows. */
+class GarminFitDefinition(val payload: ByteArray) : GarminInboundMessage()
+
+/** FIT data records the watch pushes (5012), laid out by an earlier [GarminFitDefinition]. */
+class GarminFitData(val payload: ByteArray) : GarminInboundMessage()
+
 class GarminUnhandledMessage(
     val messageType: Int,
     val payload: ByteArray,
@@ -395,6 +401,8 @@ fun decodeGarminMessage(frame: GarminGfdiFrame): GarminInboundMessage =
         GarminMessageId.MUSIC_CONTROL -> decodeMusicControl(frame.payload)
         GarminMessageId.MUSIC_CONTROL_CAPABILITIES -> GarminMusicCapabilitiesRequest()
         GarminMessageId.FILE_AVAILABLE -> decodeFileAvailable(frame.payload)
+        GarminMessageId.FIT_DEFINITION -> GarminFitDefinition(frame.payload)
+        GarminMessageId.FIT_DATA -> GarminFitData(frame.payload)
         else -> GarminUnhandledMessage(frame.messageType, frame.payload)
     }
 
@@ -771,6 +779,18 @@ fun buildGenericAck(originalMessageType: Int): ByteArray {
     return GarminGfdiFrame.build(GarminMessageId.RESPONSE, writer.toBytes())
 }
 
+/**
+ * The status for a FIT definition or data message the watch pushed: ACK plus
+ * the APPLIED code, as `FitDefinitionStatusMessage` and `FitDataStatusMessage`.
+ */
+fun buildFitStatus(fitMessageType: Int): ByteArray {
+    val writer = GarminByteWriter()
+        .writeShort(fitMessageType)
+        .writeByte(GarminStatus.ACK.code)
+        .writeByte(0) // APPLIED
+    return GarminGfdiFrame.build(GarminMessageId.RESPONSE, writer.toBytes())
+}
+
 /** Setting ordinals from `SetDeviceSettingsMessage.GarminDeviceSetting`. */
 object GarminDeviceSetting {
     const val AUTO_UPLOAD_ENABLED = 6
@@ -858,6 +878,9 @@ val garminSelfAcknowledgedTypes: Set<Int> = setOf(
     GarminMessageId.FILE_TRANSFER_DATA,
     GarminMessageId.NOTIFICATION_SUBSCRIPTION,
     GarminMessageId.NOTIFICATION_CONTROL,
+    // Their status carries an applied code, as the companion's does.
+    GarminMessageId.FIT_DEFINITION,
+    GarminMessageId.FIT_DATA,
     // Its ACK carries the command list.
     GarminMessageId.MUSIC_CONTROL_CAPABILITIES,
     // Acked by the protobuf transport, which knows the request id and offset.
