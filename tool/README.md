@@ -94,3 +94,16 @@ evaluation fixture against polysomnography.
   It prints the table (sleep sensitivity, wake specificity, accuracy, onset
   and offset error, total sleep time error, three-class agreement) that a
   threshold change quotes in its commit message, since CI never sees it.
+
+## `ppg_raw/`
+
+`inspect.py` reads the CSV the watch app's `PpgRawLogger` writes (a debuggable
+build only, a long press on the watch's status screen starts and stops it; the
+file lives under the app's `files/ppg_raw/` and comes off the watch with
+`adb shell run-as tech.mmarca.openvitals.debug cat files/ppg_raw/<name>.csv`).
+It prints, per raw value column, the distinct count, range, mean, standard
+deviation and the strongest autocorrelation peak between 0.4 and 2 seconds as
+beats per minute, so the sixteen undocumented floats of Samsung's
+`com.samsung.sensor.hr_raw` can be told apart: waveform channels peak near the
+pulse, status and counter columns do not. Standard library only. A research
+spike; nothing in the app depends on it.

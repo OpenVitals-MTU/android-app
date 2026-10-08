@@ -49,6 +49,7 @@ class WearAppService : Service() {
     private lateinit var recorder: HeartRateRecorder
     private lateinit var minuteStore: SleepMinuteStore
     private lateinit var minuteRecorder: SleepMinuteRecorder
+    private lateinit var ppgLogger: PpgRawLogger
 
     /** Bluetooth off closes the server socket; on again reopens it. */
     private val bluetoothStateReceiver = object : BroadcastReceiver() {
@@ -65,6 +66,7 @@ class WearAppService : Service() {
     override fun onCreate() {
         super.onCreate()
         store = HeartRateStore(this)
+        ppgLogger = PpgRawLogger(this)
         minuteStore = SleepMinuteStore(this)
         minuteRecorder = SleepMinuteRecorder(this, minuteStore, isHeartRateRecording = { recorder.isRunning })
         recorder = HeartRateRecorder(
@@ -93,6 +95,10 @@ class WearAppService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // onCreate already stopped a service the system refused; do not restart it.
         if (!isForeground) return START_NOT_STICKY
+        if (intent?.action == ACTION_TOGGLE_PPG_LOG) {
+            if (ppgLogger.isRunning) ppgLogger.stop() else ppgLogger.start()
+            ppgLogging = ppgLogger.isRunning
+        }
         startRfcommListener()
         // A grant made after the start: the type set grows to include health.
         if (!recorder.isRunning && WearPermissions.hasHeartRate(this)) {
@@ -258,6 +264,8 @@ class WearAppService : Service() {
             unregisterReceiver(bluetoothStateReceiver)
             recorder.stop()
             minuteRecorder.stop()
+            ppgLogger.stop()
+            ppgLogging = false
         }
         stopRfcommListener()
         super.onDestroy()
@@ -268,6 +276,20 @@ class WearAppService : Service() {
         private const val SERVICE_NAME = "OpenVitalsWearApp"
         private const val CHANNEL_ID = "phone_link"
         private const val NOTIFICATION_ID = 1
+        private const val ACTION_TOGGLE_PPG_LOG = "tech.mmarca.openvitals.wear.TOGGLE_PPG_LOG"
+
+        /** Whether the raw PPG spike is logging, for the status screen. */
+        @Volatile
+        var ppgLogging: Boolean = false
+            private set
+
+        /** Starts or stops the raw PPG log (debuggable builds with the sensor only). */
+        fun togglePpgLog(context: Context) {
+            if (!WearPermissions.hasBluetooth(context)) return
+            runCatching {
+                context.startForegroundService(Intent(context, WearAppService::class.java).setAction(ACTION_TOGGLE_PPG_LOG))
+            }.onFailure { Log.e(TAG, "Cannot toggle the PPG log", it) }
+        }
 
         /** Starts the link once the Bluetooth grant is there; a no-op without it. */
         fun startIfPermitted(context: Context) {

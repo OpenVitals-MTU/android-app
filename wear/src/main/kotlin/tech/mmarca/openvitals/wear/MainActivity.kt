@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -65,6 +67,9 @@ class MainActivity : ComponentActivity() {
                     readLatest = { store.latest() },
                     readCount = { store.count() },
                     readMinuteCount = { minuteStore.count() },
+                    ppgLogAvailable = PpgRawLogger(this).isAvailable,
+                    readPpgLogging = { WearAppService.ppgLogging },
+                    onTogglePpgLog = { WearAppService.togglePpgLog(this) },
                     onGrant = ::requestMissingPermissions,
                 )
             }
@@ -112,11 +117,15 @@ private fun WatchStatusScreen(
     readLatest: () -> WearLinkProtocol.HeartRateSample?,
     readCount: () -> Long,
     readMinuteCount: () -> Long,
+    ppgLogAvailable: Boolean,
+    readPpgLogging: () -> Boolean,
+    onTogglePpgLog: () -> Unit,
     onGrant: () -> Unit,
 ) {
     var latest by remember { mutableStateOf<WearLinkProtocol.HeartRateSample?>(null) }
     var count by remember { mutableStateOf(0L) }
     var minuteCount by remember { mutableStateOf(0L) }
+    var ppgLogging by remember { mutableStateOf(false) }
     val heartRateGranted = remember(permissionsVersion) { hasHeartRate() }
     val bluetoothGranted = remember(permissionsVersion) { hasBluetooth() }
 
@@ -126,6 +135,7 @@ private fun WatchStatusScreen(
             latest = readLatest()
             count = readCount()
             minuteCount = readMinuteCount()
+            ppgLogging = readPpgLogging()
             delay(3_000)
         }
     }
@@ -134,6 +144,10 @@ private fun WatchStatusScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            // The raw PPG spike, debuggable builds only: a long press starts or stops the log.
+            .pointerInput(ppgLogAvailable) {
+                if (ppgLogAvailable) detectTapGestures(onLongPress = { onTogglePpgLog() })
+            }
             .padding(horizontal = 20.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -180,6 +194,14 @@ private fun WatchStatusScreen(
             Button(onClick = onGrant, modifier = Modifier.padding(top = 8.dp)) {
                 Text(stringResource(R.string.action_grant))
             }
+        }
+        if (ppgLogging) {
+            Text(
+                text = stringResource(R.string.status_ppg_logging),
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
     }
 }
