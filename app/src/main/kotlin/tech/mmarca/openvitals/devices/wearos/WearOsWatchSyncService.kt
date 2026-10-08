@@ -164,14 +164,19 @@ class WearOsWatchSyncService(
                 WearOsLog.log("$night: Health Connect already holds a session from elsewhere, skipping")
                 continue
             }
-            val record = WearOsSleepImport.record(minutes, night, offset, version = clock().toEpochMilli())
-            if (record == null) {
+            val estimated = WearOsSleepImport.night(minutes, night, offset)
+            if (estimated == null) {
                 WearOsLog.log("$night: no night in the minutes")
+                continue
+            }
+            WearOsLog.log("$night: ${estimated.summary()}")
+            val record = WearOsSleepImport.record(estimated, night, offset, version = clock().toEpochMilli())
+            if (record == null) {
+                WearOsLog.log("$night: nothing counted as sleep")
                 continue
             }
             writeReplacing(record)
             nights++
-            WearOsLog.log("$night: ${record.startTime} → ${record.endTime}, ${record.stages.size} stages")
         }
         cursors.setSleepCursor(device.id, newest)
         WearOsLog.log("sleep: $nights night(s) written from ${minutes.size} minutes")

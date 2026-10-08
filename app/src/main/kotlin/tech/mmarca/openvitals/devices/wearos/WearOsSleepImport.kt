@@ -7,13 +7,12 @@ import java.time.ZoneOffset
 import tech.mmarca.openvitals.devices.core.sync.estimatedSleepSessionRecord
 import tech.mmarca.openvitals.devices.core.sync.sleepNightWindow
 import tech.mmarca.openvitals.domain.insights.SleepStageEstimator
-import tech.mmarca.openvitals.domain.model.SleepMinute
+import tech.mmarca.openvitals.domain.insights.WearSleepEstimator
 import tech.mmarca.openvitals.domain.model.WearSleepMinute
 
 /**
  * Turns the per-minute rows the watch recorded into one estimated sleep
- * session per night, through the same `SleepStageEstimator` the Garmin path
- * uses. The watch is the store: the phone keeps no minutes, only a cursor,
+ * session per night, through `WearSleepEstimator`. The watch is the store: the phone keeps no minutes, only a cursor,
  * and re-pulls a whole night's window to estimate it again as the night
  * fills in. One id per night, so the later estimate replaces the earlier.
  *
@@ -55,30 +54,29 @@ object WearOsSleepImport {
         return offsets
     }
 
-    /** The estimator's input for [night]: the minutes inside its window. */
-    fun minutesOfNight(minutes: List<WearSleepMinute>, night: LocalDate, offset: ZoneOffset): List<SleepMinute> {
+    /** The pipeline's input for [night]: the rows inside its window. */
+    fun minutesOfNight(minutes: List<WearSleepMinute>, night: LocalDate, offset: ZoneOffset): List<WearSleepMinute> {
         val (from, to) = sleepNightWindow(night, offset)
-        return minutes
-            .filter { !it.time.isBefore(from) && it.time.isBefore(to) }
-            .map { it.toSleepMinute() }
+        return minutes.filter { !it.time.isBefore(from) && it.time.isBefore(to) }
     }
 
-    /** The record for [night], or null when the minutes hold no night or nothing counted as sleep. */
-    fun record(
-        minutes: List<WearSleepMinute>,
-        night: LocalDate,
-        offset: ZoneOffset,
-        version: Long,
-    ): SleepSessionRecord? {
-        val session = SleepStageEstimator.estimate(minutesOfNight(minutes, night, offset)) ?: return null
-        return estimatedSleepSessionRecord(
-            session = session,
+    /** The estimated night for [night], or null when the minutes hold no night. */
+    fun night(minutes: List<WearSleepMinute>, night: LocalDate, offset: ZoneOffset): WearSleepEstimator.Night? =
+        WearSleepEstimator.estimate(minutesOfNight(minutes, night, offset))
+
+    /** The record for an estimated night, or null when nothing counted as sleep. */
+    fun record(night: WearSleepEstimator.Night, date: LocalDate, offset: ZoneOffset, version: Long): SleepSessionRecord? =
+        estimatedSleepSessionRecord(
+            session = night.session,
             offset = offset,
-            clientRecordId = clientRecordId(night),
+            clientRecordId = clientRecordId(date),
             version = version,
             notes = NOTES,
         )
-    }
+
+    /** Both steps, for callers that do not log the night. */
+    fun record(minutes: List<WearSleepMinute>, date: LocalDate, offset: ZoneOffset, version: Long): SleepSessionRecord? =
+        night(minutes, date, offset)?.let { record(it, date, offset, version) }
 
     private const val NOTES =
         "Sleep stages estimated by OpenVitals from the heart rate and movement the OpenVitals watch app recorded."
