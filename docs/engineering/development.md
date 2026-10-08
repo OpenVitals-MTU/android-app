@@ -65,11 +65,26 @@ outside the watch range.
 #### Installing the watch app without Play
 
 There is no F-Droid client for Wear OS and a watch cannot install an APK by
-itself, so the watch app is sideloaded over adb. The watch's Wi-Fi works
-without a phone or a Google account.
+itself, so the watch app is sideloaded over adb. A watch has no USB data
+port, and debugging over Bluetooth goes through the vendor's phone app, so
+the only way in is Wireless debugging over Wi-Fi: the watch and the computer
+must be on the same Wi-Fi network. The watch joins Wi-Fi on its own, without
+a phone or a Google account.
 
-On the watch: Settings, Developer options (tap the software version five
-times), Wireless debugging, Pair new device. Then, once per computer:
+On the watch, all in Settings:
+
+1. Connections, Wi-Fi: join the network the computer is on.
+2. Unlock Developer options: About watch, Software, tap the software version
+   five times until the watch says developer mode is on. (On a Pixel Watch:
+   System, About, tap the build number seven times.)
+3. Developer options, at the bottom of Settings: turn on ADB debugging, then
+   Wireless debugging. Wireless debugging shows the address and port to
+   connect to.
+4. Wireless debugging, Pair new device: shows the pairing address, a separate
+   pairing port, and a six-digit code. Leave this screen open while pairing;
+   the code expires with it.
+
+Then, once per computer:
 
 ```bash
 adb pair <watch-ip>:<pairing-port> <code>
@@ -78,12 +93,22 @@ adb connect <watch-ip>:<port>          # the port Wireless debugging shows
 adb -s <watch-ip>:<port> install -r wear/build/outputs/apk/debug/wear-debug.apk
 ```
 
-Debug over Bluetooth is not an option: it proxies through the vendor's phone
-app, which the Wear OS plan removes. adb's own mDNS discovery finds nothing
+Both ports change on every boot, and the watch drops Wi-Fi while it sleeps
+off the charger, so wake it before connecting. adb's own mDNS discovery finds nothing
 next to a system Avahi daemon; run adb with `ADB_MDNS_OPENSCREEN=1`, or read
 the address from `avahi-browse -rt _adb-tls-connect._tcp`. The debug watch app
 installs as `tech.mmarca.openvitals.debug`, so it pairs with the debug phone
 app.
+
+Three scripts wrap this: `scripts/wear-pair.sh` (pairing and discovery),
+`scripts/wear-install.sh` (build if needed, install, the permission grants, a
+status check with `--status`), and `scripts/wear-skip-onboarding.sh`, which
+marks a never-onboarded watch as set up so the vendor's phone app is not
+needed at all. They share `scripts/lib/wear-adb.sh`. The last one only works on watches whose welcome screen opens Settings, since
+Wi-Fi adb is behind it; the Galaxy Watch8 does not, so Samsung watches get
+onboarded once with Galaxy Wearable and the app sideloaded afterwards. The
+user-facing walkthrough, with the per-watch table, is
+[docs/how-to/wear-os-sideload.md](../how-to/wear-os-sideload.md).
 
 ### Translation Gate
 
