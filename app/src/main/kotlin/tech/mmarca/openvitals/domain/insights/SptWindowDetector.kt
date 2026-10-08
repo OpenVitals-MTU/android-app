@@ -37,9 +37,16 @@ object SptWindowDetector {
         val angleMedianHalf: Int = 2,
         val anglePercentile: Float = 0.10f,
         val angleThresholdFactor: Float = 15f,
-        /** Degrees per five seconds. GGIR bounds the threshold; these bounds suit a 5 Hz source. */
-        val angleThresholdMinDeg: Float = 0.2f,
-        val angleThresholdMaxDeg: Float = 1.0f,
+        /**
+         * Degrees per five seconds. GGIR bounds the threshold too. On the
+         * polysomnography nights the sleeping z-angle change sits at 0.0 to
+         * 0.2 degrees, so the 10th percentile is zero and the floor decides:
+         * at 0.2 restless sleep broke the window (accuracy 0.73, seven nights
+         * unfound), at 1.0 the window mostly held (0.88, two unfound), at 1.5
+         * it holds (0.90, one unfound); 2.0 changes nothing more.
+         */
+        val angleThresholdMinDeg: Float = 1.5f,
+        val angleThresholdMaxDeg: Float = 2.5f,
         val angleBlockMinMinutes: Int = 30,
         val angleGapMergeMinutes: Int = 60,
         /**
@@ -51,6 +58,14 @@ object SptWindowDetector {
         val heartRateMedianHalf: Int = 2,
         val heartRateMinSequenceMinutes: Int = 20,
         val heartRateGapMergeMinutes: Int = 90,
+        /**
+         * Whether the heart rate window may tighten the angle window's end.
+         * Off: on the polysomnography nights the tightening cut two nights
+         * short by an hour or more (REM raises the pulse late in the night)
+         * and raised the offset error from 13.6 to 21.9 minutes. The heart
+         * rate window still stands in when the arm angle finds no window.
+         */
+        val useHeartRateWindow: Boolean = false,
         /** Below this overlap with the angle window the heart rate window is ignored. */
         val minOverlapShare: Float = 0.5f,
         /** A window with fewer worn minutes than this is no night. */
@@ -59,7 +74,7 @@ object SptWindowDetector {
 
     fun detect(grid: WearMinuteGrid, wear: WearStates, config: Config = Config()): SptWindow? {
         val angle = angleWindow(grid, wear, config)
-        val heart = heartRateWindow(grid, wear, config)
+        val heart = if (config.useHeartRateWindow || angle == null) heartRateWindow(grid, wear, config) else null
         val window = when {
             angle == null && heart == null -> return null
             angle == null -> SptWindow(heart!!.first, heart.last + 1, Source.HEART_RATE)

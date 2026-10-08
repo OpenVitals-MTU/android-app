@@ -31,18 +31,48 @@ class SleepAccelEvaluationTest {
 
     private class Subject(val id: String, val rows: List<WearSleepMinute>, val labels: String)
 
+    /**
+     * The recordings run for days around the scored night; the phone only
+     * ever sees one night's window, so each subject is cut to the scored
+     * range plus [NIGHT_MARGIN_MINUTES] either side, the way the 18:00 to
+     * 14:00 window surrounds a real night.
+     */
     private fun subjects(): List<Subject> {
         val root = JSONObject(File(fixturePath!!).readText())
         val array = root.getJSONArray("subjects")
         return List(array.length()) { index ->
             val subject = array.getJSONObject(index)
             val lines = subject.getJSONArray("lines")
+            val labels = subject.getString("labels")
             val rows = List(lines.length()) { line ->
                 val parsed = requireNotNull(WearLinkProtocol.parseSleepMinute(lines.getString(line))) { "unparsable line $line of ${subject.getString("id")}" }
                 WearOsSleepMinuteMapping.toDomain(parsed)
             }
-            Subject(subject.getString("id"), rows, subject.getString("labels"))
+            val scored = labels.indices.filter { labels[it] != '-' }
+            // By time, not by row: the rows before the scored night can be days older.
+            val from = rows[scored.first()].time.minusSeconds(60L * NIGHT_MARGIN_MINUTES)
+            val to = rows[scored.last()].time.plusSeconds(60L * NIGHT_MARGIN_MINUTES)
+            val kept = rows.indices.filter { !rows[it].time.isBefore(from) && !rows[it].time.isAfter(to) }
+            Subject(subject.getString("id"), kept.map { rows[it] }, kept.map { labels[it] }.joinToString(""))
         }
+    }
+
+    /** What the pipeline's stages said about a subject, for the report. */
+    private fun diagnose(subject: Subject, config: WearSleepEstimator.Config): String {
+        val grid = WearMinuteGrid.of(subject.rows) ?: return "empty"
+        val wear = WearStateDetector.detect(grid, config.wear)
+        val scored = subject.rows.indices.filter { subject.labels[it] != '-' }
+        val reasons = scored.mapNotNull { grid.indexOf(subject.rows[it].time)?.let { at -> wear.reasons[at] } }.groupingBy { it }.eachCount()
+        val angle = SptWindowDetector.angleWindow(grid, wear, config.window)
+        val heart = SptWindowDetector.heartRateWindow(grid, wear, config.window)
+        val window = SptWindowDetector.detect(grid, wear, config.window)
+        val labels = SleepWakeScorer.score(grid, wear, config.scorer)
+        val sleepInWindow = window?.let { w -> (w.onset until w.end).count { labels[it] == 'S' } }
+        val first = scored.firstOrNull { subject.labels[it] != 'W' }?.let { grid.indexOf(subject.rows[it].time) }
+        val scoredAt = grid.indexOf(subject.rows[scored.first()].time) to grid.indexOf(subject.rows[scored.last()].time)
+        return "scored ${scoredAt.first}..${scoredAt.second} first sleep $first, not worn in scored $reasons, " +
+            "angle ${angle?.let { "${it.first}..${it.last}" } ?: "none"}, heart ${heart?.let { "${it.first}..${it.last}" } ?: "none"}, " +
+            "window ${window?.let { "${it.onset}..${it.end} ${it.source}" } ?: "none"}, S in window $sleepInWindow"
     }
 
     /** Per-minute tallies, pooled. */
@@ -65,12 +95,10 @@ class SleepAccelEvaluationTest {
         fun mae(errors: List<Long>) = if (errors.isEmpty()) Double.NaN else errors.sumOf { kotlin.math.abs(it) }.toDouble() / errors.size
     }
 
-    @Test
-    fun `the pipeline scores PhysioNet nights within the gates`() {
-        assumeTrue("set -Dopenvitals.sleepAccelFixture to run", fixturePath != null)
+    /** One pipeline configuration scored over every subject. */
+    private fun evaluate(subjects: List<Subject>, config: WearSleepEstimator.Config, perSubject: StringBuilder?): Tally {
         val tally = Tally()
-        val perSubject = StringBuilder()
-        for (subject in subjects()) {
+        for (subject in subjects) {
             val night = WearSleepEstimator.estimate(subject.rows, config)
             val scored = subject.rows.indices.filter { subject.labels[it] != '-' }
             if (scored.isEmpty()) continue
@@ -80,7 +108,7 @@ class SleepAccelEvaluationTest {
             if (night == null) {
                 tally.noNight++
                 scored.forEach { if (subject.labels[it] == 'W') tally.wakeTrue++ else tally.sleepMissed++ }
-                perSubject.append(String.format("  %-6s no night (PSG sleep %d min)%n", subject.id, psgSleep))
+                perSubject?.append(String.format("  %-6s no night (PSG sleep %d min): %s%n", subject.id, psgSleep, diagnose(subject, config)))
                 continue
             }
             val stageOf = HashMap<Long, EstimatedStage>()
@@ -116,21 +144,39 @@ class SleepAccelEvaluationTest {
                 tally.onsetErrors += onsetError
                 tally.offsetErrors += offsetError
                 tally.tstErrors += (estimatedSleep - psgSleep).toLong()
-                perSubject.append(
+                perSubject?.append(
                     String.format(
-                        "  %-6s onset %+5d  offset %+5d  tst %+5d  worn %d  not worn %d%n",
+                        "  %-6s onset %+5d  offset %+5d  tst %+5d  worn %d  not worn %d  window %dm %s%n",
                         subject.id, onsetError, offsetError, estimatedSleep - psgSleep, night.wornMinutes, night.notWornMinutes,
+                        night.window.length, night.window.source,
                     ),
                 )
+                if (perSubject != null && (kotlin.math.abs(onsetError) > 60 || kotlin.math.abs(offsetError) > 60)) {
+                    perSubject.append("         ${diagnose(subject, config)}\n")
+                }
             }
         }
-        val report = String.format(
-            "sleep-accel: accuracy %.3f  wake specificity %.3f  sleep sensitivity %.3f  " +
-                "onset MAE %.1f  offset MAE %.1f  TST MAE %.1f  REM-vs-NREM agreement %.3f  no night %d%n%s",
-            tally.accuracy, tally.specificity, tally.sensitivity,
-            tally.mae(tally.onsetErrors), tally.mae(tally.offsetErrors), tally.mae(tally.tstErrors),
-            tally.stageAccuracy, tally.noNight, perSubject,
-        )
+        return tally
+    }
+
+    private fun Tally.summary(): String = String.format(
+        "acc %.3f  spec %.3f  sens %.3f  onset MAE %5.1f  offset MAE %5.1f  TST MAE %5.1f  REM agree %.3f  no night %d",
+        accuracy, specificity, sensitivity, mae(onsetErrors), mae(offsetErrors), mae(tstErrors), stageAccuracy, noNight,
+    )
+
+    @Test
+    fun `the pipeline scores PhysioNet nights within the gates`() {
+        assumeTrue("set -Dopenvitals.sleepAccelFixture to run", fixturePath != null)
+        val subjects = subjects()
+        val perSubject = StringBuilder()
+        val tally = evaluate(subjects, config, perSubject)
+        val report = StringBuilder()
+        report.append("sleep-accel, ${subjects.size} subjects\n")
+        report.append(String.format("  %-34s %s%n", "default", tally.summary()))
+        for ((name, variant) in VARIANTS) {
+            report.append(String.format("  %-34s %s%n", name, evaluate(subjects, variant, null).summary()))
+        }
+        report.append(perSubject)
         println(report)
         val failures = buildList {
             if (tally.accuracy < 0.85) add("accuracy ${"%.3f".format(tally.accuracy)} < 0.85")
@@ -158,10 +204,33 @@ class SleepAccelEvaluationTest {
     }
 
     private companion object {
-        /** The night-only recordings of the dataset: every tuning knob at its default otherwise. */
+        /** Minutes kept either side of the scored night, standing in for the phone's night window. */
+        const val NIGHT_MARGIN_MINUTES = 240
+
+        /** Every tuning knob at its default: the cut recording is about as long as the phone's night window. */
         val config = WearSleepEstimator.Config()
 
-        /** Off until the window and the scorer land (steps 5 and 6); the report is printed either way. */
-        const val GATES_ENFORCED = false
+        /** The ablation table: one knob at a time against the default, so a change is argued with numbers. */
+        val VARIANTS: List<Pair<String, WearSleepEstimator.Config>> = run {
+            val window = config.window
+            val scorer = config.scorer
+            listOf(
+                "angle floor 1.0, max 2.0" to config.copy(window = window.copy(angleThresholdMinDeg = 1.0f, angleThresholdMaxDeg = 2.0f)),
+                "angle floor 2.5, max 4.0" to config.copy(window = window.copy(angleThresholdMinDeg = 2.5f, angleThresholdMaxDeg = 4.0f)),
+                "angle block 20, merge 90" to config.copy(window = window.copy(angleBlockMinMinutes = 20, angleGapMergeMinutes = 90)),
+                "HR window on" to config.copy(window = window.copy(useHeartRateWindow = true)),
+                "scorer: movement only" to config.copy(scorer = scorer.copy(heartRateVolatilityWeight = 0f, angleMovingWeight = 0f)),
+                "scorer: movement + HR" to config.copy(scorer = scorer.copy(angleMovingWeight = 0f)),
+                "scorer: movement + angle" to config.copy(scorer = scorer.copy(heartRateVolatilityWeight = 0f)),
+                "scorer: HR 1.0, angle 0.5" to config.copy(scorer = scorer.copy(heartRateVolatilityWeight = 1.0f, angleMovingWeight = 0.5f)),
+                "scorer: Webster 1 pass" to config.copy(scorer = scorer.copy(websterPasses = 1)),
+                "scorer: wake score 1.2" to config.copy(scorer = scorer.copy(wakeScore = 1.2f)),
+                "stages: no LIDS" to config.copy(stages = config.stages.copy(lidsWeight = 0f)),
+                "stages: LIDS 0.6" to config.copy(stages = config.stages.copy(lidsWeight = 0.6f)),
+            )
+        }
+
+        /** The report is printed either way; the gates hold the default configuration to its evaluated numbers. */
+        const val GATES_ENFORCED = true
     }
 }

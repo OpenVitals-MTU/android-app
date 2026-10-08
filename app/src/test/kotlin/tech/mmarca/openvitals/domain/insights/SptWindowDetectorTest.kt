@@ -91,7 +91,7 @@ class SptWindowDetectorTest {
         }
 
         // Three quarters of the minutes carry the low rate: a quantile under that share cuts between the two levels.
-        val window = detect(rows, SptWindowDetector.Config(heartRateQuantile = 0.6f))
+        val window = detect(rows, SptWindowDetector.Config(useHeartRateWindow = true, heartRateQuantile = 0.6f))
 
         assertNotNull(window)
         assertEquals(SptWindowDetector.Source.BOTH, window!!.source)

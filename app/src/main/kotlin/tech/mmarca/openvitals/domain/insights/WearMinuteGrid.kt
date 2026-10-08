@@ -36,6 +36,12 @@ class WearMinuteGrid private constructor(
 
     fun timeAt(index: Int): Instant = Instant.ofEpochSecond((startMinute + index) * SECONDS_PER_MINUTE)
 
+    /** The grid index of the minute holding [time], or null outside the grid. */
+    fun indexOf(time: Instant): Int? {
+        val index = time.epochSecond / SECONDS_PER_MINUTE - startMinute
+        return if (index in 0 until size) index.toInt() else null
+    }
+
     fun zoneOffsetAt(index: Int): ZoneOffset = ZoneOffset.ofTotalSeconds(offsetSeconds[index])
 
     /** True when the minute carried at least one heart rate sample. */
