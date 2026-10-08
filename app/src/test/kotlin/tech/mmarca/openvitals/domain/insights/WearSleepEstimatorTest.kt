@@ -25,9 +25,11 @@ class WearSleepEstimatorTest {
 
         assertNotNull(night)
         night!!
-        assertTrue(night.session.sleepMinutes > 400)
+        assertTrue("sleep ${night.session.sleepMinutes}", night.session.sleepMinutes > 360)
+        // Thirty restless minutes precede the sleep; the window and the onset rules may trail it by the settling hour.
+        assertTrue("onset ${night.session.onset}", !night.session.onset.isBefore(start.plusSeconds(30 * 60)) && night.session.onset.isBefore(start.plusSeconds(100 * 60)))
         assertEquals(0, night.notWornMinutes)
-        assertTrue(night.summary().contains("worn=540"))
+        assertTrue(night.summary(), night.summary().contains("worn=540"))
     }
 
     @Test

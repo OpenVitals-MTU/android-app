@@ -54,3 +54,6 @@ OpenVitals Design System/
 .gradle-ci/
 .gradle-release/
 *.code-workspace
+# PhysioNet sleep-accel download and the fixture derived from it: never committed (tool/README.md)
+tool/sleep_accel_fixture/data/
+tool/sleep_accel_fixture/out/

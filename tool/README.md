@@ -54,3 +54,43 @@ python3 tool/sleep_fixture/build.py \
   --in 2026 \
   --out app/src/test/resources/fit/sleep/venu_sq_minutes.json
 ```
+
+## `sleep_accel_fixture/`
+
+The Wear OS sleep pipeline's feature specification as code, and the local
+evaluation fixture against polysomnography.
+
+- `features.py` mirrors `docs/engineering/sleep-minute-features.md`: it turns
+  accelerometer samples in g, stored heart rate samples and the worn,
+  charging, screen and contact events into `SM` lines exactly as the watch's
+  `MinuteAggregator` does. `feature_vector.json` is the committed lock
+  between the two: `python3 -I tool/sleep_accel_fixture/features.py
+  --self-check` fails when the Python drifts, and the watch test
+  `SleepMinuteFeatureVectorTest` fails when the Kotlin drifts.
+  `--make-vector` regenerates the vector (synthetic minutes, no real data).
+- `build.py` converts PhysioNet's `sleep-accel` dataset (Walch 2019, 31
+  subjects, Apple Watch motion and heart rate with polysomnography labels,
+  ODC-By licence, doi:10.13026/hmhs-py35) into per-minute `SM` lines with a
+  label per minute. **Neither the download nor the output is committed**
+  (`data/` and `out/` are gitignored): the fixture is for local evaluation
+  only. Download the archive from
+  https://physionet.org/content/sleep-accel/1.0.0/, unpack it under
+  `tool/sleep_accel_fixture/data/`, then:
+
+  ```sh
+  python3 -I tool/sleep_accel_fixture/build.py \
+    --in tool/sleep_accel_fixture/data/sleep-accel-1.0.0 \
+    --out tool/sleep_accel_fixture/out/sleep_accel_minutes.json
+  ```
+
+  The evaluation test `SleepAccelEvaluationTest` reads that file only when
+  pointed at it and is skipped otherwise:
+
+  ```sh
+  ./gradlew :app:testCiUnitTest --tests 'tech.mmarca.openvitals.domain.insights.SleepAccelEvaluationTest' \
+    -Dopenvitals.sleepAccelFixture=$PWD/tool/sleep_accel_fixture/out/sleep_accel_minutes.json
+  ```
+
+  It prints the table (sleep sensitivity, wake specificity, accuracy, onset
+  and offset error, total sleep time error, three-class agreement) that a
+  threshold change quotes in its commit message, since CI never sees it.

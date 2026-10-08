@@ -35,6 +35,10 @@ MOVEMENT_PER_COUNT = 0.2
 MAX_MOVEMENT = 30.0
 SPARSE_SAMPLES = 150
 
+# Outside this range the sensor is reporting noise, not a heart (WearLinkProtocol.MIN_BPM / MAX_BPM).
+MIN_BPM = 25
+MAX_BPM = 250
+
 FLAG_CHARGING = 1
 FLAG_OFF_BODY = 2
 FLAG_SCREEN_ON = 4
