@@ -1,24 +1,26 @@
 package tech.mmarca.openvitals.wear
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.wear.compose.material3.MaterialTheme
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Bundle
 import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import tech.mmarca.openvitals.wear.health.HeartRatePermission
 
 class MainActivity : ComponentActivity() {
     private lateinit var sensorManager: WearSensorManager
+    private val viewModel: WearAppViewModel by viewModels()
+
+    /** A screen a tile asked for, opened once and then cleared. */
+    private var pendingRoute by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,24 +53,24 @@ class MainActivity : ComponentActivity() {
             checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
         }
         if (missing.isNotEmpty()) requestPermissions(missing.toTypedArray(), PERMISSIONS_REQUEST)
-        if (Manifest.permission.BODY_SENSORS !in missing) sensorManager.startListening()
+        if (HeartRatePermission !in missing) sensorManager.startListening()
+
+        pendingRoute = intent.getStringExtra(EXTRA_ROUTE)
 
         setContent {
-            MaterialTheme {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.open_vitals_launcher_prod),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(0.75f),
-                    )
-                }
-            }
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            OpenVitalsWearApp(
+                state = uiState,
+                onLog = viewModel::log,
+                deepLinkRoute = pendingRoute,
+                onDeepLinkHandled = { pendingRoute = null },
+            )
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        pendingRoute = intent.getStringExtra(EXTRA_ROUTE)
     }
 
     override fun onRequestPermissionsResult(
@@ -81,12 +83,12 @@ class MainActivity : ComponentActivity() {
         val granted = permissions.filterIndexed { index, _ ->
             grantResults.getOrNull(index) == PackageManager.PERMISSION_GRANTED
         }
-        if (Manifest.permission.BODY_SENSORS in granted) sensorManager.startListening()
+        if (HeartRatePermission in granted) sensorManager.startListening()
         WearAppService.startIfPermitted(this)
     }
 
     private fun requiredPermissions(): List<String> = buildList {
-        add(Manifest.permission.BODY_SENSORS)
+        add(HeartRatePermission)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) add(Manifest.permission.BLUETOOTH_CONNECT)
         // The link's ongoing notification; the service runs without it, just unseen.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
@@ -103,12 +105,14 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // Also catches a grant made in the system settings.
         WearAppService.startIfPermitted(this)
-        if (::sensorManager.isInitialized && checkSelfPermission(Manifest.permission.BODY_SENSORS) == PackageManager.PERMISSION_GRANTED) {
+        if (::sensorManager.isInitialized && checkSelfPermission(HeartRatePermission) == PackageManager.PERMISSION_GRANTED) {
             sensorManager.startListening()
         }
     }
 
-    private companion object {
-        const val PERMISSIONS_REQUEST = 1
+    companion object {
+        /** Extra a tile sets to open a screen; see [WearRoutes.isDeepLinkable]. */
+        const val EXTRA_ROUTE = "tech.mmarca.openvitals.wear.ROUTE"
+        private const val PERMISSIONS_REQUEST = 1
     }
 }

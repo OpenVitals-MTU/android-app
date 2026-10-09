@@ -91,6 +91,23 @@ dependencies {
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    // Same icon set as the phone app, so a metric keeps its glyph on the watch.
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.wear.compose.material3)
+    implementation(libs.androidx.wear.compose.navigation)
+    // Same drag-to-reorder library as the phone dashboard.
+    implementation(libs.reorderable)
+    implementation(libs.androidx.wear.tiles)
+    implementation(libs.androidx.wear.protolayout)
+    implementation(libs.androidx.wear.protolayout.material)
+    // Sensor capabilities, on-demand heart rate and exercise data types.
+    implementation(libs.androidx.health.services.client)
+    implementation(libs.kotlinx.coroutines.guava)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.junit4)
+    debugImplementation(libs.androidx.compose.ui.tooling)
 }
