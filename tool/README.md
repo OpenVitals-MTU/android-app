@@ -95,6 +95,32 @@ evaluation fixture against polysomnography.
   and offset error, total sleep time error, three-class agreement) that a
   threshold change quotes in its commit message, since CI never sees it.
 
+### Replaying a night from a watch
+
+A debuggable watch build keeps its rows in `databases/sleep_minutes.db`. To run
+the phone's pipeline on a real night and see the wear state, the window, the
+labels per hour and the stages it would have written:
+
+```sh
+adb -s <watch> shell 'run-as tech.mmarca.openvitals.debug cat databases/sleep_minutes.db' > night.db
+python3 -I - night.db <<'EOF'
+import sqlite3, sys
+c = sqlite3.connect(sys.argv[1])
+o = lambda v: "-" if v is None else str(v)
+for r in c.execute("select time_ms,kind,offset_s,flags,n,mv10,bpm,hsd10,hn,mx,my,mz,sx,sy,sz,zmin,zmax,zd10 from minutes order by time_ms"):
+    print("SM", *[o(v) for v in r])
+EOF
+```
+
+Save that output as `night.sm`, then:
+
+```sh
+./gradlew :app:testCiUnitTest --tests 'tech.mmarca.openvitals.domain.insights.WearNightReplayTest' \
+  -Dopenvitals.wearNightLines=$PWD/night.sm
+```
+
+The test is skipped without the property; its report is in the test output.
+
 ## `ppg_raw/`
 
 `inspect.py` reads the CSV the watch app's `PpgRawLogger` writes (a debuggable
