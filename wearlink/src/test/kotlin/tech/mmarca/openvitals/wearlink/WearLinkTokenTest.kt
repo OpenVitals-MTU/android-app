@@ -36,7 +36,7 @@ class WearLinkTokenTest {
         assertFalse(WearLinkToken.isWellFormed(null))
         assertFalse(WearLinkToken.isWellFormed(""))
         assertFalse(WearLinkToken.isWellFormed(good.dropLast(1)))
-        assertFalse(WearLinkToken.isWellFormed(good.replace('A', ' ')))
+        assertFalse(WearLinkToken.isWellFormed(" " + good.drop(1)))
         assertFalse(WearLinkToken.isWellFormed("*".repeat(44)))
         assertFalse(WearLinkToken.matches(good, good.dropLast(1)))
         assertFalse(WearLinkToken.matches(null, good))
