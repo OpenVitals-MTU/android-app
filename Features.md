@@ -395,7 +395,8 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Import body measurements and vitals from a CSV file through a five-step wizard: choose a file, map the columns, confirm, import, read the result.
 - Choose the column separator and whether the first row holds column names, both detected and both overridable.
 - Map each column to nothing, to the date and time, or to one of the supported measurements.
-- Import weight, body fat, lean body mass, bone mass, body water, height, basal metabolic rate, heart rate, resting heart rate, heart rate variability, blood oxygen, respiratory rate, body temperature, basal body temperature, blood glucose, and VO2 max.
+- Import weight, body fat, lean body mass, bone mass, body water, height, basal metabolic rate, heart rate, resting heart rate, heart rate variability, blood oxygen, respiratory rate, body temperature, basal body temperature, blood glucose, VO2 max, and blood pressure.
+- Import blood pressure from systolic and diastolic columns with optional body position and cuff location columns, matched by their localized labels (app language first, then English; case and whitespace ignored). Choose a default body position and cuff location, saved between imports, for unmapped columns and unmatched values. Skip a row when both pressures blank. Reject a row when only one pressure present, or systolic not above diastolic.
 - Choose the unit of each column, which describes the file rather than the app's display unit system.
 - Read a body-fat column given as a mass, converting it to a percentage using the weight in the same row.
 - Choose the date format, or detect it from the data, and pick which of day-first and month-first the file uses when both fit.
@@ -403,7 +404,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Reject a row for an unusable timestamp or too few columns, and reject a single value for an unusable number or an implausible value, keeping the rest of the row.
 - Read the result as written, already present, and rejected counts, with rejections grouped by reason.
 - Copy or save the full import report, including the parsing settings and the column mapping actually used.
-- Blood pressure and interval records such as steps, sleep, and workouts are deliberately not supported.
+- Interval records such as steps, sleep, and workouts are deliberately not supported.
 - Re-importing writes no duplicates; a corrected value replaces the record at the same instant.
 - No rollback/delete flow is provided for a CSV import after records are written.
 

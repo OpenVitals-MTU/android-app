@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.imports.csv
 
+import tech.mmarca.openvitals.domain.model.BpRecordValues
+
 /** What the user decided each column means, and whether that is usable. Pure values. */
 
 /** What a column is used for. */
@@ -44,6 +46,12 @@ data class CsvColumnMapping(
 data class CsvImportMapping(
     val columns: List<CsvColumnMapping>,
     val dateTime: CsvDateTimeSettings = CsvDateTimeSettings(),
+    /** Read for the body position and cuff location cells. */
+    val bloodPressureLabels: CsvBloodPressureLabels = CsvBloodPressureLabels(),
+    /** Used when the body position column is not imported or its cell matches no label. */
+    val defaultBodyPosition: Int = BpRecordValues.BODY_POSITION_UNKNOWN,
+    /** Used when the cuff location column is not imported or its cell matches no label. */
+    val defaultCuffLocation: Int = BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN,
 ) {
     /** Every column mapped to a metric, in column order. */
     val metricColumns: List<CsvColumnMapping> get() = columns.filter { it.isMetric }
@@ -95,6 +103,9 @@ enum class CsvMappingIssue {
     /** More than one column claims to be the interval end. */
     MULTIPLE_END_TIMESTAMP_COLUMNS,
 
+    /** Blood pressure columns are mapped without both a systolic and a diastolic one. */
+    BLOOD_PRESSURE_NEEDS_SYSTOLIC_AND_DIASTOLIC,
+
     /** Body fat is given as a mass but no weight column is mapped to divide by. */
     MASS_SHARE_NEEDS_WEIGHT_COLUMN,
 
@@ -130,6 +141,12 @@ fun validateCsvMapping(
             issues += CsvMappingIssue.DUPLICATE_METRIC
             break
         }
+    }
+
+    val pressures = listOf(CsvImportMetric.BLOOD_PRESSURE_SYSTOLIC, CsvImportMetric.BLOOD_PRESSURE_DIASTOLIC)
+
+    if (metricColumns.any { it.metric?.isBloodPressure == true } && !metricColumns.mapNotNull { it.metric }.containsAll(pressures)) {
+        issues += CsvMappingIssue.BLOOD_PRESSURE_NEEDS_SYSTOLIC_AND_DIASTOLIC
     }
 
     // Asked of the interpretation, not the metric: only a mass needs a weight column.

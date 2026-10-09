@@ -1889,6 +1889,10 @@
     <string name="settings_csv_import_metric_blood_glucose">Glicemia</string>
     <string name="settings_csv_import_metric_vo2_max">VO₂ máx.</string>
     <string name="settings_csv_import_metric_steps">Passos</string>
+    <string name="settings_csv_import_metric_bp_systolic">Sistólica</string>
+    <string name="settings_csv_import_metric_bp_diastolic">Diastólica</string>
+    <string name="settings_csv_import_metric_bp_body_position">Posição do corpo</string>
+    <string name="settings_csv_import_metric_bp_cuff_location">Posição da braçadeira</string>
     <string name="settings_csv_import_value_label">Os valores estão em</string>
     <string name="settings_csv_import_unit_kilograms">Quilogramas (kg)</string>
     <string name="settings_csv_import_unit_pounds">Libras (lb)</string>

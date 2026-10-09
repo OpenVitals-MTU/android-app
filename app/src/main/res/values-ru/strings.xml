@@ -2306,6 +2306,10 @@
     <string name="settings_csv_import_metric_blood_glucose">Глюкоза крови</string>
     <string name="settings_csv_import_metric_vo2_max">VO₂ max</string>
     <string name="settings_csv_import_metric_steps">Шаги</string>
+    <string name="settings_csv_import_metric_bp_systolic">Систолическое</string>
+    <string name="settings_csv_import_metric_bp_diastolic">Диастолическое</string>
+    <string name="settings_csv_import_metric_bp_body_position">Положение тела</string>
+    <string name="settings_csv_import_metric_bp_cuff_location">Расположение манжеты</string>
     <string name="settings_csv_import_value_label">Единицы значений</string>
     <string name="settings_csv_import_unit_kilograms">Килограммы (кг)</string>
     <string name="settings_csv_import_unit_pounds">Фунты (фунт)</string>

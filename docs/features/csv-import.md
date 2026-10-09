@@ -43,12 +43,23 @@ Heart and vitals:
 - Basal body temperature.
 - Blood glucose.
 - VO2 max.
+- Blood pressure: systolic (mmHg), diastolic (mmHg), body position and cuff location.
 
-Every supported measurement is a single value at a single instant, because that is the shape the column mapping expresses: one row, one timestamp, one number per column.
+Every supported measurement is a single value at a single instant: one row, one timestamp, one number per column.
+
+Blood pressure is the exception: the systolic and diastolic columns of a row become one Health Connect record, so both must be present. A row with both pressure cells blank is skipped silently; a row with only one of them filled, or with systolic not above diastolic, is rejected.
+
+The optional body position and cuff location columns hold text, matched against the localized labels the app shows for them (for example "Sitting", or "Istuen" in Finnish):
+
+- The app language's labels are tried first, then English when the app language is not English.
+- Matching ignores case, whitespace and punctuation.
+- Body position: standing, sitting, lying down, reclining.
+- Cuff location: left arm, right arm, left wrist, right wrist.
+
+Two dropdowns at the bottom of the mapping screen choose the default body position and cuff location. The default is used when the column is not imported, or when it is imported and a cell is blank or matches no label; such a cell does not reject the reading. Both defaults start as "Not specified", are saved, and are reloaded each time the mapping screen is shown.
 
 ## What Is Not Supported
 
-- **Blood pressure is deliberately unsupported.** Systolic and diastolic have to become one Health Connect record, which needs a two-columns-to-one-record rule the mapping model does not have.
 - **Interval records are not supported.** Steps, sleep, and workouts need a start and an end, and often sub-records, so they are out of scope for the current mapping model.
 
 ## Units Come From The File

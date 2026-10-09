@@ -2364,6 +2364,11 @@
     <string name="settings_csv_import_metric_basal_body_temperature">Temperatura corporal basal</string>
     <string name="settings_csv_import_metric_blood_glucose">Glucosa en sangre</string>
     <string name="settings_csv_import_metric_vo2_max">VO₂ máx.</string>
+    <string name="settings_csv_import_metric_steps">Pasos</string>
+    <string name="settings_csv_import_metric_bp_systolic">Sistólica</string>
+    <string name="settings_csv_import_metric_bp_diastolic">Diastólica</string>
+    <string name="settings_csv_import_metric_bp_body_position">Posición del cuerpo</string>
+    <string name="settings_csv_import_metric_bp_cuff_location">Posición del manguito</string>
     <string name="settings_csv_import_value_label">Los valores están en</string>
     <string name="settings_csv_import_unit_kilograms">Kilogramos (kg)</string>
     <string name="settings_csv_import_unit_pounds">Libras (lb)</string>
@@ -3084,7 +3089,6 @@
     <string name="activity_recording_guidance_squats">Coloca el teléfono pantalla arriba en el suelo entre tus pies o sostenlo enfrente. El sensor de proximidad cuenta una repetición cada vez que te acercas abajo en la sentadilla.</string>
     <string name="settings_csv_import_role_end_timestamp">Fecha y hora de finalización</string>
     <string name="settings_csv_import_interval_end_hint">Cada fila comprende desde la fecha y hora de inicio hasta la columna de \'Fecha y hora de finalización\'. Si falta este dato, la fila se contabiliza como un minuto.</string>
-    <string name="settings_csv_import_metric_steps">Pasos</string>
     <string name="settings_csv_import_unit_count">Un recuento</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Solo una columna puede contener la fecha y hora de finalización.</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Fecha de finalización no válida</string>

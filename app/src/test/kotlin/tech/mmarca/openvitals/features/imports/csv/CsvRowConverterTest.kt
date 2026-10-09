@@ -619,7 +619,7 @@ class CsvRowConverterTest {
     @Test
     fun `every catalog metric can build a record from its canonical value`() {
         // Guards against a metric added to the enum building the wrong record type.
-        for (metric in CsvImportMetric.entries) {
+        for (metric in CsvImportMetric.entries.filterNot { it.isBloodPressure }) {
             val spec = CsvMetricCatalog.getValue(metric)
             val converted = buildCsvImportRecord(
                 metric = metric,

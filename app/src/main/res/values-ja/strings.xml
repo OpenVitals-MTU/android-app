@@ -2357,6 +2357,10 @@
     <string name="settings_csv_import_metric_blood_glucose">血糖値</string>
     <string name="settings_csv_import_metric_vo2_max">VO₂ max</string>
     <string name="settings_csv_import_metric_steps">歩数</string>
+    <string name="settings_csv_import_metric_bp_systolic">収縮期</string>
+    <string name="settings_csv_import_metric_bp_diastolic">拡張期</string>
+    <string name="settings_csv_import_metric_bp_body_position">体位</string>
+    <string name="settings_csv_import_metric_bp_cuff_location">カフの位置</string>
     <string name="settings_csv_import_value_label">値の単位</string>
     <string name="settings_csv_import_unit_kilograms">キログラム (kg)</string>
     <string name="settings_csv_import_unit_pounds">ポンド (lb)</string>

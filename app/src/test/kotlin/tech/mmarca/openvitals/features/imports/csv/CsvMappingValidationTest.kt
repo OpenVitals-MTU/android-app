@@ -240,6 +240,7 @@ class CsvMappingValidationTest {
         assertEquals(CsvUnit.KILOGRAMS, detectCsvUnitInHeader("Weight (kg)"))
         assertEquals(CsvUnit.POUNDS, detectCsvUnitInHeader("Fat mass (lb)"))
         assertEquals(CsvUnit.PERCENT, detectCsvUnitInHeader("Body fat (%)"))
+        assertEquals(CsvUnit.MILLIMETERS_OF_MERCURY, detectCsvUnitInHeader("Systolic (mmHg)"))
     }
 
     @Test

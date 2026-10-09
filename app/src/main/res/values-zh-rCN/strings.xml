@@ -2006,6 +2006,10 @@
     <string name="settings_csv_import_metric_blood_glucose">血糖</string>
     <string name="settings_csv_import_metric_vo2_max">最大摄氧量 (VO₂ max)</string>
     <string name="settings_csv_import_metric_steps">步数</string>
+    <string name="settings_csv_import_metric_bp_systolic">收缩压</string>
+    <string name="settings_csv_import_metric_bp_diastolic">舒张压</string>
+    <string name="settings_csv_import_metric_bp_body_position">身体姿势</string>
+    <string name="settings_csv_import_metric_bp_cuff_location">袖带位置</string>
     <string name="settings_csv_import_value_label">数值单位</string>
     <string name="settings_csv_import_unit_kilograms">千克 (kg)</string>
     <string name="settings_csv_import_unit_pounds">磅 (lb)</string>

@@ -36,16 +36,18 @@ import java.time.format.FormatStyle
 import java.util.Locale
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.core.performance.offMainIo
-import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.domain.model.BpRecordValues
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
+import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.ui.components.ConfirmLeaveWhileImporting
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsFilledButton
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
+import tech.mmarca.openvitals.ui.components.OptionDropdown
 import tech.mmarca.openvitals.ui.components.PermissionCallout
+import tech.mmarca.openvitals.ui.components.rememberHealthConnectPermissionLauncher
 import tech.mmarca.openvitals.ui.components.StepBar
 import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
-import tech.mmarca.openvitals.ui.components.ConfirmLeaveWhileImporting
-import tech.mmarca.openvitals.ui.components.rememberHealthConnectPermissionLauncher
 
 private val CsvMimeTypes = arrayOf(
     "text/csv",
@@ -219,6 +221,21 @@ internal fun CsvMappingStep(
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
             }
+            item {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.settings_csv_import_preferences_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+            item {
+                CsvBloodPressureDefaults(
+                    mapping = mapping,
+                    onBodyPositionChange = viewModel::setDefaultBodyPosition,
+                    onCuffLocationChange = viewModel::setDefaultCuffLocation,
+                )
+            }
             if (state.issues.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(12.dp))
@@ -243,6 +260,41 @@ internal fun CsvMappingStep(
             backLabel = stringResource(R.string.settings_csv_import_back),
             onBack = viewModel::reset,
         )
+    }
+}
+
+/** The body position and cuff location used when their column is not imported or a cell matches no label. */
+@Composable
+private fun CsvBloodPressureDefaults(
+    mapping: CsvImportMapping,
+    onBodyPositionChange: (Int) -> Unit,
+    onCuffLocationChange: (Int) -> Unit,
+) {
+    OpenVitalsCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.settings_csv_import_bp_defaults_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(Modifier.height(8.dp))
+            OptionDropdown(
+                label = stringResource(R.string.settings_csv_import_metric_bp_body_position),
+                options = CsvBodyPositionLabelRes.keys.toList(),
+                selected = mapping.defaultBodyPosition.takeIf { it in CsvBodyPositionLabelRes },
+                optionText = { stringResource(CsvBodyPositionLabelRes.getValue(it)) },
+                enabled = true,
+                onSelect = { onBodyPositionChange(it ?: BpRecordValues.BODY_POSITION_UNKNOWN) },
+            )
+            Spacer(Modifier.height(8.dp))
+            OptionDropdown(
+                label = stringResource(R.string.settings_csv_import_metric_bp_cuff_location),
+                options = CsvCuffLocationLabelRes.keys.toList(),
+                selected = mapping.defaultCuffLocation.takeIf { it in CsvCuffLocationLabelRes },
+                optionText = { stringResource(CsvCuffLocationLabelRes.getValue(it)) },
+                enabled = true,
+                onSelect = { onCuffLocationChange(it ?: BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN) },
+            )
+        }
     }
 }
 

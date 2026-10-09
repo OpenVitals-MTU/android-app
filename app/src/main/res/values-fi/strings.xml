@@ -2357,6 +2357,10 @@
     <string name="settings_csv_import_metric_blood_glucose">Verensokeri</string>
     <string name="settings_csv_import_metric_vo2_max">VO₂ max</string>
     <string name="settings_csv_import_metric_steps">Askeleet</string>
+    <string name="settings_csv_import_metric_bp_systolic">Systolinen</string>
+    <string name="settings_csv_import_metric_bp_diastolic">Diastolinen</string>
+    <string name="settings_csv_import_metric_bp_body_position">Kehon asento</string>
+    <string name="settings_csv_import_metric_bp_cuff_location">Mansetin paikka</string>
     <string name="settings_csv_import_value_label">Arvot ovat</string>
     <string name="settings_csv_import_unit_kilograms">Kilogrammoja (kg)</string>
     <string name="settings_csv_import_unit_pounds">Paunoja (lb)</string>

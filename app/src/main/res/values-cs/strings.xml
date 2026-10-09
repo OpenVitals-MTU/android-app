@@ -2010,6 +2010,10 @@
     <string name="settings_csv_import_metric_blood_glucose">Glykémie</string>
     <string name="settings_csv_import_metric_vo2_max">VO₂ max</string>
     <string name="settings_csv_import_metric_steps">Kroky</string>
+    <string name="settings_csv_import_metric_bp_systolic">Systolický</string>
+    <string name="settings_csv_import_metric_bp_diastolic">Diastolický</string>
+    <string name="settings_csv_import_metric_bp_body_position">Poloha těla</string>
+    <string name="settings_csv_import_metric_bp_cuff_location">Umístění manžety</string>
     <string name="settings_csv_import_value_label">Hodnoty jsou v</string>
     <string name="settings_csv_import_unit_kilograms">Kilogramy (kg)</string>
     <string name="settings_csv_import_unit_pounds">Libry (lb)</string>
