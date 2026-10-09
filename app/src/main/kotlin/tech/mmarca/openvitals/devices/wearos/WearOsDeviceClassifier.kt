@@ -5,6 +5,7 @@ import tech.mmarca.openvitals.devices.core.DeviceClassifier
 import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
+import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /**
  * Claims a device for WearOS when its name looks like a wrist smartwatch or
@@ -29,4 +30,4 @@ class WearOsDeviceClassifier : DeviceClassifier {
         }
 }
 
-private val OpenVitalsAppUuid = BluetoothWearOsNodePort.OPENVITALS_WEAR_APP_UUID.toString().lowercase()
+private val OpenVitalsAppUuid = WearLinkProtocol.SERVICE_UUID.toString().lowercase()

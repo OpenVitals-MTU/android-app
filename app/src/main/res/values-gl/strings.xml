@@ -3729,10 +3729,36 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
     <string name="settings_watch_wearos_bt_paired">Reloxo vinculado con este teléfono</string>
     <string name="settings_watch_wearos_bt_not_paired">Non se atopou ningún reloxo Wear OS vinculado</string>
     <string name="settings_watch_wearos_app_running">A app OpenVitals para Wear OS estase a executar no reloxo</string>
-    <string name="settings_watch_wearos_app_no_answer">Sen resposta: o reloxo está fóra de alcance ou a app OpenVitals non se está a executar nel</string>
+    <string name="settings_watch_wearos_app_no_answer">Sen resposta: o reloxo está apagado, fóra de alcance, ou a app OpenVitals do reloxo non está instalada ou non se está executando.</string>
     <string name="settings_watch_wearos_bt_permission">OpenVitals precisa o permiso Dispositivos próximos para chegar ao reloxo.</string>
+    <string name="settings_watch_wearos_status_bluetooth_off">O Bluetooth deste teléfono está apagado.</string>
+    <string name="settings_watch_wearos_status_bond_lost">O reloxo non está emparellado con este teléfono. Abre os axustes de Bluetooth e emparéllao; antes fai visible o reloxo desde os seus propios axustes de Bluetooth.</string>
+    <string name="settings_watch_wearos_status_pending">Agardando a que permitas este teléfono no reloxo. Abre OpenVitals no reloxo e toca Permitir.</string>
+    <string name="settings_watch_wearos_status_unauthorized_mismatch">O reloxo rexeitou este teléfono: a súa chave non coincide. No reloxo, abre OpenVitals, esquece este teléfono e volve validar.</string>
+    <string name="settings_watch_wearos_status_unauthorized_blocked">Este teléfono está bloqueado no reloxo. No reloxo, abre OpenVitals e desbloquéao.</string>
+    <string name="settings_watch_wearos_status_update_watch">A app OpenVitals do reloxo é máis antiga ca esta. Actualiza a app do reloxo.</string>
+    <string name="settings_watch_wearos_status_update_phone">A app OpenVitals do reloxo é máis nova ca esta. Actualiza OpenVitals no teléfono.</string>
+    <string name="settings_watch_wearos_status_protocol">O reloxo respondeu algo que OpenVitals non puido ler. Actualiza as dúas apps e téntao de novo.</string>
+    <string name="settings_watch_wearos_linked_to">Vinculado a %1$s</string>
+    <string name="settings_watch_wearos_fail_recording">Hai unha gravación de actividade en curso. Remátaa ou descártaa antes de sincronizar o reloxo.</string>
+    <string name="settings_watch_wearos_fail_partial">O reloxo deixou de responder a medias. O recibido gardouse; sincroniza de novo para continuar.</string>
+    <string name="settings_watch_wearos_fail_health_connect">Permite a OpenVitals escribir frecuencia cardíaca e sono en Health Connect e sincroniza de novo.</string>
+    <string name="settings_watch_wearos_fail_generic">Non se puido sincronizar o reloxo. Téntao de novo.</string>
     <string name="settings_watch_wearos_check_app">Comprobar a app de Wear OS</string>
     <string name="settings_watch_wearos_checking">Comprobando a app de Wear OS…</string>
+    <string name="settings_watch_wearos_sync_section">Sincronización do reloxo</string>
+    <string name="settings_watch_wearos_sync_body">A app OpenVitals do reloxo rexistra a frecuencia cardíaca e o necesario para estimar o sono, e garda unha semana. A sincronización copia a frecuencia cardíaca nova en Health Connect e escribe unha sesión de sono estimada por noite.</string>
+    <string name="settings_watch_wearos_sync_now">Sincronizar reloxo</string>
+    <string name="settings_watch_wearos_syncing">Sincronizando reloxo…</string>
+    <string name="settings_watch_wearos_synced_none">Non hai nada novo no reloxo</string>
+    <plurals name="settings_watch_wearos_synced_samples">
+        <item quantity="one">%1$d mostra de frecuencia cardíaca sincronizada</item>
+        <item quantity="other">%1$d mostras de frecuencia cardíaca sincronizadas</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">%1$d noite de sono estimada</item>
+        <item quantity="other">%1$d noites de sono estimadas</item>
+    </plurals>
     <string name="scale_notification_channel">Pesaxes da báscula</string>
     <string name="scale_notification_title">Lendo a túa pesaxe</string>
     <string name="settings_scales_empty_title">Sen báscula configurada</string>

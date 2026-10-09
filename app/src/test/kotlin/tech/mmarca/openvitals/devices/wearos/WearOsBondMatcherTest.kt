@@ -23,6 +23,19 @@ class WearOsBondMatcherTest {
     }
 
     @Test
+    fun `the address a hello was answered from wins over the registered one and the name`() {
+        val renamed = BondedWatch("A8:D1:62:BE:3A:3B", "My watch")
+        val picked = WearOsBondMatcher.pick(
+            bonded = listOf(pixel, renamed),
+            targetAddress = "7F:12:34:56:78:9A",
+            targetName = "Pixel Watch 3",
+            linkAddress = "a8:d1:62:be:3a:3b",
+        )
+
+        assertEquals(renamed, picked)
+    }
+
+    @Test
     fun `a private BLE address falls back to the name, without the LE suffix`() {
         val picked = WearOsBondMatcher.pick(
             bonded = listOf(pixel, galaxy, headphones),

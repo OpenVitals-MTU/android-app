@@ -55,6 +55,10 @@ val nightlyVersionNameSuffix = versionNameOverride
 val localAppleHealthExportPath = providers.gradleProperty("appleHealthExport")
     .orElse(providers.systemProperty("appleHealthExport"))
     .orElse(providers.environmentVariable("APPLE_HEALTH_EXPORT"))
+// The local, gitignored PhysioNet sleep fixture (tool/README.md); SleepAccelEvaluationTest skips without it.
+val localSleepAccelFixturePath = providers.gradleProperty("sleepAccelFixture")
+    .orElse(providers.systemProperty("openvitals.sleepAccelFixture"))
+    .orElse(providers.environmentVariable("OPENVITALS_SLEEP_ACCEL_FIXTURE"))
 // versionCode is a monotonic release counter, independent of versionName.
 //
 // The Flutter era multiplied the then-base by 10 and added a per-ABI digit
@@ -258,6 +262,7 @@ androidComponents {
 }
 
 dependencies {
+    implementation(project(":wearlink"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
 
@@ -353,6 +358,13 @@ tasks.withType<Test>().configureEach {
     maxHeapSize = "1g"
     localAppleHealthExportPath.orNull?.let { path ->
         systemProperty("appleHealthExport", path)
+    }
+    localSleepAccelFixturePath.orNull?.let { path ->
+        systemProperty("openvitals.sleepAccelFixture", path)
+    }
+    // A night pulled off a watch, replayed by WearNightReplayTest (tool/README.md).
+    providers.systemProperty("openvitals.wearNightLines").orNull?.let { path ->
+        systemProperty("openvitals.wearNightLines", path)
     }
     // StringFormatSpecifierTest reads the source strings off disk rather than
     // through R, so Gradle cannot infer the dependency and would call the task

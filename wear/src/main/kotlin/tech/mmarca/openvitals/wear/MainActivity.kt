@@ -1,114 +1,106 @@
 package tech.mmarca.openvitals.wear
 
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.wear.compose.material3.MaterialTheme
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import android.util.Log
 
+/**
+ * The one screen: what the watch is recording, whether the phone can reach
+ * it, and which phones may. Asks for the permissions the link and the
+ * recorder need; each part starts on its own once granted. The work itself
+ * lives in [WearAppService], so closing this screen changes nothing.
+ */
 class MainActivity : ComponentActivity() {
-    private lateinit var sensorManager: WearSensorManager
+
+    private val store by lazy { HeartRateStore(this) }
+    private val minuteStore by lazy { SleepMinuteStore(this) }
+    private val trust by lazy { WearTrustStore(this) }
+
+    private var permissionsVersion by mutableStateOf(0)
+
+    private val requestPermissions = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) {
+        permissionsVersion++
+        WearAppService.startIfPermitted(this)
+        // The background grant is asked on its own, and only after the foreground one.
+        requestBackgroundHeartRateIfNeeded()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Identify the device manufacturer and instantiate the correct manager
-        val manufacturer = Build.MANUFACTURER.lowercase()
-        sensorManager = when {
-            manufacturer.contains("samsung") -> {
-                Log.d("MainActivity", "Samsung device detected. Using GalaxySensorManager.")
-                GalaxySensorManager(this) { data ->
-                    Log.d("MainActivity", "Data received: $data")
-                }
-            }
-            manufacturer.contains("google") -> {
-                Log.d("MainActivity", "Google device detected. Using PixelSensorManager.")
-                PixelSensorManager(this) { data ->
-                    Log.d("MainActivity", "Data received: $data")
-                }
-            }
-            else -> {
-                Log.d("MainActivity", "Generic/Other device detected ($manufacturer). Using default WearSensorManager.")
-                WearSensorManager(this) { data ->
-                    Log.d("MainActivity", "Data received: $data")
-                }
-            }
-        }
-
-        // Sensors, plus what the phone link needs. Each one starts its part once granted.
-        val missing = requiredPermissions().filter {
-            checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
-        }
-        if (missing.isNotEmpty()) requestPermissions(missing.toTypedArray(), PERMISSIONS_REQUEST)
-        if (Manifest.permission.BODY_SENSORS !in missing) sensorManager.startListening()
+        requestMissingPermissions()
 
         setContent {
             MaterialTheme {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.open_vitals_launcher_prod),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(0.75f),
-                    )
-                }
+                WatchStatusScreen(
+                    permissionsVersion = permissionsVersion,
+                    hasHeartRate = { WearPermissions.hasHeartRate(this) },
+                    hasBluetooth = { WearPermissions.hasBluetooth(this) },
+                    readLatest = { store.latest() },
+                    readCount = { store.count() },
+                    readMinuteCount = { minuteStore.count() },
+                    ppgLogAvailable = PpgRawLogger(this).isAvailable,
+                    onTogglePpgLog = { WearAppService.togglePpgLog(this) },
+                    onGrant = ::requestMissingPermissions,
+                    onAllow = { pending ->
+                        trust.trust(pending.address, pending.token, pending.name)
+                        WearPhoneRequests.cancel(this)
+                    },
+                    onBlock = { pending ->
+                        trust.block(pending.address)
+                        WearPhoneRequests.cancel(this)
+                    },
+                    onForget = { address -> trust.forget(address) },
+                    onOpenBluetoothSettings = ::openBluetoothSettings,
+                )
             }
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode != PERMISSIONS_REQUEST) return
-        val granted = permissions.filterIndexed { index, _ ->
-            grantResults.getOrNull(index) == PackageManager.PERMISSION_GRANTED
-        }
-        if (Manifest.permission.BODY_SENSORS in granted) sensorManager.startListening()
-        WearAppService.startIfPermitted(this)
-    }
-
-    private fun requiredPermissions(): List<String> = buildList {
-        add(Manifest.permission.BODY_SENSORS)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) add(Manifest.permission.BLUETOOTH_CONNECT)
-        // The link's ongoing notification; the service runs without it, just unseen.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        if (::sensorManager.isInitialized) {
-            sensorManager.stopListening()
         }
     }
 
     override fun onResume() {
         super.onResume()
         // Also catches a grant made in the system settings.
+        permissionsVersion++
         WearAppService.startIfPermitted(this)
-        if (::sensorManager.isInitialized && checkSelfPermission(Manifest.permission.BODY_SENSORS) == PackageManager.PERMISSION_GRANTED) {
-            sensorManager.startListening()
+    }
+
+    private fun openBluetoothSettings() {
+        // Not every watch has a Bluetooth settings activity; the system settings are the fallback.
+        runCatching { startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }
+            .onFailure { runCatching { startActivity(Intent(Settings.ACTION_SETTINGS)) } }
+    }
+
+    private fun requestMissingPermissions() {
+        val wanted = buildList {
+            add(WearPermissions.heartRate)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                add(android.Manifest.permission.BLUETOOTH_CONNECT)
+            }
+            // The link's ongoing notification and the phone requests; the service runs without it, just unseen.
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                add(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        val missing = wanted.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+        if (missing.isEmpty()) {
+            requestBackgroundHeartRateIfNeeded()
+        } else {
+            requestPermissions.launch(missing.toTypedArray())
         }
     }
 
-    private companion object {
-        const val PERMISSIONS_REQUEST = 1
+    private fun requestBackgroundHeartRateIfNeeded() {
+        val background = WearPermissions.heartRateInBackground ?: return
+        if (!WearPermissions.hasHeartRate(this) || WearPermissions.hasHeartRateInBackground(this)) return
+        requestPermissions.launch(arrayOf(background))
     }
 }

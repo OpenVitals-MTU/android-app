@@ -74,6 +74,14 @@ data class SleepEstimatorConfig(
     val remShareMax: Float = 0.30f,
     val adaptStep: Float = 0.1f,
     val adaptMaxIterations: Int = 8,
+    /**
+     * How much the smoothed, normalised LIDS (Winnebeck 2018) pulls the
+     * deep score up and the REM score down. Zero leaves staging to heart
+     * rate alone, as fitted on the Garmin nights.
+     */
+    val lidsWeight: Float = 0f,
+    /** Divides the activity before the LIDS conversion: the Wear OS count is about a fifth of Garmin's. */
+    val lidsActivityScale: Float = 1f,
 )
 
 /**
@@ -112,6 +120,31 @@ object SleepStageEstimator {
         val block = findBlocks(labels, config)
             .sortedWith(compareByDescending<SleepBlock> { it.sleepCount }.thenBy { it.onset })
             .firstOrNull() ?: return null
+        return sessionOf(grid, labels, block, config)
+    }
+
+    /**
+     * The night inside a window another method found, from sleep/wake labels
+     * another scorer produced: [labels] holds `S`, `W` or `G` for every grid
+     * minute of [minutes] (sorted, one per minute, the grid's size), and
+     * `[windowStart, windowEnd)` are grid indices. The block's onset and end
+     * follow the usual run rules inside the window; the stages are classified
+     * as for any night. Null when the window holds no night.
+     */
+    fun estimateWindow(
+        minutes: List<SleepMinute>,
+        labels: CharArray,
+        windowStart: Int,
+        windowEnd: Int,
+        config: SleepEstimatorConfig = SleepEstimatorConfig(),
+    ): EstimatedSleepSession? {
+        val grid = MinuteGrid.of(minutes) ?: return null
+        require(labels.size == grid.size) { "labels (${labels.size}) must cover the grid (${grid.size})" }
+        val block = blockOf(labels, windowStart.coerceIn(0, grid.size), windowEnd.coerceIn(0, grid.size), config) ?: return null
+        return sessionOf(grid, labels, block, config)
+    }
+
+    private fun sessionOf(grid: MinuteGrid, labels: CharArray, block: SleepBlock, config: SleepEstimatorConfig): EstimatedSleepSession {
         val staged = classifyStages(grid, labels, block.onset, block.end, config)
         val stages = staged.stages
         val spans = mutableListOf<EstimatedStageSpan>()
@@ -159,54 +192,8 @@ object SleepStageEstimator {
                 }
             }
         }
-        // Passes repeat until stable: a wake run that grew carries over again.
-        // The corpus constants were fitted with this, so it is not a single pass.
-        repeat(WebsterPasses) {
-            val carried = websterCarryOver(labels)
-            val bridged = websterBridge(labels)
-            if (!carried && !bridged) return labels
-        }
+        WebsterRescoring.apply(labels)
         return labels
-    }
-
-    /** Webster rule 1: the first sleep minutes after a wake run are still wake. Returns whether anything changed. */
-    private fun websterCarryOver(labels: CharArray): Boolean {
-        var changed = false
-        val runs = runsOf(labels)
-        for ((position, run) in runs.withIndex()) {
-            if (run.label != Wake) continue
-            val next = runs.getOrNull(position + 1) ?: continue
-            if (next.label != Sleep) continue
-            val toWake = when {
-                run.length >= 15 -> 4
-                run.length >= 10 -> 3
-                run.length >= 4 -> 1
-                else -> 0
-            }
-            for (index in next.start until next.start + minOf(toWake, next.length)) {
-                labels[index] = Wake
-                changed = true
-            }
-        }
-        return changed
-    }
-
-    /** Webster rules 2 and 3: a short sleep run between long wake runs is wake. Returns whether anything changed. */
-    private fun websterBridge(labels: CharArray): Boolean {
-        var changed = false
-        val rescanned = runsOf(labels)
-        for ((position, run) in rescanned.withIndex()) {
-            if (run.label != Sleep) continue
-            val before = rescanned.getOrNull(position - 1) ?: continue
-            val after = rescanned.getOrNull(position + 1) ?: continue
-            if (before.label != Wake || after.label != Wake) continue
-            val bounded = minOf(before.length, after.length)
-            if ((run.length <= 6 && bounded >= 10) || (run.length <= 10 && bounded >= 20)) {
-                for (index in run.start until run.start + run.length) labels[index] = Wake
-                changed = true
-            }
-        }
-        return changed
     }
 
     /** Candidate sleep blocks: spans between long breaks that hold a real night. */
@@ -308,11 +295,12 @@ object SleepStageEstimator {
             val deviation = features.deviation[index] / config.deviationScale
             val variability = (features.variability[index] - features.variabilityMedian) / variabilityScale
             val moving = features.movement[index] > 0f
+            val lids = config.lidsWeight * features.lids[index]
             var deep = -deviation - config.variabilityWeight * variability +
-                (config.deepPriorStart + config.deepPriorSlope * position)
+                (config.deepPriorStart + config.deepPriorSlope * position) + lids
             if (moving) deep -= config.deepMovementPenalty
             var rem = deviation + config.variabilityWeight * variability +
-                (config.remPriorStart + config.remPriorSlope * position)
+                (config.remPriorStart + config.remPriorSlope * position) - lids
             if (moving) rem -= config.remMovementPenalty
             if (index < config.remLatencyMinutes) rem = Float.NEGATIVE_INFINITY
             if (features.sinceWake[index] < config.postWakeLightMinutes) deep = Float.NEGATIVE_INFINITY
@@ -360,27 +348,15 @@ object SleepStageEstimator {
         return runs
     }
 
-    internal class LabelRun(val label: Char, val start: Int, val length: Int)
+    internal fun runsOf(labels: CharArray, from: Int = 0, to: Int = labels.size): List<SleepLabels.LabelRun> =
+        SleepLabels.runsOf(labels, from, to)
 
-    internal fun runsOf(labels: CharArray, from: Int = 0, to: Int = labels.size): List<LabelRun> {
-        val runs = mutableListOf<LabelRun>()
-        var start = from
-        for (index in from + 1..to) {
-            if (index == to || labels[index] != labels[start]) {
-                runs.add(LabelRun(labels[start], start, index - start))
-                start = index
-            }
-        }
-        return runs
-    }
-
-    internal const val Sleep = 'S'
-    internal const val Wake = 'W'
-    internal const val Gap = 'G'
+    internal const val Sleep = SleepLabels.Sleep
+    internal const val Wake = SleepLabels.Wake
+    internal const val Gap = SleepLabels.Gap
 
     private const val NightStartHour = 18
     private const val NightEndHour = 14
-    private const val WebsterPasses = 3
 
     /** Cole-Kripke one-minute weights for t-4..t+2, scaled so the centre is 1. */
     private val ColeKripkeWeights = floatArrayOf(0.29f, 0.42f, 0.23f, 0.31f, 1.00f, 0.36f, 0.25f)
@@ -456,6 +432,8 @@ private class StageFeatures(
     val variabilityMedian: Float,
     val movement: FloatArray,
     val sinceWake: IntArray,
+    /** Normalised LIDS per minute; all zero when the weight is zero. */
+    val lids: FloatArray,
 ) {
     companion object {
         fun of(
@@ -514,7 +492,13 @@ private class StageFeatures(
                 }
             }
 
-            return StageFeatures(deviation, variability, variabilityMedian, movement, sinceWake)
+            val lids = if (config.lidsWeight == 0f) {
+                FloatArray(length)
+            } else {
+                Lids.normalised(Lids.of(FloatArray(length) { index -> activity[onset + index] }, config.lidsActivityScale))
+            }
+
+            return StageFeatures(deviation, variability, variabilityMedian, movement, sinceWake, lids)
         }
 
         /** Median of the finite values in `[from, to]`, optionally only where [mask] is true. NaN if none. */

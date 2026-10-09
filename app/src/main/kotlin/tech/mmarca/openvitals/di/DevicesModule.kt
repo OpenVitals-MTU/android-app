@@ -31,8 +31,10 @@ import tech.mmarca.openvitals.devices.xiaomi.ScaleScanRadio
 import tech.mmarca.openvitals.devices.xiaomi.SystemScaleScanRadio
 import tech.mmarca.openvitals.devices.xiaomi.XiaomiScaleListener
 import tech.mmarca.openvitals.devices.xiaomi.XiaomiScaleStore
+import tech.mmarca.openvitals.devices.core.sync.CompositeDeviceSyncPort
 import tech.mmarca.openvitals.devices.wearos.BluetoothWearOsNodePort
 import tech.mmarca.openvitals.devices.wearos.WearOsNodePort
+import tech.mmarca.openvitals.devices.wearos.WearOsWatchSyncService
 
 /** Wiring for the `devices/` layer, kept apart so [AppModule] carries no watch knowledge. */
 @Module
@@ -43,9 +45,14 @@ abstract class DevicesModule {
     @Singleton
     abstract fun bindWatchPairingPort(impl: BleWatchPairing): WatchPairingPort
 
+    // One port per integration; the composite hands each device to the one that claims it.
     @Binds
-    @Singleton
-    abstract fun bindDeviceSyncPort(impl: GarminWatchSyncService): DeviceSyncPort
+    @IntoSet
+    abstract fun bindGarminSyncPort(impl: GarminWatchSyncService): DeviceSyncPort
+
+    @Binds
+    @IntoSet
+    abstract fun bindWearOsSyncPort(impl: WearOsWatchSyncService): DeviceSyncPort
 
     @Binds
     @Singleton
@@ -77,6 +84,11 @@ abstract class DevicesModule {
     abstract fun bindWearOsNodePort(impl: BluetoothWearOsNodePort): WearOsNodePort
 
     companion object {
+
+        @Provides
+        @Singleton
+        fun provideDeviceSyncPort(ports: Set<@JvmSuppressWildcards DeviceSyncPort>): DeviceSyncPort =
+            CompositeDeviceSyncPort(ports)
 
         @Provides
         @Singleton

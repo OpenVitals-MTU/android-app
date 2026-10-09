@@ -3726,10 +3726,36 @@
     <string name="settings_watch_wearos_bt_paired">ウォッチはこのスマートフォンとペアリング済みです</string>
     <string name="settings_watch_wearos_bt_not_paired">ペアリング済みの Wear OS ウォッチが見つかりません</string>
     <string name="settings_watch_wearos_app_running">ウォッチで OpenVitals Wear OS アプリが動作中です</string>
-    <string name="settings_watch_wearos_app_no_answer">応答がありません：ウォッチが範囲外か、ウォッチの OpenVitals アプリが動作していません</string>
+    <string name="settings_watch_wearos_app_no_answer">応答なし：ウォッチの電源が切れているか、範囲外か、ウォッチの OpenVitals アプリがインストールされていないか実行されていません。</string>
     <string name="settings_watch_wearos_bt_permission">ウォッチに接続するには、OpenVitals に「付近のデバイス」の権限が必要です。</string>
+    <string name="settings_watch_wearos_status_bluetooth_off">このスマートフォンの Bluetooth がオフです。</string>
+    <string name="settings_watch_wearos_status_bond_lost">ウォッチはこのスマートフォンとペア設定されていません。Bluetooth 設定を開いてペア設定してください。先にウォッチ側の Bluetooth 設定から検出可能にしてください。</string>
+    <string name="settings_watch_wearos_status_pending">ウォッチでこのスマートフォンを許可するのを待っています。ウォッチで OpenVitals を開き、「許可」をタップしてください。</string>
+    <string name="settings_watch_wearos_status_unauthorized_mismatch">ウォッチがこのスマートフォンを拒否しました。キーが一致しません。ウォッチで OpenVitals を開き、このスマートフォンを削除してから、もう一度確認してください。</string>
+    <string name="settings_watch_wearos_status_unauthorized_blocked">このスマートフォンはウォッチでブロックされています。ウォッチで OpenVitals を開き、ブロックを解除してください。</string>
+    <string name="settings_watch_wearos_status_update_watch">ウォッチの OpenVitals アプリがこのアプリより古いです。ウォッチのアプリを更新してください。</string>
+    <string name="settings_watch_wearos_status_update_phone">ウォッチの OpenVitals アプリがこのアプリより新しいです。スマートフォンの OpenVitals を更新してください。</string>
+    <string name="settings_watch_wearos_status_protocol">ウォッチの応答を OpenVitals が読み取れませんでした。両方のアプリを更新して、もう一度お試しください。</string>
+    <string name="settings_watch_wearos_linked_to">%1$s と接続中</string>
+    <string name="settings_watch_wearos_fail_recording">アクティビティを記録中です。ウォッチを同期する前に終了または破棄してください。</string>
+    <string name="settings_watch_wearos_fail_partial">ウォッチが途中で応答しなくなりました。受信した分は保存済みです。続けるにはもう一度同期してください。</string>
+    <string name="settings_watch_wearos_fail_health_connect">OpenVitals に Health Connect への心拍数と睡眠の書き込みを許可してから、もう一度同期してください。</string>
+    <string name="settings_watch_wearos_fail_generic">ウォッチを同期できませんでした。もう一度お試しください。</string>
     <string name="settings_watch_wearos_check_app">Wear OS アプリを確認</string>
     <string name="settings_watch_wearos_checking">Wear OS アプリを確認中…</string>
+    <string name="settings_watch_wearos_sync_section">ウォッチの同期</string>
+    <string name="settings_watch_wearos_sync_body">ウォッチの OpenVitals アプリは心拍数と睡眠推定に必要なデータを記録し、1 週間分を保持します。同期すると新しい心拍数を Health Connect にコピーし、一晩ごとに推定した睡眠セッションを書き込みます。</string>
+    <string name="settings_watch_wearos_sync_now">ウォッチを同期</string>
+    <string name="settings_watch_wearos_syncing">ウォッチを同期しています…</string>
+    <string name="settings_watch_wearos_synced_none">ウォッチに新しいデータはありません</string>
+    <plurals name="settings_watch_wearos_synced_samples">
+        <item quantity="one">%1$d 件の心拍数サンプルを同期しました</item>
+        <item quantity="other">%1$d 件の心拍数サンプルを同期しました</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">%1$d 晩の睡眠を推定しました</item>
+        <item quantity="other">%1$d 晩の睡眠を推定しました</item>
+    </plurals>
     <string name="scale_notification_channel">体重計の測定</string>
     <string name="scale_notification_title">測定を読み取り中</string>
     <string name="settings_scales_empty_title">体重計が設定されていません</string>

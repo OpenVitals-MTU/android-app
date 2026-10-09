@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Instant
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -32,6 +33,8 @@ import tech.mmarca.openvitals.devices.garmin.OnboardGarminWatchUseCase
 import tech.mmarca.openvitals.devices.wearos.OnboardWearOsWatchUseCase
 import tech.mmarca.openvitals.devices.wearos.WearOsCompanionManager
 import tech.mmarca.openvitals.devices.wearos.WearOsCompanionStatus
+import tech.mmarca.openvitals.devices.wearos.WearOsLinkSnapshot
+import tech.mmarca.openvitals.devices.wearos.WearOsLinkStore
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.navigation.WATCH_DEVICE_ID_ARG
 import tech.mmarca.openvitals.sensors.ble.BleSensorCoordinator
@@ -126,6 +129,7 @@ class WatchDeviceViewModel @Inject constructor(
     private val healthConnectManager: tech.mmarca.openvitals.healthconnect.HealthConnectManager,
     private val dispatchers: tech.mmarca.openvitals.core.performance.DispatcherProvider,
     private val wearOsCompanionManager: WearOsCompanionManager,
+    private val wearOsLinkStore: WearOsLinkStore,
 ) : ViewModel() {
 
     val deviceId: String = savedStateHandle.get<String>(WATCH_DEVICE_ID_ARG).orEmpty()
@@ -176,6 +180,22 @@ class WatchDeviceViewModel @Inject constructor(
         viewModelScope.launch {
             if (uiState.first { it.device != null }.device?.isWearosWatch == true) checkWearOsStatus()
         }
+        // A sync that ends in a typed failure updates the status row without another ping.
+        viewModelScope.launch {
+            wearOsLinkStore.snapshots.collect { snapshots ->
+                val snapshot = snapshots[deviceId] ?: return@collect
+                localState.update { state ->
+                    state.copy(
+                        wearOsStatus = state.wearOsStatus.copy(
+                            appStatus = snapshot.status,
+                            watchName = snapshot.watchName ?: state.wearOsStatus.watchName,
+                            bondLost = snapshot.bondLost,
+                            lastCheckedAt = snapshot.checkedAt,
+                        ),
+                    )
+                }
+            }
+        }
     }
 
     /** Takes in an ephemeris file. Its contents say what it is; the message says why not. */
@@ -212,6 +232,10 @@ class WatchDeviceViewModel @Inject constructor(
                     targetName = device.bluetoothName,
                 )
                 localState.update { it.copy(wearOsStatus = status, wearOsError = null) }
+                wearOsLinkStore.record(
+                    device.id,
+                    WearOsLinkSnapshot(status.appStatus, watchName = status.watchName, bondLost = status.bondLost, checkedAt = Instant.now()),
+                )
             } catch (e: Exception) {
                 val error = e.toScreenError(logTag = TAG, logMessage = "Wear OS status check failed")
                 localState.update { it.copy(wearOsError = error) }

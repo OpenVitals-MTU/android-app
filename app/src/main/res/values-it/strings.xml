@@ -3683,10 +3683,36 @@
     <string name="settings_watch_wearos_bt_paired">Orologio associato a questo telefono</string>
     <string name="settings_watch_wearos_bt_not_paired">Nessun orologio Wear OS associato trovato</string>
     <string name="settings_watch_wearos_app_running">L\'app OpenVitals per Wear OS è in esecuzione sull\'orologio</string>
-    <string name="settings_watch_wearos_app_no_answer">Nessuna risposta: l\'orologio è fuori portata, oppure l\'app OpenVitals non è in esecuzione</string>
+    <string name="settings_watch_wearos_app_no_answer">Nessuna risposta: l’orologio è spento, fuori portata, oppure l’app OpenVitals sull’orologio non è installata o non è in esecuzione.</string>
     <string name="settings_watch_wearos_bt_permission">OpenVitals ha bisogno dell\'autorizzazione Dispositivi nelle vicinanze per raggiungere l\'orologio.</string>
+    <string name="settings_watch_wearos_status_bluetooth_off">Il Bluetooth di questo telefono è spento.</string>
+    <string name="settings_watch_wearos_status_bond_lost">L’orologio non è associato a questo telefono. Apri le impostazioni Bluetooth e associalo; prima rendi l’orologio visibile dalle sue impostazioni Bluetooth.</string>
+    <string name="settings_watch_wearos_status_pending">In attesa che tu consenta questo telefono sull’orologio. Apri OpenVitals sull’orologio e tocca Consenti.</string>
+    <string name="settings_watch_wearos_status_unauthorized_mismatch">L’orologio ha rifiutato questo telefono: la sua chiave non corrisponde. Sull’orologio apri OpenVitals, dimentica questo telefono, poi convalida di nuovo.</string>
+    <string name="settings_watch_wearos_status_unauthorized_blocked">Questo telefono è bloccato sull’orologio. Sull’orologio apri OpenVitals e sbloccalo.</string>
+    <string name="settings_watch_wearos_status_update_watch">L’app OpenVitals sull’orologio è più vecchia di questa. Aggiorna l’app dell’orologio.</string>
+    <string name="settings_watch_wearos_status_update_phone">L’app OpenVitals sull’orologio è più recente di questa. Aggiorna OpenVitals sul telefono.</string>
+    <string name="settings_watch_wearos_status_protocol">L’orologio ha risposto qualcosa che OpenVitals non ha potuto leggere. Aggiorna entrambe le app e riprova.</string>
+    <string name="settings_watch_wearos_linked_to">Collegato a %1$s</string>
+    <string name="settings_watch_wearos_fail_recording">È in corso la registrazione di un’attività. Terminala o scartala prima di sincronizzare l’orologio.</string>
+    <string name="settings_watch_wearos_fail_partial">L’orologio ha smesso di rispondere a metà. Quanto arrivato è stato salvato; sincronizza di nuovo per continuare.</string>
+    <string name="settings_watch_wearos_fail_health_connect">Consenti a OpenVitals di scrivere frequenza cardiaca e sonno in Health Connect, poi sincronizza di nuovo.</string>
+    <string name="settings_watch_wearos_fail_generic">Impossibile sincronizzare l’orologio. Riprova.</string>
     <string name="settings_watch_wearos_check_app">Verifica l\'app Wear OS</string>
     <string name="settings_watch_wearos_checking">Verifica dell\'app Wear OS…</string>
+    <string name="settings_watch_wearos_sync_section">Sincronizzazione orologio</string>
+    <string name="settings_watch_wearos_sync_body">L’app OpenVitals sull’orologio registra la frequenza cardiaca e ciò che serve per stimare il sonno, e ne conserva una settimana. La sincronizzazione copia la nuova frequenza cardiaca in Health Connect e scrive una sessione di sonno stimata per notte.</string>
+    <string name="settings_watch_wearos_sync_now">Sincronizza orologio</string>
+    <string name="settings_watch_wearos_syncing">Sincronizzazione dell’orologio…</string>
+    <string name="settings_watch_wearos_synced_none">Niente di nuovo sull’orologio</string>
+    <plurals name="settings_watch_wearos_synced_samples">
+        <item quantity="one">%1$d campione di frequenza cardiaca sincronizzato</item>
+        <item quantity="other">%1$d campioni di frequenza cardiaca sincronizzati</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">%1$d notte di sonno stimata</item>
+        <item quantity="other">%1$d notti di sonno stimate</item>
+    </plurals>
     <string name="scale_notification_channel">Pesate della bilancia</string>
     <string name="scale_notification_title">Lettura della pesata</string>
     <string name="settings_scales_empty_title">Nessuna bilancia configurata</string>

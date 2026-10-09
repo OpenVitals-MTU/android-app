@@ -18,6 +18,10 @@ private class FakeWearOsNodePort : WearOsNodePort {
         seenTargetName = targetName
         return statusToReturn
     }
+
+    override suspend fun pullHeartRate(targetAddress: String?, targetName: String?, since: Instant): WearOsHeartRatePage? = null
+
+    override suspend fun pullSleepMinutes(targetAddress: String?, targetName: String?, since: Instant): WearOsSleepMinutePage? = null
 }
 
 class WearOsCompanionManagerTest {

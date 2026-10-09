@@ -9,7 +9,7 @@ The repo now has one Android app module for the local app. The goal is to keep b
 ## Current Snapshot
 
 - App namespace: `tech.mmarca.openvitals`
-- Project shape: two Gradle modules. The phone app is `:app`, under `app/`. `:wear` is a Wear OS placeholder with its own CI gate. The rest of this document is about `:app`
+- Project shape: three Gradle modules. The phone app is `:app`, under `app/`; `:wear` is the Wear OS watch app with its own CI gate; `:wearlink` is the pure-Kotlin link both depend on (see [Shared module `:wearlink`](#shared-module-wearlink)). The rest of this document is about `:app` unless it says otherwise
 - Dependency wiring: Hilt in `:app`, rooted at [`OpenVitalsApp`](../../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt); modules are `di/AppModule.kt`, `di/RepositoryModule.kt`, `di/PreferencesModule.kt`, `di/RemindersModule.kt`, and `di/DevicesModule.kt`
 - UI stack: Jetpack Compose + Material 3 app shell + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
 - Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
@@ -130,7 +130,7 @@ Everything else reads Health Connect on every load, through one reader function 
 
 ### 7. Keep module boundaries proportional
 
-The current project should stay single-module unless a future app or library has a concrete, active need for extracted code. Prefer package boundaries first:
+The phone app stays one module; package boundaries come first. The one extraction so far is `:wearlink`, the phone-to-watch link, because the watch app needed the same protocol, framing and trust code and a copied file had to be held in sync by a test. A module is extracted only when two apps need the same code, never to tidy one app. Prefer package boundaries first:
 
 - app-local domain models and calculations in `domain`
 - period primitives in `core/period`
@@ -352,7 +352,8 @@ Vendor-neutral ports plus the two things every integration shares.
 - [`RadioLeaseUse.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/devices/core/RadioLeaseUse.kt) — `withRadioLease(address, owner) { ... }`, `RadioLeaseBusyException`, and `object RadioLeaseOwner` with the four owner tags: `SYNC`, `FIND`, `SETTINGS`, `NOTIFICATIONS`. They are strings rather than an enum because they appear in logcat.
 - `DeviceClassification.kt` / `DeviceScanClassifier.kt` — `DeviceClassifier` and `DeviceScanClassifier` function interfaces; the first non-null classification wins, otherwise the device is a plain sensor.
 - `core/pairing/` — `WatchPairingPort` (bond, unbond, associate, disassociate), its `BleWatchPairing` implementation, `CompanionDevicePairing` around `CompanionDeviceManager`, `OpenVitalsCompanionDeviceService`, and `CompanionPresenceObserver`. The service is declared first in the manifest and is therefore the app's primary companion service, the only one Android tells that an associated device appeared; it passes that to every observer bound `@IntoSet` in `di/DevicesModule.kt`.
-- `core/sync/DeviceSyncPort.kt` — `canSync(device)` plus a progress-reporting `sync(...)`, so the watch UI never names a vendor.
+- `core/sync/DeviceSyncPort.kt` — `canSync(device)` plus a progress-reporting `sync(...)`, so the watch UI never names a vendor. Each integration binds its own port `@IntoSet`; `CompositeDeviceSyncPort` is the one the sync controller sees and hands a device to the port that claims it.
+- `core/sync/EstimatedSleepRecord.kt` — `sleepNightWindow` (18:00 the evening before to 14:00) and `estimatedSleepSessionRecord`, the Health Connect shape of a night `domain/insights/SleepStageEstimator` produced from per-minute movement and heart rate. Garmin and Wear OS both write their estimates through it, each under its own id prefix and wording.
 
 ### `devices/garmin`
 
@@ -394,7 +395,24 @@ Notes worth carrying:
 
 ### `devices/wearos`
 
-Classification and onboarding only. There is no protocol: `OnboardWearOsWatchUseCase` has a single `ASSOCIATING` step, and the device is registered with no capabilities.
+A Wear OS watch is a registered device plus a Bluetooth Classic link to the OpenVitals watch app (`:wear`). There is no vendor protocol to speak: the watch runs our own app, and the phone talks to it over an RFCOMM socket on AOSP APIs only.
+
+- `WearOsDeviceClassifier` / `WearOsDeviceNames` — claims a scanned device as `(WEAROS, WATCH)` when its name is a known smartwatch family or its SDP record lists the OpenVitals app UUID. A wrist-watch Bluetooth class alone is not enough.
+- `OnboardWearOsWatchUseCase` — a single optional `ASSOCIATING` step, no bond and no probe; the device is registered with no capabilities, off the Garmin sync path. The bond itself comes from Android's Bluetooth settings, or from the vendor's onboarding.
+- `WearOsNodePort` — the port: pairing and reachability of the watch app. `WearOsAppStatus` is `NOT_PAIRED`, `NO_ANSWER` or `APP_RUNNING`; a bond alone is never shown as connected.
+- `BluetoothWearOsNodePort` — the implementation. `WearOsBondMatcher` finds the bonded Classic entry for the registered watch (exact address, then name with a trailing ` LE` stripped: the scan address is a BLE private address), then one `PING`/`PONG` exchange with an eight-second watchdog. RFCOMM is Classic, so no radio lease is taken.
+- `WearOsCompanionManager` — the thin facade the watch screen calls.
+- The line protocol itself lives in `:wearlink` (`WearLinkProtocol`), compiled into both apps: `PING`/`PONG`; `HR_SINCE <epochMillis> <limit>` answered with `HR <epochMillis> <bpm>` lines; `SM_SINCE <epochMillis> <limit>` answered with `SM` lines, one per clock minute, nineteen integer fields defined in [sleep-minute-features.md](sleep-minute-features.md); each reply ends with `END <count> <more>`. One request per connection.
+- `WearOsWatchSyncService` — the `DeviceSyncPort` for Wear OS. Heart rate first: pulls pages from the watch's cursor (`WearOsSyncCursorStore`, the newest sample time per device), writes each page through `AppleHealthImportRepository.insertImportedRecords` before asking for the next, and advances the cursor after each write, so a sync that dies mid-way resumes where it stopped. Then sleep: pulls the minutes from the start of the night the sleep cursor sits in (`WearOsSleepImport.pullStart`), estimates every night those minutes touch and writes one `SleepSessionRecord` per night, skipping a night whose window already holds a session from anywhere else (the vendor's app, the user's own entry), then moves the sleep cursor. Refuses while an activity recording holds the foreground slot. `Succeeded.fileCount` carries the heart rate sample count.
+- `WearOsHeartRateImport` — pure mapping: one `HeartRateRecord` per clock hour, keyed `wearos_hr_<first sample millis>`, so a re-pull upserts. The watch keeps a week of samples and prunes on its own; nothing is deleted on the phone's behalf.
+- `WearOsSleepMinuteMapping` — the wire row (`WearLinkProtocol.SleepMinute`, integers) into `domain/model/WearSleepMinute` (physical units, `WearMinuteFlags`).
+- `WearOsSleepImport` — pure: the nights a pull touched, each night's rows inside its window, the night through `domain/insights/WearSleepEstimator`, and the record through `estimatedSleepSessionRecord`, keyed `wearos_sleep_est_<night>` with the sync time as version so the later estimate replaces the earlier. The phone stores no minutes: the watch is the store and a whole night window is re-pulled to re-estimate it.
+
+The Wear OS night itself is estimated by pure objects in `domain/insights`, in the order the actigraphy literature settled on: `WearMinuteGrid` (the rows on a one-minute grid, missing minutes absent), `WearStateDetector` (worn or not per minute: charging, off-body, a pulseless run while heart rate is recorded, then van Hees' still-hour rule vetoed by any pulse in the hour; a not-worn minute is a gap to everything after it), `SptWindowDetector` (the night's window: HDCZA on the z-angle change, tightened at its end by the heart rate quantile window), `SleepWakeScorer` (one linear score of Cole-Kripke movement, heart rate volatility after Walch and the z-angle range, then `WebsterRescoring`), and `SleepStageEstimator.estimateWindow` for the stages, with `Lids` as a prior behind `lidsWeight`. `WearSleepEstimator` strings them together and returns the night with its window and worn counts. The per-minute features are specified in [sleep-minute-features.md](sleep-minute-features.md) and evaluated offline against polysomnography by `SleepAccelEvaluationTest` on a local, gitignored fixture (see `tool/README.md`).
+
+On the watch, `WearAppService` hosts the RFCOMM listener and two recorders. `HeartRateRecorder` is a batched `TYPE_HEART_RATE` listener that keeps one sample per ten seconds in `HeartRateStore` (plain SQLite) and hands each stored sample and each no-contact reading to the minute recorder. `SleepMinuteRecorder` keeps one row per clock minute in `SleepMinuteStore`: `MinuteAggregator` (pure; `SleepMinuteFeatureVectorTest` holds it to the Python mirror line for line) and `AccelerationMinuteFeatures` compute the specification's fields from the batched accelerometer in g, the heart rate samples, the off-body sensor, the charger broadcasts and screen wake-ups. The accelerometer needs no permission and shares the heart rate's one-minute report latency, so the two batches arrive in one wake-up. `PpgRawLogger` is a research spike for debuggable builds only: a long press on the status screen dumps Samsung's raw PPG sensor to a CSV for `tool/ppg_raw/inspect.py`; nothing depends on it. The service's foreground type is `connectedDevice`, plus `health` once the heart rate grant is in. Android 16 gates the sensor behind `android.permission.health.READ_HEART_RATE`, not `BODY_SENSORS`; `WearPermissions` picks the right one per release.
+
+The UUID and the protocol words come from `:wearlink` on both sides. Verified on 2026-10-07 with a Galaxy Watch8 and a phone that never ran Galaxy Wearable: the watch accepted a plain second-phone bond, and the ping answered.
 
 ### `devices/xiaomi`
 
@@ -431,6 +449,16 @@ Notes worth carrying:
 `di/DevicesModule.kt` is the only module for this layer. It binds `BleWatchPairing` to `WatchPairingPort` and `GarminWatchSyncService` to `DeviceSyncPort`, binds `AndroidPhoneMediaSource` to `PhoneMediaSource`, binds `SystemScaleScanRadio` to `ScaleScanRadio` and `ScaleListeningForeground` to `ScaleForeground`, adds `XiaomiScaleListener` to the `CompanionPresenceObserver` set, and provides the GATT probe, the two Garmin `SharedPreferences`-backed stores, the one `GarminFileStore` and the one `XiaomiScaleStore`. Everything else is constructor injection. There are no `@Module` declarations inside `devices/` itself; keep it that way. `DevicesLayeringTest` fails on one.
 
 Live BLE sensor streaming during activity recording still lives in `sensors/ble`. Phone-to-phone sync is `features/devicesync`, below.
+
+## Shared module `:wearlink`
+
+The phone-to-watch link, in `wearlink/`, pure Kotlin on the JDK with no Android dependency, compiled into both `:app` and `:wear`. It exists because both apps need exactly the same protocol and the copied file it replaced was held in sync only by a test. Package `tech.mmarca.openvitals.wearlink`:
+
+- `WearLinkProtocol` — the line grammar over the RFCOMM socket: words, limits, the `SM` row type and every format and parse function. The `SM` fields are specified in [sleep-minute-features.md](sleep-minute-features.md).
+- `WearLinkLines` — the framing, defined once for both ends: UTF-8 lines, `\n` terminated, a trailing `\r` tolerated, a line over 512 bytes closes the connection.
+- `WearLinkToken` — the secret a phone presents on every connection: 32 random bytes as Base64, compared in constant time. The bond says the devices know each other; the token says this app on this phone is the one the wearer allowed.
+
+Its tests run in both gates (`verifyCiUnitTest` and `verifyWearCi` depend on `:wearlink:test`), its lockfile is `wearlink/gradle.lockfile`, and the two ratchet tests hold its files to the same limits as the phone app's. `ArchitectureDocTest` fails when a Gradle module is missing from this document.
 
 ## Phone-To-Phone Sync
 

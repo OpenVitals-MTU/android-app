@@ -61,6 +61,17 @@ class ArchitectureDocTest {
             .isEmpty()
     }
 
+    @Test
+    fun `the architecture document names every Gradle module`() {
+        val modules = Regex("""include\("(:[a-z]+)"\)""").findAll(File("../settings.gradle.kts").readText())
+            .map { it.groupValues[1] }
+            .toList()
+
+        assertWithMessage("Gradle modules not named in the architecture document")
+            .that(modules.filterNot { "`$it`" in architecture })
+            .isEmpty()
+    }
+
     private companion object {
         /** A row of the package map: the package in backticks, then what it owns. */
         val PackageRow = Regex("""(?m)^\| `([a-z/]+)/` \| (.+) \|$""")

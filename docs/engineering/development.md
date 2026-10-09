@@ -36,19 +36,20 @@ when `ANDROID_SERIAL` is set; it is disabled in CI.
 
 ### Wear OS Gate
 
-The watch app in `wear/` has its own gate, separate from `verifyCi`:
+The watch app in `wear/` has its own gate, separate from `verifyCi`. Both gates run the shared link module's tests (`:wearlink:test`), since both apps compile it:
 
 ```bash
 ./gradlew verifyWearCi
 ```
 
-It runs `:wear:testDebugUnitTest`, `:wear:lintDebug`, `:wear:assembleDebug`,
-and `:wear:compileDebugAndroidTestKotlin`. The wear module uses the standard
+It runs `:wearlink:test`, `:wear:testDebugUnitTest`, `:wear:lintDebug`, `:wear:assembleDebug`,
+and `:wear:compileDebugAndroidTestKotlin`. A dependency change in `wearlink/build.gradle.kts`
+needs `./gradlew :wearlink:dependencies --write-locks` for its lockfile, like the other modules. The wear module uses the standard
 `debug` build type; it has no `ci` variant.
 
 CI mirrors the split. `.github/workflows/test.yml` runs `verifyCi` and skips
 changes that only touch `wear/`. `.github/workflows/wear-test.yml` runs `verifyWearCi` and
-triggers only on `wear/` and the shared build files it depends on. A change to
+triggers only on `wear/`, `wearlink/` and the shared build files they depend on. A change to
 the root Gradle files runs both.
 
 The watch app shares the phone app's `applicationId`, `tech.mmarca.openvitals`,
@@ -61,6 +62,54 @@ One listing means one versionCode space. The watch owns the range
 reads `OPENVITALS_WEAR_VERSION_CODE` and `OPENVITALS_WEAR_VERSION_NAME` the way
 the phone build reads its own overrides, and fails the build when the code is
 outside the watch range.
+
+#### Installing the watch app without Play
+
+There is no F-Droid client for Wear OS and a watch cannot install an APK by
+itself, so the watch app is sideloaded over adb. A watch has no USB data
+port, and debugging over Bluetooth goes through the vendor's phone app, so
+the only way in is Wireless debugging over Wi-Fi: the watch and the computer
+must be on the same Wi-Fi network. The watch joins Wi-Fi on its own, without
+a phone or a Google account.
+
+On the watch, all in Settings:
+
+1. Connections, Wi-Fi: join the network the computer is on.
+2. Unlock Developer options: About watch, Software, tap the software version
+   five times until the watch says developer mode is on. (On a Pixel Watch:
+   System, About, tap the build number seven times.)
+3. Developer options, at the bottom of Settings: turn on ADB debugging, then
+   Wireless debugging. Wireless debugging shows the address and port to
+   connect to.
+4. Wireless debugging, Pair new device: shows the pairing address, a separate
+   pairing port, and a six-digit code. Leave this screen open while pairing;
+   the code expires with it.
+
+Then, once per computer:
+
+```bash
+adb pair <watch-ip>:<pairing-port> <code>
+adb connect <watch-ip>:<port>          # the port Wireless debugging shows
+./gradlew :wear:assembleDebug
+adb -s <watch-ip>:<port> install -r wear/build/outputs/apk/debug/wear-debug.apk
+```
+
+Both ports change on every boot, and the watch drops Wi-Fi while it sleeps
+off the charger, so wake it before connecting. adb's own mDNS discovery finds nothing
+next to a system Avahi daemon; run adb with `ADB_MDNS_OPENSCREEN=1`, or read
+the address from `avahi-browse -rt _adb-tls-connect._tcp`. The debug watch app
+installs as `tech.mmarca.openvitals.debug`, so it pairs with the debug phone
+app.
+
+Three scripts wrap this: `scripts/wear-pair.sh` (pairing and discovery),
+`scripts/wear-install.sh` (build if needed, install, the permission grants, a
+status check with `--status`), and `scripts/wear-skip-onboarding.sh`, which
+marks a never-onboarded watch as set up so the vendor's phone app is not
+needed at all. They share `scripts/lib/wear-adb.sh`. The last one only works on watches whose welcome screen opens Settings, since
+Wi-Fi adb is behind it; the Galaxy Watch8 does not, so Samsung watches get
+onboarded once with Galaxy Wearable and the app sideloaded afterwards. The
+user-facing walkthrough, with the per-watch table, is
+[docs/how-to/wear-os-sideload.md](../how-to/wear-os-sideload.md).
 
 ### Translation Gate
 
