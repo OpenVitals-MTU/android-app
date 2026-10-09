@@ -203,11 +203,18 @@ class WearAppService : Service() {
         runCatching { serverSocket?.close() }
     }
 
-    /** One request per connection. The phone closes after the reply; so do we. */
+    /**
+     * One request per connection. The phone closes after the reply, and only
+     * then do we: a Bluetooth socket closed by the writer drops whatever the
+     * reader has not taken yet, so a page of two thousand lines closed
+     * straight after its flush reached the phone as "socket closed" while
+     * the one-line pong always got through.
+     */
     private fun handleClientConnection(socket: BluetoothSocket) {
         Thread {
             try {
-                val request = socket.inputStream.bufferedReader(Charsets.UTF_8).readLine() ?: return@Thread
+                val input = socket.inputStream.bufferedReader(Charsets.UTF_8)
+                val request = input.readLine() ?: return@Thread
                 val out = socket.outputStream.bufferedWriter(Charsets.UTF_8)
                 when {
                     WearLinkProtocol.isPing(request) -> {
@@ -226,12 +233,37 @@ class WearAppService : Service() {
                     }
                 }
                 out.flush()
+                awaitPeerClose(socket, input)
             } catch (e: IOException) {
                 Log.w(TAG, "Error handling client connection: ${e.message}")
             } finally {
                 runCatching { socket.close() }
             }
         }.start()
+    }
+
+    /** Blocks until the phone closes the connection, or a watchdog closes it after [PEER_CLOSE_TIMEOUT_MILLIS]. */
+    private fun awaitPeerClose(socket: BluetoothSocket, input: java.io.BufferedReader) {
+        val watchdog = Thread {
+            try {
+                Thread.sleep(PEER_CLOSE_TIMEOUT_MILLIS)
+                Log.w(TAG, "The phone did not close the connection; closing it")
+                runCatching { socket.close() }
+            } catch (_: InterruptedException) {
+                // The phone closed in time.
+            }
+        }.apply {
+            isDaemon = true
+            start()
+        }
+        try {
+            // Nothing more is expected; the read returns -1 when the phone closes.
+            while (input.read() >= 0) Unit
+        } catch (_: IOException) {
+            // The watchdog or the phone closed the socket.
+        } finally {
+            watchdog.interrupt()
+        }
     }
 
     private fun sendHeartRate(out: BufferedWriter, request: WearLinkProtocol.HeartRateRequest) {
@@ -276,6 +308,7 @@ class WearAppService : Service() {
         private const val SERVICE_NAME = "OpenVitalsWearApp"
         private const val CHANNEL_ID = "phone_link"
         private const val NOTIFICATION_ID = 1
+        private const val PEER_CLOSE_TIMEOUT_MILLIS = 15_000L
         private const val ACTION_TOGGLE_PPG_LOG = "tech.mmarca.openvitals.wear.TOGGLE_PPG_LOG"
 
         /** Whether the raw PPG spike is logging, for the status screen. */
