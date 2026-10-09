@@ -3664,14 +3664,18 @@
     <string name="settings_watch_wearos_bt_permission">OpenVitals 需要“附近的设备”权限才能连接手表。</string>
     <string name="settings_watch_wearos_check_app">检查 Wear OS 应用</string>
     <string name="settings_watch_wearos_checking">正在检查 Wear OS 应用…</string>
-    <string name="settings_watch_wearos_sync_section">心率同步</string>
-    <string name="settings_watch_wearos_sync_body">手表上的 OpenVitals 应用会记录心率并保留一周的数据。同步会把新样本复制到 Health Connect。</string>
-    <string name="settings_watch_wearos_sync_now">同步心率</string>
-    <string name="settings_watch_wearos_syncing">正在同步心率…</string>
-    <string name="settings_watch_wearos_synced_none">没有新的心率样本</string>
+    <string name="settings_watch_wearos_sync_section">手表同步</string>
+    <string name="settings_watch_wearos_sync_body">手表上的 OpenVitals 应用会记录心率和估算睡眠所需的数据，并保留一周。同步会把新的心率复制到 Health Connect，并为每晚写入一条估算的睡眠记录。</string>
+    <string name="settings_watch_wearos_sync_now">同步手表</string>
+    <string name="settings_watch_wearos_syncing">正在同步手表…</string>
+    <string name="settings_watch_wearos_synced_none">手表上没有新数据</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">已同步 %1$d 个心率样本</item>
         <item quantity="other">已同步 %1$d 个心率样本</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">已估算 %1$d 晚的睡眠</item>
+        <item quantity="other">已估算 %1$d 晚的睡眠</item>
     </plurals>
     <string name="scale_notification_channel">体重秤称重</string>
     <string name="scale_notification_title">正在读取称重</string>

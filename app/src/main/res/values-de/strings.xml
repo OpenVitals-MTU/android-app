@@ -3658,14 +3658,18 @@
     <string name="settings_watch_wearos_bt_permission">OpenVitals braucht die Berechtigung „Geräte in der Nähe“, um die Uhr zu erreichen.</string>
     <string name="settings_watch_wearos_check_app">Wear-OS-App prüfen</string>
     <string name="settings_watch_wearos_checking">Wear-OS-App wird geprüft…</string>
-    <string name="settings_watch_wearos_sync_section">Herzfrequenz-Synchronisierung</string>
-    <string name="settings_watch_wearos_sync_body">Die OpenVitals-App auf der Uhr zeichnet die Herzfrequenz auf und behält eine Woche davon. Die Synchronisierung kopiert die neuen Messwerte in Health Connect.</string>
-    <string name="settings_watch_wearos_sync_now">Herzfrequenz synchronisieren</string>
-    <string name="settings_watch_wearos_syncing">Herzfrequenz wird synchronisiert…</string>
-    <string name="settings_watch_wearos_synced_none">Keine neuen Herzfrequenz-Messwerte</string>
+    <string name="settings_watch_wearos_sync_section">Uhr-Synchronisierung</string>
+    <string name="settings_watch_wearos_sync_body">Die OpenVitals-App auf der Uhr zeichnet die Herzfrequenz und die Daten für eine Schlafschätzung auf und behält eine Woche davon. Die Synchronisierung kopiert die neue Herzfrequenz nach Health Connect und schreibt pro Nacht eine geschätzte Schlafsitzung.</string>
+    <string name="settings_watch_wearos_sync_now">Uhr synchronisieren</string>
+    <string name="settings_watch_wearos_syncing">Uhr wird synchronisiert…</string>
+    <string name="settings_watch_wearos_synced_none">Nichts Neues auf der Uhr</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d Herzfrequenz-Messwert synchronisiert</item>
         <item quantity="other">%1$d Herzfrequenz-Messwerte synchronisiert</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">%1$d Nacht Schlaf geschätzt</item>
+        <item quantity="other">%1$d Nächte Schlaf geschätzt</item>
     </plurals>
     <string name="scale_notification_channel">Messungen der Waage</string>
     <string name="scale_notification_title">Messung wird gelesen</string>

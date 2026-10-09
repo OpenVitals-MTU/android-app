@@ -30,11 +30,11 @@ When opening a paired Wear OS watch on its device screen in Settings, Watches:
 
 The UUID and the `PING`/`PONG` words live in both modules; `WearOsLinkParityTest` fails when they drift.
 
-### Heart Rate Sync
+### Watch Sync
 
 The watch app records heart rate on its own, from the moment it is granted heart rate access, with the screen off and the app closed: the same foreground service that answers the phone keeps the sensor on, batched so the watch wakes once every few minutes rather than once per beat. It keeps one sample every ten seconds and a week of history, pruning older samples itself.
 
-On the phone, the Heart Rate Sync card on the watch's device screen has a Sync heart rate button. A sync asks the watch for everything newer than the last sample already written, one page of up to 2000 samples at a time, writes each page to Health Connect as one heart rate record per clock hour before asking for the next, and remembers how far it got after each page. A sync interrupted half-way therefore resumes where it stopped, and a page written twice updates rather than duplicates. The card reports how many samples the run brought, or that there was nothing new. A sync is refused while an activity is being recorded, as for Garmin.
+On the phone, the Watch Sync card on the watch's device screen has a Sync watch button. A sync first asks the watch for every heart rate sample newer than the last one already written, one page of up to 2000 samples at a time, writes each page to Health Connect as one heart rate record per clock hour before asking for the next, and remembers how far it got after each page. A sync interrupted half-way therefore resumes where it stopped, and a page written twice updates rather than duplicates. Then the sleep minutes follow, as the Sleep section describes. The card reports how many heart rate samples the run brought and how many nights of sleep it estimated, or that there was nothing new. A sync is refused while an activity is being recorded, as for Garmin.
 
 On Android 16 the heart rate sensor sits behind the Health Connect `READ_HEART_RATE` permission rather than `BODY_SENSORS`; the watch app asks for the right one, then for the background grant, on first launch. Without the grant the link still answers, and the watch screen says heart rate access is off.
 

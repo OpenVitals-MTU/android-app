@@ -153,9 +153,10 @@ internal fun WearOsStatusCard(
 }
 
 /**
- * The heart rate sync for a Wear OS watch: what it does, when it last ran,
- * what the last run brought, and the button. The sync itself is the shared
- * [DeviceSyncController] flow; this card only words it as samples.
+ * The sync for a Wear OS watch: what it does, when it last ran, what the
+ * last run brought (heart rate samples and estimated nights), and the
+ * button. The sync itself is the shared [DeviceSyncController] flow; this
+ * card only words it.
  */
 @Composable
 internal fun WearOsSyncCard(
@@ -185,18 +186,22 @@ internal fun WearOsSyncCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            // Only after a run this session; the count is not persisted.
+            // Only after a run this session; the counts are not persisted.
             val samples = sync.lastFileCount
+            val nights = sync.lastNightCount ?: 0
             if (!sync.isSyncing && sync.phase == DeviceSyncPhase.COMPLETE && samples != null) {
-                Text(
-                    text = if (samples > 0) {
-                        pluralStringResource(R.plurals.settings_watch_wearos_synced_samples, samples, samples)
-                    } else {
-                        stringResource(R.string.settings_watch_wearos_synced_none)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                val lines = buildList {
+                    if (samples > 0) add(pluralStringResource(R.plurals.settings_watch_wearos_synced_samples, samples, samples))
+                    if (nights > 0) add(pluralStringResource(R.plurals.settings_watch_wearos_synced_nights, nights, nights))
+                    if (isEmpty()) add(stringResource(R.string.settings_watch_wearos_synced_none))
+                }
+                for (line in lines) {
+                    Text(
+                        text = line,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
             sync.errorMessage?.let { message ->
                 Text(

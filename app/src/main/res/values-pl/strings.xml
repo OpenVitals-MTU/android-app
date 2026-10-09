@@ -3728,16 +3728,22 @@
     <string name="settings_watch_wearos_bt_permission">OpenVitals potrzebuje uprawnienia „Urządzenia w pobliżu”, aby połączyć się z zegarkiem.</string>
     <string name="settings_watch_wearos_check_app">Sprawdź aplikację Wear OS</string>
     <string name="settings_watch_wearos_checking">Sprawdzanie aplikacji Wear OS…</string>
-    <string name="settings_watch_wearos_sync_section">Synchronizacja tętna</string>
-    <string name="settings_watch_wearos_sync_body">Aplikacja OpenVitals na zegarku zapisuje tętno i przechowuje tydzień danych. Synchronizacja kopiuje nowe próbki do Health Connect.</string>
-    <string name="settings_watch_wearos_sync_now">Synchronizuj tętno</string>
-    <string name="settings_watch_wearos_syncing">Synchronizowanie tętna…</string>
-    <string name="settings_watch_wearos_synced_none">Brak nowych próbek tętna</string>
+    <string name="settings_watch_wearos_sync_section">Synchronizacja zegarka</string>
+    <string name="settings_watch_wearos_sync_body">Aplikacja OpenVitals na zegarku zapisuje tętno i dane potrzebne do oszacowania snu i przechowuje je przez tydzień. Synchronizacja kopiuje nowe tętno do Health Connect i zapisuje jedną oszacowaną sesję snu na noc.</string>
+    <string name="settings_watch_wearos_sync_now">Synchronizuj zegarek</string>
+    <string name="settings_watch_wearos_syncing">Synchronizowanie zegarka…</string>
+    <string name="settings_watch_wearos_synced_none">Brak nowych danych na zegarku</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">Zsynchronizowano %1$d próbkę tętna</item>
         <item quantity="few">Zsynchronizowano %1$d próbki tętna</item>
         <item quantity="many">Zsynchronizowano %1$d próbek tętna</item>
         <item quantity="other">Zsynchronizowano %1$d próbki tętna</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">Oszacowano sen z %1$d nocy</item>
+        <item quantity="few">Oszacowano sen z %1$d nocy</item>
+        <item quantity="many">Oszacowano sen z %1$d nocy</item>
+        <item quantity="other">Oszacowano sen z %1$d nocy</item>
     </plurals>
     <string name="scale_notification_channel">Ważenia z wagi</string>
     <string name="scale_notification_title">Odczytywanie ważenia</string>

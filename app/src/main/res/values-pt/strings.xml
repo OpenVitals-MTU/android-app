@@ -3684,14 +3684,18 @@
     <string name="settings_watch_wearos_bt_permission">O OpenVitals precisa da autorização Dispositivos próximos para chegar ao relógio.</string>
     <string name="settings_watch_wearos_check_app">Verificar a app Wear OS</string>
     <string name="settings_watch_wearos_checking">A verificar a app Wear OS…</string>
-    <string name="settings_watch_wearos_sync_section">Sincronização da frequência cardíaca</string>
-    <string name="settings_watch_wearos_sync_body">A app OpenVitals no relógio regista a frequência cardíaca e guarda uma semana. A sincronização copia as novas amostras para o Health Connect.</string>
-    <string name="settings_watch_wearos_sync_now">Sincronizar frequência cardíaca</string>
-    <string name="settings_watch_wearos_syncing">A sincronizar frequência cardíaca…</string>
-    <string name="settings_watch_wearos_synced_none">Sem novas amostras de frequência cardíaca</string>
+    <string name="settings_watch_wearos_sync_section">Sincronização do relógio</string>
+    <string name="settings_watch_wearos_sync_body">A app OpenVitals do relógio regista a frequência cardíaca e o necessário para estimar o sono, e guarda uma semana. A sincronização copia a frequência cardíaca nova para o Health Connect e escreve uma sessão de sono estimada por noite.</string>
+    <string name="settings_watch_wearos_sync_now">Sincronizar relógio</string>
+    <string name="settings_watch_wearos_syncing">A sincronizar relógio…</string>
+    <string name="settings_watch_wearos_synced_none">Nada de novo no relógio</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d amostra de frequência cardíaca sincronizada</item>
         <item quantity="other">%1$d amostras de frequência cardíaca sincronizadas</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">%1$d noite de sono estimada</item>
+        <item quantity="other">%1$d noites de sono estimadas</item>
     </plurals>
     <string name="scale_notification_channel">Pesagens da balança</string>
     <string name="scale_notification_title">A ler a sua pesagem</string>

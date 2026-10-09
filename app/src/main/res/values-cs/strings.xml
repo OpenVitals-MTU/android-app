@@ -3728,16 +3728,22 @@
     <string name="settings_watch_wearos_bt_permission">OpenVitals potřebuje oprávnění Zařízení v okolí, aby se spojil s hodinkami.</string>
     <string name="settings_watch_wearos_check_app">Ověřit aplikaci Wear OS</string>
     <string name="settings_watch_wearos_checking">Kontroluji aplikaci Wear OS…</string>
-    <string name="settings_watch_wearos_sync_section">Synchronizace tepové frekvence</string>
-    <string name="settings_watch_wearos_sync_body">Aplikace OpenVitals na hodinkách zaznamenává tepovou frekvenci a uchovává týden dat. Synchronizace zkopíruje nové vzorky do Health Connect.</string>
-    <string name="settings_watch_wearos_sync_now">Synchronizovat tep</string>
-    <string name="settings_watch_wearos_syncing">Synchronizace tepu…</string>
-    <string name="settings_watch_wearos_synced_none">Žádné nové vzorky tepu</string>
+    <string name="settings_watch_wearos_sync_section">Synchronizace hodinek</string>
+    <string name="settings_watch_wearos_sync_body">Aplikace OpenVitals v hodinkách zaznamenává tep a to, co je potřeba k odhadu spánku, a uchovává týden dat. Synchronizace zkopíruje nový tep do Health Connect a zapíše jeden odhadnutý spánek za noc.</string>
+    <string name="settings_watch_wearos_sync_now">Synchronizovat hodinky</string>
+    <string name="settings_watch_wearos_syncing">Synchronizace hodinek…</string>
+    <string name="settings_watch_wearos_synced_none">V hodinkách není nic nového</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d vzorek tepu synchronizován</item>
         <item quantity="few">%1$d vzorky tepu synchronizovány</item>
         <item quantity="many">%1$d vzorku tepu synchronizováno</item>
         <item quantity="other">%1$d vzorků tepu synchronizováno</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">Odhadnuta %1$d noc spánku</item>
+        <item quantity="few">Odhadnuty %1$d noci spánku</item>
+        <item quantity="many">Odhadnuto %1$d noci spánku</item>
+        <item quantity="other">Odhadnuto %1$d nocí spánku</item>
     </plurals>
     <string name="scale_notification_channel">Vážení z váhy</string>
     <string name="scale_notification_title">Načítá se vaše vážení</string>

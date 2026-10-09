@@ -3693,15 +3693,20 @@
     <string name="settings_watch_wearos_bt_permission">OpenVitals necesita el permiso Dispositivos cercanos para llegar al reloj.</string>
     <string name="settings_watch_wearos_check_app">Comprobar la app de Wear OS</string>
     <string name="settings_watch_wearos_checking">Comprobando la app de Wear OS…</string>
-    <string name="settings_watch_wearos_sync_section">Sincronización de frecuencia cardiaca</string>
-    <string name="settings_watch_wearos_sync_body">La app OpenVitals del reloj registra la frecuencia cardiaca y guarda una semana. La sincronización copia las muestras nuevas en Health Connect.</string>
-    <string name="settings_watch_wearos_sync_now">Sincronizar frecuencia cardiaca</string>
-    <string name="settings_watch_wearos_syncing">Sincronizando frecuencia cardiaca…</string>
-    <string name="settings_watch_wearos_synced_none">No hay muestras nuevas de frecuencia cardiaca</string>
+    <string name="settings_watch_wearos_sync_section">Sincronización del reloj</string>
+    <string name="settings_watch_wearos_sync_body">La app OpenVitals del reloj registra la frecuencia cardiaca y lo necesario para estimar el sueño, y guarda una semana. La sincronización copia la frecuencia cardiaca nueva en Health Connect y escribe una sesión de sueño estimada por noche.</string>
+    <string name="settings_watch_wearos_sync_now">Sincronizar reloj</string>
+    <string name="settings_watch_wearos_syncing">Sincronizando reloj…</string>
+    <string name="settings_watch_wearos_synced_none">No hay nada nuevo en el reloj</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d muestra de frecuencia cardiaca sincronizada</item>
         <item quantity="many">%1$d muestras de frecuencia cardiaca sincronizadas</item>
         <item quantity="other">%1$d muestras de frecuencia cardiaca sincronizadas</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">%1$d noche de sueño estimada</item>
+        <item quantity="many">%1$d noches de sueño estimadas</item>
+        <item quantity="other">%1$d noches de sueño estimadas</item>
     </plurals>
     <string name="scale_notification_channel">Pesajes de la báscula</string>
     <string name="scale_notification_title">Leyendo tu pesaje</string>

@@ -144,7 +144,7 @@ class WearOsWatchSyncServiceTest {
 
         val result = service().sync(WATCH, Duration.ZERO, null)
 
-        assertEquals(DeviceSyncResult.Succeeded(0), result)
+        assertEquals(DeviceSyncResult.Succeeded(0, nightCount = 1), result)
         assertEquals(listOf(Instant.EPOCH), sleepPullsSince)
         val session = written.captured.single() as SleepSessionRecord
         assertEquals("wearos_sleep_est_2026-10-08", session.metadata.clientRecordId)

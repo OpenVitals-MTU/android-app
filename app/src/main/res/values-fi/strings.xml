@@ -3658,14 +3658,18 @@
     <string name="settings_watch_wearos_bt_permission">OpenVitals tarvitsee Lähellä olevat laitteet -luvan tavoittaakseen kellon.</string>
     <string name="settings_watch_wearos_check_app">Tarkista Wear OS -sovellus</string>
     <string name="settings_watch_wearos_checking">Tarkistetaan Wear OS -sovellusta…</string>
-    <string name="settings_watch_wearos_sync_section">Sykkeen synkronointi</string>
-    <string name="settings_watch_wearos_sync_body">Kellon OpenVitals-sovellus tallentaa sykettä ja säilyttää viikon verran. Synkronointi kopioi uudet näytteet Health Connectiin.</string>
-    <string name="settings_watch_wearos_sync_now">Synkronoi syke</string>
-    <string name="settings_watch_wearos_syncing">Synkronoidaan sykettä…</string>
-    <string name="settings_watch_wearos_synced_none">Ei uusia sykenäytteitä</string>
+    <string name="settings_watch_wearos_sync_section">Kellon synkronointi</string>
+    <string name="settings_watch_wearos_sync_body">Kellon OpenVitals-sovellus tallentaa sykkeen ja unen arvioon tarvittavat tiedot ja säilyttää niitä viikon. Synkronointi kopioi uuden sykkeen Health Connectiin ja kirjoittaa yhden arvioidun unijakson yötä kohden.</string>
+    <string name="settings_watch_wearos_sync_now">Synkronoi kello</string>
+    <string name="settings_watch_wearos_syncing">Synkronoidaan kelloa…</string>
+    <string name="settings_watch_wearos_synced_none">Kellossa ei ole mitään uutta</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d sykenäyte synkronoitu</item>
         <item quantity="other">%1$d sykenäytettä synkronoitu</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">Arvioitu %1$d yön uni</item>
+        <item quantity="other">Arvioitu %1$d yön unet</item>
     </plurals>
     <string name="scale_notification_channel">Vaa’an punnitukset</string>
     <string name="scale_notification_title">Luetaan punnitusta</string>

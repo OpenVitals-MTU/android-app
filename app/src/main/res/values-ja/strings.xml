@@ -3730,14 +3730,18 @@
     <string name="settings_watch_wearos_bt_permission">ウォッチに接続するには、OpenVitals に「付近のデバイス」の権限が必要です。</string>
     <string name="settings_watch_wearos_check_app">Wear OS アプリを確認</string>
     <string name="settings_watch_wearos_checking">Wear OS アプリを確認中…</string>
-    <string name="settings_watch_wearos_sync_section">心拍数の同期</string>
-    <string name="settings_watch_wearos_sync_body">ウォッチの OpenVitals アプリは心拍数を記録し、1 週間分を保持します。同期すると新しいサンプルが Health Connect にコピーされます。</string>
-    <string name="settings_watch_wearos_sync_now">心拍数を同期</string>
-    <string name="settings_watch_wearos_syncing">心拍数を同期中…</string>
-    <string name="settings_watch_wearos_synced_none">新しい心拍数サンプルはありません</string>
+    <string name="settings_watch_wearos_sync_section">ウォッチの同期</string>
+    <string name="settings_watch_wearos_sync_body">ウォッチの OpenVitals アプリは心拍数と睡眠推定に必要なデータを記録し、1 週間分を保持します。同期すると新しい心拍数を Health Connect にコピーし、一晩ごとに推定した睡眠セッションを書き込みます。</string>
+    <string name="settings_watch_wearos_sync_now">ウォッチを同期</string>
+    <string name="settings_watch_wearos_syncing">ウォッチを同期しています…</string>
+    <string name="settings_watch_wearos_synced_none">ウォッチに新しいデータはありません</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d 件の心拍数サンプルを同期しました</item>
         <item quantity="other">%1$d 件の心拍数サンプルを同期しました</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">%1$d 晩の睡眠を推定しました</item>
+        <item quantity="other">%1$d 晩の睡眠を推定しました</item>
     </plurals>
     <string name="scale_notification_channel">体重計の測定</string>
     <string name="scale_notification_title">測定を読み取り中</string>

@@ -3733,14 +3733,18 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
     <string name="settings_watch_wearos_bt_permission">OpenVitals precisa o permiso Dispositivos próximos para chegar ao reloxo.</string>
     <string name="settings_watch_wearos_check_app">Comprobar a app de Wear OS</string>
     <string name="settings_watch_wearos_checking">Comprobando a app de Wear OS…</string>
-    <string name="settings_watch_wearos_sync_section">Sincronización da frecuencia cardíaca</string>
-    <string name="settings_watch_wearos_sync_body">A app OpenVitals do reloxo rexistra a frecuencia cardíaca e garda unha semana. A sincronización copia as mostras novas en Health Connect.</string>
-    <string name="settings_watch_wearos_sync_now">Sincronizar frecuencia cardíaca</string>
-    <string name="settings_watch_wearos_syncing">Sincronizando frecuencia cardíaca…</string>
-    <string name="settings_watch_wearos_synced_none">Non hai mostras novas de frecuencia cardíaca</string>
+    <string name="settings_watch_wearos_sync_section">Sincronización do reloxo</string>
+    <string name="settings_watch_wearos_sync_body">A app OpenVitals do reloxo rexistra a frecuencia cardíaca e o necesario para estimar o sono, e garda unha semana. A sincronización copia a frecuencia cardíaca nova en Health Connect e escribe unha sesión de sono estimada por noite.</string>
+    <string name="settings_watch_wearos_sync_now">Sincronizar reloxo</string>
+    <string name="settings_watch_wearos_syncing">Sincronizando reloxo…</string>
+    <string name="settings_watch_wearos_synced_none">Non hai nada novo no reloxo</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d mostra de frecuencia cardíaca sincronizada</item>
         <item quantity="other">%1$d mostras de frecuencia cardíaca sincronizadas</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">%1$d noite de sono estimada</item>
+        <item quantity="other">%1$d noites de sono estimadas</item>
     </plurals>
     <string name="scale_notification_channel">Pesaxes da báscula</string>
     <string name="scale_notification_title">Lendo a túa pesaxe</string>

@@ -39,7 +39,8 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
  * entry, is left alone. The sleep cursor moves once the nights are written.
  *
  * [DeviceSyncResult.Succeeded.fileCount] carries the number of heart rate
- * samples; the Wear OS card words it as samples.
+ * samples and [DeviceSyncResult.Succeeded.nightCount] the nights written;
+ * the Wear OS card words them so.
  */
 @Singleton
 class WearOsWatchSyncService(
@@ -117,7 +118,7 @@ class WearOsWatchSyncService(
 
         onProgress?.invoke(DeviceSyncProgress(DeviceSyncPhase.COMPLETE, filesTotal = progress.pages, filesDone = progress.pages))
         bleDeviceRepository.markSynced(device.id, clock())
-        return DeviceSyncResult.Succeeded(progress.written)
+        return DeviceSyncResult.Succeeded(progress.written, progress.nights)
     }
 
     /** False when no bonded watch matches. The samples written are counted on [progress]. */
@@ -179,6 +180,7 @@ class WearOsWatchSyncService(
             nights++
         }
         cursors.setSleepCursor(device.id, newest)
+        progress.nights = nights
         WearOsLog.log("sleep: $nights night(s) written from ${minutes.size} minutes")
         return true
     }
@@ -241,6 +243,7 @@ class WearOsWatchSyncService(
         var pages = 0
             private set
         var written = 0
+        var nights = 0
 
         fun page() {
             pages++

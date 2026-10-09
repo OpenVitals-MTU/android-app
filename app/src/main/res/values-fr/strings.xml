@@ -3693,15 +3693,20 @@
     <string name="settings_watch_wearos_bt_permission">OpenVitals a besoin de l\'autorisation Appareils à proximité pour joindre la montre.</string>
     <string name="settings_watch_wearos_check_app">Vérifier l\'appli Wear OS</string>
     <string name="settings_watch_wearos_checking">Vérification de l\'appli Wear OS…</string>
-    <string name="settings_watch_wearos_sync_section">Synchronisation de la fréquence cardiaque</string>
-    <string name="settings_watch_wearos_sync_body">L’app OpenVitals de la montre enregistre la fréquence cardiaque et en conserve une semaine. La synchronisation copie les nouveaux échantillons dans Health Connect.</string>
-    <string name="settings_watch_wearos_sync_now">Synchroniser la fréquence cardiaque</string>
-    <string name="settings_watch_wearos_syncing">Synchronisation de la fréquence cardiaque…</string>
-    <string name="settings_watch_wearos_synced_none">Aucun nouvel échantillon de fréquence cardiaque</string>
+    <string name="settings_watch_wearos_sync_section">Synchronisation de la montre</string>
+    <string name="settings_watch_wearos_sync_body">L’app OpenVitals de la montre enregistre la fréquence cardiaque et ce qu’il faut pour estimer le sommeil, et en garde une semaine. La synchronisation copie la nouvelle fréquence cardiaque dans Health Connect et écrit une session de sommeil estimée par nuit.</string>
+    <string name="settings_watch_wearos_sync_now">Synchroniser la montre</string>
+    <string name="settings_watch_wearos_syncing">Synchronisation de la montre…</string>
+    <string name="settings_watch_wearos_synced_none">Rien de nouveau sur la montre</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d échantillon de fréquence cardiaque synchronisé</item>
         <item quantity="many">%1$d échantillons de fréquence cardiaque synchronisés</item>
         <item quantity="other">%1$d échantillons de fréquence cardiaque synchronisés</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">%1$d nuit de sommeil estimée</item>
+        <item quantity="many">%1$d nuits de sommeil estimées</item>
+        <item quantity="other">%1$d nuits de sommeil estimées</item>
     </plurals>
     <string name="scale_notification_channel">Pesées de la balance</string>
     <string name="scale_notification_title">Lecture de votre pesée</string>

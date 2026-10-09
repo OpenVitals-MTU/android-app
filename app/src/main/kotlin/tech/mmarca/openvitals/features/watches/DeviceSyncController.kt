@@ -28,6 +28,8 @@ data class DeviceSyncUiState(
     val filesDone: Int = 0,
     /** Files downloaded and handed to the importer by the last completed run. */
     val lastFileCount: Int? = null,
+    /** Estimated nights of sleep written by the last completed run. */
+    val lastNightCount: Int? = null,
     val errorMessage: String? = null,
 ) {
     val isSyncing: Boolean get() = syncingDeviceId != null
@@ -119,6 +121,7 @@ class DeviceSyncController(
                 is DeviceSyncResult.Succeeded -> DeviceSyncUiState(
                     phase = DeviceSyncPhase.COMPLETE,
                     lastFileCount = result.fileCount,
+                    lastNightCount = result.nightCount,
                 )
 
                 is DeviceSyncResult.Failed -> if (silent) {

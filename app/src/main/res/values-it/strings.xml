@@ -3687,14 +3687,18 @@
     <string name="settings_watch_wearos_bt_permission">OpenVitals ha bisogno dell\'autorizzazione Dispositivi nelle vicinanze per raggiungere l\'orologio.</string>
     <string name="settings_watch_wearos_check_app">Verifica l\'app Wear OS</string>
     <string name="settings_watch_wearos_checking">Verifica dell\'app Wear OS…</string>
-    <string name="settings_watch_wearos_sync_section">Sincronizzazione frequenza cardiaca</string>
-    <string name="settings_watch_wearos_sync_body">L’app OpenVitals sull’orologio registra la frequenza cardiaca e ne conserva una settimana. La sincronizzazione copia i nuovi campioni in Health Connect.</string>
-    <string name="settings_watch_wearos_sync_now">Sincronizza frequenza cardiaca</string>
-    <string name="settings_watch_wearos_syncing">Sincronizzazione della frequenza cardiaca…</string>
-    <string name="settings_watch_wearos_synced_none">Nessun nuovo campione di frequenza cardiaca</string>
+    <string name="settings_watch_wearos_sync_section">Sincronizzazione orologio</string>
+    <string name="settings_watch_wearos_sync_body">L’app OpenVitals sull’orologio registra la frequenza cardiaca e ciò che serve per stimare il sonno, e ne conserva una settimana. La sincronizzazione copia la nuova frequenza cardiaca in Health Connect e scrive una sessione di sonno stimata per notte.</string>
+    <string name="settings_watch_wearos_sync_now">Sincronizza orologio</string>
+    <string name="settings_watch_wearos_syncing">Sincronizzazione dell’orologio…</string>
+    <string name="settings_watch_wearos_synced_none">Niente di nuovo sull’orologio</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d campione di frequenza cardiaca sincronizzato</item>
         <item quantity="other">%1$d campioni di frequenza cardiaca sincronizzati</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">%1$d notte di sonno stimata</item>
+        <item quantity="other">%1$d notti di sonno stimate</item>
     </plurals>
     <string name="scale_notification_channel">Pesate della bilancia</string>
     <string name="scale_notification_title">Lettura della pesata</string>

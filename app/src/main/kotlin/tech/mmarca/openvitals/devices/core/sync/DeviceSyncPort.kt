@@ -16,8 +16,12 @@ data class DeviceSyncProgress(
 /** The outcome of a whole sync-and-persist run. */
 sealed class DeviceSyncResult {
 
-    /** The sync finished with [fileCount] files. 0 is a success. */
-    data class Succeeded(val fileCount: Int) : DeviceSyncResult()
+    /**
+     * The sync finished with [fileCount] files, or samples for an
+     * integration that counts those, and [nightCount] estimated nights of
+     * sleep written. 0 is a success.
+     */
+    data class Succeeded(val fileCount: Int, val nightCount: Int = 0) : DeviceSyncResult()
 
     /** The sync failed. [message] is already rendered and integration-agnostic. */
     data class Failed(val message: String) : DeviceSyncResult()
