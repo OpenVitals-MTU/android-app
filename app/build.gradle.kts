@@ -262,6 +262,7 @@ androidComponents {
 }
 
 dependencies {
+    implementation(project(":wearlink"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
 

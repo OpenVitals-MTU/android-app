@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.wear
 import java.util.TreeMap
 import kotlin.math.abs
 import kotlin.math.sqrt
+import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /**
  * Folds accelerometer readings, heart rate samples, the worn and charging

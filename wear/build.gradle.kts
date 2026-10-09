@@ -89,6 +89,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":wearlink"))
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     implementation(libs.androidx.compose.ui)

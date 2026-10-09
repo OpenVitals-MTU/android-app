@@ -6,6 +6,7 @@ import org.junit.Test
 import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleDiscoveredDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
+import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 class WearOsDeviceClassifierTest {
 

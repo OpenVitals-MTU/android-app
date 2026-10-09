@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /**
  * The movement count, the flags and the kind per minute, fed with synthetic

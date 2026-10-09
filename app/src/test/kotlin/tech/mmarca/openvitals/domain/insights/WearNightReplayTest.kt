@@ -4,8 +4,8 @@ import java.io.File
 import java.time.ZoneId
 import org.junit.Assume.assumeTrue
 import org.junit.Test
-import tech.mmarca.openvitals.devices.wearos.WearLinkProtocol
 import tech.mmarca.openvitals.devices.wearos.WearOsSleepMinuteMapping
+import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /**
  * Replays a night pulled off a real watch through the pipeline and prints

@@ -9,6 +9,8 @@ import kotlin.time.Duration
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.isPermissionFailure
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
@@ -50,6 +52,7 @@ class WearOsWatchSyncService(
     private val bleDeviceRepository: BleDeviceRepository,
     private val recordingController: ActivityRecordingController,
     private val healthConnect: HealthConnectManager,
+    private val linkStore: WearOsLinkStore,
     private val clock: () -> Instant,
     private val zone: () -> ZoneId,
 ) : DeviceSyncPort {
@@ -62,8 +65,9 @@ class WearOsWatchSyncService(
         bleDeviceRepository: BleDeviceRepository,
         recordingController: ActivityRecordingController,
         healthConnect: HealthConnectManager,
+        linkStore: WearOsLinkStore,
     ) : this(
-        nodePort, cursors, importRepository, bleDeviceRepository, recordingController, healthConnect,
+        nodePort, cursors, importRepository, bleDeviceRepository, recordingController, healthConnect, linkStore,
         Instant::now, ZoneId::systemDefault,
     )
 
@@ -89,32 +93,34 @@ class WearOsWatchSyncService(
     ): DeviceSyncResult {
         // A live recording holds the foreground slot. Refuse, as the Garmin sync does.
         if (recordingController.state.value.isActive) {
-            return DeviceSyncResult.Failed(
-                "An activity recording is in progress. Finish or discard it before syncing the watch.",
-            )
+            return DeviceSyncResult.Failed(ScreenError.Text(R.string.settings_watch_wearos_fail_recording))
         }
 
         onProgress?.invoke(DeviceSyncProgress(DeviceSyncPhase.HANDSHAKE))
         val progress = Progress(onProgress)
         try {
-            if (!pullHeartRate(device, progress)) return notPaired()
-            if (!pullSleep(device, progress)) return notPaired()
+            if (!pullHeartRate(device, progress)) return notPaired(device)
+            if (!pullSleep(device, progress)) return notPaired(device)
         } catch (error: CancellationException) {
             throw error
-        } catch (error: WearOsLinkException) {
+        } catch (failure: WearOsLinkFailure) {
+            linkStore.record(device.id, WearOsLinkSnapshot(failure.toAppStatus(), checkedAt = clock()))
+            WearOsLog.log("sync failed: ${failure.message}")
             return DeviceSyncResult.Failed(
-                if (progress.written == 0) {
-                    "The watch did not answer. Make sure it is nearby and the OpenVitals app is running on it."
+                if (progress.written > 0 && failure is WearOsLinkFailure.NoAnswer) {
+                    ScreenError.Text(R.string.settings_watch_wearos_fail_partial)
                 } else {
-                    "Imported ${progress.written} sample(s), but the watch stopped answering: ${error.message}"
+                    failure.toScreenError()
                 },
             )
         } catch (error: SecurityException) {
-            return DeviceSyncResult.Failed(permissionMessage(error))
+            return DeviceSyncResult.Failed(permissionError(error))
         } catch (error: Exception) {
-            if (error.isPermissionFailure()) return DeviceSyncResult.Failed(permissionMessage(error))
-            return DeviceSyncResult.Failed(error.message?.ifBlank { null } ?: "The watch could not be synced.")
+            if (error.isPermissionFailure()) return DeviceSyncResult.Failed(permissionError(error))
+            WearOsLog.log("sync failed: $error")
+            return DeviceSyncResult.Failed(ScreenError.Text(R.string.settings_watch_wearos_fail_generic))
         }
+        linkStore.record(device.id, WearOsLinkSnapshot(WearOsAppStatus.APP_RUNNING, checkedAt = clock()))
 
         onProgress?.invoke(DeviceSyncProgress(DeviceSyncPhase.COMPLETE, filesTotal = progress.pages, filesDone = progress.pages))
         bleDeviceRepository.markSynced(device.id, clock())
@@ -192,8 +198,8 @@ class WearOsWatchSyncService(
      */
     private suspend fun <T> retryOnce(pull: suspend () -> T): T = try {
         pull()
-    } catch (error: WearOsLinkException) {
-        WearOsLog.log("link failed once (${error.message}); trying again")
+    } catch (failure: WearOsLinkFailure.NoAnswer) {
+        WearOsLog.log("link failed once (${failure.message}); trying again")
         kotlinx.coroutines.delay(RETRY_DELAY_MILLIS)
         pull()
     }
@@ -227,15 +233,17 @@ class WearOsWatchSyncService(
         }
     }
 
-    private fun notPaired() = DeviceSyncResult.Failed(
-        "No paired Wear OS watch matches this one. Pair it in Android's Bluetooth settings.",
-    )
+    private fun notPaired(device: BleSensorDevice): DeviceSyncResult.Failed {
+        linkStore.record(device.id, WearOsLinkSnapshot(WearOsAppStatus.NOT_PAIRED, checkedAt = clock()))
+        return DeviceSyncResult.Failed(ScreenError.Text(R.string.settings_watch_wearos_bt_not_paired))
+    }
 
-    private fun permissionMessage(error: Throwable): String =
+    /** The Bluetooth grant shows as the grant affordance; a Health Connect refusal names the write. */
+    private fun permissionError(error: Throwable): ScreenError =
         if (error is SecurityException && error.message?.contains("BLUETOOTH", ignoreCase = true) == true) {
-            "OpenVitals needs the Nearby devices permission to reach the watch."
+            ScreenError.PermissionDenied
         } else {
-            "Allow OpenVitals to write heart rate and sleep in Health Connect, then sync again."
+            ScreenError.Text(R.string.settings_watch_wearos_fail_health_connect)
         }
 
     /** Counts the pages pulled, for the progress ticks, and the heart rate samples written. */

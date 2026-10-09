@@ -36,19 +36,20 @@ when `ANDROID_SERIAL` is set; it is disabled in CI.
 
 ### Wear OS Gate
 
-The watch app in `wear/` has its own gate, separate from `verifyCi`:
+The watch app in `wear/` has its own gate, separate from `verifyCi`. Both gates run the shared link module's tests (`:wearlink:test`), since both apps compile it:
 
 ```bash
 ./gradlew verifyWearCi
 ```
 
-It runs `:wear:testDebugUnitTest`, `:wear:lintDebug`, `:wear:assembleDebug`,
-and `:wear:compileDebugAndroidTestKotlin`. The wear module uses the standard
+It runs `:wearlink:test`, `:wear:testDebugUnitTest`, `:wear:lintDebug`, `:wear:assembleDebug`,
+and `:wear:compileDebugAndroidTestKotlin`. A dependency change in `wearlink/build.gradle.kts`
+needs `./gradlew :wearlink:dependencies --write-locks` for its lockfile, like the other modules. The wear module uses the standard
 `debug` build type; it has no `ci` variant.
 
 CI mirrors the split. `.github/workflows/test.yml` runs `verifyCi` and skips
 changes that only touch `wear/`. `.github/workflows/wear-test.yml` runs `verifyWearCi` and
-triggers only on `wear/` and the shared build files it depends on. A change to
+triggers only on `wear/`, `wearlink/` and the shared build files they depend on. A change to
 the root Gradle files runs both.
 
 The watch app shares the phone app's `applicationId`, `tech.mmarca.openvitals`,

@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
 import android.util.Log
+import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /**
  * Keeps the heart rate sensor on and writes what it reports to the

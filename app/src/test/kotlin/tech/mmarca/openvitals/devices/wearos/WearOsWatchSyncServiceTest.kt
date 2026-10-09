@@ -13,7 +13,10 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
+import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
@@ -44,6 +47,7 @@ class WearOsWatchSyncServiceTest {
     private val importRepository = mockk<AppleHealthImportRepository>(relaxed = true)
     private val cursors = WearOsSyncCursorStore(FakeSharedPreferences())
     private val healthConnect = mockk<HealthConnectManager>(relaxed = true)
+    private val linkStore = WearOsLinkStore(FakeSharedPreferences())
     private val zone: ZoneOffset = ZoneOffset.ofHours(2)
     private val recording = MutableStateFlow(ActivityRecordingState())
     private val recordingController = mockk<ActivityRecordingController> {
@@ -85,6 +89,7 @@ class WearOsWatchSyncServiceTest {
         bleDeviceRepository = deviceRepository,
         recordingController = recordingController,
         healthConnect = healthConnect,
+        linkStore = linkStore,
         clock = { t0 },
         zone = { ZoneId.of("+02:00") },
     )
@@ -183,14 +188,40 @@ class WearOsWatchSyncServiceTest {
     @Test
     fun `a watch that stops answering during the sleep pull keeps the heart rate and says so`() = runTest {
         pages += WearOsHeartRatePage(samples(0, 10), hasMore = false)
-        sleepPullFailure = WearOsLinkException("The watch did not answer.")
+        sleepPullFailure = WearOsLinkFailure.NoAnswer()
 
         val result = service().sync(WATCH, Duration.ZERO, null)
 
         assertTrue(result is DeviceSyncResult.Failed)
-        assertTrue((result as DeviceSyncResult.Failed).message.startsWith("Imported 2 sample(s)"))
+        assertEquals(ScreenError.Text(R.string.settings_watch_wearos_fail_partial), (result as DeviceSyncResult.Failed).error)
         assertEquals(t0.plusSeconds(10), cursors.heartRateCursor(WATCH.id))
         assertEquals(Instant.EPOCH, cursors.sleepCursor(WATCH.id))
+    }
+
+    @Test
+    fun `a pending confirmation or a refusal is a typed failure that the status row shows`() = runTest {
+        pullFailure = WearOsLinkFailure.PendingConfirmation()
+
+        val pending = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(ScreenError.Text(R.string.settings_watch_wearos_status_pending), (pending as DeviceSyncResult.Failed).error)
+        assertEquals(WearOsAppStatus.PENDING_CONFIRMATION, linkStore.snapshots.value.getValue(WATCH.id).status)
+        // A refusal is not retried: one pull, one failure.
+        assertEquals(1, pullsSince.size)
+
+        pullFailure = WearOsLinkFailure.Unauthorized(WearLinkProtocol.UnauthorizedReason.MISMATCH)
+        val refused = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(ScreenError.Text(R.string.settings_watch_wearos_status_unauthorized_mismatch), (refused as DeviceSyncResult.Failed).error)
+    }
+
+    @Test
+    fun `a success records the running status`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(WearOsAppStatus.APP_RUNNING, linkStore.snapshots.value.getValue(WATCH.id).status)
     }
 
     @Test
@@ -214,18 +245,20 @@ class WearOsWatchSyncServiceTest {
         val result = service().sync(WATCH, Duration.ZERO, null)
 
         assertTrue(result is DeviceSyncResult.Failed)
-        assertTrue((result as DeviceSyncResult.Failed).message.contains("Pair it"))
+        assertEquals(ScreenError.Text(R.string.settings_watch_wearos_bt_not_paired), (result as DeviceSyncResult.Failed).error)
+        assertEquals(WearOsAppStatus.NOT_PAIRED, linkStore.snapshots.value.getValue(WATCH.id).status)
         coVerify(exactly = 0) { deviceRepository.markSynced(any(), any()) }
     }
 
     @Test
     fun `a silent watch fails the sync without moving the cursor`() = runTest {
-        pullFailure = WearOsLinkException("The watch did not answer.")
+        pullFailure = WearOsLinkFailure.NoAnswer()
 
         val result = service().sync(WATCH, Duration.ZERO, null)
 
         assertTrue(result is DeviceSyncResult.Failed)
-        assertTrue((result as DeviceSyncResult.Failed).message.contains("did not answer"))
+        assertEquals(ScreenError.Text(R.string.settings_watch_wearos_app_no_answer), (result as DeviceSyncResult.Failed).error)
+        assertEquals(WearOsAppStatus.NO_ANSWER, linkStore.snapshots.value.getValue(WATCH.id).status)
         assertEquals(Instant.EPOCH, cursors.heartRateCursor(WATCH.id))
         coVerify(exactly = 0) { deviceRepository.markSynced(any(), any()) }
     }
@@ -233,12 +266,12 @@ class WearOsWatchSyncServiceTest {
     @Test
     fun `a link lost mid-way keeps what was written and says so`() = runTest {
         pages += WearOsHeartRatePage(samples(0, 10), hasMore = true)
-        pullFailure = WearOsLinkException("The watch did not answer.")
+        pullFailure = WearOsLinkFailure.NoAnswer()
 
         val result = service().sync(WATCH, Duration.ZERO, null)
 
         assertTrue(result is DeviceSyncResult.Failed)
-        assertTrue((result as DeviceSyncResult.Failed).message.startsWith("Imported 2 sample(s)"))
+        assertEquals(ScreenError.Text(R.string.settings_watch_wearos_fail_partial), (result as DeviceSyncResult.Failed).error)
         assertEquals(t0.plusSeconds(10), cursors.heartRateCursor(WATCH.id))
         coVerify(exactly = 1) { importRepository.insertImportedRecords(any()) }
         coVerify(exactly = 0) { deviceRepository.markSynced(any(), any()) }
@@ -252,7 +285,7 @@ class WearOsWatchSyncServiceTest {
         val result = service().sync(WATCH, Duration.ZERO, null)
 
         assertTrue(result is DeviceSyncResult.Failed)
-        assertTrue((result as DeviceSyncResult.Failed).message.contains("Health Connect"))
+        assertEquals(ScreenError.Text(R.string.settings_watch_wearos_fail_health_connect), (result as DeviceSyncResult.Failed).error)
         assertEquals(Instant.EPOCH, cursors.heartRateCursor(WATCH.id))
     }
 

@@ -28,7 +28,7 @@ When opening a paired Wear OS watch on its device screen in Settings, Watches:
 - **Permission**: without Nearby devices on the phone, the card shows a grant callout instead of a status.
 - **Check again**: the "Validate Wear OS App" button re-runs the check.
 
-The UUID and the `PING`/`PONG` words live in both modules; `WearOsLinkParityTest` fails when they drift.
+The UUID and the protocol words come from the shared `:wearlink` module on both sides.
 
 ### Watch Sync
 

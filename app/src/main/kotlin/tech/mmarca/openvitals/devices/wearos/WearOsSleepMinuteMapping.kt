@@ -5,6 +5,7 @@ import java.time.ZoneOffset
 import tech.mmarca.openvitals.domain.model.SleepMinuteKind
 import tech.mmarca.openvitals.domain.model.WearMinuteFlags
 import tech.mmarca.openvitals.domain.model.WearSleepMinute
+import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /** The wire row in physical units. Pure. */
 object WearOsSleepMinuteMapping {

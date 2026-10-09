@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.watches
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
@@ -28,6 +31,7 @@ import androidx.compose.ui.res.pluralStringResource
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
 import tech.mmarca.openvitals.devices.wearos.WearOsAppStatus
 import tech.mmarca.openvitals.devices.wearos.WearOsCompanionStatus
+import tech.mmarca.openvitals.devices.wearos.messageRes
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
@@ -43,6 +47,7 @@ internal fun WearOsStatusCard(
     onCheck: () -> Unit,
     onGrantBluetooth: () -> Unit,
 ) {
+    val context = LocalContext.current
     if (error == ScreenError.PermissionDenied) {
         PermissionCallout(
             title = stringResource(R.string.message_missing_permissions_title),
@@ -102,12 +107,11 @@ internal fun WearOsStatusCard(
                 Spacer(modifier = Modifier.width(Spacing.sm))
                 Text(
                     text = when (status.appStatus) {
-                        WearOsAppStatus.APP_RUNNING ->
-                            stringResource(R.string.settings_watch_wearos_app_running)
-                        WearOsAppStatus.NO_ANSWER ->
-                            stringResource(R.string.settings_watch_wearos_app_no_answer)
-                        WearOsAppStatus.NOT_PAIRED ->
-                            stringResource(R.string.settings_watch_not_connected)
+                        WearOsAppStatus.APP_RUNNING -> status.watchName
+                            ?.let { stringResource(R.string.settings_watch_wearos_linked_to, it) }
+                            ?: stringResource(R.string.settings_watch_wearos_app_running)
+                        WearOsAppStatus.NOT_PAIRED -> stringResource(R.string.settings_watch_not_connected)
+                        else -> stringResource(status.appStatus.messageRes())
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (status.isAppRunning) {
@@ -116,6 +120,19 @@ internal fun WearOsStatusCard(
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
                 )
+            }
+            if (status.bondLost || status.appStatus == WearOsAppStatus.NOT_PAIRED) {
+                Text(
+                    text = stringResource(R.string.settings_watch_wearos_status_bond_lost),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OpenVitalsOutlinedButton(
+                    onClick = { runCatching { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) } },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.settings_sensors_open_bluetooth))
+                }
             }
 
             error.resolve()?.let { message ->
@@ -203,7 +220,7 @@ internal fun WearOsSyncCard(
                     )
                 }
             }
-            sync.errorMessage?.let { message ->
+            sync.error.resolve()?.let { message ->
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodySmall,

@@ -4,6 +4,7 @@ import java.io.File
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /**
  * The watch's minute features against the shared vector

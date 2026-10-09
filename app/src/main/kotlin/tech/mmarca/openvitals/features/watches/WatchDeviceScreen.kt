@@ -60,6 +60,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
 import tech.mmarca.openvitals.devices.garmin.GarminAgpsFileState
 import tech.mmarca.openvitals.devices.garmin.GarminAgpsKind
@@ -222,7 +223,7 @@ fun WatchDeviceScreen(
                     modifier = Modifier.padding(horizontal = Spacing.lg),
                 )
             }
-            state.sync.errorMessage?.let { message ->
+            state.sync.error.resolve()?.let { message ->
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodySmall,

@@ -11,13 +11,34 @@ import tech.mmarca.openvitals.domain.model.WearSleepMinute
  * silent is [NO_ANSWER], never "connected".
  */
 enum class WearOsAppStatus {
+    /** The phone's Bluetooth is off. */
+    BLUETOOTH_OFF,
+
     /** No bonded Wear OS watch matches the registered one. */
     NOT_PAIRED,
 
-    /** Paired, but no answer: the watch is off or out of range, or the app on it is not running. */
+    /** Paired, but no answer: the watch is off or out of range, or the app on it is not installed or not running. */
     NO_ANSWER,
 
-    /** The OpenVitals Wear OS app answered the ping. */
+    /** The watch is asking the wearer whether to allow this phone. */
+    PENDING_CONFIRMATION,
+
+    /** The watch holds another token for this phone. */
+    UNAUTHORIZED_MISMATCH,
+
+    /** The wearer blocked this phone on the watch. */
+    UNAUTHORIZED_BLOCKED,
+
+    /** The watch app speaks an older protocol than this phone. */
+    UPDATE_WATCH,
+
+    /** The watch app speaks a newer protocol than this phone. */
+    UPDATE_PHONE,
+
+    /** The watch answered something the protocol does not allow. */
+    PROTOCOL_ERROR,
+
+    /** The OpenVitals Wear OS app answered the hello. */
     APP_RUNNING,
 }
 
@@ -30,6 +51,10 @@ data class WearOsCompanionStatus(
     val connectedNodeAddress: String? = null,
     val appStatus: WearOsAppStatus = WearOsAppStatus.NOT_PAIRED,
     val lastCheckedAt: Instant? = null,
+    /** The name the watch gave in its hello, once it has. */
+    val watchName: String? = null,
+    /** The bond this watch once had with the phone is gone. */
+    val bondLost: Boolean = false,
 ) {
     val isAppRunning: Boolean
         get() = appStatus == WearOsAppStatus.APP_RUNNING
@@ -50,9 +75,6 @@ data class WearOsSleepMinutePage(
     val hasMore: Boolean,
 )
 
-/** The watch could not be reached, or answered with something other than the protocol. */
-class WearOsLinkException(message: String, cause: Throwable? = null) : Exception(message, cause)
-
 /**
  * Port for talking to the OpenVitals app on a Wear OS watch.
  *
@@ -72,8 +94,8 @@ interface WearOsNodePort {
 
     /**
      * Heart rate samples newer than [since], oldest first, up to the watch's
-     * page limit. Null when no bonded watch matches. Throws
-     * [WearOsLinkException] when the watch does not answer.
+     * page limit. Null when no bonded watch matches. Throws a
+     * [WearOsLinkFailure] for everything else the watch could not give.
      */
     suspend fun pullHeartRate(
         targetAddress: String?,
@@ -83,8 +105,8 @@ interface WearOsNodePort {
 
     /**
      * Sleep minutes newer than [since], oldest first, up to the watch's page
-     * limit. Null when no bonded watch matches. Throws [WearOsLinkException]
-     * when the watch does not answer.
+     * limit. Null when no bonded watch matches. Throws a [WearOsLinkFailure]
+     * for everything else the watch could not give.
      */
     suspend fun pullSleepMinutes(
         targetAddress: String?,

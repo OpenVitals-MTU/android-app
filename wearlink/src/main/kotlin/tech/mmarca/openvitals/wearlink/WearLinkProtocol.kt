@@ -1,4 +1,4 @@
-package tech.mmarca.openvitals.devices.wearos
+package tech.mmarca.openvitals.wearlink
 
 import java.util.UUID
 
@@ -8,9 +8,20 @@ import java.util.UUID
  * fields, `\n`-terminated. The phone sends one request line; the watch answers
  * with zero or more data lines and one terminating line, then both sides close.
  *
- * This file is identical in `:app` (`devices/wearos`) and `:wear`, except for
- * the package line; `WearOsLinkParityTest` on the phone side fails when the two
- * copies differ. Change both or neither.
+ * One source for both apps: `:wearlink` is compiled into `:app` and `:wear`.
+ *
+ * Every connection opens with one hello from the phone and one reply from the
+ * watch; requests follow only after `OK`:
+ * - `HELLO <version> <caps> <token> <name...>` — the phone's protocol version,
+ *   its capabilities (`hr,sm` or `-`), the secret it holds for this watch
+ *   (`WearLinkToken`) and its Bluetooth name, the rest of the line.
+ * - `OK <version> <caps> <name...>` — the watch knows that token for this phone.
+ * - `PENDING` — the watch holds no token for this phone yet and is asking the
+ *   wearer; the phone tries again later.
+ * - `UNAUTHORIZED <mismatch|blocked>` — the stored token differs (a possible
+ *   impersonation, or a reinstalled phone) or the phone is blocked.
+ * - `VERSION <min> <max>` — the phone's version is outside what the watch speaks.
+ * - `ERROR <bad_hello|bad_request|busy|internal>` — the watch could not serve.
  *
  * Requests:
  * - `PING` → `PONG`. Liveness only.
@@ -40,12 +51,21 @@ import java.util.UUID
  */
 object WearLinkProtocol {
 
-    /** Bumped when a change is not backward compatible. Informational for now. */
-    const val VERSION: Int = 3
+    /** Bumped when a change is not backward compatible; the hello negotiates it. */
+    const val VERSION: Int = 4
+
+    /** The oldest version this side still speaks. */
+    const val MIN_VERSION: Int = 4
 
     /** The RFCOMM service record the watch listens on and the phone connects to. */
     val SERVICE_UUID: UUID = UUID.fromString("4838d728-6e5a-4b95-a29d-a60032338301")
 
+    const val HELLO: String = "HELLO"
+    const val OK: String = "OK"
+    const val PENDING: String = "PENDING"
+    const val UNAUTHORIZED: String = "UNAUTHORIZED"
+    const val VERSION_WORD: String = "VERSION"
+    const val ERROR: String = "ERROR"
     const val PING: String = "PING"
     const val PONG: String = "PONG"
     const val HEART_RATE_SINCE: String = "HR_SINCE"
@@ -53,6 +73,138 @@ object WearLinkProtocol {
     const val SLEEP_MINUTES_SINCE: String = "SM_SINCE"
     const val SLEEP_MINUTE: String = "SM"
     const val END: String = "END"
+
+    /** Longer than this a line is a protocol violation; the reader closes rather than buffers. */
+    const val MAX_LINE_LENGTH: Int = 512
+
+    /** A device name longer than this is clipped on the wire. */
+    const val MAX_NAME_LENGTH: Int = 48
+
+    const val CAP_HEART_RATE: String = "hr"
+    const val CAP_SLEEP_MINUTES: String = "sm"
+    const val NO_CAPABILITIES: String = "-"
+
+    /** The phone's opening line. */
+    data class Hello(val version: Int, val capabilities: Set<String>, val token: String, val name: String)
+
+    enum class UnauthorizedReason(val word: String) {
+        MISMATCH("mismatch"),
+        BLOCKED("blocked"),
+        ;
+
+        companion object {
+            fun fromWord(word: String): UnauthorizedReason? = entries.firstOrNull { it.word == word }
+        }
+    }
+
+    enum class ErrorCode(val word: String) {
+        BAD_HELLO("bad_hello"),
+        BAD_REQUEST("bad_request"),
+        BUSY("busy"),
+        INTERNAL("internal"),
+        ;
+
+        companion object {
+            fun fromWord(word: String): ErrorCode? = entries.firstOrNull { it.word == word }
+        }
+    }
+
+    /** The watch's answer to a hello. */
+    sealed class HelloReply {
+        data class Ok(val version: Int, val capabilities: Set<String>, val name: String) : HelloReply()
+        data object Pending : HelloReply()
+        data class Unauthorized(val reason: UnauthorizedReason) : HelloReply()
+        data class VersionMismatch(val min: Int, val max: Int) : HelloReply()
+        data class Error(val code: ErrorCode) : HelloReply()
+    }
+
+    /** A request after the hello. */
+    sealed class Request {
+        data object Ping : Request()
+        data class HeartRateSince(val sinceEpochMillis: Long, val limit: Int) : Request()
+        data class SleepMinutesSince(val sinceEpochMillis: Long, val limit: Int) : Request()
+    }
+
+    fun formatHello(hello: Hello): String =
+        "$HELLO ${hello.version} ${formatCapabilities(hello.capabilities)} ${hello.token} ${cleanName(hello.name)}"
+
+    /** Null unless [line] is a well-formed hello with a well-formed token. */
+    fun parseHello(line: String): Hello? {
+        val fields = fields(line)
+        if (fields.size < 4 || fields[0] != HELLO) return null
+        val version = fields[1].toIntOrNull() ?: return null
+        val capabilities = parseCapabilities(fields[2]) ?: return null
+        val token = fields[3]
+        if (version < 1 || !WearLinkToken.isWellFormed(token)) return null
+        return Hello(version, capabilities, token, cleanName(fields.drop(4).joinToString(" ")))
+    }
+
+    fun formatHelloReply(reply: HelloReply): String = when (reply) {
+        is HelloReply.Ok -> "$OK ${reply.version} ${formatCapabilities(reply.capabilities)} ${cleanName(reply.name)}"
+        HelloReply.Pending -> PENDING
+        is HelloReply.Unauthorized -> "$UNAUTHORIZED ${reply.reason.word}"
+        is HelloReply.VersionMismatch -> "$VERSION_WORD ${reply.min} ${reply.max}"
+        is HelloReply.Error -> "$ERROR ${reply.code.word}"
+    }
+
+    /** Null unless [line] is a well-formed hello reply. */
+    fun parseHelloReply(line: String): HelloReply? {
+        val fields = fields(line)
+        if (fields.isEmpty()) return null
+        return when (fields[0]) {
+            OK -> {
+                if (fields.size < 3) return null
+                val version = fields[1].toIntOrNull() ?: return null
+                val capabilities = parseCapabilities(fields[2]) ?: return null
+                HelloReply.Ok(version, capabilities, cleanName(fields.drop(3).joinToString(" ")))
+            }
+            PENDING -> if (fields.size == 1) HelloReply.Pending else null
+            UNAUTHORIZED -> if (fields.size == 2) UnauthorizedReason.fromWord(fields[1])?.let(HelloReply::Unauthorized) else null
+            VERSION_WORD -> {
+                if (fields.size != 3) return null
+                val min = fields[1].toIntOrNull() ?: return null
+                val max = fields[2].toIntOrNull() ?: return null
+                if (min < 1 || max < min) null else HelloReply.VersionMismatch(min, max)
+            }
+            ERROR -> if (fields.size == 2) ErrorCode.fromWord(fields[1])?.let(HelloReply::Error) else null
+            else -> null
+        }
+    }
+
+    fun formatError(code: ErrorCode): String = "$ERROR ${code.word}"
+
+    fun formatRequest(request: Request): String = when (request) {
+        Request.Ping -> PING
+        is Request.HeartRateSince -> formatHeartRateRequest(request.sinceEpochMillis, request.limit)
+        is Request.SleepMinutesSince -> formatSleepMinutesRequest(request.sinceEpochMillis, request.limit)
+    }
+
+    /** Null unless [line] is a well-formed request. */
+    fun parseRequest(line: String): Request? {
+        if (isPing(line)) return Request.Ping
+        parseHeartRateRequest(line)?.let { return Request.HeartRateSince(it.sinceEpochMillis, it.limit) }
+        parseSleepMinutesRequest(line)?.let { return Request.SleepMinutesSince(it.sinceEpochMillis, it.limit) }
+        return null
+    }
+
+    private fun formatCapabilities(capabilities: Set<String>): String =
+        if (capabilities.isEmpty()) NO_CAPABILITIES else capabilities.sorted().joinToString(",")
+
+    private fun parseCapabilities(field: String): Set<String>? {
+        if (field == NO_CAPABILITIES) return emptySet()
+        val words = field.split(',')
+        if (words.any { word -> word.isEmpty() || word.any { !it.isLetterOrDigit() && it != '_' } }) return null
+        return words.toSet()
+    }
+
+    /** Printable characters only, every run of whitespace or control characters one space, at most [MAX_NAME_LENGTH]. */
+    fun cleanName(name: String): String =
+        name.map { if (it.isWhitespace() || it.code < 0x20 || it.code == 0x7f) ' ' else it }
+            .joinToString("")
+            .split(' ')
+            .filter { it.isNotEmpty() }
+            .joinToString(" ")
+            .take(MAX_NAME_LENGTH)
 
     /** The most samples one `HR_SINCE` reply carries. The phone pages past it. */
     const val MAX_SAMPLES_PER_REQUEST: Int = 2000

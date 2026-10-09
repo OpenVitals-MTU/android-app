@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.domain.model
 
 import java.time.Instant
 import java.time.ZoneOffset
+import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /** What the watch could tell about one minute, instantaneous evidence only. */
 data class WearMinuteFlags(val bits: Int) {

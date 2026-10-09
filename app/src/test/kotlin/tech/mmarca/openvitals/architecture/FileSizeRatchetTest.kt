@@ -14,9 +14,9 @@ import org.junit.Test
 class FileSizeRatchetTest {
 
     private val lineCounts: Map<String, Int> by lazy {
-        File(SourceRoot).walkTopDown()
+        (File(SourceRoot).walkTopDown() + File(SharedRoot).walkTopDown())
             .filter { it.isFile && it.extension == "kt" }
-            .associate { it.relativeTo(File(SourceRoot)).invariantSeparatorsPath to it.readLines().size }
+            .associate { it.rootRelativePath() to it.readLines().size }
     }
 
     @Test
@@ -50,6 +50,13 @@ class FileSizeRatchetTest {
 
     private companion object {
         const val SourceRoot = "src/main/kotlin/tech/mmarca/openvitals"
+
+        /** The shared link module is held to the same limit; its paths are reported with a `wearlink/` prefix. */
+        const val SharedRoot = "../wearlink/src/main/kotlin/tech/mmarca/openvitals"
+
+        fun File.rootRelativePath(): String =
+            if (invariantSeparatorsPath.contains("/wearlink/")) "wearlink/" + relativeTo(File(SharedRoot)).invariantSeparatorsPath
+            else relativeTo(File(SourceRoot)).invariantSeparatorsPath
         const val MaxLines = 800
 
         /** The files over the limit on 2026-09-21. Each ceiling leaves 25 to 75 lines for small fixes. */

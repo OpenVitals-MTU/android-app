@@ -8,8 +8,9 @@ data class BondedWatch(val address: String, val name: String?)
  *
  * The registry holds the address from the BLE scan. Wear OS watches advertise
  * with a private address, so the bond usually sits under another one. Order:
- * exact address, then the same name. No guess beyond that: pinging another
- * bonded watch would report the wrong one as paired.
+ * the Classic address a hello was once answered from, then the exact
+ * registered address, then the same name. No guess beyond that: pinging
+ * another bonded watch would report the wrong one as paired.
  */
 object WearOsBondMatcher {
 
@@ -17,7 +18,13 @@ object WearOsBondMatcher {
         bonded: List<BondedWatch>,
         targetAddress: String?,
         targetName: String?,
+        /** The Classic address a hello was once answered from; the surest match. */
+        linkAddress: String? = null,
     ): BondedWatch? {
+        if (!linkAddress.isNullOrBlank()) {
+            bonded.firstOrNull { it.address.equals(linkAddress, ignoreCase = true) }
+                ?.let { return it }
+        }
         if (!targetAddress.isNullOrBlank()) {
             bonded.firstOrNull { it.address.equals(targetAddress, ignoreCase = true) }
                 ?.let { return it }

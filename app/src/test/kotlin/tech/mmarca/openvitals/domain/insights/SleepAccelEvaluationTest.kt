@@ -5,9 +5,9 @@ import java.time.Duration
 import org.json.JSONObject
 import org.junit.Assume.assumeTrue
 import org.junit.Test
-import tech.mmarca.openvitals.devices.wearos.WearLinkProtocol
 import tech.mmarca.openvitals.devices.wearos.WearOsSleepMinuteMapping
 import tech.mmarca.openvitals.domain.model.WearSleepMinute
+import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /**
  * The Wear OS sleep pipeline against polysomnography: PhysioNet's

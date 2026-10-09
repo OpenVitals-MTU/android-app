@@ -60,6 +60,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- Allow or Block from the phone request notification. -->
+        <receiver
+            android:name=".WearPhoneConfirmReceiver"
+            android:exported="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -17,7 +17,7 @@ class FunctionLengthRatchetTest {
     private data class LongFunction(val file: String, val name: String, val lines: Int)
 
     private val functions: List<LongFunction> by lazy {
-        File(SourceRoot).walkTopDown()
+        (File(SourceRoot).walkTopDown() + File(SharedRoot).walkTopDown())
             .filter { it.isFile && it.extension == "kt" }
             .flatMap { file -> functionsIn(file) }
             .toList()
@@ -39,7 +39,7 @@ class FunctionLengthRatchetTest {
                     break
                 }
             }
-            LongFunction(file.relativeTo(File(SourceRoot)).invariantSeparatorsPath, match.groupValues[2], end - start + 1)
+            LongFunction(file.rootRelativePath(), match.groupValues[2], end - start + 1)
         }
     }
 
@@ -64,6 +64,13 @@ class FunctionLengthRatchetTest {
 
     private companion object {
         const val SourceRoot = "src/main/kotlin/tech/mmarca/openvitals"
+
+        /** The shared link module is held to the same limit. */
+        const val SharedRoot = "../wearlink/src/main/kotlin/tech/mmarca/openvitals"
+
+        fun File.rootRelativePath(): String =
+            if (invariantSeparatorsPath.contains("/wearlink/")) "wearlink/" + relativeTo(File(SharedRoot)).invariantSeparatorsPath
+            else relativeTo(File(SourceRoot)).invariantSeparatorsPath
         const val MaxLines = 150
         const val GiantLines = 450
 

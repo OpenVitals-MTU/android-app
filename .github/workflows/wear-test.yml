@@ -3,13 +3,14 @@
 # a failure here never blocks a phone PR: test.yml is the phone gate.
 #
 # Keep the paths list in sync with what wear/build.gradle.kts actually
-# depends on. If a shared Kotlin module appears later, add it here.
+# depends on: the watch app and the shared link module (:wearlink).
 name: wear-test
 
 on:
   pull_request:
     paths: &wear_paths
       - "wear/**"
+      - "wearlink/**"
       - "build.gradle.kts"
       - "settings.gradle.kts"
       - "settings-gradle.lockfile"

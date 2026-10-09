@@ -40,6 +40,7 @@ import tech.mmarca.openvitals.devices.wearos.WearOsCompanionManager
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import io.mockk.coEvery
 import io.mockk.coVerify
+import tech.mmarca.openvitals.devices.wearos.WearOsLinkStore
 import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleSensorCapability
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
@@ -161,6 +162,7 @@ class WatchDeviceViewModelTest {
         // The cleanup after a removal runs on the default dispatcher. Here it runs at once.
         dispatchers = mainDispatcherRule.dispatcherProvider,
         wearOsCompanionManager = wearOsCompanionManager,
+        wearOsLinkStore = WearOsLinkStore(FakeSharedPreferences()),
     )
 
     @Test

@@ -6,6 +6,7 @@ import android.database.Cursor
 import android.database.DatabaseUtils
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /**
  * The per-minute sleep input the watch has recorded and the phone may not

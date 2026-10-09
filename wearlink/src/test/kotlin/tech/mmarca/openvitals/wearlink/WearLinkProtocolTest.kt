@@ -1,4 +1,4 @@
-package tech.mmarca.openvitals.wear
+package tech.mmarca.openvitals.wearlink
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -98,6 +98,58 @@ class WearLinkProtocolTest {
         assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 R 99999 16 300 42 58 15 6 -12 3 998 3 4 5 86 90 7"))
         assertNull(WearLinkProtocol.parseSleepMinute("SM 1700000000000 R 7200 16 300 42 58 1.5 6 -12 3 998 3 4 5 86 90 7"))
         assertNull(WearLinkProtocol.parseSleepMinute("HR 1700000000000 58"))
+    }
+
+    @Test
+    fun `a hello round-trips, with the name cleaned and clipped`() {
+        val token = WearLinkToken.generate()
+        val hello = WearLinkProtocol.Hello(4, setOf("sm", "hr"), token, "  Pixel\t6  Pro\u0007 ")
+
+        val line = WearLinkProtocol.formatHello(hello)
+
+        assertEquals("HELLO 4 hr,sm $token Pixel 6 Pro", line)
+        assertEquals(hello.copy(capabilities = setOf("hr", "sm"), name = "Pixel 6 Pro"), WearLinkProtocol.parseHello(line))
+        assertEquals(48, WearLinkProtocol.parseHello("HELLO 4 - $token " + "n".repeat(60))!!.name.length)
+        assertEquals(emptySet<String>(), WearLinkProtocol.parseHello("HELLO 4 - $token")!!.capabilities)
+    }
+
+    @Test
+    fun `a hello without a well-formed token or version is refused`() {
+        val token = WearLinkToken.generate()
+
+        assertNull(WearLinkProtocol.parseHello("HELLO 4 hr short Pixel"))
+        assertNull(WearLinkProtocol.parseHello("HELLO x hr $token Pixel"))
+        assertNull(WearLinkProtocol.parseHello("HELLO 4 hr,,sm $token Pixel"))
+        assertNull(WearLinkProtocol.parseHello("PING"))
+    }
+
+    @Test
+    fun `every hello reply round-trips`() {
+        val replies = listOf(
+            WearLinkProtocol.HelloReply.Ok(4, setOf("hr", "sm"), "Galaxy Watch8 (89FZ)"),
+            WearLinkProtocol.HelloReply.Pending,
+            WearLinkProtocol.HelloReply.Unauthorized(WearLinkProtocol.UnauthorizedReason.MISMATCH),
+            WearLinkProtocol.HelloReply.Unauthorized(WearLinkProtocol.UnauthorizedReason.BLOCKED),
+            WearLinkProtocol.HelloReply.VersionMismatch(4, 5),
+            WearLinkProtocol.HelloReply.Error(WearLinkProtocol.ErrorCode.BUSY),
+        )
+
+        for (reply in replies) assertEquals(reply, WearLinkProtocol.parseHelloReply(WearLinkProtocol.formatHelloReply(reply)))
+        assertEquals("OK 4 hr,sm Galaxy Watch8 (89FZ)", WearLinkProtocol.formatHelloReply(replies[0]))
+        assertNull(WearLinkProtocol.parseHelloReply("UNAUTHORIZED why"))
+        assertNull(WearLinkProtocol.parseHelloReply("VERSION 5 4"))
+        assertNull(WearLinkProtocol.parseHelloReply("PENDING now"))
+    }
+
+    @Test
+    fun `requests parse to one type each`() {
+        assertEquals(WearLinkProtocol.Request.Ping, WearLinkProtocol.parseRequest(" PING "))
+        assertEquals(WearLinkProtocol.Request.HeartRateSince(10, 50), WearLinkProtocol.parseRequest("HR_SINCE 10 50"))
+        assertEquals(WearLinkProtocol.Request.SleepMinutesSince(10, 2000), WearLinkProtocol.parseRequest("SM_SINCE 10 99999"))
+        assertNull(WearLinkProtocol.parseRequest("HELLO 4 - x y"))
+        for (request in listOf(WearLinkProtocol.Request.Ping, WearLinkProtocol.Request.HeartRateSince(1, 2), WearLinkProtocol.Request.SleepMinutesSince(3, 4))) {
+            assertEquals(request, WearLinkProtocol.parseRequest(WearLinkProtocol.formatRequest(request)))
+        }
     }
 
     @Test
