@@ -90,3 +90,7 @@ Instantaneous evidence only; windowed rules belong to the phone.
 ## Closing a minute
 
 The watch closes a minute 90 seconds after it started; by then every batch that belongs to it has arrived (batches are at most 60 seconds late). The Python implementation closes a minute when it sees the first sample of a later minute, or at the end of the input.
+
+## What the watch actually delivers
+
+The Watch8's accelerometer cannot wake the watch and buffers 300 readings, 48 seconds at the 6.25 Hz the hub delivers; readings older than that are lost when the buffer wraps. The heart rate sensor can wake the watch, so its report latency sets how often the watch wakes at night and is kept at 40 seconds so the accelerometer buffer is drained before it wraps. A minute still ends up sparse now and then (`SPARSE` flag, `n` under 150), with few or no valid five-second epochs; the phone's window detector carries the last known angle change across such minutes rather than reading them as movement. The first recorded night, before the latency change, kept a median of 30 readings a minute.

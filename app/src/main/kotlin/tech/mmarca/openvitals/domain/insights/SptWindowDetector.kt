@@ -100,7 +100,7 @@ object SptWindowDetector {
         val change = FloatArray(n) { index ->
             if (wear.isWorn(index)) grid.zAngleDelta[index] else Float.NaN
         }
-        val smoothed = rollingMedian(change, config.angleMedianHalf)
+        val smoothed = carryForward(rollingMedian(change, config.angleMedianHalf))
         val quiet = percentile(smoothed, config.anglePercentile) ?: return null
         val threshold = (config.angleThresholdFactor * quiet).coerceIn(config.angleThresholdMinDeg, config.angleThresholdMaxDeg)
         val still = BooleanArray(n) { index -> !smoothed[index].isNaN() && smoothed[index] < threshold }
@@ -147,6 +147,26 @@ object SptWindowDetector {
             }
         }
         return merged.maxWithOrNull(compareBy<IntRange> { it.last - it.first }.thenByDescending { it.first })
+    }
+
+    /**
+     * A minute without a value takes the last one seen (and the first one
+     * seen, before any). A watch that dozes keeps only the last 48 seconds
+     * of its accelerometer buffer between wake-ups, so a quiet night is
+     * mostly minutes with a handful of samples and no valid angle epoch;
+     * the arm was no less still for it.
+     */
+    internal fun carryForward(values: FloatArray): FloatArray {
+        val out = values.copyOf()
+        var last = Float.NaN
+        for (index in out.indices) {
+            if (out[index].isNaN()) out[index] = last else last = out[index]
+        }
+        val first = out.firstOrNull { !it.isNaN() } ?: return out
+        for (index in out.indices) {
+            if (out[index].isNaN()) out[index] = first else break
+        }
+        return out
     }
 
     /** The median of the finite values within ±[half]; NaN where none. */

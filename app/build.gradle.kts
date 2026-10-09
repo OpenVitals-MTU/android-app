@@ -361,6 +361,10 @@ tasks.withType<Test>().configureEach {
     localSleepAccelFixturePath.orNull?.let { path ->
         systemProperty("openvitals.sleepAccelFixture", path)
     }
+    // A night pulled off a watch, replayed by WearNightReplayTest (tool/README.md).
+    providers.systemProperty("openvitals.wearNightLines").orNull?.let { path ->
+        systemProperty("openvitals.wearNightLines", path)
+    }
     // StringFormatSpecifierTest reads the source strings off disk rather than
     // through R, so Gradle cannot infer the dependency and would call the task
     // up to date after an edit that broke a format specifier. Declaring it means

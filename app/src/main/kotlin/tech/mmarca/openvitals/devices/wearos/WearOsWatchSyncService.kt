@@ -125,7 +125,7 @@ class WearOsWatchSyncService(
         var cursor = cursors.heartRateCursor(device.id)
         var pages = 0
         while (true) {
-            val page = nodePort.pullHeartRate(device.address, device.bluetoothName, cursor) ?: return false
+            val page = retryOnce { nodePort.pullHeartRate(device.address, device.bluetoothName, cursor) } ?: return false
             progress.page()
             val newest = page.samples.maxOfOrNull { it.time }
             if (newest != null) {
@@ -147,7 +147,7 @@ class WearOsWatchSyncService(
         var since = WearOsSleepImport.pullStart(cursor, zone().rules.getOffset(cursor))
         var pages = 0
         while (true) {
-            val page = nodePort.pullSleepMinutes(device.address, device.bluetoothName, since) ?: return false
+            val page = retryOnce { nodePort.pullSleepMinutes(device.address, device.bluetoothName, since) } ?: return false
             progress.page()
             minutes += page.minutes
             val newest = page.minutes.maxOfOrNull { it.time }
@@ -181,6 +181,19 @@ class WearOsWatchSyncService(
         cursors.setSleepCursor(device.id, newest)
         WearOsLog.log("sleep: $nights night(s) written from ${minutes.size} minutes")
         return true
+    }
+
+    /**
+     * A page pull again after one link failure. The first connection to a
+     * watch that has been dozing in bedtime mode is refused now and then and
+     * the next one goes through; a second failure is reported as before.
+     */
+    private suspend fun <T> retryOnce(pull: suspend () -> T): T = try {
+        pull()
+    } catch (error: WearOsLinkException) {
+        WearOsLog.log("link failed once (${error.message}); trying again")
+        kotlinx.coroutines.delay(RETRY_DELAY_MILLIS)
+        pull()
     }
 
     /** Whether the window holds a sleep session that is not this import's. A read failure counts as no. */
@@ -238,5 +251,7 @@ class WearOsWatchSyncService(
     private companion object {
         /** A safety net against a watch that always says "more": two million samples. */
         const val MAX_PAGES = 1000
+
+        const val RETRY_DELAY_MILLIS = 1_500L
     }
 }

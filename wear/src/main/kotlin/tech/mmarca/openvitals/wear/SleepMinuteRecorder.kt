@@ -162,8 +162,8 @@ class SleepMinuteRecorder(
         /** Five readings a second: enough to count a turn in bed, a fraction of the hub's budget. */
         const val SAMPLING_PERIOD_MICROS = 200_000
 
-        /** The same latency as the heart rate, so both batches arrive in one wake-up. */
-        const val MAX_REPORT_LATENCY_MICROS = 60 * 1_000_000
+        /** The same latency as the heart rate, so both batches arrive in one wake-up, inside the buffer's 48 seconds. */
+        const val MAX_REPORT_LATENCY_MICROS = 40 * 1_000_000
 
         const val PRUNE_EVERY_MILLIS = 6L * 60 * 60 * 1000
     }

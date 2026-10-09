@@ -126,8 +126,15 @@ class HeartRateRecorder(
         /** One reading a second from the sensor; the store keeps one in ten. */
         const val SAMPLING_PERIOD_MICROS = 1_000_000
 
-        /** How long the sensor hub may hold readings before waking the CPU. */
-        const val MAX_REPORT_LATENCY_MICROS = 60 * 1_000_000
+        /**
+         * How long the sensor hub may hold readings before waking the CPU.
+         * This is the wake-up sensor, so it sets how often the watch wakes at
+         * night, and that must fit inside the accelerometer's buffer: that
+         * sensor cannot wake the watch, its buffer holds 300 readings, 48
+         * seconds at the 6.25 Hz the hub delivers, and everything older is
+         * lost. At a minute the first night kept 30 readings a minute.
+         */
+        const val MAX_REPORT_LATENCY_MICROS = 40 * 1_000_000
 
         /** Stored sample spacing. Enough for resting and daily curves; a tenth of the bytes. */
         const val MIN_SAMPLE_GAP_MILLIS = 10_000L
