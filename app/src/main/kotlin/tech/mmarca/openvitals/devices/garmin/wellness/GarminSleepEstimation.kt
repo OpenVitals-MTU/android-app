@@ -1,20 +1,18 @@
 package tech.mmarca.openvitals.devices.garmin.wellness
 
 import androidx.health.connect.client.records.SleepSessionRecord
-import androidx.health.connect.client.records.metadata.Device
-import androidx.health.connect.client.records.metadata.Metadata
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.contract.GarminSleepMinuteRepository
+import tech.mmarca.openvitals.devices.core.sync.estimatedSleepSessionRecord
+import tech.mmarca.openvitals.devices.core.sync.sleepNightWindow
 import tech.mmarca.openvitals.devices.garmin.GarminLog
 import tech.mmarca.openvitals.domain.insights.EstimatedSleepSession
-import tech.mmarca.openvitals.domain.insights.EstimatedStage
 import tech.mmarca.openvitals.domain.insights.SleepStageEstimator
 import tech.mmarca.openvitals.domain.model.GarminSleepMinute
 import tech.mmarca.openvitals.domain.model.SleepMinuteKind
@@ -28,12 +26,6 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
  * Health Connect record is replaced, never appended to.
  */
 
-/** The window a night is estimated from: the evening before through the next early afternoon. */
-fun sleepNightWindow(night: LocalDate, offset: ZoneOffset): Pair<Instant, Instant> = Pair(
-    night.minusDays(1).atTime(NightWindowStart).toInstant(offset),
-    night.atTime(NightWindowEnd).toInstant(offset),
-)
-
 /** One id per night, so a re-run updates the record in place. */
 fun estimatedSleepClientRecordId(night: LocalDate): String = "$EstimatedSleepIdPrefix$night"
 
@@ -41,54 +33,19 @@ fun estimatedSleepClientRecordId(night: LocalDate): String = "$EstimatedSleepIdP
 fun isWatchStagedSleepId(clientRecordId: String): Boolean =
     clientRecordId.startsWith(WatchSleepIdPrefix) && !clientRecordId.startsWith(EstimatedSleepIdPrefix)
 
-/**
- * The Health Connect record for an estimated night, or null when nothing
- * would count as sleep. Stages are clamped into the session and merged so
- * Health Connect's overlap check cannot reject them.
- */
+/** The Health Connect record for an estimated night, or null when nothing would count as sleep. */
 fun estimatedSleepImportRecord(
     session: EstimatedSleepSession,
     night: LocalDate,
     offset: ZoneOffset,
     version: Long,
-): SleepSessionRecord? {
-    val stages = mutableListOf<SleepSessionRecord.Stage>()
-    for (span in session.stages.sortedBy { it.start }) {
-        val start = maxOf(span.start, session.onset, stages.lastOrNull()?.endTime ?: session.onset)
-        val end = minOf(span.end, session.end)
-        if (!start.isBefore(end)) continue
-        val stage = healthConnectStageFor(span.stage)
-        val previous = stages.lastOrNull()
-        if (previous != null && previous.stage == stage && previous.endTime == start) {
-            stages[stages.size - 1] = SleepSessionRecord.Stage(previous.startTime, end, stage)
-        } else {
-            stages.add(SleepSessionRecord.Stage(start, end, stage))
-        }
-    }
-    if (stages.none { it.stage in SleepingStages }) return null
-    return SleepSessionRecord(
-        startTime = session.onset,
-        startZoneOffset = offset,
-        endTime = session.end,
-        endZoneOffset = offset,
-        metadata = Metadata.manualEntry(
-            clientRecordId = estimatedSleepClientRecordId(night),
-            clientRecordVersion = version,
-            device = Device(type = Device.TYPE_PHONE),
-        ),
-        title = EstimatedSleepTitle,
-        notes = EstimatedSleepNotes,
-        stages = stages,
-    )
-}
-
-private fun healthConnectStageFor(stage: EstimatedStage): Int = when (stage) {
-    EstimatedStage.AWAKE -> SleepSessionRecord.STAGE_TYPE_AWAKE
-    EstimatedStage.LIGHT -> SleepSessionRecord.STAGE_TYPE_LIGHT
-    EstimatedStage.DEEP -> SleepSessionRecord.STAGE_TYPE_DEEP
-    EstimatedStage.REM -> SleepSessionRecord.STAGE_TYPE_REM
-    EstimatedStage.UNKNOWN -> SleepSessionRecord.STAGE_TYPE_UNKNOWN
-}
+): SleepSessionRecord? = estimatedSleepSessionRecord(
+    session = session,
+    offset = offset,
+    clientRecordId = estimatedSleepClientRecordId(night),
+    version = version,
+    notes = EstimatedSleepNotes,
+)
 
 /** The domain minute for a decoded file row. */
 fun FitSleepMinute.toGarminSleepMinute(): GarminSleepMinute = GarminSleepMinute(
@@ -201,15 +158,7 @@ class GarminSleepEstimationWriter(
     }
 }
 
-private val NightWindowStart: LocalTime = LocalTime.of(18, 0)
-private val NightWindowEnd: LocalTime = LocalTime.of(14, 0)
 private const val WatchSleepIdPrefix = "garmin_fit_sleep_"
 private const val EstimatedSleepIdPrefix = "garmin_fit_sleep_est_"
-private const val EstimatedSleepTitle = "Sleep"
 private const val EstimatedSleepNotes =
     "Sleep stages estimated by OpenVitals from heart rate and movement. This watch does not record sleep stages."
-private val SleepingStages = setOf(
-    SleepSessionRecord.STAGE_TYPE_LIGHT,
-    SleepSessionRecord.STAGE_TYPE_DEEP,
-    SleepSessionRecord.STAGE_TYPE_REM,
-)

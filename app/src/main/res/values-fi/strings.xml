@@ -3654,10 +3654,36 @@
     <string name="settings_watch_wearos_bt_paired">Kello on pariliitetty tähän puhelimeen</string>
     <string name="settings_watch_wearos_bt_not_paired">Pariliitettyä Wear OS -kelloa ei löytynyt</string>
     <string name="settings_watch_wearos_app_running">OpenVitalsin Wear OS -sovellus on käynnissä kellossa</string>
-    <string name="settings_watch_wearos_app_no_answer">Ei vastausta: kello on kantaman ulkopuolella tai OpenVitals-sovellus ei ole käynnissä siinä</string>
+    <string name="settings_watch_wearos_app_no_answer">Ei vastausta: kello on pois päältä, kantaman ulkopuolella tai sen OpenVitals-sovellusta ei ole asennettu tai se ei ole käynnissä.</string>
     <string name="settings_watch_wearos_bt_permission">OpenVitals tarvitsee Lähellä olevat laitteet -luvan tavoittaakseen kellon.</string>
+    <string name="settings_watch_wearos_status_bluetooth_off">Tämän puhelimen Bluetooth on pois päältä.</string>
+    <string name="settings_watch_wearos_status_bond_lost">Kelloa ei ole yhdistetty tähän puhelimeen. Avaa Bluetooth-asetukset ja yhdistä se; tee kello ensin näkyväksi sen omista Bluetooth-asetuksista.</string>
+    <string name="settings_watch_wearos_status_pending">Odotetaan, että sallit tämän puhelimen kellossa. Avaa OpenVitals kellossa ja napauta Salli.</string>
+    <string name="settings_watch_wearos_status_unauthorized_mismatch">Kello hylkäsi tämän puhelimen: sen avain ei täsmää. Avaa kellossa OpenVitals, unohda tämä puhelin ja tarkista uudelleen.</string>
+    <string name="settings_watch_wearos_status_unauthorized_blocked">Tämä puhelin on estetty kellossa. Avaa kellossa OpenVitals ja poista esto.</string>
+    <string name="settings_watch_wearos_status_update_watch">Kellon OpenVitals-sovellus on tätä vanhempi. Päivitä kellon sovellus.</string>
+    <string name="settings_watch_wearos_status_update_phone">Kellon OpenVitals-sovellus on tätä uudempi. Päivitä OpenVitals puhelimessa.</string>
+    <string name="settings_watch_wearos_status_protocol">Kello vastasi jotain, mitä OpenVitals ei voinut lukea. Päivitä molemmat sovellukset ja yritä uudelleen.</string>
+    <string name="settings_watch_wearos_linked_to">Yhdistetty: %1$s</string>
+    <string name="settings_watch_wearos_fail_recording">Aktiviteetin tallennus on käynnissä. Lopeta tai hylkää se ennen kellon synkronointia.</string>
+    <string name="settings_watch_wearos_fail_partial">Kello lakkasi vastaamasta kesken. Saapunut tallennettiin; jatka synkronoimalla uudelleen.</string>
+    <string name="settings_watch_wearos_fail_health_connect">Salli OpenVitalsin kirjoittaa syke ja uni Health Connectiin ja synkronoi uudelleen.</string>
+    <string name="settings_watch_wearos_fail_generic">Kelloa ei voitu synkronoida. Yritä uudelleen.</string>
     <string name="settings_watch_wearos_check_app">Tarkista Wear OS -sovellus</string>
     <string name="settings_watch_wearos_checking">Tarkistetaan Wear OS -sovellusta…</string>
+    <string name="settings_watch_wearos_sync_section">Kellon synkronointi</string>
+    <string name="settings_watch_wearos_sync_body">Kellon OpenVitals-sovellus tallentaa sykkeen ja unen arvioon tarvittavat tiedot ja säilyttää niitä viikon. Synkronointi kopioi uuden sykkeen Health Connectiin ja kirjoittaa yhden arvioidun unijakson yötä kohden.</string>
+    <string name="settings_watch_wearos_sync_now">Synkronoi kello</string>
+    <string name="settings_watch_wearos_syncing">Synkronoidaan kelloa…</string>
+    <string name="settings_watch_wearos_synced_none">Kellossa ei ole mitään uutta</string>
+    <plurals name="settings_watch_wearos_synced_samples">
+        <item quantity="one">%1$d sykenäyte synkronoitu</item>
+        <item quantity="other">%1$d sykenäytettä synkronoitu</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">Arvioitu %1$d yön uni</item>
+        <item quantity="other">Arvioitu %1$d yön unet</item>
+    </plurals>
     <string name="scale_notification_channel">Vaa’an punnitukset</string>
     <string name="scale_notification_title">Luetaan punnitusta</string>
     <string name="settings_scales_empty_title">Vaakaa ei ole määritetty</string>

@@ -3660,10 +3660,36 @@
     <string name="settings_watch_wearos_bt_paired">手表已与此手机配对</string>
     <string name="settings_watch_wearos_bt_not_paired">未找到已配对的 Wear OS 手表</string>
     <string name="settings_watch_wearos_app_running">手表上的 OpenVitals Wear OS 应用正在运行</string>
-    <string name="settings_watch_wearos_app_no_answer">无响应：手表不在范围内，或手表上的 OpenVitals 应用未运行</string>
+    <string name="settings_watch_wearos_app_no_answer">无回应：手表已关机、超出范围，或手表上的 OpenVitals 应用未安装或未运行。</string>
     <string name="settings_watch_wearos_bt_permission">OpenVitals 需要“附近的设备”权限才能连接手表。</string>
+    <string name="settings_watch_wearos_status_bluetooth_off">此手机的蓝牙已关闭。</string>
+    <string name="settings_watch_wearos_status_bond_lost">手表未与此手机配对。请打开蓝牙设置并配对；先在手表自身的蓝牙设置中将其设为可被发现。</string>
+    <string name="settings_watch_wearos_status_pending">正在等待您在手表上允许此手机。请在手表上打开 OpenVitals 并点按“允许”。</string>
+    <string name="settings_watch_wearos_status_unauthorized_mismatch">手表拒绝了此手机：密钥不匹配。请在手表上打开 OpenVitals，忘记此手机，然后重新验证。</string>
+    <string name="settings_watch_wearos_status_unauthorized_blocked">此手机已在手表上被屏蔽。请在手表上打开 OpenVitals 并取消屏蔽。</string>
+    <string name="settings_watch_wearos_status_update_watch">手表上的 OpenVitals 应用比此应用旧。请更新手表应用。</string>
+    <string name="settings_watch_wearos_status_update_phone">手表上的 OpenVitals 应用比此应用新。请更新手机上的 OpenVitals。</string>
+    <string name="settings_watch_wearos_status_protocol">手表的回应 OpenVitals 无法读取。请更新两个应用后重试。</string>
+    <string name="settings_watch_wearos_linked_to">已连接到 %1$s</string>
+    <string name="settings_watch_wearos_fail_recording">正在记录活动。请先结束或放弃记录，再同步手表。</string>
+    <string name="settings_watch_wearos_fail_partial">手表中途停止了回应。已收到的数据已保存；请再次同步以继续。</string>
+    <string name="settings_watch_wearos_fail_health_connect">请允许 OpenVitals 向 Health Connect 写入心率和睡眠，然后再次同步。</string>
+    <string name="settings_watch_wearos_fail_generic">无法同步手表。请重试。</string>
     <string name="settings_watch_wearos_check_app">检查 Wear OS 应用</string>
     <string name="settings_watch_wearos_checking">正在检查 Wear OS 应用…</string>
+    <string name="settings_watch_wearos_sync_section">手表同步</string>
+    <string name="settings_watch_wearos_sync_body">手表上的 OpenVitals 应用会记录心率和估算睡眠所需的数据，并保留一周。同步会把新的心率复制到 Health Connect，并为每晚写入一条估算的睡眠记录。</string>
+    <string name="settings_watch_wearos_sync_now">同步手表</string>
+    <string name="settings_watch_wearos_syncing">正在同步手表…</string>
+    <string name="settings_watch_wearos_synced_none">手表上没有新数据</string>
+    <plurals name="settings_watch_wearos_synced_samples">
+        <item quantity="one">已同步 %1$d 个心率样本</item>
+        <item quantity="other">已同步 %1$d 个心率样本</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_nights">
+        <item quantity="one">已估算 %1$d 晚的睡眠</item>
+        <item quantity="other">已估算 %1$d 晚的睡眠</item>
+    </plurals>
     <string name="scale_notification_channel">体重秤称重</string>
     <string name="scale_notification_title">正在读取称重</string>
     <string name="settings_scales_empty_title">尚未设置体重秤</string>

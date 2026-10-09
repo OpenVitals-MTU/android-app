@@ -5,7 +5,17 @@
         android:name="android.hardware.type.watch"
         android:required="true" />
 
-    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <!-- The heart rate sensor. Android 16 gates it behind the Health Connect
+         READ_HEART_RATE permission; earlier releases behind BODY_SENSORS. The
+         background pair keeps the sensor readable once the screen is closed. -->
+    <uses-permission
+        android:name="android.permission.BODY_SENSORS"
+        android:maxSdkVersion="35" />
+    <uses-permission
+        android:name="android.permission.BODY_SENSORS_BACKGROUND"
+        android:maxSdkVersion="35" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
 
     <!-- The RFCOMM listener the phone pings. Legacy pair up to API 30, runtime grant from 31. -->
     <uses-permission
@@ -19,6 +29,7 @@
     <!-- The listener outlives the activity as a connectedDevice foreground service. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
@@ -37,7 +48,7 @@
         <service
             android:name=".WearAppService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:foregroundServiceType="connectedDevice|health" />
 
         <!-- Restarts the phone link after a reboot or an update; no-op without the Bluetooth grant. -->
         <receiver
@@ -48,6 +59,11 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <!-- Allow or Block from the phone request notification. -->
+        <receiver
+            android:name=".WearPhoneConfirmReceiver"
+            android:exported="false" />
 
         <activity
             android:name=".MainActivity"

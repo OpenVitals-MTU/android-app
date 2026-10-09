@@ -46,6 +46,7 @@ Beyond the metric screens, the app now carries three subsystems that are not met
 
 - `devices/` — the device layer: the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, notification forwarding, and the listener for a bathroom scale that only broadcasts (`devices/xiaomi`: woken by Android as a companion device, it holds a short foreground service for the two seconds the result is on the air). `features/watches` and `features/scales` are its UI.
 - `features/devicesync/` — phone-to-phone Health Connect sync over Bluetooth Classic RFCOMM.
+- `wearlink/` — the `:wearlink` Gradle module: the phone-to-watch line protocol, framing and trust token, pure Kotlin, compiled into both `:app` and `:wear`. Protocol changes go there, never into a copy.
 - `data/migration/` — a one-time Flutter-to-Kotlin data importer that runs in two phases from `OpenVitalsApp.onCreate()`. Its ordering around `super.onCreate()` is load-bearing; read the architecture doc before touching startup.
 
 The following areas are still transitional and should not be copied as the default pattern:

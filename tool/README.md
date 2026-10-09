@@ -54,3 +54,82 @@ python3 tool/sleep_fixture/build.py \
   --in 2026 \
   --out app/src/test/resources/fit/sleep/venu_sq_minutes.json
 ```
+
+## `sleep_accel_fixture/`
+
+The Wear OS sleep pipeline's feature specification as code, and the local
+evaluation fixture against polysomnography.
+
+- `features.py` mirrors `docs/engineering/sleep-minute-features.md`: it turns
+  accelerometer samples in g, stored heart rate samples and the worn,
+  charging, screen and contact events into `SM` lines exactly as the watch's
+  `MinuteAggregator` does. `feature_vector.json` is the committed lock
+  between the two: `python3 -I tool/sleep_accel_fixture/features.py
+  --self-check` fails when the Python drifts, and the watch test
+  `SleepMinuteFeatureVectorTest` fails when the Kotlin drifts.
+  `--make-vector` regenerates the vector (synthetic minutes, no real data).
+- `build.py` converts PhysioNet's `sleep-accel` dataset (Walch 2019, 31
+  subjects, Apple Watch motion and heart rate with polysomnography labels,
+  ODC-By licence, doi:10.13026/hmhs-py35) into per-minute `SM` lines with a
+  label per minute. **Neither the download nor the output is committed**
+  (`data/` and `out/` are gitignored): the fixture is for local evaluation
+  only. Download the archive from
+  https://physionet.org/content/sleep-accel/1.0.0/, unpack it under
+  `tool/sleep_accel_fixture/data/`, then:
+
+  ```sh
+  python3 -I tool/sleep_accel_fixture/build.py \
+    --in tool/sleep_accel_fixture/data/sleep-accel-1.0.0 \
+    --out tool/sleep_accel_fixture/out/sleep_accel_minutes.json
+  ```
+
+  The evaluation test `SleepAccelEvaluationTest` reads that file only when
+  pointed at it and is skipped otherwise:
+
+  ```sh
+  ./gradlew :app:testCiUnitTest --tests 'tech.mmarca.openvitals.domain.insights.SleepAccelEvaluationTest' \
+    -Dopenvitals.sleepAccelFixture=$PWD/tool/sleep_accel_fixture/out/sleep_accel_minutes.json
+  ```
+
+  It prints the table (sleep sensitivity, wake specificity, accuracy, onset
+  and offset error, total sleep time error, three-class agreement) that a
+  threshold change quotes in its commit message, since CI never sees it.
+
+### Replaying a night from a watch
+
+A debuggable watch build keeps its rows in `databases/sleep_minutes.db`. To run
+the phone's pipeline on a real night and see the wear state, the window, the
+labels per hour and the stages it would have written:
+
+```sh
+adb -s <watch> shell 'run-as tech.mmarca.openvitals.debug cat databases/sleep_minutes.db' > night.db
+python3 -I - night.db <<'EOF'
+import sqlite3, sys
+c = sqlite3.connect(sys.argv[1])
+o = lambda v: "-" if v is None else str(v)
+for r in c.execute("select time_ms,kind,offset_s,flags,n,mv10,bpm,hsd10,hn,mx,my,mz,sx,sy,sz,zmin,zmax,zd10 from minutes order by time_ms"):
+    print("SM", *[o(v) for v in r])
+EOF
+```
+
+Save that output as `night.sm`, then:
+
+```sh
+./gradlew :app:testCiUnitTest --tests 'tech.mmarca.openvitals.domain.insights.WearNightReplayTest' \
+  -Dopenvitals.wearNightLines=$PWD/night.sm
+```
+
+The test is skipped without the property; its report is in the test output.
+
+## `ppg_raw/`
+
+`inspect.py` reads the CSV the watch app's `PpgRawLogger` writes (a debuggable
+build only, a long press on the watch's status screen starts and stops it; the
+file lives under the app's `files/ppg_raw/` and comes off the watch with
+`adb shell run-as tech.mmarca.openvitals.debug cat files/ppg_raw/<name>.csv`).
+It prints, per raw value column, the distinct count, range, mean, standard
+deviation and the strongest autocorrelation peak between 0.4 and 2 seconds as
+beats per minute, so the sixteen undocumented floats of Samsung's
+`com.samsung.sensor.hr_raw` can be told apart: waveform channels peak near the
+pulse, status and counter columns do not. Standard library only. A research
+spike; nothing in the app depends on it.

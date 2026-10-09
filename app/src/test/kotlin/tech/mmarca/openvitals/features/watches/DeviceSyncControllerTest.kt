@@ -14,6 +14,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.devices.FakeSharedPreferences
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
@@ -103,7 +104,7 @@ class DeviceSyncControllerTest {
         assertFalse(controller.state.value.isSyncing)
         assertEquals(DeviceSyncPhase.COMPLETE, controller.state.value.phase)
         assertEquals(3, controller.state.value.lastFileCount)
-        assertNull(controller.state.value.errorMessage)
+        assertNull(controller.state.value.error)
     }
 
     @Test
@@ -172,7 +173,7 @@ class DeviceSyncControllerTest {
         controller.syncDevice(watch.id)!!.join()
 
         assertFalse(controller.state.value.isSyncing)
-        assertEquals("Could not connect: timeout", controller.state.value.errorMessage)
+        assertEquals(ScreenError.Message("Could not connect: timeout"), controller.state.value.error)
         assertNull(controller.state.value.lastFileCount)
     }
 
@@ -210,7 +211,7 @@ class DeviceSyncControllerTest {
         controller.clear()
 
         assertNull(controller.state.value.lastFileCount)
-        assertNull(controller.state.value.errorMessage)
+        assertNull(controller.state.value.error)
 
         // A running sync's state must survive a stray clear().
         port.gate = CompletableDeferred()
@@ -231,7 +232,7 @@ class DeviceSyncControllerTest {
 
         // A sync never throws. If one does, the radio must not read busy forever.
         assertFalse(controller.state.value.isSyncing)
-        assertEquals("the port broke its contract", controller.state.value.errorMessage)
+        assertEquals(ScreenError.Message("the port broke its contract"), controller.state.value.error)
         assertNotNull(controller.syncDevice(watch.id))
     }
 
@@ -245,7 +246,7 @@ class DeviceSyncControllerTest {
         controller.syncDevice(watch.id, silent = true)!!.join()
 
         assertFalse(controller.state.value.isSyncing)
-        assertNull(controller.state.value.errorMessage)
+        assertNull(controller.state.value.error)
     }
 
     @Test
