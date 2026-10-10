@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.imports.csv
 
 import android.content.ClipData
+import android.content.res.Configuration
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -216,7 +217,9 @@ internal fun CsvMappingStep(
                     samples = sample.columnValues(index).take(3),
                     mapping = mapping.columns.firstOrNull { it.columnIndex == index }
                         ?: CsvColumnMapping(columnIndex = index),
-                    onSetRole = { role, metric -> viewModel.setColumnRole(index, role, metric) },
+                    onSetRole = { role, metric, bloodPressureField ->
+                        viewModel.setColumnRole(index, role, metric, bloodPressureField)
+                    },
                     onSetInterpretation = { viewModel.setColumnInterpretation(index, it) },
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
@@ -235,6 +238,7 @@ internal fun CsvMappingStep(
                     onBodyPositionChange = viewModel::setDefaultBodyPosition,
                     onCuffLocationChange = viewModel::setDefaultCuffLocation,
                 )
+                CsvBloodPressureAcceptedWords()
             }
             if (state.issues.isNotEmpty()) {
                 item {
@@ -245,6 +249,24 @@ internal fun CsvMappingStep(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(bottom = 4.dp),
+                        )
+                    }
+
+                    @Composable
+                    private fun CsvBloodPressureAcceptedWords() {
+                        val context = LocalContext.current
+                        val local = (CsvBodyPositionLabelRes.values + CsvCuffLocationLabelRes.values)
+                            .joinToString { stringResource(it) }
+                        val english = context.createConfigurationContext(
+                            Configuration(context.resources.configuration).apply { setLocale(Locale.ENGLISH) },
+                        )
+                        val englishLabels = (CsvBodyPositionLabelRes.values + CsvCuffLocationLabelRes.values)
+                            .joinToString { english.getString(it) }
+                        Text(
+                            text = stringResource(R.string.settings_csv_import_bp_accepted_words, local, englishLabels),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp),
                         )
                     }
                 }
@@ -346,7 +368,7 @@ internal fun CsvConfirmStep(
                             text = stringResource(
                                 R.string.settings_csv_import_confirm_summary,
                                 state.fileName.orEmpty(),
-                                mapping.metricColumns.size,
+                                mapping.recordCount,
                             ),
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(top = 8.dp),
@@ -355,7 +377,7 @@ internal fun CsvConfirmStep(
                         // The date span is the last guard against a day/month mix-up.
                         CsvDateRangeLine(sample = sample, mapping = mapping)
                         // The per-metric range catches a bad derivation as 3% or 150%.
-                        mapping.metricColumns.forEach { column ->
+                        mapping.metricColumns.filter { it.metric != null }.forEach { column ->
                             CsvMetricRangeLine(column = column, sample = sample, mapping = mapping)
                         }
                     }

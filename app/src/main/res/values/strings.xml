@@ -2402,7 +2402,7 @@
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
     <string name="settings_csv_import_unit_count">A count</string>
     <string name="settings_csv_import_unit_mmhg">Millimetres of mercury (mmHg)</string>
-    <string name="settings_csv_import_interpretation_text">A text value (see the CSV Import notes)</string>
+    <string name="settings_csv_import_bp_accepted_words">Body position and cuff location accept: %1$s. English also accepted: %2$s.</string>
     <string name="settings_csv_import_interpretation_mass_share">A mass in %1$s, as a share of the weight column</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect stores body fat as a percentage, so this is worked out from the weight measured in the same row.</string>
     <string name="settings_csv_import_date_time_title">Date and time</string>

@@ -33,6 +33,26 @@ private fun weightMapping(): CsvImportMapping = CsvImportMapping(
     ),
 )
 
+private fun bloodPressureMapping(): CsvImportMapping = CsvImportMapping(
+    columns = listOf(
+        CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
+        CsvColumnMapping(
+            columnIndex = 1,
+            role = CsvColumnRole.METRIC,
+            bloodPressureField = CsvBloodPressureField.SYSTOLIC,
+        ),
+        CsvColumnMapping(
+            columnIndex = 2,
+            role = CsvColumnRole.METRIC,
+            bloodPressureField = CsvBloodPressureField.DIASTOLIC,
+        ),
+    ),
+    dateTime = CsvDateTimeSettings(
+        format = CsvDateTimeFormat.YEAR_FIRST,
+        zone = CsvTimeZoneMode.UTC,
+    ),
+)
+
 /** A double over the repository: records inserts, refuses batches or one record, rate-limits, and reports existing ids. */
 private class RepositoryHarness(
     existingIds: Set<String> = emptySet(),
@@ -103,6 +123,20 @@ class CsvImportServiceTest {
         assertEquals(120, result.progress.written)
         assertEquals(0, result.progress.rejected)
         assertEquals(120, harness.inserted.size)
+    }
+
+    @Test
+    fun `a row with multiple blood pressure diagnostics is rejected once`() = runTest {
+        val content = "Date,Systolic,Diastolic\n2026-07-01 08:12:00,1200,not a number\n"
+        val result = service(RepositoryHarness()).run(
+            source = sourceOf(content),
+            totalBytes = content.length.toLong(),
+            dialect = Dialect,
+            mapping = bloodPressureMapping(),
+        )
+
+        assertEquals(1, result.progress.rejected)
+        assertEquals(2, result.diagnostics.size)
     }
 
     @Test

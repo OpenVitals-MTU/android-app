@@ -32,7 +32,7 @@ internal fun CsvColumnMappingTile(
     header: String,
     samples: List<String>,
     mapping: CsvColumnMapping,
-    onSetRole: (CsvColumnRole, CsvImportMetric?) -> Unit,
+    onSetRole: (CsvColumnRole, CsvImportMetric?, CsvBloodPressureField?) -> Unit,
     onSetInterpretation: (CsvValueInterpretation) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -75,7 +75,7 @@ internal fun CsvColumnMappingTile(
                         text = { Text(stringResource(R.string.settings_csv_import_role_ignore)) },
                         onClick = {
                             roleExpanded = false
-                            onSetRole(CsvColumnRole.IGNORE, null)
+                            onSetRole(CsvColumnRole.IGNORE, null, null)
                         },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                     )
@@ -83,7 +83,7 @@ internal fun CsvColumnMappingTile(
                         text = { Text(stringResource(R.string.settings_csv_import_role_timestamp)) },
                         onClick = {
                             roleExpanded = false
-                            onSetRole(CsvColumnRole.TIMESTAMP, null)
+                            onSetRole(CsvColumnRole.TIMESTAMP, null, null)
                         },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                     )
@@ -91,7 +91,7 @@ internal fun CsvColumnMappingTile(
                         text = { Text(stringResource(R.string.settings_csv_import_role_end_timestamp)) },
                         onClick = {
                             roleExpanded = false
-                            onSetRole(CsvColumnRole.END_TIMESTAMP, null)
+                            onSetRole(CsvColumnRole.END_TIMESTAMP, null, null)
                         },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                     )
@@ -100,7 +100,17 @@ internal fun CsvColumnMappingTile(
                             text = { Text(csvMetricLabel(metric)) },
                             onClick = {
                                 roleExpanded = false
-                                onSetRole(CsvColumnRole.METRIC, metric)
+                                onSetRole(CsvColumnRole.METRIC, metric, null)
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                        )
+                    }
+                    CsvBloodPressureField.entries.forEach { field ->
+                        DropdownMenuItem(
+                            text = { Text(csvBloodPressureFieldLabel(field)) },
+                            onClick = {
+                                roleExpanded = false
+                                onSetRole(CsvColumnRole.METRIC, null, field)
                             },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                         )
@@ -171,6 +181,7 @@ private fun roleValueLabel(mapping: CsvColumnMapping): String = when (mapping.ro
     CsvColumnRole.TIMESTAMP -> stringResource(R.string.settings_csv_import_role_timestamp)
     CsvColumnRole.END_TIMESTAMP -> stringResource(R.string.settings_csv_import_role_end_timestamp)
     CsvColumnRole.METRIC -> mapping.metric?.let { csvMetricLabel(it) }
+        ?: mapping.bloodPressureField?.let { csvBloodPressureFieldLabel(it) }
         ?: stringResource(R.string.settings_csv_import_role_ignore)
     CsvColumnRole.IGNORE -> stringResource(R.string.settings_csv_import_role_ignore)
 }

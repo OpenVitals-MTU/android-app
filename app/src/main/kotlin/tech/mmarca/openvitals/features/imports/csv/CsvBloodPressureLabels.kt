@@ -6,8 +6,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
-import tech.mmarca.openvitals.domain.model.BpRecordValues
-import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.BpBodyPositions
+import tech.mmarca.openvitals.core.presentation.BpMeasurementLocations
+import tech.mmarca.openvitals.core.presentation.bpBodyPositionLabelRes
+import tech.mmarca.openvitals.core.presentation.bpMeasurementLocationLabelRes
 
 /**
  * What a body position or cuff location cell can say, as normalised label
@@ -68,16 +70,8 @@ class CsvBloodPressureLabelSource @Inject constructor(
 }
 
 /** The options a user can pick as a default, in the order the dropdown lists them. */
-internal val CsvBodyPositionLabelRes: Map<Int, Int> = linkedMapOf(
-    BpRecordValues.BODY_POSITION_SITTING_DOWN to R.string.bp_position_sitting,
-    BpRecordValues.BODY_POSITION_STANDING_UP to R.string.bp_position_standing,
-    BpRecordValues.BODY_POSITION_LYING_DOWN to R.string.bp_position_lying,
-    BpRecordValues.BODY_POSITION_RECLINING to R.string.bp_position_reclining,
-)
+internal val CsvBodyPositionLabelRes: Map<Int, Int> =
+    BpBodyPositions.associateWith(::bpBodyPositionLabelRes)
 
-internal val CsvCuffLocationLabelRes: Map<Int, Int> = linkedMapOf(
-    BpRecordValues.MEASUREMENT_LOCATION_LEFT_UPPER_ARM to R.string.bp_location_left_arm,
-    BpRecordValues.MEASUREMENT_LOCATION_RIGHT_UPPER_ARM to R.string.bp_location_right_arm,
-    BpRecordValues.MEASUREMENT_LOCATION_LEFT_WRIST to R.string.bp_location_left_wrist,
-    BpRecordValues.MEASUREMENT_LOCATION_RIGHT_WRIST to R.string.bp_location_right_wrist,
-)
+internal val CsvCuffLocationLabelRes: Map<Int, Int> =
+    BpMeasurementLocations.associateWith(::bpMeasurementLocationLabelRes)

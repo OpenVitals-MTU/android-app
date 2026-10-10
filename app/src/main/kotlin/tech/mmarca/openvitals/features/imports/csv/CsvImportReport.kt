@@ -118,10 +118,6 @@ private val CsvImportMetric.reportName: String
         CsvImportMetric.BLOOD_GLUCOSE -> "bloodGlucose"
         CsvImportMetric.VO2_MAX -> "vo2Max"
         CsvImportMetric.STEPS -> "steps"
-        CsvImportMetric.BLOOD_PRESSURE_SYSTOLIC -> "bloodPressureSystolic"
-        CsvImportMetric.BLOOD_PRESSURE_DIASTOLIC -> "bloodPressureDiastolic"
-        CsvImportMetric.BLOOD_PRESSURE_BODY_POSITION -> "bloodPressureBodyPosition"
-        CsvImportMetric.BLOOD_PRESSURE_CUFF_LOCATION -> "bloodPressureCuffLocation"
     }
 
 private val CsvUnit.reportName: String
@@ -187,18 +183,25 @@ private fun roleLabel(column: CsvColumnMapping): String = when (column.role) {
     CsvColumnRole.METRIC -> {
         val metric = column.metric
         if (metric == null) {
-            "not imported"
+            column.bloodPressureField?.reportName ?: "not imported"
         } else {
             "${metric.reportName} (${interpretationLabel(column.effectiveInterpretation)})"
         }
     }
+
+    private val CsvBloodPressureField.reportName: String
+        get() = when (this) {
+            CsvBloodPressureField.SYSTOLIC -> "bloodPressureSystolic"
+            CsvBloodPressureField.DIASTOLIC -> "bloodPressureDiastolic"
+            CsvBloodPressureField.BODY_POSITION -> "bloodPressureBodyPosition"
+            CsvBloodPressureField.CUFF_LOCATION -> "bloodPressureCuffLocation"
+        }
 }
 
 private fun interpretationLabel(interpretation: CsvValueInterpretation?): String =
     when (interpretation) {
         is CsvDirectValue -> interpretation.unit.reportName
         is CsvMassShareOfWeight -> "${interpretation.unit.reportName} as a share of the weight column"
-        is CsvTextValue -> "text"
         null -> "default"
     }
 
@@ -211,7 +214,7 @@ private fun reasonLabel(reason: CsvImportDiagnosticReason): String = when (reaso
     CsvImportDiagnosticReason.DERIVATION_MISSING_WEIGHT -> "no weight to derive the percentage from"
     CsvImportDiagnosticReason.UNPARSABLE_END_TIMESTAMP -> "end date not understood"
     CsvImportDiagnosticReason.END_NOT_AFTER_START -> "end is not after the start"
-    CsvImportDiagnosticReason.MISSING_BLOOD_PRESSURE_VALUE -> "Systolic or diastolic missing"
-    CsvImportDiagnosticReason.SYSTOLIC_NOT_ABOVE_DIASTOLIC -> "Systolic is not above diastolic"
+    CsvImportDiagnosticReason.MISSING_BLOOD_PRESSURE_VALUE -> "systolic or diastolic missing"
+    CsvImportDiagnosticReason.SYSTOLIC_NOT_ABOVE_DIASTOLIC -> "systolic is not above diastolic"
     CsvImportDiagnosticReason.WRITE_FAILED -> "Health Connect refused the record"
 }

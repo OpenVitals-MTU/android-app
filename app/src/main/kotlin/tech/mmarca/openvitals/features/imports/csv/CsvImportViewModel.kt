@@ -168,11 +168,12 @@ class CsvImportViewModel @Inject constructor(
         }
     }
 
-    /** Points column [columnIndex] at [role]/[metric], defaulting the interpretation from the header unit. */
+    /** Points column [columnIndex] at [role]'s metric or blood-pressure field. */
     fun setColumnRole(
         columnIndex: Int,
         role: CsvColumnRole,
         metric: CsvImportMetric? = null,
+        bloodPressureField: CsvBloodPressureField? = null,
     ) {
         val mapping = _uiState.value.mapping ?: return
 
@@ -189,8 +190,9 @@ class CsvImportViewModel @Inject constructor(
                 CsvColumnMapping(
                     columnIndex = columnIndex,
                     role = role,
-                    metric = if (role == CsvColumnRole.METRIC) metric else null,
-                    interpretation = if (role == CsvColumnRole.METRIC) interpretation else null,
+                            metric = if (role == CsvColumnRole.METRIC) metric else null,
+                            bloodPressureField = if (role == CsvColumnRole.METRIC) bloodPressureField else null,
+                            interpretation = if (role == CsvColumnRole.METRIC) interpretation else null,
                 ),
             ),
         )

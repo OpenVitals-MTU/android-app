@@ -26,9 +26,7 @@ import kotlin.reflect.KClass
  * What a CSV column can be mapped onto, and how its text becomes the
  * canonical value. Every metric is one number at one instant, except
  * [STEPS], the first interval record: an END_TIMESTAMP column ends each
- * row's span, and a missing end means one minute. Blood pressure is the one
- * record built from several columns: systolic and diastolic make a reading,
- * and the body position and cuff location columns describe it.
+ * row's span, and a missing end means one minute.
  *
  * The order, catalog and conversions mirror the Flutter build, so both apps
  * produce the same clientRecordIds. STEPS keys on the interval's start.
@@ -51,16 +49,14 @@ enum class CsvImportMetric {
     BLOOD_GLUCOSE,
     VO2_MAX,
     STEPS,
-    BLOOD_PRESSURE_SYSTOLIC,
-    BLOOD_PRESSURE_DIASTOLIC,
-    BLOOD_PRESSURE_BODY_POSITION,
-    BLOOD_PRESSURE_CUFF_LOCATION,
-    ;
+}
 
-    /** Whether this column is one part of a blood pressure reading. */
-    val isBloodPressure: Boolean
-        get() = this == BLOOD_PRESSURE_SYSTOLIC || this == BLOOD_PRESSURE_DIASTOLIC ||
-            this == BLOOD_PRESSURE_BODY_POSITION || this == BLOOD_PRESSURE_CUFF_LOCATION
+/** A named column role in the one BloodPressureRecord record group. */
+enum class CsvBloodPressureField {
+    SYSTOLIC,
+    DIASTOLIC,
+    BODY_POSITION,
+    CUFF_LOCATION,
 }
 
 /** A unit a column's numbers are written in. The file's unit, not the app's display unit. */
@@ -120,9 +116,6 @@ data class CsvMassShareOfWeight(
     /** Always a mass unit. */
     val unit: CsvUnit,
 ) : CsvValueInterpretation
-
-/** The cell holds a text value, matched against a fixed list of canonical values. */
-data object CsvTextValue : CsvValueInterpretation
 
 /** Everything the importer needs to know about one metric. */
 data class CsvMetricSpec(
@@ -346,41 +339,16 @@ val CsvMetricCatalog: Map<CsvImportMetric, CsvMetricSpec> = mapOf(
         isInterval = true,
     ),
 
-    // Blood pressure. One record per row from the four columns; Health Connect
-    // accepts systolic 20..200 and diastolic 10..180 mmHg.
-    CsvImportMetric.BLOOD_PRESSURE_SYSTOLIC to bloodPressureSpec(
-        interpretations = listOf(CsvDirectValue(CsvUnit.MILLIMETERS_OF_MERCURY)),
-        plausibleMin = 20.0,
-        plausibleMax = 200.0,
-    ),
-    CsvImportMetric.BLOOD_PRESSURE_DIASTOLIC to bloodPressureSpec(
-        interpretations = listOf(CsvDirectValue(CsvUnit.MILLIMETERS_OF_MERCURY)),
-        plausibleMin = 10.0,
-        plausibleMax = 180.0,
-    ),
-    CsvImportMetric.BLOOD_PRESSURE_BODY_POSITION to bloodPressureSpec(
-        interpretations = listOf(CsvTextValue),
-        plausibleMin = 0.0,
-        plausibleMax = 0.0,
-    ),
-    CsvImportMetric.BLOOD_PRESSURE_CUFF_LOCATION to bloodPressureSpec(
-        interpretations = listOf(CsvTextValue),
-        plausibleMin = 0.0,
-        plausibleMax = 0.0,
-    ),
 )
 
-private fun bloodPressureSpec(
-    interpretations: List<CsvValueInterpretation>,
-    plausibleMin: Double,
-    plausibleMax: Double,
-) = CsvMetricSpec(
+/** The one record group assembled from named blood-pressure column roles. */
+val CsvBloodPressureSpec = CsvMetricSpec(
     targetType = "BloodPressureRecord",
     recordType = BloodPressureRecord::class,
     writePermission = HealthPermission.getWritePermission(BloodPressureRecord::class),
-    interpretations = interpretations,
-    plausibleMin = plausibleMin,
-    plausibleMax = plausibleMax,
+    interpretations = listOf(CsvDirectValue(CsvUnit.MILLIMETERS_OF_MERCURY)),
+    plausibleMin = 10.0,
+    plausibleMax = 200.0,
 )
 
 /** Converts [value] from [unit] to the metric's canonical (metric) unit. */

@@ -44,27 +44,23 @@ private fun bloodPressureMapping(
         CsvColumnMapping(
             columnIndex = 1,
             role = CsvColumnRole.METRIC,
-            metric = CsvImportMetric.BLOOD_PRESSURE_SYSTOLIC,
-            interpretation = CsvDirectValue(CsvUnit.MILLIMETERS_OF_MERCURY)
+            bloodPressureField = CsvBloodPressureField.SYSTOLIC,
         ),
         CsvColumnMapping(
             columnIndex = 2,
             role = CsvColumnRole.METRIC,
-            metric = CsvImportMetric.BLOOD_PRESSURE_DIASTOLIC,
-            interpretation = CsvDirectValue(CsvUnit.MILLIMETERS_OF_MERCURY)
+            bloodPressureField = CsvBloodPressureField.DIASTOLIC,
         ),
     ) + if (!withPositionColumns) emptyList() else listOf(
         CsvColumnMapping(
             columnIndex = 3,
             role = CsvColumnRole.METRIC,
-            metric = CsvImportMetric.BLOOD_PRESSURE_BODY_POSITION,
-            interpretation = CsvTextValue
+            bloodPressureField = CsvBloodPressureField.BODY_POSITION,
         ),
         CsvColumnMapping(
             columnIndex = 4,
             role = CsvColumnRole.METRIC,
-            metric = CsvImportMetric.BLOOD_PRESSURE_CUFF_LOCATION,
-            interpretation = CsvTextValue
+            bloodPressureField = CsvBloodPressureField.CUFF_LOCATION,
         ),
     ),
     dateTime = CsvDateTimeSettings(
@@ -174,6 +170,17 @@ class CsvBloodPressureImportTest {
     }
 
     @Test
+    fun `a missing trailing optional cell does not reject the blood pressure reading`() {
+        val conversion = convertCsvRow(
+            row = row(listOf("2026-07-01 08:12:00", "120", "80", "Standing")),
+            mapping = bloodPressureMapping(),
+        )
+
+        assertTrue(conversion.diagnostics.isEmpty())
+        assertEquals(1, conversion.records.size)
+    }
+
+    @Test
     fun `an out of range pressure rejects the reading`() {
         val conversion = convertCsvRow(
             row = row(listOf("2026-07-01 08:12:00", "1200", "80", "Standing", "Left wrist")),
@@ -248,8 +255,7 @@ class CsvBloodPressureImportTest {
                 CsvColumnMapping(
                     columnIndex = 1,
                     role = CsvColumnRole.METRIC,
-                    metric = CsvImportMetric.BLOOD_PRESSURE_SYSTOLIC,
-                    interpretation = CsvDirectValue(CsvUnit.MILLIMETERS_OF_MERCURY)
+                    bloodPressureField = CsvBloodPressureField.SYSTOLIC,
                 ),
             ),
             dateTime = CsvDateTimeSettings(

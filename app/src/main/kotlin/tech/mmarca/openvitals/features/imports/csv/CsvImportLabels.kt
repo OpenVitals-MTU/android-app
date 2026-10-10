@@ -26,10 +26,6 @@ internal fun csvMetricLabel(metric: CsvImportMetric): String = stringResource(
         CsvImportMetric.BLOOD_GLUCOSE -> R.string.settings_csv_import_metric_blood_glucose
         CsvImportMetric.VO2_MAX -> R.string.settings_csv_import_metric_vo2_max
         CsvImportMetric.STEPS -> R.string.settings_csv_import_metric_steps
-        CsvImportMetric.BLOOD_PRESSURE_SYSTOLIC -> R.string.settings_csv_import_metric_bp_systolic
-        CsvImportMetric.BLOOD_PRESSURE_DIASTOLIC -> R.string.settings_csv_import_metric_bp_diastolic
-        CsvImportMetric.BLOOD_PRESSURE_BODY_POSITION -> R.string.settings_csv_import_metric_bp_body_position
-        CsvImportMetric.BLOOD_PRESSURE_CUFF_LOCATION -> R.string.settings_csv_import_metric_bp_cuff_location
     },
 )
 
@@ -71,8 +67,17 @@ internal fun csvInterpretationLabel(interpretation: CsvValueInterpretation): Str
             R.string.settings_csv_import_interpretation_mass_share,
             csvUnitLabel(interpretation.unit),
         )
-        is CsvTextValue -> stringResource(R.string.settings_csv_import_interpretation_text)
     }
+
+    @Composable
+    internal fun csvBloodPressureFieldLabel(field: CsvBloodPressureField): String = stringResource(
+        when (field) {
+            CsvBloodPressureField.SYSTOLIC -> R.string.settings_csv_import_metric_bp_systolic
+            CsvBloodPressureField.DIASTOLIC -> R.string.settings_csv_import_metric_bp_diastolic
+            CsvBloodPressureField.BODY_POSITION -> R.string.settings_csv_import_metric_bp_body_position
+            CsvBloodPressureField.CUFF_LOCATION -> R.string.settings_csv_import_metric_bp_cuff_location
+        },
+    )
 
 @Composable
 internal fun csvDateFormatLabel(format: CsvDateTimeFormat): String = stringResource(
