@@ -24,6 +24,8 @@ data class WearLinkUiState(
     /** Trusted phones no longer in the watch's bonded list. */
     val bondLost: List<TrustedPhone> = emptyList(),
     val ppgLogging: Boolean = false,
+    /** Whether the sleep recorder holds the processor awake for bedtime. */
+    val bedtimeHold: BedtimeHold = BedtimeHold.OFF,
 )
 
 /**
