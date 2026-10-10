@@ -33,6 +33,10 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- Keeps the processor up in bedtime mode, worn and off the charger, so the
+         accelerometer's 48-second buffer is read before it overflows. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"

@@ -11,6 +11,8 @@ import android.hardware.SensorManager
 import android.os.BatteryManager
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 import java.util.TimeZone
 
@@ -22,9 +24,12 @@ import java.util.TimeZone
  * hands over. Runs inside `WearAppService`, so it outlives the activity.
  *
  * The accelerometer needs no permission. It is registered batched at five
- * readings a second with the same minute of report latency as the heart
- * rate, so the two share their wake-ups. Everything runs on one handler
- * thread; the heart rate recorder posts to it.
+ * readings a second with the same report latency as the heart rate, so the
+ * two share their wake-ups. On a watch whose hub lets a still arm sleep for
+ * minutes, that is not enough: while bedtime mode is on, the watch is worn
+ * and off the charger, a wake lock keeps the processor up so every minute
+ * is recorded whole ([BedtimeHold]). Everything runs on one handler thread;
+ * the heart rate recorder posts to it.
  */
 class SleepMinuteRecorder(
     private val context: Context,
@@ -42,13 +47,23 @@ class SleepMinuteRecorder(
     private var handler: Handler? = null
     private var lastPrunedAt = 0L
 
+    // Read and written on the handler thread only.
+    private var worn = true
+    private var charging = false
+    private var bedtime: BedtimeMonitor? = null
+    private var hold = BedtimeHold.OFF
+    private var holdRenewedAt = 0L
+    private val wakeLock = (context.getSystemService(Context.POWER_SERVICE) as PowerManager)
+        .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG)
+        .apply { setReferenceCounted(false) }
+
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val now = System.currentTimeMillis()
             when (intent.action) {
                 Intent.ACTION_SCREEN_ON -> aggregator.onScreenOn(now)
-                Intent.ACTION_POWER_CONNECTED -> aggregator.onCharging(now, true)
-                Intent.ACTION_POWER_DISCONNECTED -> aggregator.onCharging(now, false)
+                Intent.ACTION_POWER_CONNECTED -> setCharging(now, true)
+                Intent.ACTION_POWER_DISCONNECTED -> setCharging(now, false)
             }
         }
     }
@@ -85,7 +100,7 @@ class SleepMinuteRecorder(
         // The sticky battery broadcast seeds the charging state; the two power actions follow it.
         val battery = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val plugged = battery?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
-        workerHandler.post { aggregator.onCharging(System.currentTimeMillis(), plugged != 0) }
+        workerHandler.post { setCharging(System.currentTimeMillis(), plugged != 0) }
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_POWER_CONNECTED)
@@ -94,6 +109,10 @@ class SleepMinuteRecorder(
         context.registerReceiver(receiver, filter, null, workerHandler)
         thread = worker
         handler = workerHandler
+        workerHandler.post {
+            bedtime = BedtimeMonitor(context, workerHandler) { applyHold() }.also { it.start() }
+            applyHold()
+        }
         Log.i(TAG, "Recording sleep minutes from ${accelerometer.name}")
         return true
     }
@@ -102,6 +121,13 @@ class SleepMinuteRecorder(
         val worker = thread ?: return
         sensorManager.unregisterListener(this)
         runCatching { context.unregisterReceiver(receiver) }
+        handler?.post {
+            bedtime?.stop()
+            bedtime = null
+            if (wakeLock.isHeld) wakeLock.release()
+            hold = BedtimeHold.OFF
+            WearLinkState.update { it.copy(bedtimeHold = BedtimeHold.OFF) }
+        }
         worker.quitSafely()
         thread = null
         handler = null
@@ -133,7 +159,9 @@ class SleepMinuteRecorder(
             }
             Sensor.TYPE_LOW_LATENCY_OFFBODY_DETECT -> {
                 // 1 on the body, 0 off it.
-                aggregator.onWorn(at, (event.values.firstOrNull() ?: 1f) >= 0.5f)
+                worn = (event.values.firstOrNull() ?: 1f) >= 0.5f
+                aggregator.onWorn(at, worn)
+                applyHold()
             }
             else -> return
         }
@@ -142,7 +170,37 @@ class SleepMinuteRecorder(
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 
+    private fun setCharging(now: Long, plugged: Boolean) {
+        charging = plugged
+        aggregator.onCharging(now, plugged)
+        applyHold()
+    }
+
+    /**
+     * Takes or drops the wake lock for the current state. Taken with a
+     * short timeout and renewed at most once a minute while holding, so a
+     * stuck thread or a missed broadcast costs at most [HOLD_TIMEOUT_MILLIS].
+     */
+    private fun applyHold() {
+        val next = BedtimeHold.decide(bedtime?.isBedtime == true, worn, charging)
+        if (next == BedtimeHold.HOLDING) {
+            val now = SystemClock.elapsedRealtime()
+            if (!wakeLock.isHeld || now - holdRenewedAt >= HOLD_RENEW_EVERY_MILLIS) {
+                wakeLock.acquire(HOLD_TIMEOUT_MILLIS)
+                holdRenewedAt = now
+            }
+        } else if (wakeLock.isHeld) {
+            wakeLock.release()
+        }
+        if (next != hold) {
+            hold = next
+            Log.i(TAG, "Bedtime hold: $next")
+            WearLinkState.update { it.copy(bedtimeHold = next) }
+        }
+    }
+
     private fun closeMinutes(now: Long) {
+        if (hold == BedtimeHold.HOLDING) applyHold()
         val closed = aggregator.close(now)
         if (closed.isEmpty()) return
         for (minute in closed) store.upsert(minute)
@@ -166,5 +224,13 @@ class SleepMinuteRecorder(
         const val MAX_REPORT_LATENCY_MICROS = 40 * 1_000_000
 
         const val PRUNE_EVERY_MILLIS = 6L * 60 * 60 * 1000
+
+        const val WAKE_LOCK_TAG = "OpenVitals:bedtime"
+
+        /** Several batches long, so one late batch does not drop the lock. */
+        const val HOLD_TIMEOUT_MILLIS = 10L * 60 * 1000
+
+        /** Readings arrive several times a second; the lock is renewed once a minute. */
+        const val HOLD_RENEW_EVERY_MILLIS = 60L * 1000
     }
 }

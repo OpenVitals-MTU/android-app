@@ -96,6 +96,16 @@ internal fun WatchStatusScreen(
         Line(stringResource(R.string.status_samples_stored, count))
         Line(stringResource(R.string.status_minutes_stored, minuteCount))
         Line(
+            stringResource(
+                when (link.bedtimeHold) {
+                    BedtimeHold.OFF -> R.string.status_bedtime_off
+                    BedtimeHold.HOLDING -> R.string.status_bedtime_holding
+                    BedtimeHold.PAUSED_OFF_WRIST -> R.string.status_bedtime_paused_off_wrist
+                    BedtimeHold.PAUSED_CHARGING -> R.string.status_bedtime_paused_charging
+                },
+            ),
+        )
+        Line(
             text = when {
                 !bluetoothGranted -> stringResource(R.string.status_link_not_granted)
                 !link.bluetoothOn -> stringResource(R.string.status_link_bluetooth_off)

@@ -7,6 +7,10 @@
     <string name="status_heart_rate_bpm">%1$d bpm</string>
     <string name="status_samples_stored">%1$d samples on the watch</string>
     <string name="status_minutes_stored">%1$d sleep minutes on the watch</string>
+    <string name="status_bedtime_off">Turn on bedtime mode at night to record every sleep minute</string>
+    <string name="status_bedtime_holding">Bedtime: recording every minute</string>
+    <string name="status_bedtime_paused_off_wrist">Bedtime: paused while off the wrist</string>
+    <string name="status_bedtime_paused_charging">Bedtime: paused while charging</string>
     <string name="status_link_listening">Phone link on</string>
     <string name="status_link_not_granted">Phone link needs Nearby devices</string>
     <string name="action_grant">Allow</string>
