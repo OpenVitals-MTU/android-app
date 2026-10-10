@@ -146,4 +146,28 @@ class CardioLoadTest {
         assertEquals(195L, estimate.maxHeartRateBpm)
         assertEquals(true, estimate.maxHeartRateObserved)
     }
+
+    @Test
+    fun `women's TRIMP uses Banister's women's weighting`() {
+        // Rest 60, max 180, 150 bpm: 0.75 of reserve for 30 minutes.
+        // Men: 30 × 0.75 × 0.64 × e^(1.92 × 0.75) ≈ 60.8; women: 30 × 0.75 × 0.86 × e^(1.67 × 0.75) ≈ 67.7.
+        val samples = (0..30).map { minute ->
+            HeartRateSample(workoutStart.plusSeconds(minute * 60L), 150, source = "")
+        }
+        fun load(sex: tech.mmarca.openvitals.domain.preferences.BiologicalSex?) = calculateCardioLoad(
+            steps = steps,
+            samples = samples,
+            restingHeartRate = 60L,
+            baselineRestingHeartRate = 60L,
+            observedMaxHeartRate = null,
+            activityWindows = emptyList(),
+            explicitMaxHeartRate = 180L,
+            sex = sex,
+        ).trimpScore!!
+
+        assertEquals(60.8, load(tech.mmarca.openvitals.domain.preferences.BiologicalSex.MALE), 0.1)
+        assertEquals(67.7, load(tech.mmarca.openvitals.domain.preferences.BiologicalSex.FEMALE), 0.1)
+        // No recorded sex keeps the men's constants, as before.
+        assertEquals(60.8, load(null), 0.1)
+    }
 }
