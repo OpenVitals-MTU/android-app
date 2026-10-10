@@ -20,8 +20,8 @@ import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
  * The 5-minute-bucket Body Energy timeline.
  *
  * An energy balance: a basal waking floor plus an activity drain, the stronger
- * of the heart-rate-zone estimate (Banister TRIMP,
- * https://pmc.ncbi.nlm.nih.gov/articles/PMC6561225/) and an active-calorie
+ * of the heart-rate-zone estimate (Banister TRIMP;
+ * Morton, Fitz-Clarke and Banister 1990, doi:10.1152/jappl.1990.69.3.1171) and an active-calorie
  * estimate. The framing is a product design, not a published model.
  */
 const val BodyEnergyTimelineBucketMinutes = 5L
