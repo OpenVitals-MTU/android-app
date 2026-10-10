@@ -20,8 +20,7 @@ import androidx.wear.compose.material3.MaterialTheme
  */
 class MainActivity : ComponentActivity() {
 
-    private val store by lazy { HeartRateStore(this) }
-    private val minuteStore by lazy { SleepMinuteStore(this) }
+    private val store by lazy { MetricStore(this) }
     private val trust by lazy { WearTrustStore(this) }
 
     private var permissionsVersion by mutableStateOf(0)
@@ -45,9 +44,9 @@ class MainActivity : ComponentActivity() {
                     permissionsVersion = permissionsVersion,
                     hasHeartRate = { WearPermissions.hasHeartRate(this) },
                     hasBluetooth = { WearPermissions.hasBluetooth(this) },
-                    readLatest = { store.latest() },
-                    readCount = { store.count() },
-                    readMinuteCount = { minuteStore.count() },
+                    readLatest = { store.latest(WearMetrics.HEART_RATE) },
+                    readCount = { store.count(WearMetrics.HEART_RATE) },
+                    readMinuteCount = { store.count(WearMetrics.SLEEP_MINUTES) },
                     ppgLogAvailable = PpgRawLogger(this).isAvailable,
                     onTogglePpgLog = { WearAppService.togglePpgLog(this) },
                     onGrant = ::requestMissingPermissions,

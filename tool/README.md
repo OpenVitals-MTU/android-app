@@ -97,22 +97,17 @@ evaluation fixture against polysomnography.
 
 ### Replaying a night from a watch
 
-A debuggable watch build keeps its rows in `databases/sleep_minutes.db`. To run
-the phone's pipeline on a real night and see the wear state, the window, the
-labels per hour and the stages it would have written:
+A debuggable watch build keeps its rows in `databases/metrics.db`, one table
+whose sleep rows are already `SM` lines. To run the phone's pipeline on a real
+night and see the wear state, the window, the labels per hour and the stages it
+would have written:
 
 ```sh
-adb -s <watch> shell 'run-as tech.mmarca.openvitals.debug cat databases/sleep_minutes.db' > night.db
-python3 -I - night.db <<'EOF'
-import sqlite3, sys
-c = sqlite3.connect(sys.argv[1])
-o = lambda v: "-" if v is None else str(v)
-for r in c.execute("select time_ms,kind,offset_s,flags,n,mv10,bpm,hsd10,hn,mx,my,mz,sx,sy,sz,zmin,zmax,zd10 from minutes order by time_ms"):
-    print("SM", *[o(v) for v in r])
-EOF
+adb -s <watch> shell 'run-as tech.mmarca.openvitals.debug cat databases/metrics.db' > metrics.db
+sqlite3 metrics.db "select line from rows where metric = 'sm' order by time_ms" > night.sm
 ```
 
-Save that output as `night.sm`, then:
+Then:
 
 ```sh
 ./gradlew :app:testCiUnitTest --tests 'tech.mmarca.openvitals.domain.insights.WearNightReplayTest' \
