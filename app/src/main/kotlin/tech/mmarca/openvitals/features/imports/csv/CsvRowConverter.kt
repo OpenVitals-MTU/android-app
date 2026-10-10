@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.imports.csv
 import androidx.health.connect.client.records.BasalBodyTemperatureRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
+import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.BodyWaterMassRecord
@@ -25,6 +26,7 @@ import androidx.health.connect.client.units.BloodGlucose
 import androidx.health.connect.client.units.Length
 import androidx.health.connect.client.units.Mass
 import androidx.health.connect.client.units.Power
+import androidx.health.connect.client.units.Pressure
 import androidx.health.connect.client.units.Temperature
 import java.security.MessageDigest
 import java.time.Duration
@@ -40,7 +42,7 @@ const val CSV_CLIENT_RECORD_ID_NAMESPACE = "csv"
 
 /** A record built from one CSV cell, with everything the import loop needs. */
 data class CsvConvertedRecord(
-    val metric: CsvImportMetric,
+    val metric: CsvImportMetric?,
     /** Mirrors [CsvMetricSpec.targetType]; a segment of [clientRecordId]. */
     val targetType: String,
     val recordType: kotlin.reflect.KClass<out Record>,
@@ -75,7 +77,12 @@ fun convertCsvRow(
     // are normal. The end column is not counted; a missing end falls back to
     // the one-minute span.
     val endTimestampColumn = mapping.endTimestampColumn
-    val highestIndex = (metricColumns.map { it.columnIndex } + timestampColumn.columnIndex).max()
+    val requiredBloodPressureColumns = mapping.bloodPressureColumns.filter {
+        it.bloodPressureField == CsvBloodPressureField.SYSTOLIC ||
+            it.bloodPressureField == CsvBloodPressureField.DIASTOLIC
+    }
+    val highestIndex = (metricColumns.filter { it.metric != null }.map { it.columnIndex } +
+        requiredBloodPressureColumns.map { it.columnIndex } + timestampColumn.columnIndex).max()
     if (row.fields.size <= highestIndex) {
         return CsvRowConversion(
             diagnostics = listOf(
@@ -122,7 +129,7 @@ fun convertCsvRow(
     val diagnostics = mutableListOf<CsvImportDiagnostic>()
 
     for (column in metricColumns) {
-        val metric = column.metric!!
+        val metric = column.metric ?: continue
         val spec = CsvMetricCatalog[metric]
         val interpretation = column.effectiveInterpretation
         if (spec == null || interpretation == null) continue
@@ -197,7 +204,132 @@ fun convertCsvRow(
         )
     }
 
+    convertCsvBloodPressure(row, mapping, instant, records, diagnostics)
+
     return CsvRowConversion(records = records, diagnostics = diagnostics)
+}
+
+/**
+ * Reads the row's blood pressure columns as one reading. Both pressure cells
+ * blank means no reading and no error; only one blank costs the reading, as
+ * does a bad value. A position cell that is blank or matches no localised
+ * label takes the mapping's default.
+ */
+private fun convertCsvBloodPressure(
+    row: CsvRow,
+    mapping: CsvImportMapping,
+    instant: CsvInstant,
+    records: MutableList<CsvConvertedRecord>,
+    diagnostics: MutableList<CsvImportDiagnostic>,
+) {
+    fun columnFor(field: CsvBloodPressureField) =
+        mapping.bloodPressureColumns.firstOrNull { it.bloodPressureField == field }
+    val systolicColumn = columnFor(CsvBloodPressureField.SYSTOLIC) ?: return
+    val diastolicColumn = columnFor(CsvBloodPressureField.DIASTOLIC) ?: return
+
+    var valid = true
+    fun reject(reason: CsvImportDiagnosticReason, columnIndex: Int, detail: String?) {
+        valid = false
+        diagnostics += CsvImportDiagnostic(row.rowNumber, reason, columnIndex, detail)
+    }
+
+    fun readPressure(column: CsvColumnMapping): Double? {
+        val text = row.cell(column.columnIndex) ?: return null
+        val raw = parseCsvNumber(text)
+        if (raw == null) {
+            reject(CsvImportDiagnosticReason.UNPARSABLE_NUMBER, column.columnIndex, text)
+            return null
+        }
+
+        val value = convertCsvValueToCanonical(raw, CsvUnit.MILLIMETERS_OF_MERCURY)
+        val bounds = if (column.bloodPressureField == CsvBloodPressureField.SYSTOLIC) 20.0 to 200.0 else 10.0 to 180.0
+        if (value < bounds.first || value > bounds.second) {
+            reject(
+                CsvImportDiagnosticReason.OUT_OF_RANGE,
+                column.columnIndex,
+                String.format(Locale.US, "%.2f", value),
+            )
+            return null
+        }
+        return value
+    }
+
+    val systolicBlank = row.cell(systolicColumn.columnIndex) == null
+    val diastolicBlank = row.cell(diastolicColumn.columnIndex) == null
+
+    // Neither pressure cell filled: the row has no reading, which is not an error.
+    if (systolicBlank && diastolicBlank) return
+
+    // One of the pressure cells has no reading
+    if (systolicBlank != diastolicBlank) {
+        val missing = if (systolicBlank) systolicColumn else diastolicColumn
+        reject(CsvImportDiagnosticReason.MISSING_BLOOD_PRESSURE_VALUE, missing.columnIndex, null)
+        return
+    }
+
+    val systolic = readPressure(systolicColumn)
+    val diastolic = readPressure(diastolicColumn)
+
+    // A blank cell, or one that names no known label, takes the user's default.
+    fun readLabel(field: CsvBloodPressureField, default: Int, match: (String) -> Int?): Int {
+        val column = columnFor(field) ?: return default
+        val text = row.cell(column.columnIndex) ?: return default
+        return match(text) ?: default
+    }
+
+    val labels = mapping.bloodPressureLabels
+    val bodyPosition = readLabel(
+        CsvBloodPressureField.BODY_POSITION,
+        mapping.defaultBodyPosition,
+        labels::bodyPosition,
+    )
+    val cuffLocation = readLabel(
+        CsvBloodPressureField.CUFF_LOCATION,
+        mapping.defaultCuffLocation,
+        labels::cuffLocation,
+    )
+
+    if (!valid || systolic == null || diastolic == null) return
+    if (systolic <= diastolic) {
+        diagnostics += CsvImportDiagnostic(
+            rowNumber = row.rowNumber,
+            reason = CsvImportDiagnosticReason.SYSTOLIC_NOT_ABOVE_DIASTOLIC,
+            columnIndex = systolicColumn.columnIndex,
+            detail = String.format(Locale.US, "%.0f/%.0f", systolic, diastolic),
+        )
+        return
+    }
+
+    records += buildCsvBloodPressureRecord(systolic, diastolic, bodyPosition, cuffLocation, instant)
+}
+
+/** The blood pressure record for [instant], values in mmHg and positions as Health Connect constants. */
+fun buildCsvBloodPressureRecord(
+    systolic: Double,
+    diastolic: Double,
+    bodyPosition: Int,
+    measurementLocation: Int,
+    instant: CsvInstant,
+): CsvConvertedRecord {
+    val spec = CsvBloodPressureSpec
+    val clientRecordId = buildCsvClientRecordId(targetType = spec.targetType, utc = instant.utc)
+    return CsvConvertedRecord(
+        metric = null,
+        targetType = spec.targetType,
+        recordType = spec.recordType,
+        clientRecordId = clientRecordId,
+        instant = instant.utc,
+        canonicalValue = systolic,
+        record = BloodPressureRecord(
+            time = instant.utc,
+            zoneOffset = instant.offset,
+            systolic = Pressure.millimetersOfMercury(systolic),
+            diastolic = Pressure.millimetersOfMercury(diastolic),
+            bodyPosition = bodyPosition,
+            measurementLocation = measurementLocation,
+            metadata = csvMetadata(clientRecordId),
+        ),
+    )
 }
 
 /** The row's body weight in kg, or null. */
@@ -383,7 +515,6 @@ fun previewCanonicalValues(
     metric: CsvImportMetric,
 ): List<Double> {
     val targetType = CsvMetricCatalog[metric]?.targetType ?: return emptyList()
-
     val values = mutableListOf<Double>()
     rows.forEachIndexed { index, fields ->
         // +2: 1-based, and past the header row.
@@ -393,7 +524,9 @@ fun previewCanonicalValues(
         )
         conversion.records
             .filter { it.targetType == targetType }
-            .forEach { values += it.canonicalValue }
+            .forEach {
+                values += it.canonicalValue
+            }
     }
     return values
 }

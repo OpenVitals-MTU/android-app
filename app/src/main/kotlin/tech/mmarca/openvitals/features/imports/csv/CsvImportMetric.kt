@@ -4,6 +4,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BasalBodyTemperatureRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
+import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.BodyWaterMassRecord
@@ -25,8 +26,7 @@ import kotlin.reflect.KClass
  * What a CSV column can be mapped onto, and how its text becomes the
  * canonical value. Every metric is one number at one instant, except
  * [STEPS], the first interval record: an END_TIMESTAMP column ends each
- * row's span, and a missing end means one minute. Blood pressure is absent:
- * it needs two columns per record.
+ * row's span, and a missing end means one minute.
  *
  * The order, catalog and conversions mirror the Flutter build, so both apps
  * produce the same clientRecordIds. STEPS keys on the interval's start.
@@ -49,6 +49,14 @@ enum class CsvImportMetric {
     BLOOD_GLUCOSE,
     VO2_MAX,
     STEPS,
+}
+
+/** A named column role in the one BloodPressureRecord record group. */
+enum class CsvBloodPressureField {
+    SYSTOLIC,
+    DIASTOLIC,
+    BODY_POSITION,
+    CUFF_LOCATION,
 }
 
 /** A unit a column's numbers are written in. The file's unit, not the app's display unit. */
@@ -75,6 +83,7 @@ enum class CsvUnit {
     MILLIGRAMS_PER_DECILITER,
     MILLILITERS_PER_KG_PER_MINUTE,
     COUNT,
+    MILLIMETERS_OF_MERCURY,
 }
 
 // The same constants the manual-entry screens use.
@@ -329,6 +338,17 @@ val CsvMetricCatalog: Map<CsvImportMetric, CsvMetricSpec> = mapOf(
         plausibleMax = 200000.0,
         isInterval = true,
     ),
+
+)
+
+/** The one record group assembled from named blood-pressure column roles. */
+val CsvBloodPressureSpec = CsvMetricSpec(
+    targetType = "BloodPressureRecord",
+    recordType = BloodPressureRecord::class,
+    writePermission = HealthPermission.getWritePermission(BloodPressureRecord::class),
+    interpretations = listOf(CsvDirectValue(CsvUnit.MILLIMETERS_OF_MERCURY)),
+    plausibleMin = 10.0,
+    plausibleMax = 200.0,
 )
 
 /** Converts [value] from [unit] to the metric's canonical (metric) unit. */
@@ -355,6 +375,9 @@ fun convertCsvValueToCanonical(value: Double, unit: CsvUnit): Double = when (uni
     CsvUnit.MILLIGRAMS_PER_DECILITER -> value / MilligramsPerDeciliterPerMillimolePerLiter
     CsvUnit.MILLILITERS_PER_KG_PER_MINUTE -> value
     CsvUnit.COUNT -> value
+
+    // mmHg is the global medical standard; we're intentionally not converting to kPa (kilopascal)
+    CsvUnit.MILLIMETERS_OF_MERCURY -> value
 }
 
 /** Unit tokens recognised in a header, longest first so `kcal` beats `cal`. */
@@ -365,6 +388,7 @@ private val HeaderUnitTokens: List<Pair<String, CsvUnit>> = listOf(
     "ml/kg/min" to CsvUnit.MILLILITERS_PER_KG_PER_MINUTE,
     "mmol/l" to CsvUnit.MILLIMOLES_PER_LITER,
     "mg/dl" to CsvUnit.MILLIGRAMS_PER_DECILITER,
+    "mmhg" to CsvUnit.MILLIMETERS_OF_MERCURY,
     "breaths/min" to CsvUnit.BREATHS_PER_MINUTE,
     "brpm" to CsvUnit.BREATHS_PER_MINUTE,
     "kcal" to CsvUnit.KILOCALORIES_PER_DAY,

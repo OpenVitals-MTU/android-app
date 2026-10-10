@@ -79,6 +79,10 @@ class CsvImportViewModelTest {
             context = context,
             importService = CsvImportService(importRepository),
             healthRepository = healthRepository,
+            preferences = mockk(relaxed = true),
+            labelSource = mockk<CsvBloodPressureLabelSource>().also {
+                every { it.labels() } returns CsvBloodPressureLabels()
+            },
             healthConnectManager = manager,
         )
     }

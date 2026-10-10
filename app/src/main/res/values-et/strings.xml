@@ -2394,6 +2394,10 @@
     <string name="settings_csv_import_metric_blood_glucose">Veresuhkur</string>
     <string name="settings_csv_import_metric_vo2_max">VO₂ max</string>
     <string name="settings_csv_import_metric_steps">Sammud</string>
+    <string name="settings_csv_import_metric_bp_systolic">Süstoolne</string>
+    <string name="settings_csv_import_metric_bp_diastolic">Diastoolne</string>
+    <string name="settings_csv_import_metric_bp_body_position">Kehaasend</string>
+    <string name="settings_csv_import_metric_bp_cuff_location">Manseti asukoht</string>
     <string name="settings_csv_import_value_label">Väärtused on</string>
     <string name="settings_csv_import_unit_kilograms">Kilogrammid (kg)</string>
     <string name="settings_csv_import_unit_pounds">Naelad (lb)</string>

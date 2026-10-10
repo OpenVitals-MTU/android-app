@@ -9,13 +9,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
+import tech.mmarca.openvitals.data.repository.CsvImportPreferencesRepository
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 /** Which step of the importer the screen is showing. */
@@ -66,6 +67,8 @@ data class CsvImportState(
 class CsvImportViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val importService: CsvImportService,
+    private val preferences: CsvImportPreferencesRepository,
+    private val labelSource: CsvBloodPressureLabelSource,
     private val healthRepository: HealthRepository,
     healthConnectManager: HealthConnectManager,
 ) : ViewModel() {
@@ -116,7 +119,9 @@ class CsvImportViewModel @Inject constructor(
                     return@launch
                 }
 
-                val mapping = initialCsvMapping(headerRow = sample.headerRow, sample = sample.dataRows)
+                val mapping = withBloodPressureSettings(
+                    initialCsvMapping(headerRow = sample.headerRow, sample = sample.dataRows),
+                )
                 _uiState.update {
                     it.copy(
                         isLoadingFile = false,
@@ -146,7 +151,9 @@ class CsvImportViewModel @Inject constructor(
                 val sample = withContext(Dispatchers.IO) {
                     reader.sample(sourceFor(uri), dialect = dialect, hasHeaderRow = header)
                 }
-                val mapping = initialCsvMapping(headerRow = sample.headerRow, sample = sample.dataRows)
+                val mapping = withBloodPressureSettings(
+                    initialCsvMapping(headerRow = sample.headerRow, sample = sample.dataRows),
+                )
                 _uiState.update {
                     it.copy(
                         isLoadingFile = false,
@@ -161,11 +168,12 @@ class CsvImportViewModel @Inject constructor(
         }
     }
 
-    /** Points column [columnIndex] at [role]/[metric], defaulting the interpretation from the header unit. */
+    /** Points column [columnIndex] at [role]'s metric or blood-pressure field. */
     fun setColumnRole(
         columnIndex: Int,
         role: CsvColumnRole,
         metric: CsvImportMetric? = null,
+        bloodPressureField: CsvBloodPressureField? = null,
     ) {
         val mapping = _uiState.value.mapping ?: return
 
@@ -182,8 +190,9 @@ class CsvImportViewModel @Inject constructor(
                 CsvColumnMapping(
                     columnIndex = columnIndex,
                     role = role,
-                    metric = if (role == CsvColumnRole.METRIC) metric else null,
-                    interpretation = if (role == CsvColumnRole.METRIC) interpretation else null,
+                            metric = if (role == CsvColumnRole.METRIC) metric else null,
+                            bloodPressureField = if (role == CsvColumnRole.METRIC) bloodPressureField else null,
+                            interpretation = if (role == CsvColumnRole.METRIC) interpretation else null,
                 ),
             ),
         )
@@ -200,6 +209,20 @@ class CsvImportViewModel @Inject constructor(
     fun setDateTimeSettings(settings: CsvDateTimeSettings) {
         val mapping = _uiState.value.mapping ?: return
         applyMapping(mapping.copy(dateTime = settings))
+    }
+
+    /** Chooses the body position used when the cell is not imported or matches no label, and remembers it. */
+    fun setDefaultBodyPosition(position: Int) {
+        val mapping = _uiState.value.mapping ?: return
+        preferences.defaultBodyPosition = position
+        applyMapping(mapping.copy(defaultBodyPosition = position))
+    }
+
+    /** Chooses the cuff location used when the cell is not imported or matches no label, and remembers it. */
+    fun setDefaultCuffLocation(location: Int) {
+        val mapping = _uiState.value.mapping ?: return
+        preferences.defaultCuffLocation = location
+        applyMapping(mapping.copy(defaultCuffLocation = location))
     }
 
     fun goToStep(step: CsvImportStep) {
@@ -286,6 +309,12 @@ class CsvImportViewModel @Inject constructor(
             )
         }
     }
+
+    private fun withBloodPressureSettings(mapping: CsvImportMapping): CsvImportMapping = mapping.copy(
+        bloodPressureLabels = labelSource.labels(),
+        defaultBodyPosition = preferences.defaultBodyPosition,
+        defaultCuffLocation = preferences.defaultCuffLocation,
+    )
 
     private fun headerUnit(columnIndex: Int): CsvUnit? {
         val header = _uiState.value.sample?.headerRow ?: return null

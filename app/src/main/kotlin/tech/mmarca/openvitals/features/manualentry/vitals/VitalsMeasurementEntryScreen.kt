@@ -62,6 +62,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.BpBodyPositions
+import tech.mmarca.openvitals.core.presentation.BpMeasurementLocations
 import tech.mmarca.openvitals.features.manualentry.rememberManualEntryWritePermissionRequester
 import tech.mmarca.openvitals.features.manualentry.ManualEntryWritePermissionCallout
 import tech.mmarca.openvitals.core.presentation.ScreenError
@@ -69,6 +71,8 @@ import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.domain.preferences.UnitQuantity
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
+import tech.mmarca.openvitals.core.presentation.bpBodyPositionLabelRes
+import tech.mmarca.openvitals.core.presentation.bpMeasurementLocationLabelRes
 import tech.mmarca.openvitals.domain.model.BpMealContext
 import tech.mmarca.openvitals.domain.model.BpRecordValues
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
@@ -452,32 +456,4 @@ private fun BpMeasurementGuide() {
             }
         }
     }
-}
-
-private val BpBodyPositions = listOf(
-    BpRecordValues.BODY_POSITION_SITTING_DOWN,
-    BpRecordValues.BODY_POSITION_STANDING_UP,
-    BpRecordValues.BODY_POSITION_LYING_DOWN,
-    BpRecordValues.BODY_POSITION_RECLINING,
-)
-
-private val BpMeasurementLocations = listOf(
-    BpRecordValues.MEASUREMENT_LOCATION_LEFT_UPPER_ARM,
-    BpRecordValues.MEASUREMENT_LOCATION_RIGHT_UPPER_ARM,
-    BpRecordValues.MEASUREMENT_LOCATION_LEFT_WRIST,
-    BpRecordValues.MEASUREMENT_LOCATION_RIGHT_WRIST,
-)
-
-internal fun bpBodyPositionLabelRes(position: Int): Int = when (position) {
-    BpRecordValues.BODY_POSITION_STANDING_UP -> R.string.bp_position_standing
-    BpRecordValues.BODY_POSITION_SITTING_DOWN -> R.string.bp_position_sitting
-    BpRecordValues.BODY_POSITION_LYING_DOWN -> R.string.bp_position_lying
-    else -> R.string.bp_position_reclining
-}
-
-internal fun bpMeasurementLocationLabelRes(location: Int): Int = when (location) {
-    BpRecordValues.MEASUREMENT_LOCATION_LEFT_WRIST -> R.string.bp_location_left_wrist
-    BpRecordValues.MEASUREMENT_LOCATION_RIGHT_WRIST -> R.string.bp_location_right_wrist
-    BpRecordValues.MEASUREMENT_LOCATION_LEFT_UPPER_ARM -> R.string.bp_location_left_arm
-    else -> R.string.bp_location_right_arm
 }

@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.imports.csv
 
+import tech.mmarca.openvitals.domain.model.BpRecordValues
+
 /** What the user decided each column means, and whether that is usable. Pure values. */
 
 /** What a column is used for. */
@@ -23,10 +25,13 @@ data class CsvColumnMapping(
     val role: CsvColumnRole = CsvColumnRole.IGNORE,
     /** Set only when [role] is [CsvColumnRole.METRIC]. */
     val metric: CsvImportMetric? = null,
+    /** Set only when [role] is [CsvColumnRole.METRIC] for the blood-pressure record group. */
+    val bloodPressureField: CsvBloodPressureField? = null,
     /** How this column's number becomes the canonical value. METRIC only. */
     val interpretation: CsvValueInterpretation? = null,
 ) {
-    val isMetric: Boolean get() = role == CsvColumnRole.METRIC && metric != null
+    val isMetric: Boolean get() = role == CsvColumnRole.METRIC &&
+        (metric != null || bloodPressureField != null)
 
     val isTimestamp: Boolean get() = role == CsvColumnRole.TIMESTAMP
 
@@ -44,9 +49,19 @@ data class CsvColumnMapping(
 data class CsvImportMapping(
     val columns: List<CsvColumnMapping>,
     val dateTime: CsvDateTimeSettings = CsvDateTimeSettings(),
+    /** Read for the body position and cuff location cells. */
+    val bloodPressureLabels: CsvBloodPressureLabels = CsvBloodPressureLabels(),
+    /** Used when the body position column is not imported or its cell matches no label. */
+    val defaultBodyPosition: Int = BpRecordValues.BODY_POSITION_UNKNOWN,
+    /** Used when the cuff location column is not imported or its cell matches no label. */
+    val defaultCuffLocation: Int = BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN,
 ) {
     /** Every column mapped to a metric, in column order. */
     val metricColumns: List<CsvColumnMapping> get() = columns.filter { it.isMetric }
+    val bloodPressureColumns: List<CsvColumnMapping>
+        get() = metricColumns.filter { it.bloodPressureField != null }
+    val hasBloodPressure: Boolean get() = bloodPressureColumns.isNotEmpty()
+    val recordCount: Int get() = metricColumns.count { it.metric != null } + if (hasBloodPressure) 1 else 0
 
     /** The single timestamp column, or null when none or several are set. */
     val timestampColumn: CsvColumnMapping?
@@ -68,7 +83,7 @@ data class CsvImportMapping(
     val requiredWritePermissions: Set<String>
         get() = metricColumns.mapNotNullTo(mutableSetOf()) { column ->
             column.metric?.let { CsvMetricCatalog[it]?.writePermission }
-        }
+        }.also { if (hasBloodPressure) it += CsvBloodPressureSpec.writePermission }
 
     /** Replaces the mapping for one column. */
     fun withColumn(column: CsvColumnMapping): CsvImportMapping = copy(
@@ -94,6 +109,9 @@ enum class CsvMappingIssue {
 
     /** More than one column claims to be the interval end. */
     MULTIPLE_END_TIMESTAMP_COLUMNS,
+
+    /** Blood pressure columns are mapped without both a systolic and a diastolic one. */
+    BLOOD_PRESSURE_NEEDS_SYSTOLIC_AND_DIASTOLIC,
 
     /** Body fat is given as a mass but no weight column is mapped to divide by. */
     MASS_SHARE_NEEDS_WEIGHT_COLUMN,
@@ -124,12 +142,20 @@ fun validateCsvMapping(
         issues += CsvMappingIssue.NO_METRIC_COLUMNS
     }
 
-    val seen = mutableSetOf<CsvImportMetric>()
+    val seen = mutableSetOf<Any>()
     for (column in metricColumns) {
-        if (!seen.add(column.metric!!)) {
+        val target = column.metric ?: column.bloodPressureField!!
+        if (!seen.add(target)) {
             issues += CsvMappingIssue.DUPLICATE_METRIC
             break
         }
+    }
+
+    val pressures = mapping.bloodPressureColumns.mapNotNull { it.bloodPressureField }.toSet()
+    if (pressures.isNotEmpty() &&
+        !pressures.containsAll(setOf(CsvBloodPressureField.SYSTOLIC, CsvBloodPressureField.DIASTOLIC))
+    ) {
+        issues += CsvMappingIssue.BLOOD_PRESSURE_NEEDS_SYSTOLIC_AND_DIASTOLIC
     }
 
     // Asked of the interpretation, not the metric: only a mass needs a weight column.

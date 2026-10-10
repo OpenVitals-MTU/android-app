@@ -28,6 +28,12 @@ enum class CsvImportDiagnosticReason {
     /** The end is not after the start, usually TimeFrom and TimeTo swapped. Interval metrics only. */
     END_NOT_AFTER_START,
 
+    /** Only one of the systolic and diastolic cells is filled. */
+    MISSING_BLOOD_PRESSURE_VALUE,
+
+    /** Systolic is not above diastolic, so the two columns are swapped or wrong. */
+    SYSTOLIC_NOT_ABOVE_DIASTOLIC,
+
     /** Health Connect refused the record. */
     WRITE_FAILED,
 }

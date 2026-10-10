@@ -2345,6 +2345,10 @@
     <string name="settings_csv_import_metric_blood_glucose">Glukoza we krwi</string>
     <string name="settings_csv_import_metric_vo2_max">VO₂ max</string>
     <string name="settings_csv_import_metric_steps">Kroki</string>
+    <string name="settings_csv_import_metric_bp_systolic">Skurczowe</string>
+    <string name="settings_csv_import_metric_bp_diastolic">Rozkurczowe</string>
+    <string name="settings_csv_import_metric_bp_body_position">Pozycja ciała</string>
+    <string name="settings_csv_import_metric_bp_cuff_location">Miejsce mankietu</string>
     <string name="settings_csv_import_value_label">Wartości są w</string>
     <string name="settings_csv_import_unit_kilograms">Kilogramach (kg)</string>
     <string name="settings_csv_import_unit_pounds">Funtach (lb)</string>

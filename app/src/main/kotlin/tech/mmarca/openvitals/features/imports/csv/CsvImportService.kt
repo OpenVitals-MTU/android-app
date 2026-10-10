@@ -89,7 +89,7 @@ class CsvImportService @Inject constructor(
                     conversion.diagnostics.forEach(::record)
                     progress = progress.copy(
                         rowsRead = progress.rowsRead + 1,
-                        rejected = progress.rejected + conversion.diagnostics.size,
+                        rejected = progress.rejected + if (conversion.diagnostics.isEmpty()) 0 else 1,
                         bytesRead = row.bytesRead,
                     )
 
