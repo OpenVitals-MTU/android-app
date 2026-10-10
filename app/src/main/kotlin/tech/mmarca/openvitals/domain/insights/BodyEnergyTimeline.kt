@@ -742,9 +742,7 @@ private fun resolveIntensityContext(
         inputs.observedMaxHeartRateBpm,
         heartRateSamples.maxOfOrNull { it.beatsPerMinute },
     ).maxOrNull()
-    // Tanaka (208 - 0.7*age), matching heart-rate recovery.
-    val ageMax = profile.ageYears(inputs.date)
-        ?.let { maxOf(1L, (208.0 - 0.7 * it).roundToInt().toLong()) }
+    val ageMax = profile.ageYears(inputs.date)?.let(::tanakaMaxHeartRate)
     val maxHeartRate = when {
         resting != null && observedMax != null && observedMax >= maxOf(150L, resting + 60L) -> observedMax
         ageMax != null -> ageMax

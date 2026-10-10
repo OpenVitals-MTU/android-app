@@ -251,10 +251,6 @@ private fun maxHeartRateContext(
     )
 }
 
-/** Tanaka (208 - 0.7*age), matching heart-rate recovery and Body Energy. */
-internal fun tanakaMaxHeartRate(ageYears: Int): Long =
-    (208.0 - 0.7 * ageYears).roundToInt().toLong().coerceAtLeast(1L)
-
 private fun List<HeartRateSample>.estimatedRestingHeartRate(): Long? {
     if (isEmpty()) return null
     val sorted = map { it.beatsPerMinute }.sorted()
