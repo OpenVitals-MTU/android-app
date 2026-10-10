@@ -13,7 +13,7 @@ import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /**
  * Keeps the heart rate sensor on and writes what it reports to the
- * [HeartRateStore], one sample every [MIN_SAMPLE_GAP_MILLIS] at most. Runs
+ * [MetricStore], one sample every [MIN_SAMPLE_GAP_MILLIS] at most. Runs
  * inside `WearAppService`, so it outlives the activity.
  *
  * The sensor is registered batched: the sensor hub buffers readings for up
@@ -23,7 +23,7 @@ import tech.mmarca.openvitals.wearlink.WearLinkProtocol
  */
 class HeartRateRecorder(
     context: Context,
-    private val store: HeartRateStore,
+    private val store: MetricStore,
     /** Every stored sample, for the sleep minute recorder. Called on this recorder's thread. */
     private val onSample: (epochMillis: Long, bpm: Int) -> Unit = { _, _ -> },
     /** False when the sensor reported no contact, an unreliable reading or 0 bpm. */
@@ -99,13 +99,13 @@ class HeartRateRecorder(
 
         if (at - lastStoredAt < MIN_SAMPLE_GAP_MILLIS) return
         lastStoredAt = at
-        store.insert(at, bpm)
+        store.put(WearMetrics.HEART_RATE, WearLinkProtocol.HeartRateSample(at, bpm))
         onSample(at, bpm)
         Log.d(TAG, "Stored $bpm bpm at $at")
 
         if (at - lastPrunedAt > PRUNE_EVERY_MILLIS) {
             lastPrunedAt = at
-            store.prune(at)
+            store.prune(WearMetrics.HEART_RATE, at)
         }
     }
 

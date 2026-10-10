@@ -35,9 +35,8 @@ class WearAppService : Service() {
     /** False when the system refused the foreground start: nothing may run then. */
     private var isForeground = false
 
-    private lateinit var store: HeartRateStore
+    private lateinit var store: MetricStore
     private lateinit var recorder: HeartRateRecorder
-    private lateinit var minuteStore: SleepMinuteStore
     private lateinit var minuteRecorder: SleepMinuteRecorder
     private lateinit var ppgLogger: PpgRawLogger
     private lateinit var trust: WearTrustStore
@@ -66,10 +65,11 @@ class WearAppService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        store = HeartRateStore(this)
+        store = MetricStore(this)
+        // Off the main thread: a week of heart rate is tens of thousands of rows.
+        Thread({ LegacyStoreImport.run(this, store) }, "LegacyStoreImport").start()
         ppgLogger = PpgRawLogger(this)
-        minuteStore = SleepMinuteStore(this)
-        minuteRecorder = SleepMinuteRecorder(this, minuteStore, isHeartRateRecording = { recorder.isRunning })
+        minuteRecorder = SleepMinuteRecorder(this, store, isHeartRateRecording = { recorder.isRunning })
         recorder = HeartRateRecorder(
             this,
             store,
@@ -80,8 +80,7 @@ class WearAppService : Service() {
         link = WearLinkServerHost(
             adapter = { getSystemService(BluetoothManager::class.java)?.adapter },
             trust = trust,
-            heartRates = store,
-            minutes = minuteStore,
+            store = store,
             localName = ::localName,
         )
         isForeground = startInForeground()

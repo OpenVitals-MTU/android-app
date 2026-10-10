@@ -47,6 +47,22 @@ and `:wear:compileDebugAndroidTestKotlin`. A dependency change in `wearlink/buil
 needs `./gradlew :wearlink:dependencies --write-locks` for its lockfile, like the other modules. The wear module uses the standard
 `debug` build type; it has no `ci` variant.
 
+The watch's instrumented tests (`wear/src/androidTest`, the metric store against real SQLite)
+are compiled by the gate but run only on a device. Do not use `connectedDebugAndroidTest` on a
+watch you wear: it uninstalls the app afterwards, which deletes the recorded data and the
+trusted phones. Install the two APKs over the app instead and run the runner detached, since
+a watch's Wi-Fi adb tends to drop while the app restarts:
+
+```sh
+./gradlew :wear:assembleDebug :wear:assembleDebugAndroidTest
+adb -s <watch> install -r wear/build/outputs/apk/debug/wear-debug.apk
+adb -s <watch> install -r -t wear/build/outputs/apk/androidTest/debug/wear-debug-androidTest.apk
+adb -s <watch> shell 'nohup am instrument -w tech.mmarca.openvitals.debug.test/androidx.test.runner.AndroidJUnitRunner > /data/local/tmp/ov-inst.txt 2>&1 &'
+adb -s <watch> shell cat /data/local/tmp/ov-inst.txt   # until it ends in OK or FAILURES
+```
+
+The run stops the app; open it on the watch again afterwards so its service restarts.
+
 CI mirrors the split. `.github/workflows/test.yml` runs `verifyCi` and skips
 changes that only touch `wear/`. `.github/workflows/wear-test.yml` runs `verifyWearCi` and
 triggers only on `wear/`, `wearlink/` and the shared build files they depend on. A change to
