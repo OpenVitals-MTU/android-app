@@ -75,6 +75,15 @@ data class WearOsSleepMinutePage(
     val hasMore: Boolean,
 )
 
+/** The steps the watch counted in the clock minute starting at [start]. */
+data class WearOsStepMinute(val start: Instant, val steps: Int)
+
+/** One page of a step pull. [hasMore] means the watch cut the reply at its limit. */
+data class WearOsStepPage(
+    val minutes: List<WearOsStepMinute>,
+    val hasMore: Boolean,
+)
+
 /**
  * Port for talking to the OpenVitals app on a Wear OS watch.
  *
@@ -113,4 +122,16 @@ interface WearOsNodePort {
         targetName: String?,
         since: Instant,
     ): WearOsSleepMinutePage?
+
+    /**
+     * Step minutes newer than [since], oldest first, up to the watch's page
+     * limit. An empty page from a watch app too old to count steps. Null when
+     * no bonded watch matches. Throws a [WearOsLinkFailure] for everything
+     * else the watch could not give.
+     */
+    suspend fun pullSteps(
+        targetAddress: String?,
+        targetName: String?,
+        since: Instant,
+    ): WearOsStepPage?
 }

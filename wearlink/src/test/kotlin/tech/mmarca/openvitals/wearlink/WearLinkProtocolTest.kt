@@ -146,10 +146,28 @@ class WearLinkProtocolTest {
         assertEquals(WearLinkProtocol.Request.Ping, WearLinkProtocol.parseRequest(" PING "))
         assertEquals(WearLinkProtocol.Request.HeartRateSince(10, 50), WearLinkProtocol.parseRequest("HR_SINCE 10 50"))
         assertEquals(WearLinkProtocol.Request.SleepMinutesSince(10, 2000), WearLinkProtocol.parseRequest("SM_SINCE 10 99999"))
+        assertEquals(WearLinkProtocol.Request.StepsSince(10, 2000), WearLinkProtocol.parseRequest("ST_SINCE 10 99999"))
         assertNull(WearLinkProtocol.parseRequest("HELLO 4 - x y"))
-        for (request in listOf(WearLinkProtocol.Request.Ping, WearLinkProtocol.Request.HeartRateSince(1, 2), WearLinkProtocol.Request.SleepMinutesSince(3, 4))) {
+        val requests = listOf(
+            WearLinkProtocol.Request.Ping,
+            WearLinkProtocol.Request.HeartRateSince(1, 2),
+            WearLinkProtocol.Request.SleepMinutesSince(3, 4),
+            WearLinkProtocol.Request.StepsSince(5, 6),
+        )
+        for (request in requests) {
             assertEquals(request, WearLinkProtocol.parseRequest(WearLinkProtocol.formatRequest(request)))
         }
+    }
+
+    @Test
+    fun `a step minute round-trips, and one off the minute, empty or past a sprint is refused`() {
+        val minute = WearLinkProtocol.StepMinute(1_700_000_040_000L, 112)
+
+        assertEquals(minute, WearLinkProtocol.parseStepMinute(WearLinkProtocol.formatStepMinute(minute)))
+        assertNull(WearLinkProtocol.parseStepMinute("ST 1700000041000 112"))
+        assertNull(WearLinkProtocol.parseStepMinute("ST 1700000040000 0"))
+        assertNull(WearLinkProtocol.parseStepMinute("ST 1700000040000 ${WearLinkProtocol.MAX_STEPS_PER_MINUTE + 1}"))
+        assertNull(WearLinkProtocol.parseStepMinute("HR 1700000040000 112"))
     }
 
     @Test

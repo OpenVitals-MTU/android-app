@@ -33,6 +33,10 @@ class WearMetricsTest {
         // SleepMinute holds arrays, so compare the lines rather than the objects.
         assertEquals(WearLinkProtocol.formatSleepMinute(minute), back?.let(WearLinkProtocol::formatSleepMinute))
         assertEquals(minute.epochMillis, WearMetrics.SLEEP_MINUTES.timeOf(minute))
+
+        val steps = WearLinkProtocol.StepMinute(1_791_568_860_000, 74)
+        assertEquals(steps, roundTrip(WearMetrics.STEPS, steps))
+        assertEquals(steps.epochMillis, WearMetrics.STEPS.timeOf(steps))
     }
 
     @Test
@@ -45,13 +49,14 @@ class WearMetricsTest {
     fun `keys are unique and are the capabilities the link announces`() {
         val keys = WearMetrics.ALL.map { it.key }
         assertEquals(keys.size, keys.toSet().size)
-        assertEquals(listOf(WearLinkProtocol.CAP_HEART_RATE, WearLinkProtocol.CAP_SLEEP_MINUTES), keys)
+        assertEquals(listOf(WearLinkProtocol.CAP_HEART_RATE, WearLinkProtocol.CAP_SLEEP_MINUTES, WearLinkProtocol.CAP_STEPS), keys)
     }
 
     @Test
     fun `a sample is final once taken, a minute is rewritten as it fills in`() {
         assertEquals(WearMetric.OnSameTime.KEEP, WearMetrics.HEART_RATE.onSameTime)
         assertEquals(WearMetric.OnSameTime.REPLACE, WearMetrics.SLEEP_MINUTES.onSameTime)
+        assertEquals(WearMetric.OnSameTime.REPLACE, WearMetrics.STEPS.onSameTime)
     }
 
     private fun <T> roundTrip(metric: WearMetric<T>, value: T): T? = metric.decode(metric.encode(value))

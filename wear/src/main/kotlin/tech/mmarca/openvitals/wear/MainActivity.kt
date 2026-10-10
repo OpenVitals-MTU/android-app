@@ -81,6 +81,7 @@ class MainActivity : ComponentActivity() {
     private fun requestMissingPermissions() {
         val wanted = buildList {
             add(WearPermissions.heartRate)
+            add(android.Manifest.permission.ACTIVITY_RECOGNITION)
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 add(android.Manifest.permission.BLUETOOTH_CONNECT)
             }

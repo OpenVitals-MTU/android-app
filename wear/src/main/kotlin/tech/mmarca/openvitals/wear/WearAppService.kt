@@ -18,14 +18,14 @@ import android.os.IBinder
 import android.util.Log
 
 /**
- * The watch's end of the phone link, and the host of the heart rate and
- * sleep minute recorders.
+ * The watch's end of the phone link, and the host of the heart rate, step
+ * and sleep minute recorders.
  *
  * The link itself is [WearLinkServerHost] over `:wearlink`; this service
  * keeps it, the recorders and the trust store alive as a foreground
  * service (a plain background service is stopped about a minute after the
- * activity closes). Its type is `connectedDevice`, plus `health` while the
- * heart rate sensor is in use. Bluetooth off closes the listener; on again
+ * activity closes). Its type is `connectedDevice`, plus `health` once the
+ * heart rate or the step counter is granted. Bluetooth off closes the listener; on again
  * reopens it; a bond change refreshes which trusted phones are still paired.
  *
  * The phone side is `app/.../devices/wearos/BluetoothWearOsNodePort`.
@@ -37,6 +37,7 @@ class WearAppService : Service() {
 
     private lateinit var store: MetricStore
     private lateinit var recorder: HeartRateRecorder
+    private lateinit var stepRecorder: StepRecorder
     private lateinit var minuteRecorder: SleepMinuteRecorder
     private lateinit var ppgLogger: PpgRawLogger
     private lateinit var trust: WearTrustStore
@@ -76,6 +77,7 @@ class WearAppService : Service() {
             onSample = minuteRecorder::noteHeartRate,
             onContact = minuteRecorder::noteHeartRateContact,
         )
+        stepRecorder = StepRecorder(this, store)
         trust = WearTrustStore(this).also { it.onPending = { pending -> WearPhoneRequests.notify(this, pending) } }
         link = WearLinkServerHost(
             adapter = { getSystemService(BluetoothManager::class.java)?.adapter },
@@ -114,7 +116,9 @@ class WearAppService : Service() {
         }
         link.start()
         // A grant made after the start: the type set grows to include health.
-        if (!recorder.isRunning && WearPermissions.hasHeartRate(this)) {
+        val newHeartRate = !recorder.isRunning && WearPermissions.hasHeartRate(this)
+        val newSteps = !stepRecorder.isRunning && WearPermissions.hasActivityRecognition(this)
+        if (newHeartRate || newSteps) {
             startInForeground()
             startRecordingIfPermitted()
         }
@@ -123,8 +127,8 @@ class WearAppService : Service() {
 
     /**
      * False when the system refuses, e.g. BLUETOOTH_CONNECT not granted on
-     * API 34+. Calling it again with the heart rate grant in place adds the
-     * `health` type to the running service.
+     * API 34+. Calling it again with the heart rate or step grant in place
+     * adds the `health` type to the running service.
      */
     private fun startInForeground(): Boolean {
         val manager = getSystemService(NotificationManager::class.java)
@@ -138,7 +142,8 @@ class WearAppService : Service() {
             .setOngoing(true)
             .build()
         var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && WearPermissions.hasHeartRate(this)) {
+        val sensing = WearPermissions.hasHeartRate(this) || WearPermissions.hasActivityRecognition(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && sensing) {
             types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
         }
         return try {
@@ -151,12 +156,10 @@ class WearAppService : Service() {
         }
     }
 
+    /** Starts each recorder whose grant is in and whose sensor the watch has; the rest wait for a later call. */
     private fun startRecordingIfPermitted() {
-        if (!WearPermissions.hasHeartRate(this)) {
-            Log.i(TAG, "Heart rate not granted; link only")
-            return
-        }
-        recorder.start()
+        if (WearPermissions.hasHeartRate(this)) recorder.start() else Log.i(TAG, "Heart rate not granted")
+        if (WearPermissions.hasActivityRecognition(this)) stepRecorder.start() else Log.i(TAG, "Steps not granted")
     }
 
     /** The watch's Bluetooth name, as the phone will show it. */
@@ -183,6 +186,7 @@ class WearAppService : Service() {
         if (isForeground) {
             unregisterReceiver(bluetoothReceiver)
             recorder.stop()
+            stepRecorder.stop()
             minuteRecorder.stop()
             ppgLogger.stop()
             WearLinkState.update { it.copy(ppgLogging = false) }

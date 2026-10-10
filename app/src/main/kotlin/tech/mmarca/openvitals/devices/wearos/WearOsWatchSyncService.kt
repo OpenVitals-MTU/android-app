@@ -18,6 +18,7 @@ import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPort
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncProgress
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncResult
+import tech.mmarca.openvitals.devices.core.sync.insertSkippingPresent
 import tech.mmarca.openvitals.devices.core.sync.sleepNightWindow
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.WearSleepMinute
@@ -33,6 +34,10 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
  * written before the next is asked for, and the cursor advanced after each
  * write. A sync that dies mid-way therefore loses nothing: the next one
  * resumes at the last page written, and a page written twice upserts.
+ *
+ * Then steps, the same way, except that each pull starts a few minutes
+ * before the cursor: the watch restates a minute while late steps for it
+ * arrive, and the re-pulled minutes that grew replace their records.
  *
  * Then sleep: the minutes from the start of the night the sleep cursor sits
  * in, every night those minutes touch estimated whole and written as one
@@ -100,6 +105,7 @@ class WearOsWatchSyncService(
         val progress = Progress(onProgress)
         try {
             if (!pullHeartRate(device, progress)) return notPaired(device)
+            if (!pullSteps(device, progress)) return notPaired(device)
             if (!pullSleep(device, progress)) return notPaired(device)
         } catch (error: CancellationException) {
             throw error
@@ -144,6 +150,28 @@ class WearOsWatchSyncService(
             if (!page.hasMore || newest == null) break
             if (++pages >= MAX_PAGES) break
         }
+        return true
+    }
+
+    /** False when no bonded watch matches. */
+    private suspend fun pullSteps(device: BleSensorDevice, progress: Progress): Boolean {
+        val cursor = cursors.stepsCursor(device.id)
+        var since = if (cursor == Instant.EPOCH) cursor else cursor.minusMillis(STEPS_RESTATED_MILLIS)
+        var pages = 0
+        var written = 0
+        while (true) {
+            val page = retryOnce { nodePort.pullSteps(device.address, device.bluetoothName, since) } ?: return false
+            progress.page()
+            val newest = page.minutes.maxOfOrNull { it.start }
+            if (newest != null) {
+                written += importRepository.insertSkippingPresent(WearOsStepsImport.records(page.minutes))
+                if (newest.isAfter(cursors.stepsCursor(device.id))) cursors.setStepsCursor(device.id, newest)
+                since = newest
+            }
+            if (!page.hasMore || newest == null) break
+            if (++pages >= MAX_PAGES) break
+        }
+        WearOsLog.log("steps: $written minute(s) written")
         return true
     }
 
@@ -264,5 +292,8 @@ class WearOsWatchSyncService(
         const val MAX_PAGES = 1000
 
         const val RETRY_DELAY_MILLIS = 1_500L
+
+        /** How far back a step pull reaches past its cursor: a minute is restated for up to its batch latency. */
+        const val STEPS_RESTATED_MILLIS = 5 * 60_000L
     }
 }

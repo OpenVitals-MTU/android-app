@@ -72,6 +72,8 @@ object WearLinkProtocol {
     const val HEART_RATE: String = "HR"
     const val SLEEP_MINUTES_SINCE: String = "SM_SINCE"
     const val SLEEP_MINUTE: String = "SM"
+    const val STEPS_SINCE: String = "ST_SINCE"
+    const val STEP_MINUTE: String = "ST"
     const val END: String = "END"
 
     /** Longer than this a line is a protocol violation; the reader closes rather than buffers. */
@@ -82,6 +84,7 @@ object WearLinkProtocol {
 
     const val CAP_HEART_RATE: String = "hr"
     const val CAP_SLEEP_MINUTES: String = "sm"
+    const val CAP_STEPS: String = "st"
     const val NO_CAPABILITIES: String = "-"
 
     /** The phone's opening line. */
@@ -123,6 +126,7 @@ object WearLinkProtocol {
         data object Ping : Request()
         data class HeartRateSince(val sinceEpochMillis: Long, val limit: Int) : Request()
         data class SleepMinutesSince(val sinceEpochMillis: Long, val limit: Int) : Request()
+        data class StepsSince(val sinceEpochMillis: Long, val limit: Int) : Request()
     }
 
     fun formatHello(hello: Hello): String =
@@ -177,6 +181,7 @@ object WearLinkProtocol {
         Request.Ping -> PING
         is Request.HeartRateSince -> formatHeartRateRequest(request.sinceEpochMillis, request.limit)
         is Request.SleepMinutesSince -> formatSleepMinutesRequest(request.sinceEpochMillis, request.limit)
+        is Request.StepsSince -> formatStepsRequest(request.sinceEpochMillis, request.limit)
     }
 
     /** Null unless [line] is a well-formed request. */
@@ -184,6 +189,9 @@ object WearLinkProtocol {
         if (isPing(line)) return Request.Ping
         parseHeartRateRequest(line)?.let { return Request.HeartRateSince(it.sinceEpochMillis, it.limit) }
         parseSleepMinutesRequest(line)?.let { return Request.SleepMinutesSince(it.sinceEpochMillis, it.limit) }
+        parseSinceRequest(line, STEPS_SINCE, MAX_STEP_MINUTES_PER_REQUEST)?.let { (since, limit) ->
+            return Request.StepsSince(since, limit)
+        }
         return null
     }
 
@@ -212,11 +220,21 @@ object WearLinkProtocol {
     /** The most minutes one `SM_SINCE` reply carries: a day and a half. The phone pages past it. */
     const val MAX_MINUTES_PER_REQUEST: Int = 2000
 
+    /** The most step minutes one `ST_SINCE` reply carries. The phone pages past it. */
+    const val MAX_STEP_MINUTES_PER_REQUEST: Int = 2000
+
     data class HeartRateRequest(val sinceEpochMillis: Long, val limit: Int)
 
     data class HeartRateSample(val epochMillis: Long, val bpm: Int)
 
     data class SleepMinutesRequest(val sinceEpochMillis: Long, val limit: Int)
+
+    /**
+     * The steps the watch counted in one clock minute, keyed on the minute's
+     * start. A minute is restated while late steps for it arrive; the count
+     * only grows.
+     */
+    data class StepMinute(val epochMillis: Long, val steps: Int)
 
     /** What the watch said about one minute. The code is what goes on the wire. */
     enum class MinuteKind(val code: String) {
@@ -289,6 +307,21 @@ object WearLinkProtocol {
         parseSinceRequest(line, SLEEP_MINUTES_SINCE, MAX_MINUTES_PER_REQUEST)?.let { (since, limit) ->
             SleepMinutesRequest(since, limit)
         }
+
+    fun formatStepsRequest(sinceEpochMillis: Long, limit: Int): String =
+        "$STEPS_SINCE $sinceEpochMillis ${limit.coerceIn(1, MAX_STEP_MINUTES_PER_REQUEST)}"
+
+    fun formatStepMinute(minute: StepMinute): String = "$STEP_MINUTE ${minute.epochMillis} ${minute.steps}"
+
+    /** Null unless [line] is a well-formed `ST` line: a minute start and a plausible count. */
+    fun parseStepMinute(line: String): StepMinute? {
+        val fields = fields(line)
+        if (fields.size != 3 || fields[0] != STEP_MINUTE) return null
+        val at = fields[1].toLongOrNull() ?: return null
+        val steps = fields[2].toIntOrNull() ?: return null
+        if (at <= 0 || at % MINUTE_MILLIS != 0L || steps !in 1..MAX_STEPS_PER_MINUTE) return null
+        return StepMinute(at, steps)
+    }
 
     fun formatSample(epochMillis: Long, bpm: Int): String = "$HEART_RATE $epochMillis $bpm"
 
@@ -396,6 +429,11 @@ object WearLinkProtocol {
 
     /** Eighteen hours: the widest UTC offset there is. */
     private const val MAX_OFFSET_SECONDS = 18 * 3600
+
+    private const val MINUTE_MILLIS = 60_000L
+
+    /** Sprinting cadence is about 200 a minute; past this the counter jumped, not the wearer. */
+    const val MAX_STEPS_PER_MINUTE: Int = 400
 
     /** Outside this range the sensor is reporting noise, not a heart. */
     const val MIN_BPM: Int = 25

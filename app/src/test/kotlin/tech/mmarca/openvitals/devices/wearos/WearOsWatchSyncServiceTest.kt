@@ -63,6 +63,10 @@ class WearOsWatchSyncServiceTest {
     private val sleepPages = ArrayDeque<WearOsSleepMinutePage?>()
     private val sleepPullsSince = mutableListOf<Instant>()
     private var sleepPullFailure: Throwable? = null
+
+    /** Step pages the same way; with none queued the watch answers an empty page. */
+    private val stepPages = ArrayDeque<WearOsStepPage>()
+    private val stepPullsSince = mutableListOf<Instant>()
     private val nodePort = object : WearOsNodePort {
         override suspend fun checkStatus(targetAddress: String?, targetName: String?) = WearOsCompanionStatus()
         override suspend fun pullHeartRate(targetAddress: String?, targetName: String?, since: Instant): WearOsHeartRatePage? {
@@ -79,6 +83,11 @@ class WearOsWatchSyncServiceTest {
                 return WearOsSleepMinutePage(emptyList(), hasMore = false)
             }
             return sleepPages.removeFirst()
+        }
+
+        override suspend fun pullSteps(targetAddress: String?, targetName: String?, since: Instant): WearOsStepPage? {
+            stepPullsSince += since
+            return stepPages.removeFirstOrNull() ?: WearOsStepPage(emptyList(), hasMore = false)
         }
     }
 
@@ -137,6 +146,30 @@ class WearOsWatchSyncServiceTest {
         coVerify(exactly = 1) { deviceRepository.markSynced(WATCH.id, any()) }
         assertEquals(DeviceSyncPhase.HANDSHAKE, progress.first().phase)
         assertEquals(DeviceSyncPhase.COMPLETE, progress.last().phase)
+    }
+
+    @Test
+    fun `step minutes become step records and the next pull reaches back over restated minutes`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        stepPages += WearOsStepPage(
+            listOf(WearOsStepMinute(t0, 40), WearOsStepMinute(t0.plusSeconds(60), 12)),
+            hasMore = false,
+        )
+        val written = slot<List<androidx.health.connect.client.records.Record>>()
+        coEvery { importRepository.insertImportedRecords(capture(written)) } returns Unit
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(Instant.EPOCH, stepPullsSince.single())
+        assertEquals(t0.plusSeconds(60), cursors.stepsCursor(WATCH.id))
+        assertEquals(listOf(40L, 12L), written.captured.map { (it as androidx.health.connect.client.records.StepsRecord).count })
+
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        service().sync(WATCH, Duration.ZERO, null)
+
+        // Five minutes before the cursor, so a minute the watch restated since is pulled again.
+        assertEquals(t0.plusSeconds(60).minusSeconds(300), stepPullsSince.last())
+        assertEquals(t0.plusSeconds(60), cursors.stepsCursor(WATCH.id))
     }
 
     @Test
