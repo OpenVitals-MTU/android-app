@@ -18,7 +18,7 @@ import java.util.TimeZone
 
 /**
  * Records the sleep pipeline's input, one row per clock minute, into the
- * [SleepMinuteStore]. The math is [MinuteAggregator]'s; this class is the
+ * [MetricStore]. The math is [MinuteAggregator]'s; this class is the
  * Android around it: the batched accelerometer, the off-body sensor, the
  * charger and screen broadcasts, and the heart rate the other recorder
  * hands over. Runs inside `WearAppService`, so it outlives the activity.
@@ -33,7 +33,7 @@ import java.util.TimeZone
  */
 class SleepMinuteRecorder(
     private val context: Context,
-    private val store: SleepMinuteStore,
+    private val store: MetricStore,
     /** Whether heart rate is being recorded: only then is a minute without one a sign of no wrist. */
     isHeartRateRecording: () -> Boolean,
 ) : SensorEventListener {
@@ -203,11 +203,11 @@ class SleepMinuteRecorder(
         if (hold == BedtimeHold.HOLDING) applyHold()
         val closed = aggregator.close(now)
         if (closed.isEmpty()) return
-        for (minute in closed) store.upsert(minute)
+        store.putAll(WearMetrics.SLEEP_MINUTES, closed)
         Log.d(TAG, "Stored ${closed.size} minute(s) up to ${closed.last().epochMillis}")
         if (now - lastPrunedAt > PRUNE_EVERY_MILLIS) {
             lastPrunedAt = now
-            store.prune(now)
+            store.prune(WearMetrics.SLEEP_MINUTES, now)
         }
     }
 

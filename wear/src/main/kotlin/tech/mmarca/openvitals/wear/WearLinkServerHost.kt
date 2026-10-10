@@ -17,17 +17,16 @@ import tech.mmarca.openvitals.wearlink.WearLinkServer
  * Hosts the RFCOMM listener and runs `WearLinkServer` for every phone that
  * connects, one thread per connection. All the protocol lives in
  * `:wearlink`; this class is the Bluetooth around it and the hands the
- * stores to its request handler.
+ * store to its request handler.
  */
 class WearLinkServerHost(
     private val adapter: () -> BluetoothAdapter?,
     trust: WearTrustStore,
-    heartRates: HeartRateStore,
-    minutes: SleepMinuteStore,
+    store: MetricStore,
     private val localName: () -> String,
     private val state: WearLinkState = WearLinkState,
 ) {
-    private val server = WearLinkServer(trust, Handler(heartRates, minutes, localName))
+    private val server = WearLinkServer(trust, Handler(store, localName))
 
     @Volatile
     private var serverSocket: BluetoothServerSocket? = null
@@ -107,22 +106,22 @@ class WearLinkServerHost(
     }
 
     private class Handler(
-        private val heartRates: HeartRateStore,
-        private val minutes: SleepMinuteStore,
+        private val store: MetricStore,
         private val localName: () -> String,
     ) : WearLinkRequestHandler {
         override fun localName(): String = localName.invoke()
 
-        override fun capabilities(): Set<String> = setOf(WearLinkProtocol.CAP_HEART_RATE, WearLinkProtocol.CAP_SLEEP_MINUTES)
+        override fun capabilities(): Set<String> = WearMetrics.ALL.mapTo(LinkedHashSet()) { it.key }
 
-        override fun heartRateSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.HeartRateSample> {
+        override fun heartRateSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.HeartRateSample> =
+            page(WearMetrics.HEART_RATE, sinceEpochMillis, limit)
+
+        override fun sleepMinutesSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.SleepMinute> =
+            page(WearMetrics.SLEEP_MINUTES, sinceEpochMillis, limit)
+
+        private fun <T> page(metric: WearMetric<T>, sinceEpochMillis: Long, limit: Int): Page<T> {
             // One more than asked tells whether the limit cut the reply.
-            val samples = heartRates.since(sinceEpochMillis, limit + 1)
-            return Page(samples.take(limit), samples.size > limit)
-        }
-
-        override fun sleepMinutesSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.SleepMinute> {
-            val rows = minutes.since(sinceEpochMillis, limit + 1)
+            val rows = store.since(metric, sinceEpochMillis, limit + 1)
             return Page(rows.take(limit), rows.size > limit)
         }
     }
