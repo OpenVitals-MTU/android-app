@@ -4,9 +4,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -41,6 +43,7 @@ fun MindfulnessEntryScreen(
         sound = state.backgroundSound,
         isPlaying = state.isTimerRunning,
     )
+    MindfulnessKeepScreenOnEffect(isTimerRunning = state.isTimerRunning)
 
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
         if (!state.isEditMode) {
@@ -74,6 +77,20 @@ fun MindfulnessEntryScreen(
                 onAddEntry = viewModel::addManualEntry,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
+        }
+    }
+}
+
+// The timer counts down in the ViewModel, so letting the screen sleep would pause the session.
+@Composable
+private fun MindfulnessKeepScreenOnEffect(isTimerRunning: Boolean) {
+    if (!isTimerRunning) return
+    val view = LocalView.current
+    DisposableEffect(view) {
+        val previousKeepScreenOn = view.keepScreenOn
+        view.keepScreenOn = true
+        onDispose {
+            view.keepScreenOn = previousKeepScreenOn
         }
     }
 }
