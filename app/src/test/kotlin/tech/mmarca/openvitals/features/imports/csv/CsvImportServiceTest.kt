@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.imports.csv
 
+import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.WeightRecord
 import io.mockk.coEvery
@@ -14,6 +15,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
 private val Dialect = CsvDialect(fieldDelimiter = ",", eol = "\n")
 
@@ -149,6 +151,35 @@ class CsvImportServiceTest {
 
         assertEquals(3, result.progress.rowsRead)
         assertEquals(2, harness.inserted.size)
+    }
+
+    @Test
+    fun `two foods logged at the same time are both written, and the next run replaces them`() = runTest {
+        val content = "Date,Food,Energy (kcal)\n2026-10-04 12:30:00,Oatmeal,350\n2026-10-04 12:30:00,Milk,120\n"
+        val mapping = CsvImportMapping(
+            columns = listOf(
+                CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
+                CsvColumnMapping(columnIndex = 1, role = CsvColumnRole.FOOD_NAME),
+                CsvColumnMapping(columnIndex = 2, role = CsvColumnRole.NUTRIENT, nutrient = NutritionNutrient.ENERGY),
+            ),
+            dateTime = CsvDateTimeSettings(format = CsvDateTimeFormat.YEAR_FIRST, zone = CsvTimeZoneMode.UTC),
+        )
+        suspend fun runWith(harness: RepositoryHarness) = service(harness).run(
+            source = sourceOf(content),
+            totalBytes = content.length.toLong(),
+            dialect = Dialect,
+            mapping = mapping,
+        )
+
+        val first = RepositoryHarness()
+        assertEquals(2, runWith(first).progress.written)
+        val ids = first.inserted.map { it.metadata.clientRecordId }
+        assertEquals(listOf("Oatmeal", "Milk"), first.inserted.map { (it as NutritionRecord).name })
+        assertEquals(2, ids.toSet().size)
+
+        val second = RepositoryHarness(existingIds = ids.filterNotNull().toSet())
+        assertEquals(2, runWith(second).progress.alreadyPresent)
+        assertEquals(ids, second.inserted.map { it.metadata.clientRecordId })
     }
 
     @Test

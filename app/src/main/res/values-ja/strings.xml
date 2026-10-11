@@ -2314,11 +2314,11 @@
     <string name="settings_fit_import_folder_grant">インポート権限を許可</string>
     <string name="settings_fit_import_error">FIT インポートの警告: %1$s</string>
     <string name="settings_csv_import_title">CSV インポーター</string>
-    <string name="settings_csv_import_body">CSV ファイルから身体測定をインポートします。たとえばスマート体重計の体重・体組成エクスポートなど。各列の意味は自分で選びます。</string>
+    <string name="settings_csv_import_body">CSV ファイルから測定値や栄養をインポートします。たとえばスマート体重計の体重エクスポートや、食事ごとに 1 行のスプレッドシートなど。各列の意味は自分で選びます。</string>
     <string name="settings_csv_import_action">CSV ファイルをインポート</string>
     <string name="settings_csv_import_screen_title">CSV インポーター</string>
     <string name="settings_csv_import_pick_title">CSV ファイルを選択</string>
-    <string name="settings_csv_import_pick_body">CSV エクスポートを選び、その列を身体測定に対応付けます。確認するまで何も書き込まれません。</string>
+    <string name="settings_csv_import_pick_body">CSV ファイルを選び、その列を測定値または栄養素に対応付けます。確認するまで何も書き込まれません。</string>
     <string name="settings_csv_import_pick_action">CSV ファイルを選択</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d 列</string>
     <string name="settings_csv_import_continue">続行</string>
@@ -2339,6 +2339,7 @@
     <string name="settings_csv_import_role_ignore">インポートしない</string>
     <string name="settings_csv_import_role_timestamp">日時</string>
     <string name="settings_csv_import_role_end_timestamp">終了日時</string>
+    <string name="settings_csv_import_role_food_name">食品名</string>
     <string name="settings_csv_import_interval_end_hint">各行は日時から「終了日時」列までの期間になります。この列がない場合、1 行は 1 分として扱います。</string>
     <string name="settings_csv_import_metric_weight">体重</string>
     <string name="settings_csv_import_metric_body_fat">体脂肪</string>
@@ -2380,8 +2381,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">ミリグラム/デシリットル (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/分</string>
     <string name="settings_csv_import_unit_count">カウント</string>
+    <string name="settings_csv_import_unit_kilocalories">キロカロリー (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">キロジュール (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">ミリグラム (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">マイクログラム (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">%1$s の質量（体重列に対する割合）</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect は体脂肪をパーセントで保存するため、同じ行で測定した体重から算出します。</string>
+    <string name="settings_csv_import_nutrient_hint">1 行の栄養素の列はすべて 1 つの食事の記録になります。</string>
     <string name="settings_csv_import_date_time_title">日時</string>
     <string name="settings_csv_import_date_format_label">形式</string>
     <string name="settings_csv_import_date_format_auto">自動検出</string>
@@ -2408,6 +2414,7 @@
     <string name="settings_csv_import_issue_needs_weight">質量で与えられた体脂肪から割合を求めるには、同じファイルに体重列が必要です。</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">サンプルした行のどれもこの日付形式に一致しません。</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">終了日時を含められる列は 1 つだけです。</string>
+    <string name="settings_csv_import_issue_multiple_food_names">食品名を含められる列は 1 つだけです。</string>
     <string name="settings_csv_import_confirm_title">インポートの準備完了</string>
     <string name="settings_csv_import_confirm_summary">%1$s · 1 行あたり %2$d 項目</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s 〜 %3$s</string>

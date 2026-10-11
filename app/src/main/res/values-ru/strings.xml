@@ -2263,11 +2263,11 @@
     <string name="settings_fit_import_folder_grant">Предоставить разрешения на импорт</string>
     <string name="settings_fit_import_error">Предупреждение об импорте FIT: %1$s</string>
     <string name="settings_csv_import_title">Импортёр CSV</string>
-    <string name="settings_csv_import_body">Импортируйте измерения тела из CSV-файла — например, экспорт веса и состава тела с умных весов. Вы сами указываете назначение каждого столбца.</string>
+    <string name="settings_csv_import_body">Импортируйте измерения или данные о питании из CSV-файла — например, экспорт веса с умных весов или таблицу с одной строкой на приём пищи. Вы сами указываете назначение каждого столбца.</string>
     <string name="settings_csv_import_action">Импортировать CSV-файл</string>
     <string name="settings_csv_import_screen_title">Импортёр CSV</string>
     <string name="settings_csv_import_pick_title">Выбрать CSV-файл</string>
-    <string name="settings_csv_import_pick_body">Выберите экспорт CSV и сопоставьте его столбцы с измерениями тела. До подтверждения данные не записываются.</string>
+    <string name="settings_csv_import_pick_body">Выберите CSV-файл и сопоставьте его столбцы с измерениями или питательными веществами. До подтверждения данные не записываются.</string>
     <string name="settings_csv_import_pick_action">Выбрать CSV-файл</string>
     <string name="settings_csv_import_file_label">%1$s · столбцов: %2$d</string>
     <string name="settings_csv_import_continue">Продолжить</string>
@@ -2288,6 +2288,7 @@
     <string name="settings_csv_import_role_ignore">Не импортируется</string>
     <string name="settings_csv_import_role_timestamp">Дата и время</string>
     <string name="settings_csv_import_role_end_timestamp">Дата и время окончания</string>
+    <string name="settings_csv_import_role_food_name">Название продукта</string>
     <string name="settings_csv_import_interval_end_hint">Каждая строка охватывает период от столбца «Дата и время» до столбца «Дата и время окончания». Если столбец окончания отсутствует, строка считается одноминутным измерением.</string>
     <string name="settings_csv_import_metric_weight">Вес</string>
     <string name="settings_csv_import_metric_body_fat">Процент жира</string>
@@ -2329,8 +2330,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Миллиграммы на децилитр (мг/дл)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">мл/кг/мин</string>
     <string name="settings_csv_import_unit_count">Количество</string>
+    <string name="settings_csv_import_unit_kilocalories">Килокалории (ккал)</string>
+    <string name="settings_csv_import_unit_kilojoules">Килоджоули (кДж)</string>
+    <string name="settings_csv_import_unit_milligrams">Миллиграммы (мг)</string>
+    <string name="settings_csv_import_unit_micrograms">Микрограммы (мкг)</string>
     <string name="settings_csv_import_interpretation_mass_share">Масса в %1$s как доля значения в столбце веса</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect хранит процент жира в организме в виде процентного значения, поэтому он рассчитывается на основе веса, измеренного в той же строке.</string>
+    <string name="settings_csv_import_nutrient_hint">Все столбцы питательных веществ одной строки становятся одной записью еды.</string>
     <string name="settings_csv_import_date_time_title">Дата и время</string>
     <string name="settings_csv_import_date_format_label">Формат</string>
     <string name="settings_csv_import_date_format_auto">Определять автоматически</string>
@@ -2357,6 +2363,7 @@
     <string name="settings_csv_import_issue_needs_weight">Для расчёта процента жира, указанного как масса, в этом же файле должен быть столбец с весом.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">Ни одна из проверенных строк не соответствует этому формату даты.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Только один столбец может содержать дату и время окончания.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Только один столбец может содержать название продукта.</string>
     <string name="settings_csv_import_confirm_title">Готово к импорту</string>
     <string name="settings_csv_import_confirm_summary">%1$s · измерений в строке: %2$d</string>
     <string name="settings_csv_import_confirm_range">%1$s: с %2$s по %3$s</string>

@@ -23,6 +23,7 @@ import tech.mmarca.openvitals.domain.model.HydrationReminderConfig
 import tech.mmarca.openvitals.domain.model.LegacyOpenVitalsCarbsEntryName
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
+import tech.mmarca.openvitals.domain.model.CsvNutritionClientRecordPrefix
 import tech.mmarca.openvitals.domain.model.OpenVitalsFoodClientRecordPrefix
 import tech.mmarca.openvitals.domain.model.OpenVitalsManualNutritionClientRecordPrefix
 import tech.mmarca.openvitals.domain.model.WeightEntry
@@ -346,6 +347,7 @@ private fun List<NutritionEntry>.toHydrationNutritionOnlyEntries(
             entry.name != LegacyOpenVitalsCarbsEntryName &&
             !entry.isOpenVitalsFoodEntry() &&
             !entry.isOpenVitalsManualNutritionEntry() &&
+            !entry.isCsvImportedNutritionEntry() &&
             entry.isStandaloneHydrationNutrition(hydrationEntries)
     }.map { entry ->
         HydrationEntry(
@@ -369,6 +371,10 @@ private fun NutritionEntry.isOpenVitalsFoodEntry(): Boolean =
 /** Typed into the nutrition entry form: totals, not a drink. */
 private fun NutritionEntry.isOpenVitalsManualNutritionEntry(): Boolean =
     clientRecordId?.startsWith(OpenVitalsManualNutritionClientRecordPrefix) == true
+
+/** A row of a nutrition spreadsheet imported from CSV: a food or a day's totals, not a drink. */
+private fun NutritionEntry.isCsvImportedNutritionEntry(): Boolean =
+    clientRecordId?.startsWith(CsvNutritionClientRecordPrefix) == true
 
 private fun NutritionEntry.shouldAppearInBeverageHistory(): Boolean =
     isOpenVitalsEntry ||
