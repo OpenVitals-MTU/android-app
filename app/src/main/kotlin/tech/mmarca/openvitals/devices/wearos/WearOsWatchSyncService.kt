@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.devices.wearos
 
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.SleepSessionRecord
 import java.time.Instant
@@ -171,6 +172,9 @@ class WearOsWatchSyncService(
         var since = if (cursor == Instant.EPOCH) cursor else cursor.minusMillis(STEPS_RESTATED_MILLIS)
         var pages = 0
         var written = 0
+        var pulledSteps = 0
+        var energyMinutes = 0
+        var energyKcal = 0.0
         val weight = weightKg()
         while (true) {
             val page = retryOnce { nodePort.pullSteps(device.address, device.bluetoothName, since) } ?: return false
@@ -179,7 +183,11 @@ class WearOsWatchSyncService(
             if (newest != null) {
                 written += importRepository.insertSkippingPresent(WearOsStepsImport.records(page.minutes))
                 writeEstimates("cadence", WearOsStepsImport.cadenceRecords(page.minutes))
-                writeEstimates("walking energy", WearOsStepsImport.activeCaloriesRecords(page.minutes, weight))
+                val energy = WearOsStepsImport.activeCaloriesRecords(page.minutes, weight)
+                writeEstimates("walking energy", energy)
+                pulledSteps += page.minutes.sumOf { it.steps }
+                energyMinutes += energy.size
+                energyKcal += energy.sumOf { (it as ActiveCaloriesBurnedRecord).energy.inKilocalories }
                 if (weight == null && !progress.missingBodyWeight) {
                     WearOsLog.log("steps: no body weight, so no walking energy")
                     progress.missingBodyWeight = true
@@ -190,7 +198,11 @@ class WearOsWatchSyncService(
             if (!page.hasMore || newest == null) break
             if (++pages >= MAX_PAGES) break
         }
-        WearOsLog.log("steps: $written minute(s) written")
+        // The watch has no screen for these yet; this line is where a tester reads them.
+        WearOsLog.log(
+            "steps: $written minute(s) written, $pulledSteps steps pulled (re-pulled minutes count again); " +
+                if (weight == null) "no walking energy" else "walking energy ${"%.1f".format(energyKcal)} kcal over $energyMinutes minute(s) at $weight kg",
+        )
         return true
     }
 
