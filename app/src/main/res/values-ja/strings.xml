@@ -3748,6 +3748,7 @@
     <string name="settings_watch_wearos_sync_now">ウォッチを同期</string>
     <string name="settings_watch_wearos_syncing">ウォッチを同期しています…</string>
     <string name="settings_watch_wearos_synced_none">ウォッチに新しいデータはありません</string>
+    <string name="settings_watch_wearos_needs_weight">歩行カロリーは推定されていません。体のプロフィールに体重を追加するか、Health Connect に記録してください。</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d 件の心拍数サンプルを同期しました</item>
         <item quantity="other">%1$d 件の心拍数サンプルを同期しました</item>

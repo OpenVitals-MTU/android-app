@@ -219,6 +219,13 @@ internal fun WearOsSyncCard(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
+                if (sync.lastMissingBodyWeight) {
+                    Text(
+                        text = stringResource(R.string.settings_watch_wearos_needs_weight),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             sync.error.resolve()?.let { message ->
                 Text(

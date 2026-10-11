@@ -3682,6 +3682,7 @@
     <string name="settings_watch_wearos_sync_now">同步手表</string>
     <string name="settings_watch_wearos_syncing">正在同步手表…</string>
     <string name="settings_watch_wearos_synced_none">手表上没有新数据</string>
+    <string name="settings_watch_wearos_needs_weight">未估算步行卡路里：请在身体档案中添加体重，或在 Health Connect 中记录体重。</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">已同步 %1$d 个心率样本</item>
         <item quantity="other">已同步 %1$d 个心率样本</item>
