@@ -10,6 +10,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.provider.Settings
 import android.util.Log
+import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /**
  * Writes the steps the hub's step counter (`TYPE_STEP_COUNTER`) reports into
@@ -51,6 +52,7 @@ class StepRecorder(
             // The total is only comparable within one boot; after a reboot the counter starts again.
             val lastTotal = if (prefs.getInt(KEY_BOOT, NO_BOOT) == boot) prefs.getLong(KEY_TOTAL, 0L) else null
             counter = StepMinuteCounter(lastTotal, store.latest(WearMetrics.STEPS))
+            Log.i(TAG, if (lastTotal == null) "New boot: the first reading sets the baseline" else "Continuing from total $lastTotal")
         }
         val registered = try {
             sensorManager.registerListener(
@@ -92,6 +94,7 @@ class StepRecorder(
         prefs.edit().putInt(KEY_BOOT, boot).putLong(KEY_TOTAL, total).apply()
         if (minute == null) return
         store.put(WearMetrics.STEPS, minute)
+        logFinishedMinute(minute)
 
         if (at - lastPrunedAt > PRUNE_EVERY_MILLIS) {
             lastPrunedAt = at
@@ -100,6 +103,20 @@ class StepRecorder(
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+
+    private var lastRow: WearLinkProtocol.StepMinute? = null
+
+    /**
+     * One line per minute, written once the next minute starts: the watch
+     * has no screen for steps yet, so `adb logcat -s StepRecorder` is where
+     * a tester reads them. A late batch may still add to a logged minute.
+     */
+    private fun logFinishedMinute(row: WearLinkProtocol.StepMinute) {
+        val previous = lastRow
+        lastRow = row
+        if (previous == null || previous.epochMillis == row.epochMillis) return
+        Log.i(TAG, "${java.time.Instant.ofEpochMilli(previous.epochMillis)}: ${previous.steps} steps")
+    }
 
     private companion object {
         const val TAG = "StepRecorder"
