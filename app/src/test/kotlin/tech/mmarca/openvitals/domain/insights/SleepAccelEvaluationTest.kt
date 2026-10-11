@@ -225,6 +225,9 @@ class SleepAccelEvaluationTest {
                 "scorer: HR 1.0, angle 0.5" to config.copy(scorer = scorer.copy(heartRateVolatilityWeight = 1.0f, angleMovingWeight = 0.5f)),
                 "scorer: Webster 1 pass" to config.copy(scorer = scorer.copy(websterPasses = 1)),
                 "scorer: wake score 1.2" to config.copy(scorer = scorer.copy(wakeScore = 1.2f)),
+                "scorer: no small motion" to config.copy(scorer = scorer.copy(microMotionWeight = 0f)),
+                "scorer: small motion 0.5 deg, w 0.4" to config.copy(scorer = scorer.copy(microMotionDeg = 0.5f, microMotionWeight = 0.4f)),
+                "scorer: small motion weight 1.0" to config.copy(scorer = scorer.copy(microMotionWeight = 1.0f)),
                 "stages: no LIDS" to config.copy(stages = config.stages.copy(lidsWeight = 0f)),
                 "stages: LIDS 0.6" to config.copy(stages = config.stages.copy(lidsWeight = 0.6f)),
             )
