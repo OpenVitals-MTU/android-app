@@ -26,13 +26,18 @@ enum class ReportValueKind {
 
 /**
  * The metrics a report can carry: [DashboardMetric] minus the four with no
- * exportable daily series. The cycle's series is the cycle day. Values stay in storage units until render.
+ * exportable daily series, plus every other nutrient Health Connect stores.
+ * The cycle's series is the cycle day. Values stay in storage units until
+ * render, except caffeine, read in milligrams.
  */
 enum class ReportMetric(
-    val dashboardMetric: DashboardMetric,
+    /** The dashboard tile this mirrors. Null for the nutrient breakdown, which has none. */
+    val dashboardMetric: DashboardMetric?,
     val section: ReportSection,
     val valueKind: ReportValueKind,
     val unitQuantity: UnitQuantity? = null,
+    /** The nutrient a nutrition metric reads from the daily nutrition totals. */
+    val nutrient: NutritionNutrient? = null,
 ) {
     STEPS(DashboardMetric.STEPS, ReportSection.ACTIVITY, ReportValueKind.SUM),
     DISTANCE(DashboardMetric.DISTANCE, ReportSection.ACTIVITY, ReportValueKind.SUM, UnitQuantity.DISTANCE),
@@ -44,11 +49,51 @@ enum class ReportMetric(
     WORKOUT(DashboardMetric.WORKOUT, ReportSection.ACTIVITY, ReportValueKind.SUM),
     SLEEP(DashboardMetric.SLEEP, ReportSection.SLEEP, ReportValueKind.AVERAGE),
     HYDRATION(DashboardMetric.HYDRATION, ReportSection.NUTRITION, ReportValueKind.SUM, UnitQuantity.HYDRATION),
-    CALORIES_IN(DashboardMetric.CALORIES_IN, ReportSection.NUTRITION, ReportValueKind.SUM),
-    PROTEIN(DashboardMetric.PROTEIN, ReportSection.NUTRITION, ReportValueKind.SUM),
-    CARBS(DashboardMetric.CARBS, ReportSection.NUTRITION, ReportValueKind.SUM),
-    FAT(DashboardMetric.FAT, ReportSection.NUTRITION, ReportValueKind.SUM),
-    CAFFEINE(DashboardMetric.CAFFEINE, ReportSection.NUTRITION, ReportValueKind.SUM),
+    CALORIES_IN(DashboardMetric.CALORIES_IN, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.ENERGY),
+    PROTEIN(DashboardMetric.PROTEIN, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.PROTEIN),
+    CARBS(DashboardMetric.CARBS, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.TOTAL_CARBOHYDRATE),
+    FAT(DashboardMetric.FAT, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.TOTAL_FAT),
+    CAFFEINE(DashboardMetric.CAFFEINE, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.CAFFEINE),
+
+    // The nutrient breakdown, in the nutrition screen's order.
+    DIETARY_FIBER(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.DIETARY_FIBER),
+    SUGAR(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.SUGAR),
+    ENERGY_FROM_FAT(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.ENERGY_FROM_FAT),
+    MONOUNSATURATED_FAT(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.MONOUNSATURATED_FAT),
+    POLYUNSATURATED_FAT(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.POLYUNSATURATED_FAT),
+    SATURATED_FAT(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.SATURATED_FAT),
+    TRANS_FAT(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.TRANS_FAT),
+    UNSATURATED_FAT(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.UNSATURATED_FAT),
+    CHOLESTEROL(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.CHOLESTEROL),
+    BIOTIN(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.BIOTIN),
+    FOLATE(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.FOLATE),
+    FOLIC_ACID(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.FOLIC_ACID),
+    NIACIN(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.NIACIN),
+    PANTOTHENIC_ACID(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.PANTOTHENIC_ACID),
+    RIBOFLAVIN(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.RIBOFLAVIN),
+    THIAMIN(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.THIAMIN),
+    VITAMIN_A(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.VITAMIN_A),
+    VITAMIN_B12(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.VITAMIN_B12),
+    VITAMIN_B6(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.VITAMIN_B6),
+    VITAMIN_C(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.VITAMIN_C),
+    VITAMIN_D(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.VITAMIN_D),
+    VITAMIN_E(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.VITAMIN_E),
+    VITAMIN_K(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.VITAMIN_K),
+    CALCIUM(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.CALCIUM),
+    CHLORIDE(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.CHLORIDE),
+    CHROMIUM(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.CHROMIUM),
+    COPPER(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.COPPER),
+    IODINE(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.IODINE),
+    IRON(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.IRON),
+    MAGNESIUM(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.MAGNESIUM),
+    MANGANESE(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.MANGANESE),
+    MOLYBDENUM(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.MOLYBDENUM),
+    PHOSPHORUS(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.PHOSPHORUS),
+    POTASSIUM(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.POTASSIUM),
+    SELENIUM(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.SELENIUM),
+    SODIUM(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.SODIUM),
+    ZINC(null, ReportSection.NUTRITION, ReportValueKind.SUM, nutrient = NutritionNutrient.ZINC),
+
     WEIGHT(DashboardMetric.WEIGHT, ReportSection.BODY, ReportValueKind.AVERAGE, UnitQuantity.WEIGHT),
     HEIGHT(DashboardMetric.HEIGHT, ReportSection.BODY, ReportValueKind.AVERAGE, UnitQuantity.HEIGHT),
     BODY_FAT(DashboardMetric.BODY_FAT, ReportSection.BODY, ReportValueKind.AVERAGE),
@@ -68,6 +113,14 @@ enum class ReportMetric(
     SKIN_TEMPERATURE(DashboardMetric.SKIN_TEMPERATURE, ReportSection.VITALS, ReportValueKind.AVERAGE, UnitQuantity.TEMPERATURE),
     MINDFULNESS(DashboardMetric.MINDFULNESS, ReportSection.MINDFULNESS, ReportValueKind.SUM),
     CYCLE(DashboardMetric.CYCLE, ReportSection.CYCLE, ReportValueKind.AVERAGE),
+    ;
+
+    /**
+     * Fibre, sugar, the fats, vitamins and minerals: listed under their own headings, ticked
+     * one by one or a heading at a time, and left out of Select all so a full report does not
+     * grow thirty-seven sections nobody asked for.
+     */
+    val isNutrientBreakdown: Boolean get() = nutrient != null && dashboardMetric == null
 }
 
 enum class ReportGranularity {

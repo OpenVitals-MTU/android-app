@@ -603,10 +603,11 @@ internal fun bodyMetricData(
             valueDisplayFormatter = { DisplayValue(unitFormatter.decimal(it, 1), "") },
         ),
         BodyMetricData(
-            metric = BodyMetric.BMI,
+            metric = BodyMetric.FFMI,
             titleRes = R.string.metric_ffmi,
             latest = summary.adjustedFfmi?.let { DisplayValue(unitFormatter.decimal(it, 1), "") },
-            values = emptyList(),
+            values = dailyLatestValues(state.display.ffmiReadings, time = { it.time }, value = { it.adjustedFfmi }),
+            dayValues = state.display.ffmiReadings.map { BodyMetricDayValue(it.time, it.adjustedFfmi) },
             color = BodyFatColor,
             icon = Icons.Outlined.FitnessCenter,
             valueDisplayFormatter = { DisplayValue(unitFormatter.decimal(it, 1), "") },

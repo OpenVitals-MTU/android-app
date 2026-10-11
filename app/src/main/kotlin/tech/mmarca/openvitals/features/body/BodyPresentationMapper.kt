@@ -15,6 +15,8 @@ object BodyPresentationMapper {
         val bmrKcal = data.bmrEntries.maxByOrNull { it.time }?.kcalPerDay ?: data.bmrKcal
         val boneMassKg = data.boneMassEntries.maxByOrNull { it.time }?.massKg ?: data.boneMassKg
         val bodyWaterMassKg = data.bodyWaterMassEntries.maxByOrNull { it.time }?.massKg ?: data.bodyWaterMassKg
+        // A body-fat reading at a period's edge may have its weight just across it.
+        val weights = data.weightEntries + data.previousWeightEntries + data.baselineWeightEntries
         return BodyDisplayState(
             selectedPeriod = displayPeriodFor(
                 range = query.range,
@@ -28,6 +30,9 @@ object BodyPresentationMapper {
                 boneMassKg = boneMassKg,
                 bodyWaterMassKg = bodyWaterMassKg,
             ),
+            ffmiReadings = ffmiReadings(data.bodyFatEntries, weights, heightCm),
+            previousFfmiReadings = ffmiReadings(data.previousBodyFatEntries, weights, heightCm),
+            baselineFfmiReadings = ffmiReadings(data.baselineBodyFatEntries, weights, heightCm),
         )
     }
 

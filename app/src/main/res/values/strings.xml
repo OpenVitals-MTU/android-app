@@ -1631,6 +1631,7 @@
     <string name="report_metrics_section_title">Metrics</string>
     <string name="report_metrics_select_all">Select all</string>
     <string name="report_metrics_clear">Clear</string>
+    <string name="report_metrics_nutrient_breakdown_hint">\"Select all\" leaves these out. Tick a heading to add its whole group.</string>
     <string name="report_granularity_title">Detail</string>
     <string name="report_granularity_daily">Daily</string>
     <string name="report_granularity_weekly">Weekly</string>
@@ -2329,11 +2330,11 @@
     <string name="settings_fit_import_folder_grant">Grant import permissions</string>
     <string name="settings_fit_import_error">FIT import warning: %1$s</string>
     <string name="settings_csv_import_title">CSV importer</string>
-    <string name="settings_csv_import_body">Import body measurements from a CSV file — for example a weight and body-composition export from a smart scale. You choose what each column means.</string>
+    <string name="settings_csv_import_body">Import measurements or nutrition from a CSV file — for example a smart scale\'s weight export, or a spreadsheet with a row per meal. You choose what each column means.</string>
     <string name="settings_csv_import_action">Import a CSV file</string>
     <string name="settings_csv_import_screen_title">CSV importer</string>
     <string name="settings_csv_import_pick_title">Choose a CSV file</string>
-    <string name="settings_csv_import_pick_body">Pick a CSV export and match its columns to body measurements. Nothing is written until you confirm.</string>
+    <string name="settings_csv_import_pick_body">Pick a CSV file and match its columns to measurements or nutrients. Nothing is written until you confirm.</string>
     <string name="settings_csv_import_pick_action">Choose CSV file</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d columns</string>
     <string name="settings_csv_import_continue">Continue</string>
@@ -2354,6 +2355,7 @@
     <string name="settings_csv_import_role_ignore">Not imported</string>
     <string name="settings_csv_import_role_timestamp">Date and time</string>
     <string name="settings_csv_import_role_end_timestamp">End date and time</string>
+    <string name="settings_csv_import_role_food_name">Food name</string>
     <string name="settings_csv_import_interval_end_hint">Each row spans from the date and time to the \"End date and time\" column. Without one, a row counts as one minute.</string>
     <string name="settings_csv_import_metric_weight">Weight</string>
     <string name="settings_csv_import_metric_body_fat">Body fat</string>
@@ -2395,8 +2397,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Milligrams per decilitre (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
     <string name="settings_csv_import_unit_count">A count</string>
+    <string name="settings_csv_import_unit_kilocalories">Kilocalories (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Kilojoules (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Milligrams (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Micrograms (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">A mass in %1$s, as a share of the weight column</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect stores body fat as a percentage, so this is worked out from the weight measured in the same row.</string>
+    <string name="settings_csv_import_nutrient_hint">All the nutrient columns of a row become one food entry.</string>
     <string name="settings_csv_import_date_time_title">Date and time</string>
     <string name="settings_csv_import_date_format_label">Format</string>
     <string name="settings_csv_import_date_format_auto">Detect automatically</string>
@@ -2423,6 +2430,7 @@
     <string name="settings_csv_import_issue_needs_weight">Body fat given as a mass needs a weight column in the same file to work out the percentage.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">None of the sampled rows match this date format.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Only one column can hold the end date and time.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Only one column can hold the food name.</string>
     <string name="settings_csv_import_confirm_title">Ready to import</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d measurements per row</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s to %3$s</string>

@@ -41,10 +41,12 @@ import tech.mmarca.openvitals.data.repository.contract.NutritionRepository
 import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.data.repository.contract.VitalsRepository
 import tech.mmarca.openvitals.domain.model.DailyHydration
+import tech.mmarca.openvitals.domain.model.DailyMacros
 import tech.mmarca.openvitals.domain.model.DailySleepDuration
 import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.ReportGranularity
 import tech.mmarca.openvitals.domain.model.ReportMetric
 import tech.mmarca.openvitals.domain.model.ReportMetricStatus
@@ -196,6 +198,45 @@ class ReportDataLoaderTest {
 
         coVerify(exactly = 1) { nutrition.loadDailyMacros(start, end) }
         assertTrue(data.results.all { it.status == ReportMetricStatus.EMPTY })
+    }
+
+    @Test fun `the nutrient breakdown rides on the same daily totals, in grams`() = runTest {
+        val day = start.plusDays(3)
+        coEvery { nutrition.loadDailyMacros(any(), any()) } returns listOf(
+            DailyMacros(
+                date = day,
+                nutrientValues = mapOf(
+                    NutritionNutrient.ENERGY to 2_000.0,
+                    NutritionNutrient.CAFFEINE to 0.2,
+                    NutritionNutrient.SODIUM to 2.3,
+                    NutritionNutrient.VITAMIN_D to 0.000015,
+                ),
+            ),
+            DailyMacros(date = day.plusDays(1), nutrientValues = mapOf(NutritionNutrient.ENERGY to 1_800.0)),
+        )
+
+        val data = loader(additional = emptySet()).load(
+            request(
+                ReportMetric.CALORIES_IN,
+                ReportMetric.CAFFEINE,
+                ReportMetric.SODIUM,
+                ReportMetric.VITAMIN_D,
+                ReportMetric.ZINC,
+            ),
+        )
+
+        coVerify(exactly = 1) { nutrition.loadDailyMacros(start, end) }
+        val results = data.results.associateBy { it.metric }
+        assertEquals(listOf(2.3), results.getValue(ReportMetric.SODIUM).points.map { it.value })
+        assertEquals(0.000015, results.getValue(ReportMetric.VITAMIN_D).points.single().value, 1e-15)
+        // Caffeine keeps its milligrams.
+        assertEquals(200.0, results.getValue(ReportMetric.CAFFEINE).points.single().value, 1e-9)
+        assertEquals(2, results.getValue(ReportMetric.CALORIES_IN).points.size)
+        assertEquals(ReportMetricStatus.EMPTY, results.getValue(ReportMetric.ZINC).status)
+    }
+
+    @Test fun `a breakdown nutrient needs the nutrition read permission alone`() {
+        assertEquals(setOf(nutritionPermission), metricPermissions(ReportMetric.SODIUM))
     }
 
     @Test fun `an ungranted metric is MISSING_PERMISSION and its read never goes out`() = runTest {

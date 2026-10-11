@@ -316,6 +316,13 @@ class HydrationViewModelTest {
             id = "manual-nutrition",
             clientRecordId = "openvitals_manual_nutrition_1400_uuid",
         )
+        // A row of a nutrition spreadsheet: OpenVitals imported it, but it is a food, not a drink.
+        val csvImportedEntry = caffeineEntry.copy(
+            time = start.plusSeconds(420),
+            name = "Oatmeal",
+            id = "csv-nutrition",
+            clientRecordId = "csv_nutritionrecord_0123456789abcdef0123456789abcdef",
+        )
         val repo = emptyRepo()
         coEvery { repo.loadHydrationEntries(any(), any()) } returns listOf(hydrationEntry)
         val nutritionRepo = emptyNutritionRepo(
@@ -323,6 +330,7 @@ class HydrationViewModelTest {
                 caffeineEntry,
                 carbsEntry,
                 manualNutritionEntry,
+                csvImportedEntry,
                 pairedEntry,
                 noClientIdStandaloneEntry,
                 noClientIdPairedEntry,
@@ -345,6 +353,46 @@ class HydrationViewModelTest {
         assertEquals("Red Bull", entries[3].displayName)
         assertEquals(false, entries[3].isOpenVitalsEntry)
         assertEquals(0.0, entries[1].liters, 0.01)
+    }
+
+    @Test fun `load reads imported and synced nutrition like another app's, so a meal is not a drink`() = runTest {
+        val start = today.atStartOfDay(ZoneId.systemDefault()).plusHours(8).toInstant()
+        // OpenVitals wrote all three to Health Connect, but nobody logged them in OpenVitals.
+        val appleMeal = NutritionEntry(
+            time = start,
+            mealType = 0,
+            name = "Chicken salad",
+            energyKcal = 450.0,
+            proteinGrams = 35.0,
+            carbsGrams = null,
+            fatGrams = null,
+            fiberGrams = null,
+            sugarGrams = null,
+            source = "tech.mmarca.openvitals",
+            nutrientValues = mapOf(NutritionNutrient.ENERGY to 450.0, NutritionNutrient.PROTEIN to 35.0),
+            id = "apple-meal",
+            clientRecordId = "apple_health_nutrition_0123456789abcdef0123456789abcdef",
+            isOpenVitalsEntry = true,
+        )
+        val syncedMeal = appleMeal.copy(
+            time = start.plusSeconds(60),
+            name = "Pasta",
+            id = "synced-meal",
+            clientRecordId = "sync_0123456789abcdef0123456789abcdef",
+        )
+        // Caffeine still reads as a drink, as it does from any other app.
+        val appleCoffee = appleMeal.copy(
+            time = start.plusSeconds(120),
+            name = "Coffee",
+            nutrientValues = mapOf(NutritionNutrient.CAFFEINE to 0.095),
+            id = "apple-coffee",
+            clientRecordId = "apple_health_nutrition_fedcba9876543210fedcba9876543210",
+        )
+        val nutritionRepo = emptyNutritionRepo(listOf(appleMeal, syncedMeal, appleCoffee))
+
+        val vm = hydrationViewModel(emptyRepo(), nutritionRepository = nutritionRepo, initialRange = TimeRange.DAY)
+
+        assertEquals(listOf("apple-coffee"), vm.uiState.value.hydrationEntries.map { it.id })
     }
 
     @Test fun `deleteHydrationEntry removes entry and reloads period data`() = runTest {

@@ -26,7 +26,8 @@ import kotlin.reflect.KClass
  * canonical value. Every metric is one number at one instant, except
  * [STEPS], the first interval record: an END_TIMESTAMP column ends each
  * row's span, and a missing end means one minute. Blood pressure is absent:
- * it needs two columns per record.
+ * it needs two columns per record. Nutrients are not metrics: every nutrient
+ * column of a row folds into one record, see CsvNutrition.kt.
  *
  * The order, catalog and conversions mirror the Flutter build, so both apps
  * produce the same clientRecordIds. STEPS keys on the interval's start.
@@ -75,6 +76,12 @@ enum class CsvUnit {
     MILLIGRAMS_PER_DECILITER,
     MILLILITERS_PER_KG_PER_MINUTE,
     COUNT,
+
+    // Nutrient amounts, as nutrition labels print them.
+    KILOCALORIES,
+    KILOJOULES,
+    MILLIGRAMS,
+    MICROGRAMS,
 }
 
 // The same constants the manual-entry screens use.
@@ -82,7 +89,7 @@ private const val PoundsPerKilogram = 2.2046226218
 private const val CentimetersPerInch = 2.54
 private const val KilogramsPerStone = 6.35029318
 private const val CentimetersPerFoot = 30.48
-private const val KilojoulesPerKilocalorie = 4.184
+internal const val KilojoulesPerKilocalorie = 4.184
 private const val FahrenheitFreezingPoint = 32.0
 private const val FahrenheitPerCelsius = 1.8
 
@@ -355,6 +362,11 @@ fun convertCsvValueToCanonical(value: Double, unit: CsvUnit): Double = when (uni
     CsvUnit.MILLIGRAMS_PER_DECILITER -> value / MilligramsPerDeciliterPerMillimolePerLiter
     CsvUnit.MILLILITERS_PER_KG_PER_MINUTE -> value
     CsvUnit.COUNT -> value
+    // No metric takes these; nutrients convert with convertCsvNutrientToStored.
+    CsvUnit.KILOCALORIES -> value
+    CsvUnit.KILOJOULES -> value / KilojoulesPerKilocalorie
+    CsvUnit.MILLIGRAMS -> value / 1_000_000
+    CsvUnit.MICROGRAMS -> value / 1_000_000_000
 }
 
 /** Unit tokens recognised in a header, longest first so `kcal` beats `cal`. */
@@ -368,7 +380,12 @@ private val HeaderUnitTokens: List<Pair<String, CsvUnit>> = listOf(
     "breaths/min" to CsvUnit.BREATHS_PER_MINUTE,
     "brpm" to CsvUnit.BREATHS_PER_MINUTE,
     "kcal" to CsvUnit.KILOCALORIES_PER_DAY,
+    "mcg" to CsvUnit.MICROGRAMS,
     "kj" to CsvUnit.KILOJOULES_PER_DAY,
+    "mg" to CsvUnit.MILLIGRAMS,
+    "µg" to CsvUnit.MICROGRAMS,
+    "μg" to CsvUnit.MICROGRAMS,
+    "ug" to CsvUnit.MICROGRAMS,
     "bpm" to CsvUnit.BEATS_PER_MINUTE,
     "lbs" to CsvUnit.POUNDS,
     "lb" to CsvUnit.POUNDS,

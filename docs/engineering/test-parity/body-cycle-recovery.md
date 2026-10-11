@@ -6,7 +6,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/body/Bod
 | an empty period has no data, no readings and no tracked metrics | PORTED | BodyDisplayDerivationsTest.kt: `an empty period has no data, no readings and no tracked metrics` | needed the hasAnyBodyData seam |
 | the summary takes the latest reading, and the first weight | PORTED | BodyDisplayDerivationsTest.kt: `the summary takes the latest reading, and the first weight` | firstWeightKg/weightChangeKg/ffmi/adjustedFfmi now asserted |
 | the daily series keeps one value per day: that day's latest | PORTED | BodyDisplayDerivationsTest.kt: `the daily series keeps one value per day, that day's latest` | values + dayValues (intraday) + trackedMetrics |
-| BMI has a series only when a height is known | PORTED | BodyDisplayDerivationsTest.kt: `BMI has a series only when a height is known` | series presence/absence + FFMI never gets one |
+| BMI has a series only when a height is known | PORTED | BodyDisplayDerivationsTest.kt: `BMI has a series only when a height is known` | series presence/absence + FFMI needs body fat too (its own series: `FFMI has a series of its own, one point per body-fat reading`) |
 | readings are newest first, indexed by day, and only OpenVitals ones are editable | PORTED | BodyDisplayDerivationsTest.kt: `readings are newest first, indexed by day, and only OpenVitals ones are editable` | needed newestFirst()/onDate() seams |
 | a period with a latest value but no entries still has data | PORTED | BodyDisplayDerivationsTest.kt: `a period with a latest value but no entries still has data` | hasAnyBodyData + empty readings + metric latest |
 
