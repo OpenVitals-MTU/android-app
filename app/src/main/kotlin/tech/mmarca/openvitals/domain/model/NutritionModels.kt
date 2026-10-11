@@ -10,6 +10,12 @@ import java.time.LocalDate
 const val OpenVitalsManualNutritionClientRecordPrefix = "openvitals_manual_nutrition_"
 
 /**
+ * The client-record-id prefix of a nutrition record the CSV importer wrote: a food or a day's
+ * totals from a spreadsheet, never a drink.
+ */
+const val CsvNutritionClientRecordPrefix = "csv_nutritionrecord_"
+
+/**
  * The name the old carbs-only form gave its records. Their client id has the drink-like
  * `openvitals_nutrition_` prefix, so the beverage screens tell them apart by this name.
  */

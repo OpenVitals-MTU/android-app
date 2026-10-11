@@ -2363,11 +2363,11 @@
     <string name="settings_apple_health_import_progress_with_scan_percent">%1$d%%. %2$s. Scansionati %3$d/%4$d elementi. Selezionati %5$d/%6$d record, importati %7$d.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. Scansionati %3$d/%4$d, importati %5$d.</string>
     <string name="settings_csv_import_title">Importatore CSV</string>
-    <string name="settings_csv_import_body">Importa misurazioni corporee da un file CSV — per esempio un\'esportazione di peso e composizione corporea da una bilancia smart. Scegli tu cosa significa ogni colonna.</string>
+    <string name="settings_csv_import_body">Importa misurazioni o dati nutrizionali da un file CSV — per esempio un\'esportazione del peso da una bilancia smart o un foglio di calcolo con una riga per pasto. Scegli tu cosa significa ogni colonna.</string>
     <string name="settings_csv_import_action">Importa un file CSV</string>
     <string name="settings_csv_import_screen_title">Importatore CSV</string>
     <string name="settings_csv_import_pick_title">Scegli un file CSV</string>
-    <string name="settings_csv_import_pick_body">Scegli un\'esportazione CSV e abbina le sue colonne alle misurazioni corporee. Non viene scritto nulla finché non confermi.</string>
+    <string name="settings_csv_import_pick_body">Scegli un file CSV e abbina le sue colonne a misurazioni o nutrienti. Non viene scritto nulla finché non confermi.</string>
     <string name="settings_csv_import_pick_action">Scegli file CSV</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d colonne</string>
     <string name="settings_csv_import_continue">Continua</string>
@@ -2388,6 +2388,7 @@
     <string name="settings_csv_import_role_ignore">Non importata</string>
     <string name="settings_csv_import_role_timestamp">Data e ora</string>
     <string name="settings_csv_import_role_end_timestamp">Data e ora di fine</string>
+    <string name="settings_csv_import_role_food_name">Nome dell\'alimento</string>
     <string name="settings_csv_import_interval_end_hint">Ogni riga va dalla data e ora alla colonna \"Data e ora di fine\". Senza questa colonna, una riga vale un minuto.</string>
     <string name="settings_csv_import_metric_weight">Peso</string>
     <string name="settings_csv_import_metric_body_fat">Grasso corporeo</string>
@@ -2429,8 +2430,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Milligrammi per decilitro (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
     <string name="settings_csv_import_unit_count">Un conteggio</string>
+    <string name="settings_csv_import_unit_kilocalories">Chilocalorie (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Chilojoule (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Milligrammi (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Microgrammi (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">Una massa in %1$s, come quota della colonna del peso</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect memorizza il grasso corporeo come percentuale, quindi viene calcolato dal peso misurato nella stessa riga.</string>
+    <string name="settings_csv_import_nutrient_hint">Tutte le colonne di nutrienti di una riga formano una sola voce alimento.</string>
     <string name="settings_csv_import_date_time_title">Data e ora</string>
     <string name="settings_csv_import_date_format_label">Formato</string>
     <string name="settings_csv_import_date_format_auto">Rileva automaticamente</string>
@@ -2457,6 +2463,7 @@
     <string name="settings_csv_import_issue_needs_weight">Il grasso corporeo espresso come massa richiede una colonna del peso nello stesso file per calcolare la percentuale.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">Nessuna delle righe campionate corrisponde a questo formato di data.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Solo una colonna può contenere la data e l\'ora di fine.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Solo una colonna può contenere il nome dell\'alimento.</string>
     <string name="settings_csv_import_confirm_title">Pronto per l\'importazione</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d misurazioni per riga</string>
     <string name="settings_csv_import_confirm_range">%1$s: da %2$s a %3$s</string>

@@ -2317,11 +2317,11 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_fit_import_folder_grant">Conceder permisos de importación</string>
     <string name="settings_fit_import_error">Aviso da importación FIT: %1$s</string>
     <string name="settings_csv_import_title">Importador CSV</string>
-    <string name="settings_csv_import_body">Importa medidas corporais desde un ficheiro CSV, por exemplo unha exportación de peso e composición corporal dunha báscula intelixente. Ti escolles que significa cada columna.</string>
+    <string name="settings_csv_import_body">Importa medidas ou nutrición desde un ficheiro CSV, por exemplo unha exportación de peso dunha báscula intelixente ou unha folla de cálculo cunha fila por comida. Ti escolles que significa cada columna.</string>
     <string name="settings_csv_import_action">Importar un ficheiro CSV</string>
     <string name="settings_csv_import_screen_title">Importador CSV</string>
     <string name="settings_csv_import_pick_title">Escolle un ficheiro CSV</string>
-    <string name="settings_csv_import_pick_body">Escolle unha exportación CSV e asocia as súas columnas ás medidas corporais. Non se escribe nada ata que confirmes.</string>
+    <string name="settings_csv_import_pick_body">Escolle un ficheiro CSV e asocia as súas columnas a medidas ou nutrientes. Non se escribe nada ata que confirmes.</string>
     <string name="settings_csv_import_pick_action">Escoller ficheiro CSV</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d columnas</string>
     <string name="settings_csv_import_continue">Continuar</string>
@@ -2342,6 +2342,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_csv_import_role_ignore">Non se importa</string>
     <string name="settings_csv_import_role_timestamp">Data e hora</string>
     <string name="settings_csv_import_role_end_timestamp">Data e hora de fin</string>
+    <string name="settings_csv_import_role_food_name">Nome do alimento</string>
     <string name="settings_csv_import_interval_end_hint">Cada fila vai desde a data e hora ata a columna «Data e hora de fin». Sen ela, unha fila conta como un minuto.</string>
     <string name="settings_csv_import_metric_weight">Peso</string>
     <string name="settings_csv_import_metric_body_fat">Graxa corporal</string>
@@ -2383,8 +2384,13 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Miligramos por decilitro (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
     <string name="settings_csv_import_unit_count">Unha cantidade</string>
+    <string name="settings_csv_import_unit_kilocalories">Quilocalorías (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Quilojoules (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Miligramos (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Microgramos (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">Unha masa en %1$s, como proporción da columna de peso</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect garda a graxa corporal como porcentaxe, así que calcúlase a partir do peso medido na mesma fila.</string>
+    <string name="settings_csv_import_nutrient_hint">Todas as columnas de nutrientes dunha fila forman unha soa entrada de comida.</string>
     <string name="settings_csv_import_date_time_title">Data e hora</string>
     <string name="settings_csv_import_date_format_label">Formato</string>
     <string name="settings_csv_import_date_format_auto">Detectar automaticamente</string>
@@ -2411,6 +2417,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_csv_import_issue_needs_weight">A graxa corporal dada como masa necesita unha columna de peso no mesmo ficheiro para calcular a porcentaxe.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">Ningunha das filas de mostra coincide con este formato de data.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Só unha columna pode conter a data e a hora de fin.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Só unha columna pode conter o nome do alimento.</string>
     <string name="settings_csv_import_confirm_title">Listo para importar</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d medidas por fila</string>
     <string name="settings_csv_import_confirm_range">%1$s: de %2$s a %3$s</string>

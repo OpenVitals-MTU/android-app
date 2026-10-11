@@ -2328,11 +2328,11 @@
     <string name="settings_apple_health_import_progress_with_scan_percent">%1$d%%. %2$s. %3$d/%4$d Elemente gelesen. Ausgewählt %5$d/%6$d Datensätze, importiert %7$d.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. Gelesen %3$d/%4$d, importiert %5$d.</string>
     <string name="settings_csv_import_title">CSV-Importer</string>
-    <string name="settings_csv_import_body">Importiere Körpermessungen aus einer CSV-Datei, zum Beispiel einen Gewichts- und Körperzusammensetzungs-Export einer smarten Waage. Du legst fest, was jede Spalte bedeutet.</string>
+    <string name="settings_csv_import_body">Importiere Messungen oder Ernährung aus einer CSV-Datei, zum Beispiel den Gewichtsexport einer smarten Waage oder eine Tabelle mit einer Zeile pro Mahlzeit. Du legst fest, was jede Spalte bedeutet.</string>
     <string name="settings_csv_import_action">CSV-Datei importieren</string>
     <string name="settings_csv_import_screen_title">CSV-Importer</string>
     <string name="settings_csv_import_pick_title">CSV-Datei auswählen</string>
-    <string name="settings_csv_import_pick_body">Wähle einen CSV-Export und ordne seine Spalten Körpermessungen zu. Es wird nichts geschrieben, bis du bestätigst.</string>
+    <string name="settings_csv_import_pick_body">Wähle eine CSV-Datei und ordne ihre Spalten Messungen oder Nährstoffen zu. Es wird nichts geschrieben, bis du bestätigst.</string>
     <string name="settings_csv_import_pick_action">CSV-Datei wählen</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d Spalten</string>
     <string name="settings_csv_import_continue">Weiter</string>
@@ -2353,6 +2353,7 @@
     <string name="settings_csv_import_role_ignore">Wird nicht importiert</string>
     <string name="settings_csv_import_role_timestamp">Datum und Uhrzeit</string>
     <string name="settings_csv_import_role_end_timestamp">Enddatum und -uhrzeit</string>
+    <string name="settings_csv_import_role_food_name">Lebensmittelname</string>
     <string name="settings_csv_import_interval_end_hint">Jede Zeile reicht von Datum und Uhrzeit bis zur Spalte „Enddatum und -uhrzeit“. Ohne diese Spalte zählt eine Zeile als eine Minute.</string>
     <string name="settings_csv_import_metric_weight">Gewicht</string>
     <string name="settings_csv_import_metric_body_fat">Körperfett</string>
@@ -2393,8 +2394,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Milligramm pro Deziliter (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
     <string name="settings_csv_import_unit_count">Eine Anzahl</string>
+    <string name="settings_csv_import_unit_kilocalories">Kilokalorien (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Kilojoule (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Milligramm (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Mikrogramm (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">Eine Masse in %1$s, als Anteil der Gewichtsspalte</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect speichert Körperfett als Prozentsatz, daher wird dies aus dem in derselben Zeile gemessenen Gewicht berechnet.</string>
+    <string name="settings_csv_import_nutrient_hint">Alle Nährstoffspalten einer Zeile werden zu einem Lebensmitteleintrag.</string>
     <string name="settings_csv_import_date_time_title">Datum und Uhrzeit</string>
     <string name="settings_csv_import_date_format_label">Format</string>
     <string name="settings_csv_import_date_format_auto">Automatisch erkennen</string>
@@ -2421,6 +2427,7 @@
     <string name="settings_csv_import_issue_needs_weight">Körperfett als Masse braucht eine Gewichtsspalte in derselben Datei, um den Prozentsatz zu berechnen.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">Keine der geprüften Zeilen passt zu diesem Datumsformat.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Nur eine Spalte kann Enddatum und -uhrzeit enthalten.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Nur eine Spalte kann den Lebensmittelnamen enthalten.</string>
     <string name="settings_csv_import_confirm_title">Bereit zum Import</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d Messwerte pro Zeile</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s bis %3$s</string>

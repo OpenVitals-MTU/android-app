@@ -211,6 +211,21 @@ class HydrationDrinkUsageTest {
     }
 
     @Test
+    fun `frequentHydrationDrinkOptions ignores a food imported from CSV, even one named like a drink`() {
+        val drinks = listOf(drink("coffee", name = "Coffee"))
+
+        val result = frequentHydrationDrinkOptions(
+            drinks = drinks,
+            hydrationEntries = emptyList(),
+            nutritionEntries = listOf(
+                nutrition(t0, clientRecordId = "csv_nutritionrecord_0123456789abcdef0123456789abcdef", name = "Coffee"),
+            ),
+        )
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
     fun `frequentHydrationDrinkOptions ignores entries from other apps`() {
         val result = frequentHydrationDrinkOptions(
             drinks = listOf(drink("a", name = "Cola")),

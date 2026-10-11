@@ -316,6 +316,13 @@ class HydrationViewModelTest {
             id = "manual-nutrition",
             clientRecordId = "openvitals_manual_nutrition_1400_uuid",
         )
+        // A row of a nutrition spreadsheet: OpenVitals imported it, but it is a food, not a drink.
+        val csvImportedEntry = caffeineEntry.copy(
+            time = start.plusSeconds(420),
+            name = "Oatmeal",
+            id = "csv-nutrition",
+            clientRecordId = "csv_nutritionrecord_0123456789abcdef0123456789abcdef",
+        )
         val repo = emptyRepo()
         coEvery { repo.loadHydrationEntries(any(), any()) } returns listOf(hydrationEntry)
         val nutritionRepo = emptyNutritionRepo(
@@ -323,6 +330,7 @@ class HydrationViewModelTest {
                 caffeineEntry,
                 carbsEntry,
                 manualNutritionEntry,
+                csvImportedEntry,
                 pairedEntry,
                 noClientIdStandaloneEntry,
                 noClientIdPairedEntry,

@@ -2351,11 +2351,11 @@
     <string name="settings_apple_health_import_progress_with_scan_percent">%1$d%%. %2$s. Skaneeritud %3$d/%4$d elementi. Valitud %5$d/%6$d kirjet, imporditud %7$d.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. Skaneeritud %3$d/%4$d, imporditud %5$d.</string>
     <string name="settings_csv_import_title">CSV-importija</string>
-    <string name="settings_csv_import_body">Impordi kehamõõtmised CSV-failist — näiteks nutika kaalu kaalu- ja kehakoostise eksport. Sina valid, mida iga veerg tähendab.</string>
+    <string name="settings_csv_import_body">Impordi mõõtmised või toitumisandmed CSV-failist — näiteks nutika kaalu kaaluandmete eksport või tabel, kus igal toidukorral on oma rida. Sina valid, mida iga veerg tähendab.</string>
     <string name="settings_csv_import_action">Impordi CSV-fail</string>
     <string name="settings_csv_import_screen_title">CSV-importija</string>
     <string name="settings_csv_import_pick_title">Vali CSV-fail</string>
-    <string name="settings_csv_import_pick_body">Vali CSV-eksport ja seo selle veerud kehamõõtmistega. Enne kinnitamist ei kirjutata midagi.</string>
+    <string name="settings_csv_import_pick_body">Vali CSV-fail ja seo selle veerud mõõtmiste või toitainetega. Enne kinnitamist ei kirjutata midagi.</string>
     <string name="settings_csv_import_pick_action">Vali CSV-fail</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d veergu</string>
     <string name="settings_csv_import_continue">Jätka</string>
@@ -2376,6 +2376,7 @@
     <string name="settings_csv_import_role_ignore">Ei impordita</string>
     <string name="settings_csv_import_role_timestamp">Kuupäev ja kellaaeg</string>
     <string name="settings_csv_import_role_end_timestamp">Lõpukuupäev ja -kellaaeg</string>
+    <string name="settings_csv_import_role_food_name">Toidu nimi</string>
     <string name="settings_csv_import_interval_end_hint">Iga rida kestab kuupäevast ja kellaajast veeruni „Lõpukuupäev ja -kellaaeg“. Ilma selleta loetakse rida üheks minutiks.</string>
     <string name="settings_csv_import_metric_weight">Kaal</string>
     <string name="settings_csv_import_metric_body_fat">Keharasv</string>
@@ -2417,8 +2418,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Milligrammi detsiliitri kohta (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
     <string name="settings_csv_import_unit_count">Arv</string>
+    <string name="settings_csv_import_unit_kilocalories">Kilokalorid (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Kilodžaulid (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Milligrammid (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Mikrogrammid (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">Mass ühikus %1$s, osakaaluna kaaluveerust</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect salvestab keharasva protsendina, seega arvutatakse see sama rea kaalumõõtmise põhjal.</string>
+    <string name="settings_csv_import_nutrient_hint">Rea kõik toitaineveerud moodustavad ühe toidu kirje.</string>
     <string name="settings_csv_import_date_time_title">Kuupäev ja kellaaeg</string>
     <string name="settings_csv_import_date_format_label">Vorming</string>
     <string name="settings_csv_import_date_format_auto">Tuvasta automaatselt</string>
@@ -2445,6 +2451,7 @@
     <string name="settings_csv_import_issue_needs_weight">Massina antud keharasv vajab protsendi arvutamiseks samas failis kaaluveergu.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">Ükski valimi rida ei vasta sellele kuupäevavormingule.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Lõpukuupäev ja -kellaaeg saab olla ainult ühes veerus.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Toidu nime saab hoida ainult üks veerg.</string>
     <string name="settings_csv_import_confirm_title">Importimiseks valmis</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d mõõtmist rea kohta</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s kuni %3$s</string>

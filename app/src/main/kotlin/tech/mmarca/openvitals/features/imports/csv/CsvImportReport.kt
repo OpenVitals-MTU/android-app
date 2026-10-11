@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.imports.csv
 
 import java.util.Locale
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
 /**
  * The text report of a finished CSV import. Pure. Not sanitised, like the
@@ -120,6 +121,13 @@ private val CsvImportMetric.reportName: String
         CsvImportMetric.STEPS -> "steps"
     }
 
+/** The nutrient's name in camel case, like the metrics: VITAMIN_B12 reads "vitaminB12". */
+private val NutritionNutrient.reportName: String
+    get() = name.lowercase(Locale.US)
+        .split('_')
+        .mapIndexed { index, word -> if (index == 0) word else word.replaceFirstChar { it.titlecase(Locale.US) } }
+        .joinToString("")
+
 private val CsvUnit.reportName: String
     get() = when (this) {
         CsvUnit.KILOGRAMS -> "kilograms"
@@ -144,6 +152,10 @@ private val CsvUnit.reportName: String
         CsvUnit.MILLIGRAMS_PER_DECILITER -> "milligramsPerDeciliter"
         CsvUnit.MILLILITERS_PER_KG_PER_MINUTE -> "millilitersPerKgPerMinute"
         CsvUnit.COUNT -> "count"
+        CsvUnit.KILOCALORIES -> "kilocalories"
+        CsvUnit.KILOJOULES -> "kilojoules"
+        CsvUnit.MILLIGRAMS -> "milligrams"
+        CsvUnit.MICROGRAMS -> "micrograms"
     }
 
 private fun outcomeLabel(outcome: CsvImportOutcome): String = when (outcome) {
@@ -179,6 +191,15 @@ private fun roleLabel(column: CsvColumnMapping): String = when (column.role) {
     CsvColumnRole.IGNORE -> "not imported"
     CsvColumnRole.TIMESTAMP -> "date and time"
     CsvColumnRole.END_TIMESTAMP -> "end date and time"
+    CsvColumnRole.FOOD_NAME -> "food name"
+    CsvColumnRole.NUTRIENT -> {
+        val nutrient = column.nutrient
+        if (nutrient == null) {
+            "not imported"
+        } else {
+            "nutrient ${nutrient.reportName} (${interpretationLabel(column.effectiveInterpretation)})"
+        }
+    }
     CsvColumnRole.METRIC -> {
         val metric = column.metric
         if (metric == null) {

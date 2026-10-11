@@ -2302,11 +2302,11 @@
     <string name="settings_fit_import_folder_grant">Przyznaj uprawnienia importu</string>
     <string name="settings_fit_import_error">Ostrzeżenie importu FIT: %1$s</string>
     <string name="settings_csv_import_title">Importer CSV</string>
-    <string name="settings_csv_import_body">Importuj pomiary ciała z pliku CSV — na przykład eksport wagi i składu ciała z inteligentnej wagi. Sam decydujesz, co oznacza każda kolumna.</string>
+    <string name="settings_csv_import_body">Importuj pomiary lub dane o odżywianiu z pliku CSV — na przykład eksport wagi z inteligentnej wagi albo arkusz z jednym wierszem na posiłek. Sam decydujesz, co oznacza każda kolumna.</string>
     <string name="settings_csv_import_action">Importuj plik CSV</string>
     <string name="settings_csv_import_screen_title">Importer CSV</string>
     <string name="settings_csv_import_pick_title">Wybierz plik CSV</string>
-    <string name="settings_csv_import_pick_body">Wybierz eksport CSV i dopasuj jego kolumny do pomiarów ciała. Nic nie jest zapisywane, dopóki nie potwierdzisz.</string>
+    <string name="settings_csv_import_pick_body">Wybierz plik CSV i dopasuj jego kolumny do pomiarów lub składników odżywczych. Nic nie jest zapisywane, dopóki nie potwierdzisz.</string>
     <string name="settings_csv_import_pick_action">Wybierz plik CSV</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d kolumn</string>
     <string name="settings_csv_import_continue">Dalej</string>
@@ -2327,6 +2327,7 @@
     <string name="settings_csv_import_role_ignore">Nieimportowane</string>
     <string name="settings_csv_import_role_timestamp">Data i godzina</string>
     <string name="settings_csv_import_role_end_timestamp">Data i godzina zakończenia</string>
+    <string name="settings_csv_import_role_food_name">Nazwa produktu</string>
     <string name="settings_csv_import_interval_end_hint">Każdy wiersz obejmuje czas od daty i godziny do kolumny „Data i godzina zakończenia”. Bez niej wiersz liczy się jako jedna minuta.</string>
     <string name="settings_csv_import_metric_weight">Waga</string>
     <string name="settings_csv_import_metric_body_fat">Tkanka tłuszczowa</string>
@@ -2368,8 +2369,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Miligramach na decylitr (mg/dl)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">ml/kg/min</string>
     <string name="settings_csv_import_unit_count">Liczbie</string>
+    <string name="settings_csv_import_unit_kilocalories">Kilokaloriach (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Kilodżulach (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Miligramach (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Mikrogramach (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">Masie w %1$s, jako udział kolumny wagi</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect przechowuje tkankę tłuszczową jako procent, więc jest wyliczana z wagi zmierzonej w tym samym wierszu.</string>
+    <string name="settings_csv_import_nutrient_hint">Wszystkie kolumny składników odżywczych z wiersza tworzą jeden wpis jedzenia.</string>
     <string name="settings_csv_import_date_time_title">Data i godzina</string>
     <string name="settings_csv_import_date_format_label">Format</string>
     <string name="settings_csv_import_date_format_auto">Wykryj automatycznie</string>
@@ -2426,6 +2432,7 @@
     <string name="settings_csv_import_issue_needs_weight">Tkanka tłuszczowa podana jako masa wymaga kolumny wagi w tym samym pliku, aby obliczyć procent.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">Żaden z próbkowanych wierszy nie pasuje do tego formatu daty.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Tylko jedna kolumna może zawierać datę i godzinę zakończenia.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Tylko jedna kolumna może zawierać nazwę produktu.</string>
     <string name="settings_csv_import_confirm_title">Gotowe do importu</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d pomiarów na wiersz</string>
     <string name="settings_csv_import_confirm_range">%1$s: od %2$s do %3$s</string>

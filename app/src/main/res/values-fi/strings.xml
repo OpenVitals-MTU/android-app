@@ -2314,11 +2314,11 @@
     <string name="settings_fit_import_folder_grant">Myönnä tuontioikeudet</string>
     <string name="settings_fit_import_error">FIT-tuontivaroitus: %1$s</string>
     <string name="settings_csv_import_title">CSV-tuonti</string>
-    <string name="settings_csv_import_body">Tuo kehon mittauksia CSV-tiedostosta — esimerkiksi älyvaa\'an paino- ja kehonkoostumusvienti. Sinä päätät, mitä kukin sarake tarkoittaa.</string>
+    <string name="settings_csv_import_body">Tuo mittauksia tai ravintotietoja CSV-tiedostosta — esimerkiksi älyvaa\'an painovienti tai taulukko, jossa on rivi jokaista ateriaa kohden. Sinä päätät, mitä kukin sarake tarkoittaa.</string>
     <string name="settings_csv_import_action">Tuo CSV-tiedosto</string>
     <string name="settings_csv_import_screen_title">CSV-tuonti</string>
     <string name="settings_csv_import_pick_title">Valitse CSV-tiedosto</string>
-    <string name="settings_csv_import_pick_body">Valitse CSV-vienti ja yhdistä sen sarakkeet kehon mittauksiin. Mitään ei kirjoiteta ennen vahvistustasi.</string>
+    <string name="settings_csv_import_pick_body">Valitse CSV-tiedosto ja yhdistä sen sarakkeet mittauksiin tai ravintoaineisiin. Mitään ei kirjoiteta ennen vahvistustasi.</string>
     <string name="settings_csv_import_pick_action">Valitse CSV-tiedosto</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d saraketta</string>
     <string name="settings_csv_import_continue">Jatka</string>
@@ -2339,6 +2339,7 @@
     <string name="settings_csv_import_role_ignore">Ei tuoda</string>
     <string name="settings_csv_import_role_timestamp">Päivä ja aika</string>
     <string name="settings_csv_import_role_end_timestamp">Loppupäivä ja -aika</string>
+    <string name="settings_csv_import_role_food_name">Ruoan nimi</string>
     <string name="settings_csv_import_interval_end_hint">Jokainen rivi ulottuu päivästä ja ajasta ”Loppupäivä ja -aika” -sarakkeeseen. Ilman sitä rivi lasketaan yhdeksi minuutiksi.</string>
     <string name="settings_csv_import_metric_weight">Paino</string>
     <string name="settings_csv_import_metric_body_fat">Rasvaprosentti</string>
@@ -2380,8 +2381,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Milligrammaa desilitrassa (mg/dl)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">ml/kg/min</string>
     <string name="settings_csv_import_unit_count">Lukumäärä</string>
+    <string name="settings_csv_import_unit_kilocalories">Kilokaloreita (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Kilojouleja (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Milligrammoja (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Mikrogrammoja (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">Massa yksikössä %1$s, osuutena painosarakkeesta</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect tallentaa rasvaprosentin prosentteina, joten se lasketaan samalla rivillä mitatusta painosta.</string>
+    <string name="settings_csv_import_nutrient_hint">Rivin kaikki ravintoainesarakkeet muodostavat yhden ruokamerkinnän.</string>
     <string name="settings_csv_import_date_time_title">Päivä ja aika</string>
     <string name="settings_csv_import_date_format_label">Muoto</string>
     <string name="settings_csv_import_date_format_auto">Tunnista automaattisesti</string>
@@ -2408,6 +2414,7 @@
     <string name="settings_csv_import_issue_needs_weight">Massana annettu rasvaprosentti tarvitsee samassa tiedostossa painosarakkeen prosentin laskemiseksi.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">Yksikään otantarivi ei vastaa tätä päivämäärämuotoa.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Vain yksi sarake voi sisältää loppupäivän ja -ajan.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Vain yksi sarake voi sisältää ruoan nimen.</string>
     <string name="settings_csv_import_confirm_title">Valmis tuotavaksi</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d mittausta riviä kohden</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s – %3$s</string>
