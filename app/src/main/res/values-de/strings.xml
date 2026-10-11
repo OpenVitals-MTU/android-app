@@ -2720,6 +2720,7 @@
     <string name="report_metrics_section_title">Messwerte</string>
     <string name="report_metrics_select_all">Alle auswählen</string>
     <string name="report_metrics_clear">Leeren</string>
+    <string name="report_metrics_nutrient_breakdown_hint">„Alle auswählen“ lässt diese aus. Hake eine Überschrift an, um die ganze Gruppe hinzuzufügen.</string>
     <string name="report_granularity_title">Detailgrad</string>
     <string name="report_granularity_daily">Täglich</string>
     <string name="report_granularity_weekly">Wöchentlich</string>

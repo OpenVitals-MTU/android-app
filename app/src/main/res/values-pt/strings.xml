@@ -2753,6 +2753,7 @@
     <string name="report_metrics_section_title">Métricas</string>
     <string name="report_metrics_select_all">Selecionar tudo</string>
     <string name="report_metrics_clear">Limpar</string>
+    <string name="report_metrics_nutrient_breakdown_hint">«Selecionar tudo» deixa-os de fora. Assinale um título para adicionar todo o grupo.</string>
     <string name="report_granularity_title">Detalhe</string>
     <string name="report_granularity_daily">Diário</string>
     <string name="report_granularity_weekly">Semanal</string>

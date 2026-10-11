@@ -1609,6 +1609,7 @@
     <string name="report_metrics_section_title">Metryki</string>
     <string name="report_metrics_select_all">Zaznacz wszystko</string>
     <string name="report_metrics_clear">Wyczyść</string>
+    <string name="report_metrics_nutrient_breakdown_hint">„Zaznacz wszystko” pomija te pozycje. Zaznacz nagłówek, aby dodać całą grupę.</string>
     <string name="report_granularity_title">Szczegółowość</string>
     <string name="report_granularity_daily">Dziennie</string>
     <string name="report_granularity_weekly">Tygodniowo</string>

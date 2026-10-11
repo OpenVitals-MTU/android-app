@@ -1631,6 +1631,7 @@
     <string name="report_metrics_section_title">Metrics</string>
     <string name="report_metrics_select_all">Select all</string>
     <string name="report_metrics_clear">Clear</string>
+    <string name="report_metrics_nutrient_breakdown_hint">\"Select all\" leaves these out. Tick a heading to add its whole group.</string>
     <string name="report_granularity_title">Detail</string>
     <string name="report_granularity_daily">Daily</string>
     <string name="report_granularity_weekly">Weekly</string>

@@ -1277,6 +1277,7 @@
     <string name="report_metrics_section_title">Mesures</string>
     <string name="report_metrics_select_all">Tout sélectionner</string>
     <string name="report_metrics_clear">Effacer</string>
+    <string name="report_metrics_nutrient_breakdown_hint">« Tout sélectionner » ne les coche pas. Cochez un titre pour ajouter tout son groupe.</string>
     <string name="report_granularity_title">Niveau de détail</string>
     <string name="report_granularity_daily">Quotidien</string>
     <string name="report_granularity_weekly">Hebdomadaire</string>

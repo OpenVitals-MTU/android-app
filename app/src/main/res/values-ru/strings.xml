@@ -1565,6 +1565,7 @@
     <string name="report_metrics_section_title">Показатели</string>
     <string name="report_metrics_select_all">Выбрать всё</string>
     <string name="report_metrics_clear">Очистить</string>
+    <string name="report_metrics_nutrient_breakdown_hint">«Выбрать всё» их не отмечает. Отметьте заголовок, чтобы добавить всю группу.</string>
     <string name="report_granularity_title">Подробно</string>
     <string name="report_granularity_daily">Ежедневно</string>
     <string name="report_granularity_weekly">Еженедельно</string>
