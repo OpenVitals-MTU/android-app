@@ -19,6 +19,7 @@ enum class BodyMetric {
     WEIGHT,
     HEIGHT,
     BMI,
+    FFMI,
     BODY_FAT,
     LEAN_MASS,
     BMR,
@@ -125,6 +126,20 @@ fun BmiScreen(
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.BMI,
         onEditBodyMeasurement = onEditBodyMeasurement,
+    )
+}
+
+@Composable
+fun FfmiScreen(
+    viewModel: BodyViewModel,
+    unitFormatter: UnitFormatter,
+    dateTimeFormatterProvider: DateTimeFormatterProvider,
+) {
+    BodyMetricScreen(
+        viewModel = viewModel,
+        unitFormatter = unitFormatter,
+        dateTimeFormatterProvider = dateTimeFormatterProvider,
+        metric = BodyMetric.FFMI,
     )
 }
 
