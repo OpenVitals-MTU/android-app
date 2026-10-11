@@ -142,7 +142,15 @@ data class NutritionEntry(
     val id: String = "",
     val clientRecordId: String? = null,
     val isOpenVitalsEntry: Boolean = false,
-)
+) {
+    /**
+     * Logged in OpenVitals, not only written by it. An Apple Health or CSV import, or a record
+     * synced from another phone, is someone else's entry that OpenVitals carried in, and reads
+     * like another app's: a meal from it is not a drink.
+     */
+    val isLoggedInOpenVitals: Boolean
+        get() = isOpenVitalsEntry && !isImportedClientRecordId(clientRecordId)
+}
 
 data class NutritionWriteRequest(
     val time: Instant,
