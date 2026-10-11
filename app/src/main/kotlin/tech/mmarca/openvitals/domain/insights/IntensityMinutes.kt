@@ -4,13 +4,33 @@ import java.time.Duration
 import kotlin.math.roundToInt
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 
+/**
+ * 150 moderate-equivalent minutes a week, a vigorous minute counting as two:
+ * "150–300 min of moderate-intensity, or 75–150 min of vigorous-intensity
+ * physical activity, or some equivalent combination". Bull et al., "World
+ * Health Organization 2020 guidelines on physical activity and sedentary
+ * behaviour", Br J Sports Med 2020;54:1451–1462, doi:10.1136/bjsports-2020-102955.
+ */
 const val DefaultWeeklyIntensityMinutesTarget = 150
 
+/**
+ * Intensity by heart rate reserve (Karvonen, Kentala and Mustala, Ann Med
+ * Exp Biol Fenn 1957;35:307–315, PMID 13470504): moderate 40–59 %, vigorous
+ * 60–89 %, after Table 1 of the ACSM position stand, Garber et al., Med Sci
+ * Sports Exerc 2011;43:1334–1359, doi:10.1249/MSS.0b013e318213fefb. The
+ * table was read in its reproduction by Garzon et al., J Sport Health Sci
+ * 2017, doi:10.1016/j.jshs.2015.12.004, not in the paywalled original.
+ */
 private const val ModerateHeartRateReserveThreshold = 0.40
 private const val VigorousHeartRateReserveThreshold = 0.60
 private const val GoodHeartRateCoverageMinutes = 10.0
 private const val GoodHeartRateCoverageRatio = 0.60
 private const val MaxHeartRateSampleGapMinutes = 5.0
+/*
+ * The fallbacks below, for days without usable heart rate, are this app's own
+ * heuristics, not taken from a paper: a workout's active energy per minute,
+ * a day's active energy, then cardio load, each turned into minutes.
+ */
 private const val VigorousKcalPerMinute = 8.0
 private const val ModerateKcalPerMinute = 3.0
 private const val DailyActiveCaloriesModerateKcalPerMinute = 5.0
