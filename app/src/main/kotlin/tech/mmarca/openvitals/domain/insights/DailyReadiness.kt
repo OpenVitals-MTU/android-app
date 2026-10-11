@@ -142,6 +142,11 @@ data class DailyReadinessInsight(
     val recoveryModeSuggested: Boolean,
 )
 
+/**
+ * Heart rate variability against its 28-day median. The ±15 % and ±30 % bands
+ * are this app's own heuristic; HRV norms are individual, which is why the
+ * comparison is with the person's own baseline.
+ */
 fun calculateHrvStatus(
     hrvRmssdMs: Double?,
     baselineRmssdMs: Double?,
@@ -279,6 +284,11 @@ fun calculateIntensityMinutesReadiness(
     )
 }
 
+/**
+ * The day's readiness, body energy and training readiness scores: a starting
+ * value plus each signal's delta ([DailyReadinessSignals]). The starting
+ * values, deltas and state bands are this app's own heuristic, not a validated model.
+ */
 fun calculateDailyReadiness(
     data: DashboardData,
     goals: DailyReadinessGoalInputs = DailyReadinessGoalInputs(),

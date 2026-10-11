@@ -46,6 +46,11 @@ data class CrossMetricInsight(
         }
 }
 
+/**
+ * Pearson's r between two daily series. The moderate and strong cut-offs are
+ * this app's own reading of r, and a correlation over a few weeks of one
+ * person's days says nothing about cause.
+ */
 fun crossMetricInsight(
     primaryValues: List<CrossMetricValue>,
     secondaryValues: List<CrossMetricValue>,

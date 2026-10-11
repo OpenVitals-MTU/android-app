@@ -5,7 +5,8 @@ import kotlin.math.max
 /**
  * The bar an observed maximum must clear: at least this, and at least
  * [observedMaxHeartRateRestingDeltaBpm] above resting. Otherwise the highest
- * sample on record is a brisk walk up the stairs.
+ * sample on record is a brisk walk up the stairs. Both bars are this app's
+ * own heuristic.
  */
 const val observedMaxHeartRateMinimumBpm = 150
 const val observedMaxHeartRateRestingDeltaBpm = 60

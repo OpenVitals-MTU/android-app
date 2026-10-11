@@ -46,6 +46,11 @@ data class PersonalBaselineInsight(
             ?.let { deviation / it * 100.0 }
 }
 
+/**
+ * A metric's 30/60/90-day mean and standard deviation, and where today sits:
+ * within one SD is usual, two or more unusual. Plain descriptive statistics;
+ * the cut-offs are this app's own choice, not a clinical reference.
+ */
 fun personalBaselineInsight(
     currentValue: Double,
     values: List<BaselineValue>,
