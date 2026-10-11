@@ -961,6 +961,14 @@ when (metric) {
             },
         )
     }
+    BodyMetric.FFMI -> ffmiContent(
+        state,
+        period,
+        unitFormatter,
+        dateTimeFormatterProvider,
+        chartDaySelection,
+        sectionContext,
+    )
     BodyMetric.BODY_FAT -> bodyFatContent(
         state,
         period,
