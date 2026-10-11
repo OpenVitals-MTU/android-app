@@ -2756,6 +2756,7 @@
     <string name="report_metrics_section_title">Metriche</string>
     <string name="report_metrics_select_all">Seleziona tutto</string>
     <string name="report_metrics_clear">Cancella</string>
+    <string name="report_metrics_nutrient_breakdown_hint">«Seleziona tutto» li esclude. Spunta un titolo per aggiungere tutto il gruppo.</string>
     <string name="report_granularity_title">Dettaglio</string>
     <string name="report_granularity_daily">Giornaliero</string>
     <string name="report_granularity_weekly">Settimanale</string>

@@ -1637,6 +1637,7 @@
     <string name="report_metrics_section_title">Mittarit</string>
     <string name="report_metrics_select_all">Valitse kaikki</string>
     <string name="report_metrics_clear">Tyhjennä</string>
+    <string name="report_metrics_nutrient_breakdown_hint">”Valitse kaikki” jättää nämä pois. Valitse otsikko lisätäksesi koko ryhmän.</string>
     <string name="report_granularity_title">Tarkkuus</string>
     <string name="report_granularity_daily">Päivittäin</string>
     <string name="report_granularity_weekly">Viikoittain</string>

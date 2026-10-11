@@ -5,10 +5,10 @@ import androidx.health.connect.client.records.NutritionRecord
 import java.time.Instant
 import java.util.Locale
 import kotlin.math.pow
+import tech.mmarca.openvitals.domain.model.NutrientLabelUnit
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionNutrientUnit
-import tech.mmarca.openvitals.features.manualentry.nutrition.NutrientInputUnit
-import tech.mmarca.openvitals.features.manualentry.nutrition.inputUnit
+import tech.mmarca.openvitals.domain.model.labelUnit
 import tech.mmarca.openvitals.healthconnect.nutritionRecordOf
 
 /**
@@ -28,11 +28,11 @@ val CsvNutritionWritePermission: String = HealthPermission.getWritePermission(Nu
  * The units a nutrient column can be written in. The first, the default, is
  * the one nutrition labels print and the food form types in.
  */
-fun csvNutrientUnits(nutrient: NutritionNutrient): List<CsvUnit> = when (nutrient.inputUnit) {
-    NutrientInputUnit.KCAL -> listOf(CsvUnit.KILOCALORIES, CsvUnit.KILOJOULES)
-    NutrientInputUnit.GRAM -> listOf(CsvUnit.GRAMS, CsvUnit.MILLIGRAMS, CsvUnit.MICROGRAMS)
-    NutrientInputUnit.MILLIGRAM -> listOf(CsvUnit.MILLIGRAMS, CsvUnit.MICROGRAMS, CsvUnit.GRAMS)
-    NutrientInputUnit.MICROGRAM -> listOf(CsvUnit.MICROGRAMS, CsvUnit.MILLIGRAMS, CsvUnit.GRAMS)
+fun csvNutrientUnits(nutrient: NutritionNutrient): List<CsvUnit> = when (nutrient.labelUnit) {
+    NutrientLabelUnit.KCAL -> listOf(CsvUnit.KILOCALORIES, CsvUnit.KILOJOULES)
+    NutrientLabelUnit.GRAM -> listOf(CsvUnit.GRAMS, CsvUnit.MILLIGRAMS, CsvUnit.MICROGRAMS)
+    NutrientLabelUnit.MILLIGRAM -> listOf(CsvUnit.MILLIGRAMS, CsvUnit.MICROGRAMS, CsvUnit.GRAMS)
+    NutrientLabelUnit.MICROGRAM -> listOf(CsvUnit.MICROGRAMS, CsvUnit.MILLIGRAMS, CsvUnit.GRAMS)
 }
 
 /** [csvNutrientUnits] as the interpretations the column editor offers. */
@@ -207,15 +207,7 @@ fun previewNutrientValues(
  * the wrong unit shows: 0.000015 g of vitamin D reads "15.0 µg".
  */
 fun csvNutrientPreviewText(nutrient: NutritionNutrient, storedValue: Double): String {
-    val unit = nutrient.inputUnit
+    val unit = nutrient.labelUnit
     val shown = storedValue * 10.0.pow(unit.decimalShift)
     return String.format(Locale.US, "%.1f %s", shown, unit.symbol)
 }
-
-private val NutrientInputUnit.symbol: String
-    get() = when (this) {
-        NutrientInputUnit.KCAL -> "kcal"
-        NutrientInputUnit.GRAM -> "g"
-        NutrientInputUnit.MILLIGRAM -> "mg"
-        NutrientInputUnit.MICROGRAM -> "µg"
-    }

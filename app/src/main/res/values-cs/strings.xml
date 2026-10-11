@@ -1269,6 +1269,7 @@
     <string name="report_metrics_section_title">Metriky</string>
     <string name="report_metrics_select_all">Vybrat vše</string>
     <string name="report_metrics_clear">Zrušit výběr</string>
+    <string name="report_metrics_nutrient_breakdown_hint">„Vybrat vše“ tyto položky nevybere. Zaškrtnutím nadpisu přidáte celou skupinu.</string>
     <string name="report_granularity_title">Podrobnost</string>
     <string name="report_granularity_daily">Denně</string>
     <string name="report_granularity_weekly">Týdně</string>

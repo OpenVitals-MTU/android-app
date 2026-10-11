@@ -23,6 +23,7 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.report.ReportCancellation
 import tech.mmarca.openvitals.data.repository.report.ReportProgress
+import tech.mmarca.openvitals.domain.model.NutritionNutrientGroup
 import tech.mmarca.openvitals.domain.model.ReportGranularity
 import tech.mmarca.openvitals.domain.model.ReportMetric
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -98,6 +99,31 @@ class ReportBuilderViewModelTest {
         notOffered.toggleMedical()
         assertFalse(notOffered.uiState.value.medicalAvailable)
         assertFalse(notOffered.uiState.value.canBuild)
+    }
+
+    @Test fun `select all leaves the nutrient breakdown out and keeps what was ticked there`() = runTest {
+        val viewModel = viewModel()
+        viewModel.toggleMetric(ReportMetric.SODIUM)
+
+        viewModel.selectAllMetrics()
+
+        val selected = viewModel.uiState.value.selectedMetrics
+        assertTrue(ReportMetric.STEPS in selected)
+        assertTrue(ReportMetric.PROTEIN in selected)
+        assertTrue(ReportMetric.SODIUM in selected)
+        assertFalse(ReportMetric.VITAMIN_D in selected)
+    }
+
+    @Test fun `a breakdown heading ticks its whole group, then clears it`() = runTest {
+        val minerals = ReportMetric.entries.filter { it.nutrient?.group == NutritionNutrientGroup.MINERALS }
+        val viewModel = viewModel()
+        viewModel.toggleMetric(ReportMetric.SODIUM)
+
+        viewModel.toggleMetrics(minerals)
+        assertTrue(viewModel.uiState.value.selectedMetrics.containsAll(minerals))
+
+        viewModel.toggleMetrics(minerals)
+        assertTrue(viewModel.uiState.value.selectedMetrics.none { it in minerals })
     }
 
     @Test fun `a successful build lands on DONE with the staged file`() = runTest {

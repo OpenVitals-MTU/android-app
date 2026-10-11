@@ -1635,6 +1635,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="report_metrics_section_title">Métricas</string>
     <string name="report_metrics_select_all">Seleccionar todo</string>
     <string name="report_metrics_clear">Limpar</string>
+    <string name="report_metrics_nutrient_breakdown_hint">«Seleccionar todo» non inclúe estes. Marca un título para engadir todo o grupo.</string>
     <string name="report_granularity_title">Detalle</string>
     <string name="report_granularity_daily">Diario</string>
     <string name="report_granularity_weekly">Semanal</string>

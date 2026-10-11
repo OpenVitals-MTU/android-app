@@ -1281,6 +1281,7 @@
     <string name="report_metrics_section_title">指标</string>
     <string name="report_metrics_select_all">全选</string>
     <string name="report_metrics_clear">清除</string>
+    <string name="report_metrics_nutrient_breakdown_hint">“全选”不包括以下项目。勾选标题可添加整组。</string>
     <string name="report_granularity_title">详细程度</string>
     <string name="report_granularity_daily">每日</string>
     <string name="report_granularity_weekly">每周</string>
