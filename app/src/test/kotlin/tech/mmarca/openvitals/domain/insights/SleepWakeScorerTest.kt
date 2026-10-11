@@ -74,6 +74,29 @@ class SleepWakeScorerTest {
     }
 
     @Test
+    fun `a wrist that drifts without moving is awake in bed, and one turn in sleep is not`() {
+        // Lying awake: no movement count, a degree of drift between epochs that wanders over several
+        // degrees within a few minutes, as on a Galaxy Watch8 night. Asleep: no drift, one turn.
+        // Neither vote alone reaches the wake score; the drift and the range together do.
+        val rows = minutes(start, 120) { index, time ->
+            when {
+                index < 40 -> worn(time, 0f, 60f, zAngleDelta = 1.0f).copy(zAngleMin = 85f + 2 * (index % 4), zAngleMax = 87f + 2 * (index % 4))
+                index == 80 -> worn(time, 0f, 55f, zAngleDelta = 9f)
+                else -> worn(time, 0f, 55f, zAngleDelta = 0.05f)
+            }
+        }
+
+        val labels = score(rows)
+        val without = score(rows, SleepWakeScorer.Config(microMotionWeight = 0f))
+
+        // Once the five-minute window holds a few drifting minutes.
+        assertTrue(labels, labels.substring(4, 40).all { it == 'W' })
+        assertTrue(without, without.substring(0, 40).all { it == 'S' })
+        // The five-minute median ignores the single turn at minute 80.
+        assertTrue(labels, labels.substring(60, 120).all { it == 'S' })
+    }
+
+    @Test
     fun `not worn is a gap and the watch's own awake verdict is wake`() {
         val rows = minutes(start, 90) { index, time ->
             when {
