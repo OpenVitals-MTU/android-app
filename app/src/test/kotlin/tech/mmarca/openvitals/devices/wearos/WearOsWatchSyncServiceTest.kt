@@ -30,6 +30,7 @@ import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRe
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingStatus
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.domain.model.WearSleepMinute
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import io.mockk.slot
@@ -221,11 +222,45 @@ class WearOsWatchSyncServiceTest {
             arg<suspend (List<androidx.health.connect.client.records.Record>) -> Unit>(3).invoke(listOf(foreign))
         }
 
+        coEvery { importRepository.insertImportedRecords(capture(inserted)) } returns Unit
+
         val result = service().sync(WATCH, Duration.ZERO, null)
 
         assertEquals(DeviceSyncResult.Succeeded(0), result)
-        coVerify(exactly = 0) { importRepository.insertImportedRecords(any()) }
+        assertTrue(insertedOf<SleepSessionRecord>().isEmpty())
         assertEquals(nightMinutes().last().time, cursors.sleepCursor(WATCH.id))
+    }
+
+    @Test
+    fun `an estimated night also gives its nocturnal resting heart rate`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        sleepPages += WearOsSleepMinutePage(nightMinutes(), hasMore = false)
+        coEvery { importRepository.insertImportedRecords(capture(inserted)) } returns Unit
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        val resting = insertedOf<RestingHeartRateRecord>().single()
+        assertEquals("wearos_rhr_est_2026-10-08", resting.metadata.clientRecordId)
+        // The asleep minutes run 50.0 to 53.9 bpm in a 40-minute cycle; the lowest half hour averages about 51.
+        assertTrue(resting.beatsPerMinute in 50L..52L)
+    }
+
+    @Test
+    fun `a resting heart rate from elsewhere wins over the estimate`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        sleepPages += WearOsSleepMinutePage(nightMinutes(), hasMore = false)
+        val foreign = mockk<RestingHeartRateRecord> {
+            every { metadata } returns Metadata.manualEntry(clientRecordId = "samsung_rhr_1")
+        }
+        coEvery { healthConnect.forEachSyncRecordPage(RestingHeartRateRecord::class, any(), any(), any()) } coAnswers {
+            arg<suspend (List<androidx.health.connect.client.records.Record>) -> Unit>(3).invoke(listOf(foreign))
+        }
+        coEvery { importRepository.insertImportedRecords(capture(inserted)) } returns Unit
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertTrue(insertedOf<RestingHeartRateRecord>().isEmpty())
+        assertEquals(1, insertedOf<SleepSessionRecord>().size)
     }
 
     @Test

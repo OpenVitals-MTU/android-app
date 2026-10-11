@@ -2,11 +2,15 @@ package tech.mmarca.openvitals.devices.wearos
 
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.Record
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.reflect.KClass
 import kotlin.time.Duration
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -24,6 +28,7 @@ import tech.mmarca.openvitals.devices.core.sync.DeviceSyncProgress
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncResult
 import tech.mmarca.openvitals.devices.core.sync.insertSkippingPresent
 import tech.mmarca.openvitals.devices.core.sync.sleepNightWindow
+import tech.mmarca.openvitals.domain.insights.WearSleepEstimator
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.WearSleepMinute
 import tech.mmarca.openvitals.features.imports.applehealth.isDuplicateClientRecordFailure
@@ -43,15 +48,18 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
  * before the cursor: the watch restates a minute while late steps for it
  * arrive, and the re-pulled minutes that grew replace their records. With
  * the steps go two derived series, the cadence and, when the body weight is
- * known, the walking energy ([WearOsStepsImport]). They are estimates: a
- * Health Connect write permission the user withheld for one of them skips it
- * instead of failing the sync.
+ * known, the walking energy ([WearOsStepsImport]).
  *
  * Then sleep: the minutes from the start of the night the sleep cursor sits
  * in, every night those minutes touch estimated whole and written as one
  * session per night, replacing the earlier estimate. A night that already
  * holds a session from anywhere else, the vendor's app or the user's own
- * entry, is left alone. The sleep cursor moves once the nights are written.
+ * entry, is left alone. Each estimated night also gives a nocturnal resting
+ * heart rate ([WearOsRestingHeartRateImport]), unless the night already holds
+ * one from elsewhere. The sleep cursor moves once the nights are written.
+ *
+ * The derived series are estimates: a Health Connect write permission the
+ * user withheld for one of them skips it instead of failing the sync.
  *
  * [DeviceSyncResult.Succeeded.fileCount] carries the number of heart rate
  * samples and [DeviceSyncResult.Succeeded.nightCount] the nights written;
@@ -226,16 +234,17 @@ class WearOsWatchSyncService(
         var nights = 0
         for ((night, offset) in WearOsSleepImport.touchedNights(minutes, cursor)) {
             val (from, to) = sleepNightWindow(night, offset)
-            if (hasForeignSession(from, to)) {
-                WearOsLog.log("$night: Health Connect already holds a session from elsewhere, skipping")
-                continue
-            }
             val estimated = WearOsSleepImport.night(minutes, night, offset)
             if (estimated == null) {
                 WearOsLog.log("$night: no night in the minutes")
                 continue
             }
             WearOsLog.log("$night: ${estimated.summary()}")
+            writeRestingHeartRate(minutes, estimated, night, offset, from, to)
+            if (hasForeignRecord(SleepSessionRecord::class, from, to, WearOsSleepImport::isOwnRecordId)) {
+                WearOsLog.log("$night: Health Connect already holds a session from elsewhere, skipping")
+                continue
+            }
             val record = WearOsSleepImport.record(estimated, night, offset, version = clock().toEpochMilli())
             if (record == null) {
                 WearOsLog.log("$night: nothing counted as sleep")
@@ -263,6 +272,28 @@ class WearOsWatchSyncService(
         pull()
     }
 
+    /** The night's resting heart rate, unless the window already holds one from elsewhere. */
+    private suspend fun writeRestingHeartRate(
+        minutes: List<WearSleepMinute>,
+        estimated: WearSleepEstimator.Night,
+        night: LocalDate,
+        offset: ZoneOffset,
+        from: Instant,
+        to: Instant,
+    ) {
+        if (hasForeignRecord(RestingHeartRateRecord::class, from, to, WearOsRestingHeartRateImport::isOwnRecordId)) {
+            WearOsLog.log("$night: Health Connect already holds a resting heart rate from elsewhere, skipping")
+            return
+        }
+        val record = WearOsRestingHeartRateImport.record(minutes, estimated, night, offset, version = clock().toEpochMilli())
+        if (record == null) {
+            WearOsLog.log("$night: too few heart rate readings for a resting heart rate")
+            return
+        }
+        WearOsLog.log("$night: resting heart rate ${record.beatsPerMinute} bpm")
+        writeEstimates("resting heart rate", listOf(record))
+    }
+
     /**
      * Writes derived records. A withheld permission for their type skips
      * them, logged, instead of failing the sync the measured data belongs to.
@@ -279,17 +310,22 @@ class WearOsWatchSyncService(
         }
     }
 
-    /** Whether the window holds a sleep session that is not this import's. A read failure counts as no. */
-    private suspend fun hasForeignSession(from: Instant, to: Instant): Boolean {
+    /** Whether the window holds a record of [type] that is not this app's. A read failure counts as no. */
+    private suspend fun hasForeignRecord(
+        type: KClass<out Record>,
+        from: Instant,
+        to: Instant,
+        isOwn: (String?) -> Boolean,
+    ): Boolean {
         var found = false
         try {
-            healthConnect.forEachSyncRecordPage(SleepSessionRecord::class, from, to) { page ->
-                if (page.any { !WearOsSleepImport.isOwnRecordId(it.metadata.clientRecordId) }) found = true
+            healthConnect.forEachSyncRecordPage(type, from, to) { page ->
+                if (page.any { !isOwn(it.metadata.clientRecordId) }) found = true
             }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            WearOsLog.log("Could not read existing sleep sessions: $error")
+            WearOsLog.log("Could not read existing ${type.simpleName}: $error")
         }
         return found
     }
