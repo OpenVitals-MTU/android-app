@@ -13,6 +13,7 @@ Health report export builds a PDF of your health data straight from Health Conne
 The builder lives in Settings, Import & export, Health report.
 
 1. **Pick metrics.** All exportable metrics the installed Health Connect provider supports are listed, grouped by section (Activity, Sleep, Nutrition, Body, Heart, Vitals, Mindfulness). Select all, clear, or tick individual metrics.
+   Under Nutrition, after hydration, calories in, protein, carbohydrates, fat and caffeine, every other nutrient Health Connect stores is listed under the nutrition screen's own headings: Carbohydrates (dietary fibre, sugar), Fats (energy from fat, the fatty acids, cholesterol), Vitamins and Minerals. Each is its own metric, with its own chart, stats and table. Ticking a heading ticks its whole group, or clears it when all of it is ticked. Select all leaves this breakdown out, so a full report gains only the nutrients asked for, and keeps any of them already ticked.
 2. **Pick detail and range.** Detail is daily, weekly, or monthly buckets. The range is a preset lookback (30, 90, 180, or 365 days ending today) or a custom start and end date. Custom ranges are capped at two years so reads stay fast.
    Where Health Connect offers medical records, a **Medical records** option sits under the metrics. It is never ticked by Select all. A report can hold medical records alone.
 3. **Build.** Progress shows the metric currently being read, and the build can be cancelled. Metrics are read one group at a time; a metric that fails or times out costs its own section, never the report.
@@ -56,3 +57,5 @@ BMI and FFMI are display-time derivations with no stored history. Weekly cardio 
 ## Units and Language
 
 Values render with the user's unit settings (including per-quantity overrides) and locale number formats. Dates follow the device locale.
+
+The nutrient breakdown prints each nutrient in the unit a nutrition label uses, the same one the food form types it in: fibre, sugar and the fats in g, sodium, potassium or vitamin C in mg, vitamin D, B12 or selenium in µg, and energy from fat in kcal. Amounts under ten keep one decimal.

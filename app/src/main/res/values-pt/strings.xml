@@ -1846,11 +1846,11 @@
     <string name="settings_fit_import_folder_grant">Conceder permissões de importação</string>
     <string name="settings_fit_import_error">Aviso da importação de FIT: %1$s</string>
     <string name="settings_csv_import_title">Importador de CSV</string>
-    <string name="settings_csv_import_body">Importe medições corporais a partir de um ficheiro CSV — por exemplo, uma exportação de peso e composição corporal de uma balança inteligente. Escolha o que cada coluna significa.</string>
+    <string name="settings_csv_import_body">Importe medições ou nutrição a partir de um ficheiro CSV — por exemplo, uma exportação de peso de uma balança inteligente ou uma folha de cálculo com uma linha por refeição. Escolha o que cada coluna significa.</string>
     <string name="settings_csv_import_action">Importar um ficheiro CSV</string>
     <string name="settings_csv_import_screen_title">Importador de CSV</string>
     <string name="settings_csv_import_pick_title">Escolher um ficheiro CSV</string>
-    <string name="settings_csv_import_pick_body">Escolha uma exportação CSV e faça corresponder as colunas a medições corporais. Nada é escrito até confirmar.</string>
+    <string name="settings_csv_import_pick_body">Escolha um ficheiro CSV e faça corresponder as colunas a medições ou nutrientes. Nada é escrito até confirmar.</string>
     <string name="settings_csv_import_pick_action">Escolher ficheiro CSV</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d colunas</string>
     <string name="settings_csv_import_continue">Continuar</string>
@@ -1871,6 +1871,7 @@
     <string name="settings_csv_import_role_ignore">Não importada</string>
     <string name="settings_csv_import_role_timestamp">Data e hora</string>
     <string name="settings_csv_import_role_end_timestamp">Data e hora de fim</string>
+    <string name="settings_csv_import_role_food_name">Nome do alimento</string>
     <string name="settings_csv_import_interval_end_hint">Cada linha vai da data e hora até à coluna \"Data e hora de fim\". Sem ela, uma linha conta como um minuto.</string>
     <string name="settings_csv_import_metric_weight">Peso</string>
     <string name="settings_csv_import_metric_body_fat">Massa gorda</string>
@@ -1912,8 +1913,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Miligramas por decilitro (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
     <string name="settings_csv_import_unit_count">Uma contagem</string>
+    <string name="settings_csv_import_unit_kilocalories">Quilocalorias (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Quilojoules (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Miligramas (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Microgramas (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">Uma massa em %1$s, como proporção da coluna do peso</string>
     <string name="settings_csv_import_mass_share_hint">O Health Connect guarda a massa gorda como percentagem, pelo que este valor é calculado a partir do peso medido na mesma linha.</string>
+    <string name="settings_csv_import_nutrient_hint">Todas as colunas de nutrientes de uma linha formam um único registo de alimento.</string>
     <string name="settings_csv_import_date_time_title">Data e hora</string>
     <string name="settings_csv_import_date_format_label">Formato</string>
     <string name="settings_csv_import_date_format_auto">Detetar automaticamente</string>
@@ -1940,6 +1946,7 @@
     <string name="settings_csv_import_issue_needs_weight">A massa gorda dada como massa precisa de uma coluna de peso no mesmo ficheiro para calcular a percentagem.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">Nenhuma das linhas amostradas corresponde a este formato de data.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Só uma coluna pode conter a data e hora de fim.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Só uma coluna pode conter o nome do alimento.</string>
     <string name="settings_csv_import_confirm_title">Pronto a importar</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d medições por linha</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s a %3$s</string>
@@ -2746,6 +2753,7 @@
     <string name="report_metrics_section_title">Métricas</string>
     <string name="report_metrics_select_all">Selecionar tudo</string>
     <string name="report_metrics_clear">Limpar</string>
+    <string name="report_metrics_nutrient_breakdown_hint">«Selecionar tudo» deixa-os de fora. Assinale um título para adicionar todo o grupo.</string>
     <string name="report_granularity_title">Detalhe</string>
     <string name="report_granularity_daily">Diário</string>
     <string name="report_granularity_weekly">Semanal</string>

@@ -10,6 +10,12 @@ import java.time.LocalDate
 const val OpenVitalsManualNutritionClientRecordPrefix = "openvitals_manual_nutrition_"
 
 /**
+ * The client-record-id prefix of a nutrition record the CSV importer wrote: a food or a day's
+ * totals from a spreadsheet, never a drink.
+ */
+const val CsvNutritionClientRecordPrefix = "csv_nutritionrecord_"
+
+/**
  * The name the old carbs-only form gave its records. Their client id has the drink-like
  * `openvitals_nutrition_` prefix, so the beverage screens tell them apart by this name.
  */
@@ -136,7 +142,15 @@ data class NutritionEntry(
     val id: String = "",
     val clientRecordId: String? = null,
     val isOpenVitalsEntry: Boolean = false,
-)
+) {
+    /**
+     * Logged in OpenVitals, not only written by it. An Apple Health or CSV import, or a record
+     * synced from another phone, is someone else's entry that OpenVitals carried in, and reads
+     * like another app's: a meal from it is not a drink.
+     */
+    val isLoggedInOpenVitals: Boolean
+        get() = isOpenVitalsEntry && !isImportedClientRecordId(clientRecordId)
+}
 
 data class NutritionWriteRequest(
     val time: Instant,

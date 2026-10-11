@@ -35,6 +35,7 @@ import tech.mmarca.openvitals.features.body.BodyMetric
 import tech.mmarca.openvitals.features.body.BodyViewModel
 import tech.mmarca.openvitals.features.body.BodyWaterMassScreen
 import tech.mmarca.openvitals.features.body.BoneMassScreen
+import tech.mmarca.openvitals.features.body.FfmiScreen
 import tech.mmarca.openvitals.features.body.HeightScreen
 import tech.mmarca.openvitals.features.body.LeanMassScreen
 import tech.mmarca.openvitals.features.body.WeightScreen
@@ -461,6 +462,7 @@ private fun BodyMetricRouteScreen(
             dateTimeFormatterProvider,
             onEditBodyMeasurement,
         )
+        BodyMetric.FFMI -> FfmiScreen(viewModel, unitFormatter, dateTimeFormatterProvider)
         BodyMetric.BODY_FAT -> BodyFatScreen(
             viewModel,
             unitFormatter,
@@ -574,7 +576,7 @@ private fun DashboardWidgetId.toBodyMetricOrNull(): BodyMetric? =
         DashboardWidgetId.WEIGHT -> BodyMetric.WEIGHT
         DashboardWidgetId.HEIGHT -> BodyMetric.HEIGHT
         DashboardWidgetId.BMI -> BodyMetric.BMI
-        DashboardWidgetId.FFMI -> BodyMetric.BMI
+        DashboardWidgetId.FFMI -> BodyMetric.FFMI
         DashboardWidgetId.BODY_FAT -> BodyMetric.BODY_FAT
         DashboardWidgetId.LEAN_MASS -> BodyMetric.LEAN_MASS
         DashboardWidgetId.BMR -> BodyMetric.BMR

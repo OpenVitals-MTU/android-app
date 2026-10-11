@@ -104,10 +104,24 @@ class ReportBuilderViewModel @Inject constructor(
         )
     }
 
+    /** A breakdown heading: ticks every metric under it, or clears them when all are ticked. */
+    fun toggleMetrics(metrics: Collection<ReportMetric>) = configure { state ->
+        state.copy(
+            selectedMetrics = if (state.selectedMetrics.containsAll(metrics)) {
+                state.selectedMetrics - metrics.toSet()
+            } else {
+                state.selectedMetrics + metrics
+            },
+        )
+    }
+
     /** Kept apart from the metrics: "Select all" never adds medical records. */
     fun toggleMedical() = configure { it.copy(includeMedical = !it.includeMedical) }
 
-    fun selectAllMetrics() = configure { it.copy(selectedMetrics = it.supportedMetrics.toSet()) }
+    /** Every metric but the nutrient breakdown, which stays as the user ticked it. */
+    fun selectAllMetrics() = configure { state ->
+        state.copy(selectedMetrics = state.selectedMetrics + state.supportedMetrics.filterNot { it.isNutrientBreakdown })
+    }
 
     fun clearMetrics() = configure { it.copy(selectedMetrics = emptySet()) }
 

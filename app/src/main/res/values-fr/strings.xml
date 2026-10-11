@@ -1277,6 +1277,7 @@
     <string name="report_metrics_section_title">Mesures</string>
     <string name="report_metrics_select_all">Tout sélectionner</string>
     <string name="report_metrics_clear">Effacer</string>
+    <string name="report_metrics_nutrient_breakdown_hint">« Tout sélectionner » ne les coche pas. Cochez un titre pour ajouter tout son groupe.</string>
     <string name="report_granularity_title">Niveau de détail</string>
     <string name="report_granularity_daily">Quotidien</string>
     <string name="report_granularity_weekly">Hebdomadaire</string>
@@ -1967,11 +1968,11 @@
     <string name="settings_fit_import_folder_grant">Accorder les autorisations d\'importation</string>
     <string name="settings_fit_import_error">Avertissement d\'importation FIT : %1$s</string>
     <string name="settings_csv_import_title">Importateur CSV</string>
-    <string name="settings_csv_import_body">Importez des mesures corporelles depuis un fichier CSV, par exemple un export de poids et de composition corporelle issu d\'une balance connectée. Vous choisissez ce que signifie chaque colonne.</string>
+    <string name="settings_csv_import_body">Importez des mesures ou des données nutritionnelles depuis un fichier CSV, par exemple un export de poids issu d\'une balance connectée ou un tableur avec une ligne par repas. Vous choisissez ce que signifie chaque colonne.</string>
     <string name="settings_csv_import_action">Importer un fichier CSV</string>
     <string name="settings_csv_import_screen_title">Importateur CSV</string>
     <string name="settings_csv_import_pick_title">Choisir un fichier CSV</string>
-    <string name="settings_csv_import_pick_body">Sélectionnez un export CSV et associez ses colonnes à des mesures corporelles. Rien n\'est écrit tant que vous n\'avez pas confirmé.</string>
+    <string name="settings_csv_import_pick_body">Sélectionnez un fichier CSV et associez ses colonnes à des mesures ou à des nutriments. Rien n\'est écrit tant que vous n\'avez pas confirmé.</string>
     <string name="settings_csv_import_pick_action">Choisir un fichier CSV</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d colonnes</string>
     <string name="settings_csv_import_continue">Continuer</string>
@@ -1992,6 +1993,7 @@
     <string name="settings_csv_import_role_ignore">Non importée</string>
     <string name="settings_csv_import_role_timestamp">Date et heure</string>
     <string name="settings_csv_import_role_end_timestamp">Date et heure de fin</string>
+    <string name="settings_csv_import_role_food_name">Nom de l\'aliment</string>
     <string name="settings_csv_import_interval_end_hint">Chaque ligne va de la date et l\'heure jusqu\'à la colonne « Date et heure de fin ». Sans elle, une ligne compte pour une minute.</string>
     <string name="settings_csv_import_metric_weight">Poids</string>
     <string name="settings_csv_import_metric_body_fat">Masse grasse</string>
@@ -2033,8 +2035,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Milligrammes par décilitre (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
     <string name="settings_csv_import_unit_count">Nombre</string>
+    <string name="settings_csv_import_unit_kilocalories">Kilocalories (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Kilojoules (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Milligrammes (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Microgrammes (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">Une masse en %1$s, rapportée à la colonne de poids</string>
     <string name="settings_csv_import_mass_share_hint">Santé Connect enregistre la masse grasse en pourcentage ; elle est donc calculée à partir du poids mesuré sur la même ligne.</string>
+    <string name="settings_csv_import_nutrient_hint">Toutes les colonnes de nutriments d\'une ligne forment une seule entrée d\'aliment.</string>
     <string name="settings_csv_import_date_time_title">Date et heure</string>
     <string name="settings_csv_import_date_format_label">Format</string>
     <string name="settings_csv_import_date_format_auto">Détecter automatiquement</string>
@@ -2061,6 +2068,7 @@
     <string name="settings_csv_import_issue_needs_weight">La masse grasse exprimée en masse nécessite une colonne de poids dans le même fichier pour calculer le pourcentage.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">Aucune des lignes échantillonnées ne correspond à ce format de date.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Une seule colonne peut contenir la date et l\'heure de fin.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Une seule colonne peut contenir le nom de l\'aliment.</string>
     <string name="settings_csv_import_confirm_title">Prêt à importer</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d mesures par ligne</string>
     <string name="settings_csv_import_confirm_range">%1$s : de %2$s à %3$s</string>
