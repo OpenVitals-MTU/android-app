@@ -3,7 +3,6 @@ package tech.mmarca.openvitals.features.manualentry.hydration
 import java.time.Instant
 import java.util.Locale
 import tech.mmarca.openvitals.domain.model.CustomHydrationDrink
-import tech.mmarca.openvitals.domain.model.CsvNutritionClientRecordPrefix
 import tech.mmarca.openvitals.domain.model.HydrationEntry
 import tech.mmarca.openvitals.domain.model.NutritionEntry
 import tech.mmarca.openvitals.domain.model.OpenVitalsFoodClientRecordPrefix
@@ -60,7 +59,6 @@ internal fun frequentHydrationDrinkOptions(
         // A food or a typed nutrition entry shares the record type, and may share a drink's name.
         if (entry.clientRecordId?.startsWith(OpenVitalsFoodClientRecordPrefix) == true) return@forEach
         if (entry.clientRecordId?.startsWith(OpenVitalsManualNutritionClientRecordPrefix) == true) return@forEach
-        if (entry.clientRecordId?.startsWith(CsvNutritionClientRecordPrefix) == true) return@forEach
         val pairedHydrationClientRecordId = entry.clientRecordId?.pairedHydrationClientRecordIdOrNull()
         val pairedDrinkId = pairedHydrationClientRecordId?.hydrationDrinkIdFromClientRecordId()
         if (pairedDrinkId != null) {
@@ -90,8 +88,9 @@ internal fun frequentHydrationDrinkOptions(
 private fun HydrationEntry.isOpenVitalsHydrationEntry(): Boolean =
     isOpenVitalsEntry || clientRecordId?.startsWith(OpenVitalsHydrationClientRecordPrefix) == true
 
+/** An import or a synced record counts like another app's: its name says nothing about this phone's drinks. */
 private fun NutritionEntry.isOpenVitalsNutritionEntry(): Boolean =
-    isOpenVitalsEntry ||
+    isLoggedInOpenVitals ||
         clientRecordId?.startsWith(OpenVitalsStandaloneNutritionPrefix) == true ||
         clientRecordId?.startsWith(OpenVitalsPairedHydrationNutritionPrefix) == true
 

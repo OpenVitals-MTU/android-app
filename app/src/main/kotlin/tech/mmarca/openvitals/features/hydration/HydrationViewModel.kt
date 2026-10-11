@@ -377,7 +377,7 @@ private fun NutritionEntry.isCsvImportedNutritionEntry(): Boolean =
     clientRecordId?.startsWith(CsvNutritionClientRecordPrefix) == true
 
 private fun NutritionEntry.shouldAppearInBeverageHistory(): Boolean =
-    isOpenVitalsEntry ||
+    isLoggedInOpenVitals ||
         valueFor(NutritionNutrient.CAFFEINE)?.let { it > 0.0 && it.isFinite() } == true ||
         CaffeineHealthDrinkCatalog.matchName(name) != null
 
