@@ -13,16 +13,15 @@ import android.util.Log
 import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /**
- * Writes the steps the hub's step counter (`TYPE_STEP_COUNTER`) reports into
- * the [MetricStore], one row per clock minute; [StepMinuteCounter] does the
- * arithmetic. Runs inside `WearAppService`, so it outlives the activity.
+ * Writes the step counter's (`TYPE_STEP_COUNTER`) steps to the [MetricStore],
+ * one row per clock minute. [StepMinuteCounter] does the arithmetic. Runs in
+ * `WearAppService`, so it outlives the activity.
  *
- * The counter is the non-waking variant: it counts in the hub while the
- * processor sleeps, and a batch it drops costs only resolution, never steps,
- * because every reading carries the running total. Its report latency
- * matches the heart rate's, so the two arrive in one wake-up. The last total
- * is kept per boot, so a restart of the service neither loses nor recounts
- * what was walked meanwhile.
+ * The counter is the non-waking variant: it counts while the processor
+ * sleeps. Every reading carries the running total, so a dropped batch loses
+ * resolution, not steps. It reports with the heart rate's latency, so both
+ * arrive in one wake-up. The last total is kept per boot, so a service
+ * restart neither loses nor double-counts steps.
  */
 class StepRecorder(
     context: Context,
@@ -107,9 +106,9 @@ class StepRecorder(
     private var lastRow: WearLinkProtocol.StepMinute? = null
 
     /**
-     * One line per minute, written once the next minute starts: the watch
-     * has no screen for steps yet, so `adb logcat -s StepRecorder` is where
-     * a tester reads them. A late batch may still add to a logged minute.
+     * Logs one line per minute once the next minute starts. The watch has no
+     * steps screen yet; testers read `adb logcat -s StepRecorder`. A late
+     * batch may still add to a logged minute.
      */
     private fun logFinishedMinute(row: WearLinkProtocol.StepMinute) {
         val previous = lastRow

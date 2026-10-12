@@ -120,8 +120,29 @@ class BodyDisplayDerivationsTest {
         val bmi = metric(withHeight, R.string.metric_bmi)
         assertEquals(22.5, bmi.values.single().value, 0.01)
         assertEquals(22.5, bmi.dayValues.single().value, 0.01)
-        // FFMI never gets a series, in Flutter or here, only a latest value.
+        // FFMI needs a body-fat reading too: a weight alone makes no point.
         assertTrue(metric(withHeight, R.string.metric_ffmi).values.isEmpty())
+    }
+
+    // FFMI's series.
+
+    @Test fun `FFMI has a series of its own, one point per body-fat reading`() {
+        val state = stateOf(
+            BodyPeriodData(
+                weightEntries = listOf(weight(monday, 72.0), weight(tuesday, 70.0)),
+                heightEntries = listOf(HeightEntry(time = monday, heightCm = 180.0, source = "test")),
+                bodyFatEntries = listOf(BodyFatEntry(time = monday, percent = 20.0, source = "test")),
+            )
+        )
+
+        val ffmi = metric(state, R.string.metric_ffmi)
+        assertEquals(BodyMetric.FFMI, ffmi.metric)
+        // Monday only: 72 kg at 20% is 57.6 kg fat-free, / 1.8² = 17.78.
+        assertEquals(mondayDate, ffmi.values.single().date)
+        assertEquals(17.78, ffmi.values.single().value, 0.01)
+        assertEquals(17.78, ffmi.dayValues.single().value, 0.01)
+        // The latest stays the dashboard tile's: Tuesday's weight with Monday's body fat.
+        assertEquals("17.3", ffmi.latest?.value)
     }
 
     // The reading list.

@@ -60,8 +60,10 @@ class CsvImportService @Inject constructor(
             }
         }
 
-        // Guards against one file listing the same measurement twice.
+        // Guards against one file listing the same measurement twice. Nutrition
+        // records are numbered instead: two foods at one instant are both eaten.
         val seenIds = mutableSetOf<String>()
+        val nutritionOccurrences = CsvNutritionOccurrences()
         val pending = mutableListOf<CsvConvertedRecord>()
 
         fun finish(outcome: CsvImportOutcome, error: String? = null): CsvImportResult =
@@ -85,7 +87,11 @@ class CsvImportService @Inject constructor(
                         throw StopCollecting
                     }
 
-                    val conversion = convertCsvRow(row = row, mapping = mapping)
+                    val conversion = convertCsvRow(
+                        row = row,
+                        mapping = mapping,
+                        nutritionOccurrences = nutritionOccurrences,
+                    )
                     conversion.diagnostics.forEach(::record)
                     progress = progress.copy(
                         rowsRead = progress.rowsRead + 1,

@@ -1281,6 +1281,7 @@
     <string name="report_metrics_section_title">指标</string>
     <string name="report_metrics_select_all">全选</string>
     <string name="report_metrics_clear">清除</string>
+    <string name="report_metrics_nutrient_breakdown_hint">“全选”不包括以下项目。勾选标题可添加整组。</string>
     <string name="report_granularity_title">详细程度</string>
     <string name="report_granularity_daily">每日</string>
     <string name="report_granularity_weekly">每周</string>
@@ -1963,11 +1964,11 @@
     <string name="settings_fit_import_folder_grant">授予导入权限</string>
     <string name="settings_fit_import_error">FIT 导入警告：%1$s</string>
     <string name="settings_csv_import_title">CSV 导入器</string>
-    <string name="settings_csv_import_body">从 CSV 文件导入身体测量 — 例如智能体脂秤的体重和身体成分导出。你选择每列代表什么。</string>
+    <string name="settings_csv_import_body">从 CSV 文件导入测量数据或营养数据 — 例如智能体脂秤的体重导出，或每餐一行的电子表格。你选择每列代表什么。</string>
     <string name="settings_csv_import_action">导入 CSV 文件</string>
     <string name="settings_csv_import_screen_title">CSV 导入器</string>
     <string name="settings_csv_import_pick_title">选择 CSV 文件</string>
-    <string name="settings_csv_import_pick_body">选择 CSV 导出并将其列匹配到身体测量。确认前不会写入任何内容。</string>
+    <string name="settings_csv_import_pick_body">选择 CSV 文件并将其列匹配到测量数据或营养素。确认前不会写入任何内容。</string>
     <string name="settings_csv_import_pick_action">选择 CSV 文件</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d 列</string>
     <string name="settings_csv_import_continue">继续</string>
@@ -1988,6 +1989,7 @@
     <string name="settings_csv_import_role_ignore">不导入</string>
     <string name="settings_csv_import_role_timestamp">日期和时间</string>
     <string name="settings_csv_import_role_end_timestamp">结束日期和时间</string>
+    <string name="settings_csv_import_role_food_name">食物名称</string>
     <string name="settings_csv_import_interval_end_hint">每行从日期和时间持续到“结束日期和时间”列。没有该列时，每行按一分钟计。</string>
     <string name="settings_csv_import_metric_weight">体重</string>
     <string name="settings_csv_import_metric_body_fat">体脂</string>
@@ -2029,8 +2031,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">毫克每分升 (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
     <string name="settings_csv_import_unit_count">计数</string>
+    <string name="settings_csv_import_unit_kilocalories">千卡 (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">千焦 (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">毫克 (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">微克 (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">以 %1$s 为单位的重量，作为体重列的占比</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect 以百分比存储体脂，因此从同一行的体重测量中计算。</string>
+    <string name="settings_csv_import_nutrient_hint">一行中的所有营养素列会合成一条食物记录。</string>
     <string name="settings_csv_import_date_time_title">日期和时间</string>
     <string name="settings_csv_import_date_format_label">格式</string>
     <string name="settings_csv_import_date_format_auto">自动检测</string>
@@ -2057,6 +2064,7 @@
     <string name="settings_csv_import_issue_needs_weight">以重量给出的体脂需要同一文件中的体重列来计算百分比。</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">采样行中没有匹配此日期格式的。</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">只能有一列持有结束日期和时间。</string>
+    <string name="settings_csv_import_issue_multiple_food_names">只能有一列持有食物名称。</string>
     <string name="settings_csv_import_confirm_title">准备导入</string>
     <string name="settings_csv_import_confirm_summary">%1$s · 每行 %2$d 项测量</string>
     <string name="settings_csv_import_confirm_range">%1$s：%2$s 到 %3$s</string>

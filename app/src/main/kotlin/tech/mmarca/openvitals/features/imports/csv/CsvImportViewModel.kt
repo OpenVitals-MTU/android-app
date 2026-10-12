@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 /** Which step of the importer the screen is showing. */
@@ -48,7 +49,7 @@ data class CsvImportState(
 ) {
     /** Whether the mapping is complete enough to import. */
     val canContinue: Boolean
-        get() = issues.isEmpty() && (mapping?.metricColumns?.isNotEmpty() == true)
+        get() = issues.isEmpty() && (mapping?.importsAnything == true)
 
     /** The write permissions this mapping needs, can ask for, and lacks. */
     val missingPermissions: Set<String>
@@ -184,6 +185,25 @@ class CsvImportViewModel @Inject constructor(
                     role = role,
                     metric = if (role == CsvColumnRole.METRIC) metric else null,
                     interpretation = if (role == CsvColumnRole.METRIC) interpretation else null,
+                ),
+            ),
+        )
+    }
+
+    /** Points column [columnIndex] at [nutrient], defaulting its unit from the header like a metric. */
+    fun setColumnNutrient(columnIndex: Int, nutrient: NutritionNutrient) {
+        val mapping = _uiState.value.mapping ?: return
+        val interpretation = headerUnit(columnIndex)
+            ?.let { csvNutrientInterpretationForUnit(nutrient, it) }
+            ?: csvNutrientDefaultInterpretation(nutrient)
+
+        applyMapping(
+            mapping.withColumn(
+                CsvColumnMapping(
+                    columnIndex = columnIndex,
+                    role = CsvColumnRole.NUTRIENT,
+                    interpretation = interpretation,
+                    nutrient = nutrient,
                 ),
             ),
         )

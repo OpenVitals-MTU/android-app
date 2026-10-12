@@ -20,8 +20,8 @@ import tech.mmarca.openvitals.domain.preferences.HeartZoneThresholds
  * The 5-minute-bucket Body Energy timeline.
  *
  * An energy balance: a basal waking floor plus an activity drain, the stronger
- * of the heart-rate-zone estimate (Banister TRIMP,
- * https://pmc.ncbi.nlm.nih.gov/articles/PMC6561225/) and an active-calorie
+ * of the heart-rate-zone estimate (Banister TRIMP;
+ * Morton, Fitz-Clarke and Banister 1990, doi:10.1152/jappl.1990.69.3.1171) and an active-calorie
  * estimate. The framing is a product design, not a published model.
  */
 const val BodyEnergyTimelineBucketMinutes = 5L
@@ -742,9 +742,7 @@ private fun resolveIntensityContext(
         inputs.observedMaxHeartRateBpm,
         heartRateSamples.maxOfOrNull { it.beatsPerMinute },
     ).maxOrNull()
-    // Tanaka (208 - 0.7*age), matching heart-rate recovery.
-    val ageMax = profile.ageYears(inputs.date)
-        ?.let { maxOf(1L, (208.0 - 0.7 * it).roundToInt().toLong()) }
+    val ageMax = profile.ageYears(inputs.date)?.let(::tanakaMaxHeartRate)
     val maxHeartRate = when {
         resting != null && observedMax != null && observedMax >= maxOf(150L, resting + 60L) -> observedMax
         ageMax != null -> ageMax

@@ -11,19 +11,18 @@ import java.time.Instant
 import tech.mmarca.openvitals.domain.insights.WalkingEnergy
 
 /**
- * Maps the watch's step minutes onto Health Connect records, one per minute
+ * Maps the watch's step minutes to Health Connect records, one per minute
  * and type, keyed on the minute's start:
  *
- * - `StepsRecord`, what the watch counted.
- * - `StepsCadenceRecord`, the same count as steps per minute.
- * - `ActiveCaloriesBurnedRecord`, estimated from the cadence by
- *   [WalkingEnergy], only when the body weight is known.
+ * - `StepsRecord`: the watch's count.
+ * - `StepsCadenceRecord`: the same count as steps per minute.
+ * - `ActiveCaloriesBurnedRecord`: from the cadence by [WalkingEnergy], only
+ *   when the body weight is known.
  *
- * A minute's count only grows while late steps arrive, so the count is also
- * every record's version: a re-pull of a minute that grew replaces it, one
- * that did not changes nothing.
+ * A minute's count only grows, so the count is also every record's version:
+ * a minute that grew replaces its records, an unchanged one does nothing.
  *
- * Pure: no Android, so it is testable without a device.
+ * Pure, so it is testable without a device.
  */
 object WearOsStepsImport {
 

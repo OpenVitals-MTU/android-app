@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.imports.csv
 import com.google.common.truth.Truth.assertThat
 import java.time.ZoneOffset
 import org.junit.Test
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
 private val HeaderRow = listOf("Date", "Weight (kg)", "Fat mass (kg)", "Comments")
 
@@ -137,6 +138,31 @@ class CsvImportReportTest {
         assertThat(report).contains("[0] Date -> date and time")
         assertThat(report).contains("[1] Weight (kg) -> weight (kilograms)")
         assertThat(report).contains("[3] Comments -> not imported")
+    }
+
+    @Test
+    fun `a nutrient column names the nutrient and the unit it was read in`() {
+        val mapping = CsvImportMapping(
+            columns = listOf(
+                CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
+                CsvColumnMapping(columnIndex = 1, role = CsvColumnRole.FOOD_NAME),
+                CsvColumnMapping(
+                    columnIndex = 2,
+                    role = CsvColumnRole.NUTRIENT,
+                    nutrient = NutritionNutrient.VITAMIN_B12,
+                ),
+            ),
+        )
+
+        val report = buildCsvImportReport(
+            fileName = "meals.csv",
+            mapping = mapping,
+            result = runResult(),
+            headerRow = listOf("Date", "Food", "B12"),
+        )
+
+        assertThat(report).contains("[1] Food -> food name")
+        assertThat(report).contains("[2] B12 -> nutrient vitaminB12 (micrograms)")
     }
 
     @Test
