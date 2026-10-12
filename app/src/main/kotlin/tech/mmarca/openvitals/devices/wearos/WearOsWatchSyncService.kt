@@ -35,9 +35,9 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
  * write. A sync that dies mid-way therefore loses nothing: the next one
  * resumes at the last page written, and a page written twice upserts.
  *
- * Then steps, the same way, except that each pull starts a few minutes
- * before the cursor: the watch restates a minute while late steps for it
- * arrive, and the re-pulled minutes that grew replace their records.
+ * Then steps, the same way, but each pull starts a few minutes before the
+ * cursor: the watch rewrites a minute while late steps arrive, and a minute
+ * that grew replaces its record.
  *
  * Then sleep: the minutes from the start of the night the sleep cursor sits
  * in, every night those minutes touch estimated whole and written as one
@@ -293,7 +293,7 @@ class WearOsWatchSyncService(
 
         const val RETRY_DELAY_MILLIS = 1_500L
 
-        /** How far back a step pull reaches past its cursor: a minute is restated for up to its batch latency. */
+        /** How far a step pull reaches back past its cursor: the watch rewrites a minute for up to its batch latency. */
         const val STEPS_RESTATED_MILLIS = 5 * 60_000L
     }
 }

@@ -7,12 +7,12 @@ import androidx.health.connect.client.records.metadata.Metadata
 import java.time.Instant
 
 /**
- * Maps the watch's step minutes onto Health Connect records: one
- * `StepsRecord` per minute, keyed on the minute's start. A minute's count only
- * grows while late steps arrive, so the count is also the record's version: a
- * re-pull of a minute that grew replaces it, one that did not changes nothing.
+ * Maps the watch's step minutes to Health Connect records: one `StepsRecord`
+ * per minute, keyed on the minute's start. A minute's count only grows, so
+ * the count is also the record's version: a minute that grew replaces its
+ * record, an unchanged one does nothing.
  *
- * Pure: no Android, so it is testable without a device.
+ * Pure, so it is testable without a device.
  */
 object WearOsStepsImport {
 

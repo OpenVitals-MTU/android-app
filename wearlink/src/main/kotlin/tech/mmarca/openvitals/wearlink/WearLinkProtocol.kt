@@ -231,7 +231,7 @@ object WearLinkProtocol {
 
     /**
      * The steps the watch counted in one clock minute, keyed on the minute's
-     * start. A minute is restated while late steps for it arrive; the count
+     * start. The watch rewrites a minute while late steps arrive. The count
      * only grows.
      */
     data class StepMinute(val epochMillis: Long, val steps: Int)
@@ -432,7 +432,7 @@ object WearLinkProtocol {
 
     private const val MINUTE_MILLIS = 60_000L
 
-    /** Sprinting cadence is about 200 a minute; past this the counter jumped, not the wearer. */
+    /** Sprinting is about 200 steps a minute. More means the counter jumped. */
     const val MAX_STEPS_PER_MINUTE: Int = 400
 
     /** Outside this range the sensor is reporting noise, not a heart. */
