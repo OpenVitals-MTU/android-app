@@ -18,11 +18,11 @@ import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPort
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncProgress
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncResult
-import tech.mmarca.openvitals.devices.core.sync.insertSkippingPresent
+import tech.mmarca.openvitals.data.repository.insertSkippingPresent
 import tech.mmarca.openvitals.devices.core.sync.sleepNightWindow
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.WearSleepMinute
-import tech.mmarca.openvitals.features.imports.applehealth.isDuplicateClientRecordFailure
+import tech.mmarca.openvitals.data.repository.isDuplicateClientRecordFailure
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingController
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
