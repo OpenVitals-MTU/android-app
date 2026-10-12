@@ -11,11 +11,11 @@ import tech.mmarca.openvitals.domain.model.WearSleepMinute
 
 /**
  * One nocturnal resting heart rate per estimated night, from the minutes the
- * sleep import already pulled; see [NocturnalRestingHeartRate]. Stamped at
- * the end of the night, keyed on the night, with the sync time as version so
- * the later estimate replaces the earlier, as the sleep session does.
+ * sleep import already pulled; see [NocturnalRestingHeartRate]. Timed at the
+ * night's end and keyed on the night. The sync time is the version, so a
+ * later estimate replaces an earlier one, like the sleep session.
  *
- * Pure: no Android, so it is testable without a device.
+ * Pure, so it is testable without a device.
  */
 object WearOsRestingHeartRateImport {
 
@@ -25,7 +25,7 @@ object WearOsRestingHeartRateImport {
 
     fun isOwnRecordId(clientRecordId: String?): Boolean = clientRecordId?.startsWith(CLIENT_ID_PREFIX) == true
 
-    /** The record for [estimated], or null when its sleep held too few heart rate readings. */
+    /** The record for [estimated]. Null when its sleep has too few heart rate readings. */
     fun record(
         minutes: List<WearSleepMinute>,
         estimated: WearSleepEstimator.Night,

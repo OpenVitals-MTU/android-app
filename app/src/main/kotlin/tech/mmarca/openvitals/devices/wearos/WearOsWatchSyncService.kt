@@ -271,7 +271,7 @@ class WearOsWatchSyncService(
         pull()
     }
 
-    /** The night's resting heart rate, unless the window already holds one from elsewhere. */
+    /** Writes the night's resting heart rate, unless the window already has one from elsewhere. */
     private suspend fun writeRestingHeartRate(
         minutes: List<WearSleepMinute>,
         estimated: WearSleepEstimator.Night,
@@ -309,7 +309,7 @@ class WearOsWatchSyncService(
         }
     }
 
-    /** Whether the window holds a record of [type] that is not this app's. A read failure counts as no. */
+    /** Whether the window has a record of [type] from another app. A read failure counts as no. */
     private suspend fun hasForeignRecord(
         type: KClass<out Record>,
         from: Instant,
