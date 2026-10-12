@@ -1,29 +1,23 @@
 package tech.mmarca.openvitals.domain.insights
 
 /**
- * Walking energy from cadence alone, one minute at a time: the "simple"
- * cadence equation of Moore and colleagues, "Development of a Cadence-Based
- * Metabolic Equation for Walking", Med Sci Sports Exerc 2021;53(1):165–173,
- * doi:10.1249/MSS.0000000000002430 (Table 2):
+ * Walking energy per minute from cadence alone. Moore et al. 2021,
+ * doi:10.1249/MSS.0000000000002430, Table 2, simple equation:
  *
  *     VO2 (ml/kg/min) = 1.811 + 0.02014 · cadence + 7.427e-4 · cadence²
  *
- * fitted on 235 adults aged 21–84 walking level on a treadmill; RMSE 0.60
- * METs at normal speeds. METs are VO2 / 3.5. The minute's active energy is
- * the net cost, the METs above rest, at about 1 kcal per kg per hour per MET:
+ * Fitted on 235 adults aged 21–84, level treadmill walking; RMSE 0.60 METs.
+ * Active energy is the METs above rest (MET = VO2 / 3.5):
  *
  *     kcal = (VO2 / 3.5 − 1) · kg / 60
  *
- * Subtracting the resting MET keeps rest from being counted twice when the
- * basal rate is added for a daily total; one MET overstates the resting
- * cost of many people (Byrne and colleagues, J Appl Physiol 2005,
- * doi:10.1152/japplphysiol.00023.2004), so the active share is, if
- * anything, slightly understated.
+ * Rest is subtracted so a daily total with the basal rate does not count it
+ * twice. One MET overstates many people's resting cost (Byrne et al. 2005,
+ * doi:10.1152/japplphysiol.00023.2004), so this slightly understates.
  *
- * Limits, as the paper states them: level walking only, no hills or stairs,
- * no running, and a whole minute of sustained walking. A minute of a few
- * scattered steps is not that; below about 36 steps a minute the equation
- * stays under one MET and the minute adds nothing.
+ * Limits from the paper: level walking only, no hills, stairs or running, a
+ * whole minute of steady walking. Below about 36 steps a minute the result
+ * is under one MET and the minute adds nothing.
  */
 object WalkingEnergy {
 

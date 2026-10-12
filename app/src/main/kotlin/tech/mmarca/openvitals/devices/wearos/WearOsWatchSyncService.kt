@@ -65,7 +65,7 @@ class WearOsWatchSyncService(
     private val recordingController: ActivityRecordingController,
     private val healthConnect: HealthConnectManager,
     private val linkStore: WearOsLinkStore,
-    /** The body weight for the walking energy: Health Connect's latest, else the profile's; null when neither has one. */
+    /** Body weight for the walking energy: Health Connect's latest, else the profile's. Null when neither has one. */
     private val weightKg: suspend () -> Double?,
     private val clock: () -> Instant,
     private val zone: () -> ZoneId,
@@ -197,7 +197,7 @@ class WearOsWatchSyncService(
             if (!page.hasMore || newest == null) break
             if (++pages >= MAX_PAGES) break
         }
-        // The watch has no screen for these yet; this line is where a tester reads them.
+        // The watch has no screen for these yet; testers read this line.
         WearOsLog.log(
             "steps: $written minute(s) written, $pulledSteps steps pulled (re-pulled minutes count again); " +
                 if (weight == null) "no walking energy" else "walking energy ${"%.1f".format(energyKcal)} kcal over $energyMinutes minute(s) at $weight kg",
@@ -263,8 +263,8 @@ class WearOsWatchSyncService(
     }
 
     /**
-     * Writes derived records. A withheld permission for their type skips
-     * them, logged, instead of failing the sync the measured data belongs to.
+     * Writes derived records. If the user withheld the permission for their
+     * type, they are skipped and logged, and the sync goes on.
      */
     private suspend fun writeEstimates(what: String, records: List<Record>) {
         if (records.isEmpty()) return
