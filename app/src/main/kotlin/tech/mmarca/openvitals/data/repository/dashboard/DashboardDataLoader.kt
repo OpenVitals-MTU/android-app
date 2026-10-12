@@ -857,6 +857,7 @@ class DashboardDataLoader @Inject constructor(
                     activityWindows = activityWindows,
                     ageYears = ageYears,
                     explicitMaxHeartRate = explicitMaxHeartRate,
+                    sex = bodyProfile?.sex,
                 )
                 val intensityMinutes = calculateIntensityMinutes(
                     samples = heartRateSamplesByDate[day].orEmpty(),
