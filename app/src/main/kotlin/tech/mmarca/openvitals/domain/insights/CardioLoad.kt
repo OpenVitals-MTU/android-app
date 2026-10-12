@@ -96,7 +96,7 @@ fun calculateCardioLoad(
     val fallback = movementFallbackCardioLoad(steps)
     val resting = restingHeartRate ?: baselineRestingHeartRate ?: samples.estimatedRestingHeartRate()
     val maxHeartRate = resting?.let {
-        maxHeartRateContext(observedMaxHeartRate, samples, it, ageYears, explicitMaxHeartRate)
+        maxHeartRateContext(observedMaxHeartRate, samples, it, ageYears, sex, explicitMaxHeartRate)
     }
     val trimp = if (resting != null && maxHeartRate != null) {
         calculateTrimp(
@@ -250,6 +250,7 @@ private fun maxHeartRateContext(
     samples: List<HeartRateSample>,
     restingHeartRate: Long,
     ageYears: Int?,
+    sex: BiologicalSex?,
     explicitMaxHeartRate: Long? = null,
 ): MaxHeartRateContext? {
     // A stated maximum outranks everything.
@@ -262,9 +263,9 @@ private fun maxHeartRateContext(
         ObservedMaxHeartRateMinimumBpm,
         restingHeartRate + ObservedMaxHeartRateRestingDeltaBpm,
     )
-    // Prefer Tanaka over an observed+10 floor, which understated the maximum by 30-40 bpm.
+    // Prefer the age formula over an observed+10 floor, which understated the maximum by 30-40 bpm.
     val estimatedMax = maxOf(
-        ageYears?.let { tanakaMaxHeartRate(it) } ?: 0L,
+        ageYears?.let { ageMaxHeartRate(it, sex) } ?: 0L,
         observedMax + 10L,
         restingHeartRate + 70L,
     )
