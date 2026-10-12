@@ -55,6 +55,15 @@ class WearLinkSession internal constructor(
         }
     }
 
+    fun pullFloors(sinceEpochMillis: Long, limit: Int): WearLinkOutcome<Page<WearLinkProtocol.FloorMinute>> {
+        val items = ArrayList<WearLinkProtocol.FloorMinute>()
+        return exchange(WearLinkProtocol.Request.FloorsSince(sinceEpochMillis, limit)) { line ->
+            WearLinkProtocol.parseFloorMinute(line)?.let { items += it; return@exchange Reply.More }
+            WearLinkProtocol.parseEnd(line)?.let { return@exchange Reply.Done(Page(items, it.more)) }
+            Reply.Unexpected
+        }
+    }
+
     /** Closes the connection; the watch is waiting for exactly this. */
     fun close() = connection.close()
 

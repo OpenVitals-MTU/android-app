@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.devices.wearos
 
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -48,6 +49,8 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
  * cursor: the watch rewrites a minute while late steps arrive, and a minute
  * that grew replaces its record. Two estimates come with the steps: cadence,
  * and walking energy when the body weight is known ([WearOsStepsImport]).
+ * Then floors, the same way; only minutes with steps are written
+ * ([WearOsFloorsImport]).
  *
  * Then sleep: the minutes from the start of the night the sleep cursor sits
  * in, every night those minutes touch estimated whole and written as one
@@ -125,7 +128,8 @@ class WearOsWatchSyncService(
         val progress = Progress(onProgress)
         try {
             if (!pullHeartRate(device, progress)) return notPaired(device)
-            if (!pullSteps(device, progress)) return notPaired(device)
+            val steps = pullSteps(device, progress) ?: return notPaired(device)
+            if (!pullFloors(device, progress, steps)) return notPaired(device)
             if (!pullSleep(device, progress)) return notPaired(device)
         } catch (error: CancellationException) {
             throw error
@@ -173,8 +177,8 @@ class WearOsWatchSyncService(
         return true
     }
 
-    /** False when no bonded watch matches. */
-    private suspend fun pullSteps(device: BleSensorDevice, progress: Progress): Boolean {
+    /** The step minutes pulled, for the floors. Null when no bonded watch matches. */
+    private suspend fun pullSteps(device: BleSensorDevice, progress: Progress): List<WearOsStepMinute>? {
         val cursor = cursors.stepsCursor(device.id)
         var since = if (cursor == Instant.EPOCH) cursor else cursor.minusMillis(STEPS_RESTATED_MILLIS)
         var pages = 0
@@ -183,9 +187,11 @@ class WearOsWatchSyncService(
         var energyMinutes = 0
         var energyKcal = 0.0
         val weight = weightKg()
+        val pulled = ArrayList<WearOsStepMinute>()
         while (true) {
-            val page = retryOnce { nodePort.pullSteps(device.address, device.bluetoothName, since) } ?: return false
+            val page = retryOnce { nodePort.pullSteps(device.address, device.bluetoothName, since) } ?: return null
             progress.page()
+            pulled += page.minutes
             val newest = page.minutes.maxOfOrNull { it.start }
             if (newest != null) {
                 written += importRepository.insertSkippingPresent(WearOsStepsImport.records(page.minutes))
@@ -210,6 +216,37 @@ class WearOsWatchSyncService(
             "steps: $written minute(s) written, $pulledSteps steps pulled (re-pulled minutes count again); " +
                 if (weight == null) "no walking energy" else "walking energy ${"%.1f".format(energyKcal)} kcal over $energyMinutes minute(s) at $weight kg",
         )
+        return pulled
+    }
+
+    /**
+     * False when no bonded watch matches. Floors are pulled the way steps are,
+     * a few minutes back past the cursor, and only minutes with [steps]
+     * around them are written; see [WearOsFloorsImport].
+     */
+    private suspend fun pullFloors(device: BleSensorDevice, progress: Progress, steps: List<WearOsStepMinute>): Boolean {
+        val cursor = cursors.floorsCursor(device.id)
+        var since = if (cursor == Instant.EPOCH) cursor else cursor.minusMillis(STEPS_RESTATED_MILLIS)
+        var pages = 0
+        var climbed = 0
+        var credited = 0
+        while (true) {
+            val page = retryOnce { nodePort.pullFloors(device.address, device.bluetoothName, since) } ?: return false
+            progress.page()
+            val newest = page.minutes.maxOfOrNull { it.start }
+            if (newest != null) {
+                val records = WearOsFloorsImport.records(page.minutes, steps)
+                writeEstimates("floors", records)
+                climbed += page.minutes.sumOf { it.floors }
+                credited += records.sumOf { (it as FloorsClimbedRecord).floors.toInt() }
+                if (newest.isAfter(cursors.floorsCursor(device.id))) cursors.setFloorsCursor(device.id, newest)
+                since = newest
+            }
+            if (!page.hasMore || newest == null) break
+            if (++pages >= MAX_PAGES) break
+        }
+        // The watch has no screen for these yet; testers read this line.
+        WearOsLog.log("floors: $credited of $climbed climbed written; the rest had too few steps (elevators, weather)")
         return true
     }
 

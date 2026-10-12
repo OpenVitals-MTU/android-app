@@ -113,6 +113,23 @@ class BluetoothWearOsNodePort @Inject constructor(
         }
     }
 
+    override suspend fun pullFloors(
+        targetAddress: String?,
+        targetName: String?,
+        since: Instant,
+    ): WearOsFloorPage? = withContext(Dispatchers.IO) {
+        val match = bondedWatchOrNull(targetAddress, targetName) ?: return@withContext null
+        withSession(match, targetAddress, PULL_TIMEOUT_MS) { session ->
+            // A watch app from before floors would answer the request with an error.
+            if (WearLinkProtocol.CAP_FLOORS !in session.peer.capabilities) return@withSession WearOsFloorPage(emptyList(), false)
+            val page = unwrap(session.pullFloors(since.toEpochMilli(), WearLinkProtocol.MAX_FLOOR_MINUTES_PER_REQUEST))
+            WearOsFloorPage(
+                minutes = page.items.map { WearOsFloorMinute(Instant.ofEpochMilli(it.epochMillis), it.floors) },
+                hasMore = page.more,
+            )
+        }
+    }
+
     /** The name the watch gave in its last `OK`, for the status card. */
     @Volatile
     private var lastWatchName: String? = null

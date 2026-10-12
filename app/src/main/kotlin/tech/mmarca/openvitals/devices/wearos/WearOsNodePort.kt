@@ -84,6 +84,15 @@ data class WearOsStepPage(
     val hasMore: Boolean,
 )
 
+/** The floors the watch's barometer climbed in the clock minute starting at [start], elevators included. */
+data class WearOsFloorMinute(val start: Instant, val floors: Int)
+
+/** One page of a floor pull. [hasMore] means the watch cut the reply at its limit. */
+data class WearOsFloorPage(
+    val minutes: List<WearOsFloorMinute>,
+    val hasMore: Boolean,
+)
+
 /**
  * Port for talking to the OpenVitals app on a Wear OS watch.
  *
@@ -133,4 +142,16 @@ interface WearOsNodePort {
         targetName: String?,
         since: Instant,
     ): WearOsStepPage?
+
+    /**
+     * Floor minutes newer than [since], oldest first, up to the watch's page
+     * limit. Empty page: the watch app is too old to count floors, or the
+     * watch has no barometer. Null: no bonded watch matches. Any other
+     * failure throws [WearOsLinkFailure].
+     */
+    suspend fun pullFloors(
+        targetAddress: String?,
+        targetName: String?,
+        since: Instant,
+    ): WearOsFloorPage?
 }

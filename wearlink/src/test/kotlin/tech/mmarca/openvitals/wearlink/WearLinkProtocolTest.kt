@@ -171,6 +171,17 @@ class WearLinkProtocolTest {
     }
 
     @Test
+    fun `a floor minute round-trips, and one off the minute, empty or past an elevator is refused`() {
+        val minute = WearLinkProtocol.FloorMinute(1_700_000_040_000L, 3)
+        assertEquals("FL 1700000040000 3", WearLinkProtocol.formatFloorMinute(minute))
+        assertEquals(minute, WearLinkProtocol.parseFloorMinute(WearLinkProtocol.formatFloorMinute(minute)))
+        assertNull(WearLinkProtocol.parseFloorMinute("FL 1700000041000 3"))
+        assertNull(WearLinkProtocol.parseFloorMinute("FL 1700000040000 0"))
+        assertNull(WearLinkProtocol.parseFloorMinute("FL 1700000040000 ${WearLinkProtocol.MAX_FLOORS_PER_MINUTE + 1}"))
+        assertEquals(WearLinkProtocol.Request.FloorsSince(10, 2000), WearLinkProtocol.parseRequest("FL_SINCE 10 99999"))
+    }
+
+    @Test
     fun `ping tolerates surrounding whitespace`() {
         assertTrue(WearLinkProtocol.isPing(" PING\r"))
     }

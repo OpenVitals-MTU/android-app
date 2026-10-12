@@ -68,6 +68,10 @@ class WearOsWatchSyncServiceTest {
     /** Step pages the same way; with none queued the watch answers an empty page. */
     private val stepPages = ArrayDeque<WearOsStepPage>()
     private val stepPullsSince = mutableListOf<Instant>()
+
+    /** Floor pages the same way. */
+    private val floorPages = ArrayDeque<WearOsFloorPage>()
+    private val floorPullsSince = mutableListOf<Instant>()
     private val nodePort = object : WearOsNodePort {
         override suspend fun checkStatus(targetAddress: String?, targetName: String?) = WearOsCompanionStatus()
         override suspend fun pullHeartRate(targetAddress: String?, targetName: String?, since: Instant): WearOsHeartRatePage? {
@@ -89,6 +93,11 @@ class WearOsWatchSyncServiceTest {
         override suspend fun pullSteps(targetAddress: String?, targetName: String?, since: Instant): WearOsStepPage? {
             stepPullsSince += since
             return stepPages.removeFirstOrNull() ?: WearOsStepPage(emptyList(), hasMore = false)
+        }
+
+        override suspend fun pullFloors(targetAddress: String?, targetName: String?, since: Instant): WearOsFloorPage? {
+            floorPullsSince += since
+            return floorPages.removeFirstOrNull() ?: WearOsFloorPage(emptyList(), hasMore = false)
         }
     }
 
@@ -181,6 +190,27 @@ class WearOsWatchSyncServiceTest {
         // Five minutes before the cursor, so a minute the watch restated since is pulled again.
         assertEquals(t0.plusSeconds(60).minusSeconds(300), stepPullsSince.last())
         assertEquals(t0.plusSeconds(60), cursors.stepsCursor(WATCH.id))
+    }
+
+    @Test
+    fun `floors climbed with steps are written, an elevator ride is not, and the next pull reaches back`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        stepPages += WearOsStepPage(listOf(WearOsStepMinute(t0, 40)), hasMore = false)
+        floorPages += WearOsFloorPage(
+            listOf(WearOsFloorMinute(t0, 2), WearOsFloorMinute(t0.plusSeconds(600), 5)),
+            hasMore = false,
+        )
+        coEvery { importRepository.insertImportedRecords(capture(inserted)) } returns Unit
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(listOf(2.0), insertedOf<androidx.health.connect.client.records.FloorsClimbedRecord>().map { it.floors })
+        assertEquals(t0.plusSeconds(600), cursors.floorsCursor(WATCH.id))
+
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(t0.plusSeconds(600).minusSeconds(300), floorPullsSince.last())
     }
 
     @Test

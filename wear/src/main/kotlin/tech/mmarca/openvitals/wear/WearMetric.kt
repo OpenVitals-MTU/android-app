@@ -78,5 +78,17 @@ object WearMetrics {
         onSameTime = WearMetric.OnSameTime.REPLACE,
     )
 
-    val ALL: List<WearMetric<*>> = listOf(HEART_RATE, SLEEP_MINUTES, STEPS)
+    /**
+     * Floors climbed per clock minute; see `FloorRecorder`. A minute is
+     * written again while late readings arrive, so the newest row wins.
+     */
+    val FLOORS = WearMetric(
+        key = WearLinkProtocol.CAP_FLOORS,
+        encode = WearLinkProtocol::formatFloorMinute,
+        decode = WearLinkProtocol::parseFloorMinute,
+        timeOf = { it.epochMillis },
+        onSameTime = WearMetric.OnSameTime.REPLACE,
+    )
+
+    val ALL: List<WearMetric<*>> = listOf(HEART_RATE, SLEEP_MINUTES, STEPS, FLOORS)
 }
