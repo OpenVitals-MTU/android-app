@@ -8,7 +8,7 @@ data class BodyProfile(
     val heightCm: Double? = null,
     val restingHeartRateBpm: Int? = null,
     val maxHeartRateBpm: Int? = null,
-    /** Only the basal metabolic rate formula reads it. */
+    /** The basal metabolic rate formula and cardio load's TRIMP weighting read it. */
     val sex: BiologicalSex? = null,
 ) {
     fun normalized(today: LocalDate = LocalDate.now()): BodyProfile {
