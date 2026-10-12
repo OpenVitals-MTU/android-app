@@ -1,7 +1,12 @@
 package tech.mmarca.openvitals.features.imports.csv
 
+import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.testing.FakeHealthConnectClient
+import androidx.health.connect.client.time.TimeRangeFilter
+import io.mockk.coAnswers
 import io.mockk.coEvery
 import io.mockk.mockk
 import java.io.ByteArrayInputStream
@@ -137,6 +142,67 @@ class CsvImportServiceTest {
 
         assertEquals(1, result.progress.rejected)
         assertEquals(2, result.diagnostics.size)
+    }
+
+    @Test
+    fun `blood pressure and heart rate records from CSV persist in one Health Connect batch`() = runTest {
+        val healthConnect = FakeHealthConnectClient()
+        val repository = mockk<AppleHealthImportRepository>()
+        coEvery { repository.findMatchingImportedClientRecordIds(any(), any(), any(), any()) } returns emptySet()
+        coEvery { repository.insertImportedRecords(any()) } coAnswers {
+            healthConnect.insertRecords(arg<List<Record>>(0))
+        }
+        val mapping = CsvImportMapping(
+            columns = listOf(
+                CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
+                CsvColumnMapping(
+                    columnIndex = 1,
+                    role = CsvColumnRole.METRIC,
+                    bloodPressureField = CsvBloodPressureField.SYSTOLIC,
+                ),
+                CsvColumnMapping(
+                    columnIndex = 2,
+                    role = CsvColumnRole.METRIC,
+                    bloodPressureField = CsvBloodPressureField.DIASTOLIC,
+                ),
+                CsvColumnMapping(
+                    columnIndex = 3,
+                    role = CsvColumnRole.METRIC,
+                    metric = CsvImportMetric.HEART_RATE,
+                    interpretation = CsvDirectValue(CsvUnit.BEATS_PER_MINUTE),
+                ),
+            ),
+            dateTime = CsvDateTimeSettings(
+                format = CsvDateTimeFormat.YEAR_FIRST,
+                zone = CsvTimeZoneMode.UTC,
+            ),
+        )
+        val content = """
+            timestamp,systolic,diastolic,heart_rate,note
+            2026-10-03 08:00,120,80,70,test
+            2026-10-03 09:00,122,82,72,test
+        """.trimIndent()
+
+        val result = CsvImportService(repository).run(
+            source = sourceOf(content),
+            totalBytes = content.length.toLong(),
+            dialect = Dialect,
+            mapping = mapping,
+        )
+
+        val records = healthConnect.readRecords(
+            ReadRecordsRequest(
+                BloodPressureRecord::class,
+                TimeRangeFilter.between(
+                    Instant.parse("2026-10-03T00:00:00Z"),
+                    Instant.parse("2026-10-04T00:00:00Z"),
+                ),
+            ),
+        ).records
+        assertEquals(CsvImportOutcome.COMPLETED, result.outcome)
+        assertEquals(4, result.progress.written)
+        assertEquals(listOf(120.0, 122.0), records.map { it.systolic.inMillimetersOfMercury })
+        assertEquals(listOf(80.0, 82.0), records.map { it.diastolic.inMillimetersOfMercury })
     }
 
     @Test
