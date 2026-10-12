@@ -307,6 +307,16 @@ repository Actions secrets:
 The Play production upload runs in the `production` environment. Add required
 reviewers to that environment so a production run waits for approval.
 
+While a release is in Play review, a new upload to any track restarts the
+review. Set the repository Actions variable `OPENVITALS_PLAY_PAUSED=true` to
+hold both Play uploads: the nightly skips its open testing job, and a
+production run still waits for approval, promotes the GitHub release to stable
+and posts to Zulip, but uploads nothing. Tags, GitHub releases and F-Droid,
+which builds from the tag, are unaffected. Delete the variable to resume. A
+version released while paused reaches Play only by hand, from the AAB on its
+GitHub release, or by a production run from its tag after the variable is
+gone; the next release's upload also supersedes it.
+
 ## Release Checklist
 
 For a versioned prerelease:

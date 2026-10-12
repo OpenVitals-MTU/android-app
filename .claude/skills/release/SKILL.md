@@ -96,6 +96,12 @@ matches the filenames.
 
    Do not copy the footer from 2.12.0 or earlier: those still name the
    Codeberg release and the Woodpecker deployment.
+
+   While the repository variable `OPENVITALS_PLAY_PAUSED=true` holds the Play
+   uploads (set 2026-10 while 2.13.0 was in Play review), the second line is
+   false. Ask whether it is still set, and if it is, say instead that the
+   Google Play update follows later. The fastlane changelogs are still written,
+   for when that upload happens.
 3. **`README.md`** - add highlight bullets for headline features; update any
    claims the release changes (e.g. the language list when a locale lands).
 4. **`fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`** - one

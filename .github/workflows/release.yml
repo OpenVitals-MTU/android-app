@@ -11,6 +11,10 @@
 #   tag. Uploads the release AAB to Play production (behind the `production`
 #   environment), marks the GitHub release stable, and announces it on Zulip.
 #
+# The repository variable OPENVITALS_PLAY_PAUSED=true holds both Play uploads,
+# for while a release sits in Play review: a new upload would restart it. The
+# GitHub releases, the tag F-Droid builds from, and the announcement go on.
+#
 # scripts/ci-release-context.sh decides everything else from
 # OPENVITALS_RELEASE_EVENT and writes it to build/release-ci/, which the jobs
 # hand to each other as workflow artifacts.
@@ -195,7 +199,7 @@ jobs:
 
   publish-play-open-testing:
     needs: [context, nightly-tag]
-    if: needs.context.outputs.channel == 'nightly'
+    if: needs.context.outputs.channel == 'nightly' && vars.OPENVITALS_PLAY_PAUSED != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -225,6 +229,8 @@ jobs:
             aab:"$aab_path" \
             version_code:"$OPENVITALS_VERSION_CODE"
 
+  # While Play is paused this job still runs and uploads nothing, so the
+  # approval gate stays and publish-github-stable and announce-zulip follow.
   publish-play-production:
     needs: [context, build]
     if: needs.context.outputs.event == 'deployment'
@@ -244,8 +250,13 @@ jobs:
       - env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
           OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW: ${{ vars.OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW }}
+          OPENVITALS_PLAY_PAUSED: ${{ vars.OPENVITALS_PLAY_PAUSED }}
         run: |
           set -eu
+          if [ "$OPENVITALS_PLAY_PAUSED" = "true" ]; then
+            echo "::notice::Google Play is paused (OPENVITALS_PLAY_PAUSED=true): no upload. The AAB is on the GitHub release."
+            exit 0
+          fi
           . build/release-ci/release-context.env
           test "$OPENVITALS_PLAY_TRACK" = "production"
           test -n "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64"
