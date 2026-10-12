@@ -1269,6 +1269,7 @@
     <string name="report_metrics_section_title">Metriky</string>
     <string name="report_metrics_select_all">Vybrat vše</string>
     <string name="report_metrics_clear">Zrušit výběr</string>
+    <string name="report_metrics_nutrient_breakdown_hint">„Vybrat vše“ tyto položky nevybere. Zaškrtnutím nadpisu přidáte celou skupinu.</string>
     <string name="report_granularity_title">Podrobnost</string>
     <string name="report_granularity_daily">Denně</string>
     <string name="report_granularity_weekly">Týdně</string>
@@ -1967,11 +1968,11 @@
     <string name="settings_fit_import_folder_grant">Udělit oprávnění k importu</string>
     <string name="settings_fit_import_error">Upozornění při importu FIT: %1$s</string>
     <string name="settings_csv_import_title">Import CSV</string>
-    <string name="settings_csv_import_body">Naimportujte tělesná měření ze souboru CSV — třeba export hmotnosti a složení těla z chytré váhy. Sami určíte, co který sloupec znamená.</string>
+    <string name="settings_csv_import_body">Naimportujte měření nebo výživu ze souboru CSV — třeba export hmotnosti z chytré váhy nebo tabulku s jedním řádkem na každé jídlo. Sami určíte, co který sloupec znamená.</string>
     <string name="settings_csv_import_action">Importovat soubor CSV</string>
     <string name="settings_csv_import_screen_title">Import CSV</string>
     <string name="settings_csv_import_pick_title">Vyberte soubor CSV</string>
-    <string name="settings_csv_import_pick_body">Zvolte export CSV a přiřaďte jeho sloupce k tělesným měřením. Dokud to nepotvrdíte, nic se nezapíše.</string>
+    <string name="settings_csv_import_pick_body">Zvolte soubor CSV a přiřaďte jeho sloupce k měřením nebo živinám. Dokud to nepotvrdíte, nic se nezapíše.</string>
     <string name="settings_csv_import_pick_action">Vybrat soubor CSV</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d sloupců</string>
     <string name="settings_csv_import_continue">Pokračovat</string>
@@ -1992,6 +1993,7 @@
     <string name="settings_csv_import_role_ignore">Neimportovat</string>
     <string name="settings_csv_import_role_timestamp">Datum a čas</string>
     <string name="settings_csv_import_role_end_timestamp">Datum a čas konce</string>
+    <string name="settings_csv_import_role_food_name">Název jídla</string>
     <string name="settings_csv_import_interval_end_hint">Každý řádek trvá od data a času do sloupce „Datum a čas konce“. Bez něj se řádek počítá jako jedna minuta.</string>
     <string name="settings_csv_import_metric_weight">Hmotnost</string>
     <string name="settings_csv_import_metric_body_fat">Tělesný tuk</string>
@@ -2033,8 +2035,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Miligramy na decilitr (mg/dl)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">ml/kg/min</string>
     <string name="settings_csv_import_unit_count">Počet</string>
+    <string name="settings_csv_import_unit_kilocalories">Kilokalorie (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Kilojouly (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Miligramy (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Mikrogramy (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">Hmotnost v %1$s, jako podíl ze sloupce s hmotností</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect ukládá tělesný tuk v procentech, takže se dopočítá z hmotnosti naměřené ve stejném řádku.</string>
+    <string name="settings_csv_import_nutrient_hint">Všechny sloupce živin z jednoho řádku tvoří jeden záznam jídla.</string>
     <string name="settings_csv_import_date_time_title">Datum a čas</string>
     <string name="settings_csv_import_date_format_label">Formát</string>
     <string name="settings_csv_import_date_format_auto">Rozpoznat automaticky</string>
@@ -2061,6 +2068,7 @@
     <string name="settings_csv_import_issue_needs_weight">Tělesný tuk zadaný jako hmotnost potřebuje ve stejném souboru sloupec s hmotností, aby šlo dopočítat procento.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">Tomuto formátu data neodpovídá ani jeden z prohlédnutých řádků.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Datum a čas konce může obsahovat jen jeden sloupec.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Název jídla může obsahovat jen jeden sloupec.</string>
     <string name="settings_csv_import_confirm_title">Připraveno k importu</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d měření na řádek</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s až %3$s</string>

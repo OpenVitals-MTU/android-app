@@ -2324,11 +2324,11 @@
     <string name="settings_apple_health_import_progress_with_scan_percent">%1$d%%. %2$s. Analizados %3$d/%4$d elementos. Seleccionados %5$d/%6$d registros, importados %7$d.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. Analizados %3$d/%4$d, importados %5$d.</string>
     <string name="settings_csv_import_title">Importador CSV</string>
-    <string name="settings_csv_import_body">Importa mediciones corporales desde un archivo CSV, por ejemplo una exportación de peso y composición corporal de una báscula inteligente. Tú eliges qué significa cada columna.</string>
+    <string name="settings_csv_import_body">Importa mediciones o nutrición desde un archivo CSV, por ejemplo una exportación de peso de una báscula inteligente o una hoja de cálculo con una fila por comida. Tú eliges qué significa cada columna.</string>
     <string name="settings_csv_import_action">Importar un archivo CSV</string>
     <string name="settings_csv_import_screen_title">Importador CSV</string>
     <string name="settings_csv_import_pick_title">Elegir un archivo CSV</string>
-    <string name="settings_csv_import_pick_body">Elige una exportación CSV y asigna sus columnas a mediciones corporales. No se escribe nada hasta que confirmes.</string>
+    <string name="settings_csv_import_pick_body">Elige un archivo CSV y asigna sus columnas a mediciones o nutrientes. No se escribe nada hasta que confirmes.</string>
     <string name="settings_csv_import_pick_action">Elegir archivo CSV</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d columnas</string>
     <string name="settings_csv_import_continue">Continuar</string>
@@ -2388,6 +2388,7 @@
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
     <string name="settings_csv_import_interpretation_mass_share">Una masa en %1$s, como proporción de la columna de peso</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect almacena la grasa corporal como porcentaje, así que se calcula a partir del peso medido en la misma fila.</string>
+    <string name="settings_csv_import_nutrient_hint">Todas las columnas de nutrientes de una fila forman una sola entrada de comida.</string>
     <string name="settings_csv_import_date_time_title">Fecha y hora</string>
     <string name="settings_csv_import_date_format_label">Formato</string>
     <string name="settings_csv_import_date_format_auto">Detectar automáticamente</string>
@@ -2708,6 +2709,7 @@
     <string name="report_metrics_section_title">Métricas</string>
     <string name="report_metrics_select_all">Seleccionar todo</string>
     <string name="report_metrics_clear">Limpiar</string>
+    <string name="report_metrics_nutrient_breakdown_hint">«Seleccionar todo» no incluye estos. Marca un encabezado para añadir todo el grupo.</string>
     <string name="report_granularity_title">Detalle</string>
     <string name="report_granularity_daily">Diario</string>
     <string name="report_granularity_weekly">Semanal</string>
@@ -3083,10 +3085,16 @@
     <string name="activity_workout_share_failed">Erroral compartir el entrenamiento.</string>
     <string name="activity_recording_guidance_squats">Coloca el teléfono pantalla arriba en el suelo entre tus pies o sostenlo enfrente. El sensor de proximidad cuenta una repetición cada vez que te acercas abajo en la sentadilla.</string>
     <string name="settings_csv_import_role_end_timestamp">Fecha y hora de finalización</string>
+    <string name="settings_csv_import_role_food_name">Nombre del alimento</string>
     <string name="settings_csv_import_interval_end_hint">Cada fila comprende desde la fecha y hora de inicio hasta la columna de \'Fecha y hora de finalización\'. Si falta este dato, la fila se contabiliza como un minuto.</string>
     <string name="settings_csv_import_metric_steps">Pasos</string>
     <string name="settings_csv_import_unit_count">Un recuento</string>
+    <string name="settings_csv_import_unit_kilocalories">Kilocalorías (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Kilojulios (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Miligramos (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Microgramos (µg)</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Solo una columna puede contener la fecha y hora de finalización.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Solo una columna puede contener el nombre del alimento.</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Fecha de finalización no válida</string>
     <string name="settings_csv_import_reason_end_not_after_start">El fin debe ser posterior al inicio</string>
     <string name="settings_derived_metrics_reset_title">Reinicia la energía y la recuperación del cuerpo</string>

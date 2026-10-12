@@ -6,7 +6,7 @@
 > **Navigation:** `Screen.SettingsDataImport`, then `Screen.SettingsCsvImport`.
 > **Related:** [Feature map](feature-map.md), [Settings and preferences](settings-and-preferences.md), [Body metrics](body-metrics.md), [Apple Health import](apple-health-import.md).
 
-CSV import brings body measurements and vitals from a plain CSV file into Health Connect. It is meant for exports that have no importer of their own, such as a smart scale's weight and body-composition history, a temperature log, or a glucose export.
+CSV import brings body measurements, vitals, steps and nutrition from a plain CSV file into Health Connect. It is meant for exports that have no importer of their own, such as a smart scale's weight and body-composition history, a temperature log, a glucose export, a pedometer's step history, or a spreadsheet of meals copied from nutrition labels.
 
 There are no vendor presets. The user says what each column means, which is why a file OpenVitals has never seen still imports.
 
@@ -15,8 +15,8 @@ There are no vendor presets. The user says what each column means, which is why 
 CSV import lives in Settings, Data Importers, CSV Importer, and opens its own five-step screen.
 
 1. **Choose a file.** The file picker accepts CSV and plain-text documents. Only the head of the file is read at this point, so a large export opens immediately and nothing is written yet.
-2. **Map the columns.** OpenVitals shows the detected column separator, a "first row contains column names" switch, a short preview table, the date and time settings, and one row per column. Each column is set to not imported, date and time, or a supported measurement. A measurement column also picks what its numbers are.
-3. **Confirm.** The confirm step shows the date range the file covers and the value range each measurement will actually be written with, so a mis-mapped column is visible before anything lands. Missing Health Connect write permissions are requested here.
+2. **Map the columns.** OpenVitals shows the detected column separator, a "first row contains column names" switch, a short preview table, the date and time settings, and one row per column. Each column is set to not imported, date and time, an optional end date and time, a supported measurement, a nutrient, or a food name. A measurement or nutrient column also picks what its numbers are.
+3. **Confirm.** The confirm step shows the date range the file covers and the value range each measurement and nutrient will actually be written with, so a mis-mapped column is visible before anything lands. Missing Health Connect write permissions are requested here.
 4. **Import.** Progress shows the current row with running written, already-present, and rejected counts. The import can be cancelled; what was already written is kept.
 5. **Read the result.** The result step shows the totals, groups every rejection by reason, and can copy or save the full report.
 
@@ -44,12 +44,33 @@ Heart and vitals:
 - Blood glucose.
 - VO2 max.
 
-Every supported measurement is a single value at a single instant, because that is the shape the column mapping expresses: one row, one timestamp, one number per column.
+Activity:
+
+- Steps.
+
+Nutrition: every nutrient Health Connect stores, listed under the same sections as the nutrition screen. See [Nutrition](#nutrition) below.
+
+Most supported measurements are a single value at a single instant, because that is the shape the column mapping expresses: one row, one timestamp, one number per column. Steps is the one interval metric: each row spans from its date and time to the optional "End date and time" column. When there is no end - the column is unmapped, the cell is blank, or the row is truncated before it - the row counts as one minute. An end that cannot be read, or that is not after the start, rejects only that row's steps; the instant measurements beside it still import.
 
 ## What Is Not Supported
 
 - **Blood pressure is deliberately unsupported.** Systolic and diastolic have to become one Health Connect record, which needs a two-columns-to-one-record rule the mapping model does not have.
-- **Interval records are not supported.** Steps, sleep, and workouts need a start and an end, and often sub-records, so they are out of scope for the current mapping model.
+- **Interval records beyond steps and nutrition are not supported.** Sleep and workouts need stages or sub-records as well as a start and an end, so they are out of scope for the current mapping model. Steps and nutrition are the exceptions, carried by the single optional "End date and time" column.
+- **Meal type is not mapped.** An imported food has no breakfast, lunch, dinner or snack label.
+
+## Nutrition
+
+Nutrients are mapped one column each, like measurements, but they do not become one record each. Every nutrient column of a row folds into one Health Connect nutrition record: one food, or one day's totals, depending on what a row of the spreadsheet holds. A food-name column is optional and names the record; without one, the nutrition screen shows the entry under its meal type.
+
+The column menu lists every nutrient Health Connect stores, under the nutrition screen's own sections: energy, protein, carbohydrates and fat; dietary fibre and sugar; energy from fat and the fats, including cholesterol; the vitamins; the minerals; and caffeine.
+
+Each nutrient is read in the unit its nutrition label prints by default - kcal for energy, g for the macros, mg for vitamin C or sodium, µg for vitamin D or B12 - the same units the food entry form types in. A column can also be read in kilojoules, or in any of grams, milligrams and micrograms, and a header such as `Sodium (mg)`, `Energy (kJ)` or `Vitamin D (mcg)` pre-selects its unit. Health Connect stores kilocalories and grams either way.
+
+A food spans from the row's date and time to the "End date and time" column, or one minute without one, like steps. An end that cannot be read, or is not after the start, rejects that row's food only; measurements in the same row still import.
+
+A blank nutrient cell is a gap, and so is a zero: a label's "0 g" adds nothing, and a row whose amounts are all blank or zero writes no food. A cell that is not a number, or is negative, costs that nutrient only. Amounts above a plausible ceiling are rejected rather than stored: 10,000 kcal or 10,000 g for energy and the macros, and 100 g of any vitamin or mineral, which is Health Connect's own limit for one record.
+
+Imported foods appear on the nutrition screen and its charts like any other entry. They can be deleted there but not edited, like a logged food from the catalog: correct the spreadsheet and import it again instead. They never appear among the drinks on the hydration screen, even when one carries caffeine.
 
 ## Units Come From The File
 
@@ -57,7 +78,9 @@ The unit chosen for a column describes the file, not the app's display unit syst
 
 Accepted units per measurement include kilograms, pounds, stones, and grams for masses; centimetres, metres, inches, and feet for height; kilocalories and kilojoules per day for basal metabolic rate; Celsius and Fahrenheit for temperatures; millimoles per litre and milligrams per decilitre for glucose; milliseconds and seconds for HRV; and percent or a 0–1 fraction where a share is meaningful.
 
-When a header names its unit in parentheses, such as `Weight (kg)` or `value (°C)`, that unit is pre-selected. It stays an editable default.
+Nutrients take kilocalories or kilojoules for energy and grams, milligrams or micrograms for the rest.
+
+When a header names its unit in parentheses, such as `Weight (kg)`, `value (°C)` or `Sodium (mg)`, that unit is pre-selected. It stays an editable default.
 
 Body fat has an extra option for scales that export a fat *mass* instead of a percentage. Health Connect stores body fat as a percentage, so the column can be read as a mass and turned into a percentage using the weight measured in the same row. A row without a usable weight loses only that one value; the rest of the row still imports.
 
@@ -83,24 +106,28 @@ Every column starts as not imported, so a column is only ever included on purpos
 
 The first column whose sampled values all parse as a date is pre-selected as the timestamp column. Measurements are never guessed from header text; the date guess is safe only because it is checked against the data.
 
-The step will not continue until the mapping is valid. It reports a missing or duplicated timestamp column, no measurement columns at all, two columns mapped to the same measurement, a body-fat mass column with no weight column to derive from, and a date format that matches none of the sampled rows.
+The step will not continue until the mapping is valid. It reports a missing or duplicated timestamp column, a duplicated end date and time column, a duplicated food-name column, no measurement or nutrient columns at all, two columns mapped to the same measurement or nutrient, a body-fat mass column with no weight column to derive from, and a date format that matches none of the sampled rows.
 
 ## What Gets Rejected
 
 - A bad timestamp, or a row with fewer columns than the mapping needs, costs the whole row.
-- A bad value costs only that measurement, so one unreadable body-fat cell does not throw away a good weight in the same row.
+- A bad value costs only that measurement or nutrient, so one unreadable body-fat cell does not throw away a good weight in the same row, and one unreadable sodium cell does not throw away the rest of the food.
 - A blank cell is a gap in the data, not an error. Scales routinely skip measurements.
 - Values outside a plausible human range are rejected rather than stored. This is the guard against a mis-mapped column.
 
 ## Re-Importing And Duplicates
 
-An imported record is identified by its measurement type and its instant, deliberately not by its value. Health Connect replaces a record when an incoming one carries the same identifier, so:
+An imported record is identified by its measurement type and its instant, deliberately not by its value. A steps row uses its start instant, like every other metric, so a re-import with a corrected end replaces the record. Health Connect replaces a record when an incoming one carries the same identifier, so:
 
 - Re-importing an unchanged file changes nothing and reports those rows as already present.
 - Re-importing a file with a corrected value replaces the old record instead of leaving two measurements at the same instant.
 - Re-exporting the same history with reordered columns, or in different units, resolves to the same records.
 
-The trade-off is that two genuinely different measurements at the identical instant collapse into one. CSV-imported records use their own identifier namespace, so they can never collide with Apple Health import records.
+The trade-off is that two genuinely different measurements at the identical instant collapse into one.
+
+Foods are the exception, because two foods eaten at the same time are both real. A food is identified by its start and by its place among the file's foods at that same start: the first food at 12:30 keeps the plain identifier, the second gets its own. The same file numbers them the same way on every run, so a re-import still replaces rather than adds, and a corrected amount, a renamed food, or a reordered row at the same time ends up as the file says. The one thing a re-import cannot undo is a food deleted from the file: the record from the earlier import stays until it is deleted in the app.
+
+CSV-imported records use their own identifier namespace, so they can never collide with Apple Health import records.
 
 If Health Connect stops accepting writes because the app's quota is spent, the import stops and says so. Running it again later starts from the top and recognizes what already landed.
 

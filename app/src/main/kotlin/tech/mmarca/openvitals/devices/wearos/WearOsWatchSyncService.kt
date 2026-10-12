@@ -44,22 +44,21 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
  * write. A sync that dies mid-way therefore loses nothing: the next one
  * resumes at the last page written, and a page written twice upserts.
  *
- * Then steps, the same way, except that each pull starts a few minutes
- * before the cursor: the watch restates a minute while late steps for it
- * arrive, and the re-pulled minutes that grew replace their records. With
- * the steps go two derived series, the cadence and, when the body weight is
- * known, the walking energy ([WearOsStepsImport]).
+ * Then steps, the same way, but each pull starts a few minutes before the
+ * cursor: the watch rewrites a minute while late steps arrive, and a minute
+ * that grew replaces its record. Two estimates come with the steps: cadence,
+ * and walking energy when the body weight is known ([WearOsStepsImport]).
  *
  * Then sleep: the minutes from the start of the night the sleep cursor sits
  * in, every night those minutes touch estimated whole and written as one
  * session per night, replacing the earlier estimate. A night that already
  * holds a session from anywhere else, the vendor's app or the user's own
  * entry, is left alone. Each estimated night also gives a nocturnal resting
- * heart rate ([WearOsRestingHeartRateImport]), unless the night already holds
+ * heart rate ([WearOsRestingHeartRateImport]), unless the night already has
  * one from elsewhere. The sleep cursor moves once the nights are written.
  *
- * The derived series are estimates: a Health Connect write permission the
- * user withheld for one of them skips it instead of failing the sync.
+ * If the user withheld the write permission for an estimate, it is skipped
+ * and the sync goes on.
  *
  * [DeviceSyncResult.Succeeded.fileCount] carries the number of heart rate
  * samples and [DeviceSyncResult.Succeeded.nightCount] the nights written;
@@ -74,7 +73,7 @@ class WearOsWatchSyncService(
     private val recordingController: ActivityRecordingController,
     private val healthConnect: HealthConnectManager,
     private val linkStore: WearOsLinkStore,
-    /** The body weight for the walking energy: Health Connect's latest, else the profile's; null when neither has one. */
+    /** Body weight for the walking energy: Health Connect's latest, else the profile's. Null when neither has one. */
     private val weightKg: suspend () -> Double?,
     private val clock: () -> Instant,
     private val zone: () -> ZoneId,
@@ -206,7 +205,7 @@ class WearOsWatchSyncService(
             if (!page.hasMore || newest == null) break
             if (++pages >= MAX_PAGES) break
         }
-        // The watch has no screen for these yet; this line is where a tester reads them.
+        // The watch has no screen for these yet; testers read this line.
         WearOsLog.log(
             "steps: $written minute(s) written, $pulledSteps steps pulled (re-pulled minutes count again); " +
                 if (weight == null) "no walking energy" else "walking energy ${"%.1f".format(energyKcal)} kcal over $energyMinutes minute(s) at $weight kg",
@@ -295,8 +294,8 @@ class WearOsWatchSyncService(
     }
 
     /**
-     * Writes derived records. A withheld permission for their type skips
-     * them, logged, instead of failing the sync the measured data belongs to.
+     * Writes derived records. If the user withheld the permission for their
+     * type, they are skipped and logged, and the sync goes on.
      */
     private suspend fun writeEstimates(what: String, records: List<Record>) {
         if (records.isEmpty()) return
@@ -379,7 +378,7 @@ class WearOsWatchSyncService(
 
         const val RETRY_DELAY_MILLIS = 1_500L
 
-        /** How far back a step pull reaches past its cursor: a minute is restated for up to its batch latency. */
+        /** How far a step pull reaches back past its cursor: the watch rewrites a minute for up to its batch latency. */
         const val STEPS_RESTATED_MILLIS = 5 * 60_000L
     }
 }

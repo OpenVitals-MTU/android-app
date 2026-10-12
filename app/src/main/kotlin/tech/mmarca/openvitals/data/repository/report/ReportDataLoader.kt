@@ -24,7 +24,6 @@ import tech.mmarca.openvitals.data.repository.contract.SleepRepository
 import tech.mmarca.openvitals.data.repository.contract.VitalsRepository
 import tech.mmarca.openvitals.data.repository.dashboard.MetricReadPermissions
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
-import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.ReportDailyValue
 import tech.mmarca.openvitals.domain.model.ReportData
 import tech.mmarca.openvitals.domain.model.ReportMetric
@@ -102,10 +101,10 @@ class ReportDataLoader @Inject constructor(
 
     /** The raw permissions [metric]'s read needs. The steps family adds the steps permission. */
     fun rawPermissionsFor(metric: ReportMetric): Set<String> {
-        val base = MetricReadPermissions.forMetric(
-            metric.dashboardMetric,
-            showOpenVitalsCalculatedCalories = false,
-        )
+        val base = metric.dashboardMetric
+            ?.let { MetricReadPermissions.forMetric(it, showOpenVitalsCalculatedCalories = false) }
+            // The nutrient breakdown has no dashboard tile; every nutrient is read from the nutrition records.
+            ?: setOf(MetricReadPermissions.readNutritionPermission)
         return when (metric) {
             ReportMetric.DISTANCE,
             ReportMetric.FLOORS,
@@ -347,24 +346,17 @@ class ReportDataLoader @Inject constructor(
             }
         }
 
-        group(
-            ReportMetric.CALORIES_IN,
-            ReportMetric.PROTEIN,
-            ReportMetric.CARBS,
-            ReportMetric.FAT,
-            ReportMetric.CAFFEINE,
-        ) {
+        // One aggregate read serves every nutrient: the daily totals carry them all.
+        val nutritionMetrics = ReportMetric.entries.filter { it.nutrient != null }
+        group(*nutritionMetrics.toTypedArray()) {
             val daily = nutritionRepository.loadDailyMacros(start, end)
-            fun series(value: (tech.mmarca.openvitals.domain.model.DailyMacros) -> Double) =
-                daily.mapNotNull { day -> value(day).takeIf { it > 0 }?.let { ReportDailyValue(day.date, it) } }
-            mapOf(
-                ReportMetric.CALORIES_IN to series { it.energyKcal },
-                ReportMetric.PROTEIN to series { it.proteinGrams },
-                ReportMetric.CARBS to series { it.carbsGrams },
-                ReportMetric.FAT to series { it.fatGrams },
+            nutritionMetrics.associateWith { metric ->
                 // Stored in grams; the app talks about caffeine in milligrams.
-                ReportMetric.CAFFEINE to series { (it.nutrientValues[NutritionNutrient.CAFFEINE] ?: 0.0) * 1_000.0 },
-            )
+                val scale = if (metric == ReportMetric.CAFFEINE) 1_000.0 else 1.0
+                daily.mapNotNull { day ->
+                    day.nutrientValues[metric.nutrient]?.takeIf { it > 0 }?.let { ReportDailyValue(day.date, it * scale) }
+                }
+            }
         }
 
         val zone = ZoneId.systemDefault()

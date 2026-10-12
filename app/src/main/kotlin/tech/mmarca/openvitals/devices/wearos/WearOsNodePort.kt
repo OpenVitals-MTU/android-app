@@ -125,9 +125,8 @@ interface WearOsNodePort {
 
     /**
      * Step minutes newer than [since], oldest first, up to the watch's page
-     * limit. An empty page from a watch app too old to count steps. Null when
-     * no bonded watch matches. Throws a [WearOsLinkFailure] for everything
-     * else the watch could not give.
+     * limit. Empty page: the watch app is too old to count steps. Null: no
+     * bonded watch matches. Any other failure throws [WearOsLinkFailure].
      */
     suspend fun pullSteps(
         targetAddress: String?,

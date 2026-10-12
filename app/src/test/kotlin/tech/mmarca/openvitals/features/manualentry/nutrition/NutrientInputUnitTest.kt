@@ -3,27 +3,29 @@ package tech.mmarca.openvitals.features.manualentry.nutrition
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import tech.mmarca.openvitals.domain.model.NutrientLabelUnit
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.NutritionNutrientUnit
+import tech.mmarca.openvitals.domain.model.labelUnit
 
 /** Nutrients are typed in the unit a nutrition label prints, and stored in grams. */
 class NutrientInputUnitTest {
 
     @Test fun `each nutrient is typed in its label unit`() {
-        assertEquals(NutrientInputUnit.KCAL, NutritionNutrient.ENERGY.inputUnit)
-        assertEquals(NutrientInputUnit.GRAM, NutritionNutrient.PROTEIN.inputUnit)
-        assertEquals(NutrientInputUnit.GRAM, NutritionNutrient.SATURATED_FAT.inputUnit)
-        assertEquals(NutrientInputUnit.MILLIGRAM, NutritionNutrient.VITAMIN_C.inputUnit)
-        assertEquals(NutrientInputUnit.MILLIGRAM, NutritionNutrient.SODIUM.inputUnit)
-        assertEquals(NutrientInputUnit.MILLIGRAM, NutritionNutrient.CAFFEINE.inputUnit)
-        assertEquals(NutrientInputUnit.MICROGRAM, NutritionNutrient.VITAMIN_K.inputUnit)
-        assertEquals(NutrientInputUnit.MICROGRAM, NutritionNutrient.VITAMIN_D.inputUnit)
-        assertEquals(NutrientInputUnit.MICROGRAM, NutritionNutrient.SELENIUM.inputUnit)
+        assertEquals(NutrientLabelUnit.KCAL, NutritionNutrient.ENERGY.labelUnit)
+        assertEquals(NutrientLabelUnit.GRAM, NutritionNutrient.PROTEIN.labelUnit)
+        assertEquals(NutrientLabelUnit.GRAM, NutritionNutrient.SATURATED_FAT.labelUnit)
+        assertEquals(NutrientLabelUnit.MILLIGRAM, NutritionNutrient.VITAMIN_C.labelUnit)
+        assertEquals(NutrientLabelUnit.MILLIGRAM, NutritionNutrient.SODIUM.labelUnit)
+        assertEquals(NutrientLabelUnit.MILLIGRAM, NutritionNutrient.CAFFEINE.labelUnit)
+        assertEquals(NutrientLabelUnit.MICROGRAM, NutritionNutrient.VITAMIN_K.labelUnit)
+        assertEquals(NutrientLabelUnit.MICROGRAM, NutritionNutrient.VITAMIN_D.labelUnit)
+        assertEquals(NutrientLabelUnit.MICROGRAM, NutritionNutrient.SELENIUM.labelUnit)
     }
 
     @Test fun `no vitamin or mineral is typed in grams`() {
         val inGrams = NutritionNutrient.entries.filter { nutrient ->
-            nutrient.unit == NutritionNutrientUnit.MASS_ADAPTIVE && nutrient.inputUnit == NutrientInputUnit.GRAM
+            nutrient.unit == NutritionNutrientUnit.MASS_ADAPTIVE && nutrient.labelUnit == NutrientLabelUnit.GRAM
         }
 
         assertEquals(emptyList<NutritionNutrient>(), inGrams)
