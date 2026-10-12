@@ -47,9 +47,9 @@ data class PersonalBaselineInsight(
 }
 
 /**
- * A metric's 30/60/90-day mean and standard deviation, and where today sits:
- * within one SD is usual, two or more unusual. Plain descriptive statistics;
- * the cut-offs are this app's own choice, not a clinical reference.
+ * A metric's mean and standard deviation over 30, 60 or 90 days, and where
+ * today sits. Within 1 SD: usual. 2 SD or more: unusual. Cut-offs: app
+ * heuristic, not a clinical reference.
  */
 fun personalBaselineInsight(
     currentValue: Double,

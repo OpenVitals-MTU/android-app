@@ -208,7 +208,7 @@ private fun calculateTrimp(
     )
 }
 
-/** For days without usable heart rate: the strongest of steps, distance and active energy, each scaled by this app's own heuristic divisor. */
+/** Days without usable heart rate: the highest of steps, distance and active energy, each divided by a fixed divisor. Divisors: app heuristic, no published source. */
 private fun movementFallbackCardioLoad(steps: DailySteps?): Int {
     steps ?: return 0
     val rawLoad = maxOf(

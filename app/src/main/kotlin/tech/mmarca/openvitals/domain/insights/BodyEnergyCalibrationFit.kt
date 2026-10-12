@@ -32,7 +32,7 @@ const val DefaultWatchLearningRate = 0.1
  * Fits the personal gains from watch readings. Each reading nudges the one
  * gain behind its dominant driver by a bounded step. A drain driver reading
  * lower than predicted raises that drain gain; a charge driver is the mirror.
- * The step size and clamps are this app's own heuristic.
+ * Step size and clamps: app heuristic, no published source.
  */
 fun fitBodyEnergyGains(
     current: BodyEnergyCalibration,
