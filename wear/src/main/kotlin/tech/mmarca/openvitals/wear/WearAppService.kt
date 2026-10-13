@@ -120,7 +120,7 @@ class WearAppService : Service() {
         link.start()
         // A grant made after the start: the type set grows to include health.
         val newHeartRate = !recorder.isRunning && WearPermissions.hasHeartRate(this)
-        val newSteps = !stepRecorder.isRunning && WearPermissions.hasActivityRecognition(this)
+        val newSteps = !stepRecorder.isRunning && stepRecorder.hasSensor && WearPermissions.hasActivityRecognition(this)
         if (newHeartRate || newSteps) {
             startInForeground()
             startRecordingIfPermitted()
@@ -162,7 +162,11 @@ class WearAppService : Service() {
     /** Starts each recorder whose grant is in and whose sensor the watch has; the rest wait for a later call. */
     private fun startRecordingIfPermitted() {
         if (WearPermissions.hasHeartRate(this)) recorder.start() else Log.i(TAG, "Heart rate not granted")
-        if (WearPermissions.hasActivityRecognition(this)) stepRecorder.start() else Log.i(TAG, "Steps not granted")
+        when {
+            !stepRecorder.hasSensor -> Log.i(TAG, "No step counter")
+            WearPermissions.hasActivityRecognition(this) -> stepRecorder.start()
+            else -> Log.i(TAG, "Steps not granted")
+        }
     }
 
     /** The watch's Bluetooth name, as the phone will show it. */

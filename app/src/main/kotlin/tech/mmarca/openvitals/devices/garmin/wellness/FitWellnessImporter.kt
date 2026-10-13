@@ -12,7 +12,7 @@ import kotlinx.coroutines.CancellationException
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.contract.GarminSleepMinuteRepository
 import tech.mmarca.openvitals.data.repository.contract.GarminWellnessRepository
-import tech.mmarca.openvitals.devices.core.sync.insertSkippingPresent
+import tech.mmarca.openvitals.data.repository.insertSkippingPresent
 import tech.mmarca.openvitals.devices.garmin.GarminCounterWatermarkStore
 import tech.mmarca.openvitals.devices.garmin.GarminDownloadedFile
 import tech.mmarca.openvitals.devices.garmin.GarminLog

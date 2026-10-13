@@ -6,6 +6,8 @@ import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.domain.insights.CardioLoadMethod
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.domain.preferences.BiologicalSex
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyNutrition
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
@@ -44,6 +46,7 @@ class ActivityOverviewViewModelTest {
         heartRepository = heartRepository,
         periodPreferences = preferences,
         calorieDisplayPreferences = preferences,
+        bodyProfilePreferences = preferences,
         dispatchers = mainDispatcherRule.dispatcherProvider,
         savedStateHandle = SavedStateHandle(),
     )
@@ -174,6 +177,35 @@ class ActivityOverviewViewModelTest {
 
         assertTrue(vm.uiState.value.today.cardioLoad > 0)
         assertEquals(CardioLoadConfidence.MEDIUM, vm.uiState.value.today.cardioLoadConfidence)
+    }
+
+    @Test
+    fun `cardio load reads sex and a set maximum heart rate from the body profile`() = runTest {
+        val start = Instant.parse("${today}T10:00:00Z")
+        val heartRateSamples = (0..30).map { minute ->
+            HeartRateSample(
+                time = start.plusSeconds(minute * 60L),
+                beatsPerMinute = if (minute == 15) 190L else 145L,
+                source = "watch",
+            )
+        }
+        fun cardioLoadFor(profile: BodyProfile) = overviewViewModel(
+            activityRepository = activityRepo(
+                workouts = listOf(workout(start, start.plusSeconds(30 * 60L))),
+            ),
+            heartRepository = heartRepo(
+                heartRateSamples = heartRateSamples,
+                restingHeartRate = listOf(DailyRestingHR(today, 60L)),
+            ),
+            preferences = FakePreferences(initialProfile = profile),
+        ).uiState.value.today.cardioLoadScore
+
+        val unset = cardioLoadFor(BodyProfile())
+
+        // Banister's weighting for women, 0.86 e^(1.67 x), outweighs the men's 0.64 e^(1.92 x) at this effort.
+        assertTrue(cardioLoadFor(BodyProfile(sex = BiologicalSex.FEMALE)).score > unset.score)
+        assertEquals(190L, unset.maxHeartRateBpm)
+        assertEquals(200L, cardioLoadFor(BodyProfile(maxHeartRateBpm = 200)).maxHeartRateBpm)
     }
 
     @Test

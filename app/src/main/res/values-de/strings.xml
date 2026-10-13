@@ -3689,6 +3689,10 @@
         <item quantity="one">%1$d Herzfrequenz-Messwert synchronisiert</item>
         <item quantity="other">%1$d Herzfrequenz-Messwerte synchronisiert</item>
     </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">Schritte für %1$d Minute</item>
+        <item quantity="other">Schritte für %1$d Minuten</item>
+    </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">%1$d Nacht Schlaf geschätzt</item>
         <item quantity="other">%1$d Nächte Schlaf geschätzt</item>
