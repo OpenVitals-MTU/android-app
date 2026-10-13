@@ -37,9 +37,12 @@ internal fun WatchStatusScreen(
     permissionsVersion: Int,
     hasHeartRate: () -> Boolean,
     hasBluetooth: () -> Boolean,
+    hasSteps: () -> Boolean,
+    hasStepCounter: Boolean,
     readLatest: () -> WearLinkProtocol.HeartRateSample?,
     readCount: () -> Long,
     readMinuteCount: () -> Long,
+    readStepMinuteCount: () -> Long,
     ppgLogAvailable: Boolean,
     onTogglePpgLog: () -> Unit,
     onGrant: () -> Unit,
@@ -51,9 +54,11 @@ internal fun WatchStatusScreen(
     var latest by remember { mutableStateOf<WearLinkProtocol.HeartRateSample?>(null) }
     var count by remember { mutableStateOf(0L) }
     var minuteCount by remember { mutableStateOf(0L) }
+    var stepMinuteCount by remember { mutableStateOf(0L) }
     val link by WearLinkState.state.collectAsState()
     val heartRateGranted = remember(permissionsVersion) { hasHeartRate() }
     val bluetoothGranted = remember(permissionsVersion) { hasBluetooth() }
+    val stepsGranted = remember(permissionsVersion) { hasSteps() }
 
     // The stores are written by the service; the screen reads them every few seconds.
     LaunchedEffect(Unit) {
@@ -61,6 +66,7 @@ internal fun WatchStatusScreen(
             latest = readLatest()
             count = readCount()
             minuteCount = readMinuteCount()
+            stepMinuteCount = readStepMinuteCount()
             WearLinkState.expirePending(System.currentTimeMillis())
             delay(3_000)
         }
@@ -96,6 +102,13 @@ internal fun WatchStatusScreen(
         Line(stringResource(R.string.status_samples_stored, count))
         Line(stringResource(R.string.status_minutes_stored, minuteCount))
         Line(
+            when {
+                !hasStepCounter -> stringResource(R.string.status_steps_no_sensor)
+                !stepsGranted -> stringResource(R.string.status_steps_not_granted)
+                else -> stringResource(R.string.status_step_minutes_stored, stepMinuteCount)
+            },
+        )
+        Line(
             stringResource(
                 when (link.bedtimeHold) {
                     BedtimeHold.OFF -> R.string.status_bedtime_off
@@ -113,7 +126,7 @@ internal fun WatchStatusScreen(
                 else -> stringResource(R.string.status_link_starting)
             },
         )
-        if (!heartRateGranted || !bluetoothGranted) {
+        if (!heartRateGranted || !bluetoothGranted || (hasStepCounter && !stepsGranted)) {
             Button(onClick = onGrant, modifier = Modifier.padding(top = 8.dp)) {
                 Text(stringResource(R.string.action_grant))
             }
