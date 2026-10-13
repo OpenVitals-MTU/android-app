@@ -3755,6 +3755,10 @@
         <item quantity="one">%1$d heart rate sample synced</item>
         <item quantity="other">%1$d heart rate samples synced</item>
     </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">Steps for %1$d minute</item>
+        <item quantity="other">Steps for %1$d minutes</item>
+    </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">%1$d night of sleep estimated</item>
         <item quantity="other">%1$d nights of sleep estimated</item>

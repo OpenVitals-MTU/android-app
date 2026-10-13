@@ -3725,6 +3725,11 @@
         <item quantity="many">%1$d muestras de frecuencia cardiaca sincronizadas</item>
         <item quantity="other">%1$d muestras de frecuencia cardiaca sincronizadas</item>
     </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">Pasos de %1$d minuto</item>
+        <item quantity="many">Pasos de %1$d minutos</item>
+        <item quantity="other">Pasos de %1$d minutos</item>
+    </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">%1$d noche de sueño estimada</item>
         <item quantity="many">%1$d noches de sueño estimadas</item>

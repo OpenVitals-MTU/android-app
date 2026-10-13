@@ -16,7 +16,7 @@ import tech.mmarca.openvitals.domain.insights.EstimatedSleepSession
 import tech.mmarca.openvitals.domain.insights.SleepStageEstimator
 import tech.mmarca.openvitals.domain.model.GarminSleepMinute
 import tech.mmarca.openvitals.domain.model.SleepMinuteKind
-import tech.mmarca.openvitals.features.imports.applehealth.isDuplicateClientRecordFailure
+import tech.mmarca.openvitals.data.repository.isDuplicateClientRecordFailure
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 /**

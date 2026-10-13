@@ -25,7 +25,11 @@ sed -i "s/\\.orElse(\"[0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*-SNAPSHOT\")/.orEls
 git add app/build.gradle.kts build.gradle.kts CHANGELOG.md README.md docs fastlane .github/workflows/release.yml scripts/release.sh scripts/version-code.sh
 git commit -m "chore: release $VERSION"
 if [ -f "$RELEASE_NOTES_FILE" ]; then
-    git tag -a "$TAG" -F "$RELEASE_NOTES_FILE"
+    # The tag message becomes the GitHub release notes and the Zulip post. Git's
+    # default cleanup drops every line starting with "#", the ### section headings
+    # with it (2.13.0 and 2.14.0 lost them). The "# OpenVitals X.Y.Z" title goes,
+    # since the GitHub release already carries that name.
+    sed '1{/^# /d}' "$RELEASE_NOTES_FILE" | git tag -a "$TAG" --cleanup=whitespace -F -
 else
     git tag -a "$TAG" -m "OpenVitals $VERSION"
 fi

@@ -19,13 +19,15 @@ sealed class DeviceSyncResult {
 
     /**
      * The sync finished with [fileCount] files, or samples for an
-     * integration that counts those, and [nightCount] estimated nights of
-     * sleep written. 0 is a success. [missingBodyWeight] says an estimate
-     * that needs the body weight was skipped because none is known.
+     * integration that counts those, [nightCount] estimated nights of sleep
+     * and [stepMinuteCount] minutes of steps written. 0 is a success.
+     * [missingBodyWeight] says an estimate that needs the body weight was
+     * skipped because none is known.
      */
     data class Succeeded(
         val fileCount: Int,
         val nightCount: Int = 0,
+        val stepMinuteCount: Int = 0,
         val missingBodyWeight: Boolean = false,
     ) : DeviceSyncResult()
 

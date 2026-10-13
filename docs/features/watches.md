@@ -34,9 +34,9 @@ The UUID and the protocol words come from the shared `:wearlink` module on both 
 
 The watch app records heart rate on its own, from the moment it is granted heart rate access, with the screen off and the app closed: the same foreground service that answers the phone keeps the sensor on, batched so the watch wakes once every few minutes rather than once per beat. It keeps one sample every ten seconds and a week of history, pruning older samples itself.
 
-It counts steps the same way, from the watch's own step counter, once it is granted physical activity access: one count per clock minute, a week of history. A watch without a step counter simply records none.
+It counts steps the same way, from the watch's own step counter, once it is granted physical activity access: one count per clock minute, a week of history. Steps taken while the watch app was not running, for example after a restart of the watch, are spread evenly over the minutes in between. The watch's screen shows whether step counting is on and offers the grant if it is not. A watch without a step counter simply records none.
 
-On the phone, the Watch Sync card on the watch's device screen has a Sync watch button. A sync first asks the watch for every heart rate sample newer than the last one already written, one page of up to 2000 samples at a time, writes each page to Health Connect as one heart rate record per clock hour before asking for the next, and remembers how far it got after each page. A sync interrupted half-way therefore resumes where it stopped, and a page written twice updates rather than duplicates. Then the step minutes, written as one steps record per minute; each pull reaches a few minutes back, because the watch keeps adding late steps to a minute for a while, and a minute that grew replaces its record. Each minute is also written as a cadence (steps per minute) and, once your weight is known from Health Connect or the body profile, as an estimate of the calories walking cost above rest. That estimate uses the cadence equation of Moore and colleagues (Med Sci Sports Exerc 2021), which holds for level walking: hills, stairs, running and cycling are not counted, so it tends to come in low. Without a weight it is skipped, and the card says what is missing. If you withheld Health Connect access for one of these estimates, the sync writes the rest. Then the sleep minutes follow, as the Sleep section describes. The card reports how many heart rate samples the run brought and how many nights of sleep it estimated, or that there was nothing new. A sync is refused while an activity is being recorded, as for Garmin.
+On the phone, the Watch Sync card on the watch's device screen has a Sync watch button. A sync first asks the watch for every heart rate sample newer than the last one already written, one page of up to 2000 samples at a time, writes each page to Health Connect as one heart rate record per clock hour before asking for the next, and remembers how far it got after each page. A sync interrupted half-way therefore resumes where it stopped, and a page written twice updates rather than duplicates. Then the step minutes, written as one steps record per minute; each pull takes the last minute again, because the watch keeps adding late steps to it, and a minute that grew replaces its record. If OpenVitals may not write steps to Health Connect, the steps stay on the watch and the rest of the sync goes on. Each minute is also written as a cadence (steps per minute) and, once your weight is known from Health Connect or the body profile, as an estimate of the calories walking cost above rest. That estimate uses the cadence equation of Moore and colleagues (Med Sci Sports Exerc 2021), which holds for level walking: hills, stairs, running and cycling are not counted, so it tends to come in low. Without a weight it is skipped, and the card says what is missing. If you withheld Health Connect access for one of these estimates, the sync writes the rest. Then the sleep minutes follow, as the Sleep section describes. The card reports how many heart rate samples and minutes of steps the run brought and how many nights of sleep it estimated, or that there was nothing new. A sync is refused while an activity is being recorded, as for Garmin.
 
 On Android 16 the heart rate sensor sits behind the Health Connect `READ_HEART_RATE` permission rather than `BODY_SENSORS`; the watch app asks for the right one, then for the background grant, on first launch. Without the grant the link still answers, and the watch screen says heart rate access is off.
 
@@ -101,6 +101,17 @@ The device screen shows whether the watch has ever been synced and when it last 
 
 The dashboard carries a watch tile showing the most recently synced watch with its battery, last sync time, and a sync button, so a sync does not require a trip through Settings. While live readings are streaming (see below), the tile shows the current heart rate and step count instead of the last sync time.
 
+### When A Watch Will Not Connect Or Sync
+
+Since 2.14.0 the link follows what Gadgetbridge does for watches that had trouble connecting or syncing (first reported on a Fenix 6):
+
+- It writes to each characteristic the way the characteristic asks, with a response when the watch offers one, instead of always writing without one.
+- A dial that Android's Bluetooth stack fails, such as GATT status 133, is retried after a short settle pause: up to three connection attempts in all. A watch that does not answer at all is not redialled.
+- A whole sync may run for up to 30 minutes, enough for a first sync of a watch holding months of activities. The per-stage timeouts still end a stalled step much sooner.
+- A watch that never sends its configuration still completes the handshake, from the capabilities record it pushes as FIT messages instead.
+
+The device screen has a **Large Bluetooth packets** switch, on by default and kept per watch. Larger packets make a sync much faster; turning the switch off skips the request and keeps Bluetooth's default packet size, for a watch that keeps dropping the link or never gets a sync going.
+
 ### Automatic Sync
 
 "Automatic sync", on the watch's device screen, syncs the watch on its own every 30 minutes, hour, or two hours. Off by default, and set per watch, so two paired watches can be on different schedules or only one of them on a schedule at all.
@@ -135,15 +146,16 @@ Written to Health Connect, and therefore visible on the usual dashboard and deta
 
 - Sleep sessions with stages, and naps.
 - Heart rate series and resting heart rate.
-- Heart rate variability.
+- Heart rate variability: the nightly summary, and the five-minute values the watch records.
 - Respiratory rate.
 - VO2 max.
-- Blood oxygen and respiratory rate from a Health Snapshot recording.
+- Blood oxygen: the Pulse Ox readings the watch records, and the value from a Health Snapshot recording.
+- Respiratory rate from a Health Snapshot recording.
 - Basal metabolic rate.
 - Steps, distance, and active calories through the day.
 - Body weight, when the watch relays readings from a paired Garmin scale.
 
-Kept in OpenVitals' own storage, because Health Connect has no record type for them: stress, Body Battery, intensity minutes, recovery time, training readiness, training load, and the watch's own verdict on a night's sleep.
+Kept in OpenVitals' own storage, because Health Connect has no record type for them: stress, Body Battery, intensity minutes, recovery time, training readiness, training load, functional threshold power, lactate threshold, hill and endurance scores, and the watch's own verdict on a night's sleep, restless moments included.
 
 #### Estimated sleep stages
 
@@ -196,6 +208,7 @@ Last night:
 - Sleep score.
 - Time awake.
 - Times woken.
+- Restless moments.
 - Sleep need, compared with the usual nightly need when the watch reported one.
 
 Training:
@@ -203,6 +216,10 @@ Training:
 - Recovery time.
 - Training readiness.
 - Training load, showing the acute value with the chronic value beside it.
+- Functional threshold power, in watts.
+- Lactate threshold, in watts, with the heart rate it was reached at.
+- Hill score, with its strength and endurance parts.
+- Endurance score.
 
 A footer names the measurements this watch did not send, so an absent row reads as "your watch does not report this" rather than "the app lost it". Until a first sync the screen is empty and says so.
 
