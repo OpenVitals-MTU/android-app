@@ -57,7 +57,7 @@ One sleep session with estimated stages is written per night under a fixed id, s
 
 The stages are a heuristic, not a sleep lab: read them as when heart rate was low and steady versus high and variable. The pipeline is evaluated offline against polysomnography-labelled nights (PhysioNet's sleep-accel dataset, 31 adults wearing an Apple Watch in a sleep lab, converted by `tool/sleep_accel_fixture/` into the rows the OpenVitals watch app would have recorded); the thresholds change only with that evaluation's numbers in the commit message. As of 2026-10-08, per minute over the 31 nights: 90% of minutes scored right, 92% of sleep minutes found, 68% of wake minutes found (Cole-Kripke alone finds 56%), the night's start within 9 minutes and its end within 13 minutes on average, total sleep within 23 minutes, and REM told from non-REM 80% of the time; one night of the 31 went unfound because its recording was mostly empty. Naps are not written: one session per night.
 
-Not yet: automatic sync on a schedule, steps and other series, and live heart rate over the link. Recorded data from the vendor app, if it is installed, still reaches OpenVitals through Health Connect as before.
+Not yet: steps and other series, and live heart rate over the link. Recorded data from the vendor app, if it is installed, still reaches OpenVitals through Health Connect as before.
 
 Verified on 2026-10-07 with a Galaxy Watch8 (Wear OS on Android 16) and a GrapheneOS Pixel 6 Pro that never ran Galaxy Wearable: the watch accepted a plain bond from the phone's Bluetooth settings (it appears twice in the list, once per radio; either entry bonds both), the phone's cached service list then carried the OpenVitals UUID, and the status card got its answer. The bond is Android's, not the vendor app's, so the plan to onboard with the vendor app, install OpenVitals on the watch and then uninstall the vendor app rests on something that holds. Not yet verified: the bond and the watch service surviving a reboot, and Samsung's battery manager leaving a sideloaded service alone overnight. The watch app is installed over adb; see [Install the watch app on a Wear OS watch](../how-to/wear-os-sideload.md), which also covers skipping the vendor onboarding on the watches that allow adb before onboarding (the Galaxy Watch8 does not; it is onboarded once with Galaxy Wearable, which is uninstalled afterwards).
 
@@ -112,7 +112,7 @@ The device screen has a **Large Bluetooth packets** switch, on by default and ke
 
 ### Automatic Sync
 
-"Automatic sync", on the watch's device screen, syncs the watch on its own every 30 minutes, hour, or two hours. Off by default, and set per watch, so two paired watches can be on different schedules or only one of them on a schedule at all.
+"Automatic sync", on the device screen of a Garmin or Wear OS watch, syncs the watch on its own every 30 minutes, hour, or two hours. Off by default, and set per watch, so two paired watches can be on different schedules or only one of them on a schedule at all.
 
 A scheduled sync runs while the app is closed. Health Connect then lets OpenVitals read other apps' records only with its "Access data in the background" grant. Without it the watch's data is still saved, but everything built from all apps' records, such as Body Energy and the history caches, waits until the app is opened. So switching Automatic sync on asks for that grant when it is missing, and the card keeps a line and an "Allow background access" button for as long as it is.
 
@@ -369,7 +369,7 @@ See [Privacy](../app/privacy.md) and [Permissions](../app/permissions.md) for th
 - Older single-link transport watches cannot sync.
 - There is no background sync. Every sync is one the user asked for.
 - The Connected and Not connected labels reflect whether the watch is switched on in OpenVitals, not whether a Bluetooth link is open right now.
-- WearOS watches sync heart rate and an estimated sleep session per night, and only by hand. Steps and other series, notification forwarding, watch settings, find, sending a point and the automatic sync schedule are Garmin-only.
+- WearOS watches sync heart rate and an estimated sleep session per night, by hand or on the automatic schedule. Steps and other series, notification forwarding, watch settings, find and sending a point are Garmin-only.
 - Music controls are confirmed on one Garmin model. A volume change made on the phone reaches the watch only with the next player change.
 - Sending the alarm list has not yet been confirmed on a watch. Whether an empty list clears the watch's alarms is unknown.
 - Sending a point has not yet been confirmed on a watch. Only one point is sent at a time, and points already on the watch cannot be listed, edited, or removed from the phone.

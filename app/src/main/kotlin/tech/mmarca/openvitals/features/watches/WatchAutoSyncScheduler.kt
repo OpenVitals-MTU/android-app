@@ -12,6 +12,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.devices.core.sync.AutoSyncInterval
+import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPort
 import tech.mmarca.openvitals.devices.garmin.GarminDeviceStateStore
 import tech.mmarca.openvitals.devices.garmin.GarminLog
 
@@ -26,6 +27,7 @@ class WatchAutoSyncScheduler @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val deviceRepository: BleDeviceRepository,
     private val stateStore: GarminDeviceStateStore,
+    private val syncPort: DeviceSyncPort,
 ) {
 
     private val workManager: WorkManager get() = WorkManager.getInstance(context)
@@ -48,7 +50,7 @@ class WatchAutoSyncScheduler @Inject constructor(
         runCatching {
             deviceRepository.devices.forEach { device ->
                 val interval = stateStore.autoSyncInterval(device.id)
-                if (interval.isOn && device.isGarminGfdi) {
+                if (interval.isOn && syncPort.canSync(device)) {
                     enqueue(device.id, interval, ExistingPeriodicWorkPolicy.KEEP)
                 } else {
                     // A watch that stopped being syncable, or a schedule that outlived its preference.
