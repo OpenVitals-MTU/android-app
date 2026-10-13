@@ -3760,6 +3760,12 @@
         <item quantity="many">%1$d vzorku tepu synchronizováno</item>
         <item quantity="other">%1$d vzorků tepu synchronizováno</item>
     </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">Kroky za %1$d minutu</item>
+        <item quantity="few">Kroky za %1$d minuty</item>
+        <item quantity="many">Kroky za %1$d minuty</item>
+        <item quantity="other">Kroky za %1$d minut</item>
+    </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">Odhadnuta %1$d noc spánku</item>
         <item quantity="few">Odhadnuty %1$d noci spánku</item>

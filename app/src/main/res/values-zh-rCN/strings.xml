@@ -3694,6 +3694,10 @@
         <item quantity="one">已同步 %1$d 个心率样本</item>
         <item quantity="other">已同步 %1$d 个心率样本</item>
     </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">%1$d 分钟的步数</item>
+        <item quantity="other">%1$d 分钟的步数</item>
+    </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">已估算 %1$d 晚的睡眠</item>
         <item quantity="other">已估算 %1$d 晚的睡眠</item>

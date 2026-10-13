@@ -3761,6 +3761,12 @@
         <item quantity="many">Синхронизировано %1$d значений пульса</item>
         <item quantity="other">Синхронизировано %1$d значения пульса</item>
     </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">Шаги за %1$d минуту</item>
+        <item quantity="few">Шаги за %1$d минуты</item>
+        <item quantity="many">Шаги за %1$d минут</item>
+        <item quantity="other">Шаги за %1$d минуты</item>
+    </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">Оценён сон за %1$d ночь</item>
         <item quantity="few">Оценён сон за %1$d ночи</item>

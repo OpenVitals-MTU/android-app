@@ -1,6 +1,8 @@
 package tech.mmarca.openvitals.devices.wearos
 
+import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.StepsRecord
 import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
@@ -35,9 +37,10 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
  * write. A sync that dies mid-way therefore loses nothing: the next one
  * resumes at the last page written, and a page written twice upserts.
  *
- * Then steps, the same way, but each pull starts a few minutes before the
- * cursor: the watch rewrites a minute while late steps arrive, and a minute
- * that grew replaces its record.
+ * Then steps, the same way, but each pull also takes the cursor's minute
+ * again: the watch adds late steps only to its newest minute, and a minute
+ * that grew replaces its record. Without the Health Connect grant to write
+ * steps, the steps stay on the watch and the sync goes on.
  *
  * Then sleep: the minutes from the start of the night the sleep cursor sits
  * in, every night those minutes touch estimated whole and written as one
@@ -46,8 +49,9 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
  * entry, is left alone. The sleep cursor moves once the nights are written.
  *
  * [DeviceSyncResult.Succeeded.fileCount] carries the number of heart rate
- * samples and [DeviceSyncResult.Succeeded.nightCount] the nights written;
- * the Wear OS card words them so.
+ * samples, [DeviceSyncResult.Succeeded.stepMinuteCount] the minutes of
+ * steps and [DeviceSyncResult.Succeeded.nightCount] the nights written; the
+ * Wear OS card words them so.
  */
 @Singleton
 class WearOsWatchSyncService(
@@ -113,7 +117,7 @@ class WearOsWatchSyncService(
             linkStore.record(device.id, WearOsLinkSnapshot(failure.toAppStatus(), checkedAt = clock()))
             WearOsLog.log("sync failed: ${failure.message}")
             return DeviceSyncResult.Failed(
-                if (progress.written > 0 && failure is WearOsLinkFailure.NoAnswer) {
+                if (progress.hasWritten && failure is WearOsLinkFailure.NoAnswer) {
                     ScreenError.Text(R.string.settings_watch_wearos_fail_partial)
                 } else {
                     failure.toScreenError()
@@ -130,7 +134,7 @@ class WearOsWatchSyncService(
 
         onProgress?.invoke(DeviceSyncProgress(DeviceSyncPhase.COMPLETE, filesTotal = progress.pages, filesDone = progress.pages))
         bleDeviceRepository.markSynced(device.id, clock())
-        return DeviceSyncResult.Succeeded(progress.written, progress.nights)
+        return DeviceSyncResult.Succeeded(progress.written, progress.nights, progress.stepMinutes)
     }
 
     /** False when no bonded watch matches. The samples written are counted on [progress]. */
@@ -153,25 +157,32 @@ class WearOsWatchSyncService(
         return true
     }
 
-    /** False when no bonded watch matches. */
+    /** False when no bonded watch matches. The minutes written are counted on [progress]. */
     private suspend fun pullSteps(device: BleSensorDevice, progress: Progress): Boolean {
+        if (HealthPermission.getWritePermission(StepsRecord::class) !in healthConnect.grantedPermissions()) {
+            WearOsLog.log("steps: not pulled, Health Connect permission missing")
+            return true
+        }
         val cursor = cursors.stepsCursor(device.id)
-        var since = if (cursor == Instant.EPOCH) cursor else cursor.minusMillis(STEPS_RESTATED_MILLIS)
+        // The watch sends what is after `since`, so this takes the cursor's minute again.
+        var since = if (cursor == Instant.EPOCH) cursor else cursor.minusMillis(1)
         var pages = 0
-        var written = 0
         while (true) {
             val page = retryOnce { nodePort.pullSteps(device.address, device.bluetoothName, since) } ?: return false
             progress.page()
             val newest = page.minutes.maxOfOrNull { it.start }
             if (newest != null) {
-                written += importRepository.insertSkippingPresent(WearOsStepsImport.records(page.minutes))
+                // Written apart, so an unchanged cursor minute does not make the batch fall back to one by one.
+                val (again, fresh) = page.minutes.partition { !it.start.isAfter(cursor) }
+                progress.stepMinutes += importRepository.insertSkippingPresent(WearOsStepsImport.records(again))
+                progress.stepMinutes += importRepository.insertSkippingPresent(WearOsStepsImport.records(fresh))
                 if (newest.isAfter(cursors.stepsCursor(device.id))) cursors.setStepsCursor(device.id, newest)
                 since = newest
             }
             if (!page.hasMore || newest == null) break
             if (++pages >= MAX_PAGES) break
         }
-        WearOsLog.log("steps: $written minute(s) written")
+        WearOsLog.log("steps: ${progress.stepMinutes} minute(s) written")
         return true
     }
 
@@ -274,12 +285,17 @@ class WearOsWatchSyncService(
             ScreenError.Text(R.string.settings_watch_wearos_fail_health_connect)
         }
 
-    /** Counts the pages pulled, for the progress ticks, and the heart rate samples written. */
+    /** Counts the pages pulled, for the progress ticks, and what was written. */
     private class Progress(private val onProgress: ((DeviceSyncProgress) -> Unit)?) {
         var pages = 0
             private set
+        /** Heart rate samples. */
         var written = 0
+        var stepMinutes = 0
         var nights = 0
+
+        val hasWritten: Boolean
+            get() = written > 0 || stepMinutes > 0
 
         fun page() {
             pages++
@@ -292,8 +308,5 @@ class WearOsWatchSyncService(
         const val MAX_PAGES = 1000
 
         const val RETRY_DELAY_MILLIS = 1_500L
-
-        /** How far a step pull reaches back past its cursor: the watch rewrites a minute for up to its batch latency. */
-        const val STEPS_RESTATED_MILLIS = 5 * 60_000L
     }
 }
