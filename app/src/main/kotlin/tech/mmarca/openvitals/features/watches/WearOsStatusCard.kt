@@ -206,9 +206,13 @@ internal fun WearOsSyncCard(
             // Only after a run this session; the counts are not persisted.
             val samples = sync.lastFileCount
             val nights = sync.lastNightCount ?: 0
+            val stepMinutes = sync.lastStepMinuteCount ?: 0
             if (!sync.isSyncing && sync.phase == DeviceSyncPhase.COMPLETE && samples != null) {
                 val lines = buildList {
                     if (samples > 0) add(pluralStringResource(R.plurals.settings_watch_wearos_synced_samples, samples, samples))
+                    if (stepMinutes > 0) {
+                        add(pluralStringResource(R.plurals.settings_watch_wearos_synced_step_minutes, stepMinutes, stepMinutes))
+                    }
                     if (nights > 0) add(pluralStringResource(R.plurals.settings_watch_wearos_synced_nights, nights, nights))
                     if (isEmpty()) add(stringResource(R.string.settings_watch_wearos_synced_none))
                 }

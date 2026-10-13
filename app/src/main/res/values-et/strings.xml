@@ -3689,6 +3689,10 @@
         <item quantity="one">%1$d pulsinäit sünkroonitud</item>
         <item quantity="other">%1$d pulsinäitu sünkroonitud</item>
     </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">Sammud %1$d minuti kohta</item>
+        <item quantity="other">Sammud %1$d minuti kohta</item>
+    </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">%1$d öö uni hinnatud</item>
         <item quantity="other">%1$d öö uni hinnatud</item>

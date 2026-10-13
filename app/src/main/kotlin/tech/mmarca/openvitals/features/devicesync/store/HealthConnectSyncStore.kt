@@ -13,7 +13,8 @@ import tech.mmarca.openvitals.data.repository.SyncedRecordOriginRepository
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncAborted
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncItem
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncRecordStore
-import tech.mmarca.openvitals.features.imports.applehealth.isDuplicateClientRecordFailure
+import tech.mmarca.openvitals.data.repository.RecordWrite
+import tech.mmarca.openvitals.data.repository.insertWithOutcomes
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 /**
@@ -144,20 +145,17 @@ class HealthConnectSyncStore(
         for ((type, records) in recordsByType) {
             val keys = keysByType.getValue(type)
             try {
-                importRepository.insertImportedRecords(records)
-                written += keys
+                val outcomes = importRepository.insertWithOutcomes(records) { _, e ->
+                    Log.w(TAG, "single write failed for $type: ${e.message}")
+                }
+                // A record already present has converged, so it counts as written.
+                outcomes.forEachIndexed { index, outcome -> if (outcome != RecordWrite.FAILED) written += keys[index] }
                 Log.i(TAG, "wrote ${records.size} $type records")
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (e.isDuplicateClientRecordFailure()) {
-                    // A duplicate clientRecordId tripped the batch. Retry one by one;
-                    // a per-record duplicate is already converged, so count it written.
-                    written += insertIndividually(type, records, keys)
-                } else {
-                    // Rejected: its keys are not reported as written.
-                    Log.w(TAG, "WRITE FAILED for ${records.size} $type: ${e.message}")
-                }
+                // Rejected: its keys are not reported as written.
+                Log.w(TAG, "WRITE FAILED for ${records.size} $type: ${e.message}")
             }
         }
         // Remember each landed record's original source app, for display.
@@ -170,29 +168,6 @@ class HealthConnectSyncStore(
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "failed to persist ${landedOrigins.size} record origins: ${e.message}")
-            }
-        }
-        return written
-    }
-
-    private suspend fun insertIndividually(
-        type: String,
-        records: List<Record>,
-        keys: List<String>,
-    ): Set<String> {
-        val written = mutableSetOf<String>()
-        records.forEachIndexed { index, record ->
-            try {
-                importRepository.insertImportedRecords(listOf(record))
-                written += keys[index]
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                if (e.isDuplicateClientRecordFailure()) {
-                    written += keys[index]
-                } else {
-                    Log.w(TAG, "single write failed for $type: ${e.message}")
-                }
             }
         }
         return written

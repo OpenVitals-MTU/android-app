@@ -1,39 +1,77 @@
 package tech.mmarca.openvitals.wear
 
+import java.util.TreeMap
 import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /**
  * Turns the step counter's total since boot into steps per clock minute.
- * The difference between two readings goes to the minute of the later one.
+ * The difference between two readings is spread over the minutes between
+ * them, in proportion to time.
  *
  * Pure, so it is testable off the watch. [StepRecorder] is the Android side.
  */
 class StepMinuteCounter(
-    /** The total last seen on this boot, or null when there is none to diff against. */
-    lastTotal: Long?,
+    /** The last reading on this boot, or null when there is none to diff against. */
+    last: Reading?,
     /** The newest stored minute, so a restart inside a minute adds to it instead of replacing it. */
     latest: WearLinkProtocol.StepMinute?,
 ) {
-    var lastTotal: Long? = lastTotal
+    /** A total of the step counter and when it was read. */
+    data class Reading(val epochMillis: Long, val total: Long)
+
+    var last: Reading? = last
         private set
 
-    private var minute: WearLinkProtocol.StepMinute? = latest
+    private var newest: WearLinkProtocol.StepMinute? = latest
+
+    /** Minute start to steps, for the rows changed since the last [drain]. */
+    private val changed = TreeMap<Long, Int>()
 
     /**
-     * The minute's row to store after the counter read [total] at
-     * [epochMillis]. Null when nothing was walked. The first reading, and one
-     * below the last, only set the baseline.
+     * Takes a reading. The first one, and one below the last, only set the
+     * baseline. A time before the last reading or the newest minute counts
+     * as that time: a clock set back must not overwrite a stored minute.
      */
-    fun onTotal(epochMillis: Long, total: Long): WearLinkProtocol.StepMinute? {
-        val last = lastTotal
-        lastTotal = total
-        if (last == null || total <= last) return null
-        val start = epochMillis - Math.floorMod(epochMillis, MINUTE_MILLIS)
-        val before = minute?.takeIf { it.epochMillis == start }?.steps ?: 0
-        // More than a sprint: steps counted while nobody listened. The excess has no known minute.
-        val steps = (before + (total - last)).coerceAtMost(WearLinkProtocol.MAX_STEPS_PER_MINUTE.toLong()).toInt()
-        return WearLinkProtocol.StepMinute(start, steps).also { minute = it }
+    fun onTotal(epochMillis: Long, total: Long) {
+        val previous = last
+        val floor = maxOf(previous?.epochMillis ?: Long.MIN_VALUE, newest?.epochMillis ?: Long.MIN_VALUE)
+        val at = maxOf(epochMillis, floor)
+        last = Reading(at, total)
+        if (previous == null || total <= previous.total) return
+        spread(from = maxOf(previous.epochMillis, newest?.epochMillis ?: Long.MIN_VALUE), to = at, steps = total - previous.total)
     }
+
+    /** The rows changed since the last call, oldest first. */
+    fun drain(): List<WearLinkProtocol.StepMinute> =
+        changed.map { (start, steps) -> WearLinkProtocol.StepMinute(start, steps) }.also { changed.clear() }
+
+    private fun spread(from: Long, to: Long, steps: Long) {
+        val span = to - from
+        if (span <= 0L) {
+            add(minuteOf(to), steps)
+            return
+        }
+        // Rounded on the running sum, so the parts add up to [steps].
+        var given = 0L
+        var minute = minuteOf(from)
+        while (minute <= to) {
+            val covered = minOf(minute + MINUTE_MILLIS, to) - from
+            val upTo = steps * covered / span
+            if (upTo > given) add(minute, upTo - given)
+            given = upTo
+            minute += MINUTE_MILLIS
+        }
+    }
+
+    /** More than a sprint in one minute is not possible; the excess has no known minute and is dropped. */
+    private fun add(minute: Long, steps: Long) {
+        val before = newest?.takeIf { it.epochMillis == minute }?.steps ?: 0
+        val total = (before + steps).coerceAtMost(WearLinkProtocol.MAX_STEPS_PER_MINUTE.toLong()).toInt()
+        newest = WearLinkProtocol.StepMinute(minute, total)
+        changed[minute] = total
+    }
+
+    private fun minuteOf(epochMillis: Long): Long = epochMillis - Math.floorMod(epochMillis, MINUTE_MILLIS)
 
     private companion object {
         const val MINUTE_MILLIS = 60_000L

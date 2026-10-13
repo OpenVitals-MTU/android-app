@@ -36,6 +36,10 @@ commit with the release notes, and pushes in one motion.
 - `gh` is not installed on this laptop. Check GitHub state with `curl` against
   `https://api.github.com/repos/OpenVitals-MTU/android-app/...` (anonymous,
   60 calls an hour) or in the browser.
+- The release workflow is enabled. A tag pushed while it is disabled starts
+  nothing, and enabling it afterwards does not replay the push (2.14.0). Check
+  `state` is `active` in
+  `curl -s https://api.github.com/repos/OpenVitals-MTU/android-app/actions/workflows/release.yml`.
 
 ## 1. Version code (read this before touching anything)
 
@@ -96,6 +100,12 @@ matches the filenames.
 
    Do not copy the footer from 2.12.0 or earlier: those still name the
    Codeberg release and the Woodpecker deployment.
+
+   While the repository variable `OPENVITALS_PLAY_PAUSED=true` holds the Play
+   uploads (set 2026-10 while 2.13.0 was in Play review), the second line is
+   false. Ask whether it is still set, and if it is, say instead that the
+   Google Play update follows later. The fastlane changelogs are still written,
+   for when that upload happens.
 3. **`README.md`** - add highlight bullets for headline features; update any
    claims the release changes (e.g. the language list when a locale lands).
 4. **`fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`** - one
@@ -131,6 +141,9 @@ The script computes the version code, patches `baseVersionCode` and
 `build.gradle.kts`, commits `chore: release X.Y.Z` (staging CHANGELOG, README,
 docs, fastlane and the release machinery), tags `vX.Y.Z` with
 `docs/releases/X.Y.Z.md` as the annotation, and pushes `main` plus the tag.
+The annotation drops the `# OpenVitals X.Y.Z` title line and keeps the rest
+as written, `###` headings included; it becomes the GitHub release notes and
+the Zulip post. Before 2.15.0 the tag lost every `#` line, headings too.
 
 Verify the printed `Released vX.Y.Z (versionCode N)` matches the fastlane
 changelog filenames; if a nightly stole the code, rename all 14 files and
@@ -181,6 +194,14 @@ either way: Zulip readers see it first too.
 - 2.11.2 and 2.12.0 shipped with a stale distribution footer (Codeberg,
   Woodpecker) after the GitHub move; the footer is part of the tag message,
   so it cannot be fixed afterwards. Read the footer, do not paste it.
+- 2.14.0 was tagged while the release workflow was disabled (it had been
+  turned off to keep nightlies out of Play during the 2.13.0 review), so no
+  build, GitHub release or APK followed the tag. Hold Play with the
+  `OPENVITALS_PLAY_PAUSED` variable instead, and check the workflow state in
+  pre-flight.
+- Read facts in the notes against the code, not only the commit message:
+  2.14.0's notes said the Garmin link redials three times, from a doc, while
+  `CONNECT_ATTEMPTS = 3` means two redials. The tag kept the wrong count.
 - A fix that was hidden rather than announced can need announcing later:
   Medical records were cut from the Play build in 2.11.2 and 2.12.0 without a
   note, so 2.13.0 had to say they were back.
