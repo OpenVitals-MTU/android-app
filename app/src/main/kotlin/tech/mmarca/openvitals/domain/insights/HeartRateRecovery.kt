@@ -3,8 +3,6 @@ package tech.mmarca.openvitals.domain.insights
 import androidx.health.connect.client.records.ExerciseSegment
 import java.time.Duration
 import java.time.Instant
-import kotlin.math.max
-import kotlin.math.roundToInt
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 
@@ -494,8 +492,7 @@ private fun resolveMaxHeartRate(
 
     val age = ageYears
     if (age != null) {
-        // Tanaka (208 - 0.7*age).
-        return MaxHeartRate(max(1, (208 - 0.7 * age).roundToInt()), true)
+        return MaxHeartRate(tanakaMaxHeartRate(age).toInt(), true)
     }
 
     return null

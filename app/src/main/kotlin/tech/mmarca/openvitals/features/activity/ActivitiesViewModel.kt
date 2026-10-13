@@ -21,6 +21,7 @@ import tech.mmarca.openvitals.core.period.PeriodSelectionDriver
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.displayPeriodFor
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.toWeekPeriodMode
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.DailyHrv
@@ -31,6 +32,7 @@ import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
 import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
@@ -73,6 +75,7 @@ class ActivitiesViewModel @Inject constructor(
     private val periodPreferences: PeriodPreferences,
     private val dailyGoalPreferences: DailyGoalPreferences,
     private val heartRepository: HeartRepository,
+    private val bodyProfilePreferences: BodyProfilePreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     savedStateHandle: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
@@ -240,6 +243,7 @@ class ActivitiesViewModel @Inject constructor(
                     }
                     val loadedRestingHeartRate = restingHeartRate.await()
                     val loadedWorkouts = workouts.await()
+                    val profile = bodyProfilePreferences.bodyProfile().normalized(windows.current.end)
                     ActivitiesLoadResult(
                         workouts = loadedWorkouts,
                         plannedWorkouts = plannedWorkouts.await(),
@@ -256,6 +260,7 @@ class ActivitiesViewModel @Inject constructor(
                                 heartRateSamples = heartRateSamples.await(),
                                 restingHeartRate = loadedRestingHeartRate,
                                 hrv = hrv.await(),
+                                profile = profile,
                             )
                         },
                         crossDailyRestingHR = loadedRestingHeartRate,
@@ -363,6 +368,7 @@ private fun activityOverviewDays(
     heartRateSamples: List<HeartRateSample>,
     restingHeartRate: List<DailyRestingHR>,
     hrv: List<DailyHrv>,
+    profile: BodyProfile,
 ): List<ActivityOverviewDay> {
     val stepsByDate = steps.associateBy { it.date }
     val nutritionByDate = nutrition.associateBy { it.date }
@@ -399,6 +405,9 @@ private fun activityOverviewDays(
                 baselineRestingHeartRate = baselineRestingHeartRate,
                 observedMaxHeartRate = observedMaxHeartRate,
                 activityWindows = dayWorkouts.toCardioLoadTimeWindows(date, zone),
+                ageYears = profile.ageYears(date),
+                explicitMaxHeartRate = profile.maxHeartRateBpm?.toLong(),
+                sex = profile.sex,
             ),
         )
     }.toList()

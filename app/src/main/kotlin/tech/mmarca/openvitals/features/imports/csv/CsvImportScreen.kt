@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,8 @@ import java.util.Locale
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.core.performance.offMainIo
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
+import tech.mmarca.openvitals.features.nutrition.titleRes
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsFilledButton
@@ -215,6 +218,7 @@ internal fun CsvMappingStep(
                     mapping = mapping.columns.firstOrNull { it.columnIndex == index }
                         ?: CsvColumnMapping(columnIndex = index),
                     onSetRole = { role, metric -> viewModel.setColumnRole(index, role, metric) },
+                    onSetNutrient = { nutrient -> viewModel.setColumnNutrient(index, nutrient) },
                     onSetInterpretation = { viewModel.setColumnInterpretation(index, it) },
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
@@ -277,6 +281,7 @@ internal fun CsvConfirmStep(
     val mapping = state.mapping ?: return
     val sample = state.sample ?: return
     val missing = state.missingPermissions
+    val nutrientValues = remember(sample, mapping) { previewNutrientValues(rows = sample.dataRows, mapping = mapping) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -294,7 +299,7 @@ internal fun CsvConfirmStep(
                             text = stringResource(
                                 R.string.settings_csv_import_confirm_summary,
                                 state.fileName.orEmpty(),
-                                mapping.metricColumns.size,
+                                mapping.metricColumns.size + mapping.nutrientColumns.size,
                             ),
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(top = 8.dp),
@@ -305,6 +310,11 @@ internal fun CsvConfirmStep(
                         // The per-metric range catches a bad derivation as 3% or 150%.
                         mapping.metricColumns.forEach { column ->
                             CsvMetricRangeLine(column = column, sample = sample, mapping = mapping)
+                        }
+                        // In the unit labels print, so a column read in the wrong unit stands out.
+                        mapping.nutrientColumns.forEach { column ->
+                            val nutrient = column.nutrient ?: return@forEach
+                            CsvNutrientRangeLine(nutrient = nutrient, values = nutrientValues[nutrient].orEmpty())
                         }
                     }
                 }
@@ -363,6 +373,23 @@ private fun CsvMetricRangeLine(
             csvMetricLabel(metric),
             String.format(Locale.US, "%.1f", sorted.first()),
             String.format(Locale.US, "%.1f", sorted.last()),
+        ),
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.padding(bottom = 4.dp),
+    )
+}
+
+/** One nutrient's observed range across the sample, in the unit labels print it in. */
+@Composable
+private fun CsvNutrientRangeLine(nutrient: NutritionNutrient, values: List<Double>) {
+    if (values.isEmpty()) return
+
+    Text(
+        text = stringResource(
+            R.string.settings_csv_import_confirm_range,
+            stringResource(nutrient.titleRes()),
+            csvNutrientPreviewText(nutrient, values.min()),
+            csvNutrientPreviewText(nutrient, values.max()),
         ),
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(bottom = 4.dp),

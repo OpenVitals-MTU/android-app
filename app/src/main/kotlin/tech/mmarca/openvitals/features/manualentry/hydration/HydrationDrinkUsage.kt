@@ -88,8 +88,9 @@ internal fun frequentHydrationDrinkOptions(
 private fun HydrationEntry.isOpenVitalsHydrationEntry(): Boolean =
     isOpenVitalsEntry || clientRecordId?.startsWith(OpenVitalsHydrationClientRecordPrefix) == true
 
+/** An import or a synced record counts like another app's: its name says nothing about this phone's drinks. */
 private fun NutritionEntry.isOpenVitalsNutritionEntry(): Boolean =
-    isOpenVitalsEntry ||
+    isLoggedInOpenVitals ||
         clientRecordId?.startsWith(OpenVitalsStandaloneNutritionPrefix) == true ||
         clientRecordId?.startsWith(OpenVitalsPairedHydrationNutritionPrefix) == true
 

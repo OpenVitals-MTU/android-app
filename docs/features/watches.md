@@ -50,7 +50,7 @@ On the phone, the same sync pulls the minutes after the heart rate, from the sta
 
 1. **Was the watch worn?** A minute on the charger, one the off-body sensor called off the wrist, a pulseless stretch while the heart rate was being recorded, and an hour as still as a table with no pulse anywhere in it (the van Hees accelerometer rule, which the published actigraphy packages use) are not worn. Such a minute can never be sleep, and a night with fewer than three worn hours is not written at all. A watch left on the table or the charger therefore produces nothing.
 2. **When was the night?** The arm angle finds the sleep period (the HDCZA method, validated against polysomnography), and the heart rate may shorten its end but never its start, because the heart rate keeps falling for an hour after falling asleep.
-3. **Which minutes were sleep?** Movement by the Cole-Kripke weights, the heart rate's volatility, and whether the arm kept moving, combined the way Walch and colleagues found raises wake detection on polysomnography-labelled nights, then the standard rescoring rules.
+3. **Which minutes were sleep?** Movement by the Cole-Kripke weights, the heart rate's volatility, whether the arm kept moving, and whether the wrist kept drifting by a degree or so without a movement count, which is how lying awake in bed looks, combined the way Walch and colleagues found raises wake detection on polysomnography-labelled nights, then the standard rescoring rules.
 4. **Which stage?** The same estimator as for a Garmin watch without stages, from the heart rate against its own baseline and its variability, with the wrist's inactivity rhythm as an extra prior.
 
 One sleep session with estimated stages is written per night under a fixed id, so the later estimate replaces the earlier as the night fills in. A night whose window already holds a sleep session from anywhere else, the vendor's app through Health Connect or a session entered by hand, is left alone: those win over an estimate. The session's notes say it was estimated by OpenVitals from the watch app's heart rate and movement.
@@ -99,6 +99,17 @@ The device screen shows whether the watch has ever been synced and when it last 
 
 The dashboard carries a watch tile showing the most recently synced watch with its battery, last sync time, and a sync button, so a sync does not require a trip through Settings. While live readings are streaming (see below), the tile shows the current heart rate and step count instead of the last sync time.
 
+### When A Watch Will Not Connect Or Sync
+
+Since 2.14.0 the link follows what Gadgetbridge does for watches that had trouble connecting or syncing (first reported on a Fenix 6):
+
+- It writes to each characteristic the way the characteristic asks, with a response when the watch offers one, instead of always writing without one.
+- A dial that Android's Bluetooth stack fails, such as GATT status 133, is retried after a short settle pause: up to three connection attempts in all. A watch that does not answer at all is not redialled.
+- A whole sync may run for up to 30 minutes, enough for a first sync of a watch holding months of activities. The per-stage timeouts still end a stalled step much sooner.
+- A watch that never sends its configuration still completes the handshake, from the capabilities record it pushes as FIT messages instead.
+
+The device screen has a **Large Bluetooth packets** switch, on by default and kept per watch. Larger packets make a sync much faster; turning the switch off skips the request and keeps Bluetooth's default packet size, for a watch that keeps dropping the link or never gets a sync going.
+
 ### Automatic Sync
 
 "Automatic sync", on the watch's device screen, syncs the watch on its own every 30 minutes, hour, or two hours. Off by default, and set per watch, so two paired watches can be on different schedules or only one of them on a schedule at all.
@@ -133,15 +144,16 @@ Written to Health Connect, and therefore visible on the usual dashboard and deta
 
 - Sleep sessions with stages, and naps.
 - Heart rate series and resting heart rate.
-- Heart rate variability.
+- Heart rate variability: the nightly summary, and the five-minute values the watch records.
 - Respiratory rate.
 - VO2 max.
-- Blood oxygen and respiratory rate from a Health Snapshot recording.
+- Blood oxygen: the Pulse Ox readings the watch records, and the value from a Health Snapshot recording.
+- Respiratory rate from a Health Snapshot recording.
 - Basal metabolic rate.
 - Steps, distance, and active calories through the day.
 - Body weight, when the watch relays readings from a paired Garmin scale.
 
-Kept in OpenVitals' own storage, because Health Connect has no record type for them: stress, Body Battery, intensity minutes, recovery time, training readiness, training load, and the watch's own verdict on a night's sleep.
+Kept in OpenVitals' own storage, because Health Connect has no record type for them: stress, Body Battery, intensity minutes, recovery time, training readiness, training load, functional threshold power, lactate threshold, hill and endurance scores, and the watch's own verdict on a night's sleep, restless moments included.
 
 #### Estimated sleep stages
 
@@ -194,6 +206,7 @@ Last night:
 - Sleep score.
 - Time awake.
 - Times woken.
+- Restless moments.
 - Sleep need, compared with the usual nightly need when the watch reported one.
 
 Training:
@@ -201,6 +214,10 @@ Training:
 - Recovery time.
 - Training readiness.
 - Training load, showing the acute value with the chronic value beside it.
+- Functional threshold power, in watts.
+- Lactate threshold, in watts, with the heart rate it was reached at.
+- Hill score, with its strength and endurance parts.
+- Endurance score.
 
 A footer names the measurements this watch did not send, so an absent row reads as "your watch does not report this" rather than "the app lost it". Until a first sync the screen is empty and says so.
 

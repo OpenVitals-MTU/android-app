@@ -8,6 +8,9 @@ import java.time.LocalDate
 data class BodyDisplayState(
     val selectedPeriod: DatePeriod = DatePeriod(LocalDate.now(), LocalDate.now()),
     val summary: BodySummaryDisplay = BodySummaryDisplay(),
+    val ffmiReadings: List<FfmiReading> = emptyList(),
+    val previousFfmiReadings: List<FfmiReading> = emptyList(),
+    val baselineFfmiReadings: List<FfmiReading> = emptyList(),
 )
 
 @Immutable

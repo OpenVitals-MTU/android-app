@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
 private val Sample = listOf(
     listOf("2026-07-01 08:12:00", "78.4", "15.2"),
@@ -31,6 +32,14 @@ private fun metricAt(
     metric = metric,
     interpretation = interpretation,
 )
+
+private fun nutrientAt(index: Int, nutrient: NutritionNutrient) = CsvColumnMapping(
+    columnIndex = index,
+    role = CsvColumnRole.NUTRIENT,
+    nutrient = nutrient,
+)
+
+private fun foodNameAt(index: Int) = CsvColumnMapping(columnIndex = index, role = CsvColumnRole.FOOD_NAME)
 
 class CsvMappingValidationTest {
 
@@ -301,5 +310,62 @@ class CsvMappingValidationTest {
         )
 
         assertTrue(CsvMappingIssue.TIMESTAMP_FORMAT_MATCHES_NO_SAMPLE_ROW in issues)
+    }
+
+    // Nutrients.
+
+    @Test
+    fun `a nutrition mapping with no metric column is importable`() {
+        val mapping = mappingOf(
+            listOf(timestampAt(0), nutrientAt(1, NutritionNutrient.ENERGY), nutrientAt(2, NutritionNutrient.PROTEIN)),
+        )
+
+        assertTrue(validateCsvMapping(mapping, Sample).isEmpty())
+    }
+
+    @Test
+    fun `two columns mapped to the same nutrient report the duplicate`() {
+        val mapping = mappingOf(
+            listOf(timestampAt(0), nutrientAt(1, NutritionNutrient.SODIUM), nutrientAt(2, NutritionNutrient.SODIUM)),
+        )
+
+        assertTrue(CsvMappingIssue.DUPLICATE_METRIC in validateCsvMapping(mapping, Sample))
+    }
+
+    @Test
+    fun `a food name alone is nothing to import`() {
+        val issues = validateCsvMapping(mappingOf(listOf(timestampAt(0), foodNameAt(1))), Sample)
+
+        assertTrue(CsvMappingIssue.NO_METRIC_COLUMNS in issues)
+    }
+
+    @Test
+    fun `two food-name columns report the conflict`() {
+        val mapping = mappingOf(
+            listOf(timestampAt(0), foodNameAt(1), foodNameAt(2), nutrientAt(3, NutritionNutrient.ENERGY)),
+        )
+
+        assertTrue(CsvMappingIssue.MULTIPLE_FOOD_NAME_COLUMNS in validateCsvMapping(mapping, Sample))
+        assertNull(mapping.foodNameColumn)
+    }
+
+    @Test
+    fun `any number of nutrient columns needs the one nutrition permission`() {
+        val mapping = mappingOf(
+            listOf(
+                timestampAt(0),
+                metricAt(1, CsvImportMetric.WEIGHT),
+                nutrientAt(2, NutritionNutrient.ENERGY),
+                nutrientAt(3, NutritionNutrient.VITAMIN_C),
+            ),
+        )
+
+        assertEquals(
+            setOf(
+                "android.permission.health.WRITE_WEIGHT",
+                "android.permission.health.WRITE_NUTRITION",
+            ),
+            mapping.requiredWritePermissions,
+        )
     }
 }

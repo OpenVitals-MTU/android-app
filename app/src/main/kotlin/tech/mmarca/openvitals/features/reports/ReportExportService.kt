@@ -11,6 +11,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,8 @@ import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
 import tech.mmarca.openvitals.domain.cycle.CycleSymptom
 import tech.mmarca.openvitals.domain.model.CycleRecordValues
 import tech.mmarca.openvitals.domain.model.GlucoseRecordValues
+import tech.mmarca.openvitals.domain.model.NutrientLabelUnit
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.ReportCycleDetail
 import tech.mmarca.openvitals.domain.model.ReportData
 import tech.mmarca.openvitals.domain.model.ReportGranularity
@@ -36,9 +39,11 @@ import tech.mmarca.openvitals.domain.model.ReportMetricStatus
 import tech.mmarca.openvitals.domain.model.ReportPoint
 import tech.mmarca.openvitals.domain.model.ReportRequest
 import tech.mmarca.openvitals.domain.model.ReportValueKind
+import tech.mmarca.openvitals.domain.model.labelUnit
 import tech.mmarca.openvitals.features.activity.exerciseTypeLabel
 import tech.mmarca.openvitals.features.cycle.cycleSymptomLabelRes
 import tech.mmarca.openvitals.features.cycle.exclusionReasonLabelRes
+import tech.mmarca.openvitals.features.nutrition.titleRes
 import tech.mmarca.openvitals.features.reports.pdf.ReportPdfCycleLabels
 import tech.mmarca.openvitals.features.reports.pdf.ReportPdfLabels
 import tech.mmarca.openvitals.features.reports.pdf.ReportPdfWriter
@@ -362,6 +367,44 @@ class ReportExportService @Inject constructor(
                     -> DisplayValue(unitFormatter.decimal(value, 0), "g")
                     ReportMetric.CAFFEINE ->
                         DisplayValue(unitFormatter.count(value.roundToLong()), "mg")
+                    ReportMetric.DIETARY_FIBER,
+                    ReportMetric.SUGAR,
+                    ReportMetric.ENERGY_FROM_FAT,
+                    ReportMetric.MONOUNSATURATED_FAT,
+                    ReportMetric.POLYUNSATURATED_FAT,
+                    ReportMetric.SATURATED_FAT,
+                    ReportMetric.TRANS_FAT,
+                    ReportMetric.UNSATURATED_FAT,
+                    ReportMetric.CHOLESTEROL,
+                    ReportMetric.BIOTIN,
+                    ReportMetric.FOLATE,
+                    ReportMetric.FOLIC_ACID,
+                    ReportMetric.NIACIN,
+                    ReportMetric.PANTOTHENIC_ACID,
+                    ReportMetric.RIBOFLAVIN,
+                    ReportMetric.THIAMIN,
+                    ReportMetric.VITAMIN_A,
+                    ReportMetric.VITAMIN_B12,
+                    ReportMetric.VITAMIN_B6,
+                    ReportMetric.VITAMIN_C,
+                    ReportMetric.VITAMIN_D,
+                    ReportMetric.VITAMIN_E,
+                    ReportMetric.VITAMIN_K,
+                    ReportMetric.CALCIUM,
+                    ReportMetric.CHLORIDE,
+                    ReportMetric.CHROMIUM,
+                    ReportMetric.COPPER,
+                    ReportMetric.IODINE,
+                    ReportMetric.IRON,
+                    ReportMetric.MAGNESIUM,
+                    ReportMetric.MANGANESE,
+                    ReportMetric.MOLYBDENUM,
+                    ReportMetric.PHOSPHORUS,
+                    ReportMetric.POTASSIUM,
+                    ReportMetric.SELENIUM,
+                    ReportMetric.SODIUM,
+                    ReportMetric.ZINC,
+                    -> reportNutrientDisplay(metric.nutrient!!, value, unitFormatter)
                     ReportMetric.WEIGHT -> unitFormatter.weight(value)
                     ReportMetric.HEIGHT -> unitFormatter.height(value)
                     ReportMetric.BODY_FAT,
@@ -405,6 +448,44 @@ class ReportExportService @Inject constructor(
         ReportMetric.CARBS -> R.string.metric_carbs
         ReportMetric.FAT -> R.string.metric_fat
         ReportMetric.CAFFEINE -> R.string.metric_caffeine
+        ReportMetric.DIETARY_FIBER,
+        ReportMetric.SUGAR,
+        ReportMetric.ENERGY_FROM_FAT,
+        ReportMetric.MONOUNSATURATED_FAT,
+        ReportMetric.POLYUNSATURATED_FAT,
+        ReportMetric.SATURATED_FAT,
+        ReportMetric.TRANS_FAT,
+        ReportMetric.UNSATURATED_FAT,
+        ReportMetric.CHOLESTEROL,
+        ReportMetric.BIOTIN,
+        ReportMetric.FOLATE,
+        ReportMetric.FOLIC_ACID,
+        ReportMetric.NIACIN,
+        ReportMetric.PANTOTHENIC_ACID,
+        ReportMetric.RIBOFLAVIN,
+        ReportMetric.THIAMIN,
+        ReportMetric.VITAMIN_A,
+        ReportMetric.VITAMIN_B12,
+        ReportMetric.VITAMIN_B6,
+        ReportMetric.VITAMIN_C,
+        ReportMetric.VITAMIN_D,
+        ReportMetric.VITAMIN_E,
+        ReportMetric.VITAMIN_K,
+        ReportMetric.CALCIUM,
+        ReportMetric.CHLORIDE,
+        ReportMetric.CHROMIUM,
+        ReportMetric.COPPER,
+        ReportMetric.IODINE,
+        ReportMetric.IRON,
+        ReportMetric.MAGNESIUM,
+        ReportMetric.MANGANESE,
+        ReportMetric.MOLYBDENUM,
+        ReportMetric.PHOSPHORUS,
+        ReportMetric.POTASSIUM,
+        ReportMetric.SELENIUM,
+        ReportMetric.SODIUM,
+        ReportMetric.ZINC,
+        -> metric.nutrient!!.titleRes()
         ReportMetric.WEIGHT -> R.string.metric_latest_weight
         ReportMetric.HEIGHT -> R.string.metric_height
         ReportMetric.BODY_FAT -> R.string.metric_body_fat
@@ -424,6 +505,21 @@ class ReportExportService @Inject constructor(
         ReportMetric.SKIN_TEMPERATURE -> R.string.metric_skin_temperature
         ReportMetric.MINDFULNESS -> R.string.metric_mindfulness
     }
+}
+
+/**
+ * A breakdown nutrient in the unit nutrition labels print it in, as the food form types it:
+ * sodium in mg, vitamin D in µg. One decimal under ten, so 2.4 µg of B12 does not read 2.
+ */
+internal fun reportNutrientDisplay(
+    nutrient: NutritionNutrient,
+    storedValue: Double,
+    unitFormatter: UnitFormatter,
+): DisplayValue {
+    val unit = nutrient.labelUnit
+    if (unit == NutrientLabelUnit.KCAL) return unitFormatter.energy(storedValue)
+    val shown = storedValue * 10.0.pow(unit.decimalShift)
+    return DisplayValue(unitFormatter.decimal(shown, if (shown < 10.0) 1 else 0), unit.symbol)
 }
 
 /** `openvitals-report-20260805-1432.pdf` — sortable, collision-free per minute. */

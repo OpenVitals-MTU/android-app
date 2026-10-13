@@ -28,7 +28,7 @@ class MetricDispatchTest {
             DashboardWidgetId.WEIGHT to BodyMetric.WEIGHT,
             DashboardWidgetId.HEIGHT to BodyMetric.HEIGHT,
             DashboardWidgetId.BMI to BodyMetric.BMI,
-            DashboardWidgetId.FFMI to BodyMetric.BMI,
+            DashboardWidgetId.FFMI to BodyMetric.FFMI,
             DashboardWidgetId.BODY_FAT to BodyMetric.BODY_FAT,
             DashboardWidgetId.LEAN_MASS to BodyMetric.LEAN_MASS,
             DashboardWidgetId.BONE_MASS to BodyMetric.BONE_MASS,

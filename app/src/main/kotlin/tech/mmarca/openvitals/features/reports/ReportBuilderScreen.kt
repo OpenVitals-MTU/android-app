@@ -25,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -42,8 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -57,7 +54,6 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.performance.offMainIo
 import tech.mmarca.openvitals.domain.model.ReportGranularity
 import tech.mmarca.openvitals.domain.model.ReportMetric
-import tech.mmarca.openvitals.domain.model.ReportSection
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
 import tech.mmarca.openvitals.ui.components.HealthDatePickerDialog
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
@@ -89,6 +85,7 @@ fun ReportBuilderScreen(
                 state = state,
                 metricTitle = viewModel::metricTitle,
                 onToggleMetric = viewModel::toggleMetric,
+                onToggleMetrics = viewModel::toggleMetrics,
                 onToggleMedical = viewModel::toggleMedical,
                 onSelectAll = viewModel::selectAllMetrics,
                 onClear = viewModel::clearMetrics,
@@ -120,6 +117,7 @@ internal fun ReportConfigureStep(
     onSetCustomEnd: (LocalDate) -> Unit,
     onBuild: () -> Unit,
     onToggleMedical: () -> Unit = {},
+    onToggleMetrics: (List<ReportMetric>) -> Unit = {},
 ) {
     val permissionLauncher = rememberHealthConnectPermissionLauncher()
     var showStartPicker by remember { mutableStateOf(false) }
@@ -127,51 +125,14 @@ internal fun ReportConfigureStep(
 
     LazyColumn(contentPadding = PaddingValues(16.dp)) {
         item {
-            OpenVitalsCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = stringResource(R.string.report_metrics_section_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.weight(1f),
-                        )
-                        OpenVitalsTextButton(onClick = onSelectAll) {
-                            Text(stringResource(R.string.report_metrics_select_all))
-                        }
-                        OpenVitalsTextButton(onClick = onClear) {
-                            Text(stringResource(R.string.report_metrics_clear))
-                        }
-                    }
-                    state.metricsBySection.forEach { (section, metrics) ->
-                        Text(
-                            text = stringResource(section.titleRes()),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 12.dp, bottom = 2.dp),
-                        )
-                        metrics.forEach { metric ->
-                            val checked = metric in state.selectedMetrics
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .toggleable(
-                                        value = checked,
-                                        role = Role.Checkbox,
-                                        onValueChange = { onToggleMetric(metric) },
-                                    ),
-                            ) {
-                                Checkbox(checked = checked, onCheckedChange = null)
-                                Text(
-                                    text = metricTitle(metric),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(start = 4.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            ReportMetricChecklist(
+                state = state,
+                metricTitle = metricTitle,
+                onToggleMetric = onToggleMetric,
+                onToggleMetrics = onToggleMetrics,
+                onSelectAll = onSelectAll,
+                onClear = onClear,
+            )
         }
 
         if (state.medicalAvailable) {
@@ -493,17 +454,6 @@ private suspend fun copyReportTo(context: Context, file: File, destination: Uri)
             file.inputStream().use { input -> input.copyTo(output) }
         } ?: error("no output stream for $destination")
     }.isSuccess
-
-private fun ReportSection.titleRes(): Int = when (this) {
-    ReportSection.ACTIVITY -> R.string.onboarding_hc_category_activity
-    ReportSection.SLEEP -> R.string.onboarding_hc_category_sleep
-    ReportSection.NUTRITION -> R.string.onboarding_hc_category_nutrition
-    ReportSection.BODY -> R.string.onboarding_category_body
-    ReportSection.HEART -> R.string.section_heart
-    ReportSection.VITALS -> R.string.section_vitals
-    ReportSection.MINDFULNESS -> R.string.onboarding_category_mindfulness
-    ReportSection.CYCLE -> R.string.onboarding_category_cycle_tracking
-}
 
 private fun ReportGranularity.titleRes(): Int = when (this) {
     ReportGranularity.DAILY -> R.string.report_granularity_daily

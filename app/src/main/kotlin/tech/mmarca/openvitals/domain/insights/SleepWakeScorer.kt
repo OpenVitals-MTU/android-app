@@ -5,7 +5,7 @@ import kotlin.math.exp
 import tech.mmarca.openvitals.domain.model.SleepMinuteKind
 
 /**
- * Sleep or wake per grid minute, for the rows the watch records. Three
+ * Sleep or wake per grid minute, for the rows the watch records. Four
  * votes on one linear score, after Walch 2019, whose heart rate term lifted
  * wake specificity from 71% to 82% on polysomnography-labelled nights:
  *
@@ -17,7 +17,12 @@ import tech.mmarca.openvitals.domain.model.SleepMinuteKind
  *   night's own 90th percentile of deviation from the mean (floored at a
  *   few beats, under which a flat night would amplify sensor noise);
  * - arm angle: one when the z-angle moved more than five degrees over the
- *   trailing five minutes (van Hees 2015), else zero.
+ *   trailing five minutes (van Hees 2015), else zero;
+ * - small arm motion: one when the median 5-second z-angle change over the
+ *   trailing five minutes is at least 0.8 degrees. Lying awake in bed the
+ *   wrist drifts about a degree between epochs with no movement count at
+ *   all; asleep it sits near zero. Without this vote, quiet wakefulness in
+ *   bed scored as sleep, and its falling heart rate as deep sleep.
  *
  * A minute the watch was not worn for is a gap; a minute the watch itself
  * called awake is wake. Webster's rescoring runs last, as for Cole-Kripke.
@@ -45,6 +50,17 @@ object SleepWakeScorer {
         val activityWeight: Float = 1.0f,
         val heartRateVolatilityWeight: Float = 0.5f,
         val angleMovingWeight: Float = 0.3f,
+        /**
+         * Small arm motion, the median 5-second z-angle change over the
+         * trailing window. On the polysomnography nights 0.8 degrees at
+         * weight 0.7 finds 2.6 points more wake for 1.1 points less sleep,
+         * onset error unchanged; on a Galaxy Watch8 night it moved the onset
+         * from 39 minutes early to 10 minutes late. 0.5 degrees at weight
+         * 0.4 left that night's quiet wake as sleep.
+         */
+        val microMotionWindowMinutes: Int = 5,
+        val microMotionDeg: Float = 0.8f,
+        val microMotionWeight: Float = 0.7f,
         val wakeScore: Float = 1.0f,
         val websterPasses: Int = WebsterRescoring.DefaultPasses,
     )
@@ -77,9 +93,11 @@ object SleepWakeScorer {
             val activityTerm = weighted / config.threshold
             val heartTerm = volatility[index].takeIf { !it.isNaN() } ?: 0f
             val angleTerm = if (angleMoved(grid, wear, index, config)) 1f else 0f
+            val microTerm = if (config.microMotionWeight > 0f && microMoved(grid, wear, index, config)) 1f else 0f
             val score = config.activityWeight * activityTerm +
                 config.heartRateVolatilityWeight * heartTerm +
-                config.angleMovingWeight * angleTerm
+                config.angleMovingWeight * angleTerm +
+                config.microMotionWeight * microTerm
             labels[index] = if (score >= config.wakeScore) SleepLabels.Wake else SleepLabels.Sleep
         }
         WebsterRescoring.apply(labels, config.websterPasses)
@@ -99,6 +117,25 @@ object SleepWakeScorer {
             if (max > high) high = max
         }
         return high - low >= config.angleStillDeg
+    }
+
+    /**
+     * True when the median 5-second z-angle change over the trailing window
+     * reaches [Config.microMotionDeg]. The median, not the mean: one turn in
+     * bed would hold a mean high for the whole window after it.
+     */
+    private fun microMoved(grid: WearMinuteGrid, wear: WearStates, index: Int, config: Config): Boolean {
+        val values = ArrayList<Float>(config.microMotionWindowMinutes)
+        for (at in maxOf(0, index - config.microMotionWindowMinutes + 1)..index) {
+            if (!wear.isWorn(at)) continue
+            val delta = grid.zAngleDelta[at]
+            if (!delta.isNaN()) values += delta
+        }
+        if (values.isEmpty()) return false
+        values.sort()
+        val middle = values.size / 2
+        val median = if (values.size % 2 == 1) values[middle] else (values[middle - 1] + values[middle]) / 2
+        return median >= config.microMotionDeg
     }
 
     /**
