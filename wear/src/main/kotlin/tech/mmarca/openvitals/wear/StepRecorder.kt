@@ -34,6 +34,8 @@ class StepRecorder(
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val boot: Int = Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT, -1)
     private var thread: HandlerThread? = null
+    /** Volatile: written on the caller's thread, read by the listener on the worker. */
+    @Volatile
     private var handler: Handler? = null
     private var flushPending = false
     private var counter: StepMinuteCounter? = null
@@ -55,6 +57,9 @@ class StepRecorder(
         }
         val worker = HandlerThread("StepRecorder").apply { start() }
         val workerHandler = Handler(worker.looper)
+        // Set before registering: the first event may arrive at once, and it schedules the flush.
+        thread = worker
+        handler = workerHandler
         workerHandler.post {
             counter = StepMinuteCounter(lastReading(), store.latest(WearMetrics.STEPS))
         }
@@ -72,12 +77,12 @@ class StepRecorder(
             false
         }
         if (!registered) {
+            thread = null
+            handler = null
             worker.quitSafely()
             Log.w(TAG, "Step listener not registered")
             return false
         }
-        thread = worker
-        handler = workerHandler
         Log.i(TAG, "Recording steps from ${sensor.name}")
         return true
     }
