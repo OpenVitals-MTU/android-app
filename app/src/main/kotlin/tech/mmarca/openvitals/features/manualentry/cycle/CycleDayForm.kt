@@ -9,6 +9,9 @@ import tech.mmarca.openvitals.core.presentation.TemperatureUnits
 import tech.mmarca.openvitals.domain.cycle.CycleSymptom
 import tech.mmarca.openvitals.domain.model.BbtDisturbance
 import tech.mmarca.openvitals.domain.model.CervicalSensation
+import tech.mmarca.openvitals.domain.model.CervixFirmness
+import tech.mmarca.openvitals.domain.model.CervixOpening
+import tech.mmarca.openvitals.domain.model.CervixPosition
 import tech.mmarca.openvitals.domain.model.CycleDayLog
 import tech.mmarca.openvitals.domain.model.CycleDayLogWrite
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
@@ -66,6 +69,10 @@ data class CycleDayForm(
     val bbtTime: LocalTime? = null,
     val bbtDisturbances: Set<BbtDisturbance> = emptySet(),
     val cervicalSensation: CervicalSensation? = null,
+    val cervixOpening: CervixOpening? = null,
+    val cervixFirmness: CervixFirmness? = null,
+    val cervixPosition: CervixPosition? = null,
+    val desire: Int? = null,
     val mucusAppearance: Int? = null,
     val mucusAmount: Int? = null,
     val ovulationResult: Int? = null,
@@ -77,6 +84,9 @@ data class CycleDayForm(
 
     val hasCervicalMucus: Boolean
         get() = mucusAppearance != null || mucusAmount != null
+
+    val hasCervixObservation: Boolean
+        get() = cervixOpening != null || cervixFirmness != null || cervixPosition != null
 
     fun bbtCelsius(unitSystem: UnitSystem): Double? {
         if (bbtInputText.isBlank()) return null
@@ -126,6 +136,10 @@ data class CycleDayForm(
             hcgTest = hcgTest,
             bbtDisturbances = if (bbtInputText.isBlank()) emptySet() else bbtDisturbances,
             cervicalSensation = cervicalSensation,
+            cervixOpening = cervixOpening,
+            cervixFirmness = cervixFirmness,
+            cervixPosition = cervixPosition,
+            desireLevel = desire,
         ),
     )
 
@@ -149,6 +163,10 @@ data class CycleDayForm(
                 bbtTime = bbt?.time?.atZone(zone)?.toLocalTime()?.withSecond(0)?.withNano(0),
                 bbtDisturbances = journal?.bbtDisturbances.orEmpty(),
                 cervicalSensation = journal?.cervicalSensation,
+                cervixOpening = journal?.cervixOpening,
+                cervixFirmness = journal?.cervixFirmness,
+                cervixPosition = journal?.cervixPosition,
+                desire = journal?.desireLevel,
                 mucusAppearance = log.ownCervicalMucus?.appearance?.takeIf { it != CycleRecordValues.MUCUS_APPEARANCE_UNKNOWN },
                 mucusAmount = log.ownCervicalMucus?.sensation?.takeIf { it != CycleRecordValues.MUCUS_SENSATION_UNKNOWN },
                 ovulationResult = log.ownOvulationTest?.result,

@@ -51,6 +51,13 @@ internal fun CsvImportResultView(
                             ),
                             style = MaterialTheme.typography.titleMedium,
                         )
+                        if (result.progress.journalDays > 0) {
+                            Text(
+                                text = stringResource(R.string.settings_csv_import_journal_days, result.progress.journalDays),
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(top = 4.dp),
+                            )
+                        }
                         if (result.wroteNothing) {
                             Text(
                                 text = stringResource(R.string.settings_csv_import_result_empty),
