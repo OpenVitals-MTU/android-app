@@ -2425,10 +2425,11 @@
     <string name="settings_csv_import_start">Tuo</string>
     <string name="settings_csv_import_cancel">Peruuta</string>
     <string name="settings_csv_import_progress">Rivi %1$d · kirjoitettu %2$d, jo olemassa %3$d, hylätty %4$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect rajoittaa kirjoituksia toistaiseksi. Tuonti jatkuu %1$d s kuluttua.</string>
     <string name="settings_csv_import_result">Kirjoitettu %1$d. Jo olemassa %2$d. Hylätty %3$d.</string>
     <string name="settings_csv_import_result_empty">Tästä tiedostosta ei tuotu mitään.</string>
     <string name="settings_csv_import_result_cancelled">Tuonti peruutettu. Jo kirjoitettu säilytettiin.</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect ei toistaiseksi hyväksy kirjoituksia. Aja tuonti myöhemmin uudelleen; jo kirjoitetut tietueet ohitetaan.</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect hylkäsi kirjoituksia puolen tunnin ajan. Aja tuonti myöhemmin uudelleen; jo kirjoitettu säilyy.</string>
     <string name="settings_csv_import_error">Tuonti epäonnistui: %1$s</string>
     <string name="settings_csv_import_diagnostics_title">Hylätyt rivit</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>

@@ -2461,10 +2461,11 @@
     <string name="settings_csv_import_start">Impordi</string>
     <string name="settings_csv_import_cancel">Tühista</string>
     <string name="settings_csv_import_progress">Rida %1$d · kirjutatud %2$d, juba olemas %3$d, tagasi lükatud %4$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect piirab praegu kirjutamisi. Import jätkub %1$d s pärast.</string>
     <string name="settings_csv_import_result">Kirjutatud %1$d. Juba olemas %2$d. Tagasi lükatud %3$d.</string>
     <string name="settings_csv_import_result_empty">Sellest failist ei imporditud midagi.</string>
     <string name="settings_csv_import_result_cancelled">Import tühistati. Juba kirjutatu jäi alles.</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect ei võta praegu kirjutamisi vastu. Käivita import hiljem uuesti; juba kirjutatud kirjed jäetakse vahele.</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect keeldus pool tundi kirjutamisi vastu võtmast. Käivita import hiljem uuesti; juba kirjutatu jääb alles.</string>
     <string name="settings_csv_import_error">Import ebaõnnestus: %1$s</string>
     <string name="settings_csv_import_diagnostics_title">Tagasi lükatud read</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>

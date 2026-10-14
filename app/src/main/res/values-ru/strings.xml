@@ -2374,10 +2374,11 @@
     <string name="settings_csv_import_start">Импортировать</string>
     <string name="settings_csv_import_cancel">Отмена</string>
     <string name="settings_csv_import_progress">Строка %1$d · записано: %2$d, уже существовало: %3$d, отклонено: %4$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect пока ограничивает запись. Импорт продолжится через %1$d с.</string>
     <string name="settings_csv_import_result">Записано: %1$d. Уже существовало: %2$d. Отклонено: %3$d.</string>
     <string name="settings_csv_import_result_empty">Из этого файла ничего не импортировано.</string>
     <string name="settings_csv_import_result_cancelled">Импорт отменён. Уже записанные данные сохранены.</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect временно прекратил принимать записи. Запустите импорт позже; уже записанные записи будут пропущены.</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect полчаса отклонял запись. Запустите импорт позже; уже записанное сохраняется.</string>
     <string name="settings_csv_import_error">Не удалось выполнить импорт: %1$s</string>
     <string name="settings_csv_import_diagnostics_title">Отклонённые строки</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>
