@@ -50,6 +50,7 @@ object DashboardAggregator {
             .map { week -> week.sumOf { it.score } }
     }
 
+    /** Weekly cardio load target: the median of comparable earlier weeks, else the current pace. App heuristic, no published source. */
     fun weeklyCardioTarget(
         currentScore: Int,
         daysElapsed: Int,

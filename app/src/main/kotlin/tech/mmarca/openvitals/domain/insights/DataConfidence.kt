@@ -47,6 +47,7 @@ data class DataConfidence(
     val warnings: List<DataConfidenceWarning>,
 )
 
+/** How far to trust a summary, from coverage and sources. Coverage cut-offs 25 % and 60 %: app heuristic, no published source. */
 fun dataConfidence(
     period: DatePeriod,
     trackedDates: Collection<LocalDate>,
