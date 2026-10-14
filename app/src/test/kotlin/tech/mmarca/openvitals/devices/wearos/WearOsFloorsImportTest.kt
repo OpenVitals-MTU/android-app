@@ -11,31 +11,41 @@ class WearOsFloorsImportTest {
     private val minute = Instant.parse("2026-10-12T08:00:00Z")
     private val before = minute.minusSeconds(60)
 
-    private fun floors(floors: List<WearOsFloorMinute>, steps: List<WearOsStepMinute>): List<Double> =
-        WearOsFloorsImport.records(floors, steps).map { (it as FloorsClimbedRecord).floors }
+    private fun floors(ascent: List<WearOsAscentMinute>, steps: List<WearOsStepMinute>): List<Double> =
+        WearOsFloorsImport.records(ascent, steps).map { (it as FloorsClimbedRecord).floors }
 
     @Test
-    fun `a floor counts with ten steps in its minute and the one before`() {
-        assertEquals(listOf(2.0), floors(listOf(WearOsFloorMinute(minute, 2)), listOf(WearOsStepMinute(minute, 25))))
+    fun `height counts with ten steps per floor in its minute and the one before`() {
+        assertEquals(listOf(2.0), floors(listOf(WearOsAscentMinute(minute, 6.0)), listOf(WearOsStepMinute(minute, 25))), 1e-9)
         // Stairs that started in the minute before.
-        assertEquals(listOf(1.0), floors(listOf(WearOsFloorMinute(minute, 1)), listOf(WearOsStepMinute(before, 12))))
+        assertEquals(listOf(1.0), floors(listOf(WearOsAscentMinute(minute, 3.0)), listOf(WearOsStepMinute(before, 12))), 1e-9)
     }
 
     @Test
-    fun `too few steps cut the count, and none drop the minute`() {
-        // 20 steps carry two floors, not five: the rest was an elevator.
-        assertEquals(listOf(2.0), floors(listOf(WearOsFloorMinute(minute, 5)), listOf(WearOsStepMinute(minute, 20))))
-        assertTrue(floors(listOf(WearOsFloorMinute(minute, 5)), emptyList()).isEmpty())
-        assertTrue(floors(listOf(WearOsFloorMinute(minute, 1)), listOf(WearOsStepMinute(minute, 9))).isEmpty())
+    fun `a partial floor is kept, so a day's floors add up`() {
+        // 4 m with plenty of steps: one and a third floors, not one.
+        assertEquals(listOf(4.0 / 3.0), floors(listOf(WearOsAscentMinute(minute, 4.0)), listOf(WearOsStepMinute(minute, 60))), 1e-9)
     }
 
     @Test
-    fun `the record is keyed on the minute and versioned by its count`() {
-        val record = WearOsFloorsImport.records(listOf(WearOsFloorMinute(minute, 3)), listOf(WearOsStepMinute(minute, 60)))
+    fun `too few steps cut the height, and none drop the minute`() {
+        // 20 steps carry 6 m, not 15: the rest was an elevator.
+        assertEquals(listOf(2.0), floors(listOf(WearOsAscentMinute(minute, 15.0)), listOf(WearOsStepMinute(minute, 20))), 1e-9)
+        assertTrue(floors(listOf(WearOsAscentMinute(minute, 15.0)), emptyList()).isEmpty())
+    }
+
+    @Test
+    fun `the record is keyed on the minute and versioned by its credited decimetres`() {
+        val record = WearOsFloorsImport.records(listOf(WearOsAscentMinute(minute, 9.0)), listOf(WearOsStepMinute(minute, 60)))
             .single() as FloorsClimbedRecord
         assertEquals(minute, record.startTime)
         assertEquals(minute.plusSeconds(60), record.endTime)
         assertEquals("wearos_floors_${minute.toEpochMilli()}", record.metadata.clientRecordId)
-        assertEquals(3L, record.metadata.clientRecordVersion)
+        assertEquals(90L, record.metadata.clientRecordVersion)
+    }
+
+    private fun assertEquals(expected: List<Double>, actual: List<Double>, delta: Double) {
+        assertEquals(expected.size, actual.size)
+        expected.zip(actual).forEach { (e, a) -> assertEquals(e, a, delta) }
     }
 }

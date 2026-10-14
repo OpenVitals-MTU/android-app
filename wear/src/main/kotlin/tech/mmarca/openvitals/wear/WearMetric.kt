@@ -79,16 +79,18 @@ object WearMetrics {
     )
 
     /**
-     * Floors climbed per clock minute; see `FloorRecorder`. A minute is
-     * written again while late readings arrive, so the newest row wins.
+     * Height climbed per clock minute, in decimetres; see `AscentRecorder`. A
+     * minute is written again while late readings arrive, so the newest row
+     * wins. Rows of builds that sent whole floors (`fl`) are under another
+     * key and are never read as ascent.
      */
-    val FLOORS = WearMetric(
-        key = WearLinkProtocol.CAP_FLOORS,
-        encode = WearLinkProtocol::formatFloorMinute,
-        decode = WearLinkProtocol::parseFloorMinute,
+    val ASCENT = WearMetric(
+        key = WearLinkProtocol.CAP_ASCENT,
+        encode = WearLinkProtocol::formatAscentMinute,
+        decode = WearLinkProtocol::parseAscentMinute,
         timeOf = { it.epochMillis },
         onSameTime = WearMetric.OnSameTime.REPLACE,
     )
 
-    val ALL: List<WearMetric<*>> = listOf(HEART_RATE, SLEEP_MINUTES, STEPS, FLOORS)
+    val ALL: List<WearMetric<*>> = listOf(HEART_RATE, SLEEP_MINUTES, STEPS, ASCENT)
 }

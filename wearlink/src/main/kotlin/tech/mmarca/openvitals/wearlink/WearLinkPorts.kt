@@ -54,5 +54,5 @@ interface WearLinkRequestHandler {
 
     fun stepsSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.StepMinute>
 
-    fun floorsSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.FloorMinute>
+    fun ascentSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.AscentMinute>
 }
