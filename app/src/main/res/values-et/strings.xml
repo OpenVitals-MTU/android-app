@@ -356,6 +356,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">Süstoolne (mmHg)</string>
     <string name="vitals_entry_diastolic_label">Diastoolne (mmHg)</string>
+    <string name="vitals_entry_pulse_label">Pulss (lööki/min, valikuline)</string>
+    <string name="vitals_entry_pulse_permission_needed">Pulsi salvestamiseks koos mõõtmisega vajab OpenVitals Health Connectis südame löögisageduse kirjutamisluba. Pulss salvestatakse südame löögisageduse kirjena mõõtmise ajal.</string>
+    <string name="vitals_entry_invalid_pulse">Sisesta pulss vahemikus 20 kuni 300 lööki/min või jäta väli tühjaks.</string>
     <string name="vitals_entry_add_selected">Lisa %1$s</string>
     <string name="vitals_entry_invalid_value">Sisesta selle näitaja jaoks kehtiv väärtus.</string>
     <string name="vitals_entry_write_failed">Näitajat ei õnnestunud salvestada: %1$s</string>

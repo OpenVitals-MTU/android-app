@@ -496,6 +496,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">Sistólica (mmHg)</string>
     <string name="vitals_entry_diastolic_label">Diastólica (mmHg)</string>
+    <string name="vitals_entry_pulse_label">Pulso (lpm, opcional)</string>
+    <string name="vitals_entry_pulse_permission_needed">Para gardar o pulso cunha medición, OpenVitals precisa permiso de escritura da frecuencia cardíaca en Health Connect. O pulso gárdase como un rexistro de frecuencia cardíaca á hora da medición.</string>
+    <string name="vitals_entry_invalid_pulse">Introduce un pulso entre 20 e 300 lpm, ou deixa o campo vacío.</string>
     <string name="vitals_entry_add_selected">Engadir %1$s</string>
     <string name="vitals_entry_invalid_value">Introduce un valor válido para esta constante.</string>
     <string name="vitals_entry_write_failed">Non se puido gardar a constante: %1$s</string>

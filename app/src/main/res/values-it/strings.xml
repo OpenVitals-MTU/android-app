@@ -356,6 +356,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">Sistolica (mmHg)</string>
     <string name="vitals_entry_diastolic_label">Diastolica (mmHg)</string>
+    <string name="vitals_entry_pulse_label">Polso (bpm, facoltativo)</string>
+    <string name="vitals_entry_pulse_permission_needed">Per salvare il polso con una misurazione, OpenVitals ha bisogno dell\'autorizzazione di scrittura della frequenza cardiaca in Health Connect. Il polso viene salvato come registrazione della frequenza cardiaca all\'ora della misurazione.</string>
+    <string name="vitals_entry_invalid_pulse">Inserisci un polso tra 20 e 300 bpm, oppure lascia il campo vuoto.</string>
     <string name="vitals_entry_add_selected">Aggiungi %1$s</string>
     <string name="vitals_entry_invalid_value">Inserisci un valore valido per questo parametro vitale.</string>
     <string name="vitals_entry_write_failed">Impossibile salvare il parametro vitale: %1$s</string>

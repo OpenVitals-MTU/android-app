@@ -1,8 +1,10 @@
 package tech.mmarca.openvitals.healthconnect
 
+import android.util.Log
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
@@ -20,6 +22,9 @@ import tech.mmarca.openvitals.domain.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.domain.model.BloodPressureEntry
 import tech.mmarca.openvitals.domain.model.BpRecordValues
 import tech.mmarca.openvitals.domain.model.bpMealContextFromClientRecordId
+import tech.mmarca.openvitals.domain.model.bpPulseClientRecordId
+import tech.mmarca.openvitals.domain.model.bpPulseFromClientRecordId
+import tech.mmarca.openvitals.domain.model.withBpPulse
 import tech.mmarca.openvitals.domain.model.withBpMealContext
 import tech.mmarca.openvitals.domain.model.BodyTempEntry
 import tech.mmarca.openvitals.domain.model.DailyBloodPressurePoint
@@ -294,6 +299,7 @@ internal class VitalsHealthReader(
             mealContext = bpMealContextFromClientRecordId(metadata.clientRecordId),
             bodyPosition = bodyPosition,
             measurementLocation = measurementLocation,
+            pulseBpm = bpPulseFromClientRecordId(metadata.clientRecordId),
         )
 
     private fun OxygenSaturationRecord.toEntry(): SpO2Entry =
@@ -365,7 +371,7 @@ internal class VitalsHealthReader(
         val baseClientRecordId =
             "openvitals_vitals_${request.type.name.lowercase()}_${time.toEpochMilli()}_${UUID.randomUUID()}"
         val clientRecordId = if (request.type == VitalsMeasurementType.BLOOD_PRESSURE) {
-            baseClientRecordId.withBpMealContext(request.bpMealContext)
+            baseClientRecordId.withBpMealContext(request.bpMealContext).withBpPulse(request.bpPulseBpm)
         } else {
             baseClientRecordId
         }
@@ -410,8 +416,60 @@ internal class VitalsHealthReader(
             )
         }
 
-        support.client().insertRecords(listOf(record))
+        val pulse = request.bpPulseBpm?.let { bpm -> pulseRecord(clientRecordId, time, bpm, metadata.device) }
+        support.client().insertRecords(listOfNotNull(record, pulse))
         clientRecordId
+    }
+
+    /**
+     * The reading's pulse as a one-sample heart rate record at the reading's instant,
+     * keyed on the reading's client id so a rewrite replaces instead of duplicating.
+     */
+    private fun pulseRecord(
+        bpClientRecordId: String,
+        time: Instant,
+        bpm: Int,
+        device: Device?,
+        clientRecordVersion: Long = 0,
+    ): HeartRateRecord {
+        val offset = ZoneId.systemDefault().rules.getOffset(time)
+        return HeartRateRecord(
+            startTime = time,
+            startZoneOffset = offset,
+            // One sample, so a window of one instant: a longer one could end in the future.
+            endTime = time,
+            endZoneOffset = offset,
+            samples = listOf(HeartRateRecord.Sample(time = time, beatsPerMinute = bpm.toLong())),
+            metadata = Metadata.manualEntry(
+                device = device ?: Device(type = Device.TYPE_PHONE),
+                clientRecordId = bpPulseClientRecordId(bpClientRecordId),
+                clientRecordVersion = clientRecordVersion,
+            ),
+        )
+    }
+
+    /** Rewrites the reading's pulse under its client id, or removes it when the edit cleared the pulse. */
+    private suspend fun writePulseOf(bpClientRecordId: String, request: VitalsMeasurementWriteRequest, device: Device?) {
+        val bpm = request.bpPulseBpm
+        if (bpm == null) {
+            deletePulseOf(bpClientRecordId)
+            return
+        }
+        val pulse = pulseRecord(bpClientRecordId, request.time, bpm, device, clientRecordVersion = Instant.now().toEpochMilli())
+        support.client().insertRecords(listOf(pulse))
+    }
+
+    /** A reading without a pulse record is left as it is; missing heart rate write access keeps the reading too. */
+    private suspend fun deletePulseOf(bpClientRecordId: String) {
+        try {
+            support.client().deleteRecords(
+                recordType = HeartRateRecord::class,
+                recordIdsList = emptyList(),
+                clientRecordIdsList = listOf(bpPulseClientRecordId(bpClientRecordId)),
+            )
+        } catch (error: SecurityException) {
+            Log.w(TAG, "The pulse of a reading was left behind: heart rate write access is missing", error)
+        }
     }
 
     suspend fun readVitalsMeasurementEntry(type: VitalsMeasurementType, id: String): VitalsMeasurementEntry? =
@@ -446,12 +504,14 @@ internal class VitalsHealthReader(
             val time = request.time
             val zone = ZoneId.systemDefault()
 
-            // Blood pressure carries its meal context in the clientRecordId, so an
+            // Blood pressure carries its meal context and pulse in the clientRecordId, so an
             // edit is an upsert: same id replaces, a new id inserts first and
             // deletes the old after, so a failure never loses the reading.
             val existingClientRecordId = existing.metadata.clientRecordId
             if (request.type == VitalsMeasurementType.BLOOD_PRESSURE && existingClientRecordId != null) {
-                val newClientRecordId = existingClientRecordId.withBpMealContext(request.bpMealContext)
+                val newClientRecordId = existingClientRecordId
+                    .withBpMealContext(request.bpMealContext)
+                    .withBpPulse(request.bpPulseBpm)
                 val replacement = BloodPressureRecord(
                     time = time,
                     zoneOffset = zone.rules.getOffset(time),
@@ -467,6 +527,7 @@ internal class VitalsHealthReader(
                         ?: BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN,
                 )
                 support.client().insertRecords(listOf(replacement))
+                writePulseOf(existingClientRecordId, request, existing.metadata.device)
                 if (newClientRecordId != existingClientRecordId) {
                     support.client().deleteRecords(
                         recordType = BloodPressureRecord::class,
@@ -477,6 +538,8 @@ internal class VitalsHealthReader(
                 return@withContext
             }
 
+            // A reading without a client id (an imported one) is edited in place and cannot
+            // carry a pulse: the pulse record is keyed on the reading's client id.
             val metadata = Metadata.manualEntryWithId(
                 id = id,
                 device = existing.metadata.device ?: Device(type = Device.TYPE_PHONE),
@@ -531,6 +594,7 @@ internal class VitalsHealthReader(
                     recordIdsList = listOf(existing.metadata.id),
                     clientRecordIdsList = emptyList(),
                 )
+                existing.metadata.clientRecordId?.let { deletePulseOf(it) }
             }
             VitalsMeasurementType.SPO2 -> {
                 val existing = support.client().readRecord(OxygenSaturationRecord::class, id).record
@@ -586,6 +650,11 @@ internal class VitalsHealthReader(
                 require(request.value > diastolic) {
                     "Systolic blood pressure must be higher than diastolic blood pressure."
                 }
+                request.bpPulseBpm?.let { pulse ->
+                    require(pulse in MinPulseBpm..MaxPulseBpm) {
+                        "Pulse must be between $MinPulseBpm and $MaxPulseBpm bpm."
+                    }
+                }
             }
             VitalsMeasurementType.SPO2 -> require(request.value > 0.0 && request.value <= MaxPercent) {
                 "SpO2 must be greater than 0% and no more than ${MaxPercent.toInt()}%."
@@ -613,6 +682,7 @@ internal class VitalsHealthReader(
             type = VitalsMeasurementType.BLOOD_PRESSURE,
             time = time,
             bpMealContext = bpMealContextFromClientRecordId(metadata.clientRecordId),
+            bpPulseBpm = bpPulseFromClientRecordId(metadata.clientRecordId),
             bpBodyPosition = bodyPosition.takeIf { it != BpRecordValues.BODY_POSITION_UNKNOWN },
             bpMeasurementLocation = measurementLocation
                 .takeIf { it != BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN },
@@ -667,6 +737,8 @@ private const val MinSystolicMmHg = 20.0
 private const val MaxSystolicMmHg = 200.0
 private const val MinDiastolicMmHg = 10.0
 private const val MaxDiastolicMmHg = 180.0
+private const val MinPulseBpm = 20
+private const val MaxPulseBpm = 300
 private const val MaxPercent = 100.0
 private const val MaxRespiratoryRate = 1000.0
 private const val MaxBodyTemperatureCelsius = 100.0
@@ -678,3 +750,5 @@ private const val DailyReadPageSize = 5000
 
 private fun List<Double>.averageOrNull(): Double? =
     takeIf { it.isNotEmpty() }?.average()
+
+private const val TAG = "VitalsHealthReader"
