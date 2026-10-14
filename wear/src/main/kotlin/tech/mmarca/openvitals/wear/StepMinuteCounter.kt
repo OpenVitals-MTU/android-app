@@ -6,7 +6,11 @@ import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 /**
  * Turns the step counter's total since boot into steps per clock minute.
  * The difference between two readings is spread over the minutes between
- * them, in proportion to time.
+ * them, in proportion to time, but at most over the [MAX_SPREAD_MILLIS]
+ * before the newer one: a gap of days (the recorder stopped while another
+ * app kept the counter running) would otherwise put steps into every night.
+ * Of a longer gap only that window's share is kept, at the gap's average
+ * pace; the rest has no known minute and is dropped.
  *
  * Pure, so it is testable off the watch. [StepRecorder] is the Android side.
  */
@@ -38,19 +42,21 @@ class StepMinuteCounter(
         val at = maxOf(epochMillis, floor)
         last = Reading(at, total)
         if (previous == null || total <= previous.total) return
-        spread(from = maxOf(previous.epochMillis, newest?.epochMillis ?: Long.MIN_VALUE), to = at, steps = total - previous.total)
+        spread(start = maxOf(previous.epochMillis, newest?.epochMillis ?: Long.MIN_VALUE), to = at, total = total - previous.total)
     }
 
     /** The rows changed since the last call, oldest first. */
     fun drain(): List<WearLinkProtocol.StepMinute> =
         changed.map { (start, steps) -> WearLinkProtocol.StepMinute(start, steps) }.also { changed.clear() }
 
-    private fun spread(from: Long, to: Long, steps: Long) {
-        val span = to - from
-        if (span <= 0L) {
-            add(minuteOf(to), steps)
+    private fun spread(start: Long, to: Long, total: Long) {
+        if (to - start <= 0L) {
+            add(minuteOf(to), total)
             return
         }
+        val from = maxOf(start, to - MAX_SPREAD_MILLIS)
+        val span = to - from
+        val steps = total * span / (to - start)
         // Rounded on the running sum, so the parts add up to [steps].
         var given = 0L
         var minute = minuteOf(from)
@@ -73,7 +79,10 @@ class StepMinuteCounter(
 
     private fun minuteOf(epochMillis: Long): Long = epochMillis - Math.floorMod(epochMillis, MINUTE_MILLIS)
 
-    private companion object {
-        const val MINUTE_MILLIS = 60_000L
+    companion object {
+        private const val MINUTE_MILLIS = 60_000L
+
+        /** The widest window a difference is spread over. App heuristic, no published source. */
+        const val MAX_SPREAD_MILLIS = 60 * MINUTE_MILLIS
     }
 }
