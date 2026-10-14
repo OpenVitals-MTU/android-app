@@ -8,7 +8,7 @@ data class BodyProfile(
     val heightCm: Double? = null,
     val restingHeartRateBpm: Int? = null,
     val maxHeartRateBpm: Int? = null,
-    /** The basal metabolic rate formula and cardio load's TRIMP weighting read it. */
+    /** The basal metabolic rate formula, cardio load's TRIMP weighting and the age-predicted maximum heart rate read it. */
     val sex: BiologicalSex? = null,
 ) {
     fun normalized(today: LocalDate = LocalDate.now()): BodyProfile {
@@ -34,7 +34,7 @@ data class BodyProfile(
             ?.let { today.year - it }
             ?.takeIf { it in MinAgeYears..MaxAgeYears }
 
-    /** The Body Energy inputs. Sex is not one, so a sex change does not rebuild the chain. */
+    /** The Body Energy inputs. Sex is one: it picks the age formula for the maximum heart rate. */
     fun signature(today: LocalDate = LocalDate.now()): String {
         val normalized = normalized(today)
         return listOf(
@@ -43,6 +43,7 @@ data class BodyProfile(
             normalized.heightCm ?: "auto",
             normalized.restingHeartRateBpm ?: "auto",
             normalized.maxHeartRateBpm ?: "auto",
+            normalized.sex ?: "auto",
         ).joinToString("|")
     }
 
