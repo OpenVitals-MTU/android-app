@@ -7,6 +7,7 @@ import io.mockk.coEvery
 import io.mockk.mockk
 import java.io.ByteArrayInputStream
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.test.runTest
@@ -15,6 +16,8 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
+import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
+import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
 private val Dialect = CsvDialect(fieldDelimiter = ",", eol = "\n")
@@ -50,7 +53,16 @@ private class RepositoryHarness(
 
     val repository: AppleHealthImportRepository = mockk()
 
+    /** The cycle journal, as a map: what a drip import writes beside Health Connect. */
+    val journalEntries = mutableMapOf<LocalDate, CycleJournalEntry>()
+    val journal: CycleJournalRepository = mockk()
+
     init {
+        coEvery { journal.entry(any()) } answers { journalEntries[arg<LocalDate>(0)] }
+        coEvery { journal.save(any()) } answers {
+            val entry = arg<CycleJournalEntry>(0)
+            journalEntries[entry.date] = entry
+        }
         coEvery { repository.findMatchingImportedClientRecordIds(any(), any(), any(), any()) } answers {
             val wantedIds = arg<Set<String>>(3)
             wantedIds.intersect(existingIds)
@@ -94,7 +106,7 @@ class CsvImportServiceTest {
     private val pauses = mutableListOf<Long>()
 
     private fun service(harness: RepositoryHarness): CsvImportService =
-        CsvImportService(harness.repository, waitMillis = { millis -> pauses += millis })
+        CsvImportService(harness.repository, harness.journal, waitMillis = { millis -> pauses += millis })
 
     @Test
     fun `every row of a clean file is written and the run completes`() = runTest {
@@ -105,7 +117,7 @@ class CsvImportServiceTest {
             source = sourceOf(content),
             totalBytes = content.length.toLong(),
             dialect = Dialect,
-            mapping = weightMapping(),
+            plan = CsvImportPlan.Columns(weightMapping()),
         )
 
         assertEquals(CsvImportOutcome.COMPLETED, result.outcome)
@@ -124,7 +136,7 @@ class CsvImportServiceTest {
             source = sourceOf(content),
             totalBytes = content.length.toLong(),
             dialect = Dialect,
-            mapping = weightMapping(),
+            plan = CsvImportPlan.Columns(weightMapping()),
         )
         val existing = probe.inserted.mapNotNullTo(mutableSetOf()) { it.metadata.clientRecordId }
 
@@ -133,7 +145,7 @@ class CsvImportServiceTest {
             source = sourceOf(content),
             totalBytes = content.length.toLong(),
             dialect = Dialect,
-            mapping = weightMapping(),
+            plan = CsvImportPlan.Columns(weightMapping()),
         )
 
         assertEquals(3, result.progress.alreadyPresent)
@@ -154,7 +166,7 @@ class CsvImportServiceTest {
             source = sourceOf(content),
             totalBytes = content.length.toLong(),
             dialect = Dialect,
-            mapping = weightMapping(),
+            plan = CsvImportPlan.Columns(weightMapping()),
         )
 
         assertEquals(3, result.progress.rowsRead)
@@ -176,7 +188,7 @@ class CsvImportServiceTest {
             source = sourceOf(content),
             totalBytes = content.length.toLong(),
             dialect = Dialect,
-            mapping = mapping,
+            plan = CsvImportPlan.Columns(mapping),
         )
 
         val first = RepositoryHarness()
@@ -204,7 +216,7 @@ class CsvImportServiceTest {
             source = sourceOf(content),
             totalBytes = content.length.toLong(),
             dialect = Dialect,
-            mapping = weightMapping(),
+            plan = CsvImportPlan.Columns(weightMapping()),
         )
 
         assertEquals(CsvImportOutcome.COMPLETED, result.outcome)
@@ -224,7 +236,7 @@ class CsvImportServiceTest {
             source = sourceOf(content),
             totalBytes = content.length.toLong(),
             dialect = Dialect,
-            mapping = weightMapping(),
+            plan = CsvImportPlan.Columns(weightMapping()),
             onProgress = { progress -> progress.resumingInSeconds?.let { countdowns += it } },
         )
 
@@ -250,7 +262,7 @@ class CsvImportServiceTest {
             source = sourceOf(content),
             totalBytes = content.length.toLong(),
             dialect = Dialect,
-            mapping = weightMapping(),
+            plan = CsvImportPlan.Columns(weightMapping()),
         )
 
         assertEquals(CsvImportOutcome.RATE_LIMITED, result.outcome)
@@ -274,7 +286,7 @@ class CsvImportServiceTest {
             source = sourceOf(content),
             totalBytes = content.length.toLong(),
             dialect = Dialect,
-            mapping = weightMapping(),
+            plan = CsvImportPlan.Columns(weightMapping()),
             cancellation = cancellation,
             onProgress = { progress ->
                 if (progress.resumingInSeconds != null && progress.resumingInSeconds!! <= 12) cancellation.cancel()
@@ -288,6 +300,45 @@ class CsvImportServiceTest {
     }
 
     @Test
+    fun `a drip export writes its records to Health Connect and its journal days to Room`() = runTest {
+        val header = "date,temperature.value,temperature.exclude,temperature.time,temperature.note,bleeding.value,bleeding.exclude," +
+            "mucus.feeling,mucus.texture,mucus.value,mucus.exclude,note.value,pain.cramps,mood.sad"
+        val content = header + "\n" +
+            "2015-12-31,,,,,1,false,,,,,,true,true\n" +
+            "2015-12-30,36.5,false,7:10,,0,true,,,,,\"slept badly.\",,\n" +
+            "2015-12-29,,,,,,,,,,,,,\n"
+        val harness = RepositoryHarness()
+        val plan = detectDripExport(header.split(","), ZoneOffset.UTC)!!
+
+        val result = service(harness).run(
+            source = sourceOf(content),
+            totalBytes = content.length.toLong(),
+            dialect = Dialect,
+            plan = CsvImportPlan.Drip(plan),
+        )
+
+        assertEquals(CsvImportOutcome.COMPLETED, result.outcome)
+        assertEquals(3, result.progress.rowsRead)
+        // A flow day, and a spotting day with its temperature.
+        assertEquals(3, result.progress.written)
+        assertEquals(3, harness.inserted.size)
+        assertEquals(2, result.progress.journalDays)
+        assertEquals(setOf(LocalDate.of(2015, 12, 31), LocalDate.of(2015, 12, 30)), harness.journalEntries.keys)
+        assertEquals("slept badly.", harness.journalEntries.getValue(LocalDate.of(2015, 12, 30)).notes)
+        assertEquals(0, result.progress.rejected)
+
+        // The same file again changes no journal day and rewrites the same ids.
+        val again = service(harness).run(
+            source = sourceOf(content),
+            totalBytes = content.length.toLong(),
+            dialect = Dialect,
+            plan = CsvImportPlan.Drip(plan),
+        )
+        assertEquals(0, again.progress.journalDays)
+        assertEquals(3, again.progress.written)
+    }
+
+    @Test
     fun `cancelling mid-run keeps what was written and stops reading`() = runTest {
         val content = csvOf(2000)
         val harness = RepositoryHarness()
@@ -297,7 +348,7 @@ class CsvImportServiceTest {
             source = sourceOf(content),
             totalBytes = content.length.toLong(),
             dialect = Dialect,
-            mapping = weightMapping(),
+            plan = CsvImportPlan.Columns(weightMapping()),
             cancellation = cancellation,
             onProgress = { progress ->
                 if (progress.rowsRead >= 50) cancellation.cancel()
@@ -321,7 +372,7 @@ class CsvImportServiceTest {
             source = sourceOf(content),
             totalBytes = content.length.toLong(),
             dialect = Dialect,
-            mapping = weightMapping(),
+            plan = CsvImportPlan.Columns(weightMapping()),
         )
 
         assertEquals(CsvImportOutcome.COMPLETED, result.outcome)
@@ -337,7 +388,7 @@ class CsvImportServiceTest {
             source = CsvInputSource { null },
             totalBytes = 0,
             dialect = Dialect,
-            mapping = weightMapping(),
+            plan = CsvImportPlan.Columns(weightMapping()),
         )
 
         assertEquals(CsvImportOutcome.FAILED, result.outcome)
@@ -354,7 +405,7 @@ class CsvImportServiceTest {
             source = sourceOf(content),
             totalBytes = content.length.toLong(),
             dialect = Dialect,
-            mapping = weightMapping(),
+            plan = CsvImportPlan.Columns(weightMapping()),
         )
 
         assertEquals(CsvImportOutcome.COMPLETED, result.outcome)
@@ -374,7 +425,7 @@ class CsvImportServiceTest {
             source = sourceOf(content),
             totalBytes = content.length.toLong(),
             dialect = Dialect,
-            mapping = weightMapping(),
+            plan = CsvImportPlan.Columns(weightMapping()),
         )
 
         assertEquals(CSV_MAX_RETAINED_DIAGNOSTICS, result.diagnostics.size)
@@ -394,7 +445,7 @@ class CsvImportServiceTest {
             source = sourceOf(content),
             totalBytes = content.toByteArray(Charsets.UTF_8).size.toLong(),
             dialect = Dialect,
-            mapping = weightMapping(),
+            plan = CsvImportPlan.Columns(weightMapping()),
             onProgress = { progress ->
                 progress.fraction?.let { fractions.add(it) }
             },
