@@ -84,7 +84,7 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
 
     companion object {
         /** Raise it with a new migration in [ALL_MIGRATIONS], and commit the schema file Room then writes. */
-        const val VERSION = 16
+        const val VERSION = 17
 
         val MIGRATION_1_3 = beverageMigration(1)
         val MIGRATION_2_3 = beverageMigration(2)
@@ -179,6 +179,19 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
         }
 
         /**
+         * The cervix observation and the desire scale join the cycle journal. A device on
+         * 13..16 gets the columns added; one still on 12 gets them from the table's creation.
+         */
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                addColumnIfMissing(db, "cycle_journal_entries", "cervix_opening", "TEXT")
+                addColumnIfMissing(db, "cycle_journal_entries", "cervix_firmness", "TEXT")
+                addColumnIfMissing(db, "cycle_journal_entries", "cervix_position", "TEXT")
+                addColumnIfMissing(db, "cycle_journal_entries", "desire", "INTEGER")
+            }
+        }
+
+        /**
          * Every migration, in one place. The database builder takes this list, so a migration
          * cannot be written and then left out of it.
          */
@@ -199,7 +212,21 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                 MIGRATION_13_14,
                 MIGRATION_14_15,
                 MIGRATION_15_16,
+                MIGRATION_16_17,
             )
+
+        /** `ALTER TABLE ADD COLUMN`, skipped when an earlier creation already carries the column. */
+        private fun addColumnIfMissing(db: SupportSQLiteDatabase, table: String, column: String, type: String) {
+            val present = db.query("PRAGMA table_info(`$table`)").use { cursor ->
+                val nameIndex = cursor.getColumnIndex("name")
+                var found = false
+                while (!found && cursor.moveToNext()) {
+                    found = nameIndex >= 0 && cursor.getString(nameIndex) == column
+                }
+                found
+            }
+            if (!present) db.execSQL("ALTER TABLE `$table` ADD COLUMN `$column` $type")
+        }
 
         private fun beverageMigration(startVersion: Int): Migration =
             object : Migration(startVersion, 3) {
@@ -448,6 +475,10 @@ abstract class OpenVitalsDatabase : RoomDatabase() {
                     `hcg_test` TEXT,
                     `bbt_disturbances` TEXT NOT NULL,
                     `cervical_sensation` TEXT,
+                    `cervix_opening` TEXT,
+                    `cervix_firmness` TEXT,
+                    `cervix_position` TEXT,
+                    `desire` INTEGER,
                     `updated_at_millis` INTEGER NOT NULL,
                     PRIMARY KEY(`date`)
                 )

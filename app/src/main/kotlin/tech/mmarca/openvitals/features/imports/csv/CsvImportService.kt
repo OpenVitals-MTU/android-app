@@ -7,6 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
+import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
+import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectRateLimitBackoff
 
 /** Records handed to Health Connect per insert call. */
@@ -53,23 +55,27 @@ class CsvImportCancellation {
 @Singleton
 class CsvImportService internal constructor(
     private val importRepository: AppleHealthImportRepository,
+    private val journalRepository: CycleJournalRepository,
     /** Suspends for the given time. Tests pass a recorder so no pause is real. */
     private val waitMillis: suspend (Long) -> Unit,
 ) {
     @Inject
-    constructor(importRepository: AppleHealthImportRepository) : this(importRepository, { delay(it) })
+    constructor(
+        importRepository: AppleHealthImportRepository,
+        journalRepository: CycleJournalRepository,
+    ) : this(importRepository, journalRepository, { delay(it) })
 
     private val reader = CsvTableReader()
 
     /**
-     * Imports [source] under [mapping]. [totalBytes] is only the progress
+     * Imports [source] under [plan]. [totalBytes] is only the progress
      * denominator. Never throws: every failure becomes a [CsvImportResult].
      */
     suspend fun run(
         source: CsvInputSource,
         totalBytes: Long,
         dialect: CsvDialect,
-        mapping: CsvImportMapping,
+        plan: CsvImportPlan,
         hasHeaderRow: Boolean = true,
         onProgress: (CsvImportProgress) -> Unit = {},
         cancellation: CsvImportCancellation? = null,
@@ -90,6 +96,11 @@ class CsvImportService internal constructor(
         val seenIds = mutableSetOf<String>()
         val nutritionOccurrences = CsvNutritionOccurrences()
         val pending = mutableListOf<CsvConvertedRecord>()
+
+        val convert: (CsvRow) -> CsvRowConversion = when (plan) {
+            is CsvImportPlan.Columns -> { row -> convertCsvRow(row, plan.mapping, nutritionOccurrences) }
+            is CsvImportPlan.Drip -> { row -> convertDripRow(row, plan.plan) }
+        }
 
         fun finish(outcome: CsvImportOutcome, error: String? = null): CsvImportResult =
             CsvImportResult(
@@ -130,15 +141,14 @@ class CsvImportService internal constructor(
                         throw StopCollecting
                     }
 
-                    val conversion = convertCsvRow(
-                        row = row,
-                        mapping = mapping,
-                        nutritionOccurrences = nutritionOccurrences,
-                    )
+                    val conversion = convert(row)
                     conversion.diagnostics.forEach(::record)
+                    // Room, not Health Connect: written at once, outside the batches and their quota.
+                    val journalWritten = conversion.journalEntry?.let { writeJournalEntry(it) } == true
                     progress = progress.copy(
                         rowsRead = progress.rowsRead + 1,
                         rejected = progress.rejected + conversion.diagnostics.size,
+                        journalDays = progress.journalDays + if (journalWritten) 1 else 0,
                         bytesRead = row.bytesRead,
                     )
 
@@ -173,6 +183,14 @@ class CsvImportService internal constructor(
         } catch (error: Exception) {
             finish(CsvImportOutcome.FAILED, error = error.toString())
         }
+    }
+
+    /** Lays [imported] over the day's journal entry. True when the day changed. */
+    private suspend fun writeJournalEntry(imported: CycleJournalEntry): Boolean {
+        val existing = journalRepository.entry(imported.date)
+        val merged = mergeDripJournalEntry(existing, imported) ?: return false
+        journalRepository.save(merged)
+        return true
     }
 
     /**
