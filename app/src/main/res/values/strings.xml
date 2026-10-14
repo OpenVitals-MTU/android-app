@@ -1009,8 +1009,10 @@
     <string name="cardio_load_day_numbers_title">Today values</string>
     <string name="cardio_load_references_title">Backed links</string>
     <string name="cardio_load_calculation_summary">OpenVitals uses HR-based TRIMP when heart-rate data is available, then falls back to movement only when HR is not usable.</string>
-    <string name="cardio_load_formula">TRIMP = minutes x HRR x 0.64 x e^(1.92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = minutes x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR is heart-rate reserve: (heart rate - resting heart rate) / (max heart rate - resting heart rate). OpenVitals sums this over available heart-rate intervals for the day.</string>
+    <string name="cardio_load_formula_weighting">a = 0.64 and b = 1.92 for men, a = 0.86 and b = 1.67 for women (Banister). If your body profile has no sex, the values for men are used.</string>
+    <string name="cardio_load_max_hr_body">Your maximum heart rate comes from your body profile. If none is set, OpenVitals uses the highest heart rate it has measured, when that is high enough to count. Otherwise it estimates the maximum from your age: 206 - 0.88 x age for women (Gulati), 208 - 0.7 x age for everyone else (Tanaka).</string>
     <string name="cardio_load_mapping_body">When recorded activities exist, heart-rate samples are mapped by timestamp into each activity start and end window. Without activity windows, only elevated heart-rate intervals are counted. If HR is not usable, movement and active calories are shown as a low-confidence fallback.</string>
     <string name="cardio_load_method">Method</string>
     <string name="cardio_load_trimp_score">TRIMP score</string>
@@ -1034,6 +1036,8 @@
     <string name="cardio_load_calibration_estimated_max">Max HR estimated</string>
     <string name="cardio_load_reference_banister">Banister TRIMP equation</string>
     <string name="cardio_load_reference_training_load">Training-load monitoring review</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: maximum heart rate by age</string>
+    <string name="cardio_load_reference_gulati">Gulati: maximum heart rate for women</string>
     <string name="cardio_load_reference_health_connect">Health Connect workout HR mapping</string>
     <string name="section_sleep_sessions">Sleep sessions</string>
     <string name="section_weight">Weight</string>

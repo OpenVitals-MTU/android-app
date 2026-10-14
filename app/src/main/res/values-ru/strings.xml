@@ -977,8 +977,10 @@
     <string name="cardio_load_day_numbers_title">Значения за сегодня</string>
     <string name="cardio_load_references_title">Ссылки на источники</string>
     <string name="cardio_load_calculation_summary">OpenVitals использует TRIMP на основе частоты сердечных сокращений, если доступны данные о пульсе, а затем переходит к расчёту только по движению, если данные о пульсе непригодны для использования.</string>
-    <string name="cardio_load_formula">TRIMP = минуты × HRR × 0,64 × e^(1,92 × HRR)</string>
+    <string name="cardio_load_formula">TRIMP = минуты × HRR × a × e^(b × HRR)</string>
     <string name="cardio_load_formula_body">HRR — это резерв частоты сердечных сокращений: (частота сердечных сокращений − пульс в покое) / (максимальный пульс − пульс в покое). OpenVitals суммирует этот показатель по доступным интервалам измерения пульса за день.</string>
+    <string name="cardio_load_formula_weighting">a = 0,64 и b = 1,92 для мужчин, a = 0,86 и b = 1,67 для женщин (Banister). Если в профиле тела не указан пол, используются значения для мужчин.</string>
+    <string name="cardio_load_max_hr_body">Максимальный пульс берётся из профиля тела. Если он не указан, OpenVitals использует самый высокий измеренный пульс, если он достаточно высок. Иначе максимум оценивается по возрасту: 206 - 0,88 × возраст для женщин (Gulati), 208 - 0,7 × возраст для остальных (Tanaka).</string>
     <string name="cardio_load_mapping_body">Если записанные активности существуют, измерения пульса сопоставляются по временным меткам с периодом от начала до окончания каждой активности. При отсутствии временных интервалов активности учитываются только интервалы повышенного пульса. Если данные о пульсе непригодны для использования, движение и активные калории отображаются как приблизительная оценка с низкой достоверностью.</string>
     <string name="cardio_load_method">Метод</string>
     <string name="cardio_load_trimp_score">Оценка TRIMP</string>
@@ -1002,6 +1004,8 @@
     <string name="cardio_load_calibration_estimated_max">Максимальный пульс — расчётный</string>
     <string name="cardio_load_reference_banister">Уравнение TRIMP Банистера</string>
     <string name="cardio_load_reference_training_load">Обзор мониторинга тренировочной нагрузки</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: максимальный пульс по возрасту</string>
+    <string name="cardio_load_reference_gulati">Gulati: максимальный пульс у женщин</string>
     <string name="cardio_load_reference_health_connect">Сопоставление пульса с тренировками в Health Connect</string>
     <string name="section_sleep_sessions">Сеансы сна</string>
     <string name="section_weight">Вес</string>

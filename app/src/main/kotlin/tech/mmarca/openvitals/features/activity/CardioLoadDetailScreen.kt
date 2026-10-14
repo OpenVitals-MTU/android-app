@@ -39,6 +39,8 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.domain.insights.CardioLoadEstimate
 import tech.mmarca.openvitals.domain.insights.CardioLoadMethod
+import tech.mmarca.openvitals.domain.insights.GulatiMaxHeartRateUrl
+import tech.mmarca.openvitals.domain.insights.TanakaMaxHeartRateUrl
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -209,6 +211,18 @@ private fun ExplanationCard(
             )
             Spacer(Modifier.height(12.dp))
             Text(
+                text = stringResource(R.string.cardio_load_formula_weighting),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.cardio_load_max_hr_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
                 text = stringResource(R.string.cardio_load_mapping_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -331,6 +345,14 @@ private fun ReferencesCard(
         ReferenceButton(
             title = stringResource(R.string.cardio_load_reference_training_load),
             url = TrainingLoadReviewUrl,
+        )
+        ReferenceButton(
+            title = stringResource(R.string.cardio_load_reference_tanaka),
+            url = TanakaMaxHeartRateUrl,
+        )
+        ReferenceButton(
+            title = stringResource(R.string.cardio_load_reference_gulati),
+            url = GulatiMaxHeartRateUrl,
         )
         ReferenceButton(
             title = stringResource(R.string.cardio_load_reference_health_connect),

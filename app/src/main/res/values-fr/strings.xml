@@ -701,8 +701,10 @@
     <string name="cardio_load_day_numbers_title">Valeurs du jour</string>
     <string name="cardio_load_references_title">Sources</string>
     <string name="cardio_load_calculation_summary">OpenVitals utilise le TRIMP basé sur la fréquence cardiaque lorsque des données FC sont disponibles, et ne se rabat sur le mouvement que si la FC n\'est pas exploitable.</string>
-    <string name="cardio_load_formula">TRIMP = minutes x RFC x 0,64 x e^(1,92 x RFC)</string>
+    <string name="cardio_load_formula">TRIMP = minutes x RFC x a x e^(b x RFC)</string>
     <string name="cardio_load_formula_body">RFC désigne la réserve de fréquence cardiaque : (fréquence cardiaque - FC au repos) / (FC max - FC au repos). OpenVitals additionne cette valeur sur les intervalles de fréquence cardiaque disponibles pour la journée.</string>
+    <string name="cardio_load_formula_weighting">a = 0,64 et b = 1,92 pour les hommes, a = 0,86 et b = 1,67 pour les femmes (Banister). Si votre profil corporel n\'indique pas de sexe, les valeurs pour les hommes s\'appliquent.</string>
+    <string name="cardio_load_max_hr_body">Votre fréquence cardiaque maximale vient de votre profil corporel. Si elle n\'y est pas renseignée, OpenVitals utilise la fréquence cardiaque la plus élevée mesurée, si elle est assez haute. Sinon, il estime le maximum à partir de votre âge : 206 - 0,88 x âge pour les femmes (Gulati), 208 - 0,7 x âge pour les autres (Tanaka).</string>
     <string name="cardio_load_mapping_body">Lorsque des activités enregistrées existent, les mesures de fréquence cardiaque sont associées par horodatage à la fenêtre de début et de fin de chaque activité. Sans fenêtres d\'activité, seuls les intervalles de fréquence cardiaque élevée sont comptabilisés. Si la FC n\'est pas exploitable, le mouvement et les calories actives sont affichés comme solution de repli à faible fiabilité.</string>
     <string name="cardio_load_method">Méthode</string>
     <string name="cardio_load_trimp_score">Score TRIMP</string>
@@ -726,6 +728,8 @@
     <string name="cardio_load_calibration_estimated_max">FC max estimée</string>
     <string name="cardio_load_reference_banister">Équation TRIMP de Banister</string>
     <string name="cardio_load_reference_training_load">Revue sur le suivi de la charge d\'entraînement</string>
+    <string name="cardio_load_reference_tanaka">Tanaka : fréquence cardiaque maximale selon l\'âge</string>
+    <string name="cardio_load_reference_gulati">Gulati : fréquence cardiaque maximale des femmes</string>
     <string name="cardio_load_reference_health_connect">Association de la FC aux entraînements dans Santé Connect</string>
     <string name="section_sleep_sessions">Sessions de sommeil</string>
     <string name="section_weight">Poids</string>

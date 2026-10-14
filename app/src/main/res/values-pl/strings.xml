@@ -1002,8 +1002,10 @@
     <string name="cardio_load_day_numbers_title">Dzisiejsze wartości</string>
     <string name="cardio_load_references_title">Źródła</string>
     <string name="cardio_load_calculation_summary">OpenVitals używa TRIMP opartego na tętnie, gdy dane o tętnie są dostępne, a na ruch przechodzi tylko wtedy, gdy tętno jest nieużyteczne.</string>
-    <string name="cardio_load_formula">TRIMP = minuty x HRR x 0,64 x e^(1,92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = minuty x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR to rezerwa tętna: (tętno - tętno spoczynkowe) / (tętno maksymalne - tętno spoczynkowe). OpenVitals sumuje to dla dostępnych przedziałów tętna w ciągu dnia.</string>
+    <string name="cardio_load_formula_weighting">a = 0,64 i b = 1,92 dla mężczyzn, a = 0,86 i b = 1,67 dla kobiet (Banister). Jeśli profil ciała nie podaje płci, używane są wartości dla mężczyzn.</string>
+    <string name="cardio_load_max_hr_body">Maksymalne tętno pochodzi z profilu ciała. Jeśli go nie ustawiono, OpenVitals używa najwyższego zmierzonego tętna, jeśli jest wystarczająco wysokie. W przeciwnym razie szacuje maksimum na podstawie wieku: 206 - 0,88 x wiek dla kobiet (Gulati), 208 - 0,7 x wiek dla pozostałych (Tanaka).</string>
     <string name="cardio_load_mapping_body">Gdy istnieją zarejestrowane aktywności, próbki tętna są przypisywane według czasu do okna początku i końca każdej aktywności. Bez okien aktywności liczone są tylko przedziały podwyższonego tętna. Jeśli tętno jest nieużyteczne, ruch i kalorie aktywne są pokazywane jako zastępstwo o niskiej wiarygodności.</string>
     <string name="cardio_load_method">Metoda</string>
     <string name="cardio_load_trimp_score">Wynik TRIMP</string>
@@ -1027,6 +1029,8 @@
     <string name="cardio_load_calibration_estimated_max">Tętno maks. szacowane</string>
     <string name="cardio_load_reference_banister">Równanie TRIMP Banistera</string>
     <string name="cardio_load_reference_training_load">Przegląd monitorowania obciążenia treningowego</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: maksymalne tętno według wieku</string>
+    <string name="cardio_load_reference_gulati">Gulati: maksymalne tętno u kobiet</string>
     <string name="cardio_load_reference_health_connect">Mapowanie tętna treningów w Health Connect</string>
     <string name="section_sleep_sessions">Sesje snu</string>
     <string name="section_weight">Waga</string>

@@ -37,6 +37,8 @@ import tech.mmarca.openvitals.domain.insights.BodyEnergyConfidence
 import tech.mmarca.openvitals.domain.insights.BodyEnergyPrimaryInfluence
 import tech.mmarca.openvitals.domain.insights.BodyEnergyReasonCode
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
+import tech.mmarca.openvitals.domain.insights.GulatiMaxHeartRateUrl
+import tech.mmarca.openvitals.domain.insights.TanakaMaxHeartRateUrl
 import tech.mmarca.openvitals.features.readiness.DailyReadinessCard
 import tech.mmarca.openvitals.features.readiness.DailyReadinessViewModel
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
@@ -517,6 +519,14 @@ private fun BodyEnergySourcesCard(
             ReferenceLinkButton(
                 title = stringResource(R.string.cardio_load_reference_training_load),
                 url = TrainingLoadReviewUrl,
+            )
+            ReferenceLinkButton(
+                title = stringResource(R.string.cardio_load_reference_tanaka),
+                url = TanakaMaxHeartRateUrl,
+            )
+            ReferenceLinkButton(
+                title = stringResource(R.string.cardio_load_reference_gulati),
+                url = GulatiMaxHeartRateUrl,
             )
         }
     }
