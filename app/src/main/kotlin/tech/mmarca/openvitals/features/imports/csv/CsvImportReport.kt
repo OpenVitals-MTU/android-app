@@ -34,6 +34,9 @@ fun buildCsvImportReport(
     appendLine("Records written: ${result.progress.written}")
     appendLine("Already present: ${result.progress.alreadyPresent}")
     appendLine("Rejected:        ${result.progress.rejected}")
+    if (result.progress.quotaPauses > 0) {
+        appendLine("Quota pauses:    ${result.progress.quotaPauses} (${quotaWaitLabel(result.progress.quotaWaitMillis)})")
+    }
     appendLine()
     appendLine("Parsing")
     appendLine("-------")
@@ -163,6 +166,18 @@ private fun outcomeLabel(outcome: CsvImportOutcome): String = when (outcome) {
     CsvImportOutcome.CANCELLED -> "cancelled by the user"
     CsvImportOutcome.RATE_LIMITED -> "stopped — Health Connect rate limit"
     CsvImportOutcome.FAILED -> "failed"
+}
+
+/** "waited 12 min 30 s", so a slow run explains its own duration. */
+private fun quotaWaitLabel(waitMillis: Long): String {
+    val totalSeconds = waitMillis / 1_000L
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+    return when {
+        minutes == 0L -> "waited $seconds s"
+        seconds == 0L -> "waited $minutes min"
+        else -> "waited $minutes min $seconds s"
+    }
 }
 
 private fun delimiterLabel(delimiter: String): String = when (delimiter) {

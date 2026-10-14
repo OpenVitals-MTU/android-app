@@ -2078,10 +2078,11 @@
     <string name="settings_csv_import_start">Importer</string>
     <string name="settings_csv_import_cancel">Annuler</string>
     <string name="settings_csv_import_progress">Ligne %1$d · écrites %2$d, déjà présentes %3$d, rejetées %4$d</string>
+    <string name="settings_csv_import_quota_pause">Santé Connect limite les écritures pour le moment. L\'import reprend dans %1$d s.</string>
     <string name="settings_csv_import_result">Écrites : %1$d. Déjà présentes : %2$d. Rejetées : %3$d.</string>
     <string name="settings_csv_import_result_empty">Rien n\'a été importé depuis ce fichier.</string>
     <string name="settings_csv_import_result_cancelled">Import annulé. Ce qui avait déjà été écrit a été conservé.</string>
-    <string name="settings_csv_import_result_rate_limited">Santé Connect n\'accepte plus d\'écritures pour le moment. Relancez l\'import plus tard ; les enregistrements déjà écrits seront ignorés.</string>
+    <string name="settings_csv_import_result_rate_limited">Santé Connect a refusé les écritures pendant une demi-heure. Relancez l\'import plus tard ; ce qui a été écrit est conservé.</string>
     <string name="settings_csv_import_error">L\'import a échoué : %1$s</string>
     <string name="settings_csv_import_diagnostics_title">Lignes rejetées</string>
     <string name="settings_csv_import_diagnostic_line">%1$s : %2$d</string>

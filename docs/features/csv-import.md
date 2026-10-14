@@ -129,7 +129,7 @@ Foods are the exception, because two foods eaten at the same time are both real.
 
 CSV-imported records use their own identifier namespace, so they can never collide with Apple Health import records.
 
-If Health Connect stops accepting writes because the app's quota is spent, the import stops and says so. Running it again later starts from the top and recognizes what already landed.
+If Health Connect refuses a batch because the app's write quota is spent, the import does not stop: it pauses, says how long until the next attempt, and writes the same batch again. The pauses grow from 15 seconds to 5 minutes, since the quota refills continuously; an accepted write resets them. A million-row heart rate export is a few thousand writes, more than one quota window allows, so a large file simply takes longer and the report counts the pauses and the time they took. Cancel works during a pause. Only when half an hour of pausing brings no accepted write does the import stop and say so; running it again later starts from the top and recognizes what already landed.
 
 ## Reports
 

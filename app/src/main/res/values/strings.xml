@@ -2440,10 +2440,11 @@
     <string name="settings_csv_import_start">Import</string>
     <string name="settings_csv_import_cancel">Cancel</string>
     <string name="settings_csv_import_progress">Row %1$d · written %2$d, already present %3$d, rejected %4$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect is limiting writes for now. The import continues in %1$d s.</string>
     <string name="settings_csv_import_result">Written %1$d. Already present %2$d. Rejected %3$d.</string>
     <string name="settings_csv_import_result_empty">Nothing was imported from this file.</string>
     <string name="settings_csv_import_result_cancelled">Import cancelled. What had already been written was kept.</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect stopped accepting writes for now. Run the import again later; records already written are skipped.</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect kept refusing writes for half an hour. Run the import again later; what was written is kept.</string>
     <string name="settings_csv_import_error">The import failed: %1$s</string>
     <string name="settings_csv_import_diagnostics_title">Rejected rows</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>
