@@ -9,7 +9,8 @@ import tech.mmarca.openvitals.domain.model.DashboardWeeklyIntensityMinutes
 
 /**
  * One function per signal the day's readiness reads. Each returns what it adds, so the
- * score is a sum and no signal can see another's running total.
+ * score is a sum and no signal can see another's running total. Every threshold and
+ * delta here: app heuristic, not validated.
  */
 /**
  * What one signal adds to the day's verdict. Deltas, so the signals are independent and
