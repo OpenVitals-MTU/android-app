@@ -46,6 +46,10 @@ data class CrossMetricInsight(
         }
 }
 
+/**
+ * Pearson's r between two daily series. Moderate and strong cut-offs: app
+ * heuristic, no published source. A correlation does not show a cause.
+ */
 fun crossMetricInsight(
     primaryValues: List<CrossMetricValue>,
     secondaryValues: List<CrossMetricValue>,
