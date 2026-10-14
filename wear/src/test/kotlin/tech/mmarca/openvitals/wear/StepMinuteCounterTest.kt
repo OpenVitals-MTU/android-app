@@ -109,6 +109,20 @@ class StepMinuteCounterTest {
     }
 
     @Test
+    fun `a gap of days keeps only the last hour's share, at the gap's pace`() {
+        val counter = counter(lastAt = minute, lastTotal = 0)
+        val hour = StepMinuteCounter.MAX_SPREAD_MILLIS
+
+        // Two days, 28,800 steps: 10 a minute on average.
+        counter.onTotal(minute + 48 * hour, 28_800)
+
+        val rows = counter.drain()
+        assertEquals(60, rows.size)
+        assertEquals(minute + 47 * hour, rows.first().epochMillis)
+        assertTrue(rows.all { it.steps == 10 })
+    }
+
+    @Test
     fun `after a reboot the steps since the boot are counted, spread from the boot`() {
         // On a new boot the recorder starts from total 0 at the boot time.
         val counter = counter(lastAt = minute, lastTotal = 0)
