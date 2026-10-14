@@ -20,6 +20,9 @@ import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
 import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.BbtDisturbance
 import tech.mmarca.openvitals.domain.model.CervicalSensation
+import tech.mmarca.openvitals.domain.model.CervixFirmness
+import tech.mmarca.openvitals.domain.model.CervixOpening
+import tech.mmarca.openvitals.domain.model.CervixPosition
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.domain.model.HcgTestResult
 import tech.mmarca.openvitals.domain.model.PillPlan
@@ -42,6 +45,10 @@ object CycleJournalJson {
         entry.hcgTest?.let { put("hcg", it.name) }
         put("disturbances", buildJsonArray { entry.bbtDisturbances.map { it.name }.sorted().forEach { add(it) } })
         entry.cervicalSensation?.let { put("sensation", it.name) }
+        entry.cervixOpening?.let { put("cervixOpening", it.name) }
+        entry.cervixFirmness?.let { put("cervixFirmness", it.name) }
+        entry.cervixPosition?.let { put("cervixPosition", it.name) }
+        entry.desireLevel?.let { put("desire", it) }
         put("updatedAt", entry.updatedAt.toEpochMilli())
     }
 
@@ -58,6 +65,10 @@ object CycleJournalJson {
             hcgTest = json.nameOrNull("hcg")?.let { name -> HcgTestResult.entries.firstOrNull { it.name == name } },
             bbtDisturbances = json.names("disturbances").mapNotNullTo(mutableSetOf()) { name -> BbtDisturbance.entries.firstOrNull { it.name == name } },
             cervicalSensation = json.nameOrNull("sensation")?.let { name -> CervicalSensation.entries.firstOrNull { it.name == name } },
+            cervixOpening = json.nameOrNull("cervixOpening")?.let { name -> CervixOpening.entries.firstOrNull { it.name == name } },
+            cervixFirmness = json.nameOrNull("cervixFirmness")?.let { name -> CervixFirmness.entries.firstOrNull { it.name == name } },
+            cervixPosition = json.nameOrNull("cervixPosition")?.let { name -> CervixPosition.entries.firstOrNull { it.name == name } },
+            desireLevel = json.intOrNull("desire")?.takeIf { it in CycleJournalEntry.TRACKING_SCALE },
             updatedAt = json["updatedAt"]?.jsonPrimitive?.long?.let(Instant::ofEpochMilli) ?: Instant.EPOCH,
         )
     }.getOrNull()
