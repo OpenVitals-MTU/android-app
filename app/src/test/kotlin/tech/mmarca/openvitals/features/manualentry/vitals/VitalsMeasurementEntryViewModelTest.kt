@@ -233,12 +233,77 @@ class VitalsMeasurementEntryViewModelTest {
         coVerify(exactly = 0) { repo.writeVitalsMeasurementEntry(any()) }
     }
 
+    @Test fun `the pulse rides on the blood pressure write as its own value`() = runTest {
+        val repo = vitalsRepo()
+        val vm = VitalsMeasurementEntryViewModel(repo)
+        vm.setType(VitalsMeasurementType.BLOOD_PRESSURE)
+        advanceUntilIdle()
+
+        vm.updatePulseInput(" 68 ")
+        vm.addEntry(121.0, 78.0)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writeVitalsMeasurementEntry(match<VitalsMeasurementWriteRequest> { request ->
+                request.bpPulseBpm == 68
+            })
+        }
+        assertEquals("", vm.uiState.value.pulseInputText)
+    }
+
+    @Test fun `a blank pulse writes the reading alone, even without heart rate write access`() = runTest {
+        val repo = vitalsRepo(canWritePulse = false)
+        val vm = VitalsMeasurementEntryViewModel(repo)
+        vm.setType(VitalsMeasurementType.BLOOD_PRESSURE)
+        advanceUntilIdle()
+
+        vm.addEntry(121.0, 78.0)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writeVitalsMeasurementEntry(match<VitalsMeasurementWriteRequest> { request ->
+                request.bpPulseBpm == null
+            })
+        }
+        assertTrue(vm.uiState.value.saveCompleted)
+    }
+
+    @Test fun `a pulse outside 20 to 300 does not write`() = runTest {
+        val repo = vitalsRepo()
+        val vm = VitalsMeasurementEntryViewModel(repo)
+        vm.setType(VitalsMeasurementType.BLOOD_PRESSURE)
+        advanceUntilIdle()
+
+        vm.updatePulseInput("7")
+        vm.addEntry(121.0, 78.0)
+
+        assertEquals(VitalsMeasurementEntryError.INVALID_PULSE, vm.uiState.value.entryError)
+        coVerify(exactly = 0) { repo.writeVitalsMeasurementEntry(any()) }
+    }
+
+    @Test fun `a typed pulse without heart rate write access does not write`() = runTest {
+        val repo = vitalsRepo(canWritePulse = false)
+        val vm = VitalsMeasurementEntryViewModel(repo)
+        vm.setType(VitalsMeasurementType.BLOOD_PRESSURE)
+        advanceUntilIdle()
+
+        vm.updatePulseInput("68")
+        vm.addEntry(121.0, 78.0)
+
+        assertEquals(VitalsMeasurementEntryError.MISSING_PULSE_WRITE_PERMISSION, vm.uiState.value.entryError)
+        assertEquals(setOf("write_heart_rate"), vm.uiState.value.pulseWritePermissions)
+        coVerify(exactly = 0) { repo.writeVitalsMeasurementEntry(any()) }
+    }
+
     private fun vitalsRepo(
         canWrite: Boolean = true,
+        canWritePulse: Boolean = true,
     ): VitalsRepository =
         mockk<VitalsRepository>().also { repo ->
             every { repo.vitalsWritePermissions(any()) } returns setOf("write_vitals")
+            every { repo.bpPulseWritePermissions } returns setOf("write_heart_rate")
             coEvery { repo.hasVitalsWritePermission(any()) } returns canWrite
+            coEvery { repo.hasBpPulseWritePermission() } returns canWritePulse
             coEvery { repo.writeVitalsMeasurementEntry(any()) } returns "record-id"
         }
 }

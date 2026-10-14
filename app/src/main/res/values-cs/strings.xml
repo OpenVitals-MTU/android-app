@@ -408,6 +408,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">Systolický (mmHg)</string>
     <string name="vitals_entry_diastolic_label">Diastolický (mmHg)</string>
+    <string name="vitals_entry_pulse_label">Tep (tepů/min, nepovinné)</string>
+    <string name="vitals_entry_pulse_permission_needed">Aby OpenVitals mohl uložit tep spolu s měřením, potřebuje v Health Connect oprávnění k zápisu srdeční frekvence. Tep se ukládá jako záznam srdeční frekvence v čase měření.</string>
+    <string name="vitals_entry_invalid_pulse">Zadejte tep mezi 20 a 300 tepy/min, nebo pole nechte prázdné.</string>
     <string name="vitals_entry_add_selected">Přidat %1$s</string>
     <string name="vitals_entry_invalid_value">Zadejte platnou hodnotu pro tuto vitální funkci.</string>
     <string name="vitals_entry_write_failed">Vitální funkci se nepodařilo uložit: %1$s</string>
