@@ -98,6 +98,7 @@ class WearAppService : Service() {
             adapter = { getSystemService(BluetoothManager::class.java)?.adapter },
             trust = trust,
             store = store,
+            live = LiveHeartRate(this, isRecording = { recorder.isRunning }),
             localName = ::localName,
         )
         isForeground = startInForeground()

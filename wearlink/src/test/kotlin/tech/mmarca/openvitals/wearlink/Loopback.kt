@@ -85,6 +85,8 @@ class MemoryHandler(
     var minutes: List<WearLinkProtocol.SleepMinute> = emptyList(),
     var steps: List<WearLinkProtocol.StepMinute> = emptyList(),
     var floors: List<WearLinkProtocol.FloorMinute> = emptyList(),
+    /** What one `HR_LIVE` window hands out; empty is a watch off the wrist. */
+    var live: List<WearLinkProtocol.HeartRateSample> = emptyList(),
     var name: String = "Galaxy Watch8 (89FZ)",
 ) : WearLinkRequestHandler {
     override fun localName(): String = name
@@ -105,5 +107,9 @@ class MemoryHandler(
     override fun floorsSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.FloorMinute> {
         val newer = floors.filter { it.epochMillis > sinceEpochMillis }
         return Page(newer.take(limit), newer.size > limit)
+    }
+    override fun liveHeartRate(seconds: Int, emit: (WearLinkProtocol.HeartRateSample) -> Unit): Int {
+        live.forEach(emit)
+        return live.size
     }
 }

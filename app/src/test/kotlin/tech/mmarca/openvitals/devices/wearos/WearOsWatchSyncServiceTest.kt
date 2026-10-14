@@ -104,6 +104,12 @@ class WearOsWatchSyncServiceTest {
             floorPullsSince += since
             return floorPages.removeFirstOrNull() ?: WearOsFloorPage(emptyList(), hasMore = false)
         }
+
+        override suspend fun liveHeartRate(
+            targetAddress: String?,
+            targetName: String?,
+            onSample: (WearOsHeartRateSample) -> Unit,
+        ): Boolean = false
     }
 
     /**

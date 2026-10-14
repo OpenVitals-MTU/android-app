@@ -108,6 +108,25 @@ class WearLinkLoopbackTest {
     }
 
     @Test
+    fun `live windows hand out each reading and can repeat on one connection`() {
+        val loopback = trusted()
+        val readings = List(3) { WearLinkProtocol.HeartRateSample(1_700_000_000_000L + it * 1000L, 70 + it) }
+        loopback.handler.live = readings
+        val link = loopback.connect()
+        val session = (WearLinkClient.hello(link.clientConnection, hello()) as WearLinkOutcome.Ok).value
+
+        val seen = ArrayList<WearLinkProtocol.HeartRateSample>()
+        assertEquals(3, (session.liveHeartRate(5) { seen += it } as WearLinkOutcome.Ok).value)
+        assertEquals(readings, seen)
+        // Off the wrist: the window ends at once, empty, and the connection stays usable.
+        loopback.handler.live = emptyList()
+        assertEquals(0, (session.liveHeartRate(5) { seen += it } as WearLinkOutcome.Ok).value)
+        assertEquals(3, seen.size)
+        session.close()
+        assertEquals(WearLinkServer.Outcome.SERVED, link.serverOutcome())
+    }
+
+    @Test
     fun `a phone that never says hello is cut off, and one that goes quiet is too`() {
         // A closed pipe reads as end of stream where a closed socket throws; either way the watchdog ended it early.
         val quick = Loopback(options = WearLinkServer.Options(helloTimeoutMillis = 200, idleTimeoutMillis = 200))
