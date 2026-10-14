@@ -48,9 +48,9 @@ class FloorMinuteCounter(
             lowest = metres
             return null
         }
-        val floors = ((metres - low) / METRES_PER_FLOOR).toInt()
+        val floors = ((metres - low) / WearLinkProtocol.METRES_PER_FLOOR).toInt()
         if (floors == 0) return null
-        lowest = low + floors * METRES_PER_FLOOR
+        lowest = low + floors * WearLinkProtocol.METRES_PER_FLOOR
         val start = epochMillis - Math.floorMod(epochMillis, MINUTE_MILLIS)
         val before = minute?.takeIf { it.epochMillis == start }?.floors ?: 0
         val total = (before + floors).coerceAtMost(WearLinkProtocol.MAX_FLOORS_PER_MINUTE)
@@ -58,9 +58,6 @@ class FloorMinuteCounter(
     }
 
     companion object {
-        /** One floor: 3 m, about 10 ft. */
-        const val METRES_PER_FLOOR = 3.0
-
         const val SMOOTHING_MILLIS = 10_000L
 
         /** Longer without a reading, and the next one starts a new low point. */

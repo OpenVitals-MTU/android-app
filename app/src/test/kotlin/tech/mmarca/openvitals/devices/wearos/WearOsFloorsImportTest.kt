@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.devices.wearos
 
+import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import java.time.Instant
 import org.junit.Assert.assertEquals
@@ -37,5 +38,16 @@ class WearOsFloorsImportTest {
         assertEquals(minute.plusSeconds(60), record.endTime)
         assertEquals("wearos_floors_${minute.toEpochMilli()}", record.metadata.clientRecordId)
         assertEquals(3L, record.metadata.clientRecordVersion)
+    }
+
+    @Test
+    fun `the elevation gain is the credited floors at 3 m, under its own id`() {
+        // 20 steps credit two of the five floors: 6 m.
+        val record = WearOsFloorsImport.elevationRecords(listOf(WearOsFloorMinute(minute, 5)), listOf(WearOsStepMinute(minute, 20)))
+            .single() as ElevationGainedRecord
+        assertEquals(6.0, record.elevation.inMeters, 1e-9)
+        assertEquals("wearos_elevation_${minute.toEpochMilli()}", record.metadata.clientRecordId)
+        assertEquals(2L, record.metadata.clientRecordVersion)
+        assertTrue(WearOsFloorsImport.elevationRecords(listOf(WearOsFloorMinute(minute, 5)), emptyList()).isEmpty())
     }
 }

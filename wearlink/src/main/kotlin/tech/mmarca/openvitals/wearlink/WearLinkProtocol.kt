@@ -472,6 +472,9 @@ object WearLinkProtocol {
     /** A fast elevator climbs about 200 floors a minute. More means the barometer jumped. */
     const val MAX_FLOORS_PER_MINUTE: Int = 300
 
+    /** The ascent one floor in an `FL` line stands for: 3 m, about 10 ft. */
+    const val METRES_PER_FLOOR: Double = 3.0
+
     /** Outside this range the sensor is reporting noise, not a heart. */
     const val MIN_BPM: Int = 25
     const val MAX_BPM: Int = 250
