@@ -158,6 +158,11 @@ class WearLinkServer(
                 for (minute in page.items) writer.line(WearLinkProtocol.formatStepMinute(minute))
                 writer.line(WearLinkProtocol.formatEnd(page.items.size, page.more))
             }
+            is WearLinkProtocol.Request.AscentSince -> {
+                val page = handler.ascentSince(request.sinceEpochMillis, request.limit)
+                for (minute in page.items) writer.line(WearLinkProtocol.formatAscentMinute(minute))
+                writer.line(WearLinkProtocol.formatEnd(page.items.size, page.more))
+            }
         }
     }
 

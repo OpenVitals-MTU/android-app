@@ -33,6 +33,8 @@ data class DeviceSyncUiState(
     val lastNightCount: Int? = null,
     /** Minutes of steps written by the last completed run. */
     val lastStepMinuteCount: Int? = null,
+    /** The last completed run skipped an estimate for want of the body weight. */
+    val lastMissingBodyWeight: Boolean = false,
     val error: ScreenError? = null,
 ) {
     val isSyncing: Boolean get() = syncingDeviceId != null
@@ -126,6 +128,7 @@ class DeviceSyncController(
                     lastFileCount = result.fileCount,
                     lastNightCount = result.nightCount,
                     lastStepMinuteCount = result.stepMinuteCount,
+                    lastMissingBodyWeight = result.missingBodyWeight,
                 )
 
                 is DeviceSyncResult.Failed -> if (silent) {

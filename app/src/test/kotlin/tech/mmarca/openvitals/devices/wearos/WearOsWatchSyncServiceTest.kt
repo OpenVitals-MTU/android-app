@@ -30,6 +30,7 @@ import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRe
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingStatus
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.domain.model.WearSleepMinute
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import io.mockk.slot
@@ -70,6 +71,10 @@ class WearOsWatchSyncServiceTest {
     private val watchSteps = mutableListOf<WearOsStepMinute>()
     private val stepPullsSince = mutableListOf<Instant>()
     private var stepsNotPaired = false
+
+    /** Floor pages the same way. */
+    private val ascentPages = ArrayDeque<WearOsAscentPage>()
+    private val ascentPullsSince = mutableListOf<Instant>()
     private val nodePort = object : WearOsNodePort {
         override suspend fun checkStatus(targetAddress: String?, targetName: String?) = WearOsCompanionStatus()
         override suspend fun pullHeartRate(targetAddress: String?, targetName: String?, since: Instant): WearOsHeartRatePage? {
@@ -94,6 +99,11 @@ class WearOsWatchSyncServiceTest {
             val after = watchSteps.filter { it.start.isAfter(since) }.sortedBy { it.start }
             return WearOsStepPage(after.take(STEP_PAGE), hasMore = after.size > STEP_PAGE)
         }
+
+        override suspend fun pullAscent(targetAddress: String?, targetName: String?, since: Instant): WearOsAscentPage? {
+            ascentPullsSince += since
+            return ascentPages.removeFirstOrNull() ?: WearOsAscentPage(emptyList(), hasMore = false)
+        }
     }
 
     /**
@@ -103,10 +113,17 @@ class WearOsWatchSyncServiceTest {
     private val healthConnectVersions = mutableMapOf<String, Long>()
     private val insertCalls = mutableListOf<List<androidx.health.connect.client.records.Record>>()
 
+    /** A record type whose write permission the user withheld. */
+    private var refused: (androidx.health.connect.client.records.Record) -> Boolean = { false }
+
+    /** The body weight the walking energy reads; null as for a profile without one. */
+    private var weight: Double? = 70.0
+
     init {
         coEvery { healthConnect.grantedPermissions() } returns setOf(HealthPermission.getWritePermission(StepsRecord::class))
         coEvery { importRepository.insertImportedRecords(any()) } answers {
             val records = firstArg<List<androidx.health.connect.client.records.Record>>()
+            if (records.any(refused)) throw SecurityException("Caller doesn't have the write permission")
             insertCalls += records
             val present = records.any { record ->
                 val id = record.metadata.clientRecordId ?: return@any false
@@ -120,6 +137,8 @@ class WearOsWatchSyncServiceTest {
     private fun stepCounts(): Map<Instant, Long> =
         insertCalls.flatten().filterIsInstance<StepsRecord>().associate { it.startTime to it.count }
 
+    private inline fun <reified T> insertedOf(): List<T> = insertCalls.flatten().filterIsInstance<T>()
+
     private fun service() = WearOsWatchSyncService(
         nodePort = nodePort,
         cursors = cursors,
@@ -128,6 +147,7 @@ class WearOsWatchSyncServiceTest {
         recordingController = recordingController,
         healthConnect = healthConnect,
         linkStore = linkStore,
+        weightKg = { weight },
         clock = { t0 },
         zone = { ZoneId.of("+02:00") },
     )
@@ -188,6 +208,7 @@ class WearOsWatchSyncServiceTest {
         assertEquals(listOf(Instant.EPOCH, t0.plusSeconds(60), t0.plusSeconds(180)), stepPullsSince)
         assertEquals(t0.plusSeconds(240), cursors.stepsCursor(WATCH.id))
         assertEquals((0..4).associate { t0.plusSeconds(60L * it) to 10L + it }, stepCounts())
+        assertEquals((0..4).map { 10.0 + it }, insertedOf<androidx.health.connect.client.records.StepsCadenceRecord>().map { it.samples.single().rate })
     }
 
     @Test
@@ -221,8 +242,33 @@ class WearOsWatchSyncServiceTest {
 
         // The cursor minute is written alone and refused as present; no record is tried twice.
         assertEquals(listOf(t0), insertCalls.first().map { (it as StepsRecord).startTime })
-        assertEquals(3, insertCalls.sumOf { it.size })
+        assertEquals(3, insertedOf<StepsRecord>().size)
         assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 2), result)
+    }
+
+    @Test
+    fun `walking energy comes with the steps, from a cadence above rest`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += listOf(WearOsStepMinute(t0, 40), WearOsStepMinute(t0.plusSeconds(60), 12))
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        // 40 steps a minute costs a little more than rest; 12 does not.
+        assertEquals(1, insertedOf<androidx.health.connect.client.records.ActiveCaloriesBurnedRecord>().size)
+    }
+
+    @Test
+    fun `no body weight writes no walking energy, and a withheld permission for an estimate does not fail the sync`() = runTest {
+        weight = null
+        refused = { it is androidx.health.connect.client.records.StepsCadenceRecord }
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 110)
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 1, missingBodyWeight = true), result)
+        assertEquals(1, insertedOf<StepsRecord>().size)
+        assertTrue(insertedOf<androidx.health.connect.client.records.ActiveCaloriesBurnedRecord>().isEmpty())
     }
 
     @Test
@@ -259,6 +305,58 @@ class WearOsWatchSyncServiceTest {
         val result = service().sync(WATCH, Duration.ZERO, null)
 
         assertEquals(ScreenError.Text(R.string.settings_watch_wearos_fail_partial), (result as DeviceSyncResult.Failed).error)
+    }
+
+    @Test
+    fun `floors climbed with steps are written, an elevator ride is not, and the next pull takes the cursor minute again`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 40)
+        ascentPages += WearOsAscentPage(
+            listOf(WearOsAscentMinute(t0, 6.0), WearOsAscentMinute(t0.plusSeconds(600), 15.0)),
+            hasMore = false,
+        )
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(listOf(2.0), insertedOf<androidx.health.connect.client.records.FloorsClimbedRecord>().map { it.floors })
+        assertEquals(t0.plusSeconds(600), cursors.ascentCursor(WATCH.id))
+
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(t0.plusSeconds(600).minusMillis(1), ascentPullsSince.last())
+    }
+
+    @Test
+    fun `the step pull reaches back to the minute before the floors cursor, without writing it again`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += List(3) { WearOsStepMinute(t0.plusSeconds(60L * it), 40) }
+        ascentPages += WearOsAscentPage(listOf(WearOsAscentMinute(t0, 3.0)), hasMore = false)
+        service().sync(WATCH, Duration.ZERO, null)
+        // Steps reached t0 + 2 min, floors only t0.
+
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        ascentPages += WearOsAscentPage(listOf(WearOsAscentMinute(t0.plusSeconds(60), 6.0)), hasMore = false)
+        insertCalls.clear()
+        stepPullsSince.clear()
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(t0.minusSeconds(60).minusMillis(1), stepPullsSince.first())
+        // Only the cursor minute is tried again; t0 and t0 + 1 min are not rewritten.
+        assertEquals(listOf(t0.plusSeconds(120)), insertedOf<StepsRecord>().map { it.startTime })
+        assertEquals(listOf(2.0), insertedOf<androidx.health.connect.client.records.FloorsClimbedRecord>().map { it.floors })
+    }
+
+    @Test
+    fun `without the grant to write steps, floors stay on the watch too`() = runTest {
+        coEvery { healthConnect.grantedPermissions() } returns emptySet()
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        ascentPages += WearOsAscentPage(listOf(WearOsAscentMinute(t0, 3.0)), hasMore = false)
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(emptyList<Instant>(), ascentPullsSince)
+        assertEquals(Instant.EPOCH, cursors.ascentCursor(WATCH.id))
     }
 
     @Test
@@ -303,8 +401,36 @@ class WearOsWatchSyncServiceTest {
         val result = service().sync(WATCH, Duration.ZERO, null)
 
         assertEquals(DeviceSyncResult.Succeeded(0), result)
-        coVerify(exactly = 0) { importRepository.insertImportedRecords(any()) }
+        assertTrue(insertedOf<SleepSessionRecord>().isEmpty())
         assertEquals(nightMinutes().last().time, cursors.sleepCursor(WATCH.id))
+    }
+
+    @Test
+    fun `an estimated night also gives its nocturnal resting heart rate`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        sleepPages += WearOsSleepMinutePage(nightMinutes(), hasMore = false)
+        service().sync(WATCH, Duration.ZERO, null)
+
+        val resting = insertedOf<RestingHeartRateRecord>().single()
+        assertEquals("wearos_rhr_est_2026-10-08", resting.metadata.clientRecordId)
+        // The asleep minutes run 50.0 to 53.9 bpm in a 40-minute cycle; the lowest half hour averages about 51.
+        assertTrue(resting.beatsPerMinute in 50L..52L)
+    }
+
+    @Test
+    fun `a resting heart rate from elsewhere wins over the estimate`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        sleepPages += WearOsSleepMinutePage(nightMinutes(), hasMore = false)
+        val foreign = mockk<RestingHeartRateRecord> {
+            every { metadata } returns Metadata.manualEntry(clientRecordId = "samsung_rhr_1")
+        }
+        coEvery { healthConnect.forEachSyncRecordPage(RestingHeartRateRecord::class, any(), any(), any()) } coAnswers {
+            arg<suspend (List<androidx.health.connect.client.records.Record>) -> Unit>(3).invoke(listOf(foreign))
+        }
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertTrue(insertedOf<RestingHeartRateRecord>().isEmpty())
+        assertEquals(1, insertedOf<SleepSessionRecord>().size)
     }
 
     @Test

@@ -3782,6 +3782,7 @@
     <string name="settings_watch_wearos_sync_now">Sync watch</string>
     <string name="settings_watch_wearos_syncing">Syncing watch…</string>
     <string name="settings_watch_wearos_synced_none">Nothing new on the watch</string>
+    <string name="settings_watch_wearos_needs_weight">Walking calories not estimated: add your weight in Body profile or record one in Health Connect.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d heart rate sample synced</item>
         <item quantity="other">%1$d heart rate samples synced</item>
