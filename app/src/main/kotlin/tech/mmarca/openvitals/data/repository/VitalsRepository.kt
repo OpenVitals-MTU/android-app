@@ -6,6 +6,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
@@ -74,6 +75,7 @@ class VitalsRepositoryImpl @Inject constructor(
     private val writeBodyTemperaturePermission = HealthPermission.getWritePermission(BodyTemperatureRecord::class)
     private val readHrvPermission = HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class)
     private val writeHrvPermission = HealthPermission.getWritePermission(HeartRateVariabilityRmssdRecord::class)
+    private val writeHeartRatePermission = HealthPermission.getWritePermission(HeartRateRecord::class)
 
     override fun vitalsWritePermissions(type: VitalsMeasurementType): Set<String> = setOf(
         when (type) {
@@ -84,6 +86,13 @@ class VitalsRepositoryImpl @Inject constructor(
             VitalsMeasurementType.HRV -> writeHrvPermission
         }
     )
+
+    override val bpPulseWritePermissions: Set<String> get() = setOf(writeHeartRatePermission)
+
+    /** The type's write permissions, plus heart rate when the request carries a pulse. */
+    private fun writePermissionsFor(request: VitalsMeasurementWriteRequest): Set<String> =
+        vitalsWritePermissions(request.type) +
+            (if (request.bpPulseBpm != null) bpPulseWritePermissions else emptySet())
 
     private suspend fun grantedPermissionsIfAvailable(): Set<String> =
         if (hc.availability() == HealthConnectAvailability.AVAILABLE) hc.grantedPermissions() else emptySet()
@@ -578,8 +587,13 @@ class VitalsRepositoryImpl @Inject constructor(
     override suspend fun hasVitalsWritePermission(type: VitalsMeasurementType): Boolean =
         vitalsWritePermissions(type).all { permission -> permission in grantedPermissionsIfAvailable() }
 
+    override suspend fun hasBpPulseWritePermission(): Boolean {
+        val granted = grantedPermissionsIfAvailable()
+        return bpPulseWritePermissions.all { permission -> permission in granted }
+    }
+
     override suspend fun writeVitalsMeasurementEntry(request: VitalsMeasurementWriteRequest): String {
-        val missingPermissions = vitalsWritePermissions(request.type) - grantedPermissionsIfAvailable()
+        val missingPermissions = writePermissionsFor(request) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping writeVitalsMeasurementEntry type=${request.type} missingCount=${missingPermissions.size}")
             throw SecurityException("Missing Health Connect write permission for ${request.type}")
@@ -606,7 +620,7 @@ class VitalsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateVitalsMeasurementEntry(id: String, request: VitalsMeasurementWriteRequest) {
-        val missingPermissions = vitalsWritePermissions(request.type) - grantedPermissionsIfAvailable()
+        val missingPermissions = writePermissionsFor(request) - grantedPermissionsIfAvailable()
         if (missingPermissions.isNotEmpty()) {
             Log.w(TAG, "Skipping updateVitalsMeasurementEntry type=${request.type} missingCount=${missingPermissions.size}")
             throw SecurityException("Missing Health Connect write permission for ${request.type}")

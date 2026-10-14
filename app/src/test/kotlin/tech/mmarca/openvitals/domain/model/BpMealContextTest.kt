@@ -39,6 +39,40 @@ class BpMealContextTest {
         assertNull(bpMealContextFromClientRecordId("${baseId}_bpctx-nonsense"))
     }
 
+    @Test fun `the pulse token rides beside the context and each survives the other's edit`() {
+        val both = baseId.withBpMealContext(BpMealContext.BEFORE_BREAKFAST).withBpPulse(68)
+
+        assertEquals(BpMealContext.BEFORE_BREAKFAST, bpMealContextFromClientRecordId(both))
+        assertEquals(68, bpPulseFromClientRecordId(both))
+
+        val newPulse = both.withBpPulse(72)
+        assertEquals(72, bpPulseFromClientRecordId(newPulse))
+        assertEquals(BpMealContext.BEFORE_BREAKFAST, bpMealContextFromClientRecordId(newPulse))
+
+        val newContext = both.withBpMealContext(BpMealContext.AFTER_DINNER)
+        assertEquals(68, bpPulseFromClientRecordId(newContext))
+        assertEquals(BpMealContext.AFTER_DINNER, bpMealContextFromClientRecordId(newContext))
+
+        assertEquals(baseId.withBpMealContext(BpMealContext.BEFORE_BREAKFAST), both.withBpPulse(null))
+        assertEquals(baseId.withBpPulse(68), both.withBpMealContext(null))
+        assertEquals(baseId, both.withBpPulse(null).withBpMealContext(null))
+    }
+
+    @Test fun `the pulse record id strips both tokens, so it never moves`() {
+        val both = baseId.withBpMealContext(BpMealContext.BEFORE_BREAKFAST).withBpPulse(68)
+
+        assertEquals("${baseId}_pulse", bpPulseClientRecordId(both))
+        assertEquals(bpPulseClientRecordId(baseId), bpPulseClientRecordId(both.withBpPulse(72)))
+    }
+
+    @Test fun `foreign, bare and mangled ids read as no pulse`() {
+        assertNull(bpPulseFromClientRecordId(null))
+        assertNull(bpPulseFromClientRecordId(baseId))
+        assertNull(bpPulseFromClientRecordId("${baseId}_bppulse-"))
+        assertNull(bpPulseFromClientRecordId("${baseId}_bppulse-fast"))
+        assertNull(bpPulseFromClientRecordId("${baseId}_bppulse-0"))
+    }
+
     @Test fun `the mirrored position and location constants match the androidx library`() {
         assertEquals(BloodPressureRecord.BODY_POSITION_UNKNOWN, BpRecordValues.BODY_POSITION_UNKNOWN)
         assertEquals(BloodPressureRecord.BODY_POSITION_STANDING_UP, BpRecordValues.BODY_POSITION_STANDING_UP)

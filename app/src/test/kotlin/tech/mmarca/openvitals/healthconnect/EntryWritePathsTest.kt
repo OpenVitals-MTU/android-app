@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.BasalBodyTemperatureRecord
 import androidx.health.connect.client.records.BloodPressureRecord
+import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.BodyTemperatureMeasurementLocation
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.IntermenstrualBleedingRecord
@@ -38,6 +39,8 @@ import org.junit.Before
 import org.junit.Test
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.domain.model.BodyMeasurementType
+import tech.mmarca.openvitals.domain.model.BpMealContext
+import tech.mmarca.openvitals.domain.model.bpPulseClientRecordId
 import tech.mmarca.openvitals.domain.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.model.CycleEntryWriteRequest
@@ -139,6 +142,81 @@ class EntryWritePathsTest {
         val reading = all(BloodPressureRecord::class).single()
         assertThat(reading.systolic.inMillimetersOfMercury).isWithin(1e-9).of(121.0)
         assertThat(reading.diastolic.inMillimetersOfMercury).isWithin(1e-9).of(79.0)
+    }
+
+    @Test
+    fun `a reading's pulse is a heart rate record at the same instant that follows every edit`() = onTheTestClock {
+        val reader = VitalsHealthReader(support(), APP_PACKAGE)
+        reader.writeVitalsMeasurementEntry(
+            VitalsMeasurementWriteRequest(
+                VitalsMeasurementType.BLOOD_PRESSURE, NOON, 128.0, secondaryValue = 84.0, bpPulseBpm = 68,
+            ),
+        )
+        val reading = all(BloodPressureRecord::class).single()
+        val pulse = all(HeartRateRecord::class).single()
+        assertThat(pulse.samples.single().beatsPerMinute).isEqualTo(68L)
+        assertThat(pulse.samples.single().time).isEqualTo(NOON)
+        assertThat(pulse.metadata.clientRecordId).isEqualTo(bpPulseClientRecordId(reading.metadata.clientRecordId!!))
+        assertThat(reader.readVitalsMeasurementEntry(VitalsMeasurementType.BLOOD_PRESSURE, reading.metadata.id)?.bpPulseBpm)
+            .isEqualTo(68)
+        // A list of readings shows the pulse from the reading alone, with no second read.
+        assertThat(reader.readBloodPressureEntries(DAY_START, DAY_END).single().pulseBpm).isEqualTo(68)
+
+        // The edit moves the reading, gives it a meal context (a new client id) and a new pulse:
+        // still one pulse record, at the new time, still found from the reading.
+        reader.updateVitalsMeasurementEntry(
+            reading.metadata.id,
+            VitalsMeasurementWriteRequest(
+                VitalsMeasurementType.BLOOD_PRESSURE, NOON.plusSeconds(600), 121.0, secondaryValue = 79.0,
+                bpMealContext = BpMealContext.BEFORE_BREAKFAST, bpPulseBpm = 72,
+            ),
+        )
+        val edited = all(BloodPressureRecord::class).single()
+        val editedPulse = all(HeartRateRecord::class).single()
+        assertThat(editedPulse.samples.single().beatsPerMinute).isEqualTo(72L)
+        assertThat(editedPulse.samples.single().time).isEqualTo(NOON.plusSeconds(600))
+        assertThat(reader.readVitalsMeasurementEntry(VitalsMeasurementType.BLOOD_PRESSURE, edited.metadata.id)?.bpPulseBpm)
+            .isEqualTo(72)
+
+        // Clearing the pulse removes its record and leaves the reading.
+        reader.updateVitalsMeasurementEntry(
+            edited.metadata.id,
+            VitalsMeasurementWriteRequest(
+                VitalsMeasurementType.BLOOD_PRESSURE, NOON.plusSeconds(600), 121.0, secondaryValue = 79.0,
+                bpMealContext = BpMealContext.BEFORE_BREAKFAST,
+            ),
+        )
+        assertThat(all(HeartRateRecord::class)).isEmpty()
+        assertThat(all(BloodPressureRecord::class)).hasSize(1)
+        assertThat(reader.readBloodPressureEntries(DAY_START, DAY_END).single().pulseBpm).isNull()
+        assertThat(reader.readVitalsMeasurementEntry(VitalsMeasurementType.BLOOD_PRESSURE, edited.metadata.id)?.bpPulseBpm)
+            .isNull()
+    }
+
+    @Test
+    fun `deleting a reading takes its pulse along and leaves other heart rate alone`() = onTheTestClock {
+        val reader = VitalsHealthReader(support(), APP_PACKAGE)
+        fake.insertRecords(
+            listOf(
+                HeartRateRecord(
+                    startTime = NOON, startZoneOffset = ZoneOffset.UTC, endTime = NOON, endZoneOffset = ZoneOffset.UTC,
+                    samples = listOf(HeartRateRecord.Sample(NOON, 90L)),
+                    metadata = Metadata.manualEntry(),
+                ),
+            ),
+        )
+        reader.writeVitalsMeasurementEntry(
+            VitalsMeasurementWriteRequest(
+                VitalsMeasurementType.BLOOD_PRESSURE, NOON, 128.0, secondaryValue = 84.0, bpPulseBpm = 68,
+            ),
+        )
+        val id = all(BloodPressureRecord::class).single().metadata.id
+        assertThat(all(HeartRateRecord::class)).hasSize(2)
+
+        reader.deleteVitalsMeasurementEntry(VitalsMeasurementType.BLOOD_PRESSURE, id)
+
+        assertThat(all(BloodPressureRecord::class)).isEmpty()
+        assertThat(all(HeartRateRecord::class).single().samples.single().beatsPerMinute).isEqualTo(90L)
     }
 
     // Mindfulness.
