@@ -195,7 +195,12 @@ private class BloodPressureScale(
     val lowest: BloodPressureCategory,
 )
 
-/** The app's own reference, above 180 or above 120. Guidelines without a top band of their own use it. */
+/**
+ * Above 180 or above 120: severe elevation, 2017 ACC/AHA guideline,
+ * hypertensive crisis section (doi:10.1161/HYP.0000000000000065). It is an
+ * emergency only with new organ damage, so the app shows a reference, not a
+ * diagnosis. Guidelines without their own top band use it.
+ */
 private val SevereReferenceBand = BloodPressureBand(BloodPressureCategory.SEVERE_REFERENCE, 181, 121)
 
 private fun BloodPressureGuideline.scale(): BloodPressureScale = when (this) {
@@ -238,6 +243,10 @@ private fun BloodPressureGuideline.scale(): BloodPressureScale = when (this) {
     )
 }
 
+/**
+ * WHO adult BMI classes 18.5 / 25 / 30 / 35 / 40. WHO Technical Report
+ * Series 894, 2000, PMID 11234459.
+ */
 fun bmiInterpretation(bmi: Double): BmiInterpretation? {
     if (bmi <= 0.0) return null
     val category = when {
@@ -261,6 +270,11 @@ fun bmiInterpretation(bmi: Double): BmiInterpretation? {
     )
 }
 
+/**
+ * Bands for the adjusted fat-free mass index. Index: Kouri et al. 1995,
+ * doi:10.1097/00042752-199510000-00003. Its only threshold is a natural
+ * limit of about 25. The bands: calculator convention, no published source.
+ */
 fun ffmiInterpretation(adjustedFfmi: Double): FfmiInterpretation? {
     if (adjustedFfmi <= 0.0) return null
     val category = when {
@@ -310,6 +324,11 @@ fun sleepTargetInterpretation(
     )
 }
 
+/**
+ * Adult macronutrient ranges, % of energy: protein 10–35, carbohydrate
+ * 45–65, fat 20–35. Institute of Medicine 2005, doi:10.17226/10490.
+ * Children's ranges differ.
+ */
 fun macroSplitInterpretation(
     proteinGrams: Double,
     carbsGrams: Double,
@@ -347,6 +366,7 @@ fun macroSplitInterpretation(
     )
 }
 
+/** Against WHO's 150 minutes a week (Bull et al. 2020, doi:10.1136/bjsports-2020-102955). */
 fun workoutGuidelineProgress(
     loggedMinutes: Double,
     referenceMinutes: Double = 150.0,
@@ -374,11 +394,21 @@ fun workoutGuidelineProgress(
     )
 }
 
+/**
+ * 60–100 bpm: adult convention, set by consensus, never tested. Spodick
+ * 1996 (doi:10.1097/00007611-199607000-00003) proposes 50–90. The 2018
+ * ACC/AHA/HRS bradycardia guideline sets the floor at 50
+ * (doi:10.1161/CIR.0000000000000628).
+ */
 fun restingHeartRateContext(bpm: Long): VitalContextInterpretation? {
     if (bpm <= 0L) return null
     return referenceRangeContext(bpm.toDouble(), 60.0, 100.0)
 }
 
+/**
+ * 12–18 breaths a minute: textbook convention, no primary study. NEWS2
+ * (Royal College of Physicians 2017) scores 12–20 as normal.
+ */
 fun respiratoryRateContext(breathsPerMinute: Double): VitalContextInterpretation? =
     if (breathsPerMinute <= 0.0) {
         null
@@ -386,6 +416,12 @@ fun respiratoryRateContext(breathsPerMinute: Double): VitalContextInterpretation
         referenceRangeContext(breathsPerMinute, 12.0, 18.0)
     }
 
+/**
+ * 36.1–37.2 °C. Upper bound: early-morning limit, Mackowiak et al. 1992,
+ * doi:10.1001/jama.1992.03490120092034 (whole-day limit 37.7 °C). Lower
+ * bound: convention (97 °F), also NEWS2's lower normal edge. Obermeyer et
+ * al. 2017 (doi:10.1136/bmj.j5468): 95 % of people at 35.7–37.3 °C.
+ */
 fun bodyTemperatureContext(celsius: Double): VitalContextInterpretation? =
     if (celsius <= 0.0) {
         null
@@ -393,6 +429,12 @@ fun bodyTemperatureContext(celsius: Double): VitalContextInterpretation? =
         referenceRangeContext(celsius, 36.1, 37.2)
     }
 
+/**
+ * Tiers derived from the BTS oxygen guideline, which does not name them
+ * (O'Driscoll et al. 2017, doi:10.1136/thoraxjnl-2016-209729). Below 95:
+ * under its 94–98 % target. 92 and 88: its target range with hypercapnia
+ * risk. NEWS2 also scores below 96.
+ */
 fun oxygenSaturationContext(percent: Double): VitalContextInterpretation? {
     if (percent <= 0.0) return null
     val status = when {

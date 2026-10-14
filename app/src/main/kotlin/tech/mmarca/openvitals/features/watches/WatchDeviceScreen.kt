@@ -265,8 +265,8 @@ fun WatchDeviceScreen(
         }
 
         SectionHeader(stringResource(R.string.settings_watch_section_device))
-        if (isGarmin) {
-            // First: the schedule decides whether this screen is ever visited again.
+        // First: the schedule decides whether this screen is ever visited again.
+        if (isGarmin || device.isWearosWatch) {
             AutoSyncCard(
                 selected = state.autoSync,
                 backgroundReadMissing = state.backgroundReadMissing,
@@ -282,6 +282,8 @@ fun WatchDeviceScreen(
                     backgroundAccessLauncher.launch(setOf(viewModel.backgroundReadPermission))
                 },
             )
+        }
+        if (isGarmin) {
             OpenVitalsCard {
                 Column(
                     modifier = Modifier
