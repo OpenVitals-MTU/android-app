@@ -552,6 +552,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">Systolinen (mmHg)</string>
     <string name="vitals_entry_diastolic_label">Diastolinen (mmHg)</string>
+    <string name="vitals_entry_pulse_label">Pulssi (bpm, valinnainen)</string>
+    <string name="vitals_entry_pulse_permission_needed">Jotta OpenVitals voi tallentaa pulssin mittauksen mukana, se tarvitsee Health Connectissa sykkeen kirjoitusoikeuden. Pulssi tallennetaan syketietueena mittauksen ajankohtaan.</string>
+    <string name="vitals_entry_invalid_pulse">Anna pulssi väliltä 20–300 bpm tai jätä kenttä tyhjäksi.</string>
     <string name="vitals_entry_add_selected">Lisää %1$s</string>
     <string name="vitals_entry_invalid_value">Anna kelvollinen arvo tälle elintoiminnolle.</string>
     <string name="vitals_entry_write_failed">Elintoimintoa ei voitu tallentaa: %1$s</string>

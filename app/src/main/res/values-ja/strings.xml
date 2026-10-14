@@ -496,6 +496,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">収縮期 (mmHg)</string>
     <string name="vitals_entry_diastolic_label">拡張期 (mmHg)</string>
+    <string name="vitals_entry_pulse_label">脈拍（bpm、任意）</string>
+    <string name="vitals_entry_pulse_permission_needed">測定値とともに脈拍を保存するには、OpenVitals に Health Connect の心拍数の書き込み権限が必要です。脈拍は測定時刻の心拍数レコードとして保存されます。</string>
+    <string name="vitals_entry_invalid_pulse">20〜300 bpm の脈拍を入力するか、空欄のままにしてください。</string>
     <string name="vitals_entry_add_selected">%1$s を追加</string>
     <string name="vitals_entry_invalid_value">このバイタルに有効な値を入力してください。</string>
     <string name="vitals_entry_write_failed">バイタルを保存できませんでした: %1$s</string>

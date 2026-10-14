@@ -68,8 +68,9 @@ resolves one in this order:
 1. The maximum you entered in [Body profile](settings-and-preferences.md).
 2. The highest rate actually observed, when it is plausible against your resting
    rate.
-3. An age estimate, using Tanaka (208 − 0.7 × age), which is more accurate across
-   ages than the older 220 − age rule.
+3. An age estimate: Gulati (206 − 0.88 × age) when the body profile says female,
+   otherwise Tanaka (208 − 0.7 × age). Both are more accurate than the older
+   220 − age rule.
 
 An estimated maximum widens the band that counts as near-maximal, because the
 estimate itself is uncertain. If none of the three can be resolved, the reading
