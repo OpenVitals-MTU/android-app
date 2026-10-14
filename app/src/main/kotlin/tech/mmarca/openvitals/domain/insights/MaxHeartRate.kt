@@ -35,7 +35,8 @@ fun tanakaMaxHeartRate(ageYears: Int): Long =
 /**
  * The bar an observed maximum must clear: at least this, and at least
  * [observedMaxHeartRateRestingDeltaBpm] above resting. Otherwise the highest
- * sample on record is a brisk walk up the stairs.
+ * sample on record is a brisk walk up the stairs. Both thresholds: app
+ * heuristic, no published source.
  */
 const val observedMaxHeartRateMinimumBpm = 150
 const val observedMaxHeartRateRestingDeltaBpm = 60
