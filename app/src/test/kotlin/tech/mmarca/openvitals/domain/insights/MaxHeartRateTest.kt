@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import tech.mmarca.openvitals.domain.preferences.BiologicalSex
 
 class MaxHeartRateTest {
 
@@ -36,5 +37,13 @@ class MaxHeartRateTest {
         // Resting 95: bar is 155; 155 clears it, 154 does not.
         assertTrue(isObservedMaxHeartRateTrustworthy(155, 95))
         assertFalse(isObservedMaxHeartRateTrustworthy(154, 95))
+    }
+
+    @Test
+    fun `women get Gulati's formula, everyone else Tanaka's`() {
+        // Age 40: Gulati 206 − 35.2 = 170.8, Tanaka 208 − 28 = 180.
+        assertEquals(171L, ageMaxHeartRate(40, BiologicalSex.FEMALE))
+        assertEquals(180L, ageMaxHeartRate(40, BiologicalSex.MALE))
+        assertEquals(180L, ageMaxHeartRate(40, null))
     }
 }

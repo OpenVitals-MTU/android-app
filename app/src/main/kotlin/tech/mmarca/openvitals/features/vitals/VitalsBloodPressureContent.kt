@@ -86,9 +86,13 @@ internal fun LazyListScope.bloodPressureContent(
                 )
             },
             entries = {
+                val bpmUnit = stringResource(R.string.unit_bpm)
                 HeartEntryListContent(
                     entries = state.bloodPressure,
-                    value = { unitFormatter.bloodPressure(it.systolicMmHg, it.diastolicMmHg).text },
+                    value = { entry ->
+                        val reading = unitFormatter.bloodPressure(entry.systolicMmHg, entry.diastolicMmHg).text
+                        entry.pulseBpm?.let { pulse -> "$reading · $pulse $bpmUnit" } ?: reading
+                    },
                     source = { it.source },
                     time = { it.time },
                     dateTimeFormatterProvider = dateTimeFormatterProvider,

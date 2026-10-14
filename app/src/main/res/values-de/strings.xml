@@ -355,6 +355,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">Systolisch (mmHg)</string>
     <string name="vitals_entry_diastolic_label">Diastolisch (mmHg)</string>
+    <string name="vitals_entry_pulse_label">Puls (bpm, optional)</string>
+    <string name="vitals_entry_pulse_permission_needed">Um den Puls mit einer Messung zu speichern, benötigt OpenVitals in Health Connect die Schreibberechtigung für Herzfrequenz. Der Puls wird als Herzfrequenz-Eintrag zum Zeitpunkt der Messung gespeichert.</string>
+    <string name="vitals_entry_invalid_pulse">Gib einen Puls zwischen 20 und 300 bpm ein oder lass das Feld leer.</string>
     <string name="vitals_entry_add_selected">%1$s hinzufügen</string>
     <string name="vitals_entry_invalid_value">Gib einen gültigen Wert für diesen Vitalwert ein.</string>
     <string name="vitals_entry_write_failed">Vitalwert konnte nicht gespeichert werden: %1$s</string>

@@ -411,6 +411,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">收缩压 (mmHg)</string>
     <string name="vitals_entry_diastolic_label">舒张压 (mmHg)</string>
+    <string name="vitals_entry_pulse_label">脉搏（bpm，可选）</string>
+    <string name="vitals_entry_pulse_permission_needed">要将脉搏与测量值一起保存，OpenVitals 需要 Health Connect 的心率写入权限。脉搏会保存为测量时间的心率记录。</string>
+    <string name="vitals_entry_invalid_pulse">请输入 20 至 300 bpm 之间的脉搏，或留空。</string>
     <string name="vitals_entry_add_selected">添加 %1$s</string>
     <string name="vitals_entry_invalid_value">请输入有效的生命体征值。</string>
     <string name="vitals_entry_write_failed">无法保存生命体征：%1$s</string>

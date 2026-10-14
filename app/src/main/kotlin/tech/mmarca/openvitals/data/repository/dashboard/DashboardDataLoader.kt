@@ -871,6 +871,7 @@ class DashboardDataLoader @Inject constructor(
                     cardioLoadScore = cardioLoad.score,
                     ageYears = ageYears,
                     explicitMaxHeartRate = explicitMaxHeartRate,
+                    sex = bodyProfile?.sex,
                 )
                 cardioEstimatesByDate[day] = cardioLoad
                 intensityEstimatesByDate[day] = intensityMinutes

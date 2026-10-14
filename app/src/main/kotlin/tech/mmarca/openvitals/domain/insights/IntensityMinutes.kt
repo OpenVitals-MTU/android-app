@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.domain.insights
 import java.time.Duration
 import kotlin.math.roundToInt
 import tech.mmarca.openvitals.domain.model.HeartRateSample
+import tech.mmarca.openvitals.domain.preferences.BiologicalSex
 
 /**
  * WHO 2020: 150 moderate minutes a week. One vigorous minute counts as two.
@@ -100,10 +101,11 @@ fun calculateIntensityMinutes(
     cardioLoadScore: Int?,
     ageYears: Int? = null,
     explicitMaxHeartRate: Long? = null,
+    sex: BiologicalSex? = null,
 ): IntensityMinutesEstimate {
     val resting = restingHeartRate ?: baselineRestingHeartRate ?: samples.estimatedRestingHeartRate()
     val maxHeartRate = resting?.let {
-        maxHeartRateContext(observedMaxHeartRate, samples, it, ageYears, explicitMaxHeartRate)
+        maxHeartRateContext(observedMaxHeartRate, samples, it, ageYears, sex, explicitMaxHeartRate)
     }
     if (resting != null && maxHeartRate != null) {
         val heartRateEstimate = calculateHeartRateReserveIntensity(
@@ -273,6 +275,7 @@ private fun maxHeartRateContext(
     samples: List<HeartRateSample>,
     restingHeartRate: Long,
     ageYears: Int?,
+    sex: BiologicalSex?,
     explicitMaxHeartRate: Long? = null,
 ): IntensityMaxHeartRateContext? {
     // A user-stated maximum outranks everything, as in heart-rate recovery.
@@ -285,9 +288,9 @@ private fun maxHeartRateContext(
         ObservedMaxHeartRateMinimumBpm,
         restingHeartRate + ObservedMaxHeartRateRestingDeltaBpm,
     )
-    // As in cardio load: Tanaka beats a quiet fortnight's ceiling.
+    // As in cardio load: the age formula beats a quiet fortnight's ceiling.
     val estimatedMax = maxOf(
-        ageYears?.let { tanakaMaxHeartRate(it) } ?: 0L,
+        ageYears?.let { ageMaxHeartRate(it, sex) } ?: 0L,
         observedMax + 10L,
         restingHeartRate + 70L,
     )

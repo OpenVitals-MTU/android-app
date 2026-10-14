@@ -411,6 +411,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">Systolique (mmHg)</string>
     <string name="vitals_entry_diastolic_label">Diastolique (mmHg)</string>
+    <string name="vitals_entry_pulse_label">Pouls (bpm, facultatif)</string>
+    <string name="vitals_entry_pulse_permission_needed">Pour enregistrer le pouls avec une mesure, OpenVitals a besoin de l\'autorisation d\'écriture de la fréquence cardiaque dans Health Connect. Le pouls est enregistré comme un relevé de fréquence cardiaque à l\'heure de la mesure.</string>
+    <string name="vitals_entry_invalid_pulse">Saisissez un pouls entre 20 et 300 bpm, ou laissez le champ vide.</string>
     <string name="vitals_entry_add_selected">Ajouter %1$s</string>
     <string name="vitals_entry_invalid_value">Saisissez une valeur valide pour cette constante.</string>
     <string name="vitals_entry_write_failed">Impossible d\'enregistrer la constante : %1$s</string>
