@@ -32,7 +32,7 @@ No OpenVitals account is required, and the app has no `INTERNET` permission. Ope
 - Log by hand: drinks and hydration, food and nutrition, activities, mindfulness, cycle records, weight, height, body fat, blood pressure, SpO2, respiratory rate and body temperature. Records with a matching Health Connect type are written there; some cycle-journal data stays local because Health Connect has no record type for it.
 - Record activities with GPS, offline maps and Bluetooth sensors. Routes and workouts can also be imported, and guided workout plans can be run from the phone.
 - Read recovery views derived on the phone: Daily Readiness, Body Energy and Training Readiness, together with HRV status, physiological stress, adaptive goals and explanation screens based on the data available.
-- Bring in Apple Health exports, CSV files of measurements or meals, route and workout files, and supported medical records.
+- Bring in Apple Health exports, CSV files of measurements or meals, a cycle history exported by drip, route and workout files, and supported medical records.
 - Generate PDF health reports fully on-device, with charts, statistics and sections for supported health data.
 - Track your cycle with a local day journal, estimates, reminders, pill tracking, backup and a home-screen widget alongside the records kept in Health Connect.
 - Put widgets on the home screen for readiness, Body Energy, vitals, selected metrics and quick beverage logging.
@@ -102,7 +102,7 @@ Guidance can also be sent to a paired Garmin watch on its own switch, independen
 
 ### Wear OS watches
 
-A [Wear OS watch](https://docs.openvitals.health/features/smartwatches) running the OpenVitals Wear OS app records heart rate and what a sleep estimate needs. A sync from the phone copies the heart rate into Health Connect and writes one estimated sleep session per night, and a status card shows whether the watch is paired and the watch app answers. No vendor app is needed on the phone once the watch is paired. The watch app is still in development, for testers: it is not on any store yet and is [installed over adb](https://docs.openvitals.health/how-to/wear-os-sideload).
+A [Wear OS watch](https://docs.openvitals.health/features/smartwatches) running the OpenVitals Wear OS app records heart rate and what a sleep estimate needs. A sync from the phone, on a tap or on a schedule, copies the heart rate into Health Connect and writes one estimated sleep session per night, and a status card shows whether the watch is paired and the watch app answers. No vendor app is needed on the phone once the watch is paired. The watch app is still in development, for testers: it is not on any store yet and is [installed over adb](https://docs.openvitals.health/how-to/wear-os-sideload).
 
 ### Sync with another phone
 
@@ -139,7 +139,7 @@ OpenVitals currently has screens or data handling for:
 - **Body:** weight, height, BMI, body fat, lean body mass, BMR, bone mass, body water and Fat-Free Mass Index (FFMI) where the required measurements are available.
 - **Nutrition, hydration and caffeine:** drinks, hydration, meals, calories, macros, caffeine and the additional Health Connect nutrients present in the data.
 - **Mindfulness:** session history, totals, goals and timer/manual logging where the installed Health Connect provider supports mindfulness records.
-- **Cycle tracking:** periods and flow, ovulation tests, cervical mucus, basal body temperature, intermenstrual bleeding and sexual activity. The local journal also keeps data that Health Connect has no record type for, such as pain, mood, energy, symptoms and notes.
+- **Cycle tracking:** periods and flow, ovulation tests, cervical mucus, basal body temperature, intermenstrual bleeding and sexual activity. The local journal also keeps data that Health Connect has no record type for, such as pain, mood, energy, desire, the cervix, symptoms and notes.
 - **Goals:** configurable daily goals for supported activity metrics, workout minutes, hydration, sleep, nutrition and mindfulness.
 - **Achievements:** badges and progress for daily steps, lifetime distance, floors and other supported achievement categories.
 - **Medical records:** the Health Connect medical-record categories available on Android 14 and newer with a recent Health Connect module. Records are shown as stored; OpenVitals does not interpret their clinical meaning.
