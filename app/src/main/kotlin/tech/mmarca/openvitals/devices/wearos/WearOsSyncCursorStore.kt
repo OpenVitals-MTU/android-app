@@ -48,11 +48,11 @@ class WearOsSyncCursorStore(private val prefs: SharedPreferences) {
     }
 
     /** The floor cursor, or [Instant.EPOCH] for a watch never synced. */
-    fun floorsCursor(deviceId: String): Instant =
-        Instant.ofEpochMilli(prefs.getLong(floorsKey(deviceId), 0L))
+    fun ascentCursor(deviceId: String): Instant =
+        Instant.ofEpochMilli(prefs.getLong(ascentKey(deviceId), 0L))
 
-    fun setFloorsCursor(deviceId: String, at: Instant) {
-        prefs.edit { putLong(floorsKey(deviceId), at.toEpochMilli()) }
+    fun setAscentCursor(deviceId: String, at: Instant) {
+        prefs.edit { putLong(ascentKey(deviceId), at.toEpochMilli()) }
     }
 
     fun clear(deviceId: String) {
@@ -60,7 +60,7 @@ class WearOsSyncCursorStore(private val prefs: SharedPreferences) {
             remove(key(deviceId))
             remove(sleepKey(deviceId))
             remove(stepsKey(deviceId))
-            remove(floorsKey(deviceId))
+            remove(ascentKey(deviceId))
         }
     }
 
@@ -70,7 +70,7 @@ class WearOsSyncCursorStore(private val prefs: SharedPreferences) {
 
     private fun stepsKey(deviceId: String) = "steps_cursor_$deviceId"
 
-    private fun floorsKey(deviceId: String) = "floors_cursor_$deviceId"
+    private fun ascentKey(deviceId: String) = "ascent_cursor_$deviceId"
 
     private companion object {
         const val PREFS_FILE = "wearos_sync_cursors"
