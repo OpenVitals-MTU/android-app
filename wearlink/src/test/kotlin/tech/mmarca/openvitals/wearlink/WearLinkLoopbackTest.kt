@@ -22,7 +22,7 @@ class WearLinkLoopbackTest {
 
         val session = (WearLinkClient.hello(link.clientConnection, hello()) as WearLinkOutcome.Ok).value
         assertEquals("Galaxy Watch8 (89FZ)", session.peer.name)
-        assertEquals(setOf("hr", "sm"), session.peer.capabilities)
+        assertEquals(setOf("hr", "sm", "st"), session.peer.capabilities)
         assertEquals(WearLinkOutcome.Ok(Unit), session.ping())
         assertFalse(link.serverReturned())
         session.close()
@@ -85,6 +85,7 @@ class WearLinkLoopbackTest {
             WearLinkProtocol.SleepMinute(1_700_000_000_000L + index * 60_000L, WearLinkProtocol.MinuteKind.RAW, 7200, 16, 300, 0, 58, 12, 6, intArrayOf(0, 0, 1000), intArrayOf(3, 3, 3), 88, 90, 1)
         }
         loopback.handler.heartRate = List(10) { WearLinkProtocol.HeartRateSample(1_700_000_000_000L + it * 10_000L, 60 + it) }
+        loopback.handler.steps = List(3) { WearLinkProtocol.StepMinute(1_700_000_040_000L + it * 60_000L, 90 + it) }
         val link = loopback.connect()
         val session = (WearLinkClient.hello(link.clientConnection, hello()) as WearLinkOutcome.Ok).value
 
@@ -96,6 +97,8 @@ class WearLinkLoopbackTest {
         assertFalse(rest.more)
         val heart = (session.pullHeartRate(0, 2000) as WearLinkOutcome.Ok).value
         assertEquals(10, heart.items.size)
+        val steps = (session.pullSteps(0, 2000) as WearLinkOutcome.Ok).value
+        assertEquals(loopback.handler.steps, steps.items)
         assertFalse(link.serverReturned())
         session.close()
         assertEquals(WearLinkServer.Outcome.SERVED, link.serverOutcome())

@@ -46,6 +46,15 @@ class WearLinkSession internal constructor(
         }
     }
 
+    fun pullSteps(sinceEpochMillis: Long, limit: Int): WearLinkOutcome<Page<WearLinkProtocol.StepMinute>> {
+        val items = ArrayList<WearLinkProtocol.StepMinute>()
+        return exchange(WearLinkProtocol.Request.StepsSince(sinceEpochMillis, limit)) { line ->
+            WearLinkProtocol.parseStepMinute(line)?.let { items += it; return@exchange Reply.More }
+            WearLinkProtocol.parseEnd(line)?.let { return@exchange Reply.Done(Page(items, it.more)) }
+            Reply.Unexpected
+        }
+    }
+
     /** Closes the connection; the watch is waiting for exactly this. */
     fun close() = connection.close()
 

@@ -3789,6 +3789,12 @@
         <item quantity="many">Zsynchronizowano %1$d próbek tętna</item>
         <item quantity="other">Zsynchronizowano %1$d próbki tętna</item>
     </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">Kroki z %1$d minuty</item>
+        <item quantity="few">Kroki z %1$d minut</item>
+        <item quantity="many">Kroki z %1$d minut</item>
+        <item quantity="other">Kroki z %1$d minuty</item>
+    </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">Oszacowano sen z %1$d nocy</item>
         <item quantity="few">Oszacowano sen z %1$d nocy</item>

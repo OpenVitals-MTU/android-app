@@ -19,7 +19,7 @@ import tech.mmarca.openvitals.domain.insights.bodyComposition
 import tech.mmarca.openvitals.domain.insights.bodyCompositionMissingInputs
 import tech.mmarca.openvitals.domain.model.ScaleWeighIn
 import tech.mmarca.openvitals.domain.preferences.BodyProfile
-import tech.mmarca.openvitals.features.imports.applehealth.isDuplicateClientRecordFailure
+import tech.mmarca.openvitals.data.repository.isDuplicateClientRecordFailure
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectSyncDisabledException
 

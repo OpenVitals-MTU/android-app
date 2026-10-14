@@ -83,16 +83,22 @@ class MemoryTrustStore : WearLinkTrustStore {
 class MemoryHandler(
     var heartRate: List<WearLinkProtocol.HeartRateSample> = emptyList(),
     var minutes: List<WearLinkProtocol.SleepMinute> = emptyList(),
+    var steps: List<WearLinkProtocol.StepMinute> = emptyList(),
     var name: String = "Galaxy Watch8 (89FZ)",
 ) : WearLinkRequestHandler {
     override fun localName(): String = name
-    override fun capabilities(): Set<String> = setOf(WearLinkProtocol.CAP_HEART_RATE, WearLinkProtocol.CAP_SLEEP_MINUTES)
+    override fun capabilities(): Set<String> =
+        setOf(WearLinkProtocol.CAP_HEART_RATE, WearLinkProtocol.CAP_SLEEP_MINUTES, WearLinkProtocol.CAP_STEPS)
     override fun heartRateSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.HeartRateSample> {
         val newer = heartRate.filter { it.epochMillis > sinceEpochMillis }
         return Page(newer.take(limit), newer.size > limit)
     }
     override fun sleepMinutesSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.SleepMinute> {
         val newer = minutes.filter { it.epochMillis > sinceEpochMillis }
+        return Page(newer.take(limit), newer.size > limit)
+    }
+    override fun stepsSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.StepMinute> {
+        val newer = steps.filter { it.epochMillis > sinceEpochMillis }
         return Page(newer.take(limit), newer.size > limit)
     }
 }

@@ -33,6 +33,8 @@ import tech.mmarca.openvitals.domain.model.WearSleepMinute
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import io.mockk.slot
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.StepsRecord
 
 /**
  * What a Wear OS sync does around the link. The watch is a fake here: the
@@ -63,6 +65,11 @@ class WearOsWatchSyncServiceTest {
     private val sleepPages = ArrayDeque<WearOsSleepMinutePage?>()
     private val sleepPullsSince = mutableListOf<Instant>()
     private var sleepPullFailure: Throwable? = null
+
+    /** The minutes the watch holds; a pull answers those after `since`, [STEP_PAGE] at a time. */
+    private val watchSteps = mutableListOf<WearOsStepMinute>()
+    private val stepPullsSince = mutableListOf<Instant>()
+    private var stepsNotPaired = false
     private val nodePort = object : WearOsNodePort {
         override suspend fun checkStatus(targetAddress: String?, targetName: String?) = WearOsCompanionStatus()
         override suspend fun pullHeartRate(targetAddress: String?, targetName: String?, since: Instant): WearOsHeartRatePage? {
@@ -80,7 +87,38 @@ class WearOsWatchSyncServiceTest {
             }
             return sleepPages.removeFirst()
         }
+
+        override suspend fun pullSteps(targetAddress: String?, targetName: String?, since: Instant): WearOsStepPage? {
+            stepPullsSince += since
+            if (stepsNotPaired) return null
+            val after = watchSteps.filter { it.start.isAfter(since) }.sortedBy { it.start }
+            return WearOsStepPage(after.take(STEP_PAGE), hasMore = after.size > STEP_PAGE)
+        }
     }
+
+    /**
+     * Health Connect's rule for a `clientRecordId`: a batch is refused whole
+     * when one record is already there at the same or a higher version.
+     */
+    private val healthConnectVersions = mutableMapOf<String, Long>()
+    private val insertCalls = mutableListOf<List<androidx.health.connect.client.records.Record>>()
+
+    init {
+        coEvery { healthConnect.grantedPermissions() } returns setOf(HealthPermission.getWritePermission(StepsRecord::class))
+        coEvery { importRepository.insertImportedRecords(any()) } answers {
+            val records = firstArg<List<androidx.health.connect.client.records.Record>>()
+            insertCalls += records
+            val present = records.any { record ->
+                val id = record.metadata.clientRecordId ?: return@any false
+                (healthConnectVersions[id] ?: Long.MIN_VALUE) >= record.metadata.clientRecordVersion
+            }
+            if (present) throw IllegalStateException("clientRecordId already exists")
+            records.forEach { record -> record.metadata.clientRecordId?.let { healthConnectVersions[it] = record.metadata.clientRecordVersion } }
+        }
+    }
+
+    private fun stepCounts(): Map<Instant, Long> =
+        insertCalls.flatten().filterIsInstance<StepsRecord>().associate { it.startTime to it.count }
 
     private fun service() = WearOsWatchSyncService(
         nodePort = nodePort,
@@ -137,6 +175,90 @@ class WearOsWatchSyncServiceTest {
         coVerify(exactly = 1) { deviceRepository.markSynced(WATCH.id, any()) }
         assertEquals(DeviceSyncPhase.HANDSHAKE, progress.first().phase)
         assertEquals(DeviceSyncPhase.COMPLETE, progress.last().phase)
+    }
+
+    @Test
+    fun `step minutes are pulled page by page, each from the newest minute written`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += List(5) { WearOsStepMinute(t0.plusSeconds(60L * it), 10 + it) }
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 5), result)
+        assertEquals(listOf(Instant.EPOCH, t0.plusSeconds(60), t0.plusSeconds(180)), stepPullsSince)
+        assertEquals(t0.plusSeconds(240), cursors.stepsCursor(WATCH.id))
+        assertEquals((0..4).associate { t0.plusSeconds(60L * it) to 10L + it }, stepCounts())
+    }
+
+    @Test
+    fun `the next sync takes the cursor minute again, and a minute that grew replaces its record`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += listOf(WearOsStepMinute(t0, 40), WearOsStepMinute(t0.plusSeconds(60), 12))
+        service().sync(WATCH, Duration.ZERO, null)
+
+        // Late steps for the cursor minute, and a new minute.
+        watchSteps[1] = WearOsStepMinute(t0.plusSeconds(60), 30)
+        watchSteps += WearOsStepMinute(t0.plusSeconds(120), 7)
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        insertCalls.clear()
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(t0.plusSeconds(60).minusMillis(1), stepPullsSince.last())
+        assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 2), result)
+        assertEquals(mapOf(t0.plusSeconds(60) to 30L, t0.plusSeconds(120) to 7L), stepCounts())
+    }
+
+    @Test
+    fun `an unchanged cursor minute does not make the new minutes fall back to one by one`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 40)
+        service().sync(WATCH, Duration.ZERO, null)
+
+        watchSteps += listOf(WearOsStepMinute(t0.plusSeconds(60), 5), WearOsStepMinute(t0.plusSeconds(120), 6))
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        insertCalls.clear()
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        // The cursor minute is written alone and refused as present; no record is tried twice.
+        assertEquals(listOf(t0), insertCalls.first().map { (it as StepsRecord).startTime })
+        assertEquals(3, insertCalls.sumOf { it.size })
+        assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 2), result)
+    }
+
+    @Test
+    fun `without the grant to write steps, the steps stay on the watch and sleep still syncs`() = runTest {
+        coEvery { healthConnect.grantedPermissions() } returns emptySet()
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 40)
+        sleepPages += WearOsSleepMinutePage(nightMinutes(), hasMore = false)
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(DeviceSyncResult.Succeeded(0, nightCount = 1), result)
+        assertEquals(emptyList<Instant>(), stepPullsSince)
+        assertEquals(Instant.EPOCH, cursors.stepsCursor(WATCH.id))
+    }
+
+    @Test
+    fun `a watch that is no longer paired during the step pull fails the sync`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        stepsNotPaired = true
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(ScreenError.Text(R.string.settings_watch_wearos_bt_not_paired), (result as DeviceSyncResult.Failed).error)
+        assertEquals(Instant.EPOCH, cursors.stepsCursor(WATCH.id))
+    }
+
+    @Test
+    fun `a watch that stops answering after steps were written says so`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 40)
+        sleepPullFailure = WearOsLinkFailure.NoAnswer()
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(ScreenError.Text(R.string.settings_watch_wearos_fail_partial), (result as DeviceSyncResult.Failed).error)
     }
 
     @Test
@@ -290,6 +412,8 @@ class WearOsWatchSyncServiceTest {
     }
 
     private companion object {
+        const val STEP_PAGE = 2
+
         val WATCH = BleSensorDevice(
             id = "watch-1",
             displayName = "Galaxy Watch8",

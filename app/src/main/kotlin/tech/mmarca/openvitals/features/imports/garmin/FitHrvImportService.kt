@@ -10,7 +10,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
-import tech.mmarca.openvitals.features.imports.applehealth.isDuplicateClientRecordFailure
+import tech.mmarca.openvitals.data.repository.isDuplicateClientRecordFailure
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.FitHrvReading
 import tech.mmarca.openvitals.healthconnect.HealthConnectRateLimitBackoff
 

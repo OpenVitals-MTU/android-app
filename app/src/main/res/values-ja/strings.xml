@@ -3789,6 +3789,10 @@
         <item quantity="one">%1$d 件の心拍数サンプルを同期しました</item>
         <item quantity="other">%1$d 件の心拍数サンプルを同期しました</item>
     </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">%1$d 分間の歩数</item>
+        <item quantity="other">%1$d 分間の歩数</item>
+    </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">%1$d 晩の睡眠を推定しました</item>
         <item quantity="other">%1$d 晩の睡眠を推定しました</item>

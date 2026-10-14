@@ -3753,6 +3753,11 @@
         <item quantity="many">%1$d échantillons de fréquence cardiaque synchronisés</item>
         <item quantity="other">%1$d échantillons de fréquence cardiaque synchronisés</item>
     </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">Pas sur %1$d minute</item>
+        <item quantity="many">Pas sur %1$d minutes</item>
+        <item quantity="other">Pas sur %1$d minutes</item>
+    </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">%1$d nuit de sommeil estimée</item>
         <item quantity="many">%1$d nuits de sommeil estimées</item>

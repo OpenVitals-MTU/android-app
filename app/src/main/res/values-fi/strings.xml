@@ -3717,6 +3717,10 @@
         <item quantity="one">%1$d sykenäyte synkronoitu</item>
         <item quantity="other">%1$d sykenäytettä synkronoitu</item>
     </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">Askeleet %1$d minuutilta</item>
+        <item quantity="other">Askeleet %1$d minuutilta</item>
+    </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">Arvioitu %1$d yön uni</item>
         <item quantity="other">Arvioitu %1$d yön unet</item>
