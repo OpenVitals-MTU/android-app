@@ -50,4 +50,12 @@ class BodyProfileTest {
         assertNull(profile.ageYears(LocalDate.of(2026, 6, 30)))
         assertTrue(profile.signature(LocalDate.of(2026, 6, 30)).contains("auto"))
     }
+
+    @Test
+    fun `sex is in the signature, so a change rebuilds Body Energy`() {
+        val date = LocalDate.of(2026, 6, 30)
+        val female = BodyProfile(birthYear = 1986, sex = BiologicalSex.FEMALE).signature(date)
+        val unknown = BodyProfile(birthYear = 1986).signature(date)
+        assertTrue(female != unknown)
+    }
 }
