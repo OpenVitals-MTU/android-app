@@ -3796,6 +3796,10 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
         <item quantity="one">%1$d mostra de frecuencia cardíaca sincronizada</item>
         <item quantity="other">%1$d mostras de frecuencia cardíaca sincronizadas</item>
     </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">Pasos de %1$d minuto</item>
+        <item quantity="other">Pasos de %1$d minutos</item>
+    </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">%1$d noite de sono estimada</item>
         <item quantity="other">%1$d noites de sono estimadas</item>

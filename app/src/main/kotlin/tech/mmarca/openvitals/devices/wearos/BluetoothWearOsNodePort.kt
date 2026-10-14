@@ -96,6 +96,23 @@ class BluetoothWearOsNodePort @Inject constructor(
         }
     }
 
+    override suspend fun pullSteps(
+        targetAddress: String?,
+        targetName: String?,
+        since: Instant,
+    ): WearOsStepPage? = withContext(Dispatchers.IO) {
+        val match = bondedWatchOrNull(targetAddress, targetName) ?: return@withContext null
+        withSession(match, targetAddress, PULL_TIMEOUT_MS) { session ->
+            // A watch app from before steps would answer the request with an error.
+            if (WearLinkProtocol.CAP_STEPS !in session.peer.capabilities) return@withSession WearOsStepPage(emptyList(), false)
+            val page = unwrap(session.pullSteps(since.toEpochMilli(), WearLinkProtocol.MAX_STEP_MINUTES_PER_REQUEST))
+            WearOsStepPage(
+                minutes = page.items.map { WearOsStepMinute(Instant.ofEpochMilli(it.epochMillis), it.steps) },
+                hasMore = page.more,
+            )
+        }
+    }
+
     /** The name the watch gave in its last `OK`, for the status card. */
     @Volatile
     private var lastWatchName: String? = null
@@ -167,7 +184,7 @@ class BluetoothWearOsNodePort @Inject constructor(
             }
             val hello = WearLinkProtocol.Hello(
                 version = WearLinkProtocol.VERSION,
-                capabilities = setOf(WearLinkProtocol.CAP_HEART_RATE, WearLinkProtocol.CAP_SLEEP_MINUTES),
+                capabilities = setOf(WearLinkProtocol.CAP_HEART_RATE, WearLinkProtocol.CAP_SLEEP_MINUTES, WearLinkProtocol.CAP_STEPS),
                 token = linkStore.tokenFor(match.address),
                 name = localName(adapter),
             )

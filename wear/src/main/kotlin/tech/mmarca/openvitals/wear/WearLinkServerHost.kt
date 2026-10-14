@@ -119,6 +119,9 @@ class WearLinkServerHost(
         override fun sleepMinutesSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.SleepMinute> =
             page(WearMetrics.SLEEP_MINUTES, sinceEpochMillis, limit)
 
+        override fun stepsSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.StepMinute> =
+            page(WearMetrics.STEPS, sinceEpochMillis, limit)
+
         private fun <T> page(metric: WearMetric<T>, sinceEpochMillis: Long, limit: Int): Page<T> {
             // One more than asked tells whether the limit cut the reply.
             val rows = store.since(metric, sinceEpochMillis, limit + 1)
