@@ -53,4 +53,13 @@ interface WearLinkRequestHandler {
     fun sleepMinutesSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.SleepMinute>
 
     fun stepsSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.StepMinute>
+
+    fun ascentSince(sinceEpochMillis: Long, limit: Int): Page<WearLinkProtocol.AscentMinute>
+
+    /**
+     * Blocks for up to [seconds], handing each heart rate reading to [emit]
+     * on the caller's thread as it arrives; returns how many. Returns 0 at
+     * once when the watch is off the wrist or cannot measure.
+     */
+    fun liveHeartRate(seconds: Int, emit: (WearLinkProtocol.HeartRateSample) -> Unit): Int
 }

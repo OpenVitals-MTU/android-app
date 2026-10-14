@@ -29,6 +29,10 @@ import java.util.UUID
  *   each newer than `epochMillis` (exclusive), then `END <count> <more>`.
  * - `SM_SINCE <epochMillis> <limit>` → up to `limit` `SM` lines, oldest first,
  *   each newer than `epochMillis` (exclusive), then `END <count> <more>`.
+ * - `HR_LIVE <seconds>` → for up to `seconds` (at most [MAX_LIVE_SECONDS],
+ *   less than the watch's idle timeout), one `HR` line as each reading
+ *   arrives, then `END <count> 0`. Only a watch announcing `hl` serves it; a
+ *   watch off the wrist answers `END 0 0` at once. Nothing is stored for it.
  *
  * Reply lines:
  * - `HR <epochMillis> <bpm>` — one heart rate sample.
@@ -74,6 +78,9 @@ object WearLinkProtocol {
     const val SLEEP_MINUTE: String = "SM"
     const val STEPS_SINCE: String = "ST_SINCE"
     const val STEP_MINUTE: String = "ST"
+    const val ASCENT_SINCE: String = "AS_SINCE"
+    const val ASCENT_MINUTE: String = "AS"
+    const val HEART_RATE_LIVE: String = "HR_LIVE"
     const val END: String = "END"
 
     /** Longer than this a line is a protocol violation; the reader closes rather than buffers. */
@@ -85,6 +92,8 @@ object WearLinkProtocol {
     const val CAP_HEART_RATE: String = "hr"
     const val CAP_SLEEP_MINUTES: String = "sm"
     const val CAP_STEPS: String = "st"
+    const val CAP_ASCENT: String = "as"
+    const val CAP_LIVE_HEART_RATE: String = "hl"
     const val NO_CAPABILITIES: String = "-"
 
     /** The phone's opening line. */
@@ -127,6 +136,8 @@ object WearLinkProtocol {
         data class HeartRateSince(val sinceEpochMillis: Long, val limit: Int) : Request()
         data class SleepMinutesSince(val sinceEpochMillis: Long, val limit: Int) : Request()
         data class StepsSince(val sinceEpochMillis: Long, val limit: Int) : Request()
+        data class AscentSince(val sinceEpochMillis: Long, val limit: Int) : Request()
+        data class LiveHeartRate(val seconds: Int) : Request()
     }
 
     fun formatHello(hello: Hello): String =
@@ -182,6 +193,8 @@ object WearLinkProtocol {
         is Request.HeartRateSince -> formatHeartRateRequest(request.sinceEpochMillis, request.limit)
         is Request.SleepMinutesSince -> formatSleepMinutesRequest(request.sinceEpochMillis, request.limit)
         is Request.StepsSince -> formatStepsRequest(request.sinceEpochMillis, request.limit)
+        is Request.AscentSince -> formatAscentRequest(request.sinceEpochMillis, request.limit)
+        is Request.LiveHeartRate -> "$HEART_RATE_LIVE ${request.seconds.coerceIn(1, MAX_LIVE_SECONDS)}"
     }
 
     /** Null unless [line] is a well-formed request. */
@@ -192,7 +205,18 @@ object WearLinkProtocol {
         parseSinceRequest(line, STEPS_SINCE, MAX_STEP_MINUTES_PER_REQUEST)?.let { (since, limit) ->
             return Request.StepsSince(since, limit)
         }
+        parseSinceRequest(line, ASCENT_SINCE, MAX_ASCENT_MINUTES_PER_REQUEST)?.let { (since, limit) ->
+            return Request.AscentSince(since, limit)
+        }
+        parseLiveRequest(line)?.let { return Request.LiveHeartRate(it) }
         return null
+    }
+
+    private fun parseLiveRequest(line: String): Int? {
+        val fields = fields(line)
+        if (fields.size != 2 || fields[0] != HEART_RATE_LIVE) return null
+        val seconds = fields[1].toIntOrNull() ?: return null
+        return if (seconds < 1) null else seconds.coerceAtMost(MAX_LIVE_SECONDS)
     }
 
     private fun formatCapabilities(capabilities: Set<String>): String =
@@ -223,6 +247,12 @@ object WearLinkProtocol {
     /** The most step minutes one `ST_SINCE` reply carries. The phone pages past it. */
     const val MAX_STEP_MINUTES_PER_REQUEST: Int = 2000
 
+    /** The longest one `HR_LIVE` runs: below the watch's 15-second idle timeout. The phone asks again. */
+    const val MAX_LIVE_SECONDS: Int = 10
+
+    /** The most ascent minutes one `AS_SINCE` reply carries. The phone pages past it. */
+    const val MAX_ASCENT_MINUTES_PER_REQUEST: Int = 2000
+
     data class HeartRateRequest(val sinceEpochMillis: Long, val limit: Int)
 
     data class HeartRateSample(val epochMillis: Long, val bpm: Int)
@@ -235,6 +265,15 @@ object WearLinkProtocol {
      * only grows.
      */
     data class StepMinute(val epochMillis: Long, val steps: Int)
+
+    /**
+     * The height the watch's barometer climbed in one clock minute, in
+     * decimetres, keyed on the minute's start. Elevators count too; the
+     * phone keeps only minutes with steps and derives the floors from the
+     * metres. The watch rewrites a minute while late readings arrive. The
+     * count only grows.
+     */
+    data class AscentMinute(val epochMillis: Long, val decimetres: Int)
 
     /** What the watch said about one minute. The code is what goes on the wire. */
     enum class MinuteKind(val code: String) {
@@ -321,6 +360,21 @@ object WearLinkProtocol {
         val steps = fields[2].toIntOrNull() ?: return null
         if (at <= 0 || at % MINUTE_MILLIS != 0L || steps !in 1..MAX_STEPS_PER_MINUTE) return null
         return StepMinute(at, steps)
+    }
+
+    fun formatAscentRequest(sinceEpochMillis: Long, limit: Int): String =
+        "$ASCENT_SINCE $sinceEpochMillis ${limit.coerceIn(1, MAX_ASCENT_MINUTES_PER_REQUEST)}"
+
+    fun formatAscentMinute(minute: AscentMinute): String = "$ASCENT_MINUTE ${minute.epochMillis} ${minute.decimetres}"
+
+    /** Null unless [line] is a well-formed `AS` line: a minute start and a plausible ascent. */
+    fun parseAscentMinute(line: String): AscentMinute? {
+        val fields = fields(line)
+        if (fields.size != 3 || fields[0] != ASCENT_MINUTE) return null
+        val at = fields[1].toLongOrNull() ?: return null
+        val decimetres = fields[2].toIntOrNull() ?: return null
+        if (at <= 0 || at % MINUTE_MILLIS != 0L || decimetres !in 1..MAX_ASCENT_DECIMETRES_PER_MINUTE) return null
+        return AscentMinute(at, decimetres)
     }
 
     fun formatSample(epochMillis: Long, bpm: Int): String = "$HEART_RATE $epochMillis $bpm"
@@ -434,6 +488,9 @@ object WearLinkProtocol {
 
     /** Sprinting is about 200 steps a minute. More means the counter jumped. */
     const val MAX_STEPS_PER_MINUTE: Int = 400
+
+    /** A fast elevator climbs about 600 m a minute. More means the barometer jumped. */
+    const val MAX_ASCENT_DECIMETRES_PER_MINUTE: Int = 9000
 
     /** Outside this range the sensor is reporting noise, not a heart. */
     const val MIN_BPM: Int = 25

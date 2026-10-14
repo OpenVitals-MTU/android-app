@@ -10,7 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 
 /**
  * How far each Wear OS watch has been pulled, per device id: the time of the
- * newest heart rate sample and step minute written to Health Connect, and the
+ * newest heart rate sample, step minute and floor minute pulled, and the
  * time of the newest sleep minute an estimate was made from. The next sync asks the
  * watch for what is newer. A re-pull is harmless: the imports' record ids
  * are deterministic, so an upsert follows.
@@ -47,11 +47,20 @@ class WearOsSyncCursorStore(private val prefs: SharedPreferences) {
         prefs.edit { putLong(stepsKey(deviceId), at.toEpochMilli()) }
     }
 
+    /** The floor cursor, or [Instant.EPOCH] for a watch never synced. */
+    fun ascentCursor(deviceId: String): Instant =
+        Instant.ofEpochMilli(prefs.getLong(ascentKey(deviceId), 0L))
+
+    fun setAscentCursor(deviceId: String, at: Instant) {
+        prefs.edit { putLong(ascentKey(deviceId), at.toEpochMilli()) }
+    }
+
     fun clear(deviceId: String) {
         prefs.edit {
             remove(key(deviceId))
             remove(sleepKey(deviceId))
             remove(stepsKey(deviceId))
+            remove(ascentKey(deviceId))
         }
     }
 
@@ -60,6 +69,8 @@ class WearOsSyncCursorStore(private val prefs: SharedPreferences) {
     private fun sleepKey(deviceId: String) = "sleep_cursor_$deviceId"
 
     private fun stepsKey(deviceId: String) = "steps_cursor_$deviceId"
+
+    private fun ascentKey(deviceId: String) = "ascent_cursor_$deviceId"
 
     private companion object {
         const val PREFS_FILE = "wearos_sync_cursors"

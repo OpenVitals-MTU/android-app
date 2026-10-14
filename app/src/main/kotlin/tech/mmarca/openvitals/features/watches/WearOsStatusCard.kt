@@ -46,6 +46,8 @@ internal fun WearOsStatusCard(
     isChecking: Boolean,
     onCheck: () -> Unit,
     onGrantBluetooth: () -> Unit,
+    /** The heart rate the watch streams while this screen is open; null while none arrives. */
+    liveHeartRateBpm: Int? = null,
 ) {
     val context = LocalContext.current
     if (error == ScreenError.PermissionDenied) {
@@ -119,6 +121,12 @@ internal fun WearOsStatusCard(
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
+                )
+            }
+            liveHeartRateBpm?.let { bpm ->
+                Text(
+                    text = stringResource(R.string.settings_watch_live_now, bpm),
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
             if (status.bondLost || status.appStatus == WearOsAppStatus.NOT_PAIRED) {
@@ -221,6 +229,13 @@ internal fun WearOsSyncCard(
                         text = line,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                if (sync.lastMissingBodyWeight) {
+                    Text(
+                        text = stringResource(R.string.settings_watch_wearos_needs_weight),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
