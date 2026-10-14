@@ -159,6 +159,8 @@ class WearAppService : Service() {
     /** Starts each recorder whose grant is in and whose sensor the watch has; the rest wait for a later call. */
     private fun startRecordingIfPermitted() {
         if (WearPermissions.hasHeartRate(this)) recorder.start() else Log.i(TAG, "Heart rate not granted")
+        // Without the heart rate's wake-ups the step counter must wake the watch itself.
+        stepRecorder.setHeartRateRunning(recorder.isRunning)
         when {
             !stepRecorder.hasSensor -> Log.i(TAG, "No step counter")
             WearPermissions.hasActivityRecognition(this) -> stepRecorder.start()
