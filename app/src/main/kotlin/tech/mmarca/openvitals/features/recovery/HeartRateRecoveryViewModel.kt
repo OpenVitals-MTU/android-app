@@ -276,6 +276,7 @@ class HeartRateRecoveryViewModel @Inject constructor(
                 ageYears = profile.ageYears(),
                 observedMaxHeartRateBpm = observedMaxHeartRateBpm,
                 explicitMaxHeartRateBpm = profile.maxHeartRateBpm,
+                sex = profile.sex,
             )
         }
 

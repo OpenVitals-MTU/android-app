@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
+import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
@@ -25,6 +26,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -539,6 +541,26 @@ class VitalsRepositoryTest {
         assertEquals(240.0, row.valueSum, 0.0001) // 120 × 2
         assertEquals(160.0, row.secondarySum!!, 0.0001) // 80 × 2
         assertEquals(2L, row.sampleCount)
+    }
+
+    @Test fun `a reading with a pulse needs heart rate write access, a reading alone does not`() = runTest {
+        val withoutHeartRate = VitalsRepositoryImpl(writeHc())
+        val reading = req(VitalsMeasurementType.BLOOD_PRESSURE, anchor, value = 120.0, secondary = 80.0)
+
+        withoutHeartRate.writeVitalsMeasurementEntry(reading)
+        val refused = runCatching { withoutHeartRate.writeVitalsMeasurementEntry(reading.copy(bpPulseBpm = 68)) }
+        assertTrue(refused.exceptionOrNull() is SecurityException)
+        assertFalse(withoutHeartRate.hasBpPulseWritePermission())
+
+        val heartRateWrite = HealthPermission.getWritePermission(HeartRateRecord::class)
+        val hc = writeHc(granted = allVitalsPermissions + allVitalsWritePermissions + heartRateWrite)
+        val withHeartRate = VitalsRepositoryImpl(hc)
+
+        withHeartRate.writeVitalsMeasurementEntry(reading.copy(bpPulseBpm = 68))
+
+        assertTrue(withHeartRate.hasBpPulseWritePermission())
+        assertEquals(setOf(heartRateWrite), withHeartRate.bpPulseWritePermissions)
+        coVerify(exactly = 1) { hc.writeVitalsMeasurementEntry(match { it.bpPulseBpm == 68 }) }
     }
 
     @Test fun `with no cache wired, a write still succeeds`() = runTest {

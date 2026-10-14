@@ -9,6 +9,7 @@ import java.time.LocalTime
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -420,10 +421,10 @@ class PreferencesRepositoryTest {
         assertEquals(profile.signature(), reloaded.bodyProfile().signature())
         assertEquals(BiologicalSex.FEMALE, reloaded.bodyProfile().sex)
 
-        // Clearing the sex removes it; the signature is untouched, so Body Energy does not rebuild.
+        // Clearing the sex removes it and changes the signature: sex picks the max heart rate formula.
         repo.setBodyProfile(profile.copy(sex = null))
         assertEquals(null, reload(prefs).bodyProfile().sex)
-        assertEquals(profile.signature(), repo.bodyProfile().signature())
+        assertNotEquals(profile.signature(), repo.bodyProfile().signature())
     }
 
     @Test fun `bodyEnergyCalibration round-trips manual zones`() {

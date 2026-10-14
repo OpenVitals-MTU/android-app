@@ -54,6 +54,9 @@ data class CsvImportProgress(
     /** Metrics or rows that produced no record. */
     val rejected: Int = 0,
 
+    /** Cycle journal days written or updated on this phone, from a drip export. */
+    val journalDays: Int = 0,
+
     val bytesRead: Long = 0,
     val totalBytes: Long = 0,
 
@@ -92,6 +95,13 @@ enum class CsvImportOutcome {
     FAILED,
 }
 
+/** How a run reads its rows: through the user's column mapping, or as a known export. */
+sealed interface CsvImportPlan {
+    data class Columns(val mapping: CsvImportMapping) : CsvImportPlan
+
+    data class Drip(val plan: DripImportPlan) : CsvImportPlan
+}
+
 /** The end of a run. */
 data class CsvImportResult(
     val outcome: CsvImportOutcome,
@@ -105,7 +115,7 @@ data class CsvImportResult(
 
     val error: String? = null,
 ) {
-    val wroteNothing: Boolean get() = progress.written == 0
+    val wroteNothing: Boolean get() = progress.written == 0 && progress.journalDays == 0
 }
 
 /** Matches the Apple importer's cap, so a re-import cannot produce an unbounded report. */

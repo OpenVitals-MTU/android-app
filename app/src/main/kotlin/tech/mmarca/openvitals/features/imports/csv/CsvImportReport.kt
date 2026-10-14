@@ -14,11 +14,13 @@ const val CSV_IMPORT_REPORT_FILE_NAME = "openvitals-csv-import-report.txt"
 /** Renders [result] as text. File name and dialect come from the run, not a fresh sniff. */
 fun buildCsvImportReport(
     fileName: String?,
-    mapping: CsvImportMapping,
+    /** The column mapping, or null for a drip export read through [drip]. */
+    mapping: CsvImportMapping?,
     result: CsvImportResult,
     headerRow: List<String>,
     fieldDelimiter: String? = null,
     hasHeaderRow: Boolean? = null,
+    drip: DripImportPlan? = null,
 ): String = buildString {
     appendLine("OpenVitals CSV import report")
     appendLine("===========================")
@@ -34,6 +36,9 @@ fun buildCsvImportReport(
     appendLine("Records written: ${result.progress.written}")
     appendLine("Already present: ${result.progress.alreadyPresent}")
     appendLine("Rejected:        ${result.progress.rejected}")
+    if (result.progress.journalDays > 0) {
+        appendLine("Journal days:    ${result.progress.journalDays}")
+    }
     if (result.progress.quotaPauses > 0) {
         appendLine("Quota pauses:    ${result.progress.quotaPauses} (${quotaWaitLabel(result.progress.quotaWaitMillis)})")
     }
@@ -46,18 +51,33 @@ fun buildCsvImportReport(
     if (hasHeaderRow != null) {
         appendLine("Header row: ${if (hasHeaderRow) "yes" else "no"}")
     }
-    appendLine("Date format: ${mapping.dateTime.format.reportName}")
-    appendLine("Time zone:   ${zoneLabel(mapping.dateTime)}")
-    mapping.dateTime.customPattern?.takeIf { it.isNotEmpty() }?.let {
-        appendLine("Custom pattern: $it")
+    if (mapping != null) {
+        appendLine("Date format: ${mapping.dateTime.format.reportName}")
+        appendLine("Time zone:   ${zoneLabel(mapping.dateTime)}")
+        mapping.dateTime.customPattern?.takeIf { it.isNotEmpty() }?.let {
+            appendLine("Custom pattern: $it")
+        }
+    }
+    if (drip != null) {
+        appendLine("Format:     drip export")
+        appendLine("Time zone:  ${drip.zone.id}")
     }
 
-    appendLine()
-    appendLine("Column mapping")
-    appendLine("--------------")
-    for (column in mapping.columns) {
-        val header = headerRow.getOrNull(column.columnIndex) ?: "Column ${column.columnIndex + 1}"
-        appendLine("[${column.columnIndex}] $header -> ${roleLabel(column)}")
+    if (drip != null) {
+        appendLine()
+        appendLine("Imported from drip")
+        appendLine("------------------")
+        for (option in DripImportOption.entries) {
+            appendLine("${dripOptionReportLabel(option)}: ${if (option in drip.enabled) "yes" else "no"}")
+        }
+    } else if (mapping != null) {
+        appendLine()
+        appendLine("Column mapping")
+        appendLine("--------------")
+        for (column in mapping.columns) {
+            val header = headerRow.getOrNull(column.columnIndex) ?: "Column ${column.columnIndex + 1}"
+            appendLine("[${column.columnIndex}] $header -> ${roleLabel(column)}")
+        }
     }
 
     if (result.diagnosticCounts.isNotEmpty()) {
@@ -160,6 +180,14 @@ private val CsvUnit.reportName: String
         CsvUnit.MILLIGRAMS -> "milligrams"
         CsvUnit.MICROGRAMS -> "micrograms"
     }
+
+private fun dripOptionReportLabel(option: DripImportOption): String = when (option) {
+    DripImportOption.BLEEDING -> "Bleeding"
+    DripImportOption.TEMPERATURE -> "Basal body temperature"
+    DripImportOption.CERVICAL_MUCUS -> "Cervical mucus"
+    DripImportOption.SEXUAL_ACTIVITY -> "Sexual activity"
+    DripImportOption.JOURNAL -> "Journal (pain, mood, cervix, desire, notes)"
+}
 
 private fun outcomeLabel(outcome: CsvImportOutcome): String = when (outcome) {
     CsvImportOutcome.COMPLETED -> "completed"
