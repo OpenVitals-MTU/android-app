@@ -775,6 +775,8 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/imports/
 | a rate-limited batch is written again after a pause and the run completes | PORTED | CsvImportServiceTest.kt: `a rate-limited batch is written again after a pause and the run completes` | Kotlin-only: pauses 15 s then 30 s, counted down per second, tallied into the progress |
 | a rate-limited run stops and reports how far it got | PORTED | CsvImportServiceTest.kt: `a rate-limited run stops and reports how far it got` | Gives up only once the 30-minute pause budget is spent |
 | cancelling during a quota pause ends the run as cancelled within a second | PORTED | CsvImportServiceTest.kt: `cancelling during a quota pause ends the run as cancelled within a second` | Kotlin-only |
+| a drip export writes its records to Health Connect and its journal days to Room | PORTED | CsvImportServiceTest.kt: `a drip export writes its records to Health Connect and its journal days to Room` | Kotlin-only; a second run changes no journal day |
+| drip export: header detection, bleeding, temperature, mucus, sex, journal, cervix and desire, disabled options, bad dates, stable ids, journal merge, sample summary | PORTED | DripImportTest.kt (12 tests) | Kotlin-only; drip had no Flutter counterpart |
 | cancelling mid-run keeps what was written and stops reading | PORTED | CsvImportServiceTest.kt: `cancelling mid-run keeps what was written and stops reading` | |
 | a malformed row is skipped with a diagnostic and the rest imports | PORTED | CsvImportServiceTest.kt: `a malformed row is skipped with a diagnostic and the rest imports` | |
 | a missing file fails the run instead of throwing | PORTED | CsvImportServiceTest.kt: `a missing file fails the run instead of throwing` | |

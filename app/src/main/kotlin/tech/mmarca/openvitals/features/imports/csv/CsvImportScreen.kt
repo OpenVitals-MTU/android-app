@@ -91,12 +91,24 @@ fun CsvImportScreen(
                 state = state,
                 onPick = { filePicker.launch(CsvMimeTypes) },
             )
-            CsvImportStep.MAPPING -> CsvMappingStep(state = state, viewModel = viewModel)
-            CsvImportStep.CONFIRM -> CsvConfirmStep(
-                state = state,
-                viewModel = viewModel,
-                onGrantPermissions = { permissionLauncher.launch(state.missingPermissions) },
-            )
+            CsvImportStep.MAPPING -> if (state.drip != null) {
+                DripOptionsStep(state = state, viewModel = viewModel)
+            } else {
+                CsvMappingStep(state = state, viewModel = viewModel)
+            }
+            CsvImportStep.CONFIRM -> if (state.drip != null) {
+                DripConfirmStep(
+                    state = state,
+                    viewModel = viewModel,
+                    onGrantPermissions = { permissionLauncher.launch(state.missingPermissions) },
+                )
+            } else {
+                CsvConfirmStep(
+                    state = state,
+                    viewModel = viewModel,
+                    onGrantPermissions = { permissionLauncher.launch(state.missingPermissions) },
+                )
+            }
             CsvImportStep.IMPORTING -> CsvImportingStep(state = state, onCancel = viewModel::cancelImport)
             CsvImportStep.DONE -> CsvDoneStep(state = state, viewModel = viewModel, onDone = onDone)
         }
@@ -425,6 +437,12 @@ private fun CsvImportingStep(
             ),
             style = MaterialTheme.typography.bodyMedium,
         )
+        if (progress.journalDays > 0) {
+            Text(
+                text = stringResource(R.string.settings_csv_import_journal_days, progress.journalDays),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
         progress.resumingInSeconds?.let { seconds ->
             Spacer(Modifier.height(8.dp))
             Text(

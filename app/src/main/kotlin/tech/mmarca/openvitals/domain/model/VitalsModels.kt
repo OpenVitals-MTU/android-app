@@ -16,6 +16,8 @@ data class BloodPressureEntry(
     val bodyPosition: Int = BpRecordValues.BODY_POSITION_UNKNOWN,
     /** [BpRecordValues] MEASUREMENT_LOCATION_* — native HC field. */
     val measurementLocation: Int = BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN,
+    /** The pulse saved with the reading, from OpenVitals-written records only. */
+    val pulseBpm: Int? = null,
 )
 
 /** Health Connect's BloodPressureRecord constants, mirrored so the domain stays library-free. */
@@ -117,6 +119,12 @@ data class VitalsMeasurementWriteRequest(
     val bpBodyPosition: Int? = null,
     /** Blood pressure only: [BpRecordValues] MEASUREMENT_LOCATION_*; null writes UNKNOWN. */
     val bpMeasurementLocation: Int? = null,
+    /**
+     * Blood pressure only: the pulse the cuff showed, in beats per minute. Written as a
+     * heart rate record at the reading's time under [bpPulseClientRecordId]; null writes
+     * none and, on an edit, removes the one a previous save left.
+     */
+    val bpPulseBpm: Int? = null,
 )
 
 data class VitalsMeasurementEntry(
@@ -133,6 +141,8 @@ data class VitalsMeasurementEntry(
     val bpBodyPosition: Int? = null,
     /** Blood pressure only: MEASUREMENT_LOCATION_* value, null when unknown. */
     val bpMeasurementLocation: Int? = null,
+    /** Blood pressure only: the pulse saved with the reading, null when none was. */
+    val bpPulseBpm: Int? = null,
 )
 
 /** One chart point per local day. [count] keeps period averages count-weighted. */
