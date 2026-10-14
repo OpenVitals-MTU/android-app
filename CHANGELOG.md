@@ -1,5 +1,55 @@
 # Changelog
 
+## 2.14.1 - 2026-10-14
+
+### English
+
+- **Cycle history from drip.** The CSV importer under Settings > Import & export recognises a CSV exported by the drip cycle tracker and needs no column mapping: five switches choose what to bring over. Bleeding becomes period flow and spotting in Health Connect, morning temperatures land at their recorded time, cervical mucus comes over as texture and feeling, and sex as protected, unprotected or unknown. Pain and mood become symptoms, mood and energy levels, the cervix, desire and every note go into the cycle journal on the phone. Importing the same export again replaces rather than duplicates.
+- **The cervix and desire in the cycle journal.** The day log gains the cervix as felt, opening, firmness and position, under cervical mucus, and desire as a fourth 1 to 5 scale beside pain, mood and energy. Both travel with the journal backup and the phone-to-phone sync.
+- **Automatic sync for Wear OS watches.** The Automatic sync card shows for a Wear OS watch too; a scheduled run copies the heart rate into Health Connect and writes the night's estimated sleep, as a tap on Sync does.
+- **CSV import waits out Health Connect's quota.** A batch Health Connect refused for quota used to end the import. It now pauses, from 15 seconds up to 5 minutes, with a countdown, and writes the same batch again; only half an hour without an accepted write stops the run. Cancel works during a pause, and the report counts the pauses.
+- **Fixes:** the Activities screens compute cardio load with the body profile, as the dashboard does, so a day no longer shows two loads.
+
+### Espanol
+
+- **Historial del ciclo desde drip.** El Importador CSV de Ajustes > Importar y exportar reconoce un CSV exportado por la app de ciclo drip y no necesita asignar columnas: cinco interruptores eligen que traer. El sangrado pasa a flujo menstrual y manchado en Health Connect, las temperaturas de la manana se guardan a su hora registrada, el moco cervical llega como textura y sensacion, y el sexo como protegido, sin proteccion o desconocido. Dolor y animo pasan a sintomas; los niveles de animo y energia, el cuello uterino, el deseo y todas las notas van al diario del ciclo en el telefono. Importar de nuevo la misma exportacion sustituye en lugar de duplicar.
+- **Cuello uterino y deseo en el diario del ciclo.** El registro del dia gana el cuello uterino tal como se percibe, apertura, firmeza y posicion, bajo moco cervical, y el deseo como cuarta escala de 1 a 5 junto a dolor, animo y energia. Ambos viajan con la copia del diario y la sincronizacion entre telefonos.
+- **Sincronizacion automatica de relojes Wear OS.** La tarjeta Sincronizacion automatica aparece tambien para un reloj Wear OS; una ejecucion programada copia la frecuencia cardiaca a Health Connect y escribe el sueno estimado de la noche, como un toque en Sincronizar.
+- **La importacion CSV espera la cuota de Health Connect.** Un lote que Health Connect rechazaba por cuota terminaba la importacion. Ahora hace una pausa, de 15 segundos a 5 minutos, con cuenta atras, y vuelve a escribir el mismo lote; solo media hora sin una escritura aceptada detiene la ejecucion. Cancelar funciona durante la pausa, y el informe cuenta las pausas.
+- **Correcciones:** las pantallas de Actividades calculan la carga cardiovascular con el perfil corporal, como el panel, asi que un dia ya no muestra dos cargas.
+
+### Deutsch
+
+- **Zyklusverlauf aus drip.** Der CSV-Importer unter Einstellungen > Import & Export erkennt eine von der Zyklus-App drip exportierte CSV und braucht keine Spaltenzuordnung: Fuenf Schalter waehlen, was uebernommen wird. Blutung wird zu Periodenstaerke und Schmierblutung in Health Connect, Morgentemperaturen landen zur erfassten Uhrzeit, Zervixschleim kommt als Beschaffenheit und Empfinden, Sex als geschuetzt, ungeschuetzt oder unbekannt. Schmerzen und Stimmung werden zu Symptomen; Stimmungs- und Energielevel, Gebaermutterhals, Verlangen und jede Notiz gehen ins Zyklustagebuch auf dem Telefon. Ein erneuter Import desselben Exports ersetzt statt zu verdoppeln.
+- **Gebaermutterhals und Verlangen im Zyklustagebuch.** Das Tagesprotokoll erhaelt den Gebaermutterhals wie ertastet, Oeffnung, Festigkeit und Position, unter Zervixschleim, und Verlangen als vierte Skala von 1 bis 5 neben Schmerzen, Stimmung und Energie. Beides reist mit der Tagebuchsicherung und der Synchronisierung zwischen Telefonen.
+- **Automatische Synchronisierung fuer Wear-OS-Uhren.** Die Karte Automatische Synchronisierung erscheint auch fuer eine Wear-OS-Uhr; ein geplanter Lauf kopiert die Herzfrequenz nach Health Connect und schreibt den geschaetzten Schlaf der Nacht, wie ein Tippen auf Synchronisieren.
+- **CSV-Import wartet das Health-Connect-Kontingent ab.** Ein Stapel, den Health Connect wegen des Kontingents ablehnte, beendete den Import. Jetzt pausiert er, von 15 Sekunden bis 5 Minuten, mit Countdown, und schreibt denselben Stapel erneut; erst eine halbe Stunde ohne angenommenen Schreibvorgang beendet den Lauf. Abbrechen geht waehrend der Pause, und der Bericht zaehlt die Pausen.
+- **Korrekturen:** Die Aktivitaeten-Bildschirme berechnen die Cardio-Belastung mit dem Koerperprofil, wie das Dashboard, sodass ein Tag nicht mehr zwei Belastungen zeigt.
+
+### Italiano
+
+- **Cronologia del ciclo da drip.** L'Importatore CSV in Impostazioni > Importazione ed esportazione riconosce un CSV esportato dall'app per il ciclo drip e non richiede la mappatura delle colonne: cinque interruttori scelgono cosa portare. Il sanguinamento diventa flusso mestruale e spotting in Health Connect, le temperature del mattino arrivano all'ora registrata, il muco cervicale come consistenza e sensazione, il sesso come protetto, non protetto o sconosciuto. Dolore e umore diventano sintomi; i livelli di umore ed energia, la cervice, il desiderio e ogni nota vanno nel diario del ciclo sul telefono. Importare di nuovo la stessa esportazione sostituisce invece di duplicare.
+- **Cervice e desiderio nel diario del ciclo.** Il registro del giorno guadagna la cervice come percepita, apertura, consistenza e posizione, sotto il muco cervicale, e il desiderio come quarta scala da 1 a 5 accanto a dolore, umore ed energia. Entrambi viaggiano con il backup del diario e la sincronizzazione tra telefoni.
+- **Sincronizzazione automatica degli orologi Wear OS.** La scheda Sincronizzazione automatica compare anche per un orologio Wear OS; un'esecuzione programmata copia la frequenza cardiaca in Health Connect e scrive il sonno stimato della notte, come un tocco su Sincronizza.
+- **L'importazione CSV attende la quota di Health Connect.** Un blocco rifiutato da Health Connect per quota terminava l'importazione. Ora fa una pausa, da 15 secondi a 5 minuti, con conto alla rovescia, e riscrive lo stesso blocco; solo mezz'ora senza una scrittura accettata ferma l'esecuzione. Annulla funziona durante la pausa, e il report conta le pause.
+- **Correzioni:** le schermate Attivita calcolano il carico cardio con il profilo corporeo, come la dashboard, cosi un giorno non mostra piu due carichi.
+
+### Eesti
+
+- **Tsukli ajalugu dripist.** CSV-importija Seaded > Import ja eksport all tunneb ara tsukliapi drip eksporditud CSV ega vaja veergude vastendamist: viis lulitit valivad, mis ule tuua. Veritsusest saab Health Connectis menstruatsiooni vool ja maarimine, hommikused temperatuurid salvestuvad salvestatud kellaajal, emakakaela lima tuleb ule tekstuuri ja tundena ning seks kaitstuna, kaitsmatuna voi teadmata. Valu ja tuju muutuvad sumptomiteks; tuju ja energia tasemed, emakakael, iha ja koik markmed lahevad telefoni tsuklipaevikusse. Sama ekspordi uuesti importimine asendab, mitte ei dubleeri.
+- **Emakakael ja iha tsuklipaevikus.** Paeva logi saab emakakaela sellisena, nagu seda tuntakse, avatus, tugevus ja asend, emakakaela lima all, ning iha neljanda 1 kuni 5 skaalana valu, tuju ja energia korval. Molemad liiguvad paeviku varukoopia ja telefonidevahelise sunkroonimisega.
+- **Wear OS kellade automaatne sunkroonimine.** Kaart Automaatne sunkroonimine kuvatakse ka Wear OS kella puhul; ajastatud kaivitus kopeerib pulsi Health Connecti ja kirjutab oo hinnangulise une, nagu puudutus nupul Sunkrooni.
+- **CSV-import ootab Health Connecti kvoodi ara.** Partii, mille Health Connect kvoodi tottu tagasi lukkas, lopetas impordi. Nuud teeb see pausi, 15 sekundist 5 minutini, loenduriga, ja kirjutab sama partii uuesti; alles pool tundi ilma uhegi vastuvoetud kirjutamiseta peatab kaivituse. Tuhista tootab pausi ajal ja aruanne loendab pausid.
+- **Parandused:** Tegevuste ekraanid arvutavad kardiokoormuse kehaprofiiliga, nagu armatuurlaud, nii et paev ei naita enam kahte koormust.
+
+### Portugues
+
+- **Historico do ciclo a partir do drip.** O Importador CSV em Definicoes > Importar e exportar reconhece um CSV exportado pela app de ciclo drip e nao precisa de mapear colunas: cinco interruptores escolhem o que trazer. O sangramento passa a fluxo menstrual e spotting no Health Connect, as temperaturas da manha ficam na hora registada, o muco cervical chega como textura e sensacao, e o sexo como protegido, sem protecao ou desconhecido. Dor e humor passam a sintomas; os niveis de humor e energia, o colo do utero, o desejo e todas as notas vao para o diario do ciclo no telemovel. Importar de novo a mesma exportacao substitui em vez de duplicar.
+- **Colo do utero e desejo no diario do ciclo.** O registo do dia ganha o colo do utero tal como se sente, abertura, firmeza e posicao, sob muco cervical, e o desejo como quarta escala de 1 a 5 ao lado de dor, humor e energia. Ambos viajam com a copia do diario e a sincronizacao entre telemoveis.
+- **Sincronizacao automatica de relogios Wear OS.** O cartao Sincronizacao automatica aparece tambem para um relogio Wear OS; uma execucao agendada copia a frequencia cardiaca para o Health Connect e escreve o sono estimado da noite, como um toque em Sincronizar.
+- **A importacao CSV espera pela quota do Health Connect.** Um lote que o Health Connect recusava por quota terminava a importacao. Agora faz uma pausa, de 15 segundos a 5 minutos, com contagem decrescente, e volta a escrever o mesmo lote; so meia hora sem uma escrita aceite para a execucao. Cancelar funciona durante a pausa, e o relatorio conta as pausas.
+- **Correcoes:** os ecras de Atividades calculam a carga cardio com o perfil corporal, como o painel, pelo que um dia ja nao mostra duas cargas.
+
 ## 2.14.0 - 2026-10-12
 
 ### English
