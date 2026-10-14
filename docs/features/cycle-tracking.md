@@ -31,14 +31,14 @@ From Health Connect, when the permission is granted:
 From the local journal (Room, `cycle_journal_entries`), because Health Connect has no record type for them:
 
 - A "no bleeding" mark that separates "checked, none" from "not logged".
-- Pain, mood, and energy on a 1 to 5 scale.
+- Pain, mood, energy, and desire on a 1 to 5 scale.
 - Symptoms from a fixed catalog (cramps, headache, bloating, mood changes, and so on).
 - Private notes.
-- Pregnancy test result, temperature disturbance flags, cervical sensation.
+- Pregnancy test result, temperature disturbance flags, cervical sensation, and the cervix as felt: opening, firmness, position.
 
 ## The day log
 
-"+ Log" → Cycle, the cycle screen's Log action and the home widget open a chooser: one card each for bleeding, how you feel, a pregnancy test, an ovulation test, sexual activity, basal body temperature and cervical mucus. A card opens the day log on that section alone; "Log everything for the day" opens the full log. The calendar, the entry list's pencil and the Today card of a day that already has entries open the full log for that date: bleeding first (not recorded, none, spotting, light, medium, heavy), then the three scales, then symptoms and notes behind a disclosure, then body observations (temperature with time and disturbances, cervical sensation, mucus, ovulation test, sexual activity). Blank means not logged.
+"+ Log" → Cycle, the cycle screen's Log action and the home widget open a chooser: one card each for bleeding, how you feel, a pregnancy test, an ovulation test, sexual activity, basal body temperature and cervical mucus. A card opens the day log on that section alone; "Log everything for the day" opens the full log. The calendar, the entry list's pencil and the Today card of a day that already has entries open the full log for that date: bleeding first (not recorded, none, spotting, light, medium, heavy), then the four scales, then symptoms and notes behind a disclosure, then body observations (temperature with time and disturbances, cervical sensation, mucus, cervix, ovulation test, sexual activity). Blank means not logged.
 
 Saving reconciles each Health Connect record kind separately: a record OpenVitals owns is updated or deleted, a new value is inserted, and an unchanged value is left alone. Records written by other apps are shown as read-only context and are never modified. Journal fields go to the local table. Leaving with unsaved changes asks first.
 
@@ -95,6 +95,8 @@ All of it is local. Nothing here is written to Health Connect.
 ## Report and backup
 
 The health report offers a Cycle tracking section: the cycle-day chart, the length statistics over completed cycles, bleeding and pain counts, a table of the cycles in the range, the symptom counts on and off bleeding days, and the notes. See [Health report export](health-report-export.md).
+
+A history kept in the drip cycle tracker comes in through the CSV importer, which recognises drip's export and writes its bleeding, temperatures, mucus and sex to Health Connect and its pain, mood, cervix, desire and notes to the journal; see [CSV import](csv-import.md#drip-export).
 
 Settings → Cycle exports the journal as a JSON file (day logs, excluded cycles, contexts and age band) and imports one back. An import merges: a day both sides hold keeps the newer edit, exclusions are added, and the contexts and age band fill a phone that declared none. Health Connect records are not in the file; Health Connect has its own export.
 

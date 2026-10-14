@@ -96,7 +96,7 @@ Do not break these without an explicit decision. They are app-wide, and each has
 - **Health Connect reads and record mapping live behind `healthconnect/*HealthReader`.** Writes go through `AppleHealthImportRepository.insertImportedRecords` with a deterministic `clientRecordId`. Medical records (FHIR) have no `clientRecordId`: they go through `healthconnect/MedicalRecordsWriter`, where a record's data source, type and id make a rewrite an update.
 - **Nothing waits on the main thread.** No `runBlocking` in `app/src/main` (`NoRunBlockingRatchetTest` holds the allow-list). A receiver never holds a broadcast for a Health Connect read. Composables `remember` any pass over samples.
 - **Every locale ships complete.** A new string goes to `values/strings.xml` and to every `values-*/strings.xml`, with the plural shape each locale needs; `python3 scripts/verify-translations.py` checks them. See [translations.md](docs/engineering/translations.md) and the translation-gate note in [development.md](docs/engineering/development.md).
-- **Room is at version 16.** A new entity means a `MIGRATION_16_17` and a bump, not `fallbackToDestructiveMigration`.
+- **Room is at version 17.** A new entity means a `MIGRATION_17_18` and a bump, not `fallbackToDestructiveMigration`.
 - **The docs are checked against the code.** `ArchitectureDocTest` fails when a Room table, the Room version or a package is missing from the docs. `HealthConnectLayeringTest` and `DevicesLayeringTest` hold two layering rules. `FileSizeRatchetTest` stops a file passing 800 lines, and `FunctionLengthRatchetTest` stops a new function passing 150. When one fails, fix the code or the doc in the same commit.
 
 ## Implementation Rules

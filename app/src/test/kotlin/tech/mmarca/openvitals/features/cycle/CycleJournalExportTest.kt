@@ -13,6 +13,9 @@ import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
 import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.BbtDisturbance
 import tech.mmarca.openvitals.domain.model.CervicalSensation
+import tech.mmarca.openvitals.domain.model.CervixFirmness
+import tech.mmarca.openvitals.domain.model.CervixOpening
+import tech.mmarca.openvitals.domain.model.CervixPosition
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.domain.model.HcgTestResult
 
@@ -30,6 +33,10 @@ class CycleJournalExportTest {
             hcgTest = HcgTestResult.NEGATIVE,
             bbtDisturbances = setOf(BbtDisturbance.ALCOHOL, BbtDisturbance.POOR_SLEEP),
             cervicalSensation = CervicalSensation.DRY,
+            cervixOpening = CervixOpening.MEDIUM,
+            cervixFirmness = CervixFirmness.SOFT,
+            cervixPosition = CervixPosition.HIGH,
+            desireLevel = 4,
             updatedAt = Instant.parse("2026-07-10T20:00:00Z"),
         ),
         CycleJournalEntry(date = LocalDate.of(2026, 7, 11), painLevel = 1, updatedAt = Instant.parse("2026-07-11T21:00:00Z")),
