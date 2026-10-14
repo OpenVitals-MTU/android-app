@@ -84,6 +84,15 @@ data class WearOsStepPage(
     val hasMore: Boolean,
 )
 
+/** The height the watch's barometer climbed in the clock minute starting at [start], elevators included. */
+data class WearOsAscentMinute(val start: Instant, val metres: Double)
+
+/** One page of an ascent pull. [hasMore] means the watch cut the reply at its limit. */
+data class WearOsAscentPage(
+    val minutes: List<WearOsAscentMinute>,
+    val hasMore: Boolean,
+)
+
 /**
  * Port for talking to the OpenVitals app on a Wear OS watch.
  *
@@ -133,4 +142,16 @@ interface WearOsNodePort {
         targetName: String?,
         since: Instant,
     ): WearOsStepPage?
+
+    /**
+     * Ascent minutes newer than [since], oldest first, up to the watch's page
+     * limit. Empty page: the watch app is too old to send ascent, or the
+     * watch has no barometer. Null: no bonded watch matches. Any other
+     * failure throws [WearOsLinkFailure].
+     */
+    suspend fun pullAscent(
+        targetAddress: String?,
+        targetName: String?,
+        since: Instant,
+    ): WearOsAscentPage?
 }

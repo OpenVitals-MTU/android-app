@@ -55,6 +55,15 @@ class WearLinkSession internal constructor(
         }
     }
 
+    fun pullAscent(sinceEpochMillis: Long, limit: Int): WearLinkOutcome<Page<WearLinkProtocol.AscentMinute>> {
+        val items = ArrayList<WearLinkProtocol.AscentMinute>()
+        return exchange(WearLinkProtocol.Request.AscentSince(sinceEpochMillis, limit)) { line ->
+            WearLinkProtocol.parseAscentMinute(line)?.let { items += it; return@exchange Reply.More }
+            WearLinkProtocol.parseEnd(line)?.let { return@exchange Reply.Done(Page(items, it.more)) }
+            Reply.Unexpected
+        }
+    }
+
     /** Closes the connection; the watch is waiting for exactly this. */
     fun close() = connection.close()
 
