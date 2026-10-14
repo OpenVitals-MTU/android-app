@@ -41,6 +41,8 @@ private class RepositoryHarness(
     failEveryBatch: Boolean = false,
     rejectRecordWhere: ((Record) -> Boolean)? = null,
     rateLimitAfterBatches: Int? = null,
+    /** How many refusals the quota failure lasts; null means for ever. */
+    rateLimitRefusals: Int? = null,
 ) {
     val inserted = mutableListOf<Record>()
     var batchCalls = 0
@@ -57,7 +59,10 @@ private class RepositoryHarness(
             val records = arg<List<Record>>(0)
             batchCalls++
             if (rateLimitAfterBatches != null && batchCalls > rateLimitAfterBatches) {
-                throw IllegalStateException("Quota has been exceeded")
+                val refusal = batchCalls - rateLimitAfterBatches
+                if (rateLimitRefusals == null || refusal <= rateLimitRefusals) {
+                    throw IllegalStateException("Quota has been exceeded")
+                }
             }
             if (records.size > 1 && failEveryBatch) {
                 throw IllegalStateException("batch refused")
@@ -85,8 +90,11 @@ class CsvImportServiceTest {
         }
     }
 
+    /** The pauses the service asked for, in milliseconds; nothing actually sleeps. */
+    private val pauses = mutableListOf<Long>()
+
     private fun service(harness: RepositoryHarness): CsvImportService =
-        CsvImportService(harness.repository)
+        CsvImportService(harness.repository, waitMillis = { millis -> pauses += millis })
 
     @Test
     fun `every row of a clean file is written and the run completes`() = runTest {
@@ -206,9 +214,36 @@ class CsvImportServiceTest {
     }
 
     @Test
+    fun `a rate-limited batch is written again after a pause and the run completes`() = runTest {
+        val content = csvOf(900)
+        // Batch size is 300: the second flush is refused twice, then accepted.
+        val harness = RepositoryHarness(rateLimitAfterBatches = 1, rateLimitRefusals = 2)
+        val countdowns = mutableListOf<Int>()
+
+        val result = service(harness).run(
+            source = sourceOf(content),
+            totalBytes = content.length.toLong(),
+            dialect = Dialect,
+            mapping = weightMapping(),
+            onProgress = { progress -> progress.resumingInSeconds?.let { countdowns += it } },
+        )
+
+        assertEquals(CsvImportOutcome.COMPLETED, result.outcome)
+        assertEquals(900, result.progress.written)
+        assertEquals(900, harness.inserted.size)
+        assertEquals(2, result.progress.quotaPauses)
+        // The first two pauses of the ladder, 15 s then 30 s, counted down a second at a time.
+        assertEquals(CSV_QUOTA_PAUSES_MILLIS[0] + CSV_QUOTA_PAUSES_MILLIS[1], pauses.sum())
+        assertEquals(pauses.sum(), result.progress.quotaWaitMillis)
+        assertEquals(15, countdowns.first())
+        assertEquals(1, countdowns.last())
+        assertEquals(null, result.progress.resumingInSeconds)
+    }
+
+    @Test
     fun `a rate-limited run stops and reports how far it got`() = runTest {
         val content = csvOf(900)
-        // Batch size is 300, so the second flush is refused.
+        // Batch size is 300, so the second flush is refused, and keeps being refused.
         val harness = RepositoryHarness(rateLimitAfterBatches = 1)
 
         val result = service(harness).run(
@@ -223,6 +258,33 @@ class CsvImportServiceTest {
         assertTrue(result.error!!.contains("Quota", ignoreCase = true))
         assertEquals(CSV_WRITE_BATCH_SIZE, result.progress.written)
         assertTrue(result.progress.rowsRead < 900)
+        // It gave up only once the pause budget was spent, not on the first refusal.
+        assertTrue(pauses.sum() >= CSV_QUOTA_PAUSE_BUDGET_MILLIS)
+        assertTrue(pauses.sum() < CSV_QUOTA_PAUSE_BUDGET_MILLIS + CSV_QUOTA_PAUSES_MILLIS.last())
+        assertEquals(result.progress.quotaPauses, harness.batchCalls - 2)
+    }
+
+    @Test
+    fun `cancelling during a quota pause ends the run as cancelled within a second`() = runTest {
+        val content = csvOf(600)
+        val harness = RepositoryHarness(rateLimitAfterBatches = 1)
+        val cancellation = CsvImportCancellation()
+
+        val result = service(harness).run(
+            source = sourceOf(content),
+            totalBytes = content.length.toLong(),
+            dialect = Dialect,
+            mapping = weightMapping(),
+            cancellation = cancellation,
+            onProgress = { progress ->
+                if (progress.resumingInSeconds != null && progress.resumingInSeconds!! <= 12) cancellation.cancel()
+            },
+        )
+
+        assertEquals(CsvImportOutcome.CANCELLED, result.outcome)
+        assertEquals(CSV_WRITE_BATCH_SIZE, result.progress.written)
+        // The cancel landed during the fourth one-second slice; nothing waited beyond it.
+        assertEquals(4 * CSV_QUOTA_PAUSE_SLICE_MILLIS, pauses.sum())
     }
 
     @Test

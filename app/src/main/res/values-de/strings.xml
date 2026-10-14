@@ -2437,10 +2437,11 @@
     <string name="settings_csv_import_start">Importieren</string>
     <string name="settings_csv_import_cancel">Abbrechen</string>
     <string name="settings_csv_import_progress">Zeile %1$d · geschrieben %2$d, bereits vorhanden %3$d, abgelehnt %4$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect begrenzt derzeit Schreibvorgänge. Der Import wird in %1$d s fortgesetzt.</string>
     <string name="settings_csv_import_result">Geschrieben %1$d. Bereits vorhanden %2$d. Abgelehnt %3$d.</string>
     <string name="settings_csv_import_result_empty">Aus dieser Datei wurde nichts importiert.</string>
     <string name="settings_csv_import_result_cancelled">Import abgebrochen. Bereits Geschriebenes wurde behalten.</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect nimmt vorerst keine Schreibvorgänge mehr an. Führe den Import später erneut aus; bereits geschriebene Datensätze werden übersprungen.</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect hat eine halbe Stunde lang Schreibvorgänge abgelehnt. Führe den Import später erneut aus; was geschrieben wurde, bleibt erhalten.</string>
     <string name="settings_csv_import_error">Der Import ist fehlgeschlagen: %1$s</string>
     <string name="settings_csv_import_diagnostics_title">Abgelehnte Zeilen</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>

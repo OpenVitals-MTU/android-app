@@ -2074,10 +2074,11 @@
     <string name="settings_csv_import_start">导入</string>
     <string name="settings_csv_import_cancel">取消</string>
     <string name="settings_csv_import_progress">第 %1$d 行 · 已写入 %2$d，已存在 %3$d，已拒绝 %4$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect 目前正在限制写入。导入将在 %1$d 秒后继续。</string>
     <string name="settings_csv_import_result">已写入 %1$d。已存在 %2$d。已拒绝 %3$d。</string>
     <string name="settings_csv_import_result_empty">未从此文件导入任何内容。</string>
     <string name="settings_csv_import_result_cancelled">导入已取消。已写入的内容保留。</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect 暂时停止接受写入。稍后重新运行导入；已写入的记录会被跳过。</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect 持续半小时拒绝写入。请稍后重新运行导入；已写入的内容会保留。</string>
     <string name="settings_csv_import_error">导入失败：%1$s</string>
     <string name="settings_csv_import_diagnostics_title">已拒绝的行</string>
     <string name="settings_csv_import_diagnostic_line">%1$s：%2$d</string>

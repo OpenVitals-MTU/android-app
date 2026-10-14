@@ -2473,10 +2473,11 @@
     <string name="settings_csv_import_start">Importa</string>
     <string name="settings_csv_import_cancel">Annulla</string>
     <string name="settings_csv_import_progress">Riga %1$d · scritti %2$d, già presenti %3$d, rifiutati %4$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect sta limitando le scritture per ora. L\'importazione riprende tra %1$d s.</string>
     <string name="settings_csv_import_result">Scritti %1$d. Già presenti %2$d. Rifiutati %3$d.</string>
     <string name="settings_csv_import_result_empty">Nulla è stato importato da questo file.</string>
     <string name="settings_csv_import_result_cancelled">Importazione annullata. Ciò che era già stato scritto è stato conservato.</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect ha smesso di accettare scritture per ora. Esegui di nuovo l\'importazione più tardi; i record già scritti vengono saltati.</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect ha rifiutato le scritture per mezz\'ora. Esegui di nuovo l\'importazione più tardi; ciò che è stato scritto resta.</string>
     <string name="settings_csv_import_error">L\'importazione non è riuscita: %1$s</string>
     <string name="settings_csv_import_diagnostics_title">Righe rifiutate</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>
