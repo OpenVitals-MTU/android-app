@@ -31,6 +31,24 @@ enum class CervicalSensation {
     SLIPPERY,
 }
 
+/** The cervix as felt: the third sympto-thermal sign, beside temperature and mucus. */
+enum class CervixOpening {
+    CLOSED,
+    MEDIUM,
+    OPEN,
+}
+
+enum class CervixFirmness {
+    FIRM,
+    SOFT,
+}
+
+enum class CervixPosition {
+    LOW,
+    MEDIUM,
+    HIGH,
+}
+
 /**
  * The subjective half of a day's cycle observations. Health Connect has no
  * record type for any of these fields, so they live in Room. Bleeding, tests
@@ -48,19 +66,29 @@ data class CycleJournalEntry(
     val hcgTest: HcgTestResult? = null,
     val bbtDisturbances: Set<BbtDisturbance> = emptySet(),
     val cervicalSensation: CervicalSensation? = null,
+    val cervixOpening: CervixOpening? = null,
+    val cervixFirmness: CervixFirmness? = null,
+    val cervixPosition: CervixPosition? = null,
+    /** Sexual desire on the same 1 to 5 scale as mood and energy. */
+    val desireLevel: Int? = null,
     val updatedAt: Instant = Instant.EPOCH,
 ) {
     init {
         require(painLevel == null || painLevel in TRACKING_SCALE) { "pain out of scale" }
         require(moodLevel == null || moodLevel in TRACKING_SCALE) { "mood out of scale" }
         require(energyLevel == null || energyLevel in TRACKING_SCALE) { "energy out of scale" }
+        require(desireLevel == null || desireLevel in TRACKING_SCALE) { "desire out of scale" }
     }
+
+    val hasCervixObservation: Boolean
+        get() = cervixOpening != null || cervixFirmness != null || cervixPosition != null
 
     /** Whether anything at all was recorded. An empty entry is deleted, not stored. */
     val hasObservations: Boolean
         get() = bleedingNone || painLevel != null || moodLevel != null || energyLevel != null ||
             symptoms.isNotEmpty() || notes.isNotBlank() || hcgTest != null ||
-            bbtDisturbances.isNotEmpty() || cervicalSensation != null
+            bbtDisturbances.isNotEmpty() || cervicalSensation != null ||
+            hasCervixObservation || desireLevel != null
 
     companion object {
         val TRACKING_SCALE = 1..5

@@ -38,6 +38,7 @@ enum class ObservationScaleType {
     PAIN,
     MOOD,
     ENERGY,
+    DESIRE,
 }
 
 private val StepMinHeight: Dp = 64.dp
@@ -128,6 +129,7 @@ private fun ScaleStep(
                     ObservationScaleType.PAIN -> PainGlyph(step, selected, markColor)
                     ObservationScaleType.MOOD -> MoodGlyph(step, markColor)
                     ObservationScaleType.ENERGY -> EnergyGlyph(step, markColor)
+                    ObservationScaleType.DESIRE -> DesireGlyph(step, markColor)
                 }
             }
             Text(
@@ -171,6 +173,16 @@ private fun MoodGlyph(step: Int, color: Color) {
 }
 
 /** A battery with one bar lit per step. */
+/** A dot that grows with the step: a plain mark for a scale with no agreed icon. */
+@Composable
+private fun DesireGlyph(step: Int, color: Color) {
+    Canvas(modifier = Modifier.size(GlyphSize)) {
+        val outer = size.minDimension / 2f
+        drawCircle(color = color.copy(alpha = Emphasis.subtle), radius = outer)
+        drawCircle(color = color, radius = outer * (0.3f + 0.7f * (step - 1) / 4f))
+    }
+}
+
 @Composable
 private fun EnergyGlyph(step: Int, color: Color) {
     Canvas(modifier = Modifier.size(width = BatteryWidth, height = GlyphSize)) {

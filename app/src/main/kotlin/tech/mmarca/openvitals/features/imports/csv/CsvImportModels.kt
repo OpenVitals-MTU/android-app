@@ -54,8 +54,20 @@ data class CsvImportProgress(
     /** Metrics or rows that produced no record. */
     val rejected: Int = 0,
 
+    /** Cycle journal days written or updated on this phone, from a drip export. */
+    val journalDays: Int = 0,
+
     val bytesRead: Long = 0,
     val totalBytes: Long = 0,
+
+    /** Times the run paused because Health Connect refused a write for quota. */
+    val quotaPauses: Int = 0,
+
+    /** Time spent in those pauses. */
+    val quotaWaitMillis: Long = 0,
+
+    /** Seconds until the next write attempt while a pause runs; null otherwise. */
+    val resumingInSeconds: Int? = null,
 ) {
     /** 0..1, or null when the file size is unknown. */
     val fraction: Float?
@@ -73,11 +85,21 @@ enum class CsvImportOutcome {
     /** The user cancelled. Everything written before that stays written. */
     CANCELLED,
 
-    /** Health Connect rate-limited us. Re-running resumes from the top and re-dedupes. */
+    /**
+     * Health Connect kept refusing writes for quota through a whole pause budget.
+     * Re-running resumes from the top and re-dedupes.
+     */
     RATE_LIMITED,
 
     /** Something else failed; [CsvImportResult.error] says what. */
     FAILED,
+}
+
+/** How a run reads its rows: through the user's column mapping, or as a known export. */
+sealed interface CsvImportPlan {
+    data class Columns(val mapping: CsvImportMapping) : CsvImportPlan
+
+    data class Drip(val plan: DripImportPlan) : CsvImportPlan
 }
 
 /** The end of a run. */
@@ -93,7 +115,7 @@ data class CsvImportResult(
 
     val error: String? = null,
 ) {
-    val wroteNothing: Boolean get() = progress.written == 0
+    val wroteNothing: Boolean get() = progress.written == 0 && progress.journalDays == 0
 }
 
 /** Matches the Apple importer's cap, so a re-import cannot produce an unbounded report. */
