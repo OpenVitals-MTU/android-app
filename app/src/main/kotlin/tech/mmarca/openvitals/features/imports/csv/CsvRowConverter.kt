@@ -32,6 +32,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.util.Locale
 import kotlin.math.roundToLong
+import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
 /** One CSV row to the Health Connect records it represents. Pure: no I/O, no clock. */
@@ -60,6 +61,8 @@ data class CsvConvertedRecord(
 data class CsvRowConversion(
     val records: List<CsvConvertedRecord> = emptyList(),
     val diagnostics: List<CsvImportDiagnostic> = emptyList(),
+    /** The day's cycle journal entry, from a drip export; Room, not Health Connect. */
+    val journalEntry: CycleJournalEntry? = null,
 )
 
 /**

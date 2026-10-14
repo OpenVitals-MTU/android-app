@@ -9,6 +9,9 @@ import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
 import tech.mmarca.openvitals.domain.cycle.CycleSymptom
 import tech.mmarca.openvitals.domain.model.BbtDisturbance
 import tech.mmarca.openvitals.domain.model.CervicalSensation
+import tech.mmarca.openvitals.domain.model.CervixFirmness
+import tech.mmarca.openvitals.domain.model.CervixOpening
+import tech.mmarca.openvitals.domain.model.CervixPosition
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.domain.model.HcgTestResult
 
@@ -31,6 +34,10 @@ data class CycleJournalEntryEntity(
     /** Disturbance names, comma-separated, sorted. */
     @ColumnInfo(name = "bbt_disturbances") val bbtDisturbances: String,
     @ColumnInfo(name = "cervical_sensation") val cervicalSensation: String?,
+    @ColumnInfo(name = "cervix_opening") val cervixOpening: String?,
+    @ColumnInfo(name = "cervix_firmness") val cervixFirmness: String?,
+    @ColumnInfo(name = "cervix_position") val cervixPosition: String?,
+    val desire: Int?,
     @ColumnInfo(name = "updated_at_millis") val updatedAtMillis: Long,
 ) {
     /** Unknown ids and names are dropped, not surfaced. */
@@ -46,6 +53,10 @@ data class CycleJournalEntryEntity(
         bbtDisturbances = bbtDisturbances.splitList()
             .mapNotNullTo(mutableSetOf()) { name -> BbtDisturbance.entries.firstOrNull { it.name == name } },
         cervicalSensation = cervicalSensation?.let { name -> CervicalSensation.entries.firstOrNull { it.name == name } },
+        cervixOpening = cervixOpening?.let { name -> CervixOpening.entries.firstOrNull { it.name == name } },
+        cervixFirmness = cervixFirmness?.let { name -> CervixFirmness.entries.firstOrNull { it.name == name } },
+        cervixPosition = cervixPosition?.let { name -> CervixPosition.entries.firstOrNull { it.name == name } },
+        desireLevel = desire?.takeIf { it in CycleJournalEntry.TRACKING_SCALE },
         updatedAt = Instant.ofEpochMilli(updatedAtMillis),
     )
 
@@ -61,6 +72,10 @@ data class CycleJournalEntryEntity(
             hcgTest = entry.hcgTest?.name,
             bbtDisturbances = entry.bbtDisturbances.map { it.name }.sorted().joinToString(SEPARATOR),
             cervicalSensation = entry.cervicalSensation?.name,
+            cervixOpening = entry.cervixOpening?.name,
+            cervixFirmness = entry.cervixFirmness?.name,
+            cervixPosition = entry.cervixPosition?.name,
+            desire = entry.desireLevel,
             updatedAtMillis = entry.updatedAt.toEpochMilli(),
         )
 
