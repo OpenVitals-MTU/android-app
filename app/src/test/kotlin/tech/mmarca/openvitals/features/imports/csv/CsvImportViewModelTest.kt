@@ -86,7 +86,7 @@ class CsvImportViewModelTest {
         every { manager.dataImportWritePermissions } returns (allWritePermissions - unsupported)
         return CsvImportViewModel(
             context = context,
-            importService = CsvImportService(importRepository),
+            importService = CsvImportService(importRepository, mockk(relaxed = true)),
             healthRepository = healthRepository,
             healthConnectManager = manager,
         )

@@ -193,6 +193,7 @@ internal fun entryKey(entry: CycleJournalEntry): String = fingerprintOf(
         entry.date, entry.bleedingNone, entry.painLevel, entry.moodLevel, entry.energyLevel,
         entry.symptoms.map { it.id }.sorted(), entry.notes, entry.hcgTest?.name,
         entry.bbtDisturbances.map { it.name }.sorted(), entry.cervicalSensation?.name,
+        entry.cervixOpening?.name, entry.cervixFirmness?.name, entry.cervixPosition?.name, entry.desireLevel,
     ),
 )
 

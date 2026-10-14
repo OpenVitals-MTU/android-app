@@ -67,6 +67,32 @@ class OpenVitalsDatabaseSchemaTest {
         }
     }
 
+    @Test
+    fun `migration 16 to 17 adds the journal columns a device lacks and leaves present ones alone`() {
+        fun columnsAddedWhenTableHas(vararg present: String): List<String> {
+            val statements = mutableListOf<String>()
+            val db = mockk<SupportSQLiteDatabase>(relaxed = true)
+            every { db.execSQL(any()) } answers { statements += firstArg<String>() }
+            every { db.query(any<String>()) } answers {
+                val cursor = mockk<android.database.Cursor>(relaxed = true)
+                var row = -1
+                every { cursor.getColumnIndex("name") } returns 0
+                every { cursor.moveToNext() } answers { ++row < present.size }
+                every { cursor.getString(0) } answers { present[row] }
+                cursor
+            }
+            OpenVitalsDatabase.MIGRATION_16_17.migrate(db)
+            return statements.filter { it.startsWith("ALTER TABLE") }
+        }
+
+        assertEquals(4, columnsAddedWhenTableHas("date", "cervical_sensation").size)
+        assertEquals(
+            listOf("ALTER TABLE `cycle_journal_entries` ADD COLUMN `desire` INTEGER"),
+            columnsAddedWhenTableHas("cervix_opening", "cervix_firmness", "cervix_position"),
+        )
+        assertTrue(columnsAddedWhenTableHas("cervix_opening", "cervix_firmness", "cervix_position", "desire").isEmpty())
+    }
+
     /** Runs the chain from [start] on a database that only records. Returns each table's CREATE statement. */
     private fun replayMigrationsFrom(start: Int): Map<String, String> {
         val tables = linkedMapOf<String, String>()

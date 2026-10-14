@@ -20,6 +20,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -29,7 +31,10 @@ import tech.mmarca.openvitals.core.performance.AppForegroundGate
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
+import tech.mmarca.openvitals.data.repository.contract.CycleJournalRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
+import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
+import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.healthconnect.HealthConnectSyncGate
 import tech.mmarca.openvitals.healthconnect.MindfulnessIntegrationGate
@@ -268,6 +273,7 @@ class CsvImportFlowTest {
             context = context,
             importService = CsvImportService(
                 AppleHealthImportRepository(hc = manager, dispatchers = DefaultDispatcherProvider),
+                InMemoryCycleJournal(),
             ),
             healthRepository = NothingGrantedHealthRepository,
             healthConnectManager = manager,
@@ -289,6 +295,38 @@ class CsvImportFlowTest {
     /** Runs [block] on the main thread, where a view model expects to be driven. */
     private fun onMain(block: () -> Unit) {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(block)
+    }
+
+    /** The cycle journal a drip import would write to; this flow never reaches it. */
+    private class InMemoryCycleJournal : CycleJournalRepository {
+        private val entries = mutableMapOf<LocalDate, CycleJournalEntry>()
+
+        override suspend fun entry(date: LocalDate): CycleJournalEntry? = entries[date]
+
+        override suspend fun entries(start: LocalDate, end: LocalDate): List<CycleJournalEntry> =
+            entries.values.filter { it.date in start..end }
+
+        override suspend fun allEntries(): List<CycleJournalEntry> = entries.values.toList()
+
+        override fun changes(): Flow<Unit> = emptyFlow()
+
+        override suspend fun save(entry: CycleJournalEntry) {
+            entries[entry.date] = entry
+        }
+
+        override suspend fun restore(entry: CycleJournalEntry) = save(entry)
+
+        override suspend fun delete(date: LocalDate) {
+            entries.remove(date)
+        }
+
+        override suspend fun exclusions(): Map<LocalDate, CycleExclusionReason?> = emptyMap()
+
+        override suspend fun exclude(start: LocalDate, end: LocalDate?, reason: CycleExclusionReason?) = Unit
+
+        override suspend fun include(start: LocalDate, end: LocalDate?) = Unit
+
+        override suspend fun deleteAll() = entries.clear()
     }
 
     /** Nothing granted and nothing to grant, so the fake cannot stand in for Health Connect. */
