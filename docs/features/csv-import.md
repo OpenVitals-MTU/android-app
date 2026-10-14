@@ -8,7 +8,7 @@
 
 CSV import brings body measurements, vitals, steps and nutrition from a plain CSV file into Health Connect. It is meant for exports that have no importer of their own, such as a smart scale's weight and body-composition history, a temperature log, a glucose export, a pedometer's step history, or a spreadsheet of meals copied from nutrition labels.
 
-There are no vendor presets. The user says what each column means, which is why a file OpenVitals has never seen still imports.
+There is one vendor preset, the drip cycle tracker's export, recognised by its header; see [drip Export](#drip-export). Every other file is read through the column mapping: the user says what each column means, which is why a file OpenVitals has never seen still imports.
 
 ## Import Flow
 
@@ -57,6 +57,22 @@ Most supported measurements are a single value at a single instant, because that
 - **Blood pressure is deliberately unsupported.** Systolic and diastolic have to become one Health Connect record, which needs a two-columns-to-one-record rule the mapping model does not have.
 - **Interval records beyond steps and nutrition are not supported.** Sleep and workouts need stages or sub-records as well as a start and an end, so they are out of scope for the current mapping model. Steps and nutrition are the exceptions, carried by the single optional "End date and time" column.
 - **Meal type is not mapped.** An imported food has no breakfast, lunch, dinner or snack label.
+
+## drip Export
+
+The cycle tracker [drip](https://gitlab.com/bloodyhealth/drip) exports its history as a CSV with one row per day and dotted column names such as `bleeding.value` and `temperature.time`. OpenVitals recognises that header when the file is picked and skips the column mapping: the mapping step becomes a set of switches for what to bring over, and the confirm step shows how many of the first rows hold something to import and the dates they span. Days are read in the phone's time zone, since drip stores local days, and each day's records are placed at noon, the same instant the cycle day log gives a past day.
+
+What each switch imports:
+
+- **Bleeding.** drip's light, medium and heavy become a menstruation flow record of the same level. drip's spotting, and any bleeding marked in drip as not menstrual, become an intermenstrual bleeding record.
+- **Basal body temperature.** The morning temperature at its recorded clock time, or noon when drip has none. A temperature excluded in drip was judged unreliable there and is left out.
+- **Cervical mucus.** drip's texture names the appearance (creamy, egg white); when the texture says nothing, the feeling stands in (dry, wet as watery, slippery as egg white). The feeling also fills the journal's cervical sensation. An observation excluded in drip is skipped.
+- **Sexual activity.** A day with partner or solo sex. Protected when drip lists a contraceptive, unprotected when it says none, unknown otherwise.
+- **Journal.** drip's pain and mood switches become symptoms (migraine counts as a headache, ovulation pain as pelvic pain outside the period; sad, stressed and angry as mood changes; anxious and fatigue as themselves). The mood switches also set the journal's mood level, 4 for a good day, 2 for a hard one, 3 for both, and energetic or fatigue set the energy level the same way. The cervix comes over as felt, opening, firmness and position, unless excluded in drip; desire's low, medium and high become 2, 3 and 4 on the journal's scale. Every note, drip's day note and the notes on temperature, sex, pain and mood, goes into the day's notes.
+
+The journal needs no Health Connect permission: it is written to this phone's cycle journal as the rows are read, laid over whatever the day already holds. Symptoms are added, levels, the sensation and the cervix are filled only where drip has them, note lines already present are not repeated, and a day drip would not change keeps its edit time. The result and the report count the journal days updated separately from the Health Connect records.
+
+Re-importing a drip export replaces its records like any other CSV, since a day's record of each kind resolves to the same identifier. A day that changes kind between exports, from flow to spotting, leaves the earlier record in place.
 
 ## Nutrition
 
@@ -129,7 +145,7 @@ Foods are the exception, because two foods eaten at the same time are both real.
 
 CSV-imported records use their own identifier namespace, so they can never collide with Apple Health import records.
 
-If Health Connect stops accepting writes because the app's quota is spent, the import stops and says so. Running it again later starts from the top and recognizes what already landed.
+If Health Connect refuses a batch because the app's write quota is spent, the import does not stop: it pauses, says how long until the next attempt, and writes the same batch again. The pauses grow from 15 seconds to 5 minutes, since the quota refills continuously; an accepted write resets them. A million-row heart rate export is a few thousand writes, more than one quota window allows, so a large file simply takes longer and the report counts the pauses and the time they took. Cancel works during a pause. Only when half an hour of pausing brings no accepted write does the import stop and say so; running it again later starts from the top and recognizes what already landed.
 
 ## Reports
 

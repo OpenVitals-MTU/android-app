@@ -21,6 +21,9 @@ import tech.mmarca.openvitals.domain.cycle.CycleSymptom
 import tech.mmarca.openvitals.domain.cycle.ObservationCatalog
 import tech.mmarca.openvitals.domain.model.BbtDisturbance
 import tech.mmarca.openvitals.domain.model.CervicalSensation
+import tech.mmarca.openvitals.domain.model.CervixFirmness
+import tech.mmarca.openvitals.domain.model.CervixOpening
+import tech.mmarca.openvitals.domain.model.CervixPosition
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.model.HcgTestResult
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
@@ -177,6 +180,14 @@ class CycleEntryViewModel @Inject constructor(
 
     fun setCervicalSensation(sensation: CervicalSensation?) = updateForm { copy(cervicalSensation = sensation) }
 
+    fun setCervixOpening(opening: CervixOpening?) = updateForm { copy(cervixOpening = opening) }
+
+    fun setCervixFirmness(firmness: CervixFirmness?) = updateForm { copy(cervixFirmness = firmness) }
+
+    fun setCervixPosition(position: CervixPosition?) = updateForm { copy(cervixPosition = position) }
+
+    fun setDesire(level: Int?) = updateForm { copy(desire = level) }
+
     fun setMucusAppearance(appearance: Int?) = updateForm { copy(mucusAppearance = appearance) }
 
     fun setMucusAmount(amount: Int?) = updateForm { copy(mucusAmount = amount) }
@@ -252,7 +263,8 @@ class CycleEntryViewModel @Inject constructor(
                     foreignSpotting = log.foreignSpotting,
                     showMore = _uiState.value.showMore || form.symptoms.isNotEmpty() || form.notes.isNotBlank() || form.hcgTest != null,
                     showBiomarkers = _uiState.value.showBiomarkers || form.bbtInputText.isNotBlank() ||
-                        form.hasCervicalMucus || form.cervicalSensation != null || form.ovulationResult != null ||
+                        form.hasCervicalMucus || form.cervicalSensation != null || form.hasCervixObservation ||
+                        form.ovulationResult != null ||
                         form.sexualActivityProtection != null,
                     isLoadingDay = false,
                 )

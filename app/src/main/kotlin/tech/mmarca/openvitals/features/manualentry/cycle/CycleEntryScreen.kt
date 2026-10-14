@@ -124,6 +124,7 @@ internal data class CycleEntryActions(
     val onPain: (Int?) -> Unit,
     val onMood: (Int?) -> Unit,
     val onEnergy: (Int?) -> Unit,
+    val onDesire: (Int?) -> Unit,
     val onToggleMore: () -> Unit,
     val onToggleBiomarkers: () -> Unit,
     val onToggleSymptom: (tech.mmarca.openvitals.domain.cycle.CycleSymptom) -> Unit,
@@ -135,6 +136,9 @@ internal data class CycleEntryActions(
     val onBbtTime: (java.time.LocalTime?) -> Unit,
     val onToggleBbtDisturbance: (tech.mmarca.openvitals.domain.model.BbtDisturbance) -> Unit,
     val onCervicalSensation: (tech.mmarca.openvitals.domain.model.CervicalSensation?) -> Unit,
+    val onCervixOpening: (tech.mmarca.openvitals.domain.model.CervixOpening?) -> Unit,
+    val onCervixFirmness: (tech.mmarca.openvitals.domain.model.CervixFirmness?) -> Unit,
+    val onCervixPosition: (tech.mmarca.openvitals.domain.model.CervixPosition?) -> Unit,
     val onMucusAppearance: (Int?) -> Unit,
     val onMucusAmount: (Int?) -> Unit,
     val onOvulation: (Int?) -> Unit,
@@ -146,6 +150,7 @@ internal data class CycleEntryActions(
         onPain = viewModel::setPain,
         onMood = viewModel::setMood,
         onEnergy = viewModel::setEnergy,
+        onDesire = viewModel::setDesire,
         onToggleMore = viewModel::toggleMore,
         onToggleBiomarkers = viewModel::toggleBiomarkers,
         onToggleSymptom = viewModel::toggleSymptom,
@@ -157,6 +162,9 @@ internal data class CycleEntryActions(
         onBbtTime = viewModel::setBbtTime,
         onToggleBbtDisturbance = viewModel::toggleBbtDisturbance,
         onCervicalSensation = viewModel::setCervicalSensation,
+        onCervixOpening = viewModel::setCervixOpening,
+        onCervixFirmness = viewModel::setCervixFirmness,
+        onCervixPosition = viewModel::setCervixPosition,
         onMucusAppearance = viewModel::setMucusAppearance,
         onMucusAmount = viewModel::setMucusAmount,
         onOvulation = viewModel::setOvulation,
@@ -166,7 +174,7 @@ internal data class CycleEntryActions(
     companion object {
         /** No-op callbacks, for previews and tests. */
         val None = CycleEntryActions(
-            {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+            {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
         )
     }
 }
@@ -256,7 +264,14 @@ private fun CycleEntryAllSections(
         foreignSpotting = state.foreignSpotting,
         onSelect = actions.onBleeding,
     )
-    CycleEntryScales(form = form, enabled = editable, onPain = actions.onPain, onMood = actions.onMood, onEnergy = actions.onEnergy)
+    CycleEntryScales(
+        form = form,
+        enabled = editable,
+        onPain = actions.onPain,
+        onMood = actions.onMood,
+        onEnergy = actions.onEnergy,
+        onDesire = actions.onDesire,
+    )
 
     CycleEntryToggle(
         expanded = state.showMore,
@@ -307,7 +322,14 @@ private fun CycleEntryOneSection(
             onSelect = actions.onBleeding,
         )
         CycleEntrySection.FEELING -> {
-            CycleEntryScales(form = form, enabled = editable, onPain = actions.onPain, onMood = actions.onMood, onEnergy = actions.onEnergy)
+            CycleEntryScales(
+        form = form,
+        enabled = editable,
+        onPain = actions.onPain,
+        onMood = actions.onMood,
+        onEnergy = actions.onEnergy,
+        onDesire = actions.onDesire,
+    )
             CycleEntrySymptoms(
                 selected = form.symptoms,
                 offered = state.offeredSymptoms,
@@ -336,6 +358,9 @@ private fun CycleEntryOneSection(
             onSensation = actions.onCervicalSensation,
             onAppearance = actions.onMucusAppearance,
             onAmount = actions.onMucusAmount,
+            onCervixOpening = actions.onCervixOpening,
+            onCervixFirmness = actions.onCervixFirmness,
+            onCervixPosition = actions.onCervixPosition,
         )
     }
 }
@@ -409,6 +434,9 @@ private fun CycleEntryBiomarkers(
         onSensation = actions.onCervicalSensation,
         onAppearance = actions.onMucusAppearance,
         onAmount = actions.onMucusAmount,
+        onCervixOpening = actions.onCervixOpening,
+        onCervixFirmness = actions.onCervixFirmness,
+        onCervixPosition = actions.onCervixPosition,
     )
     CycleEntryOvulationSection(form = form, editable = editable, actions = actions)
     CycleEntrySexualActivitySection(form = form, editable = editable, actions = actions)

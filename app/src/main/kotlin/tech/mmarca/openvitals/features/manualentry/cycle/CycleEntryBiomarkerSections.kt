@@ -27,6 +27,9 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.TemperatureUnits
 import tech.mmarca.openvitals.domain.model.BbtDisturbance
 import tech.mmarca.openvitals.domain.model.CervicalSensation
+import tech.mmarca.openvitals.domain.model.CervixFirmness
+import tech.mmarca.openvitals.domain.model.CervixOpening
+import tech.mmarca.openvitals.domain.model.CervixPosition
 import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.features.manualentry.ManualEntryPickerButton
 import tech.mmarca.openvitals.features.manualentry.ManualEntryTimePickerDialog
@@ -133,6 +136,9 @@ internal fun CycleEntryCervicalFluidSection(
     onSensation: (CervicalSensation?) -> Unit,
     onAppearance: (Int?) -> Unit,
     onAmount: (Int?) -> Unit,
+    onCervixOpening: (CervixOpening?) -> Unit,
+    onCervixFirmness: (CervixFirmness?) -> Unit,
+    onCervixPosition: (CervixPosition?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -176,7 +182,87 @@ internal fun CycleEntryCervicalFluidSection(
             enabled = enabled,
             onSelect = onAmount,
         )
+        Text(text = stringResource(R.string.cycle_entry_cervix), style = MaterialTheme.typography.titleSmall)
+        EnumChipRow(
+            label = stringResource(R.string.cycle_entry_cervix_opening),
+            options = CervixOpening.entries,
+            selected = form.cervixOpening,
+            enabled = enabled,
+            labelRes = ::cervixOpeningLabelRes,
+            onSelect = onCervixOpening,
+        )
+        EnumChipRow(
+            label = stringResource(R.string.cycle_entry_cervix_firmness),
+            options = CervixFirmness.entries,
+            selected = form.cervixFirmness,
+            enabled = enabled,
+            labelRes = ::cervixFirmnessLabelRes,
+            onSelect = onCervixFirmness,
+        )
+        EnumChipRow(
+            label = stringResource(R.string.cycle_entry_cervix_position),
+            options = CervixPosition.entries,
+            selected = form.cervixPosition,
+            enabled = enabled,
+            labelRes = ::cervixPositionLabelRes,
+            onSelect = onCervixPosition,
+        )
     }
+}
+
+/** One row of single-choice chips over an enum; tapping the chosen one clears it. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun <T : Enum<T>> EnumChipRow(
+    label: String,
+    options: List<T>,
+    selected: T?,
+    enabled: Boolean,
+    labelRes: (T) -> Int,
+    onSelect: (T?) -> Unit,
+) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        options.forEach { option ->
+            val isSelected = selected == option
+            FilterChip(
+                selected = isSelected,
+                enabled = enabled,
+                onClick = { onSelect(if (isSelected) null else option) },
+                label = { Text(stringResource(labelRes(option))) },
+                leadingIcon = if (isSelected) {
+                    { Icon(Icons.Outlined.Check, contentDescription = null) }
+                } else {
+                    null
+                },
+                shape = MaterialTheme.shapes.small,
+            )
+        }
+    }
+}
+
+internal fun cervixOpeningLabelRes(opening: CervixOpening): Int = when (opening) {
+    CervixOpening.CLOSED -> R.string.cycle_cervix_closed
+    CervixOpening.MEDIUM -> R.string.cycle_cervix_medium
+    CervixOpening.OPEN -> R.string.cycle_cervix_open
+}
+
+internal fun cervixFirmnessLabelRes(firmness: CervixFirmness): Int = when (firmness) {
+    CervixFirmness.FIRM -> R.string.cycle_cervix_firm
+    CervixFirmness.SOFT -> R.string.cycle_cervix_soft
+}
+
+internal fun cervixPositionLabelRes(position: CervixPosition): Int = when (position) {
+    CervixPosition.LOW -> R.string.cycle_cervix_low
+    CervixPosition.MEDIUM -> R.string.cycle_cervix_medium
+    CervixPosition.HIGH -> R.string.cycle_cervix_high
 }
 
 internal fun sensationLabelRes(sensation: CervicalSensation): Int = when (sensation) {

@@ -26,7 +26,7 @@ import tech.mmarca.openvitals.domain.model.HcgTestResult
 import tech.mmarca.openvitals.features.cycle.cycleSymptomLabelRes
 import tech.mmarca.openvitals.ui.theme.Spacing
 
-/** Pain, mood and energy. Blank means not recorded; the copy states each scale's direction. */
+/** Pain, mood, energy and desire. Blank means not recorded; the copy states each scale's direction. */
 @Composable
 internal fun CycleEntryScales(
     form: CycleDayForm,
@@ -34,11 +34,13 @@ internal fun CycleEntryScales(
     onPain: (Int?) -> Unit,
     onMood: (Int?) -> Unit,
     onEnergy: (Int?) -> Unit,
+    onDesire: (Int?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val pain = scaleDescriptions(R.string.cycle_entry_pain_value)
     val mood = scaleDescriptions(R.string.cycle_entry_mood_value)
     val energy = scaleDescriptions(R.string.cycle_entry_energy_value)
+    val desire = scaleDescriptions(R.string.cycle_entry_desire_value)
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
         CycleObservationScale(
             label = stringResource(R.string.cycle_entry_pain),
@@ -65,6 +67,15 @@ internal fun CycleEntryScales(
             type = ObservationScaleType.ENERGY,
             valueDescription = energy::getValue,
             onValueChange = onEnergy,
+            enabled = enabled,
+        )
+        CycleObservationScale(
+            label = stringResource(R.string.cycle_entry_desire),
+            supportingText = stringResource(R.string.cycle_entry_desire_scale),
+            value = form.desire,
+            type = ObservationScaleType.DESIRE,
+            valueDescription = desire::getValue,
+            onValueChange = onDesire,
             enabled = enabled,
         )
     }
