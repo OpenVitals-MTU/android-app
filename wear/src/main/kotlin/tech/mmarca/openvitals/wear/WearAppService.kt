@@ -181,6 +181,8 @@ class WearAppService : Service() {
             heartRateWanted -> recorder.start()
             else -> Log.i(TAG, "Heart rate resting: not worn")
         }
+        // Without the heart rate's wake-ups the step counter must wake the watch itself.
+        stepRecorder.setHeartRateRunning(recorder.isRunning)
         when {
             !stepRecorder.hasSensor -> Log.i(TAG, "No step counter")
             WearPermissions.hasActivityRecognition(this) -> stepRecorder.start()
@@ -192,6 +194,7 @@ class WearAppService : Service() {
         if (!isForeground || wanted == heartRateWanted) return
         heartRateWanted = wanted
         if (!wanted) recorder.stop() else if (WearPermissions.hasHeartRate(this)) recorder.start()
+        stepRecorder.setHeartRateRunning(recorder.isRunning)
     }
 
     /** The watch's Bluetooth name, as the phone will show it. */
