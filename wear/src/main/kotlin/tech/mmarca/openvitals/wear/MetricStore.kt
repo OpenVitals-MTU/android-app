@@ -15,6 +15,9 @@ import android.database.sqlite.SQLiteOpenHelper
  *
  * The phone keeps its own cursors and the watch keeps each metric's
  * retention of history; nothing is deleted on the phone's behalf.
+ *
+ * A second table keeps a recorder's own state by key, so a recorder can
+ * write it in the same transaction as its rows.
  */
 class MetricStore(context: Context, name: String? = DB_NAME) : SQLiteOpenHelper(context, name, null, DB_VERSION) {
 
@@ -26,9 +29,16 @@ class MetricStore(context: Context, name: String? = DB_NAME) : SQLiteOpenHelper(
                 "$COL_LINE TEXT NOT NULL, " +
                 "PRIMARY KEY ($COL_METRIC, $COL_TIME)) WITHOUT ROWID",
         )
+        createStateTable(db)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) createStateTable(db)
+    }
+
+    private fun createStateTable(db: SQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS $STATE_TABLE ($COL_KEY TEXT PRIMARY KEY, $COL_VALUE TEXT NOT NULL)")
+    }
 
     /** Stores one value; one already at its time stays or is replaced as [WearMetric.onSameTime] says. */
     fun <T> put(metric: WearMetric<T>, value: T) {
@@ -46,6 +56,28 @@ class MetricStore(context: Context, name: String? = DB_NAME) : SQLiteOpenHelper(
             db.endTransaction()
         }
     }
+
+    /** Stores [values] and sets the state [key] to [state], in one transaction. */
+    fun <T> putAll(metric: WearMetric<T>, values: Iterable<T>, key: String, state: String) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            for (value in values) put(db, metric, value)
+            val row = ContentValues(2).apply {
+                put(COL_KEY, key)
+                put(COL_VALUE, state)
+            }
+            db.insertWithOnConflict(STATE_TABLE, null, row, SQLiteDatabase.CONFLICT_REPLACE)
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /** The state stored under [key], or null when there is none. */
+    fun state(key: String): String? =
+        readableDatabase.query(STATE_TABLE, arrayOf(COL_VALUE), "$COL_KEY = ?", arrayOf(key), null, null, null)
+            .use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
 
     /** Up to [limit] values newer than [epochMillis], oldest first. Rows this build cannot read are skipped. */
     fun <T> since(metric: WearMetric<T>, epochMillis: Long, limit: Int): List<T> =
@@ -104,10 +136,13 @@ class MetricStore(context: Context, name: String? = DB_NAME) : SQLiteOpenHelper(
 
     companion object {
         const val DB_NAME = "metrics.db"
-        private const val DB_VERSION = 1
+        private const val DB_VERSION = 2
         const val TABLE = "rows"
         private const val COL_METRIC = "metric"
         private const val COL_TIME = "time_ms"
         private const val COL_LINE = "line"
+        private const val STATE_TABLE = "state"
+        private const val COL_KEY = "key"
+        private const val COL_VALUE = "value"
     }
 }

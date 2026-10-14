@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.imports.applehealth
 
 import android.content.Context
+import tech.mmarca.openvitals.data.repository.isDuplicateClientRecordFailure
 import android.database.Cursor
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -1246,14 +1247,6 @@ private fun ConvertedAppleRecord.diagnostic(reasonCode: String, detail: String):
         detail = detail,
     )
 
-internal fun Throwable.isDuplicateClientRecordFailure(): Boolean {
-    val text = generateSequence(this) { it.cause }
-        .joinToString(" ") { listOfNotNull(it.message, it::class.simpleName).joinToString(" ") }
-        .lowercase()
-    return "clientrecordid" in text ||
-        "client record id" in text ||
-        (("duplicate" in text || "already exist" in text || "already exists" in text) && "record" in text)
-}
 
 private fun Map<String, MutableAppleImportTypeStats>.toTypeSummaries(): List<AppleHealthImportTypeSummary> =
     entries

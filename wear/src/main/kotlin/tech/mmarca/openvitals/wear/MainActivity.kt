@@ -44,9 +44,12 @@ class MainActivity : ComponentActivity() {
                     permissionsVersion = permissionsVersion,
                     hasHeartRate = { WearPermissions.hasHeartRate(this) },
                     hasBluetooth = { WearPermissions.hasBluetooth(this) },
+                    hasSteps = { WearPermissions.hasActivityRecognition(this) },
+                    hasStepCounter = StepRecorder.hasStepCounter(this),
                     readLatest = { store.latest(WearMetrics.HEART_RATE) },
                     readCount = { store.count(WearMetrics.HEART_RATE) },
                     readMinuteCount = { store.count(WearMetrics.SLEEP_MINUTES) },
+                    readStepMinuteCount = { store.count(WearMetrics.STEPS) },
                     ppgLogAvailable = PpgRawLogger(this).isAvailable,
                     onTogglePpgLog = { WearAppService.togglePpgLog(this) },
                     onGrant = ::requestMissingPermissions,
@@ -81,6 +84,7 @@ class MainActivity : ComponentActivity() {
     private fun requestMissingPermissions() {
         val wanted = buildList {
             add(WearPermissions.heartRate)
+            add(android.Manifest.permission.ACTIVITY_RECOGNITION)
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 add(android.Manifest.permission.BLUETOOTH_CONNECT)
             }

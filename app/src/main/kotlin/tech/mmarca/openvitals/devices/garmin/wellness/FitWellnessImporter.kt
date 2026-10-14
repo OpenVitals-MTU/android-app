@@ -12,6 +12,7 @@ import kotlinx.coroutines.CancellationException
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.contract.GarminSleepMinuteRepository
 import tech.mmarca.openvitals.data.repository.contract.GarminWellnessRepository
+import tech.mmarca.openvitals.data.repository.insertSkippingPresent
 import tech.mmarca.openvitals.devices.garmin.GarminCounterWatermarkStore
 import tech.mmarca.openvitals.devices.garmin.GarminDownloadedFile
 import tech.mmarca.openvitals.devices.garmin.GarminLog
@@ -19,7 +20,6 @@ import tech.mmarca.openvitals.domain.insights.SleepStageEstimator
 import tech.mmarca.openvitals.domain.model.GarminSleepMinute
 import tech.mmarca.openvitals.domain.model.GarminWellnessMetric
 import tech.mmarca.openvitals.domain.model.GarminWellnessSample
-import tech.mmarca.openvitals.features.imports.applehealth.isDuplicateClientRecordFailure
 
 /**
  * Runs the wellness import for one sync's FIT files: Health Connect records
@@ -130,29 +130,13 @@ class FitWellnessImporter @Inject constructor(
             .values
             .toList()
         if (deduped.isEmpty()) return
-        try {
-            importRepository.insertImportedRecords(deduped)
-            GarminLog.log("[GARMIN-IMPORT] wrote ${deduped.size} Health Connect records")
-            return
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            if (!error.isDuplicateClientRecordFailure()) throw error
-        }
-        // The batch is atomic; retry one by one so new records still land.
-        var written = 0
-        for (record in deduped) {
-            try {
-                importRepository.insertImportedRecords(listOf(record))
-                written += 1
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Exception) {
-                if (!error.isDuplicateClientRecordFailure()) throw error
-            }
-        }
+        val written = importRepository.insertSkippingPresent(deduped)
         GarminLog.log(
-            "[GARMIN-IMPORT] wrote $written/${deduped.size} records (rest already present)",
+            if (written == deduped.size) {
+                "[GARMIN-IMPORT] wrote $written Health Connect records"
+            } else {
+                "[GARMIN-IMPORT] wrote $written/${deduped.size} records (rest already present)"
+            },
         )
     }
 

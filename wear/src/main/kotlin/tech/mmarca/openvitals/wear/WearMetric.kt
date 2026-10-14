@@ -66,5 +66,17 @@ object WearMetrics {
         onSameTime = WearMetric.OnSameTime.REPLACE,
     )
 
-    val ALL: List<WearMetric<*>> = listOf(HEART_RATE, SLEEP_MINUTES)
+    /**
+     * Steps per clock minute; see `StepRecorder`. A minute is written again
+     * while late steps for it arrive, so the newest row wins.
+     */
+    val STEPS = WearMetric(
+        key = WearLinkProtocol.CAP_STEPS,
+        encode = WearLinkProtocol::formatStepMinute,
+        decode = WearLinkProtocol::parseStepMinute,
+        timeOf = { it.epochMillis },
+        onSameTime = WearMetric.OnSameTime.REPLACE,
+    )
+
+    val ALL: List<WearMetric<*>> = listOf(HEART_RATE, SLEEP_MINUTES, STEPS)
 }

@@ -40,6 +40,10 @@ object WearPermissions {
 
     fun hasHeartRate(context: Context): Boolean = isGranted(context, heartRate)
 
+    /** The step counter needs ACTIVITY_RECOGNITION, a runtime grant on every release this app runs on. */
+    fun hasActivityRecognition(context: Context): Boolean =
+        isGranted(context, Manifest.permission.ACTIVITY_RECOGNITION)
+
     fun hasHeartRateInBackground(context: Context): Boolean =
         heartRateInBackground?.let { isGranted(context, it) } ?: true
 
