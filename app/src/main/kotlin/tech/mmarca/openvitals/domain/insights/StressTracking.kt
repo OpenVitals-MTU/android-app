@@ -117,6 +117,11 @@ data class PhysiologicalStressEstimate(
     }
 }
 
+/**
+ * A 0–100 stress score: HRV and resting heart rate against the personal
+ * baseline, plus training, sleep and other context. Weights, thresholds and
+ * levels: app heuristic, not validated. Not a clinical stress measure.
+ */
 fun calculatePhysiologicalStress(data: DashboardData): PhysiologicalStressEstimate {
     var rawScore = 32
     var signalCount = 0

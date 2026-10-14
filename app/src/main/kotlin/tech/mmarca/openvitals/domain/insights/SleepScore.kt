@@ -331,7 +331,13 @@ fun calculateSleepScore(
     )
 }
 
-/** NSF 2015 age-banded sleep duration. Adults default to 7-9 h when age is unknown. */
+/**
+ * NSF recommended sleep by age: Hirshkowitz et al. 2015,
+ * doi:10.1016/j.sleh.2014.12.010 (final report doi:10.1016/j.sleh.2015.10.004).
+ * Adults default to 7-9 h when age is unknown. Ideal bands: NSF
+ * "recommended". Where the score reaches zero: app heuristic, wider than
+ * NSF "may be appropriate" (6 and 10 h, adults 26–64).
+ */
 fun sleepDurationTargetForAge(ageYears: Int?): SleepDurationTarget = when {
     ageYears == null -> SleepDurationTarget(7.0, 9.0, 4.0, 11.0)
     ageYears < 14 -> SleepDurationTarget(9.0, 11.0, 6.0, 13.0) // school-aged 6–13
@@ -421,15 +427,23 @@ fun sleepQualityPillar(
     )
 }
 
-/** NSF quality: efficiency at or above 85% is good. 65% maps to 0. */
+/**
+ * NSF quality: efficiency of 85 % or more is good (Ohayon et al. 2017,
+ * doi:10.1016/j.sleh.2016.11.006). 65 % scores 0: app heuristic.
+ */
 internal fun efficiencyPoints(efficiencyPercent: Double): Double =
     EfficiencyShare * ((efficiencyPercent - 65.0) / 20.0).coerceIn(0.0, 1.0)
 
-/** NSF quality: WASO at or under 20 min is good. 90 min maps to 0. */
+/** NSF quality: WASO of 20 min or less is good (Ohayon et al. 2017). 90 min scores 0: app heuristic. */
 internal fun continuityPoints(wakeAfterSleepOnsetMinutes: Double): Double =
     ContinuityShare * ((90.0 - wakeAfterSleepOnsetMinutes) / 70.0).coerceIn(0.0, 1.0)
 
-/** Deep ~13-23% and REM ~20-25% are typical adult targets. Soft trapezoid scoring. */
+/**
+ * Deep ~13-23 % and REM ~20-25 %: young-adult shares, Carskadon and Dement,
+ * Principles and Practice of Sleep Medicine (book, no DOI; cited
+ * second-hand). Ohayon et al. 2017 found little agreement on stage shares as
+ * a quality marker. Soft trapezoid scoring.
+ */
 internal fun stageBalancePoints(deepAndRemPercent: Pair<Double, Double>): Double {
     val (deep, rem) = deepAndRemPercent
     val deepRatio = bandRatio(deep, idealMin = 13.0, idealMax = 23.0, floor = 5.0, ceiling = 35.0)
