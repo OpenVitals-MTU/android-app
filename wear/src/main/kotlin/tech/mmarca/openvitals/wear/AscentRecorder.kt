@@ -10,22 +10,22 @@ import android.os.HandlerThread
 import android.util.Log
 
 /**
- * Writes the floors the barometer (`TYPE_PRESSURE`) climbed into the
- * [MetricStore], one row per clock minute. [FloorMinuteCounter] does the
+ * Writes the height the barometer (`TYPE_PRESSURE`) climbed into the
+ * [MetricStore], one row per clock minute. [AscentMinuteCounter] does the
  * arithmetic. Runs in `WearAppService`, so it outlives the activity. Needs
  * no grant.
  *
  * The barometer is read once a second, batched with the heart rate's
  * latency, so both arrive in one wake-up.
  */
-class FloorRecorder(
+class AscentRecorder(
     context: Context,
     private val store: MetricStore,
 ) : SensorEventListener {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private var thread: HandlerThread? = null
-    private var counter: FloorMinuteCounter? = null
+    private var counter: AscentMinuteCounter? = null
     private var lastPrunedAt = 0L
 
     /** Starts recording. False when the watch has no barometer or the registration failed. */
@@ -36,8 +36,8 @@ class FloorRecorder(
             Log.w(TAG, "No barometer")
             return false
         }
-        val worker = HandlerThread("FloorRecorder").apply { start() }
-        Handler(worker.looper).post { counter = FloorMinuteCounter(store.latest(WearMetrics.FLOORS)) }
+        val worker = HandlerThread("AscentRecorder").apply { start() }
+        Handler(worker.looper).post { counter = AscentMinuteCounter(store.latest(WearMetrics.ASCENT)) }
         val registered = sensorManager.registerListener(
             this,
             sensor,
@@ -51,7 +51,7 @@ class FloorRecorder(
             return false
         }
         thread = worker
-        Log.i(TAG, "Recording floors from ${sensor.name}")
+        Log.i(TAG, "Recording ascent from ${sensor.name}")
         return true
     }
 
@@ -60,7 +60,7 @@ class FloorRecorder(
         sensorManager.unregisterListener(this)
         worker.quitSafely()
         thread = null
-        Log.i(TAG, "Stopped recording floors")
+        Log.i(TAG, "Stopped recording ascent")
     }
 
     override fun onSensorChanged(event: SensorEvent) {
@@ -71,20 +71,20 @@ class FloorRecorder(
         // A fresh listener gets the last cached reading, possibly hours old.
         if (SensorTime.isStale(at)) return
         val minute = counter.onPressure(at, hectopascals) ?: return
-        store.put(WearMetrics.FLOORS, minute)
-        // The watch has no floors screen yet; testers read `adb logcat -s FloorRecorder`.
-        Log.i(TAG, "${java.time.Instant.ofEpochMilli(minute.epochMillis)}: ${minute.floors} floor(s) so far")
+        store.put(WearMetrics.ASCENT, minute)
+        // The watch has no ascent screen yet; testers read `adb logcat -s AscentRecorder`.
+        Log.i(TAG, "${java.time.Instant.ofEpochMilli(minute.epochMillis)}: ${minute.decimetres / 10.0} m climbed so far")
 
         if (at - lastPrunedAt > PRUNE_EVERY_MILLIS) {
             lastPrunedAt = at
-            store.prune(WearMetrics.FLOORS, at)
+            store.prune(WearMetrics.ASCENT, at)
         }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 
     private companion object {
-        const val TAG = "FloorRecorder"
+        const val TAG = "AscentRecorder"
         const val SAMPLING_PERIOD_MICROS = 1_000_000
 
         /** The heart rate's latency, so both batches arrive in one wake-up; see `HeartRateRecorder`. */

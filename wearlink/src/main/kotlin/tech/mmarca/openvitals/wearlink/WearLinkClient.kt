@@ -55,10 +55,10 @@ class WearLinkSession internal constructor(
         }
     }
 
-    fun pullFloors(sinceEpochMillis: Long, limit: Int): WearLinkOutcome<Page<WearLinkProtocol.FloorMinute>> {
-        val items = ArrayList<WearLinkProtocol.FloorMinute>()
-        return exchange(WearLinkProtocol.Request.FloorsSince(sinceEpochMillis, limit)) { line ->
-            WearLinkProtocol.parseFloorMinute(line)?.let { items += it; return@exchange Reply.More }
+    fun pullAscent(sinceEpochMillis: Long, limit: Int): WearLinkOutcome<Page<WearLinkProtocol.AscentMinute>> {
+        val items = ArrayList<WearLinkProtocol.AscentMinute>()
+        return exchange(WearLinkProtocol.Request.AscentSince(sinceEpochMillis, limit)) { line ->
+            WearLinkProtocol.parseAscentMinute(line)?.let { items += it; return@exchange Reply.More }
             WearLinkProtocol.parseEnd(line)?.let { return@exchange Reply.Done(Page(items, it.more)) }
             Reply.Unexpected
         }

@@ -12,6 +12,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.reflect.KClass
@@ -136,7 +137,7 @@ class WearOsWatchSyncService(
             if (!pullHeartRate(device, progress)) return notPaired(device)
             if (HealthPermission.getWritePermission(StepsRecord::class) in healthConnect.grantedPermissions()) {
                 val steps = pullSteps(device, progress) ?: return notPaired(device)
-                if (!pullFloors(device, progress, steps)) return notPaired(device)
+                if (!pullAscent(device, progress, steps)) return notPaired(device)
             } else {
                 // The floors filter needs the steps, so floors wait too.
                 WearOsLog.log("steps and floors: not pulled, Health Connect permission for steps missing")
@@ -198,8 +199,8 @@ class WearOsWatchSyncService(
         val cursor = cursors.stepsCursor(device.id)
         // The watch sends what is after `since`, so this takes the cursor's minute again.
         var since = if (cursor == Instant.EPOCH) cursor else cursor.minusMillis(1)
-        val floorsCursor = cursors.floorsCursor(device.id)
-        if (floorsCursor != Instant.EPOCH) since = minOf(since, floorsCursor.minusSeconds(60).minusMillis(1))
+        val ascentCursor = cursors.ascentCursor(device.id)
+        if (ascentCursor != Instant.EPOCH) since = minOf(since, ascentCursor.minusSeconds(60).minusMillis(1))
         var pages = 0
         var pulledSteps = 0
         var energyMinutes = 0
@@ -243,18 +244,18 @@ class WearOsWatchSyncService(
     }
 
     /**
-     * False when no bonded watch matches. Floors are pulled the way steps are,
-     * taking the cursor's minute again, and only minutes with [steps] around
-     * them are written; see [WearOsFloorsImport].
+     * False when no bonded watch matches. Ascent is pulled the way steps are,
+     * taking the cursor's minute again, and written as floors only for
+     * minutes with [steps] around them; see [WearOsFloorsImport].
      */
-    private suspend fun pullFloors(device: BleSensorDevice, progress: Progress, steps: List<WearOsStepMinute>): Boolean {
-        val cursor = cursors.floorsCursor(device.id)
+    private suspend fun pullAscent(device: BleSensorDevice, progress: Progress, steps: List<WearOsStepMinute>): Boolean {
+        val cursor = cursors.ascentCursor(device.id)
         var since = if (cursor == Instant.EPOCH) cursor else cursor.minusMillis(1)
         var pages = 0
-        var climbed = 0
-        var credited = 0
+        var climbed = 0.0
+        var credited = 0.0
         while (true) {
-            val page = retryOnce { nodePort.pullFloors(device.address, device.bluetoothName, since) } ?: return false
+            val page = retryOnce { nodePort.pullAscent(device.address, device.bluetoothName, since) } ?: return false
             progress.page()
             val newest = page.minutes.maxOfOrNull { it.start }
             if (newest != null) {
@@ -267,16 +268,19 @@ class WearOsWatchSyncService(
                 for (part in elevation.partition { (it as ElevationGainedRecord).startTime.isAfter(cursor) }.toList()) {
                     writeEstimates("elevation", part)
                 }
-                climbed += page.minutes.sumOf { it.floors }
-                credited += records.sumOf { (it as FloorsClimbedRecord).floors.toInt() }
-                if (newest.isAfter(cursors.floorsCursor(device.id))) cursors.setFloorsCursor(device.id, newest)
+                climbed += page.minutes.sumOf { it.metres }
+                credited += records.sumOf { (it as FloorsClimbedRecord).floors } * WearOsFloorsImport.METRES_PER_FLOOR
+                if (newest.isAfter(cursors.ascentCursor(device.id))) cursors.setAscentCursor(device.id, newest)
                 since = newest
             }
             if (!page.hasMore || newest == null) break
             if (++pages >= MAX_PAGES) break
         }
         // The watch has no screen for these yet; testers read this line.
-        WearOsLog.log("floors: $credited of $climbed climbed written; the rest had too few steps (elevators, weather)")
+        WearOsLog.log(
+            "ascent: ${"%.1f".format(Locale.ROOT, credited)} of ${"%.1f".format(Locale.ROOT, climbed)} m climbed written as floors; " +
+                "the rest had too few steps (elevators, weather)",
+        )
         return true
     }
 

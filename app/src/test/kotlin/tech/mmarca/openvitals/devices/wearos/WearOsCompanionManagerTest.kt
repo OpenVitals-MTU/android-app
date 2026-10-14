@@ -24,7 +24,7 @@ private class FakeWearOsNodePort : WearOsNodePort {
 
     override suspend fun pullSleepMinutes(targetAddress: String?, targetName: String?, since: Instant): WearOsSleepMinutePage? = null
     override suspend fun pullSteps(targetAddress: String?, targetName: String?, since: Instant): WearOsStepPage? = null
-    override suspend fun pullFloors(targetAddress: String?, targetName: String?, since: Instant): WearOsFloorPage? = null
+    override suspend fun pullAscent(targetAddress: String?, targetName: String?, since: Instant): WearOsAscentPage? = null
 
     /** One entry per live session: the readings it hands out, then whether the watch could stream; a failure throws. */
     val liveSessions = ArrayDeque<Pair<List<Int>, Boolean>>()

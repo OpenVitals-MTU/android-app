@@ -113,18 +113,18 @@ class BluetoothWearOsNodePort @Inject constructor(
         }
     }
 
-    override suspend fun pullFloors(
+    override suspend fun pullAscent(
         targetAddress: String?,
         targetName: String?,
         since: Instant,
-    ): WearOsFloorPage? = withContext(Dispatchers.IO) {
+    ): WearOsAscentPage? = withContext(Dispatchers.IO) {
         val match = bondedWatchOrNull(targetAddress, targetName) ?: return@withContext null
         withSession(match, targetAddress, PULL_TIMEOUT_MS) { session ->
-            // A watch app from before floors would answer the request with an error.
-            if (WearLinkProtocol.CAP_FLOORS !in session.peer.capabilities) return@withSession WearOsFloorPage(emptyList(), false)
-            val page = unwrap(session.pullFloors(since.toEpochMilli(), WearLinkProtocol.MAX_FLOOR_MINUTES_PER_REQUEST))
-            WearOsFloorPage(
-                minutes = page.items.map { WearOsFloorMinute(Instant.ofEpochMilli(it.epochMillis), it.floors) },
+            // A watch app from before ascent would answer the request with an error.
+            if (WearLinkProtocol.CAP_ASCENT !in session.peer.capabilities) return@withSession WearOsAscentPage(emptyList(), false)
+            val page = unwrap(session.pullAscent(since.toEpochMilli(), WearLinkProtocol.MAX_ASCENT_MINUTES_PER_REQUEST))
+            WearOsAscentPage(
+                minutes = page.items.map { WearOsAscentMinute(Instant.ofEpochMilli(it.epochMillis), it.decimetres / 10.0) },
                 hasMore = page.more,
             )
         }

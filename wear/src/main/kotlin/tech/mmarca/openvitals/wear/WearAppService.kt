@@ -21,7 +21,7 @@ import android.util.Log
 
 /**
  * The watch's end of the phone link, and the host of the heart rate, step,
- * floor and sleep minute recorders. The heart rate rests while the watch
+ * ascent and sleep minute recorders. The heart rate rests while the watch
  * is off the wrist ([WornMonitor]).
  *
  * The link itself is [WearLinkServerHost] over `:wearlink`; this service
@@ -41,7 +41,7 @@ class WearAppService : Service() {
     private lateinit var store: MetricStore
     private lateinit var recorder: HeartRateRecorder
     private lateinit var stepRecorder: StepRecorder
-    private lateinit var floorRecorder: FloorRecorder
+    private lateinit var ascentRecorder: AscentRecorder
     private lateinit var minuteRecorder: SleepMinuteRecorder
     private lateinit var wornMonitor: WornMonitor
     private lateinit var ppgLogger: PpgRawLogger
@@ -92,7 +92,7 @@ class WearAppService : Service() {
             onHeartRateWanted = { wanted -> mainHandler.post { setHeartRateWanted(wanted) } },
         )
         stepRecorder = StepRecorder(this, store)
-        floorRecorder = FloorRecorder(this, store)
+        ascentRecorder = AscentRecorder(this, store)
         trust = WearTrustStore(this).also { it.onPending = { pending -> WearPhoneRequests.notify(this, pending) } }
         link = WearLinkServerHost(
             adapter = { getSystemService(BluetoothManager::class.java)?.adapter },
@@ -121,7 +121,7 @@ class WearAppService : Service() {
         startRecordingIfPermitted()
         // Need no grant: the accelerometer and the barometer are open to every app.
         minuteRecorder.start()
-        floorRecorder.start()
+        ascentRecorder.start()
         wornMonitor.start()
     }
 
@@ -224,7 +224,7 @@ class WearAppService : Service() {
             mainHandler.removeCallbacksAndMessages(null)
             recorder.stop()
             stepRecorder.stop()
-            floorRecorder.stop()
+            ascentRecorder.stop()
             minuteRecorder.stop()
             ppgLogger.stop()
             WearLinkState.update { it.copy(ppgLogging = false) }

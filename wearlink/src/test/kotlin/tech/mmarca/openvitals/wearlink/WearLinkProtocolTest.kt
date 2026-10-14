@@ -174,14 +174,16 @@ class WearLinkProtocolTest {
     }
 
     @Test
-    fun `a floor minute round-trips, and one off the minute, empty or past an elevator is refused`() {
-        val minute = WearLinkProtocol.FloorMinute(1_700_000_040_000L, 3)
-        assertEquals("FL 1700000040000 3", WearLinkProtocol.formatFloorMinute(minute))
-        assertEquals(minute, WearLinkProtocol.parseFloorMinute(WearLinkProtocol.formatFloorMinute(minute)))
-        assertNull(WearLinkProtocol.parseFloorMinute("FL 1700000041000 3"))
-        assertNull(WearLinkProtocol.parseFloorMinute("FL 1700000040000 0"))
-        assertNull(WearLinkProtocol.parseFloorMinute("FL 1700000040000 ${WearLinkProtocol.MAX_FLOORS_PER_MINUTE + 1}"))
-        assertEquals(WearLinkProtocol.Request.FloorsSince(10, 2000), WearLinkProtocol.parseRequest("FL_SINCE 10 99999"))
+    fun `an ascent minute round-trips, and one off the minute, empty or past an elevator is refused`() {
+        val minute = WearLinkProtocol.AscentMinute(1_700_000_040_000L, 32)
+        assertEquals("AS 1700000040000 32", WearLinkProtocol.formatAscentMinute(minute))
+        assertEquals(minute, WearLinkProtocol.parseAscentMinute(WearLinkProtocol.formatAscentMinute(minute)))
+        assertNull(WearLinkProtocol.parseAscentMinute("AS 1700000041000 32"))
+        assertNull(WearLinkProtocol.parseAscentMinute("AS 1700000040000 0"))
+        assertNull(WearLinkProtocol.parseAscentMinute("AS 1700000040000 ${WearLinkProtocol.MAX_ASCENT_DECIMETRES_PER_MINUTE + 1}"))
+        // A line of the builds that sent whole floors is not ascent.
+        assertNull(WearLinkProtocol.parseAscentMinute("FL 1700000040000 3"))
+        assertEquals(WearLinkProtocol.Request.AscentSince(10, 2000), WearLinkProtocol.parseRequest("AS_SINCE 10 99999"))
     }
 
     @Test
