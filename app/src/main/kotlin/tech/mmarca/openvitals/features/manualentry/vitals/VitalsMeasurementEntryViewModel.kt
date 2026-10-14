@@ -43,10 +43,14 @@ private const val MaxRespiratoryRate = 1000.0
 private const val MaxBodyTemperatureCelsius = 100.0
 private const val MinHrvMillis = 1.0
 private const val MaxHrvMillis = 200.0
+private const val MinPulseBpm = 20
+private const val MaxPulseBpm = 300
 
 enum class VitalsMeasurementEntryError {
     INVALID_VALUE,
+    INVALID_PULSE,
     MISSING_WRITE_PERMISSION,
+    MISSING_PULSE_WRITE_PERMISSION,
     WRITE_FAILED,
 }
 
@@ -55,11 +59,16 @@ data class VitalsMeasurementEntryUiState(
     val type: VitalsMeasurementType = VitalsMeasurementType.BLOOD_PRESSURE,
     val inputText: String = "",
     val secondaryInputText: String = "",
+    /** Blood pressure only: the pulse the cuff showed; blank saves none. */
+    val pulseInputText: String = "",
     val bpMealContext: BpMealContext? = null,
     val bpBodyPosition: Int? = null,
     val bpMeasurementLocation: Int? = null,
     val writePermissions: Set<String> = emptySet(),
     val canWrite: Boolean = false,
+    /** Blood pressure only: what saving a pulse needs on top of [writePermissions]. */
+    val pulseWritePermissions: Set<String> = emptySet(),
+    val canWritePulse: Boolean = false,
     val isCheckingPermission: Boolean = true,
     val isSavingEntry: Boolean = false,
     val editRecordId: String? = null,
@@ -109,12 +118,18 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                 writeError = null,
             )
             runCatching {
-                repository.vitalsWritePermissions(type) to repository.hasVitalsWritePermission(type)
-            }.onSuccess { (writePermissions, canWrite) ->
+                Triple(
+                    repository.vitalsWritePermissions(type),
+                    repository.hasVitalsWritePermission(type),
+                    type == VitalsMeasurementType.BLOOD_PRESSURE && repository.hasBpPulseWritePermission(),
+                )
+            }.onSuccess { (writePermissions, canWrite, canWritePulse) ->
                 _uiState.value = _uiState.value.copy(
                     isCheckingPermission = false,
                     writePermissions = writePermissions,
                     canWrite = canWrite,
+                    pulseWritePermissions = repository.bpPulseWritePermissions,
+                    canWritePulse = canWritePulse,
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
@@ -140,6 +155,15 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
     fun updateSecondaryInput(text: String) {
         _uiState.value = _uiState.value.copy(
             secondaryInputText = text,
+            saveCompleted = false,
+            entryError = null,
+            writeError = null,
+        )
+    }
+
+    fun updatePulseInput(text: String) {
+        _uiState.value = _uiState.value.copy(
+            pulseInputText = text,
             saveCompleted = false,
             entryError = null,
             writeError = null,
@@ -199,6 +223,24 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
             )
             return
         }
+        // The pulse is optional, so only a typed one is checked and needs its permission.
+        val pulseText = current.pulseInputText.trim()
+            .takeIf { current.type == VitalsMeasurementType.BLOOD_PRESSURE && it.isNotEmpty() }
+        val pulseBpm = pulseText?.toIntOrNull()?.takeIf { it in MinPulseBpm..MaxPulseBpm }
+        if (pulseText != null && pulseBpm == null) {
+            _uiState.value = current.copy(
+                entryError = VitalsMeasurementEntryError.INVALID_PULSE,
+                writeError = null,
+            )
+            return
+        }
+        if (pulseBpm != null && !current.canWritePulse) {
+            _uiState.value = current.copy(
+                entryError = VitalsMeasurementEntryError.MISSING_PULSE_WRITE_PERMISSION,
+                writeError = null,
+            )
+            return
+        }
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -218,6 +260,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                         .takeIf { current.type == VitalsMeasurementType.BLOOD_PRESSURE },
                     bpMeasurementLocation = current.bpMeasurementLocation
                         .takeIf { current.type == VitalsMeasurementType.BLOOD_PRESSURE },
+                    bpPulseBpm = pulseBpm,
                 )
                 if (current.editRecordId == null) {
                     repository.writeVitalsMeasurementEntry(request)
@@ -228,6 +271,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     inputText = if (_uiState.value.isEditMode) _uiState.value.inputText else "",
                     secondaryInputText = if (_uiState.value.isEditMode) _uiState.value.secondaryInputText else "",
+                    pulseInputText = if (_uiState.value.isEditMode) _uiState.value.pulseInputText else "",
                     // A saved add clears the picked time, so the next entry defaults to now.
                     editTime = if (_uiState.value.isEditMode) _uiState.value.editTime else null,
                     isSavingEntry = false,
@@ -265,6 +309,7 @@ class VitalsMeasurementEntryViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     inputText = entry.value.toDisplayInput(type, unitSystem),
                     secondaryInputText = entry.secondaryValue?.toInputText().orEmpty(),
+                    pulseInputText = entry.bpPulseBpm?.toString().orEmpty(),
                     bpMealContext = entry.bpMealContext,
                     bpBodyPosition = entry.bpBodyPosition,
                     bpMeasurementLocation = entry.bpMeasurementLocation,

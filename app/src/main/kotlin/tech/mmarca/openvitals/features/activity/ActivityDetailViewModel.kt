@@ -250,6 +250,7 @@ internal class ActivityDetailViewModel @Inject constructor(
             // The 90-day observed maximum is a trend-screen concern.
             observedMaxHeartRateBpm = null,
             explicitMaxHeartRateBpm = profile.maxHeartRateBpm,
+            sex = profile.sex,
         )
     }
 

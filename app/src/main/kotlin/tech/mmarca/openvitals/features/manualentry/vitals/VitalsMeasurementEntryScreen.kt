@@ -112,6 +112,7 @@ fun VitalsMeasurementEntryScreen(
                 unitFormatter = unitFormatter,
                 onInputChanged = viewModel::updateInput,
                 onSecondaryInputChanged = viewModel::updateSecondaryInput,
+                onPulseInputChanged = viewModel::updatePulseInput,
                 onSelectBpMealContext = viewModel::selectBpMealContext,
                 onSelectBpBodyPosition = viewModel::selectBpBodyPosition,
                 onSelectBpMeasurementLocation = viewModel::selectBpMeasurementLocation,
@@ -133,6 +134,9 @@ fun VitalsMeasurementEntryScreen(
                 onRequestWritePermission = {
                     requestWritePermissions.launch(state.writePermissions)
                 },
+                onRequestPulseWritePermission = {
+                    requestWritePermissions.launch(state.pulseWritePermissions)
+                },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
@@ -145,12 +149,14 @@ private fun VitalsMeasurementEntryCard(
     unitFormatter: UnitFormatter,
     onInputChanged: (String) -> Unit,
     onSecondaryInputChanged: (String) -> Unit,
+    onPulseInputChanged: (String) -> Unit,
     onSelectBpMealContext: (BpMealContext?) -> Unit,
     onSelectBpBodyPosition: (Int?) -> Unit,
     onSelectBpMeasurementLocation: (Int?) -> Unit,
     onEntryTimeChanged: (java.time.Instant) -> Unit,
     onAddEntry: () -> Unit,
     onRequestWritePermission: () -> Unit,
+    onRequestPulseWritePermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val title = stringResource(state.type.titleRes())
@@ -216,6 +222,22 @@ private fun VitalsMeasurementEntryCard(
                         enabled = !state.isSavingEntry,
                         label = stringResource(R.string.vitals_entry_diastolic_label),
                         modifier = Modifier.weight(1f),
+                    )
+                }
+                // A home monitor shows the pulse with every reading, so the form takes it too.
+                VitalsValueField(
+                    value = state.pulseInputText,
+                    onValueChange = onPulseInputChanged,
+                    enabled = !state.isSavingEntry,
+                    label = stringResource(R.string.vitals_entry_pulse_label),
+                    keyboardType = KeyboardType.Number,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                // Asked for only once a pulse is typed: a reading alone never needs heart rate access.
+                if (state.canWrite && !state.canWritePulse && state.pulseInputText.isNotBlank()) {
+                    ManualEntryWritePermissionCallout(
+                        body = stringResource(R.string.vitals_entry_pulse_permission_needed),
+                        onGrant = onRequestPulseWritePermission,
                     )
                 }
                 OptionDropdown(
@@ -299,6 +321,7 @@ private fun VitalsValueField(
     enabled: Boolean,
     label: String,
     modifier: Modifier = Modifier,
+    keyboardType: KeyboardType = KeyboardType.Decimal,
 ) {
     OutlinedTextField(
         value = value,
@@ -306,7 +329,7 @@ private fun VitalsValueField(
         enabled = enabled,
         singleLine = true,
         label = { Text(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         modifier = modifier,
     )
 }
@@ -318,7 +341,10 @@ private fun vitalsMeasurementEntryErrorText(
     title: String,
 ): String = when (error) {
     VitalsMeasurementEntryError.INVALID_VALUE -> stringResource(R.string.vitals_entry_invalid_value)
+    VitalsMeasurementEntryError.INVALID_PULSE -> stringResource(R.string.vitals_entry_invalid_pulse)
     VitalsMeasurementEntryError.MISSING_WRITE_PERMISSION -> stringResource(R.string.vitals_entry_permission_needed, title)
+    VitalsMeasurementEntryError.MISSING_PULSE_WRITE_PERMISSION ->
+        stringResource(R.string.vitals_entry_pulse_permission_needed)
     VitalsMeasurementEntryError.WRITE_FAILED -> stringResource(
         R.string.vitals_entry_write_failed,
         writeError.resolve() ?: stringResource(R.string.unknown_error),

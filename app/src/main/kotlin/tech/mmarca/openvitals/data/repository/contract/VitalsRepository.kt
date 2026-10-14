@@ -23,6 +23,12 @@ interface VitalsRepository {
 
     fun vitalsWritePermissions(type: VitalsMeasurementType): Set<String>
 
+    /**
+     * What a blood pressure reading needs on top of [vitalsWritePermissions] to carry a
+     * pulse: the pulse is a heart rate record of its own.
+     */
+    val bpPulseWritePermissions: Set<String>
+
     suspend fun missingPermissions(): Set<String>
 
     suspend fun loadVitalsPeriod(
@@ -59,6 +65,8 @@ interface VitalsRepository {
     suspend fun loadSkinTemperature(start: LocalDate, end: LocalDate): List<SkinTemperatureEntry>
 
     suspend fun hasVitalsWritePermission(type: VitalsMeasurementType): Boolean
+
+    suspend fun hasBpPulseWritePermission(): Boolean
 
     suspend fun writeVitalsMeasurementEntry(request: VitalsMeasurementWriteRequest): String
 
