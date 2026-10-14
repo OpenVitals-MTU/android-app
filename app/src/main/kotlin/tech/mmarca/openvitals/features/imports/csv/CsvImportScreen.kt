@@ -425,6 +425,14 @@ private fun CsvImportingStep(
             ),
             style = MaterialTheme.typography.bodyMedium,
         )
+        progress.resumingInSeconds?.let { seconds ->
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.settings_csv_import_quota_pause, seconds),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Spacer(Modifier.weight(1f))
         OpenVitalsOutlinedButton(
             onClick = onCancel,

@@ -2078,10 +2078,11 @@
     <string name="settings_csv_import_start">Importovat</string>
     <string name="settings_csv_import_cancel">Zrušit</string>
     <string name="settings_csv_import_progress">Řádek %1$d · zapsáno %2$d, již přítomno %3$d, odmítnuto %4$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect teď omezuje zápisy. Import bude pokračovat za %1$d s.</string>
     <string name="settings_csv_import_result">Zapsáno %1$d. Již přítomno %2$d. Odmítnuto %3$d.</string>
     <string name="settings_csv_import_result_empty">Z tohoto souboru se nic nenaimportovalo.</string>
     <string name="settings_csv_import_result_cancelled">Import zrušen. Co už bylo zapsáno, zůstalo zachováno.</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect zatím přestal přijímat zápisy. Spusťte import znovu později; už zapsané záznamy se přeskočí.</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect půl hodiny odmítal zápisy. Spusťte import znovu později; co už bylo zapsáno, zůstává.</string>
     <string name="settings_csv_import_error">Import selhal: %1$s</string>
     <string name="settings_csv_import_diagnostics_title">Odmítnuté řádky</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>

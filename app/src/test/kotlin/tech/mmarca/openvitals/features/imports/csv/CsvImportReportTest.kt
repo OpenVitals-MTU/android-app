@@ -251,4 +251,13 @@ class CsvImportReportTest {
         assertThat(report(result = runResult(outcome = CsvImportOutcome.RATE_LIMITED)))
             .contains("Health Connect rate limit")
     }
+
+    @Test
+    fun `quota pauses appear in the totals only when the run took some`() {
+        val paused = runResult()
+        val result = paused.copy(progress = paused.progress.copy(quotaPauses = 3, quotaWaitMillis = 105_000L))
+
+        assertThat(report(result = result)).contains("Quota pauses:    3 (waited 1 min 45 s)")
+        assertThat(report()).doesNotContain("Quota pauses")
+    }
 }

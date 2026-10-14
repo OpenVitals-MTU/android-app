@@ -2425,10 +2425,11 @@
     <string name="settings_csv_import_start">インポート</string>
     <string name="settings_csv_import_cancel">キャンセル</string>
     <string name="settings_csv_import_progress">行 %1$d · 書き込み %2$d、既存 %3$d、拒否 %4$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect が現在書き込みを制限しています。%1$d 秒後にインポートを再開します。</string>
     <string name="settings_csv_import_result">書き込み %1$d。既存 %2$d。拒否 %3$d。</string>
     <string name="settings_csv_import_result_empty">このファイルからは何もインポートされませんでした。</string>
     <string name="settings_csv_import_result_cancelled">インポートをキャンセルしました。すでに書き込まれたものは保持されます。</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect が現在書き込みを受け付けなくなりました。後でもう一度インポートしてください。書き込み済みの記録はスキップされます。</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect が 30 分間書き込みを拒否し続けました。後でもう一度インポートしてください。書き込み済みの内容は保持されます。</string>
     <string name="settings_csv_import_error">インポートに失敗しました: %1$s</string>
     <string name="settings_csv_import_diagnostics_title">拒否された行</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>

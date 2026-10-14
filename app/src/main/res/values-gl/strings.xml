@@ -2428,10 +2428,11 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_csv_import_start">Importar</string>
     <string name="settings_csv_import_cancel">Cancelar</string>
     <string name="settings_csv_import_progress">Fila %1$d · escritas %2$d, xa presentes %3$d, rexeitadas %4$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect está limitando as escrituras por agora. A importación continúa en %1$d s.</string>
     <string name="settings_csv_import_result">Escritas %1$d. Xa presentes %2$d. Rexeitadas %3$d.</string>
     <string name="settings_csv_import_result_empty">Non se importou nada deste ficheiro.</string>
     <string name="settings_csv_import_result_cancelled">Importación cancelada. O que xa se escribira mantívose.</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect deixou de aceptar escrituras por agora. Volve executar a importación máis tarde; os rexistros xa escritos sáltanse.</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect rexeitou as escrituras durante media hora. Volve executar a importación máis tarde; o xa escrito consérvase.</string>
     <string name="settings_csv_import_error">Fallou a importación: %1$s</string>
     <string name="settings_csv_import_diagnostics_title">Filas rexeitadas</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>
