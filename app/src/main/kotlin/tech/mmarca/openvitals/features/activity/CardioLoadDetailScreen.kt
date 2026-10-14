@@ -54,6 +54,7 @@ import tech.mmarca.openvitals.ui.components.OpenVitalsSectionSpacing
 import tech.mmarca.openvitals.ui.components.SharedMetricTile
 import tech.mmarca.openvitals.ui.components.localizedDayTitle
 import tech.mmarca.openvitals.ui.theme.HeartColor
+import tech.mmarca.openvitals.ui.theme.Spacing
 import kotlin.math.roundToLong
 
 private const val BanisterTrimpUrl = "https://pmc.ncbi.nlm.nih.gov/articles/PMC6561225/"
@@ -209,13 +210,13 @@ private fun ExplanationCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Spacing.md))
             Text(
                 text = stringResource(R.string.cardio_load_formula_weighting),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Spacing.md))
             Text(
                 text = stringResource(R.string.cardio_load_max_hr_body),
                 style = MaterialTheme.typography.bodyMedium,
