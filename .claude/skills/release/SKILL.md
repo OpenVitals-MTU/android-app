@@ -36,10 +36,10 @@ commit with the release notes, and pushes in one motion.
 - `gh` is not installed on this laptop. Check GitHub state with `curl` against
   `https://api.github.com/repos/OpenVitals-MTU/android-app/...` (anonymous,
   60 calls an hour) or in the browser.
-- The pipeline workflow is enabled. A tag pushed while it is disabled starts
+- The release workflow is enabled. A tag pushed while it is disabled starts
   nothing, and enabling it afterwards does not replay the push (2.14.0). Check
   `state` is `active` in
-  `curl -s https://api.github.com/repos/OpenVitals-MTU/android-app/actions/workflows/pipeline.yml`.
+  `curl -s https://api.github.com/repos/OpenVitals-MTU/android-app/actions/workflows/release.yml`.
 
 ## 1. Version code (read this before touching anything)
 
@@ -66,11 +66,11 @@ git ls-remote --refs origin 'refs/version-code/*' | sed 's#.*/##' | sort -n | ta
 ```
 
 **Race caveat:** a nightly can mint a code between your preview and the release
-run. Only the pipeline's schedule (00:00 UTC, often started some minutes late
-by GitHub) and manual runs of `.github/workflows/pipeline.yml` with target
+run. Only the release workflow's schedule (00:00 UTC, often started some minutes late
+by GitHub) and manual runs of `.github/workflows/release.yml` with target
 `nightly` build nightlies; a push to main runs tests only. Near midnight UTC,
 or while a manual run is going, check the runs first
-(`https://github.com/OpenVitals-MTU/android-app/actions/workflows/pipeline.yml`). Either way,
+(`https://github.com/OpenVitals-MTU/android-app/actions/workflows/release.yml`). Either way,
 compute the code and name the fastlane files immediately before running the
 release script, and afterwards verify the script's printed `versionCode`
 matches the filenames.
@@ -153,7 +153,7 @@ amend before anyone pulls:
 for f in fastlane/metadata/android/*/changelogs/OLD.txt; do git mv "$f" "${f%OLD.txt}NEW.txt"; done
 ```
 
-CI (GitHub Actions) takes it from the tag: the tag's pipeline run builds the
+CI (GitHub Actions) takes it from the tag: the tag's release run builds the
 signed APK, signed debug APK and AAB once, publishes them to the GitHub
 prerelease, uploads the AAB to Play open testing, and waits for the
 `production` environment's approval. Approving that run (Actions > the run >
@@ -161,10 +161,10 @@ Review deployments) promotes the version from open testing to production (an
 upload instead if open testing never had it, as while Play was paused), marks
 the release stable and posts the full notes to the Zulip `releases` channel
 (`scripts/announce-zulip.sh`). A tag whose run is gone is shipped by a manual
-run of the pipeline with target `production`, started from the tag: it takes
+run of the release workflow with target `production`, started from the tag: it takes
 the AAB from the prerelease, no build.
 
-The Mastodon toot is disabled since 2.9.1: the pipeline has no `announce-mastodon`
+The Mastodon toot is disabled since 2.9.1: the release workflow has no `announce-mastodon`
 job. If it comes back, the toot's body
 is the narrative paragraph of `docs/releases/X.Y.Z.md` - the paragraph right
 after `Released YYYY-MM-DD.` - cut to fit 500 characters with the GitHub release and
