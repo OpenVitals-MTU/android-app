@@ -48,6 +48,8 @@ android {
 
     lint {
         ignoreTestSources = true
+        // As in the app: the full lint already ran on the commit.
+        checkReleaseBuilds = false
         // The fixtures do not ship either.
         ignoreTestFixturesSources = true
     }
