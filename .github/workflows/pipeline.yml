@@ -306,7 +306,7 @@ jobs:
           export OPENVITALS_RELEASE_KEY_PASSWORD="$OPENVITALS_RELEASE_STORE_PASSWORD"
           keytool -list -storetype PKCS12 -keystore "$keystore_path" -storepass "$OPENVITALS_RELEASE_STORE_PASSWORD" -alias "$OPENVITALS_RELEASE_KEY_ALIAS" >/dev/null
           export OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY=true
-          export OPENVITALS_MINIFY_DEBUG_FOR_CI=true
+          export OPENVITALS_PUBLISHED_DEBUG_APK=true
           if [ -n "${OPENVITALS_VERSION_CODE:-}" ]; then export OPENVITALS_VERSION_CODE; fi
           if [ -n "${OPENVITALS_VERSION_NAME:-}" ]; then export OPENVITALS_VERSION_NAME; fi
           test -n "$OPENVITALS_APK_ABI_FILTERS"

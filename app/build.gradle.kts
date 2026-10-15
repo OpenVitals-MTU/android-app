@@ -38,7 +38,11 @@ val hasReleaseSigning = listOf(
 ).all { !it.isNullOrBlank() }
 
 val signDebugWithReleaseKey = System.getenv("OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY") == "true"
-val minifyDebugForCi = System.getenv("OPENVITALS_MINIFY_DEBUG_FOR_CI") == "true"
+// The release pipeline publishes a debug APK: not debuggable, since it is
+// public, but not run through R8 either. It was until 2026-10, to match the
+// release build's size and shape; that second R8 pass was six minutes of
+// every nightly build, and nothing needed the shape.
+val publishedDebugApk = System.getenv("OPENVITALS_PUBLISHED_DEBUG_APK") == "true"
 val apkAbiFilters = System.getenv("OPENVITALS_APK_ABI_FILTERS")
     ?.split(',')
     ?.map { it.trim() }
@@ -129,14 +133,8 @@ android {
             if (signDebugWithReleaseKey && hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
-            if (minifyDebugForCi) {
+            if (publishedDebugApk) {
                 isDebuggable = false
-                isMinifyEnabled = true
-                isShrinkResources = true
-                proguardFiles(
-                    getDefaultProguardFile("proguard-android-optimize.txt"),
-                    "proguard-rules.pro"
-                )
             }
         }
 
