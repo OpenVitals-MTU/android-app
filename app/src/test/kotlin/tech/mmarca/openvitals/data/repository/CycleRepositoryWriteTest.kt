@@ -16,6 +16,7 @@ import java.time.ZoneId
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
@@ -182,6 +183,26 @@ class CycleRepositoryWriteTest {
         val statistics = repository.loadCycleStatistics(today)
 
         assertEquals(listOf(LocalDate.of(2026, 7, 1)), statistics?.cycleStarts)
+    }
+
+    @Test
+    fun `statistics read the whole history, not the last eighteen months`() = runTest {
+        val today = LocalDate.of(2026, 8, 5)
+        val readMenstruation = HealthPermission.getReadPermission(MenstruationFlowRecord::class)
+        val hc = hc(granted = setOf(readMenstruation))
+        val starts = mutableListOf<java.time.Instant>()
+        coEvery { hc.readMenstruationFlowEntries(any(), any()) } answers {
+            starts += firstArg<java.time.Instant>()
+            emptyList()
+        }
+        coEvery { hc.readMenstruationPeriods(any(), any()) } returns emptyList()
+        val repository = CycleRepositoryImpl(hc, FakeCycleJournalRepository(), FakePreferences(), FakePreferences())
+
+        repository.loadCycleStatistics(today)
+
+        // A drip import brings a decade of cycles; the history section must reach them.
+        val tenYearsBack = today.minusYears(10).atStartOfDay(zone).toInstant()
+        assertTrue("read from ${starts.single()}", !starts.single().isAfter(tenYearsBack))
     }
 
     @Test

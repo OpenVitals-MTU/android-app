@@ -201,7 +201,7 @@ class CycleRepositoryImpl @Inject constructor(
             return null
         }
         val zone = ZoneId.systemDefault()
-        val startInstant = today.minusMonths(STATISTICS_LOOKBACK_MONTHS).atStartOfDay(zone).toInstant()
+        val startInstant = today.minusYears(STATISTICS_LOOKBACK_YEARS).atStartOfDay(zone).toInstant()
         val endInstant = today.plusDays(1).atStartOfDay(zone).toInstant()
 
         return coroutineScope {
@@ -295,4 +295,10 @@ private fun CycleData.toDayLog(date: LocalDate, journal: tech.mmarca.openvitals.
         foreignSpotting = intermenstrualBleeding.any { !it.isOpenVitalsEntry },
     )
 
-private const val STATISTICS_LOOKBACK_MONTHS = 18L
+/**
+ * The whole recorded history, in effect: bleeding records are a few a month, so
+ * decades of them are one cheap read. The estimate limits itself to the last six
+ * intervals; the history section and the longitudinal statistics want all of it.
+ * 18 months until 2.14.2, which capped the history at about nineteen cycles.
+ */
+private const val STATISTICS_LOOKBACK_YEARS = 30L
