@@ -215,8 +215,8 @@
     <string name="activity_entry_recording_split_interval">Interwał %1$d</string>
     <string name="activity_entry_recording_split_time_range">%1$d-%2$d minut</string>
     <string name="activity_entry_recording_split_elapsed">Upłynęło</string>
-    <string name="activity_entry_recording_split_avg">Avg</string>
-    <string name="activity_entry_recording_split_max">Max</string>
+    <string name="activity_entry_recording_split_avg">Śr.</string>
+    <string name="activity_entry_recording_split_max">Maks</string>
     <string name="activity_entry_recording_no_intervals">Brak interwałów</string>
     <string name="activity_entry_recording_lap">Okrążenie</string>
     <string name="activity_entry_recording_marker">Dodaj znacznik</string>

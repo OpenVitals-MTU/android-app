@@ -438,7 +438,7 @@
     <string name="settings_watch_live_now">Ora: %1$d bpm</string>
     <string name="settings_watch_auto_sync">Sincronizzazione automatica</string>
     <string name="settings_watch_auto_sync_body">Sincronizza l\'orologio da solo, così sonno e attività arrivano senza aprire l\'app. L\'orologio deve essere a portata e il momento esatto lo decide Android, quindi una tornata può arrivare un po\' in ritardo. Off significa che l\'orologio viene sincronizzato solo su richiesta.</string>
-    <string name="settings_watch_auto_sync_off">Off</string>
+    <string name="settings_watch_auto_sync_off">Disattivata</string>
     <string name="settings_watch_auto_sync_30m">30 min</string>
     <string name="settings_watch_auto_sync_1h">1 h</string>
     <string name="settings_watch_auto_sync_2h">2 h</string>
@@ -1120,7 +1120,7 @@
     <string name="activity_recording_live_cadence">Cadenza</string>
     <string name="activity_recording_live_power">Potenza</string>
     <string name="activity_recording_live_speed">Velocità</string>
-    <string name="activity_recording_notification_heart_rate">HR %1$s</string>
+    <string name="activity_recording_notification_heart_rate">FC %1$s</string>
     <string name="settings_nutrition_group_title">Nutrizione</string>
     <string name="settings_nutrition_group_body">Dati calorie e personalizzazione caffeina</string>
     <string name="settings_recovery_group_title">Recupero</string>
