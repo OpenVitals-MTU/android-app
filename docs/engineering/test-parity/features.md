@@ -741,7 +741,9 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/imports/
 | buildCsvImportReport > a clean run has no rejection sections at all | PORTED | CsvImportReportTest.kt: `a clean run has no rejection sections at all` |  |
 | buildCsvImportReport > a failed run carries its error text | PORTED | CsvImportReportTest.kt: `a failed run carries its error text` |  |
 | buildCsvImportReport > a rate-limited run says so rather than reading as a plain stop | PORTED | CsvImportReportTest.kt: `a rate-limited run says so rather than reading as a plain stop` |  |
-| journal days and empty rows are in the totals, so every row of a drip export is accounted for | PORTED | CsvImportReportTest.kt: `journal days and empty rows are in the totals, so every row of a drip export is accounted for` | Kotlin-only |
+| the totals partition the rows, qualify the records, and account for every drip day | PORTED | CsvImportReportTest.kt: `the totals partition the rows, qualify the records, and account for every drip day` | Kotlin-only |
+| a presence lookup that fails leaves the records written and counted as unchecked | PORTED | CsvImportServiceTest.kt: `a presence lookup that fails leaves the records written and counted as unchecked` | Kotlin-only; a missing read permission must not read as "not present" |
+| a malformed row is counted as a rejected row, not as nothing to import | PORTED | CsvImportServiceTest.kt: `a malformed row is counted as a rejected row, not as nothing to import` | Kotlin-only |
 
 ## test/features/imports/csv/csv_import_screen_test.dart
 Kotlin counterpart: none (compose screen app/src/main/kotlin/.../csv/CsvImportScreen.kt has no androidTest)

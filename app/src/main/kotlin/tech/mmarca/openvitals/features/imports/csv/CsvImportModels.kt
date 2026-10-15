@@ -51,8 +51,25 @@ data class CsvImportProgress(
     /** Records handed to Health Connect. Includes upserts over existing records. */
     val written: Int = 0,
 
-    /** Records whose id was already present. Still written: "imported before", not "skipped". */
+    /**
+     * Records whose id was already present, so the write replaced an earlier
+     * import. Still written: "imported before", not "skipped". A lower bound
+     * when [presenceUnchecked] is above zero.
+     */
     val alreadyPresent: Int = 0,
+
+    /**
+     * Records written without the presence check, because Health Connect could
+     * not be read for them: no read permission for the type, or a quota. The
+     * write does not depend on the check.
+     */
+    val presenceUnchecked: Int = 0,
+
+    /** Rows that produced at least one record or a journal entry. */
+    val rowsImported: Int = 0,
+
+    /** Rows that produced nothing but a diagnostic. [rejected] counts single values too. */
+    val rowsRejected: Int = 0,
 
     /** Metrics or rows that produced no record. */
     val rejected: Int = 0,

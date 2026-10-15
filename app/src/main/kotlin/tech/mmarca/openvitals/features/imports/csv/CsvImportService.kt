@@ -145,12 +145,17 @@ class CsvImportService internal constructor(
                     conversion.diagnostics.forEach(::record)
                     // Room, not Health Connect: written at once, outside the batches and their quota.
                     val journalWritten = conversion.journalEntry?.let { writeJournalEntry(it) } == true
-                    val empty = conversion.records.isEmpty() && conversion.journalEntry == null && conversion.diagnostics.isEmpty()
+                    // Every row lands in exactly one of three: imported, rejected, or nothing to import.
+                    val produced = conversion.records.isNotEmpty() || conversion.journalEntry != null
+                    val rejectedRow = !produced && conversion.diagnostics.isNotEmpty()
+                    val empty = !produced && conversion.diagnostics.isEmpty()
                     progress = progress.copy(
                         rowsRead = progress.rowsRead + 1,
                         rejected = progress.rejected + conversion.diagnostics.size,
                         journalDays = progress.journalDays + if (conversion.journalEntry != null) 1 else 0,
                         journalDaysUpdated = progress.journalDaysUpdated + if (journalWritten) 1 else 0,
+                        rowsImported = progress.rowsImported + if (produced) 1 else 0,
+                        rowsRejected = progress.rowsRejected + if (rejectedRow) 1 else 0,
                         emptyRows = progress.emptyRows + if (empty) 1 else 0,
                         bytesRead = row.bytesRead,
                     )
@@ -210,17 +215,21 @@ class CsvImportService internal constructor(
         val batch = pending.toList()
         pending.clear()
 
-        val alreadyPresent = countExisting(batch)
+        val presence = countExisting(batch)
+        val alreadyPresent = presence.found
+        val unchecked = presence.unchecked
 
         val batchError = writeUntilAccepted(batch.map { it.record }, pauses)
         if (batchError == null) {
-            return FlushOutcome(written = batch.size, alreadyPresent = alreadyPresent).withPauses(pauses)
+            return FlushOutcome(written = batch.size, alreadyPresent = alreadyPresent, presenceUnchecked = unchecked)
+                .withPauses(pauses)
         }
         if (HealthConnectRateLimitBackoff.isRateLimitFailure(batchError)) {
             return FlushOutcome(
                 rateLimited = true,
                 error = batchError.message,
                 alreadyPresent = alreadyPresent,
+                presenceUnchecked = unchecked,
             ).withPauses(pauses)
         }
 
@@ -235,6 +244,7 @@ class CsvImportService internal constructor(
                     written = written,
                     rejected = rejected,
                     alreadyPresent = alreadyPresent,
+                    presenceUnchecked = unchecked,
                     rateLimited = true,
                     error = singleError.message,
                 ).withPauses(pauses)
@@ -250,7 +260,8 @@ class CsvImportService internal constructor(
                 }
             }
         }
-        return FlushOutcome(written = written, rejected = rejected, alreadyPresent = alreadyPresent).withPauses(pauses)
+        return FlushOutcome(written = written, rejected = rejected, alreadyPresent = alreadyPresent, presenceUnchecked = unchecked)
+            .withPauses(pauses)
     }
 
     /**
@@ -317,9 +328,14 @@ class CsvImportService internal constructor(
         fun takeWaitMillis(): Long = waitMillisTotal.also { waitMillisTotal = 0L }
     }
 
-    /** How many of [batch]'s ids Health Connect holds. A lookup failure only costs the count. */
-    private suspend fun countExisting(batch: List<CsvConvertedRecord>): Int {
+    /**
+     * How many of [batch]'s ids Health Connect holds. A lookup that fails, for
+     * a missing read permission or a quota, only costs the count: its records
+     * are reported as unchecked and written all the same.
+     */
+    private suspend fun countExisting(batch: List<CsvConvertedRecord>): PresenceCount {
         var total = 0
+        var unchecked = 0
         for ((recordType, records) in batch.groupBy { it.recordType }) {
             var start = 0
             while (start < records.size) {
@@ -335,16 +351,19 @@ class CsvImportService internal constructor(
                         wantedIds = chunk.mapTo(mutableSetOf()) { it.clientRecordId },
                     )
                 }.getOrNull()
-                if (found != null) total += found.size
+                if (found != null) total += found.size else unchecked += chunk.size
             }
         }
-        return total
+        return PresenceCount(found = total, unchecked = unchecked)
     }
 }
+
+private data class PresenceCount(val found: Int, val unchecked: Int)
 
 private data class FlushOutcome(
     val written: Int = 0,
     val alreadyPresent: Int = 0,
+    val presenceUnchecked: Int = 0,
     val rejected: Int = 0,
     val rateLimited: Boolean = false,
     val error: String? = null,
@@ -355,6 +374,7 @@ private data class FlushOutcome(
 private fun CsvImportProgress.apply(flush: FlushOutcome): CsvImportProgress = copy(
     written = written + flush.written,
     alreadyPresent = alreadyPresent + flush.alreadyPresent,
+    presenceUnchecked = presenceUnchecked + flush.presenceUnchecked,
     rejected = rejected + flush.rejected,
     quotaPauses = quotaPauses + flush.quotaPauses,
     quotaWaitMillis = quotaWaitMillis + flush.quotaWaitMillis,

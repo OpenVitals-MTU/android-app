@@ -86,10 +86,9 @@ class CsvImportReportTest {
     fun `every tally from the run appears`() {
         val report = report()
 
-        assertThat(report).contains("Rows read:       120")
-        assertThat(report).contains("Records written: 118")
-        assertThat(report).contains("Already present: 4")
-        assertThat(report).contains("Rejected:        2")
+        assertThat(report).contains("Rows read:           120")
+        assertThat(report).contains("Records written:     118, of which 4 replaced an earlier import")
+        assertThat(report).contains("Rejections:          2")
     }
 
     @Test
@@ -253,16 +252,33 @@ class CsvImportReportTest {
     }
 
     @Test
-    fun `journal days and empty rows are in the totals, so every row of a drip export is accounted for`() {
+    fun `the totals partition the rows, qualify the records, and account for every drip day`() {
         val base = runResult()
-        val result = base.copy(progress = base.progress.copy(journalDays = 60, journalDaysUpdated = 0, emptyRows = 2))
+        val result = base.copy(
+            progress = base.progress.copy(
+                rowsRead = 817,
+                rowsImported = 815,
+                rowsRejected = 1,
+                emptyRows = 1,
+                written = 754,
+                alreadyPresent = 69,
+                presenceUnchecked = 240,
+                journalDays = 297,
+                journalDaysUpdated = 0,
+            ),
+        )
 
         val report = report(result = result)
 
-        assertThat(report).contains("Journal days:    60 (0 updated)")
-        assertThat(report).contains("Nothing to import: 2 rows")
+        assertThat(report).contains("Rows read:           817")
+        assertThat(report).contains("  Imported:          815")
+        assertThat(report).contains("  Rejected:          1")
+        assertThat(report).contains("  Nothing to import: 1")
+        assertThat(report).contains("Records written:     754, of which 69 replaced an earlier import")
+        assertThat(report).contains("  Not checked first: 240")
+        assertThat(report).contains("Journal days:        297 (0 updated)")
         assertThat(report()).doesNotContain("Journal days")
-        assertThat(report()).doesNotContain("Nothing to import")
+        assertThat(report()).doesNotContain("Not checked first")
     }
 
     @Test
@@ -270,7 +286,7 @@ class CsvImportReportTest {
         val paused = runResult()
         val result = paused.copy(progress = paused.progress.copy(quotaPauses = 3, quotaWaitMillis = 105_000L))
 
-        assertThat(report(result = result)).contains("Quota pauses:    3 (waited 1 min 45 s)")
+        assertThat(report(result = result)).contains("Quota pauses:        3 (waited 1 min 45 s)")
         assertThat(report()).doesNotContain("Quota pauses")
     }
 }

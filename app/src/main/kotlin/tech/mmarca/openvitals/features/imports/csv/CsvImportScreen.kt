@@ -432,7 +432,6 @@ private fun CsvImportingStep(
                 R.string.settings_csv_import_progress,
                 progress.rowsRead,
                 progress.written,
-                progress.alreadyPresent,
                 progress.rejected,
             ),
             style = MaterialTheme.typography.bodyMedium,

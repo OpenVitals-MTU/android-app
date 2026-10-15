@@ -46,6 +46,8 @@ private class RepositoryHarness(
     rateLimitAfterBatches: Int? = null,
     /** How many refusals the quota failure lasts; null means for ever. */
     rateLimitRefusals: Int? = null,
+    /** Record types whose presence lookup fails, as a missing read permission would make it. */
+    unreadableTypes: Set<kotlin.reflect.KClass<out Record>> = emptySet(),
 ) {
     val inserted = mutableListOf<Record>()
     var batchCalls = 0
@@ -64,6 +66,7 @@ private class RepositoryHarness(
             journalEntries[entry.date] = entry
         }
         coEvery { repository.findMatchingImportedClientRecordIds(any(), any(), any(), any()) } answers {
+            if (arg<kotlin.reflect.KClass<out Record>>(0) in unreadableTypes) throw SecurityException("no read permission")
             val wantedIds = arg<Set<String>>(3)
             wantedIds.intersect(existingIds)
         }
@@ -327,8 +330,11 @@ class CsvImportServiceTest {
         assertEquals(setOf(LocalDate.of(2015, 12, 31), LocalDate.of(2015, 12, 30)), harness.journalEntries.keys)
         assertEquals("slept badly.", harness.journalEntries.getValue(LocalDate.of(2015, 12, 30)).notes)
         assertEquals(0, result.progress.rejected)
-        // The all-empty day is accounted for, not lost between the counts.
+        // Every row lands in one bucket: the two days with content, and the all-empty day.
+        assertEquals(2, result.progress.rowsImported)
+        assertEquals(0, result.progress.rowsRejected)
         assertEquals(1, result.progress.emptyRows)
+        assertEquals(result.progress.rowsRead, result.progress.rowsImported + result.progress.rowsRejected + result.progress.emptyRows)
 
         // The same file again rewrites the same ids; its journal days are still seen, none changed.
         val again = service(harness).run(
@@ -341,6 +347,48 @@ class CsvImportServiceTest {
         assertEquals(0, again.progress.journalDaysUpdated)
         assertEquals(3, again.progress.written)
         assertEquals(again.progress.rowsRead, again.progress.journalDays + again.progress.emptyRows)
+    }
+
+    @Test
+    fun `a presence lookup that fails leaves the records written and counted as unchecked`() = runTest {
+        val content = csvOf(5)
+        // Seeded as present, but the type cannot be read: the count must not pretend to know.
+        val probe = RepositoryHarness()
+        service(probe).run(source = sourceOf(content), totalBytes = 0, dialect = Dialect, plan = CsvImportPlan.Columns(weightMapping()))
+        val existing = probe.inserted.mapNotNullTo(mutableSetOf()) { it.metadata.clientRecordId }
+        val harness = RepositoryHarness(existingIds = existing, unreadableTypes = setOf(WeightRecord::class))
+
+        val result = service(harness).run(
+            source = sourceOf(content),
+            totalBytes = content.length.toLong(),
+            dialect = Dialect,
+            plan = CsvImportPlan.Columns(weightMapping()),
+        )
+
+        assertEquals(CsvImportOutcome.COMPLETED, result.outcome)
+        assertEquals(5, result.progress.written)
+        assertEquals(5, harness.inserted.size)
+        assertEquals(0, result.progress.alreadyPresent)
+        assertEquals(5, result.progress.presenceUnchecked)
+    }
+
+    @Test
+    fun `a malformed row is counted as a rejected row, not as nothing to import`() = runTest {
+        val content = "Date,Weight\n2026-07-01 08:12:00,78.4\nnot a date,78.5\n2026-07-03 08:12:00,\n"
+        val harness = RepositoryHarness()
+
+        val result = service(harness).run(
+            source = sourceOf(content),
+            totalBytes = content.length.toLong(),
+            dialect = Dialect,
+            plan = CsvImportPlan.Columns(weightMapping()),
+        )
+
+        assertEquals(3, result.progress.rowsRead)
+        assertEquals(1, result.progress.rowsImported)
+        assertEquals(1, result.progress.rowsRejected)
+        // A blank weight cell is a gap, not an error: nothing to import.
+        assertEquals(1, result.progress.emptyRows)
     }
 
     @Test
