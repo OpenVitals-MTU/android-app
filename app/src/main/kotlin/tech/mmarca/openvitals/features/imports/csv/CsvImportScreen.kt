@@ -49,6 +49,7 @@ import tech.mmarca.openvitals.ui.components.StepBar
 import tech.mmarca.openvitals.ui.components.WithHealthConnectFeatureScreen
 import tech.mmarca.openvitals.ui.components.ConfirmLeaveWhileImporting
 import tech.mmarca.openvitals.ui.components.rememberHealthConnectPermissionLauncher
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 private val CsvMimeTypes = arrayOf(
     "text/csv",
@@ -120,10 +121,10 @@ internal fun CsvPickStep(
     state: CsvImportState,
     onPick: () -> Unit,
 ) {
-    LazyColumn(contentPadding = PaddingValues(16.dp)) {
+    LazyColumn(contentPadding = PaddingValues(Spacing.lg)) {
         item {
             OpenVitalsCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(Spacing.lg)) {
                     Text(
                         text = stringResource(R.string.settings_csv_import_pick_title),
                         style = MaterialTheme.typography.titleMedium,
@@ -132,26 +133,26 @@ internal fun CsvPickStep(
                         text = stringResource(R.string.settings_csv_import_pick_body),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp),
+                        modifier = Modifier.padding(top = Spacing.sm),
                     )
                     state.error?.let { message ->
                         Text(
                             text = stringResource(R.string.settings_csv_import_unreadable_file, message),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(top = 12.dp),
+                            modifier = Modifier.padding(top = Spacing.md),
                         )
                     }
                     if (state.isLoadingFile) {
                         LinearProgressIndicator(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 12.dp),
+                                .padding(top = Spacing.md),
                         )
                         Text(
                             text = stringResource(R.string.settings_csv_import_loading),
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 8.dp),
+                            modifier = Modifier.padding(top = Spacing.sm),
                         )
                     }
                     OpenVitalsFilledButton(
@@ -159,7 +160,7 @@ internal fun CsvPickStep(
                         enabled = !state.isLoadingFile,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 16.dp),
+                            .padding(top = Spacing.lg),
                     ) {
                         androidx.compose.material3.Icon(
                             imageVector = Icons.Outlined.Description,
@@ -189,7 +190,7 @@ internal fun CsvMappingStep(
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(Spacing.lg),
         ) {
             item {
                 Text(
@@ -201,27 +202,27 @@ internal fun CsvMappingStep(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Spacing.md))
                 CsvDialectCard(
                     sample = sample,
                     onDialectChange = { dialect, hasHeaderRow ->
                         viewModel.setDialect(dialect, hasHeaderRow)
                     },
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Spacing.md))
                 CsvPreviewTable(sample = sample)
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Spacing.md))
                 CsvDateTimeSection(
                     sample = sample,
                     mapping = mapping,
                     onSettingsChange = viewModel::setDateTimeSettings,
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Spacing.md))
                 Text(
                     text = stringResource(R.string.settings_csv_import_columns_title),
                     style = MaterialTheme.typography.titleSmall,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Spacing.sm))
             }
             items(count = sample.columnCount) { index ->
                 CsvColumnMappingTile(
@@ -232,18 +233,18 @@ internal fun CsvMappingStep(
                     onSetRole = { role, metric -> viewModel.setColumnRole(index, role, metric) },
                     onSetNutrient = { nutrient -> viewModel.setColumnNutrient(index, nutrient) },
                     onSetInterpretation = { viewModel.setColumnInterpretation(index, it) },
-                    modifier = Modifier.padding(bottom = 8.dp),
+                    modifier = Modifier.padding(bottom = Spacing.sm),
                 )
             }
             if (state.issues.isNotEmpty()) {
                 item {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(Spacing.md))
                     state.issues.forEach { issue ->
                         Text(
                             text = csvIssueLabel(issue),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(bottom = 4.dp),
+                            modifier = Modifier.padding(bottom = Spacing.xs),
                         )
                     }
                 }
@@ -276,7 +277,7 @@ internal fun CsvEmptyFileBody(onBack: () -> Unit) {
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyMedium,
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(Spacing.lg))
         OpenVitalsOutlinedButton(onClick = onBack) {
             Text(stringResource(R.string.settings_csv_import_back))
         }
@@ -298,11 +299,11 @@ internal fun CsvConfirmStep(
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(Spacing.lg),
         ) {
             item {
                 OpenVitalsCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(Spacing.lg)) {
                         Text(
                             text = stringResource(R.string.settings_csv_import_confirm_title),
                             style = MaterialTheme.typography.titleMedium,
@@ -314,9 +315,9 @@ internal fun CsvConfirmStep(
                                 mapping.metricColumns.size + mapping.nutrientColumns.size,
                             ),
                             style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(top = 8.dp),
+                            modifier = Modifier.padding(top = Spacing.sm),
                         )
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(Spacing.md))
                         // The date span is the last guard against a day/month mix-up.
                         CsvDateRangeLine(sample = sample, mapping = mapping)
                         // The per-metric range catches a bad derivation as 3% or 150%.
@@ -331,7 +332,7 @@ internal fun CsvConfirmStep(
                     }
                 }
                 if (missing.isNotEmpty()) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(Spacing.md))
                     PermissionCallout(
                         title = stringResource(R.string.settings_csv_import_permission_title),
                         body = stringResource(R.string.settings_csv_import_permission_body),
@@ -363,7 +364,7 @@ private fun CsvDateRangeLine(sample: CsvSample, mapping: CsvImportMapping) {
         ),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(bottom = 8.dp),
+        modifier = Modifier.padding(bottom = Spacing.sm),
     )
 }
 
@@ -387,7 +388,7 @@ private fun CsvMetricRangeLine(
             String.format(Locale.US, "%.1f", sorted.last()),
         ),
         style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.padding(bottom = 4.dp),
+        modifier = Modifier.padding(bottom = Spacing.xs),
     )
 }
 
@@ -404,7 +405,7 @@ private fun CsvNutrientRangeLine(nutrient: NutritionNutrient, values: List<Doubl
             csvNutrientPreviewText(nutrient, values.max()),
         ),
         style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.padding(bottom = 4.dp),
+        modifier = Modifier.padding(bottom = Spacing.xs),
     )
 }
 
@@ -418,7 +419,7 @@ private fun CsvImportingStep(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(Spacing.lg),
     ) {
         val fraction = progress.fraction
         if (fraction != null) {
@@ -426,7 +427,7 @@ private fun CsvImportingStep(
         } else {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Spacing.md))
         Text(
             text = stringResource(
                 R.string.settings_csv_import_progress,
@@ -443,7 +444,7 @@ private fun CsvImportingStep(
             )
         }
         progress.resumingInSeconds?.let { seconds ->
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Spacing.sm))
             Text(
                 text = stringResource(R.string.settings_csv_import_quota_pause, seconds),
                 style = MaterialTheme.typography.bodySmall,

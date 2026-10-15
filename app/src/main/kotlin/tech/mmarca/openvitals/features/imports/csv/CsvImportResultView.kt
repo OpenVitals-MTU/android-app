@@ -24,6 +24,7 @@ import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.StepBar
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
  * The finished-import view: the tally, why rows were rejected, and what to do
@@ -43,11 +44,11 @@ internal fun CsvImportResultView(
     Column(modifier = modifier) {
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.lg),
         ) {
             item {
                 OpenVitalsCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(Spacing.lg)) {
                         Text(
                             text = stringResource(outcomeTitleRes(result.outcome)),
                             style = MaterialTheme.typography.titleMedium,
@@ -58,14 +59,14 @@ internal fun CsvImportResultView(
                                 text = stringResource(R.string.settings_csv_import_result_empty),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 8.dp),
+                                modifier = Modifier.padding(top = Spacing.sm),
                             )
                         }
                         if (result.outcome == CsvImportOutcome.CANCELLED) {
                             Text(
                                 text = stringResource(R.string.settings_csv_import_result_cancelled),
                                 style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(top = 8.dp),
+                                modifier = Modifier.padding(top = Spacing.sm),
                             )
                         }
                         if (result.outcome == CsvImportOutcome.RATE_LIMITED) {
@@ -73,7 +74,7 @@ internal fun CsvImportResultView(
                                 text = stringResource(R.string.settings_csv_import_result_rate_limited),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(top = 8.dp),
+                                modifier = Modifier.padding(top = Spacing.sm),
                             )
                         }
                         if (result.outcome == CsvImportOutcome.FAILED && result.error != null) {
@@ -81,7 +82,7 @@ internal fun CsvImportResultView(
                                 text = stringResource(R.string.settings_csv_import_error, result.error),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(top = 8.dp),
+                                modifier = Modifier.padding(top = Spacing.sm),
                             )
                         }
                     }
@@ -90,14 +91,14 @@ internal fun CsvImportResultView(
 
             if (result.diagnosticCounts.isNotEmpty()) {
                 item {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(Spacing.md))
                     OpenVitalsCard(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(modifier = Modifier.padding(Spacing.lg)) {
                             Text(
                                 text = stringResource(R.string.settings_csv_import_diagnostics_title),
                                 style = MaterialTheme.typography.titleSmall,
                             )
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(Spacing.sm))
                             result.diagnosticCounts.forEach { (reason, count) ->
                                 Text(
                                     text = stringResource(
@@ -114,7 +115,7 @@ internal fun CsvImportResultView(
             }
 
             item {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Spacing.md))
                 Row {
                     OpenVitalsOutlinedButton(
                         onClick = onCopyReport,
@@ -128,7 +129,7 @@ internal fun CsvImportResultView(
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.settings_csv_import_copy_report))
                     }
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(Spacing.sm))
                     OpenVitalsOutlinedButton(
                         onClick = onSaveReport,
                         modifier = Modifier.weight(1f),
@@ -164,7 +165,7 @@ private fun outcomeTitleRes(outcome: CsvImportOutcome): Int = when (outcome) {
 /** Rows, records and, for a drip export, journal days, each as a labelled column of numbers. */
 @Composable
 private fun CsvImportTally(progress: CsvImportProgress) {
-    Column(modifier = Modifier.padding(top = 12.dp)) {
+    Column(modifier = Modifier.padding(top = Spacing.md)) {
         TallyTitle(stringResource(R.string.settings_csv_import_tally_rows_title))
         TallyRow(stringResource(R.string.settings_csv_import_tally_rows_read), progress.rowsRead)
         TallyRow(stringResource(R.string.settings_csv_import_tally_rows_imported), progress.rowsImported)
@@ -172,7 +173,7 @@ private fun CsvImportTally(progress: CsvImportProgress) {
         TallyRow(stringResource(R.string.settings_csv_import_tally_rows_empty), progress.emptyRows)
         TallyNote(stringResource(R.string.settings_csv_import_tally_rows_note))
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Spacing.md))
         TallyTitle(stringResource(R.string.settings_csv_import_tally_records_title))
         TallyRow(stringResource(R.string.settings_csv_import_tally_records_written), progress.written)
         TallyRow(stringResource(R.string.settings_csv_import_tally_records_replaced), progress.alreadyPresent)
@@ -182,7 +183,7 @@ private fun CsvImportTally(progress: CsvImportProgress) {
         }
 
         if (progress.journalDays > 0) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Spacing.md))
             TallyTitle(stringResource(R.string.settings_csv_import_tally_journal_title))
             TallyRow(stringResource(R.string.settings_csv_import_tally_journal_days), progress.journalDays)
             TallyRow(stringResource(R.string.settings_csv_import_tally_journal_updated), progress.journalDaysUpdated)
@@ -192,12 +193,12 @@ private fun CsvImportTally(progress: CsvImportProgress) {
 
 @Composable
 private fun TallyTitle(text: String) {
-    Text(text = text, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 4.dp))
+    Text(text = text, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = Spacing.xs))
 }
 
 @Composable
 private fun TallyRow(label: String, value: Int) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xs)) {
         Text(text = label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         Text(text = value.toString(), style = MaterialTheme.typography.bodyMedium)
     }
@@ -209,6 +210,6 @@ private fun TallyNote(text: String) {
         text = text,
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 4.dp),
+        modifier = Modifier.padding(top = Spacing.xs),
     )
 }
