@@ -366,7 +366,13 @@ jobs:
   # an APK that will not install (2026-07). See scripts/move-nightly-tag.sh.
   nightly-tag:
     needs: [context, build]
-    if: needs.context.outputs.channel == 'nightly'
+    # Every job from here on names the result it needs. With a plain `if`,
+    # GitHub also skips a job whose chain holds a skipped job, and stage 1 is
+    # skipped for a verified commit; the first nightly stopped at build (2026-10).
+    if: >-
+      !cancelled()
+      && needs.build.result == 'success'
+      && needs.context.outputs.channel == 'nightly'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -386,6 +392,7 @@ jobs:
 
   nightly-github-prerelease:
     needs: [context, nightly-tag]
+    if: ${{ !cancelled() && needs.nightly-tag.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -404,7 +411,7 @@ jobs:
   # download page back.
   nightly-play-open-testing:
     needs: [context, nightly-tag]
-    if: vars.OPENVITALS_PLAY_PAUSED != 'true'
+    if: ${{ !cancelled() && needs.nightly-tag.result == 'success' && vars.OPENVITALS_PLAY_PAUSED != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -420,6 +427,7 @@ jobs:
 
   prune-github-releases:
     needs: [context, nightly-github-prerelease]
+    if: ${{ !cancelled() && needs.nightly-github-prerelease.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -436,7 +444,7 @@ jobs:
 
   version-github-prerelease:
     needs: [context, build]
-    if: needs.context.outputs.kind == 'tag'
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.context.outputs.kind == 'tag' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -454,7 +462,7 @@ jobs:
   # The version goes to open testing now; stage 3 promotes it from there.
   version-play-open-testing:
     needs: [context, build]
-    if: needs.context.outputs.kind == 'tag' && vars.OPENVITALS_PLAY_PAUSED != 'true'
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.context.outputs.kind == 'tag' && vars.OPENVITALS_PLAY_PAUSED != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -495,6 +503,7 @@ jobs:
 
   github-stable:
     needs: [context, production-approval]
+    if: ${{ !cancelled() && needs.production-approval.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -511,6 +520,7 @@ jobs:
   # the announcement still follows.
   play-production:
     needs: [context, production-approval]
+    if: ${{ !cancelled() && needs.production-approval.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -533,6 +543,7 @@ jobs:
   # never posts twice.
   announce-zulip:
     needs: [context, github-stable, play-production]
+    if: ${{ !cancelled() && needs.github-stable.result == 'success' && needs.play-production.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
