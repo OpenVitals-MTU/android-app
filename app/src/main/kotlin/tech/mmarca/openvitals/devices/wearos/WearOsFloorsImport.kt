@@ -6,16 +6,15 @@ import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import java.time.Instant
 import kotlin.math.roundToLong
+import tech.mmarca.openvitals.wearlink.AscentCredit
 
 /**
  * Maps the watch's ascent minutes to `FloorsClimbedRecord`s, one per minute,
- * keyed on the minute's start: the credited metres over [METRES_PER_FLOOR],
+ * keyed on the minute's start: the credited metres over [AscentCredit.METRES_PER_FLOOR],
  * a fraction kept, so a day's partial floors add up.
  *
- * The watch counts every rise, an elevator ride and a drift of the weather
- * too. Height counts only with at least [MIN_STEPS_PER_FLOOR] steps per
- * floor's height in that minute and the one before; stairs take about 16 per
- * floor. The threshold is an app heuristic, no published source.
+ * Height counts only with enough steps around it ([AscentCredit]), so
+ * elevator rides and weather drift drop out.
  *
  * The credited decimetres are the record's version, so a minute whose steps
  * or ascent grew replaces its record.
@@ -26,11 +25,6 @@ object WearOsFloorsImport {
 
     const val CLIENT_ID_PREFIX = "wearos_floors_"
 
-    const val MIN_STEPS_PER_FLOOR = 10
-
-    /** One floor: 3 m, about 10 ft, the common definition wearables use. */
-    const val METRES_PER_FLOOR = 3.0
-
     /** Records for [ascent], given the [steps] pulled in the same sync. Minutes without enough steps write nothing. */
     fun records(ascent: List<WearOsAscentMinute>, steps: List<WearOsStepMinute>): List<Record> =
         credited(ascent, steps).map { (start, metres) ->
@@ -39,7 +33,7 @@ object WearOsFloorsImport {
                 startZoneOffset = null,
                 endTime = start.plusSeconds(SECONDS_PER_MINUTE),
                 endZoneOffset = null,
-                floors = metres / METRES_PER_FLOOR,
+                floors = metres / AscentCredit.METRES_PER_FLOOR,
                 metadata = watchMetadata("$CLIENT_ID_PREFIX${start.toEpochMilli()}", metres),
             )
         }
@@ -51,7 +45,7 @@ object WearOsFloorsImport {
         return ascent.groupBy { it.start }.mapNotNull { (start, same) ->
             val climbed = same.maxOf { it.metres }
             val walked = (stepsAt[start.minusSeconds(SECONDS_PER_MINUTE)] ?: 0) + (stepsAt[start] ?: 0)
-            val credited = minOf(climbed, walked * METRES_PER_FLOOR / MIN_STEPS_PER_FLOOR)
+            val credited = AscentCredit.creditedMetres(climbed, walked)
             if (credited > 0.0) start to credited else null
         }
     }

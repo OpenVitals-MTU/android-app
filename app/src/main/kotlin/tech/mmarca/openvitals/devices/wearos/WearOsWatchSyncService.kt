@@ -38,6 +38,7 @@ import tech.mmarca.openvitals.domain.model.WearSleepMinute
 import tech.mmarca.openvitals.data.repository.isDuplicateClientRecordFailure
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingController
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.wearlink.AscentCredit
 
 /**
  * Pulls what the OpenVitals Wear OS app recorded and writes it to Health
@@ -264,7 +265,7 @@ class WearOsWatchSyncService(
                     writeEstimates("floors", part)
                 }
                 climbed += page.minutes.sumOf { it.metres }
-                credited += records.sumOf { (it as FloorsClimbedRecord).floors } * WearOsFloorsImport.METRES_PER_FLOOR
+                credited += records.sumOf { (it as FloorsClimbedRecord).floors } * AscentCredit.METRES_PER_FLOOR
                 if (newest.isAfter(cursors.ascentCursor(device.id))) cursors.setAscentCursor(device.id, newest)
                 since = newest
             }
