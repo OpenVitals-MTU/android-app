@@ -1044,7 +1044,7 @@
     <string name="dashboard_readiness_title">Forme du jour</string>
     <string name="dashboard_readiness_score">Forme</string>
     <string name="dashboard_readiness_body_energy">Énergie corporelle</string>
-    <string name="dashboard_readiness_training">Training Readiness</string>
+    <string name="dashboard_readiness_training">Préparation à l\'entraînement</string>
     <string name="dashboard_readiness_hrv_status">Statut VFC</string>
     <string name="dashboard_readiness_intensity_minutes">Minutes intensives</string>
     <string name="dashboard_readiness_stress_level">Niveau de stress</string>
@@ -1271,7 +1271,7 @@
     <string name="settings_vitals_group_body">Catégories de pression artérielle</string>
     <string name="settings_recovery_group_title">Récupération</string>
     <string name="settings_recovery_group_body">Plage nocturne de sommeil et calibrage de l\'énergie corporelle</string>
-    <string name="settings_data_transfer_group_title">Import &amp; export</string>
+    <string name="settings_data_transfer_group_title">Importation et exportation</string>
     <string name="settings_data_transfer_group_body">Importez des exports Apple Santé, des fichiers d\'itinéraire, FIT et CSV, ou exportez un rapport de santé en PDF</string>
     <string name="settings_report_export_title">Rapport de santé</string>
     <string name="settings_report_export_body">Générez un rapport PDF de vos données de santé à remettre à un médecin ou à conserver pour vos archives</string>

@@ -470,7 +470,7 @@
     <string name="metric_bmi">BMI</string>
     <string name="metric_ffmi">FFMI</string>
     <string name="metric_lean_mass">Fettfreie Masse</string>
-    <string name="metric_bmr">BMR</string>
+    <string name="metric_bmr">Grundumsatz</string>
     <string name="metric_bone_mass">Knochenmasse</string>
     <string name="metric_body_water_mass">Körperwassermasse</string>
     <string name="metric_latest">Zuletzt</string>
@@ -1579,7 +1579,7 @@
     <string name="settings_apple_health_import_category_vitals_desc">Blutdruck, Sauerstoffsättigung, Atemfrequenz, Körpertemperatur, Blutzucker und VO2 max.</string>
     <string name="settings_apple_health_import_category_nutrition">Ernährung</string>
     <string name="settings_apple_health_import_category_nutrition_desc">Nahrungsenergie, Makros, Koffein, Mineralstoffe und Vitamine.</string>
-    <string name="settings_apple_health_import_category_hydration">Hydration</string>
+    <string name="settings_apple_health_import_category_hydration">Hydrierung</string>
     <string name="settings_apple_health_import_category_hydration_desc">Wasseraufnahme.</string>
     <string name="settings_apple_health_import_category_mindfulness">Mindfulness</string>
     <string name="settings_apple_health_import_category_mindfulness_desc">Mindfulness-Sitzungen, wenn Health Connect sie unterstützt.</string>
@@ -2603,7 +2603,7 @@
         <item quantity="other">%1$d Dateien</item>
     </plurals>
     <string name="settings_watch_action_data">Daten</string>
-    <string name="settings_watch_action_sync">Sync</string>
+    <string name="settings_watch_action_sync">Synchronisieren</string>
     <string name="settings_watch_action_alarms">Wecker</string>
     <string name="settings_watch_action_find">Finden</string>
     <string name="settings_watch_find_stop">Stopp</string>
