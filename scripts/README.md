@@ -3,29 +3,9 @@
 Nothing in here ships in the app. The shell scripts at the top level are what
 CI and a release run (`ci-*.sh`, `release.sh`, `version-code.sh`, the publish
 and announce scripts) and the checks the gate calls (`verify-translations.py`,
-`verify-r8-keeps.py`, `generate-translation-coverage.py`). The folders below
-are host-side tooling that regenerates committed fixtures; they run on a
-development machine. Until 2026-10 they lived in `tool/`.
-
-## `health_fixture/`
-
-`build.py` regenerates the committed Health Connect test fixture
-(`app/src/test/resources/golden.json`, read by `HcFixture.kt`) from a real
-Health Connect export. The export is a database dump of a real person's health
-data, so the fixture is **derived, never copied** — the script's header
-documents exactly what is kept and what is scrubbed.
-
-It is a line-for-line port of the Flutter era's `build.dart` (this repo keeps
-no Dart): every query, formula, alias and scrub rule is unchanged, verified by
-running both semantics against a synthetic export covering every table — the
-per-record key sets also match the committed fixture exactly. Needs only the
-Python 3 standard library.
-
-```sh
-python3 scripts/health_fixture/build.py \
-  --db "path/to/health_connect_export.db" \
-  --out app/src/test/resources/golden.json
-```
+`verify-r8-keeps.py`, `generate-translation-coverage.py`). The fixture builders that
+once lived beside them (`tool/`, then here) were removed in 2026-10; the
+committed fixtures they produced stay as they are.
 
 ## `re/` (untracked)
 
@@ -39,68 +19,9 @@ checkout by hand, not by git; see its own README.
 
 Nothing Dart survives in this repository. `scripts/verify_l10n.dart` and its
 checks were superseded by `scripts/verify-translations.py` plus the JVM tests
-(`StringFormatSpecifierTest`, `TranslationCatalogTest`); `build.dart` was
-ported to `build.py` above.
+(`StringFormatSpecifierTest`, `TranslationCatalogTest`).
 
-## `sleep_fixture/`
-
-`build.py` derives the committed sleep-minute fixture
-(`app/src/test/resources/fit/sleep/venu_sq_minutes.json`, read by
-`SleepStageEstimatorTest`) from a folder of raw `SLEEP_*.fit` files pulled off
-a Garmin watch that leaves sleep staging to Garmin's servers. The files are
-real nights of a real person and are gitignored, so the fixture is **derived,
-never copied**: heart rate is rounded to whole beats, movement and activity to
-two decimals, every timestamp moves by one whole-week shift into 2020, and
-serial numbers, file names and the other packed features are dropped. The
-script's header lists the rules. Needs only the Python 3 standard library.
-
-```sh
-python3 scripts/sleep_fixture/build.py \
-  --in 2026 \
-  --out app/src/test/resources/fit/sleep/venu_sq_minutes.json
-```
-
-## `sleep_accel_fixture/`
-
-The Wear OS sleep pipeline's feature specification as code, and the local
-evaluation fixture against polysomnography.
-
-- `features.py` mirrors `docs/engineering/sleep-minute-features.md`: it turns
-  accelerometer samples in g, stored heart rate samples and the worn,
-  charging, screen and contact events into `SM` lines exactly as the watch's
-  `MinuteAggregator` does. `feature_vector.json` is the committed lock
-  between the two: `python3 -I scripts/sleep_accel_fixture/features.py
-  --self-check` fails when the Python drifts, and the watch test
-  `SleepMinuteFeatureVectorTest` fails when the Kotlin drifts.
-  `--make-vector` regenerates the vector (synthetic minutes, no real data).
-- `build.py` converts PhysioNet's `sleep-accel` dataset (Walch 2019, 31
-  subjects, Apple Watch motion and heart rate with polysomnography labels,
-  ODC-By licence, doi:10.13026/hmhs-py35) into per-minute `SM` lines with a
-  label per minute. **Neither the download nor the output is committed**
-  (`data/` and `out/` are gitignored): the fixture is for local evaluation
-  only. Download the archive from
-  https://physionet.org/content/sleep-accel/1.0.0/, unpack it under
-  `scripts/sleep_accel_fixture/data/`, then:
-
-  ```sh
-  python3 -I scripts/sleep_accel_fixture/build.py \
-    --in scripts/sleep_accel_fixture/data/sleep-accel-1.0.0 \
-    --out scripts/sleep_accel_fixture/out/sleep_accel_minutes.json
-  ```
-
-  The evaluation test `SleepAccelEvaluationTest` reads that file only when
-  pointed at it and is skipped otherwise:
-
-  ```sh
-  ./gradlew :app:testCiUnitTest --tests 'tech.mmarca.openvitals.domain.insights.SleepAccelEvaluationTest' \
-    -Dopenvitals.sleepAccelFixture=$PWD/scripts/sleep_accel_fixture/out/sleep_accel_minutes.json
-  ```
-
-  It prints the table (sleep sensitivity, wake specificity, accuracy, onset
-  and offset error, total sleep time error, three-class agreement) that a
-  threshold change quotes in its commit message, since CI never sees it.
-
-### Replaying a night from a watch
+## Replaying a night from a watch
 
 A debuggable watch build keeps its rows in `databases/metrics.db`, one table
 whose sleep rows are already `SM` lines. To run the phone's pipeline on a real
