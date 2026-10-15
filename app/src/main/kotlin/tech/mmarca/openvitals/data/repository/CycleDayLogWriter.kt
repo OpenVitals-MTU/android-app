@@ -44,12 +44,13 @@ internal class CycleDayLogWriter(
         )
         val bbt = existing.ownBasalBodyTemperature
         val bbtTime = write.basalBodyTemperatureTime?.let { date.atTime(it).atZone(zone).toInstant() }
+        val writtenBbtCelsius = write.basalBodyTemperatureCelsius
         reconcile(
             kind = CycleEntryKind.BASAL_BODY_TEMPERATURE,
             ownId = bbt?.id,
             ownTime = bbtTime ?: bbt?.time,
-            unchanged = bbt != null && write.basalBodyTemperatureCelsius != null &&
-                abs(bbt.temperatureCelsius - write.basalBodyTemperatureCelsius) < TEMPERATURE_EPSILON &&
+            unchanged = bbt != null && writtenBbtCelsius != null &&
+                abs(bbt.temperatureCelsius - writtenBbtCelsius) < TEMPERATURE_EPSILON &&
                 bbt.measurementLocation == (write.basalBodyTemperatureLocation ?: CycleRecordValues.MEASUREMENT_LOCATION_UNKNOWN) &&
                 (bbtTime == null || bbtTime == bbt.time),
             desired = write.basalBodyTemperatureCelsius?.let {

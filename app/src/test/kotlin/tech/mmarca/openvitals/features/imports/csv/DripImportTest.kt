@@ -84,7 +84,13 @@ class DripImportTest {
             plan(),
         )
         assertTrue(excluded.records.isEmpty())
-        assertTrue(excluded.diagnostics.isEmpty())
+        // Left out on purpose, and said so: the day is accounted for in the report.
+        assertEquals(CsvImportDiagnosticReason.EXCLUDED_IN_SOURCE, excluded.diagnostics.single().reason)
+        assertEquals("temperature.value=37.9", excluded.diagnostics.single().detail)
+
+        // An exclude flag over an empty cell excludes nothing and says nothing.
+        val flagOnly = convertDripRow(row("date" to "2016-01-05", "temperature.exclude" to "true"), plan())
+        assertTrue(flagOnly.diagnostics.isEmpty())
 
         val wild = convertDripRow(row("date" to "2016-01-04", "temperature.value" to "98.6", "temperature.exclude" to "false"), plan())
         assertEquals(CsvImportDiagnosticReason.OUT_OF_RANGE, wild.diagnostics.single().reason)
@@ -107,6 +113,7 @@ class DripImportTest {
         val excluded = convertDripRow(row("date" to "2016-02-04", "mucus.feeling" to "3", "mucus.texture" to "2", "mucus.exclude" to "true"), plan())
         assertTrue(excluded.records.isEmpty())
         assertNull(excluded.journalEntry)
+        assertEquals(CsvImportDiagnosticReason.EXCLUDED_IN_SOURCE, excluded.diagnostics.single().reason)
     }
 
     @Test
@@ -147,6 +154,10 @@ class DripImportTest {
         assertEquals(2, entry.energyLevel)
         assertEquals("long day\ntired", entry.notes)
 
+        // drip writes `say ""hi""` without wrapping quotes; the note reads as typed.
+        val quoted = convertDripRow(row("date" to "2016-01-02", "note.value" to "say \"\"hi\"\""), plan())
+        assertEquals("say \"hi\"", quoted.journalEntry?.notes)
+
         val mixed = convertDripRow(row("date" to "2016-01-01", "mood.happy" to "true", "mood.anxious" to "true", "mood.energetic" to "true"), plan())
         assertEquals(3, mixed.journalEntry?.moodLevel)
         assertEquals(4, mixed.journalEntry?.energyLevel)
@@ -167,6 +178,7 @@ class DripImportTest {
         val excluded = convertDripRow(row("date" to "2016-04-02", "cervix.opening" to "0", "cervix.exclude" to "true", "desire.value" to "0"), plan())
         assertNull(excluded.journalEntry?.cervixOpening)
         assertEquals(2, excluded.journalEntry?.desireLevel)
+        assertEquals(CsvImportDiagnosticReason.EXCLUDED_IN_SOURCE, excluded.diagnostics.single().reason)
     }
 
     @Test
@@ -192,6 +204,10 @@ class DripImportTest {
         assertTrue(blank.records.isEmpty())
         assertNull(blank.journalEntry)
         assertTrue(blank.diagnostics.isEmpty())
+
+        // A day whose mucus says "nothing" twice has nothing OpenVitals can hold, and that is not an error.
+        val nothing = convertDripRow(row("date" to "2015-12-28", "mucus.feeling" to "1", "mucus.texture" to "0", "mucus.exclude" to "false"), plan())
+        assertTrue(nothing.records.isEmpty() && nothing.journalEntry == null && nothing.diagnostics.isEmpty())
     }
 
     @Test

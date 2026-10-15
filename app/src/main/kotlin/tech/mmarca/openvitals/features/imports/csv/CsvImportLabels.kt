@@ -132,5 +132,6 @@ internal fun csvDiagnosticReasonLabel(reason: CsvImportDiagnosticReason): String
         CsvImportDiagnosticReason.UNPARSABLE_END_TIMESTAMP -> R.string.settings_csv_import_reason_unparsable_end_timestamp
         CsvImportDiagnosticReason.END_NOT_AFTER_START -> R.string.settings_csv_import_reason_end_not_after_start
         CsvImportDiagnosticReason.WRITE_FAILED -> R.string.settings_csv_import_reason_write_failed
+        CsvImportDiagnosticReason.EXCLUDED_IN_SOURCE -> R.string.settings_csv_import_reason_excluded_in_source
     },
 )

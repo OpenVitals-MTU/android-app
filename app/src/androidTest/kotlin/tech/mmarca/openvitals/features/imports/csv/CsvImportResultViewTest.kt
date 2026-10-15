@@ -30,7 +30,14 @@ class CsvImportResultViewTest {
         )
 
         composeRule
-            .onNodeWithText(string(R.string.settings_csv_import_result, 2, 0, 0))
+            .onNodeWithText(string(R.string.settings_csv_import_outcome_completed))
+            .assertIsDisplayed()
+        // The tally keeps rows and records apart, each under its own title.
+        composeRule
+            .onNodeWithText(string(R.string.settings_csv_import_tally_rows_title))
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithText(string(R.string.settings_csv_import_tally_records_written))
             .assertIsDisplayed()
         // Nothing was refused, so the run has nothing to explain.
         composeRule

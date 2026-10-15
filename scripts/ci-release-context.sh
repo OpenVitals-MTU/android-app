@@ -115,8 +115,9 @@ else
     else
         build_debug_apk="true"
         debug_apk_basename="OpenVitals-$release_tag-debug.apk"
-        # A tag build also makes the app bundle and attaches it to the GitHub release,
-        # for a Play upload by hand. It does not publish to Play: only a deployment does.
+        # A tag build also makes the app bundle, attaches it to the GitHub release
+        # and uploads it to open testing; production is a promotion from there.
+        play_track="beta"
         bundle_task=":app:bundleRelease"
         aab_variant_dir="release"
         aab_basename="OpenVitals-$release_tag.aab"

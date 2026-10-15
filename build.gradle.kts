@@ -3,9 +3,9 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion
 
 plugins {
     alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.android.library) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.kotlin.jvm) apply false
-    alias(libs.plugins.kover) apply false
     alias(libs.plugins.hilt.android) apply false
     alias(libs.plugins.ksp) apply false
 }
@@ -45,8 +45,8 @@ tasks.register("verifyAndroidTest") {
 
 tasks.register("verifyCiUnitTest") {
     group = "verification"
-    description = "Runs the phone app unit tests against the CI build type, and the shared link module's."
-    dependsOn(":wearlink:test", ":app:testCiUnitTest")
+    description = "Runs the phone app unit tests against the CI build type, and the domain and link modules'."
+    dependsOn(":wearlink:test", ":domain:testCiUnitTest", ":app:testCiUnitTest")
 }
 
 tasks.register<Exec>("verifyTranslations") {
@@ -57,10 +57,9 @@ tasks.register<Exec>("verifyTranslations") {
 
 tasks.register("verifyCiPreflight") {
     group = "verification"
-    description = "Runs phone app lint, duplicate-class and android-test compile checks for CI."
+    description = "Runs the translation, duplicate-class and android-test compile checks for CI."
     dependsOn(
         "verifyTranslations",
-        ":app:lintCi",
         // Not assembleCi: nothing used that APK, and dexing it was a minute and a half.
         // The release pipeline builds and packages the real one after this gate.
         ":app:checkCiDuplicateClasses",
@@ -68,14 +67,25 @@ tasks.register("verifyCiPreflight") {
     )
 }
 
+// Lint is half of the gate's task time. CI runs it on pushes to main and in
+// the release build, not on pull requests (.github/workflows/test.yml), so it
+// is not part of verifyCiPreflight.
+tasks.register("verifyCiLint") {
+    group = "verification"
+    description = "Runs phone app and domain module lint for CI."
+    dependsOn(":app:lintCi", ":domain:lintCi")
+}
+
 // Phone app only. The wear module has its own gate (verifyWearCi) and its own
 // pipeline (.github/workflows/wear-test.yml), so a watch failure never blocks a phone PR.
+// The whole gate in one invocation, for a local run and the release build.
 tasks.register("verifyCi") {
     group = "verification"
     description = "Runs phone app CI verification without connected-device instrumentation tests."
     dependsOn(
         "verifyCiUnitTest",
         "verifyCiPreflight",
+        "verifyCiLint",
     )
 }
 

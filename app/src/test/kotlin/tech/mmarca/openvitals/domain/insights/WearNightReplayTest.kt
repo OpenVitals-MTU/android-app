@@ -12,7 +12,7 @@ import tech.mmarca.openvitals.wearlink.WearLinkProtocol
  * what the phone would have written: the wear state, the window, the
  * labels per hour and the stages. For a developer with a watch in hand;
  * skipped unless `-Dopenvitals.wearNightLines=<file of SM lines>` is set
- * (`tool/README.md` says how to get the lines off the watch).
+ * (`scripts/README.md` says how to get the lines off the watch).
  */
 class WearNightReplayTest {
 

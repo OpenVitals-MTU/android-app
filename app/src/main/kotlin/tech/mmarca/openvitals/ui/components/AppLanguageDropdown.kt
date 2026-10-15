@@ -66,9 +66,9 @@ fun AppLanguageDropdown(
  */
 @Composable
 private fun AppLanguage.label(): String =
-    when (languageTag) {
+    when (val tag = languageTag) {
         null -> stringResource(R.string.settings_language_system)
-        else -> autonym(languageTag)
+        else -> autonym(tag)
     }
 
 private fun autonym(languageTag: String): String {
