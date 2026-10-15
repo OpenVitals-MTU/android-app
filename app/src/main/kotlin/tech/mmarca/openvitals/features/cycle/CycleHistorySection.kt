@@ -20,8 +20,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +63,10 @@ private val GuideStroke: Dp = 1.dp
 private val DashOn = 6f
 private val DashOff = 6f
 
+/** Bars shown at first; Load more reveals [CycleHistoryPageSize] older ones at a time, newest first. */
+private const val CycleHistoryInitialCount = 12
+private const val CycleHistoryPageSize = 10
+
 /** One bar per cycle against the 21 to 35 day reference zone. Tap a bar for its detail. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -71,6 +77,8 @@ internal fun CycleHistoryCard(
     modifier: Modifier = Modifier,
 ) {
     var selected by remember { mutableStateOf<LongitudinalCycleItem?>(null) }
+    var visibleCount by rememberSaveable { mutableIntStateOf(CycleHistoryInitialCount) }
+    val boundedVisibleCount = visibleCount.coerceAtMost(stats.items.size)
     OpenVitalsCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(LayoutMetrics.cardPadding), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
             Text(
@@ -111,7 +119,20 @@ internal fun CycleHistoryCard(
                     )
                 }
             }
-            CycleBars(stats = stats, dateTimeFormatterProvider = dateTimeFormatterProvider, onSelect = { selected = it })
+            CycleBars(
+                stats = stats,
+                visibleItems = stats.items.take(boundedVisibleCount),
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                onSelect = { selected = it },
+            )
+            if (boundedVisibleCount < stats.items.size) {
+                OpenVitalsOutlinedButton(
+                    onClick = { visibleCount = (boundedVisibleCount + CycleHistoryPageSize).coerceAtMost(stats.items.size) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.action_load_more_entries))
+                }
+            }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(stringResource(R.string.cycle_variability_ref_min), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(stringResource(R.string.cycle_variability_reference_band), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -132,9 +153,11 @@ internal fun CycleHistoryCard(
     }
 }
 
+/** The axis spans every cycle, not only the visible ones, so loading more never rescales the bars. */
 @Composable
 private fun CycleBars(
     stats: LongitudinalCycleStats,
+    visibleItems: List<LongitudinalCycleItem>,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
     onSelect: (LongitudinalCycleItem) -> Unit,
 ) {
@@ -155,7 +178,7 @@ private fun CycleBars(
             },
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        stats.items.forEach { item ->
+        visibleItems.forEach { item ->
             CycleBarRow(item = item, maxDays = maxDays, dateTimeFormatterProvider = dateTimeFormatterProvider, onClick = { onSelect(item) })
         }
     }

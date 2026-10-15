@@ -58,7 +58,7 @@ The screen is a metric detail scaffold fixed to the month: the arrows and the da
 - **Stats**: count, mean, and range of recorded cycles.
 - **Setup**: a link to cycle settings when no context or age band is set.
 
-Below that: the observation list, the cycle history bars against a 21 to 35 day reference band with a per-cycle detail sheet, the thermal chart with a coverline when a shift is confirmed, and symptom patterns per phase.
+Below that: the observation list, the cycle history bars against a 21 to 35 day reference band with a per-cycle detail sheet, newest first, twelve at a time with a Load 10 more button, over the whole recorded history (until 2.14.2 the history stopped at eighteen months, about nineteen cycles), the thermal chart with a coverline when a shift is confirmed, and symptom patterns per phase.
 
 ## Estimator
 
