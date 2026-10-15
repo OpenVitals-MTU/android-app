@@ -19,9 +19,14 @@ git diff --check
 
 `verifyCi` is an aggregate defined in the root `build.gradle.kts`:
 
-- `verifyCiUnitTest` runs `:app:testCiUnitTest`.
-- `verifyCiPreflight` runs `verifyTranslations`, `:app:lintCi`, `:app:assembleCi`,
+- `verifyCiUnitTest` runs `:wearlink:test`, `:domain:testCiUnitTest` and `:app:testCiUnitTest`.
+- `verifyCiPreflight` runs `verifyTranslations`, `:app:checkCiDuplicateClasses`
   and `:app:compileCiAndroidTestKotlin`.
+- `verifyCiLint` runs `:app:lintCi` and `:domain:lintCi`. It is its own aggregate
+  because CI runs it only on pushes to `main`, on a job of its own.
+
+Nothing assembles an APK: nothing used it, and dexing it cost a minute and a
+half. The release pipeline builds the real one after the gate.
 
 Unit tests run against the `ci` build type. There is no debug unit-test variant,
 so the task is `:app:testCiUnitTest`; `:app:testDebugUnitTest` does not exist.
@@ -44,7 +49,7 @@ The watch app in `wear/` has its own gate, separate from `verifyCi`. Both gates 
 
 It runs `:wearlink:test`, `:wear:testDebugUnitTest`, `:wear:lintDebug`, `:wear:assembleDebug`,
 and `:wear:compileDebugAndroidTestKotlin`. A dependency change in `wearlink/build.gradle.kts`
-needs `./gradlew :wearlink:dependencies --write-locks` for its lockfile, like the other modules. The wear module uses the standard
+needs `./gradlew :wearlink:dependencies --write-locks` for its lockfile, like the other modules (`:domain:dependencies --write-locks` for the domain module). The wear module uses the standard
 `debug` build type; it has no `ci` variant.
 
 The watch's instrumented tests (`wear/src/androidTest`, the metric store against real SQLite)
@@ -63,10 +68,10 @@ adb -s <watch> shell cat /data/local/tmp/ov-inst.txt   # until it ends in OK or 
 
 The run stops the app; open it on the watch again afterwards so its service restarts.
 
-CI mirrors the split. `.github/workflows/test.yml` runs `verifyCi` and skips
-changes that only touch `wear/`. `.github/workflows/wear-test.yml` runs `verifyWearCi` and
-triggers only on `wear/`, `wearlink/` and the shared build files they depend on. A change to
-the root Gradle files runs both.
+CI mirrors the split. The verify workflow (`.github/workflows/verify.yml`) diffs a
+pull request or push against its base and runs the phone jobs for anything
+outside `wear/` and the `wear` job for `wear/`, `wearlink/` and the shared build
+files they depend on. A change to the root Gradle files runs both.
 
 The watch app shares the phone app's `applicationId`, `tech.mmarca.openvitals`,
 so Play lists it as a form factor of OpenVitals rather than a second app. The
@@ -201,19 +206,45 @@ AGP 9 built-in Kotlin currently requires `android.disallowKotlinSourceSets=false
 
 ## CI
 
-CI is GitHub Actions on GitHub-hosted runners. The Gradle jobs run in the
-prebaked `ghcr.io/mmarca-tech/openvitals-android-ci` image (see
-[`ci-image/README.md`](../../ci-image/README.md)), cache Gradle with
-`gradle/actions/setup-gradle`, and go through `scripts/ci-android-gradle.sh`,
-which sizes the JVMs for the runner's 16 GB. The test workflow runs:
+CI is GitHub Actions on the stock `ubuntu-latest` runner, which ships JDK 17
+and the Android SDK; `scripts/ci-android-setup.sh` installs the platform and
+build-tools the app compiles against when the runner image lacks them (a
+prebaked container image did this until 2026-10; pulling it cost as much as the
+install). The Gradle jobs cache Gradle with `gradle/actions/setup-gradle` and
+go through `scripts/ci-android-gradle.sh`, which sizes the JVMs for the
+runner's 16 GB. Two workflows. `verify.yml` is the gate, on every pull request
+and push to `main`: the `app-test` job always, `lint` on pushes to `main` only,
+`wear-test` when the watch app or the build files it shares changed:
 
 ```bash
-./gradlew --no-daemon verifyCi
+# tests job: every core gets a test fork, since nothing else runs here
+./gradlew --no-daemon -Popenvitals.testForks=4 verifyCiUnitTest verifyCiPreflight
+git diff --check
+# lint job
+./gradlew --no-daemon verifyCiLint
 git diff --check
 ```
 
-`.github/workflows/release.yml` builds and publishes. There are two GitHub
-release outputs:
+Lint alone is half of the gate's task time, so in a single job it stretched
+the tests, which shared the runner's four cores with it. A pull request's gate
+is the tests job alone; a lint finding is caught on `main` before a nightly
+ships.
+
+The Gradle build cache is on (`org.gradle.caching` in `gradle.properties`), and
+`setup-gradle` keeps it between runs along with the dependency cache. A code
+change invalidates `:app`'s compile and test tasks either way, so the win is on
+`:wearlink`, on reruns, and on the release build, which restores what the
+`main` run of the same commit produced.
+
+`release.yml` is the release, on the schedule, a version tag and the manual
+run. A tag or the nightly is cut from a commit on `main`, whose push ran the
+verify workflow; the release's `context` job looks that run up, waits for it
+if it is still going, and stops the release if there is none or it failed, so
+the gate is never run twice and never skipped.
+
+Its `build` job signs the APK, the debug APK and the AAB once and stores them
+as the run's `release-build` artifact; every job after it, production
+included, ships those files as they are. There are two GitHub release outputs:
 
 - The `00:00 UTC` schedule, or a manual run of the release workflow with target
   `nightly`, builds `:app:assembleNightly` and `:app:assembleDebug`, then
@@ -224,15 +255,18 @@ release outputs:
   prerelease as `OpenVitals-nightly.aab`.
 - A pushed `vX.Y.Z` or `VX.Y.Z` tag builds `:app:assembleRelease` and
   `:app:assembleDebug`, then publishes `OpenVitals-vX.Y.Z.apk` and
-  `OpenVitals-vX.Y.Z-debug.apk` to its own versioned GitHub prerelease, which
-  can be promoted after validation by a manual run of the release workflow with
-  target `production`, started from the tag. The tag build also runs
-  `:app:bundleRelease` and attaches `OpenVitals-vX.Y.Z.aab`. It does not upload
-  to Play.
+  `OpenVitals-vX.Y.Z-debug.apk` to its own versioned GitHub prerelease. The tag
+  build also runs `:app:bundleRelease`, attaches `OpenVitals-vX.Y.Z.aab` and
+  uploads it to the open testing track, beside the prerelease. The same run
+  then waits for the `production` environment's approval.
 
 Each attached AAB has a `.sha256` file beside it. The AAB is there for a Play
-upload by hand, when Play refuses the upload from the workflow. The GitHub
-release job does not wait for the Play job, so the AAB is attached even then.
+upload by hand, when Play refuses the upload from the workflow, and it is what
+a manual production run ships: a run with target `production`, started from
+the tag, downloads the prerelease's AAB, checks it against the `.sha256` and
+runs the production jobs on it. That is the way to ship a tag whose own run is
+gone (its approval lapsed, or it predates the workflow). The GitHub release job does not
+wait for the Play job, so the AAB is attached even then.
 
 Nightly and release APKs use the release-style production application ID,
 minification, packaging, and signing model. Published Debug APKs use the
@@ -264,16 +298,18 @@ the incoming code against the live Play track before uploading. Production runs
 reuse the marker from the already published `vX.Y.Z` release so the Play AAB
 matches the GitHub APK's install order. The nightly run also prunes old
 versioned GitHub releases so only the newest nine remain, while preserving the
-fixed `nightly` release and all Git tags. The production run uploads the signed
-release AAB to Google Play production, promotes the matching GitHub prerelease
-to stable, and then posts the full release notes to the Zulip `releases`
-channel under a `vX.Y.Z` topic (`scripts/announce-zulip.sh`). A Mastodon
-announcement from `https://techhub.social/@openvitals`
+fixed `nightly` release and all Git tags. Once approved, the run promotes the
+version from the open testing track to Google Play production with the store
+metadata (it uploads the AAB instead when open testing never had that version,
+as for a tag cut while Play was paused) and promotes the matching GitHub
+prerelease to stable, the two in parallel, then posts the full release notes
+to the Zulip `releases` channel under a `vX.Y.Z` topic
+(`scripts/announce-zulip.sh`). A
+Mastodon announcement from `https://techhub.social/@openvitals`
 (`scripts/announce-mastodon.sh`, the release notes' narrative paragraph plus
-links to the GitHub release and the Play listing) is disabled for now: its job
-is commented out in `.github/workflows/release.yml`. Both announcement scripts
-check for an existing post for the tag first, so re-running production never
-announces twice.
+links to the GitHub release and the Play listing) is disabled for now: the
+release workflow has no job for it. Both announcement scripts check for an existing
+post for the tag first, so re-running production never announces twice.
 
 The scheduled run only skips the build when there is nothing new to publish:
 either the `nightly` tag already points at HEAD, or HEAD has no commits after
@@ -344,17 +380,18 @@ ANDROID_SERIAL=<serial> ./gradlew verifyAndroidTest
 
 6. Commit the release prep, tag the commit as an annotated `v<versionName>` tag
    such as `v0.7.0` using the matching `CHANGELOG.md` section as the tag
-   message, and push both the branch and tag. The tag run of the release
-   workflow runs the release checks and publishes the versioned GitHub
-   prerelease APK.
-7. After validation, run the release workflow by hand (Actions > release > Run
-   workflow) from the version tag, with target `production`. Once the
-   `production` environment approves it, the run uploads the signed release AAB
-   to Google Play production, promotes the matching GitHub prerelease to
-   stable, and posts the release notes to the Zulip `releases` channel.
+   message, and push both the branch and tag. The tag's release run builds the
+   signed artifacts once, publishes the versioned GitHub prerelease, and then
+   waits for the `production` environment's approval.
+7. After validation, approve that run (Actions > the tag's run > Review
+   deployments). It promotes the version from open testing to Google Play
+   production and the GitHub prerelease to stable, then posts the release notes
+   to the Zulip `releases` channel. If the run is gone, run the release workflow by
+   hand (Actions > release > Run workflow) from the version tag with target `production`: it
+   ships the prerelease's AAB the same way, without a build.
 
-For an immediate nightly release, run the release workflow by hand from `main`
-with target `nightly`. It runs the same release checks, moves the `nightly` tag
+For an immediate nightly release, run the release workflow by hand from `main` with
+target `nightly`. It runs the same release checks, moves the `nightly` tag
 to the commit, publishes the APK to the mutable GitHub `nightly` prerelease, and
 uploads the signed AAB to Google Play open testing. The schedule does the same
 at midnight UTC.

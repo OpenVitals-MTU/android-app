@@ -470,7 +470,7 @@
     <string name="metric_bmi">BMI</string>
     <string name="metric_ffmi">FFMI</string>
     <string name="metric_lean_mass">Fettfreie Masse</string>
-    <string name="metric_bmr">BMR</string>
+    <string name="metric_bmr">Grundumsatz</string>
     <string name="metric_bone_mass">Knochenmasse</string>
     <string name="metric_body_water_mass">Körperwassermasse</string>
     <string name="metric_latest">Zuletzt</string>
@@ -1579,7 +1579,7 @@
     <string name="settings_apple_health_import_category_vitals_desc">Blutdruck, Sauerstoffsättigung, Atemfrequenz, Körpertemperatur, Blutzucker und VO2 max.</string>
     <string name="settings_apple_health_import_category_nutrition">Ernährung</string>
     <string name="settings_apple_health_import_category_nutrition_desc">Nahrungsenergie, Makros, Koffein, Mineralstoffe und Vitamine.</string>
-    <string name="settings_apple_health_import_category_hydration">Hydration</string>
+    <string name="settings_apple_health_import_category_hydration">Hydrierung</string>
     <string name="settings_apple_health_import_category_hydration_desc">Wasseraufnahme.</string>
     <string name="settings_apple_health_import_category_mindfulness">Mindfulness</string>
     <string name="settings_apple_health_import_category_mindfulness_desc">Mindfulness-Sitzungen, wenn Health Connect sie unterstützt.</string>
@@ -2439,7 +2439,7 @@
     <string name="settings_csv_import_permission_body">OpenVitals benötigt die Berechtigung, diese Messwerte in Health Connect zu schreiben.</string>
     <string name="settings_csv_import_start">Importieren</string>
     <string name="settings_csv_import_cancel">Abbrechen</string>
-    <string name="settings_csv_import_progress">Zeile %1$d · geschrieben %2$d, bereits vorhanden %3$d, abgelehnt %4$d</string>
+    <string name="settings_csv_import_progress">Zeile %1$d · Datensätze geschrieben %2$d, abgelehnt %3$d</string>
     <string name="settings_csv_import_quota_pause">Health Connect begrenzt derzeit Schreibvorgänge. Der Import wird in %1$d s fortgesetzt.</string>
     <string name="settings_csv_import_drip_title">drip-Export erkannt</string>
     <string name="settings_csv_import_drip_body">%1$s ist ein von drip exportierter Zyklusverlauf. Wähle, was in OpenVitals übernommen wird. Jeder Tag wird in der Zeitzone dieses Telefons gelesen, und nichts wird geschrieben, bevor du bestätigst.</string>
@@ -2454,13 +2454,30 @@
     <string name="settings_csv_import_drip_journal">Tagebuch</string>
     <string name="settings_csv_import_drip_journal_body">Schmerzen und Stimmung als Symptome, Stimmungs- und Energielevel, Gebärmutterhals, Verlangen und jede Notiz ins Zyklustagebuch auf diesem Telefon.</string>
     <string name="settings_csv_import_drip_confirm_summary">%1$s · %2$d der ersten %3$d Tage enthalten etwas zum Importieren</string>
-    <string name="settings_csv_import_journal_days">Aktualisierte Tagebuchtage: %1$d</string>
-    <string name="settings_csv_import_result">Geschrieben %1$d. Bereits vorhanden %2$d. Abgelehnt %3$d.</string>
+    <string name="settings_csv_import_journal_days">Tagebuchtage: %1$d, davon %2$d aktualisiert</string>
+    <string name="settings_csv_import_tally_rows_title">Zeilen der Datei</string>
+    <string name="settings_csv_import_tally_rows_read">Gelesen</string>
+    <string name="settings_csv_import_tally_rows_imported">Importiert</string>
+    <string name="settings_csv_import_tally_rows_rejected">Abgelehnt</string>
+    <string name="settings_csv_import_tally_rows_empty">Nichts zu importieren</string>
+    <string name="settings_csv_import_tally_rows_note">Eine Zeile kann mehrere Datensätze ergeben oder keinen, daher lassen sich Zeilen und Datensätze nicht gegeneinander aufrechnen.</string>
+    <string name="settings_csv_import_tally_records_title">Health-Connect-Datensätze</string>
+    <string name="settings_csv_import_tally_records_written">Geschrieben</string>
+    <string name="settings_csv_import_tally_records_replaced">Ersatz eines früheren Imports</string>
+    <string name="settings_csv_import_tally_records_unchecked">Ohne vorherige Prüfung geschrieben</string>
+    <string name="settings_csv_import_tally_records_unchecked_note">Health Connect konnte für diese Datensätze nicht gelesen werden, die Zahl der ersetzten ist daher eine Untergrenze.</string>
+    <string name="settings_csv_import_tally_journal_title">Zyklustagebuch</string>
+    <string name="settings_csv_import_tally_journal_days">Tage mit Eintrag</string>
+    <string name="settings_csv_import_tally_journal_updated">Auf diesem Telefon aktualisiert</string>
+    <string name="settings_csv_import_outcome_completed">Import abgeschlossen</string>
+    <string name="settings_csv_import_outcome_cancelled">Import abgebrochen</string>
+    <string name="settings_csv_import_outcome_rate_limited">Import gestoppt</string>
+    <string name="settings_csv_import_outcome_failed">Import fehlgeschlagen</string>
     <string name="settings_csv_import_result_empty">Aus dieser Datei wurde nichts importiert.</string>
     <string name="settings_csv_import_result_cancelled">Import abgebrochen. Bereits Geschriebenes wurde behalten.</string>
     <string name="settings_csv_import_result_rate_limited">Health Connect hat eine halbe Stunde lang Schreibvorgänge abgelehnt. Führe den Import später erneut aus; was geschrieben wurde, bleibt erhalten.</string>
     <string name="settings_csv_import_error">Der Import ist fehlgeschlagen: %1$s</string>
-    <string name="settings_csv_import_diagnostics_title">Abgelehnte Zeilen</string>
+    <string name="settings_csv_import_diagnostics_title">Ablehnungen nach Grund</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>
     <string name="settings_csv_import_reason_missing_timestamp">Kein Datum und keine Uhrzeit</string>
     <string name="settings_csv_import_reason_unparsable_timestamp">Datum nicht verstanden</string>
@@ -2469,6 +2486,7 @@
     <string name="settings_csv_import_reason_out_of_range">Wert außerhalb eines plausiblen Bereichs</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">Kein Gewicht, um den Prozentsatz zu berechnen</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect hat den Datensatz abgelehnt</string>
+    <string name="settings_csv_import_reason_excluded_in_source">In der Quell-App ausgeschlossen</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Enddatum nicht verstanden</string>
     <string name="settings_csv_import_reason_end_not_after_start">Ende liegt nicht nach dem Start</string>
     <string name="settings_csv_import_save_report">Bericht speichern</string>
@@ -2603,7 +2621,7 @@
         <item quantity="other">%1$d Dateien</item>
     </plurals>
     <string name="settings_watch_action_data">Daten</string>
-    <string name="settings_watch_action_sync">Sync</string>
+    <string name="settings_watch_action_sync">Synchronisieren</string>
     <string name="settings_watch_action_alarms">Wecker</string>
     <string name="settings_watch_action_find">Finden</string>
     <string name="settings_watch_find_stop">Stopp</string>

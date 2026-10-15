@@ -32,15 +32,22 @@ fun buildCsvImportReport(
     appendLine()
     appendLine("Totals")
     appendLine("------")
-    appendLine("Rows read:       ${result.progress.rowsRead}")
-    appendLine("Records written: ${result.progress.written}")
-    appendLine("Already present: ${result.progress.alreadyPresent}")
-    appendLine("Rejected:        ${result.progress.rejected}")
-    if (result.progress.journalDays > 0) {
-        appendLine("Journal days:    ${result.progress.journalDays}")
+    // Rows partition three ways and add up to rows read. Records do not: a row can make several.
+    val progress = result.progress
+    appendLine("Rows read:           ${progress.rowsRead}")
+    appendLine("  Imported:          ${progress.rowsImported} (rows that produced a record or a journal entry)")
+    appendLine("  Rejected:          ${progress.rowsRejected}")
+    appendLine("  Nothing to import: ${progress.emptyRows}")
+    appendLine("Records written:     ${progress.written}, of which ${progress.alreadyPresent} replaced an earlier import")
+    if (progress.presenceUnchecked > 0) {
+        appendLine("  Not checked first: ${progress.presenceUnchecked} (Health Connect could not be read for them; written all the same)")
     }
-    if (result.progress.quotaPauses > 0) {
-        appendLine("Quota pauses:    ${result.progress.quotaPauses} (${quotaWaitLabel(result.progress.quotaWaitMillis)})")
+    if (progress.journalDays > 0) {
+        appendLine("Journal days:        ${progress.journalDays} (${progress.journalDaysUpdated} updated)")
+    }
+    appendLine("Rejections:          ${progress.rejected} (whole rows and single values, by reason below)")
+    if (progress.quotaPauses > 0) {
+        appendLine("Quota pauses:        ${progress.quotaPauses} (${quotaWaitLabel(progress.quotaWaitMillis)})")
     }
     appendLine()
     appendLine("Parsing")
@@ -270,4 +277,5 @@ private fun reasonLabel(reason: CsvImportDiagnosticReason): String = when (reaso
     CsvImportDiagnosticReason.UNPARSABLE_END_TIMESTAMP -> "end date not understood"
     CsvImportDiagnosticReason.END_NOT_AFTER_START -> "end is not after the start"
     CsvImportDiagnosticReason.WRITE_FAILED -> "Health Connect refused the record"
+    CsvImportDiagnosticReason.EXCLUDED_IN_SOURCE -> "Excluded in the source app"
 }

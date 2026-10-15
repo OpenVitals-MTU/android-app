@@ -147,13 +147,21 @@ fun convertDripRow(row: CsvRow, plan: DripImportPlan): CsvRowConversion {
         dripTemperatureRecord(cells, row.rowNumber, date, plan.zone, diagnostics)?.let { records += it }
     }
     val mucusExcluded = cells.flag("mucus.exclude")
-    if (DripImportOption.CERVICAL_MUCUS in plan.enabled && !mucusExcluded) {
-        dripMucusRecord(cells, noon, offset)?.let { records += it }
+    if (DripImportOption.CERVICAL_MUCUS in plan.enabled) {
+        if (mucusExcluded) {
+            cells.excludedDiagnostic(row.rowNumber, "mucus.exclude", "mucus.feeling", "mucus.texture")?.let { diagnostics += it }
+        } else {
+            dripMucusRecord(cells, noon, offset)?.let { records += it }
+        }
     }
     if (DripImportOption.SEXUAL_ACTIVITY in plan.enabled) {
         dripSexRecord(cells, noon, offset)?.let { records += it }
     }
     val journal = if (DripImportOption.JOURNAL in plan.enabled) {
+        if (cells.flag("cervix.exclude")) {
+            cells.excludedDiagnostic(row.rowNumber, "cervix.exclude", "cervix.opening", "cervix.firmness", "cervix.position")
+                ?.let { diagnostics += it }
+        }
         dripJournalEntry(cells, date, mucusExcluded)
     } else {
         null
@@ -228,6 +236,22 @@ private class DripCells(private val row: CsvRow, private val columns: Map<String
 
     /** An option-list value: a whole number, or null when empty or not a number. */
     fun int(name: String): Int? = text(name)?.let(::parseCsvNumber)?.takeIf { it == it.toInt().toDouble() }?.toInt()
+
+    /**
+     * The diagnostic for an observation drip marked excluded, so a day left
+     * out on purpose is accounted for. Null when [valueColumns] hold nothing:
+     * an exclude flag over empty cells excludes nothing.
+     */
+    fun excludedDiagnostic(rowNumber: Int, flagColumn: String, vararg valueColumns: String): CsvImportDiagnostic? {
+        val values = valueColumns.mapNotNull { name -> text(name)?.let { "$name=$it" } }
+        if (values.isEmpty()) return null
+        return CsvImportDiagnostic(
+            rowNumber = rowNumber,
+            reason = CsvImportDiagnosticReason.EXCLUDED_IN_SOURCE,
+            columnIndex = columnIndex(flagColumn),
+            detail = values.joinToString(", "),
+        )
+    }
 }
 
 private fun dripBleedingRecord(
@@ -265,7 +289,8 @@ private fun dripBleedingRecord(
 
 /**
  * The morning temperature at its recorded clock time, noon without one. A
- * temperature excluded in drip was judged unreliable there and is left out.
+ * temperature excluded in drip was judged unreliable there and is left out,
+ * with a diagnostic so the day is accounted for.
  */
 private fun dripTemperatureRecord(
     cells: DripCells,
@@ -275,7 +300,10 @@ private fun dripTemperatureRecord(
     diagnostics: MutableList<CsvImportDiagnostic>,
 ): CsvConvertedRecord? {
     val text = cells.text("temperature.value") ?: return null
-    if (cells.flag("temperature.exclude")) return null
+    if (cells.flag("temperature.exclude")) {
+        cells.excludedDiagnostic(rowNumber, "temperature.exclude", "temperature.value")?.let { diagnostics += it }
+        return null
+    }
     val celsius = parseCsvNumber(text)
     val columnIndex = cells.columnIndex("temperature.value")
     if (celsius == null) {
@@ -430,7 +458,9 @@ private fun dripJournalEntry(cells: DripCells, date: LocalDate, mucusExcluded: B
         2 -> LevelGood
         else -> null
     }
-    val notes = DripNoteColumns.mapNotNull { cells.text(it) }.joinToString("\n")
+    // drip doubles every quote in a note but wraps the cell only when it also
+    // holds a period, comma or the like, so an unwrapped note keeps them doubled.
+    val notes = DripNoteColumns.mapNotNull { cells.text(it)?.replace("\"\"", "\"") }.joinToString("\n")
     val entry = CycleJournalEntry(
         date = date,
         symptoms = symptoms,
