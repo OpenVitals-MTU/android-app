@@ -91,7 +91,7 @@ export PATH="$JAVA_HOME/bin:$PATH"
 # A standard Linux runner has 16 GB. The build JVM gets 6 GB (lint runs inside
 # it) and the Kotlin compiler 4 GB; test forks take 1 GB each, two on four
 # cores, or four when the job runs only the tests (-Popenvitals.testForks=4,
-# see pipeline.yml). About 12 GB. Developer machines keep the smaller sizes in
+# see verify.yml). About 12 GB. Developer machines keep the smaller sizes in
 # gradle.properties. Through GRADLE_OPTS, not -D: the single-use daemon splits a
 # -D value at its spaces.
 GRADLE_OPTS="${GRADLE_OPTS:-} -Dorg.gradle.jvmargs=\"-Xmx6g -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8\""
