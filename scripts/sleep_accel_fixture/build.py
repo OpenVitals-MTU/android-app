@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Builds the local sleep evaluation fixture from PhysioNet's sleep-accel dataset.
 
-    python3 -I tool/sleep_accel_fixture/build.py \
-        --in tool/sleep_accel_fixture/data/sleep-accel-1.0.0 \
-        --out tool/sleep_accel_fixture/out/sleep_accel_minutes.json
+    python3 -I scripts/sleep_accel_fixture/build.py \
+        --in scripts/sleep_accel_fixture/data/sleep-accel-1.0.0 \
+        --out scripts/sleep_accel_fixture/out/sleep_accel_minutes.json
 
 The dataset (Walch et al. 2019, "Motion and heart rate from a wrist-worn
 wearable and labeled sleep from polysomnography", PhysioNet v1.0.0,
@@ -137,7 +137,7 @@ def main(argv):
         labelled = sum(1 for c in built["labels"] if c != "-")
         print(f"{subject}: {len(built['lines'])} minutes, {labelled} labelled", file=sys.stderr)
     fixture = {
-        "note": "Local evaluation fixture derived from PhysioNet sleep-accel; see tool/sleep_accel_fixture/build.py. Not for distribution.",
+        "note": "Local evaluation fixture derived from PhysioNet sleep-accel; see scripts/sleep_accel_fixture/build.py. Not for distribution.",
         "source": "Walch, O. (2019). Motion and heart rate from a wrist-worn wearable and labeled sleep from polysomnography (version 1.0.0). PhysioNet. https://doi.org/10.13026/hmhs-py35",
         "licence": "Open Data Commons Attribution License v1.0",
         "subjects": subjects,

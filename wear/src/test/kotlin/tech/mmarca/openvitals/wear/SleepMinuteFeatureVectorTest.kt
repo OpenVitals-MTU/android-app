@@ -8,14 +8,14 @@ import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /**
  * The watch's minute features against the shared vector
- * `tool/sleep_accel_fixture/feature_vector.json`, whose expected lines come
+ * `scripts/sleep_accel_fixture/feature_vector.json`, whose expected lines come
  * from the Python mirror (`features.py --make-vector`). Either side drifting
  * from `docs/engineering/sleep-minute-features.md` fails here or in
  * `features.py --self-check`.
  */
 class SleepMinuteFeatureVectorTest {
 
-    private val vector = JSONObject(File("../tool/sleep_accel_fixture/feature_vector.json").readText())
+    private val vector = JSONObject(File("../scripts/sleep_accel_fixture/feature_vector.json").readText())
 
     @Test
     fun `the aggregator reproduces every expected line`() {

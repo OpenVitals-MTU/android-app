@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds the committed sleep-minute fixture from real Garmin SLEEP FIT files.
 
-    python3 tool/sleep_fixture/build.py \
+    python3 scripts/sleep_fixture/build.py \
         --in 2026 \
         --out app/src/test/resources/fit/sleep/venu_sq_minutes.json
 

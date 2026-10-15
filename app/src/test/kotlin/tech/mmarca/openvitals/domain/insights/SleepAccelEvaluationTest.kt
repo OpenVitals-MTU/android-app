@@ -11,7 +11,7 @@ import tech.mmarca.openvitals.wearlink.WearLinkProtocol
 
 /**
  * The Wear OS sleep pipeline against polysomnography: PhysioNet's
- * sleep-accel nights, converted by `tool/sleep_accel_fixture/build.py` into
+ * sleep-accel nights, converted by `scripts/sleep_accel_fixture/build.py` into
  * the rows the watch would have recorded, with a label per minute. The
  * fixture is local and gitignored, so this test runs only when
  * `-Dopenvitals.sleepAccelFixture=<path>` points at it and is skipped

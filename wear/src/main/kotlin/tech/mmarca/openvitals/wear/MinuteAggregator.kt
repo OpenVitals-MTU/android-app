@@ -9,7 +9,7 @@ import tech.mmarca.openvitals.wearlink.WearLinkProtocol
  * Folds accelerometer readings, heart rate samples, the worn and charging
  * state and screen wake-ups into one `SM` row per clock minute, exactly as
  * `docs/engineering/sleep-minute-features.md` specifies. The Python mirror
- * is `tool/sleep_accel_fixture/features.py`; `SleepMinuteFeatureVectorTest`
+ * is `scripts/sleep_accel_fixture/features.py`; `SleepMinuteFeatureVectorTest`
  * holds the two together.
  *
  * Readings arrive in g. Pure Kotlin, so a test can feed it. A minute closes

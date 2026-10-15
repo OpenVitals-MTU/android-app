@@ -1,6 +1,11 @@
-# Host-side tooling
+# Scripts
 
-Nothing in here ships in the app; these run on a development machine.
+Nothing in here ships in the app. The shell scripts at the top level are what
+CI and a release run (`ci-*.sh`, `release.sh`, `version-code.sh`, the publish
+and announce scripts) and the checks the gate calls (`verify-translations.py`,
+`verify-r8-keeps.py`, `generate-translation-coverage.py`). The folders below
+are host-side tooling that regenerates committed fixtures; they run on a
+development machine. Until 2026-10 they lived in `tool/`.
 
 ## `health_fixture/`
 
@@ -17,7 +22,7 @@ per-record key sets also match the committed fixture exactly. Needs only the
 Python 3 standard library.
 
 ```sh
-python3 tool/health_fixture/build.py \
+python3 scripts/health_fixture/build.py \
   --db "path/to/health_connect_export.db" \
   --out app/src/test/resources/golden.json
 ```
@@ -32,7 +37,7 @@ checkout by hand, not by git; see its own README.
 
 ## What did NOT move here from the Flutter era
 
-Nothing Dart survives in this repository. `tool/verify_l10n.dart` and its
+Nothing Dart survives in this repository. `scripts/verify_l10n.dart` and its
 checks were superseded by `scripts/verify-translations.py` plus the JVM tests
 (`StringFormatSpecifierTest`, `TranslationCatalogTest`); `build.dart` was
 ported to `build.py` above.
@@ -50,7 +55,7 @@ serial numbers, file names and the other packed features are dropped. The
 script's header lists the rules. Needs only the Python 3 standard library.
 
 ```sh
-python3 tool/sleep_fixture/build.py \
+python3 scripts/sleep_fixture/build.py \
   --in 2026 \
   --out app/src/test/resources/fit/sleep/venu_sq_minutes.json
 ```
@@ -64,7 +69,7 @@ evaluation fixture against polysomnography.
   accelerometer samples in g, stored heart rate samples and the worn,
   charging, screen and contact events into `SM` lines exactly as the watch's
   `MinuteAggregator` does. `feature_vector.json` is the committed lock
-  between the two: `python3 -I tool/sleep_accel_fixture/features.py
+  between the two: `python3 -I scripts/sleep_accel_fixture/features.py
   --self-check` fails when the Python drifts, and the watch test
   `SleepMinuteFeatureVectorTest` fails when the Kotlin drifts.
   `--make-vector` regenerates the vector (synthetic minutes, no real data).
@@ -75,12 +80,12 @@ evaluation fixture against polysomnography.
   (`data/` and `out/` are gitignored): the fixture is for local evaluation
   only. Download the archive from
   https://physionet.org/content/sleep-accel/1.0.0/, unpack it under
-  `tool/sleep_accel_fixture/data/`, then:
+  `scripts/sleep_accel_fixture/data/`, then:
 
   ```sh
-  python3 -I tool/sleep_accel_fixture/build.py \
-    --in tool/sleep_accel_fixture/data/sleep-accel-1.0.0 \
-    --out tool/sleep_accel_fixture/out/sleep_accel_minutes.json
+  python3 -I scripts/sleep_accel_fixture/build.py \
+    --in scripts/sleep_accel_fixture/data/sleep-accel-1.0.0 \
+    --out scripts/sleep_accel_fixture/out/sleep_accel_minutes.json
   ```
 
   The evaluation test `SleepAccelEvaluationTest` reads that file only when
@@ -88,7 +93,7 @@ evaluation fixture against polysomnography.
 
   ```sh
   ./gradlew :app:testCiUnitTest --tests 'tech.mmarca.openvitals.domain.insights.SleepAccelEvaluationTest' \
-    -Dopenvitals.sleepAccelFixture=$PWD/tool/sleep_accel_fixture/out/sleep_accel_minutes.json
+    -Dopenvitals.sleepAccelFixture=$PWD/scripts/sleep_accel_fixture/out/sleep_accel_minutes.json
   ```
 
   It prints the table (sleep sensitivity, wake specificity, accuracy, onset
@@ -115,16 +120,3 @@ Then:
 ```
 
 The test is skipped without the property; its report is in the test output.
-
-## `ppg_raw/`
-
-`inspect.py` reads the CSV the watch app's `PpgRawLogger` writes (a debuggable
-build only, a long press on the watch's status screen starts and stops it; the
-file lives under the app's `files/ppg_raw/` and comes off the watch with
-`adb shell run-as tech.mmarca.openvitals.debug cat files/ppg_raw/<name>.csv`).
-It prints, per raw value column, the distinct count, range, mean, standard
-deviation and the strongest autocorrelation peak between 0.4 and 2 seconds as
-beats per minute, so the sixteen undocumented floats of Samsung's
-`com.samsung.sensor.hr_raw` can be told apart: waveform channels peak near the
-pulse, status and counter columns do not. Standard library only. A research
-spike; nothing in the app depends on it.

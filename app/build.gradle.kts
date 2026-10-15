@@ -54,7 +54,7 @@ val nightlyVersionNameSuffix = versionNameOverride
 val localAppleHealthExportPath = providers.gradleProperty("appleHealthExport")
     .orElse(providers.systemProperty("appleHealthExport"))
     .orElse(providers.environmentVariable("APPLE_HEALTH_EXPORT"))
-// The local, gitignored PhysioNet sleep fixture (tool/README.md); SleepAccelEvaluationTest skips without it.
+// The local, gitignored PhysioNet sleep fixture (scripts/README.md); SleepAccelEvaluationTest skips without it.
 val localSleepAccelFixturePath = providers.gradleProperty("sleepAccelFixture")
     .orElse(providers.systemProperty("openvitals.sleepAccelFixture"))
     .orElse(providers.environmentVariable("OPENVITALS_SLEEP_ACCEL_FIXTURE"))
@@ -363,7 +363,7 @@ tasks.withType<Test>().configureEach {
     localSleepAccelFixturePath.orNull?.let { path ->
         systemProperty("openvitals.sleepAccelFixture", path)
     }
-    // A night pulled off a watch, replayed by WearNightReplayTest (tool/README.md).
+    // A night pulled off a watch, replayed by WearNightReplayTest (scripts/README.md).
     providers.systemProperty("openvitals.wearNightLines").orNull?.let { path ->
         systemProperty("openvitals.wearNightLines", path)
     }

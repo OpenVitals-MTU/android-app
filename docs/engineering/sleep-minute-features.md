@@ -1,6 +1,6 @@
 # Sleep minute features (SM line, version 3)
 
-The OpenVitals Wear OS app records one row per clock minute as the input of the phone's sleep pipeline. The row is computed twice, from the same specification: in Kotlin on the watch (`wear/.../MinuteAggregator.kt` and `AccelerationMinuteFeatures.kt`) and in Python for the offline evaluation (`tool/sleep_accel_fixture/features.py`). The committed test vector `tool/sleep_accel_fixture/feature_vector.json` holds raw samples and the expected lines; the watch test `SleepMinuteFeatureVectorTest` and `features.py --self-check` both fail when either side drifts from this page.
+The OpenVitals Wear OS app records one row per clock minute as the input of the phone's sleep pipeline. The row is computed twice, from the same specification: in Kotlin on the watch (`wear/.../MinuteAggregator.kt` and `AccelerationMinuteFeatures.kt`) and in Python for the offline evaluation (`scripts/sleep_accel_fixture/features.py`). The committed test vector `scripts/sleep_accel_fixture/feature_vector.json` holds raw samples and the expected lines; the watch test `SleepMinuteFeatureVectorTest` and `features.py --self-check` both fail when either side drifts from this page.
 
 The pipeline that consumes the rows is described in [architecture.md](architecture.md) under `devices/wearos` and `domain/insights`; the research behind each rule is in [watches.md](../features/watches.md).
 

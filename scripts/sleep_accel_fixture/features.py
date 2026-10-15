@@ -5,11 +5,11 @@ The specification is docs/engineering/sleep-minute-features.md; this module
 is its Python mirror and the watch's MinuteAggregator / AccelerationMinuteFeatures
 are its Kotlin mirror. The two are held together by feature_vector.json:
 
-    python3 -I tool/sleep_accel_fixture/features.py --self-check
+    python3 -I scripts/sleep_accel_fixture/features.py --self-check
         feeds the vector's raw samples through MinuteFeatureBuilder and fails
         when the lines differ from the vector's expected lines.
 
-    python3 -I tool/sleep_accel_fixture/features.py --make-vector
+    python3 -I scripts/sleep_accel_fixture/features.py --make-vector
         regenerates feature_vector.json: a few synthetic minutes covering a
         still watch on a table, a slow drift, a turn in bed, a sparse minute,
         off-body, charging, no heart rate contact and a screen wake-up.
