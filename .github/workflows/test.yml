@@ -45,10 +45,6 @@ jobs:
       # since a job-level env cannot read the runner context.
       - run: echo "GRADLE_USER_HOME=$RUNNER_TEMP/gradle-user-home" >> "$GITHUB_ENV"
       - uses: gradle/actions/setup-gradle@v4
-        with:
-          # TRIAL, remove before merging: lets this pull request save the Gradle
-          # cache, so its second run shows the warm time of the stock runner.
-          cache-read-only: false
       - run: scripts/ci-android-gradle.sh -Popenvitals.testForks=4 verifyCiUnitTest verifyCiPreflight
       - run: git diff --check
 
@@ -62,9 +58,5 @@ jobs:
       # since a job-level env cannot read the runner context.
       - run: echo "GRADLE_USER_HOME=$RUNNER_TEMP/gradle-user-home" >> "$GITHUB_ENV"
       - uses: gradle/actions/setup-gradle@v4
-        with:
-          # TRIAL, remove before merging: lets this pull request save the Gradle
-          # cache, so its second run shows the warm time of the stock runner.
-          cache-read-only: false
       - run: scripts/ci-android-gradle.sh verifyCiLint
       - run: git diff --check
