@@ -48,6 +48,8 @@ android {
 
     lint {
         ignoreTestSources = true
+        // The fixtures do not ship either.
+        ignoreTestFixturesSources = true
     }
 }
 

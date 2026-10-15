@@ -28,9 +28,9 @@ concurrency:
 # verifyCi, which aggregates the three tasks the jobs run.
 jobs:
   # verifyCiUnitTest (:wearlink:test, :domain:testCiUnitTest, :app:testCiUnitTest) and verifyCiPreflight
-  # (verifyTranslations, :app:checkCiDuplicateClasses,
-  # :app:compileCiAndroidTestKotlin). Nothing else runs here, so every core gets
-  # a test fork (app/build.gradle.kts reads openvitals.testForks).
+  # (verifyTranslations, :app:checkCiDuplicateClasses, :app:compileCiAndroidTestKotlin,
+  # :domain:lintCi). The app's lint is the one thing not here, so every core
+  # gets a test fork (app/build.gradle.kts reads openvitals.testForks).
   tests:
     # The stock runner: it ships JDK 17 and the Android SDK, and
     # scripts/ci-android-setup.sh installs the platform and build-tools the app
@@ -48,7 +48,7 @@ jobs:
       - run: scripts/ci-android-gradle.sh -Popenvitals.testForks=4 verifyCiUnitTest verifyCiPreflight
       - run: git diff --check
 
-  # verifyCiLint (:app:lintCi, :domain:lintCi).
+  # verifyCiLint (:app:lintCi).
   lint:
     runs-on: ubuntu-latest
     steps:

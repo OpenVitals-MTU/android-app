@@ -20,10 +20,11 @@ git diff --check
 `verifyCi` is an aggregate defined in the root `build.gradle.kts`:
 
 - `verifyCiUnitTest` runs `:wearlink:test`, `:domain:testCiUnitTest` and `:app:testCiUnitTest`.
-- `verifyCiPreflight` runs `verifyTranslations`, `:app:checkCiDuplicateClasses`
-  and `:app:compileCiAndroidTestKotlin`.
-- `verifyCiLint` runs `:app:lintCi` and `:domain:lintCi`. It is its own aggregate because CI
-  runs it on its own job, in parallel with the other two.
+- `verifyCiPreflight` runs `verifyTranslations`, `:app:checkCiDuplicateClasses`,
+  `:app:compileCiAndroidTestKotlin` and `:domain:lintCi`.
+- `verifyCiLint` runs `:app:lintCi`. It is its own aggregate because CI runs it on
+  its own job, in parallel with the other two; the domain module's lint stays with
+  the tests, which have the slack on a four-core runner.
 
 Nothing assembles an APK: nothing used it, and dexing it cost a minute and a
 half. The release pipeline builds the real one after the gate.
