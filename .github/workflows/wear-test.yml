@@ -38,10 +38,12 @@ jobs:
     # The stock runner, as in test.yml; the wear module compiles against the
     # same platform, which scripts/ci-android-setup.sh installs when missing.
     runs-on: ubuntu-latest
-    env:
-      GRADLE_USER_HOME: ${{ runner.temp }}/gradle-user-home
     steps:
       - uses: actions/checkout@v5
+      # setup-gradle leaves caching off when the runner already has a Gradle
+      # user home with caches in it, so the job uses one of its own. A step,
+      # since a job-level env cannot read the runner context.
+      - run: echo "GRADLE_USER_HOME=$RUNNER_TEMP/gradle-user-home" >> "$GITHUB_ENV"
       - uses: gradle/actions/setup-gradle@v4
       - run: scripts/ci-android-gradle.sh verifyWearCi
       - run: git diff --check

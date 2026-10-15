@@ -118,14 +118,16 @@ jobs:
     if: needs.context.outputs.skip != 'true'
     # The stock runner, as in test.yml.
     runs-on: ubuntu-latest
-    env:
-      GRADLE_USER_HOME: ${{ runner.temp }}/gradle-user-home
     steps:
       - uses: actions/checkout@v5
       - uses: actions/download-artifact@v4
         with:
           name: release-context
           path: build/release-ci
+      # setup-gradle leaves caching off when the runner already has a Gradle
+      # user home with caches in it, so the job uses one of its own. A step,
+      # since a job-level env cannot read the runner context.
+      - run: echo "GRADLE_USER_HOME=$RUNNER_TEMP/gradle-user-home" >> "$GITHUB_ENV"
       # Read-only: a signing build never writes the cache other builds restore.
       - uses: gradle/actions/setup-gradle@v4
         with:
