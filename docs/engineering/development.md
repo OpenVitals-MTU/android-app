@@ -206,11 +206,13 @@ AGP 9 built-in Kotlin currently requires `android.disallowKotlinSourceSets=false
 
 ## CI
 
-CI is GitHub Actions on GitHub-hosted runners. The Gradle jobs run in the
-prebaked `ghcr.io/mmarca-tech/openvitals-android-ci` image (see
-[`ci-image/README.md`](../../ci-image/README.md)), cache Gradle with
-`gradle/actions/setup-gradle`, and go through `scripts/ci-android-gradle.sh`,
-which sizes the JVMs for the runner's 16 GB. The test workflow is two jobs
+CI is GitHub Actions on the stock `ubuntu-latest` runner, which ships JDK 17
+and the Android SDK; `scripts/ci-android-setup.sh` installs the platform and
+build-tools the app compiles against when the runner image lacks them (a
+prebaked container image did this until 2026-10; pulling it cost as much as the
+install). The Gradle jobs cache Gradle with `gradle/actions/setup-gradle` and
+go through `scripts/ci-android-gradle.sh`, which sizes the JVMs for the
+runner's 16 GB. The test workflow is two jobs
 that run at the same time, both required on a pull request and on `main`:
 
 ```bash

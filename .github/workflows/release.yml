@@ -116,12 +116,10 @@ jobs:
   build:
     needs: context
     if: needs.context.outputs.skip != 'true'
+    # The stock runner, as in test.yml.
     runs-on: ubuntu-latest
-    # Same prebaked image as test.yml; bump the tags together.
-    container: ghcr.io/mmarca-tech/openvitals-android-ci:android-37
     steps:
       - uses: actions/checkout@v5
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/download-artifact@v4
         with:
           name: release-context

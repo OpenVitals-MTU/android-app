@@ -17,7 +17,6 @@ on:
       - "gradle/**"
       - "gradlew"
       - "scripts/ci-*"
-      - "ci-image/**"
       - ".github/workflows/wear-test.yml"
   push:
     branches: [main]
@@ -36,13 +35,11 @@ jobs:
   # One Gradle invocation: the watch module is small enough (about a minute)
   # that splitting it as test.yml does would cost more in setup than it saves.
   verify-wear:
+    # The stock runner, as in test.yml; the wear module compiles against the
+    # same platform, which scripts/ci-android-setup.sh installs when missing.
     runs-on: ubuntu-latest
-    # Same prebaked image as test.yml. Bump both tags together when compileSdk
-    # moves; the wear module compiles against the same platform.
-    container: ghcr.io/mmarca-tech/openvitals-android-ci:android-37
     steps:
       - uses: actions/checkout@v5
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: gradle/actions/setup-gradle@v4
       - run: scripts/ci-android-gradle.sh verifyWearCi
       - run: git diff --check

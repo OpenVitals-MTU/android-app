@@ -32,16 +32,14 @@ jobs:
   # :app:compileCiAndroidTestKotlin). Nothing else runs here, so every core gets
   # a test fork (app/build.gradle.kts reads openvitals.testForks).
   tests:
+    # The stock runner: it ships JDK 17 and the Android SDK, and
+    # scripts/ci-android-setup.sh installs the platform and build-tools the app
+    # compiles against when the runner image lacks them. That replaced a
+    # prebaked container image (2026-10): pulling it cost as much as the
+    # install, and it had to be rebuilt whenever compileSdk moved.
     runs-on: ubuntu-latest
-    # Prebaked CI image: cirruslabs/android-sdk:tools plus the Android platform
-    # and build-tools this app compiles against (see ci-image/Dockerfile), so no
-    # sdkmanager runs at CI time. Rebuild + push (scripts/build-ci-image.sh
-    # --push) and bump this tag in every workflow together when compileSdk
-    # moves. The package must stay PUBLIC on ghcr (see ci-image/README.md).
-    container: ghcr.io/mmarca-tech/openvitals-android-ci:android-37
     steps:
       - uses: actions/checkout@v5
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: gradle/actions/setup-gradle@v4
       - run: scripts/ci-android-gradle.sh -Popenvitals.testForks=4 verifyCiUnitTest verifyCiPreflight
       - run: git diff --check
@@ -49,11 +47,8 @@ jobs:
   # verifyCiLint (:app:lintCi).
   lint:
     runs-on: ubuntu-latest
-    # Same prebaked image as the tests job; bump the tags together.
-    container: ghcr.io/mmarca-tech/openvitals-android-ci:android-37
     steps:
       - uses: actions/checkout@v5
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: gradle/actions/setup-gradle@v4
       - run: scripts/ci-android-gradle.sh verifyCiLint
       - run: git diff --check
