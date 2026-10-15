@@ -30,24 +30,25 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.domain.insights.BanisterTrimpUrl
 import tech.mmarca.openvitals.domain.insights.CardioLoadConfidence
 import tech.mmarca.openvitals.domain.insights.CardioLoadEstimate
 import tech.mmarca.openvitals.domain.insights.CardioLoadMethod
 import tech.mmarca.openvitals.domain.insights.GulatiMaxHeartRateUrl
 import tech.mmarca.openvitals.domain.insights.TanakaMaxHeartRateUrl
+import tech.mmarca.openvitals.domain.insights.TrainingLoadReviewUrl
 import tech.mmarca.openvitals.core.presentation.DisplayValue
 import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
-import tech.mmarca.openvitals.ui.components.AutoResizeText
 import tech.mmarca.openvitals.ui.components.ErrorMessage
 import tech.mmarca.openvitals.ui.components.FullScreenLoading
 import tech.mmarca.openvitals.ui.components.PullToRefreshBox
+import tech.mmarca.openvitals.ui.components.ReferenceLinkButton
 import tech.mmarca.openvitals.ui.components.SectionHeader
 import tech.mmarca.openvitals.ui.components.OpenVitalsCardHorizontalPadding
 import tech.mmarca.openvitals.ui.components.OpenVitalsSectionSpacing
@@ -57,8 +58,6 @@ import tech.mmarca.openvitals.ui.theme.HeartColor
 import tech.mmarca.openvitals.ui.theme.Spacing
 import kotlin.math.roundToLong
 
-private const val BanisterTrimpUrl = "https://pmc.ncbi.nlm.nih.gov/articles/PMC6561225/"
-private const val TrainingLoadReviewUrl = "https://pmc.ncbi.nlm.nih.gov/articles/PMC4213373/"
 private const val HealthConnectWorkoutUrl =
     "https://developer.android.com/health-and-fitness/health-connect/experiences/workouts"
 
@@ -198,13 +197,13 @@ private fun ExplanationCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (expanded) {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Spacing.lg))
             Text(
                 text = stringResource(R.string.cardio_load_formula),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Spacing.sm))
             Text(
                 text = stringResource(R.string.cardio_load_formula_body),
                 style = MaterialTheme.typography.bodyMedium,
@@ -222,14 +221,14 @@ private fun ExplanationCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Spacing.md))
             Text(
                 text = stringResource(R.string.cardio_load_mapping_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Spacing.md))
         OpenVitalsOutlinedButton(onClick = onToggleExpanded) {
             Text(
                 text = stringResource(
@@ -325,7 +324,7 @@ private fun CardioLoadNumbersCard(
                 ),
             )
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Spacing.md))
         Text(
             text = calibrationLabel(estimate),
             style = MaterialTheme.typography.bodySmall,
@@ -339,51 +338,28 @@ private fun ReferencesCard(
     modifier: Modifier = Modifier,
 ) {
     DetailCard(modifier = modifier) {
-        ReferenceButton(
-            title = stringResource(R.string.cardio_load_reference_banister),
-            url = BanisterTrimpUrl,
-        )
-        ReferenceButton(
-            title = stringResource(R.string.cardio_load_reference_training_load),
-            url = TrainingLoadReviewUrl,
-        )
-        ReferenceButton(
-            title = stringResource(R.string.cardio_load_reference_tanaka),
-            url = TanakaMaxHeartRateUrl,
-        )
-        ReferenceButton(
-            title = stringResource(R.string.cardio_load_reference_gulati),
-            url = GulatiMaxHeartRateUrl,
-        )
-        ReferenceButton(
-            title = stringResource(R.string.cardio_load_reference_health_connect),
-            url = HealthConnectWorkoutUrl,
-        )
-    }
-}
-
-@Composable
-private fun ReferenceButton(
-    title: String,
-    url: String,
-) {
-    val uriHandler = LocalUriHandler.current
-    OpenVitalsOutlinedButton(
-        onClick = { uriHandler.openUri(url) },
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-    ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
-            contentDescription = null,
-        )
-        Spacer(Modifier.width(8.dp))
-        AutoResizeText(
-            text = title,
-            maxLines = 2,
-            modifier = Modifier.weight(1f, fill = false),
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            ReferenceLinkButton(
+                title = stringResource(R.string.cardio_load_reference_banister),
+                url = BanisterTrimpUrl,
+            )
+            ReferenceLinkButton(
+                title = stringResource(R.string.cardio_load_reference_training_load),
+                url = TrainingLoadReviewUrl,
+            )
+            ReferenceLinkButton(
+                title = stringResource(R.string.cardio_load_reference_tanaka),
+                url = TanakaMaxHeartRateUrl,
+            )
+            ReferenceLinkButton(
+                title = stringResource(R.string.cardio_load_reference_gulati),
+                url = GulatiMaxHeartRateUrl,
+            )
+            ReferenceLinkButton(
+                title = stringResource(R.string.cardio_load_reference_health_connect),
+                url = HealthConnectWorkoutUrl,
+            )
+        }
     }
 }
 

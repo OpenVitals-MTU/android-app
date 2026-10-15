@@ -288,12 +288,8 @@ private fun maxHeartRateContext(
         ObservedMaxHeartRateMinimumBpm,
         restingHeartRate + ObservedMaxHeartRateRestingDeltaBpm,
     )
-    // As in cardio load: the age formula beats a quiet fortnight's ceiling.
-    val estimatedMax = maxOf(
-        ageYears?.let { ageMaxHeartRate(it, sex) } ?: 0L,
-        observedMax + 10L,
-        restingHeartRate + 70L,
-    )
+    val estimatedMax = ageYears?.let { ageMaxHeartRate(it, sex) }
+        ?: maxOf(observedMax + 10L, restingHeartRate + 70L)
     return IntensityMaxHeartRateContext(
         bpm = if (observedAvailable) observedMax else estimatedMax,
         isObservedAvailable = observedAvailable,

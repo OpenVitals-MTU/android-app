@@ -221,6 +221,9 @@ private fun calculateTrimp(
  * restated in doi:10.2147/CIA.S211568. Without a recorded sex the men's
  * constants stay, as before the profile carried one.
  */
+const val BanisterTrimpUrl = "https://pmc.ncbi.nlm.nih.gov/articles/PMC6561225/"
+const val TrainingLoadReviewUrl = "https://pmc.ncbi.nlm.nih.gov/articles/PMC4213373/"
+
 private enum class BanisterWeighting(val factor: Double, val exponent: Double) {
     MEN(0.64, 1.92),
     WOMEN(0.86, 1.67),
@@ -264,12 +267,8 @@ private fun maxHeartRateContext(
         ObservedMaxHeartRateMinimumBpm,
         restingHeartRate + ObservedMaxHeartRateRestingDeltaBpm,
     )
-    // Prefer the age formula over an observed+10 floor, which understated the maximum by 30-40 bpm.
-    val estimatedMax = maxOf(
-        ageYears?.let { ageMaxHeartRate(it, sex) } ?: 0L,
-        observedMax + 10L,
-        restingHeartRate + 70L,
-    )
+    val estimatedMax = ageYears?.let { ageMaxHeartRate(it, sex) }
+        ?: maxOf(observedMax + 10L, restingHeartRate + 70L)
     return MaxHeartRateContext(
         bpm = if (observedAvailable) observedMax else estimatedMax,
         isObservedAvailable = observedAvailable,
