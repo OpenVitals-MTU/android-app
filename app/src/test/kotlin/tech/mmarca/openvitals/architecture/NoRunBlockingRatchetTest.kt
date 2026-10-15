@@ -13,7 +13,7 @@ class NoRunBlockingRatchetTest {
 
     @Test
     fun `runBlocking stays inside the allow-list`() {
-        val offenders = File(SourceRoot).walkTopDown()
+        val offenders = sourceFiles()
             .filter { it.isFile && it.extension == "kt" }
             .filter { file -> file.readLines().any { line -> RunBlockingCall.containsMatchIn(line.substringBefore("//")) } }
             .map { it.name }
@@ -30,7 +30,7 @@ class NoRunBlockingRatchetTest {
 
     @Test
     fun `the allow-list holds no stale names`() {
-        val present = File(SourceRoot).walkTopDown()
+        val present = sourceFiles()
             .filter { it.isFile && it.name in Allowed }
             .filter { file -> file.readLines().any { RunBlockingCall.containsMatchIn(it.substringBefore("//")) } }
             .map { it.name }
@@ -41,8 +41,11 @@ class NoRunBlockingRatchetTest {
             .isEqualTo(Allowed)
     }
 
+    private fun sourceFiles() = File(SourceRoot).walkTopDown() + File(DomainRoot).walkTopDown()
+
     private companion object {
         const val SourceRoot = "src/main/kotlin/tech/mmarca/openvitals"
+        const val DomainRoot = "../domain/src/main/kotlin/tech/mmarca/openvitals"
         val RunBlockingCall = Regex("""\brunBlocking\s*[({]""")
 
         val Allowed = setOf(

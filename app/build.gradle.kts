@@ -54,10 +54,6 @@ val nightlyVersionNameSuffix = versionNameOverride
 val localAppleHealthExportPath = providers.gradleProperty("appleHealthExport")
     .orElse(providers.systemProperty("appleHealthExport"))
     .orElse(providers.environmentVariable("APPLE_HEALTH_EXPORT"))
-// The local, gitignored PhysioNet sleep fixture (tool/README.md); SleepAccelEvaluationTest skips without it.
-val localSleepAccelFixturePath = providers.gradleProperty("sleepAccelFixture")
-    .orElse(providers.systemProperty("openvitals.sleepAccelFixture"))
-    .orElse(providers.environmentVariable("OPENVITALS_SLEEP_ACCEL_FIXTURE"))
 // versionCode is a monotonic release counter, independent of versionName.
 //
 // The Flutter era multiplied the then-base by 10 and added a per-ABI digit
@@ -261,6 +257,7 @@ androidComponents {
 }
 
 dependencies {
+    implementation(project(":domain"))
     implementation(project(":wearlink"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -332,6 +329,8 @@ dependencies {
     ksp(libs.hilt.android.compiler)
 
     // Testing
+    // The FHIR, C-CDA and SMART Health Card fixtures live with the domain module.
+    testImplementation(testFixtures(project(":domain")))
     testImplementation(libs.junit4)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
@@ -357,13 +356,13 @@ tasks.withType<Test>().configureEach {
     maxParallelForks = providers.gradleProperty("openvitals.testForks").orNull?.toInt()
         ?: (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
     maxHeapSize = "1g"
+    // The memory budget above assumes one test task at a time. The domain
+    // module's tests take seconds; they go first rather than beside these.
+    mustRunAfter(":domain:testCiUnitTest")
     localAppleHealthExportPath.orNull?.let { path ->
         systemProperty("appleHealthExport", path)
     }
-    localSleepAccelFixturePath.orNull?.let { path ->
-        systemProperty("openvitals.sleepAccelFixture", path)
-    }
-    // A night pulled off a watch, replayed by WearNightReplayTest (tool/README.md).
+    // A night pulled off a watch, replayed by WearNightReplayTest (scripts/README.md).
     providers.systemProperty("openvitals.wearNightLines").orNull?.let { path ->
         systemProperty("openvitals.wearNightLines", path)
     }

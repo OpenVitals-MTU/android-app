@@ -22,7 +22,7 @@ sed -i "s/baseVersionCode = [0-9]*/baseVersionCode = $VERSION_CODE/" app/build.g
 sed -i "s/baseVersionName = \"[^\"]*\"/baseVersionName = \"$VERSION\"/" app/build.gradle.kts
 sed -i "s/\\.orElse(\"[0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*-SNAPSHOT\")/.orElse(\"$VERSION-SNAPSHOT\")/" build.gradle.kts
 
-git add app/build.gradle.kts build.gradle.kts CHANGELOG.md README.md docs fastlane .github/workflows/release.yml scripts/release.sh scripts/version-code.sh
+git add app/build.gradle.kts build.gradle.kts CHANGELOG.md README.md docs fastlane .github/workflows/pipeline.yml scripts/release.sh scripts/version-code.sh
 git commit -m "chore: release $VERSION"
 if [ -f "$RELEASE_NOTES_FILE" ]; then
     # The tag message becomes the GitHub release notes and the Zulip post. Git's
