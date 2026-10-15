@@ -1,17 +1,17 @@
 # The one pipeline. Every run goes through the same three stages; the context
 # job decides which jobs apply.
 #
-#   Stage 1, verify: tests, lint and the watch gate as separate jobs. Lint does
+#   Stage 1, verify: app-test, wear-test and lint as separate jobs. Lint does
 #     not run on pull requests. A tag or nightly cut from a commit that already
 #     passed on main skips the stage.
 #   Stage 2, prerelease: for a tag or a nightly, one build signs the APK, the
 #     debug APK and the AAB once and keeps them as the run's artifact. From it,
 #     in parallel: the GitHub prerelease, the Play open-testing upload (nightly),
 #     the nightly tag move and the pruning of old releases.
-#   Stage 3, production: for a tag, the Play production upload waits for the
-#     `production` environment's approval in the same run and ships the AAB
-#     stage 2 built. Nothing is rebuilt or re-signed. Then the GitHub release is
-#     marked stable and the Zulip announcement goes out, in parallel.
+#   Stage 3, production: for a tag, the run waits for the `production`
+#     environment's approval, then promotes the version from open testing to
+#     the production track and the GitHub prerelease to stable, in parallel,
+#     and announces on Zulip. Nothing is rebuilt or re-signed.
 #
 # Ways in: a pull request and a push to main run stage 1; the 00:00 UTC
 # schedule and a manual run with target "nightly" run stages 1 and 2; a pushed
@@ -214,7 +214,7 @@ jobs:
   # and verifyCiPreflight (verifyTranslations, :app:checkCiDuplicateClasses,
   # :app:compileCiAndroidTestKotlin). No lint here, so every core gets a test
   # fork (app/build.gradle.kts reads openvitals.testForks).
-  tests:
+  app-test:
     needs: context
     if: needs.context.outputs.run_tests == 'true'
     runs-on: ubuntu-latest
@@ -244,7 +244,7 @@ jobs:
   # the watch module is small enough that splitting it would cost more in setup
   # than it saves. A watch failure never blocks a phone-only change: the job
   # runs only when the watch app or the build plumbing it shares changed.
-  wear:
+  wear-test:
     needs: context
     if: needs.context.outputs.run_wear == 'true'
     runs-on: ubuntu-latest
@@ -260,11 +260,11 @@ jobs:
   # The one signed build of the run. Its outputs are the release-build artifact
   # every later job, stage 3 included, ships as they are.
   build:
-    needs: [context, tests, lint]
+    needs: [context, app-test, lint]
     if: >-
       !cancelled()
       && needs.context.outputs.build == 'true'
-      && (needs.tests.result == 'success' || needs.tests.result == 'skipped')
+      && (needs.app-test.result == 'success' || needs.app-test.result == 'skipped')
       && (needs.lint.result == 'success' || needs.lint.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
@@ -397,11 +397,17 @@ jobs:
             "$OPENVITALS_RELEASE_PRERELEASE" \
             "$@"
 
-  # Beside the GitHub release, not after it: a Play refusal must not hold the
-  # download page back.
+  # Nightly and tag builds both go to open testing; stage 3 promotes a tag's
+  # from there. Beside the GitHub release, not after it: a Play refusal must not
+  # hold the download page back. A nightly waits for its tag move, which burns
+  # the versionCode first.
   play-open-testing:
-    needs: [context, nightly-tag]
-    if: needs.context.outputs.channel == 'nightly' && vars.OPENVITALS_PLAY_PAUSED != 'true'
+    needs: [context, build, nightly-tag]
+    if: >-
+      !cancelled()
+      && needs.build.result == 'success'
+      && (needs.nightly-tag.result == 'success' || needs.nightly-tag.result == 'skipped')
+      && vars.OPENVITALS_PLAY_PAUSED != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -479,10 +485,9 @@ jobs:
           path: build/release-ci/
           retention-days: 30
 
-  # Waits for the `production` environment's approval (its required reviewers),
-  # then uploads the AAB this run holds. While Play is paused the job still runs
-  # and uploads nothing, so the gate stays and the two jobs after it follow.
-  release-production:
+  # The gate: this job holds the `production` environment, so the run waits here
+  # for its required reviewers. Nothing else happens in it.
+  production-approval:
     needs: [context, github-release, fetch-release-assets]
     if: >-
       !cancelled()
@@ -492,6 +497,18 @@ jobs:
       )
     runs-on: ubuntu-latest
     environment: production
+    steps:
+      - env:
+          RELEASE_TAG: ${{ needs.context.outputs.tag }}
+        run: echo "::notice::$RELEASE_TAG approved for production"
+
+  # Promotes the version from the open-testing track to production, with the
+  # store metadata; a version that never reached open testing (Play was paused)
+  # is uploaded instead. While Play is paused the job runs and does nothing, so
+  # the jobs after it still follow.
+  play-production:
+    needs: [context, production-approval]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: ruby/setup-ruby@v1
@@ -527,7 +544,7 @@ jobs:
             version_code:"$OPENVITALS_VERSION_CODE"
 
   github-stable:
-    needs: [context, release-production]
+    needs: [context, production-approval]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -538,10 +555,11 @@ jobs:
           RELEASE_TAG: ${{ needs.context.outputs.tag }}
         run: gh release edit "$RELEASE_TAG" --prerelease=false --draft=false --latest
 
-  # The Zulip "releases" channel gets the full notes under a vX.Y.Z topic; the
-  # script checks for an earlier post, so a re-run never posts twice.
+  # After both promotions. The Zulip "releases" channel gets the full notes
+  # under a vX.Y.Z topic; the script checks for an earlier post, so a re-run
+  # never posts twice.
   announce-zulip:
-    needs: [context, release-production]
+    needs: [context, play-production, github-stable]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

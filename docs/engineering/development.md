@@ -257,9 +257,9 @@ There are two GitHub release outputs:
 - A pushed `vX.Y.Z` or `VX.Y.Z` tag builds `:app:assembleRelease` and
   `:app:assembleDebug`, then publishes `OpenVitals-vX.Y.Z.apk` and
   `OpenVitals-vX.Y.Z-debug.apk` to its own versioned GitHub prerelease. The tag
-  build also runs `:app:bundleRelease` and attaches `OpenVitals-vX.Y.Z.aab`. The
-  same run then waits, in stage 3, for the `production` environment's approval;
-  approving it uploads that AAB to Play.
+  build also runs `:app:bundleRelease`, attaches `OpenVitals-vX.Y.Z.aab` and
+  uploads it to the open testing track, beside the prerelease. The same run
+  then waits, in stage 3, for the `production` environment's approval.
 
 Each attached AAB has a `.sha256` file beside it. The AAB is there for a Play
 upload by hand, when Play refuses the upload from the pipeline, and it is what
@@ -299,10 +299,13 @@ the incoming code against the live Play track before uploading. Production runs
 reuse the marker from the already published `vX.Y.Z` release so the Play AAB
 matches the GitHub APK's install order. The nightly run also prunes old
 versioned GitHub releases so only the newest nine remain, while preserving the
-fixed `nightly` release and all Git tags. The production run uploads the signed
-release AAB to Google Play production, promotes the matching GitHub prerelease
-to stable and posts the full release notes to the Zulip `releases` channel
-under a `vX.Y.Z` topic (`scripts/announce-zulip.sh`), the two in parallel. A
+fixed `nightly` release and all Git tags. Once approved, stage 3 promotes the
+version from the open testing track to Google Play production with the store
+metadata (it uploads the AAB instead when open testing never had that version,
+as for a tag cut while Play was paused) and promotes the matching GitHub
+prerelease to stable, the two in parallel, then posts the full release notes
+to the Zulip `releases` channel under a `vX.Y.Z` topic
+(`scripts/announce-zulip.sh`). A
 Mastodon announcement from `https://techhub.social/@openvitals`
 (`scripts/announce-mastodon.sh`, the release notes' narrative paragraph plus
 links to the GitHub release and the Play listing) is disabled for now: the
@@ -382,9 +385,9 @@ ANDROID_SERIAL=<serial> ./gradlew verifyAndroidTest
    signed artifacts once, publishes the versioned GitHub prerelease, and then
    waits for the `production` environment's approval.
 7. After validation, approve that run (Actions > the tag's run > Review
-   deployments). It uploads the AAB it built to Google Play production, promotes
-   the GitHub prerelease to stable, and posts the release notes to the Zulip
-   `releases` channel. If the run is gone, run the pipeline by hand (Actions >
+   deployments). It promotes the version from open testing to Google Play
+   production and the GitHub prerelease to stable, then posts the release notes
+   to the Zulip `releases` channel. If the run is gone, run the pipeline by hand (Actions >
    pipeline > Run workflow) from the version tag with target `production`: it
    ships the prerelease's AAB the same way, without a build.
 

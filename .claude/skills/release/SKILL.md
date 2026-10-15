@@ -155,12 +155,14 @@ for f in fastlane/metadata/android/*/changelogs/OLD.txt; do git mv "$f" "${f%OLD
 
 CI (GitHub Actions) takes it from the tag: the tag's pipeline run builds the
 signed APK, signed debug APK and AAB once, publishes them to the GitHub
-prerelease, and waits for the `production` environment's approval. Approving
-that run (Actions > the run > Review deployments) uploads the same AAB to Play
-production, marks the release stable and posts the full notes to the Zulip
-`releases` channel (`scripts/announce-zulip.sh`). A tag whose run is gone is
-shipped by a manual run of the pipeline with target `production`, started from
-the tag: it takes the AAB from the prerelease, no build.
+prerelease, uploads the AAB to Play open testing, and waits for the
+`production` environment's approval. Approving that run (Actions > the run >
+Review deployments) promotes the version from open testing to production (an
+upload instead if open testing never had it, as while Play was paused), marks
+the release stable and posts the full notes to the Zulip `releases` channel
+(`scripts/announce-zulip.sh`). A tag whose run is gone is shipped by a manual
+run of the pipeline with target `production`, started from the tag: it takes
+the AAB from the prerelease, no build.
 
 The Mastodon toot is disabled since 2.9.1: the pipeline has no `announce-mastodon`
 job. If it comes back, the toot's body
