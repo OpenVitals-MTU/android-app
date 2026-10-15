@@ -2440,7 +2440,8 @@
     <string name="settings_csv_import_drip_journal">Diario</string>
     <string name="settings_csv_import_drip_journal_body">Dolor y ánimo como síntomas, niveles de ánimo y energía, cuello uterino, deseo y todas las notas, al diario del ciclo en este teléfono.</string>
     <string name="settings_csv_import_drip_confirm_summary">%1$s · %2$d de los primeros %3$d días contienen algo que importar</string>
-    <string name="settings_csv_import_journal_days">Días del diario actualizados: %1$d</string>
+    <string name="settings_csv_import_journal_days">Días del diario: %1$d, de los que %2$d actualizados</string>
+    <string name="settings_csv_import_empty_rows">Filas sin nada que importar: %1$d</string>
     <string name="settings_csv_import_result">Escritos %1$d. Ya presentes %2$d. Rechazados %3$d.</string>
     <string name="settings_csv_import_result_empty">No se importó nada de este archivo.</string>
     <string name="settings_csv_import_result_cancelled">Importación cancelada. Lo que ya se había escrito se conservó.</string>
@@ -2455,6 +2456,7 @@
     <string name="settings_csv_import_reason_out_of_range">Valor fuera de un rango plausible</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">Sin peso para calcular el porcentaje</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect rechazó el registro</string>
+    <string name="settings_csv_import_reason_excluded_in_source">Excluido en la app de origen</string>
     <string name="settings_csv_import_save_report">Guardar informe</string>
     <string name="settings_csv_import_report_saved">Informe guardado.</string>
     <string name="settings_csv_import_report_save_failed">No se pudo guardar el informe.</string>

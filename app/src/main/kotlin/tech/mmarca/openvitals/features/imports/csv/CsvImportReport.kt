@@ -37,7 +37,10 @@ fun buildCsvImportReport(
     appendLine("Already present: ${result.progress.alreadyPresent}")
     appendLine("Rejected:        ${result.progress.rejected}")
     if (result.progress.journalDays > 0) {
-        appendLine("Journal days:    ${result.progress.journalDays}")
+        appendLine("Journal days:    ${result.progress.journalDays} (${result.progress.journalDaysUpdated} updated)")
+    }
+    if (result.progress.emptyRows > 0) {
+        appendLine("Nothing to import: ${result.progress.emptyRows} rows")
     }
     if (result.progress.quotaPauses > 0) {
         appendLine("Quota pauses:    ${result.progress.quotaPauses} (${quotaWaitLabel(result.progress.quotaWaitMillis)})")
@@ -270,4 +273,5 @@ private fun reasonLabel(reason: CsvImportDiagnosticReason): String = when (reaso
     CsvImportDiagnosticReason.UNPARSABLE_END_TIMESTAMP -> "end date not understood"
     CsvImportDiagnosticReason.END_NOT_AFTER_START -> "end is not after the start"
     CsvImportDiagnosticReason.WRITE_FAILED -> "Health Connect refused the record"
+    CsvImportDiagnosticReason.EXCLUDED_IN_SOURCE -> "Excluded in the source app"
 }

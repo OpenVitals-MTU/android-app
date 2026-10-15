@@ -145,10 +145,13 @@ class CsvImportService internal constructor(
                     conversion.diagnostics.forEach(::record)
                     // Room, not Health Connect: written at once, outside the batches and their quota.
                     val journalWritten = conversion.journalEntry?.let { writeJournalEntry(it) } == true
+                    val empty = conversion.records.isEmpty() && conversion.journalEntry == null && conversion.diagnostics.isEmpty()
                     progress = progress.copy(
                         rowsRead = progress.rowsRead + 1,
                         rejected = progress.rejected + conversion.diagnostics.size,
-                        journalDays = progress.journalDays + if (journalWritten) 1 else 0,
+                        journalDays = progress.journalDays + if (conversion.journalEntry != null) 1 else 0,
+                        journalDaysUpdated = progress.journalDaysUpdated + if (journalWritten) 1 else 0,
+                        emptyRows = progress.emptyRows + if (empty) 1 else 0,
                         bytesRead = row.bytesRead,
                     )
 

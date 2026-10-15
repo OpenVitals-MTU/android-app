@@ -323,19 +323,24 @@ class CsvImportServiceTest {
         assertEquals(3, result.progress.written)
         assertEquals(3, harness.inserted.size)
         assertEquals(2, result.progress.journalDays)
+        assertEquals(2, result.progress.journalDaysUpdated)
         assertEquals(setOf(LocalDate.of(2015, 12, 31), LocalDate.of(2015, 12, 30)), harness.journalEntries.keys)
         assertEquals("slept badly.", harness.journalEntries.getValue(LocalDate.of(2015, 12, 30)).notes)
         assertEquals(0, result.progress.rejected)
+        // The all-empty day is accounted for, not lost between the counts.
+        assertEquals(1, result.progress.emptyRows)
 
-        // The same file again changes no journal day and rewrites the same ids.
+        // The same file again rewrites the same ids; its journal days are still seen, none changed.
         val again = service(harness).run(
             source = sourceOf(content),
             totalBytes = content.length.toLong(),
             dialect = Dialect,
             plan = CsvImportPlan.Drip(plan),
         )
-        assertEquals(0, again.progress.journalDays)
+        assertEquals(2, again.progress.journalDays)
+        assertEquals(0, again.progress.journalDaysUpdated)
         assertEquals(3, again.progress.written)
+        assertEquals(again.progress.rowsRead, again.progress.journalDays + again.progress.emptyRows)
     }
 
     @Test

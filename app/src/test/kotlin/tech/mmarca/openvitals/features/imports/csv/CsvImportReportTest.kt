@@ -253,6 +253,19 @@ class CsvImportReportTest {
     }
 
     @Test
+    fun `journal days and empty rows are in the totals, so every row of a drip export is accounted for`() {
+        val base = runResult()
+        val result = base.copy(progress = base.progress.copy(journalDays = 60, journalDaysUpdated = 0, emptyRows = 2))
+
+        val report = report(result = result)
+
+        assertThat(report).contains("Journal days:    60 (0 updated)")
+        assertThat(report).contains("Nothing to import: 2 rows")
+        assertThat(report()).doesNotContain("Journal days")
+        assertThat(report()).doesNotContain("Nothing to import")
+    }
+
+    @Test
     fun `quota pauses appear in the totals only when the run took some`() {
         val paused = runResult()
         val result = paused.copy(progress = paused.progress.copy(quotaPauses = 3, quotaWaitMillis = 105_000L))

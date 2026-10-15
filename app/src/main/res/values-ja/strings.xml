@@ -2442,7 +2442,8 @@
     <string name="settings_csv_import_drip_journal">日誌</string>
     <string name="settings_csv_import_drip_journal_body">痛みと気分を症状として、気分とエネルギーのレベル、子宮頸部、性欲、すべてのメモを、この端末の周期日誌へ。</string>
     <string name="settings_csv_import_drip_confirm_summary">%1$s · 先頭 %3$d 日のうち %2$d 日に取り込む内容があります</string>
-    <string name="settings_csv_import_journal_days">更新した日誌の日数: %1$d</string>
+    <string name="settings_csv_import_journal_days">日誌の日数: %1$d（うち更新 %2$d）</string>
+    <string name="settings_csv_import_empty_rows">取り込む内容のない行: %1$d</string>
     <string name="settings_csv_import_result">書き込み %1$d。既存 %2$d。拒否 %3$d。</string>
     <string name="settings_csv_import_result_empty">このファイルからは何もインポートされませんでした。</string>
     <string name="settings_csv_import_result_cancelled">インポートをキャンセルしました。すでに書き込まれたものは保持されます。</string>
@@ -2457,6 +2458,7 @@
     <string name="settings_csv_import_reason_out_of_range">値が妥当な範囲外</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">割合を求める体重がない</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect が記録を拒否</string>
+    <string name="settings_csv_import_reason_excluded_in_source">元のアプリで除外</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">終了日を解釈できない</string>
     <string name="settings_csv_import_reason_end_not_after_start">終了が開始より後でない</string>
     <string name="settings_csv_import_save_report">レポートを保存</string>

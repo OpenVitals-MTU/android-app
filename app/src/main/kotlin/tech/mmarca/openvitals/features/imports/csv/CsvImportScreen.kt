@@ -439,7 +439,7 @@ private fun CsvImportingStep(
         )
         if (progress.journalDays > 0) {
             Text(
-                text = stringResource(R.string.settings_csv_import_journal_days, progress.journalDays),
+                text = stringResource(R.string.settings_csv_import_journal_days, progress.journalDays, progress.journalDaysUpdated),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }

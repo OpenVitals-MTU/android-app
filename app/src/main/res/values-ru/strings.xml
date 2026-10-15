@@ -2391,7 +2391,8 @@
     <string name="settings_csv_import_drip_journal">Дневник</string>
     <string name="settings_csv_import_drip_journal_body">Боль и настроение как симптомы, уровни настроения и энергии, шейка матки, желание и все заметки в дневник цикла на этом телефоне.</string>
     <string name="settings_csv_import_drip_confirm_summary">%1$s · %2$d из первых %3$d дней содержат что-то для импорта</string>
-    <string name="settings_csv_import_journal_days">Обновлено дней дневника: %1$d</string>
+    <string name="settings_csv_import_journal_days">Дней дневника: %1$d, из них обновлено %2$d</string>
+    <string name="settings_csv_import_empty_rows">Строк без данных для импорта: %1$d</string>
     <string name="settings_csv_import_result">Записано: %1$d. Уже существовало: %2$d. Отклонено: %3$d.</string>
     <string name="settings_csv_import_result_empty">Из этого файла ничего не импортировано.</string>
     <string name="settings_csv_import_result_cancelled">Импорт отменён. Уже записанные данные сохранены.</string>
@@ -2406,6 +2407,7 @@
     <string name="settings_csv_import_reason_out_of_range">Значение выходит за правдоподобный диапазон</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">Нет веса для расчёта процентного значения</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect отклонил запись</string>
+    <string name="settings_csv_import_reason_excluded_in_source">Исключено в исходном приложении</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Не удалось распознать дату окончания</string>
     <string name="settings_csv_import_reason_end_not_after_start">Дата окончания не позже даты начала</string>
     <string name="settings_csv_import_save_report">Сохранить отчёт</string>
