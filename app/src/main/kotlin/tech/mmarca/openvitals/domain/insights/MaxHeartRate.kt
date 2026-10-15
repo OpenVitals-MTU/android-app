@@ -6,7 +6,7 @@ import tech.mmarca.openvitals.domain.preferences.BiologicalSex
 
 /** The papers behind [tanakaMaxHeartRate] and [gulatiMaxHeartRate], linked from the info cards. */
 const val TanakaMaxHeartRateUrl = "https://doi.org/10.1016/S0735-1097(00)01054-8"
-const val GulatiMaxHeartRateUrl = "https://doi.org/10.1161/CIRCULATIONAHA.109.939249"
+const val GulatiMaxHeartRateUrl = "https://doi.org/10.1161/CIRCULATIONAHA.110.939249"
 
 /**
  * The age-predicted maximum heart rate: [gulatiMaxHeartRate] for women,
@@ -18,7 +18,7 @@ fun ageMaxHeartRate(ageYears: Int, sex: BiologicalSex?): Long =
 
 /**
  * Women's age-predicted maximum heart rate, 206 − 0.88 × age. Gulati et al.
- * 2010, doi:10.1161/CIRCULATIONAHA.109.939249: treadmill tests of 5,437
+ * 2010, doi:10.1161/CIRCULATIONAHA.110.939249: treadmill tests of 5,437
  * women. Tanaka's formula overestimated their maximum.
  */
 fun gulatiMaxHeartRate(ageYears: Int): Long =
