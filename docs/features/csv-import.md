@@ -18,7 +18,7 @@ CSV import lives in Settings, Data Importers, CSV Importer, and opens its own fi
 2. **Map the columns.** OpenVitals shows the detected column separator, a "first row contains column names" switch, a short preview table, the date and time settings, and one row per column. Each column is set to not imported, date and time, an optional end date and time, a supported measurement, a nutrient, or a food name. A measurement or nutrient column also picks what its numbers are.
 3. **Confirm.** The confirm step shows the date range the file covers and the value range each measurement and nutrient will actually be written with, so a mis-mapped column is visible before anything lands. Missing Health Connect write permissions are requested here.
 4. **Import.** Progress shows the current row with running written, already-present, and rejected counts. The import can be cancelled; what was already written is kept.
-5. **Read the result.** The result step shows the totals, groups every rejection by reason, and can copy or save the full report.
+5. **Read the result.** The result step keeps three tallies apart, because they do not add up to each other: the rows of the file (read, imported, rejected, nothing to import, which do add up to the rows read), the Health Connect records (written, and how many of those replaced an earlier import), and, for a drip export, the cycle journal days. A row can produce several records or none. Rejections are grouped by reason below the tallies, and the full report can be copied or saved.
 
 ## Supported Measurements
 
@@ -70,7 +70,9 @@ What each switch imports:
 - **Sexual activity.** A day with partner or solo sex. Protected when drip lists a contraceptive, unprotected when it says none, unknown otherwise.
 - **Journal.** drip's pain and mood switches become symptoms (migraine counts as a headache, ovulation pain as pelvic pain outside the period; sad, stressed and angry as mood changes; anxious and fatigue as themselves). The mood switches also set the journal's mood level, 4 for a good day, 2 for a hard one, 3 for both, and energetic or fatigue set the energy level the same way. The cervix comes over as felt, opening, firmness and position, unless excluded in drip; desire's low, medium and high become 2, 3 and 4 on the journal's scale. Every note, drip's day note and the notes on temperature, sex, pain and mood, goes into the day's notes.
 
-The journal needs no Health Connect permission: it is written to this phone's cycle journal as the rows are read, laid over whatever the day already holds. Symptoms are added, levels, the sensation and the cervix are filled only where drip has them, note lines already present are not repeated, and a day drip would not change keeps its edit time. The result and the report count the journal days updated separately from the Health Connect records.
+The journal needs no Health Connect permission: it is written to this phone's cycle journal as the rows are read, laid over whatever the day already holds. Symptoms are added, levels, the sensation and the cervix are filled only where drip has them, note lines already present are not repeated, and a day drip would not change keeps its edit time.
+
+Every row of the export is accounted for in the result and the report: a row is imported (it produced a record or a journal entry), rejected (it produced only a diagnostic), or has nothing to import, and the three add up to the rows read. Records written counts Health Connect records, of which a day can make up to four, so it is not a row count, and the records that replaced an earlier import are a part of it, not an addition. Journal days counts the rows that carried a journal entry, and says how many of them changed on this phone; on a second run of the same file that is none. A temperature, mucus or cervix observation marked excluded in drip is left out on purpose and listed under rejections as "Excluded in the source app", with the values it held. A row that produced nothing at all, such as a day cleared in drip, a mucus observation of "nothing", or only an "other" switch under sex, pain or mood, is counted under "Rows with nothing to import".
 
 Re-importing a drip export replaces its records like any other CSV, since a day's record of each kind resolves to the same identifier. A day that changes kind between exports, from flow to spotting, leaves the earlier record in place.
 
@@ -135,7 +137,7 @@ The step will not continue until the mapping is valid. It reports a missing or d
 
 An imported record is identified by its measurement type and its instant, deliberately not by its value. A steps row uses its start instant, like every other metric, so a re-import with a corrected end replaces the record. Health Connect replaces a record when an incoming one carries the same identifier, so:
 
-- Re-importing an unchanged file changes nothing and reports those rows as already present.
+- Re-importing an unchanged file changes nothing and reports those records as having replaced an earlier import. That count needs Health Connect to be readable for the record's type; when it is not, for a missing read permission or a spent quota, the records are written all the same and reported as not checked first, and the replaced count is a lower bound.
 - Re-importing a file with a corrected value replaces the old record instead of leaving two measurements at the same instant.
 - Re-exporting the same history with reordered columns, or in different units, resolves to the same records.
 

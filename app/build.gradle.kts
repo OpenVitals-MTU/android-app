@@ -6,7 +6,6 @@ import org.gradle.process.CommandLineArgumentProvider
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kover)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
 }
@@ -39,7 +38,11 @@ val hasReleaseSigning = listOf(
 ).all { !it.isNullOrBlank() }
 
 val signDebugWithReleaseKey = System.getenv("OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY") == "true"
-val minifyDebugForCi = System.getenv("OPENVITALS_MINIFY_DEBUG_FOR_CI") == "true"
+// The release pipeline publishes a debug APK: not debuggable, since it is
+// public, but not run through R8 either. It was until 2026-10, to match the
+// release build's size and shape; that second R8 pass was six minutes of
+// every nightly build, and nothing needed the shape.
+val publishedDebugApk = System.getenv("OPENVITALS_PUBLISHED_DEBUG_APK") == "true"
 val apkAbiFilters = System.getenv("OPENVITALS_APK_ABI_FILTERS")
     ?.split(',')
     ?.map { it.trim() }
@@ -55,10 +58,6 @@ val nightlyVersionNameSuffix = versionNameOverride
 val localAppleHealthExportPath = providers.gradleProperty("appleHealthExport")
     .orElse(providers.systemProperty("appleHealthExport"))
     .orElse(providers.environmentVariable("APPLE_HEALTH_EXPORT"))
-// The local, gitignored PhysioNet sleep fixture (tool/README.md); SleepAccelEvaluationTest skips without it.
-val localSleepAccelFixturePath = providers.gradleProperty("sleepAccelFixture")
-    .orElse(providers.systemProperty("openvitals.sleepAccelFixture"))
-    .orElse(providers.environmentVariable("OPENVITALS_SLEEP_ACCEL_FIXTURE"))
 // versionCode is a monotonic release counter, independent of versionName.
 //
 // The Flutter era multiplied the then-base by 10 and added a per-ABI digit
@@ -134,14 +133,8 @@ android {
             if (signDebugWithReleaseKey && hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
-            if (minifyDebugForCi) {
+            if (publishedDebugApk) {
                 isDebuggable = false
-                isMinifyEnabled = true
-                isShrinkResources = true
-                proguardFiles(
-                    getDefaultProguardFile("proguard-android-optimize.txt"),
-                    "proguard-rules.pro"
-                )
             }
         }
 
@@ -203,6 +196,10 @@ android {
     lint {
         // Tests do not ship. Analysing them cost as much as the app itself.
         ignoreTestSources = true
+        // No lint vital on release-type builds: the pipeline's lint job already
+        // ran the full lint on the commit, and the two analyses it added to a
+        // nightly build ran beside R8 (five minutes, 2026-10).
+        checkReleaseBuilds = false
         disable += setOf(
             "LogNotTimber",
             // Partial Weblate languages are allowed once scripts/verify-translations.py
@@ -262,6 +259,7 @@ androidComponents {
 }
 
 dependencies {
+    implementation(project(":domain"))
     implementation(project(":wearlink"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -333,6 +331,8 @@ dependencies {
     ksp(libs.hilt.android.compiler)
 
     // Testing
+    // The FHIR, C-CDA and SMART Health Card fixtures live with the domain module.
+    testImplementation(testFixtures(project(":domain")))
     testImplementation(libs.junit4)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
@@ -354,15 +354,17 @@ tasks.withType<Test>().configureEach {
     jvmArgs("-XX:+EnableDynamicAgentLoading")
     // Test classes spread over a few JVMs. Half the cores, at most four: each fork
     // is about a gigabyte, and lint and the Kotlin compiler run at the same time.
-    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
+    // A CI job that runs only the tests sets -Popenvitals.testForks to use every core.
+    maxParallelForks = providers.gradleProperty("openvitals.testForks").orNull?.toInt()
+        ?: (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
     maxHeapSize = "1g"
+    // The memory budget above assumes one test task at a time. The domain
+    // module's tests take seconds; they go first rather than beside these.
+    mustRunAfter(":domain:testCiUnitTest")
     localAppleHealthExportPath.orNull?.let { path ->
         systemProperty("appleHealthExport", path)
     }
-    localSleepAccelFixturePath.orNull?.let { path ->
-        systemProperty("openvitals.sleepAccelFixture", path)
-    }
-    // A night pulled off a watch, replayed by WearNightReplayTest (tool/README.md).
+    // A night pulled off a watch, replayed by WearNightReplayTest (scripts/README.md).
     providers.systemProperty("openvitals.wearNightLines").orNull?.let { path ->
         systemProperty("openvitals.wearNightLines", path)
     }

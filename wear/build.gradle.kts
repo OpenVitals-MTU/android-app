@@ -11,9 +11,9 @@ plugins {
 val wearVersionCodeBase = 2_000_000_000
 val wearBaseVersionCode = wearVersionCodeBase + 1
 val wearBaseVersionName = "1.0.0"
-// Same switch as the phone app: the release pipeline publishes debug APKs
-// through R8 so they match the release build's size and shape.
-val minifyDebugForCi = System.getenv("OPENVITALS_MINIFY_DEBUG_FOR_CI") == "true"
+// Same switch as the phone app: a published debug APK is not debuggable, and
+// is not run through R8 (it was until 2026-10; see app/build.gradle.kts).
+val publishedDebugApk = System.getenv("OPENVITALS_PUBLISHED_DEBUG_APK") == "true"
 val wearVersionCodeOverride = providers.environmentVariable("OPENVITALS_WEAR_VERSION_CODE")
     .map { it.toInt() }
 val wearVersionNameOverride = providers.environmentVariable("OPENVITALS_WEAR_VERSION_NAME")
@@ -49,14 +49,8 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            if (minifyDebugForCi) {
+            if (publishedDebugApk) {
                 isDebuggable = false
-                isMinifyEnabled = true
-                isShrinkResources = true
-                proguardFiles(
-                    getDefaultProguardFile("proguard-android-optimize.txt"),
-                    "proguard-rules.pro",
-                )
             }
         }
 

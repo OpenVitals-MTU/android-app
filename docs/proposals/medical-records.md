@@ -408,7 +408,7 @@ Health Connect stays the source of truth, as everywhere else in the app. No Room
 ### Tests
 
 - Permissions: the medical set is in `managedPermissions` only when the feature is available, and never in the phase, onboarding, requestable, or all sets. `PERMISSION_SET_VERSION` stays 4. The mindfulness leak test in `HealthConnectPermissionServiceTest` is the model.
-- Unit: parser and pre-flight on fixture files (the HL7 example resources are CC0 and can be vendored under `app/src/test/resources/fhir/`), summaries per type, repository against the fake client, ViewModel tests for paging and permission-denied states.
+- Unit: parser and pre-flight on fixture files (the HL7 example resources are CC0 and can be vendored under `domain/src/testFixtures/resources/fhir/`), summaries per type, repository against the fake client, ViewModel tests for paging and permission-denied states.
 - Id assignment: a `urn:uuid` document bundle, contained resources, invalid ids, and duplicate ids, with every reference checked after rewriting.
 - Grouping: a synthetic Apple export with two providers that reuse the same ids, and one DSTU2 record.
 - Round trip: export from the fake client, re-import into an empty one, and get the same sources, ids, and references back. Re-import into the same client and get no duplicates.

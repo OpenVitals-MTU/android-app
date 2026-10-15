@@ -85,13 +85,14 @@ internal fun cycleItems(
             cell(labels.intermenstrualDays, detail.intermenstrualDays.toString()),
         ),
     )
-    if (detail.meanPain != null) {
+    val meanPain = detail.meanPain
+    if (meanPain != null) {
         stats(
             listOf(
                 cell(labels.painOnBleeding, detail.painDaysOnBleeding.toString()),
                 cell(labels.painOffBleeding, detail.painDaysOffBleeding.toString()),
                 cell(labels.severePainDays, detail.severePainDays.toString()),
-                cell(labels.meanPain, values.decimal(detail.meanPain, 1)),
+                cell(labels.meanPain, values.decimal(meanPain, 1)),
             ),
         )
     }
