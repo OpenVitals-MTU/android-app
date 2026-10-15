@@ -38,6 +38,8 @@ jobs:
     # The stock runner, as in test.yml; the wear module compiles against the
     # same platform, which scripts/ci-android-setup.sh installs when missing.
     runs-on: ubuntu-latest
+    env:
+      GRADLE_USER_HOME: ${{ runner.temp }}/gradle-user-home
     steps:
       - uses: actions/checkout@v5
       - uses: gradle/actions/setup-gradle@v4

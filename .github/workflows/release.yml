@@ -118,6 +118,8 @@ jobs:
     if: needs.context.outputs.skip != 'true'
     # The stock runner, as in test.yml.
     runs-on: ubuntu-latest
+    env:
+      GRADLE_USER_HOME: ${{ runner.temp }}/gradle-user-home
     steps:
       - uses: actions/checkout@v5
       - uses: actions/download-artifact@v4

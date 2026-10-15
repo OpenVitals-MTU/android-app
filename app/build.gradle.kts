@@ -356,6 +356,9 @@ tasks.withType<Test>().configureEach {
     maxParallelForks = providers.gradleProperty("openvitals.testForks").orNull?.toInt()
         ?: (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
     maxHeapSize = "1g"
+    // The memory budget above assumes one test task at a time. The domain
+    // module's tests take seconds; they go first rather than beside these.
+    mustRunAfter(":domain:testCiUnitTest")
     localAppleHealthExportPath.orNull?.let { path ->
         systemProperty("appleHealthExport", path)
     }

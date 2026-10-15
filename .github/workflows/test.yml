@@ -38,6 +38,10 @@ jobs:
     # prebaked container image (2026-10): pulling it cost as much as the
     # install, and it had to be rebuilt whenever compileSdk moved.
     runs-on: ubuntu-latest
+    # setup-gradle leaves caching off when the runner already has a Gradle
+    # user home with caches in it, so the jobs use one of their own.
+    env:
+      GRADLE_USER_HOME: ${{ runner.temp }}/gradle-user-home
     steps:
       - uses: actions/checkout@v5
       - uses: gradle/actions/setup-gradle@v4
@@ -47,6 +51,8 @@ jobs:
   # verifyCiLint (:app:lintCi, :domain:lintCi).
   lint:
     runs-on: ubuntu-latest
+    env:
+      GRADLE_USER_HOME: ${{ runner.temp }}/gradle-user-home
     steps:
       - uses: actions/checkout@v5
       - uses: gradle/actions/setup-gradle@v4
