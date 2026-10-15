@@ -19,14 +19,19 @@ concurrency:
   group: test-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# The gate is two jobs that run at the same time, and both are required. Lint
+# alone is half of the gate's task time, and in one job it shared the runner's
+# four cores with the tests and the compiler, which stretched everything. Each
+# job repeats the minute of setup and compiles :app once more; what matters is
+# the wall-clock time, and Actions minutes are free on a public repository.
+# Locally and in the release build the whole gate is still one invocation,
+# verifyCi, which aggregates the three tasks the jobs run.
 jobs:
-  # One Gradle invocation covers everything the workflow verifies. verifyCi is
-  # the root-project aggregate of verifyCiUnitTest (:app:testCiUnitTest) and
-  # verifyCiPreflight (verifyTranslations, :app:lintCi,
-  # :app:checkCiDuplicateClasses, :app:compileCiAndroidTestKotlin). Splitting
-  # these into separate jobs would repeat the setup script, JVM startup, and
-  # Gradle configuration for each.
-  verify:
+  # verifyCiUnitTest (:wearlink:test, :app:testCiUnitTest) and verifyCiPreflight
+  # (verifyTranslations, :app:checkCiDuplicateClasses,
+  # :app:compileCiAndroidTestKotlin). Nothing else runs here, so every core gets
+  # a test fork (app/build.gradle.kts reads openvitals.testForks).
+  tests:
     runs-on: ubuntu-latest
     # Prebaked CI image: cirruslabs/android-sdk:tools plus the Android platform
     # and build-tools this app compiles against (see ci-image/Dockerfile), so no
@@ -38,5 +43,17 @@ jobs:
       - uses: actions/checkout@v5
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: gradle/actions/setup-gradle@v4
-      - run: scripts/ci-android-gradle.sh verifyCi
+      - run: scripts/ci-android-gradle.sh -Popenvitals.testForks=4 verifyCiUnitTest verifyCiPreflight
+      - run: git diff --check
+
+  # verifyCiLint (:app:lintCi).
+  lint:
+    runs-on: ubuntu-latest
+    # Same prebaked image as the tests job; bump the tags together.
+    container: ghcr.io/mmarca-tech/openvitals-android-ci:android-37
+    steps:
+      - uses: actions/checkout@v5
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: scripts/ci-android-gradle.sh verifyCiLint
       - run: git diff --check

@@ -19,9 +19,14 @@ git diff --check
 
 `verifyCi` is an aggregate defined in the root `build.gradle.kts`:
 
-- `verifyCiUnitTest` runs `:app:testCiUnitTest`.
-- `verifyCiPreflight` runs `verifyTranslations`, `:app:lintCi`, `:app:assembleCi`,
+- `verifyCiUnitTest` runs `:wearlink:test` and `:app:testCiUnitTest`.
+- `verifyCiPreflight` runs `verifyTranslations`, `:app:checkCiDuplicateClasses`
   and `:app:compileCiAndroidTestKotlin`.
+- `verifyCiLint` runs `:app:lintCi`. It is its own aggregate because CI runs it
+  on its own job, in parallel with the other two.
+
+Nothing assembles an APK: nothing used it, and dexing it cost a minute and a
+half. The release pipeline builds the real one after the gate.
 
 Unit tests run against the `ci` build type. There is no debug unit-test variant,
 so the task is `:app:testCiUnitTest`; `:app:testDebugUnitTest` does not exist.
@@ -63,7 +68,7 @@ adb -s <watch> shell cat /data/local/tmp/ov-inst.txt   # until it ends in OK or 
 
 The run stops the app; open it on the watch again afterwards so its service restarts.
 
-CI mirrors the split. `.github/workflows/test.yml` runs `verifyCi` and skips
+CI mirrors the split. `.github/workflows/test.yml` runs the phone gate and skips
 changes that only touch `wear/`. `.github/workflows/wear-test.yml` runs `verifyWearCi` and
 triggers only on `wear/`, `wearlink/` and the shared build files they depend on. A change to
 the root Gradle files runs both.
@@ -205,12 +210,33 @@ CI is GitHub Actions on GitHub-hosted runners. The Gradle jobs run in the
 prebaked `ghcr.io/mmarca-tech/openvitals-android-ci` image (see
 [`ci-image/README.md`](../../ci-image/README.md)), cache Gradle with
 `gradle/actions/setup-gradle`, and go through `scripts/ci-android-gradle.sh`,
-which sizes the JVMs for the runner's 16 GB. The test workflow runs:
+which sizes the JVMs for the runner's 16 GB. The test workflow is two jobs
+that run at the same time, both required on a pull request and on `main`:
 
 ```bash
-./gradlew --no-daemon verifyCi
+# tests job: every core gets a test fork, since nothing else runs here
+./gradlew --no-daemon -Popenvitals.testForks=4 verifyCiUnitTest verifyCiPreflight
+git diff --check
+# lint job
+./gradlew --no-daemon verifyCiLint
 git diff --check
 ```
+
+Lint alone is half of the gate's task time, so in a single job it stretched
+the tests, which shared the runner's four cores with it. The split costs a
+second setup and a second compile of `:app`, but the gate ends when the slower
+job does rather than after both in sequence.
+
+The Gradle build cache is on (`org.gradle.caching` in `gradle.properties`), and
+`setup-gradle` keeps it between runs along with the dependency cache. A code
+change invalidates `:app`'s compile and test tasks either way, so the win is on
+`:wearlink`, on reruns, and on the release build, which restores what the
+`main` run of the same commit produced.
+
+The release workflow runs `verifyCi` in its build job only when the commit has
+not already passed the test workflow: a tag or the nightly is cut from a commit
+on `main`, whose push ran the gate. Its `context` job looks that run up and the
+build job skips the "Prerelease verification" step when it passed.
 
 `.github/workflows/release.yml` builds and publishes. There are two GitHub
 release outputs:
