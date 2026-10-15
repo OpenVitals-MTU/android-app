@@ -2442,7 +2442,8 @@
     <string name="settings_csv_import_drip_journal">Päiväkirja</string>
     <string name="settings_csv_import_drip_journal_body">Kipu ja mieliala oireina, mieliala- ja energiatasot, kohdunkaula, halu ja kaikki muistiinpanot tämän puhelimen kiertopäiväkirjaan.</string>
     <string name="settings_csv_import_drip_confirm_summary">%1$s · %2$d ensimmäisestä %3$d päivästä sisältää jotain tuotavaa</string>
-    <string name="settings_csv_import_journal_days">Päivitetyt päiväkirjapäivät: %1$d</string>
+    <string name="settings_csv_import_journal_days">Päiväkirjapäiviä: %1$d, joista %2$d päivitetty</string>
+    <string name="settings_csv_import_empty_rows">Rivejä ilman tuotavaa: %1$d</string>
     <string name="settings_csv_import_result">Kirjoitettu %1$d. Jo olemassa %2$d. Hylätty %3$d.</string>
     <string name="settings_csv_import_result_empty">Tästä tiedostosta ei tuotu mitään.</string>
     <string name="settings_csv_import_result_cancelled">Tuonti peruutettu. Jo kirjoitettu säilytettiin.</string>
@@ -2457,6 +2458,7 @@
     <string name="settings_csv_import_reason_out_of_range">Arvo uskottavan alueen ulkopuolella</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">Ei painoa, josta prosentti laskettaisiin</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect hylkäsi tietueen</string>
+    <string name="settings_csv_import_reason_excluded_in_source">Jätetty pois lähdesovelluksessa</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Loppupäivää ei ymmärretty</string>
     <string name="settings_csv_import_reason_end_not_after_start">Loppu ei ole alun jälkeen</string>
     <string name="settings_csv_import_save_report">Tallenna raportti</string>

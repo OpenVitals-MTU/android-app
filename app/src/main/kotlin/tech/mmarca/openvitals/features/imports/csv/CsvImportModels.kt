@@ -30,6 +30,9 @@ enum class CsvImportDiagnosticReason {
 
     /** Health Connect refused the record. */
     WRITE_FAILED,
+
+    /** The source app had marked the observation excluded, so it is left out on purpose. */
+    EXCLUDED_IN_SOURCE,
 }
 
 /** One rejected row or metric, named well enough for the user to go find it. */
@@ -54,8 +57,14 @@ data class CsvImportProgress(
     /** Metrics or rows that produced no record. */
     val rejected: Int = 0,
 
-    /** Cycle journal days written or updated on this phone, from a drip export. */
+    /** Rows that carried a cycle journal entry, from a drip export, whether or not the day changed. */
     val journalDays: Int = 0,
+
+    /** Of [journalDays], the days written or updated on this phone; the rest already held the same. */
+    val journalDaysUpdated: Int = 0,
+
+    /** Rows that produced no record, no journal entry and no diagnostic: nothing OpenVitals can hold. */
+    val emptyRows: Int = 0,
 
     val bytesRead: Long = 0,
     val totalBytes: Long = 0,
@@ -115,7 +124,7 @@ data class CsvImportResult(
 
     val error: String? = null,
 ) {
-    val wroteNothing: Boolean get() = progress.written == 0 && progress.journalDays == 0
+    val wroteNothing: Boolean get() = progress.written == 0 && progress.journalDaysUpdated == 0
 }
 
 /** Matches the Apple importer's cap, so a re-import cannot produce an unbounded report. */

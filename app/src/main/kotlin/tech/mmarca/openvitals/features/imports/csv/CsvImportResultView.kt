@@ -53,8 +53,20 @@ internal fun CsvImportResultView(
                         )
                         if (result.progress.journalDays > 0) {
                             Text(
-                                text = stringResource(R.string.settings_csv_import_journal_days, result.progress.journalDays),
+                                text = stringResource(
+                                    R.string.settings_csv_import_journal_days,
+                                    result.progress.journalDays,
+                                    result.progress.journalDaysUpdated,
+                                ),
                                 style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(top = 4.dp),
+                            )
+                        }
+                        if (result.progress.emptyRows > 0) {
+                            Text(
+                                text = stringResource(R.string.settings_csv_import_empty_rows, result.progress.emptyRows),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 4.dp),
                             )
                         }

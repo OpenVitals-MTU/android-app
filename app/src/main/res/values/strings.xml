@@ -2457,7 +2457,8 @@
     <string name="settings_csv_import_drip_journal">Journal</string>
     <string name="settings_csv_import_drip_journal_body">Pain and mood as symptoms, mood and energy levels, the cervix, desire, and every note, into the cycle journal on this phone.</string>
     <string name="settings_csv_import_drip_confirm_summary">%1$s · %2$d of the first %3$d days hold something to import</string>
-    <string name="settings_csv_import_journal_days">Journal days updated: %1$d</string>
+    <string name="settings_csv_import_journal_days">Journal days: %1$d, of which %2$d updated</string>
+    <string name="settings_csv_import_empty_rows">Rows with nothing to import: %1$d</string>
     <string name="settings_csv_import_result">Written %1$d. Already present %2$d. Rejected %3$d.</string>
     <string name="settings_csv_import_result_empty">Nothing was imported from this file.</string>
     <string name="settings_csv_import_result_cancelled">Import cancelled. What had already been written was kept.</string>
@@ -2472,6 +2473,7 @@
     <string name="settings_csv_import_reason_out_of_range">Value outside a plausible range</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">No weight to work out the percentage from</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect refused the record</string>
+    <string name="settings_csv_import_reason_excluded_in_source">Excluded in the source app</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">End date not understood</string>
     <string name="settings_csv_import_reason_end_not_after_start">End is not after the start</string>
     <string name="settings_csv_import_save_report">Save report</string>

@@ -2095,7 +2095,8 @@
     <string name="settings_csv_import_drip_journal">Journal</string>
     <string name="settings_csv_import_drip_journal_body">Douleurs et humeur comme symptômes, niveaux d\'humeur et d\'énergie, col de l\'utérus, désir et chaque note, dans le journal de cycle de ce téléphone.</string>
     <string name="settings_csv_import_drip_confirm_summary">%1$s · %2$d des %3$d premiers jours contiennent quelque chose à importer</string>
-    <string name="settings_csv_import_journal_days">Jours du journal mis à jour : %1$d</string>
+    <string name="settings_csv_import_journal_days">Jours du journal : %1$d, dont %2$d mis à jour</string>
+    <string name="settings_csv_import_empty_rows">Lignes sans rien à importer : %1$d</string>
     <string name="settings_csv_import_result">Écrites : %1$d. Déjà présentes : %2$d. Rejetées : %3$d.</string>
     <string name="settings_csv_import_result_empty">Rien n\'a été importé depuis ce fichier.</string>
     <string name="settings_csv_import_result_cancelled">Import annulé. Ce qui avait déjà été écrit a été conservé.</string>
@@ -2110,6 +2111,7 @@
     <string name="settings_csv_import_reason_out_of_range">Valeur hors d\'une plage plausible</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">Aucun poids pour calculer le pourcentage</string>
     <string name="settings_csv_import_reason_write_failed">Santé Connect a refusé l\'enregistrement</string>
+    <string name="settings_csv_import_reason_excluded_in_source">Exclu dans l\'application source</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Date de fin non reconnue</string>
     <string name="settings_csv_import_reason_end_not_after_start">La fin n\'est pas postérieure au début</string>
     <string name="settings_csv_import_save_report">Enregistrer le rapport</string>

@@ -2445,7 +2445,8 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_csv_import_drip_journal">Diario</string>
     <string name="settings_csv_import_drip_journal_body">Dor e ánimo como síntomas, niveis de ánimo e enerxía, colo do útero, desexo e todas as notas, ao diario do ciclo neste teléfono.</string>
     <string name="settings_csv_import_drip_confirm_summary">%1$s · %2$d dos primeiros %3$d días conteñen algo que importar</string>
-    <string name="settings_csv_import_journal_days">Días do diario actualizados: %1$d</string>
+    <string name="settings_csv_import_journal_days">Días do diario: %1$d, dos que %2$d actualizados</string>
+    <string name="settings_csv_import_empty_rows">Filas sen nada que importar: %1$d</string>
     <string name="settings_csv_import_result">Escritas %1$d. Xa presentes %2$d. Rexeitadas %3$d.</string>
     <string name="settings_csv_import_result_empty">Non se importou nada deste ficheiro.</string>
     <string name="settings_csv_import_result_cancelled">Importación cancelada. O que xa se escribira mantívose.</string>
@@ -2460,6 +2461,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_csv_import_reason_out_of_range">Valor fóra dun rango plausible</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">Sen peso para calcular a porcentaxe</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect rexeitou o rexistro</string>
+    <string name="settings_csv_import_reason_excluded_in_source">Excluído na app de orixe</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Data de fin non recoñecida</string>
     <string name="settings_csv_import_reason_end_not_after_start">O final non é posterior ao inicio</string>
     <string name="settings_csv_import_save_report">Gardar informe</string>

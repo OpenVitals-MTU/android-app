@@ -2454,7 +2454,8 @@
     <string name="settings_csv_import_drip_journal">Tagebuch</string>
     <string name="settings_csv_import_drip_journal_body">Schmerzen und Stimmung als Symptome, Stimmungs- und Energielevel, Gebärmutterhals, Verlangen und jede Notiz ins Zyklustagebuch auf diesem Telefon.</string>
     <string name="settings_csv_import_drip_confirm_summary">%1$s · %2$d der ersten %3$d Tage enthalten etwas zum Importieren</string>
-    <string name="settings_csv_import_journal_days">Aktualisierte Tagebuchtage: %1$d</string>
+    <string name="settings_csv_import_journal_days">Tagebuchtage: %1$d, davon %2$d aktualisiert</string>
+    <string name="settings_csv_import_empty_rows">Zeilen ohne Import: %1$d</string>
     <string name="settings_csv_import_result">Geschrieben %1$d. Bereits vorhanden %2$d. Abgelehnt %3$d.</string>
     <string name="settings_csv_import_result_empty">Aus dieser Datei wurde nichts importiert.</string>
     <string name="settings_csv_import_result_cancelled">Import abgebrochen. Bereits Geschriebenes wurde behalten.</string>
@@ -2469,6 +2470,7 @@
     <string name="settings_csv_import_reason_out_of_range">Wert außerhalb eines plausiblen Bereichs</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">Kein Gewicht, um den Prozentsatz zu berechnen</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect hat den Datensatz abgelehnt</string>
+    <string name="settings_csv_import_reason_excluded_in_source">In der Quell-App ausgeschlossen</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Enddatum nicht verstanden</string>
     <string name="settings_csv_import_reason_end_not_after_start">Ende liegt nicht nach dem Start</string>
     <string name="settings_csv_import_save_report">Bericht speichern</string>

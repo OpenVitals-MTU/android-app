@@ -2460,7 +2460,8 @@
     <string name="settings_csv_import_drip_journal">Dziennik</string>
     <string name="settings_csv_import_drip_journal_body">Ból i nastrój jako objawy, poziomy nastroju i energii, szyjka macicy, pożądanie oraz wszystkie notatki, do dziennika cyklu w tym telefonie.</string>
     <string name="settings_csv_import_drip_confirm_summary">%1$s · %2$d z pierwszych %3$d dni zawiera coś do zaimportowania</string>
-    <string name="settings_csv_import_journal_days">Zaktualizowane dni dziennika: %1$d</string>
+    <string name="settings_csv_import_journal_days">Dni dziennika: %1$d, w tym zaktualizowane: %2$d</string>
+    <string name="settings_csv_import_empty_rows">Wiersze bez niczego do importu: %1$d</string>
     <string name="settings_csv_import_result">Zapisano %1$d. Już obecne %2$d. Odrzucono %3$d.</string>
     <string name="settings_csv_import_result_empty">Nic nie zaimportowano z tego pliku.</string>
     <string name="settings_csv_import_result_cancelled">Import anulowany. To, co już zapisano, zostało zachowane.</string>
@@ -2475,6 +2476,7 @@
     <string name="settings_csv_import_reason_out_of_range">Wartość poza wiarygodnym zakresem</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">Brak wagi do obliczenia procentu</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect odrzucił rekord</string>
+    <string name="settings_csv_import_reason_excluded_in_source">Wykluczone w aplikacji źródłowej</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Nierozpoznana data zakończenia</string>
     <string name="settings_csv_import_reason_end_not_after_start">Zakończenie nie jest późniejsze niż początek</string>
     <string name="settings_csv_import_save_report">Zapisz raport</string>

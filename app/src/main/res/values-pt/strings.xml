@@ -1973,7 +1973,8 @@
     <string name="settings_csv_import_drip_journal">Diário</string>
     <string name="settings_csv_import_drip_journal_body">Dor e humor como sintomas, níveis de humor e energia, colo do útero, desejo e todas as notas, para o diário do ciclo neste telemóvel.</string>
     <string name="settings_csv_import_drip_confirm_summary">%1$s · %2$d dos primeiros %3$d dias contêm algo para importar</string>
-    <string name="settings_csv_import_journal_days">Dias do diário atualizados: %1$d</string>
+    <string name="settings_csv_import_journal_days">Dias do diário: %1$d, dos quais %2$d atualizados</string>
+    <string name="settings_csv_import_empty_rows">Linhas sem nada para importar: %1$d</string>
     <string name="settings_csv_import_result">Escritas %1$d. Já presentes %2$d. Rejeitadas %3$d.</string>
     <string name="settings_csv_import_result_empty">Nada foi importado deste ficheiro.</string>
     <string name="settings_csv_import_result_cancelled">Importação cancelada. O que já tinha sido escrito foi mantido.</string>
@@ -1988,6 +1989,7 @@
     <string name="settings_csv_import_reason_out_of_range">Valor fora de um intervalo plausível</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">Sem peso para calcular a percentagem</string>
     <string name="settings_csv_import_reason_write_failed">O Health Connect recusou o registo</string>
+    <string name="settings_csv_import_reason_excluded_in_source">Excluído na app de origem</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Data de fim não compreendida</string>
     <string name="settings_csv_import_reason_end_not_after_start">O fim não é posterior ao início</string>
     <string name="settings_csv_import_save_report">Guardar relatório</string>
