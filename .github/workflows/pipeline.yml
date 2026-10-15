@@ -157,7 +157,8 @@ jobs:
 
       # A tag and the nightly are cut from a commit on main, whose push already
       # ran stage 1. When that run passed, stage 1 is not run again (it was
-      # twelve minutes of every tag build). No passed run, or a commit never
+      # twelve minutes of every tag build). Only a push run counts: a pull
+      # request run passes without lint. No passed push run, or a commit never
       # pushed to main, and stage 1 runs. An annotated tag's GITHUB_SHA is the
       # tag object, hence the rev-parse.
       - id: verified
@@ -166,9 +167,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           commit="$(git rev-parse "$GITHUB_SHA^{commit}")"
-          passed="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/pipeline.yml/runs?head_sha=$commit&status=success&per_page=1" --jq '.total_count')"
-          if [ "${passed:-0}" -gt 0 ]; then
-            echo "::notice::$commit already passed this pipeline; stage 1 is skipped."
+          run_url="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/pipeline.yml/runs?head_sha=$commit&event=push&status=success&per_page=1" --jq '.workflow_runs[0].html_url // empty')"
+          if [ -n "$run_url" ]; then
+            echo "::notice::$commit already passed stage 1 on its push: $run_url. Stage 1 is skipped."
             echo "verified=true" >> "$GITHUB_OUTPUT"
           else
             echo "verified=false" >> "$GITHUB_OUTPUT"
