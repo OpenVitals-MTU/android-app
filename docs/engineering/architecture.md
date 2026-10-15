@@ -9,11 +9,11 @@ The repo now has one Android app module for the local app. The goal is to keep b
 ## Current Snapshot
 
 - App namespace: `tech.mmarca.openvitals`
-- Project shape: three Gradle modules. The phone app is `:app`, under `app/`; `:wear` is the Wear OS watch app with its own CI gate; `:wearlink` is the pure-Kotlin link both depend on (see [Shared module `:wearlink`](#shared-module-wearlink)). The rest of this document is about `:app` unless it says otherwise
+- Project shape: four Gradle modules. The phone app is `:app`, under `app/`; `:domain` holds the app-local pure code the app depends on (see [Module `:domain`](#module-domain)); `:wear` is the Wear OS watch app with its own CI gate; `:wearlink` is the pure-Kotlin link both apps depend on (see [Shared module `:wearlink`](#shared-module-wearlink)). The rest of this document is about `:app` unless it says otherwise; package names are the same across `:app` and `:domain`
 - Dependency wiring: Hilt in `:app`, rooted at [`OpenVitalsApp`](../../app/src/main/kotlin/tech/mmarca/openvitals/OpenVitalsApp.kt); modules are `di/AppModule.kt`, `di/RepositoryModule.kt`, `di/PreferencesModule.kt`, `di/RemindersModule.kt`, and `di/DevicesModule.kt`
 - UI stack: Jetpack Compose + Material 3 app shell + Navigation Compose + `ViewModel` + coroutines/`StateFlow`
 - Health data backend: Health Connect AndroidX client, wrapped by [`HealthConnectManager`](../../app/src/main/kotlin/tech/mmarca/openvitals/healthconnect/HealthConnectManager.kt)
-- App-local domain code: pure models, insight calculations, and preference enums under [`domain`](../../app/src/main/kotlin/tech/mmarca/openvitals/domain)
+- App-local domain code: pure models, insight calculations, and preference enums under [`domain`](../../domain/src/main/kotlin/tech/mmarca/openvitals/domain), in the `:domain` module
 - Shared period shell: in place and used by all metric detail/list screens
 - Feature repositories: in place for activity, sleep, heart, body, body energy, caffeine, hydration, nutrition, mindfulness, cycle, and vitals
 - Dashboard: still a dedicated day-based summary screen, not a period-detail screen
@@ -31,11 +31,11 @@ Most importantly, body and entry/session browsing now live in metric-owned detai
 | Package | Owns |
 |---|---|
 | `comaps/` | the CoMaps navigation provider: the `ContentResolver` source and the guidance feed |
-| `core/` | app-wide primitives: `period`, `presentation`, `stats`, `geo`, `fit`, `performance`, `diagnostics`, `export` (share staging), `permissions` (OS runtime permissions) |
+| `core/` | app-wide primitives: `presentation`, `performance`, `diagnostics`, `permissions` (OS runtime permissions) in `:app`; `period`, `stats`, `geo`, `fit`, `export` (share staging) in `:domain` |
 | `data/` | `local` (Room), `repository` (feature-facing repositories + `contract` interfaces), `sync` (history/backfill services), `migration` (one-time Flutter import) |
 | `devices/` | device integration: `core` (ports, radio lease, pairing), `garmin` (GFDI stack), `wearos`, `notifications` (notification listener), `media` (the phone's players, for music controls), `weather` (the weather a watch asks for), `xiaomi` (the S400 scale: broadcast decoding, the background listener and the weigh-in import) |
 | `di/` | `AppModule`, `RepositoryModule`, `PreferencesModule`, `RemindersModule`, `DevicesModule` |
-| `domain/` | pure code: `model`, `insights`, `preferences`, `query`, `usecase`, `cycle`, `dashboard` (the aggregator), `report` (report roll-ups), `medical` (FHIR parsing, id repair, source grouping, the patient check, record summaries, the export bundle) |
+| `domain/` | pure code: `model`, `insights`, `preferences`, `cycle`, `dashboard` (the aggregator), `report` (report roll-ups), `medical` (FHIR parsing, id repair, source grouping, the patient check, record summaries, the export bundle) in `:domain`; `query` and `usecase`, which reach into the repositories, in `:app` |
 | `features/` | one package per user-facing feature area |
 | `healthconnect/` | the Health Connect integration boundary: manager, per-area readers, permission/UX services |
 | `navigation/` | routes and graph registration |
@@ -130,10 +130,10 @@ Everything else reads Health Connect on every load, through one reader function 
 
 ### 7. Keep module boundaries proportional
 
-The phone app stays one module; package boundaries come first. The one extraction so far is `:wearlink`, the phone-to-watch link, because the watch app needed the same protocol, framing and trust code and a copied file had to be held in sync by a test. A module is extracted only when two apps need the same code, never to tidy one app. Prefer package boundaries first:
+Package boundaries come first; a module is a build-time decision, not a tidying one. There are two extractions. `:wearlink`, the phone-to-watch link, because the watch app needed the same protocol, framing and trust code and a copied file had to be held in sync by a test. `:domain`, the app-local pure code, because lint and the unit tests of one 215k-line module ran on one thread for ten minutes: a module with no dependency on the rest of the app gets its own lint and test tasks, which run beside the app's and stay cached while only the app changes. A module is extracted when two apps need the same code, or when a layer that nothing below it depends on is large enough to shorten the gate. Prefer package boundaries first:
 
-- app-local domain models and calculations in `domain`
-- period primitives in `core/period`
+- app-local domain models and calculations in `domain` (the `:domain` module)
+- period primitives in `core/period` (also `:domain`)
 - app-only resources, navigation, Hilt wiring, and local policy in `:app`
 
 ## Logical Layers In The Current App
@@ -191,7 +191,7 @@ Current files:
 - [`data/repository/CycleRepository.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/CycleRepository.kt)
 - [`data/repository/VitalsRepository.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/VitalsRepository.kt)
 - [`data/repository/PreferencesRepository.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/data/repository/PreferencesRepository.kt)
-- feature-oriented model files under [`domain/model`](../../app/src/main/kotlin/tech/mmarca/openvitals/domain/model)
+- feature-oriented model files under [`domain/model`](../../domain/src/main/kotlin/tech/mmarca/openvitals/domain/model)
 
 Current boundary shape:
 
@@ -329,7 +329,7 @@ This keeps metric UI declarative: composables render precomputed insight models 
 
 ## Shared FIT Decoding
 
-[`core/fit/FitDecoder.kt`](../../app/src/main/kotlin/tech/mmarca/openvitals/core/fit/FitDecoder.kt) is the one FIT decoder in the app. It was extracted from the route importer's private decoder once a second consumer appeared.
+[`core/fit/FitDecoder.kt`](../../domain/src/main/kotlin/tech/mmarca/openvitals/core/fit/FitDecoder.kt), in `:domain`, is the one FIT decoder in the app. It was extracted from the route importer's private decoder once a second consumer appeared.
 
 It is a generic container walk and nothing more: it reads the FIT header, definition and data messages, compressed timestamps and developer fields, and returns `FitMessage` values keyed by global message number. It has no message allowlist and no semantics.
 
@@ -450,6 +450,16 @@ Notes worth carrying:
 `di/DevicesModule.kt` is the only module for this layer. It binds `BleWatchPairing` to `WatchPairingPort` and `GarminWatchSyncService` to `DeviceSyncPort`, binds `AndroidPhoneMediaSource` to `PhoneMediaSource`, binds `SystemScaleScanRadio` to `ScaleScanRadio` and `ScaleListeningForeground` to `ScaleForeground`, adds `XiaomiScaleListener` to the `CompanionPresenceObserver` set, and provides the GATT probe, the two Garmin `SharedPreferences`-backed stores, the one `GarminFileStore` and the one `XiaomiScaleStore`. Everything else is constructor injection. There are no `@Module` declarations inside `devices/` itself; keep it that way. `DevicesLayeringTest` fails on one.
 
 Live BLE sensor streaming during activity recording still lives in `sensors/ble`. Phone-to-phone sync is `features/devicesync`, below.
+
+## Module `:domain`
+
+The app-local code that nothing in the rest of the phone app sits below, in `domain/`: the packages `domain/model`, `domain/insights`, `domain/preferences`, `domain/cycle`, `domain/dashboard`, `domain/report` and `domain/medical`, and the primitives `core/period`, `core/fit`, `core/geo`, `core/stats` and `core/export`. Package names are unchanged, so an import does not say which module a class is in. `:app` depends on it; `:wear` does not.
+
+It is an Android library, not plain Kotlin: a few files use Health Connect record constants (`ExerciseTypeTraits`, `PlannedExerciseSteps`, the activity splits) and the platform's locale data (`SystemUnitSystemProvider`, `AppLanguage`), and Android lint then still checks it. It has the app's build types (`ci`, `nightly`), so the app's `ci` variant takes the module's `ci` variant and the module's tests and lint run on that one compile. Nothing in it is injected: it holds no Hilt module, and its classes are constructed by the app's repositories and the app's `di/` modules.
+
+Its test fixtures (`testFixtures`) hold the FHIR, C-CDA, SMART Health Card and wear sleep fixtures that both its own tests and the app's import tests use, with the FHIR sample files under `domain/src/testFixtures/resources/fhir/`. Its tests and lint are part of the phone gate (`verifyCiUnitTest` depends on `:domain:testCiUnitTest`, `verifyCiLint` on `:domain:lintCi`), its lockfile is `domain/gradle.lockfile`, and the ratchet tests and the `runBlocking` allow-list cover its files under the same package-relative paths as the app's.
+
+The module exists for the build: the app's lint and tests no longer cover these lines, and a change elsewhere leaves this module's compile, lint and test results in the build cache. What does not belong here: anything with an inbound dependency from `data/`, `healthconnect/` or `features/` (`domain/query` and `domain/usecase` stay in `:app` for that reason), resources, and Hilt wiring.
 
 ## Shared module `:wearlink`
 

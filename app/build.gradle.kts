@@ -261,6 +261,7 @@ androidComponents {
 }
 
 dependencies {
+    implementation(project(":domain"))
     implementation(project(":wearlink"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -332,6 +333,8 @@ dependencies {
     ksp(libs.hilt.android.compiler)
 
     // Testing
+    // The FHIR, C-CDA and SMART Health Card fixtures live with the domain module.
+    testImplementation(testFixtures(project(":domain")))
     testImplementation(libs.junit4)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)

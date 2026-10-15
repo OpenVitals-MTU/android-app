@@ -19,11 +19,11 @@ git diff --check
 
 `verifyCi` is an aggregate defined in the root `build.gradle.kts`:
 
-- `verifyCiUnitTest` runs `:wearlink:test` and `:app:testCiUnitTest`.
+- `verifyCiUnitTest` runs `:wearlink:test`, `:domain:testCiUnitTest` and `:app:testCiUnitTest`.
 - `verifyCiPreflight` runs `verifyTranslations`, `:app:checkCiDuplicateClasses`
   and `:app:compileCiAndroidTestKotlin`.
-- `verifyCiLint` runs `:app:lintCi`. It is its own aggregate because CI runs it
-  on its own job, in parallel with the other two.
+- `verifyCiLint` runs `:app:lintCi` and `:domain:lintCi`. It is its own aggregate because CI
+  runs it on its own job, in parallel with the other two.
 
 Nothing assembles an APK: nothing used it, and dexing it cost a minute and a
 half. The release pipeline builds the real one after the gate.
@@ -49,7 +49,7 @@ The watch app in `wear/` has its own gate, separate from `verifyCi`. Both gates 
 
 It runs `:wearlink:test`, `:wear:testDebugUnitTest`, `:wear:lintDebug`, `:wear:assembleDebug`,
 and `:wear:compileDebugAndroidTestKotlin`. A dependency change in `wearlink/build.gradle.kts`
-needs `./gradlew :wearlink:dependencies --write-locks` for its lockfile, like the other modules. The wear module uses the standard
+needs `./gradlew :wearlink:dependencies --write-locks` for its lockfile, like the other modules (`:domain:dependencies --write-locks` for the domain module). The wear module uses the standard
 `debug` build type; it has no `ci` variant.
 
 The watch's instrumented tests (`wear/src/androidTest`, the metric store against real SQLite)
