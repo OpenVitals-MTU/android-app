@@ -198,6 +198,10 @@ android {
     lint {
         // Tests do not ship. Analysing them cost as much as the app itself.
         ignoreTestSources = true
+        // No lint vital on release-type builds: the pipeline's lint job already
+        // ran the full lint on the commit, and the two analyses it added to a
+        // nightly build ran beside R8 (five minutes, 2026-10).
+        checkReleaseBuilds = false
         disable += setOf(
             "LogNotTimber",
             // Partial Weblate languages are allowed once scripts/verify-translations.py
