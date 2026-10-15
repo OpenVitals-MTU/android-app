@@ -6,7 +6,6 @@ import org.gradle.process.CommandLineArgumentProvider
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kover)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
 }
@@ -354,7 +353,9 @@ tasks.withType<Test>().configureEach {
     jvmArgs("-XX:+EnableDynamicAgentLoading")
     // Test classes spread over a few JVMs. Half the cores, at most four: each fork
     // is about a gigabyte, and lint and the Kotlin compiler run at the same time.
-    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
+    // A CI job that runs only the tests sets -Popenvitals.testForks to use every core.
+    maxParallelForks = providers.gradleProperty("openvitals.testForks").orNull?.toInt()
+        ?: (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
     maxHeapSize = "1g"
     localAppleHealthExportPath.orNull?.let { path ->
         systemProperty("appleHealthExport", path)
