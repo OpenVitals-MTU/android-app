@@ -27,7 +27,7 @@ concurrency:
 # Locally and in the release build the whole gate is still one invocation,
 # verifyCi, which aggregates the three tasks the jobs run.
 jobs:
-  # verifyCiUnitTest (:wearlink:test, :app:testCiUnitTest) and verifyCiPreflight
+  # verifyCiUnitTest (:wearlink:test, :domain:testCiUnitTest, :app:testCiUnitTest) and verifyCiPreflight
   # (verifyTranslations, :app:checkCiDuplicateClasses,
   # :app:compileCiAndroidTestKotlin). Nothing else runs here, so every core gets
   # a test fork (app/build.gradle.kts reads openvitals.testForks).
@@ -44,7 +44,7 @@ jobs:
       - run: scripts/ci-android-gradle.sh -Popenvitals.testForks=4 verifyCiUnitTest verifyCiPreflight
       - run: git diff --check
 
-  # verifyCiLint (:app:lintCi).
+  # verifyCiLint (:app:lintCi, :domain:lintCi).
   lint:
     runs-on: ubuntu-latest
     steps:

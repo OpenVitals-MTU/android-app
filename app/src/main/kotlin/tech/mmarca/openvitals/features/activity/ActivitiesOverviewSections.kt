@@ -348,7 +348,7 @@ internal fun PlannedWorkoutRow(
             )
             if (plannedWorkout.notes?.isNotBlank() == true) {
                 AutoResizeText(
-                    text = plannedWorkout.notes,
+                    text = plannedWorkout.notes.orEmpty(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,

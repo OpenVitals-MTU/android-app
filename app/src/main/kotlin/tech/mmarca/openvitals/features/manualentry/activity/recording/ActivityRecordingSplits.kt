@@ -231,8 +231,7 @@ private fun ActivityRecordingLap.toSplit(
     val stats = points.routeStatsBetween(routeBreakIndexes, startTime, endTime)
     val splitDistanceMeters = when {
         stats.distanceMeters > 0.0 -> stats.distanceMeters
-        distanceMeters != null -> distanceMeters
-        else -> 0.0
+        else -> distanceMeters ?: 0.0
     }
     return ActivityRecordingSplit(
         index = index,

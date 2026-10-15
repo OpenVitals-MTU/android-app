@@ -110,7 +110,7 @@ class TranslationCatalogTest {
 
     /** Read from the source, not restated here. */
     private fun shippedLanguageTags(): Set<String> {
-        val source = File("src/main/kotlin/tech/mmarca/openvitals/domain/preferences/AppLanguage.kt")
+        val source = File("../domain/src/main/kotlin/tech/mmarca/openvitals/domain/preferences/AppLanguage.kt")
             .readText()
         val tags = APP_LANGUAGE_CONSTANT.findAll(source).map { it.groupValues[1] }.toSet()
         assertWithMessage("AppLanguage.kt no longer declares its constants the way this test reads them")

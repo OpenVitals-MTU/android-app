@@ -326,10 +326,11 @@ class ReportPdfWriter(
             }
         }
         val medicalLabels = labels.medical
-        if (data.medical != null && medicalLabels != null) {
+        val medical = data.medical
+        if (medical != null && medicalLabels != null) {
             val title = LayoutItem(ReportBlock.MetricTitle(medicalLabels.title), lineHeight(metricTitlePaint) + 8f, keepWithNext = true)
             val notice = { text: String -> LayoutItem(ReportBlock.Notice(text), staticLayout(text, noticePaint, width - 10).height + 8f) }
-            items += medicalItems(data.medical, medicalLabels, title, notice, headerHeight(), rowHeight())
+            items += medicalItems(medical, medicalLabels, title, notice, headerHeight(), rowHeight())
         }
         return items
     }

@@ -250,10 +250,11 @@ class DashboardDataLoaderTest {
             )
         )
 
-        assertNotNull(data.sleep)
-        assertEquals(eveningSleep.startTime, data.sleep!!.startTime)
-        assertEquals(nextDaySleep.endTime, data.sleep.endTime)
-        assertEquals(Duration.ofHours(7).plusMinutes(38).toMillis(), data.sleep.durationMs)
+        val sleep = data.sleep
+        assertNotNull(sleep)
+        assertEquals(eveningSleep.startTime, sleep!!.startTime)
+        assertEquals(nextDaySleep.endTime, sleep.endTime)
+        assertEquals(Duration.ofHours(7).plusMinutes(38).toMillis(), sleep.durationMs)
     }
 
     @Test fun `loadDashboard prefers Health Connect aggregate sleep duration`() = runTest {
