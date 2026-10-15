@@ -1,0 +1,28 @@
+name: Publish the GitHub release
+description: >-
+  Creates or updates the GitHub release named in build/release-ci/release-context.env
+  and uploads this run's signed artifacts to it. The job provides GH_TOKEN and
+  GH_REPO and has the release-build artifact under build/release-ci.
+runs:
+  using: composite
+  steps:
+    # The app bundle goes last: it is there for a Play upload by hand, when
+    # Play refuses the upload from the pipeline.
+    - shell: bash
+      run: |
+        set -eu
+        . build/release-ci/release-context.env
+        out=build/release-ci
+        set -- "$out/$OPENVITALS_APK_BASENAME" "$out/$OPENVITALS_APK_BASENAME.sha256"
+        if [ "$OPENVITALS_BUILD_DEBUG_APK" = "true" ]; then
+          set -- "$@" "$out/$OPENVITALS_DEBUG_APK_BASENAME" "$out/$OPENVITALS_DEBUG_APK_BASENAME.sha256"
+        fi
+        if [ "$OPENVITALS_BUILD_AAB" = "true" ]; then
+          set -- "$@" "$out/$OPENVITALS_AAB_BASENAME" "$out/$OPENVITALS_AAB_BASENAME.sha256"
+        fi
+        scripts/publish-github-release.sh \
+          "$OPENVITALS_RELEASE_TAG" \
+          "$out/release-title.txt" \
+          "$out/release-notes.md" \
+          "$OPENVITALS_RELEASE_PRERELEASE" \
+          "$@"

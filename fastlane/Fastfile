@@ -72,7 +72,7 @@ platform :android do
     )
   end
 
-  desc "Upload the signed Android App Bundle directly to Google Play production with store metadata"
+  desc "Promote the version from open testing to Google Play production with store metadata, or upload it there when open testing never had it"
   lane :production do |options|
     json_key = options[:json_key] || ENV["GOOGLE_PLAY_JSON_KEY"]
     aab = options[:aab] || ENV["OPENVITALS_RELEASE_AAB"]
@@ -108,6 +108,35 @@ platform :android do
           "Bump baseVersionCode in app/build.gradle.kts past #{max_existing}."
         )
       end
+
+      # The pipeline's stage 2 put this version on open testing; production is
+      # then a promotion of that same release, with the store metadata, not a
+      # second upload. A version open testing never had (Play was paused at the
+      # time) falls through to the upload below.
+      beta_codes = google_play_track_version_codes(
+        package_name: OPENVITALS_PACKAGE_NAME,
+        json_key: json_key,
+        track: "beta"
+      ).map(&:to_i)
+      if beta_codes.include?(version_code.to_i)
+        UI.message("Promoting version code #{version_code} from open testing to production.")
+        supply(
+          package_name: OPENVITALS_PACKAGE_NAME,
+          json_key: json_key,
+          track: "beta",
+          track_promote_to: "production",
+          track_promote_release_status: "completed",
+          version_code: version_code.to_i,
+          skip_upload_aab: true,
+          skip_upload_apk: true,
+          metadata_path: OPENVITALS_METADATA_PATH,
+          sync_image_upload: true,
+          changes_not_sent_for_review: ENV["OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW"] == "true",
+          timeout: 600
+        )
+        next
+      end
+      UI.message("Version code #{version_code} is not on open testing; uploading the bundle to production.")
     end
 
     supply(

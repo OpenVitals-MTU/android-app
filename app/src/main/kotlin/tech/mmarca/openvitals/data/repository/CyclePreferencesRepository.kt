@@ -37,7 +37,8 @@ class CyclePreferencesRepository @Inject constructor(
     override fun setCycleTrackingProfile(profile: CycleTrackingProfile) {
         prefs.edit {
             putString(KEY_CONTEXTS, profile.contexts.map { it.id }.sorted().joinToString(SEPARATOR))
-            if (profile.ageBand == null) remove(KEY_AGE_BAND) else putString(KEY_AGE_BAND, profile.ageBand.id)
+            val ageBand = profile.ageBand
+            if (ageBand == null) remove(KEY_AGE_BAND) else putString(KEY_AGE_BAND, ageBand.id)
         }
         this.profile.value = profile
     }
