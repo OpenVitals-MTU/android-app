@@ -57,25 +57,23 @@ tasks.register<Exec>("verifyTranslations") {
 
 tasks.register("verifyCiPreflight") {
     group = "verification"
-    description = "Runs the translation, duplicate-class, android-test compile and domain lint checks for CI."
+    description = "Runs the translation, duplicate-class and android-test compile checks for CI."
     dependsOn(
         "verifyTranslations",
         // Not assembleCi: nothing used that APK, and dexing it was a minute and a half.
         // The release pipeline builds and packages the real one after this gate.
         ":app:checkCiDuplicateClasses",
         ":app:compileCiAndroidTestKotlin",
-        // The domain module's lint runs on the tests job, which has the slack: on
-        // the runner's four cores it would only compete with the app's lint.
-        ":domain:lintCi",
     )
 }
 
-// The app's lint alone is half of the gate's task time, so it has a CI job of
-// its own (.github/workflows/test.yml) and is not part of verifyCiPreflight.
+// Lint is half of the gate's task time. CI runs it on pushes to main and in
+// the release build, not on pull requests (.github/workflows/test.yml), so it
+// is not part of verifyCiPreflight.
 tasks.register("verifyCiLint") {
     group = "verification"
-    description = "Runs phone app lint for CI."
-    dependsOn(":app:lintCi")
+    description = "Runs phone app and domain module lint for CI."
+    dependsOn(":app:lintCi", ":domain:lintCi")
 }
 
 // Phone app only. The wear module has its own gate (verifyWearCi) and its own

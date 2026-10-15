@@ -20,11 +20,10 @@ git diff --check
 `verifyCi` is an aggregate defined in the root `build.gradle.kts`:
 
 - `verifyCiUnitTest` runs `:wearlink:test`, `:domain:testCiUnitTest` and `:app:testCiUnitTest`.
-- `verifyCiPreflight` runs `verifyTranslations`, `:app:checkCiDuplicateClasses`,
-  `:app:compileCiAndroidTestKotlin` and `:domain:lintCi`.
-- `verifyCiLint` runs `:app:lintCi`. It is its own aggregate because CI runs it on
-  its own job, in parallel with the other two; the domain module's lint stays with
-  the tests, which have the slack on a four-core runner.
+- `verifyCiPreflight` runs `verifyTranslations`, `:app:checkCiDuplicateClasses`
+  and `:app:compileCiAndroidTestKotlin`.
+- `verifyCiLint` runs `:app:lintCi` and `:domain:lintCi`. It is its own aggregate
+  because CI runs it only on pushes to `main`, on a job of its own.
 
 Nothing assembles an APK: nothing used it, and dexing it cost a minute and a
 half. The release pipeline builds the real one after the gate.
@@ -213,8 +212,9 @@ build-tools the app compiles against when the runner image lacks them (a
 prebaked container image did this until 2026-10; pulling it cost as much as the
 install). The Gradle jobs cache Gradle with `gradle/actions/setup-gradle` and
 go through `scripts/ci-android-gradle.sh`, which sizes the JVMs for the
-runner's 16 GB. The test workflow is two jobs
-that run at the same time, both required on a pull request and on `main`:
+runner's 16 GB. The test workflow is two jobs. The tests job runs on every pull
+request and on `main`; the lint job runs on pushes to `main` only (a release
+build of a commit `main` has not verified runs `verifyCi`, lint included):
 
 ```bash
 # tests job: every core gets a test fork, since nothing else runs here
@@ -226,9 +226,9 @@ git diff --check
 ```
 
 Lint alone is half of the gate's task time, so in a single job it stretched
-the tests, which shared the runner's four cores with it. The split costs a
-second setup and a second compile of `:app`, but the gate ends when the slower
-job does rather than after both in sequence.
+the tests, which shared the runner's four cores with it. A pull request's gate
+is the tests job alone; a lint finding is caught on `main` before a nightly
+ships.
 
 The Gradle build cache is on (`org.gradle.caching` in `gradle.properties`), and
 `setup-gradle` keeps it between runs along with the dependency cache. A code

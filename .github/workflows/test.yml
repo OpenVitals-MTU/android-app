@@ -19,18 +19,18 @@ concurrency:
   group: test-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# The gate is two jobs that run at the same time, and both are required. Lint
-# alone is half of the gate's task time, and in one job it shared the runner's
-# four cores with the tests and the compiler, which stretched everything. Each
-# job repeats the minute of setup and compiles :app once more; what matters is
-# the wall-clock time, and Actions minutes are free on a public repository.
-# Locally and in the release build the whole gate is still one invocation,
-# verifyCi, which aggregates the three tasks the jobs run.
+# Two jobs. The tests run on every pull request and push; lint runs on pushes
+# to main only (and in the release build, through verifyCi). Lint alone is
+# half of the gate's task time, and in one job it shared the runner's four
+# cores with the tests and the compiler, which stretched everything; a lint
+# finding is rarely what a review turns on, and main still catches it before a
+# nightly ships. Locally and in the release build the whole gate is still one
+# invocation, verifyCi, which aggregates the three tasks the jobs run.
 jobs:
   # verifyCiUnitTest (:wearlink:test, :domain:testCiUnitTest, :app:testCiUnitTest) and verifyCiPreflight
-  # (verifyTranslations, :app:checkCiDuplicateClasses, :app:compileCiAndroidTestKotlin,
-  # :domain:lintCi). The app's lint is the one thing not here, so every core
-  # gets a test fork (app/build.gradle.kts reads openvitals.testForks).
+  # (verifyTranslations, :app:checkCiDuplicateClasses, :app:compileCiAndroidTestKotlin).
+  # No lint here, so every core gets a test fork (app/build.gradle.kts reads
+  # openvitals.testForks).
   tests:
     # The stock runner: it ships JDK 17 and the Android SDK, and
     # scripts/ci-android-setup.sh installs the platform and build-tools the app
@@ -48,8 +48,9 @@ jobs:
       - run: scripts/ci-android-gradle.sh -Popenvitals.testForks=4 verifyCiUnitTest verifyCiPreflight
       - run: git diff --check
 
-  # verifyCiLint (:app:lintCi).
+  # verifyCiLint (:app:lintCi, :domain:lintCi). Pushes to main only.
   lint:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
