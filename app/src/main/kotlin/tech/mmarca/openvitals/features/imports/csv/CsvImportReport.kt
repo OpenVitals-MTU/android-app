@@ -32,18 +32,22 @@ fun buildCsvImportReport(
     appendLine()
     appendLine("Totals")
     appendLine("------")
-    appendLine("Rows read:       ${result.progress.rowsRead}")
-    appendLine("Records written: ${result.progress.written}")
-    appendLine("Already present: ${result.progress.alreadyPresent}")
-    appendLine("Rejected:        ${result.progress.rejected}")
-    if (result.progress.journalDays > 0) {
-        appendLine("Journal days:    ${result.progress.journalDays} (${result.progress.journalDaysUpdated} updated)")
+    // Rows partition three ways and add up to rows read. Records do not: a row can make several.
+    val progress = result.progress
+    appendLine("Rows read:           ${progress.rowsRead}")
+    appendLine("  Imported:          ${progress.rowsImported} (rows that produced a record or a journal entry)")
+    appendLine("  Rejected:          ${progress.rowsRejected}")
+    appendLine("  Nothing to import: ${progress.emptyRows}")
+    appendLine("Records written:     ${progress.written}, of which ${progress.alreadyPresent} replaced an earlier import")
+    if (progress.presenceUnchecked > 0) {
+        appendLine("  Not checked first: ${progress.presenceUnchecked} (Health Connect could not be read for them; written all the same)")
     }
-    if (result.progress.emptyRows > 0) {
-        appendLine("Nothing to import: ${result.progress.emptyRows} rows")
+    if (progress.journalDays > 0) {
+        appendLine("Journal days:        ${progress.journalDays} (${progress.journalDaysUpdated} updated)")
     }
-    if (result.progress.quotaPauses > 0) {
-        appendLine("Quota pauses:    ${result.progress.quotaPauses} (${quotaWaitLabel(result.progress.quotaWaitMillis)})")
+    appendLine("Rejections:          ${progress.rejected} (whole rows and single values, by reason below)")
+    if (progress.quotaPauses > 0) {
+        appendLine("Quota pauses:        ${progress.quotaPauses} (${quotaWaitLabel(progress.quotaWaitMillis)})")
     }
     appendLine()
     appendLine("Parsing")
