@@ -9,14 +9,17 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * Converts FHIR DSTU2 (1.0.2) resources to R4, for the record types older iPhones export from
- * their providers. Health Connect stores R4 and R4B only.
+ * Converts FHIR DSTU2 (1.0.2) resources to R4, for the providers still on it: older iPhones
+ * export their records in it, and some labs serve it to the apps that fetch from them. Health
+ * Connect stores R4 and R4B only.
  *
  * It is a field mapping, not a full converter: renamed fields, status codes that moved, single
  * values that became lists, and `MedicationOrder`, which became `MedicationRequest`. A field
  * R4 has no place for is dropped. The narrative is dropped too: it described the old shape.
  * Every converted record carries an OpenVitals tag, so it can always be told from one the
  * provider wrote as R4.
+ *
+ * A plain FHIR file states no version, so [looksDstu2] tells a DSTU2 record by its shape.
  */
 object Dstu2ToR4 {
     const val Version = "1.0.2"
@@ -32,6 +35,33 @@ object Dstu2ToR4 {
     fun isConverted(resource: JsonObject): Boolean =
         resource.obj("meta")?.objects("tag").orEmpty().any { it.string("system") == OpenVitalsFhir.TagSystem && it.string("code") == ConvertedTag }
 
+    /**
+     * Whether [resource] has DSTU2's shape: a field DSTU2 had and R4 dropped or renamed, a single
+     * value R4 holds as a list, a type R4 renamed, or a profile that names DSTU2. A record with
+     * none of those reads the same in both versions, so it is not one. A converted record never is.
+     */
+    fun looksDstu2(resource: JsonObject): Boolean {
+        if (resource.obj("meta")?.strings("profile").orEmpty().any(::profileNamesDstu2)) return true
+        val type = resource.resourceType
+        if (Dstu2OnlyFields[type].orEmpty().any { it in resource }) return true
+        return when (type) {
+            "MedicationOrder" -> true
+            "AllergyIntolerance" -> resource["category"] is JsonPrimitive || resource["note"] is JsonObject
+            "Condition" -> resource["clinicalStatus"] is JsonPrimitive || resource["verificationStatus"] is JsonPrimitive || resource["category"] is JsonObject
+            "Observation" -> resource["category"] is JsonObject || resource["interpretation"] is JsonObject
+            "MedicationStatement" -> resource["note"] is JsonPrimitive
+            "Procedure" -> resource["reasonReference"] is JsonObject
+            "Patient" -> resource.objects("name").any { it["family"] is JsonArray }
+            "Practitioner" -> resource["name"] is JsonObject
+            "Organization", "Location" -> resource["type"] is JsonObject
+            "Encounter" -> resource["class"] is JsonPrimitive
+            else -> false
+        }
+    }
+
+    /** Whether a `meta.profile` URL names DSTU2, as a Bundle's or a resource's may. */
+    fun profileNamesDstu2(url: String): Boolean = Dstu2ProfileHints.any { url.contains(it, ignoreCase = true) }
+
     private fun convertAny(resource: JsonObject): JsonObject? {
         val fields = Fields(resource)
         when (resource.resourceType) {
@@ -45,7 +75,8 @@ object Dstu2ToR4 {
             "Medication" -> medication(fields)
             "Patient" -> patient(fields)
             "Practitioner" -> practitioner(fields)
-            "Organization" -> fields.wrap("type")
+            "Organization", "Location" -> fields.wrap("type")
+            "Encounter" -> encounter(fields)
             else -> return null
         }
         fields.remove("text")
@@ -166,12 +197,8 @@ object Dstu2ToR4 {
 
     private fun observation(f: Fields) {
         // Health Connect sorts an Observation by its category, in R4's code system.
-        f.obj("category")?.let { category ->
-            val codings = category.objects("coding").map { coding ->
-                if (coding.string("system") == OldObservationCategories) coding.with("system", JsonPrimitive(ObservationCategories)) else coding
-            }
-            f["category"] = JsonArray(listOf(if (codings.isEmpty()) category else category.with("coding", JsonArray(codings))))
-        }
+        val categories = f.array("category")?.filterIsInstance<JsonObject>() ?: listOfNotNull(f.obj("category"))
+        f.putOrRemove("category", JsonArray(categories.map(::r4Category)))
         f.noteFromString("comments")
         f.wrap("interpretation")
         f.array("referenceRange")?.let { ranges ->
@@ -199,6 +226,27 @@ object Dstu2ToR4 {
         f.array("performer")?.let { performers ->
             f["performer"] = JsonArray(performers.filterIsInstance<JsonObject>().map { performer -> Fields(performer).apply { rename("role", "function") }.let(::JsonObject) })
         }
+    }
+
+    private fun r4Category(category: JsonObject): JsonObject {
+        val codings = category.objects("coding").map { coding ->
+            if (coding.string("system") == OldObservationCategories) coding.with("system", JsonPrimitive(ObservationCategories)) else coding
+        }
+        return if (codings.isEmpty()) category else category.with("coding", JsonArray(codings))
+    }
+
+    /** The class became a coding in v3 ActCode; a class with no code there is dropped. */
+    private fun encounter(f: Fields) {
+        f.rename("patient", "subject")
+        f.rename("incomingReferral", "basedOn")
+        f.rename("reason", "reasonCode")
+        f.rename("indication", "reasonReference")
+        f.wrap("appointment")
+        (f["class"] as? JsonPrimitive)?.content?.let { code ->
+            val mapped = EncounterClasses[code]
+            if (mapped == null) f.remove("class") else f["class"] = buildJsonObject { put("system", ActCode); put("code", mapped) }
+        }
+        f.obj("hospitalization")?.let { f.putOrRemove("hospitalization", it.without("admittingDiagnosis", "dischargeDiagnosis")) }
     }
 
     private fun medication(f: Fields) {
@@ -320,6 +368,26 @@ object Dstu2ToR4 {
     private const val ConditionVerification = "http://terminology.hl7.org/CodeSystem/condition-ver-status"
     private const val ObservationCategories = "http://terminology.hl7.org/CodeSystem/observation-category"
     private const val OldObservationCategories = "http://hl7.org/fhir/observation-category"
+    private const val ActCode = "http://terminology.hl7.org/CodeSystem/v3-ActCode"
+    private val EncounterClasses = mapOf(
+        "inpatient" to "IMP", "outpatient" to "AMB", "ambulatory" to "AMB", "emergency" to "EMER",
+        "home" to "HH", "field" to "FLD", "daytime" to "SS", "virtual" to "VR",
+    )
+    private val Dstu2ProfileHints = listOf("/DSTU2/", "/1.0.2/", "fhir.dstu2")
+
+    /** Per type, the fields DSTU2 had that R4 dropped or renamed. */
+    private val Dstu2OnlyFields = mapOf(
+        "Immunization" to setOf("date", "wasNotGiven", "reported", "explanation", "vaccinationProtocol"),
+        "AllergyIntolerance" to setOf("substance", "status", "onset", "reporter", "lastOccurence"),
+        "Condition" to setOf("patient", "dateRecorded", "notes"),
+        "MedicationStatement" to setOf("patient", "wasNotTaken", "reasonNotTaken", "reasonForUseCodeableConcept", "reasonForUseReference", "supportingInformation"),
+        "Observation" to setOf("comments", "related"),
+        "Procedure" to setOf("notPerformed", "reasonNotPerformed", "reasonCodeableConcept", "request", "notes", "used"),
+        "Medication" to setOf("product", "isBrand", "package"),
+        "Patient" to setOf("careProvider", "animal"),
+        "Practitioner" to setOf("practitionerRole"),
+        "Encounter" to setOf("patient", "indication", "incomingReferral"),
+    )
     private val AllergyCategories = setOf("food", "medication", "environment")
     private val Criticality = mapOf("CRITL" to "low", "CRITH" to "high", "CRITU" to "unable-to-assess")
     private val DoseAndRateParts = listOf("doseQuantity", "doseRange", "rateRatio", "rateRange", "rateQuantity")

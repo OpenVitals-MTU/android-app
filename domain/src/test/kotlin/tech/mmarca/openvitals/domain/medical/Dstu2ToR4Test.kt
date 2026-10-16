@@ -167,4 +167,58 @@ class Dstu2ToR4Test {
     fun `a type with no mapping is not converted`() {
         assertThat(Dstu2ToR4.convert(Json.parseToJsonElement("""{"resourceType":"DiagnosticOrder","id":"d"}""").jsonObject)).isNull()
     }
+
+    @Test
+    fun `an encounter's class becomes a coding and its patient the subject, and a location's type a list`() {
+        val encounter = convert(
+            """{"resourceType":"Encounter","id":"e","status":"finished","class":"outpatient","patient":{"reference":"Patient/p"},
+               "reason":[{"text":"Check-up"}],"indication":[{"reference":"Condition/c"}],"appointment":{"reference":"Appointment/a"},
+               "hospitalization":{"admitSource":{"text":"GP"},"dischargeDiagnosis":[{"reference":"Condition/c"}]}}""",
+        )
+        val location = convert("""{"resourceType":"Location","id":"l","name":"Ward 3","type":{"text":"Ward"}}""")
+
+        assertThat(encounter.getValue("class").jsonObject.text("code")).isEqualTo("AMB")
+        assertThat(encounter.getValue("subject").jsonObject.text("reference")).isEqualTo("Patient/p")
+        assertThat(encounter.getValue("reasonCode").jsonArray).hasSize(1)
+        assertThat(encounter.getValue("reasonReference").jsonArray).hasSize(1)
+        assertThat(encounter.getValue("appointment").jsonArray).hasSize(1)
+        assertThat(encounter.getValue("hospitalization").jsonObject.keys).containsExactly("admitSource")
+        assertThat(encounter.keys).containsNoneOf("patient", "reason", "indication")
+        assertThat(location.getValue("type").jsonArray).hasSize(1)
+    }
+
+    @Test
+    fun `a record is told as DSTU2 by the fields R4 dropped and the single values R4 lists, and a converted one no longer is`() {
+        val dstu2 = listOf(
+            // A lab result as LabCorp serves it, through CommonHealth: one category, in the old code system.
+            """{"resourceType":"Observation","id":"o","status":"final","category":{"coding":[{"system":"http://hl7.org/fhir/observation-category","code":"laboratory"}]},
+               "code":{"coding":[{"system":"http://labcorp.com/ers/testCodes","code":"XXXXXX","display":"Please Note:"}]}}""",
+            """{"resourceType":"Condition","id":"c","clinicalStatus":"active","code":{"text":"Asthma"}}""",
+            """{"resourceType":"Immunization","id":"i","status":"completed","date":"2015-04-01","vaccineCode":{"text":"Flu"}}""",
+            """{"resourceType":"AllergyIntolerance","id":"a","substance":{"text":"Nuts"}}""",
+            """{"resourceType":"MedicationOrder","id":"m","status":"active"}""",
+            """{"resourceType":"Patient","id":"p","name":[{"family":["Tamm"],"given":["Mari"]}]}""",
+            """{"resourceType":"Practitioner","id":"d","name":{"family":["Kask"]}}""",
+            """{"resourceType":"Encounter","id":"e","status":"finished","class":"inpatient"}""",
+            """{"resourceType":"Medication","id":"x","meta":{"profile":["http://hl7.org/fhir/DSTU2/StructureDefinition/Medication"]}}""",
+        ).map(FhirTestFiles::json)
+        val r4 = listOf(
+            """{"resourceType":"Observation","id":"o","status":"final","category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"laboratory"}]}],"code":{"text":"Glucose"}}""",
+            """{"resourceType":"Condition","id":"c","clinicalStatus":{"coding":[{"code":"active"}]},"subject":{"reference":"Patient/p"}}""",
+            """{"resourceType":"Immunization","id":"i","status":"not-done","occurrenceDateTime":"2024-04-01","vaccineCode":{"text":"Flu"}}""",
+            """{"resourceType":"AllergyIntolerance","id":"a","clinicalStatus":{"coding":[{"code":"active"}]},"code":{"text":"Nuts"},"category":["food"]}""",
+            """{"resourceType":"MedicationRequest","id":"m","status":"active","intent":"order"}""",
+            """{"resourceType":"Patient","id":"p","name":[{"family":"Tamm","given":["Mari"]}]}""",
+            """{"resourceType":"Practitioner","id":"d","name":[{"family":"Kask"}]}""",
+            """{"resourceType":"Encounter","id":"e","status":"finished","class":{"code":"IMP"},"subject":{"reference":"Patient/p"}}""",
+            """{"resourceType":"Medication","id":"x","meta":{"profile":["http://hl7.org/fhir/StructureDefinition/Medication"]}}""",
+        ).map(FhirTestFiles::json)
+
+        assertThat(dstu2.filterNot(Dstu2ToR4::looksDstu2)).isEmpty()
+        assertThat(r4.filter(Dstu2ToR4::looksDstu2)).isEmpty()
+        val converted = dstu2.map { requireNotNull(Dstu2ToR4.convert(it)) }
+        assertThat(converted.filter(Dstu2ToR4::looksDstu2)).isEmpty()
+        assertThat(converted.first().getValue("category").jsonArray.single().jsonObject.getValue("coding").jsonArray.single().jsonObject.text("system"))
+            .isEqualTo("http://terminology.hl7.org/CodeSystem/observation-category")
+    }
 }
