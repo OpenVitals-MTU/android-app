@@ -411,6 +411,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">收缩压 (mmHg)</string>
     <string name="vitals_entry_diastolic_label">舒张压 (mmHg)</string>
+    <string name="vitals_entry_pulse_label">脉搏（bpm，可选）</string>
+    <string name="vitals_entry_pulse_permission_needed">要将脉搏与测量值一起保存，OpenVitals 需要 Health Connect 的心率写入权限。脉搏会保存为测量时间的心率记录。</string>
+    <string name="vitals_entry_invalid_pulse">请输入 20 至 300 bpm 之间的脉搏，或留空。</string>
     <string name="vitals_entry_add_selected">添加 %1$s</string>
     <string name="vitals_entry_invalid_value">请输入有效的生命体征值。</string>
     <string name="vitals_entry_write_failed">无法保存生命体征：%1$s</string>
@@ -694,8 +697,10 @@
     <string name="cardio_load_day_numbers_title">今日数值</string>
     <string name="cardio_load_references_title">参考链接</string>
     <string name="cardio_load_calculation_summary">有心率数据时 OpenVitals 使用基于心率的 TRIMP，心率不可用时回退到仅运动量。</string>
-    <string name="cardio_load_formula">TRIMP = 分钟 × HRR × 0.64 × e^(1.92 × HRR)</string>
+    <string name="cardio_load_formula">TRIMP = 分钟 × HRR × a × e^(b × HRR)</string>
     <string name="cardio_load_formula_body">HRR 是心率储备：(心率 - 静息心率) / (最大心率 - 静息心率)。OpenVitals 对当日可用的心率区间求和。</string>
+    <string name="cardio_load_formula_weighting">男性 a = 0.64，b = 1.92；女性 a = 0.86，b = 1.67（Banister）。如果身体资料未填写性别，则使用男性的数值。</string>
+    <string name="cardio_load_max_hr_body">最大心率来自你的身体资料。如果未设置，OpenVitals 会使用测得的最高心率（前提是足够高）。否则按年龄估算：女性为 206 - 0.88 × 年龄（Gulati），其他人为 208 - 0.7 × 年龄（Tanaka）。</string>
     <string name="cardio_load_mapping_body">有记录活动时，心率样本按时间戳映射到每个活动的开始和结束窗口。没有活动窗口时，仅计算升高的心率区间。心率不可用时，运动量和活动卡路里作为低可信度回退显示。</string>
     <string name="cardio_load_method">方法</string>
     <string name="cardio_load_trimp_score">TRIMP 得分</string>
@@ -719,6 +724,8 @@
     <string name="cardio_load_calibration_estimated_max">最大心率（估算）</string>
     <string name="cardio_load_reference_banister">Banister TRIMP 公式</string>
     <string name="cardio_load_reference_training_load">训练负荷监测综述</string>
+    <string name="cardio_load_reference_tanaka">Tanaka：按年龄估算最大心率</string>
+    <string name="cardio_load_reference_gulati">Gulati：女性最大心率</string>
     <string name="cardio_load_reference_health_connect">Health Connect 锻炼心率映射</string>
     <string name="section_sleep_sessions">睡眠会话</string>
     <string name="section_weight">体重</string>
@@ -1281,6 +1288,7 @@
     <string name="report_metrics_section_title">指标</string>
     <string name="report_metrics_select_all">全选</string>
     <string name="report_metrics_clear">清除</string>
+    <string name="report_metrics_nutrient_breakdown_hint">“全选”不包括以下项目。勾选标题可添加整组。</string>
     <string name="report_granularity_title">详细程度</string>
     <string name="report_granularity_daily">每日</string>
     <string name="report_granularity_weekly">每周</string>
@@ -1539,6 +1547,7 @@
     <string name="medical_import_error_too_large">此文件超过 8 MB。</string>
     <string name="medical_import_error_unreadable">无法读取此文件。</string>
     <string name="medical_import_error_no_records">此文件中没有 Health Connect 存储的内容。</string>
+    <string name="medical_import_error_reports_only">此文件仅包含诊断报告。Health Connect 保存的是报告的结果，而不是报告本身，而此文件中没有这些结果。结果是 Observation 记录，通常位于单独的文件中，请改为导入那些文件。</string>
     <string name="medical_import_new_source">新来源</string>
     <string name="medical_import_existing_source">添加到你之前导入的来源</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>
@@ -1963,11 +1972,11 @@
     <string name="settings_fit_import_folder_grant">授予导入权限</string>
     <string name="settings_fit_import_error">FIT 导入警告：%1$s</string>
     <string name="settings_csv_import_title">CSV 导入器</string>
-    <string name="settings_csv_import_body">从 CSV 文件导入身体测量 — 例如智能体脂秤的体重和身体成分导出。你选择每列代表什么。</string>
+    <string name="settings_csv_import_body">从 CSV 文件导入测量数据或营养数据 — 例如智能体脂秤的体重导出，或每餐一行的电子表格。你选择每列代表什么。</string>
     <string name="settings_csv_import_action">导入 CSV 文件</string>
     <string name="settings_csv_import_screen_title">CSV 导入器</string>
     <string name="settings_csv_import_pick_title">选择 CSV 文件</string>
-    <string name="settings_csv_import_pick_body">选择 CSV 导出并将其列匹配到身体测量。确认前不会写入任何内容。</string>
+    <string name="settings_csv_import_pick_body">选择 CSV 文件并将其列匹配到测量数据或营养素。确认前不会写入任何内容。</string>
     <string name="settings_csv_import_pick_action">选择 CSV 文件</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d 列</string>
     <string name="settings_csv_import_continue">继续</string>
@@ -1988,6 +1997,7 @@
     <string name="settings_csv_import_role_ignore">不导入</string>
     <string name="settings_csv_import_role_timestamp">日期和时间</string>
     <string name="settings_csv_import_role_end_timestamp">结束日期和时间</string>
+    <string name="settings_csv_import_role_food_name">食物名称</string>
     <string name="settings_csv_import_interval_end_hint">每行从日期和时间持续到“结束日期和时间”列。没有该列时，每行按一分钟计。</string>
     <string name="settings_csv_import_metric_weight">体重</string>
     <string name="settings_csv_import_metric_body_fat">体脂</string>
@@ -2029,8 +2039,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">毫克每分升 (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
     <string name="settings_csv_import_unit_count">计数</string>
+    <string name="settings_csv_import_unit_kilocalories">千卡 (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">千焦 (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">毫克 (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">微克 (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">以 %1$s 为单位的重量，作为体重列的占比</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect 以百分比存储体脂，因此从同一行的体重测量中计算。</string>
+    <string name="settings_csv_import_nutrient_hint">一行中的所有营养素列会合成一条食物记录。</string>
     <string name="settings_csv_import_date_time_title">日期和时间</string>
     <string name="settings_csv_import_date_format_label">格式</string>
     <string name="settings_csv_import_date_format_auto">自动检测</string>
@@ -2057,6 +2072,7 @@
     <string name="settings_csv_import_issue_needs_weight">以重量给出的体脂需要同一文件中的体重列来计算百分比。</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">采样行中没有匹配此日期格式的。</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">只能有一列持有结束日期和时间。</string>
+    <string name="settings_csv_import_issue_multiple_food_names">只能有一列持有食物名称。</string>
     <string name="settings_csv_import_confirm_title">准备导入</string>
     <string name="settings_csv_import_confirm_summary">%1$s · 每行 %2$d 项测量</string>
     <string name="settings_csv_import_confirm_range">%1$s：%2$s 到 %3$s</string>
@@ -2065,13 +2081,45 @@
     <string name="settings_csv_import_permission_body">OpenVitals 需要权限才能将这些测量写入 Health Connect。</string>
     <string name="settings_csv_import_start">导入</string>
     <string name="settings_csv_import_cancel">取消</string>
-    <string name="settings_csv_import_progress">第 %1$d 行 · 已写入 %2$d，已存在 %3$d，已拒绝 %4$d</string>
-    <string name="settings_csv_import_result">已写入 %1$d。已存在 %2$d。已拒绝 %3$d。</string>
+    <string name="settings_csv_import_progress">第 %1$d 行 · 已写入记录 %2$d，拒绝 %3$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect 目前正在限制写入。导入将在 %1$d 秒后继续。</string>
+    <string name="settings_csv_import_drip_title">检测到 drip 导出文件</string>
+    <string name="settings_csv_import_drip_body">%1$s 是从 drip 导出的周期历史。选择要导入 OpenVitals 的内容。每一天按本机时区读取，确认之前不会写入任何内容。</string>
+    <string name="settings_csv_import_drip_bleeding">出血</string>
+    <string name="settings_csv_import_drip_bleeding_body">经期流量和点滴出血写入 Health Connect。在 drip 中排除的出血会记为点滴出血。</string>
+    <string name="settings_csv_import_drip_temperature">基础体温</string>
+    <string name="settings_csv_import_drip_temperature_body">按记录时间导入晨间体温。在 drip 中排除的体温不会导入。</string>
+    <string name="settings_csv_import_drip_mucus">宫颈黏液</string>
+    <string name="settings_csv_import_drip_mucus_body">质地和感觉写入 Health Connect；感觉同时填入日志的感受。</string>
+    <string name="settings_csv_import_drip_sex">性行为</string>
+    <string name="settings_csv_import_drip_sex_body">有性行为的日子：drip 记录了避孕措施则为有保护，记录为无则为无保护。</string>
+    <string name="settings_csv_import_drip_journal">日志</string>
+    <string name="settings_csv_import_drip_journal_body">疼痛和心情作为症状，心情和精力等级，宫颈，性欲，以及所有备注，写入本机的周期日志。</string>
+    <string name="settings_csv_import_drip_confirm_summary">%1$s · 前 %3$d 天中有 %2$d 天包含可导入内容</string>
+    <string name="settings_csv_import_journal_days">日志天数：%1$d，其中更新 %2$d</string>
+    <string name="settings_csv_import_tally_rows_title">文件的行</string>
+    <string name="settings_csv_import_tally_rows_read">已读取</string>
+    <string name="settings_csv_import_tally_rows_imported">已导入</string>
+    <string name="settings_csv_import_tally_rows_rejected">已拒绝</string>
+    <string name="settings_csv_import_tally_rows_empty">无可导入内容</string>
+    <string name="settings_csv_import_tally_rows_note">一行可能生成多条记录，也可能一条都没有，因此行数与记录数不会相互相加。</string>
+    <string name="settings_csv_import_tally_records_title">Health Connect 记录</string>
+    <string name="settings_csv_import_tally_records_written">已写入</string>
+    <string name="settings_csv_import_tally_records_replaced">替换了之前的导入</string>
+    <string name="settings_csv_import_tally_records_unchecked">写入前未查询</string>
+    <string name="settings_csv_import_tally_records_unchecked_note">这些记录无法读取 Health Connect，因此替换数量是下限。</string>
+    <string name="settings_csv_import_tally_journal_title">周期日志</string>
+    <string name="settings_csv_import_tally_journal_days">有记录的天数</string>
+    <string name="settings_csv_import_tally_journal_updated">在本机更新</string>
+    <string name="settings_csv_import_outcome_completed">导入完成</string>
+    <string name="settings_csv_import_outcome_cancelled">导入已取消</string>
+    <string name="settings_csv_import_outcome_rate_limited">导入已停止</string>
+    <string name="settings_csv_import_outcome_failed">导入失败</string>
     <string name="settings_csv_import_result_empty">未从此文件导入任何内容。</string>
     <string name="settings_csv_import_result_cancelled">导入已取消。已写入的内容保留。</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect 暂时停止接受写入。稍后重新运行导入；已写入的记录会被跳过。</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect 持续半小时拒绝写入。请稍后重新运行导入；已写入的内容会保留。</string>
     <string name="settings_csv_import_error">导入失败：%1$s</string>
-    <string name="settings_csv_import_diagnostics_title">已拒绝的行</string>
+    <string name="settings_csv_import_diagnostics_title">按原因列出的拒绝</string>
     <string name="settings_csv_import_diagnostic_line">%1$s：%2$d</string>
     <string name="settings_csv_import_reason_missing_timestamp">无日期和时间</string>
     <string name="settings_csv_import_reason_unparsable_timestamp">日期无法识别</string>
@@ -2080,6 +2128,7 @@
     <string name="settings_csv_import_reason_out_of_range">值超出合理范围</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">无体重以计算百分比</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect 拒绝了记录</string>
+    <string name="settings_csv_import_reason_excluded_in_source">已在来源应用中排除</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">结束日期无法识别</string>
     <string name="settings_csv_import_reason_end_not_after_start">结束不晚于开始</string>
     <string name="settings_csv_import_save_report">保存报告</string>
@@ -3284,6 +3333,20 @@
     <string name="cycle_sensation_damp">微湿</string>
     <string name="cycle_sensation_wet">湿润</string>
     <string name="cycle_sensation_slippery">滑润</string>
+    <string name="cycle_entry_desire">性欲</string>
+    <string name="cycle_entry_desire_scale">1：很低，5：很高</string>
+    <string name="cycle_entry_desire_value">性欲：%1$d / 5</string>
+    <string name="cycle_entry_cervix">宫颈</string>
+    <string name="cycle_entry_cervix_opening">开口</string>
+    <string name="cycle_entry_cervix_firmness">硬度</string>
+    <string name="cycle_entry_cervix_position">位置</string>
+    <string name="cycle_cervix_closed">闭合</string>
+    <string name="cycle_cervix_medium">中等</string>
+    <string name="cycle_cervix_open">张开</string>
+    <string name="cycle_cervix_firm">硬</string>
+    <string name="cycle_cervix_soft">软</string>
+    <string name="cycle_cervix_low">低</string>
+    <string name="cycle_cervix_high">高</string>
     <string name="cycle_entry_partial_permission">没有 Health Connect 写入权限的观察项，在更改时会被跳过。</string>
     <string name="cycle_entry_save">保存当天</string>
     <string name="cycle_entry_discard_title">不保存就离开？</string>
@@ -3683,9 +3746,14 @@
     <string name="settings_watch_wearos_syncing">正在同步手表…</string>
     <string name="settings_watch_wearos_synced_none">手表上没有新数据</string>
     <string name="settings_watch_wearos_needs_weight">未估算步行卡路里：请在身体档案中添加体重，或在 Health Connect 中记录体重。</string>
+    <string name="settings_watch_wearos_needs_step_writes">部分步数数据未写入：请允许 OpenVitals 向 Health Connect 写入步数、步频和活动卡路里，然后重新同步。</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">已同步 %1$d 个心率样本</item>
         <item quantity="other">已同步 %1$d 个心率样本</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">%1$d 分钟的步数</item>
+        <item quantity="other">%1$d 分钟的步数</item>
     </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">已估算 %1$d 晚的睡眠</item>

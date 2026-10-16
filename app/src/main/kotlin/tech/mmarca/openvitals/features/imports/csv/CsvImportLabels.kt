@@ -54,6 +54,10 @@ internal fun csvUnitLabel(unit: CsvUnit): String = stringResource(
         CsvUnit.MILLIGRAMS_PER_DECILITER -> R.string.settings_csv_import_unit_milligrams_per_deciliter
         CsvUnit.MILLILITERS_PER_KG_PER_MINUTE -> R.string.settings_csv_import_unit_milliliters_per_kg_per_minute
         CsvUnit.COUNT -> R.string.settings_csv_import_unit_count
+        CsvUnit.KILOCALORIES -> R.string.settings_csv_import_unit_kilocalories
+        CsvUnit.KILOJOULES -> R.string.settings_csv_import_unit_kilojoules
+        CsvUnit.MILLIGRAMS -> R.string.settings_csv_import_unit_milligrams
+        CsvUnit.MICROGRAMS -> R.string.settings_csv_import_unit_micrograms
     },
 )
 
@@ -112,6 +116,7 @@ internal fun csvIssueLabel(issue: CsvMappingIssue): String = stringResource(
         CsvMappingIssue.TIMESTAMP_FORMAT_MATCHES_NO_SAMPLE_ROW -> R.string.settings_csv_import_issue_timestamp_unparsed
         CsvMappingIssue.AMBIGUOUS_DAY_MONTH_ORDER -> R.string.settings_csv_import_date_format_ambiguous
         CsvMappingIssue.MULTIPLE_END_TIMESTAMP_COLUMNS -> R.string.settings_csv_import_issue_multiple_end_timestamps
+        CsvMappingIssue.MULTIPLE_FOOD_NAME_COLUMNS -> R.string.settings_csv_import_issue_multiple_food_names
     },
 )
 
@@ -127,5 +132,6 @@ internal fun csvDiagnosticReasonLabel(reason: CsvImportDiagnosticReason): String
         CsvImportDiagnosticReason.UNPARSABLE_END_TIMESTAMP -> R.string.settings_csv_import_reason_unparsable_end_timestamp
         CsvImportDiagnosticReason.END_NOT_AFTER_START -> R.string.settings_csv_import_reason_end_not_after_start
         CsvImportDiagnosticReason.WRITE_FAILED -> R.string.settings_csv_import_reason_write_failed
+        CsvImportDiagnosticReason.EXCLUDED_IN_SOURCE -> R.string.settings_csv_import_reason_excluded_in_source
     },
 )

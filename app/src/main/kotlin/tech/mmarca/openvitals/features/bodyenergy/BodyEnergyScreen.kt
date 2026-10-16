@@ -32,11 +32,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.LocalDate
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.presentation.resolve
+import tech.mmarca.openvitals.domain.insights.BanisterTrimpUrl
 import tech.mmarca.openvitals.domain.insights.BodyEnergyCalibrationMode
 import tech.mmarca.openvitals.domain.insights.BodyEnergyConfidence
 import tech.mmarca.openvitals.domain.insights.BodyEnergyPrimaryInfluence
 import tech.mmarca.openvitals.domain.insights.BodyEnergyReasonCode
 import tech.mmarca.openvitals.domain.insights.BodyEnergyTimeline
+import tech.mmarca.openvitals.domain.insights.GulatiMaxHeartRateUrl
+import tech.mmarca.openvitals.domain.insights.TanakaMaxHeartRateUrl
+import tech.mmarca.openvitals.domain.insights.TrainingLoadReviewUrl
 import tech.mmarca.openvitals.features.readiness.DailyReadinessCard
 import tech.mmarca.openvitals.features.readiness.DailyReadinessViewModel
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
@@ -518,12 +522,17 @@ private fun BodyEnergySourcesCard(
                 title = stringResource(R.string.cardio_load_reference_training_load),
                 url = TrainingLoadReviewUrl,
             )
+            ReferenceLinkButton(
+                title = stringResource(R.string.cardio_load_reference_tanaka),
+                url = TanakaMaxHeartRateUrl,
+            )
+            ReferenceLinkButton(
+                title = stringResource(R.string.cardio_load_reference_gulati),
+                url = GulatiMaxHeartRateUrl,
+            )
         }
     }
 }
-
-private const val BanisterTrimpUrl = "https://pmc.ncbi.nlm.nih.gov/articles/PMC6561225/"
-private const val TrainingLoadReviewUrl = "https://pmc.ncbi.nlm.nih.gov/articles/PMC4213373/"
 
 @Composable
 private fun BodyEnergyStat(

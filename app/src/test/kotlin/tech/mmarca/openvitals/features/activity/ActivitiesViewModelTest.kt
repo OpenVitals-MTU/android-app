@@ -9,10 +9,15 @@ import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.presentation.ScreenError
+import tech.mmarca.openvitals.domain.insights.CardioLoadEstimate
 import tech.mmarca.openvitals.domain.insights.MetricDailyGoalKey
 import tech.mmarca.openvitals.domain.insights.dailyGoalProgress
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.domain.preferences.BiologicalSex
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
+import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.PlannedExerciseData
 import tech.mmarca.openvitals.domain.query.ActivitiesPeriodData
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
@@ -43,19 +48,24 @@ class ActivitiesViewModelTest {
         repository: ActivityRepository,
         preferences: FakePreferences = FakePreferences(),
         savedStateHandle: SavedStateHandle = SavedStateHandle(),
+        heartRepository: HeartRepository = heartRepo(),
     ) = ActivitiesViewModel(
         repository = repository,
-        heartRepository = heartRepo(),
+        heartRepository = heartRepository,
         periodPreferences = preferences,
         dailyGoalPreferences = preferences,
+        bodyProfilePreferences = preferences,
         dispatchers = mainDispatcherRule.dispatcherProvider,
         savedStateHandle = savedStateHandle,
     )
 
-    private fun heartRepo(): HeartRepository = mockk<HeartRepository>().also { repo ->
-        coEvery { repo.loadDailyRestingHR(any(), any()) } returns emptyList()
+    private fun heartRepo(
+        heartRateSamples: List<HeartRateSample> = emptyList(),
+        restingHeartRate: List<DailyRestingHR> = emptyList(),
+    ): HeartRepository = mockk<HeartRepository>().also { repo ->
+        coEvery { repo.loadDailyRestingHR(any(), any()) } returns restingHeartRate
         coEvery { repo.loadDailyHRV(any(), any()) } returns emptyList()
-        coEvery { repo.loadHeartRateSamples(any<LocalDate>(), any<LocalDate>()) } returns emptyList()
+        coEvery { repo.loadHeartRateSamples(any<LocalDate>(), any<LocalDate>()) } returns heartRateSamples
     }
 
     private fun emptyRepo() = mockk<ActivityRepository>().also { repo ->
@@ -436,6 +446,40 @@ class ActivitiesViewModelTest {
         coVerify(exactly = 1) { repo.loadWorkoutsWithMetrics(any(), any()) }
         // ...while the previous and baseline windows take the cheap read.
         coVerify(exactly = 2) { repo.loadWorkouts(any(), any()) }
+    }
+
+    @Test fun `cardio load reads sex and a set maximum heart rate from the body profile`() = runTest {
+        val today = LocalDate.now()
+        val start = Instant.parse("${today}T08:00:00Z")
+        val heartRateSamples = (0..30).map { minute ->
+            HeartRateSample(
+                time = start.plusSeconds(minute * 60L),
+                beatsPerMinute = if (minute == 15) 190L else 145L,
+                source = "watch",
+            )
+        }
+        fun cardioLoadFor(profile: BodyProfile): CardioLoadEstimate {
+            val repo = emptyRepo()
+            coEvery { repo.loadWorkouts(any(), any()) } returns
+                listOf(workout(id = "walk", source = "watch", isOpenVitalsEntry = false))
+            val vm = activitiesViewModel(
+                repo,
+                FakePreferences(initialProfile = profile),
+                heartRepository = heartRepo(
+                    heartRateSamples = heartRateSamples,
+                    restingHeartRate = listOf(DailyRestingHR(today, 60L)),
+                ),
+            )
+            advanceUntilIdle()
+            return vm.uiState.value.overviewDays.single { it.date == today }.cardioLoadScore
+        }
+
+        val unset = cardioLoadFor(BodyProfile())
+
+        // Banister's weighting for women, 0.86 e^(1.67 x), outweighs the men's 0.64 e^(1.92 x) at this effort.
+        assertTrue(cardioLoadFor(BodyProfile(sex = BiologicalSex.FEMALE)).score > unset.score)
+        assertEquals(190L, unset.maxHeartRateBpm)
+        assertEquals(200L, cardioLoadFor(BodyProfile(maxHeartRateBpm = 200)).maxHeartRateBpm)
     }
 
     private fun workout(

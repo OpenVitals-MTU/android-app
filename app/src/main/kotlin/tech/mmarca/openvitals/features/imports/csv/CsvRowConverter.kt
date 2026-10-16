@@ -32,50 +32,60 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.util.Locale
 import kotlin.math.roundToLong
+import tech.mmarca.openvitals.domain.model.CycleJournalEntry
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
 /** One CSV row to the Health Connect records it represents. Pure: no I/O, no clock. */
 
 /** The `clientRecordId` namespace for CSV imports. Distinct from the Apple importer's. */
 const val CSV_CLIENT_RECORD_ID_NAMESPACE = "csv"
 
-/** A record built from one CSV cell, with everything the import loop needs. */
+/** A record built from one CSV cell, or from a row's nutrient cells, with everything the import loop needs. */
 data class CsvConvertedRecord(
-    val metric: CsvImportMetric,
+    /** Null for a nutrition record, which no single metric makes. */
+    val metric: CsvImportMetric?,
     /** Mirrors [CsvMetricSpec.targetType]; a segment of [clientRecordId]. */
     val targetType: String,
     val recordType: kotlin.reflect.KClass<out Record>,
     val clientRecordId: String,
     /** The measurement's instant, used to bound the duplicate-lookup window. */
     val instant: Instant,
-    /** The value in the metric's canonical unit, for the confirm-step preview. */
-    val canonicalValue: Double,
+    /** The value in the metric's canonical unit, for the confirm-step preview. Null for nutrition. */
+    val canonicalValue: Double?,
     val record: Record,
+    /** A nutrition record's amounts, grams or kcal, for the confirm-step preview. Empty for a metric. */
+    val nutrients: Map<NutritionNutrient, Double> = emptyMap(),
 )
 
 /** What one row produced. */
 data class CsvRowConversion(
     val records: List<CsvConvertedRecord> = emptyList(),
     val diagnostics: List<CsvImportDiagnostic> = emptyList(),
+    /** The day's cycle journal entry, from a drip export; Room, not Health Connect. */
+    val journalEntry: CycleJournalEntry? = null,
 )
 
 /**
  * Converts [row] under [mapping]. A bad timestamp costs the row, a bad value
- * only that metric, a bad end timestamp only the interval metrics.
+ * only that metric or nutrient, a bad end timestamp only the interval records.
+ * [nutritionOccurrences] numbers nutrition records across one run.
  */
 fun convertCsvRow(
     row: CsvRow,
     mapping: CsvImportMapping,
+    nutritionOccurrences: CsvNutritionOccurrences = CsvNutritionOccurrences(),
 ): CsvRowConversion {
     val timestampColumn = mapping.timestampColumn ?: return CsvRowConversion()
 
     val metricColumns = mapping.metricColumns
-    if (metricColumns.isEmpty()) return CsvRowConversion()
+    if (!mapping.importsAnything) return CsvRowConversion()
 
     // "Too short" is relative to what the mapping reads: trailing empty columns
-    // are normal. The end column is not counted; a missing end falls back to
-    // the one-minute span.
+    // are normal. The end and food-name columns are not counted; a missing end
+    // falls back to the one-minute span, a missing name to none.
     val endTimestampColumn = mapping.endTimestampColumn
-    val highestIndex = (metricColumns.map { it.columnIndex } + timestampColumn.columnIndex).max()
+    val readColumns = metricColumns + mapping.nutrientColumns + timestampColumn
+    val highestIndex = readColumns.maxOf { it.columnIndex }
     if (row.fields.size <= highestIndex) {
         return CsvRowConversion(
             diagnostics = listOf(
@@ -127,26 +137,11 @@ fun convertCsvRow(
         val interpretation = column.effectiveInterpretation
         if (spec == null || interpretation == null) continue
 
-        // No end named: a one-minute span. An end that is stated but garbage,
-        // or not after the start, still rejects.
-        var intervalEnd: CsvInstant? = null
-        if (spec.isInterval) {
-            val reason = when {
-                endText == null -> null
-                endInstant == null -> CsvImportDiagnosticReason.UNPARSABLE_END_TIMESTAMP
-                !endInstant.utc.isAfter(instant.utc) -> CsvImportDiagnosticReason.END_NOT_AFTER_START
-                else -> null
-            }
-            if (reason != null) {
-                diagnostics += CsvImportDiagnostic(
-                    rowNumber = row.rowNumber,
-                    reason = reason,
-                    columnIndex = endTimestampColumn?.columnIndex ?: column.columnIndex,
-                    detail = endText,
-                )
-                continue
-            }
-            intervalEnd = endInstant ?: instant.plusDefaultIntervalSpan()
+        val intervalEnd = if (spec.isInterval) {
+            val endColumnIndex = endTimestampColumn?.columnIndex ?: column.columnIndex
+            csvIntervalEnd(row, instant, endText, endInstant, endColumnIndex, diagnostics) ?: continue
+        } else {
+            null
         }
 
         // A blank cell is a gap, not an error.
@@ -197,7 +192,38 @@ fun convertCsvRow(
         )
     }
 
+    convertCsvNutritionRow(row, mapping, instant, endText, endInstant, nutritionOccurrences, diagnostics)
+        ?.let { records += it }
+
     return CsvRowConversion(records = records, diagnostics = diagnostics)
+}
+
+/**
+ * Where an interval record starting at [start] ends. No end named: a one-minute
+ * span. An end that is stated but garbage, or not after the start, rejects:
+ * null, with the reason added to [diagnostics] against [columnIndex].
+ */
+internal fun csvIntervalEnd(
+    row: CsvRow,
+    start: CsvInstant,
+    endText: String?,
+    endInstant: CsvInstant?,
+    columnIndex: Int,
+    diagnostics: MutableList<CsvImportDiagnostic>,
+): CsvInstant? {
+    val reason = when {
+        endText == null -> return start.plusDefaultIntervalSpan()
+        endInstant == null -> CsvImportDiagnosticReason.UNPARSABLE_END_TIMESTAMP
+        !endInstant.utc.isAfter(start.utc) -> CsvImportDiagnosticReason.END_NOT_AFTER_START
+        else -> return endInstant
+    }
+    diagnostics += CsvImportDiagnostic(
+        rowNumber = row.rowNumber,
+        reason = reason,
+        columnIndex = columnIndex,
+        detail = endText,
+    )
+    return null
 }
 
 /** The row's body weight in kg, or null. */
@@ -335,7 +361,7 @@ private val DefaultIntervalSpan = Duration.ofMinutes(1)
 private fun CsvInstant.plusDefaultIntervalSpan(): CsvInstant =
     CsvInstant(utc = utc.plus(DefaultIntervalSpan), offset = offset)
 
-private fun csvMetadata(clientRecordId: String): Metadata =
+internal fun csvMetadata(clientRecordId: String): Metadata =
     Metadata.manualEntry(
         device = Device(type = Device.TYPE_PHONE),
         clientRecordId = clientRecordId,
@@ -345,12 +371,19 @@ private fun csvMetadata(clientRecordId: String): Metadata =
  * The identity of a CSV-imported record: type and instant, not value, so a
  * corrected re-import replaces the old record. File name, header, unit and
  * mapping are excluded too. For an interval metric the instant is the start.
+ * [occurrence] tells apart nutrition records that start at the same instant,
+ * the second food of a meal; the first keeps the plain id.
  *
  * Byte-compatible with the Flutter build: hash input `"<targetType>|<epochMillis>"`,
  * SHA-256 truncated to 16 bytes, shape `csv_<slug>_<hex>`. Do not change.
+ * Flutter had no nutrition, so a later occurrence appends `"|<occurrence>"`.
  */
-fun buildCsvClientRecordId(targetType: String, utc: Instant): String {
-    val parts = "$targetType|${utc.toEpochMilli()}"
+fun buildCsvClientRecordId(targetType: String, utc: Instant, occurrence: Int = 0): String {
+    val parts = if (occurrence == 0) {
+        "$targetType|${utc.toEpochMilli()}"
+    } else {
+        "$targetType|${utc.toEpochMilli()}|$occurrence"
+    }
     val bytes = MessageDigest.getInstance("SHA-256").digest(parts.toByteArray(Charsets.UTF_8))
     val digest = buildString(32) {
         for (index in 0 until 16) {
@@ -382,20 +415,27 @@ fun previewCanonicalValues(
     mapping: CsvImportMapping,
     metric: CsvImportMetric,
 ): List<Double> {
-    val targetType = CsvMetricCatalog[metric]?.targetType ?: return emptyList()
+    if (metric !in CsvMetricCatalog) return emptyList()
 
-    val values = mutableListOf<Double>()
-    rows.forEachIndexed { index, fields ->
+    return previewRecords(rows, mapping)
+        .filter { it.metric == metric }
+        .mapNotNull { it.canonicalValue }
+}
+
+/** Every record the sampled [rows] convert to, through the import path. */
+internal fun previewRecords(
+    rows: List<List<String>>,
+    mapping: CsvImportMapping,
+): List<CsvConvertedRecord> {
+    val occurrences = CsvNutritionOccurrences()
+    return rows.flatMapIndexed { index, fields ->
         // +2: 1-based, and past the header row.
-        val conversion = convertCsvRow(
+        convertCsvRow(
             row = CsvRow(rowNumber = index + 2, fields = fields),
             mapping = mapping,
-        )
-        conversion.records
-            .filter { it.targetType == targetType }
-            .forEach { values += it.canonicalValue }
+            nutritionOccurrences = occurrences,
+        ).records
     }
-    return values
 }
 
 /**

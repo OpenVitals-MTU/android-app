@@ -30,6 +30,9 @@ enum class CsvImportDiagnosticReason {
 
     /** Health Connect refused the record. */
     WRITE_FAILED,
+
+    /** The source app had marked the observation excluded, so it is left out on purpose. */
+    EXCLUDED_IN_SOURCE,
 }
 
 /** One rejected row or metric, named well enough for the user to go find it. */
@@ -48,14 +51,49 @@ data class CsvImportProgress(
     /** Records handed to Health Connect. Includes upserts over existing records. */
     val written: Int = 0,
 
-    /** Records whose id was already present. Still written: "imported before", not "skipped". */
+    /**
+     * Records whose id was already present, so the write replaced an earlier
+     * import. Still written: "imported before", not "skipped". A lower bound
+     * when [presenceUnchecked] is above zero.
+     */
     val alreadyPresent: Int = 0,
+
+    /**
+     * Records written without the presence check, because Health Connect could
+     * not be read for them: no read permission for the type, or a quota. The
+     * write does not depend on the check.
+     */
+    val presenceUnchecked: Int = 0,
+
+    /** Rows that produced at least one record or a journal entry. */
+    val rowsImported: Int = 0,
+
+    /** Rows that produced nothing but a diagnostic. [rejected] counts single values too. */
+    val rowsRejected: Int = 0,
 
     /** Metrics or rows that produced no record. */
     val rejected: Int = 0,
 
+    /** Rows that carried a cycle journal entry, from a drip export, whether or not the day changed. */
+    val journalDays: Int = 0,
+
+    /** Of [journalDays], the days written or updated on this phone; the rest already held the same. */
+    val journalDaysUpdated: Int = 0,
+
+    /** Rows that produced no record, no journal entry and no diagnostic: nothing OpenVitals can hold. */
+    val emptyRows: Int = 0,
+
     val bytesRead: Long = 0,
     val totalBytes: Long = 0,
+
+    /** Times the run paused because Health Connect refused a write for quota. */
+    val quotaPauses: Int = 0,
+
+    /** Time spent in those pauses. */
+    val quotaWaitMillis: Long = 0,
+
+    /** Seconds until the next write attempt while a pause runs; null otherwise. */
+    val resumingInSeconds: Int? = null,
 ) {
     /** 0..1, or null when the file size is unknown. */
     val fraction: Float?
@@ -73,11 +111,21 @@ enum class CsvImportOutcome {
     /** The user cancelled. Everything written before that stays written. */
     CANCELLED,
 
-    /** Health Connect rate-limited us. Re-running resumes from the top and re-dedupes. */
+    /**
+     * Health Connect kept refusing writes for quota through a whole pause budget.
+     * Re-running resumes from the top and re-dedupes.
+     */
     RATE_LIMITED,
 
     /** Something else failed; [CsvImportResult.error] says what. */
     FAILED,
+}
+
+/** How a run reads its rows: through the user's column mapping, or as a known export. */
+sealed interface CsvImportPlan {
+    data class Columns(val mapping: CsvImportMapping) : CsvImportPlan
+
+    data class Drip(val plan: DripImportPlan) : CsvImportPlan
 }
 
 /** The end of a run. */
@@ -93,7 +141,7 @@ data class CsvImportResult(
 
     val error: String? = null,
 ) {
-    val wroteNothing: Boolean get() = progress.written == 0
+    val wroteNothing: Boolean get() = progress.written == 0 && progress.journalDaysUpdated == 0
 }
 
 /** Matches the Apple importer's cap, so a re-import cannot produce an unbounded report. */

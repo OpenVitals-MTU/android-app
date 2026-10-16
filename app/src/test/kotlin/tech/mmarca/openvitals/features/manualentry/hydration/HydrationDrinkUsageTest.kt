@@ -211,6 +211,24 @@ class HydrationDrinkUsageTest {
     }
 
     @Test
+    fun `frequentHydrationDrinkOptions ignores imported and synced records, even ones named like a drink`() {
+        val drinks = listOf(drink("coffee", name = "Coffee"))
+
+        // OpenVitals wrote them, but they were logged in Apple Health, a CSV file and another phone.
+        val result = frequentHydrationDrinkOptions(
+            drinks = drinks,
+            hydrationEntries = emptyList(),
+            nutritionEntries = listOf(
+                nutrition(t0, clientRecordId = "apple_health_nutrition_0123456789abcdef0123456789abcdef", name = "Coffee"),
+                nutrition(t0, clientRecordId = "csv_nutritionrecord_0123456789abcdef0123456789abcdef", name = "Coffee"),
+                nutrition(t0, clientRecordId = "sync_0123456789abcdef0123456789abcdef", name = "Coffee"),
+            ),
+        )
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
     fun `frequentHydrationDrinkOptions ignores entries from other apps`() {
         val result = frequentHydrationDrinkOptions(
             drinks = listOf(drink("a", name = "Cola")),

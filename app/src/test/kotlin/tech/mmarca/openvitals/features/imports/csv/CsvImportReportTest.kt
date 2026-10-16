@@ -3,6 +3,7 @@ package tech.mmarca.openvitals.features.imports.csv
 import com.google.common.truth.Truth.assertThat
 import java.time.ZoneOffset
 import org.junit.Test
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
 private val HeaderRow = listOf("Date", "Weight (kg)", "Fat mass (kg)", "Comments")
 
@@ -85,10 +86,9 @@ class CsvImportReportTest {
     fun `every tally from the run appears`() {
         val report = report()
 
-        assertThat(report).contains("Rows read:       120")
-        assertThat(report).contains("Records written: 118")
-        assertThat(report).contains("Already present: 4")
-        assertThat(report).contains("Rejected:        2")
+        assertThat(report).contains("Rows read:           120")
+        assertThat(report).contains("Records written:     118, of which 4 replaced an earlier import")
+        assertThat(report).contains("Rejections:          2")
     }
 
     @Test
@@ -137,6 +137,31 @@ class CsvImportReportTest {
         assertThat(report).contains("[0] Date -> date and time")
         assertThat(report).contains("[1] Weight (kg) -> weight (kilograms)")
         assertThat(report).contains("[3] Comments -> not imported")
+    }
+
+    @Test
+    fun `a nutrient column names the nutrient and the unit it was read in`() {
+        val mapping = CsvImportMapping(
+            columns = listOf(
+                CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
+                CsvColumnMapping(columnIndex = 1, role = CsvColumnRole.FOOD_NAME),
+                CsvColumnMapping(
+                    columnIndex = 2,
+                    role = CsvColumnRole.NUTRIENT,
+                    nutrient = NutritionNutrient.VITAMIN_B12,
+                ),
+            ),
+        )
+
+        val report = buildCsvImportReport(
+            fileName = "meals.csv",
+            mapping = mapping,
+            result = runResult(),
+            headerRow = listOf("Date", "Food", "B12"),
+        )
+
+        assertThat(report).contains("[1] Food -> food name")
+        assertThat(report).contains("[2] B12 -> nutrient vitaminB12 (micrograms)")
     }
 
     @Test
@@ -224,5 +249,44 @@ class CsvImportReportTest {
     fun `a rate-limited run says so rather than reading as a plain stop`() {
         assertThat(report(result = runResult(outcome = CsvImportOutcome.RATE_LIMITED)))
             .contains("Health Connect rate limit")
+    }
+
+    @Test
+    fun `the totals partition the rows, qualify the records, and account for every drip day`() {
+        val base = runResult()
+        val result = base.copy(
+            progress = base.progress.copy(
+                rowsRead = 817,
+                rowsImported = 815,
+                rowsRejected = 1,
+                emptyRows = 1,
+                written = 754,
+                alreadyPresent = 69,
+                presenceUnchecked = 240,
+                journalDays = 297,
+                journalDaysUpdated = 0,
+            ),
+        )
+
+        val report = report(result = result)
+
+        assertThat(report).contains("Rows read:           817")
+        assertThat(report).contains("  Imported:          815")
+        assertThat(report).contains("  Rejected:          1")
+        assertThat(report).contains("  Nothing to import: 1")
+        assertThat(report).contains("Records written:     754, of which 69 replaced an earlier import")
+        assertThat(report).contains("  Not checked first: 240")
+        assertThat(report).contains("Journal days:        297 (0 updated)")
+        assertThat(report()).doesNotContain("Journal days")
+        assertThat(report()).doesNotContain("Not checked first")
+    }
+
+    @Test
+    fun `quota pauses appear in the totals only when the run took some`() {
+        val paused = runResult()
+        val result = paused.copy(progress = paused.progress.copy(quotaPauses = 3, quotaWaitMillis = 105_000L))
+
+        assertThat(report(result = result)).contains("Quota pauses:        3 (waited 1 min 45 s)")
+        assertThat(report()).doesNotContain("Quota pauses")
     }
 }

@@ -6,6 +6,7 @@ import android.database.Cursor
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.Record
 import io.mockk.coEvery
 import io.mockk.every
@@ -24,11 +25,13 @@ import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
 private const val WriteWeight = "android.permission.health.WRITE_WEIGHT"
 private const val WriteBodyWaterMass = "android.permission.health.WRITE_BODY_WATER_MASS"
+private const val WriteNutrition = "android.permission.health.WRITE_NUTRITION"
 
 /** The Withings shape, three rows. */
 private const val WithingsCsv =
@@ -36,6 +39,12 @@ private const val WithingsCsv =
         "2026-07-01 08:12:00,78.4,15.2,3.1\n" +
         "2026-07-02 08:14:00,78.6,15.3,3.1\n" +
         "2026-07-03 08:11:00,78.2,15.1,3.1\n"
+
+/** A food log kept in a spreadsheet: energy in kJ, as some labels print it. */
+private const val FoodLogCsv =
+    "Date,Food,\"Energy (kJ)\",\"Sodium (mg)\"\n" +
+        "2026-10-04 08:00:00,Oatmeal,1464,120\n" +
+        "2026-10-04 12:30:00,Soup,753,800\n"
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CsvImportViewModelTest {
@@ -53,7 +62,7 @@ class CsvImportViewModelTest {
     private var granted: Set<String> = emptySet()
 
     private val allWritePermissions: Set<String> =
-        CsvMetricCatalog.values.mapTo(mutableSetOf()) { it.writePermission }
+        CsvMetricCatalog.values.mapTo(mutableSetOf()) { it.writePermission } + CsvNutritionWritePermission
 
     @Before
     fun setUp() {
@@ -77,7 +86,7 @@ class CsvImportViewModelTest {
         every { manager.dataImportWritePermissions } returns (allWritePermissions - unsupported)
         return CsvImportViewModel(
             context = context,
-            importService = CsvImportService(importRepository),
+            importService = CsvImportService(importRepository, mockk(relaxed = true)),
             healthRepository = healthRepository,
             healthConnectManager = manager,
         )
@@ -249,6 +258,30 @@ class CsvImportViewModelTest {
         assertTrue(vm.uiState.value.missingPermissions.isEmpty())
     }
 
+    @Test
+    fun `a food log maps its nutrients in the units its headers name and imports a record per row`() = runTest {
+        val vm = viewModel()
+        vm.pickFile(documentUri("food.csv", FoodLogCsv))
+        vm.awaitLoaded()
+        assertFalse(vm.uiState.value.canContinue)
+
+        vm.setColumnRole(1, role = CsvColumnRole.FOOD_NAME)
+        vm.setColumnNutrient(2, NutritionNutrient.ENERGY)
+        vm.setColumnNutrient(3, NutritionNutrient.SODIUM)
+        val energy = vm.uiState.value.mapping!!.columns.first { it.columnIndex == 2 }
+        assertEquals(CsvDirectValue(CsvUnit.KILOJOULES), energy.effectiveInterpretation)
+        assertTrue(vm.uiState.value.canContinue)
+        assertEquals(setOf(WriteNutrition), vm.uiState.value.missingPermissions)
+
+        vm.startImport()
+        vm.awaitDone()
+
+        val foods = inserted.filterIsInstance<NutritionRecord>()
+        assertEquals(listOf("Oatmeal", "Soup"), foods.map { it.name })
+        assertEquals(349.9, foods.first().energy!!.inKilocalories, 0.1)
+        assertEquals(0.8, foods.last().sodium!!.inGrams, 1e-9)
+    }
+
     /** Picks the Withings file and maps its weight column, ready to import. */
     private suspend fun CsvImportViewModel.mapWeight(uri: Uri) {
         pickFile(uri)
@@ -300,7 +333,7 @@ class CsvImportViewModelTest {
 
         assertNotNull(report)
         assertTrue(report!!.contains("File: withings.csv"))
-        assertTrue(report.contains("Records written: 3"))
+        assertTrue(report.contains("Records written:     3, of which"))
         assertTrue(report.contains("[1] Weight (kg) -> weight (kilograms)"))
     }
 

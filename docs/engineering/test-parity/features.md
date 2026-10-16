@@ -741,6 +741,9 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/imports/
 | buildCsvImportReport > a clean run has no rejection sections at all | PORTED | CsvImportReportTest.kt: `a clean run has no rejection sections at all` |  |
 | buildCsvImportReport > a failed run carries its error text | PORTED | CsvImportReportTest.kt: `a failed run carries its error text` |  |
 | buildCsvImportReport > a rate-limited run says so rather than reading as a plain stop | PORTED | CsvImportReportTest.kt: `a rate-limited run says so rather than reading as a plain stop` |  |
+| the totals partition the rows, qualify the records, and account for every drip day | PORTED | CsvImportReportTest.kt: `the totals partition the rows, qualify the records, and account for every drip day` | Kotlin-only |
+| a presence lookup that fails leaves the records written and counted as unchecked | PORTED | CsvImportServiceTest.kt: `a presence lookup that fails leaves the records written and counted as unchecked` | Kotlin-only; a missing read permission must not read as "not present" |
+| a malformed row is counted as a rejected row, not as nothing to import | PORTED | CsvImportServiceTest.kt: `a malformed row is counted as a rejected row, not as nothing to import` | Kotlin-only |
 
 ## test/features/imports/csv/csv_import_screen_test.dart
 Kotlin counterpart: none (compose screen app/src/main/kotlin/.../csv/CsvImportScreen.kt has no androidTest)
@@ -772,7 +775,11 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/imports/
 | records already in Health Connect are counted as present and still written, so a corrected value upserts | PORTED | CsvImportServiceTest.kt: `records already in Health Connect are counted as present and still written so a corrected value upserts` | |
 | a duplicated row inside one file is written once | PORTED | CsvImportServiceTest.kt: `a duplicated row inside one file is written once` | |
 | a refused batch is retried record by record and only the bad record is counted as rejected | PORTED | CsvImportServiceTest.kt: `a refused batch is retried record by record and only the bad record is counted as rejected` | |
-| a rate-limited run stops and reports how far it got | PORTED | CsvImportServiceTest.kt: `a rate-limited run stops and reports how far it got` | |
+| a rate-limited batch is written again after a pause and the run completes | PORTED | CsvImportServiceTest.kt: `a rate-limited batch is written again after a pause and the run completes` | Kotlin-only: pauses 15 s then 30 s, counted down per second, tallied into the progress |
+| a rate-limited run stops and reports how far it got | PORTED | CsvImportServiceTest.kt: `a rate-limited run stops and reports how far it got` | Gives up only once the 30-minute pause budget is spent |
+| cancelling during a quota pause ends the run as cancelled within a second | PORTED | CsvImportServiceTest.kt: `cancelling during a quota pause ends the run as cancelled within a second` | Kotlin-only |
+| a drip export writes its records to Health Connect and its journal days to Room | PORTED | CsvImportServiceTest.kt: `a drip export writes its records to Health Connect and its journal days to Room` | Kotlin-only; a second run still counts its journal days but updates none; an empty row is counted, so rows = journal days + empty rows |
+| drip export: header detection, bleeding, temperature, mucus, sex, journal, cervix and desire, disabled options, bad dates, stable ids, journal merge, sample summary | PORTED | DripImportTest.kt (12 tests) | Kotlin-only; drip had no Flutter counterpart |
 | cancelling mid-run keeps what was written and stops reading | PORTED | CsvImportServiceTest.kt: `cancelling mid-run keeps what was written and stops reading` | |
 | a malformed row is skipped with a diagnostic and the rest imports | PORTED | CsvImportServiceTest.kt: `a malformed row is skipped with a diagnostic and the rest imports` | |
 | a missing file fails the run instead of throwing | PORTED | CsvImportServiceTest.kt: `a missing file fails the run instead of throwing` | |

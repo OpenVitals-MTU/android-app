@@ -36,6 +36,10 @@ commit with the release notes, and pushes in one motion.
 - `gh` is not installed on this laptop. Check GitHub state with `curl` against
   `https://api.github.com/repos/OpenVitals-MTU/android-app/...` (anonymous,
   60 calls an hour) or in the browser.
+- The release workflow is enabled. A tag pushed while it is disabled starts
+  nothing, and enabling it afterwards does not replay the push (2.14.0). Check
+  `state` is `active` in
+  `curl -s https://api.github.com/repos/OpenVitals-MTU/android-app/actions/workflows/release.yml`.
 
 ## 1. Version code (read this before touching anything)
 
@@ -62,10 +66,10 @@ git ls-remote --refs origin 'refs/version-code/*' | sed 's#.*/##' | sort -n | ta
 ```
 
 **Race caveat:** a nightly can mint a code between your preview and the release
-run. Only the release workflow's schedule (00:00 UTC, often started some
-minutes late by GitHub) and manual runs of `.github/workflows/release.yml`
-build nightlies; a push to main runs tests only. Near midnight UTC, or while a
-manual run is going, check the runs first
+run. Only the release workflow's schedule (00:00 UTC, often started some minutes late
+by GitHub) and manual runs of `.github/workflows/release.yml` with target
+`nightly` build nightlies; a push to main runs tests only. Near midnight UTC,
+or while a manual run is going, check the runs first
 (`https://github.com/OpenVitals-MTU/android-app/actions/workflows/release.yml`). Either way,
 compute the code and name the fastlane files immediately before running the
 release script, and afterwards verify the script's printed `versionCode`
@@ -96,6 +100,12 @@ matches the filenames.
 
    Do not copy the footer from 2.12.0 or earlier: those still name the
    Codeberg release and the Woodpecker deployment.
+
+   While the repository variable `OPENVITALS_PLAY_PAUSED=true` holds the Play
+   uploads (set 2026-10 while 2.13.0 was in Play review), the second line is
+   false. Ask whether it is still set, and if it is, say instead that the
+   Google Play update follows later. The fastlane changelogs are still written,
+   for when that upload happens.
 3. **`README.md`** - add highlight bullets for headline features; update any
    claims the release changes (e.g. the language list when a locale lands).
 4. **`fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`** - one
@@ -131,6 +141,9 @@ The script computes the version code, patches `baseVersionCode` and
 `build.gradle.kts`, commits `chore: release X.Y.Z` (staging CHANGELOG, README,
 docs, fastlane and the release machinery), tags `vX.Y.Z` with
 `docs/releases/X.Y.Z.md` as the annotation, and pushes `main` plus the tag.
+The annotation drops the `# OpenVitals X.Y.Z` title line and keeps the rest
+as written, `###` headings included; it becomes the GitHub release notes and
+the Zulip post. Before 2.15.0 the tag lost every `#` line, headings too.
 
 Verify the printed `Released vX.Y.Z (versionCode N)` matches the fastlane
 changelog filenames; if a nightly stole the code, rename all 14 files and
@@ -140,14 +153,19 @@ amend before anyone pulls:
 for f in fastlane/metadata/android/*/changelogs/OLD.txt; do git mv "$f" "${f%OLD.txt}NEW.txt"; done
 ```
 
-CI (GitHub Actions) takes it from the tag: signed APK, signed debug APK, and
-AAB on the GitHub release. Play production upload comes from a manual run of
-the release workflow with target `production`, started from the tag and
-approved through the `production` environment; it also posts the full notes to
-the Zulip `releases` channel (`scripts/announce-zulip.sh`).
+CI (GitHub Actions) takes it from the tag: the tag's release run builds the
+signed APK, signed debug APK and AAB once, publishes them to the GitHub
+prerelease, uploads the AAB to Play open testing, and waits for the
+`production` environment's approval. Approving that run (Actions > the run >
+Review deployments) promotes the version from open testing to production (an
+upload instead if open testing never had it, as while Play was paused), marks
+the release stable and posts the full notes to the Zulip `releases` channel
+(`scripts/announce-zulip.sh`). A tag whose run is gone is shipped by a manual
+run of the release workflow with target `production`, started from the tag: it takes
+the AAB from the prerelease, no build.
 
-The Mastodon toot is disabled since 2.9.1: the `announce-mastodon` step is
-commented out in `.github/workflows/release.yml`. If it comes back, the toot's body
+The Mastodon toot is disabled since 2.9.1: the release workflow has no `announce-mastodon`
+job. If it comes back, the toot's body
 is the narrative paragraph of `docs/releases/X.Y.Z.md` - the paragraph right
 after `Released YYYY-MM-DD.` - cut to fit 500 characters with the GitHub release and
 Play links. Write that paragraph to read well on its own and front-load it
@@ -181,6 +199,14 @@ either way: Zulip readers see it first too.
 - 2.11.2 and 2.12.0 shipped with a stale distribution footer (Codeberg,
   Woodpecker) after the GitHub move; the footer is part of the tag message,
   so it cannot be fixed afterwards. Read the footer, do not paste it.
+- 2.14.0 was tagged while the release workflow was disabled (it had been
+  turned off to keep nightlies out of Play during the 2.13.0 review), so no
+  build, GitHub release or APK followed the tag. Hold Play with the
+  `OPENVITALS_PLAY_PAUSED` variable instead, and check the workflow state in
+  pre-flight.
+- Read facts in the notes against the code, not only the commit message:
+  2.14.0's notes said the Garmin link redials three times, from a doc, while
+  `CONNECT_ATTEMPTS = 3` means two redials. The tag kept the wrong count.
 - A fix that was hidden rather than announced can need announcing later:
   Medical records were cut from the Play build in 2.11.2 and 2.12.0 without a
   note, so 2.13.0 had to say they were back.

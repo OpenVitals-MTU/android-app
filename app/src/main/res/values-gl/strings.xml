@@ -496,6 +496,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">Sistólica (mmHg)</string>
     <string name="vitals_entry_diastolic_label">Diastólica (mmHg)</string>
+    <string name="vitals_entry_pulse_label">Pulso (lpm, opcional)</string>
+    <string name="vitals_entry_pulse_permission_needed">Para gardar o pulso cunha medición, OpenVitals precisa permiso de escritura da frecuencia cardíaca en Health Connect. O pulso gárdase como un rexistro de frecuencia cardíaca á hora da medición.</string>
+    <string name="vitals_entry_invalid_pulse">Introduce un pulso entre 20 e 300 lpm, ou deixa o campo vacío.</string>
     <string name="vitals_entry_add_selected">Engadir %1$s</string>
     <string name="vitals_entry_invalid_value">Introduce un valor válido para esta constante.</string>
     <string name="vitals_entry_write_failed">Non se puido gardar a constante: %1$s</string>
@@ -982,8 +985,10 @@
     <string name="cardio_load_day_numbers_title">Valores de hoxe</string>
     <string name="cardio_load_references_title">Ligazóns de apoio</string>
     <string name="cardio_load_calculation_summary">OpenVitals usa o TRIMP baseado na FC cando hai datos de frecuencia cardíaca, e recorre ao movemento só cando a FC non é utilizable.</string>
-    <string name="cardio_load_formula">TRIMP = minutos x HRR x 0.64 x e^(1.92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = minutos x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR é a reserva de frecuencia cardíaca: (frecuencia cardíaca - FC en repouso) / (FC máxima - FC en repouso). OpenVitals súmaa nos intervalos de frecuencia cardíaca dispoñibles do día.</string>
+    <string name="cardio_load_formula_weighting">a = 0.64 e b = 1.92 para homes, a = 0.86 e b = 1.67 para mulleres (Banister). Se o teu perfil corporal non indica o sexo, úsanse os valores para homes.</string>
+    <string name="cardio_load_max_hr_body">A túa frecuencia cardíaca máxima vén do teu perfil corporal. Se non hai ningunha, OpenVitals usa a frecuencia cardíaca máis alta medida, se é dabondo alta. Se non, estima o máximo a partir da túa idade: 206 - 0.88 x idade para mulleres (Gulati), 208 - 0.7 x idade para o resto (Tanaka).</string>
     <string name="cardio_load_mapping_body">Cando hai actividades gravadas, as mostras de frecuencia cardíaca asígnanse por marca de tempo á ventá de inicio e fin de cada actividade. Sen ventás de actividade, só se contan os intervalos de frecuencia cardíaca elevada. Se a FC non é utilizable, móstranse o movemento e as calorías activas como alternativa de baixa confianza.</string>
     <string name="cardio_load_method">Método</string>
     <string name="cardio_load_trimp_score">Puntuación TRIMP</string>
@@ -1007,6 +1012,8 @@
     <string name="cardio_load_calibration_estimated_max">FC máx estimada</string>
     <string name="cardio_load_reference_banister">Ecuación TRIMP de Banister</string>
     <string name="cardio_load_reference_training_load">Revisión sobre monitorización da carga de adestramento</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: frecuencia cardíaca máxima segundo a idade</string>
+    <string name="cardio_load_reference_gulati">Gulati: frecuencia cardíaca máxima en mulleres</string>
     <string name="cardio_load_reference_health_connect">Asignación de FC de adestramentos en Health Connect</string>
     <string name="section_sleep_sessions">Sesións de sono</string>
     <string name="section_weight">Peso</string>
@@ -1635,6 +1642,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="report_metrics_section_title">Métricas</string>
     <string name="report_metrics_select_all">Seleccionar todo</string>
     <string name="report_metrics_clear">Limpar</string>
+    <string name="report_metrics_nutrient_breakdown_hint">«Seleccionar todo» non inclúe estes. Marca un título para engadir todo o grupo.</string>
     <string name="report_granularity_title">Detalle</string>
     <string name="report_granularity_daily">Diario</string>
     <string name="report_granularity_weekly">Semanal</string>
@@ -1893,6 +1901,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="medical_import_error_too_large">Este ficheiro ocupa máis de 8 MB.</string>
     <string name="medical_import_error_unreadable">Non se puido ler este ficheiro.</string>
     <string name="medical_import_error_no_records">Este ficheiro non contén nada que Health Connect garde.</string>
+    <string name="medical_import_error_reports_only">Este ficheiro só contén informes diagnósticos. Health Connect garda os resultados dun informe, non o informe, e este ficheiro non os contén. Son rexistros Observation, normalmente en ficheiros propios: importa eses no seu lugar.</string>
     <string name="medical_import_new_source">Orixe nova</string>
     <string name="medical_import_existing_source">Engádese a unha orixe que xa importaches</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>
@@ -2317,11 +2326,11 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_fit_import_folder_grant">Conceder permisos de importación</string>
     <string name="settings_fit_import_error">Aviso da importación FIT: %1$s</string>
     <string name="settings_csv_import_title">Importador CSV</string>
-    <string name="settings_csv_import_body">Importa medidas corporais desde un ficheiro CSV, por exemplo unha exportación de peso e composición corporal dunha báscula intelixente. Ti escolles que significa cada columna.</string>
+    <string name="settings_csv_import_body">Importa medidas ou nutrición desde un ficheiro CSV, por exemplo unha exportación de peso dunha báscula intelixente ou unha folla de cálculo cunha fila por comida. Ti escolles que significa cada columna.</string>
     <string name="settings_csv_import_action">Importar un ficheiro CSV</string>
     <string name="settings_csv_import_screen_title">Importador CSV</string>
     <string name="settings_csv_import_pick_title">Escolle un ficheiro CSV</string>
-    <string name="settings_csv_import_pick_body">Escolle unha exportación CSV e asocia as súas columnas ás medidas corporais. Non se escribe nada ata que confirmes.</string>
+    <string name="settings_csv_import_pick_body">Escolle un ficheiro CSV e asocia as súas columnas a medidas ou nutrientes. Non se escribe nada ata que confirmes.</string>
     <string name="settings_csv_import_pick_action">Escoller ficheiro CSV</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d columnas</string>
     <string name="settings_csv_import_continue">Continuar</string>
@@ -2342,6 +2351,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_csv_import_role_ignore">Non se importa</string>
     <string name="settings_csv_import_role_timestamp">Data e hora</string>
     <string name="settings_csv_import_role_end_timestamp">Data e hora de fin</string>
+    <string name="settings_csv_import_role_food_name">Nome do alimento</string>
     <string name="settings_csv_import_interval_end_hint">Cada fila vai desde a data e hora ata a columna «Data e hora de fin». Sen ela, unha fila conta como un minuto.</string>
     <string name="settings_csv_import_metric_weight">Peso</string>
     <string name="settings_csv_import_metric_body_fat">Graxa corporal</string>
@@ -2383,8 +2393,13 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Miligramos por decilitro (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
     <string name="settings_csv_import_unit_count">Unha cantidade</string>
+    <string name="settings_csv_import_unit_kilocalories">Quilocalorías (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Quilojoules (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Miligramos (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Microgramos (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">Unha masa en %1$s, como proporción da columna de peso</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect garda a graxa corporal como porcentaxe, así que calcúlase a partir do peso medido na mesma fila.</string>
+    <string name="settings_csv_import_nutrient_hint">Todas as columnas de nutrientes dunha fila forman unha soa entrada de comida.</string>
     <string name="settings_csv_import_date_time_title">Data e hora</string>
     <string name="settings_csv_import_date_format_label">Formato</string>
     <string name="settings_csv_import_date_format_auto">Detectar automaticamente</string>
@@ -2411,6 +2426,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_csv_import_issue_needs_weight">A graxa corporal dada como masa necesita unha columna de peso no mesmo ficheiro para calcular a porcentaxe.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">Ningunha das filas de mostra coincide con este formato de data.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Só unha columna pode conter a data e a hora de fin.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Só unha columna pode conter o nome do alimento.</string>
     <string name="settings_csv_import_confirm_title">Listo para importar</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d medidas por fila</string>
     <string name="settings_csv_import_confirm_range">%1$s: de %2$s a %3$s</string>
@@ -2419,13 +2435,45 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_csv_import_permission_body">OpenVitals necesita permiso para escribir estas medidas en Health Connect.</string>
     <string name="settings_csv_import_start">Importar</string>
     <string name="settings_csv_import_cancel">Cancelar</string>
-    <string name="settings_csv_import_progress">Fila %1$d · escritas %2$d, xa presentes %3$d, rexeitadas %4$d</string>
-    <string name="settings_csv_import_result">Escritas %1$d. Xa presentes %2$d. Rexeitadas %3$d.</string>
+    <string name="settings_csv_import_progress">Fila %1$d · rexistros escritos %2$d, rexeitados %3$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect está limitando as escrituras por agora. A importación continúa en %1$d s.</string>
+    <string name="settings_csv_import_drip_title">Exportación de drip detectada</string>
+    <string name="settings_csv_import_drip_body">%1$s é un historial de ciclo exportado por drip. Escolle que traer a OpenVitals. Cada día lese no fuso horario deste teléfono e non se escribe nada ata que confirmes.</string>
+    <string name="settings_csv_import_drip_bleeding">Sangrado</string>
+    <string name="settings_csv_import_drip_bleeding_body">Fluxo menstrual e manchado a Health Connect. O sangrado que excluíches en drip pasa a ser manchado.</string>
+    <string name="settings_csv_import_drip_temperature">Temperatura basal</string>
+    <string name="settings_csv_import_drip_temperature_body">Temperaturas da mañá á súa hora rexistrada. As temperaturas excluídas en drip déixanse fóra.</string>
+    <string name="settings_csv_import_drip_mucus">Moco cervical</string>
+    <string name="settings_csv_import_drip_mucus_body">Textura e sensación a Health Connect; a sensación tamén enche a do diario.</string>
+    <string name="settings_csv_import_drip_sex">Actividade sexual</string>
+    <string name="settings_csv_import_drip_sex_body">Días con sexo: protexido cando drip indica un anticonceptivo, sen protección cando indica ningún.</string>
+    <string name="settings_csv_import_drip_journal">Diario</string>
+    <string name="settings_csv_import_drip_journal_body">Dor e ánimo como síntomas, niveis de ánimo e enerxía, colo do útero, desexo e todas as notas, ao diario do ciclo neste teléfono.</string>
+    <string name="settings_csv_import_drip_confirm_summary">%1$s · %2$d dos primeiros %3$d días conteñen algo que importar</string>
+    <string name="settings_csv_import_journal_days">Días do diario: %1$d, dos que %2$d actualizados</string>
+    <string name="settings_csv_import_tally_rows_title">Filas do ficheiro</string>
+    <string name="settings_csv_import_tally_rows_read">Lidas</string>
+    <string name="settings_csv_import_tally_rows_imported">Importadas</string>
+    <string name="settings_csv_import_tally_rows_rejected">Rexeitadas</string>
+    <string name="settings_csv_import_tally_rows_empty">Nada que importar</string>
+    <string name="settings_csv_import_tally_rows_note">Unha fila pode producir varios rexistros ou ningún, así que filas e rexistros non se suman entre si.</string>
+    <string name="settings_csv_import_tally_records_title">Rexistros de Health Connect</string>
+    <string name="settings_csv_import_tally_records_written">Escritos</string>
+    <string name="settings_csv_import_tally_records_replaced">Substituíron unha importación anterior</string>
+    <string name="settings_csv_import_tally_records_unchecked">Escritos sen comprobar antes</string>
+    <string name="settings_csv_import_tally_records_unchecked_note">Non se puido ler Health Connect para estes rexistros, así que o número de substituídos é un mínimo.</string>
+    <string name="settings_csv_import_tally_journal_title">Diario do ciclo</string>
+    <string name="settings_csv_import_tally_journal_days">Días con entrada</string>
+    <string name="settings_csv_import_tally_journal_updated">Actualizados neste teléfono</string>
+    <string name="settings_csv_import_outcome_completed">Importación rematada</string>
+    <string name="settings_csv_import_outcome_cancelled">Importación cancelada</string>
+    <string name="settings_csv_import_outcome_rate_limited">Importación detida</string>
+    <string name="settings_csv_import_outcome_failed">Importación fallida</string>
     <string name="settings_csv_import_result_empty">Non se importou nada deste ficheiro.</string>
     <string name="settings_csv_import_result_cancelled">Importación cancelada. O que xa se escribira mantívose.</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect deixou de aceptar escrituras por agora. Volve executar a importación máis tarde; os rexistros xa escritos sáltanse.</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect rexeitou as escrituras durante media hora. Volve executar a importación máis tarde; o xa escrito consérvase.</string>
     <string name="settings_csv_import_error">Fallou a importación: %1$s</string>
-    <string name="settings_csv_import_diagnostics_title">Filas rexeitadas</string>
+    <string name="settings_csv_import_diagnostics_title">Rexeitamentos por motivo</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>
     <string name="settings_csv_import_reason_missing_timestamp">Sen data e hora</string>
     <string name="settings_csv_import_reason_unparsable_timestamp">Data non recoñecida</string>
@@ -2434,6 +2482,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_csv_import_reason_out_of_range">Valor fóra dun rango plausible</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">Sen peso para calcular a porcentaxe</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect rexeitou o rexistro</string>
+    <string name="settings_csv_import_reason_excluded_in_source">Excluído na app de orixe</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Data de fin non recoñecida</string>
     <string name="settings_csv_import_reason_end_not_after_start">O final non é posterior ao inicio</string>
     <string name="settings_csv_import_save_report">Gardar informe</string>
@@ -3353,6 +3402,20 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
     <string name="cycle_sensation_damp">Húmida</string>
     <string name="cycle_sensation_wet">Mollada</string>
     <string name="cycle_sensation_slippery">Esvaradía</string>
+    <string name="cycle_entry_desire">Desexo</string>
+    <string name="cycle_entry_desire_scale">1: moi baixo, 5: moi alto</string>
+    <string name="cycle_entry_desire_value">Desexo: %1$d de 5</string>
+    <string name="cycle_entry_cervix">Colo do útero</string>
+    <string name="cycle_entry_cervix_opening">Apertura</string>
+    <string name="cycle_entry_cervix_firmness">Firmeza</string>
+    <string name="cycle_entry_cervix_position">Posición</string>
+    <string name="cycle_cervix_closed">Pechado</string>
+    <string name="cycle_cervix_medium">Medio</string>
+    <string name="cycle_cervix_open">Aberto</string>
+    <string name="cycle_cervix_firm">Firme</string>
+    <string name="cycle_cervix_soft">Brando</string>
+    <string name="cycle_cervix_low">Baixo</string>
+    <string name="cycle_cervix_high">Alto</string>
     <string name="cycle_entry_partial_permission">As observacións sen permiso de escritura en Health Connect omítense cando cambian.</string>
     <string name="cycle_entry_save">Gardar día</string>
     <string name="cycle_entry_discard_title">Saír sen gardar?</string>
@@ -3752,9 +3815,14 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
     <string name="settings_watch_wearos_syncing">Sincronizando reloxo…</string>
     <string name="settings_watch_wearos_synced_none">Non hai nada novo no reloxo</string>
     <string name="settings_watch_wearos_needs_weight">Calorías ao camiñar sen estimar: engade o teu peso en Perfil corporal ou rexístrao en Health Connect.</string>
+    <string name="settings_watch_wearos_needs_step_writes">Algúns datos de pasos non se escribiron: permite que OpenVitals escriba pasos, cadencia e calorías activas en Health Connect e volve sincronizar.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d mostra de frecuencia cardíaca sincronizada</item>
         <item quantity="other">%1$d mostras de frecuencia cardíaca sincronizadas</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">Pasos de %1$d minuto</item>
+        <item quantity="other">Pasos de %1$d minutos</item>
     </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">%1$d noite de sono estimada</item>

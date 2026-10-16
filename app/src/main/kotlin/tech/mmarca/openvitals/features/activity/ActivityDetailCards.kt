@@ -486,19 +486,22 @@ private fun formatRoutePoint(
         String.format(Locale.US, "%.5f, %.5f", point.latitude, point.longitude),
         formatDateTime(point.time.atZone(zone), dateTimeFormatterProvider),
     )
-    if (point.altitudeMeters != null) {
-        parts += stringResource(R.string.detail_altitude, unitFormatter.elevation(point.altitudeMeters).text)
+    val altitudeMeters = point.altitudeMeters
+    if (altitudeMeters != null) {
+        parts += stringResource(R.string.detail_altitude, unitFormatter.elevation(altitudeMeters).text)
     }
-    if (point.horizontalAccuracyMeters != null) {
+    val horizontalAccuracyMeters = point.horizontalAccuracyMeters
+    if (horizontalAccuracyMeters != null) {
         parts += stringResource(
             R.string.detail_horizontal_accuracy,
-            unitFormatter.elevation(point.horizontalAccuracyMeters).text,
+            unitFormatter.elevation(horizontalAccuracyMeters).text,
         )
     }
-    if (point.verticalAccuracyMeters != null) {
+    val verticalAccuracyMeters = point.verticalAccuracyMeters
+    if (verticalAccuracyMeters != null) {
         parts += stringResource(
             R.string.detail_vertical_accuracy,
-            unitFormatter.elevation(point.verticalAccuracyMeters).text,
+            unitFormatter.elevation(verticalAccuracyMeters).text,
         )
     }
     return parts.joinToString("\n")

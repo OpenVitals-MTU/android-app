@@ -239,6 +239,16 @@ class SyncPairingTest {
         }
     }
 
+    @Test
+    fun `a plain frame long enough to carry a tag does not open either`() {
+        // The short payload above is refused before decryption; this one reaches AES-GCM.
+        val longPlain = ByteArray(64) { it.toByte() }
+
+        assertThrows(SyncPairingException::class.java) {
+            SyncFrameCipher.forRole(SyncRole.GUEST, keys).open(SyncFrameType.BATCH, longPlain)
+        }
+    }
+
     // constantTimeEquals.
 
     @Test

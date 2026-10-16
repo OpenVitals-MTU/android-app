@@ -11,19 +11,18 @@ import java.time.Instant
 import tech.mmarca.openvitals.domain.insights.WalkingEnergy
 
 /**
- * Maps the watch's step minutes onto Health Connect records, one per minute
+ * Maps the watch's step minutes to Health Connect records, one per minute
  * and type, keyed on the minute's start:
  *
- * - `StepsRecord`, what the watch counted.
- * - `StepsCadenceRecord`, the same count as steps per minute.
- * - `ActiveCaloriesBurnedRecord`, estimated from the cadence by
- *   [WalkingEnergy], only when the body weight is known.
+ * - `StepsRecord`: the watch's count.
+ * - `StepsCadenceRecord`: the same count as steps per minute.
+ * - `ActiveCaloriesBurnedRecord`: from the cadence by [WalkingEnergy], only
+ *   when the body weight is known.
  *
- * A minute's count only grows while late steps arrive, so the count is also
- * every record's version: a re-pull of a minute that grew replaces it, one
- * that did not changes nothing.
+ * A minute's count only grows, so the count is also every record's version:
+ * a minute that grew replaces its records, an unchanged one does nothing.
  *
- * Pure: no Android, so it is testable without a device.
+ * Pure, so it is testable without a device.
  */
 object WearOsStepsImport {
 
@@ -66,16 +65,17 @@ object WearOsStepsImport {
     ): List<Record> {
         if (weightKg == null || weightKg <= 0.0) return emptyList()
         return latestPerMinute(minutes).mapNotNull { minute ->
-            if (isInsideExerciseSession(minute, exerciseSessions)) return@mapNotNull null
+            if (!WalkingEnergy.isAboveRest(minute.steps) || isInsideExerciseSession(minute, exerciseSessions)) {
+                return@mapNotNull null
+            }
             val kcal = WalkingEnergy.activeKcalPerMinute(minute.steps, weightKg)
-            if (kcal <= 0.0) return@mapNotNull null
             ActiveCaloriesBurnedRecord(
                 startTime = minute.start,
                 startZoneOffset = null,
                 endTime = minute.end,
                 endZoneOffset = null,
                 energy = Energy.kilocalories(kcal),
-                // Computed on the phone, as the other OpenVitals estimates are.
+                // Computed on the phone, like the other OpenVitals estimates.
                 metadata = Metadata.manualEntry(
                     device = Device(type = Device.TYPE_PHONE),
                     clientRecordId = "$ACTIVE_CALORIES_CLIENT_ID_PREFIX${minute.start.toEpochMilli()}",
@@ -85,9 +85,12 @@ object WearOsStepsImport {
         }
     }
 
+    /** Whether a minute would cost more than rest, so a known weight would write walking energy for it. */
+    fun hasWalkingEnergy(minutes: List<WearOsStepMinute>): Boolean = minutes.any { WalkingEnergy.isAboveRest(it.steps) }
+
     fun clientRecordId(minuteStart: Instant): String = "$CLIENT_ID_PREFIX${minuteStart.toEpochMilli()}"
 
-    /** A minute stated twice in one page keeps the larger count, the later statement. */
+    /** A minute twice in one page keeps the larger, later count. */
     private fun latestPerMinute(minutes: List<WearOsStepMinute>): List<WearOsStepMinute> =
         minutes.groupBy { it.start }.map { (_, same) -> same.maxBy { it.steps } }
 

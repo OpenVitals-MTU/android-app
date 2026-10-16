@@ -4,6 +4,7 @@ import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.security.AlgorithmParameters
 import java.security.GeneralSecurityException
+import java.security.ProviderException
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.MessageDigest
@@ -169,9 +170,18 @@ class SyncFrameCipher(sendKey: ByteArray, receiveKey: ByteArray) {
     }
 
     fun open(type: SyncFrameType, payload: ByteArray): ByteArray {
+        // A frame shorter than its tag cannot be genuine. Checked here because the
+        // JDKs disagree on how to report it: an integrity failure on some, a
+        // ProviderException wrapping ShortBufferException on others (Temurin 17).
+        if (payload.size < GCM_TAG_BITS / Byte.SIZE_BITS) {
+            throw SyncPairingException("frame is shorter than its tag")
+        }
         val out = try {
             crypt(Cipher.DECRYPT_MODE, receiveKey, opened, type, payload)
         } catch (e: GeneralSecurityException) {
+            throw SyncPairingException("frame failed its integrity check")
+        } catch (e: ProviderException) {
+            // The provider refused the input itself; treat it as a frame that does not open.
             throw SyncPairingException("frame failed its integrity check")
         }
         opened += 1

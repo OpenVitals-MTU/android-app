@@ -30,6 +30,7 @@ import tech.mmarca.openvitals.domain.medical.MedicalImportPlanner
 import tech.mmarca.openvitals.domain.medical.MedicalImportProgress
 import tech.mmarca.openvitals.domain.medical.MedicalImportReport
 import tech.mmarca.openvitals.domain.medical.MedicalImportResult
+import tech.mmarca.openvitals.domain.medical.DiagnosticReportResults
 import tech.mmarca.openvitals.domain.medical.MedicalImportSource
 import tech.mmarca.openvitals.domain.medical.MedicalImportSourceResult
 import tech.mmarca.openvitals.domain.medical.MedicalSourceDocument
@@ -53,6 +54,9 @@ enum class MedicalImportPickError {
 
     /** FHIR, but nothing in it Health Connect stores. */
     NO_RECORDS,
+
+    /** Only diagnostic reports that point at their results elsewhere: Health Connect stores the results, not the report. */
+    REPORTS_ONLY,
 
     /** The user refused the camera, so a QR code cannot be scanned. A photo of it can still be picked. */
     CAMERA_DENIED,
@@ -192,7 +196,8 @@ class MedicalImportViewModel(
             try {
                 val analysis = withContext(dispatchers.default) { FhirImportAnalyzer.analyze(entries.file, fileName ?: DefaultFileName) }
                 if (analysis.groups.none { it.ready.isNotEmpty() || it.rejected.isNotEmpty() } && entries.skipped.isEmpty()) {
-                    return@launch onPickFailed(MedicalImportPickError.NO_RECORDS)
+                    val reports = analysis.groups.any { DiagnosticReportResults.ReportType in it.skippedTypes }
+                    return@launch onPickFailed(if (reports) MedicalImportPickError.REPORTS_ONLY else MedicalImportPickError.NO_RECORDS)
                 }
                 ownSources = repository.ownSources()
                 val ownIds = ownSources.map { it.id }.toSet()

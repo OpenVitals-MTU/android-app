@@ -31,8 +31,12 @@ data class DeviceSyncUiState(
     val lastFileCount: Int? = null,
     /** Estimated nights of sleep written by the last completed run. */
     val lastNightCount: Int? = null,
+    /** Minutes of steps written by the last completed run. */
+    val lastStepMinuteCount: Int? = null,
     /** The last completed run skipped an estimate for want of the body weight. */
     val lastMissingBodyWeight: Boolean = false,
+    /** Health Connect writes the last completed run skipped for want of a grant. */
+    val lastWithheldWritePermissions: Set<String> = emptySet(),
     val error: ScreenError? = null,
 ) {
     val isSyncing: Boolean get() = syncingDeviceId != null
@@ -125,7 +129,9 @@ class DeviceSyncController(
                     phase = DeviceSyncPhase.COMPLETE,
                     lastFileCount = result.fileCount,
                     lastNightCount = result.nightCount,
+                    lastStepMinuteCount = result.stepMinuteCount,
                     lastMissingBodyWeight = result.missingBodyWeight,
+                    lastWithheldWritePermissions = result.withheldWritePermissions,
                 )
 
                 is DeviceSyncResult.Failed -> if (silent) {

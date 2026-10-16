@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.imports.csv
 
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
+
 /** What the user decided each column means, and whether that is usable. Pure values. */
 
 /** What a column is used for. */
@@ -15,6 +17,12 @@ enum class CsvColumnRole {
 
     /** A body metric. */
     METRIC,
+
+    /** One nutrient of the row's food. Every nutrient column of a row makes one nutrition record. */
+    NUTRIENT,
+
+    /** The name of the row's food. Optional; read only when nutrient columns are mapped. */
+    FOOD_NAME,
 }
 
 /** One column's assignment. */
@@ -23,18 +31,25 @@ data class CsvColumnMapping(
     val role: CsvColumnRole = CsvColumnRole.IGNORE,
     /** Set only when [role] is [CsvColumnRole.METRIC]. */
     val metric: CsvImportMetric? = null,
-    /** How this column's number becomes the canonical value. METRIC only. */
+    /** How this column's number becomes the canonical value. METRIC and NUTRIENT only. */
     val interpretation: CsvValueInterpretation? = null,
+    /** Set only when [role] is [CsvColumnRole.NUTRIENT]. */
+    val nutrient: NutritionNutrient? = null,
 ) {
     val isMetric: Boolean get() = role == CsvColumnRole.METRIC && metric != null
+
+    val isNutrient: Boolean get() = role == CsvColumnRole.NUTRIENT && nutrient != null
 
     val isTimestamp: Boolean get() = role == CsvColumnRole.TIMESTAMP
 
     val isEndTimestamp: Boolean get() = role == CsvColumnRole.END_TIMESTAMP
 
-    /** The interpretation to use, falling back to the metric's default. */
+    val isFoodName: Boolean get() = role == CsvColumnRole.FOOD_NAME
+
+    /** The interpretation to use, falling back to the metric's or nutrient's default. */
     val effectiveInterpretation: CsvValueInterpretation?
         get() {
+            if (isNutrient) return interpretation ?: csvNutrientDefaultInterpretation(nutrient!!)
             val selected = metric ?: return null
             return interpretation ?: CsvMetricCatalog[selected]?.defaultInterpretation
         }
@@ -47,6 +62,16 @@ data class CsvImportMapping(
 ) {
     /** Every column mapped to a metric, in column order. */
     val metricColumns: List<CsvColumnMapping> get() = columns.filter { it.isMetric }
+
+    /** Every column mapped to a nutrient, in column order. */
+    val nutrientColumns: List<CsvColumnMapping> get() = columns.filter { it.isNutrient }
+
+    /** Whether any column produces a record: a metric, or a nutrient. */
+    val importsAnything: Boolean get() = metricColumns.isNotEmpty() || nutrientColumns.isNotEmpty()
+
+    /** The single food-name column, or null when none or several are set. */
+    val foodNameColumn: CsvColumnMapping?
+        get() = columns.filter { it.isFoodName }.singleOrNull()
 
     /** The single timestamp column, or null when none or several are set. */
     val timestampColumn: CsvColumnMapping?
@@ -64,10 +89,12 @@ data class CsvImportMapping(
     val needsWeightColumn: Boolean
         get() = metricColumns.any { it.effectiveInterpretation?.needsRowWeight == true }
 
-    /** The write permissions this mapping needs: only the metrics in use. */
+    /** The write permissions this mapping needs: only the metrics in use, and nutrition for nutrients. */
     val requiredWritePermissions: Set<String>
         get() = metricColumns.mapNotNullTo(mutableSetOf()) { column ->
             column.metric?.let { CsvMetricCatalog[it]?.writePermission }
+        }.apply {
+            if (nutrientColumns.isNotEmpty()) add(CsvNutritionWritePermission)
         }
 
     /** Replaces the mapping for one column. */
@@ -89,11 +116,14 @@ enum class CsvMappingIssue {
     /** Nothing to import. */
     NO_METRIC_COLUMNS,
 
-    /** Two columns map to the same metric, so one would overwrite the other. */
+    /** Two columns map to the same metric or nutrient, so one would overwrite the other. */
     DUPLICATE_METRIC,
 
     /** More than one column claims to be the interval end. */
     MULTIPLE_END_TIMESTAMP_COLUMNS,
+
+    /** More than one column claims to be the food name. */
+    MULTIPLE_FOOD_NAME_COLUMNS,
 
     /** Body fat is given as a mass but no weight column is mapped to divide by. */
     MASS_SHARE_NEEDS_WEIGHT_COLUMN,
@@ -119,17 +149,18 @@ fun validateCsvMapping(
         issues += CsvMappingIssue.MULTIPLE_TIMESTAMP_COLUMNS
     }
 
-    val metricColumns = mapping.metricColumns
-    if (metricColumns.isEmpty()) {
+    if (!mapping.importsAnything) {
         issues += CsvMappingIssue.NO_METRIC_COLUMNS
     }
 
-    val seen = mutableSetOf<CsvImportMetric>()
-    for (column in metricColumns) {
-        if (!seen.add(column.metric!!)) {
-            issues += CsvMappingIssue.DUPLICATE_METRIC
-            break
-        }
+    val metrics = mapping.metricColumns.map { it.metric }
+    val nutrients = mapping.nutrientColumns.map { it.nutrient }
+    if (metrics.size != metrics.toSet().size || nutrients.size != nutrients.toSet().size) {
+        issues += CsvMappingIssue.DUPLICATE_METRIC
+    }
+
+    if (mapping.columns.count { it.isFoodName } > 1) {
+        issues += CsvMappingIssue.MULTIPLE_FOOD_NAME_COLUMNS
     }
 
     // Asked of the interpretation, not the metric: only a mass needs a weight column.

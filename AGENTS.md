@@ -47,6 +47,7 @@ Beyond the metric screens, the app now carries three subsystems that are not met
 - `devices/` — the device layer: the Garmin GFDI protocol stack, the shared BLE radio lease, companion-device pairing, notification forwarding, and the listener for a bathroom scale that only broadcasts (`devices/xiaomi`: woken by Android as a companion device, it holds a short foreground service for the two seconds the result is on the air). `features/watches` and `features/scales` are its UI.
 - `features/devicesync/` — phone-to-phone Health Connect sync over Bluetooth Classic RFCOMM.
 - `wearlink/` — the `:wearlink` Gradle module: the phone-to-watch line protocol, framing and trust token, pure Kotlin, compiled into both `:app` and `:wear`. Protocol changes go there, never into a copy.
+- `domain/` — the `:domain` Gradle module: the app-local pure code (`domain/model`, `domain/insights`, `domain/preferences`, `domain/cycle`, `domain/dashboard`, `domain/report`, `domain/medical`, and `core/period`, `core/fit`, `core/geo`, `core/stats`, `core/export`), with the same package names as the app. It exists so its lint and tests run beside the app's. Nothing in it may import `data/`, `healthconnect/`, `features/` or `ui/`; `domain/query` and `domain/usecase` stay in `:app` because they do.
 - `data/migration/` — a one-time Flutter-to-Kotlin data importer that runs in two phases from `OpenVitalsApp.onCreate()`. Its ordering around `super.onCreate()` is load-bearing; read the architecture doc before touching startup.
 
 The following areas are still transitional and should not be copied as the default pattern:
@@ -96,7 +97,7 @@ Do not break these without an explicit decision. They are app-wide, and each has
 - **Health Connect reads and record mapping live behind `healthconnect/*HealthReader`.** Writes go through `AppleHealthImportRepository.insertImportedRecords` with a deterministic `clientRecordId`. Medical records (FHIR) have no `clientRecordId`: they go through `healthconnect/MedicalRecordsWriter`, where a record's data source, type and id make a rewrite an update.
 - **Nothing waits on the main thread.** No `runBlocking` in `app/src/main` (`NoRunBlockingRatchetTest` holds the allow-list). A receiver never holds a broadcast for a Health Connect read. Composables `remember` any pass over samples.
 - **Every locale ships complete.** A new string goes to `values/strings.xml` and to every `values-*/strings.xml`, with the plural shape each locale needs; `python3 scripts/verify-translations.py` checks them. See [translations.md](docs/engineering/translations.md) and the translation-gate note in [development.md](docs/engineering/development.md).
-- **Room is at version 16.** A new entity means a `MIGRATION_16_17` and a bump, not `fallbackToDestructiveMigration`.
+- **Room is at version 17.** A new entity means a `MIGRATION_17_18` and a bump, not `fallbackToDestructiveMigration`.
 - **The docs are checked against the code.** `ArchitectureDocTest` fails when a Room table, the Room version or a package is missing from the docs. `HealthConnectLayeringTest` and `DevicesLayeringTest` hold two layering rules. `FileSizeRatchetTest` stops a file passing 800 lines, and `FunctionLengthRatchetTest` stops a new function passing 150. When one fails, fix the code or the doc in the same commit.
 
 ## Implementation Rules
@@ -118,8 +119,8 @@ A feature should own:
 Shared code belongs in:
 
 - `ui/components` for reusable shell components
-- `core/period` for app-local period math and formatting
-- `domain/model`, `domain/insights`, and `domain/preferences` for app-local pure models, calculations, and preference enums
+- `core/period` for app-local period math and formatting (in the `:domain` module)
+- `domain/model`, `domain/insights`, and `domain/preferences` for app-local pure models, calculations, and preference enums (in `:domain`; a member the app uses is `public`, since `internal` stops at the module)
 - `core/presentation` for shared formatters, `ScreenError`, and UI models that remain repository-free
 - `core/fit` for FIT container decoding; interpretation stays with the consumer
 - `devices/core` for device-agnostic ports and the radio lease

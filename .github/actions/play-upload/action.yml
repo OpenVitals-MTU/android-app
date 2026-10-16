@@ -1,0 +1,42 @@
+name: Google Play upload
+description: >-
+  Runs a fastlane lane against the AAB this run holds under build/release-ci,
+  with the versionCode from release-context.env. The job has checked out the
+  repository and downloaded the release-build artifact.
+inputs:
+  lane:
+    description: open_testing or production
+    required: true
+  service-account-json-base64:
+    description: the GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 secret
+    required: true
+  changes-not-sent-for-review:
+    description: the OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW variable
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: "3.3"
+        bundler-cache: true
+    - shell: bash
+      env:
+        LANE: ${{ inputs.lane }}
+        GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ inputs.service-account-json-base64 }}
+        OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW: ${{ inputs.changes-not-sent-for-review }}
+      run: |
+        set -eu
+        . build/release-ci/release-context.env
+        test -n "$OPENVITALS_VERSION_CODE"
+        test -n "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64"
+        play_key_path="$RUNNER_TEMP/google-play-service-account.json"
+        printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 -d > "$play_key_path"
+        test -s "$play_key_path"
+        aab_path="$GITHUB_WORKSPACE/build/release-ci/$OPENVITALS_AAB_BASENAME"
+        test -f "$aab_path"
+        bundle exec fastlane android "$LANE" \
+          json_key:"$play_key_path" \
+          aab:"$aab_path" \
+          version_code:"$OPENVITALS_VERSION_CODE"

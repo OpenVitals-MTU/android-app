@@ -23,8 +23,9 @@ class NutritionEntryEditingTest {
         )
     }
 
-    @Test fun `a food, a water-less drink, another app's record or one without ids is not editable`() {
+    @Test fun `a food, a CSV row, a water-less drink, another app's record or one without ids is not editable`() {
         assertNull(entry("openvitals_food_1_banana_u", name = "Banana").editKind())
+        assertNull(entry("csv_nutritionrecord_0123456789abcdef0123456789abcdef", name = "Oatmeal").editKind())
         assertNull(entry("openvitals_nutrition_1_u", name = "Espresso").editKind())
         assertNull(entry("openvitals_hydration_nutrition_").editKind())
         assertNull(entry("openvitals_manual_nutrition_1_u", isOpenVitals = false).editKind())

@@ -111,6 +111,7 @@ fun WatchDeviceScreen(
     val backgroundAccessLauncher = rememberHealthConnectPermissionLauncher(
         onResult = viewModel::refreshBackgroundAccess,
     )
+    val syncWriteLauncher = rememberHealthConnectPermissionLauncher()
 
     if (state.showMusicDisclosure) {
         NotificationAccessDisclosureDialog(
@@ -187,7 +188,7 @@ fun WatchDeviceScreen(
                 },
             )
             SectionHeader(stringResource(R.string.settings_watch_wearos_sync_section))
-            WearOsSyncCard(device = device, sync = state.sync, onSync = viewModel::syncNow)
+            WearOsSyncCard(device, state.sync, onSync = viewModel::syncNow, onAllowWrites = syncWriteLauncher.launch)
         }
 
         if (isGarmin) {
@@ -265,8 +266,8 @@ fun WatchDeviceScreen(
         }
 
         SectionHeader(stringResource(R.string.settings_watch_section_device))
-        if (isGarmin) {
-            // First: the schedule decides whether this screen is ever visited again.
+        // First: the schedule decides whether this screen is ever visited again.
+        if (isGarmin || device.isWearosWatch) {
             AutoSyncCard(
                 selected = state.autoSync,
                 backgroundReadMissing = state.backgroundReadMissing,
@@ -282,6 +283,8 @@ fun WatchDeviceScreen(
                     backgroundAccessLauncher.launch(setOf(viewModel.backgroundReadPermission))
                 },
             )
+        }
+        if (isGarmin) {
             OpenVitalsCard {
                 Column(
                     modifier = Modifier

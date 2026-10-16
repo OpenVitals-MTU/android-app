@@ -357,10 +357,8 @@ object DashboardPresentationMapper {
         )
         DashboardWidgetId.BLOOD_PRESSURE -> optionalMetricWidget(
             id = widgetId,
-            value = if (data.latestSystolicMmHg != null && data.latestDiastolicMmHg != null) {
-                unitFormatter.bloodPressure(data.latestSystolicMmHg, data.latestDiastolicMmHg)
-            } else {
-                null
+            value = data.latestSystolicMmHg?.let { systolic ->
+                data.latestDiastolicMmHg?.let { diastolic -> unitFormatter.bloodPressure(systolic, diastolic) }
             },
             requiresNoDataMessage = true,
             isLoading = isLoading,
@@ -497,15 +495,18 @@ object DashboardPresentationMapper {
     private fun cycleDisplay(data: DashboardData): CycleWidgetDisplay? {
         val summary = data.cycleSummary
         val day = summary?.currentCycleDay
+        val menstruationPeriodDays = data.menstruationPeriodDays
+        val ovulationTestCount = data.ovulationTestCount
+        val basalBodyTemperatureCelsius = data.latestBasalBodyTemperatureCelsius
         return when {
             summary != null && day != null ->
                 CycleWidgetDisplay.RecordedDay(day, cycleSecondaryLine(summary.phase, summary.estimate, data.date))
-            data.menstruationPeriodDays != null && data.menstruationPeriodDays > 0 ->
-                CycleWidgetDisplay.MenstruationDays(data.menstruationPeriodDays)
-            data.ovulationTestCount != null && data.ovulationTestCount > 0 ->
-                CycleWidgetDisplay.OvulationTests(data.ovulationTestCount)
-            data.latestBasalBodyTemperatureCelsius != null ->
-                CycleWidgetDisplay.BasalTemperature(data.latestBasalBodyTemperatureCelsius)
+            menstruationPeriodDays != null && menstruationPeriodDays > 0 ->
+                CycleWidgetDisplay.MenstruationDays(menstruationPeriodDays)
+            ovulationTestCount != null && ovulationTestCount > 0 ->
+                CycleWidgetDisplay.OvulationTests(ovulationTestCount)
+            basalBodyTemperatureCelsius != null ->
+                CycleWidgetDisplay.BasalTemperature(basalBodyTemperatureCelsius)
             else -> null
         }
     }

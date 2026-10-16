@@ -552,6 +552,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">Systolinen (mmHg)</string>
     <string name="vitals_entry_diastolic_label">Diastolinen (mmHg)</string>
+    <string name="vitals_entry_pulse_label">Pulssi (bpm, valinnainen)</string>
+    <string name="vitals_entry_pulse_permission_needed">Jotta OpenVitals voi tallentaa pulssin mittauksen mukana, se tarvitsee Health Connectissa sykkeen kirjoitusoikeuden. Pulssi tallennetaan syketietueena mittauksen ajankohtaan.</string>
+    <string name="vitals_entry_invalid_pulse">Anna pulssi väliltä 20–300 bpm tai jätä kenttä tyhjäksi.</string>
     <string name="vitals_entry_add_selected">Lisää %1$s</string>
     <string name="vitals_entry_invalid_value">Anna kelvollinen arvo tälle elintoiminnolle.</string>
     <string name="vitals_entry_write_failed">Elintoimintoa ei voitu tallentaa: %1$s</string>
@@ -1032,8 +1035,10 @@
     <string name="cardio_load_day_numbers_title">Päivän arvot</string>
     <string name="cardio_load_references_title">Lähdelinkit</string>
     <string name="cardio_load_calculation_summary">OpenVitals käyttää sykepohjaista TRIMP-arvoa, kun syketietoja on saatavilla, ja turvautuu liikkeeseen vain, kun syke ei ole käyttökelpoinen.</string>
-    <string name="cardio_load_formula">TRIMP = minuutit x HRR x 0,64 x e^(1,92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = minuutit x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR on sykereservi: (syke - leposyke) / (maksimisyke - leposyke). OpenVitals laskee tämän yhteen päivän saatavilla olevilta sykeväleiltä.</string>
+    <string name="cardio_load_formula_weighting">a = 0,64 ja b = 1,92 miehille, a = 0,86 ja b = 1,67 naisille (Banister). Jos kehoprofiilissa ei ole sukupuolta, käytetään miesten arvoja.</string>
+    <string name="cardio_load_max_hr_body">Maksimisykkeesi tulee kehoprofiilistasi. Jos sitä ei ole asetettu, OpenVitals käyttää korkeinta mitattua sykettä, kun se on riittävän korkea. Muuten se arvioi maksimin iästäsi: 206 - 0,88 x ikä naisille (Gulati), 208 - 0,7 x ikä muille (Tanaka).</string>
     <string name="cardio_load_mapping_body">Kun tallennettuja aktiviteetteja on, sykenäytteet kohdistetaan aikaleiman mukaan kunkin aktiviteetin alku- ja loppuikkunaan. Ilman aktiviteetti-ikkunoita lasketaan vain kohonneen sykkeen jaksot. Jos syke ei ole käyttökelpoinen, liike ja aktiiviset kalorit näytetään matalan luotettavuuden varavaihtoehtona.</string>
     <string name="cardio_load_method">Menetelmä</string>
     <string name="cardio_load_trimp_score">TRIMP-pisteet</string>
@@ -1057,6 +1062,8 @@
     <string name="cardio_load_calibration_estimated_max">Maksimisyke arvioitu</string>
     <string name="cardio_load_reference_banister">Banisterin TRIMP-yhtälö</string>
     <string name="cardio_load_reference_training_load">Katsaus harjoituskuormituksen seurantaan</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: maksimisyke iän mukaan</string>
+    <string name="cardio_load_reference_gulati">Gulati: naisten maksimisyke</string>
     <string name="cardio_load_reference_health_connect">Health Connectin treenisykkeen kohdistus</string>
     <string name="section_sleep_sessions">Unijaksot</string>
     <string name="section_weight">Paino</string>
@@ -1637,6 +1644,7 @@
     <string name="report_metrics_section_title">Mittarit</string>
     <string name="report_metrics_select_all">Valitse kaikki</string>
     <string name="report_metrics_clear">Tyhjennä</string>
+    <string name="report_metrics_nutrient_breakdown_hint">”Valitse kaikki” jättää nämä pois. Valitse otsikko lisätäksesi koko ryhmän.</string>
     <string name="report_granularity_title">Tarkkuus</string>
     <string name="report_granularity_daily">Päivittäin</string>
     <string name="report_granularity_weekly">Viikoittain</string>
@@ -1894,6 +1902,7 @@
     <string name="medical_import_error_too_large">Tämä tiedosto on yli 8 Mt.</string>
     <string name="medical_import_error_unreadable">Tiedostoa ei voitu lukea.</string>
     <string name="medical_import_error_no_records">Tässä tiedostossa ei ole mitään, mitä Health Connect tallentaa.</string>
+    <string name="medical_import_error_reports_only">Tämä tiedosto sisältää vain diagnostisia raportteja. Health Connect tallentaa raportin tulokset, ei itse raporttia, eikä tämä tiedosto sisällä niitä. Ne ovat Observation-tietueita, yleensä omissa tiedostoissaan: tuo ne sen sijaan.</string>
     <string name="medical_import_new_source">Uusi lähde</string>
     <string name="medical_import_existing_source">Lisätään aiemmin tuotuun lähteeseen</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>
@@ -2314,11 +2323,11 @@
     <string name="settings_fit_import_folder_grant">Myönnä tuontioikeudet</string>
     <string name="settings_fit_import_error">FIT-tuontivaroitus: %1$s</string>
     <string name="settings_csv_import_title">CSV-tuonti</string>
-    <string name="settings_csv_import_body">Tuo kehon mittauksia CSV-tiedostosta — esimerkiksi älyvaa\'an paino- ja kehonkoostumusvienti. Sinä päätät, mitä kukin sarake tarkoittaa.</string>
+    <string name="settings_csv_import_body">Tuo mittauksia tai ravintotietoja CSV-tiedostosta — esimerkiksi älyvaa\'an painovienti tai taulukko, jossa on rivi jokaista ateriaa kohden. Sinä päätät, mitä kukin sarake tarkoittaa.</string>
     <string name="settings_csv_import_action">Tuo CSV-tiedosto</string>
     <string name="settings_csv_import_screen_title">CSV-tuonti</string>
     <string name="settings_csv_import_pick_title">Valitse CSV-tiedosto</string>
-    <string name="settings_csv_import_pick_body">Valitse CSV-vienti ja yhdistä sen sarakkeet kehon mittauksiin. Mitään ei kirjoiteta ennen vahvistustasi.</string>
+    <string name="settings_csv_import_pick_body">Valitse CSV-tiedosto ja yhdistä sen sarakkeet mittauksiin tai ravintoaineisiin. Mitään ei kirjoiteta ennen vahvistustasi.</string>
     <string name="settings_csv_import_pick_action">Valitse CSV-tiedosto</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d saraketta</string>
     <string name="settings_csv_import_continue">Jatka</string>
@@ -2339,6 +2348,7 @@
     <string name="settings_csv_import_role_ignore">Ei tuoda</string>
     <string name="settings_csv_import_role_timestamp">Päivä ja aika</string>
     <string name="settings_csv_import_role_end_timestamp">Loppupäivä ja -aika</string>
+    <string name="settings_csv_import_role_food_name">Ruoan nimi</string>
     <string name="settings_csv_import_interval_end_hint">Jokainen rivi ulottuu päivästä ja ajasta ”Loppupäivä ja -aika” -sarakkeeseen. Ilman sitä rivi lasketaan yhdeksi minuutiksi.</string>
     <string name="settings_csv_import_metric_weight">Paino</string>
     <string name="settings_csv_import_metric_body_fat">Rasvaprosentti</string>
@@ -2380,8 +2390,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Milligrammaa desilitrassa (mg/dl)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">ml/kg/min</string>
     <string name="settings_csv_import_unit_count">Lukumäärä</string>
+    <string name="settings_csv_import_unit_kilocalories">Kilokaloreita (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Kilojouleja (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Milligrammoja (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Mikrogrammoja (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">Massa yksikössä %1$s, osuutena painosarakkeesta</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect tallentaa rasvaprosentin prosentteina, joten se lasketaan samalla rivillä mitatusta painosta.</string>
+    <string name="settings_csv_import_nutrient_hint">Rivin kaikki ravintoainesarakkeet muodostavat yhden ruokamerkinnän.</string>
     <string name="settings_csv_import_date_time_title">Päivä ja aika</string>
     <string name="settings_csv_import_date_format_label">Muoto</string>
     <string name="settings_csv_import_date_format_auto">Tunnista automaattisesti</string>
@@ -2408,6 +2423,7 @@
     <string name="settings_csv_import_issue_needs_weight">Massana annettu rasvaprosentti tarvitsee samassa tiedostossa painosarakkeen prosentin laskemiseksi.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">Yksikään otantarivi ei vastaa tätä päivämäärämuotoa.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Vain yksi sarake voi sisältää loppupäivän ja -ajan.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Vain yksi sarake voi sisältää ruoan nimen.</string>
     <string name="settings_csv_import_confirm_title">Valmis tuotavaksi</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d mittausta riviä kohden</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s – %3$s</string>
@@ -2416,13 +2432,45 @@
     <string name="settings_csv_import_permission_body">OpenVitals tarvitsee oikeuden kirjoittaa nämä mittaukset Health Connectiin.</string>
     <string name="settings_csv_import_start">Tuo</string>
     <string name="settings_csv_import_cancel">Peruuta</string>
-    <string name="settings_csv_import_progress">Rivi %1$d · kirjoitettu %2$d, jo olemassa %3$d, hylätty %4$d</string>
-    <string name="settings_csv_import_result">Kirjoitettu %1$d. Jo olemassa %2$d. Hylätty %3$d.</string>
+    <string name="settings_csv_import_progress">Rivi %1$d · kirjoitettuja tietueita %2$d, hylättyjä %3$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect rajoittaa kirjoituksia toistaiseksi. Tuonti jatkuu %1$d s kuluttua.</string>
+    <string name="settings_csv_import_drip_title">drip-vienti tunnistettu</string>
+    <string name="settings_csv_import_drip_body">%1$s on dripistä viety kiertohistoria. Valitse, mitä tuodaan OpenVitalsiin. Jokainen päivä luetaan tämän puhelimen aikavyöhykkeellä, eikä mitään kirjoiteta ennen vahvistusta.</string>
+    <string name="settings_csv_import_drip_bleeding">Vuoto</string>
+    <string name="settings_csv_import_drip_bleeding_body">Kuukautisvuoto ja tiputteluvuoto Health Connectiin. Dripissä pois jätetty vuoto muuttuu tiputteluvuodoksi.</string>
+    <string name="settings_csv_import_drip_temperature">Peruslämpö</string>
+    <string name="settings_csv_import_drip_temperature_body">Aamulämmöt kirjattuun kellonaikaan. Dripissä pois jätetyt lämmöt jätetään pois.</string>
+    <string name="settings_csv_import_drip_mucus">Kohdunkaulan lima</string>
+    <string name="settings_csv_import_drip_mucus_body">Koostumus ja tuntemus Health Connectiin; tuntemus täyttää myös päiväkirjan aistimuksen.</string>
+    <string name="settings_csv_import_drip_sex">Seksuaalinen aktiivisuus</string>
+    <string name="settings_csv_import_drip_sex_body">Seksipäivät: suojattu, kun drip mainitsee ehkäisyn, suojaamaton, kun se sanoo ei mitään.</string>
+    <string name="settings_csv_import_drip_journal">Päiväkirja</string>
+    <string name="settings_csv_import_drip_journal_body">Kipu ja mieliala oireina, mieliala- ja energiatasot, kohdunkaula, halu ja kaikki muistiinpanot tämän puhelimen kiertopäiväkirjaan.</string>
+    <string name="settings_csv_import_drip_confirm_summary">%1$s · %2$d ensimmäisestä %3$d päivästä sisältää jotain tuotavaa</string>
+    <string name="settings_csv_import_journal_days">Päiväkirjapäiviä: %1$d, joista %2$d päivitetty</string>
+    <string name="settings_csv_import_tally_rows_title">Tiedoston rivit</string>
+    <string name="settings_csv_import_tally_rows_read">Luettu</string>
+    <string name="settings_csv_import_tally_rows_imported">Tuotu</string>
+    <string name="settings_csv_import_tally_rows_rejected">Hylätty</string>
+    <string name="settings_csv_import_tally_rows_empty">Ei tuotavaa</string>
+    <string name="settings_csv_import_tally_rows_note">Yksi rivi voi tuottaa useita tietueita tai ei yhtään, joten rivit ja tietueet eivät summaudu toisiinsa.</string>
+    <string name="settings_csv_import_tally_records_title">Health Connect -tietueet</string>
+    <string name="settings_csv_import_tally_records_written">Kirjoitettu</string>
+    <string name="settings_csv_import_tally_records_replaced">Korvasi aiemman tuonnin</string>
+    <string name="settings_csv_import_tally_records_unchecked">Kirjoitettu tarkistamatta ensin</string>
+    <string name="settings_csv_import_tally_records_unchecked_note">Health Connectia ei voitu lukea näille tietueille, joten korvattujen määrä on alaraja.</string>
+    <string name="settings_csv_import_tally_journal_title">Kiertopäiväkirja</string>
+    <string name="settings_csv_import_tally_journal_days">Päiviä, joilla on merkintä</string>
+    <string name="settings_csv_import_tally_journal_updated">Päivitetty tällä puhelimella</string>
+    <string name="settings_csv_import_outcome_completed">Tuonti valmis</string>
+    <string name="settings_csv_import_outcome_cancelled">Tuonti peruutettu</string>
+    <string name="settings_csv_import_outcome_rate_limited">Tuonti pysäytetty</string>
+    <string name="settings_csv_import_outcome_failed">Tuonti epäonnistui</string>
     <string name="settings_csv_import_result_empty">Tästä tiedostosta ei tuotu mitään.</string>
     <string name="settings_csv_import_result_cancelled">Tuonti peruutettu. Jo kirjoitettu säilytettiin.</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect ei toistaiseksi hyväksy kirjoituksia. Aja tuonti myöhemmin uudelleen; jo kirjoitetut tietueet ohitetaan.</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect hylkäsi kirjoituksia puolen tunnin ajan. Aja tuonti myöhemmin uudelleen; jo kirjoitettu säilyy.</string>
     <string name="settings_csv_import_error">Tuonti epäonnistui: %1$s</string>
-    <string name="settings_csv_import_diagnostics_title">Hylätyt rivit</string>
+    <string name="settings_csv_import_diagnostics_title">Hylkäykset syyn mukaan</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>
     <string name="settings_csv_import_reason_missing_timestamp">Ei päivää ja aikaa</string>
     <string name="settings_csv_import_reason_unparsable_timestamp">Päivämäärää ei ymmärretty</string>
@@ -2431,6 +2479,7 @@
     <string name="settings_csv_import_reason_out_of_range">Arvo uskottavan alueen ulkopuolella</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">Ei painoa, josta prosentti laskettaisiin</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect hylkäsi tietueen</string>
+    <string name="settings_csv_import_reason_excluded_in_source">Jätetty pois lähdesovelluksessa</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Loppupäivää ei ymmärretty</string>
     <string name="settings_csv_import_reason_end_not_after_start">Loppu ei ole alun jälkeen</string>
     <string name="settings_csv_import_save_report">Tallenna raportti</string>
@@ -3278,6 +3327,20 @@
     <string name="cycle_sensation_damp">Kostea</string>
     <string name="cycle_sensation_wet">Märkä</string>
     <string name="cycle_sensation_slippery">Liukas</string>
+    <string name="cycle_entry_desire">Halu</string>
+    <string name="cycle_entry_desire_scale">1: hyvin vähäinen, 5: hyvin voimakas</string>
+    <string name="cycle_entry_desire_value">Halu: %1$d / 5</string>
+    <string name="cycle_entry_cervix">Kohdunkaula</string>
+    <string name="cycle_entry_cervix_opening">Avautuminen</string>
+    <string name="cycle_entry_cervix_firmness">Kiinteys</string>
+    <string name="cycle_entry_cervix_position">Sijainti</string>
+    <string name="cycle_cervix_closed">Suljettu</string>
+    <string name="cycle_cervix_medium">Keskitaso</string>
+    <string name="cycle_cervix_open">Avoin</string>
+    <string name="cycle_cervix_firm">Kiinteä</string>
+    <string name="cycle_cervix_soft">Pehmeä</string>
+    <string name="cycle_cervix_low">Matala</string>
+    <string name="cycle_cervix_high">Korkea</string>
     <string name="cycle_entry_partial_permission">Havainnot, joille ei ole Health Connectin kirjoitusoikeutta, ohitetaan niiden muuttuessa.</string>
     <string name="cycle_entry_save">Tallenna päivä</string>
     <string name="cycle_entry_discard_title">Poistutaanko tallentamatta?</string>
@@ -3677,9 +3740,14 @@
     <string name="settings_watch_wearos_syncing">Synkronoidaan kelloa…</string>
     <string name="settings_watch_wearos_synced_none">Kellossa ei ole mitään uutta</string>
     <string name="settings_watch_wearos_needs_weight">Kävelykaloreita ei arvioitu: lisää painosi Kehoprofiiliin tai kirjaa se Health Connectiin.</string>
+    <string name="settings_watch_wearos_needs_step_writes">Osa askeltiedoista jäi kirjoittamatta: salli OpenVitalsin kirjoittaa askeleet, askeltiheys ja aktiiviset kalorit Health Connectiin ja synkronoi uudelleen.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d sykenäyte synkronoitu</item>
         <item quantity="other">%1$d sykenäytettä synkronoitu</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">Askeleet %1$d minuutilta</item>
+        <item quantity="other">Askeleet %1$d minuutilta</item>
     </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">Arvioitu %1$d yön uni</item>

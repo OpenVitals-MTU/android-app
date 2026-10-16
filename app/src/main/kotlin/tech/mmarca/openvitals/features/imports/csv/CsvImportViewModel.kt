@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
+import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 
 /** Which step of the importer the screen is showing. */
@@ -32,7 +33,10 @@ data class CsvImportState(
     /** File size from the SAF provider; zero when it does not say. */
     val totalBytes: Long = 0,
     val sample: CsvSample? = null,
+    /** The column mapping. Null while a drip export is being read through [drip]. */
     val mapping: CsvImportMapping? = null,
+    /** Set when the picked file is a drip export: the mapping step becomes its option switches. */
+    val drip: DripImportPlan? = null,
     val issues: List<CsvMappingIssue> = emptyList(),
     val isLoadingFile: Boolean = false,
     val isImporting: Boolean = false,
@@ -46,16 +50,20 @@ data class CsvImportState(
     /** The write permissions this device can ask for; the request set is intersected with it. */
     val supportedWritePermissions: Set<String> = emptySet(),
 ) {
-    /** Whether the mapping is complete enough to import. */
+    /** Whether the mapping, or the drip options, say enough to import. */
     val canContinue: Boolean
-        get() = issues.isEmpty() && (mapping?.metricColumns?.isNotEmpty() == true)
+        get() = drip?.importsAnything ?: (issues.isEmpty() && mapping?.importsAnything == true)
 
     /** The write permissions this mapping needs, can ask for, and lacks. */
     val missingPermissions: Set<String>
         get() {
-            val required = mapping?.requiredWritePermissions ?: emptySet()
+            val required = drip?.requiredWritePermissions ?: mapping?.requiredWritePermissions ?: emptySet()
             return required.intersect(supportedWritePermissions) - granted
         }
+
+    /** What the run reads rows with, or null before a file is understood. */
+    val importPlan: CsvImportPlan?
+        get() = drip?.let { CsvImportPlan.Drip(it) } ?: mapping?.let { CsvImportPlan.Columns(it) }
 
     /** Sampled rows, for validation and the preview table. */
     val sampleRows: List<List<String>> get() = sample?.dataRows ?: emptyList()
@@ -116,7 +124,13 @@ class CsvImportViewModel @Inject constructor(
                     return@launch
                 }
 
-                val mapping = initialCsvMapping(headerRow = sample.headerRow, sample = sample.dataRows)
+                // A drip export needs no mapping: its columns are known by name.
+                val drip = detectDripExport(sample.headerRow)
+                val mapping = if (drip == null) {
+                    initialCsvMapping(headerRow = sample.headerRow, sample = sample.dataRows)
+                } else {
+                    null
+                }
                 _uiState.update {
                     it.copy(
                         isLoadingFile = false,
@@ -125,7 +139,8 @@ class CsvImportViewModel @Inject constructor(
                         totalBytes = totalBytes,
                         sample = sample,
                         mapping = mapping,
-                        issues = validateCsvMapping(mapping, sample.dataRows),
+                        drip = drip,
+                        issues = mapping?.let { validateCsvMapping(it, sample.dataRows) } ?: emptyList(),
                         step = CsvImportStep.MAPPING,
                     )
                 }
@@ -189,6 +204,25 @@ class CsvImportViewModel @Inject constructor(
         )
     }
 
+    /** Points column [columnIndex] at [nutrient], defaulting its unit from the header like a metric. */
+    fun setColumnNutrient(columnIndex: Int, nutrient: NutritionNutrient) {
+        val mapping = _uiState.value.mapping ?: return
+        val interpretation = headerUnit(columnIndex)
+            ?.let { csvNutrientInterpretationForUnit(nutrient, it) }
+            ?: csvNutrientDefaultInterpretation(nutrient)
+
+        applyMapping(
+            mapping.withColumn(
+                CsvColumnMapping(
+                    columnIndex = columnIndex,
+                    role = CsvColumnRole.NUTRIENT,
+                    interpretation = interpretation,
+                    nutrient = nutrient,
+                ),
+            ),
+        )
+    }
+
     /** Changes how one already-mapped column's number is read. */
     fun setColumnInterpretation(columnIndex: Int, interpretation: CsvValueInterpretation) {
         val mapping = _uiState.value.mapping ?: return
@@ -206,11 +240,19 @@ class CsvImportViewModel @Inject constructor(
         _uiState.update { it.copy(step = step) }
     }
 
+    /** Turns one part of a drip import on or off. */
+    fun setDripOption(option: DripImportOption, on: Boolean) {
+        _uiState.update { state ->
+            val drip = state.drip ?: return@update state
+            state.copy(drip = drip.withOption(option, on))
+        }
+    }
+
     /** Runs the import. Progress lands on the state as it goes. */
     fun startImport() {
         val state = _uiState.value
         val uri = state.uri ?: return
-        val mapping = state.mapping ?: return
+        val plan = state.importPlan ?: return
         val sample = state.sample ?: return
 
         val cancel = CsvImportCancellation()
@@ -230,7 +272,7 @@ class CsvImportViewModel @Inject constructor(
                 source = sourceFor(uri),
                 totalBytes = state.totalBytes,
                 dialect = sample.dialect,
-                mapping = mapping,
+                plan = plan,
                 hasHeaderRow = sample.hasHeaderRow,
                 cancellation = cancel,
                 onProgress = { progress ->
@@ -257,14 +299,15 @@ class CsvImportViewModel @Inject constructor(
     fun reportText(): String? {
         val state = _uiState.value
         val result = state.result ?: return null
-        val mapping = state.mapping ?: return null
+        if (state.mapping == null && state.drip == null) return null
         return buildCsvImportReport(
             fileName = state.fileName,
-            mapping = mapping,
+            mapping = state.mapping,
             result = result,
             headerRow = state.sample?.headerRow ?: emptyList(),
             fieldDelimiter = state.sample?.dialect?.fieldDelimiter,
             hasHeaderRow = state.sample?.hasHeaderRow,
+            drip = state.drip,
         )
     }
 

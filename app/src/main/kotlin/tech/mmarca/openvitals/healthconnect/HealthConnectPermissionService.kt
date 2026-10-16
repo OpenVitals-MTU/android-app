@@ -207,6 +207,8 @@ internal class HealthConnectPermissionService(
         HealthPermission.getWritePermission(BodyTemperatureRecord::class),
         // Keeps the Settings write-access card in step with what the log writes.
         HealthPermission.getWritePermission(HeartRateVariabilityRmssdRecord::class),
+        // The pulse a blood pressure reading carries is a heart rate record.
+        HealthPermission.getWritePermission(HeartRateRecord::class),
     )
 
     val dataImportWritePermissions: Set<String> get() = buildSet {

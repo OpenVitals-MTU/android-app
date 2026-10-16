@@ -1,0 +1,94 @@
+package tech.mmarca.openvitals.domain.model
+
+import androidx.health.connect.client.records.BloodPressureRecord
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+/** The clientRecordId token is the only place the BP meal context lives, so encode/parse must round-trip and a foreign id must read as "no context". */
+class BpMealContextTest {
+
+    private val baseId = "openvitals_vitals_blood_pressure_1750000000000_abc-123"
+
+    @Test fun `every context round-trips through the client id`() {
+        BpMealContext.entries.forEach { context ->
+            val encoded = baseId.withBpMealContext(context)
+            assertEquals(context, bpMealContextFromClientRecordId(encoded))
+        }
+    }
+
+    @Test fun `re-encoding replaces the token instead of stacking`() {
+        val once = baseId.withBpMealContext(BpMealContext.BEFORE_BREAKFAST)
+        val twice = once.withBpMealContext(BpMealContext.AFTER_DINNER)
+
+        assertEquals(BpMealContext.AFTER_DINNER, bpMealContextFromClientRecordId(twice))
+        assertEquals(baseId.withBpMealContext(BpMealContext.AFTER_DINNER), twice)
+    }
+
+    @Test fun `a null context strips the token back to the base id`() {
+        val encoded = baseId.withBpMealContext(BpMealContext.BEFORE_LUNCH)
+
+        assertEquals(baseId, encoded.withBpMealContext(null))
+    }
+
+    @Test fun `foreign, bare and mangled ids read as no context`() {
+        assertNull(bpMealContextFromClientRecordId(null))
+        assertNull(bpMealContextFromClientRecordId(baseId))
+        assertNull(bpMealContextFromClientRecordId("some_other_app_record_42"))
+        assertNull(bpMealContextFromClientRecordId("${baseId}_bpctx-"))
+        assertNull(bpMealContextFromClientRecordId("${baseId}_bpctx-nonsense"))
+    }
+
+    @Test fun `the pulse token rides beside the context and each survives the other's edit`() {
+        val both = baseId.withBpMealContext(BpMealContext.BEFORE_BREAKFAST).withBpPulse(68)
+
+        assertEquals(BpMealContext.BEFORE_BREAKFAST, bpMealContextFromClientRecordId(both))
+        assertEquals(68, bpPulseFromClientRecordId(both))
+
+        val newPulse = both.withBpPulse(72)
+        assertEquals(72, bpPulseFromClientRecordId(newPulse))
+        assertEquals(BpMealContext.BEFORE_BREAKFAST, bpMealContextFromClientRecordId(newPulse))
+
+        val newContext = both.withBpMealContext(BpMealContext.AFTER_DINNER)
+        assertEquals(68, bpPulseFromClientRecordId(newContext))
+        assertEquals(BpMealContext.AFTER_DINNER, bpMealContextFromClientRecordId(newContext))
+
+        assertEquals(baseId.withBpMealContext(BpMealContext.BEFORE_BREAKFAST), both.withBpPulse(null))
+        assertEquals(baseId.withBpPulse(68), both.withBpMealContext(null))
+        assertEquals(baseId, both.withBpPulse(null).withBpMealContext(null))
+    }
+
+    @Test fun `the pulse record id strips both tokens, so it never moves`() {
+        val both = baseId.withBpMealContext(BpMealContext.BEFORE_BREAKFAST).withBpPulse(68)
+
+        assertEquals("${baseId}_pulse", bpPulseClientRecordId(both))
+        assertEquals(bpPulseClientRecordId(baseId), bpPulseClientRecordId(both.withBpPulse(72)))
+    }
+
+    @Test fun `foreign, bare and mangled ids read as no pulse`() {
+        assertNull(bpPulseFromClientRecordId(null))
+        assertNull(bpPulseFromClientRecordId(baseId))
+        assertNull(bpPulseFromClientRecordId("${baseId}_bppulse-"))
+        assertNull(bpPulseFromClientRecordId("${baseId}_bppulse-fast"))
+        assertNull(bpPulseFromClientRecordId("${baseId}_bppulse-0"))
+    }
+
+    @Test fun `the mirrored position and location constants match the androidx library`() {
+        assertEquals(BloodPressureRecord.BODY_POSITION_UNKNOWN, BpRecordValues.BODY_POSITION_UNKNOWN)
+        assertEquals(BloodPressureRecord.BODY_POSITION_STANDING_UP, BpRecordValues.BODY_POSITION_STANDING_UP)
+        assertEquals(BloodPressureRecord.BODY_POSITION_SITTING_DOWN, BpRecordValues.BODY_POSITION_SITTING_DOWN)
+        assertEquals(BloodPressureRecord.BODY_POSITION_LYING_DOWN, BpRecordValues.BODY_POSITION_LYING_DOWN)
+        assertEquals(BloodPressureRecord.BODY_POSITION_RECLINING, BpRecordValues.BODY_POSITION_RECLINING)
+        assertEquals(BloodPressureRecord.MEASUREMENT_LOCATION_UNKNOWN, BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN)
+        assertEquals(BloodPressureRecord.MEASUREMENT_LOCATION_LEFT_WRIST, BpRecordValues.MEASUREMENT_LOCATION_LEFT_WRIST)
+        assertEquals(BloodPressureRecord.MEASUREMENT_LOCATION_RIGHT_WRIST, BpRecordValues.MEASUREMENT_LOCATION_RIGHT_WRIST)
+        assertEquals(
+            BloodPressureRecord.MEASUREMENT_LOCATION_LEFT_UPPER_ARM,
+            BpRecordValues.MEASUREMENT_LOCATION_LEFT_UPPER_ARM,
+        )
+        assertEquals(
+            BloodPressureRecord.MEASUREMENT_LOCATION_RIGHT_UPPER_ARM,
+            BpRecordValues.MEASUREMENT_LOCATION_RIGHT_UPPER_ARM,
+        )
+    }
+}

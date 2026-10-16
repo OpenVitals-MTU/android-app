@@ -242,6 +242,8 @@ class BodyRepositoryImpl @Inject constructor(
         return hc.readWeightEntries(startInstant, endInstant)
     }
 
+    override suspend fun loadLatestWeight(): Double? = loadLatestWeight(grantedPermissionsIfAvailable())
+
     override suspend fun loadLatestHeight(): Double? {
         val granted = grantedPermissionsIfAvailable()
         return loadLatestHeight(granted)

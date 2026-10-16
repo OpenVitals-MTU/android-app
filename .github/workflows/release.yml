@@ -1,19 +1,32 @@
-# Release workflow. Three ways in:
+# The release. One run builds the signed artifacts once and ships them from
+# its own artifact, through to production.
 #
-# - nightly: the 00:00 UTC schedule, or a manual run with target "nightly".
-#   Builds the nightly APK, debug APK and AAB, moves the `nightly` tag, updates
-#   the fixed `nightly` GitHub prerelease, uploads the AAB to Play open testing
-#   and prunes old versioned releases. The schedule skips when there is nothing
-#   new to publish; a manual run always builds.
-# - a pushed vX.Y.Z / VX.Y.Z tag: builds the signed release APK, debug APK and
-#   AAB and publishes them to that tag's GitHub prerelease. No Play upload.
-# - production: a manual run with target "production", started from the vX.Y.Z
-#   tag. Uploads the release AAB to Play production (behind the `production`
-#   environment), marks the GitHub release stable, and announces it on Zulip.
+# Ways in: the 00:00 UTC schedule and a manual run with target "nightly" make
+# a nightly; a pushed vX.Y.Z / VX.Y.Z tag makes a version; a manual run with
+# target "production", started from a tag, is the fallback for a tag whose run
+# is gone (its approval lapsed, or it predates this workflow): its build job
+# downloads the AAB from that tag's GitHub prerelease instead of building,
+# checks the sha256, and stage 3 runs on it.
 #
-# scripts/ci-release-context.sh decides everything else from
-# OPENVITALS_RELEASE_EVENT and writes it to build/release-ci/, which the jobs
-# hand to each other as workflow artifacts.
+#   context: the commit must have passed the verify workflow (verify.yml) on
+#     its push to main. A run still going is waited for; none, or a failed
+#     one, stops the release with the reason.
+#   build: signs the APK, the debug APK and the AAB once; they are the run's
+#     release-build artifact, which every job after it ships as it is.
+#   nightly: moves the `nightly` tag, then updates the nightly GitHub
+#     prerelease beside the Play open-testing upload, then prunes old releases.
+#   version: publishes the GitHub prerelease beside the open-testing upload,
+#     waits for the `production` environment's approval, then promotes the
+#     version to the production track and the prerelease to stable, in
+#     parallel, and announces on Zulip. Nothing is rebuilt or re-signed.
+#
+# The repository variable OPENVITALS_PLAY_PAUSED=true holds every Play upload,
+# for while a release sits in Play review: a new upload would restart it. The
+# GitHub releases, the tag F-Droid builds from, and the announcement go on.
+#
+# scripts/ci-release-context.sh decides the release details from
+# OPENVITALS_RELEASE_EVENT and writes them to build/release-ci/, which the jobs
+# hand to each other as the release-context artifact.
 name: release
 
 on:
@@ -24,7 +37,7 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: "nightly publishes a nightly build; production ships the vX.Y.Z tag this run is started from"
+        description: "nightly publishes a nightly build; production ships the vX.Y.Z tag this run is started from, from its prerelease's AAB"
         type: choice
         options: [nightly, production]
         default: nightly
@@ -33,7 +46,7 @@ permissions:
   contents: read
 
 # One nightly at a time, so two runs never mint a versionCode against the same
-# survey. A tag and a production run each get their own lane.
+# survey. A tag, and a production promotion, each get their own lane.
 concurrency:
   group: release-${{ github.event_name == 'push' && github.ref || inputs.target || 'nightly' }}
   cancel-in-progress: false
@@ -50,70 +63,123 @@ defaults:
     shell: bash
 
 jobs:
+  # What kind of run this is and the release details; and the check that the
+  # commit passed the gate.
   context:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # The gate check lists the verify workflow's runs.
+      actions: read
     outputs:
-      skip: ${{ steps.ctx.outputs.skip }}
-      channel: ${{ steps.ctx.outputs.channel }}
-      tag: ${{ steps.ctx.outputs.tag }}
-      event: ${{ steps.ctx.outputs.event }}
+      # nightly | tag | promote
+      kind: ${{ steps.kind.outputs.kind }}
+      # Stage 2 builds (a nightly with something to publish, or a tag), or, for
+      # a promotion, takes the artifacts from the prerelease.
+      build: ${{ steps.plan.outputs.build }}
+      channel: ${{ steps.release.outputs.channel }}
+      tag: ${{ steps.release.outputs.tag }}
     steps:
       - uses: actions/checkout@v5
         with:
           # The nightly skip check and the tag lookup need history and tags.
           fetch-depth: 0
-      - name: Resolve release context
+
+      - id: kind
+        env:
+          EVENT: ${{ github.event_name }}
+          TARGET: ${{ inputs.target }}
+        run: |
+          case "$EVENT" in
+            schedule) kind=nightly ;;
+            workflow_dispatch) if [ "$TARGET" = "production" ]; then kind=promote; else kind=nightly; fi ;;
+            push) kind=tag ;;
+            *) echo "unexpected event $EVENT" >&2; exit 1 ;;
+          esac
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
+          echo "::notice::run kind: $kind"
+
+      # The release details. A cron nightly with nothing new to publish ends
+      # the run here.
+      - id: release
         env:
           # version-code.sh reads release markers through the API.
           GH_TOKEN: ${{ github.token }}
-        run: sh scripts/ci-release-context.sh
-      - id: ctx
         run: |
+          sh scripts/ci-release-context.sh
           . build/release-ci/release-context.env
           {
             echo "skip=$OPENVITALS_SKIP_NIGHTLY"
             echo "channel=$OPENVITALS_RELEASE_CHANNEL"
             echo "tag=$OPENVITALS_RELEASE_TAG"
-            echo "event=$OPENVITALS_RELEASE_EVENT"
           } >> "$GITHUB_OUTPUT"
           if [ "$OPENVITALS_SKIP_NIGHTLY" = "true" ]; then
             echo "::notice::Skipping: cron nightly has nothing new to publish."
           fi
+
+      # A tag and the nightly are cut from a commit on main, whose push ran the
+      # verify workflow. That run is the gate: still going, it is waited for;
+      # passed, the build goes ahead; none, or failed, and the release stops.
+      # Only a push run counts: a pull request run passes without lint. An
+      # annotated tag's GITHUB_SHA is the tag object, hence the rev-parse.
+      - id: verified
+        if: steps.kind.outputs.kind != 'promote' && steps.release.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          commit="$(git rev-parse "$GITHUB_SHA^{commit}")"
+          runs="repos/$GITHUB_REPOSITORY/actions/workflows/verify.yml/runs?head_sha=$commit&event=push&per_page=5"
+          run_id="$(gh api "$runs" --jq '[.workflow_runs[] | select(.status != "completed")][0].id // empty')"
+          if [ -n "$run_id" ]; then
+            echo "verify run $run_id is still going for $commit; waiting for it."
+            gh run watch "$run_id" > /dev/null || true
+          fi
+          run_url="$(gh api "$runs&status=success" --jq '.workflow_runs[0].html_url // empty')"
+          if [ -z "$run_url" ]; then
+            echo "::error::$commit has not passed the verify workflow on a push to main. Push it to main (or fix that run) and start the release again."
+            exit 1
+          fi
+          echo "::notice::$commit passed the gate: $run_url"
+
+      - id: plan
+        env:
+          KIND: ${{ steps.kind.outputs.kind }}
+          SKIP: ${{ steps.release.outputs.skip }}
+        run: |
+          build=true
+          if [ "$KIND" = "nightly" ] && [ "$SKIP" = "true" ]; then build=false; fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          echo "plan: build=$build"
+
       - uses: actions/upload-artifact@v4
         with:
           name: release-context
           path: build/release-ci/
           retention-days: 7
 
-  # Prerelease verification, then the signed build, in one job so they share
-  # one Gradle setup.
+  # The one signed build of the run. Its outputs are the release-build artifact
+  # every later job, stage 3 included, ships as they are. A manual production
+  # run builds nothing: it takes the AAB from the tag's GitHub prerelease, where
+  # a tag run put it, and checks it against its sha256.
   build:
     needs: context
-    if: needs.context.outputs.skip != 'true'
+    if: needs.context.outputs.build == 'true'
     runs-on: ubuntu-latest
-    # Same prebaked image as test.yml; bump the tags together.
-    container: ghcr.io/mmarca-tech/openvitals-android-ci:android-37
     steps:
       - uses: actions/checkout@v5
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/download-artifact@v4
         with:
           name: release-context
           path: build/release-ci
+      - if: needs.context.outputs.kind != 'promote'
+        run: echo "GRADLE_USER_HOME=$RUNNER_TEMP/gradle-user-home" >> "$GITHUB_ENV"
       # Read-only: a signing build never writes the cache other builds restore.
-      - uses: gradle/actions/setup-gradle@v4
+      - if: needs.context.outputs.kind != 'promote'
+        uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: true
-
-      # verifyCi aggregates verifyCiUnitTest and verifyCiPreflight. A production
-      # run ships a tag whose own run already passed it.
-      - name: Prerelease verification
-        if: env.OPENVITALS_RELEASE_EVENT != 'deployment'
-        run: |
-          scripts/ci-android-gradle.sh verifyCi
-          git diff --check
-
       - name: Build signed artifacts
+        if: needs.context.outputs.kind != 'promote'
         env:
           OPENVITALS_RELEASE_KEYSTORE_BASE64: ${{ secrets.OPENVITALS_RELEASE_KEYSTORE_BASE64 }}
           OPENVITALS_RELEASE_STORE_PASSWORD: ${{ secrets.OPENVITALS_RELEASE_STORE_PASSWORD }}
@@ -132,7 +198,7 @@ jobs:
           export OPENVITALS_RELEASE_KEY_PASSWORD="$OPENVITALS_RELEASE_STORE_PASSWORD"
           keytool -list -storetype PKCS12 -keystore "$keystore_path" -storepass "$OPENVITALS_RELEASE_STORE_PASSWORD" -alias "$OPENVITALS_RELEASE_KEY_ALIAS" >/dev/null
           export OPENVITALS_SIGN_DEBUG_WITH_RELEASE_KEY=true
-          export OPENVITALS_MINIFY_DEBUG_FOR_CI=true
+          export OPENVITALS_PUBLISHED_DEBUG_APK=true
           if [ -n "${OPENVITALS_VERSION_CODE:-}" ]; then export OPENVITALS_VERSION_CODE; fi
           if [ -n "${OPENVITALS_VERSION_NAME:-}" ]; then export OPENVITALS_VERSION_NAME; fi
           test -n "$OPENVITALS_APK_ABI_FILTERS"
@@ -163,11 +229,27 @@ jobs:
             cp "$aab_path" "$out/$OPENVITALS_AAB_BASENAME"
             (cd "$out" && sha256sum "$OPENVITALS_AAB_BASENAME" > "$OPENVITALS_AAB_BASENAME.sha256")
           fi
+      - name: Take the artifacts from the tag's prerelease (no build)
+        if: needs.context.outputs.kind == 'promote'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          . build/release-ci/release-context.env
+          test -n "$OPENVITALS_AAB_BASENAME"
+          gh release download "$OPENVITALS_RELEASE_TAG" \
+            --pattern "$OPENVITALS_AAB_BASENAME" --pattern "$OPENVITALS_AAB_BASENAME.sha256" \
+            --dir build/release-ci
+          (cd build/release-ci && sha256sum -c "$OPENVITALS_AAB_BASENAME.sha256")
+          echo "::notice::shipping $OPENVITALS_AAB_BASENAME from the $OPENVITALS_RELEASE_TAG prerelease, versionCode $OPENVITALS_VERSION_CODE"
       - uses: actions/upload-artifact@v4
         with:
           name: release-build
           path: build/release-ci/
-          retention-days: 7
+          retention-days: 30
+
+  # --- the nightly branch
 
   # Nightly keeps a single stable download page, so the `nightly` tag is
   # force-moved to this commit. The versionCode is recorded to an append-only
@@ -175,7 +257,12 @@ jobs:
   # an APK that will not install (2026-07). See scripts/move-nightly-tag.sh.
   nightly-tag:
     needs: [context, build]
-    if: needs.context.outputs.channel == 'nightly'
+    # Every job from here on names the result it needs: GitHub also skips a
+    # job with a plain `if` when a job upstream in its chain was skipped.
+    if: >-
+      !cancelled()
+      && needs.build.result == 'success'
+      && needs.context.outputs.channel == 'nightly'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -193,80 +280,9 @@ jobs:
           . build/release-ci/release-context.env
           scripts/move-nightly-tag.sh nightly "$GITHUB_SHA" "OpenVitals nightly $GITHUB_RUN_NUMBER" "$OPENVITALS_VERSION_CODE"
 
-  publish-play-open-testing:
+  nightly-github-prerelease:
     needs: [context, nightly-tag]
-    if: needs.context.outputs.channel == 'nightly'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.3"
-          bundler-cache: true
-      - uses: actions/download-artifact@v4
-        with:
-          name: release-build
-          path: build/release-ci
-      - env:
-          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
-          OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW: ${{ vars.OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW }}
-        run: |
-          set -eu
-          . build/release-ci/release-context.env
-          test "$OPENVITALS_PLAY_TRACK" = "beta"
-          test -n "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64"
-          play_key_path="$RUNNER_TEMP/google-play-service-account.json"
-          printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 -d > "$play_key_path"
-          test -s "$play_key_path"
-          aab_path="$GITHUB_WORKSPACE/build/release-ci/$OPENVITALS_AAB_BASENAME"
-          test -f "$aab_path"
-          bundle exec fastlane android open_testing \
-            json_key:"$play_key_path" \
-            aab:"$aab_path" \
-            version_code:"$OPENVITALS_VERSION_CODE"
-
-  publish-play-production:
-    needs: [context, build]
-    if: needs.context.outputs.event == 'deployment'
-    runs-on: ubuntu-latest
-    # Add required reviewers to this environment for an approval gate.
-    environment: production
-    steps:
-      - uses: actions/checkout@v5
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.3"
-          bundler-cache: true
-      - uses: actions/download-artifact@v4
-        with:
-          name: release-build
-          path: build/release-ci
-      - env:
-          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
-          OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW: ${{ vars.OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW }}
-        run: |
-          set -eu
-          . build/release-ci/release-context.env
-          test "$OPENVITALS_PLAY_TRACK" = "production"
-          test -n "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64"
-          play_key_path="$RUNNER_TEMP/google-play-service-account.json"
-          printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64" | base64 -d > "$play_key_path"
-          test -s "$play_key_path"
-          aab_path="$GITHUB_WORKSPACE/build/release-ci/$OPENVITALS_AAB_BASENAME"
-          test -f "$aab_path"
-          bundle exec fastlane android production \
-            json_key:"$play_key_path" \
-            aab:"$aab_path" \
-            version_code:"$OPENVITALS_VERSION_CODE"
-
-  # Nightly and tag runs. A tag run skips nightly-tag, hence the explicit check.
-  publish-github-release:
-    needs: [context, build, nightly-tag]
-    if: >-
-      !cancelled()
-      && needs.build.result == 'success'
-      && (needs.nightly-tag.result == 'success' || needs.nightly-tag.result == 'skipped')
-      && needs.context.outputs.event != 'deployment'
+    if: ${{ !cancelled() && needs.nightly-tag.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -276,33 +292,32 @@ jobs:
         with:
           name: release-build
           path: build/release-ci
-      # The app bundle goes last. It is there for a Play upload by hand, when
-      # Play refuses the upload from this workflow. This job does not wait for
-      # the Play job.
-      - env:
+      - uses: ./.github/actions/publish-github-release
+        env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: |
-          set -eu
-          . build/release-ci/release-context.env
-          out=build/release-ci
-          set -- "$out/$OPENVITALS_APK_BASENAME" "$out/$OPENVITALS_APK_BASENAME.sha256"
-          if [ "$OPENVITALS_BUILD_DEBUG_APK" = "true" ]; then
-            set -- "$@" "$out/$OPENVITALS_DEBUG_APK_BASENAME" "$out/$OPENVITALS_DEBUG_APK_BASENAME.sha256"
-          fi
-          if [ "$OPENVITALS_BUILD_AAB" = "true" ]; then
-            set -- "$@" "$out/$OPENVITALS_AAB_BASENAME" "$out/$OPENVITALS_AAB_BASENAME.sha256"
-          fi
-          scripts/publish-github-release.sh \
-            "$OPENVITALS_RELEASE_TAG" \
-            "$out/release-title.txt" \
-            "$out/release-notes.md" \
-            "$OPENVITALS_RELEASE_PRERELEASE" \
-            "$@"
+
+  # Beside the prerelease, not after it: a Play refusal must not hold the
+  # download page back.
+  nightly-play-open-testing:
+    needs: [context, nightly-tag]
+    if: ${{ !cancelled() && needs.nightly-tag.result == 'success' && vars.OPENVITALS_PLAY_PAUSED != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-build
+          path: build/release-ci
+      - uses: ./.github/actions/play-upload
+        with:
+          lane: open_testing
+          service-account-json-base64: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+          changes-not-sent-for-review: ${{ vars.OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW }}
 
   prune-github-releases:
-    needs: [context, publish-github-release]
-    if: needs.context.outputs.channel == 'nightly'
+    needs: [context, nightly-github-prerelease]
+    if: ${{ !cancelled() && needs.nightly-github-prerelease.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -315,8 +330,68 @@ jobs:
           KEEP_RELEASES: "9"
         run: scripts/prune-github-releases.sh
 
-  publish-github-stable:
-    needs: [context, publish-play-production]
+  # --- the version branch
+
+  version-github-prerelease:
+    needs: [context, build]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.context.outputs.kind == 'tag' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-build
+          path: build/release-ci
+      - uses: ./.github/actions/publish-github-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+
+  # The version goes to open testing now; stage 3 promotes it from there.
+  version-play-open-testing:
+    needs: [context, build]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.context.outputs.kind == 'tag' && vars.OPENVITALS_PLAY_PAUSED != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-build
+          path: build/release-ci
+      - uses: ./.github/actions/play-upload
+        with:
+          lane: open_testing
+          service-account-json-base64: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+          changes-not-sent-for-review: ${{ vars.OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW }}
+
+  # The gate: this job holds the `production` environment, so the run waits here
+  # for its required reviewers. A tag run reaches it from its prerelease (the
+  # open-testing upload may be paused); a manual production run straight from
+  # the artifacts its build job fetched.
+  production-approval:
+    needs: [context, build, version-github-prerelease, version-play-open-testing]
+    if: >-
+      !cancelled()
+      && (
+        (
+          needs.context.outputs.kind == 'tag'
+          && needs.version-github-prerelease.result == 'success'
+          && (needs.version-play-open-testing.result == 'success' || needs.version-play-open-testing.result == 'skipped')
+        )
+        || (needs.context.outputs.kind == 'promote' && needs.build.result == 'success')
+      )
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - env:
+          RELEASE_TAG: ${{ needs.context.outputs.tag }}
+        run: echo "::notice::$RELEASE_TAG approved for production"
+
+  github-stable:
+    needs: [context, production-approval]
+    if: ${{ !cancelled() && needs.production-approval.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -327,10 +402,36 @@ jobs:
           RELEASE_TAG: ${{ needs.context.outputs.tag }}
         run: gh release edit "$RELEASE_TAG" --prerelease=false --draft=false --latest
 
-  # Same trigger and idempotency story as announce-mastodon, for the Zulip
-  # "releases" channel (full release notes under a vX.Y.Z topic).
+  # Promotes the version from the open-testing track to production, with the
+  # store metadata; a version that never reached open testing (Play was paused)
+  # is uploaded instead. While Play is paused the job runs and does nothing, so
+  # the announcement still follows.
+  play-production:
+    needs: [context, production-approval]
+    if: ${{ !cancelled() && needs.production-approval.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-build
+          path: build/release-ci
+      - if: vars.OPENVITALS_PLAY_PAUSED == 'true'
+        run: |
+          echo "::notice::Google Play is paused (OPENVITALS_PLAY_PAUSED=true): no upload. The AAB is on the GitHub release."
+      - if: vars.OPENVITALS_PLAY_PAUSED != 'true'
+        uses: ./.github/actions/play-upload
+        with:
+          lane: production
+          service-account-json-base64: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+          changes-not-sent-for-review: ${{ vars.OPENVITALS_PLAY_CHANGES_NOT_SENT_FOR_REVIEW }}
+
+  # After both promotions. The Zulip "releases" channel gets the full notes
+  # under a vX.Y.Z topic; the script checks for an earlier post, so a re-run
+  # never posts twice.
   announce-zulip:
-    needs: [context, publish-github-stable]
+    needs: [context, github-stable, play-production]
+    if: ${{ !cancelled() && needs.github-stable.result == 'success' && needs.play-production.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

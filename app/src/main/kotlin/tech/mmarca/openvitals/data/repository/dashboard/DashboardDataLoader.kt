@@ -705,6 +705,7 @@ class DashboardDataLoader @Inject constructor(
         )
     }
 
+    /** Kouri et al. 1995 (doi:10.1097/00042752-199510000-00003): FFM / m², normalised to 1.80 m by 6.3 × (1.80 − m). */
     private fun calculateAdjustedFfmi(
         weightKg: Double?,
         heightCm: Double?,
@@ -857,6 +858,7 @@ class DashboardDataLoader @Inject constructor(
                     activityWindows = activityWindows,
                     ageYears = ageYears,
                     explicitMaxHeartRate = explicitMaxHeartRate,
+                    sex = bodyProfile?.sex,
                 )
                 val intensityMinutes = calculateIntensityMinutes(
                     samples = heartRateSamplesByDate[day].orEmpty(),
@@ -869,6 +871,7 @@ class DashboardDataLoader @Inject constructor(
                     cardioLoadScore = cardioLoad.score,
                     ageYears = ageYears,
                     explicitMaxHeartRate = explicitMaxHeartRate,
+                    sex = bodyProfile?.sex,
                 )
                 cardioEstimatesByDate[day] = cardioLoad
                 intensityEstimatesByDate[day] = intensityMinutes

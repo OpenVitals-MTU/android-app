@@ -513,6 +513,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">Systolic (mmHg)</string>
     <string name="vitals_entry_diastolic_label">Diastolic (mmHg)</string>
+    <string name="vitals_entry_pulse_label">Pulse (bpm, optional)</string>
+    <string name="vitals_entry_pulse_permission_needed">To save the pulse with a reading, OpenVitals needs Health Connect write permission for heart rate. The pulse is saved as a heart rate record at the time of the reading.</string>
+    <string name="vitals_entry_invalid_pulse">Enter a pulse between 20 and 300 bpm, or leave it empty.</string>
     <string name="vitals_entry_add_selected">Add %1$s</string>
     <string name="vitals_entry_invalid_value">Enter a valid value for this vital.</string>
     <string name="vitals_entry_write_failed">Could not save vital: %1$s</string>
@@ -1009,8 +1012,10 @@
     <string name="cardio_load_day_numbers_title">Today values</string>
     <string name="cardio_load_references_title">Backed links</string>
     <string name="cardio_load_calculation_summary">OpenVitals uses HR-based TRIMP when heart-rate data is available, then falls back to movement only when HR is not usable.</string>
-    <string name="cardio_load_formula">TRIMP = minutes x HRR x 0.64 x e^(1.92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = minutes x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR is heart-rate reserve: (heart rate - resting heart rate) / (max heart rate - resting heart rate). OpenVitals sums this over available heart-rate intervals for the day.</string>
+    <string name="cardio_load_formula_weighting">a = 0.64 and b = 1.92 for men, a = 0.86 and b = 1.67 for women (Banister). If your body profile has no sex, the values for men are used.</string>
+    <string name="cardio_load_max_hr_body">Your maximum heart rate comes from your body profile. If none is set, OpenVitals uses the highest heart rate it has measured, when that is high enough to count. Otherwise it estimates the maximum from your age: 206 - 0.88 x age for women (Gulati), 208 - 0.7 x age for everyone else (Tanaka).</string>
     <string name="cardio_load_mapping_body">When recorded activities exist, heart-rate samples are mapped by timestamp into each activity start and end window. Without activity windows, only elevated heart-rate intervals are counted. If HR is not usable, movement and active calories are shown as a low-confidence fallback.</string>
     <string name="cardio_load_method">Method</string>
     <string name="cardio_load_trimp_score">TRIMP score</string>
@@ -1034,6 +1039,8 @@
     <string name="cardio_load_calibration_estimated_max">Max HR estimated</string>
     <string name="cardio_load_reference_banister">Banister TRIMP equation</string>
     <string name="cardio_load_reference_training_load">Training-load monitoring review</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: maximum heart rate by age</string>
+    <string name="cardio_load_reference_gulati">Gulati: maximum heart rate for women</string>
     <string name="cardio_load_reference_health_connect">Health Connect workout HR mapping</string>
     <string name="section_sleep_sessions">Sleep sessions</string>
     <string name="section_weight">Weight</string>
@@ -1631,6 +1638,7 @@
     <string name="report_metrics_section_title">Metrics</string>
     <string name="report_metrics_select_all">Select all</string>
     <string name="report_metrics_clear">Clear</string>
+    <string name="report_metrics_nutrient_breakdown_hint">\"Select all\" leaves these out. Tick a heading to add its whole group.</string>
     <string name="report_granularity_title">Detail</string>
     <string name="report_granularity_daily">Daily</string>
     <string name="report_granularity_weekly">Weekly</string>
@@ -1889,6 +1897,7 @@
     <string name="medical_import_error_too_large">This file is larger than 8 MB.</string>
     <string name="medical_import_error_unreadable">This file could not be read.</string>
     <string name="medical_import_error_no_records">This file holds nothing Health Connect stores.</string>
+    <string name="medical_import_error_reports_only">This file holds only diagnostic reports. Health Connect stores the results of a report, not the report, and this file does not hold them. They are Observation records, usually in files of their own: import those instead.</string>
     <string name="medical_import_new_source">New source</string>
     <string name="medical_import_existing_source">Adds to a source you imported before</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>
@@ -2329,11 +2338,11 @@
     <string name="settings_fit_import_folder_grant">Grant import permissions</string>
     <string name="settings_fit_import_error">FIT import warning: %1$s</string>
     <string name="settings_csv_import_title">CSV importer</string>
-    <string name="settings_csv_import_body">Import body measurements from a CSV file — for example a weight and body-composition export from a smart scale. You choose what each column means.</string>
+    <string name="settings_csv_import_body">Import measurements or nutrition from a CSV file — for example a smart scale\'s weight export, or a spreadsheet with a row per meal. You choose what each column means.</string>
     <string name="settings_csv_import_action">Import a CSV file</string>
     <string name="settings_csv_import_screen_title">CSV importer</string>
     <string name="settings_csv_import_pick_title">Choose a CSV file</string>
-    <string name="settings_csv_import_pick_body">Pick a CSV export and match its columns to body measurements. Nothing is written until you confirm.</string>
+    <string name="settings_csv_import_pick_body">Pick a CSV file and match its columns to measurements or nutrients. Nothing is written until you confirm.</string>
     <string name="settings_csv_import_pick_action">Choose CSV file</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d columns</string>
     <string name="settings_csv_import_continue">Continue</string>
@@ -2354,6 +2363,7 @@
     <string name="settings_csv_import_role_ignore">Not imported</string>
     <string name="settings_csv_import_role_timestamp">Date and time</string>
     <string name="settings_csv_import_role_end_timestamp">End date and time</string>
+    <string name="settings_csv_import_role_food_name">Food name</string>
     <string name="settings_csv_import_interval_end_hint">Each row spans from the date and time to the \"End date and time\" column. Without one, a row counts as one minute.</string>
     <string name="settings_csv_import_metric_weight">Weight</string>
     <string name="settings_csv_import_metric_body_fat">Body fat</string>
@@ -2395,8 +2405,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Milligrams per decilitre (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
     <string name="settings_csv_import_unit_count">A count</string>
+    <string name="settings_csv_import_unit_kilocalories">Kilocalories (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Kilojoules (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Milligrams (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Micrograms (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">A mass in %1$s, as a share of the weight column</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect stores body fat as a percentage, so this is worked out from the weight measured in the same row.</string>
+    <string name="settings_csv_import_nutrient_hint">All the nutrient columns of a row become one food entry.</string>
     <string name="settings_csv_import_date_time_title">Date and time</string>
     <string name="settings_csv_import_date_format_label">Format</string>
     <string name="settings_csv_import_date_format_auto">Detect automatically</string>
@@ -2423,6 +2438,7 @@
     <string name="settings_csv_import_issue_needs_weight">Body fat given as a mass needs a weight column in the same file to work out the percentage.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">None of the sampled rows match this date format.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Only one column can hold the end date and time.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Only one column can hold the food name.</string>
     <string name="settings_csv_import_confirm_title">Ready to import</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d measurements per row</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s to %3$s</string>
@@ -2431,13 +2447,45 @@
     <string name="settings_csv_import_permission_body">OpenVitals needs permission to write these measurements to Health Connect.</string>
     <string name="settings_csv_import_start">Import</string>
     <string name="settings_csv_import_cancel">Cancel</string>
-    <string name="settings_csv_import_progress">Row %1$d · written %2$d, already present %3$d, rejected %4$d</string>
-    <string name="settings_csv_import_result">Written %1$d. Already present %2$d. Rejected %3$d.</string>
+    <string name="settings_csv_import_progress">Row %1$d · records written %2$d, rejected %3$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect is limiting writes for now. The import continues in %1$d s.</string>
+    <string name="settings_csv_import_drip_title">drip export detected</string>
+    <string name="settings_csv_import_drip_body">%1$s is a cycle history exported by drip. Choose what to bring into OpenVitals. Each day is read in this phone\'s time zone, and nothing is written until you confirm.</string>
+    <string name="settings_csv_import_drip_bleeding">Bleeding</string>
+    <string name="settings_csv_import_drip_bleeding_body">Period flow and spotting to Health Connect. Bleeding you excluded in drip becomes spotting.</string>
+    <string name="settings_csv_import_drip_temperature">Basal body temperature</string>
+    <string name="settings_csv_import_drip_temperature_body">Morning temperatures at their recorded time. Temperatures excluded in drip are left out.</string>
+    <string name="settings_csv_import_drip_mucus">Cervical mucus</string>
+    <string name="settings_csv_import_drip_mucus_body">Texture and feeling to Health Connect; the feeling also fills the journal\'s sensation.</string>
+    <string name="settings_csv_import_drip_sex">Sexual activity</string>
+    <string name="settings_csv_import_drip_sex_body">Days with sex: protected when drip lists a contraceptive, unprotected when it says none.</string>
+    <string name="settings_csv_import_drip_journal">Journal</string>
+    <string name="settings_csv_import_drip_journal_body">Pain and mood as symptoms, mood and energy levels, the cervix, desire, and every note, into the cycle journal on this phone.</string>
+    <string name="settings_csv_import_drip_confirm_summary">%1$s · %2$d of the first %3$d days hold something to import</string>
+    <string name="settings_csv_import_journal_days">Journal days: %1$d, of which %2$d updated</string>
+    <string name="settings_csv_import_tally_rows_title">Rows of the file</string>
+    <string name="settings_csv_import_tally_rows_read">Read</string>
+    <string name="settings_csv_import_tally_rows_imported">Imported</string>
+    <string name="settings_csv_import_tally_rows_rejected">Rejected</string>
+    <string name="settings_csv_import_tally_rows_empty">Nothing to import</string>
+    <string name="settings_csv_import_tally_rows_note">A row can produce several records, or none, so rows and records do not add up to each other.</string>
+    <string name="settings_csv_import_tally_records_title">Health Connect records</string>
+    <string name="settings_csv_import_tally_records_written">Written</string>
+    <string name="settings_csv_import_tally_records_replaced">Replaced an earlier import</string>
+    <string name="settings_csv_import_tally_records_unchecked">Written without checking first</string>
+    <string name="settings_csv_import_tally_records_unchecked_note">Health Connect could not be read for these records, so the replaced count is a lower bound.</string>
+    <string name="settings_csv_import_tally_journal_title">Cycle journal</string>
+    <string name="settings_csv_import_tally_journal_days">Days with an entry</string>
+    <string name="settings_csv_import_tally_journal_updated">Updated on this phone</string>
+    <string name="settings_csv_import_outcome_completed">Import finished</string>
+    <string name="settings_csv_import_outcome_cancelled">Import cancelled</string>
+    <string name="settings_csv_import_outcome_rate_limited">Import stopped</string>
+    <string name="settings_csv_import_outcome_failed">Import failed</string>
     <string name="settings_csv_import_result_empty">Nothing was imported from this file.</string>
     <string name="settings_csv_import_result_cancelled">Import cancelled. What had already been written was kept.</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect stopped accepting writes for now. Run the import again later; records already written are skipped.</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect kept refusing writes for half an hour. Run the import again later; what was written is kept.</string>
     <string name="settings_csv_import_error">The import failed: %1$s</string>
-    <string name="settings_csv_import_diagnostics_title">Rejected rows</string>
+    <string name="settings_csv_import_diagnostics_title">Rejections by reason</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>
     <string name="settings_csv_import_reason_missing_timestamp">No date and time</string>
     <string name="settings_csv_import_reason_unparsable_timestamp">Date not understood</string>
@@ -2446,6 +2494,7 @@
     <string name="settings_csv_import_reason_out_of_range">Value outside a plausible range</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">No weight to work out the percentage from</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect refused the record</string>
+    <string name="settings_csv_import_reason_excluded_in_source">Excluded in the source app</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">End date not understood</string>
     <string name="settings_csv_import_reason_end_not_after_start">End is not after the start</string>
     <string name="settings_csv_import_save_report">Save report</string>
@@ -3342,6 +3391,20 @@
     <string name="cycle_sensation_damp">Damp</string>
     <string name="cycle_sensation_wet">Wet</string>
     <string name="cycle_sensation_slippery">Slippery</string>
+    <string name="cycle_entry_desire">Desire</string>
+    <string name="cycle_entry_desire_scale">1: very low, 5: very high</string>
+    <string name="cycle_entry_desire_value">Desire: %1$d out of 5</string>
+    <string name="cycle_entry_cervix">Cervix</string>
+    <string name="cycle_entry_cervix_opening">Opening</string>
+    <string name="cycle_entry_cervix_firmness">Firmness</string>
+    <string name="cycle_entry_cervix_position">Position</string>
+    <string name="cycle_cervix_closed">Closed</string>
+    <string name="cycle_cervix_medium">Medium</string>
+    <string name="cycle_cervix_open">Open</string>
+    <string name="cycle_cervix_firm">Firm</string>
+    <string name="cycle_cervix_soft">Soft</string>
+    <string name="cycle_cervix_low">Low</string>
+    <string name="cycle_cervix_high">High</string>
     <string name="cycle_entry_partial_permission">Observations without a Health Connect write permission are skipped when they change.</string>
     <string name="cycle_entry_save">Save day</string>
     <string name="cycle_entry_discard_title">Leave without saving?</string>
@@ -3743,9 +3806,14 @@
     <string name="settings_watch_wearos_syncing">Syncing watch…</string>
     <string name="settings_watch_wearos_synced_none">Nothing new on the watch</string>
     <string name="settings_watch_wearos_needs_weight">Walking calories not estimated: add your weight in Body profile or record one in Health Connect.</string>
+    <string name="settings_watch_wearos_needs_step_writes">Some step data not written: allow OpenVitals to write steps, cadence and active calories in Health Connect, then sync again.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d heart rate sample synced</item>
         <item quantity="other">%1$d heart rate samples synced</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">Steps for %1$d minute</item>
+        <item quantity="other">Steps for %1$d minutes</item>
     </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">%1$d night of sleep estimated</item>

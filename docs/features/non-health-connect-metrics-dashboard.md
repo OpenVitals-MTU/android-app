@@ -12,6 +12,8 @@ Some OpenVitals dashboard values are not raw Health Connect record types. They a
 
 Cardio load estimates training strain from available activity and heart-rate signals. When heart-rate coverage is good, OpenVitals uses a TRIMP-style calculation based on heart-rate reserve. When heart-rate data is missing or incomplete, the app can fall back to movement-only context with lower confidence.
 
+The body profile feeds it: a maximum heart rate set there outranks every estimate, the birth year gives the age-predicted maximum, and a profile that records female switches to Gulati's age formula (206 − 0.88 × age instead of Tanaka's 208 − 0.7 × age) and to Banister's weighting for women. The Cardio load info card shows both formulas and links the papers. The dashboard and the Activities screens read the same profile, so they show the same load for the same day.
+
 The detail screen explains:
 
 - Daily and weekly cardio load.

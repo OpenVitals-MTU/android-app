@@ -17,7 +17,7 @@ Hydration can show:
 - Goal progress.
 - Previous-period comparison and baseline context.
 - Hydration entries, including entries created from beverage logging.
-- Nutrition-only hydration-related entries when they contribute useful context.
+- Nutrition-only drinks: a drink logged in OpenVitals without water, or another app's nutrition record that carries caffeine or a known drink's name. Records OpenVitals imported from Apple Health or synced from another phone count as another app's, so a meal from them never shows as a drink. Foods, typed nutrition totals and CSV rows never do.
 - Data confidence and source labels.
 - Hydration reminder configuration.
 

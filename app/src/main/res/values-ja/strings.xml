@@ -496,6 +496,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">収縮期 (mmHg)</string>
     <string name="vitals_entry_diastolic_label">拡張期 (mmHg)</string>
+    <string name="vitals_entry_pulse_label">脈拍（bpm、任意）</string>
+    <string name="vitals_entry_pulse_permission_needed">測定値とともに脈拍を保存するには、OpenVitals に Health Connect の心拍数の書き込み権限が必要です。脈拍は測定時刻の心拍数レコードとして保存されます。</string>
+    <string name="vitals_entry_invalid_pulse">20〜300 bpm の脈拍を入力するか、空欄のままにしてください。</string>
     <string name="vitals_entry_add_selected">%1$s を追加</string>
     <string name="vitals_entry_invalid_value">このバイタルに有効な値を入力してください。</string>
     <string name="vitals_entry_write_failed">バイタルを保存できませんでした: %1$s</string>
@@ -979,8 +982,10 @@
     <string name="cardio_load_day_numbers_title">今日の値</string>
     <string name="cardio_load_references_title">参考リンク</string>
     <string name="cardio_load_calculation_summary">OpenVitals は心拍データがある場合は心拍ベースの TRIMP を使い、心拍が使えない場合のみ動きにフォールバックします。</string>
-    <string name="cardio_load_formula">TRIMP = 分 x HRR x 0.64 x e^(1.92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = 分 x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR は心拍予備能: (心拍数 - 安静時心拍数) / (最大心拍数 - 安静時心拍数)。OpenVitals はその日の利用可能な心拍区間で合計します。</string>
+    <string name="cardio_load_formula_weighting">男性は a = 0.64、b = 1.92、女性は a = 0.86、b = 1.67 です (Banister)。身体プロフィールに性別がない場合は男性の値を使います。</string>
+    <string name="cardio_load_max_hr_body">最大心拍数は身体プロフィールの値を使います。設定がない場合は、十分に高ければ測定された最高心拍数を使います。それ以外は年齢から推定します: 女性は 206 - 0.88 x 年齢 (Gulati)、それ以外は 208 - 0.7 x 年齢 (Tanaka)。</string>
     <string name="cardio_load_mapping_body">記録されたアクティビティがある場合、心拍サンプルはタイムスタンプで各アクティビティの開始〜終了に割り当てられます。アクティビティがない場合は心拍が上昇した区間のみ数えます。心拍が使えない場合は、動きと活動カロリーを低信頼度の代替として表示します。</string>
     <string name="cardio_load_method">方法</string>
     <string name="cardio_load_trimp_score">TRIMP スコア</string>
@@ -1004,6 +1009,8 @@
     <string name="cardio_load_calibration_estimated_max">最大心拍 推定</string>
     <string name="cardio_load_reference_banister">Banister の TRIMP 式</string>
     <string name="cardio_load_reference_training_load">トレーニング負荷モニタリングのレビュー</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: 年齢別の最大心拍数</string>
+    <string name="cardio_load_reference_gulati">Gulati: 女性の最大心拍数</string>
     <string name="cardio_load_reference_health_connect">Health Connect ワークアウト心拍の割り当て</string>
     <string name="section_sleep_sessions">睡眠セッション</string>
     <string name="section_weight">体重</string>
@@ -1632,6 +1639,7 @@
     <string name="report_metrics_section_title">指標</string>
     <string name="report_metrics_select_all">すべて選択</string>
     <string name="report_metrics_clear">クリア</string>
+    <string name="report_metrics_nutrient_breakdown_hint">「すべて選択」ではこれらは選択されません。見出しにチェックを入れるとグループ全体を追加できます。</string>
     <string name="report_granularity_title">詳細度</string>
     <string name="report_granularity_daily">日別</string>
     <string name="report_granularity_weekly">週別</string>
@@ -1890,6 +1898,7 @@
     <string name="medical_import_error_too_large">このファイルは 8 MB を超えています。</string>
     <string name="medical_import_error_unreadable">このファイルを読み込めませんでした。</string>
     <string name="medical_import_error_no_records">このファイルには Health Connect が保存するデータがありません。</string>
+    <string name="medical_import_error_reports_only">このファイルには診断レポートしか含まれていません。Health Connect はレポートそのものではなく、その結果を保存しますが、このファイルには結果が含まれていません。結果は Observation レコードで、通常は別のファイルにあります。そちらをインポートしてください。</string>
     <string name="medical_import_new_source">新しい提供元</string>
     <string name="medical_import_existing_source">以前インポートした提供元に追加</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>
@@ -2314,11 +2323,11 @@
     <string name="settings_fit_import_folder_grant">インポート権限を許可</string>
     <string name="settings_fit_import_error">FIT インポートの警告: %1$s</string>
     <string name="settings_csv_import_title">CSV インポーター</string>
-    <string name="settings_csv_import_body">CSV ファイルから身体測定をインポートします。たとえばスマート体重計の体重・体組成エクスポートなど。各列の意味は自分で選びます。</string>
+    <string name="settings_csv_import_body">CSV ファイルから測定値や栄養をインポートします。たとえばスマート体重計の体重エクスポートや、食事ごとに 1 行のスプレッドシートなど。各列の意味は自分で選びます。</string>
     <string name="settings_csv_import_action">CSV ファイルをインポート</string>
     <string name="settings_csv_import_screen_title">CSV インポーター</string>
     <string name="settings_csv_import_pick_title">CSV ファイルを選択</string>
-    <string name="settings_csv_import_pick_body">CSV エクスポートを選び、その列を身体測定に対応付けます。確認するまで何も書き込まれません。</string>
+    <string name="settings_csv_import_pick_body">CSV ファイルを選び、その列を測定値または栄養素に対応付けます。確認するまで何も書き込まれません。</string>
     <string name="settings_csv_import_pick_action">CSV ファイルを選択</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d 列</string>
     <string name="settings_csv_import_continue">続行</string>
@@ -2339,6 +2348,7 @@
     <string name="settings_csv_import_role_ignore">インポートしない</string>
     <string name="settings_csv_import_role_timestamp">日時</string>
     <string name="settings_csv_import_role_end_timestamp">終了日時</string>
+    <string name="settings_csv_import_role_food_name">食品名</string>
     <string name="settings_csv_import_interval_end_hint">各行は日時から「終了日時」列までの期間になります。この列がない場合、1 行は 1 分として扱います。</string>
     <string name="settings_csv_import_metric_weight">体重</string>
     <string name="settings_csv_import_metric_body_fat">体脂肪</string>
@@ -2380,8 +2390,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">ミリグラム/デシリットル (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/分</string>
     <string name="settings_csv_import_unit_count">カウント</string>
+    <string name="settings_csv_import_unit_kilocalories">キロカロリー (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">キロジュール (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">ミリグラム (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">マイクログラム (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">%1$s の質量（体重列に対する割合）</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect は体脂肪をパーセントで保存するため、同じ行で測定した体重から算出します。</string>
+    <string name="settings_csv_import_nutrient_hint">1 行の栄養素の列はすべて 1 つの食事の記録になります。</string>
     <string name="settings_csv_import_date_time_title">日時</string>
     <string name="settings_csv_import_date_format_label">形式</string>
     <string name="settings_csv_import_date_format_auto">自動検出</string>
@@ -2408,6 +2423,7 @@
     <string name="settings_csv_import_issue_needs_weight">質量で与えられた体脂肪から割合を求めるには、同じファイルに体重列が必要です。</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">サンプルした行のどれもこの日付形式に一致しません。</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">終了日時を含められる列は 1 つだけです。</string>
+    <string name="settings_csv_import_issue_multiple_food_names">食品名を含められる列は 1 つだけです。</string>
     <string name="settings_csv_import_confirm_title">インポートの準備完了</string>
     <string name="settings_csv_import_confirm_summary">%1$s · 1 行あたり %2$d 項目</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s 〜 %3$s</string>
@@ -2416,13 +2432,45 @@
     <string name="settings_csv_import_permission_body">これらの測定値を Health Connect に書き込むには権限が必要です。</string>
     <string name="settings_csv_import_start">インポート</string>
     <string name="settings_csv_import_cancel">キャンセル</string>
-    <string name="settings_csv_import_progress">行 %1$d · 書き込み %2$d、既存 %3$d、拒否 %4$d</string>
-    <string name="settings_csv_import_result">書き込み %1$d。既存 %2$d。拒否 %3$d。</string>
+    <string name="settings_csv_import_progress">行 %1$d · 書き込んだ記録 %2$d、拒否 %3$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect が現在書き込みを制限しています。%1$d 秒後にインポートを再開します。</string>
+    <string name="settings_csv_import_drip_title">drip のエクスポートを検出しました</string>
+    <string name="settings_csv_import_drip_body">%1$s は drip からエクスポートされた周期の履歴です。OpenVitals に取り込む項目を選んでください。各日はこの端末のタイムゾーンで読み取られ、確認するまで何も書き込まれません。</string>
+    <string name="settings_csv_import_drip_bleeding">出血</string>
+    <string name="settings_csv_import_drip_bleeding_body">月経の量と少量出血を Health Connect へ。drip で除外した出血は少量出血になります。</string>
+    <string name="settings_csv_import_drip_temperature">基礎体温</string>
+    <string name="settings_csv_import_drip_temperature_body">記録された時刻の朝の体温。drip で除外した体温は取り込みません。</string>
+    <string name="settings_csv_import_drip_mucus">頸管粘液</string>
+    <string name="settings_csv_import_drip_mucus_body">性状と感覚を Health Connect へ。感覚は日誌の感覚にも入ります。</string>
+    <string name="settings_csv_import_drip_sex">性行為</string>
+    <string name="settings_csv_import_drip_sex_body">性行為のあった日。drip に避妊具の記録があれば避妊あり、なしと記録されていれば避妊なしになります。</string>
+    <string name="settings_csv_import_drip_journal">日誌</string>
+    <string name="settings_csv_import_drip_journal_body">痛みと気分を症状として、気分とエネルギーのレベル、子宮頸部、性欲、すべてのメモを、この端末の周期日誌へ。</string>
+    <string name="settings_csv_import_drip_confirm_summary">%1$s · 先頭 %3$d 日のうち %2$d 日に取り込む内容があります</string>
+    <string name="settings_csv_import_journal_days">日誌の日数: %1$d（うち更新 %2$d）</string>
+    <string name="settings_csv_import_tally_rows_title">ファイルの行</string>
+    <string name="settings_csv_import_tally_rows_read">読み取り</string>
+    <string name="settings_csv_import_tally_rows_imported">取り込み</string>
+    <string name="settings_csv_import_tally_rows_rejected">拒否</string>
+    <string name="settings_csv_import_tally_rows_empty">取り込む内容なし</string>
+    <string name="settings_csv_import_tally_rows_note">1 行から複数の記録ができることも、1 つもできないこともあるため、行数と記録数は一致しません。</string>
+    <string name="settings_csv_import_tally_records_title">Health Connect の記録</string>
+    <string name="settings_csv_import_tally_records_written">書き込み</string>
+    <string name="settings_csv_import_tally_records_replaced">以前の取り込みを置き換え</string>
+    <string name="settings_csv_import_tally_records_unchecked">事前確認なしで書き込み</string>
+    <string name="settings_csv_import_tally_records_unchecked_note">これらの記録では Health Connect を読み取れなかったため、置き換えた件数は下限です。</string>
+    <string name="settings_csv_import_tally_journal_title">周期日誌</string>
+    <string name="settings_csv_import_tally_journal_days">記入のある日</string>
+    <string name="settings_csv_import_tally_journal_updated">この端末で更新</string>
+    <string name="settings_csv_import_outcome_completed">取り込み完了</string>
+    <string name="settings_csv_import_outcome_cancelled">取り込みをキャンセル</string>
+    <string name="settings_csv_import_outcome_rate_limited">取り込みを停止</string>
+    <string name="settings_csv_import_outcome_failed">取り込みに失敗</string>
     <string name="settings_csv_import_result_empty">このファイルからは何もインポートされませんでした。</string>
     <string name="settings_csv_import_result_cancelled">インポートをキャンセルしました。すでに書き込まれたものは保持されます。</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect が現在書き込みを受け付けなくなりました。後でもう一度インポートしてください。書き込み済みの記録はスキップされます。</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect が 30 分間書き込みを拒否し続けました。後でもう一度インポートしてください。書き込み済みの内容は保持されます。</string>
     <string name="settings_csv_import_error">インポートに失敗しました: %1$s</string>
-    <string name="settings_csv_import_diagnostics_title">拒否された行</string>
+    <string name="settings_csv_import_diagnostics_title">理由別の拒否</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>
     <string name="settings_csv_import_reason_missing_timestamp">日時なし</string>
     <string name="settings_csv_import_reason_unparsable_timestamp">日付を解釈できない</string>
@@ -2431,6 +2479,7 @@
     <string name="settings_csv_import_reason_out_of_range">値が妥当な範囲外</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">割合を求める体重がない</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect が記録を拒否</string>
+    <string name="settings_csv_import_reason_excluded_in_source">元のアプリで除外</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">終了日を解釈できない</string>
     <string name="settings_csv_import_reason_end_not_after_start">終了が開始より後でない</string>
     <string name="settings_csv_import_save_report">レポートを保存</string>
@@ -3350,6 +3399,20 @@
     <string name="cycle_sensation_damp">湿っている</string>
     <string name="cycle_sensation_wet">濡れている</string>
     <string name="cycle_sensation_slippery">滑らか</string>
+    <string name="cycle_entry_desire">性欲</string>
+    <string name="cycle_entry_desire_scale">1: とても低い、5: とても高い</string>
+    <string name="cycle_entry_desire_value">性欲: 5 段階中 %1$d</string>
+    <string name="cycle_entry_cervix">子宮頸部</string>
+    <string name="cycle_entry_cervix_opening">開き</string>
+    <string name="cycle_entry_cervix_firmness">硬さ</string>
+    <string name="cycle_entry_cervix_position">位置</string>
+    <string name="cycle_cervix_closed">閉じている</string>
+    <string name="cycle_cervix_medium">中間</string>
+    <string name="cycle_cervix_open">開いている</string>
+    <string name="cycle_cervix_firm">硬い</string>
+    <string name="cycle_cervix_soft">柔らかい</string>
+    <string name="cycle_cervix_low">低い</string>
+    <string name="cycle_cervix_high">高い</string>
     <string name="cycle_entry_partial_permission">Health Connect の書き込み権限がない観察項目は、変更してもスキップされます。</string>
     <string name="cycle_entry_save">この日を保存</string>
     <string name="cycle_entry_discard_title">保存せずに戻りますか？</string>
@@ -3749,9 +3812,14 @@
     <string name="settings_watch_wearos_syncing">ウォッチを同期しています…</string>
     <string name="settings_watch_wearos_synced_none">ウォッチに新しいデータはありません</string>
     <string name="settings_watch_wearos_needs_weight">歩行カロリーは推定されていません。体のプロフィールに体重を追加するか、Health Connect に記録してください。</string>
+    <string name="settings_watch_wearos_needs_step_writes">一部の歩数データを書き込めませんでした。OpenVitals に Health Connect への歩数、ケイデンス、アクティブカロリーの書き込みを許可してから、もう一度同期してください。</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d 件の心拍数サンプルを同期しました</item>
         <item quantity="other">%1$d 件の心拍数サンプルを同期しました</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">%1$d 分間の歩数</item>
+        <item quantity="other">%1$d 分間の歩数</item>
     </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">%1$d 晩の睡眠を推定しました</item>

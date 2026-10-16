@@ -356,6 +356,9 @@
     <string name="vitals_entry_value_label">%1$s (%2$s)</string>
     <string name="vitals_entry_systolic_label">Süstoolne (mmHg)</string>
     <string name="vitals_entry_diastolic_label">Diastoolne (mmHg)</string>
+    <string name="vitals_entry_pulse_label">Pulss (lööki/min, valikuline)</string>
+    <string name="vitals_entry_pulse_permission_needed">Pulsi salvestamiseks koos mõõtmisega vajab OpenVitals Health Connectis südame löögisageduse kirjutamisluba. Pulss salvestatakse südame löögisageduse kirjena mõõtmise ajal.</string>
+    <string name="vitals_entry_invalid_pulse">Sisesta pulss vahemikus 20 kuni 300 lööki/min või jäta väli tühjaks.</string>
     <string name="vitals_entry_add_selected">Lisa %1$s</string>
     <string name="vitals_entry_invalid_value">Sisesta selle näitaja jaoks kehtiv väärtus.</string>
     <string name="vitals_entry_write_failed">Näitajat ei õnnestunud salvestada: %1$s</string>
@@ -618,8 +621,10 @@
     <string name="cardio_load_day_numbers_title">Tänased väärtused</string>
     <string name="cardio_load_references_title">Kasutatud allikad</string>
     <string name="cardio_load_calculation_summary">OpenVitals kasutab pulsipõhist TRIMP-i, kui pulsiandmed on saadaval, ja langeb tagasi ainult liikumisele, kui pulss ei ole kasutatav.</string>
-    <string name="cardio_load_formula">TRIMP = minutid x HRR x 0,64 x e^(1,92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = minutid x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR on pulsivaru: (pulss - puhkeoleku pulss) / (maksimaalne pulss - puhkeoleku pulss). OpenVitals liidab selle kokku kättesaadavate pulsi-intervallide kohta terve päeva jooksul.</string>
+    <string name="cardio_load_formula_weighting">a = 0,64 ja b = 1,92 meestele, a = 0,86 ja b = 1,67 naistele (Banister). Kui kehaprofiilis pole sugu märgitud, kasutatakse meeste väärtusi.</string>
+    <string name="cardio_load_max_hr_body">Sinu maksimaalne pulss tuleb kehaprofiilist. Kui seda pole määratud, kasutab OpenVitals kõrgeimat mõõdetud pulssi, kui see on piisavalt kõrge. Muidu hindab see maksimumi vanuse järgi: 206 - 0,88 x vanus naistele (Gulati), 208 - 0,7 x vanus kõigile teistele (Tanaka).</string>
     <string name="cardio_load_mapping_body">Kui salvestatud treeningud on olemas, seotakse pulsinäidud ajatempli järgi iga treeningu algus- ja lõpuaknaga. Ilma treeninguakendeta loetakse ainult tõusnud pulsi intervalle. Kui pulss ei ole kasutatav, näidatakse madala usaldusväärsusega tagavarana liikumist ja aktiivseid kaloreid.</string>
     <string name="cardio_load_method">Meetod</string>
     <string name="cardio_load_trimp_score">TRIMP-tulemus</string>
@@ -643,6 +648,8 @@
     <string name="cardio_load_calibration_estimated_max">Maks pulss hinnanguline</string>
     <string name="cardio_load_reference_banister">Banisteri TRIMP-valem</string>
     <string name="cardio_load_reference_training_load">Treeningkoormuse jälgimise ülevaade</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: maksimaalne pulss vanuse järgi</string>
+    <string name="cardio_load_reference_gulati">Gulati: naiste maksimaalne pulss</string>
     <string name="cardio_load_reference_health_connect">Health Connecti treeningu pulsi seostamine</string>
     <string name="section_sleep_sessions">Unesessioonid</string>
     <string name="section_weight">Kaal</string>
@@ -1280,6 +1287,7 @@
     <string name="medical_import_error_too_large">See fail on suurem kui 8 MB.</string>
     <string name="medical_import_error_unreadable">Faili ei saanud lugeda.</string>
     <string name="medical_import_error_no_records">Selles failis pole midagi, mida Health Connect salvestab.</string>
+    <string name="medical_import_error_reports_only">See fail sisaldab ainult diagnostilisi aruandeid. Health Connect salvestab aruande tulemused, mitte aruannet ennast, ja see fail neid ei sisalda. Need on Observation-kirjed, tavaliselt eraldi failides: impordi hoopis need.</string>
     <string name="medical_import_new_source">Uus allikas</string>
     <string name="medical_import_existing_source">Lisab allikale, mille oled varem importinud</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>
@@ -2351,11 +2359,11 @@
     <string name="settings_apple_health_import_progress_with_scan_percent">%1$d%%. %2$s. Skaneeritud %3$d/%4$d elementi. Valitud %5$d/%6$d kirjet, imporditud %7$d.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. Skaneeritud %3$d/%4$d, imporditud %5$d.</string>
     <string name="settings_csv_import_title">CSV-importija</string>
-    <string name="settings_csv_import_body">Impordi kehamõõtmised CSV-failist — näiteks nutika kaalu kaalu- ja kehakoostise eksport. Sina valid, mida iga veerg tähendab.</string>
+    <string name="settings_csv_import_body">Impordi mõõtmised või toitumisandmed CSV-failist — näiteks nutika kaalu kaaluandmete eksport või tabel, kus igal toidukorral on oma rida. Sina valid, mida iga veerg tähendab.</string>
     <string name="settings_csv_import_action">Impordi CSV-fail</string>
     <string name="settings_csv_import_screen_title">CSV-importija</string>
     <string name="settings_csv_import_pick_title">Vali CSV-fail</string>
-    <string name="settings_csv_import_pick_body">Vali CSV-eksport ja seo selle veerud kehamõõtmistega. Enne kinnitamist ei kirjutata midagi.</string>
+    <string name="settings_csv_import_pick_body">Vali CSV-fail ja seo selle veerud mõõtmiste või toitainetega. Enne kinnitamist ei kirjutata midagi.</string>
     <string name="settings_csv_import_pick_action">Vali CSV-fail</string>
     <string name="settings_csv_import_file_label">%1$s · %2$d veergu</string>
     <string name="settings_csv_import_continue">Jätka</string>
@@ -2376,6 +2384,7 @@
     <string name="settings_csv_import_role_ignore">Ei impordita</string>
     <string name="settings_csv_import_role_timestamp">Kuupäev ja kellaaeg</string>
     <string name="settings_csv_import_role_end_timestamp">Lõpukuupäev ja -kellaaeg</string>
+    <string name="settings_csv_import_role_food_name">Toidu nimi</string>
     <string name="settings_csv_import_interval_end_hint">Iga rida kestab kuupäevast ja kellaajast veeruni „Lõpukuupäev ja -kellaaeg“. Ilma selleta loetakse rida üheks minutiks.</string>
     <string name="settings_csv_import_metric_weight">Kaal</string>
     <string name="settings_csv_import_metric_body_fat">Keharasv</string>
@@ -2417,8 +2426,13 @@
     <string name="settings_csv_import_unit_milligrams_per_deciliter">Milligrammi detsiliitri kohta (mg/dL)</string>
     <string name="settings_csv_import_unit_milliliters_per_kg_per_minute">mL/kg/min</string>
     <string name="settings_csv_import_unit_count">Arv</string>
+    <string name="settings_csv_import_unit_kilocalories">Kilokalorid (kcal)</string>
+    <string name="settings_csv_import_unit_kilojoules">Kilodžaulid (kJ)</string>
+    <string name="settings_csv_import_unit_milligrams">Milligrammid (mg)</string>
+    <string name="settings_csv_import_unit_micrograms">Mikrogrammid (µg)</string>
     <string name="settings_csv_import_interpretation_mass_share">Mass ühikus %1$s, osakaaluna kaaluveerust</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect salvestab keharasva protsendina, seega arvutatakse see sama rea kaalumõõtmise põhjal.</string>
+    <string name="settings_csv_import_nutrient_hint">Rea kõik toitaineveerud moodustavad ühe toidu kirje.</string>
     <string name="settings_csv_import_date_time_title">Kuupäev ja kellaaeg</string>
     <string name="settings_csv_import_date_format_label">Vorming</string>
     <string name="settings_csv_import_date_format_auto">Tuvasta automaatselt</string>
@@ -2445,6 +2459,7 @@
     <string name="settings_csv_import_issue_needs_weight">Massina antud keharasv vajab protsendi arvutamiseks samas failis kaaluveergu.</string>
     <string name="settings_csv_import_issue_timestamp_unparsed">Ükski valimi rida ei vasta sellele kuupäevavormingule.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Lõpukuupäev ja -kellaaeg saab olla ainult ühes veerus.</string>
+    <string name="settings_csv_import_issue_multiple_food_names">Toidu nime saab hoida ainult üks veerg.</string>
     <string name="settings_csv_import_confirm_title">Importimiseks valmis</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d mõõtmist rea kohta</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s kuni %3$s</string>
@@ -2453,13 +2468,45 @@
     <string name="settings_csv_import_permission_body">OpenVitals vajab luba nende mõõtmiste kirjutamiseks Health Connectisse.</string>
     <string name="settings_csv_import_start">Impordi</string>
     <string name="settings_csv_import_cancel">Tühista</string>
-    <string name="settings_csv_import_progress">Rida %1$d · kirjutatud %2$d, juba olemas %3$d, tagasi lükatud %4$d</string>
-    <string name="settings_csv_import_result">Kirjutatud %1$d. Juba olemas %2$d. Tagasi lükatud %3$d.</string>
+    <string name="settings_csv_import_progress">Rida %1$d · kirjutatud kirjeid %2$d, tagasi lükatud %3$d</string>
+    <string name="settings_csv_import_quota_pause">Health Connect piirab praegu kirjutamisi. Import jätkub %1$d s pärast.</string>
+    <string name="settings_csv_import_drip_title">Tuvastati dripi eksport</string>
+    <string name="settings_csv_import_drip_body">%1$s on dripist eksporditud tsükli ajalugu. Vali, mis OpenVitalsi tuua. Iga päeva loetakse selle telefoni ajavööndis ja midagi ei kirjutata enne kinnitamist.</string>
+    <string name="settings_csv_import_drip_bleeding">Veritsus</string>
+    <string name="settings_csv_import_drip_bleeding_body">Menstruatsiooni vool ja määrimine Health Connecti. Dripis välja jäetud veritsusest saab määrimine.</string>
+    <string name="settings_csv_import_drip_temperature">Basaaltemperatuur</string>
+    <string name="settings_csv_import_drip_temperature_body">Hommikused temperatuurid salvestatud kellaajal. Dripis välja jäetud temperatuurid jäetakse kõrvale.</string>
+    <string name="settings_csv_import_drip_mucus">Emakakaela lima</string>
+    <string name="settings_csv_import_drip_mucus_body">Tekstuur ja tunne Health Connecti; tunne täidab ka päeviku aistingu.</string>
+    <string name="settings_csv_import_drip_sex">Seksuaalne aktiivsus</string>
+    <string name="settings_csv_import_drip_sex_body">Seksiga päevad: kaitstud, kui drip nimetab rasestumisvastast vahendit, kaitsmata, kui ta ütleb, et mitte ühtegi.</string>
+    <string name="settings_csv_import_drip_journal">Päevik</string>
+    <string name="settings_csv_import_drip_journal_body">Valu ja tuju sümptomitena, tuju ja energia tasemed, emakakael, iha ning kõik märkmed selle telefoni tsüklipäevikusse.</string>
+    <string name="settings_csv_import_drip_confirm_summary">%1$s · esimesest %3$d päevast %2$d sisaldab midagi importimiseks</string>
+    <string name="settings_csv_import_journal_days">Päevikupäevi: %1$d, neist %2$d uuendatud</string>
+    <string name="settings_csv_import_tally_rows_title">Faili read</string>
+    <string name="settings_csv_import_tally_rows_read">Loetud</string>
+    <string name="settings_csv_import_tally_rows_imported">Imporditud</string>
+    <string name="settings_csv_import_tally_rows_rejected">Tagasi lükatud</string>
+    <string name="settings_csv_import_tally_rows_empty">Pole midagi importida</string>
+    <string name="settings_csv_import_tally_rows_note">Üks rida võib anda mitu kirjet või mitte ühtegi, seega read ja kirjed ei liitu omavahel.</string>
+    <string name="settings_csv_import_tally_records_title">Health Connecti kirjed</string>
+    <string name="settings_csv_import_tally_records_written">Kirjutatud</string>
+    <string name="settings_csv_import_tally_records_replaced">Asendas varasema impordi</string>
+    <string name="settings_csv_import_tally_records_unchecked">Kirjutatud eelneva kontrollita</string>
+    <string name="settings_csv_import_tally_records_unchecked_note">Nende kirjete jaoks ei õnnestunud Health Connecti lugeda, seega asendatute arv on alampiir.</string>
+    <string name="settings_csv_import_tally_journal_title">Tsüklipäevik</string>
+    <string name="settings_csv_import_tally_journal_days">Sissekandega päevi</string>
+    <string name="settings_csv_import_tally_journal_updated">Selles telefonis uuendatud</string>
+    <string name="settings_csv_import_outcome_completed">Import lõpetatud</string>
+    <string name="settings_csv_import_outcome_cancelled">Import tühistatud</string>
+    <string name="settings_csv_import_outcome_rate_limited">Import peatatud</string>
+    <string name="settings_csv_import_outcome_failed">Import ebaõnnestus</string>
     <string name="settings_csv_import_result_empty">Sellest failist ei imporditud midagi.</string>
     <string name="settings_csv_import_result_cancelled">Import tühistati. Juba kirjutatu jäi alles.</string>
-    <string name="settings_csv_import_result_rate_limited">Health Connect ei võta praegu kirjutamisi vastu. Käivita import hiljem uuesti; juba kirjutatud kirjed jäetakse vahele.</string>
+    <string name="settings_csv_import_result_rate_limited">Health Connect keeldus pool tundi kirjutamisi vastu võtmast. Käivita import hiljem uuesti; juba kirjutatu jääb alles.</string>
     <string name="settings_csv_import_error">Import ebaõnnestus: %1$s</string>
-    <string name="settings_csv_import_diagnostics_title">Tagasi lükatud read</string>
+    <string name="settings_csv_import_diagnostics_title">Tagasilükkamised põhjuse järgi</string>
     <string name="settings_csv_import_diagnostic_line">%1$s: %2$d</string>
     <string name="settings_csv_import_reason_missing_timestamp">Kuupäev ja kellaaeg puuduvad</string>
     <string name="settings_csv_import_reason_unparsable_timestamp">Kuupäevast ei saadud aru</string>
@@ -2468,6 +2515,7 @@
     <string name="settings_csv_import_reason_out_of_range">Väärtus väljaspool usutavat vahemikku</string>
     <string name="settings_csv_import_reason_derivation_missing_weight">Puudub kaal, millest protsenti arvutada</string>
     <string name="settings_csv_import_reason_write_failed">Health Connect keeldus kirjest</string>
+    <string name="settings_csv_import_reason_excluded_in_source">Lähteäpis välja jäetud</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Lõpukuupäevast ei saadud aru</string>
     <string name="settings_csv_import_reason_end_not_after_start">Lõpp ei ole pärast algust</string>
     <string name="settings_csv_import_save_report">Salvesta raport</string>
@@ -2737,6 +2785,7 @@
     <string name="report_metrics_section_title">Mõõdikud</string>
     <string name="report_metrics_select_all">Vali kõik</string>
     <string name="report_metrics_clear">Tühjenda</string>
+    <string name="report_metrics_nutrient_breakdown_hint">„Vali kõik“ jätab need välja. Märgi pealkiri, et lisada kogu rühm.</string>
     <string name="report_granularity_title">Detailsus</string>
     <string name="report_granularity_daily">Päevane</string>
     <string name="report_granularity_weekly">Nädalane</string>
@@ -3278,6 +3327,20 @@
     <string name="cycle_sensation_damp">Niiske</string>
     <string name="cycle_sensation_wet">Märg</string>
     <string name="cycle_sensation_slippery">Libe</string>
+    <string name="cycle_entry_desire">Iha</string>
+    <string name="cycle_entry_desire_scale">1: väga madal, 5: väga kõrge</string>
+    <string name="cycle_entry_desire_value">Iha: %1$d 5-st</string>
+    <string name="cycle_entry_cervix">Emakakael</string>
+    <string name="cycle_entry_cervix_opening">Avatus</string>
+    <string name="cycle_entry_cervix_firmness">Tugevus</string>
+    <string name="cycle_entry_cervix_position">Asend</string>
+    <string name="cycle_cervix_closed">Suletud</string>
+    <string name="cycle_cervix_medium">Keskmine</string>
+    <string name="cycle_cervix_open">Avatud</string>
+    <string name="cycle_cervix_firm">Tugev</string>
+    <string name="cycle_cervix_soft">Pehme</string>
+    <string name="cycle_cervix_low">Madal</string>
+    <string name="cycle_cervix_high">Kõrge</string>
     <string name="cycle_entry_partial_permission">Tähelepanekud, millel puudub Health Connecti kirjutamisluba, jäetakse muutumisel vahele.</string>
     <string name="cycle_entry_save">Salvesta päev</string>
     <string name="cycle_entry_discard_title">Lahkud salvestamata?</string>
@@ -3677,9 +3740,14 @@
     <string name="settings_watch_wearos_syncing">Kella sünkroonimine…</string>
     <string name="settings_watch_wearos_synced_none">Kellas pole midagi uut</string>
     <string name="settings_watch_wearos_needs_weight">Kõndimise kaloreid ei hinnatud: lisa oma kaal Kehaprofiili või salvesta see Health Connecti.</string>
+    <string name="settings_watch_wearos_needs_step_writes">Osa sammuandmeid jäi kirjutamata: luba OpenVitalsil kirjutada Health Connecti samme, sammusagedust ja aktiivseid kaloreid ning sünkrooni uuesti.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d pulsinäit sünkroonitud</item>
         <item quantity="other">%1$d pulsinäitu sünkroonitud</item>
+    </plurals>
+    <plurals name="settings_watch_wearos_synced_step_minutes">
+        <item quantity="one">Sammud %1$d minuti kohta</item>
+        <item quantity="other">Sammud %1$d minuti kohta</item>
     </plurals>
     <plurals name="settings_watch_wearos_synced_nights">
         <item quantity="one">%1$d öö uni hinnatud</item>

@@ -16,6 +16,7 @@ import tech.mmarca.openvitals.core.performance.LoadCoordinator
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.displayPeriodFor
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
+import tech.mmarca.openvitals.domain.preferences.BodyProfile
 import tech.mmarca.openvitals.domain.preferences.toWeekPeriodMode
 import tech.mmarca.openvitals.domain.model.CaloriesBurnedSource
 import tech.mmarca.openvitals.domain.model.DailyHrv
@@ -25,6 +26,7 @@ import tech.mmarca.openvitals.domain.model.DailySteps
 import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.data.repository.contract.CalorieDisplayPreferences
 import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
@@ -96,6 +98,7 @@ class ActivityOverviewViewModel @Inject constructor(
     private val heartRepository: HeartRepository,
     private val periodPreferences: PeriodPreferences,
     private val calorieDisplayPreferences: CalorieDisplayPreferences,
+    private val bodyProfilePreferences: BodyProfilePreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     savedStateHandle: androidx.lifecycle.SavedStateHandle,
 ) : ViewModel() {
@@ -146,8 +149,9 @@ class ActivityOverviewViewModel @Inject constructor(
                 loadActivityOverview(start, end)
             }.onSuccess { result ->
                 if (!isCurrent) return@load
+                val profile = bodyProfilePreferences.bodyProfile().normalized(end)
                 val days = withContext(dispatchers.default) {
-                    result.toDays(start, end)
+                    result.toDays(start, end, profile)
                 }
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
@@ -198,6 +202,7 @@ class ActivityOverviewViewModel @Inject constructor(
     private fun ActivityOverviewLoadResult.toDays(
         start: LocalDate,
         end: LocalDate,
+        profile: BodyProfile,
     ): List<ActivityOverviewDay> {
         val stepsByDate = steps.associateBy { it.date }
         val nutritionByDate = nutrition.associateBy { it.date }
@@ -235,6 +240,9 @@ class ActivityOverviewViewModel @Inject constructor(
                     baselineRestingHeartRate = baselineRestingHeartRate,
                     observedMaxHeartRate = observedMaxHeartRate,
                     activityWindows = dayWorkouts.toCardioLoadTimeWindows(date, zone),
+                    ageYears = profile.ageYears(date),
+                    explicitMaxHeartRate = profile.maxHeartRateBpm?.toLong(),
+                    sex = profile.sex,
                 ),
             )
         }.toList()

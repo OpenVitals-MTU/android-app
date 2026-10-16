@@ -180,6 +180,7 @@ internal fun WearOsSyncCard(
     device: BleSensorDevice,
     sync: DeviceSyncUiState,
     onSync: () -> Unit,
+    onAllowWrites: (Set<String>) -> Unit,
 ) {
     val syncingThis = sync.isSyncingDevice(device.id)
     OpenVitalsCard {
@@ -206,9 +207,13 @@ internal fun WearOsSyncCard(
             // Only after a run this session; the counts are not persisted.
             val samples = sync.lastFileCount
             val nights = sync.lastNightCount ?: 0
+            val stepMinutes = sync.lastStepMinuteCount ?: 0
             if (!sync.isSyncing && sync.phase == DeviceSyncPhase.COMPLETE && samples != null) {
                 val lines = buildList {
                     if (samples > 0) add(pluralStringResource(R.plurals.settings_watch_wearos_synced_samples, samples, samples))
+                    if (stepMinutes > 0) {
+                        add(pluralStringResource(R.plurals.settings_watch_wearos_synced_step_minutes, stepMinutes, stepMinutes))
+                    }
                     if (nights > 0) add(pluralStringResource(R.plurals.settings_watch_wearos_synced_nights, nights, nights))
                     if (isEmpty()) add(stringResource(R.string.settings_watch_wearos_synced_none))
                 }
@@ -225,6 +230,20 @@ internal fun WearOsSyncCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+                val withheld = sync.lastWithheldWritePermissions
+                if (withheld.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.settings_watch_wearos_needs_step_writes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OpenVitalsOutlinedButton(
+                        onClick = { onAllowWrites(withheld) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.action_grant_permission))
+                    }
                 }
             }
             sync.error.resolve()?.let { message ->
