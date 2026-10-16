@@ -55,3 +55,5 @@ OpenVitals Design System/
 .gradle-release/
 *.code-workspace
 __pycache__/
+# Local FHIR corpora for FhirCorpusCheck, too large to commit. Anchored, so the test fixtures named fhir/ stay tracked.
+/fhir/
