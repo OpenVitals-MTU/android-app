@@ -164,6 +164,23 @@ class Dstu2ToR4Test {
     }
 
     @Test
+    fun `every name's family names become one string, a contact's too, and a contact's alone marks the record DSTU2`() {
+        val patient = convert(
+            """{"resourceType":"Patient","id":"p","name":[{"family":["Smith"],"given":["John","Q"]}],
+               "contact":[{"name":{"family":["Doe","Roe"],"given":["Jane"]}}]}""",
+        )
+        val organization = FhirTestFiles.json("""{"resourceType":"Organization","id":"o","name":"Lab","contact":[{"name":{"family":["Kask"]}}]}""")
+
+        val name = patient.getValue("name").jsonArray.single().jsonObject
+        assertThat(name.text("family")).isEqualTo("Smith")
+        assertThat(name.getValue("given").jsonArray.map { it.jsonPrimitive.content }).containsExactly("John", "Q").inOrder()
+        assertThat(patient.getValue("contact").jsonArray.single().jsonObject.getValue("name").jsonObject.text("family")).isEqualTo("Doe Roe")
+        assertThat(Dstu2ToR4.looksDstu2(organization)).isTrue()
+        assertThat(requireNotNull(Dstu2ToR4.convert(organization)).getValue("contact").jsonArray.single().jsonObject.getValue("name").jsonObject.text("family"))
+            .isEqualTo("Kask")
+    }
+
+    @Test
     fun `a type with no mapping is not converted`() {
         assertThat(Dstu2ToR4.convert(Json.parseToJsonElement("""{"resourceType":"DiagnosticOrder","id":"d"}""").jsonObject)).isNull()
     }

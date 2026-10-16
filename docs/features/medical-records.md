@@ -69,7 +69,7 @@ Health Connect stores no diagnostic report, only its results, which are Observat
 
 ### FHIR DSTU2
 
-Health Connect stores FHIR R4 and R4B. Some providers still hand out DSTU2, the 2015 version: older iPhones exported it, and labs such as LabCorp serve it to the apps that fetch records on a patient's behalf, such as CommonHealth. A DSTU2 record is converted to R4 before it is checked: renamed fields, status codes that moved, and single values that R4 holds as lists, such as a lab result's category. A plain FHIR file states no version, so a record is recognised by its shape, by the fields DSTU2 had and R4 does not; a record that reads the same in both versions needs no conversion. A converted record says so on its detail screen.
+Health Connect stores FHIR R4 and R4B. Some providers still hand out DSTU2, the 2015 version: older iPhones exported it, and labs such as LabCorp serve it to the apps that fetch records on a patient's behalf, such as CommonHealth. A DSTU2 record is converted to R4 before it is checked: renamed fields, status codes that moved, single values that R4 holds as lists, such as a lab result's category, and the family names of a person, which DSTU2 holds as a list and R4 as one string. A plain FHIR file states no version, so a record is recognised by its shape, by the fields DSTU2 had and R4 does not; a record that reads the same in both versions needs no conversion. A converted record says so on its detail screen.
 
 ### Apple Health clinical records
 
