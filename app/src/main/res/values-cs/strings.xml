@@ -701,8 +701,10 @@
     <string name="cardio_load_day_numbers_title">Dnešní hodnoty</string>
     <string name="cardio_load_references_title">Odkazy na zdroje</string>
     <string name="cardio_load_calculation_summary">OpenVitals používá TRIMP založený na srdečním tepu, pokud jsou data o tepu k dispozici, a teprve když tep použít nelze, přejde na pohyb.</string>
-    <string name="cardio_load_formula">TRIMP = minuty x HRR x 0,64 x e^(1,92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = minuty x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR je tepová rezerva: (srdeční tep - klidový tep) / (maximální tep - klidový tep). OpenVitals ji sčítá přes dostupné intervaly srdečního tepu za den.</string>
+    <string name="cardio_load_formula_weighting">a = 0,64 a b = 1,92 pro muže, a = 0,86 a b = 1,67 pro ženy (Banister). Pokud tělesný profil neuvádí pohlaví, použijí se hodnoty pro muže.</string>
+    <string name="cardio_load_max_hr_body">Maximální tepová frekvence pochází z tělesného profilu. Pokud tam není uvedena, OpenVitals použije nejvyšší naměřenou tepovou frekvenci, pokud je dost vysoká. Jinak maximum odhadne z věku: 206 - 0,88 x věk pro ženy (Gulati), 208 - 0,7 x věk pro ostatní (Tanaka).</string>
     <string name="cardio_load_mapping_body">Pokud existují zaznamenané aktivity, vzorky srdečního tepu se podle časových značek přiřadí do okna začátku a konce každé aktivity. Bez oken aktivit se počítají jen intervaly se zvýšeným tepem. Když tep použít nelze, zobrazí se jako méně spolehlivá náhrada pohyb a aktivní kalorie.</string>
     <string name="cardio_load_method">Metoda</string>
     <string name="cardio_load_trimp_score">Skóre TRIMP</string>
@@ -726,6 +728,8 @@
     <string name="cardio_load_calibration_estimated_max">Maximální tep odhadnut</string>
     <string name="cardio_load_reference_banister">Banisterova rovnice TRIMP</string>
     <string name="cardio_load_reference_training_load">Přehled sledování tréninkové zátěže</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: maximální tepová frekvence podle věku</string>
+    <string name="cardio_load_reference_gulati">Gulati: maximální tepová frekvence u žen</string>
     <string name="cardio_load_reference_health_connect">Mapování tepu tréninku v Health Connect</string>
     <string name="section_sleep_sessions">Spánkové relace</string>
     <string name="section_weight">Hmotnost</string>

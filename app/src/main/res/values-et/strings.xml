@@ -621,8 +621,10 @@
     <string name="cardio_load_day_numbers_title">Tänased väärtused</string>
     <string name="cardio_load_references_title">Kasutatud allikad</string>
     <string name="cardio_load_calculation_summary">OpenVitals kasutab pulsipõhist TRIMP-i, kui pulsiandmed on saadaval, ja langeb tagasi ainult liikumisele, kui pulss ei ole kasutatav.</string>
-    <string name="cardio_load_formula">TRIMP = minutid x HRR x 0,64 x e^(1,92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = minutid x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR on pulsivaru: (pulss - puhkeoleku pulss) / (maksimaalne pulss - puhkeoleku pulss). OpenVitals liidab selle kokku kättesaadavate pulsi-intervallide kohta terve päeva jooksul.</string>
+    <string name="cardio_load_formula_weighting">a = 0,64 ja b = 1,92 meestele, a = 0,86 ja b = 1,67 naistele (Banister). Kui kehaprofiilis pole sugu märgitud, kasutatakse meeste väärtusi.</string>
+    <string name="cardio_load_max_hr_body">Sinu maksimaalne pulss tuleb kehaprofiilist. Kui seda pole määratud, kasutab OpenVitals kõrgeimat mõõdetud pulssi, kui see on piisavalt kõrge. Muidu hindab see maksimumi vanuse järgi: 206 - 0,88 x vanus naistele (Gulati), 208 - 0,7 x vanus kõigile teistele (Tanaka).</string>
     <string name="cardio_load_mapping_body">Kui salvestatud treeningud on olemas, seotakse pulsinäidud ajatempli järgi iga treeningu algus- ja lõpuaknaga. Ilma treeninguakendeta loetakse ainult tõusnud pulsi intervalle. Kui pulss ei ole kasutatav, näidatakse madala usaldusväärsusega tagavarana liikumist ja aktiivseid kaloreid.</string>
     <string name="cardio_load_method">Meetod</string>
     <string name="cardio_load_trimp_score">TRIMP-tulemus</string>
@@ -646,6 +648,8 @@
     <string name="cardio_load_calibration_estimated_max">Maks pulss hinnanguline</string>
     <string name="cardio_load_reference_banister">Banisteri TRIMP-valem</string>
     <string name="cardio_load_reference_training_load">Treeningkoormuse jälgimise ülevaade</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: maksimaalne pulss vanuse järgi</string>
+    <string name="cardio_load_reference_gulati">Gulati: naiste maksimaalne pulss</string>
     <string name="cardio_load_reference_health_connect">Health Connecti treeningu pulsi seostamine</string>
     <string name="section_sleep_sessions">Unesessioonid</string>
     <string name="section_weight">Kaal</string>
