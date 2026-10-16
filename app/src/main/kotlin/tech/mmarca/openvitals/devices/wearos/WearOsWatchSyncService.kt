@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.devices.wearos
 
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.SleepSessionRecord
 import java.time.Instant
@@ -183,7 +184,8 @@ class WearOsWatchSyncService(
             if (newest != null) {
                 written += importRepository.insertSkippingPresent(WearOsStepsImport.records(page.minutes))
                 writeEstimates("cadence", WearOsStepsImport.cadenceRecords(page.minutes))
-                val energy = WearOsStepsImport.activeCaloriesRecords(page.minutes, weight)
+                val exerciseSessions = exerciseSessions(page.minutes)
+                val energy = WearOsStepsImport.activeCaloriesRecords(page.minutes, weight, exerciseSessions)
                 writeEstimates("walking energy", energy)
                 pulledSteps += page.minutes.sumOf { it.steps }
                 energyMinutes += energy.size
@@ -292,6 +294,24 @@ class WearOsWatchSyncService(
             WearOsLog.log("Could not read existing sleep sessions: $error")
         }
         return found
+    }
+
+    /** Time ranges of exercise sessions overlapping the step minutes range. */
+    private suspend fun exerciseSessions(minutes: List<WearOsStepMinute>): List<ClosedRange<Instant>> {
+        if (minutes.isEmpty()) return emptyList()
+        val minStart = minutes.minOf { it.start }
+        val maxEnd = minutes.maxOf { it.start }.plusSeconds(60)
+        val sessions = mutableListOf<ClosedRange<Instant>>()
+        try {
+            healthConnect.forEachSyncRecordPage(ExerciseSessionRecord::class, minStart, maxEnd) { page ->
+                page.filterIsInstance<ExerciseSessionRecord>().mapTo(sessions) { it.startTime..it.endTime }
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            WearOsLog.log("Could not read exercise sessions for walking energy filtering: $error")
+        }
+        return sessions
     }
 
     /** A higher version replaces the earlier estimate. If Health Connect still objects, delete and retry once. */

@@ -55,10 +55,18 @@ object WearOsStepsImport {
             )
         }
 
-    /** Empty unless [weightKg] is known; minutes too slow to cost more than rest write nothing. */
-    fun activeCaloriesRecords(minutes: List<WearOsStepMinute>, weightKg: Double?): List<Record> {
+    /**
+     * Empty unless [weightKg] is known; minutes too slow to cost more than rest
+     * or inside an exercise session write nothing.
+     */
+    fun activeCaloriesRecords(
+        minutes: List<WearOsStepMinute>,
+        weightKg: Double?,
+        exerciseSessions: List<ClosedRange<Instant>> = emptyList(),
+    ): List<Record> {
         if (weightKg == null || weightKg <= 0.0) return emptyList()
         return latestPerMinute(minutes).mapNotNull { minute ->
+            if (isInsideExerciseSession(minute, exerciseSessions)) return@mapNotNull null
             val kcal = WalkingEnergy.activeKcalPerMinute(minute.steps, weightKg)
             if (kcal <= 0.0) return@mapNotNull null
             ActiveCaloriesBurnedRecord(
@@ -82,6 +90,17 @@ object WearOsStepsImport {
     /** A minute stated twice in one page keeps the larger count, the later statement. */
     private fun latestPerMinute(minutes: List<WearOsStepMinute>): List<WearOsStepMinute> =
         minutes.groupBy { it.start }.map { (_, same) -> same.maxBy { it.steps } }
+
+    private fun isInsideExerciseSession(minute: WearOsStepMinute, exerciseSessions: List<ClosedRange<Instant>>): Boolean {
+        if (exerciseSessions.isEmpty()) return false
+        val minuteStart = minute.start
+        val minuteEnd = minute.end
+        return exerciseSessions.any { session ->
+            val sessionStart = session.start
+            val sessionEnd = session.endInclusive
+            sessionEnd > sessionStart && minuteStart < sessionEnd && minuteEnd > sessionStart
+        }
+    }
 
     private fun watchMetadata(clientRecordId: String, steps: Int): Metadata =
         Metadata.autoRecorded(

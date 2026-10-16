@@ -54,4 +54,17 @@ class WearOsStepsImportTest {
         assertEquals(2.584, record.energy.inKilocalories, 0.001)
         assertEquals(100L, record.metadata.clientRecordVersion)
     }
+
+    @Test
+    fun `walking energy skips minutes inside an exercise session`() {
+        val minute1 = minute
+        val minute2 = minute.plusSeconds(60)
+        val minutes = listOf(WearOsStepMinute(minute1, 100), WearOsStepMinute(minute2, 100))
+        val exerciseSessions = listOf(minute1..minute1.plusSeconds(60))
+
+        val records = WearOsStepsImport.activeCaloriesRecords(minutes, weightKg = 70.0, exerciseSessions = exerciseSessions)
+
+        val record = records.single() as androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+        assertEquals(minute2, record.startTime)
+    }
 }

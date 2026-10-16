@@ -30,6 +30,7 @@ import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRe
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingStatus
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.domain.model.WearSleepMinute
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import io.mockk.slot
@@ -244,6 +245,31 @@ class WearOsWatchSyncServiceTest {
         assertEquals(DeviceSyncResult.Succeeded(0, missingBodyWeight = true), result)
         assertEquals(1, insertedOf<androidx.health.connect.client.records.StepsRecord>().size)
         assertTrue(insertedOf<androidx.health.connect.client.records.ActiveCaloriesBurnedRecord>().isEmpty())
+    }
+
+    @Test
+    fun `walking energy skips minutes overlapping an exercise session in Health Connect`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        val m1 = t0
+        val m2 = t0.plusSeconds(60)
+        stepPages += WearOsStepPage(
+            listOf(WearOsStepMinute(m1, 100), WearOsStepMinute(m2, 100)),
+            hasMore = false,
+        )
+        val session = mockk<ExerciseSessionRecord> {
+            every { startTime } returns m1
+            every { endTime } returns m1.plusSeconds(60)
+        }
+        coEvery { healthConnect.forEachSyncRecordPage(ExerciseSessionRecord::class, any(), any(), any()) } coAnswers {
+            arg<suspend (List<androidx.health.connect.client.records.Record>) -> Unit>(3).invoke(listOf(session))
+        }
+        coEvery { importRepository.insertImportedRecords(capture(inserted)) } returns Unit
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        val activeCalories = insertedOf<androidx.health.connect.client.records.ActiveCaloriesBurnedRecord>()
+        assertEquals(1, activeCalories.size)
+        assertEquals(m2, activeCalories.single().startTime)
     }
 
     @Test
