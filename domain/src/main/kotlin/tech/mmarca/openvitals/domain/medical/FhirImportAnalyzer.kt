@@ -35,11 +35,17 @@ data class FhirImportAnalysis(
     val readyCount: Int get() = groups.sumOf { it.ready.size }
 }
 
-/** The analyze step: group by source, skip unsupported types, assign ids, then pre-flight. */
+/**
+ * The analyze step: group by source, convert DSTU2 records to R4, skip unsupported types,
+ * assign ids, then pre-flight. A record is DSTU2 when the Bundle's profile says so, or by its
+ * own shape ([Dstu2ToR4.looksDstu2]): a plain file states no version.
+ */
 object FhirImportAnalyzer {
     fun analyze(file: FhirFile, fileName: String): FhirImportAnalysis {
+        val dstu2Bundle = file.bundleProfiles.any(Dstu2ToR4::profileNamesDstu2)
         val groups = FhirSourceGrouper.group(file, fileName).map { group ->
-            val (supported, unsupported) = group.entries.partition { it.type in FhirResourceTypes.supported }
+            val entries = group.entries.map { if (dstu2Bundle || Dstu2ToR4.looksDstu2(it.resource)) it.asR4() else it }
+            val (supported, unsupported) = entries.partition { it.type in FhirResourceTypes.supported }
             val ids = FhirIdAssigner.assign(supported, scope = group.baseUri ?: FhirSourceGrouper.ImportScheme)
             val checked = ids.resources.map { it to FhirPreflight.check(it) }
             FhirImportGroup(
@@ -55,4 +61,7 @@ object FhirImportAnalyzer {
         }
         return FhirImportAnalysis(groups, file.isOpenVitalsExport)
     }
+
+    /** The entry with its record in R4. A type with no mapping stays as it is: the platform's reason reaches the report. */
+    private fun FhirEntry.asR4(): FhirEntry = Dstu2ToR4.convert(resource)?.let { copy(resource = it) } ?: this
 }
