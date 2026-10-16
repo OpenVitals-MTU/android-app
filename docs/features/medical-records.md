@@ -65,6 +65,8 @@ Records from a source another app already holds start left out, so a re-import o
 
 The importer also repairs common problems in real files. It gives records without ids a stable id, lifts contained records out of their parent, and rewrites the references between them. The report lists every repair.
 
+Health Connect stores no diagnostic report, only its results, which are Observation records. A report that holds its results inside itself gives each one as a lab result of its own: it takes the report's patient, date and performer where it names none, and the laboratory category when the report comes from a lab. Most reports point at results kept as records of their own, often in files of their own. A file holding only such reports says so, and the files with the results are the ones to import.
+
 ### FHIR DSTU2
 
 Health Connect stores FHIR R4 and R4B. Some providers still hand out DSTU2, the 2015 version: older iPhones exported it, and labs such as LabCorp serve it to the apps that fetch records on a patient's behalf, such as CommonHealth. A DSTU2 record is converted to R4 before it is checked: renamed fields, status codes that moved, and single values that R4 holds as lists, such as a lab result's category. A plain FHIR file states no version, so a record is recognised by its shape, by the fields DSTU2 had and R4 does not; a record that reads the same in both versions needs no conversion. A converted record says so on its detail screen.

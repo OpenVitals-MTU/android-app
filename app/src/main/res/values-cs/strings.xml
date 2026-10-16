@@ -1537,6 +1537,7 @@
     <string name="medical_import_error_too_large">Tento soubor je větší než 8 MB.</string>
     <string name="medical_import_error_unreadable">Soubor nelze přečíst.</string>
     <string name="medical_import_error_no_records">Tento soubor neobsahuje nic, co Health Connect ukládá.</string>
+    <string name="medical_import_error_reports_only">Tento soubor obsahuje pouze diagnostické zprávy. Health Connect ukládá výsledky zprávy, nikoli zprávu samotnou, a tento soubor je neobsahuje. Jsou to záznamy Observation, obvykle ve vlastních souborech: importujte raději ty.</string>
     <string name="medical_import_new_source">Nový zdroj</string>
     <string name="medical_import_existing_source">Přidá do zdroje, který jste importovali dříve</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>

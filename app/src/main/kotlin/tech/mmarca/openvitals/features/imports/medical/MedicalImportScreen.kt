@@ -221,6 +221,7 @@ private val MedicalImportPickError.messageRes: Int
         MedicalImportPickError.TOO_LARGE -> R.string.medical_import_error_too_large
         MedicalImportPickError.UNREADABLE -> R.string.medical_import_error_unreadable
         MedicalImportPickError.NO_RECORDS -> R.string.medical_import_error_no_records
+        MedicalImportPickError.REPORTS_ONLY -> R.string.medical_import_error_reports_only
         MedicalImportPickError.CAMERA_DENIED -> R.string.medical_import_error_camera_denied
     }
 

@@ -1287,6 +1287,7 @@
     <string name="medical_import_error_too_large">See fail on suurem kui 8 MB.</string>
     <string name="medical_import_error_unreadable">Faili ei saanud lugeda.</string>
     <string name="medical_import_error_no_records">Selles failis pole midagi, mida Health Connect salvestab.</string>
+    <string name="medical_import_error_reports_only">See fail sisaldab ainult diagnostilisi aruandeid. Health Connect salvestab aruande tulemused, mitte aruannet ennast, ja see fail neid ei sisalda. Need on Observation-kirjed, tavaliselt eraldi failides: impordi hoopis need.</string>
     <string name="medical_import_new_source">Uus allikas</string>
     <string name="medical_import_existing_source">Lisab allikale, mille oled varem importinud</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>

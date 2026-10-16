@@ -1897,6 +1897,7 @@
     <string name="medical_import_error_too_large">This file is larger than 8 MB.</string>
     <string name="medical_import_error_unreadable">This file could not be read.</string>
     <string name="medical_import_error_no_records">This file holds nothing Health Connect stores.</string>
+    <string name="medical_import_error_reports_only">This file holds only diagnostic reports. Health Connect stores the results of a report, not the report, and this file does not hold them. They are Observation records, usually in files of their own: import those instead.</string>
     <string name="medical_import_new_source">New source</string>
     <string name="medical_import_existing_source">Adds to a source you imported before</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>

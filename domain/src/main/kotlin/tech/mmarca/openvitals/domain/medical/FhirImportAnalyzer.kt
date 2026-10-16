@@ -36,17 +36,27 @@ data class FhirImportAnalysis(
 }
 
 /**
- * The analyze step: group by source, convert DSTU2 records to R4, skip unsupported types,
- * assign ids, then pre-flight. A record is DSTU2 when the Bundle's profile says so, or by its
- * own shape ([Dstu2ToR4.looksDstu2]): a plain file states no version.
+ * The analyze step: group by source, lift the results a DiagnosticReport holds inside itself
+ * ([DiagnosticReportResults]), convert DSTU2 records to R4, skip unsupported types, assign ids,
+ * then pre-flight. A record is DSTU2 when the Bundle's profile says so, or by its own shape
+ * ([Dstu2ToR4.looksDstu2]): a plain file states no version. A result lifted from a DSTU2 report is DSTU2 too.
  */
 object FhirImportAnalyzer {
     fun analyze(file: FhirFile, fileName: String): FhirImportAnalysis {
         val dstu2Bundle = file.bundleProfiles.any(Dstu2ToR4::profileNamesDstu2)
         val groups = FhirSourceGrouper.group(file, fileName).map { group ->
-            val entries = group.entries.map { if (dstu2Bundle || Dstu2ToR4.looksDstu2(it.resource)) it.asR4() else it }
+            val scope = group.baseUri ?: FhirSourceGrouper.ImportScheme
+            val liftNotes = mutableListOf<FhirIdNote>()
+            val entries = group.entries.flatMap { entry ->
+                val dstu2 = dstu2Bundle || Dstu2ToR4.looksDstu2(entry.resource)
+                val results = DiagnosticReportResults.of(entry, scope).map { (result, note) ->
+                    liftNotes += note
+                    if (dstu2 || Dstu2ToR4.looksDstu2(result.resource)) result.asR4() else result
+                }
+                listOf(if (dstu2) entry.asR4() else entry) + results
+            }
             val (supported, unsupported) = entries.partition { it.type in FhirResourceTypes.supported }
-            val ids = FhirIdAssigner.assign(supported, scope = group.baseUri ?: FhirSourceGrouper.ImportScheme)
+            val ids = FhirIdAssigner.assign(supported, scope = scope)
             val checked = ids.resources.map { it to FhirPreflight.check(it) }
             FhirImportGroup(
                 baseUri = group.baseUri,
@@ -55,7 +65,7 @@ object FhirImportAnalyzer {
                 ready = checked.filter { it.second == null }.map { it.first },
                 rejected = checked.mapNotNull { (resource, problem) -> problem?.let { FhirRejectedResource(resource, it) } },
                 skippedTypes = unsupported.groupingBy { it.type ?: "" }.eachCount(),
-                notes = ids.notes,
+                notes = liftNotes + ids.notes,
                 versionStated = group.fhirVersion != null,
             )
         }
