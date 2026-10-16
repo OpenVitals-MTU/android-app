@@ -1035,8 +1035,10 @@
     <string name="cardio_load_day_numbers_title">Päivän arvot</string>
     <string name="cardio_load_references_title">Lähdelinkit</string>
     <string name="cardio_load_calculation_summary">OpenVitals käyttää sykepohjaista TRIMP-arvoa, kun syketietoja on saatavilla, ja turvautuu liikkeeseen vain, kun syke ei ole käyttökelpoinen.</string>
-    <string name="cardio_load_formula">TRIMP = minuutit x HRR x 0,64 x e^(1,92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = minuutit x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR on sykereservi: (syke - leposyke) / (maksimisyke - leposyke). OpenVitals laskee tämän yhteen päivän saatavilla olevilta sykeväleiltä.</string>
+    <string name="cardio_load_formula_weighting">a = 0,64 ja b = 1,92 miehille, a = 0,86 ja b = 1,67 naisille (Banister). Jos kehoprofiilissa ei ole sukupuolta, käytetään miesten arvoja.</string>
+    <string name="cardio_load_max_hr_body">Maksimisykkeesi tulee kehoprofiilistasi. Jos sitä ei ole asetettu, OpenVitals käyttää korkeinta mitattua sykettä, kun se on riittävän korkea. Muuten se arvioi maksimin iästäsi: 206 - 0,88 x ikä naisille (Gulati), 208 - 0,7 x ikä muille (Tanaka).</string>
     <string name="cardio_load_mapping_body">Kun tallennettuja aktiviteetteja on, sykenäytteet kohdistetaan aikaleiman mukaan kunkin aktiviteetin alku- ja loppuikkunaan. Ilman aktiviteetti-ikkunoita lasketaan vain kohonneen sykkeen jaksot. Jos syke ei ole käyttökelpoinen, liike ja aktiiviset kalorit näytetään matalan luotettavuuden varavaihtoehtona.</string>
     <string name="cardio_load_method">Menetelmä</string>
     <string name="cardio_load_trimp_score">TRIMP-pisteet</string>
@@ -1060,6 +1062,8 @@
     <string name="cardio_load_calibration_estimated_max">Maksimisyke arvioitu</string>
     <string name="cardio_load_reference_banister">Banisterin TRIMP-yhtälö</string>
     <string name="cardio_load_reference_training_load">Katsaus harjoituskuormituksen seurantaan</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: maksimisyke iän mukaan</string>
+    <string name="cardio_load_reference_gulati">Gulati: naisten maksimisyke</string>
     <string name="cardio_load_reference_health_connect">Health Connectin treenisykkeen kohdistus</string>
     <string name="section_sleep_sessions">Unijaksot</string>
     <string name="section_weight">Paino</string>

@@ -982,8 +982,10 @@
     <string name="cardio_load_day_numbers_title">今日の値</string>
     <string name="cardio_load_references_title">参考リンク</string>
     <string name="cardio_load_calculation_summary">OpenVitals は心拍データがある場合は心拍ベースの TRIMP を使い、心拍が使えない場合のみ動きにフォールバックします。</string>
-    <string name="cardio_load_formula">TRIMP = 分 x HRR x 0.64 x e^(1.92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = 分 x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR は心拍予備能: (心拍数 - 安静時心拍数) / (最大心拍数 - 安静時心拍数)。OpenVitals はその日の利用可能な心拍区間で合計します。</string>
+    <string name="cardio_load_formula_weighting">男性は a = 0.64、b = 1.92、女性は a = 0.86、b = 1.67 です (Banister)。身体プロフィールに性別がない場合は男性の値を使います。</string>
+    <string name="cardio_load_max_hr_body">最大心拍数は身体プロフィールの値を使います。設定がない場合は、十分に高ければ測定された最高心拍数を使います。それ以外は年齢から推定します: 女性は 206 - 0.88 x 年齢 (Gulati)、それ以外は 208 - 0.7 x 年齢 (Tanaka)。</string>
     <string name="cardio_load_mapping_body">記録されたアクティビティがある場合、心拍サンプルはタイムスタンプで各アクティビティの開始〜終了に割り当てられます。アクティビティがない場合は心拍が上昇した区間のみ数えます。心拍が使えない場合は、動きと活動カロリーを低信頼度の代替として表示します。</string>
     <string name="cardio_load_method">方法</string>
     <string name="cardio_load_trimp_score">TRIMP スコア</string>
@@ -1007,6 +1009,8 @@
     <string name="cardio_load_calibration_estimated_max">最大心拍 推定</string>
     <string name="cardio_load_reference_banister">Banister の TRIMP 式</string>
     <string name="cardio_load_reference_training_load">トレーニング負荷モニタリングのレビュー</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: 年齢別の最大心拍数</string>
+    <string name="cardio_load_reference_gulati">Gulati: 女性の最大心拍数</string>
     <string name="cardio_load_reference_health_connect">Health Connect ワークアウト心拍の割り当て</string>
     <string name="section_sleep_sessions">睡眠セッション</string>
     <string name="section_weight">体重</string>
