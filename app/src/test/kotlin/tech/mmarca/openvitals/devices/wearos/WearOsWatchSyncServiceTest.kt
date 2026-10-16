@@ -248,6 +248,30 @@ class WearOsWatchSyncServiceTest {
     }
 
     @Test
+    fun `a failing weight lookup falls back to no walking energy instead of aborting the sync`() = runTest {
+        val failingService = WearOsWatchSyncService(
+            nodePort = nodePort,
+            cursors = cursors,
+            importRepository = importRepository,
+            bleDeviceRepository = deviceRepository,
+            recordingController = recordingController,
+            healthConnect = healthConnect,
+            linkStore = linkStore,
+            weightKg = { throw RuntimeException("Health Connect transient error") },
+            clock = { t0 },
+            zone = { ZoneId.of("+02:00") },
+        )
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        stepPages += WearOsStepPage(listOf(WearOsStepMinute(t0, 110)), hasMore = false)
+
+        val result = failingService.sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(DeviceSyncResult.Succeeded(0, missingBodyWeight = true), result)
+        assertEquals(1, insertedOf<androidx.health.connect.client.records.StepsRecord>().size)
+        assertTrue(insertedOf<androidx.health.connect.client.records.ActiveCaloriesBurnedRecord>().isEmpty())
+    }
+
+    @Test
     fun `walking energy skips minutes overlapping an exercise session in Health Connect`() = runTest {
         pages += WearOsHeartRatePage(emptyList(), hasMore = false)
         val m1 = t0

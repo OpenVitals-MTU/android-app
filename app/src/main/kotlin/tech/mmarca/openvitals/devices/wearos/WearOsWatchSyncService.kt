@@ -86,7 +86,16 @@ class WearOsWatchSyncService(
         bodyProfilePreferences: BodyProfilePreferences,
     ) : this(
         nodePort, cursors, importRepository, bleDeviceRepository, recordingController, healthConnect, linkStore,
-        { bodyRepository.resolveBodyProfile(bodyProfilePreferences.bodyProfile()).weightKg },
+        {
+            try {
+                bodyRepository.resolveBodyProfile(bodyProfilePreferences.bodyProfile()).weightKg
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                WearOsLog.log("steps: could not read body weight for walking energy: $error")
+                null
+            }
+        },
         Instant::now, ZoneId::systemDefault,
     )
 
@@ -176,7 +185,14 @@ class WearOsWatchSyncService(
         var pulledSteps = 0
         var energyMinutes = 0
         var energyKcal = 0.0
-        val weight = weightKg()
+        val weight = try {
+            weightKg()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            WearOsLog.log("steps: could not read body weight for walking energy: $error")
+            null
+        }
         while (true) {
             val page = retryOnce { nodePort.pullSteps(device.address, device.bluetoothName, since) } ?: return false
             progress.page()
