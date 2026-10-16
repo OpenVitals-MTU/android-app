@@ -146,4 +146,86 @@ class IndoorFitImportTest {
             strength.exerciseType,
         )
     }
+
+    @Test fun `a yoga session imports as YOGA, not as the generic training it is filed under`() {
+        // A watch files yoga as sport 10 `training` with sub-sport 43. The form had no
+        // yoga type, so the session landed on "Other workout" or the type already chosen.
+        val start = Instant.parse("2026-10-12T09:56:00Z")
+        val parsed = RouteFileParser.parseFile(
+            FitTestFiles.activity(
+                sport = 10,
+                subSport = 43,
+                points = emptyList(),
+                sessionTime = start,
+                elapsedSeconds = 33L * 60L,
+                totalCaloriesKcal = 182,
+            ),
+            fileName = "2026-10-12-09-56-00.fit",
+        )
+        assertEquals("yoga", parsed.type)
+
+        val outcome = import(parsed)
+
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_YOGA, outcome.type.exerciseType)
+        assertFalse(outcome.type.supportsGpsRoute)
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_YOGA, outcome.request?.exerciseType)
+    }
+
+    @Test fun `every sport a watch files is the Health Connect type the exporter writes it from`() {
+        // (sport, sub_sport) pairs from ActivityWorkoutExport.toFitSport and Garmin's profile.
+        val cases = listOf(
+            Triple(4, 15, ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL),
+            Triple(4, 16, ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING),
+            Triple(5, 17, ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL),
+            Triple(5, 18, ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER),
+            Triple(10, 19, ExerciseSessionRecord.EXERCISE_TYPE_STRETCHING),
+            Triple(10, 20, ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING),
+            Triple(4, 44, ExerciseSessionRecord.EXERCISE_TYPE_PILATES),
+            Triple(10, 62, ExerciseSessionRecord.EXERCISE_TYPE_GUIDED_BREATHING),
+            Triple(6, null, ExerciseSessionRecord.EXERCISE_TYPE_BASKETBALL),
+            Triple(7, null, ExerciseSessionRecord.EXERCISE_TYPE_SOCCER),
+            Triple(8, null, ExerciseSessionRecord.EXERCISE_TYPE_TENNIS),
+            Triple(8, 97, ExerciseSessionRecord.EXERCISE_TYPE_TABLE_TENNIS),
+            Triple(9, null, ExerciseSessionRecord.EXERCISE_TYPE_FOOTBALL_AMERICAN),
+            Triple(31, null, ExerciseSessionRecord.EXERCISE_TYPE_ROCK_CLIMBING),
+            Triple(33, null, ExerciseSessionRecord.EXERCISE_TYPE_ICE_SKATING),
+            Triple(47, null, ExerciseSessionRecord.EXERCISE_TYPE_BOXING),
+            Triple(53, null, ExerciseSessionRecord.EXERCISE_TYPE_SCUBA_DIVING),
+            Triple(62, null, ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING),
+            Triple(64, 95, ExerciseSessionRecord.EXERCISE_TYPE_BADMINTON),
+            Triple(73, 91, ExerciseSessionRecord.EXERCISE_TYPE_ICE_HOCKEY),
+            Triple(80, null, ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS),
+            Triple(83, null, ExerciseSessionRecord.EXERCISE_TYPE_DANCING),
+        )
+        cases.forEach { (sport, subSport, expected) ->
+            val parsed = RouteFileParser.parseFile(
+                FitTestFiles.activity(
+                    sport = sport,
+                    subSport = subSport,
+                    points = emptyList(),
+                    elapsedSeconds = 1_800L,
+                ),
+                fileName = "activity.fit",
+            )
+            val type = inferActivityType(parsed, DefaultActivityEntryTypes.first())
+            assertEquals("sport $sport sub-sport $subSport", expected, type.exerciseType)
+        }
+    }
+
+    @Test fun `a file named yoga under a generic sport is yoga`() {
+        val yoga = inferActivityType(
+            RouteFileImport(
+                fileName = "Morning Yoga.fit",
+                points = emptyList(),
+                distanceMeters = 0.0,
+                elevationGainedMeters = 0.0,
+                startTime = Instant.parse("2026-05-26T08:00:00Z"),
+                endTime = Instant.parse("2026-05-26T08:30:00Z"),
+                type = "training",
+            ),
+            DefaultActivityEntryTypes.first(),
+        )
+
+        assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_YOGA, yoga.exerciseType)
+    }
 }
