@@ -240,12 +240,93 @@ val DefaultActivityEntryTypes: List<ActivityEntryType> = listOf(
         defaultTitle = "Trampoline jumping",
         repetitionUnit = ActivityRepetitionUnit.REPETITIONS,
     ),
+    // The rest of Health Connect's session types, so the form can write every type
+    // the detail screen can show. Alphabetical by the English label; the curated
+    // block above stays first. Each is one of three shapes.
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_BADMINTON, R.string.hc_exercise_type_badminton),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_BASEBALL, R.string.hc_exercise_type_baseball),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_BASKETBALL, R.string.hc_exercise_type_basketball),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_BOOT_CAMP, R.string.hc_exercise_type_boot_camp),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_BOXING, R.string.hc_exercise_type_boxing),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_CRICKET, R.string.hc_exercise_type_cricket),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_DANCING, R.string.hc_exercise_type_dancing),
+    indoorDistanceActivity(ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL, R.string.hc_exercise_type_elliptical),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_EXERCISE_CLASS, R.string.hc_exercise_type_exercise_class),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_FENCING, R.string.hc_exercise_type_fencing),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_FOOTBALL_AMERICAN, R.string.hc_exercise_type_football_american),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_FOOTBALL_AUSTRALIAN, R.string.hc_exercise_type_football_australian),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_FRISBEE_DISC, R.string.hc_exercise_type_frisbee_disc),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_GUIDED_BREATHING, R.string.hc_exercise_type_guided_breathing),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_GYMNASTICS, R.string.hc_exercise_type_gymnastics),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_HANDBALL, R.string.hc_exercise_type_handball),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING, R.string.hc_exercise_type_high_intensity_interval_training),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_ICE_HOCKEY, R.string.hc_exercise_type_ice_hockey),
+    routeActivity(ExerciseSessionRecord.EXERCISE_TYPE_ICE_SKATING, R.string.hc_exercise_type_ice_skating),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS, R.string.hc_exercise_type_martial_arts),
+    routeActivity(ExerciseSessionRecord.EXERCISE_TYPE_PARAGLIDING, R.string.hc_exercise_type_paragliding, supportsElevation = true),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_PILATES, R.string.hc_exercise_type_pilates),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_RACQUETBALL, R.string.hc_exercise_type_racquetball),
+    routeActivity(ExerciseSessionRecord.EXERCISE_TYPE_ROCK_CLIMBING, R.string.hc_exercise_type_rock_climbing, supportsElevation = true),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_ROLLER_HOCKEY, R.string.hc_exercise_type_roller_hockey),
+    indoorDistanceActivity(ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE, R.string.hc_exercise_type_rowing_machine),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_RUGBY, R.string.hc_exercise_type_rugby),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_SCUBA_DIVING, R.string.hc_exercise_type_scuba_diving),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_SOCCER, R.string.hc_exercise_type_soccer),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_SOFTBALL, R.string.hc_exercise_type_softball),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_SQUASH, R.string.hc_exercise_type_squash),
+    indoorDistanceActivity(ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING, R.string.hc_exercise_type_stair_climbing, supportsElevation = true),
+    indoorDistanceActivity(ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING_MACHINE, R.string.hc_exercise_type_stair_climbing_machine),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_STRETCHING, R.string.hc_exercise_type_stretching),
+    indoorDistanceActivity(ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL, R.string.hc_exercise_type_swimming_pool),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_TABLE_TENNIS, R.string.hc_exercise_type_table_tennis),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_TENNIS, R.string.hc_exercise_type_tennis),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_VOLLEYBALL, R.string.hc_exercise_type_volleyball),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_WATER_POLO, R.string.hc_exercise_type_water_polo),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING, R.string.hc_exercise_type_weightlifting),
+    timedActivity(ExerciseSessionRecord.EXERCISE_TYPE_YOGA, R.string.hc_exercise_type_yoga),
     ActivityEntryType(
         exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT,
         labelRes = R.string.exercise_type_other_workout,
         supportsGpsRoute = false,
         supportsDistance = false,
     ),
+)
+
+/** Travels outdoors: a GPS route, a distance, a live recording. */
+private fun routeActivity(
+    exerciseType: Int,
+    @StringRes labelRes: Int,
+    supportsElevation: Boolean = false,
+): ActivityEntryType = ActivityEntryType(
+    exerciseType = exerciseType,
+    labelRes = labelRes,
+    supportsElevation = supportsElevation,
+)
+
+/** A machine or a pool: a distance but no route; recorded as a timed session with a strap. */
+private fun indoorDistanceActivity(
+    exerciseType: Int,
+    @StringRes labelRes: Int,
+    supportsElevation: Boolean = false,
+): ActivityEntryType = ActivityEntryType(
+    exerciseType = exerciseType,
+    labelRes = labelRes,
+    supportsGpsRoute = false,
+    supportsDistance = true,
+    supportsElevation = supportsElevation,
+    recordingSensor = ActivityRecordingSensor.BLE,
+)
+
+/** A timed session with an optional heart rate strap, like strength training. */
+private fun timedActivity(
+    exerciseType: Int,
+    @StringRes labelRes: Int,
+): ActivityEntryType = ActivityEntryType(
+    exerciseType = exerciseType,
+    labelRes = labelRes,
+    supportsGpsRoute = false,
+    supportsDistance = false,
+    recordingSensor = ActivityRecordingSensor.BLE,
 )
 
 /**
