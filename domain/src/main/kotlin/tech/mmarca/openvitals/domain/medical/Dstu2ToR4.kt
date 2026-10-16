@@ -55,6 +55,8 @@ object Dstu2ToR4 {
             "Practitioner" -> resource["name"] is JsonObject
             "Organization", "Location" -> resource["type"] is JsonObject
             "Encounter" -> resource["class"] is JsonPrimitive
+            // Not converted, as Health Connect stores no report, but the results it holds are DSTU2 too.
+            "DiagnosticReport" -> resource["category"] is JsonObject || resource["performer"] is JsonObject
             else -> false
         }
     }
@@ -387,6 +389,7 @@ object Dstu2ToR4 {
         "Patient" to setOf("careProvider", "animal"),
         "Practitioner" to setOf("practitionerRole"),
         "Encounter" to setOf("patient", "indication", "incomingReferral"),
+        "DiagnosticReport" to setOf("request", "codedDiagnosis"),
     )
     private val AllergyCategories = setOf("food", "medication", "environment")
     private val Criticality = mapOf("CRITL" to "low", "CRITH" to "high", "CRITU" to "unable-to-assess")

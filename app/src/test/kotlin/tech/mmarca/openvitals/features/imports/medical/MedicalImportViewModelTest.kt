@@ -60,14 +60,17 @@ class MedicalImportViewModelTest {
     }
 
     @Test
-    fun `a file that is not FHIR, or holds nothing Health Connect stores, is refused`() = runTest {
+    fun `a file that is not FHIR, or holds nothing Health Connect stores, is refused, and a report alone says where its results are`() = runTest {
         val vm = viewModel()
 
         vm.analyze("steps.csv") { "date,steps\n2024-01-01,100".byteInputStream() }
         assertThat(vm.uiState.value.pickError).isEqualTo(MedicalImportPickError.NOT_SUPPORTED)
 
-        vm.analyze("report.json") { """{"resourceType":"DiagnosticReport","id":"r1","status":"final","code":{"text":"x"}}""".byteInputStream() }
+        vm.analyze("note.json") { """{"resourceType":"DocumentReference","id":"d1","status":"current","content":[{"attachment":{"title":"x"}}]}""".byteInputStream() }
         assertThat(vm.uiState.value.pickError).isEqualTo(MedicalImportPickError.NO_RECORDS)
+
+        vm.analyze("report.json") { """{"resourceType":"DiagnosticReport","id":"r1","status":"final","code":{"text":"x"},"result":[{"reference":"Observation/o1"}]}""".byteInputStream() }
+        assertThat(vm.uiState.value.pickError).isEqualTo(MedicalImportPickError.REPORTS_ONLY)
         assertThat(vm.uiState.value.step).isEqualTo(MedicalImportStep.PICK)
     }
 
