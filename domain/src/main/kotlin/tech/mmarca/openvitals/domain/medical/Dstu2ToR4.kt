@@ -44,6 +44,7 @@ object Dstu2ToR4 {
         if (resource.obj("meta")?.strings("profile").orEmpty().any(::profileNamesDstu2)) return true
         val type = resource.resourceType
         if (Dstu2OnlyFields[type].orEmpty().any { it in resource }) return true
+        if (hasListedFamily(resource)) return true
         return when (type) {
             "MedicationOrder" -> true
             "AllergyIntolerance" -> resource["category"] is JsonPrimitive || resource["note"] is JsonObject
@@ -51,7 +52,6 @@ object Dstu2ToR4 {
             "Observation" -> resource["category"] is JsonObject || resource["interpretation"] is JsonObject
             "MedicationStatement" -> resource["note"] is JsonPrimitive
             "Procedure" -> resource["reasonReference"] is JsonObject
-            "Patient" -> resource.objects("name").any { it["family"] is JsonArray }
             "Practitioner" -> resource["name"] is JsonObject
             "Organization", "Location" -> resource["type"] is JsonObject
             "Encounter" -> resource["class"] is JsonPrimitive
@@ -59,6 +59,13 @@ object Dstu2ToR4 {
             "DiagnosticReport" -> resource["category"] is JsonObject || resource["performer"] is JsonObject
             else -> false
         }
+    }
+
+    /** A name anywhere in [element] with DSTU2's list of family names: a patient's, a contact's, a practitioner's. */
+    private fun hasListedFamily(element: JsonElement): Boolean = when (element) {
+        is JsonObject -> element["family"] is JsonArray || element.values.any(::hasListedFamily)
+        is JsonArray -> element.any(::hasListedFamily)
+        else -> false
     }
 
     /** Whether a `meta.profile` URL names DSTU2, as a Bundle's or a resource's may. */
@@ -82,6 +89,8 @@ object Dstu2ToR4 {
             else -> return null
         }
         fields.remove("text")
+        // `family` belongs to a name alone, in both versions, so every name is found wherever it sits.
+        fields.replaceAll { _, value -> singleFamilies(value) }
         fields.obj("meta")?.let { meta -> fields.putOrRemove("meta", meta.without("profile")) }
         // A contained resource is converted like any other; one of a type with no mapping is dropped.
         fields.array("contained")?.let { contained ->
@@ -270,18 +279,26 @@ object Dstu2ToR4 {
     private fun patient(f: Fields) {
         f.rename("careProvider", "generalPractitioner")
         f.remove("animal")
-        f.array("name")?.let { names -> f["name"] = JsonArray(names.filterIsInstance<JsonObject>().map(::humanName)) }
     }
 
     private fun practitioner(f: Fields) {
-        f.obj("name")?.let { f["name"] = JsonArray(listOf(humanName(it))) }
+        f.wrap("name")
         f.remove("practitionerRole")
     }
 
-    /** DSTU2 held several family names; R4 holds one string. */
-    private fun humanName(name: JsonObject): JsonObject {
-        val family = (name["family"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content }?.joinToString(" ") ?: return name
-        return if (family.isBlank()) name.without("family") else name.with("family", JsonPrimitive(family))
+    /** DSTU2 held several family names; R4 holds one string. Every name in [element] gets one. */
+    private fun singleFamilies(element: JsonElement): JsonElement = when (element) {
+        is JsonArray -> JsonArray(element.map(::singleFamilies))
+        is JsonObject -> {
+            val name = JsonObject(element.mapValues { (_, value) -> singleFamilies(value) })
+            val family = (name["family"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content }?.joinToString(" ")
+            when {
+                family == null -> name
+                family.isBlank() -> name.without("family")
+                else -> name.with("family", JsonPrimitive(family))
+            }
+        }
+        else -> element
     }
 
     /** A dosage's dose and rate moved into `doseAndRate`, and a few fields were renamed. */
