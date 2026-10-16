@@ -34,10 +34,26 @@ These parts are on main and pass their tests. The tests use invented data, so ea
 `EstonianPortalRealExportCheck` runs the importer over an unzipped export on the developer's computer. It prints counts only: no names, codes, values or dates. CI skips it.
 
 ```
-env OPENVITALS_EE_EXPORT=<folder> ./gradlew :app:testCiUnitTest --tests '*EstonianPortalRealExportCheck*'
+env OPENVITALS_EE_EXPORT=<folder> ./gradlew :domain:testCiUnitTest --tests '*EstonianPortalRealExportCheck*'
 ```
 
 It also prints an id fingerprint. Keep it before a change to the CDA code and compare it after. See [the rules](#rules-for-picking-this-up).
+
+### The local check for FHIR datasets
+
+`FhirCorpusCheck` runs the importer over whole folders of FHIR JSON and NDJSON, one import per file, and prints what it did: records ready and held back, types skipped, repairs, categories, references, and records taken for DSTU2. It fails when a file throws, when a record keeps an id or a contained record the importer should have repaired, or when an R4 record is taken for DSTU2. CI skips it. Paths are split by `:`.
+
+```
+env OPENVITALS_FHIR_CORPUS=<folder>:<folder> ./gradlew :domain:testCiUnitTest --tests '*FhirCorpusCheck*' --rerun
+```
+
+Three synthetic datasets have been run through it, with none held back that the importer should have repaired, and none taken for DSTU2:
+
+- **Synthea**, 1,180 patients as R4 transaction bundles, kept in the repository's ignored `fhir/` folder. 13 are over the 8 MB limit and are refused whole.
+- **[SMART bulk export samples](https://github.com/smart-on-fhir/sample-bulk-fhir-datasets)**, NDJSON, one file per type. Each file becomes its own source, and references between the files do not resolve.
+- **[HL7 AU test data](https://github.com/hl7au/au-fhir-test-data)**, one resource or one patient summary per file. Four Observations are held back because Health Connect cannot classify them: exam findings coded in SNOMED CT.
+
+A slice of each is committed for CI, in `domain/src/test/resources/fhir/datasets`, and `FhirDatasetSamplesTest` reads it. What only Health Connect checks is not seen by either: the AU patient summaries carry no-break spaces in their narratives, and only an import on a phone tells whether Health Connect refuses them there as it does in a code's text.
 
 ## Small fixes
 
