@@ -1901,6 +1901,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="medical_import_error_too_large">Este ficheiro ocupa máis de 8 MB.</string>
     <string name="medical_import_error_unreadable">Non se puido ler este ficheiro.</string>
     <string name="medical_import_error_no_records">Este ficheiro non contén nada que Health Connect garde.</string>
+    <string name="medical_import_error_reports_only">Este ficheiro só contén informes diagnósticos. Health Connect garda os resultados dun informe, non o informe, e este ficheiro non os contén. Son rexistros Observation, normalmente en ficheiros propios: importa eses no seu lugar.</string>
     <string name="medical_import_new_source">Orixe nova</string>
     <string name="medical_import_existing_source">Engádese a unha orixe que xa importaches</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>

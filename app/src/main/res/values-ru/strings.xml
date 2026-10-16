@@ -1833,6 +1833,7 @@
     <string name="medical_import_error_too_large">Файл больше 8 МБ.</string>
     <string name="medical_import_error_unreadable">Не удалось прочитать файл.</string>
     <string name="medical_import_error_no_records">В этом файле нет данных, которые хранит Health Connect.</string>
+    <string name="medical_import_error_reports_only">Этот файл содержит только диагностические отчёты. Health Connect хранит результаты отчёта, а не сам отчёт, а в этом файле их нет. Это записи Observation, обычно в отдельных файлах: импортируйте их.</string>
     <string name="medical_import_new_source">Новый источник</string>
     <string name="medical_import_existing_source">Добавится к источнику, импортированному ранее</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>

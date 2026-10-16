@@ -1902,6 +1902,7 @@
     <string name="medical_import_error_too_large">Tämä tiedosto on yli 8 Mt.</string>
     <string name="medical_import_error_unreadable">Tiedostoa ei voitu lukea.</string>
     <string name="medical_import_error_no_records">Tässä tiedostossa ei ole mitään, mitä Health Connect tallentaa.</string>
+    <string name="medical_import_error_reports_only">Tämä tiedosto sisältää vain diagnostisia raportteja. Health Connect tallentaa raportin tulokset, ei itse raporttia, eikä tämä tiedosto sisällä niitä. Ne ovat Observation-tietueita, yleensä omissa tiedostoissaan: tuo ne sen sijaan.</string>
     <string name="medical_import_new_source">Uusi lähde</string>
     <string name="medical_import_existing_source">Lisätään aiemmin tuotuun lähteeseen</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>

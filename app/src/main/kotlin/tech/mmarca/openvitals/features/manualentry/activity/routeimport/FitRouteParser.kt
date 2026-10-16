@@ -607,7 +607,10 @@ private fun fitSportIsCycling(sport: Int?): Boolean = sport == 2 || sport == 21
 private fun fitSportName(sport: Int?, subSport: Int? = null): String? =
     fitSubSportName(subSport) ?: sport?.fitPlainSportName()
 
-/** The sub-sports that ARE the activity. FIT `sub_sport` enum. */
+/**
+ * The sub-sports that ARE the activity. FIT `sub_sport` enum, the numbers the
+ * exporter writes in ActivityWorkoutExport. Each name is one matchExerciseType knows.
+ */
 private fun fitSubSportName(value: Int?): String? =
     when (value) {
         1 -> "treadmill"
@@ -615,7 +618,20 @@ private fun fitSubSportName(value: Int?): String? =
         5,
         6 -> "indoor cycling"
         14 -> "indoor rowing"
+        15 -> "elliptical"
+        16 -> "stair climbing"
+        17 -> "pool swimming"
+        18 -> "open water swimming"
+        19 -> "stretching"
         20 -> "strength training"
+        43 -> "yoga"
+        44 -> "pilates"
+        62 -> "breathing"
+        91 -> "ice hockey"
+        94 -> "squash"
+        95 -> "badminton"
+        96 -> "racquetball"
+        97 -> "table tennis"
         else -> null
     }
 
@@ -626,6 +642,10 @@ private fun Int.fitPlainSportName(): String? =
         21 -> "cycling"
         4 -> "fitness equipment"
         5 -> "swimming"
+        6 -> "basketball"
+        7 -> "soccer"
+        8 -> "tennis"
+        9 -> "american football"
         10 -> "training"
         11 -> "walking"
         12,
@@ -638,13 +658,30 @@ private fun Int.fitPlainSportName(): String? =
         41,
         42 -> "paddling"
         25 -> "golf"
-        30,
-        33 -> "skating"
+        // 26 hang_gliding: the nearest Health Connect type.
+        26 -> "paragliding"
+        30 -> "skating"
+        31 -> "rock climbing"
         32 -> "sailing"
+        33 -> "ice skating"
         35 -> "snowshoeing"
         38 -> "surfing"
         47 -> "boxing"
-        62 -> "interval training"
+        // 48 floor_climbing.
+        48 -> "stair climbing"
+        49 -> "baseball"
+        50,
+        51 -> "softball"
+        53 -> "scuba diving"
+        62 -> "hiit"
+        // 69 disc_golf: the nearest Health Connect type.
+        69 -> "frisbee"
+        71 -> "cricket"
+        72 -> "rugby"
+        73 -> "hockey"
+        75 -> "volleyball"
+        80 -> "martial arts"
+        83 -> "dancing"
         else -> null
     }
 
