@@ -3738,6 +3738,7 @@
     <string name="settings_watch_wearos_sync_now">Synkronoi kello</string>
     <string name="settings_watch_wearos_syncing">Synkronoidaan kelloa…</string>
     <string name="settings_watch_wearos_synced_none">Kellossa ei ole mitään uutta</string>
+    <string name="settings_watch_wearos_needs_weight">Kävelykaloreita ei arvioitu: lisää painosi Kehoprofiiliin tai kirjaa se Health Connectiin.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d sykenäyte synkronoitu</item>
         <item quantity="other">%1$d sykenäytettä synkronoitu</item>

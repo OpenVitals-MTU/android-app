@@ -3764,6 +3764,7 @@
     <string name="settings_watch_wearos_sync_now">Sincronizar relógio</string>
     <string name="settings_watch_wearos_syncing">A sincronizar relógio…</string>
     <string name="settings_watch_wearos_synced_none">Nada de novo no relógio</string>
+    <string name="settings_watch_wearos_needs_weight">Calorias de caminhada não estimadas: adicione o seu peso em Perfil corporal ou registe-o no Health Connect.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d amostra de frequência cardíaca sincronizada</item>
         <item quantity="other">%1$d amostras de frequência cardíaca sincronizadas</item>
