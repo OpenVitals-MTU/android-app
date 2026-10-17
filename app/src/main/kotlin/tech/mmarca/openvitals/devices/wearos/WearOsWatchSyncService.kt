@@ -1,10 +1,14 @@
 package tech.mmarca.openvitals.devices.wearos
 
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import java.time.Instant
 import java.time.ZoneId
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration
@@ -16,6 +20,8 @@ import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.isPermissionFailure
 import tech.mmarca.openvitals.data.repository.AppleHealthImportRepository
 import tech.mmarca.openvitals.data.repository.BleDeviceRepository
+import tech.mmarca.openvitals.data.repository.contract.BodyProfilePreferences
+import tech.mmarca.openvitals.data.repository.contract.BodyRepository
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPort
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncProgress
@@ -40,7 +46,10 @@ import tech.mmarca.openvitals.healthconnect.HealthConnectManager
  * Then steps, the same way, but each pull also takes the cursor's minute
  * again: the watch adds late steps only to its newest minute, and a minute
  * that grew replaces its record. Without the Health Connect grant to write
- * steps, the steps stay on the watch and the sync goes on.
+ * steps, the steps stay on the watch and the sync goes on. Two estimates
+ * come with the steps: cadence, and walking energy when the body weight is
+ * known ([WearOsStepsImport]). If the user withheld the write permission for
+ * one, it is skipped and the sync goes on.
  *
  * Then sleep: the minutes from the start of the night the sleep cursor sits
  * in, every night those minutes touch estimated whole and written as one
@@ -62,6 +71,8 @@ class WearOsWatchSyncService(
     private val recordingController: ActivityRecordingController,
     private val healthConnect: HealthConnectManager,
     private val linkStore: WearOsLinkStore,
+    /** Body weight for the walking energy: Health Connect's latest, else the profile's. Null when neither has one. */
+    private val weightKg: suspend () -> Double?,
     private val clock: () -> Instant,
     private val zone: () -> ZoneId,
 ) : DeviceSyncPort {
@@ -75,8 +86,14 @@ class WearOsWatchSyncService(
         recordingController: ActivityRecordingController,
         healthConnect: HealthConnectManager,
         linkStore: WearOsLinkStore,
+        bodyRepository: BodyRepository,
+        bodyProfilePreferences: BodyProfilePreferences,
     ) : this(
         nodePort, cursors, importRepository, bleDeviceRepository, recordingController, healthConnect, linkStore,
+        {
+            val declared = bodyProfilePreferences.bodyProfile()
+            declared.copy(weightKg = bodyRepository.loadLatestWeight() ?: declared.weightKg).normalized().weightKg
+        },
         Instant::now, ZoneId::systemDefault,
     )
 
@@ -134,7 +151,10 @@ class WearOsWatchSyncService(
 
         onProgress?.invoke(DeviceSyncProgress(DeviceSyncPhase.COMPLETE, filesTotal = progress.pages, filesDone = progress.pages))
         bleDeviceRepository.markSynced(device.id, clock())
-        return DeviceSyncResult.Succeeded(progress.written, progress.nights, progress.stepMinutes)
+        return DeviceSyncResult.Succeeded(
+            progress.written, progress.nights, progress.stepMinutes, progress.missingBodyWeight,
+            progress.withheldPermissions.toSet(),
+        )
     }
 
     /** False when no bonded watch matches. The samples written are counted on [progress]. */
@@ -159,14 +179,47 @@ class WearOsWatchSyncService(
 
     /** False when no bonded watch matches. The minutes written are counted on [progress]. */
     private suspend fun pullSteps(device: BleSensorDevice, progress: Progress): Boolean {
-        if (HealthPermission.getWritePermission(StepsRecord::class) !in healthConnect.grantedPermissions()) {
+        val withheld = STEPS_WRITE_PERMISSIONS - healthConnect.grantedPermissions()
+        progress.withheldPermissions += withheld
+        if (STEPS_WRITE_PERMISSION in withheld) {
             WearOsLog.log("steps: not pulled, Health Connect permission missing")
             return true
         }
+        val writeEnergy = ACTIVE_CALORIES_WRITE_PERMISSION !in withheld
+        if (!writeEnergy) WearOsLog.log("walking energy: not written, Health Connect permission missing")
         val cursor = cursors.stepsCursor(device.id)
         // The watch sends what is after `since`, so this takes the cursor's minute again.
         var since = if (cursor == Instant.EPOCH) cursor else cursor.minusMillis(1)
         var pages = 0
+        var pulledSteps = 0
+        var energyMinutes = 0
+        var energyKcal = 0.0
+        // Read once, and only when a page brings a minute that would need it.
+        var weight: Double? = null
+        var weightRead = false
+
+        suspend fun writeBatch(minutes: List<WearOsStepMinute>) {
+            if (minutes.isEmpty()) return
+            progress.stepMinutes += importRepository.insertSkippingPresent(WearOsStepsImport.records(minutes))
+            // Health Connect files cadence under the steps grant.
+            importRepository.insertSkippingPresent(WearOsStepsImport.cadenceRecords(minutes))
+            if (!writeEnergy || !WearOsStepsImport.hasWalkingEnergy(minutes)) return
+            if (!weightRead) {
+                weight = bodyWeightKg()
+                weightRead = true
+            }
+            val weightKg = weight
+            if (weightKg == null) {
+                if (!progress.missingBodyWeight) WearOsLog.log("steps: no body weight, so no walking energy")
+                progress.missingBodyWeight = true
+                return
+            }
+            val energy = WearOsStepsImport.activeCaloriesRecords(minutes, weightKg, exerciseSessions(minutes))
+            importRepository.insertSkippingPresent(energy)
+            energyMinutes += energy.size
+            energyKcal += energy.sumOf { (it as ActiveCaloriesBurnedRecord).energy.inKilocalories }
+        }
+
         while (true) {
             val page = retryOnce { nodePort.pullSteps(device.address, device.bluetoothName, since) } ?: return false
             progress.page()
@@ -174,16 +227,35 @@ class WearOsWatchSyncService(
             if (newest != null) {
                 // Written apart, so an unchanged cursor minute does not make the batch fall back to one by one.
                 val (again, fresh) = page.minutes.partition { !it.start.isAfter(cursor) }
-                progress.stepMinutes += importRepository.insertSkippingPresent(WearOsStepsImport.records(again))
-                progress.stepMinutes += importRepository.insertSkippingPresent(WearOsStepsImport.records(fresh))
+                writeBatch(again)
+                writeBatch(fresh)
+                pulledSteps += page.minutes.sumOf { it.steps }
                 if (newest.isAfter(cursors.stepsCursor(device.id))) cursors.setStepsCursor(device.id, newest)
                 since = newest
             }
             if (!page.hasMore || newest == null) break
             if (++pages >= MAX_PAGES) break
         }
-        WearOsLog.log("steps: ${progress.stepMinutes} minute(s) written")
+        // The watch has no screen for these yet; testers read this line.
+        WearOsLog.log(
+            "steps: ${progress.stepMinutes} minute(s) written, $pulledSteps steps pulled (the re-pulled minute counts again); " +
+                if (weight == null) {
+                    "no walking energy"
+                } else {
+                    "walking energy ${"%.1f".format(Locale.ROOT, energyKcal)} kcal over $energyMinutes minute(s) at $weight kg"
+                },
+        )
         return true
+    }
+
+    /** The weight for the walking energy. It is optional, so a failed read counts as none. */
+    private suspend fun bodyWeightKg(): Double? = try {
+        weightKg()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        WearOsLog.log("steps: could not read body weight for walking energy: $error")
+        null
     }
 
     /** False when no bonded watch matches. */
@@ -258,6 +330,24 @@ class WearOsWatchSyncService(
         return found
     }
 
+    /** Time ranges of exercise sessions overlapping the step minutes range. */
+    private suspend fun exerciseSessions(minutes: List<WearOsStepMinute>): List<ClosedRange<Instant>> {
+        if (minutes.isEmpty()) return emptyList()
+        val minStart = minutes.minOf { it.start }
+        val maxEnd = minutes.maxOf { it.start }.plusSeconds(60)
+        val sessions = mutableListOf<ClosedRange<Instant>>()
+        try {
+            healthConnect.forEachSyncRecordPage(ExerciseSessionRecord::class, minStart, maxEnd) { page ->
+                page.filterIsInstance<ExerciseSessionRecord>().mapTo(sessions) { it.startTime..it.endTime }
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            WearOsLog.log("Could not read exercise sessions for walking energy filtering: $error")
+        }
+        return sessions
+    }
+
     /** A higher version replaces the earlier estimate. If Health Connect still objects, delete and retry once. */
     private suspend fun writeReplacing(record: SleepSessionRecord) {
         try {
@@ -297,6 +387,12 @@ class WearOsWatchSyncService(
         val hasWritten: Boolean
             get() = written > 0 || stepMinutes > 0
 
+        /** Steps came in but no body weight was known, so the walking energy was skipped. */
+        var missingBodyWeight = false
+
+        /** Health Connect writes for the steps and their estimates the user has not granted. */
+        val withheldPermissions = mutableSetOf<String>()
+
         fun page() {
             pages++
             onProgress?.invoke(DeviceSyncProgress(DeviceSyncPhase.DOWNLOADING, filesTotal = pages, filesDone = pages - 1))
@@ -308,5 +404,9 @@ class WearOsWatchSyncService(
         const val MAX_PAGES = 1000
 
         const val RETRY_DELAY_MILLIS = 1_500L
+
+        val STEPS_WRITE_PERMISSION = HealthPermission.getWritePermission(StepsRecord::class)
+        val ACTIVE_CALORIES_WRITE_PERMISSION = HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class)
+        val STEPS_WRITE_PERMISSIONS = setOf(STEPS_WRITE_PERMISSION, ACTIVE_CALORIES_WRITE_PERMISSION)
     }
 }

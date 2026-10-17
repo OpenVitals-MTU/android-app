@@ -180,6 +180,7 @@ internal fun WearOsSyncCard(
     device: BleSensorDevice,
     sync: DeviceSyncUiState,
     onSync: () -> Unit,
+    onAllowWrites: (Set<String>) -> Unit,
 ) {
     val syncingThis = sync.isSyncingDevice(device.id)
     OpenVitalsCard {
@@ -222,6 +223,27 @@ internal fun WearOsSyncCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
+                }
+                if (sync.lastMissingBodyWeight) {
+                    Text(
+                        text = stringResource(R.string.settings_watch_wearos_needs_weight),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                val withheld = sync.lastWithheldWritePermissions
+                if (withheld.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.settings_watch_wearos_needs_step_writes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OpenVitalsOutlinedButton(
+                        onClick = { onAllowWrites(withheld) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.action_grant_permission))
+                    }
                 }
             }
             sync.error.resolve()?.let { message ->

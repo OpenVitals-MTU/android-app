@@ -3774,6 +3774,8 @@
     <string name="settings_watch_wearos_sync_now">Sincronizar reloj</string>
     <string name="settings_watch_wearos_syncing">Sincronizando reloj…</string>
     <string name="settings_watch_wearos_synced_none">No hay nada nuevo en el reloj</string>
+    <string name="settings_watch_wearos_needs_weight">Calorías al caminar sin estimar: añade tu peso en Perfil corporal o regístralo en Health Connect.</string>
+    <string name="settings_watch_wearos_needs_step_writes">Algunos datos de pasos no se escribieron: permite que OpenVitals escriba pasos, cadencia y calorías activas en Health Connect y vuelve a sincronizar.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d muestra de frecuencia cardiaca sincronizada</item>
         <item quantity="many">%1$d muestras de frecuencia cardiaca sincronizadas</item>

@@ -111,6 +111,7 @@ fun WatchDeviceScreen(
     val backgroundAccessLauncher = rememberHealthConnectPermissionLauncher(
         onResult = viewModel::refreshBackgroundAccess,
     )
+    val syncWriteLauncher = rememberHealthConnectPermissionLauncher()
 
     if (state.showMusicDisclosure) {
         NotificationAccessDisclosureDialog(
@@ -187,7 +188,7 @@ fun WatchDeviceScreen(
                 },
             )
             SectionHeader(stringResource(R.string.settings_watch_wearos_sync_section))
-            WearOsSyncCard(device = device, sync = state.sync, onSync = viewModel::syncNow)
+            WearOsSyncCard(device, state.sync, onSync = viewModel::syncNow, onAllowWrites = syncWriteLauncher.launch)
         }
 
         if (isGarmin) {
