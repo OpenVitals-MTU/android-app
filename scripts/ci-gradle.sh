@@ -57,6 +57,7 @@ install_jdk17() {
 JAVA_HOME="$(
     find_supported_jdk \
         "${OPENVITALS_CI_JAVA_HOME:-}" \
+        "${JAVA_HOME_17_X64:-}" \
         "${JAVA_HOME:-}" \
         /usr/lib/jvm/java-17-openjdk-amd64 \
         /usr/lib/jvm/java-17-openjdk \
