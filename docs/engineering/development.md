@@ -206,11 +206,15 @@ AGP 9 built-in Kotlin currently requires `android.disallowKotlinSourceSets=false
 
 ## CI
 
-CI is GitHub Actions on the stock `ubuntu-latest` runner, which ships JDK 17
-and the Android SDK; `scripts/ci-android-setup.sh` installs the platform and
+CI is GitHub Actions on the stock `ubuntu-26.04` runner, which ships JDK 17
+and the Android SDK. It is pinned rather than `ubuntu-latest`, which moves from
+Ubuntu 24.04 to 26.04 between 2026-10-19 and 2026-11-19, so no job switches
+image mid-way. The image's default Java is 25; `scripts/ci-gradle.sh` takes its
+JDK 17 from `JAVA_HOME_17_X64`. `scripts/ci-android-setup.sh` installs the platform and
 build-tools the app compiles against when the runner image lacks them (a
 prebaked container image did this until 2026-10; pulling it cost as much as the
-install). The Gradle jobs cache Gradle with `gradle/actions/setup-gradle` and
+install). The Gradle jobs cache Gradle with `gradle/actions/setup-gradle` (v5:
+v6 moves its caching into a proprietary component under Gradle's terms of use) and
 go through `scripts/ci-android-gradle.sh`, which sizes the JVMs for the
 runner's 16 GB. Two workflows. `verify.yml` is the gate, on every pull request
 and push to `main`: the `app-test` job always, `lint` on pushes to `main` only,
