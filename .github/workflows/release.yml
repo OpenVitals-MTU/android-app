@@ -66,7 +66,7 @@ jobs:
   # What kind of run this is and the release details; and the check that the
   # commit passed the gate.
   context:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       # The gate check lists the verify workflow's runs.
@@ -151,7 +151,7 @@ jobs:
           echo "build=$build" >> "$GITHUB_OUTPUT"
           echo "plan: build=$build"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-context
           path: build/release-ci/
@@ -164,10 +164,10 @@ jobs:
   build:
     needs: context
     if: needs.context.outputs.build == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-context
           path: build/release-ci
@@ -175,7 +175,7 @@ jobs:
         run: echo "GRADLE_USER_HOME=$RUNNER_TEMP/gradle-user-home" >> "$GITHUB_ENV"
       # Read-only: a signing build never writes the cache other builds restore.
       - if: needs.context.outputs.kind != 'promote'
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
         with:
           cache-read-only: true
       - name: Build signed artifacts
@@ -243,7 +243,7 @@ jobs:
             --dir build/release-ci
           (cd build/release-ci && sha256sum -c "$OPENVITALS_AAB_BASENAME.sha256")
           echo "::notice::shipping $OPENVITALS_AAB_BASENAME from the $OPENVITALS_RELEASE_TAG prerelease, versionCode $OPENVITALS_VERSION_CODE"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-build
           path: build/release-ci/
@@ -263,14 +263,14 @@ jobs:
       !cancelled()
       && needs.build.result == 'success'
       && needs.context.outputs.channel == 'nightly'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-build
           path: build/release-ci
@@ -283,12 +283,12 @@ jobs:
   nightly-github-prerelease:
     needs: [context, nightly-tag]
     if: ${{ !cancelled() && needs.nightly-tag.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-build
           path: build/release-ci
@@ -302,10 +302,10 @@ jobs:
   nightly-play-open-testing:
     needs: [context, nightly-tag]
     if: ${{ !cancelled() && needs.nightly-tag.result == 'success' && vars.OPENVITALS_PLAY_PAUSED != 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-build
           path: build/release-ci
@@ -318,7 +318,7 @@ jobs:
   prune-github-releases:
     needs: [context, nightly-github-prerelease]
     if: ${{ !cancelled() && needs.nightly-github-prerelease.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     steps:
@@ -335,12 +335,12 @@ jobs:
   version-github-prerelease:
     needs: [context, build]
     if: ${{ !cancelled() && needs.build.result == 'success' && needs.context.outputs.kind == 'tag' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-build
           path: build/release-ci
@@ -353,10 +353,10 @@ jobs:
   version-play-open-testing:
     needs: [context, build]
     if: ${{ !cancelled() && needs.build.result == 'success' && needs.context.outputs.kind == 'tag' && vars.OPENVITALS_PLAY_PAUSED != 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-build
           path: build/release-ci
@@ -382,7 +382,7 @@ jobs:
         )
         || (needs.context.outputs.kind == 'promote' && needs.build.result == 'success')
       )
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     environment: production
     steps:
       - env:
@@ -392,7 +392,7 @@ jobs:
   github-stable:
     needs: [context, production-approval]
     if: ${{ !cancelled() && needs.production-approval.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     steps:
@@ -409,10 +409,10 @@ jobs:
   play-production:
     needs: [context, production-approval]
     if: ${{ !cancelled() && needs.production-approval.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-build
           path: build/release-ci
@@ -432,10 +432,10 @@ jobs:
   announce-zulip:
     needs: [context, github-stable, play-production]
     if: ${{ !cancelled() && needs.github-stable.result == 'success' && needs.play-production.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-context
           path: build/release-ci
