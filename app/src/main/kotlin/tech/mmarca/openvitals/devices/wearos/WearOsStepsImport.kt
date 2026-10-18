@@ -73,8 +73,8 @@ object WearOsStepsImport {
     ): List<ActiveCaloriesBurnedRecord> {
         if (weightKg == null || weightKg <= 0.0) return emptyList()
         return minutes.mapNotNull { minute ->
-            if (!WalkingEnergy.isAboveRest(minute.steps)) return@mapNotNull null
-            val kcal = WalkingEnergy.activeKcalPerMinute(minute.steps, weightKg)
+            // 0 at or below rest: such a minute writes nothing.
+            val kcal = WalkingEnergy.activeKcalPerMinute(minute.steps, weightKg).takeIf { it > 0.0 } ?: return@mapNotNull null
             ActiveCaloriesBurnedRecord(
                 startTime = minute.start,
                 startZoneOffset = zone.offsetAt(minute.start),

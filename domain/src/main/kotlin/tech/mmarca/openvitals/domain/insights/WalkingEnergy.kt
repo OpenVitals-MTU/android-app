@@ -33,11 +33,11 @@ object WalkingEnergy {
     fun isAboveRest(stepsPerMinute: Int): Boolean =
         stepsPerMinute > 0 && oxygenUptake(stepsPerMinute) > ML_O2_PER_KG_MIN_PER_MET
 
-    /** Active kilocalories for one minute at [stepsPerMinute], never below zero. */
+    /** Active kilocalories for one minute at [stepsPerMinute]; 0 at or below rest, the same test as [isAboveRest]. */
     fun activeKcalPerMinute(stepsPerMinute: Int, weightKg: Double): Double {
-        if (!isAboveRest(stepsPerMinute) || weightKg <= 0.0) return 0.0
+        if (stepsPerMinute <= 0 || weightKg <= 0.0) return 0.0
         val netMets = oxygenUptake(stepsPerMinute) / ML_O2_PER_KG_MIN_PER_MET - 1.0
-        return (netMets * weightKg / MINUTES_PER_HOUR).coerceAtLeast(0.0)
+        return if (netMets > 0.0) netMets * weightKg / MINUTES_PER_HOUR else 0.0
     }
 
     private const val ML_O2_PER_KG_MIN_PER_MET = 3.5
