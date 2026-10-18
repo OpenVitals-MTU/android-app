@@ -53,8 +53,6 @@ For the detailed feature inventory, see the [feature guide](https://docs.openvit
     <img width="23%" alt="Beverage entry" src="docs/images/beverageEntry.png">
 </div>
 
-More screenshots are on the [docs site](https://docs.openvitals.health/screenshots).
-
 ## Devices and integrations
 
 ### Garmin watches
