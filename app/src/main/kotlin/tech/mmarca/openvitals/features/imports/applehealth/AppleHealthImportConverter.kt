@@ -236,6 +236,18 @@ internal class AppleHealthImportConverter(
         return null
     }
 
+    /**
+     * Health Connect checks a record's values when the record is built. A value
+     * it refuses fails the samples behind it, never the whole import.
+     */
+    internal inline fun <T : Any> acceptedByHealthConnect(records: List<AppleRecord>, build: () -> T?): T? =
+        try {
+            build()
+        } catch (error: IllegalArgumentException) {
+            records.forEach { invalid(it, "Value is outside the range Health Connect accepts.") }
+            null
+        }
+
     internal fun unsupportedNull(record: AppleRecord, detail: String): Nothing? =
         unsupported(record.type, detail, record.timeRangeOrNull()?.toString(), record.unit, record.valueForReport)
 

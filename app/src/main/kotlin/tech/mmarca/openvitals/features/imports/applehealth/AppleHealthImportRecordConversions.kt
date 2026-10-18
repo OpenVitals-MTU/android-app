@@ -36,7 +36,6 @@ internal fun AppleHealthImportConverter.convertWeight(
     val kg = record.numericValue?.toKilograms(record.unit)?.takeIf { it > 0.0 }
         ?: return invalid(record, "Weight is missing, unsupported unit, or not positive.")
     val fingerprint = record.stableClientRecordId("weight")
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         "WeightRecord",
@@ -57,7 +56,6 @@ internal fun AppleHealthImportConverter.convertHeight(
     val meters = record.numericValue?.toMeters(record.unit)?.takeIf { it > 0.0 }
         ?: return invalid(record, "Height is missing, unsupported unit, or not positive.")
     val fingerprint = record.stableClientRecordId("height")
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         "HeightRecord",
@@ -78,7 +76,6 @@ internal fun AppleHealthImportConverter.convertBodyFat(
     val percent = record.numericValue?.toPercentage(record.unit)?.takeIf { it in 0.0..100.0 }
         ?: return invalid(record, "Body fat is missing, unsupported unit, or outside 0..100%.")
     val fingerprint = record.stableClientRecordId("body_fat")
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         "BodyFatRecord",
@@ -99,7 +96,6 @@ internal fun AppleHealthImportConverter.convertLeanMass(
     val kg = record.numericValue?.toKilograms(record.unit)?.takeIf { it > 0.0 }
         ?: return invalid(record, "Lean body mass is missing, unsupported unit, or not positive.")
     val fingerprint = record.stableClientRecordId("lean_mass")
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         "LeanBodyMassRecord",
@@ -120,7 +116,6 @@ internal fun AppleHealthImportConverter.convertBoneMass(
     val kg = record.numericValue?.toKilograms(record.unit)?.takeIf { it > 0.0 }
         ?: return invalid(record, "Bone mass is missing, unsupported unit, or not positive.")
     val fingerprint = record.stableClientRecordId("bone_mass")
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         "BoneMassRecord",
@@ -141,7 +136,6 @@ internal fun AppleHealthImportConverter.convertBodyWaterMass(
     val kg = record.numericValue?.toKilograms(record.unit)?.takeIf { it > 0.0 }
         ?: return invalid(record, "Body water mass is missing, unsupported unit, or not positive.")
     val fingerprint = record.stableClientRecordId("body_water_mass")
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         "BodyWaterMassRecord",
@@ -162,7 +156,6 @@ internal fun AppleHealthImportConverter.convertHydration(
     val milliliters = record.numericValue?.toMilliliters(record.unit)?.takeIf { it > 0.0 }
         ?: return invalid(record, "Hydration is missing, unsupported unit, or not positive.")
     val fingerprint = record.stableClientRecordId("hydration")
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         "HydrationRecord",
@@ -190,7 +183,6 @@ internal fun AppleHealthImportConverter.convertOxygenSaturation(
     val percent = record.numericValue?.toPercentage(record.unit)?.takeIf { it in 0.0..100.0 }
         ?: return invalid(record, "Oxygen saturation is missing, unsupported unit, or outside 0..100%.")
     val fingerprint = record.stableClientRecordId("spo2")
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         "OxygenSaturationRecord",
@@ -211,7 +203,6 @@ internal fun AppleHealthImportConverter.convertRespiratoryRate(
     val rate = record.numericValue?.takeIf { it > 0.0 }
         ?: return invalid(record, "Respiratory rate is missing or not positive.")
     val fingerprint = record.stableClientRecordId("respiratory_rate")
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         "RespiratoryRateRecord",
@@ -232,7 +223,6 @@ internal fun AppleHealthImportConverter.convertBodyTemperature(
     val celsius = record.numericValue?.toCelsius(record.unit)
         ?: return invalid(record, "Body temperature is missing or has an unsupported unit.")
     val fingerprint = record.stableClientRecordId("body_temperature")
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         "BodyTemperatureRecord",
@@ -258,7 +248,6 @@ internal fun AppleHealthImportConverter.convertBloodGlucose(
     val glucose = record.numericValue?.toBloodGlucose(record.unit)
         ?: return invalid(record, "Blood glucose is missing or has an unsupported unit.")
     val fingerprint = record.stableClientRecordId("blood_glucose")
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         "BloodGlucoseRecord",
@@ -287,7 +276,6 @@ internal fun AppleHealthImportConverter.convertVo2Max(
     val vo2 = record.numericValue?.takeIf { it in 1.0..100.0 }
         ?: return invalid(record, "VO2 max is missing or outside 1..100 mL/kg/min.")
     val fingerprint = record.stableClientRecordId("vo2_max")
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         "Vo2MaxRecord",
@@ -314,7 +302,6 @@ internal fun AppleHealthImportConverter.convertBasalBodyTemperature(
     val celsius = record.numericValue?.toCelsius(record.unit)
         ?: return invalid(record, "Basal body temperature is missing or has an unsupported unit.")
     val fingerprint = record.stableClientRecordId("basal_body_temperature")
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         "BasalBodyTemperatureRecord",
@@ -341,7 +328,6 @@ internal fun AppleHealthImportConverter.convertMindfulness(
         return skippedNull(record, "feature_unavailable", "Mindfulness sessions are not available in this Health Connect provider.")
     }
     val fingerprint = record.stableClientRecordId("mindfulness")
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         "MindfulnessSessionRecord",
@@ -403,7 +389,6 @@ internal fun AppleHealthImportConverter.convertCycleCategory(
             )
             else -> return unsupportedNull(record, "No direct cycle mapping is implemented for this Apple record type.")
         }
-    markConverted(record.type)
     return ConvertedAppleRecord(
         record.type,
         convertedRecord::class.simpleName ?: "Record",
