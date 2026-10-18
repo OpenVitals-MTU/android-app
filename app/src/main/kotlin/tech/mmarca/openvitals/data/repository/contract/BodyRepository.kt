@@ -26,9 +26,6 @@ interface BodyRepository {
 
     suspend fun loadWeightEntries(start: LocalDate, end: LocalDate): List<WeightEntry>
 
-    /** Health Connect's latest weight in kg; null without the read grant or a record. */
-    suspend fun loadLatestWeight(): Double?
-
     suspend fun loadLatestHeight(): Double?
 
     /** The declared profile with measured weight and height when readable. Fallback is the point. */

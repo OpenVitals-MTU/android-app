@@ -90,10 +90,7 @@ class WearOsWatchSyncService(
         bodyProfilePreferences: BodyProfilePreferences,
     ) : this(
         nodePort, cursors, importRepository, bleDeviceRepository, recordingController, healthConnect, linkStore,
-        {
-            val declared = bodyProfilePreferences.bodyProfile()
-            declared.copy(weightKg = bodyRepository.loadLatestWeight() ?: declared.weightKg).normalized().weightKg
-        },
+        { bodyRepository.resolveBodyProfile(bodyProfilePreferences.bodyProfile()).weightKg },
         Instant::now, ZoneId::systemDefault,
     )
 
