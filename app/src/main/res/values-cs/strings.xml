@@ -3810,6 +3810,7 @@
     <string name="settings_watch_wearos_syncing">Synchronizace hodinek…</string>
     <string name="settings_watch_wearos_synced_none">V hodinkách není nic nového</string>
     <string name="settings_watch_wearos_needs_weight">Kalorie z chůze nebyly odhadnuty: zadejte svou hmotnost v Tělesném profilu nebo ji zaznamenejte v Health Connect.</string>
+    <string name="settings_watch_wearos_needs_weight_read">Kalorie z chůze nebyly odhadnuty: zadejte svou hmotnost v Tělesném profilu nebo povolte OpenVitals číst vaši hmotnost v Health Connect.</string>
     <string name="settings_watch_wearos_needs_steps_write">Kroky nebyly zapsány: povolte OpenVitals zapisovat kroky do Health Connect a synchronizujte znovu.</string>
     <string name="settings_watch_wearos_needs_calories_write">Kalorie z chůze nebyly zapsány: povolte OpenVitals zapisovat aktivní kalorie a číst tréninky v Health Connect, aby se od příští synchronizace odhadovaly.</string>
     <plurals name="settings_watch_wearos_synced_samples">

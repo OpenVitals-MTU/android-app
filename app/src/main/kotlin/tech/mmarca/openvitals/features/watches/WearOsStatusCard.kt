@@ -227,7 +227,7 @@ internal fun WearOsSyncCard(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
-                if (sync.lastMissingBodyWeight) {
+                if (sync.lastMissingBodyWeight && !sync.lastWeightReadWithheld) {
                     Text(
                         text = stringResource(R.string.settings_watch_wearos_needs_weight),
                         style = MaterialTheme.typography.bodySmall,
@@ -235,14 +235,17 @@ internal fun WearOsSyncCard(
                     )
                 }
                 val unwritten = sync.lastUnwritten
-                if (unwritten.isNotEmpty()) {
-                    // One line per series left out; the button asks for every grant missing.
+                val weightUnreadable = sync.lastMissingBodyWeight && sync.lastWeightReadWithheld
+                if (unwritten.isNotEmpty() || weightUnreadable) {
+                    // One line per thing left out; the button asks for every grant missing.
                     val stepsLine = stringResource(R.string.settings_watch_wearos_needs_steps_write)
                     val caloriesLine = stringResource(R.string.settings_watch_wearos_needs_calories_write)
+                    val weightLine = stringResource(R.string.settings_watch_wearos_needs_weight_read)
                     InlineGrantPrompt(
                         message = listOfNotNull(
                             stepsLine.takeIf { UnwrittenSeries.STEPS in unwritten },
                             caloriesLine.takeIf { UnwrittenSeries.WALKING_ENERGY in unwritten },
+                            weightLine.takeIf { weightUnreadable },
                         ).joinToString("\n"),
                         actionLabel = stringResource(R.string.action_grant_permission),
                         onGrant = { onAllowGrants(sync.lastWithheldPermissions) },

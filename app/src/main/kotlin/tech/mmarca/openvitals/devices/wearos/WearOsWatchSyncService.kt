@@ -6,6 +6,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.WeightRecord
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
@@ -155,7 +156,7 @@ class WearOsWatchSyncService(
         bleDeviceRepository.markSynced(device.id, clock())
         return DeviceSyncResult.Succeeded(
             progress.written, progress.nights, progress.stepMinutes, progress.missingBodyWeight,
-            progress.unwritten.toSet(), progress.withheldPermissions.toSet(),
+            progress.weightReadWithheld, progress.unwritten.toSet(), progress.withheldPermissions.toSet(),
         )
     }
 
@@ -181,7 +182,8 @@ class WearOsWatchSyncService(
 
     /** False when no bonded watch matches. The minutes written are counted on [progress]. */
     private suspend fun pullSteps(device: BleSensorDevice, progress: Progress): Boolean {
-        val withheld = STEPS_SYNC_PERMISSIONS - healthConnect.grantedPermissions()
+        val granted = healthConnect.grantedPermissions()
+        val withheld = STEPS_SYNC_PERMISSIONS - granted
         if (STEPS_WRITE_PERMISSION in withheld) {
             // Nothing pulled, so whether a minute would need the energy grants is unknown; the steps come first.
             progress.withheldPermissions += STEPS_WRITE_PERMISSION
@@ -237,6 +239,11 @@ class WearOsWatchSyncService(
             if (weightKg == null) {
                 if (!progress.missingBodyWeight) WearOsLog.log("steps: no body weight, so no walking energy")
                 progress.missingBodyWeight = true
+                // A weight in Health Connect is out of reach without this grant, so the card asks for it.
+                if (WEIGHT_READ_PERMISSION !in granted) {
+                    progress.weightReadWithheld = true
+                    progress.withheldPermissions += WEIGHT_READ_PERMISSION
+                }
                 return
             }
             val sessions = sessionsOfPage() ?: return
@@ -457,6 +464,9 @@ class WearOsWatchSyncService(
         /** Steps came in but no body weight was known, so the walking energy was skipped. */
         var missingBodyWeight = false
 
+        /** With [missingBodyWeight]: Health Connect's weight was not readable for want of the grant. */
+        var weightReadWithheld = false
+
         /** Health Connect grants for the steps and their estimates the user has not given. */
         val withheldPermissions = mutableSetOf<String>()
 
@@ -481,6 +491,7 @@ class WearOsWatchSyncService(
         private val STEPS_WRITE_PERMISSION = HealthPermission.getWritePermission(StepsRecord::class)
         private val ACTIVE_CALORIES_WRITE_PERMISSION = HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class)
         private val EXERCISE_READ_PERMISSION = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
+        private val WEIGHT_READ_PERMISSION = HealthPermission.getReadPermission(WeightRecord::class)
 
         private val WALKING_ENERGY_PERMISSIONS = setOf(ACTIVE_CALORIES_WRITE_PERMISSION, EXERCISE_READ_PERMISSION)
 

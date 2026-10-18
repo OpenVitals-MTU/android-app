@@ -115,7 +115,7 @@ class WearOsWatchSyncServiceTest {
     private var weight: Double? = 70.0
 
     init {
-        coEvery { healthConnect.grantedPermissions() } returns setOf(STEPS_WRITE, CALORIES_WRITE, EXERCISE_READ)
+        coEvery { healthConnect.grantedPermissions() } returns setOf(STEPS_WRITE, CALORIES_WRITE, EXERCISE_READ, WEIGHT_READ)
         coEvery { healthConnect.readsOtherAppsDataNow() } returns true
         coEvery { importRepository.insertImportedRecords(any()) } answers {
             val records = firstArg<List<androidx.health.connect.client.records.Record>>()
@@ -292,6 +292,24 @@ class WearOsWatchSyncServiceTest {
         assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 1, missingBodyWeight = true), result)
         assertEquals(1, insertedOf<StepsRecord>().size)
         assertTrue(insertedOf<ActiveCaloriesBurnedRecord>().isEmpty())
+    }
+
+    @Test
+    fun `no weight and no grant to read one asks for the grant`() = runTest {
+        weight = null
+        coEvery { healthConnect.grantedPermissions() } returns setOf(STEPS_WRITE, CALORIES_WRITE, EXERCISE_READ)
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 110)
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(
+            DeviceSyncResult.Succeeded(
+                0, stepMinuteCount = 1, missingBodyWeight = true, weightReadWithheld = true,
+                withheldPermissions = setOf(WEIGHT_READ),
+            ),
+            result,
+        )
     }
 
     @Test
@@ -670,6 +688,7 @@ class WearOsWatchSyncServiceTest {
         val STEPS_WRITE = HealthPermission.getWritePermission(StepsRecord::class)
         val CALORIES_WRITE = HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class)
         val EXERCISE_READ = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
+        val WEIGHT_READ = HealthPermission.getReadPermission(androidx.health.connect.client.records.WeightRecord::class)
 
         val WATCH = BleSensorDevice(
             id = "watch-1",

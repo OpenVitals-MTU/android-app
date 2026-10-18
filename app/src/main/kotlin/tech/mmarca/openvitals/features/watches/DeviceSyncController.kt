@@ -36,6 +36,8 @@ data class DeviceSyncUiState(
     val lastStepMinuteCount: Int? = null,
     /** The last completed run skipped an estimate for want of the body weight. */
     val lastMissingBodyWeight: Boolean = false,
+    /** With [lastMissingBodyWeight]: Health Connect's weight was unreadable for want of the grant. */
+    val lastWeightReadWithheld: Boolean = false,
     /** The series the last completed run left out for want of a grant. */
     val lastUnwritten: Set<UnwrittenSeries> = emptySet(),
     /** Health Connect grants the last completed run skipped a write for want of. */
@@ -134,6 +136,7 @@ class DeviceSyncController(
                     lastNightCount = result.nightCount,
                     lastStepMinuteCount = result.stepMinuteCount,
                     lastMissingBodyWeight = result.missingBodyWeight,
+                    lastWeightReadWithheld = result.weightReadWithheld,
                     lastUnwritten = result.unwritten,
                     lastWithheldPermissions = result.withheldPermissions,
                 )

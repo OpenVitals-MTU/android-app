@@ -3775,6 +3775,7 @@
     <string name="settings_watch_wearos_syncing">Sincronizando reloj…</string>
     <string name="settings_watch_wearos_synced_none">No hay nada nuevo en el reloj</string>
     <string name="settings_watch_wearos_needs_weight">Calorías al caminar sin estimar: añade tu peso en Perfil corporal o regístralo en Health Connect.</string>
+    <string name="settings_watch_wearos_needs_weight_read">Calorías al caminar sin estimar: añade tu peso en Perfil corporal o permite que OpenVitals lea tu peso en Health Connect.</string>
     <string name="settings_watch_wearos_needs_steps_write">Pasos no escritos: permite que OpenVitals escriba pasos en Health Connect y vuelve a sincronizar.</string>
     <string name="settings_watch_wearos_needs_calories_write">Calorías al caminar no escritas: permite que OpenVitals escriba calorías activas y lea entrenamientos en Health Connect para estimarlas desde la próxima sincronización.</string>
     <plurals name="settings_watch_wearos_synced_samples">

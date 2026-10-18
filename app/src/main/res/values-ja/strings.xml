@@ -3812,6 +3812,7 @@
     <string name="settings_watch_wearos_syncing">ウォッチを同期しています…</string>
     <string name="settings_watch_wearos_synced_none">ウォッチに新しいデータはありません</string>
     <string name="settings_watch_wearos_needs_weight">歩行カロリーは推定されていません。体のプロフィールに体重を追加するか、Health Connect に記録してください。</string>
+    <string name="settings_watch_wearos_needs_weight_read">歩行カロリーは推定されていません。体のプロフィールに体重を追加するか、OpenVitals に Health Connect の体重の読み取りを許可してください。</string>
     <string name="settings_watch_wearos_needs_steps_write">歩数を書き込めませんでした。OpenVitals に Health Connect への歩数の書き込みを許可してから、もう一度同期してください。</string>
     <string name="settings_watch_wearos_needs_calories_write">歩行カロリーを書き込めませんでした。OpenVitals に Health Connect でのアクティブカロリーの書き込みとワークアウトの読み取りを許可すると、次回の同期から推定されます。</string>
     <plurals name="settings_watch_wearos_synced_samples">
