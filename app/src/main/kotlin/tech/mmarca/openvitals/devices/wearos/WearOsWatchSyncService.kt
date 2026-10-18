@@ -257,13 +257,14 @@ class WearOsWatchSyncService(
             // Counted as written, not as tried: a minute refused as present adds nothing.
             val written = energy.zip(insertEstimates(energy, "walking energy")).filter { (_, outcome) -> outcome == RecordWrite.WRITTEN }
             energyMinutes += written.size
-            energyKcal += written.sumOf { (record, _) -> (record as ActiveCaloriesBurnedRecord).energy.inKilocalories }
+            energyKcal += written.sumOf { (record, _) -> record.energy.inKilocalories }
         }
 
         while (true) {
             val pulled = retryOnce { nodePort.pullSteps(device.address, device.bluetoothName, since) } ?: return false
             progress.page()
-            page = pulled.minutes
+            // Each minute once, so every builder below works on the same minutes.
+            page = WearOsStepsImport.latestPerMinute(pulled.minutes)
             pageSessionsRead = false
             val newest = page.maxOfOrNull { it.start }
             if (newest != null) {
@@ -305,7 +306,7 @@ class WearOsWatchSyncService(
         val records = WearOsStepsImport.records(minutes, zone())
         val changed = records.zip(importRepository.insertWithOutcomes(records))
             .filter { (_, outcome) -> outcome == RecordWrite.WRITTEN }
-            .mapTo(HashSet()) { (record, _) -> (record as StepsRecord).startTime }
+            .mapTo(HashSet()) { (record, _) -> record.startTime }
         progress.stepMinutes += changed.size
         val due = minutes.filter { it.start in changed || it.start.isAfter(stepsCursor) }
         // Health Connect files cadence under the steps grant.

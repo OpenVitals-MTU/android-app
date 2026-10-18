@@ -1,7 +1,6 @@
 package tech.mmarca.openvitals.devices.wearos
 
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
-import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.StepsCadenceRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.metadata.Device
@@ -37,8 +36,9 @@ object WearOsStepsImport {
     const val CADENCE_CLIENT_ID_PREFIX = "wearos_cadence_"
     const val ACTIVE_CALORIES_CLIENT_ID_PREFIX = "wearos_walk_kcal_"
 
-    fun records(minutes: List<WearOsStepMinute>, zone: ZoneId): List<Record> =
-        latestPerMinute(minutes).map { minute ->
+    /** One per minute of [minutes], which hold each minute once ([latestPerMinute]). */
+    fun records(minutes: List<WearOsStepMinute>, zone: ZoneId): List<StepsRecord> =
+        minutes.map { minute ->
             StepsRecord(
                 startTime = minute.start,
                 startZoneOffset = zone.offsetAt(minute.start),
@@ -49,8 +49,8 @@ object WearOsStepsImport {
             )
         }
 
-    fun cadenceRecords(minutes: List<WearOsStepMinute>, zone: ZoneId): List<Record> =
-        latestPerMinute(minutes).map { minute ->
+    fun cadenceRecords(minutes: List<WearOsStepMinute>, zone: ZoneId): List<StepsCadenceRecord> =
+        minutes.map { minute ->
             StepsCadenceRecord(
                 startTime = minute.start,
                 startZoneOffset = zone.offsetAt(minute.start),
@@ -63,19 +63,17 @@ object WearOsStepsImport {
 
     /**
      * Empty unless [weightKg] is known; minutes too slow to cost more than rest
-     * or inside an exercise session write nothing.
+     * write nothing. Minutes inside a workout are left out before
+     * ([outsideExerciseSessions]).
      */
     fun activeCaloriesRecords(
         minutes: List<WearOsStepMinute>,
         weightKg: Double?,
         zone: ZoneId,
-        exerciseSessions: List<ClosedRange<Instant>> = emptyList(),
-    ): List<Record> {
+    ): List<ActiveCaloriesBurnedRecord> {
         if (weightKg == null || weightKg <= 0.0) return emptyList()
-        return latestPerMinute(minutes).mapNotNull { minute ->
-            if (!WalkingEnergy.isAboveRest(minute.steps) || isInsideExerciseSession(minute, exerciseSessions)) {
-                return@mapNotNull null
-            }
+        return minutes.mapNotNull { minute ->
+            if (!WalkingEnergy.isAboveRest(minute.steps)) return@mapNotNull null
             val kcal = WalkingEnergy.activeKcalPerMinute(minute.steps, weightKg)
             ActiveCaloriesBurnedRecord(
                 startTime = minute.start,
@@ -104,8 +102,8 @@ object WearOsStepsImport {
 
     fun clientRecordId(minuteStart: Instant): String = "$CLIENT_ID_PREFIX${minuteStart.toEpochMilli()}"
 
-    /** A minute twice in one page keeps the larger, later count. */
-    private fun latestPerMinute(minutes: List<WearOsStepMinute>): List<WearOsStepMinute> =
+    /** Each minute once: a minute twice in one page keeps the larger, later count. */
+    fun latestPerMinute(minutes: List<WearOsStepMinute>): List<WearOsStepMinute> =
         minutes.groupBy { it.start }.map { (_, same) -> same.maxBy { it.steps } }
 
     private fun isInsideExerciseSession(minute: WearOsStepMinute, exerciseSessions: List<ClosedRange<Instant>>): Boolean {
