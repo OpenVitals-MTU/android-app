@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +24,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import tech.mmarca.openvitals.R
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.core.period.DatePeriod
 import tech.mmarca.openvitals.core.period.TimeRange
@@ -55,6 +60,8 @@ fun MetricDetailScaffold(
     showTimeRangeSelector: Boolean = true,
     syncPaused: Boolean = false,
     sectionListState: MetricDetailSectionListState? = null,
+    /** A thin bar while [isLoading], for a screen that keeps its last content on screen as it reloads. */
+    showLoadingBar: Boolean = false,
     headerItems: LazyListScope.() -> Unit = {},
     content: LazyListScope.(period: DatePeriod) -> Unit,
 ) {
@@ -168,6 +175,7 @@ fun MetricDetailScaffold(
                 content(period)
                 item { Spacer(Modifier.height(16.dp)) }
             }
+            if (showLoadingBar && isLoading && !pullRefreshRequested) MetricLoadingBar()
         }
     }
     }
@@ -182,4 +190,15 @@ fun MetricDetailScaffold(
             },
         )
     }
+}
+
+/** The refresh of a screen still showing what it loaded last. */
+@Composable
+private fun MetricLoadingBar() {
+    val loadingDescription = stringResource(R.string.loading)
+    LinearProgressIndicator(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = loadingDescription },
+    )
 }

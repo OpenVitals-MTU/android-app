@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.healthconnect
 
 import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
 import androidx.health.connect.client.records.DistanceRecord
@@ -16,6 +17,7 @@ import androidx.health.connect.client.records.StepsCadenceRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
+import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.testing.FakeHealthConnectClient
 import androidx.health.connect.client.units.Length
 import androidx.health.connect.client.units.Mass
@@ -28,8 +30,13 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -126,6 +133,39 @@ class HealthConnectReadMappingTest {
             assertThat(sessions.single().totalDistanceMeters).isNull()
             assertThat(sessions.single().averageSpeedMetersPerSecond).isNull()
         }
+
+    // A closed screen kept asking for one aggregate per remaining workout: the per-session
+    // fallback swallowed the cancellation. Health Connect queues each call it is sent and
+    // answers aggregates one at a time, so the next screen waited behind all of them.
+    @Test
+    fun `a cancelled readExerciseSessionsWithMetrics stops asking for aggregates`() = runTest {
+        val days = (0L until 3L).map { Duration.ofDays(it) }
+        val fake = seeded(*days.map { session(sessionStart + it, sessionEnd + it) }.toTypedArray())
+        var aggregateCalls = 0
+        lateinit var read: Job
+        val client = object : HealthConnectClient by fake {
+            override suspend fun aggregate(request: AggregateRequest): AggregationResult {
+                aggregateCalls++
+                // The screen closes while the first answer is on its way. The platform
+                // queues a call before it looks at the caller's cancellation.
+                read.cancel()
+                currentCoroutineContext().ensureActive()
+                return fake.aggregate(request)
+            }
+        }
+
+        read = launch {
+            activity(client).readExerciseSessionsWithMetrics(
+                start = sessionStart.minusSeconds(3_600),
+                end = sessionEnd.plus(days.last()).plusSeconds(3_600),
+                includeDistance = true,
+                includeSpeed = true,
+            )
+        }
+        read.join()
+
+        assertThat(aggregateCalls).isEqualTo(1)
+    }
 
     // Power was never read back, so the "Average power" row never appeared.
     @Test
@@ -506,10 +546,13 @@ class HealthConnectReadMappingTest {
     private fun activity(client: HealthConnectClient) =
         ActivityHealthReader(support(client), APP_PACKAGE)
 
-    private fun session(): ExerciseSessionRecord = ExerciseSessionRecord(
-        startTime = sessionStart,
+    private fun session(
+        start: Instant = sessionStart,
+        end: Instant = sessionEnd,
+    ): ExerciseSessionRecord = ExerciseSessionRecord(
+        startTime = start,
         startZoneOffset = ZoneOffset.UTC,
-        endTime = sessionEnd,
+        endTime = end,
         endZoneOffset = ZoneOffset.UTC,
         exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
         title = "Morning run",

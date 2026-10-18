@@ -325,10 +325,16 @@ class DashboardViewModel @Inject constructor(
     fun resumeCurrentDay() {
         refreshPreferences()
         // Reload whenever the user returns to today: ON_RESUME is the only signal
-        // that Health Connect data may have changed.
-        if (!userPinnedPastDay) {
-            load(LocalDate.now())
+        // that Health Connect data may have changed. A pinned day reloads if it was cut short.
+        when {
+            !userPinnedPastDay -> load(LocalDate.now())
+            loadCoordinator.interrupted -> load(_uiState.value.selectedDate)
         }
+    }
+
+    /** The screen left view: its reads stop, so the next screen's start at once. */
+    fun stopLoading() {
+        if (loadCoordinator.cancel()) inFlightLoadDate = null
     }
 
     fun load(date: LocalDate, refreshMode: RefreshMode = RefreshMode.NORMAL) {

@@ -11,20 +11,22 @@ import tech.mmarca.openvitals.domain.model.DailyHrv
 import tech.mmarca.openvitals.domain.model.DailyRestingHR
 import tech.mmarca.openvitals.domain.model.HeartRateDayAggregate
 import tech.mmarca.openvitals.domain.model.HeartRateInsightBucketDuration
+import tech.mmarca.openvitals.domain.model.HeartRateInsightBuckets
 import tech.mmarca.openvitals.domain.model.HeartRateSample
 import tech.mmarca.openvitals.domain.model.HeartRateSummary
-import tech.mmarca.openvitals.domain.model.MaxInsightAggregateBuckets
 import tech.mmarca.openvitals.domain.model.HrvSample
 import tech.mmarca.openvitals.domain.model.RestingHeartRateSample
 import tech.mmarca.openvitals.domain.model.dayAverageBpm
 import tech.mmarca.openvitals.domain.model.exceedsRawHeartRateReadRange
 import tech.mmarca.openvitals.domain.model.heartRateSampleFromAggregateBucket
-import tech.mmarca.openvitals.domain.model.shouldUseAggregatedHeartRateSamples
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.roundToLong
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 internal class HeartHealthReader(
     private val support: HealthConnectReaderSupport,
@@ -50,46 +52,68 @@ internal class HeartHealthReader(
     }
 
     /**
-     * Heart-rate series dense enough for TRIMP and intensity-minute coverage.
-     * Sliced at [HeartRateInsightBucketDuration], at most
-     * [MaxInsightAggregateBuckets] per request, one local day at a time.
+     * Heart-rate series dense enough for TRIMP and intensity-minute coverage:
+     * the mean of each [HeartRateInsightBucketDuration], one local day at a time.
+     *
+     * Folded from the records, not read as a grouped-duration aggregate.
+     * Health Connect takes about 0.7 s for any heart-rate aggregate, whatever
+     * its bucket count, and serves them one at a time even when asked in
+     * parallel: the Activities month took 25 s on a Pixel 10 Pro. The records
+     * of a day read in a few hundred milliseconds, and two days read at once.
+     * The means match `BPM_AVG` bucket for bucket, truncation included.
+     *
+     * Health Connect matches a read on a record's start time, so each day
+     * reads the records that start in it and no record is read twice. Only
+     * the first day looks back, for a record that started before the range.
+     * A day's records are folded before the next pair is read, so memory is
+     * bounded by a day of samples however long the range.
      */
     suspend fun readHeartRateSamplesForInsights(start: Instant, end: Instant): List<HeartRateSample> {
         if (!end.isAfter(start)) return emptyList()
-        val zone = ZoneId.systemDefault()
+        val windows = localDayWindows(start, end, ZoneId.systemDefault())
+        val days = coroutineScope {
+            windows.mapIndexed { index, (windowStart, windowEnd) ->
+                async {
+                    val readStart = if (index == 0) windowStart.minus(SeriesRecordLookaround) else windowStart
+                    support.withNullableLogging("readHeartRateSamplesForInsights[$readStart..$windowEnd]") {
+                        HeartRateInsightBuckets(windows).apply {
+                            readHeartRateRecordsStartingIn(readStart, windowEnd).forEach { record ->
+                                val source = SyncedSourceOverlay.displaySource(record.metadata)
+                                record.samples.forEach { sample ->
+                                    add(HeartRateSample(sample.time, sample.beatsPerMinute, source))
+                                }
+                            }
+                        }
+                    }
+                }
+            }.awaitAll()
+        }
+        return HeartRateInsightBuckets(windows)
+            .apply { days.forEach { day -> day?.let(::addAll) } }
+            .samples()
+    }
+
+    private suspend fun readHeartRateRecordsStartingIn(start: Instant, end: Instant): List<HeartRateRecord> =
+        support.client().readRecordsPaged(
+            recordType = HeartRateRecord::class,
+            timeRangeFilter = TimeRangeFilter.between(start, end),
+        ).filter { record ->
+            // A client that matched on overlap would hand a record to two days.
+            !record.startTime.isBefore(start) && record.startTime.isBefore(end)
+        }
+
+    /** `[start, end)` cut at each local midnight. */
+    private fun localDayWindows(start: Instant, end: Instant, zone: ZoneId): List<Pair<Instant, Instant>> {
+        val windows = mutableListOf<Pair<Instant, Instant>>()
         var day = start.atZone(zone).toLocalDate()
         val lastDay = end.minusMillis(1).atZone(zone).toLocalDate()
-        val samples = mutableListOf<HeartRateSample>()
         while (!day.isAfter(lastDay)) {
             val windowStart = maxOf(start, day.atStartOfDay(zone).toInstant())
             val windowEnd = minOf(end, day.plusDays(1).atStartOfDay(zone).toInstant())
-            if (windowEnd.isAfter(windowStart)) {
-                val dayRange = Duration.between(windowStart, windowEnd)
-                if (shouldUseAggregatedHeartRateSamples(dayRange)) {
-                    aggregateWindows(windowStart, windowEnd, HeartRateInsightBucketDuration).forEach { (chunkStart, chunkEnd) ->
-                        samples += support.withLogging(
-                            "readHeartRateSamplesForInsights[$chunkStart..$chunkEnd]",
-                            emptyList(),
-                        ) {
-                            readAggregatedHeartRateSamples(
-                                chunkStart,
-                                chunkEnd,
-                                HeartRateInsightBucketDuration,
-                            )
-                        }
-                    }
-                } else {
-                    samples += support.withLogging(
-                        "readHeartRateSamplesForInsights[$windowStart..$windowEnd]",
-                        emptyList(),
-                    ) {
-                        readRawOrAggregatedFallback(windowStart, windowEnd)
-                    }
-                }
-            }
+            if (windowEnd.isAfter(windowStart)) windows += windowStart to windowEnd
             day = day.plusDays(1)
         }
-        return samples
+        return windows
     }
 
     /**

@@ -44,6 +44,9 @@ fun ActivitiesScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.resumeCurrentPeriod(refreshCurrent = true)
     }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        viewModel.stopLoading()
+    }
 
     WithHealthConnectFeatureScreen(
         feature = HealthConnectFeature.ACTIVITIES,
@@ -64,6 +67,7 @@ fun ActivitiesScreen(
             weekPeriodMode = state.activityWeekMode.toWeekPeriodMode(),
             syncPaused = hcUx.syncPaused,
             sectionListState = sectionContext.listState,
+            showLoadingBar = true,
             periodOverride = {
                 activityDisplayPeriod(
                     selectedRange = state.selectedRange,

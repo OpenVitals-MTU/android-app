@@ -76,7 +76,8 @@ class HeartRateReadBoundsTest {
         assertThat(samples).isNotEmpty()
         assertThat(samples.size.toLong()).isAtMost(bucketsInWindow + rawEdgeSamples)
         assertThat(samples.size).isLessThan(3 * 24 * 60 / 3)
-        assertThat(client.groupByDurationRequestRanges).isNotEmpty()
+        // Folded from the records: a heart-rate aggregate costs 0.7 s on a device, whatever its size.
+        assertThat(client.groupByDurationRequestRanges).isEmpty()
     }
 
     /** One record per six hours, a sample a minute at 62 bpm, and one 187 bpm spike. */
@@ -98,7 +99,7 @@ class HeartRateReadBoundsTest {
             )
         }
         inner.insertRecords(records)
-        return AggregatingFakeHealthConnectClient(inner)
+        return AggregatingFakeHealthConnectClient(inner, platformTimeRange = true)
     }
 
     private fun reader(client: AggregatingFakeHealthConnectClient): HeartHealthReader {

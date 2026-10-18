@@ -1,5 +1,7 @@
 package tech.mmarca.openvitals.features.activity
 
+import org.junit.Assert.assertFalse
+import tech.mmarca.openvitals.core.performance.ScreenSnapshotStore
 import tech.mmarca.openvitals.data.repository.contract.HeartRepository
 import tech.mmarca.openvitals.navigation.SELECTED_DAY_ARG
 import androidx.lifecycle.SavedStateHandle
@@ -49,6 +51,7 @@ class ActivitiesViewModelTest {
         preferences: FakePreferences = FakePreferences(),
         savedStateHandle: SavedStateHandle = SavedStateHandle(),
         heartRepository: HeartRepository = heartRepo(),
+        snapshots: ScreenSnapshotStore = ScreenSnapshotStore(),
     ) = ActivitiesViewModel(
         repository = repository,
         heartRepository = heartRepository,
@@ -57,6 +60,7 @@ class ActivitiesViewModelTest {
         bodyProfilePreferences = preferences,
         dispatchers = mainDispatcherRule.dispatcherProvider,
         savedStateHandle = savedStateHandle,
+        snapshots = snapshots,
     )
 
     private fun heartRepo(
@@ -108,6 +112,72 @@ class ActivitiesViewModelTest {
         assertTrue(vm.uiState.value.workouts.isEmpty())
         coVerify { repo.deleteActivityEntry("activity-id") }
         coVerify(atLeast = 2) { repo.loadWorkouts(any(), any()) }
+    }
+
+    @Test fun `a reopened screen draws its last load at once, then the live read`() = runTest {
+        val walk = workout(id = "walk", source = "com.example", isOpenVitalsEntry = false)
+        val bike = workout(id = "bike", source = "com.example", isOpenVitalsEntry = false)
+        val snapshots = ScreenSnapshotStore()
+        val repo = emptyRepo()
+        coEvery { repo.loadWorkoutsWithMetrics(any(), any()) } returns listOf(walk)
+        activitiesViewModel(repo, snapshots = snapshots)
+        advanceUntilIdle()
+
+        val liveRead = CompletableDeferred<List<ExerciseData>>()
+        coEvery { repo.loadWorkoutsWithMetrics(any(), any()) } coAnswers { liveRead.await() }
+        val reopened = activitiesViewModel(repo, snapshots = snapshots)
+        advanceUntilIdle()
+
+        assertEquals(listOf(walk), reopened.uiState.value.workouts)
+        assertTrue(reopened.uiState.value.isLoading)
+
+        liveRead.complete(listOf(bike))
+        advanceUntilIdle()
+
+        assertEquals(listOf(bike), reopened.uiState.value.workouts)
+        assertFalse(reopened.uiState.value.isLoading)
+    }
+
+    @Test fun `a load stopped when the screen leaves view leaves no error and runs on resume`() = runTest {
+        val walk = workout(id = "walk", source = "com.example", isOpenVitalsEntry = false)
+        val repo = emptyRepo()
+        var reads = 0
+        val firstRead = CompletableDeferred<List<ExerciseData>>()
+        coEvery { repo.loadWorkoutsWithMetrics(any(), any()) } coAnswers {
+            if (++reads == 1) firstRead.await() else listOf(walk)
+        }
+        val vm = activitiesViewModel(repo)
+        advanceUntilIdle()
+
+        // A workout opens on top: the overview's reads give way.
+        vm.stopLoading()
+        advanceUntilIdle()
+        // The load's own runCatching sees the cancellation; it must not surface as an error.
+        assertEquals(null, vm.uiState.value.error)
+
+        vm.resumeCurrentPeriod(refreshCurrent = true)
+        advanceUntilIdle()
+
+        assertEquals(2, reads)
+        assertEquals(listOf(walk), vm.uiState.value.workouts)
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
+    @Test fun `a snapshot read under other grants is not drawn`() = runTest {
+        val walk = workout(id = "walk", source = "com.example", isOpenVitalsEntry = false)
+        var grants = setOf("read exercise")
+        val snapshots = ScreenSnapshotStore(fingerprint = { grants })
+        val repo = emptyRepo()
+        coEvery { repo.loadWorkoutsWithMetrics(any(), any()) } returns listOf(walk)
+        activitiesViewModel(repo, snapshots = snapshots)
+        advanceUntilIdle()
+
+        grants = emptySet()
+        coEvery { repo.loadWorkoutsWithMetrics(any(), any()) } coAnswers { CompletableDeferred<List<ExerciseData>>().await() }
+        val reopened = activitiesViewModel(repo, snapshots = snapshots)
+        advanceUntilIdle()
+
+        assertTrue(reopened.uiState.value.workouts.isEmpty())
     }
 
     @Test fun `deleteActivityEntry ignores workout not created by OpenVitals`() = runTest {

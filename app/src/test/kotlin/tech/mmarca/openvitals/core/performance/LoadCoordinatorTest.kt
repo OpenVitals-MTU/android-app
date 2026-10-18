@@ -75,4 +75,30 @@ class LoadCoordinatorTest {
 
         assertFalse(reachedTheEnd)
     }
+
+    @Test
+    fun `a cancelled load stops and publishes nothing`() = runTest {
+        val coordinator = LoadCoordinator()
+        val gate = CompletableDeferred<Unit>()
+        val settled = mutableListOf<String>()
+
+        coordinator.launch(this) {
+            // A swallowed cancellation still must not reach the screen as an error.
+            runCatching { gate.await() }
+            if (isCurrent) settled += "stale"
+        }
+        advanceUntilIdle()
+
+        assertTrue("a load in flight was cut short", coordinator.cancel())
+        assertTrue(coordinator.interrupted)
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), settled)
+        assertFalse("nothing was left to cut short", coordinator.cancel())
+        assertTrue("a second stop keeps the first one's mark", coordinator.interrupted)
+
+        coordinator.launch(this) { }
+        assertFalse("a new load clears the mark", coordinator.interrupted)
+    }
 }
