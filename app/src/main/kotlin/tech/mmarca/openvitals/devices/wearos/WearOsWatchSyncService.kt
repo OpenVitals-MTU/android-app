@@ -241,7 +241,7 @@ class WearOsWatchSyncService(
             }
             val sessions = sessionsOfPage() ?: return
             val energy = WearOsStepsImport.activeCaloriesRecords(minutes, weightKg, sessions)
-            importRepository.insertSkippingPresent(energy)
+            insertEstimates(energy, "walking energy")
             energyMinutes += energy.size
             energyKcal += energy.sumOf { (it as ActiveCaloriesBurnedRecord).energy.inKilocalories }
         }
@@ -295,8 +295,22 @@ class WearOsWatchSyncService(
         progress.stepMinutes += changed.size
         val due = minutes.filter { it.start in changed || it.start.isAfter(stepsCursor) }
         // Health Connect files cadence under the steps grant.
-        importRepository.insertSkippingPresent(WearOsStepsImport.cadenceRecords(due))
+        insertEstimates(WearOsStepsImport.cadenceRecords(due), "cadence")
         return due
+    }
+
+    /**
+     * Writes records derived from the steps. They are optional: a failure is
+     * logged and skipped, so it never fails the sync and keeps sleep from
+     * being pulled. Returns how many were written.
+     */
+    private suspend fun insertEstimates(records: List<Record>, what: String): Int = try {
+        importRepository.insertSkippingPresent(records)
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        WearOsLog.log("$what: not written: $error")
+        0
     }
 
     /** The weight for the walking energy; a failure when it could not be read. It is optional, so that never fails the sync. */

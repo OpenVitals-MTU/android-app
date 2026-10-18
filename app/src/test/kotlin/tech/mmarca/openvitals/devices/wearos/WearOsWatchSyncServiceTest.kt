@@ -245,18 +245,28 @@ class WearOsWatchSyncServiceTest {
     }
 
     @Test
-    fun `a sync that failed after the steps writes their cadence the next time`() = runTest {
-        refused = { it is StepsCadenceRecord }
+    fun `a sync that stopped after the steps writes their cadence the next time`() = runTest {
+        // The steps went out, then the process died before the cadence and the cursor.
+        healthConnectVersions[WearOsStepsImport.clientRecordId(t0)] = 12L
         pages += WearOsHeartRatePage(emptyList(), hasMore = false)
         watchSteps += WearOsStepMinute(t0, 12)
-        service().sync(WATCH, Duration.ZERO, null)
-        assertEquals(Instant.EPOCH, cursors.stepsCursor(WATCH.id))
 
-        refused = { false }
-        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
         service().sync(WATCH, Duration.ZERO, null)
 
         assertEquals(listOf(t0), insertedOf<StepsCadenceRecord>().map { it.startTime })
+    }
+
+    @Test
+    fun `a failing estimate write neither fails the sync nor keeps sleep from syncing`() = runTest {
+        refused = { it is StepsCadenceRecord || it is ActiveCaloriesBurnedRecord }
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 110)
+        sleepPages += WearOsSleepMinutePage(nightMinutes(), hasMore = false)
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(DeviceSyncResult.Succeeded(0, nightCount = 1, stepMinuteCount = 1), result)
+        assertEquals(t0, cursors.stepsCursor(WATCH.id))
     }
 
     @Test
