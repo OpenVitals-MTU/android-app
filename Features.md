@@ -76,8 +76,8 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - View cross-metric insight comparing workouts with resting heart rate.
 - View activity details including title, type, start/end time, duration, moving time, source, notes, time zones, recording method, device, record IDs, client record IDs, client record version, planned session ID, and last modified time.
 - View activity metrics including steps, distance, pace, speed, recorded speed, power, cadence, calories, wheelchair pushes, floors, and elevation.
-- View route previews, route point counts, start/end route points, offline maps from imported PMTiles or Mapsforge packs, map opening, and GPX/KMZ export when route data is available.
-- Export or share any workout's metrics without its GPS route, as TCX or FIT (with heart-rate samples) or CSV.
+- View route previews, route point counts, start/end route points, offline maps from imported PMTiles or Mapsforge packs, map opening, and GPX, KMZ or FIT export when route data is available; the FIT carries the route with heart rate, speed and cadence beside it.
+- Export or share any workout's metrics without its GPS route, as TCX or FIT (with heart-rate, speed and cadence samples) or CSV.
 - View activity segments, laps, repetitions, and set information where available.
 - Configure the activity recording dashboard, use Focus mode, keep the screen awake while recording, and monitor heart rate for supported strength and repetition training recordings.
 

@@ -2147,7 +2147,9 @@
     <string name="activity_route_share_failed">Marsruudifaili ei õnnestunud jagada.</string>
     <string name="activity_workout_export_title">Ekspordi treening</string>
     <string name="activity_workout_export_description">Salvesta selle treeningu näitajad failina. GPS-marsruuti ei kaasata.</string>
-    <string name="activity_workout_export_description_with_route">Salvesta see treening failina. GPX ja KMZ sisaldavad GPS-marsruuti; TCX, CSV ja FIT mitte.</string>
+    <string name="activity_workout_export_description_route_choice">Salvesta see treening failina, GPS-marsruudiga või ilma.</string>
+    <string name="activity_workout_export_with_route">GPS-marsruudiga</string>
+    <string name="activity_workout_export_without_route">Ilma GPS-marsruudita</string>
     <string name="activity_workout_export_tcx">Salvesta TCX</string>
     <string name="activity_workout_export_csv">Salvesta CSV</string>
     <string name="activity_workout_export_fit">Salvesta FIT</string>
