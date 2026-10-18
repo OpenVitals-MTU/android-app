@@ -36,6 +36,7 @@ import tech.mmarca.openvitals.domain.model.WearSleepMinute
 import tech.mmarca.openvitals.data.repository.isDuplicateClientRecordFailure
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingController
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
 
 /**
  * Pulls what the OpenVitals Wear OS app recorded and writes it to Health
@@ -93,7 +94,8 @@ class WearOsWatchSyncService(
         bodyProfilePreferences: BodyProfilePreferences,
     ) : this(
         nodePort, cursors, importRepository, bleDeviceRepository, recordingController, healthConnect, linkStore,
-        { bodyRepository.resolveBodyProfile(bodyProfilePreferences.bodyProfile()).weightKg },
+        // Strict: the readers turn a failed read into null, which would pass for "no weight".
+        { withStrictHealthConnectReads { bodyRepository.resolveBodyProfile(bodyProfilePreferences.bodyProfile()).weightKg } },
         Instant::now, ZoneId::systemDefault,
     )
 
