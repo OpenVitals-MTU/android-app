@@ -21,6 +21,10 @@ import tech.mmarca.openvitals.domain.insights.WalkingEnergy
  *
  * A minute's count only grows, so the count is also every record's version:
  * a minute that grew replaces its records, an unchanged one does nothing.
+ * The walking energy also depends on the weight and on the exercise sessions
+ * present when it was written, which the version does not carry: the
+ * estimate is frozen at its first write, and only a minute whose count grows
+ * is worked out again.
  *
  * Pure, so it is testable without a device.
  */

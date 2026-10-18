@@ -16,7 +16,9 @@ package tech.mmarca.openvitals.domain.insights
  * doi:10.1152/japplphysiol.00023.2004), so this slightly understates.
  *
  * Limits from the paper: level walking only, no hills, stairs or running, a
- * whole minute of steady walking. Below about 36 steps a minute the result
+ * whole minute of steady walking. Nothing here tells a run from a walk: the
+ * caller leaves out minutes inside a recorded exercise session, and an
+ * unrecorded run is extrapolated past the fitted range. Below about 36 steps a minute the result
  * is under one MET and the minute adds nothing.
  */
 object WalkingEnergy {

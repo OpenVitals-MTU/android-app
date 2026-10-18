@@ -174,6 +174,8 @@ Health Connect-backed destinations should use the shared shell instead of wiring
 
 Do not add per-screen `PermissionCallout`, inline `HealthConnectSyncStatusBanner`, or duplicate `HealthConnectAccessGate` wiring.
 
+A grant missing for one part of a card (a write a sync skipped, a background read an option needs) uses `ui/components/InlineGrantPrompt`: the card's own message and a button, no hand-built text-plus-button.
+
 ### Do not copy these patterns
 
 - local coroutine loading directly in screens for new feature work
