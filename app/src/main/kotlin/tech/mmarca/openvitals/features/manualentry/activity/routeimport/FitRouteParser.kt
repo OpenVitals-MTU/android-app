@@ -77,7 +77,6 @@ internal object FitRouteParser {
                 startTime = startTime,
                 endTime = endTime,
                 durationSeconds = summary.durationSeconds,
-                originalPointCount = routePoints.size,
             )
         }
 
@@ -96,7 +95,6 @@ internal object FitRouteParser {
             type = fitSportName(summary.sport, summary.subSport),
             hasRecordedTimestamps = true,
             hasImportedTimeRange = true,
-            originalPointCount = routePoints.size,
         )
     }
 
@@ -147,7 +145,6 @@ internal object FitRouteParser {
             type = metadata.type,
             hasRecordedTimestamps = false,
             hasImportedTimeRange = false,
-            originalPointCount = routePoints.size,
         )
     }
 
@@ -168,7 +165,6 @@ internal object FitRouteParser {
             type = fitSportName(summary.sport, summary.subSport),
             hasRecordedTimestamps = false,
             hasImportedTimeRange = false,
-            originalPointCount = 0,
         )
     }
 }
