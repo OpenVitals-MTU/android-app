@@ -8,11 +8,14 @@ import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.units.Energy
 import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 import tech.mmarca.openvitals.domain.insights.WalkingEnergy
 
 /**
  * Maps the watch's step minutes to Health Connect records, one per minute
- * and type, keyed on the minute's start:
+ * and type, keyed on the minute's start, with the zone's offset at that
+ * minute:
  *
  * - `StepsRecord`: the watch's count.
  * - `StepsCadenceRecord`: the same count as steps per minute.
@@ -34,25 +37,25 @@ object WearOsStepsImport {
     const val CADENCE_CLIENT_ID_PREFIX = "wearos_cadence_"
     const val ACTIVE_CALORIES_CLIENT_ID_PREFIX = "wearos_walk_kcal_"
 
-    fun records(minutes: List<WearOsStepMinute>): List<Record> =
+    fun records(minutes: List<WearOsStepMinute>, zone: ZoneId): List<Record> =
         latestPerMinute(minutes).map { minute ->
             StepsRecord(
                 startTime = minute.start,
-                startZoneOffset = null,
+                startZoneOffset = zone.offsetAt(minute.start),
                 endTime = minute.end,
-                endZoneOffset = null,
+                endZoneOffset = zone.offsetAt(minute.end),
                 count = minute.steps.toLong(),
                 metadata = watchMetadata(clientRecordId(minute.start), minute.steps),
             )
         }
 
-    fun cadenceRecords(minutes: List<WearOsStepMinute>): List<Record> =
+    fun cadenceRecords(minutes: List<WearOsStepMinute>, zone: ZoneId): List<Record> =
         latestPerMinute(minutes).map { minute ->
             StepsCadenceRecord(
                 startTime = minute.start,
-                startZoneOffset = null,
+                startZoneOffset = zone.offsetAt(minute.start),
                 endTime = minute.end,
-                endZoneOffset = null,
+                endZoneOffset = zone.offsetAt(minute.end),
                 samples = listOf(StepsCadenceRecord.Sample(time = minute.start, rate = minute.steps.toDouble())),
                 metadata = watchMetadata("$CADENCE_CLIENT_ID_PREFIX${minute.start.toEpochMilli()}", minute.steps),
             )
@@ -65,6 +68,7 @@ object WearOsStepsImport {
     fun activeCaloriesRecords(
         minutes: List<WearOsStepMinute>,
         weightKg: Double?,
+        zone: ZoneId,
         exerciseSessions: List<ClosedRange<Instant>> = emptyList(),
     ): List<Record> {
         if (weightKg == null || weightKg <= 0.0) return emptyList()
@@ -75,9 +79,9 @@ object WearOsStepsImport {
             val kcal = WalkingEnergy.activeKcalPerMinute(minute.steps, weightKg)
             ActiveCaloriesBurnedRecord(
                 startTime = minute.start,
-                startZoneOffset = null,
+                startZoneOffset = zone.offsetAt(minute.start),
                 endTime = minute.end,
-                endZoneOffset = null,
+                endZoneOffset = zone.offsetAt(minute.end),
                 energy = Energy.kilocalories(kcal),
                 // Computed on the phone, like the other OpenVitals estimates.
                 metadata = Metadata.manualEntry(
@@ -123,6 +127,9 @@ object WearOsStepsImport {
         )
 
     private val WearOsStepMinute.end: Instant get() = start.plusSeconds(SECONDS_PER_MINUTE)
+
+    /** The offset in force at [instant], so local-time buckets stay right across a DST change. */
+    private fun ZoneId.offsetAt(instant: Instant): ZoneOffset = rules.getOffset(instant)
 
     private const val SECONDS_PER_MINUTE = 60L
 }

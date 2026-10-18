@@ -2,6 +2,9 @@ package tech.mmarca.openvitals.devices.wearos
 
 import androidx.health.connect.client.records.StepsRecord
 import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.ZoneOffset.UTC
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -11,8 +14,20 @@ class WearOsStepsImportTest {
     private val minute = Instant.parse("2026-10-07T10:15:00Z")
 
     @Test
+    fun `each minute carries the offset in force at it, across a DST change`() {
+        val berlin = ZoneId.of("Europe/Berlin")
+        // 2026-10-25 01:00Z: Berlin goes from +02:00 to +01:00.
+        val before = Instant.parse("2026-10-25T00:58:00Z")
+        val after = Instant.parse("2026-10-25T01:05:00Z")
+        val records = WearOsStepsImport.records(listOf(WearOsStepMinute(before, 50), WearOsStepMinute(after, 50)), berlin)
+            .map { it as StepsRecord }
+
+        assertEquals(listOf(ZoneOffset.ofHours(2), ZoneOffset.ofHours(1)), records.map { it.startZoneOffset })
+    }
+
+    @Test
     fun `one record per minute, keyed on its start, with the count as its version`() {
-        val record = WearOsStepsImport.records(listOf(WearOsStepMinute(minute, 87))).single() as StepsRecord
+        val record = WearOsStepsImport.records(listOf(WearOsStepMinute(minute, 87)), UTC).single() as StepsRecord
 
         assertEquals(minute, record.startTime)
         assertEquals(minute.plusSeconds(60), record.endTime)
@@ -23,19 +38,19 @@ class WearOsStepsImportTest {
 
     @Test
     fun `a minute stated twice in one page keeps the larger count`() {
-        val records = WearOsStepsImport.records(listOf(WearOsStepMinute(minute, 30), WearOsStepMinute(minute, 55)))
+        val records = WearOsStepsImport.records(listOf(WearOsStepMinute(minute, 30), WearOsStepMinute(minute, 55)), UTC)
 
         assertEquals(listOf(55L), records.map { (it as StepsRecord).count })
     }
 
     @Test
     fun `no minutes, no records`() {
-        assertTrue(WearOsStepsImport.records(emptyList()).isEmpty())
+        assertTrue(WearOsStepsImport.records(emptyList(), UTC).isEmpty())
     }
 
     @Test
     fun `the cadence is the minute's count, a measurement from the watch`() {
-        val record = WearOsStepsImport.cadenceRecords(listOf(WearOsStepMinute(minute, 104))).single()
+        val record = WearOsStepsImport.cadenceRecords(listOf(WearOsStepMinute(minute, 104)), UTC).single()
             as androidx.health.connect.client.records.StepsCadenceRecord
 
         assertEquals(104.0, record.samples.single().rate, 0.0)
@@ -47,8 +62,8 @@ class WearOsStepsImportTest {
     fun `walking energy needs the body weight and skips minutes that cost no more than rest`() {
         val minutes = listOf(WearOsStepMinute(minute, 100), WearOsStepMinute(minute.plusSeconds(60), 10))
 
-        assertTrue(WearOsStepsImport.activeCaloriesRecords(minutes, weightKg = null).isEmpty())
-        val record = WearOsStepsImport.activeCaloriesRecords(minutes, weightKg = 70.0).single()
+        assertTrue(WearOsStepsImport.activeCaloriesRecords(minutes, weightKg = null, zone = UTC).isEmpty())
+        val record = WearOsStepsImport.activeCaloriesRecords(minutes, weightKg = 70.0, zone = UTC).single()
             as androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
         assertEquals(minute, record.startTime)
         assertTrue(record.energy.inKilocalories > 0.0)
@@ -62,7 +77,7 @@ class WearOsStepsImportTest {
         val minutes = listOf(WearOsStepMinute(minute1, 100), WearOsStepMinute(minute2, 100))
         val exerciseSessions = listOf(minute1..minute1.plusSeconds(60))
 
-        val records = WearOsStepsImport.activeCaloriesRecords(minutes, weightKg = 70.0, exerciseSessions = exerciseSessions)
+        val records = WearOsStepsImport.activeCaloriesRecords(minutes, weightKg = 70.0, zone = UTC, exerciseSessions = exerciseSessions)
 
         val record = records.single() as androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
         assertEquals(minute2, record.startTime)

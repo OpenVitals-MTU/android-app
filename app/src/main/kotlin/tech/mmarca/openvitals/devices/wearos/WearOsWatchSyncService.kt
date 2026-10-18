@@ -254,7 +254,7 @@ class WearOsWatchSyncService(
                 }
                 return
             }
-            val energy = WearOsStepsImport.activeCaloriesRecords(minutes, weightKg)
+            val energy = WearOsStepsImport.activeCaloriesRecords(minutes, weightKg, zone())
             insertEstimates(energy, "walking energy")
             energyMinutes += energy.size
             energyKcal += energy.sumOf { (it as ActiveCaloriesBurnedRecord).energy.inKilocalories }
@@ -302,14 +302,14 @@ class WearOsWatchSyncService(
      * have left without one. Returns the minutes due, for the walking energy.
      */
     private suspend fun writeSteps(minutes: List<WearOsStepMinute>, stepsCursor: Instant, progress: Progress): List<WearOsStepMinute> {
-        val records = WearOsStepsImport.records(minutes)
+        val records = WearOsStepsImport.records(minutes, zone())
         val changed = records.zip(importRepository.insertWithOutcomes(records))
             .filter { (_, outcome) -> outcome == RecordWrite.WRITTEN }
             .mapTo(HashSet()) { (record, _) -> (record as StepsRecord).startTime }
         progress.stepMinutes += changed.size
         val due = minutes.filter { it.start in changed || it.start.isAfter(stepsCursor) }
         // Health Connect files cadence under the steps grant.
-        insertEstimates(WearOsStepsImport.cadenceRecords(due), "cadence")
+        insertEstimates(WearOsStepsImport.cadenceRecords(due, zone()), "cadence")
         return due
     }
 
