@@ -29,7 +29,6 @@ import tech.mmarca.openvitals.devices.core.sync.DeviceSyncProgress
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncResult
 import tech.mmarca.openvitals.devices.core.sync.UnwrittenSeries
 import tech.mmarca.openvitals.data.repository.RecordWrite
-import tech.mmarca.openvitals.data.repository.insertSkippingPresent
 import tech.mmarca.openvitals.data.repository.insertWithOutcomes
 import tech.mmarca.openvitals.devices.core.sync.sleepNightWindow
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
@@ -255,9 +254,10 @@ class WearOsWatchSyncService(
                 return
             }
             val energy = WearOsStepsImport.activeCaloriesRecords(minutes, weightKg, zone())
-            insertEstimates(energy, "walking energy")
-            energyMinutes += energy.size
-            energyKcal += energy.sumOf { (it as ActiveCaloriesBurnedRecord).energy.inKilocalories }
+            // Counted as written, not as tried: a minute refused as present adds nothing.
+            val written = energy.zip(insertEstimates(energy, "walking energy")).filter { (_, outcome) -> outcome == RecordWrite.WRITTEN }
+            energyMinutes += written.size
+            energyKcal += written.sumOf { (record, _) -> (record as ActiveCaloriesBurnedRecord).energy.inKilocalories }
         }
 
         while (true) {
@@ -286,10 +286,10 @@ class WearOsWatchSyncService(
         // The watch has no screen for these yet; testers read this line.
         WearOsLog.log(
             "steps: ${progress.stepMinutes} minute(s) written, $pulledSteps steps pulled (the re-pulled minute counts again); " +
-                if (weight == null) {
-                    "no walking energy"
+                if (energyMinutes == 0) {
+                    "no walking energy written"
                 } else {
-                    "walking energy ${"%.1f".format(Locale.ROOT, energyKcal)} kcal over $energyMinutes minute(s) at $weight kg"
+                    "walking energy ${"%.1f".format(Locale.ROOT, energyKcal)} kcal written over $energyMinutes minute(s) at $weight kg"
                 },
         )
         return true
@@ -316,15 +316,16 @@ class WearOsWatchSyncService(
     /**
      * Writes records derived from the steps. They are optional: a failure is
      * logged and skipped, so it never fails the sync and keeps sleep from
-     * being pulled. Returns how many were written.
+     * being pulled. Returns what became of each record, or nothing when the
+     * write failed.
      */
-    private suspend fun insertEstimates(records: List<Record>, what: String): Int = try {
-        importRepository.insertSkippingPresent(records)
+    private suspend fun insertEstimates(records: List<Record>, what: String): List<RecordWrite> = try {
+        importRepository.insertWithOutcomes(records)
     } catch (error: CancellationException) {
         throw error
     } catch (error: Exception) {
         WearOsLog.log("$what: not written: $error")
-        0
+        emptyList()
     }
 
     /** The weight for the walking energy; a failure when it could not be read. It is optional, so that never fails the sync. */
