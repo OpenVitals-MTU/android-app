@@ -210,15 +210,17 @@ internal fun WearOsSyncCard(
             val samples = sync.lastFileCount
             val nights = sync.lastNightCount ?: 0
             val stepMinutes = sync.lastStepMinuteCount ?: 0
-            if (!sync.isSyncing && sync.phase == DeviceSyncPhase.COMPLETE && samples != null) {
+            if (!sync.isSyncing && sync.phase == DeviceSyncPhase.COMPLETE && samples != null && sync.lastDeviceId == device.id) {
                 val lines = buildList {
                     if (samples > 0) add(pluralStringResource(R.plurals.settings_watch_wearos_synced_samples, samples, samples))
                     if (stepMinutes > 0) {
                         add(pluralStringResource(R.plurals.settings_watch_wearos_synced_step_minutes, stepMinutes, stepMinutes))
                     }
                     if (nights > 0) add(pluralStringResource(R.plurals.settings_watch_wearos_synced_nights, nights, nights))
-                    // With a series left out, "nothing new" would contradict the line below that says so.
-                    if (isEmpty() && sync.lastUnwritten.isEmpty()) add(stringResource(R.string.settings_watch_wearos_synced_none))
+                    // With something left out, "nothing new" would contradict the line below that says so.
+                    if (isEmpty() && sync.lastUnwritten.isEmpty() && !sync.lastMissingBodyWeight) {
+                        add(stringResource(R.string.settings_watch_wearos_synced_none))
+                    }
                 }
                 for (line in lines) {
                     Text(

@@ -28,6 +28,8 @@ data class DeviceSyncUiState(
     val phase: DeviceSyncPhase? = null,
     val filesTotal: Int = 0,
     val filesDone: Int = 0,
+    /** The device the last completed run synced, so a second watch's card does not show its outcome. */
+    val lastDeviceId: String? = null,
     /** Files downloaded and handed to the importer by the last completed run. */
     val lastFileCount: Int? = null,
     /** Estimated nights of sleep written by the last completed run. */
@@ -132,6 +134,7 @@ class DeviceSyncController(
             _state.value = when (result) {
                 is DeviceSyncResult.Succeeded -> DeviceSyncUiState(
                     phase = DeviceSyncPhase.COMPLETE,
+                    lastDeviceId = deviceId,
                     lastFileCount = result.fileCount,
                     lastNightCount = result.nightCount,
                     lastStepMinuteCount = result.stepMinuteCount,
