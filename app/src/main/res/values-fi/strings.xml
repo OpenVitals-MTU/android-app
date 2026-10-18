@@ -387,7 +387,9 @@
     <string name="activity_route_share_failed">Reittitiedostoa ei voitu jakaa.</string>
     <string name="activity_workout_export_title">Vie treeni</string>
     <string name="activity_workout_export_description">Tallenna tämän treenin mittarit tiedostona. GPS-reitti ei sisälly.</string>
-    <string name="activity_workout_export_description_with_route">Tallenna tämä treeni tiedostona. GPX ja KMZ sisältävät GPS-reitin; TCX, CSV ja FIT jättävät sen pois.</string>
+    <string name="activity_workout_export_description_route_choice">Tallenna tämä treeni tiedostona, GPS-reitin kanssa tai ilman.</string>
+    <string name="activity_workout_export_with_route">GPS-reitin kanssa</string>
+    <string name="activity_workout_export_without_route">Ilman GPS-reittiä</string>
     <string name="activity_workout_export_tcx">Tallenna TCX</string>
     <string name="activity_workout_export_csv">Tallenna CSV</string>
     <string name="activity_workout_export_fit">Tallenna FIT</string>

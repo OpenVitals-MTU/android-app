@@ -19,16 +19,20 @@ import androidx.health.connect.client.units.meters
 import java.time.Duration
 import kotlin.math.roundToLong
 
-internal fun AppleHealthImportConverter.convertSingleRecord(record: AppleRecord): ConvertedAppleRecord? {
+// A record counts as converted once Health Connect has accepted its values.
+internal fun AppleHealthImportConverter.convertSingleRecord(record: AppleRecord): ConvertedAppleRecord? =
+    acceptedByHealthConnect(listOf(record)) { buildSingleRecord(record) }
+        ?.also { markConverted(record.type) }
+
+private fun AppleHealthImportConverter.buildSingleRecord(record: AppleRecord): ConvertedAppleRecord? {
     val start = record.startDate ?: return invalid(record, "Record is missing startDate.")
     val end = record.endDate ?: start
     val interval = interval(start, end)
     val value = record.numericValue
 
     fun metadata(targetType: String): Metadata = appleMetadata(record, targetType, record.sourceFingerprint)
-    fun converted(targetType: String, fingerprint: String, healthRecord: Record): ConvertedAppleRecord {
-        markConverted(record.type)
-        return ConvertedAppleRecord(
+    fun converted(targetType: String, fingerprint: String, healthRecord: Record): ConvertedAppleRecord =
+        ConvertedAppleRecord(
             appleType = record.type,
             targetType = targetType,
             fingerprint = fingerprint,
@@ -38,7 +42,6 @@ internal fun AppleHealthImportConverter.convertSingleRecord(record: AppleRecord)
             unit = record.unit,
             value = record.valueForReport,
         )
-    }
 
     return when (record.type) {
         AppleStepCount -> {
@@ -126,7 +129,10 @@ internal fun AppleHealthImportConverter.convertSingleRecord(record: AppleRecord)
                 ?: return invalid(record, "Basal energy is missing, unsupported unit, or not positive.")
             val durationSeconds = Duration.between(interval.start.instant, interval.end.instant).seconds.takeIf { it > 0 }
                 ?: return invalid(record, "Basal energy record has no positive duration.")
-            val kcalPerDay = kilocalories * 86_400.0 / durationSeconds
+            // Some apps log a whole day's BMR as one short sample, which reads far above
+            // the most Health Connect accepts.
+            val kcalPerDay = (kilocalories * 86_400.0 / durationSeconds).takeIf { it <= 10_000.0 }
+                ?: return invalid(record, "Basal energy over this interval is above 10000 kcal/day.")
             val fingerprint = record.stableClientRecordId("bmr")
             converted(
                 "BasalMetabolicRateRecord",

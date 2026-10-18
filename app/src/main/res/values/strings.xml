@@ -346,7 +346,9 @@
     <string name="activity_route_share_failed">Could not share route file.</string>
     <string name="activity_workout_export_title">Export workout</string>
     <string name="activity_workout_export_description">Save this workout\'s metrics as a file. The GPS route is not included.</string>
-    <string name="activity_workout_export_description_with_route">Save this workout as a file. GPX and KMZ include the GPS route; TCX, CSV, and FIT leave it out.</string>
+    <string name="activity_workout_export_description_route_choice">Save this workout as a file, with its GPS route or without it.</string>
+    <string name="activity_workout_export_with_route">With the GPS route</string>
+    <string name="activity_workout_export_without_route">Without the GPS route</string>
     <string name="activity_workout_export_tcx">Save TCX</string>
     <string name="activity_workout_export_csv">Save CSV</string>
     <string name="activity_workout_export_fit">Save FIT</string>

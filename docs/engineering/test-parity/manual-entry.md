@@ -354,7 +354,7 @@ Kotlin counterpart: /home/manu/Documentos/repos/openvitals-android/app/src/test/
 | RouteFileParser > parseFile imports sparse FIT course without route geometry | PORTED | RouteFileParserTest.kt `parseFile imports sparse FIT course without route geometry` | |
 | RouteFileParser > parseFile imports FIT workout definition without activity session | PORTED | RouteFileParserTest.kt `parseFile imports FIT workout definition without activity session` | |
 | RouteFileParser > parseFile extracts untimestamped KML line string with synthetic timing | PORTED | RouteFileParserTest.kt `parseFile extracts untimestamped KML line string with synthetic timing` | |
-| RouteFileParser > parse simplifies very large route files | PORTED | RouteFileParserTest.kt `parse simplifies very large route files` | |
+| RouteFileParser > parse simplifies very large route files | DIVERGED | RouteFileParserTest.kt `parse keeps every point of a very large route file` | Deliberate: Kotlin keeps every point. Health Connect's record size limit is met at write time by `OversizedRouteShrinker` |
 | RouteFileParser > parse rejects GPX without two timestamped points | PORTED | RouteFileParserTest.kt `parse rejects GPX without two timestamped points` | Kotlin asserts only that it fails (no exception-type check) — minor |
 | RouteFileParser > parseFile rejects oversized raw route file before parsing | PORTED | RouteFileParserTest.kt `parseFile rejects oversized raw route file before parsing` | Same error message asserted |
 | RouteFileParser > parseFile rejects oversized KMZ route entry before XML parsing | PORTED | RouteFileParserTest.kt `parseFile rejects oversized KMZ route entry before XML parsing` | Same error message asserted |

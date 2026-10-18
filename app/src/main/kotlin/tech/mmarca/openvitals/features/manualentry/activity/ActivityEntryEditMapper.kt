@@ -51,7 +51,6 @@ internal fun ExerciseData.toEditState(
                 description = notes,
                 hasRecordedTimestamps = true,
                 hasImportedTimeRange = true,
-                originalPointCount = routeData.points.size,
             )
         }
     val start = startTime.atZone(clock.zone)

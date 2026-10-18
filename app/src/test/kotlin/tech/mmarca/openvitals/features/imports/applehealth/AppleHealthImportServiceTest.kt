@@ -9,14 +9,17 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.WeightRecord
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -186,6 +189,107 @@ class AppleHealthImportServiceTest {
         val bloodPressure = result.converted.single().record as BloodPressureRecord
         assertEquals(120.0, bloodPressure.systolic.inMillimetersOfMercury, 0.0)
         assertEquals(80.0, bloodPressure.diastolic.inMillimetersOfMercury, 0.0)
+    }
+
+    @Test
+    fun `converter fails a systolic reading above the 200 mmHg health connect accepts`() {
+        val parsed = parseXml(
+            """
+            <HealthData>
+                <Correlation type="HKCorrelationTypeIdentifierBloodPressure" sourceName="Test"
+                    startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:00:00 +0000">
+                    <Record type="HKQuantityTypeIdentifierBloodPressureSystolic" sourceName="Test"
+                        startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:00:00 +0000"
+                        unit="mmHg" value="210" />
+                    <Record type="HKQuantityTypeIdentifierBloodPressureDiastolic" sourceName="Test"
+                        startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:00:00 +0000"
+                        unit="mmHg" value="120" />
+                </Correlation>
+            </HealthData>
+            """.trimIndent(),
+        )
+
+        val result = AppleHealthImportConverter(mindfulnessAvailable = true).convert(parsed)
+
+        assertTrue(result.converted.isEmpty())
+        assertEquals("Systolic value is missing or outside supported range.", result.diagnostics.single().detail)
+    }
+
+    @Test
+    fun `converter fails basal energy that works out above 10000 kcal per day and keeps the rest`() {
+        // A day's BMR logged as a one-hour sample: 1494.72 kcal/h is 35873.28 kcal/day.
+        val parsed = parseXml(
+            """
+            <HealthData>
+                <Record type="HKQuantityTypeIdentifierBasalEnergyBurned" sourceName="Diet app"
+                    startDate="2026-01-01 00:00:00 +0000" endDate="2026-01-01 01:00:00 +0000"
+                    unit="kcal" value="1494.72" />
+                <Record type="HKQuantityTypeIdentifierBasalEnergyBurned" sourceName="Watch"
+                    startDate="2026-01-02 08:00:00 +0000" endDate="2026-01-02 08:01:00 +0000"
+                    unit="kcal" value="1.2" />
+            </HealthData>
+            """.trimIndent(),
+        )
+
+        val result = AppleHealthImportConverter(mindfulnessAvailable = true).convert(parsed)
+
+        val bmr = result.converted.single().record as BasalMetabolicRateRecord
+        assertEquals(1728.0, bmr.basalMetabolicRate.inKilocaloriesPerDay, 1e-6)
+        val stats = result.typeStats.getValue(AppleBasalEnergyBurned)
+        assertEquals(1, stats.converted)
+        assertEquals(1, stats.failed)
+        assertEquals("Basal energy over this interval is above 10000 kcal/day.", result.diagnostics.single().detail)
+    }
+
+    @Test
+    fun `a value health connect refuses fails its sample instead of the import`() {
+        val parsed = parseXml(
+            """
+            <HealthData>
+                <Record type="HKQuantityTypeIdentifierBodyMass" sourceName="Scale"
+                    startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:00:00 +0000"
+                    unit="kg" value="1500" />
+                <Record type="HKQuantityTypeIdentifierBodyMass" sourceName="Scale"
+                    startDate="2026-01-02 08:00:00 +0000" endDate="2026-01-02 08:00:00 +0000"
+                    unit="kg" value="70" />
+            </HealthData>
+            """.trimIndent(),
+        )
+
+        val result = AppleHealthImportConverter(mindfulnessAvailable = true).convert(parsed)
+
+        assertEquals(70.0, (result.converted.single().record as WeightRecord).weight.inKilograms, 0.0)
+        val stats = result.typeStats.getValue(AppleBodyMass)
+        assertEquals(1, stats.converted)
+        assertEquals(1, stats.failed)
+        assertEquals("Value is outside the range Health Connect accepts.", result.diagnostics.single().detail)
+    }
+
+    @Test
+    fun `a meal health connect refuses fails only the samples that went into it`() {
+        val parsed = parseXml(
+            """
+            <HealthData>
+                <Record type="HKQuantityTypeIdentifierDietaryEnergyConsumed" sourceName="Diet app"
+                    startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:00:00 +0000"
+                    unit="kcal" value="250000" />
+                <Record type="HKQuantityTypeIdentifierDietaryProtein" sourceName="Diet app"
+                    startDate="2026-01-01 08:00:00 +0000" endDate="2026-01-01 08:00:00 +0000"
+                    unit="g" value="30" />
+                <Record type="HKQuantityTypeIdentifierDietaryEnergyConsumed" sourceName="Diet app"
+                    startDate="2026-01-01 13:00:00 +0000" endDate="2026-01-01 13:00:00 +0000"
+                    unit="kcal" value="500" />
+            </HealthData>
+            """.trimIndent(),
+        )
+
+        val result = AppleHealthImportConverter(mindfulnessAvailable = true).convert(parsed)
+
+        val meal = result.converted.single().record as NutritionRecord
+        assertEquals(500.0, meal.energy?.inKilocalories ?: 0.0, 0.0)
+        assertEquals(1, result.typeStats.getValue(AppleNutritionSyntheticType).converted)
+        assertEquals(1, result.typeStats.getValue(AppleDietaryEnergyConsumed).failed)
+        assertEquals(1, result.typeStats.getValue(AppleDietaryProtein).failed)
     }
 
     @Test

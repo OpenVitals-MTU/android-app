@@ -305,7 +305,9 @@
     <string name="activity_route_share_failed">Non se puido compartir o ficheiro da ruta.</string>
     <string name="activity_workout_export_title">Exportar adestramento</string>
     <string name="activity_workout_export_description">Garda as métricas deste adestramento nun ficheiro. A ruta GPS non se inclúe.</string>
-    <string name="activity_workout_export_description_with_route">Garda este adestramento nun ficheiro. GPX e KMZ inclúen a ruta GPS; TCX, CSV e FIT non.</string>
+    <string name="activity_workout_export_description_route_choice">Garda este adestramento nun ficheiro, coa ruta GPS ou sen ela.</string>
+    <string name="activity_workout_export_with_route">Coa ruta GPS</string>
+    <string name="activity_workout_export_without_route">Sen a ruta GPS</string>
     <string name="activity_workout_export_tcx">Gardar TCX</string>
     <string name="activity_workout_export_csv">Gardar CSV</string>
     <string name="activity_workout_export_fit">Gardar FIT</string>

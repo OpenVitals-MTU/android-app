@@ -85,7 +85,7 @@ private fun AppleHealthImportConverter.buildBloodPressureRecord(
         detail = "Blood pressure is missing measurement time.",
         timeRange = null,
     )
-    val sys = systolic?.takeIf { it in 20.0..300.0 } ?: return invalid(
+    val sys = systolic?.takeIf { it in 20.0..200.0 } ?: return invalid(
         appleType = appleType,
         detail = "Systolic value is missing or outside supported range.",
         timeRange = time.instant.toString(),

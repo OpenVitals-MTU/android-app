@@ -317,7 +317,9 @@
     <string name="activity_route_share_failed">Не удалось поделиться файлом маршрута.</string>
     <string name="activity_workout_export_title">Экспортировать тренировку</string>
     <string name="activity_workout_export_description">Сохранить показатели этой тренировки в файл. GPS-маршрут не включается.</string>
-    <string name="activity_workout_export_description_with_route">Сохранить эту тренировку в файл. GPX и KMZ включают GPS-маршрут; TCX, CSV и FIT — нет.</string>
+    <string name="activity_workout_export_description_route_choice">Сохранить эту тренировку в файл, с GPS-маршрутом или без него.</string>
+    <string name="activity_workout_export_with_route">С GPS-маршрутом</string>
+    <string name="activity_workout_export_without_route">Без GPS-маршрута</string>
     <string name="activity_workout_export_tcx">Сохранить TCX</string>
     <string name="activity_workout_export_csv">Сохранить CSV</string>
     <string name="activity_workout_export_fit">Сохранить FIT</string>

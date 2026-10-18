@@ -246,7 +246,9 @@
     <string name="activity_route_share_failed">无法分享路线文件。</string>
     <string name="activity_workout_export_title">导出锻炼</string>
     <string name="activity_workout_export_description">将此锻炼的指标保存为文件。不包含 GPS 路线。</string>
-    <string name="activity_workout_export_description_with_route">将此锻炼保存为文件。GPX 和 KMZ 包含 GPS 路线；TCX、CSV 和 FIT 不包含。</string>
+    <string name="activity_workout_export_description_route_choice">将此锻炼保存为文件，可包含或不包含 GPS 路线。</string>
+    <string name="activity_workout_export_with_route">包含 GPS 路线</string>
+    <string name="activity_workout_export_without_route">不含 GPS 路线</string>
     <string name="activity_workout_export_tcx">保存 TCX</string>
     <string name="activity_workout_export_csv">保存 CSV</string>
     <string name="activity_workout_export_fit">保存 FIT</string>

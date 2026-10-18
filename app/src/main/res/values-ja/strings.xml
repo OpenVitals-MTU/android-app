@@ -305,7 +305,9 @@
     <string name="activity_route_share_failed">ルートファイルを共有できませんでした。</string>
     <string name="activity_workout_export_title">ワークアウトをエクスポート</string>
     <string name="activity_workout_export_description">このワークアウトの指標をファイルとして保存します。GPS ルートは含まれません。</string>
-    <string name="activity_workout_export_description_with_route">このワークアウトをファイルとして保存します。GPX と KMZ には GPS ルートが含まれ、TCX、CSV、FIT には含まれません。</string>
+    <string name="activity_workout_export_description_route_choice">このワークアウトを、GPS ルートを含めて、または含めずにファイルとして保存します。</string>
+    <string name="activity_workout_export_with_route">GPS ルートあり</string>
+    <string name="activity_workout_export_without_route">GPS ルートなし</string>
     <string name="activity_workout_export_tcx">TCX を保存</string>
     <string name="activity_workout_export_csv">CSV を保存</string>
     <string name="activity_workout_export_fit">FIT を保存</string>

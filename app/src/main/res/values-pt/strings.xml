@@ -245,7 +245,9 @@
     <string name="activity_route_share_failed">Não foi possível partilhar o ficheiro da rota.</string>
     <string name="activity_workout_export_title">Exportar treino</string>
     <string name="activity_workout_export_description">Guarde as métricas deste treino como ficheiro. A rota GPS não é incluída.</string>
-    <string name="activity_workout_export_description_with_route">Guarde este treino como ficheiro. GPX e KMZ incluem a rota GPS; TCX, CSV e FIT não.</string>
+    <string name="activity_workout_export_description_route_choice">Guarde este treino como ficheiro, com ou sem a rota GPS.</string>
+    <string name="activity_workout_export_with_route">Com a rota GPS</string>
+    <string name="activity_workout_export_without_route">Sem a rota GPS</string>
     <string name="activity_workout_export_tcx">Guardar TCX</string>
     <string name="activity_workout_export_csv">Guardar CSV</string>
     <string name="activity_workout_export_fit">Guardar FIT</string>
