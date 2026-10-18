@@ -1,5 +1,43 @@
 # Changelog
 
+## 2.14.4 - 2026-10-18
+
+### English
+
+- **A FIT file with the GPS route.** A workout with a route can be saved or shared as a FIT that carries the route, the altitude and the distance covered beside heart rate, speed and cadence. The Export workout card groups its formats under "With the GPS route" (GPX, KMZ, FIT) and "Without the GPS route" (TCX, CSV, FIT).
+- **Speed and cadence in the FIT and TCX exports.** The workout export held heart rate and the session totals only, so a ride opened in a FIT viewer showed a heart-rate line and nothing else. FIT and TCX now carry the speed and cadence the workout screen shows, and every FIT marks where the timer starts and stops and the local time of the workout.
+- **Imported routes keep every point.** Route files and Garmin watch activities with more than 2,000 GPS points were cut to 2,000; the map, splits and route analysis now use every point. A route too large for one Health Connect record is still thinned until it fits.
+
+### Espanol
+
+- **Un FIT con la ruta GPS.** Un entrenamiento con ruta se puede guardar o compartir como un FIT que lleva la ruta, la altitud y la distancia recorrida junto con la frecuencia cardiaca, la velocidad y la cadencia. La tarjeta Exportar entrenamiento agrupa sus formatos en "Con la ruta GPS" (GPX, KMZ, FIT) y "Sin la ruta GPS" (TCX, CSV, FIT).
+- **Velocidad y cadencia en las exportaciones FIT y TCX.** La exportacion del entrenamiento solo llevaba la frecuencia cardiaca y los totales de la sesion, asi que una salida en bici abierta en un visor FIT mostraba una linea de pulso y nada mas. FIT y TCX llevan ahora la velocidad y la cadencia que muestra la pantalla del entrenamiento, y cada FIT marca el inicio y el final del cronometro y la hora local del entrenamiento.
+- **Las rutas importadas conservan todos los puntos.** Los archivos de ruta y las actividades de relojes Garmin con mas de 2.000 puntos GPS se recortaban a 2.000; el mapa, los tramos y el analisis de ruta usan ahora todos los puntos. Una ruta demasiado grande para un registro de Health Connect se sigue reduciendo hasta que cabe.
+
+### Deutsch
+
+- **Eine FIT-Datei mit der GPS-Route.** Ein Workout mit Route laesst sich als FIT speichern oder teilen, die Route, Hoehe und zurueckgelegte Strecke neben Herzfrequenz, Geschwindigkeit und Kadenz enthaelt. Die Karte Workout exportieren gruppiert ihre Formate unter "Mit GPS-Route" (GPX, KMZ, FIT) und "Ohne GPS-Route" (TCX, CSV, FIT).
+- **Geschwindigkeit und Kadenz im FIT- und TCX-Export.** Der Workout-Export enthielt nur die Herzfrequenz und die Summen der Einheit, daher zeigte eine Fahrt in einem FIT-Betrachter nur eine Pulskurve. FIT und TCX enthalten jetzt die Geschwindigkeit und Kadenz, die der Workout-Bildschirm zeigt, und jede FIT-Datei markiert Start und Stopp des Timers und die Ortszeit des Workouts.
+- **Importierte Routen behalten jeden Punkt.** Routendateien und Garmin-Uhr-Aktivitaeten mit mehr als 2.000 GPS-Punkten wurden auf 2.000 gekuerzt; Karte, Abschnitte und Routenanalyse nutzen jetzt jeden Punkt. Eine Route, die fuer einen Health-Connect-Eintrag zu gross ist, wird weiterhin ausgeduennt, bis sie passt.
+
+### Italiano
+
+- **Un file FIT con il percorso GPS.** Un allenamento con percorso si puo salvare o condividere come FIT che contiene il percorso, l'altitudine e la distanza percorsa accanto a frequenza cardiaca, velocita e cadenza. La scheda Esporta allenamento raggruppa i formati sotto "Con il percorso GPS" (GPX, KMZ, FIT) e "Senza il percorso GPS" (TCX, CSV, FIT).
+- **Velocita e cadenza nelle esportazioni FIT e TCX.** L'esportazione dell'allenamento conteneva solo la frequenza cardiaca e i totali della sessione, quindi un giro aperto in un visualizzatore FIT mostrava solo una linea del battito. FIT e TCX contengono ora la velocita e la cadenza mostrate dalla schermata dell'allenamento, e ogni FIT segna l'avvio e l'arresto del timer e l'ora locale dell'allenamento.
+- **I percorsi importati conservano ogni punto.** I file di percorso e le attivita degli orologi Garmin con piu di 2.000 punti GPS venivano ridotti a 2.000; mappa, suddivisioni e analisi percorso usano ora ogni punto. Un percorso troppo grande per un record di Health Connect viene ancora sfoltito finche ci sta.
+
+### Eesti
+
+- **FIT-fail koos GPS-marsruudiga.** Marsruudiga treeningu saab salvestada voi jagada FIT-failina, milles on marsruut, korgus ja labitud vahemaa koos pulsi, kiiruse ja kadentsiga. Kaart Ekspordi treening ruhmitab vormingud pealkirjade "GPS-marsruudiga" (GPX, KMZ, FIT) ja "Ilma GPS-marsruudita" (TCX, CSV, FIT) alla.
+- **Kiirus ja kadents FIT- ja TCX-ekspordis.** Treeningu eksport sisaldas ainult pulssi ja seansi kokkuvotteid, nii et FIT-vaaturis avatud soit naitas vaid pulsijoont. FIT ja TCX sisaldavad nuud kiirust ja kadentsi, mida treeningu ekraan naitab, ning iga FIT margib taimeri alguse ja lopu ning treeningu kohaliku aja.
+- **Imporditud marsruudid sailitavad iga punkti.** Marsruudifailid ja Garmini kella tegevused, milles oli ule 2000 GPS-punkti, loigati 2000 punktini; kaart, loigud ja marsruudi analuus kasutavad nuud iga punkti. Liiga suurt marsruuti, mis uhte Health Connecti kirjesse ei mahu, harvendatakse endiselt, kuni see mahub.
+
+### Portugues
+
+- **Um FIT com a rota GPS.** Um treino com rota pode ser guardado ou partilhado como um FIT que leva a rota, a altitude e a distancia percorrida junto com a frequencia cardiaca, a velocidade e a cadencia. O cartao Exportar treino agrupa os formatos em "Com a rota GPS" (GPX, KMZ, FIT) e "Sem a rota GPS" (TCX, CSV, FIT).
+- **Velocidade e cadencia nas exportacoes FIT e TCX.** A exportacao do treino so levava a frequencia cardiaca e os totais da sessao, por isso um passeio aberto num visualizador FIT mostrava apenas uma linha de pulsacao. FIT e TCX levam agora a velocidade e a cadencia que o ecra do treino mostra, e cada FIT marca o inicio e a paragem do cronometro e a hora local do treino.
+- **As rotas importadas mantem todos os pontos.** Os ficheiros de rota e as atividades de relogios Garmin com mais de 2000 pontos GPS eram cortados para 2000; o mapa, os parciais e a analise da rota usam agora todos os pontos. Uma rota demasiado grande para um registo do Health Connect continua a ser reduzida ate caber.
+
 ## 2.14.3 - 2026-10-17
 
 ### English

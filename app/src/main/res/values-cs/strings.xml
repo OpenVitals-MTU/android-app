@@ -245,7 +245,9 @@
     <string name="activity_route_share_failed">Soubor s trasou se nepodařilo sdílet.</string>
     <string name="activity_workout_export_title">Exportovat trénink</string>
     <string name="activity_workout_export_description">Uložte metriky tohoto tréninku jako soubor. Trasa GPS není součástí.</string>
-    <string name="activity_workout_export_description_with_route">Uložte tento trénink jako soubor. GPX a KMZ obsahují trasu GPS; TCX, CSV a FIT ji vynechávají.</string>
+    <string name="activity_workout_export_description_route_choice">Uložte tento trénink jako soubor, s trasou GPS nebo bez ní.</string>
+    <string name="activity_workout_export_with_route">S trasou GPS</string>
+    <string name="activity_workout_export_without_route">Bez trasy GPS</string>
     <string name="activity_workout_export_tcx">Uložit TCX</string>
     <string name="activity_workout_export_csv">Uložit CSV</string>
     <string name="activity_workout_export_fit">Uložit FIT</string>

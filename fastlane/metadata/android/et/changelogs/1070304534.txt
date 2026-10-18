@@ -1,0 +1,1 @@
+GPS-marsruudiga treeningu saab nüüd salvestada FIT-failina, milles on marsruut, kõrgus ja vahemaa koos pulsi, kiiruse ja kadentsiga. Marsruudita FIT- ja TCX-eksport sisaldab nüüd ka kiirust ja kadentsi, mitte ainult pulssi. Failist imporditud või Garmini kellast sünkroonitud marsruudid säilitavad iga punkti, selle asemel et neid 2000 punktini kärpida.

@@ -152,7 +152,6 @@ class RouteFileParserTest {
         assertEquals("indoor-workout.fit", result.fileName)
         assertEquals("training", result.type)
         assertTrue(result.points.isEmpty())
-        assertEquals(0, result.originalPointCount)
         assertEquals(Instant.parse("2026-05-26T08:30:00Z"), result.startTime)
         assertEquals(Instant.parse("2026-05-26T09:15:00Z"), result.endTime)
         // FIT session field 11 is `total_calories`; there is no active-calorie field, so active stays unknown.
@@ -205,7 +204,6 @@ class RouteFileParserTest {
 
         assertEquals("cycling", result.type)
         assertTrue(result.points.isEmpty())
-        assertEquals(1, result.originalPointCount)
         assertEquals(2_400.0, result.distanceMeters, 0.001)
         assertEquals(Instant.parse("2026-05-26T08:40:00Z"), result.endTime)
     }
@@ -266,7 +264,6 @@ class RouteFileParserTest {
         assertEquals("Tiny Course", result.name)
         assertEquals("walking", result.type)
         assertTrue(result.points.isEmpty())
-        assertEquals(1, result.originalPointCount)
         assertFalse(result.hasRecordedTimestamps)
         assertFalse(result.hasImportedTimeRange)
         assertEquals(5 * 60L, result.durationSeconds)
@@ -319,9 +316,9 @@ class RouteFileParserTest {
         assertTrue(result.distanceMeters > 0.0)
     }
 
-    @Test fun `parse simplifies very large route files`() {
+    @Test fun `parse keeps every point of a very large route file`() {
         val start = Instant.parse("2026-05-26T08:30:00Z")
-        val points = (0 until 2_100).joinToString(separator = "\n") { index ->
+        val points = (0 until 10_000).joinToString(separator = "\n") { index ->
             """
             <trkpt lat="${59.0 + index * 0.00001}" lon="${24.0 + index * 0.00001}">
               <time>${start.plusSeconds(index.toLong())}</time>
@@ -339,9 +336,9 @@ class RouteFileParserTest {
             fileName = "large.gpx",
         )
 
-        assertEquals(2_100, result.originalPointCount)
-        assertTrue(result.points.size < result.originalPointCount)
-        assertEquals(2_000, result.points.size)
+        // Health Connect's record size limit is met at write time, not by thinning on import.
+        assertEquals(10_000, result.points.size)
+        assertEquals(start.plusSeconds(9_999), result.points.last().time)
     }
 
     @Test fun `parse rejects GPX without two timestamped points`() {

@@ -1,0 +1,1 @@
+A workout with a GPS route can now be saved as a FIT that carries the route, altitude and distance alongside heart rate, speed and cadence. The FIT and TCX exports without the route now include speed and cadence too, not only heart rate. Routes imported from a file or synced from a Garmin watch keep every point instead of being cut to 2,000.

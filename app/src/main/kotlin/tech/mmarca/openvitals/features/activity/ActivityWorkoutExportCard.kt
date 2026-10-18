@@ -18,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import tech.mmarca.openvitals.R
@@ -27,8 +29,9 @@ import tech.mmarca.openvitals.ui.theme.Emphasis
 import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
- * Every way a workout leaves the app. Route formats only with a route;
- * metric formats on every workout. The description says which carry the route.
+ * Every way a workout leaves the app. Route formats only with a route,
+ * under their own heading; metric formats on every workout. FIT is in both
+ * groups: with the route it is the whole recording, without it the metrics.
  */
 @Composable
 internal fun WorkoutExportCard(
@@ -42,15 +45,18 @@ internal fun WorkoutExportCard(
     onSaveRouteAsKmz: (() -> Unit)? = null,
     onShareRouteAsGpx: (() -> Unit)? = null,
     onShareRouteAsKmz: (() -> Unit)? = null,
+    onSaveRouteAsFit: (() -> Unit)? = null,
+    onShareRouteAsFit: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val hasRouteFormats = onSaveRouteAsGpx != null && onSaveRouteAsKmz != null &&
-        onShareRouteAsGpx != null && onShareRouteAsKmz != null
+        onShareRouteAsGpx != null && onShareRouteAsKmz != null &&
+        onSaveRouteAsFit != null && onShareRouteAsFit != null
     DetailSectionCard(title = stringResource(R.string.activity_workout_export_title), modifier = modifier) {
         Text(
             text = stringResource(
                 if (hasRouteFormats) {
-                    R.string.activity_workout_export_description_with_route
+                    R.string.activity_workout_export_description_route_choice
                 } else {
                     R.string.activity_workout_export_description
                 },
@@ -60,6 +66,7 @@ internal fun WorkoutExportCard(
         )
         Spacer(Modifier.height(Spacing.md))
         if (hasRouteFormats) {
+            ExportGroupHeading(stringResource(R.string.activity_workout_export_with_route))
             WorkoutFormatRow(
                 saveLabel = stringResource(R.string.activity_route_export_gpx),
                 shareLabel = stringResource(R.string.activity_route_share_gpx),
@@ -74,6 +81,14 @@ internal fun WorkoutExportCard(
                 onShare = checkNotNull(onShareRouteAsKmz),
             )
             ExportRowDivider()
+            WorkoutFormatRow(
+                saveLabel = stringResource(R.string.activity_workout_export_fit),
+                shareLabel = stringResource(R.string.activity_workout_share_fit),
+                onSave = checkNotNull(onSaveRouteAsFit),
+                onShare = checkNotNull(onShareRouteAsFit),
+            )
+            Spacer(Modifier.height(Spacing.md))
+            ExportGroupHeading(stringResource(R.string.activity_workout_export_without_route))
         }
         WorkoutFormatRow(
             saveLabel = stringResource(R.string.activity_workout_export_tcx),
@@ -96,6 +111,18 @@ internal fun WorkoutExportCard(
             onShare = onShareAsFit,
         )
     }
+}
+
+/** Names a group of format rows: whether its files carry the GPS route. */
+@Composable
+private fun ExportGroupHeading(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall,
+        modifier = Modifier
+            .padding(bottom = Spacing.xs)
+            .semantics { heading() },
+    )
 }
 
 /** A quiet rule between format rows — the subtle between-item tint, tight padding. */

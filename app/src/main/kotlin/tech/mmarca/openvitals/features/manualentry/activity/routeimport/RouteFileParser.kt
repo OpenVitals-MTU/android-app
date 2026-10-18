@@ -29,7 +29,6 @@ data class RouteFileImport(
     val bleSamples: BleRecordingSampleBuffer = BleRecordingSampleBuffer(),
     val hasRecordedTimestamps: Boolean = true,
     val hasImportedTimeRange: Boolean = true,
-    val originalPointCount: Int = points.size,
     /** A hash of the file's bytes. The same file always gives the same key, whatever its name. */
     val contentKey: String? = null,
 )

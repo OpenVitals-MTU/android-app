@@ -2159,7 +2159,9 @@
     <string name="activity_route_share_failed">Impossibile condividere il file del percorso.</string>
     <string name="activity_workout_export_title">Esporta allenamento</string>
     <string name="activity_workout_export_description">Salva le metriche di questo allenamento come file. Il percorso GPS non è incluso.</string>
-    <string name="activity_workout_export_description_with_route">Salva questo allenamento come file. GPX e KMZ includono il percorso GPS; TCX, CSV e FIT no.</string>
+    <string name="activity_workout_export_description_route_choice">Salva questo allenamento come file, con o senza il percorso GPS.</string>
+    <string name="activity_workout_export_with_route">Con il percorso GPS</string>
+    <string name="activity_workout_export_without_route">Senza il percorso GPS</string>
     <string name="activity_workout_export_tcx">Salva TCX</string>
     <string name="activity_workout_export_csv">Salva CSV</string>
     <string name="activity_workout_export_fit">Salva FIT</string>
