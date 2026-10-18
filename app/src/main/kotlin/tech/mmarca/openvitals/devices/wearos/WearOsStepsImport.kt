@@ -89,6 +89,12 @@ object WearOsStepsImport {
         }
     }
 
+    /** The minutes no exercise session in [exerciseSessions] overlaps. */
+    fun outsideExerciseSessions(
+        minutes: List<WearOsStepMinute>,
+        exerciseSessions: List<ClosedRange<Instant>>,
+    ): List<WearOsStepMinute> = minutes.filterNot { isInsideExerciseSession(it, exerciseSessions) }
+
     /** Whether a minute would cost more than rest, so a known weight would write walking energy for it. */
     fun hasWalkingEnergy(minutes: List<WearOsStepMinute>): Boolean = minutes.any { WalkingEnergy.isAboveRest(it.steps) }
 

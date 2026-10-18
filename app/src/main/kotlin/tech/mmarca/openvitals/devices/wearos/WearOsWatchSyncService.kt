@@ -231,10 +231,18 @@ class WearOsWatchSyncService(
         suspend fun writeBatch(batch: List<WearOsStepMinute>) {
             if (batch.isEmpty()) return
             // A minute is estimated when its steps were written; see writeSteps for the minutes past the cursor.
-            val minutes = writeSteps(batch, cursor, progress)
+            val due = writeSteps(batch, cursor, progress)
+            if (!WearOsStepsImport.hasWalkingEnergy(due)) return
+            if (!writeEnergy) {
+                // The sessions cannot be read here, so whether a recorded workout covers these minutes is unknown.
+                energyNeeded = true
+                return
+            }
+            // Sessions before the weight: minutes inside a recorded workout get no estimate, so they need no weight.
+            val sessions = sessionsOfPage() ?: return
+            val minutes = WearOsStepsImport.outsideExerciseSessions(due, sessions)
             if (!WearOsStepsImport.hasWalkingEnergy(minutes)) return
             energyNeeded = true
-            if (!writeEnergy) return
             val weightKg = knownWeight().getOrElse { return }
             if (weightKg == null) {
                 if (!progress.missingBodyWeight) WearOsLog.log("steps: no body weight, so no walking energy")
@@ -246,8 +254,7 @@ class WearOsWatchSyncService(
                 }
                 return
             }
-            val sessions = sessionsOfPage() ?: return
-            val energy = WearOsStepsImport.activeCaloriesRecords(minutes, weightKg, sessions)
+            val energy = WearOsStepsImport.activeCaloriesRecords(minutes, weightKg)
             insertEstimates(energy, "walking energy")
             energyMinutes += energy.size
             energyKcal += energy.sumOf { (it as ActiveCaloriesBurnedRecord).energy.inKilocalories }

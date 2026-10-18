@@ -566,6 +566,22 @@ class WearOsWatchSyncServiceTest {
     }
 
     @Test
+    fun `walking minutes all inside a recorded workout ask for no weight`() = runTest {
+        weight = null
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 150)
+        val run = ExerciseData(
+            id = "run", title = null, exerciseType = 0, startTime = t0, endTime = t0.plusSeconds(60),
+            durationMs = 60_000, source = "other.app",
+        )
+        coEvery { healthConnect.readExerciseSessions(any(), any()) } returns listOf(run)
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 1), result)
+    }
+
+    @Test
     fun `the session read reaches back to a workout begun before the first minute`() = runTest {
         pages += WearOsHeartRatePage(emptyList(), hasMore = false)
         watchSteps += WearOsStepMinute(t0, 100)
