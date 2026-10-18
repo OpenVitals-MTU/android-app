@@ -111,8 +111,9 @@ fun WatchDeviceScreen(
     val backgroundAccessLauncher = rememberHealthConnectPermissionLauncher(
         onResult = viewModel::refreshBackgroundAccess,
     )
-    // A sync right after the grant writes what it now may, and replaces the card's "not written" line.
-    val syncGrantLauncher = rememberHealthConnectPermissionLauncher(onResult = viewModel::syncNow)
+    // A sync right after a grant writes what it now may, and replaces the card's "not written" line. Not after a
+    // refusal: that would hold the watch link for a run that ends where it began.
+    val syncGrantLauncher = rememberHealthConnectPermissionLauncher(onGranted = viewModel::syncNow)
 
     if (state.showMusicDisclosure) {
         NotificationAccessDisclosureDialog(
