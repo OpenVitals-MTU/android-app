@@ -153,7 +153,6 @@ internal object TcxRouteParser {
                 endTime = endTime,
                 durationSeconds = duration,
                 bleSamples = bleSamples,
-                originalPointCount = routePoints.size,
             )
         }
 
@@ -172,7 +171,6 @@ internal object TcxRouteParser {
             description = null,
             type = sport.tcxSportName(),
             bleSamples = bleSamples,
-            originalPointCount = 0,
         )
     }
 }
