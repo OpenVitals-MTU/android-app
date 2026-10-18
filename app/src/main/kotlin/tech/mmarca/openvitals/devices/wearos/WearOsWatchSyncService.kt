@@ -403,18 +403,16 @@ class WearOsWatchSyncService(
         // what actually covers a minute.
         val readStart = minutes.minOf { it.start }.minus(SESSION_LOOKAROUND)
         val readEnd = minutes.maxOf { it.start }.plusSeconds(60).plus(SESSION_LOOKAROUND)
-        val sessions = mutableListOf<ClosedRange<Instant>>()
-        try {
-            healthConnect.forEachSyncRecordPage(ExerciseSessionRecord::class, readStart, readEnd) { page ->
-                page.filterIsInstance<ExerciseSessionRecord>().mapTo(sessions) { it.startTime..it.endTime }
-            }
+        // Strict: the reader turns a failed read into an empty list, which would pass for "no workout".
+        return try {
+            withStrictHealthConnectReads { healthConnect.readExerciseSessions(readStart, readEnd) }
+                .map { it.startTime..it.endTime }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
             WearOsLog.log("Could not read exercise sessions for walking energy filtering: $error")
-            return null
+            null
         }
-        return sessions
     }
 
     /** A higher version replaces the earlier estimate. If Health Connect still objects, delete and retry once. */

@@ -26,6 +26,7 @@ import tech.mmarca.openvitals.devices.core.sync.UnwrittenSeries
 import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
+import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingController
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingState
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingStatus
@@ -386,7 +387,7 @@ class WearOsWatchSyncServiceTest {
 
     @Test
     fun `exercise sessions that cannot be read write no walking energy`() = runTest {
-        coEvery { healthConnect.forEachSyncRecordPage(ExerciseSessionRecord::class, any(), any(), any()) } throws IllegalStateException("busy")
+        coEvery { healthConnect.readExerciseSessions(any(), any()) } throws IllegalStateException("busy")
         pages += WearOsHeartRatePage(emptyList(), hasMore = false)
         watchSteps += WearOsStepMinute(t0, 110)
 
@@ -407,7 +408,7 @@ class WearOsWatchSyncServiceTest {
         service().sync(WATCH, Duration.ZERO, null)
 
         // One read per sync, though the second writes the cursor minute and the new one apart.
-        coVerify(exactly = 2) { healthConnect.forEachSyncRecordPage(ExerciseSessionRecord::class, any(), any(), any()) }
+        coVerify(exactly = 2) { healthConnect.readExerciseSessions(any(), any()) }
     }
 
     @Test
@@ -535,13 +536,11 @@ class WearOsWatchSyncServiceTest {
     fun `walking energy skips minutes overlapping an exercise session in Health Connect`() = runTest {
         pages += WearOsHeartRatePage(emptyList(), hasMore = false)
         watchSteps += listOf(WearOsStepMinute(t0, 100), WearOsStepMinute(t0.plusSeconds(60), 100))
-        val session = mockk<ExerciseSessionRecord> {
-            every { startTime } returns t0
-            every { endTime } returns t0.plusSeconds(60)
-        }
-        coEvery { healthConnect.forEachSyncRecordPage(ExerciseSessionRecord::class, any(), any(), any()) } coAnswers {
-            arg<suspend (List<androidx.health.connect.client.records.Record>) -> Unit>(3).invoke(listOf(session))
-        }
+        val session = ExerciseData(
+            id = "run", title = null, exerciseType = 0, startTime = t0, endTime = t0.plusSeconds(60),
+            durationMs = 60_000, source = "other.app",
+        )
+        coEvery { healthConnect.readExerciseSessions(any(), any()) } returns listOf(session)
 
         service().sync(WATCH, Duration.ZERO, null)
 
@@ -553,7 +552,7 @@ class WearOsWatchSyncServiceTest {
         pages += WearOsHeartRatePage(emptyList(), hasMore = false)
         watchSteps += WearOsStepMinute(t0, 100)
         val from = slot<Instant>()
-        coEvery { healthConnect.forEachSyncRecordPage(ExerciseSessionRecord::class, capture(from), any(), any()) } returns Unit
+        coEvery { healthConnect.readExerciseSessions(capture(from), any()) } returns emptyList()
 
         service().sync(WATCH, Duration.ZERO, null)
 
