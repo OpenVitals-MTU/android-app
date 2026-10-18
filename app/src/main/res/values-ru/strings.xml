@@ -3811,7 +3811,8 @@
     <string name="settings_watch_wearos_syncing">Синхронизация часов…</string>
     <string name="settings_watch_wearos_synced_none">На часах нет ничего нового</string>
     <string name="settings_watch_wearos_needs_weight">Калории при ходьбе не оценены: укажите вес в профиле тела или запишите его в Health Connect.</string>
-    <string name="settings_watch_wearos_needs_step_writes">Часть данных о шагах не записана: разрешите OpenVitals записывать шаги, каденс и активные калории в Health Connect, затем синхронизируйте снова.</string>
+    <string name="settings_watch_wearos_needs_steps_write">Шаги не записаны: разрешите OpenVitals записывать шаги в Health Connect, затем синхронизируйте снова.</string>
+    <string name="settings_watch_wearos_needs_calories_write">Калории при ходьбе не записаны: разрешите OpenVitals записывать активные калории и читать тренировки в Health Connect, чтобы они оценивались со следующей синхронизации.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">Синхронизировано %1$d значение пульса</item>
         <item quantity="few">Синхронизировано %1$d значения пульса</item>

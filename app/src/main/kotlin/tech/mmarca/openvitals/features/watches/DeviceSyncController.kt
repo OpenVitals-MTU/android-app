@@ -19,6 +19,7 @@ import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPort
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncResult
+import tech.mmarca.openvitals.devices.core.sync.UnwrittenSeries
 
 /** Where a device sync has got to, for the row that started it. Device-agnostic. */
 data class DeviceSyncUiState(
@@ -35,8 +36,10 @@ data class DeviceSyncUiState(
     val lastStepMinuteCount: Int? = null,
     /** The last completed run skipped an estimate for want of the body weight. */
     val lastMissingBodyWeight: Boolean = false,
-    /** Health Connect writes the last completed run skipped for want of a grant. */
-    val lastWithheldWritePermissions: Set<String> = emptySet(),
+    /** The series the last completed run left out for want of a grant. */
+    val lastUnwritten: Set<UnwrittenSeries> = emptySet(),
+    /** Health Connect grants the last completed run skipped a write for want of. */
+    val lastWithheldPermissions: Set<String> = emptySet(),
     val error: ScreenError? = null,
 ) {
     val isSyncing: Boolean get() = syncingDeviceId != null
@@ -131,7 +134,8 @@ class DeviceSyncController(
                     lastNightCount = result.nightCount,
                     lastStepMinuteCount = result.stepMinuteCount,
                     lastMissingBodyWeight = result.missingBodyWeight,
-                    lastWithheldWritePermissions = result.withheldWritePermissions,
+                    lastUnwritten = result.unwritten,
+                    lastWithheldPermissions = result.withheldPermissions,
                 )
 
                 is DeviceSyncResult.Failed -> if (silent) {

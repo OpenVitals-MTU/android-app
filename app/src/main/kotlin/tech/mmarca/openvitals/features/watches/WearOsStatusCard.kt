@@ -29,10 +29,12 @@ import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.resolve
 import androidx.compose.ui.res.pluralStringResource
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
+import tech.mmarca.openvitals.devices.core.sync.UnwrittenSeries
 import tech.mmarca.openvitals.devices.wearos.WearOsAppStatus
 import tech.mmarca.openvitals.devices.wearos.WearOsCompanionStatus
 import tech.mmarca.openvitals.devices.wearos.messageRes
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
+import tech.mmarca.openvitals.ui.components.InlineGrantPrompt
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.PermissionCallout
@@ -180,7 +182,7 @@ internal fun WearOsSyncCard(
     device: BleSensorDevice,
     sync: DeviceSyncUiState,
     onSync: () -> Unit,
-    onAllowWrites: (Set<String>) -> Unit,
+    onAllowGrants: (Set<String>) -> Unit,
 ) {
     val syncingThis = sync.isSyncingDevice(device.id)
     OpenVitalsCard {
@@ -215,7 +217,8 @@ internal fun WearOsSyncCard(
                         add(pluralStringResource(R.plurals.settings_watch_wearos_synced_step_minutes, stepMinutes, stepMinutes))
                     }
                     if (nights > 0) add(pluralStringResource(R.plurals.settings_watch_wearos_synced_nights, nights, nights))
-                    if (isEmpty()) add(stringResource(R.string.settings_watch_wearos_synced_none))
+                    // With a series left out, "nothing new" would contradict the line below that says so.
+                    if (isEmpty() && sync.lastUnwritten.isEmpty()) add(stringResource(R.string.settings_watch_wearos_synced_none))
                 }
                 for (line in lines) {
                     Text(
@@ -231,19 +234,19 @@ internal fun WearOsSyncCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                val withheld = sync.lastWithheldWritePermissions
-                if (withheld.isNotEmpty()) {
-                    Text(
-                        text = stringResource(R.string.settings_watch_wearos_needs_step_writes),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                val unwritten = sync.lastUnwritten
+                if (unwritten.isNotEmpty()) {
+                    // One line per series left out; the button asks for every grant missing.
+                    val stepsLine = stringResource(R.string.settings_watch_wearos_needs_steps_write)
+                    val caloriesLine = stringResource(R.string.settings_watch_wearos_needs_calories_write)
+                    InlineGrantPrompt(
+                        message = listOfNotNull(
+                            stepsLine.takeIf { UnwrittenSeries.STEPS in unwritten },
+                            caloriesLine.takeIf { UnwrittenSeries.WALKING_ENERGY in unwritten },
+                        ).joinToString("\n"),
+                        actionLabel = stringResource(R.string.action_grant_permission),
+                        onGrant = { onAllowGrants(sync.lastWithheldPermissions) },
                     )
-                    OpenVitalsOutlinedButton(
-                        onClick = { onAllowWrites(withheld) },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.action_grant_permission))
-                    }
                 }
             }
             sync.error.resolve()?.let { message ->

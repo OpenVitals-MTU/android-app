@@ -71,9 +71,9 @@ import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.ui.components.DeclareAppBar
 import tech.mmarca.openvitals.ui.components.DeviceAvatar
 import tech.mmarca.openvitals.ui.components.formatDeviceTime
+import tech.mmarca.openvitals.ui.components.InlineGrantPrompt
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.rememberHealthConnectPermissionLauncher
-import tech.mmarca.openvitals.ui.components.OpenVitalsTextButton
 import tech.mmarca.openvitals.ui.theme.Spacing
 import tech.mmarca.openvitals.ui.components.OpenVitalsIconButton
 import tech.mmarca.openvitals.ui.components.ScreenAppBar
@@ -111,7 +111,8 @@ fun WatchDeviceScreen(
     val backgroundAccessLauncher = rememberHealthConnectPermissionLauncher(
         onResult = viewModel::refreshBackgroundAccess,
     )
-    val syncWriteLauncher = rememberHealthConnectPermissionLauncher()
+    // A sync right after the grant writes what it now may, and replaces the card's "not written" line.
+    val syncGrantLauncher = rememberHealthConnectPermissionLauncher(onResult = viewModel::syncNow)
 
     if (state.showMusicDisclosure) {
         NotificationAccessDisclosureDialog(
@@ -188,7 +189,7 @@ fun WatchDeviceScreen(
                 },
             )
             SectionHeader(stringResource(R.string.settings_watch_wearos_sync_section))
-            WearOsSyncCard(device, state.sync, onSync = viewModel::syncNow, onAllowWrites = syncWriteLauncher.launch)
+            WearOsSyncCard(device, state.sync, onSync = viewModel::syncNow, onAllowGrants = syncGrantLauncher.launch)
         }
 
         if (isGarmin) {
@@ -626,15 +627,12 @@ private fun AutoSyncCard(
                 }
             }
             if (selected != AutoSyncInterval.OFF && backgroundReadMissing) {
-                Text(
-                    text = stringResource(R.string.settings_watch_auto_sync_background_access),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                InlineGrantPrompt(
+                    message = stringResource(R.string.settings_watch_auto_sync_background_access),
+                    actionLabel = stringResource(R.string.settings_watch_auto_sync_background_access_action),
+                    onGrant = onAllowBackgroundRead,
                     modifier = Modifier.padding(top = Spacing.sm),
                 )
-                OpenVitalsTextButton(onClick = onAllowBackgroundRead) {
-                    Text(stringResource(R.string.settings_watch_auto_sync_background_access_action))
-                }
             }
         }
     }

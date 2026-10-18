@@ -3810,7 +3810,8 @@
     <string name="settings_watch_wearos_syncing">Synchronizowanie zegarka…</string>
     <string name="settings_watch_wearos_synced_none">Brak nowych danych na zegarku</string>
     <string name="settings_watch_wearos_needs_weight">Nie oszacowano kalorii z chodzenia: dodaj swoją wagę w Profilu ciała lub zapisz ją w Health Connect.</string>
-    <string name="settings_watch_wearos_needs_step_writes">Część danych o krokach nie została zapisana: zezwól OpenVitals na zapisywanie kroków, kadencji i aktywnych kalorii w Health Connect, a następnie zsynchronizuj ponownie.</string>
+    <string name="settings_watch_wearos_needs_steps_write">Nie zapisano kroków: zezwól OpenVitals na zapisywanie kroków w Health Connect, a następnie zsynchronizuj ponownie.</string>
+    <string name="settings_watch_wearos_needs_calories_write">Nie zapisano kalorii z chodzenia: zezwól OpenVitals na zapisywanie aktywnych kalorii i odczyt treningów w Health Connect, aby były szacowane od następnej synchronizacji.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">Zsynchronizowano %1$d próbkę tętna</item>
         <item quantity="few">Zsynchronizowano %1$d próbki tętna</item>

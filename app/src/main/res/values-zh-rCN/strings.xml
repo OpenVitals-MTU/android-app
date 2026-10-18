@@ -3746,7 +3746,8 @@
     <string name="settings_watch_wearos_syncing">正在同步手表…</string>
     <string name="settings_watch_wearos_synced_none">手表上没有新数据</string>
     <string name="settings_watch_wearos_needs_weight">未估算步行卡路里：请在身体档案中添加体重，或在 Health Connect 中记录体重。</string>
-    <string name="settings_watch_wearos_needs_step_writes">部分步数数据未写入：请允许 OpenVitals 向 Health Connect 写入步数、步频和活动卡路里，然后重新同步。</string>
+    <string name="settings_watch_wearos_needs_steps_write">未写入步数：请允许 OpenVitals 向 Health Connect 写入步数，然后重新同步。</string>
+    <string name="settings_watch_wearos_needs_calories_write">未写入步行卡路里：请允许 OpenVitals 在 Health Connect 中写入活动卡路里并读取锻炼记录，从下次同步起即可估算。</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">已同步 %1$d 个心率样本</item>
         <item quantity="other">已同步 %1$d 个心率样本</item>

@@ -3775,7 +3775,8 @@
     <string name="settings_watch_wearos_syncing">Synchronisation de la montre…</string>
     <string name="settings_watch_wearos_synced_none">Rien de nouveau sur la montre</string>
     <string name="settings_watch_wearos_needs_weight">Calories de marche non estimées : ajoutez votre poids dans Profil corporel ou enregistrez-le dans Health Connect.</string>
-    <string name="settings_watch_wearos_needs_step_writes">Certaines données de pas n’ont pas été écrites : autorisez OpenVitals à écrire les pas, la cadence et les calories actives dans Health Connect, puis synchronisez à nouveau.</string>
+    <string name="settings_watch_wearos_needs_steps_write">Pas non écrits : autorisez OpenVitals à écrire les pas dans Health Connect, puis synchronisez à nouveau.</string>
+    <string name="settings_watch_wearos_needs_calories_write">Calories de marche non écrites : autorisez OpenVitals à écrire les calories actives et à lire les entraînements dans Health Connect pour les estimer dès la prochaine synchronisation.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d échantillon de fréquence cardiaque synchronisé</item>
         <item quantity="many">%1$d échantillons de fréquence cardiaque synchronisés</item>

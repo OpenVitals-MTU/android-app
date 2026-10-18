@@ -3806,7 +3806,8 @@
     <string name="settings_watch_wearos_syncing">Syncing watch…</string>
     <string name="settings_watch_wearos_synced_none">Nothing new on the watch</string>
     <string name="settings_watch_wearos_needs_weight">Walking calories not estimated: add your weight in Body profile or record one in Health Connect.</string>
-    <string name="settings_watch_wearos_needs_step_writes">Some step data not written: allow OpenVitals to write steps, cadence and active calories in Health Connect, then sync again.</string>
+    <string name="settings_watch_wearos_needs_steps_write">Steps not written: allow OpenVitals to write steps in Health Connect, then sync again.</string>
+    <string name="settings_watch_wearos_needs_calories_write">Walking calories not written: allow OpenVitals to write active calories and read workouts in Health Connect to estimate them from the next sync on.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d heart rate sample synced</item>
         <item quantity="other">%1$d heart rate samples synced</item>
