@@ -349,7 +349,9 @@
     <string name="activity_route_share_failed">Nie udało się udostępnić pliku trasy.</string>
     <string name="activity_workout_export_title">Eksportuj trening</string>
     <string name="activity_workout_export_description">Zapisz metryki tego treningu jako plik. Trasa GPS nie jest dołączana.</string>
-    <string name="activity_workout_export_description_with_route">Zapisz ten trening jako plik. GPX i KMZ zawierają trasę GPS; TCX, CSV i FIT ją pomijają.</string>
+    <string name="activity_workout_export_description_route_choice">Zapisz ten trening jako plik, z trasą GPS lub bez niej.</string>
+    <string name="activity_workout_export_with_route">Z trasą GPS</string>
+    <string name="activity_workout_export_without_route">Bez trasy GPS</string>
     <string name="activity_workout_export_tcx">Zapisz TCX</string>
     <string name="activity_workout_export_csv">Zapisz CSV</string>
     <string name="activity_workout_export_fit">Zapisz FIT</string>

@@ -3,19 +3,29 @@ package tech.mmarca.openvitals.features.activity
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import java.io.ByteArrayOutputStream
 import java.time.Instant
+import java.time.ZoneOffset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.mmarca.openvitals.core.fit.FitCrc
+import tech.mmarca.openvitals.core.fit.FitDecoder
+import tech.mmarca.openvitals.core.fit.FitMessage
+import tech.mmarca.openvitals.core.geo.haversineMeters
+import tech.mmarca.openvitals.domain.model.ActivityCadenceKind
+import tech.mmarca.openvitals.domain.model.ActivityCadenceSample
 import tech.mmarca.openvitals.domain.model.ExerciseData
+import tech.mmarca.openvitals.domain.model.ExerciseRouteData
+import tech.mmarca.openvitals.domain.model.ExerciseRoutePoint
+import tech.mmarca.openvitals.domain.model.ExerciseRouteStatus
 import tech.mmarca.openvitals.domain.model.HeartRateSample
+import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.FitRouteParser
 import tech.mmarca.openvitals.features.manualentry.activity.routeimport.TcxRouteParser
 
 /**
- * The workout export carries everything about the session and nothing about where it happened.
- * The TCX side round-trips through the app's own [TcxRouteParser].
+ * The workout export carries everything about the session and, unless asked for the route,
+ * nothing about where it happened. Both sides round-trip through the app's own parsers.
  */
 class ActivityWorkoutExportTest {
 
@@ -24,7 +34,7 @@ class ActivityWorkoutExportTest {
 
         writeActivityWorkoutTcx(
             workout = workout(),
-            heartRateSamples = heartRateSamples(),
+            series = ActivityWorkoutSeries(heartRate = heartRateSamples()),
             output = output,
             serializer = recordingXmlSerializer(),
         )
@@ -56,7 +66,7 @@ class ActivityWorkoutExportTest {
 
         writeActivityWorkoutTcx(
             workout = workout(),
-            heartRateSamples = samples,
+            series = ActivityWorkoutSeries(heartRate = samples),
             output = output,
             serializer = recordingXmlSerializer(),
         )
@@ -70,7 +80,7 @@ class ActivityWorkoutExportTest {
 
         writeActivityWorkoutTcx(
             workout = workout(averageHeartRateBpm = 151),
-            heartRateSamples = heartRateSamples(),
+            series = ActivityWorkoutSeries(heartRate = heartRateSamples()),
             output = output,
             serializer = recordingXmlSerializer(),
         )
@@ -85,7 +95,7 @@ class ActivityWorkoutExportTest {
 
         writeActivityWorkoutTcx(
             workout = workout(),
-            heartRateSamples = emptyList(),
+            series = ActivityWorkoutSeries(),
             output = output,
             serializer = recordingXmlSerializer(),
         )
@@ -102,7 +112,7 @@ class ActivityWorkoutExportTest {
 
         writeActivityWorkoutTcx(
             workout = workout(title = """Run <with> "friends" & family""", notes = "it's <fine>"),
-            heartRateSamples = emptyList(),
+            series = ActivityWorkoutSeries(),
             output = output,
             serializer = recordingXmlSerializer(),
         )
@@ -116,7 +126,7 @@ class ActivityWorkoutExportTest {
 
         writeActivityWorkoutTcx(
             workout = workout(exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING),
-            heartRateSamples = emptyList(),
+            series = ActivityWorkoutSeries(),
             output = output,
             serializer = recordingXmlSerializer(),
         )
@@ -170,7 +180,7 @@ class ActivityWorkoutExportTest {
 
         writeActivityWorkoutFit(
             workout = workout(),
-            heartRateSamples = heartRateSamples(),
+            series = ActivityWorkoutSeries(heartRate = heartRateSamples()),
             output = output,
         )
 
@@ -192,7 +202,7 @@ class ActivityWorkoutExportTest {
 
         writeActivityWorkoutFit(
             workout = workout(),
-            heartRateSamples = heartRateSamples(),
+            series = ActivityWorkoutSeries(heartRate = heartRateSamples()),
             output = output,
         )
 
@@ -212,7 +222,7 @@ class ActivityWorkoutExportTest {
 
         writeActivityWorkoutFit(
             workout = workout(),
-            heartRateSamples = emptyList(),
+            series = ActivityWorkoutSeries(),
             output = output,
         )
 
@@ -232,7 +242,7 @@ class ActivityWorkoutExportTest {
 
         writeActivityWorkoutFit(
             workout = workout(),
-            heartRateSamples = samples,
+            series = ActivityWorkoutSeries(heartRate = samples),
             output = output,
         )
 
@@ -255,13 +265,144 @@ class ActivityWorkoutExportTest {
             elevationGainedMeters = null,
         )
 
-        writeActivityWorkoutFit(bare, heartRateSamples = emptyList(), output = output)
+        writeActivityWorkoutFit(bare, series = ActivityWorkoutSeries(), output = output)
 
         val parsed = FitRouteParser.parse(output.toByteArray())
         assertEquals(0.0, parsed.distanceMeters, 0.001)
         assertEquals(null, parsed.totalCaloriesKcal)
         assertEquals(0.0, parsed.elevationGainedMeters, 0.001)
         assertEquals(3600L, parsed.durationSeconds)
+    }
+
+    @Test fun `tcx trackpoints carry speed and run cadence back through the importer`() {
+        val output = ByteArrayOutputStream()
+
+        writeActivityWorkoutTcx(
+            workout = workout(),
+            series = ActivityWorkoutSeries(
+                heartRate = heartRateSamples(),
+                speed = listOf(speed("2026-05-26T08:40:00Z", 3.25)),
+                cadence = listOf(cadence("2026-05-26T08:40:00Z", 170.0, ActivityCadenceKind.STEPS)),
+            ),
+            output = output,
+            serializer = recordingXmlSerializer(),
+        )
+
+        val tcx = output.toString(Charsets.UTF_8.name())
+        assertFalse(tcx.contains("Position"))
+        val samples = TcxRouteParser.parse(tcx).bleSamples
+        assertEquals(listOf(3.25), samples.speedSamples.map { it.metersPerSecond })
+        assertEquals(listOf(170L), samples.stepsCadenceSamples.map { it.stepsPerMinute })
+        assertEquals(listOf(140L, 172L), samples.heartRateSamples.map { it.beatsPerMinute })
+    }
+
+    @Test fun `fit records carry speed and step cadence back through the importer`() {
+        val output = ByteArrayOutputStream()
+
+        writeActivityWorkoutFit(
+            workout = workout(),
+            series = ActivityWorkoutSeries(
+                heartRate = heartRateSamples(),
+                speed = listOf(speed("2026-05-26T08:40:00.400Z", 3.25)),
+                cadence = listOf(cadence("2026-05-26T08:40:00.700Z", 171.0, ActivityCadenceKind.STEPS)),
+            ),
+            output = output,
+        )
+
+        val samples = FitRouteParser.parse(output.toByteArray()).bleSamples
+        assertEquals(listOf(3.25), samples.speedSamples.map { it.metersPerSecond })
+        // FIT counts one foot: 171 steps go out as 85 and a half. The importer reads the whole 85.
+        assertEquals(listOf(170L), samples.stepsCadenceSamples.map { it.stepsPerMinute })
+        // One second, one record: the heart rate, speed and cadence of 08:40:00 share it.
+        val records = fitMessages(output).filter { it.globalMessageNumber == FitRecord }
+        assertEquals(2, records.size)
+        assertEquals(64L, records.first().values[FitRecordFractionalCadence])
+    }
+
+    @Test fun `fit ride writes pedal cadence and leaves step cadence out`() {
+        val output = ByteArrayOutputStream()
+
+        writeActivityWorkoutFit(
+            workout = workout(exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_BIKING),
+            series = ActivityWorkoutSeries(
+                cadence = listOf(
+                    cadence("2026-05-26T08:40:00Z", 88.0, ActivityCadenceKind.CYCLING),
+                    cadence("2026-05-26T08:41:00Z", 160.0, ActivityCadenceKind.STEPS),
+                ),
+            ),
+            output = output,
+        )
+
+        val samples = FitRouteParser.parse(output.toByteArray()).bleSamples
+        assertEquals(listOf(88L), samples.cyclingCadenceSamples.map { it.rpm })
+        assertTrue(samples.stepsCadenceSamples.isEmpty())
+    }
+
+    @Test fun `fit with the route carries position, altitude and distance beside heart rate`() {
+        val output = ByteArrayOutputStream()
+        val route = listOf(
+            routePoint("2026-05-26T08:40:00Z", latitude = 41.3851, altitudeMeters = 12.0),
+            routePoint("2026-05-26T08:40:10Z", latitude = 41.3860, altitudeMeters = 14.4),
+        )
+
+        writeActivityWorkoutFit(
+            workout = workout(),
+            series = ActivityWorkoutSeries(heartRate = heartRateSamples()),
+            output = output,
+            routePoints = route,
+        )
+
+        val parsed = FitRouteParser.parse(output.toByteArray())
+        assertEquals(listOf(41.3851, 41.3860), parsed.points.map { it.latitude.roundTo(4) })
+        assertEquals(14.4, parsed.points.last().altitudeMeters!!, 0.001)
+        assertEquals(listOf(140L, 172L), parsed.bleSamples.heartRateSamples.map { it.beatsPerMinute })
+        // Distance is what the route covered so far, at that point's second.
+        val lastFix = fitMessages(output)
+            .filter { it.globalMessageNumber == FitRecord }
+            .last { it.values.containsKey(FitRecordDistance) }
+        assertEquals(
+            haversineMeters(41.3851, 2.1734, 41.3860, 2.1734),
+            lastFix.values.getValue(FitRecordDistance) / 100.0,
+            0.01,
+        )
+    }
+
+    @Test fun `routeless fit writes no position even for a workout that has a route`() {
+        val output = ByteArrayOutputStream()
+        val withRoute = workout().copy(
+            route = ExerciseRouteData(
+                status = ExerciseRouteStatus.DATA,
+                points = listOf(
+                    routePoint("2026-05-26T08:40:00Z", latitude = 41.3851),
+                    routePoint("2026-05-26T08:40:10Z", latitude = 41.3860),
+                ),
+            ),
+        )
+
+        writeActivityWorkoutFit(withRoute, ActivityWorkoutSeries(heartRate = heartRateSamples()), output)
+
+        val records = fitMessages(output).filter { it.globalMessageNumber == FitRecord }
+        assertTrue(records.isNotEmpty())
+        assertTrue(records.none { it.values.containsKey(FitRecordLatitude) || it.values.containsKey(FitRecordLongitude) })
+    }
+
+    @Test fun `fit brackets the records with timer events and stamps the local end time`() {
+        val output = ByteArrayOutputStream()
+
+        writeActivityWorkoutFit(
+            workout = workout().copy(endZoneOffset = ZoneOffset.ofHours(2)),
+            series = ActivityWorkoutSeries(heartRate = heartRateSamples()),
+            output = output,
+        )
+
+        val messages = fitMessages(output)
+        val events = messages.filter { it.globalMessageNumber == FitEvent }
+        // Timer start, then stop_all.
+        assertEquals(listOf(0L, 4L), events.map { it.values[FitEventType] })
+        assertTrue(messages.indexOf(events.first()) < messages.indexOfFirst { it.globalMessageNumber == FitRecord })
+        assertTrue(messages.indexOf(events.last()) > messages.indexOfLast { it.globalMessageNumber == FitRecord })
+        val activity = messages.single { it.globalMessageNumber == FitActivity }
+        assertEquals(activity.timestamp!! + 7200, activity.values[FitActivityLocalTimestamp])
     }
 
     @Test fun `workout export file names use selected format extension`() {
@@ -308,11 +449,32 @@ class ActivityWorkoutExportTest {
         sample("2026-05-26T08:50:00Z", 172),
     )
 
+    private fun speed(time: String, metersPerSecond: Double) =
+        SpeedSample(time = Instant.parse(time), metersPerSecond = metersPerSecond, source = "test")
+
+    private fun cadence(time: String, rate: Double, kind: ActivityCadenceKind) =
+        ActivityCadenceSample(time = Instant.parse(time), rate = rate, kind = kind, source = "test")
+
+    private fun routePoint(time: String, latitude: Double, altitudeMeters: Double? = null) = ExerciseRoutePoint(
+        time = Instant.parse(time),
+        latitude = latitude,
+        longitude = 2.1734,
+        altitudeMeters = altitudeMeters,
+        horizontalAccuracyMeters = null,
+        verticalAccuracyMeters = null,
+    )
+
+    private fun fitMessages(output: ByteArrayOutputStream): List<FitMessage> =
+        FitDecoder.readFile(output.toByteArray(), 0).messages
+
+    private fun Double.roundTo(decimals: Int): Double =
+        java.math.BigDecimal(this).setScale(decimals, java.math.RoundingMode.HALF_UP).toDouble()
+
     private fun fitTypeFor(exerciseType: Int): String? {
         val output = ByteArrayOutputStream()
         writeActivityWorkoutFit(
             workout = workout(exerciseType = exerciseType),
-            heartRateSamples = emptyList(),
+            series = ActivityWorkoutSeries(),
             output = output,
         )
         return FitRouteParser.parse(output.toByteArray()).type
@@ -326,4 +488,17 @@ class ActivityWorkoutExportTest {
         beatsPerMinute = beatsPerMinute,
         source = "test",
     )
+
+    private companion object {
+        // FIT profile numbers the assertions read.
+        const val FitRecord = 20
+        const val FitEvent = 21
+        const val FitActivity = 34
+        const val FitRecordLatitude = 0
+        const val FitRecordLongitude = 1
+        const val FitRecordDistance = 5
+        const val FitRecordFractionalCadence = 53
+        const val FitEventType = 1
+        const val FitActivityLocalTimestamp = 5
+    }
 }
