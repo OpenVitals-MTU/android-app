@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.14.5 - 2026-10-18
+
+### English
+
+- **An Apple Health import that stopped on one value.** A single sample Health Connect cannot store, such as a day's basal metabolic rate logged by an app as a one-hour sample (more than 35,000 kcal a day), stopped the whole import with an error. Such a sample is now counted as failed, with the reason in the import report, and the import carries on. The same goes for any other measurement or logged meal outside what Health Connect accepts, and for a systolic blood pressure above 200 mmHg. Importing the same file again with the same categories picks up where the import stopped.
+
+### Espanol
+
+- **Una importacion de Apple Health que se detenia por un solo valor.** Una sola muestra que Health Connect no puede guardar, como la tasa metabolica basal de un dia entero registrada por una app como una muestra de una hora (mas de 35.000 kcal al dia), detenia toda la importacion con un error. Esa muestra cuenta ahora como fallida, con el motivo en el informe de importacion, y la importacion continua. Lo mismo vale para cualquier otra medicion o comida registrada fuera de lo que acepta Health Connect, y para una presion sistolica por encima de 200 mmHg. Importar de nuevo el mismo archivo con las mismas categorias sigue donde se detuvo la importacion.
+
+### Deutsch
+
+- **Ein Apple-Health-Import, der an einem einzigen Wert abbrach.** Ein einziger Messwert, den Health Connect nicht speichern kann, etwa die basalmetabole Rate eines ganzen Tages, von einer App als einstuendiger Messwert eingetragen (ueber 35.000 kcal pro Tag), brach den ganzen Import mit einem Fehler ab. Ein solcher Messwert zaehlt jetzt als fehlgeschlagen, mit dem Grund im Importbericht, und der Import laeuft weiter. Das gilt auch fuer jede andere Messung oder eingetragene Mahlzeit ausserhalb dessen, was Health Connect annimmt, und fuer einen systolischen Blutdruck ueber 200 mmHg. Wird dieselbe Datei mit denselben Kategorien erneut importiert, setzt der Import dort fort, wo er stehen blieb.
+
+### Italiano
+
+- **Un'importazione da Apple Health che si fermava per un solo valore.** Un solo campione che Health Connect non puo salvare, come il metabolismo basale di un giorno intero registrato da un'app come un campione di un'ora (oltre 35.000 kcal al giorno), fermava l'intera importazione con un errore. Ora quel campione conta come non riuscito, con il motivo nel report di importazione, e l'importazione prosegue. Lo stesso vale per ogni altra misurazione o pasto registrato fuori da quanto accetta Health Connect, e per una pressione sistolica sopra 200 mmHg. Importare di nuovo lo stesso file con le stesse categorie riprende da dove l'importazione si era fermata.
+
+### Eesti
+
+- **Apple Healthi import, mis peatus uhe vaartuse tottu.** Uks naidis, mida Health Connect salvestada ei saa, naiteks terve paeva baasainevahetuse kiirus, mille moni rakendus on kirja pannud uhe tunni naidisena (ule 35 000 kcal paevas), peatas kogu impordi veaga. Selline naidis loetakse nuud ebaonnestunuks, pohjusega impordiaruandes, ja import jatkub. Sama kehtib iga muu mootmise voi kirja pandud toidukorra kohta, mida Health Connect ei aktsepteeri, ning sustoolse vererohu kohta ule 200 mmHg. Sama faili uuesti importimine samade kategooriatega jatkab sealt, kus import peatus.
+
+### Portugues
+
+- **Uma importacao do Apple Health que parava por um so valor.** Uma unica amostra que o Health Connect nao consegue guardar, como a taxa metabolica basal de um dia inteiro registada por uma app como uma amostra de uma hora (mais de 35 000 kcal por dia), parava toda a importacao com um erro. Essa amostra conta agora como falhada, com o motivo no relatorio de importacao, e a importacao continua. O mesmo vale para qualquer outra medicao ou refeicao registada fora do que o Health Connect aceita, e para uma pressao sistolica acima de 200 mmHg. Importar de novo o mesmo ficheiro com as mesmas categorias retoma onde a importacao parou.
+
 ## 2.14.4 - 2026-10-18
 
 ### English
