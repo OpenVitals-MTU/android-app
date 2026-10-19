@@ -168,4 +168,19 @@ class CycleCalculationsTest {
 
         assertEquals(listOf(28, 28), stats.recentIntervalLengths)
     }
+
+    @Test
+    fun `a marker observed in the current cycle reaches the estimate`() {
+        val starts = startsEvery(28, 3)
+        val lh = starts.last().plusDays(13)
+        val stats = CycleCalculations.compute(
+            bleedingFor(starts).associateWith { CycleRecordValues.FLOW_MEDIUM },
+            today = lh.plusDays(1),
+            observations = CycleObservations(lhPositiveDays = setOf(lh)),
+        )
+
+        val basis = stats.estimate.estimateOrNull!!.basis as CycleEstimateBasis.Marker
+        assertEquals(OvulationMarker.LH_TEST, basis.anchor)
+        assertEquals(lh, basis.anchorDate)
+    }
 }
