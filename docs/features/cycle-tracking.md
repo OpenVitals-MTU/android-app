@@ -66,6 +66,20 @@ Cycle starts come from bleeding segments across all Health Connect sources. The 
 
 Two recorded starts give a first estimate. With fewer, the screen says it is waiting for history. When intervals are out of range, the screen says so instead of guessing.
 
+### From a recorded marker
+
+Once the current cycle holds a recorded sign that ovulation has passed, the estimate counts from that sign instead of from the last start. The days from a marker to the next start vary less within a woman than whole cycles do, so the window narrows. Three markers count, each read back from the record:
+
+- **LH test**: the first positive test of the cycle. A "high" result does not count.
+- **Temperature**: the first high day of a confirmed thermal shift (the rule below).
+- **Mucus peak**: the last day of best-quality mucus, once three observed days of lesser quality follow it. Best quality is egg-white mucus, or a wet or slippery sensation in the day log. Watery mucus does not count. A day without a mucus entry leaves the peak unknown.
+
+Each marker has its own interval to the next start, learned from the user's earlier cycles that hold the same marker (the last six, 7 to 20 days) and shrunk toward a published prior with weight 2: LH 13.8 ± 1.86 days, temperature 11.0 ± 2.07, mucus 13.0 ± 2.5. The window is 1.96 standard deviations, at least 2 and at most 22 days, and never starts inside recorded flow. A declared timing context floors the variance at the prior.
+
+When an LH test or a mucus peak falls zero to three days before the first high day, the shift is confirmed and the card says another sign agrees. The LH test anchors when there is one, the temperature otherwise. When a shift and another marker are recorded and none agrees, the estimate keeps the calendar and the card says the signs disagree. An excluded current cycle always keeps the calendar.
+
+The card names what the range counts from. A marker estimate is still an estimate of the next period: it never marks fertile or infertile days.
+
 ## Phase
 
 Bleeding days are menstrual. Days 2 to 7 without a bleeding entry are indeterminate. The ovulation anchor is the estimated window's central day minus 13, plus or minus 2. The ovulatory label appears only on the central day and only with at least six intervals and at most 7 days of variability. From two days before the central day the phase is the next-period window. After the window ends the phase is expired until a new start is recorded.

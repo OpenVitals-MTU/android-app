@@ -55,6 +55,7 @@ Status legend: **exists** already in OpenVitals · **new** built for this design
 |---|---|---|
 | `CycleEstimateCalculator` | Start-to-start intervals, last six inside 15..90 days, excluded cycles skipped, a gap over 90 days resets the history. Central date = last start + rounded mean. Half-width = 1.96 × √(variance shrunk toward a population prior with weight 2, or 0.5 once the record shows persistent 7-day swings), floored at 3 days, capped at 22, floored again so the window never starts inside recorded flow. Prior SD by age band (Apple Women's Health Study table), 4.54 days undeclared. A declared timing context floors the variance at the prior. Results: available, needs more history (fewer than two starts), intervals out of range. | new, replaces the mean-and-spread rule |
 | `CurrentCyclePhaseCalculator` | Menstrual is recorded (day 1 or flow today). Days 2–7 without flow detail are indeterminate. Follicular before the ovulation band, luteal after it, ovulatory only on the central day (central − 13) and only with six stable intervals varying at most 7 days. The two days before the central date and the estimate window are the "next period window"; past the window the estimate has expired. | new |
+| `MarkerEstimate` | Once the current cycle holds an ovulation marker (first positive LH test, first high day of the thermal shift, mucus peak followed by three lesser days), the next start is the marker day plus that marker's own interval to the next start, learned from earlier cycles and shrunk toward a prior (LH 13.8 ± 1.86, temperature 11.0 ± 2.07, mucus 13.0 ± 2.5, weight 2), half-width 1.96 SD floored at 2. A mucus peak or LH test 0–3 days before the first high day confirms the shift; a shift and markers that do not agree fall back to the calendar and say so. See *Marker estimate sources*. | new (2026-10) |
 | Cycle facts | 24 population facts with sources, one per day by date hash, shown when the phase is indeterminate. | new |
 | Phase tips | 30 sourced tips, filtered by phase, declared contexts and the last three days' symptoms; ties broken by date hash. | new |
 
@@ -109,6 +110,22 @@ Status legend: **exists** already in OpenVitals · **new** built for this design
 ### 9. Out of scope
 
 Network sync, end-to-end encryption, partner sharing, and crash reporting. OpenVitals has no `INTERNET` permission by design.
+
+## Marker estimate sources
+
+What each number rests on, and how far it was checked. The priors only matter until a user has one or two earlier cycles with the same marker.
+
+| Number | Source | Checked |
+|---|---|---|
+| Interval after ovulation varies less than the follicular phase (within-woman variance 3.0 vs 5.2 days², 53 women, 676 ovulatory cycles) | Henry, Shirin, Goshtasebi, Prior 2024, *Hum Reprod* 39(11):2565 | full text |
+| Temperature prior 11.0 ± 2.07: luteal phase counted from the temperature shift, median 10.9 days; between-women variance 4.3; shift 2.4 ± 1.5 days after the LH peak | Henry et al. 2024 | full text |
+| LH prior 13.8 ± 1.86: luteal phase 12.77 ± 1.86 days from the day after the LH surge, 75,981 cycles | Soumpasis, Grace, Johnson 2020, *Hum Reprod Open* hoaa011 | full text |
+| Six-low, three-high rule, last high 0.2 °C above the six; mucus peak known only once the secretion is sticky again; end of the fertile time three days after the peak | Frank-Herrmann et al. 2007, *Hum Reprod* 22(5):1310 | full text |
+| Mucus peak 1–3 days before the temperature rise in 74% of 2,276 cycles; basis for the 0–3 day agreement bound and the mucus prior (temperature prior + 2) | PubMed 3366346 (German sympto-thermal cohort) | abstract via search summary only |
+| LH peak +0.46 days from ultrasound ovulation; mucus peak and initial LH rise close to it in more than 72% of cycles | Ecochard et al. 2001, *BJOG* 108(8):822 | abstract |
+| Backtest: on the Marquette cycle data (159 women, 1,370 cycles) a marker plus the user's own interval gave a mean absolute error of 1.3 days and a window of 8.5 days at 96.6% coverage, against 2.1 days and 15.5 days for the calendar | `FedCycleData071012.csv` (Kaggle mirror), script outside the repository | the dataset's ovulation-day definition is undocumented |
+
+Settings without a source: watery mucus is not best quality; the 7–20 day plausible interval; the 2-day minimum half-width; LH before temperature before mucus as anchor order.
 
 ## Data model
 
