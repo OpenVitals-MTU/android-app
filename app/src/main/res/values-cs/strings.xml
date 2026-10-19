@@ -3569,6 +3569,11 @@
         <item quantity="other">Rozmezí odhadnuté z %1$d zaznamenaných cyklů.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">Tento odhad vychází pouze z vaší zaznamenané historie a může se změnit.</string>
+    <string name="cycle_estimate_basis_lh">Počítáno od tvého pozitivního LH testu %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Počítáno od tvého vzestupu teploty %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Počítáno od tvého vrcholu hlenu %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Druhý zaznamenaný příznak souhlasí.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Tvé zaznamenané příznaky si odporují, proto tento rozsah vychází z historie cyklů.</string>
     <string name="cycle_estimate_window_a11y">Odhadované rozmezí %1$d dní</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">Asi za %1$d den</item>
