@@ -3569,6 +3569,11 @@
         <item quantity="other">Zakres oszacowany z %1$d zapisanego cyklu.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">To oszacowanie opiera się wyłącznie na zapisanej historii i może się zmienić.</string>
+    <string name="cycle_estimate_basis_lh">Liczone od Twojego pozytywnego testu LH z %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Liczone od Twojego wzrostu temperatury z %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Liczone od Twojego szczytu śluzu z %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Drugi zapisany objaw się zgadza.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Twoje zapisane objawy są sprzeczne, więc ten zakres opiera się na historii cykli.</string>
     <string name="cycle_estimate_window_a11y">Szacowany zakres %1$d dni</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">Za około %1$d dzień</item>

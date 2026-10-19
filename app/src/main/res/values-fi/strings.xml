@@ -3521,6 +3521,11 @@
         <item quantity="other">Vaihteluväli on arvioitu %1$d kirjatusta kierrosta.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">Tämä arvio perustuu vain kirjattuun historiaasi ja voi muuttua.</string>
+    <string name="cycle_estimate_basis_lh">Laskettu positiivisesta LH-testistäsi %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Laskettu lämmönnoustasi %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Laskettu limahuipustasi %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Toinen kirjattu merkki on samassa linjassa.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Kirjatut merkkisi ovat ristiriidassa, joten tämä väli perustuu kiertohistoriaasi.</string>
     <string name="cycle_estimate_window_a11y">Arvioitu vaihteluväli %1$d päivää</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">Noin %1$d päivän päästä</item>
