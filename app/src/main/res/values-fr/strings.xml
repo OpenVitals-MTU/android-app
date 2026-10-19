@@ -3545,6 +3545,11 @@
         <item quantity="other">Plage estimée à partir de %1$d cycles enregistrés.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">Cette estimation repose uniquement sur votre historique enregistré et peut changer.</string>
+    <string name="cycle_estimate_basis_lh">Compté à partir de votre test LH positif du %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Compté à partir de votre montée de température du %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Compté à partir de votre pic de glaire du %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Un deuxième signe enregistré concorde.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Vos signes enregistrés ne concordent pas, cette plage utilise donc l\'historique de vos cycles.</string>
     <string name="cycle_estimate_window_a11y">Plage estimée de %1$d jours</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">Dans environ %1$d jour</item>

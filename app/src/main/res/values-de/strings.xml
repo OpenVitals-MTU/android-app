@@ -3521,6 +3521,11 @@
         <item quantity="other">Zeitraum geschätzt aus %1$d erfassten Zyklen.</item>
     </plurals>
     <string name="cycle_estimate_disclaimer">Diese Schätzung beruht nur auf deinem erfassten Verlauf und kann sich ändern.</string>
+    <string name="cycle_estimate_basis_lh">Gezählt ab deinem positiven LH-Test am %1$s.</string>
+    <string name="cycle_estimate_basis_temperature">Gezählt ab deinem Temperaturanstieg am %1$s.</string>
+    <string name="cycle_estimate_basis_mucus">Gezählt ab deinem Schleim-Höhepunkt am %1$s.</string>
+    <string name="cycle_estimate_basis_confirmed">Ein zweites erfasstes Zeichen stimmt damit überein.</string>
+    <string name="cycle_estimate_basis_markers_disagree">Deine erfassten Zeichen widersprechen sich, daher nutzt dieser Zeitraum deinen Zyklusverlauf.</string>
     <string name="cycle_estimate_window_a11y">Geschätzter Bereich von %1$d Tagen</string>
     <plurals name="cycle_estimate_days_remaining">
         <item quantity="one">In etwa %1$d Tag</item>

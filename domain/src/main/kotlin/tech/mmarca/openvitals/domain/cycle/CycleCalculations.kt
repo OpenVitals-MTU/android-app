@@ -36,6 +36,9 @@ object CycleCalculations {
     const val MaxBreakInBleedingDays = 1
     const val MaxDisplayableCycleDay = 99
 
+    /** The current cycle and the six before it: what the marker estimate learns from. */
+    const val MarkerHistoryCycles = 7
+
     /** Groups bleeding days into segments tolerating gaps of [maxBreakDays]. Each start is a cycle start. */
     fun bleedingSegments(
         bleedingDays: Collection<LocalDate>,
@@ -64,6 +67,7 @@ object CycleCalculations {
      * @param exclusions cycles the user keeps out of the estimate, by a date inside them.
      * @param profile the declared contexts and age band.
      * @param todayBleeding what the journal says about today, when the flow days do not.
+     * @param observations LH tests, temperatures and mucus; markers in them sharpen the estimate.
      */
     fun compute(
         flowDays: Map<LocalDate, Int>,
@@ -72,6 +76,7 @@ object CycleCalculations {
         exclusions: Map<LocalDate, CycleExclusionReason?> = emptyMap(),
         profile: CycleTrackingProfile = CycleTrackingProfile(),
         todayBleeding: DayBleeding? = null,
+        observations: CycleObservations = CycleObservations(),
     ): CycleStatistics {
         val cycles = CycleHistory.build(flowDays, spottingDays, exclusions)
         if (cycles.isEmpty()) return CycleStatistics()
@@ -86,6 +91,9 @@ object CycleCalculations {
             cycles = cycles,
             ageBand = profile.ageBand,
             hasTimingContext = profile.hasTimingContext,
+            markers = cycles.takeLast(MarkerHistoryCycles).associate { cycle ->
+                cycle.startDate to OvulationMarkerDetector.detect(cycle, observations, today)
+            },
         )
         val recent = CycleEstimateCalculator.recentIntervalLengths(cycles)
         val phase = CurrentCyclePhaseCalculator.evaluate(
