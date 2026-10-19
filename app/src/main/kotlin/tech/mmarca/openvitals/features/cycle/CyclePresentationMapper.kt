@@ -4,10 +4,10 @@ import java.time.LocalDate
 import java.time.ZoneId
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.displayPeriodFor
-import tech.mmarca.openvitals.domain.cycle.BbtReading
 import tech.mmarca.openvitals.domain.cycle.CurrentCyclePhase
 import tech.mmarca.openvitals.domain.cycle.CycleEstimateResult
 import tech.mmarca.openvitals.domain.cycle.CycleFacts
+import tech.mmarca.openvitals.domain.cycle.CycleObservations
 import tech.mmarca.openvitals.domain.cycle.CycleStatistics
 import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
 import tech.mmarca.openvitals.domain.cycle.LongitudinalCycleStats
@@ -75,7 +75,7 @@ object CyclePresentationMapper {
             today = todayDisplay(statistics, data, allByDate, profile, today, zone, pill),
             history = statistics?.let { LongitudinalCycleStatsCalculator.calculate(it.cycles, today) }
                 ?: LongitudinalCycleStats.Empty,
-            thermal = thermalDisplay(statistics, currentCycleTemperatures, allByDate, zone),
+            thermal = thermalDisplay(statistics, currentCycleTemperatures, allJournalEntries, zone),
             patterns = statistics?.let { stats ->
                 SymptomPatternCalculator.calculate(
                     cycles = stats.cycles,
@@ -134,22 +134,13 @@ object CyclePresentationMapper {
     private fun thermalDisplay(
         statistics: CycleStatistics?,
         temperatures: List<BasalBodyTemperatureEntry>,
-        journalByDate: Map<LocalDate, CycleJournalEntry>,
+        journal: List<CycleJournalEntry>,
         zone: ZoneId,
     ): CycleThermalDisplay? {
         val cycle = statistics?.currentCycle ?: return null
-        val readings = temperatures
-            .groupBy { it.time.atZone(zone).toLocalDate() }
-            .filterKeys { !it.isBefore(cycle.startDate) }
-            .map { (date, entries) ->
-                val latest = entries.maxBy { it.time }
-                BbtReading(
-                    date = date,
-                    celsius = latest.temperatureCelsius,
-                    disturbed = journalByDate[date]?.bbtDisturbances.orEmpty().isNotEmpty(),
-                )
-            }
-            .sortedBy { it.date }
+        val readings = CycleObservations.from(CycleData(basalBodyTemperature = temperatures), journal, zone)
+            .bbtReadings
+            .filter { !it.date.isBefore(cycle.startDate) }
         if (readings.isEmpty()) return null
         return CycleThermalDisplay(
             cycleStart = cycle.startDate,
