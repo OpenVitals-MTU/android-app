@@ -398,6 +398,14 @@ class HeartRepositoryImpl @Inject constructor(
         return hc.readDailyRestingHR(start, end)
     }
 
+    override suspend fun loadRestingHeartRateSamples(start: Instant, end: Instant): List<RestingHeartRateSample> {
+        if (readRestingHRPermission !in grantedPermissionsIfAvailable()) {
+            Log.w(TAG, "Skipping loadRestingHeartRateSamples missingCount=1")
+            return emptyList()
+        }
+        return hc.readRestingHeartRateSamples(start, end)
+    }
+
     override suspend fun loadHrvRmssd(date: LocalDate): Double? {
         val granted = grantedPermissionsIfAvailable()
         return loadHrvRmssd(date, granted)
