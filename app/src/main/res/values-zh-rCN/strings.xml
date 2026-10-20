@@ -3615,20 +3615,34 @@
     <string name="cycle_exclusion_reason_contraception_change">更换避孕方式或紧急避孕</string>
     <string name="cycle_exclusion_reason_stress_or_travel">重大压力或旅行</string>
     <string name="cycle_exclusion_reason_other">其他原因</string>
-    <string name="cycle_thermal_subtitle">当前周期的晨间体温。确认的升温是事后判断，不是生育力预测。</string>
+    <string name="cycle_thermal_subtitle">当前周期的晨起体温和夜间皮肤温度。变化是事后检测的，不是预测。</string>
     <string name="cycle_thermal_no_shift">未确认体温升高</string>
     <string name="cycle_thermal_shift_confirmed">在记录的体温中发现持续升温。</string>
     <string name="cycle_thermal_coverline">基准线以虚线显示</string>
     <string name="cycle_thermal_empty">记录经期开始日和晨间体温，即可查看基础体温图。</string>
     <string name="cycle_skin_title">皮肤温度与你的周期</string>
-    <string name="cycle_skin_intro">手表和戒指会在夜间测量你的皮肤温度。排卵后它往往略高，在一项小型戒指研究中约高0.3 °C。研究是事后根据整个周期来读取这一变化的，从不提前预测。</string>
+    <string name="cycle_skin_intro">手表和戒指会在夜间测量你的皮肤温度。排卵后它往往略高，在一项小型戒指研究中约高0.3 °C。OpenVitals会显示它在你的夜间数据中找到的升高，这是事后根据整个周期读取的，从不提前预测。</string>
     <string name="cycle_skin_accuracy" formatted="false">在一项大型Apple Watch研究中，对出现至少0.2 °C上升的周期，有81 %估算出了排卵日，其中89 %的估算与LH试纸找到的日期相差不超过2天。一项戒指研究的平均误差为1.3天，而按日历推算为3.4天。这些是各项研究自己所用方法的结果，并不适用于所有手表和所有方法。</string>
-    <string name="cycle_skin_limits" formatted="false">• 没有发现上升并不意味着没有排卵：在一项437个周期的研究中，82 %出现了持续上升。\n• 没有排卵时也可能出现上升：一项小型手腕研究在无排卵周期中同样发现了上升。\n• 发烧或生病同样会使皮肤温度升高。\n• 皮肤温度不是核心体温：在一项研究中，它与口腔温度仅呈中等程度相关（r = 0.56）。</string>
     <string name="cycle_skin_note_hormonal">你设置了激素类避孕方式，或在过去两个月内停用了一种。激素类方式会作用于本卡片所讲的体温节律，其中许多会抑制排卵（卵子的释放），体温升高正是跟在排卵之后。因此你自己的体温可能不会显示出清晰的前后变化模式。那项大型手腕温度研究排除了使用激素类方式的人以及停用后两个月内的人，所以它的结果对你参考意义不大。这是信息，不是建议。</string>
+    <string name="cycle_skin_limits" formatted="false">• 没有发现上升并不意味着没有排卵：在一项437个周期的研究中，82 %出现了持续上升。\n• 没有排卵时也可能出现上升：一项小型手腕研究在无排卵周期中也常常标出上升。\n• 发烧或生病同样会使皮肤温度升高。\n• 皮肤温度不是核心体温：在一项研究中，它与口腔温度仅呈中等程度相关（r = 0.56）。</string>
+    <string name="cycle_skin_note_pill">你在记录避孕药。这项大型手腕温度研究排除了使用激素避孕的人以及停用后两个月内的人，因此其结果对你的体温说明有限。</string>
     <string name="cycle_skin_note_pcos">你已标注多囊卵巢综合征（PCOS）。我们没有找到关于PCOS中基于温度检测排卵的研究，因此请格外谨慎地解读任何温度模式。</string>
-    <string name="cycle_skin_not_a_method">OpenVitals的估算不使用皮肤温度。这只是背景信息，不是避孕方法，也不是生育力预测，更不是医疗建议。</string>
+    <string name="cycle_skin_not_a_method">OpenVitals会显示检测到的变化，但不使用皮肤温度来做估算。这不是避孕方法，也不是生育力预测，更不是医疗建议。</string>
     <string name="cycle_skin_show_details">显示数字和来源</string>
     <string name="cycle_skin_hide_details">隐藏详情</string>
+    <string name="cycle_thermal_chip_bbt">早晨（BBT）</string>
+    <string name="cycle_thermal_chip_skin">夜间（皮肤）</string>
+    <string name="cycle_thermal_axis_bbt">BBT</string>
+    <string name="cycle_thermal_axis_skin">皮肤 Δ</string>
+    <string name="cycle_thermal_skin_unavailable">这里无法读取皮肤温度：可能没有手表或戒指写入过，也可能OpenVitals没有读取权限。请查看设置中的Health Connect权限。</string>
+    <string name="cycle_thermal_bbt_unavailable">基础体温不可用：这个周期没有晨起测量。</string>
+    <string name="cycle_thermal_none_selected">选择“早晨（BBT）”或“夜间（皮肤）”以查看图表。</string>
+    <string name="cycle_skin_result_confirmed">事后检测到：从%1$s起，连续三个夜晚各自比前六个夜晚中至少五个高出至少0.2 °C（升高约%2$s）。这是皮肤温度的升高，并不说明你何时可能怀孕。</string>
+    <string name="cycle_skin_result_none">这个周期的夜间皮肤温度目前未检测到变化。没有找到连续三个夜晚都比前六个夜晚高出至少0.2 °C的情况。这并不说明是否发生了排卵。</string>
+    <string name="cycle_skin_result_weak">信号太弱，无法判断：这个周期各夜之间最多相差%1$s，低于所需的0.2 °C。当手表或戒指对传出的数据做平滑处理时就会这样，小幅升高会被掩盖。OpenVitals不会猜测。</string>
+    <string name="cycle_skin_result_insufficient">这个周期里有皮肤温度的夜晚还太少：至少需要15个夜晚才能解读该周期。</string>
+    <string name="cycle_skin_result_not_plausible">在%1$s前后发现了升高，但这样周期的前半段会超出10到90天的范围，或者在已结束的周期中后半段会超出7到17天的范围。因此不算作变化。</string>
+    <string name="cycle_skin_result_source">数据来源：%1$s</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
     <string name="cycle_skin_hormonal_details">研究对激素类方式的发现。在27名服用避孕药的人中，手腕皮肤温度的昼夜节律在假黄体期与假卵泡期（服药周与停药周）之间没有差异，而在14名自然周期的人中有差异。在18名服用避孕药的人中，服用有效药片的几周晨起口腔温度（36.4 °C）高于停药周（36.1 °C），且升高幅度与孕激素剂量相伴。一篇综述指出雌激素一般使体温降低、孕激素一般使体温升高。另一篇关于激素类方式作用机制的综述把抑制排卵和宫颈黏液的改变列为复方避孕药和纯孕激素方式的主要机制之一。此处引用的其他研究同样排除了使用激素的人：一项指环研究（Thigpen）剔除了6个使用激素的周期，一项手指指环研究（Maijala）在其子研究中排除了使用激素避孕的人，2021年的手腕研究（Zhu）只纳入未接受激素治疗的人。对于避孕药以外的方式，我们没有找到皮肤温度方面的研究。</string>
     <string name="section_cycle_nightly">整个周期的夜间脉搏、HRV 和呼吸</string>

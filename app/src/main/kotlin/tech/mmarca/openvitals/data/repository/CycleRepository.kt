@@ -10,6 +10,7 @@ import androidx.health.connect.client.records.IntermenstrualBleedingRecord
 import androidx.health.connect.client.records.MenstruationFlowRecord
 import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.SexualActivityRecord
+import androidx.health.connect.client.records.SkinTemperatureRecord
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
@@ -26,6 +27,7 @@ import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.model.CycleEntryWriteRequest
 import tech.mmarca.openvitals.domain.model.CycleRecordValues
 import tech.mmarca.openvitals.domain.model.HealthConnectAvailability
+import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.domain.query.CyclePeriodData
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import java.time.LocalDate
@@ -54,6 +56,7 @@ class CycleRepositoryImpl @Inject constructor(
         HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class)
     private val readIntermenstrualBleedingPermission =
         HealthPermission.getReadPermission(IntermenstrualBleedingRecord::class)
+    private val readSkinTemperaturePermission = HealthPermission.getReadPermission(SkinTemperatureRecord::class)
     private val readSexualActivityPermission = HealthPermission.getReadPermission(SexualActivityRecord::class)
 
     private val dayLogWriter = CycleDayLogWriter(this)
@@ -79,6 +82,7 @@ class CycleRepositoryImpl @Inject constructor(
         return coroutineScope {
             val window = query.windows.current
             val today = LocalDate.now()
+            val granted = grantedPermissionsIfAvailable()
             val data = async { loadCycleData(window.start, window.end) }
             val missing = async { missingPermissions() }
             val statistics = async { loadCycleStatistics(today) }
@@ -89,6 +93,9 @@ class CycleRepositoryImpl @Inject constructor(
             val temperatures = stats?.currentCycle?.let { cycle ->
                 async { loadCycleData(cycle.startDate, today).basalBodyTemperature }
             }
+            val skinTemperature = stats?.currentCycle?.let { cycle ->
+                async { loadSkinTemperature(cycle.startDate, today, granted) }
+            }
             CyclePeriodData(
                 data = data.await(),
                 missingPermissions = missing.await(),
@@ -96,8 +103,19 @@ class CycleRepositoryImpl @Inject constructor(
                 journalEntries = entries.await(),
                 allJournalEntries = allEntries.await(),
                 currentCycleTemperatures = temperatures?.await().orEmpty(),
+                currentCycleSkinTemperature = skinTemperature?.await().orEmpty(),
             )
         }
+    }
+
+    /**
+     * Night skin temperature for the shift line. An optional extra: it is not in the cycle permission set,
+     * so a missing grant never gates the screen; it is read when the vitals category already granted it.
+     */
+    private suspend fun loadSkinTemperature(start: LocalDate, end: LocalDate, granted: Set<String>): List<SkinTemperatureEntry> {
+        if (!hc.isSkinTemperatureAvailable() || readSkinTemperaturePermission !in granted) return emptyList()
+        val zone = ZoneId.systemDefault()
+        return hc.readSkinTemperatureEntries(start.atStartOfDay(zone).toInstant(), end.plusDays(1).atStartOfDay(zone).toInstant())
     }
 
     override suspend fun loadCycleData(start: LocalDate, end: LocalDate): CycleData {

@@ -19,6 +19,7 @@ import tech.mmarca.openvitals.domain.cycle.SymptomPatternCalculator
 import tech.mmarca.openvitals.domain.cycle.ThermalShiftCalculator
 import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
+import tech.mmarca.openvitals.domain.model.SkinTemperatureEntry
 import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
 import tech.mmarca.openvitals.domain.model.DayBleedingChoice
@@ -34,6 +35,7 @@ object CyclePresentationMapper {
         journalEntries: List<CycleJournalEntry> = emptyList(),
         allJournalEntries: List<CycleJournalEntry> = journalEntries,
         currentCycleTemperatures: List<BasalBodyTemperatureEntry> = emptyList(),
+        currentCycleSkinTemperature: List<SkinTemperatureEntry> = emptyList(),
         profile: CycleTrackingProfile = CycleTrackingProfile(),
         today: LocalDate = LocalDate.now(),
         pill: PillTodayDisplay? = null,
@@ -77,6 +79,7 @@ object CyclePresentationMapper {
             history = statistics?.let { LongitudinalCycleStatsCalculator.calculate(it.cycles, today) }
                 ?: LongitudinalCycleStats.Empty,
             thermal = thermalDisplay(statistics, currentCycleTemperatures, allJournalEntries, zone),
+            skin = skinDisplay(statistics, currentCycleSkinTemperature, zone),
             patterns = statistics?.let { stats ->
                 SymptomPatternCalculator.calculate(
                     cycles = stats.cycles,

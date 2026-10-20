@@ -162,7 +162,13 @@ internal fun LazyListScope.cyclePeriodContent(
         }
         section(MetricDetailSectionId.CYCLE_THERMAL, today.hasCycleHistory) {
             SectionHeader(stringResource(R.string.section_cycle_thermal))
-            CycleThermalCard(thermal = display.thermal, unitFormatter = unitFormatter, modifier = sectionModifier)
+            CycleThermalCard(
+                thermal = display.thermal,
+                skin = display.skin,
+                unitFormatter = unitFormatter,
+                dateTimeFormatterProvider = dateTimeFormatterProvider,
+                modifier = sectionModifier,
+            )
             CycleSkinTemperatureInfoCard(
                 hormonalInfluencing = today.hormonalInfluencing,
                 pcosDeclared = today.pcosDeclared,
