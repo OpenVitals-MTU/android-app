@@ -66,6 +66,13 @@ class CycleRepositoryImpl @Inject constructor(
         return phase4Permissions.filterNot { it in granted }.toSet()
     }
 
+    override val cycleNightlyPermissions: Set<String> get() = hc.cycleNightlyPermissions
+
+    override suspend fun missingNightlyPermissions(): Set<String> {
+        val granted = grantedPermissionsIfAvailable()
+        return cycleNightlyPermissions.filterNot { it in granted }.toSet()
+    }
+
     override suspend fun loadCyclePeriod(
         query: PeriodLoadQuery,
     ): CyclePeriodData {

@@ -68,6 +68,7 @@ Status legend: **exists** already in OpenVitals · **new** built for this design
 | Variability | Bar per cycle against a 21–35 day reference band, badges for current, excluded and a 7-day swing, median and mean, tap for detail and exclusion. | new |
 | Thermal chart | Cycle-day axis, disturbed readings hollow, coverline once a sustained shift is found (six lows, three highs, third at least 0.2 °C above the highest low, readings at most three days apart). | adapted: the BBT card is rebuilt on this rule |
 | Patterns | Symptom counts by phase over all cycles, descriptive only. | new |
+| Nightly vitals | The current cycle's overnight resting pulse, HRV (RMSSD) and breathing rate by cycle day, one median per sleep session, one source per signal, a chip and a colour per signal, a missing signal named and not filled in ("not allowed" apart from "no data", with an optional permission button), resting pulse falling back to the device's labelled daily value, a details section with the evidence. Information only: no phase, ovulation, fertility or contraception statement, no effect on any estimate. `MetricDetailSectionId.CYCLE_NIGHTLY`. | new (2026-10-20) |
 | Cycle stats | Average, count, min–max of recent intervals. | new |
 
 ### 5. Reminders
@@ -156,6 +157,22 @@ What the information card under the thermal chart quotes. Each DOI resolved on C
 | Hormone users left out: Maijala sub-study excluded hormonal contraception (n = 8); Thigpen removed 6 cycles with hormone use and says the algorithm is not intended for people who do not ovulate due to hormonal contraceptives; Zhu enrolled only people not on hormonal therapy; Wang also allowed non-hormonal methods (condoms) | full texts of the three papers above | full text |
 
 What was looked for and not found, so the app does not claim it: a prior for the days from a wrist or finger temperature rise to the next period (the luteal lengths found were measured with basal temperature, LH tests or mucus, not with a skin sensor), a study of temperature-based ovulation detection in PCOS, and a measured time for the skin-temperature rhythm to normalise after stopping hormonal contraception. The 60-day washout in an earlier plan comes from Apple's exclusion criterion, not from a measurement. Until such a prior exists, skin temperature stays out of `MarkerEstimate`.
+
+## Sources for nightly vitals
+
+Every figure on the nightly vitals card was read from the paper (Europe PMC abstract or full text, bibliographic data checked against Crossref) before it was written. They are listed in `CycleSources` and attached to their statement in `NightlyVitalsEvidence`.
+
+| Source | DOI | What the card says from it |
+|---|---|---|
+| Goodale et al., J Med Internet Res 2019 | 10.2196/13404 | 237 recruited women (conception-seeking in the paper; the card does not say so) wearing the Ava bracelet at night: nightly heart rate 56.6 bpm in the follicular phase, 60.5 bpm in the late luteal phase (means 56.56 and 60.47 in the full text, which analyses the 30th-percentile nightly heart rate). |
+| Jasinski et al., npj Digit Med 2024 | 10.1038/s41746-024-01394-0 | 11,590 participants, 45,811 cycles, WHOOP: resting heart rate lowest on cycle day 5, highest on day 26; RMSSD highest on day 5, lowest on day 27. |
+| Lin et al., Sci Data 2026 (mcPHASES) | 10.1038/s41597-026-06805-3 | 42 young adults, Fitbit Sense, three months: median resting heart rate differs significantly between phases, lowest follicular, peak luteal. |
+| de Jager et al., Sports Med 2026 | 10.1007/s40279-025-02388-y | Living systematic review, 16 studies: wearable HRV higher at the start of the cycle, lower toward the end, differences of 3 to 9%; lower HRV with hormonal contraceptives, particularly late in the cycle. Its study table is also the source for the Oura (5-minute overnight intervals) and WHOOP (last slow-wave cycle; non-wake periods) aggregation notes. |
+| Gonzalez et al., npj Digit Med 2026 | 10.1038/s41746-026-02799-9 | 2,596 women, 42,759 cycles, WHOOP: resting heart rate +1.2% with a 10% fall in weekly sleep, regardless of phase. Full text: RHR and HRV are weighted averages over the sleep period, weighted toward its end and slow-wave windows; respiratory rate is the median over sleep. |
+| Pietila et al., JMIR Ment Health 2018 | 10.2196/mental.9519 | 4,098 Finnish employees, first 3 hours of sleep: alcohol dose-dependently lowers parasympathetic regulation; an HRV-based recovery measure fell by 9.3, 24.0 and 39.2 percentage units at low, moderate and high intake. |
+| Shi et al., npj Digit Med 2026 | 10.1038/s41746-025-02320-8 | Systematic review and network meta-analysis, 27 studies: multi-parameter wearables 0.89 vs temperature alone 0.87 pooled accuracy; the authors say such parameters could slightly improve accuracy. The card quotes only "a slight gain, 0.89 versus 0.87, overlapping confidence intervals", without naming the task (fertile-window detection) and without the temperature-only interval, which the paper gives as both 0.85 to 0.88 and 0.85 to 0.89. |
+
+Not quoted, on purpose: any ovulation-detection accuracy of the app itself (it has none), and Goodale's 90% machine-learning accuracy (a different task from what the card shows).
 
 ## Phases
 
