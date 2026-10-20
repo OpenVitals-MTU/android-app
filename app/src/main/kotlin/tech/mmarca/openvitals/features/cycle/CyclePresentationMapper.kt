@@ -17,6 +17,7 @@ import tech.mmarca.openvitals.domain.cycle.PhaseTips
 import tech.mmarca.openvitals.domain.cycle.SymptomDay
 import tech.mmarca.openvitals.domain.cycle.SymptomPatternCalculator
 import tech.mmarca.openvitals.domain.cycle.ThermalShiftCalculator
+import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.BasalBodyTemperatureEntry
 import tech.mmarca.openvitals.domain.model.CycleData
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
@@ -127,6 +128,7 @@ object CyclePresentationMapper {
             recentIntervalLengths = statistics?.recentIntervalLengths.orEmpty(),
             totalCycles = statistics?.cycles?.size ?: 0,
             hasProfile = profile.contexts.isNotEmpty() || profile.ageBand != null,
+            pcosDeclared = TrackingContext.PCOS in profile.contexts,
             pill = pill,
         )
     }
