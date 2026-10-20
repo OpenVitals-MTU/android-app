@@ -30,6 +30,7 @@ data class CycleDisplayState(
     val today: CycleTodayDisplay = CycleTodayDisplay(),
     val history: LongitudinalCycleStats = LongitudinalCycleStats.Empty,
     val thermal: CycleThermalDisplay? = null,
+    val skin: CycleSkinDisplay? = null,
     val patterns: List<SymptomPattern> = emptyList(),
 )
 

@@ -3681,20 +3681,34 @@
     <string name="cycle_exclusion_reason_contraception_change">避妊法の変更または緊急避妊</string>
     <string name="cycle_exclusion_reason_stress_or_travel">強いストレスまたは旅行</string>
     <string name="cycle_exclusion_reason_other">その他の理由</string>
-    <string name="cycle_thermal_subtitle">現在の周期の朝の体温です。確認された上昇は事後的なもので、妊娠しやすさの予測ではありません。</string>
+    <string name="cycle_thermal_subtitle">現在の周期の朝の体温と夜間の皮膚温です。変化は後から検出されるもので、予測ではありません。</string>
     <string name="cycle_thermal_no_shift">確認された体温上昇なし</string>
     <string name="cycle_thermal_shift_confirmed">記録された体温に持続的な上昇が見つかりました。</string>
     <string name="cycle_thermal_coverline">カバーラインは破線で表示</string>
     <string name="cycle_thermal_empty">月経開始日と朝の体温を記録すると、基礎体温グラフが表示されます。</string>
     <string name="cycle_skin_title">皮膚温と周期</string>
-    <string name="cycle_skin_intro">時計やリングは夜間の皮膚温を測定します。排卵後はやや高くなる傾向があり、小規模なリング研究では約0.3 °Cでした。研究ではこれを周期全体から後から読み取るもので、事前に予測するものではありません。</string>
+    <string name="cycle_skin_intro">時計やリングは夜間の皮膚温を測定します。排卵後はやや高くなる傾向があり、小規模なリング研究では約0.3 °Cでした。OpenVitalsは、夜間の記録から見つけた上昇を、周期全体から後から読み取って表示します。事前に予測するものではありません。</string>
     <string name="cycle_skin_accuracy" formatted="false">大規模なApple Watch研究では、0.2 °C以上の上昇があった周期の81 %で排卵日が推定され、その推定の89 %はLH検査で特定した日から2日以内でした。リング研究では平均誤差が1.3日で、カレンダー計算の3.4日を下回りました。これらは各研究独自の方法による結果であり、すべての時計やすべての方法に当てはまるわけではありません。</string>
-    <string name="cycle_skin_limits" formatted="false">• 上昇が見つからなくても排卵がなかったとは限りません：437周期の研究では、持続的な上昇が見られたのは82 %でした。\n• 排卵がなくても上昇が現れることがあります：小規模な手首の研究では、排卵のない周期でも上昇が見つかりました。\n• 発熱や病気でも皮膚温は上がります。\n• 皮膚温は深部体温ではありません：ある研究では口腔温との相関は中程度にとどまりました（r = 0.56）。</string>
     <string name="cycle_skin_note_hormonal">ホルモン避妊法が設定されているか、過去2か月以内に中止しています。ホルモン法は、このカードが扱う体温リズムに作用し、その多くは排卵（卵子の放出）を抑えます。体温の上昇は排卵に続いて起こるものです。そのため、あなた自身の体温には、前後のはっきりしたパターンが現れないことがあります。大規模な手首温度の研究は、ホルモン法を使っている人と、中止後2か月以内の人を除外しているため、その結果はあなたについてはほとんど何も語りません。これは情報であり、助言ではありません。</string>
+    <string name="cycle_skin_limits" formatted="false">• 上昇が見つからなくても排卵がなかったとは限りません：437周期の研究では、持続的な上昇が見られたのは82 %でした。\n• 排卵がなくても上昇が現れることがあります：小規模な手首の研究では、排卵のない周期でも上昇がしばしば検出されました。\n• 発熱や病気でも皮膚温は上がります。\n• 皮膚温は深部体温ではありません：ある研究では口腔温との相関は中程度にとどまりました（r = 0.56）。</string>
+    <string name="cycle_skin_note_pill">ピルを記録しています。手首の温度に関する大規模研究では、ホルモン避妊を使用している人と中止後2か月までの人が除外されているため、その結果はあなたの体温についてほとんど何も語りません。</string>
     <string name="cycle_skin_note_pcos">PCOSを設定しています。PCOSで温度による排卵検出を調べた研究は見つかりませんでした。体温パターンは特に慎重に読んでください。</string>
-    <string name="cycle_skin_not_a_method">OpenVitalsは推定に皮膚温を使用していません。これは背景情報であり、避妊法や妊よう性の予測ではなく、医療上の助言でもありません。</string>
+    <string name="cycle_skin_not_a_method">OpenVitalsは検出した変化を表示しますが、推定には皮膚温を使用していません。避妊法や妊よう性の予測ではなく、医療上の助言でもありません。</string>
     <string name="cycle_skin_show_details">数値と出典を表示</string>
     <string name="cycle_skin_hide_details">詳細を隠す</string>
+    <string name="cycle_thermal_chip_bbt">朝（BBT）</string>
+    <string name="cycle_thermal_chip_skin">夜（皮膚）</string>
+    <string name="cycle_thermal_axis_bbt">BBT</string>
+    <string name="cycle_thermal_axis_skin">皮膚 Δ</string>
+    <string name="cycle_thermal_skin_unavailable">ここでは皮膚温を読み取れません。時計やリングが書き込んでいないか、OpenVitalsに読み取りが許可されていない可能性があります。設定のHealth Connectの権限を確認してください。</string>
+    <string name="cycle_thermal_bbt_unavailable">基礎体温は利用できません。この周期には朝の測定がありません。</string>
+    <string name="cycle_thermal_none_selected">グラフを表示するには、朝（BBT）または夜（皮膚）を選んでください。</string>
+    <string name="cycle_skin_result_confirmed">後から検出: %1$s以降、3夜連続で、それぞれ直前6夜のうち少なくとも5夜より0.2 °C以上高くなりました（上昇は約%2$s）。これは皮膚温の上昇であり、いつ妊娠しうるかを示すものではありません。</string>
+    <string name="cycle_skin_result_none">この周期の夜間の皮膚温では、これまでのところ変化は検出されていません。直前6夜より0.2 °C以上高い夜が3夜連続する箇所は見つかりませんでした。排卵があったかどうかは、これでは分かりません。</string>
+    <string name="cycle_skin_result_weak">信号が弱すぎて判断できません。この周期の夜の差は最大でも%1$sで、必要な0.2 °Cに届きません。時計やリングが受け渡すデータを平滑化していると、小さな上昇が隠れることがあります。OpenVitalsは推測しません。</string>
+    <string name="cycle_skin_result_insufficient">この周期では、皮膚温のある夜がまだ少なすぎます。周期を読み取るには、少なくとも15夜が必要です。</string>
+    <string name="cycle_skin_result_not_plausible">%1$s頃に上昇が見つかりましたが、その場合、周期の前半が10〜90日の範囲外、または完了した周期では後半が7〜17日の範囲外になります。変化としては数えません。</string>
+    <string name="cycle_skin_result_source">データ元: %1$s</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
     <string name="cycle_skin_hormonal_details">ホルモン法についての研究結果です。ピル使用者27人では、手首の皮膚温の日内リズムは、偽黄体期と偽卵胞期（実薬の週と休薬の週）の間で差がなく、自然な周期の14人では差がありました。ピル使用者18人では、朝の口腔温が、実薬の週（36.4 °C）の方が休薬の週（36.1 °C）より高く、その上昇はプロゲスチンの用量と並んでいました。ある総説は、エストロゲンは一般に体温を下げ、プロゲスチンは一般に体温を上げると述べています。ホルモン法の作用機序に関する総説は、配合ピルとプロゲスチン単独の方法の主な作用として、排卵抑制と頸管粘液の変化を挙げています。ここで挙げた他の研究もホルモン使用者を除いています。リング研究（Thigpen）はホルモン使用のある6周期を除外し、指リング研究（Maijala）はその副研究でホルモン避妊の使用者を除外し、2021年の手首研究（Zhu）はホルモン療法を受けていない人だけを対象にしました。ピル以外の方法についての皮膚温の研究は見つかりませんでした。</string>
     <string name="section_cycle_nightly">周期を通した夜間の脈拍、HRV、呼吸</string>

@@ -156,6 +156,18 @@ What the information card under the thermal chart quotes. Each DOI resolved on C
 | For combined pills and progestin-only methods, ovulation inhibition and changes in cervical mucus are among the main mechanisms (the abstract does not cover rings, patches or implants, so the card says only that many methods stop ovulation) | Rivera et al. 1999, *Am J Obstet Gynecol*, 10.1016/s0002-9378(99)70120-1 | abstract |
 | Hormone users left out: Maijala sub-study excluded hormonal contraception (n = 8); Thigpen removed 6 cycles with hormone use and says the algorithm is not intended for people who do not ovulate due to hormonal contraceptives; Zhu enrolled only people not on hormonal therapy; Wang also allowed non-hormonal methods (condoms) | full texts of the three papers above | full text |
 
+The detection itself (`SkinTemperatureShiftCalculator`) rests on three of these papers; nothing in it feeds an estimate.
+
+| Step in the code | Source | Checked |
+|---|---|---|
+| Centre the series, reject outliers beyond 2 SD, fill gaps linearly (their Butterworth band-pass and hysteresis thresholding are not replicated) | Thigpen et al. 2025, *J Med Internet Res*, 10.2196/60667 | full text (centring, rejection beyond 2 SD, linear fill, the 7-17 and 10-90 day limits) |
+| Plausibility: luteal phase 7 to 17 days (completed cycles only), follicular phase 10 to 90 days | Thigpen et al. 2025, 10.2196/60667 | full text |
+| First high night: it and the next two nights each at least 0.2 °C above at least five of the six preceding nights | Shilaih et al. 2018, *Biosci Rep*, 10.1042/bsr20171279 | full text |
+| Signal gate: best 3-night mean minus lowest 6-night mean at least 0.2 °C (a product heuristic derived from the paper's condition that evaluated cycles show a signal of at least 0.2 °C) | Wang et al. 2025, *Hum Reprod*, 10.1093/humrep/deaf005 | full text |
+| Synthetic test rise of about 0.3 °C | Maijala et al. 2019, *BMC Womens Health*, 10.1186/s12905-019-0844-9 | full text |
+
+Product choices with no source: the nightly value is the mean of a night's samples (Shilaih uses the 99th percentile of LOESS-smoothed night data), and the six nights before the first high night are fixed for all three high nights (the paper's wording leaves the sliding reading open). A fixed 0.2 °C depends on the sensor: a smoothed set from one device showed a mean post-ovulation rise of only about 0.05 °C, which is why a weak signal is reported instead of guessed.
+
 What was looked for and not found, so the app does not claim it: a prior for the days from a wrist or finger temperature rise to the next period (the luteal lengths found were measured with basal temperature, LH tests or mucus, not with a skin sensor), a study of temperature-based ovulation detection in PCOS, and a measured time for the skin-temperature rhythm to normalise after stopping hormonal contraception. The 60-day washout in an earlier plan comes from Apple's exclusion criterion, not from a measurement. Until such a prior exists, skin temperature stays out of `MarkerEstimate`.
 
 ## Sources for nightly vitals

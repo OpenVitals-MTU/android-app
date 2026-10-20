@@ -3667,20 +3667,34 @@
     <string name="cycle_exclusion_reason_contraception_change">Změna antikoncepce nebo nouzová antikoncepce</string>
     <string name="cycle_exclusion_reason_stress_or_travel">Silný stres nebo cestování</string>
     <string name="cycle_exclusion_reason_other">Jiný důvod</string>
-    <string name="cycle_thermal_subtitle">Ranní teploty aktuálního cyklu. Potvrzený vzestup je zpětný, není to předpověď plodnosti.</string>
+    <string name="cycle_thermal_subtitle">Ranní teploty a noční teplota kůže aktuálního cyklu. Posun se zjišťuje zpětně, není to předpověď.</string>
     <string name="cycle_thermal_no_shift">žádný potvrzený vzestup teploty</string>
     <string name="cycle_thermal_shift_confirmed">V zaznamenaných teplotách byl nalezen trvalý vzestup.</string>
     <string name="cycle_thermal_coverline">Krycí linie zobrazena čárkovaně</string>
     <string name="cycle_thermal_empty">Zaznamenejte začátek menstruace a ranní teploty a uvidíte teplotní graf.</string>
     <string name="cycle_skin_title">Teplota kůže a tvůj cyklus</string>
-    <string name="cycle_skin_intro">Hodinky a prsteny měří v noci teplotu tvé kůže. Po ovulaci bývá o něco vyšší, v jedné malé studii s prstenem asi o 0,3 °C. Studie to čtou zpětně z celého cyklu, nikdy předem.</string>
+    <string name="cycle_skin_intro">Hodinky a prsteny v noci měří teplotu tvé kůže. Po ovulaci bývá o něco vyšší, v jedné malé studii s prstenem asi o 0,3 °C. OpenVitals ukáže vzestup, který ve tvých nocích najde, a to zpětně a z celého cyklu, nikdy předem.</string>
     <string name="cycle_skin_accuracy" formatted="false">Ve velké studii s Apple Watch byl den ovulace odhadnut u 81 % cyklů s nárůstem alespoň o 0,2 °C a 89 % těchto odhadů leželo nejvýše 2 dny od dne zjištěného LH testy. Studie s prstenem zjistila průměrnou chybu 1,3 dne oproti 3,4 dne při počítání podle kalendáře. Jsou to výsledky vlastní metody každé studie; neplatí pro všechny hodinky ani všechny metody.</string>
-    <string name="cycle_skin_limits" formatted="false">• Nezjištěný nárůst neznamená, že k ovulaci nedošlo: ve studii se 437 cykly se trvalý nárůst objevil u 82 %.\n• Nárůst se může objevit i bez ovulace: malá studie na zápěstí našla nárůsty i v cyklech bez ovulace.\n• Teplotu kůže zvyšuje také horečka nebo nemoc.\n• Teplota kůže není tělesná teplota jádra: v jedné studii korelovala s teplotou měřenou v ústech jen středně (r = 0,56).</string>
     <string name="cycle_skin_note_hormonal">Uvedla jsi hormonální metodu, nebo jsi ji během posledních dvou měsíců přestala používat. Hormonální metody působí na stejný rytmus tělesné teploty, o kterém tato karta pojednává, a mnohé z nich zastavují ovulaci (uvolnění vajíčka), po které teplota stoupá. Tvá vlastní teplota proto nemusí ukazovat jasný vzorec před a po. Velká studie teploty na zápěstí vyřadila lidi s hormonálními metodami a dva měsíce po jejich vysazení, takže její výsledky o tobě říkají málo. Jde o informaci, ne o radu.</string>
+    <string name="cycle_skin_limits" formatted="false">• Nezjištěný nárůst neznamená, že k ovulaci nedošlo: ve studii se 437 cykly se trvalý nárůst objevil u 82 %.\n• Nárůst se může objevit i bez ovulace: malá studie na zápěstí často označila nárůst i v cyklech bez ovulace.\n• Teplotu kůže zvyšuje také horečka nebo nemoc.\n• Teplota kůže není tělesná teplota jádra: v jedné studii korelovala s teplotou měřenou v ústech jen středně (r = 0,56).</string>
+    <string name="cycle_skin_note_pill">Zaznamenáváš pilulku. Velká studie teploty na zápěstí vyloučila lidi s hormonální antikoncepcí a dva měsíce po jejím vysazení, takže její výsledky o tvé teplotě říkají málo.</string>
     <string name="cycle_skin_note_pcos">Uvedla jsi PCOS. Nenašli jsme žádnou studii o zjišťování ovulace podle teploty u PCOS; jakýkoli průběh teploty proto čti s mimořádnou opatrností.</string>
-    <string name="cycle_skin_not_a_method">OpenVitals teplotu kůže pro své odhady nepoužívá. Jde o doplňující informaci, ne o metodu antikoncepce ani předpověď plodnosti a ne o lékařskou radu.</string>
+    <string name="cycle_skin_not_a_method">OpenVitals zobrazuje zjištěný posun, ale teplotu kůže pro své odhady nepoužívá. Není to metoda antikoncepce ani předpovědi plodnosti a není to lékařská rada.</string>
     <string name="cycle_skin_show_details">Zobrazit čísla a zdroje</string>
     <string name="cycle_skin_hide_details">Skrýt podrobnosti</string>
+    <string name="cycle_thermal_chip_bbt">Ráno (BBT)</string>
+    <string name="cycle_thermal_chip_skin">Noc (kůže)</string>
+    <string name="cycle_thermal_axis_bbt">BBT</string>
+    <string name="cycle_thermal_axis_skin">Kůže Δ</string>
+    <string name="cycle_thermal_skin_unavailable">Teplotu kůže tu nelze číst: žádné hodinky ani prsten ji nemusely zapsat, nebo ji OpenVitals nemusí smět číst. Podívej se na oprávnění Health Connect v Nastavení.</string>
+    <string name="cycle_thermal_bbt_unavailable">Bazální teplota není k dispozici: v tomto cyklu není žádné ranní měření.</string>
+    <string name="cycle_thermal_none_selected">Vyber Ráno (BBT) nebo Noc (kůže), aby se zobrazil graf.</string>
+    <string name="cycle_skin_result_confirmed">Zjištěno zpětně: od %1$s byly tři noci po sobě každá nejméně o 0,2 °C nad nejméně pěti z šesti předchozích nocí (vzestup asi %2$s). Jde o vzestup teploty tvé kůže, ne o tvrzení, kdy můžeš otěhotnět.</string>
+    <string name="cycle_skin_result_none">V nočních teplotách kůže tohoto cyklu zatím nebyl zjištěn žádný posun. Nenašly se tři noci po sobě nejméně o 0,2 °C nad předchozími šesti. To neříká, zda k ovulaci došlo.</string>
+    <string name="cycle_skin_result_weak">Signál je příliš slabý na posouzení: noci tohoto cyklu se liší nejvýše o %1$s, tedy méně než potřebných 0,2 °C. To se stává, když hodinky nebo prsten data, která předávají, vyhlazují, a malé vzestupy tak zmizí. OpenVitals nehádá.</string>
+    <string name="cycle_skin_result_insufficient">V tomto cyklu je zatím příliš málo nocí s teplotou kůže: před vyhodnocením cyklu je jich potřeba alespoň 15.</string>
+    <string name="cycle_skin_result_not_plausible">Kolem %1$s byl nalezen vzestup, ale první část cyklu by pak ležela mimo 10 až 90 dní, nebo ve skončeném cyklu druhá část mimo 7 až 17 dní. Nepočítá se jako posun.</string>
+    <string name="cycle_skin_result_source">Zdroj dat: %1$s</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
     <string name="cycle_skin_hormonal_details">Co studie zjistily o hormonálních metodách. U 27 uživatelek pilulky se denní rytmus teploty kůže na zápěstí nelišil mezi pseudoluteální a pseudofolikulární fází (týdny s pilulkami a týden bez nich), zatímco u 14 lidí s přirozeným cyklem ano. U 18 uživatelek pilulky byla ranní teplota v ústech vyšší v týdnech s aktivními pilulkami (36,4 °C) než v týdnu bez pilulky (36,1 °C) a vzestup šel ruku v ruce s dávkou gestagenu. Přehledová práce popisuje estrogeny jako obecně snižující a gestageny jako obecně zvyšující tělesnou teplotu. Přehled o způsobu účinku hormonálních metod uvádí mezi hlavními mechanismy kombinovaných pilulek a metod jen s gestagenem zástavu ovulace a změny hlenu děložního čípku. I ostatní zde uvedené studie vynechaly uživatele hormonů: studie s prstenem (Thigpen) odebrala 6 cyklů s užíváním hormonů, studie s prstenem na prstu (Maijala) vyloučila ve své dílčí studii uživatelky hormonální antikoncepce a studie zápěstí z roku 2021 (Zhu) zařadila jen lidi bez hormonální léčby. Studii teploty kůže pro jiné metody než pilulku jsme nenašli.</string>
     <string name="section_cycle_nightly">Noční tep, HRV a dýchání během cyklu</string>
