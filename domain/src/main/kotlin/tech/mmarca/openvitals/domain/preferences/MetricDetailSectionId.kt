@@ -29,6 +29,7 @@ enum class MetricDetailSectionId {
     CYCLE_HISTORY,
     CYCLE_THERMAL,
     CYCLE_PATTERNS,
+    CYCLE_NIGHTLY,
 }
 
 val DefaultMetricDetailSectionOrder: List<MetricDetailSectionId> = listOf(
@@ -59,6 +60,7 @@ val DefaultMetricDetailSectionOrder: List<MetricDetailSectionId> = listOf(
     MetricDetailSectionId.CYCLE_HISTORY,
     MetricDetailSectionId.CYCLE_THERMAL,
     MetricDetailSectionId.CYCLE_PATTERNS,
+    MetricDetailSectionId.CYCLE_NIGHTLY,
 )
 
 fun metricDetailSectionOrderFromStored(storedIds: List<String>?): List<MetricDetailSectionId> {

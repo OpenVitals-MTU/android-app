@@ -16,6 +16,12 @@ interface CycleRepository {
 
     suspend fun missingPermissions(): Set<String>
 
+    /** The optional reads behind the nightly card: sleep, resting pulse, HRV and breathing rate. */
+    val cycleNightlyPermissions: Set<String>
+
+    /** The part of [cycleNightlyPermissions] not granted, or all of it when Health Connect is unavailable. */
+    suspend fun missingNightlyPermissions(): Set<String>
+
     suspend fun loadCyclePeriod(
         query: PeriodLoadQuery,
     ): CyclePeriodData
