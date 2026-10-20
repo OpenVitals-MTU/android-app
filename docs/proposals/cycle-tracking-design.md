@@ -138,6 +138,20 @@ Two Room tables, migration 12 → 13. Health Connect has no record type for any 
 
 Preferences, through a `CyclePreferences` contract: declared contexts, age band, reminder configuration.
 
+## Skin temperature sources
+
+What the information card under the thermal chart quotes. Each DOI resolved on Crossref (title, journal, year and first author match); each number was read in the abstract or full text.
+
+| Statement on the card | Source | Checked |
+|---|---|---|
+| Night skin temperature is about 0.3 °C higher in the luteal phase (finger ring, 22 participants); skin and oral temperature correlate with r = 0.563 | Maijala et al. 2019, *BMC Womens Health*, 10.1186/s12905-019-0844-9 | full text |
+| A sustained wrist-temperature rise showed in 357 of 437 cycles (82%); the rule is 0.2 °C above at least five of the preceding six days, for three days | Shilaih et al. 2018, *Biosci Rep*, 10.1042/bsr20171279 | full text |
+| Ovulation day estimated in 80.8% of completed cycles with a rise of at least 0.2 °C, 89.0% within ±2 days of the LH-test day; hormonal contraception and the two months after stopping were exclusion criteria | Wang et al. 2025, *Hum Reprod*, 10.1093/humrep/deaf005 | full text |
+| Ring: ovulation detected in 96.4% of 1,155 cycles, mean error 1.26 days against 3.44 days for the calendar method | Thigpen et al. 2025, *J Med Internet Res*, 10.2196/60667 | full text |
+| Wrist temperature was more sensitive than basal temperature (0.62 against 0.23) and less specific (0.26 against 0.70) in 193 cycles, 23 of them anovulatory | Zhu et al. 2021, *J Med Internet Res*, 10.2196/20710 | abstract |
+
+What was looked for and not found, so the app does not claim it: a prior for the days from a wrist or finger temperature rise to the next period (the luteal lengths found were measured with basal temperature, LH tests or mucus, not with a skin sensor), a study of temperature-based ovulation detection in PCOS, and a measured time for the skin-temperature rhythm to normalise after stopping hormonal contraception. The 60-day washout in an earlier plan comes from Apple's exclusion criterion, not from a measurement. Until such a prior exists, skin temperature stays out of `MarkerEstimate`.
+
 ## Phases
 
 1. Domain and tests: estimator, phase model, facts, tips, thermal shift, patterns, longitudinal stats, catalog. *done*
