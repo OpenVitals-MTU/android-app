@@ -3614,6 +3614,15 @@
     <string name="cycle_thermal_shift_confirmed">Kirjatuista lämpötiloista löytyi pysyvä nousu.</string>
     <string name="cycle_thermal_coverline">Peiteviiva näytetään katkoviivana</string>
     <string name="cycle_thermal_empty">Kirjaa kuukautisten alku ja aamulämpötilat nähdäksesi lämpökäyrän.</string>
+    <string name="cycle_skin_title">Ihon lämpötila ja kuukautiskiertosi</string>
+    <string name="cycle_skin_intro">Kellot ja sormukset mittaavat ihosi lämpötilaa yöllä. Ovulaation jälkeen se on yleensä hieman korkeampi, yhdessä pienessä sormustutkimuksessa noin 0,3 °C. Tutkimukset lukevat tämän jälkikäteen koko kierrosta, eivät koskaan etukäteen.</string>
+    <string name="cycle_skin_accuracy" formatted="false">Suuressa Apple Watch -tutkimuksessa ovulaatiopäivä arvioitiin 81 %:lle kierroista, joissa lämpötila nousi vähintään 0,2 °C, ja 89 % arvioista oli enintään 2 päivän päässä LH-testeillä löydetystä päivästä. Sormustutkimuksessa keskimääräinen virhe oli 1,3 päivää, kun kalenterin mukaan laskettaessa se oli 3,4 päivää. Nämä ovat kunkin tutkimuksen oman menetelmän tuloksia; ne eivät päde kaikkiin kelloihin tai menetelmiin.</string>
+    <string name="cycle_skin_limits" formatted="false">• Havaitsematon nousu ei tarkoita, ettei ovulaatiota ollut: 437 kierron tutkimuksessa pysyvä nousu näkyi 82 %:ssa.\n• Nousu voi näkyä myös ilman ovulaatiota: pieni ranteesta tehty tutkimus löysi nousuja myös kierroissa ilman ovulaatiota.\n• Myös kuume tai sairaus nostaa ihon lämpötilaa.\n• Ihon lämpötila ei ole kehon ydinlämpö: yhdessä tutkimuksessa se korreloi suun lämpötilan kanssa vain kohtalaisesti (r = 0,56).</string>
+    <string name="cycle_skin_note_pill">Seuraat e-pillereitä. Suuressa ranteen lämpötilatutkimuksessa jätettiin pois hormonaalista ehkäisyä käyttävät ja kaksi kuukautta lopettamisen jälkeen, joten sen tulokset kertovat vähän sinun lämpötilastasi.</string>
+    <string name="cycle_skin_note_pcos">Olet ilmoittanut PCOS:n. Emme löytäneet tutkimusta lämpötilaan perustuvasta ovulaation tunnistamisesta PCOS:ssa, joten lue kaikkia lämpötilakuvioita erityisen varovasti.</string>
+    <string name="cycle_skin_not_a_method">OpenVitals ei käytä ihon lämpötilaa arvioihinsa. Tämä on taustatietoa, ei ehkäisymenetelmä eikä hedelmällisyysennuste eikä lääketieteellinen neuvo.</string>
+    <string name="cycle_skin_show_details">Näytä luvut ja lähteet</string>
+    <string name="cycle_skin_hide_details">Piilota yksityiskohdat</string>
     <string name="cycle_thermal_day_label">P%1$d</string>
     <string name="cycle_patterns_subtitle">Kuinka usein kukin oire kirjattiin kussakin vaiheessa. Vain lukumääriä; mitään ei diagnosoida eikä ennusteta.</string>
     <string name="cycle_patterns_empty_title">Ei vielä oireita</string>

@@ -3634,6 +3634,15 @@
     <string name="cycle_thermal_shift_confirmed">Foi encontrada uma subida térmica sustentada nas temperaturas registadas.</string>
     <string name="cycle_thermal_coverline">Linha de cobertura mostrada a tracejado</string>
     <string name="cycle_thermal_empty">Regista um início de menstruação e temperaturas matinais para ver o gráfico térmico.</string>
+    <string name="cycle_skin_title">Temperatura da pele e o teu ciclo</string>
+    <string name="cycle_skin_intro">Relógios e anéis medem a temperatura da tua pele durante a noite. Depois da ovulação costuma ser um pouco mais alta, cerca de 0,3 °C num pequeno estudo com anel. Os estudos leem isto a posteriori, a partir de todo o ciclo, nunca antecipadamente.</string>
+    <string name="cycle_skin_accuracy" formatted="false">Num grande estudo com Apple Watch foi estimado um dia de ovulação em 81 % dos ciclos com uma subida de pelo menos 0,2 °C, e 89 % dessas estimativas ficaram a 2 dias ou menos do dia encontrado com testes de LH. Um estudo com anel encontrou um erro médio de 1,3 dias, contra 3,4 dias ao contar pelo calendário. São resultados do método próprio de cada estudo; não valem para todos os relógios nem para todos os métodos.</string>
+    <string name="cycle_skin_limits" formatted="false">• Não encontrar uma subida não significa que não houve ovulação: num estudo com 437 ciclos, uma subida sustentada apareceu em 82 %.\n• Uma subida também pode surgir sem ovulação: um pequeno estudo no pulso encontrou subidas também em ciclos sem ovulação.\n• Febre ou doença também aumentam a temperatura da pele.\n• A temperatura da pele não é a temperatura central: num estudo correlacionava-se apenas moderadamente com a temperatura oral (r = 0,56).</string>
+    <string name="cycle_skin_note_pill">Registas a pílula. O grande estudo de temperatura no pulso excluiu pessoas com contraceção hormonal e até dois meses após a suspensão, por isso os seus resultados dizem pouco sobre a tua temperatura.</string>
+    <string name="cycle_skin_note_pcos">Indicaste SOP. Não encontrámos nenhum estudo sobre deteção da ovulação por temperatura no SOP; lê qualquer padrão de temperatura com especial cautela.</string>
+    <string name="cycle_skin_not_a_method">O OpenVitals não usa a temperatura da pele nas suas estimativas. É informação de contexto, não um método contracetivo nem uma previsão de fertilidade, e não é aconselhamento médico.</string>
+    <string name="cycle_skin_show_details">Mostrar números e fontes</string>
+    <string name="cycle_skin_hide_details">Ocultar detalhes</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
     <string name="cycle_patterns_subtitle">Com que frequência cada sintoma foi registado em cada fase. Apenas contagens; nada é diagnosticado nem previsto.</string>
     <string name="cycle_patterns_empty_title">Ainda sem sintomas</string>

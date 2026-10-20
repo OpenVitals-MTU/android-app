@@ -3614,6 +3614,15 @@
     <string name="cycle_thermal_shift_confirmed">In den erfassten Temperaturen wurde ein anhaltender Anstieg gefunden.</string>
     <string name="cycle_thermal_coverline">Deckungslinie als gestrichelte Linie</string>
     <string name="cycle_thermal_empty">Erfasse einen Periodenbeginn und Morgentemperaturen, um die Temperaturkurve zu sehen.</string>
+    <string name="cycle_skin_title">Hauttemperatur und dein Zyklus</string>
+    <string name="cycle_skin_intro">Uhren und Ringe messen nachts deine Hauttemperatur. Nach dem Eisprung liegt sie tendenziell etwas höher, in einer kleinen Ringstudie um etwa 0,3 °C. Studien lesen das im Nachhinein aus dem ganzen Zyklus, nie im Voraus.</string>
+    <string name="cycle_skin_accuracy" formatted="false">In einer großen Apple-Watch-Studie wurde für 81 % der Zyklen mit einem Anstieg von mindestens 0,2 °C ein Eisprungtag geschätzt, und 89 % dieser Schätzungen lagen höchstens 2 Tage neben dem mit LH-Tests ermittelten Tag. Eine Ringstudie fand einen mittleren Fehler von 1,3 Tagen, gegenüber 3,4 Tagen beim Zählen nach dem Kalender. Das sind Ergebnisse der jeweils eigenen Methode der Studie; sie lassen sich nicht auf jede Uhr und jede Methode übertragen.</string>
+    <string name="cycle_skin_limits" formatted="false">• Kein erkannter Anstieg heißt nicht, dass kein Eisprung stattfand: In einer Studie mit 437 Zyklen zeigte sich in 82 % ein anhaltender Anstieg.\n• Ein Anstieg kann auch ohne Eisprung auftreten: Eine kleine Handgelenkstudie fand Anstiege auch in Zyklen ohne Eisprung.\n• Auch Fieber oder Krankheit erhöhen die Hauttemperatur.\n• Die Hauttemperatur ist nicht die Körperkerntemperatur: In einer Studie korrelierte sie nur mäßig mit der oralen Temperatur (r = 0,56).</string>
+    <string name="cycle_skin_note_pill">Du erfasst die Pille. Die große Handgelenkstudie schloss Menschen mit hormoneller Verhütung und bis zwei Monate nach dem Absetzen aus; ihre Ergebnisse sagen daher wenig über deine Temperatur.</string>
+    <string name="cycle_skin_note_pcos">Du hast PCOS angegeben. Wir haben keine Studie zur temperaturbasierten Eisprungerkennung bei PCOS gefunden; lies jedes Temperaturmuster daher mit besonderer Vorsicht.</string>
+    <string name="cycle_skin_not_a_method">OpenVitals nutzt die Hauttemperatur nicht für seine Schätzungen. Das ist Hintergrundwissen, keine Verhütungsmethode, keine Fruchtbarkeitsvorhersage und keine medizinische Beratung.</string>
+    <string name="cycle_skin_show_details">Zahlen und Quellen anzeigen</string>
+    <string name="cycle_skin_hide_details">Details ausblenden</string>
     <string name="cycle_thermal_day_label">T%1$d</string>
     <string name="cycle_patterns_subtitle">Wie oft jedes Symptom in jeder Phase erfasst wurde. Nur Zählungen; nichts wird diagnostiziert oder vorhergesagt.</string>
     <string name="cycle_patterns_empty_title">Noch keine Symptome</string>

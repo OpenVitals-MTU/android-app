@@ -3686,6 +3686,15 @@
     <string name="cycle_thermal_shift_confirmed">記録された体温に持続的な上昇が見つかりました。</string>
     <string name="cycle_thermal_coverline">カバーラインは破線で表示</string>
     <string name="cycle_thermal_empty">月経開始日と朝の体温を記録すると、基礎体温グラフが表示されます。</string>
+    <string name="cycle_skin_title">皮膚温と周期</string>
+    <string name="cycle_skin_intro">時計やリングは夜間の皮膚温を測定します。排卵後はやや高くなる傾向があり、小規模なリング研究では約0.3 °Cでした。研究ではこれを周期全体から後から読み取るもので、事前に予測するものではありません。</string>
+    <string name="cycle_skin_accuracy" formatted="false">大規模なApple Watch研究では、0.2 °C以上の上昇があった周期の81 %で排卵日が推定され、その推定の89 %はLH検査で特定した日から2日以内でした。リング研究では平均誤差が1.3日で、カレンダー計算の3.4日を下回りました。これらは各研究独自の方法による結果であり、すべての時計やすべての方法に当てはまるわけではありません。</string>
+    <string name="cycle_skin_limits" formatted="false">• 上昇が見つからなくても排卵がなかったとは限りません：437周期の研究では、持続的な上昇が見られたのは82 %でした。\n• 排卵がなくても上昇が現れることがあります：小規模な手首の研究では、排卵のない周期でも上昇が見つかりました。\n• 発熱や病気でも皮膚温は上がります。\n• 皮膚温は深部体温ではありません：ある研究では口腔温との相関は中程度にとどまりました（r = 0.56）。</string>
+    <string name="cycle_skin_note_pill">ピルを記録しています。手首の温度に関する大規模研究では、ホルモン避妊を使用している人と中止後2か月までの人が除外されているため、その結果はあなたの体温についてほとんど何も語りません。</string>
+    <string name="cycle_skin_note_pcos">PCOSを設定しています。PCOSで温度による排卵検出を調べた研究は見つかりませんでした。体温パターンは特に慎重に読んでください。</string>
+    <string name="cycle_skin_not_a_method">OpenVitalsは推定に皮膚温を使用していません。これは背景情報であり、避妊法や妊よう性の予測ではなく、医療上の助言でもありません。</string>
+    <string name="cycle_skin_show_details">数値と出典を表示</string>
+    <string name="cycle_skin_hide_details">詳細を隠す</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
     <string name="cycle_patterns_subtitle">各症状が各期に記録された回数です。数えるだけで、診断や予測はしません。</string>
     <string name="cycle_patterns_empty_title">まだ症状がありません</string>
