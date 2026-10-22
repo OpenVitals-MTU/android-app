@@ -19,6 +19,7 @@ import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPort
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncResult
+import tech.mmarca.openvitals.devices.core.sync.UnwrittenSeries
 
 /** Where a device sync has got to, for the row that started it. Device-agnostic. */
 data class DeviceSyncUiState(
@@ -27,12 +28,22 @@ data class DeviceSyncUiState(
     val phase: DeviceSyncPhase? = null,
     val filesTotal: Int = 0,
     val filesDone: Int = 0,
+    /** The device the last completed run synced, so a second watch's card does not show its outcome. */
+    val lastDeviceId: String? = null,
     /** Files downloaded and handed to the importer by the last completed run. */
     val lastFileCount: Int? = null,
     /** Estimated nights of sleep written by the last completed run. */
     val lastNightCount: Int? = null,
     /** Minutes of steps written by the last completed run. */
     val lastStepMinuteCount: Int? = null,
+    /** The last completed run skipped an estimate for want of the body weight. */
+    val lastMissingBodyWeight: Boolean = false,
+    /** With [lastMissingBodyWeight]: Health Connect's weight was unreadable for want of the grant. */
+    val lastWeightReadWithheld: Boolean = false,
+    /** The series the last completed run left out for want of a grant. */
+    val lastUnwritten: Set<UnwrittenSeries> = emptySet(),
+    /** Health Connect grants the last completed run skipped a write for want of. */
+    val lastWithheldPermissions: Set<String> = emptySet(),
     val error: ScreenError? = null,
 ) {
     val isSyncing: Boolean get() = syncingDeviceId != null
@@ -123,9 +134,14 @@ class DeviceSyncController(
             _state.value = when (result) {
                 is DeviceSyncResult.Succeeded -> DeviceSyncUiState(
                     phase = DeviceSyncPhase.COMPLETE,
+                    lastDeviceId = deviceId,
                     lastFileCount = result.fileCount,
                     lastNightCount = result.nightCount,
                     lastStepMinuteCount = result.stepMinuteCount,
+                    lastMissingBodyWeight = result.missingBodyWeight,
+                    lastWeightReadWithheld = result.weightReadWithheld,
+                    lastUnwritten = result.unwritten,
+                    lastWithheldPermissions = result.withheldPermissions,
                 )
 
                 is DeviceSyncResult.Failed -> if (silent) {

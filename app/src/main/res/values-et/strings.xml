@@ -3741,6 +3741,10 @@
     <string name="settings_watch_wearos_sync_now">Sünkrooni kell</string>
     <string name="settings_watch_wearos_syncing">Kella sünkroonimine…</string>
     <string name="settings_watch_wearos_synced_none">Kellas pole midagi uut</string>
+    <string name="settings_watch_wearos_needs_weight">Kõndimise kaloreid ei hinnatud: lisa oma kaal Kehaprofiili või salvesta see Health Connecti.</string>
+    <string name="settings_watch_wearos_needs_weight_read">Kõndimise kaloreid ei hinnatud: lisa oma kaal Kehaprofiili või luba OpenVitalsil lugeda sinu kaalu Health Connectist.</string>
+    <string name="settings_watch_wearos_needs_steps_write">Samme ei kirjutatud: luba OpenVitalsil kirjutada Health Connecti samme ja sünkrooni uuesti.</string>
+    <string name="settings_watch_wearos_needs_calories_write">Kõndimise kaloreid ei kirjutatud: luba OpenVitalsil Health Connectis aktiivseid kaloreid kirjutada ja treeninguid lugeda, et neid järgmisest sünkroonimisest alates hinnata.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d pulsinäit sünkroonitud</item>
         <item quantity="other">%1$d pulsinäitu sünkroonitud</item>

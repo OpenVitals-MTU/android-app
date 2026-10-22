@@ -3816,6 +3816,10 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
     <string name="settings_watch_wearos_sync_now">Sincronizar reloxo</string>
     <string name="settings_watch_wearos_syncing">Sincronizando reloxo…</string>
     <string name="settings_watch_wearos_synced_none">Non hai nada novo no reloxo</string>
+    <string name="settings_watch_wearos_needs_weight">Calorías ao camiñar sen estimar: engade o teu peso en Perfil corporal ou rexístrao en Health Connect.</string>
+    <string name="settings_watch_wearos_needs_weight_read">Calorías ao camiñar sen estimar: engade o teu peso en Perfil corporal ou permite que OpenVitals lea o teu peso en Health Connect.</string>
+    <string name="settings_watch_wearos_needs_steps_write">Pasos sen escribir: permite que OpenVitals escriba pasos en Health Connect e volve sincronizar.</string>
+    <string name="settings_watch_wearos_needs_calories_write">Calorías ao camiñar sen escribir: permite que OpenVitals escriba calorías activas e lea adestramentos en Health Connect para estimalas desde a próxima sincronización.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d mostra de frecuencia cardíaca sincronizada</item>
         <item quantity="other">%1$d mostras de frecuencia cardíaca sincronizadas</item>

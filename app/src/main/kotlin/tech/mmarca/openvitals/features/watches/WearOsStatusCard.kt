@@ -29,10 +29,12 @@ import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.resolve
 import androidx.compose.ui.res.pluralStringResource
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
+import tech.mmarca.openvitals.devices.core.sync.UnwrittenSeries
 import tech.mmarca.openvitals.devices.wearos.WearOsAppStatus
 import tech.mmarca.openvitals.devices.wearos.WearOsCompanionStatus
 import tech.mmarca.openvitals.devices.wearos.messageRes
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
+import tech.mmarca.openvitals.ui.components.InlineGrantPrompt
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.OpenVitalsOutlinedButton
 import tech.mmarca.openvitals.ui.components.PermissionCallout
@@ -180,6 +182,7 @@ internal fun WearOsSyncCard(
     device: BleSensorDevice,
     sync: DeviceSyncUiState,
     onSync: () -> Unit,
+    onAllowGrants: (Set<String>) -> Unit,
 ) {
     val syncingThis = sync.isSyncingDevice(device.id)
     OpenVitalsCard {
@@ -207,20 +210,47 @@ internal fun WearOsSyncCard(
             val samples = sync.lastFileCount
             val nights = sync.lastNightCount ?: 0
             val stepMinutes = sync.lastStepMinuteCount ?: 0
-            if (!sync.isSyncing && sync.phase == DeviceSyncPhase.COMPLETE && samples != null) {
+            if (!sync.isSyncing && sync.phase == DeviceSyncPhase.COMPLETE && samples != null && sync.lastDeviceId == device.id) {
                 val lines = buildList {
                     if (samples > 0) add(pluralStringResource(R.plurals.settings_watch_wearos_synced_samples, samples, samples))
                     if (stepMinutes > 0) {
                         add(pluralStringResource(R.plurals.settings_watch_wearos_synced_step_minutes, stepMinutes, stepMinutes))
                     }
                     if (nights > 0) add(pluralStringResource(R.plurals.settings_watch_wearos_synced_nights, nights, nights))
-                    if (isEmpty()) add(stringResource(R.string.settings_watch_wearos_synced_none))
+                    // With something left out, "nothing new" would contradict the line below that says so.
+                    if (isEmpty() && sync.lastUnwritten.isEmpty() && !sync.lastMissingBodyWeight) {
+                        add(stringResource(R.string.settings_watch_wearos_synced_none))
+                    }
                 }
                 for (line in lines) {
                     Text(
                         text = line,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                if (sync.lastMissingBodyWeight && !sync.lastWeightReadWithheld) {
+                    Text(
+                        text = stringResource(R.string.settings_watch_wearos_needs_weight),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                val unwritten = sync.lastUnwritten
+                val weightUnreadable = sync.lastMissingBodyWeight && sync.lastWeightReadWithheld
+                if (unwritten.isNotEmpty() || weightUnreadable) {
+                    // One line per thing left out; the button asks for every grant missing.
+                    val stepsLine = stringResource(R.string.settings_watch_wearos_needs_steps_write)
+                    val caloriesLine = stringResource(R.string.settings_watch_wearos_needs_calories_write)
+                    val weightLine = stringResource(R.string.settings_watch_wearos_needs_weight_read)
+                    InlineGrantPrompt(
+                        message = listOfNotNull(
+                            stepsLine.takeIf { UnwrittenSeries.STEPS in unwritten },
+                            caloriesLine.takeIf { UnwrittenSeries.WALKING_ENERGY in unwritten },
+                            weightLine.takeIf { weightUnreadable },
+                        ).joinToString("\n"),
+                        actionLabel = stringResource(R.string.action_grant_permission),
+                        onGrant = { onAllowGrants(sync.lastWithheldPermissions) },
                     )
                 }
             }
