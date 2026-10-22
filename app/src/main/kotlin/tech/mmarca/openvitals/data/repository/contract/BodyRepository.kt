@@ -55,6 +55,9 @@ interface BodyRepository {
 
     suspend fun writeBodyMeasurementEntry(request: BodyMeasurementWriteRequest): String
 
+    /** Writes every request in one Health Connect insert, so they are saved together or not at all. */
+    suspend fun writeBodyMeasurementEntries(requests: List<BodyMeasurementWriteRequest>): List<String>
+
     suspend fun loadBodyMeasurementEntry(type: BodyMeasurementType, id: String): BodyMeasurementEntry?
 
     suspend fun updateBodyMeasurementEntry(id: String, request: BodyMeasurementWriteRequest)

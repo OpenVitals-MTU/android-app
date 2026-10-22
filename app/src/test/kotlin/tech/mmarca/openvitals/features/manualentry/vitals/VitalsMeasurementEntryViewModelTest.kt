@@ -26,7 +26,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import tech.mmarca.openvitals.core.presentation.ScreenError
+import androidx.lifecycle.SavedStateHandle
+import java.time.Instant
+import tech.mmarca.openvitals.domain.model.GlucoseContext
+import tech.mmarca.openvitals.domain.model.GlucoseRecordValues
+import tech.mmarca.openvitals.domain.model.VitalsMeasurementEntry
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
+import tech.mmarca.openvitals.domain.model.Vo2MaxRecordValues
+import tech.mmarca.openvitals.domain.preferences.UnitSystem
+import tech.mmarca.openvitals.navigation.VITALS_ENTRY_ID_ARG
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementWriteRequest
 import tech.mmarca.openvitals.data.repository.contract.VitalsRepository
 import tech.mmarca.openvitals.util.MainDispatcherRule
@@ -293,6 +301,112 @@ class VitalsMeasurementEntryViewModelTest {
         assertEquals(VitalsMeasurementEntryError.MISSING_PULSE_WRITE_PERMISSION, vm.uiState.value.entryError)
         assertEquals(setOf("write_heart_rate"), vm.uiState.value.pulseWritePermissions)
         coVerify(exactly = 0) { repo.writeVitalsMeasurementEntry(any()) }
+    }
+
+    @Test fun `a glucose reading carries its meal and sample to the write`() = runTest {
+        val repo = vitalsRepo()
+        val vm = VitalsMeasurementEntryViewModel(repo)
+        vm.setType(VitalsMeasurementType.BLOOD_GLUCOSE)
+        advanceUntilIdle()
+        val context = GlucoseContext(
+            relationToMeal = GlucoseRecordValues.RELATION_TO_MEAL_AFTER_MEAL,
+            mealType = GlucoseRecordValues.MEAL_TYPE_LUNCH,
+            specimenSource = GlucoseRecordValues.SPECIMEN_SOURCE_CAPILLARY_BLOOD,
+        )
+
+        vm.updateGlucose(context)
+        vm.addEntry(7.2)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writeVitalsMeasurementEntry(match<VitalsMeasurementWriteRequest> { request ->
+                request.type == VitalsMeasurementType.BLOOD_GLUCOSE && request.value == 7.2 && request.glucose == context
+            })
+        }
+    }
+
+    @Test fun `a meal is kept only for a reading taken before or after one`() = runTest {
+        val vm = VitalsMeasurementEntryViewModel(vitalsRepo())
+        vm.setType(VitalsMeasurementType.BLOOD_GLUCOSE)
+        advanceUntilIdle()
+
+        vm.updateGlucose(GlucoseContext(GlucoseRecordValues.RELATION_TO_MEAL_BEFORE_MEAL, GlucoseRecordValues.MEAL_TYPE_DINNER))
+        assertEquals(GlucoseRecordValues.MEAL_TYPE_DINNER, vm.uiState.value.glucose.mealType)
+
+        vm.updateGlucose(vm.uiState.value.glucose.copy(relationToMeal = GlucoseRecordValues.RELATION_TO_MEAL_FASTING))
+        assertNull(vm.uiState.value.glucose.mealType)
+    }
+
+    @Test fun `the glucose unit starts at the setting and switching it converts the typed level`() = runTest {
+        val vm = VitalsMeasurementEntryViewModel(vitalsRepo())
+        vm.setType(VitalsMeasurementType.BLOOD_GLUCOSE, UnitSystem.IMPERIAL)
+        advanceUntilIdle()
+        assertEquals(UnitSystem.IMPERIAL, vm.uiState.value.glucoseUnit)
+
+        vm.updateInput("99")
+        vm.selectGlucoseUnit(UnitSystem.METRIC)
+        assertEquals("5.5", vm.uiState.value.inputText)
+
+        vm.selectGlucoseUnit(UnitSystem.IMPERIAL)
+        assertEquals("99", vm.uiState.value.inputText)
+    }
+
+    @Test fun `a VO2 max reading carries how it was measured`() = runTest {
+        val repo = vitalsRepo()
+        val vm = VitalsMeasurementEntryViewModel(repo)
+        vm.setType(VitalsMeasurementType.VO2_MAX)
+        advanceUntilIdle()
+
+        vm.selectVo2MaxMeasurementMethod(Vo2MaxRecordValues.MEASUREMENT_METHOD_COOPER_TEST)
+        vm.addEntry(48.5)
+        advanceUntilIdle()
+
+        coVerify {
+            repo.writeVitalsMeasurementEntry(match<VitalsMeasurementWriteRequest> { request ->
+                request.type == VitalsMeasurementType.VO2_MAX &&
+                    request.value == 48.5 &&
+                    request.vo2MaxMeasurementMethod == Vo2MaxRecordValues.MEASUREMENT_METHOD_COOPER_TEST
+            })
+        }
+    }
+
+    @Test fun `glucose and VO2 max outside what Health Connect takes do not write`() = runTest {
+        val repo = vitalsRepo()
+        val vm = VitalsMeasurementEntryViewModel(repo)
+
+        vm.setType(VitalsMeasurementType.BLOOD_GLUCOSE)
+        advanceUntilIdle()
+        vm.addEntry(60.0)
+        assertEquals(VitalsMeasurementEntryError.INVALID_VALUE, vm.uiState.value.entryError)
+
+        vm.setType(VitalsMeasurementType.VO2_MAX)
+        advanceUntilIdle()
+        vm.addEntry(120.0)
+        assertEquals(VitalsMeasurementEntryError.INVALID_VALUE, vm.uiState.value.entryError)
+
+        coVerify(exactly = 0) { repo.writeVitalsMeasurementEntry(any()) }
+    }
+
+    @Test fun `editing a glucose reading shows it in the unit of the setting, with its context`() = runTest {
+        val repo = vitalsRepo()
+        val context = GlucoseContext(relationToMeal = GlucoseRecordValues.RELATION_TO_MEAL_FASTING)
+        coEvery { repo.loadVitalsMeasurementEntry(VitalsMeasurementType.BLOOD_GLUCOSE, "glucose-id") } returns
+            VitalsMeasurementEntry(
+                id = "glucose-id",
+                type = VitalsMeasurementType.BLOOD_GLUCOSE,
+                time = Instant.parse("2026-05-19T07:30:00Z"),
+                value = 5.5,
+                source = "OpenVitals",
+                isOpenVitalsEntry = true,
+                glucose = context,
+            )
+        val vm = VitalsMeasurementEntryViewModel(repo, SavedStateHandle(mapOf(VITALS_ENTRY_ID_ARG to "glucose-id")))
+
+        vm.setType(VitalsMeasurementType.BLOOD_GLUCOSE, UnitSystem.IMPERIAL)
+        advanceUntilIdle()
+
+        assertEquals("99", vm.uiState.value.inputText)
+        assertEquals(context, vm.uiState.value.glucose)
     }
 
     private fun vitalsRepo(

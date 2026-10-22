@@ -152,6 +152,7 @@
     <string name="screen_nutrition_entry">Nutrition entry</string>
     <string name="screen_food_entry">Food entry</string>
     <string name="screen_body_measurement_entry">Body measurement entry</string>
+    <string name="screen_body_composition_entry">Body composition</string>
     <string name="screen_vitals_measurement_entry">Vitals entry</string>
 
     <string name="bottom_nav_dashboard">Summary</string>
@@ -503,6 +504,12 @@
     <string name="body_entry_add_selected">Add %1$s</string>
     <string name="body_entry_invalid_value">Enter a valid value for this measurement.</string>
     <string name="body_entry_write_failed">Could not save body measurement: %1$s</string>
+    <string name="body_entry_nothing_to_save">Enter at least one value.</string>
+    <string name="body_composition_entry_subtitle">Enter what your scale shows and leave the rest blank. Every value is saved to Health Connect with the same time.</string>
+    <string name="body_composition_entry_permission_needed">To save these values, OpenVitals needs Health Connect write permission for each of them. The app will not store this data; entries are saved in Health Connect.</string>
+    <string name="body_composition_entry_save">Save measurements</string>
+    <string name="body_composition_entry_invalid_values">Check the highlighted values.</string>
+    <string name="body_composition_entry_water_needs_weight">Enter your weight to save body water as a percentage.</string>
     <string name="nutrition_entry_subtitle">Entries are saved directly to Health Connect. Fill in only the amounts you have.</string>
     <string name="nutrition_entry_permission_needed">To add nutrition entries, OpenVitals needs Health Connect write permission. The app will not store this data; entries are saved in Health Connect.</string>
     <string name="nutrition_entry_add">Log nutrition entry</string>
@@ -521,6 +528,19 @@
     <string name="vitals_entry_add_selected">Add %1$s</string>
     <string name="vitals_entry_invalid_value">Enter a valid value for this vital.</string>
     <string name="vitals_entry_write_failed">Could not save vital: %1$s</string>
+    <string name="vitals_entry_glucose_meal_label">Meal</string>
+    <string name="vitals_entry_glucose_sample_label">Sample</string>
+    <string name="glucose_sample_capillary">Finger prick (capillary blood)</string>
+    <string name="glucose_sample_interstitial">Sensor (interstitial fluid)</string>
+    <string name="glucose_sample_plasma">Plasma</string>
+    <string name="glucose_sample_serum">Serum</string>
+    <string name="glucose_sample_whole_blood">Whole blood</string>
+    <string name="vitals_entry_vo2_method_label">How was it measured?</string>
+    <string name="vo2_method_metabolic_cart">Lab test (gas analysis)</string>
+    <string name="vo2_method_cooper">Cooper test</string>
+    <string name="vo2_method_multistage">Beep test (multistage)</string>
+    <string name="vo2_method_rockport">Rockport walk test</string>
+    <string name="vo2_method_heart_rate_ratio">Heart rate ratio</string>
 
     <string name="range_day">Day</string>
     <string name="range_week">Week</string>
@@ -634,6 +654,7 @@
     <string name="metric_bmr">BMR</string>
     <string name="metric_bone_mass">Bone mass</string>
     <string name="metric_body_water_mass">Body water mass</string>
+    <string name="metric_body_water">Body water</string>
     <string name="metric_latest">Latest</string>
     <string name="metric_change">Change</string>
     <string name="metric_protein">Protein</string>

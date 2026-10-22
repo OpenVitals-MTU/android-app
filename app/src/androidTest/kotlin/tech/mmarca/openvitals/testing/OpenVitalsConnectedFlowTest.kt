@@ -130,7 +130,7 @@ class OpenVitalsConnectedFlowTest {
             ManualEntryWidgetId.NUTRITION,
             ManualEntryWidgetId.ACTIVITY,
             ManualEntryWidgetId.MINDFULNESS,
-            ManualEntryWidgetId.WEIGHT,
+            ManualEntryWidgetId.BODY_COMPOSITION,
             ManualEntryWidgetId.BLOOD_PRESSURE,
         )
 
@@ -142,6 +142,7 @@ class OpenVitalsConnectedFlowTest {
                     onOpenNutritionEntry = { opened = "nutrition" },
                     onOpenActivityEntry = { opened = "activity" },
                     onOpenMindfulnessEntry = { opened = "mindfulness" },
+                    onOpenBodyCompositionEntry = { opened = "body_composition" },
                     onOpenBodyMeasurementEntry = { opened = it.name },
                     onOpenVitalsMeasurementEntry = { opened = it.name },
                     onOpenCycleEntry = { opened = "cycle" },
@@ -165,8 +166,8 @@ class OpenVitalsConnectedFlowTest {
         composeRule.onNodeWithText(string(R.string.manual_entry_activity_title)).performClick()
         composeRule.runOnIdle { assertEquals("activity", opened) }
 
-        composeRule.onNodeWithText(string(R.string.metric_weight)).performClick()
-        composeRule.runOnIdle { assertEquals("WEIGHT", opened) }
+        composeRule.onNodeWithText(string(R.string.screen_body_composition_entry)).performClick()
+        composeRule.runOnIdle { assertEquals("body_composition", opened) }
 
         composeRule.runOnIdle { isEditingWidgets = true }
         composeRule.waitForIdle()

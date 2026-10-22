@@ -56,6 +56,17 @@ class ManualEntryViewModelTest {
         )
     }
 
+    @Test fun `a saved order keeps the weight and body fat tiles as one body composition tile`() = runTest {
+        val vm = ManualEntryViewModel(
+            prefs(storedWidgetOrder = listOf("WEIGHT", ManualEntryWidgetId.HEIGHT.name, "BODY_FAT")),
+        )
+
+        assertEquals(
+            listOf(ManualEntryWidgetId.BODY_COMPOSITION, ManualEntryWidgetId.HEIGHT),
+            vm.uiState.value.widgets,
+        )
+    }
+
     @Test fun `manual entry widget edit toggles`() = runTest {
         val vm = ManualEntryViewModel(prefs())
 
@@ -111,11 +122,21 @@ class ManualEntryViewModelTest {
         assertTrue(vm.uiState.value.pendingCycleEntryNavigation)
     }
 
+    @Test fun `body composition tap opens the weigh-in`() = runTest {
+        val vm = ManualEntryViewModel(prefs())
+
+        vm.onBodyCompositionWidgetTapped()
+        assertTrue(vm.uiState.value.pendingBodyCompositionEntryNavigation)
+
+        vm.onBodyCompositionEntryNavigationHandled()
+        assertFalse(vm.uiState.value.pendingBodyCompositionEntryNavigation)
+    }
+
     @Test fun `body measurement tap opens the entry for that type`() = runTest {
         val vm = ManualEntryViewModel(prefs())
 
-        vm.onBodyMeasurementWidgetTapped(BodyMeasurementType.WEIGHT)
-        assertEquals(BodyMeasurementType.WEIGHT, vm.uiState.value.pendingBodyEntryNavigation)
+        vm.onBodyMeasurementWidgetTapped(BodyMeasurementType.HEIGHT)
+        assertEquals(BodyMeasurementType.HEIGHT, vm.uiState.value.pendingBodyEntryNavigation)
 
         vm.onBodyEntryNavigationHandled()
         assertNull(vm.uiState.value.pendingBodyEntryNavigation)

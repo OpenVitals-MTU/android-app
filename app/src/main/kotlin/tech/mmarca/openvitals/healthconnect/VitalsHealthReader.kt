@@ -5,7 +5,6 @@ import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
@@ -14,13 +13,9 @@ import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.time.TimeRangeFilter
-import androidx.health.connect.client.units.celsius
-import androidx.health.connect.client.units.millimetersOfMercury
-import androidx.health.connect.client.units.percent
 import tech.mmarca.openvitals.core.stats.timeBucketedAverageOrNull
 import tech.mmarca.openvitals.domain.model.BloodGlucoseEntry
 import tech.mmarca.openvitals.domain.model.BloodPressureEntry
-import tech.mmarca.openvitals.domain.model.BpRecordValues
 import tech.mmarca.openvitals.domain.model.bpMealContextFromClientRecordId
 import tech.mmarca.openvitals.domain.model.bpPulseClientRecordId
 import tech.mmarca.openvitals.domain.model.bpPulseFromClientRecordId
@@ -334,6 +329,8 @@ internal class VitalsHealthReader(
             time = time,
             vo2MaxMlPerKgPerMin = vo2MillilitersPerMinuteKilogram,
             source = SyncedSourceOverlay.displaySource(metadata),
+            id = metadata.id,
+            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
 
     private fun BloodGlucoseRecord.toEntry(): BloodGlucoseEntry =
@@ -344,6 +341,8 @@ internal class VitalsHealthReader(
             mealType = mealType,
             relationToMeal = relationToMeal,
             source = SyncedSourceOverlay.displaySource(metadata),
+            id = metadata.id,
+            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
         )
 
     private fun SkinTemperatureRecord.toEntry(): SkinTemperatureEntry {
@@ -379,42 +378,7 @@ internal class VitalsHealthReader(
             device = Device(type = Device.TYPE_PHONE),
             clientRecordId = clientRecordId,
         )
-        val record = when (request.type) {
-            VitalsMeasurementType.BLOOD_PRESSURE -> BloodPressureRecord(
-                time = time,
-                zoneOffset = zone.rules.getOffset(time),
-                metadata = metadata,
-                systolic = request.value.millimetersOfMercury,
-                diastolic = requireNotNull(request.secondaryValue).millimetersOfMercury,
-                bodyPosition = request.bpBodyPosition ?: BpRecordValues.BODY_POSITION_UNKNOWN,
-                measurementLocation = request.bpMeasurementLocation
-                    ?: BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN,
-            )
-            VitalsMeasurementType.SPO2 -> OxygenSaturationRecord(
-                time = time,
-                zoneOffset = zone.rules.getOffset(time),
-                percentage = request.value.percent,
-                metadata = metadata,
-            )
-            VitalsMeasurementType.RESPIRATORY_RATE -> RespiratoryRateRecord(
-                time = time,
-                zoneOffset = zone.rules.getOffset(time),
-                rate = request.value,
-                metadata = metadata,
-            )
-            VitalsMeasurementType.BODY_TEMPERATURE -> BodyTemperatureRecord(
-                time = time,
-                zoneOffset = zone.rules.getOffset(time),
-                metadata = metadata,
-                temperature = request.value.celsius,
-            )
-            VitalsMeasurementType.HRV -> HeartRateVariabilityRmssdRecord(
-                time = time,
-                zoneOffset = zone.rules.getOffset(time),
-                heartRateVariabilityMillis = request.value,
-                metadata = metadata,
-            )
-        }
+        val record = request.toRecord(metadata)
 
         val pulse = request.bpPulseBpm?.let { bpm -> pulseRecord(clientRecordId, time, bpm, metadata.device) }
         support.client().insertRecords(listOfNotNull(record, pulse))
@@ -474,35 +438,17 @@ internal class VitalsHealthReader(
 
     suspend fun readVitalsMeasurementEntry(type: VitalsMeasurementType, id: String): VitalsMeasurementEntry? =
         support.withNullableLogging("readVitalsMeasurementEntry[$type][$id]") {
-            when (type) {
-                VitalsMeasurementType.BLOOD_PRESSURE ->
-                    support.client().readRecord(BloodPressureRecord::class, id).record.toVitalsMeasurementEntry()
-                VitalsMeasurementType.SPO2 ->
-                    support.client().readRecord(OxygenSaturationRecord::class, id).record.toVitalsMeasurementEntry()
-                VitalsMeasurementType.RESPIRATORY_RATE ->
-                    support.client().readRecord(RespiratoryRateRecord::class, id).record.toVitalsMeasurementEntry()
-                VitalsMeasurementType.BODY_TEMPERATURE ->
-                    support.client().readRecord(BodyTemperatureRecord::class, id).record.toVitalsMeasurementEntry()
-                VitalsMeasurementType.HRV ->
-                    support.client().readRecord(HeartRateVariabilityRmssdRecord::class, id).record.toVitalsMeasurementEntry()
-            }
+            val record = support.client().readRecord(type.recordType, id).record
+            record.toVitalsMeasurementEntry(isOpenVitalsRecord(record.metadata.dataOrigin.packageName, appPackageName))
         }
 
     suspend fun updateVitalsMeasurementEntry(id: String, request: VitalsMeasurementWriteRequest) =
         withContext(Dispatchers.IO) {
             validateVitalsMeasurement(request)
 
-            val existing: Record = when (request.type) {
-                VitalsMeasurementType.BLOOD_PRESSURE -> support.client().readRecord(BloodPressureRecord::class, id).record
-                VitalsMeasurementType.SPO2 -> support.client().readRecord(OxygenSaturationRecord::class, id).record
-                VitalsMeasurementType.RESPIRATORY_RATE -> support.client().readRecord(RespiratoryRateRecord::class, id).record
-                VitalsMeasurementType.BODY_TEMPERATURE -> support.client().readRecord(BodyTemperatureRecord::class, id).record
-                VitalsMeasurementType.HRV -> support.client().readRecord(HeartRateVariabilityRmssdRecord::class, id).record
-            }
+            val existing = support.client().readRecord(request.type.recordType, id).record
             existing.requireOpenVitalsOrigin(appPackageName)
-
-            val time = request.time
-            val zone = ZoneId.systemDefault()
+            val device = existing.metadata.device ?: Device(type = Device.TYPE_PHONE)
 
             // Blood pressure carries its meal context and pulse in the clientRecordId, so an
             // edit is an upsert: same id replaces, a new id inserts first and
@@ -512,19 +458,12 @@ internal class VitalsHealthReader(
                 val newClientRecordId = existingClientRecordId
                     .withBpMealContext(request.bpMealContext)
                     .withBpPulse(request.bpPulseBpm)
-                val replacement = BloodPressureRecord(
-                    time = time,
-                    zoneOffset = zone.rules.getOffset(time),
-                    metadata = Metadata.manualEntry(
+                val replacement = request.toRecord(
+                    Metadata.manualEntry(
                         clientRecordId = newClientRecordId,
                         clientRecordVersion = Instant.now().toEpochMilli(),
-                        device = existing.metadata.device ?: Device(type = Device.TYPE_PHONE),
+                        device = device,
                     ),
-                    systolic = request.value.millimetersOfMercury,
-                    diastolic = requireNotNull(request.secondaryValue).millimetersOfMercury,
-                    bodyPosition = request.bpBodyPosition ?: BpRecordValues.BODY_POSITION_UNKNOWN,
-                    measurementLocation = request.bpMeasurementLocation
-                        ?: BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN,
                 )
                 support.client().insertRecords(listOf(replacement))
                 writePulseOf(existingClientRecordId, request, existing.metadata.device)
@@ -540,98 +479,20 @@ internal class VitalsHealthReader(
 
             // A reading without a client id (an imported one) is edited in place and cannot
             // carry a pulse: the pulse record is keyed on the reading's client id.
-            val metadata = Metadata.manualEntryWithId(
-                id = id,
-                device = existing.metadata.device ?: Device(type = Device.TYPE_PHONE),
-            )
-            val record = when (request.type) {
-                VitalsMeasurementType.BLOOD_PRESSURE -> BloodPressureRecord(
-                    time = time,
-                    zoneOffset = zone.rules.getOffset(time),
-                    metadata = metadata,
-                    systolic = request.value.millimetersOfMercury,
-                    diastolic = requireNotNull(request.secondaryValue).millimetersOfMercury,
-                    bodyPosition = request.bpBodyPosition ?: BpRecordValues.BODY_POSITION_UNKNOWN,
-                    measurementLocation = request.bpMeasurementLocation
-                        ?: BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN,
-                )
-                VitalsMeasurementType.SPO2 -> OxygenSaturationRecord(
-                    time = time,
-                    zoneOffset = zone.rules.getOffset(time),
-                    percentage = request.value.percent,
-                    metadata = metadata,
-                )
-                VitalsMeasurementType.RESPIRATORY_RATE -> RespiratoryRateRecord(
-                    time = time,
-                    zoneOffset = zone.rules.getOffset(time),
-                    rate = request.value,
-                    metadata = metadata,
-                )
-                VitalsMeasurementType.BODY_TEMPERATURE -> BodyTemperatureRecord(
-                    time = time,
-                    zoneOffset = zone.rules.getOffset(time),
-                    metadata = metadata,
-                    temperature = request.value.celsius,
-                )
-                VitalsMeasurementType.HRV -> HeartRateVariabilityRmssdRecord(
-                    time = time,
-                    zoneOffset = zone.rules.getOffset(time),
-                    heartRateVariabilityMillis = request.value,
-                    metadata = metadata,
-                )
-            }
-
+            val record = request.toRecord(Metadata.manualEntryWithId(id = id, device = device))
             support.client().updateRecords(listOf(record))
         }
 
     suspend fun deleteVitalsMeasurementEntry(type: VitalsMeasurementType, id: String) = withContext(Dispatchers.IO) {
-        when (type) {
-            VitalsMeasurementType.BLOOD_PRESSURE -> {
-                val existing = support.client().readRecord(BloodPressureRecord::class, id).record
-                existing.requireOpenVitalsOrigin(appPackageName)
-                support.client().deleteRecords(
-                    recordType = BloodPressureRecord::class,
-                    recordIdsList = listOf(existing.metadata.id),
-                    clientRecordIdsList = emptyList(),
-                )
-                existing.metadata.clientRecordId?.let { deletePulseOf(it) }
-            }
-            VitalsMeasurementType.SPO2 -> {
-                val existing = support.client().readRecord(OxygenSaturationRecord::class, id).record
-                existing.requireOpenVitalsOrigin(appPackageName)
-                support.client().deleteRecords(
-                    recordType = OxygenSaturationRecord::class,
-                    recordIdsList = listOf(existing.metadata.id),
-                    clientRecordIdsList = emptyList(),
-                )
-            }
-            VitalsMeasurementType.RESPIRATORY_RATE -> {
-                val existing = support.client().readRecord(RespiratoryRateRecord::class, id).record
-                existing.requireOpenVitalsOrigin(appPackageName)
-                support.client().deleteRecords(
-                    recordType = RespiratoryRateRecord::class,
-                    recordIdsList = listOf(existing.metadata.id),
-                    clientRecordIdsList = emptyList(),
-                )
-            }
-            VitalsMeasurementType.BODY_TEMPERATURE -> {
-                val existing = support.client().readRecord(BodyTemperatureRecord::class, id).record
-                existing.requireOpenVitalsOrigin(appPackageName)
-                support.client().deleteRecords(
-                    recordType = BodyTemperatureRecord::class,
-                    recordIdsList = listOf(existing.metadata.id),
-                    clientRecordIdsList = emptyList(),
-                )
-            }
-            VitalsMeasurementType.HRV -> {
-                val existing = support.client().readRecord(HeartRateVariabilityRmssdRecord::class, id).record
-                existing.requireOpenVitalsOrigin(appPackageName)
-                support.client().deleteRecords(
-                    recordType = HeartRateVariabilityRmssdRecord::class,
-                    recordIdsList = listOf(existing.metadata.id),
-                    clientRecordIdsList = emptyList(),
-                )
-            }
+        val existing = support.client().readRecord(type.recordType, id).record
+        existing.requireOpenVitalsOrigin(appPackageName)
+        support.client().deleteRecords(
+            recordType = type.recordType,
+            recordIdsList = listOf(existing.metadata.id),
+            clientRecordIdsList = emptyList(),
+        )
+        if (type == VitalsMeasurementType.BLOOD_PRESSURE) {
+            existing.metadata.clientRecordId?.let { deletePulseOf(it) }
         }
     }
 
@@ -673,64 +534,14 @@ internal class VitalsHealthReader(
             ) {
                 "HRV must be between ${MinHrvMillis.toInt()} and ${MaxHrvMillis.toInt()} ms."
             }
+            VitalsMeasurementType.BLOOD_GLUCOSE -> require(request.value > 0.0 && request.value <= MaxGlucoseMmolPerL) {
+                "Blood glucose must be greater than 0 and no more than ${MaxGlucoseMmolPerL.toInt()} mmol/L."
+            }
+            VitalsMeasurementType.VO2_MAX -> require(request.value > 0.0 && request.value <= MaxVo2Max) {
+                "VO2 max must be greater than 0 and no more than ${MaxVo2Max.toInt()} mL/kg/min."
+            }
         }
     }
-
-    private fun BloodPressureRecord.toVitalsMeasurementEntry(): VitalsMeasurementEntry =
-        VitalsMeasurementEntry(
-            id = metadata.id,
-            type = VitalsMeasurementType.BLOOD_PRESSURE,
-            time = time,
-            bpMealContext = bpMealContextFromClientRecordId(metadata.clientRecordId),
-            bpPulseBpm = bpPulseFromClientRecordId(metadata.clientRecordId),
-            bpBodyPosition = bodyPosition.takeIf { it != BpRecordValues.BODY_POSITION_UNKNOWN },
-            bpMeasurementLocation = measurementLocation
-                .takeIf { it != BpRecordValues.MEASUREMENT_LOCATION_UNKNOWN },
-            value = systolic.inMillimetersOfMercury,
-            secondaryValue = diastolic.inMillimetersOfMercury,
-            source = SyncedSourceOverlay.displaySource(metadata),
-            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
-        )
-
-    private fun OxygenSaturationRecord.toVitalsMeasurementEntry(): VitalsMeasurementEntry =
-        VitalsMeasurementEntry(
-            id = metadata.id,
-            type = VitalsMeasurementType.SPO2,
-            time = time,
-            value = percentage.value,
-            source = SyncedSourceOverlay.displaySource(metadata),
-            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
-        )
-
-    private fun RespiratoryRateRecord.toVitalsMeasurementEntry(): VitalsMeasurementEntry =
-        VitalsMeasurementEntry(
-            id = metadata.id,
-            type = VitalsMeasurementType.RESPIRATORY_RATE,
-            time = time,
-            value = rate,
-            source = SyncedSourceOverlay.displaySource(metadata),
-            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
-        )
-
-    private fun BodyTemperatureRecord.toVitalsMeasurementEntry(): VitalsMeasurementEntry =
-        VitalsMeasurementEntry(
-            id = metadata.id,
-            type = VitalsMeasurementType.BODY_TEMPERATURE,
-            time = time,
-            value = temperature.inCelsius,
-            source = SyncedSourceOverlay.displaySource(metadata),
-            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
-        )
-
-    private fun HeartRateVariabilityRmssdRecord.toVitalsMeasurementEntry(): VitalsMeasurementEntry =
-        VitalsMeasurementEntry(
-            id = metadata.id,
-            type = VitalsMeasurementType.HRV,
-            time = time,
-            value = heartRateVariabilityMillis,
-            source = SyncedSourceOverlay.displaySource(metadata),
-            isOpenVitalsEntry = isOpenVitalsRecord(metadata.dataOrigin.packageName, appPackageName),
-        )
 }
 
 private const val MinSystolicMmHg = 20.0
@@ -744,6 +555,10 @@ private const val MaxRespiratoryRate = 1000.0
 private const val MaxBodyTemperatureCelsius = 100.0
 private const val MinHrvMillis = 1.0
 private const val MaxHrvMillis = 200.0
+
+// Health Connect's own limits for the two records.
+private const val MaxGlucoseMmolPerL = 50.0
+private const val MaxVo2Max = 100.0
 
 /** Page size for the daily readers: the platform maximum, cutting round trips fivefold. */
 private const val DailyReadPageSize = 5000

@@ -8,7 +8,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.preferences.AppThemeMode
-import tech.mmarca.openvitals.domain.model.BodyMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.features.manualentry.ManualEntryScreen
 import tech.mmarca.openvitals.features.manualentry.ManualEntryViewModel
@@ -70,6 +69,9 @@ internal fun NavGraphBuilder.manualEntryRoutes(
                 },
                 onOpenMindfulnessEntry = {
                     navController.navigate(Screen.MindfulnessEntry.route)
+                },
+                onOpenBodyCompositionEntry = {
+                    navController.navigate(Screen.BodyCompositionEntry.route)
                 },
                 onOpenBodyMeasurementEntry = { type ->
                     navController.navigate(Screen.BodyMeasurementEntry.createRoute(type.name))
@@ -294,17 +296,22 @@ internal fun NavGraphBuilder.manualEntryRoutes(
         )
     }
 
+    // A weigh-in is saved once, so the form closes on save, as the cycle day log does.
+    composable(Screen.BodyCompositionEntry.route) {
+        val bodyMeasurementViewModel = hiltViewModel<BodyMeasurementEntryViewModel>()
+        BodyMeasurementEntryScreen(
+            viewModel = bodyMeasurementViewModel,
+            unitFormatter = unitFormatter,
+            onEntrySaved = onEntrySavedAndPopBack,
+        )
+    }
+
     composable(
         route = Screen.BodyMeasurementEntry.route,
         arguments = listOf(navArgument(BODY_MEASUREMENT_TYPE_ARG) { type = NavType.StringType }),
-    ) { backStackEntry ->
-        val type = backStackEntry.arguments
-            ?.getString(BODY_MEASUREMENT_TYPE_ARG)
-            ?.toBodyMeasurementTypeOrNull()
-            ?: BodyMeasurementType.WEIGHT
+    ) {
         val bodyMeasurementViewModel = hiltViewModel<BodyMeasurementEntryViewModel>()
         BodyMeasurementEntryScreen(
-            type = type,
             viewModel = bodyMeasurementViewModel,
             unitFormatter = unitFormatter,
             onEntrySaved = onEntrySaved,
@@ -317,14 +324,9 @@ internal fun NavGraphBuilder.manualEntryRoutes(
             navArgument(BODY_MEASUREMENT_TYPE_ARG) { type = NavType.StringType },
             navArgument(BODY_ENTRY_ID_ARG) { type = NavType.StringType },
         ),
-    ) { backStackEntry ->
-        val type = backStackEntry.arguments
-            ?.getString(BODY_MEASUREMENT_TYPE_ARG)
-            ?.toBodyMeasurementTypeOrNull()
-            ?: BodyMeasurementType.WEIGHT
+    ) {
         val bodyMeasurementViewModel = hiltViewModel<BodyMeasurementEntryViewModel>()
         BodyMeasurementEntryScreen(
-            type = type,
             viewModel = bodyMeasurementViewModel,
             unitFormatter = unitFormatter,
             onEntrySaved = onEntrySavedAndPopBack,

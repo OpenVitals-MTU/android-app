@@ -158,6 +158,7 @@ sealed class Screen(
     data object MindfulnessEntryEdit : Screen("manual_entry/mindfulness/edit/{$MINDFULNESS_ENTRY_ID_ARG}", R.string.screen_mindfulness_entry) {
         fun createRoute(entryId: String): String = "manual_entry/mindfulness/edit/${Uri.encode(entryId)}"
     }
+    data object BodyCompositionEntry : Screen("manual_entry/body_composition", R.string.screen_body_composition_entry)
     data object BodyMeasurementEntry : Screen("manual_entry/body/{$BODY_MEASUREMENT_TYPE_ARG}", R.string.screen_body_measurement_entry) {
         fun createRoute(type: String): String = "manual_entry/body/${Uri.encode(type)}"
     }
@@ -339,6 +340,7 @@ sealed class Screen(
                 ActivityEntryEdit,
                 MindfulnessEntry,
                 MindfulnessEntryEdit,
+                BodyCompositionEntry,
                 BodyMeasurementEntry,
                 BodyMeasurementEntryEdit,
                 VitalsMeasurementEntry,

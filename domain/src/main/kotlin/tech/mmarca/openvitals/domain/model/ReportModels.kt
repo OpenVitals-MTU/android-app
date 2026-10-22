@@ -239,13 +239,27 @@ data class ReportBloodPressureDetail(
     val diastolic: ReportMetricSummary,
 ) : ReportMetricDetail
 
-/** Health Connect's RELATION_TO_MEAL_* constants, mirrored so the domain stays library-free. */
+/** Health Connect's blood glucose constants, mirrored so the domain stays library-free. */
 object GlucoseRecordValues {
     const val RELATION_TO_MEAL_UNKNOWN = 0
     const val RELATION_TO_MEAL_GENERAL = 1
     const val RELATION_TO_MEAL_FASTING = 2
     const val RELATION_TO_MEAL_BEFORE_MEAL = 3
     const val RELATION_TO_MEAL_AFTER_MEAL = 4
+
+    const val MEAL_TYPE_UNKNOWN = 0
+    const val MEAL_TYPE_BREAKFAST = 1
+    const val MEAL_TYPE_LUNCH = 2
+    const val MEAL_TYPE_DINNER = 3
+    const val MEAL_TYPE_SNACK = 4
+
+    const val SPECIMEN_SOURCE_UNKNOWN = 0
+    const val SPECIMEN_SOURCE_INTERSTITIAL_FLUID = 1
+    const val SPECIMEN_SOURCE_CAPILLARY_BLOOD = 2
+    const val SPECIMEN_SOURCE_PLASMA = 3
+    const val SPECIMEN_SOURCE_SERUM = 4
+    const val SPECIMEN_SOURCE_TEARS = 5
+    const val SPECIMEN_SOURCE_WHOLE_BLOOD = 6
 }
 
 /** One raw glucose measurement with its meal context. */

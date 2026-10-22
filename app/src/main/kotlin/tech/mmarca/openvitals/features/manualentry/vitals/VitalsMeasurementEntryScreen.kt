@@ -24,11 +24,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Air
+import androidx.compose.material.icons.outlined.Bloodtype
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeviceThermostat
 import androidx.compose.material.icons.outlined.ExpandLess
@@ -36,6 +38,7 @@ import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -44,6 +47,9 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -71,6 +77,12 @@ import tech.mmarca.openvitals.domain.preferences.UnitSystem
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
 import tech.mmarca.openvitals.domain.model.BpMealContext
 import tech.mmarca.openvitals.domain.model.BpRecordValues
+import tech.mmarca.openvitals.domain.model.GlucoseContext
+import tech.mmarca.openvitals.domain.model.GlucoseMgPerDlPerMmolPerL
+import tech.mmarca.openvitals.domain.model.GlucoseRecordValues
+import tech.mmarca.openvitals.domain.model.Vo2MaxRecordValues
+import tech.mmarca.openvitals.features.vitals.glucoseColor
+import tech.mmarca.openvitals.features.vitals.vo2Color
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.ui.components.OpenVitalsButton
 import tech.mmarca.openvitals.ui.components.OptionDropdown
@@ -116,13 +128,21 @@ fun VitalsMeasurementEntryScreen(
                 onSelectBpMealContext = viewModel::selectBpMealContext,
                 onSelectBpBodyPosition = viewModel::selectBpBodyPosition,
                 onSelectBpMeasurementLocation = viewModel::selectBpMeasurementLocation,
+                onSelectGlucoseUnit = viewModel::selectGlucoseUnit,
+                onGlucoseChanged = viewModel::updateGlucose,
+                onSelectVo2MaxMeasurementMethod = viewModel::selectVo2MaxMeasurementMethod,
                 onEntryTimeChanged = viewModel::updateEntryTime,
                 onAddEntry = {
                     viewModel.addEntry(
                         value = canonicalVitalsValue(
                             input = state.inputText,
                             type = state.type,
-                            unitSystem = unitFormatter.unitSystemFor(state.type),
+                            // Glucose is read in the unit picked on the form, the others in the setting.
+                            unitSystem = if (state.type == VitalsMeasurementType.BLOOD_GLUCOSE) {
+                                state.glucoseUnit
+                            } else {
+                                unitFormatter.unitSystemFor(state.type)
+                            },
                         ),
                         secondaryValue = if (state.type == VitalsMeasurementType.BLOOD_PRESSURE) {
                             state.secondaryInputText.toVitalsDoubleOrNull()
@@ -153,6 +173,9 @@ private fun VitalsMeasurementEntryCard(
     onSelectBpMealContext: (BpMealContext?) -> Unit,
     onSelectBpBodyPosition: (Int?) -> Unit,
     onSelectBpMeasurementLocation: (Int?) -> Unit,
+    onSelectGlucoseUnit: (UnitSystem) -> Unit,
+    onGlucoseChanged: (GlucoseContext) -> Unit,
+    onSelectVo2MaxMeasurementMethod: (Int?) -> Unit,
     onEntryTimeChanged: (java.time.Instant) -> Unit,
     onAddEntry: () -> Unit,
     onRequestWritePermission: () -> Unit,
@@ -204,75 +227,43 @@ private fun VitalsMeasurementEntryCard(
                 )
             }
 
-            if (state.type == VitalsMeasurementType.BLOOD_PRESSURE) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
+            when (state.type) {
+                VitalsMeasurementType.BLOOD_PRESSURE -> BloodPressureFields(
+                    state = state,
+                    onSystolicChanged = onInputChanged,
+                    onDiastolicChanged = onSecondaryInputChanged,
+                    onPulseChanged = onPulseInputChanged,
+                    onSelectMealContext = onSelectBpMealContext,
+                    onSelectBodyPosition = onSelectBpBodyPosition,
+                    onSelectMeasurementLocation = onSelectBpMeasurementLocation,
+                    onRequestPulseWritePermission = onRequestPulseWritePermission,
+                )
+                VitalsMeasurementType.BLOOD_GLUCOSE -> BloodGlucoseFields(
+                    state = state,
+                    title = title,
+                    onLevelChanged = onInputChanged,
+                    onSelectUnit = onSelectGlucoseUnit,
+                    onGlucoseChanged = onGlucoseChanged,
+                )
+                else -> {
                     VitalsValueField(
                         value = state.inputText,
                         onValueChange = onInputChanged,
                         enabled = !state.isSavingEntry,
-                        label = stringResource(R.string.vitals_entry_systolic_label),
-                        modifier = Modifier.weight(1f),
+                        label = stringResource(R.string.vitals_entry_value_label, title, unitLabel),
+                        modifier = Modifier.fillMaxWidth(),
                     )
-                    VitalsValueField(
-                        value = state.secondaryInputText,
-                        onValueChange = onSecondaryInputChanged,
-                        enabled = !state.isSavingEntry,
-                        label = stringResource(R.string.vitals_entry_diastolic_label),
-                        modifier = Modifier.weight(1f),
-                    )
+                    if (state.type == VitalsMeasurementType.VO2_MAX) {
+                        OptionDropdown(
+                            label = stringResource(R.string.vitals_entry_vo2_method_label),
+                            options = Vo2MaxMeasurementMethods,
+                            selected = state.vo2MaxMeasurementMethod,
+                            optionText = { stringResource(vo2MaxMeasurementMethodLabelRes(it)) },
+                            enabled = !state.isSavingEntry,
+                            onSelect = onSelectVo2MaxMeasurementMethod,
+                        )
+                    }
                 }
-                // A home monitor shows the pulse with every reading, so the form takes it too.
-                VitalsValueField(
-                    value = state.pulseInputText,
-                    onValueChange = onPulseInputChanged,
-                    enabled = !state.isSavingEntry,
-                    label = stringResource(R.string.vitals_entry_pulse_label),
-                    keyboardType = KeyboardType.Number,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                // Asked for only once a pulse is typed: a reading alone never needs heart rate access.
-                if (state.canWrite && !state.canWritePulse && state.pulseInputText.isNotBlank()) {
-                    ManualEntryWritePermissionCallout(
-                        body = stringResource(R.string.vitals_entry_pulse_permission_needed),
-                        onGrant = onRequestPulseWritePermission,
-                    )
-                }
-                OptionDropdown(
-                    label = stringResource(R.string.vitals_entry_bp_context_label),
-                    options = BpMealContext.entries,
-                    selected = state.bpMealContext,
-                    optionText = { stringResource(it.labelRes()) },
-                    enabled = !state.isSavingEntry,
-                    onSelect = onSelectBpMealContext,
-                )
-                OptionDropdown(
-                    label = stringResource(R.string.vitals_entry_bp_position_label),
-                    options = BpBodyPositions,
-                    selected = state.bpBodyPosition,
-                    optionText = { stringResource(bpBodyPositionLabelRes(it)) },
-                    enabled = !state.isSavingEntry,
-                    onSelect = onSelectBpBodyPosition,
-                )
-                OptionDropdown(
-                    label = stringResource(R.string.vitals_entry_bp_location_label),
-                    options = BpMeasurementLocations,
-                    selected = state.bpMeasurementLocation,
-                    optionText = { stringResource(bpMeasurementLocationLabelRes(it)) },
-                    enabled = !state.isSavingEntry,
-                    onSelect = onSelectBpMeasurementLocation,
-                )
-                BpMeasurementGuide()
-            } else {
-                VitalsValueField(
-                    value = state.inputText,
-                    onValueChange = onInputChanged,
-                    enabled = !state.isSavingEntry,
-                    label = stringResource(R.string.vitals_entry_value_label, title, unitLabel),
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
 
             // A measurement is not always logged when taken, so a new entry offers the time too.
@@ -312,6 +303,151 @@ private fun VitalsMeasurementEntryCard(
             }
         }
     }
+}
+
+/** Systolic and diastolic, the pulse a home monitor shows, and how the reading was taken. */
+@Composable
+private fun BloodPressureFields(
+    state: VitalsMeasurementEntryUiState,
+    onSystolicChanged: (String) -> Unit,
+    onDiastolicChanged: (String) -> Unit,
+    onPulseChanged: (String) -> Unit,
+    onSelectMealContext: (BpMealContext?) -> Unit,
+    onSelectBodyPosition: (Int?) -> Unit,
+    onSelectMeasurementLocation: (Int?) -> Unit,
+    onRequestPulseWritePermission: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        VitalsValueField(
+            value = state.inputText,
+            onValueChange = onSystolicChanged,
+            enabled = !state.isSavingEntry,
+            label = stringResource(R.string.vitals_entry_systolic_label),
+            modifier = Modifier.weight(1f),
+        )
+        VitalsValueField(
+            value = state.secondaryInputText,
+            onValueChange = onDiastolicChanged,
+            enabled = !state.isSavingEntry,
+            label = stringResource(R.string.vitals_entry_diastolic_label),
+            modifier = Modifier.weight(1f),
+        )
+    }
+    // A home monitor shows the pulse with every reading, so the form takes it too.
+    VitalsValueField(
+        value = state.pulseInputText,
+        onValueChange = onPulseChanged,
+        enabled = !state.isSavingEntry,
+        label = stringResource(R.string.vitals_entry_pulse_label),
+        keyboardType = KeyboardType.Number,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    // Asked for only once a pulse is typed: a reading alone never needs heart rate access.
+    if (state.canWrite && !state.canWritePulse && state.pulseInputText.isNotBlank()) {
+        ManualEntryWritePermissionCallout(
+            body = stringResource(R.string.vitals_entry_pulse_permission_needed),
+            onGrant = onRequestPulseWritePermission,
+        )
+    }
+    OptionDropdown(
+        label = stringResource(R.string.vitals_entry_bp_context_label),
+        options = BpMealContext.entries,
+        selected = state.bpMealContext,
+        optionText = { stringResource(it.labelRes()) },
+        enabled = !state.isSavingEntry,
+        onSelect = onSelectMealContext,
+    )
+    OptionDropdown(
+        label = stringResource(R.string.vitals_entry_bp_position_label),
+        options = BpBodyPositions,
+        selected = state.bpBodyPosition,
+        optionText = { stringResource(bpBodyPositionLabelRes(it)) },
+        enabled = !state.isSavingEntry,
+        onSelect = onSelectBodyPosition,
+    )
+    OptionDropdown(
+        label = stringResource(R.string.vitals_entry_bp_location_label),
+        options = BpMeasurementLocations,
+        selected = state.bpMeasurementLocation,
+        optionText = { stringResource(bpMeasurementLocationLabelRes(it)) },
+        enabled = !state.isSavingEntry,
+        onSelect = onSelectMeasurementLocation,
+    )
+    BpMeasurementGuide()
+}
+
+/** The level in the unit the meter shows, and when and from what it was taken. */
+@Composable
+private fun BloodGlucoseFields(
+    state: VitalsMeasurementEntryUiState,
+    title: String,
+    onLevelChanged: (String) -> Unit,
+    onSelectUnit: (UnitSystem) -> Unit,
+    onGlucoseChanged: (GlucoseContext) -> Unit,
+) {
+    val enabled = !state.isSavingEntry
+    val units = listOf(UnitSystem.METRIC, UnitSystem.IMPERIAL)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        VitalsValueField(
+            value = state.inputText,
+            onValueChange = onLevelChanged,
+            enabled = enabled,
+            label = stringResource(
+                R.string.vitals_entry_value_label,
+                title,
+                VitalsMeasurementType.BLOOD_GLUCOSE.inputUnitLabel(state.glucoseUnit),
+            ),
+            modifier = Modifier.weight(1f),
+        )
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.width(150.dp)) {
+            units.forEachIndexed { index, unit ->
+                SegmentedButton(
+                    selected = state.glucoseUnit == unit,
+                    onClick = { onSelectUnit(unit) },
+                    enabled = enabled,
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = units.size),
+                    icon = {},
+                ) {
+                    Text(VitalsMeasurementType.BLOOD_GLUCOSE.inputUnitLabel(unit), maxLines = 1)
+                }
+            }
+        }
+    }
+    OptionDropdown(
+        label = stringResource(R.string.vitals_entry_bp_context_label),
+        options = GlucoseRelationsToMeal,
+        selected = state.glucose.relationToMeal,
+        optionText = { stringResource(glucoseRelationToMealLabelRes(it)) },
+        enabled = enabled,
+        onSelect = { onGlucoseChanged(state.glucose.copy(relationToMeal = it)) },
+    )
+    if (state.glucose.relationToMeal == GlucoseRecordValues.RELATION_TO_MEAL_BEFORE_MEAL ||
+        state.glucose.relationToMeal == GlucoseRecordValues.RELATION_TO_MEAL_AFTER_MEAL
+    ) {
+        OptionDropdown(
+            label = stringResource(R.string.vitals_entry_glucose_meal_label),
+            options = GlucoseMealTypes,
+            selected = state.glucose.mealType,
+            optionText = { stringResource(glucoseMealTypeLabelRes(it)) },
+            enabled = enabled,
+            onSelect = { onGlucoseChanged(state.glucose.copy(mealType = it)) },
+        )
+    }
+    OptionDropdown(
+        label = stringResource(R.string.vitals_entry_glucose_sample_label),
+        options = GlucoseSpecimenSources,
+        selected = state.glucose.specimenSource,
+        optionText = { stringResource(glucoseSpecimenSourceLabelRes(it)) },
+        enabled = enabled,
+        onSelect = { onGlucoseChanged(state.glucose.copy(specimenSource = it)) },
+    )
 }
 
 @Composable
@@ -363,6 +499,11 @@ internal fun canonicalVitalsValue(
         } else {
             value
         }
+        VitalsMeasurementType.BLOOD_GLUCOSE -> if (unitSystem == UnitSystem.IMPERIAL) {
+            value / GlucoseMgPerDlPerMmolPerL
+        } else {
+            value
+        }
         else -> value
     }
 }
@@ -376,14 +517,18 @@ fun VitalsMeasurementType.titleRes(): Int = when (this) {
     VitalsMeasurementType.RESPIRATORY_RATE -> R.string.metric_respiratory_rate
     VitalsMeasurementType.BODY_TEMPERATURE -> R.string.metric_body_temp
     VitalsMeasurementType.HRV -> R.string.metric_hrv
+    VitalsMeasurementType.BLOOD_GLUCOSE -> R.string.metric_blood_glucose
+    VitalsMeasurementType.VO2_MAX -> R.string.metric_vo2_max
 }
 
-private fun VitalsMeasurementType.inputUnitLabel(unitSystem: UnitSystem): String = when (this) {
+internal fun VitalsMeasurementType.inputUnitLabel(unitSystem: UnitSystem): String = when (this) {
     VitalsMeasurementType.BLOOD_PRESSURE -> "mmHg"
     VitalsMeasurementType.SPO2 -> "%"
     VitalsMeasurementType.RESPIRATORY_RATE -> "br/min"
     VitalsMeasurementType.BODY_TEMPERATURE -> TemperatureUnits.label(unitSystem)
     VitalsMeasurementType.HRV -> "ms"
+    VitalsMeasurementType.BLOOD_GLUCOSE -> if (unitSystem == UnitSystem.IMPERIAL) "mg/dL" else "mmol/L"
+    VitalsMeasurementType.VO2_MAX -> "mL/kg/min"
 }
 
 fun VitalsMeasurementType.icon(): ImageVector = when (this) {
@@ -392,6 +537,8 @@ fun VitalsMeasurementType.icon(): ImageVector = when (this) {
     VitalsMeasurementType.RESPIRATORY_RATE -> Icons.Outlined.Air
     VitalsMeasurementType.BODY_TEMPERATURE -> Icons.Outlined.DeviceThermostat
     VitalsMeasurementType.HRV -> Icons.Outlined.FavoriteBorder
+    VitalsMeasurementType.BLOOD_GLUCOSE -> Icons.Outlined.Bloodtype
+    VitalsMeasurementType.VO2_MAX -> Icons.Outlined.Speed
 }
 
 fun VitalsMeasurementType.accentColor(): Color = when (this) {
@@ -400,10 +547,13 @@ fun VitalsMeasurementType.accentColor(): Color = when (this) {
     VitalsMeasurementType.RESPIRATORY_RATE -> RespiratoryColor
     VitalsMeasurementType.BODY_TEMPERATURE -> TemperatureColor
     VitalsMeasurementType.HRV -> VitalsColor
+    VitalsMeasurementType.BLOOD_GLUCOSE -> glucoseColor
+    VitalsMeasurementType.VO2_MAX -> vo2Color
 }
 
 private fun UnitFormatter.unitSystemFor(type: VitalsMeasurementType): UnitSystem = when (type) {
     VitalsMeasurementType.BODY_TEMPERATURE -> unitSystem(UnitQuantity.TEMPERATURE)
+    VitalsMeasurementType.BLOOD_GLUCOSE -> unitSystem(UnitQuantity.BLOOD_GLUCOSE)
     else -> unitSystem()
 }
 
@@ -506,4 +656,66 @@ internal fun bpMeasurementLocationLabelRes(location: Int): Int = when (location)
     BpRecordValues.MEASUREMENT_LOCATION_RIGHT_WRIST -> R.string.bp_location_right_wrist
     BpRecordValues.MEASUREMENT_LOCATION_LEFT_UPPER_ARM -> R.string.bp_location_left_arm
     else -> R.string.bp_location_right_arm
+}
+
+private val GlucoseRelationsToMeal = listOf(
+    GlucoseRecordValues.RELATION_TO_MEAL_FASTING,
+    GlucoseRecordValues.RELATION_TO_MEAL_BEFORE_MEAL,
+    GlucoseRecordValues.RELATION_TO_MEAL_AFTER_MEAL,
+    GlucoseRecordValues.RELATION_TO_MEAL_GENERAL,
+)
+
+private val GlucoseMealTypes = listOf(
+    GlucoseRecordValues.MEAL_TYPE_BREAKFAST,
+    GlucoseRecordValues.MEAL_TYPE_LUNCH,
+    GlucoseRecordValues.MEAL_TYPE_DINNER,
+    GlucoseRecordValues.MEAL_TYPE_SNACK,
+)
+
+/** Tears are left out: Health Connect has the source, no meter a person types from does. */
+private val GlucoseSpecimenSources = listOf(
+    GlucoseRecordValues.SPECIMEN_SOURCE_CAPILLARY_BLOOD,
+    GlucoseRecordValues.SPECIMEN_SOURCE_INTERSTITIAL_FLUID,
+    GlucoseRecordValues.SPECIMEN_SOURCE_PLASMA,
+    GlucoseRecordValues.SPECIMEN_SOURCE_SERUM,
+    GlucoseRecordValues.SPECIMEN_SOURCE_WHOLE_BLOOD,
+)
+
+/** "Not specified" is saved as Health Connect's other method, so other has no entry of its own. */
+private val Vo2MaxMeasurementMethods = listOf(
+    Vo2MaxRecordValues.MEASUREMENT_METHOD_METABOLIC_CART,
+    Vo2MaxRecordValues.MEASUREMENT_METHOD_COOPER_TEST,
+    Vo2MaxRecordValues.MEASUREMENT_METHOD_MULTISTAGE_FITNESS_TEST,
+    Vo2MaxRecordValues.MEASUREMENT_METHOD_ROCKPORT_FITNESS_TEST,
+    Vo2MaxRecordValues.MEASUREMENT_METHOD_HEART_RATE_RATIO,
+)
+
+private fun glucoseRelationToMealLabelRes(relation: Int): Int = when (relation) {
+    GlucoseRecordValues.RELATION_TO_MEAL_FASTING -> R.string.report_pdf_glucose_fasting
+    GlucoseRecordValues.RELATION_TO_MEAL_BEFORE_MEAL -> R.string.report_pdf_glucose_before_meal
+    GlucoseRecordValues.RELATION_TO_MEAL_AFTER_MEAL -> R.string.report_pdf_glucose_after_meal
+    else -> R.string.report_pdf_glucose_general
+}
+
+private fun glucoseMealTypeLabelRes(mealType: Int): Int = when (mealType) {
+    GlucoseRecordValues.MEAL_TYPE_BREAKFAST -> R.string.meal_breakfast
+    GlucoseRecordValues.MEAL_TYPE_LUNCH -> R.string.meal_lunch
+    GlucoseRecordValues.MEAL_TYPE_DINNER -> R.string.meal_dinner
+    else -> R.string.meal_snack
+}
+
+private fun glucoseSpecimenSourceLabelRes(source: Int): Int = when (source) {
+    GlucoseRecordValues.SPECIMEN_SOURCE_CAPILLARY_BLOOD -> R.string.glucose_sample_capillary
+    GlucoseRecordValues.SPECIMEN_SOURCE_INTERSTITIAL_FLUID -> R.string.glucose_sample_interstitial
+    GlucoseRecordValues.SPECIMEN_SOURCE_PLASMA -> R.string.glucose_sample_plasma
+    GlucoseRecordValues.SPECIMEN_SOURCE_SERUM -> R.string.glucose_sample_serum
+    else -> R.string.glucose_sample_whole_blood
+}
+
+private fun vo2MaxMeasurementMethodLabelRes(method: Int): Int = when (method) {
+    Vo2MaxRecordValues.MEASUREMENT_METHOD_METABOLIC_CART -> R.string.vo2_method_metabolic_cart
+    Vo2MaxRecordValues.MEASUREMENT_METHOD_COOPER_TEST -> R.string.vo2_method_cooper
+    Vo2MaxRecordValues.MEASUREMENT_METHOD_MULTISTAGE_FITNESS_TEST -> R.string.vo2_method_multistage
+    Vo2MaxRecordValues.MEASUREMENT_METHOD_ROCKPORT_FITNESS_TEST -> R.string.vo2_method_rockport
+    else -> R.string.vo2_method_heart_rate_ratio
 }

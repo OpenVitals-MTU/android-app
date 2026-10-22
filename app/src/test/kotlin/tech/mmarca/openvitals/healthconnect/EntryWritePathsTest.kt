@@ -6,16 +6,23 @@ import androidx.health.connect.client.records.NutritionRecord
 import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.BasalBodyTemperatureRecord
+import androidx.health.connect.client.records.BasalMetabolicRateRecord
+import androidx.health.connect.client.records.BloodGlucoseRecord
+import androidx.health.connect.client.records.BodyWaterMassRecord
+import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.BodyTemperatureMeasurementLocation
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.IntermenstrualBleedingRecord
+import androidx.health.connect.client.records.LeanBodyMassRecord
+import androidx.health.connect.client.records.MealType
 import androidx.health.connect.client.records.MenstruationFlowRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
+import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -44,10 +51,13 @@ import tech.mmarca.openvitals.domain.model.bpPulseClientRecordId
 import tech.mmarca.openvitals.domain.model.BodyMeasurementWriteRequest
 import tech.mmarca.openvitals.domain.model.CycleEntryKind
 import tech.mmarca.openvitals.domain.model.CycleEntryWriteRequest
+import tech.mmarca.openvitals.domain.model.GlucoseContext
+import tech.mmarca.openvitals.domain.model.GlucoseRecordValues
 import tech.mmarca.openvitals.domain.model.HydrationWriteRequest
 import tech.mmarca.openvitals.domain.model.MindfulnessSessionWriteRequest
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementType
 import tech.mmarca.openvitals.domain.model.VitalsMeasurementWriteRequest
+import tech.mmarca.openvitals.domain.model.Vo2MaxRecordValues
 
 /**
  * Write, edit and delete of one entry, per reader, on Google's fake client. The activity
@@ -109,6 +119,76 @@ class EntryWritePathsTest {
         assertThat(all(WeightRecord::class).single().weight.inKilograms).isWithin(1e-9).of(80.0)
     }
 
+    @Test
+    fun `a weigh-in is written in one insert, and each value is edited and deleted on its own`() = onTheTestClock {
+        val reader = BodyHealthReader(support(), APP_PACKAGE)
+        val ids = reader.writeBodyMeasurementEntries(
+            listOf(
+                BodyMeasurementWriteRequest(BodyMeasurementType.WEIGHT, NOON, 80.0),
+                BodyMeasurementWriteRequest(BodyMeasurementType.BODY_FAT, NOON, 21.0),
+                BodyMeasurementWriteRequest(BodyMeasurementType.LEAN_MASS, NOON, 63.2),
+                BodyMeasurementWriteRequest(BodyMeasurementType.BODY_WATER_MASS, NOON, 44.0),
+                BodyMeasurementWriteRequest(BodyMeasurementType.BONE_MASS, NOON, 3.1),
+                BodyMeasurementWriteRequest(BodyMeasurementType.BMR, NOON, 1_712.0),
+            ),
+        )
+
+        assertThat(ids).hasSize(6)
+        assertThat(all(LeanBodyMassRecord::class).single().mass.inKilograms).isWithin(1e-9).of(63.2)
+        assertThat(all(BodyWaterMassRecord::class).single().time).isEqualTo(NOON)
+        assertThat(all(BasalMetabolicRateRecord::class).single().basalMetabolicRate.inKilocaloriesPerDay)
+            .isWithin(1e-6).of(1_712.0)
+        val leanId = all(LeanBodyMassRecord::class).single().metadata.id
+        assertThat(reader.readBodyMeasurementEntry(BodyMeasurementType.LEAN_MASS, leanId)?.isOpenVitalsEntry).isTrue()
+
+        reader.updateBodyMeasurementEntry(leanId, BodyMeasurementWriteRequest(BodyMeasurementType.LEAN_MASS, NOON, 62.8))
+        reader.deleteBodyMeasurementEntry(BodyMeasurementType.BONE_MASS, all(BoneMassRecord::class).single().metadata.id)
+
+        assertThat(all(LeanBodyMassRecord::class).single().mass.inKilograms).isWithin(1e-9).of(62.8)
+        assertThat(all(BoneMassRecord::class)).isEmpty()
+        assertThat(all(WeightRecord::class)).hasSize(1)
+    }
+
+    @Test
+    fun `a weigh-in with one value out of range writes nothing`() = onTheTestClock {
+        val reader = BodyHealthReader(support(), APP_PACKAGE)
+
+        val write = runCatching {
+            reader.writeBodyMeasurementEntries(
+                listOf(
+                    BodyMeasurementWriteRequest(BodyMeasurementType.WEIGHT, NOON, 80.0),
+                    BodyMeasurementWriteRequest(BodyMeasurementType.BODY_FAT, NOON, 120.0),
+                ),
+            )
+        }
+
+        assertThat(write.exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(all(WeightRecord::class)).isEmpty()
+    }
+
+    @Test
+    fun `the daily BMR estimate is not offered for editing, a typed BMR is`() = onTheTestClock {
+        client.insertRecords(
+            listOf(
+                BasalMetabolicRateRecord(
+                    time = NOON,
+                    zoneOffset = ZoneOffset.UTC,
+                    basalMetabolicRate = androidx.health.connect.client.units.Power.kilocaloriesPerDay(1_650.0),
+                    metadata = Metadata.manualEntry(clientRecordId = "${BmrEstimateClientRecordIdPrefix}$DAY"),
+                ),
+            ),
+        )
+        val reader = BodyHealthReader(support(), APP_PACKAGE)
+        reader.writeBodyMeasurementEntry(BodyMeasurementWriteRequest(BodyMeasurementType.BMR, NOON, 1_712.0))
+
+        val editableByEstimate = all(BasalMetabolicRateRecord::class).associate { record ->
+            record.metadata.clientRecordId.orEmpty().startsWith(BmrEstimateClientRecordIdPrefix) to
+                reader.readBodyMeasurementEntry(BodyMeasurementType.BMR, record.metadata.id)?.isOpenVitalsEntry
+        }
+
+        assertThat(editableByEstimate).containsExactly(true, false, false, true)
+    }
+
     // Vitals.
 
     @Test
@@ -123,6 +203,70 @@ class EntryWritePathsTest {
 
         reader.deleteVitalsMeasurementEntry(VitalsMeasurementType.SPO2, id)
         assertThat(all(OxygenSaturationRecord::class)).isEmpty()
+    }
+
+    @Test
+    fun `a blood glucose reading is written with its context, edited in place and deleted`() = onTheTestClock {
+        val reader = VitalsHealthReader(support(), APP_PACKAGE)
+        val afterDinner = GlucoseContext(
+            relationToMeal = GlucoseRecordValues.RELATION_TO_MEAL_AFTER_MEAL,
+            mealType = GlucoseRecordValues.MEAL_TYPE_DINNER,
+            specimenSource = GlucoseRecordValues.SPECIMEN_SOURCE_CAPILLARY_BLOOD,
+        )
+        reader.writeVitalsMeasurementEntry(
+            VitalsMeasurementWriteRequest(VitalsMeasurementType.BLOOD_GLUCOSE, NOON, 7.4, glucose = afterDinner),
+        )
+
+        // The domain mirrors Health Connect's constants; the record proves they still match.
+        val written = all(BloodGlucoseRecord::class).single()
+        assertThat(written.level.inMillimolesPerLiter).isWithin(1e-9).of(7.4)
+        assertThat(written.relationToMeal).isEqualTo(BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL)
+        assertThat(written.mealType).isEqualTo(MealType.MEAL_TYPE_DINNER)
+        assertThat(written.specimenSource).isEqualTo(BloodGlucoseRecord.SPECIMEN_SOURCE_CAPILLARY_BLOOD)
+        val id = written.metadata.id
+        assertThat(reader.readVitalsMeasurementEntry(VitalsMeasurementType.BLOOD_GLUCOSE, id)?.glucose).isEqualTo(afterDinner)
+
+        reader.updateVitalsMeasurementEntry(
+            id,
+            VitalsMeasurementWriteRequest(VitalsMeasurementType.BLOOD_GLUCOSE, NOON, 5.1),
+        )
+
+        val edited = all(BloodGlucoseRecord::class).single()
+        assertThat(edited.metadata.id).isEqualTo(id)
+        assertThat(edited.relationToMeal).isEqualTo(BloodGlucoseRecord.RELATION_TO_MEAL_UNKNOWN)
+        assertThat(reader.readVitalsMeasurementEntry(VitalsMeasurementType.BLOOD_GLUCOSE, id)?.glucose)
+            .isEqualTo(GlucoseContext())
+
+        reader.deleteVitalsMeasurementEntry(VitalsMeasurementType.BLOOD_GLUCOSE, id)
+        assertThat(all(BloodGlucoseRecord::class)).isEmpty()
+    }
+
+    @Test
+    fun `a VO2 max reading keeps how it was measured, and none is Health Connect's other`() = onTheTestClock {
+        val reader = VitalsHealthReader(support(), APP_PACKAGE)
+        reader.writeVitalsMeasurementEntry(
+            VitalsMeasurementWriteRequest(
+                VitalsMeasurementType.VO2_MAX,
+                NOON,
+                48.5,
+                vo2MaxMeasurementMethod = Vo2MaxRecordValues.MEASUREMENT_METHOD_COOPER_TEST,
+            ),
+        )
+        reader.writeVitalsMeasurementEntry(
+            VitalsMeasurementWriteRequest(VitalsMeasurementType.VO2_MAX, NOON.plusSeconds(60), 47.0),
+        )
+
+        val (cooper, unspecified) = all(Vo2MaxRecord::class).sortedBy { it.time }
+        assertThat(cooper.vo2MillilitersPerMinuteKilogram).isWithin(1e-9).of(48.5)
+        assertThat(cooper.measurementMethod).isEqualTo(Vo2MaxRecord.MEASUREMENT_METHOD_COOPER_TEST)
+        assertThat(unspecified.measurementMethod).isEqualTo(Vo2MaxRecord.MEASUREMENT_METHOD_OTHER)
+        assertThat(reader.readVitalsMeasurementEntry(VitalsMeasurementType.VO2_MAX, cooper.metadata.id)?.vo2MaxMeasurementMethod)
+            .isEqualTo(Vo2MaxRecordValues.MEASUREMENT_METHOD_COOPER_TEST)
+        assertThat(reader.readVitalsMeasurementEntry(VitalsMeasurementType.VO2_MAX, unspecified.metadata.id)?.vo2MaxMeasurementMethod)
+            .isNull()
+
+        reader.deleteVitalsMeasurementEntry(VitalsMeasurementType.VO2_MAX, cooper.metadata.id)
+        assertThat(all(Vo2MaxRecord::class).map { it.metadata.id }).containsExactly(unspecified.metadata.id)
     }
 
     @Test
