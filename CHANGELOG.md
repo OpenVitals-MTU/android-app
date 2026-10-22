@@ -1,5 +1,61 @@
 # Changelog
 
+## 2.15.0 - 2026-10-23
+
+### English
+
+- **One form for a body analysis scale.** The Weight and Body fat tiles in Add entry are now one Body composition tile: weight, body fat, lean mass, body water, bone mass and BMR, saved together with the same time. Body water can be typed as a percentage of the weight on the same form. Each value can still be edited or deleted alone from the Body screens.
+- **Blood glucose and VO2 max entry.** New Add entry tiles. Blood glucose is typed in mmol/L or mg/dL with its relation to a meal and the sample; VO2 max with how it was measured. Both can be edited and deleted from their detail screens. If you rearranged your tiles, add them from the grid's edit mode.
+- **Every kind of medical record can be typed in:** visits, procedures, lab results, prescriptions, vital signs, social history, pregnancy, doctors and their roles, clinics, places and your personal details, beside vaccines, allergies, medications and conditions. Doctors, clinics, labs and places already entered are offered as you type.
+- **Medical records are a beta.** A one-time notice on the first open says the area is still under development, and asks you to use it with care and review the data you import.
+- **Cadence and walking calories from a Wear OS watch.** Each synced minute of steps is also written as a cadence and, once your weight is known, as an estimate of walking calories. Minutes inside a recorded workout get none. Contributed by Ludwig Ettner.
+- **Fixes:** the medical records import counts each observation where Health Connect files it, a body weight under vital signs, and holds back one Health Connect would refuse; the sleep home-screen widget shows the time asleep, as the dashboard card does; a lab flag sent as a bare H, L, N or A reads as a word.
+
+### Espanol
+
+- **Un formulario para una bascula de composicion corporal.** Los mosaicos Peso y Grasa corporal de Anadir entrada son ahora uno solo, Composicion corporal: peso, grasa corporal, masa magra, agua corporal, masa osea y TMB, guardados juntos con la misma hora. El agua corporal se puede escribir como porcentaje del peso del mismo formulario. Cada valor se puede seguir editando o borrando por separado desde las pantallas de Cuerpo.
+- **Registro de glucosa en sangre y VO2 max.** Nuevos mosaicos en Anadir entrada. La glucosa se escribe en mmol/L o mg/dL con su relacion con la comida y la muestra; el VO2 max, con como se midio. Ambos se pueden editar y borrar desde sus pantallas de detalle. Si reordenaste tus mosaicos, anadelos desde el modo de edicion de la cuadricula.
+- **Todo tipo de registro medico se puede escribir a mano:** visitas, procedimientos, resultados de laboratorio, recetas, constantes vitales, historia social, embarazo, medicos y sus funciones, clinicas, lugares y tus datos personales, ademas de vacunas, alergias, medicamentos y afecciones. Los medicos, clinicas, laboratorios y lugares ya introducidos se ofrecen al escribir.
+- **El historial medico esta en beta.** Un aviso, solo la primera vez, dice que la seccion sigue en desarrollo y pide usarla con cuidado y revisar los datos importados.
+- **Cadencia y calorias al caminar desde un reloj Wear OS.** Cada minuto de pasos sincronizado se escribe tambien como cadencia y, cuando se conoce tu peso, como estimacion de las calorias al caminar. Los minutos dentro de un entrenamiento registrado no reciben ninguna. Contribucion de Ludwig Ettner.
+- **Correcciones:** la importacion de registros medicos cuenta cada observacion donde la archiva Health Connect, un peso corporal en constantes vitales, y retiene la que Health Connect rechazaria; el widget de sueno de la pantalla de inicio muestra el tiempo dormido, como la tarjeta del panel; un indicador de laboratorio enviado como H, L, N o A se lee como palabra.
+
+### Deutsch
+
+- **Ein Formular fuer eine Koerperanalysewaage.** Die Kacheln Gewicht und Koerperfett unter Eintrag hinzufuegen sind jetzt eine Kachel Koerperzusammensetzung: Gewicht, Koerperfett, Magermasse, Koerperwasser, Knochenmasse und Grundumsatz, zusammen mit derselben Uhrzeit gespeichert. Koerperwasser laesst sich als Prozent des Gewichts im selben Formular eingeben. Jeder Wert laesst sich weiterhin einzeln in den Koerper-Bildschirmen bearbeiten oder loeschen.
+- **Blutzucker und VO2max eintragen.** Neue Kacheln unter Eintrag hinzufuegen. Blutzucker wird in mmol/L oder mg/dL mit dem Bezug zur Mahlzeit und der Probe eingetragen, VO2max mit der Messmethode. Beide lassen sich in ihren Detailansichten bearbeiten und loeschen. Wer seine Kacheln umsortiert hat, fuegt sie im Bearbeitungsmodus des Rasters hinzu.
+- **Jede Art medizinischer Unterlagen laesst sich eintippen:** Besuche, Eingriffe, Laborwerte, Verschreibungen, Vitalwerte, Sozialanamnese, Schwangerschaft, Aerzte und ihre Rollen, Kliniken, Orte und deine persoenlichen Angaben, neben Impfungen, Allergien, Medikamenten und Erkrankungen. Bereits eingetragene Aerzte, Kliniken, Labore und Orte werden beim Tippen angeboten.
+- **Medizinische Unterlagen sind eine Beta.** Ein einmaliger Hinweis beim ersten Oeffnen sagt, dass der Bereich noch in Entwicklung ist, und bittet, ihn mit Bedacht zu nutzen und importierte Daten zu pruefen.
+- **Kadenz und Gehkalorien von einer Wear-OS-Uhr.** Jede synchronisierte Schrittminute wird auch als Kadenz geschrieben und, sobald dein Gewicht bekannt ist, als Schaetzung der Gehkalorien. Minuten in einem aufgezeichneten Training bekommen keine. Beigetragen von Ludwig Ettner.
+- **Korrekturen:** der Import medizinischer Unterlagen zaehlt jede Beobachtung dort, wo Health Connect sie ablegt, ein Koerpergewicht unter Vitalwerten, und haelt eine zurueck, die Health Connect ablehnen wuerde; das Schlaf-Widget auf dem Startbildschirm zeigt die Schlafzeit wie die Dashboard-Karte; ein Laborkennzeichen, das als blosses H, L, N oder A kommt, erscheint als Wort.
+
+### Italiano
+
+- **Un modulo per una bilancia impedenziometrica.** I riquadri Peso e Grasso corporeo di Aggiungi voce sono ora un solo riquadro Composizione corporea: peso, grasso corporeo, massa magra, acqua corporea, massa ossea e metabolismo basale, salvati insieme con lo stesso orario. L'acqua corporea si puo inserire come percentuale del peso dello stesso modulo. Ogni valore si puo ancora modificare o eliminare da solo dalle schermate Corpo.
+- **Glucosio nel sangue e VO2 max.** Nuovi riquadri in Aggiungi voce. Il glucosio nel sangue si inserisce in mmol/L o mg/dL con il rapporto col pasto e il campione; il VO2 max con il metodo di misura. Entrambi si possono modificare ed eliminare dalle loro schermate di dettaglio. Se hai riordinato i riquadri, aggiungili dalla modalita di modifica della griglia.
+- **Ogni tipo di cartella clinica si puo inserire a mano:** visite, procedure, esami di laboratorio, prescrizioni, parametri vitali, anamnesi sociale, gravidanza, medici e i loro ruoli, cliniche, luoghi e i tuoi dati personali, accanto a vaccini, allergie, farmaci e patologie. Medici, cliniche, laboratori e luoghi gia inseriti vengono proposti mentre scrivi.
+- **La cartella clinica e in beta.** Un avviso, solo alla prima apertura, dice che la sezione e ancora in sviluppo e chiede di usarla con attenzione e di controllare i dati importati.
+- **Cadenza e calorie della camminata da un orologio Wear OS.** Ogni minuto di passi sincronizzato viene scritto anche come cadenza e, quando il tuo peso e noto, come stima delle calorie della camminata. I minuti dentro un allenamento registrato non ne ricevono. Contributo di Ludwig Ettner.
+- **Correzioni:** l'importazione della cartella clinica conta ogni osservazione dove la archivia Health Connect, un peso corporeo nei parametri vitali, e trattiene quella che Health Connect rifiuterebbe; il widget del sonno nella schermata Home mostra il tempo di sonno, come la scheda della dashboard; un indicatore di laboratorio inviato come H, L, N o A si legge come parola.
+
+### Eesti
+
+- **Uks vorm kehakoostise kaalule.** Lisa kirje ruudud Kaal ja Keharasv on nuud uks ruut Keha koostis: kaal, keharasv, rasvavaba mass, kehavesi, luumass ja baasainevahetus, salvestatud koos sama ajaga. Kehavee saab sisestada protsendina samal vormil olevast kaalust. Iga vaartust saab endiselt eraldi muuta voi kustutada Keha ekraanidelt.
+- **Veresuhkru ja VO2 max sisestamine.** Lisa kirje all on uued ruudud. Veresuhkur sisestatakse mmol/L voi mg/dL uhikutes koos seosega toidukorraga ja proovi liigiga, VO2 max koos mootmisviisiga. Molemaid saab muuta ja kustutada nende detailvaatest. Kui oled ruute umber jarjestanud, lisa need ruudustiku muutmisreziimis.
+- **Iga liiki meditsiinilisi andmeid saab kasitsi sisestada:** visiidid, protseduurid, laboritulemused, retseptid, elulised naitajad, sotsiaalne anamnees, rasedus, arstid ja nende rollid, kliinikud, kohad ja sinu isikuandmed, lisaks vaktsiinidele, allergiatele, ravimitele ja haigusseisunditele. Juba sisestatud arste, kliinikuid, laboreid ja kohti pakutakse kirjutamise ajal.
+- **Meditsiinilised andmed on beetaversioonis.** Uhekordne teade esimesel avamisel utleb, et osa on alles arendamisel, ning palub seda ettevaatlikult kasutada ja imporditud andmeid kontrollida.
+- **Kadents ja konnikalorid Wear OS kellast.** Iga sunkroonitud sammuminut kirjutatakse ka kadentsina ja, kui sinu kaal on teada, konnikalorite hinnanguna. Salvestatud treeningu sees olevad minutid hinnangut ei saa. Panustas Ludwig Ettner.
+- **Parandused:** meditsiiniliste andmete import loeb iga vaatluse sinna, kuhu Health Connect selle paigutab, kehakaalu eluliste naitajate alla, ja jatab korvale selle, mille Health Connect tagasi lukkaks; avakuva une vidin naitab magatud aega nagu toolaua kaart; laborimarge, mis tuleb lihtsalt H, L, N voi A kujul, kuvatakse sonana.
+
+### Portugues
+
+- **Um formulario para uma balanca de composicao corporal.** Os mosaicos Peso e Gordura corporal em Adicionar registo sao agora um so, Composicao corporal: peso, gordura corporal, massa magra, agua corporal, massa ossea e TMB, guardados juntos com a mesma hora. A agua corporal pode ser introduzida como percentagem do peso do mesmo formulario. Cada valor pode continuar a ser editado ou apagado sozinho nos ecras do Corpo.
+- **Registo de glicemia e VO2 max.** Novos mosaicos em Adicionar registo. A glicemia e introduzida em mmol/L ou mg/dL com a relacao com a refeicao e a amostra; o VO2 max, com o modo como foi medido. Ambos podem ser editados e apagados nos seus ecras de detalhe. Se reordenou os mosaicos, adicione-os no modo de edicao da grelha.
+- **Todo o tipo de registo medico pode ser introduzido a mao:** consultas, procedimentos, resultados de analises, receitas, sinais vitais, historia social, gravidez, medicos e as suas funcoes, clinicas, locais e os seus dados pessoais, alem de vacinas, alergias, medicamentos e condicoes. Medicos, clinicas, laboratorios e locais ja introduzidos sao sugeridos enquanto escreve.
+- **Os registos medicos estao em beta.** Um aviso, so na primeira abertura, diz que a area ainda esta em desenvolvimento e pede que a use com cuidado e reveja os dados importados.
+- **Cadencia e calorias da caminhada de um relogio Wear OS.** Cada minuto de passos sincronizado e tambem escrito como cadencia e, quando o seu peso e conhecido, como estimativa das calorias da caminhada. Os minutos dentro de um treino registado nao recebem nenhuma. Contribuicao de Ludwig Ettner.
+- **Correcoes:** a importacao de registos medicos conta cada observacao onde o Health Connect a arquiva, um peso corporal nos sinais vitais, e retem a que o Health Connect recusaria; o widget de sono do ecra inicial mostra o tempo a dormir, como o cartao do painel; um indicador de analises enviado como H, L, N ou A le-se como palavra.
+
 ## 2.14.5 - 2026-10-18
 
 ### English
