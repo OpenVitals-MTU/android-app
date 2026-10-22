@@ -65,6 +65,7 @@ import tech.mmarca.openvitals.domain.model.DashboardMetric
 import tech.mmarca.openvitals.domain.model.DashboardQuery
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.domain.model.RefreshMode
+import tech.mmarca.openvitals.domain.model.asleepDurationMs
 import tech.mmarca.openvitals.features.cycle.cycleSummarySecondaryLine
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.features.dashboard.toDashboardMetricOrNull
@@ -598,7 +599,8 @@ internal fun DashboardData.toSnapshot(
         DashboardWidgetId.ELEVATION -> snapshot(elevationGainedMeters?.let(unitFormatter::elevation))
         DashboardWidgetId.WHEELCHAIR_PUSHES -> countOnly(wheelchairPushes)
         DashboardWidgetId.WORKOUT -> countOnly(workouts.size.takeIf { it > 0 })
-        DashboardWidgetId.SLEEP -> snapshot(sleep?.let { DisplayValue(unitFormatter.duration(it.durationMs), "") })
+        // Asleep time from the stages, as the dashboard card shows it, not the Health Connect aggregate.
+        DashboardWidgetId.SLEEP -> snapshot(sleep?.let { DisplayValue(unitFormatter.duration(it.asleepDurationMs()), "") })
         DashboardWidgetId.BODY_ENERGY -> snapshot(
             bodyEnergyTimeline?.let { DisplayValue(unitFormatter.count(it.currentScore), "") },
             subtitle = bodyEnergyTimeline?.let { "+${it.charged} / -${it.drained}" }
