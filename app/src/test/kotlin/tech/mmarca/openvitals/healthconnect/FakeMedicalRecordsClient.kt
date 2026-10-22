@@ -118,6 +118,7 @@ internal class FakeMedicalRecordsClient(
         val id = json["id"]?.jsonPrimitive?.content
         require(id != null && FHIR_ID.matches(id)) { "Invalid resource id $id" }
         require("contained" !in json) { "Contained resources are not supported" }
+        REQUIRED_FIELDS[type].orEmpty().forEach { field -> require(field in json) { "Missing required field $field" } }
         val category = requireNotNull(category(type!!, json)) { "Cannot classify $type/$id" }
         return MedicalRecord(MedicalRecordRef(dataSourceId, type, id), category, fhirVersion, data)
     }
@@ -135,19 +136,50 @@ internal class FakeMedicalRecordsClient(
         else -> null
     }
 
+    /** The platform's own order: pregnancy, social history and vital signs by LOINC code, then category. */
     private fun observationCategory(json: JsonObject): MedicalCategory? {
-        val codes = json["category"]?.jsonArray.orEmpty()
-            .flatMap { it.jsonObject["coding"]?.jsonArray.orEmpty() }
-            .mapNotNull { it.jsonObject["code"]?.jsonPrimitive?.content }
+        fun codes(concepts: List<JsonObject>, system: String) = concepts
+            .flatMap { it["coding"]?.jsonArray.orEmpty() }
+            .map { it.jsonObject }
+            .filter { it["system"]?.jsonPrimitive?.content == system }
+            .mapNotNull { it["code"]?.jsonPrimitive?.content }
+        val loinc = codes(listOfNotNull(json["code"]?.jsonObject), "http://loinc.org")
+        val categories = codes(json["category"]?.jsonArray.orEmpty().map { it.jsonObject }, OBSERVATION_CATEGORY_SYSTEM)
         return when {
-            "laboratory" in codes -> MedicalCategory.LAB_RESULTS
-            "vital-signs" in codes -> MedicalCategory.VITAL_SIGNS
-            "social-history" in codes -> MedicalCategory.SOCIAL_HISTORY
+            loinc.any { it in PREGNANCY_LOINC } -> MedicalCategory.PREGNANCY
+            loinc.any { it in SOCIAL_HISTORY_LOINC } || "social-history" in categories -> MedicalCategory.SOCIAL_HISTORY
+            loinc.any { it in VITAL_SIGNS_LOINC } || "vital-signs" in categories -> MedicalCategory.VITAL_SIGNS
+            "laboratory" in categories -> MedicalCategory.LAB_RESULTS
             else -> null
         }
     }
 
     companion object {
+        private const val OBSERVATION_CATEGORY_SYSTEM = "http://terminology.hl7.org/CodeSystem/observation-category"
+
+        // The platform's lists, from MedicalResourceValidator in AOSP packages/modules/HealthFitness.
+        private val PREGNANCY_LOINC = setOf(
+            "82810-3", "11636-8", "11637-6", "11638-4", "11639-2", "11640-0", "11612-9",
+            "11613-7", "11614-5", "33065-4", "11778-8", "11779-6", "11780-4",
+        )
+        private val SOCIAL_HISTORY_LOINC = setOf("74013-4", "72166-2")
+        private val VITAL_SIGNS_LOINC = setOf(
+            "85353-1", "9279-1", "8867-4", "2708-6", "8310-5", "8302-2", "9843-4",
+            "29463-7", "39156-5", "85354-9", "8480-6", "8462-4",
+        )
+
+        /** FHIR R4's required top-level fields, which the platform checks. */
+        private val REQUIRED_FIELDS = mapOf(
+            "Immunization" to listOf("status", "vaccineCode", "patient"),
+            "AllergyIntolerance" to listOf("patient"),
+            "Condition" to listOf("subject"),
+            "MedicationStatement" to listOf("status", "subject"),
+            "MedicationRequest" to listOf("status", "intent", "subject"),
+            "Encounter" to listOf("status", "class"),
+            "Procedure" to listOf("status", "subject"),
+            "Observation" to listOf("status", "code"),
+        )
+
         const val OWN_PACKAGE = "tech.mmarca.openvitals"
         const val MAX_PAGE_SIZE = 5000
 
