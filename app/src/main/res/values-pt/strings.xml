@@ -1327,6 +1327,9 @@
     <string name="health_connect_promote_medical_records_title">Veja os seus registos médicos</string>
     <string name="health_connect_promote_medical_records_body">Permite os registos médicos para ver, importar e exportar vacinas, alergias, resultados de análises e mais.</string>
     <string name="medical_records_title">Registos médicos</string>
+    <string name="medical_beta_tag">Beta</string>
+    <string name="medical_beta_notice_body">Os registos médicos estão em beta e ainda em desenvolvimento, por isso podem surgir erros. Use-os com cuidado e reveja os dados que importar.</string>
+    <string name="medical_beta_notice_accept">Compreendo</string>
     <string name="medical_category_vaccines">Vacinas</string>
     <string name="medical_category_allergies">Alergias</string>
     <string name="medical_category_conditions">Doenças</string>

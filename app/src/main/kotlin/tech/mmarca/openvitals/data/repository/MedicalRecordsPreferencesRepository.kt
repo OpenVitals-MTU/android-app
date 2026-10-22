@@ -18,8 +18,13 @@ class MedicalRecordsPreferencesRepository @Inject constructor(
         get() = prefs.getBoolean(KEY_FIRST_REQUEST_DONE, false)
         set(value) = prefs.edit { putBoolean(KEY_FIRST_REQUEST_DONE, value) }
 
+    override var betaNoticeSeen: Boolean
+        get() = prefs.getBoolean(KEY_BETA_NOTICE_SEEN, false)
+        set(value) = prefs.edit { putBoolean(KEY_BETA_NOTICE_SEEN, value) }
+
     private companion object {
         const val PREFS_FILE = "openvitals_medical_records_preferences"
         const val KEY_FIRST_REQUEST_DONE = "first_permission_request_done"
+        const val KEY_BETA_NOTICE_SEEN = "beta_notice_seen"
     }
 }

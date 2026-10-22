@@ -1190,6 +1190,9 @@
     <string name="health_connect_promote_medical_records_title">Visualizza la tua cartella clinica</string>
     <string name="health_connect_promote_medical_records_body">Consenti la cartella clinica per vedere, importare ed esportare vaccini, allergie, esami di laboratorio e altro.</string>
     <string name="medical_records_title">Cartella clinica</string>
+    <string name="medical_beta_tag">Beta</string>
+    <string name="medical_beta_notice_body">La cartella clinica è in beta e ancora in sviluppo, quindi possono verificarsi errori. Usala con attenzione e controlla i dati che importi.</string>
+    <string name="medical_beta_notice_accept">Ho capito</string>
     <string name="medical_category_vaccines">Vaccini</string>
     <string name="medical_category_allergies">Allergie</string>
     <string name="medical_category_conditions">Patologie</string>

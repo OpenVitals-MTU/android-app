@@ -1803,6 +1803,9 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="health_connect_promote_medical_records_title">Consulta o teu historial médico</string>
     <string name="health_connect_promote_medical_records_body">Permite o historial médico para ver, importar e exportar vacinas, alerxias, resultados de laboratorio e máis.</string>
     <string name="medical_records_title">Historial médico</string>
+    <string name="medical_beta_tag">Beta</string>
+    <string name="medical_beta_notice_body">O historial médico está en beta e aínda en desenvolvemento, polo que poden aparecer erros. Úsao con coidado e revisa os datos que importes.</string>
+    <string name="medical_beta_notice_accept">Entendido</string>
     <string name="medical_category_vaccines">Vacinas</string>
     <string name="medical_category_allergies">Alerxias</string>
     <string name="medical_category_conditions">Doenzas</string>

@@ -1776,6 +1776,9 @@
     <string name="health_connect_promote_medical_records_title">Zobacz swoją dokumentację medyczną</string>
     <string name="health_connect_promote_medical_records_body">Zezwól na dokumentację medyczną, aby wyświetlać, importować i eksportować szczepienia, alergie, wyniki badań i więcej.</string>
     <string name="medical_records_title">Dokumentacja medyczna</string>
+    <string name="medical_beta_tag">Beta</string>
+    <string name="medical_beta_notice_body">Dokumentacja medyczna jest w wersji beta i wciąż powstaje, więc mogą wystąpić błędy. Korzystaj z niej ostrożnie i sprawdzaj importowane dane.</string>
+    <string name="medical_beta_notice_accept">Rozumiem</string>
     <string name="medical_category_vaccines">Szczepienia</string>
     <string name="medical_category_allergies">Alergie</string>
     <string name="medical_category_conditions">Choroby</string>

@@ -1800,6 +1800,9 @@
     <string name="health_connect_promote_medical_records_title">医療記録を見る</string>
     <string name="health_connect_promote_medical_records_body">医療記録を許可すると、予防接種、アレルギー、検査結果などの表示、インポート、エクスポートができます。</string>
     <string name="medical_records_title">医療記録</string>
+    <string name="medical_beta_tag">ベータ</string>
+    <string name="medical_beta_notice_body">医療記録はベータ版で、まだ開発中のため、不具合が起きる可能性があります。慎重にご利用いただき、インポートしたデータを確認してください。</string>
+    <string name="medical_beta_notice_accept">了解しました</string>
     <string name="medical_category_vaccines">予防接種</string>
     <string name="medical_category_allergies">アレルギー</string>
     <string name="medical_category_conditions">疾患</string>
