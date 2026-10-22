@@ -1,6 +1,7 @@
 package tech.mmarca.openvitals.features.homewidgets
 
 import androidx.datastore.preferences.core.mutablePreferencesOf
+import java.time.Instant
 import java.time.LocalDate
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -17,6 +18,8 @@ import tech.mmarca.openvitals.domain.cycle.CyclePhase
 import tech.mmarca.openvitals.domain.cycle.PhaseCertainty
 import tech.mmarca.openvitals.domain.model.DashboardCycleSummary
 import tech.mmarca.openvitals.domain.model.DashboardData
+import tech.mmarca.openvitals.domain.model.SleepData
+import tech.mmarca.openvitals.domain.model.SleepStage
 import tech.mmarca.openvitals.features.dashboard.DashboardWidgetId
 import tech.mmarca.openvitals.navigation.Screen
 
@@ -88,6 +91,36 @@ class HomeMetricWidgetSnapshotTest {
             snapshot.subtitle,
         )
         assertEquals(emptyList<HomeMetricWidgetRow>(), snapshot.rows)
+    }
+
+    @Test
+    fun `sleep shows the asleep time from the stages, as the dashboard card does`() {
+        val bedtime = Instant.parse("2026-10-19T00:10:00Z")
+        val awakeStart = Instant.parse("2026-10-19T03:00:00Z")
+        val awakeEnd = Instant.parse("2026-10-19T03:07:00Z")
+        val wake = Instant.parse("2026-10-19T08:28:00Z")
+        val sleep = SleepData(
+            id = "zepp-night",
+            startTime = bedtime,
+            endTime = wake,
+            // The loader swaps in the Health Connect daily aggregate, which can disagree with the stages.
+            durationMs = (5 * 60 + 43) * 60_000L,
+            source = "com.huami.watch.hmwatchmanager",
+            stages = listOf(
+                SleepStage(bedtime, awakeStart, SleepStage.STAGE_LIGHT),
+                SleepStage(awakeStart, awakeEnd, SleepStage.STAGE_AWAKE),
+                SleepStage(awakeEnd, wake, SleepStage.STAGE_DEEP),
+            ),
+        )
+
+        val snapshot = buildMetricWidgetSnapshot(
+            context = context,
+            metricId = DashboardWidgetId.SLEEP,
+            data = DashboardData(date = LocalDate.of(2026, 10, 19), sleep = sleep),
+            unitFormatter = unitFormatter(),
+        )
+
+        assertEquals("8h 11m", snapshot.value)
     }
 
     @Test
