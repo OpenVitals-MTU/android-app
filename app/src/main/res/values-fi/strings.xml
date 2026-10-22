@@ -1804,6 +1804,9 @@
     <string name="health_connect_promote_medical_records_title">Katso terveystietojasi</string>
     <string name="health_connect_promote_medical_records_body">Salli terveystiedot, jotta voit tarkastella, tuoda ja viedä rokotuksia, allergioita, laboratoriotuloksia ja muuta.</string>
     <string name="medical_records_title">Terveystiedot</string>
+    <string name="medical_beta_tag">Beta</string>
+    <string name="medical_beta_notice_body">Terveystiedot ovat beetavaiheessa ja yhä kehitteillä, joten virheitä voi ilmetä. Käytä niitä harkiten ja tarkista tuomasi tiedot.</string>
+    <string name="medical_beta_notice_accept">Ymmärrän</string>
     <string name="medical_category_vaccines">Rokotukset</string>
     <string name="medical_category_allergies">Allergiat</string>
     <string name="medical_category_conditions">Sairaudet</string>

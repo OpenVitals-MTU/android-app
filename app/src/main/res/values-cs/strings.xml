@@ -1437,6 +1437,9 @@
     <string name="health_connect_promote_medical_records_title">Zobrazte své zdravotní záznamy</string>
     <string name="health_connect_promote_medical_records_body">Povolte zdravotní záznamy, abyste mohli zobrazit, importovat a exportovat očkování, alergie, laboratorní výsledky a další.</string>
     <string name="medical_records_title">Zdravotní záznamy</string>
+    <string name="medical_beta_tag">Beta</string>
+    <string name="medical_beta_notice_body">Zdravotní záznamy jsou ve verzi beta a stále se vyvíjejí, takže se mohou objevit chyby. Používejte je opatrně a importovaná data vždy zkontrolujte.</string>
+    <string name="medical_beta_notice_accept">Rozumím</string>
     <string name="medical_category_vaccines">Očkování</string>
     <string name="medical_category_allergies">Alergie</string>
     <string name="medical_category_conditions">Onemocnění</string>

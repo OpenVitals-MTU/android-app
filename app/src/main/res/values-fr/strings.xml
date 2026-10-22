@@ -1445,6 +1445,9 @@
     <string name="health_connect_promote_medical_records_title">Consultez vos dossiers médicaux</string>
     <string name="health_connect_promote_medical_records_body">Autorisez les dossiers médicaux pour voir, importer et exporter vaccins, allergies, résultats d\'analyses et plus encore.</string>
     <string name="medical_records_title">Dossiers médicaux</string>
+    <string name="medical_beta_tag">Bêta</string>
+    <string name="medical_beta_notice_body">Les dossiers médicaux sont en bêta et encore en développement : des bugs peuvent survenir. Utilisez-les avec prudence et vérifiez les données que vous importez.</string>
+    <string name="medical_beta_notice_accept">Compris</string>
     <string name="medical_category_vaccines">Vaccins</string>
     <string name="medical_category_allergies">Allergies</string>
     <string name="medical_category_conditions">Affections</string>

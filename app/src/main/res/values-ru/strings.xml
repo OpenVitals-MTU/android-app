@@ -1733,6 +1733,9 @@
     <string name="health_connect_promote_medical_records_title">Просматривайте медицинские записи</string>
     <string name="health_connect_promote_medical_records_body">Разрешите медицинские записи, чтобы просматривать, импортировать и экспортировать прививки, аллергии, результаты анализов и многое другое.</string>
     <string name="medical_records_title">Медицинские записи</string>
+    <string name="medical_beta_tag">Бета</string>
+    <string name="medical_beta_notice_body">Медицинские записи находятся в бета-версии и ещё в разработке, поэтому возможны ошибки. Пользуйтесь ими осторожно и проверяйте импортированные данные.</string>
+    <string name="medical_beta_notice_accept">Понятно</string>
     <string name="medical_category_vaccines">Прививки</string>
     <string name="medical_category_allergies">Аллергии</string>
     <string name="medical_category_conditions">Заболевания</string>

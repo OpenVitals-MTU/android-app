@@ -1187,6 +1187,9 @@
     <string name="health_connect_promote_medical_records_title">Vaata oma meditsiinilisi andmeid</string>
     <string name="health_connect_promote_medical_records_body">Luba meditsiinilised andmed, et vaktsineerimisi, allergiaid, laboritulemusi ja muud vaadata, importida ja eksportida.</string>
     <string name="medical_records_title">Meditsiinilised andmed</string>
+    <string name="medical_beta_tag">Beeta</string>
+    <string name="medical_beta_notice_body">Meditsiinilised andmed on beetaversioonis ja alles arendamisel, seega võib esineda vigu. Kasuta neid ettevaatlikult ja kontrolli imporditud andmeid.</string>
+    <string name="medical_beta_notice_accept">Sain aru</string>
     <string name="medical_category_vaccines">Vaktsineerimised</string>
     <string name="medical_category_allergies">Allergiad</string>
     <string name="medical_category_conditions">Haigused</string>

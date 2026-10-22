@@ -14,7 +14,10 @@ class MedicalRecordsHomeViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private class FakePreferences(override var firstPermissionRequestDone: Boolean = false) : MedicalRecordsPreferences
+    private class FakePreferences(
+        override var firstPermissionRequestDone: Boolean = false,
+        override var betaNoticeSeen: Boolean = false,
+    ) : MedicalRecordsPreferences
 
     private val repository = FakeMedicalRecordsRepository().apply {
         addSource("clinic", "Clinic")
@@ -111,5 +114,16 @@ class MedicalRecordsHomeViewModelTest {
         assertThat(vm.uiState.value.firstRequestDone).isTrue()
         assertThat(preferences.firstPermissionRequestDone).isTrue()
         assertThat(viewModel().uiState.value.firstRequestDone).isTrue()
+    }
+
+    @Test
+    fun `the beta notice shows until it is dismissed, then never again`() = runTest {
+        val vm = viewModel()
+        assertThat(vm.uiState.value.betaNoticeSeen).isFalse()
+
+        vm.onBetaNoticeDismissed()
+
+        assertThat(vm.uiState.value.betaNoticeSeen).isTrue()
+        assertThat(viewModel().uiState.value.betaNoticeSeen).isTrue()
     }
 }

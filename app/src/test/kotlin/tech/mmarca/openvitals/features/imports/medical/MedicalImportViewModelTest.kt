@@ -29,7 +29,10 @@ class MedicalImportViewModelTest {
     @get:Rule
     val folder = TemporaryFolder()
 
-    private class FakePreferences(override var firstPermissionRequestDone: Boolean = true) : MedicalRecordsPreferences
+    private class FakePreferences(
+        override var firstPermissionRequestDone: Boolean = true,
+        override var betaNoticeSeen: Boolean = true,
+    ) : MedicalRecordsPreferences
 
     private val repository = FakeMedicalRecordsRepository()
     private val preferences = FakePreferences()

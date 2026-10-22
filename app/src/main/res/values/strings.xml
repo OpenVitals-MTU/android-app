@@ -1799,6 +1799,9 @@
     <string name="health_connect_promote_medical_records_title">See your medical records</string>
     <string name="health_connect_promote_medical_records_body">Allow medical records to view, import, and export vaccines, allergies, lab results, and more.</string>
     <string name="medical_records_title">Medical records</string>
+    <string name="medical_beta_tag">Beta</string>
+    <string name="medical_beta_notice_body">Medical records are in beta and still under development, so bugs may arise. Please use them with care, and review any data you import.</string>
+    <string name="medical_beta_notice_accept">I understand</string>
     <string name="medical_category_vaccines">Vaccines</string>
     <string name="medical_category_allergies">Allergies</string>
     <string name="medical_category_conditions">Conditions</string>

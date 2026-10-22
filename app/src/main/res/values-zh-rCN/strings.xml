@@ -1449,6 +1449,9 @@
     <string name="health_connect_promote_medical_records_title">查看你的医疗记录</string>
     <string name="health_connect_promote_medical_records_body">允许医疗记录，以查看、导入和导出疫苗接种、过敏、化验结果等。</string>
     <string name="medical_records_title">医疗记录</string>
+    <string name="medical_beta_tag">测试版</string>
+    <string name="medical_beta_notice_body">医疗记录仍处于测试阶段，正在开发中，可能会出现问题。请谨慎使用，并检查导入的数据。</string>
+    <string name="medical_beta_notice_accept">我知道了</string>
     <string name="medical_category_vaccines">疫苗接种</string>
     <string name="medical_category_allergies">过敏</string>
     <string name="medical_category_conditions">疾病</string>

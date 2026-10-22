@@ -1192,6 +1192,9 @@
     <string name="health_connect_promote_medical_records_title">Ver tu historial médico</string>
     <string name="health_connect_promote_medical_records_body">Permite el historial médico para ver, importar y exportar vacunas, alergias, resultados de laboratorio y más.</string>
     <string name="medical_records_title">Historial médico</string>
+    <string name="medical_beta_tag">Beta</string>
+    <string name="medical_beta_notice_body">El historial médico está en beta y aún en desarrollo, así que pueden surgir errores. Úsalo con cuidado y revisa los datos que importes.</string>
+    <string name="medical_beta_notice_accept">Entendido</string>
     <string name="medical_category_vaccines">Vacunas</string>
     <string name="medical_category_allergies">Alergias</string>
     <string name="medical_category_conditions">Afecciones</string>

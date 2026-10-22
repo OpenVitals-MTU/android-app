@@ -1187,6 +1187,9 @@
     <string name="health_connect_promote_medical_records_title">Medizinische Unterlagen ansehen</string>
     <string name="health_connect_promote_medical_records_body">Erlaube medizinische Unterlagen, um Impfungen, Allergien, Laborwerte und mehr anzusehen, zu importieren und zu exportieren.</string>
     <string name="medical_records_title">Medizinische Unterlagen</string>
+    <string name="medical_beta_tag">Beta</string>
+    <string name="medical_beta_notice_body">Medizinische Unterlagen sind in der Beta und noch in Entwicklung, daher kann es zu Fehlern kommen. Geh bitte sorgsam damit um und prüfe die Daten, die du importierst.</string>
+    <string name="medical_beta_notice_accept">Verstanden</string>
     <string name="medical_category_vaccines">Impfungen</string>
     <string name="medical_category_allergies">Allergien</string>
     <string name="medical_category_conditions">Erkrankungen</string>

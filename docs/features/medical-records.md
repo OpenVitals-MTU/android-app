@@ -18,7 +18,9 @@ Health Connect offers medical records on Android 14 and newer, once its module h
 
 A **Medical records** tile on the dashboard opens the records home. The tile is static: a glyph, the title and "Tap to browse". It reads nothing.
 
-The first time the area opens, OpenVitals asks for all thirteen medical permissions in one Health Connect request: one read permission per category, and write. The request holds only medical permissions, so Health Connect shows its own medical screen, where any of them can be turned off. OpenVitals does not ask again by itself.
+The first time the records home opens, a notice marked **Beta** says the area is still under development, that bugs may arise, and asks the user to use it with care and review the data they import. It shows once: closing it, with its button or Back, stores that it was seen. A tap beside it does not close it. Someone who used the area before the notice existed sees it once, on their next visit.
+
+Once the notice is closed, the first visit asks for all thirteen medical permissions in one Health Connect request: one read permission per category, and write. The request holds only medical permissions, so Health Connect shows its own medical screen, where any of them can be turned off. OpenVitals does not ask again by itself.
 
 ## The records home
 

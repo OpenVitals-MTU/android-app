@@ -39,6 +39,7 @@ data class MedicalRecordsHomeUiState(
     val available: Boolean = true,
     val rows: List<MedicalCategoryRow> = emptyList(),
     val firstRequestDone: Boolean = true,
+    val betaNoticeSeen: Boolean = true,
     val ownSourceCount: Int = 0,
     val documentCount: Int = 0,
     val documentsBytes: Long = 0,
@@ -54,7 +55,10 @@ class MedicalRecordsHomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
-        MedicalRecordsHomeUiState(firstRequestDone = preferences.firstPermissionRequestDone),
+        MedicalRecordsHomeUiState(
+            firstRequestDone = preferences.firstPermissionRequestDone,
+            betaNoticeSeen = preferences.betaNoticeSeen,
+        ),
     )
     val uiState: StateFlow<MedicalRecordsHomeUiState> = _uiState.asStateFlow()
     private val loadCoordinator = LoadCoordinator()
@@ -93,6 +97,12 @@ class MedicalRecordsHomeViewModel @Inject constructor(
     fun onFirstRequestLaunched() {
         preferences.firstPermissionRequestDone = true
         _uiState.update { it.copy(firstRequestDone = true) }
+    }
+
+    /** Called as the beta notice is dismissed, so it never shows again. */
+    fun onBetaNoticeDismissed() {
+        preferences.betaNoticeSeen = true
+        _uiState.update { it.copy(betaNoticeSeen = true) }
     }
 
     private suspend fun row(category: MedicalCategory, readable: Boolean): MedicalCategoryRow {
