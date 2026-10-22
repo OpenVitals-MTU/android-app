@@ -35,6 +35,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.LocalDrink
 import androidx.compose.material.icons.outlined.LunchDining
+import androidx.compose.material.icons.outlined.MonitorWeight
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.SelfImprovement
@@ -74,6 +75,7 @@ import tech.mmarca.openvitals.ui.theme.HydrationColor
 import tech.mmarca.openvitals.ui.theme.CycleColor
 import tech.mmarca.openvitals.ui.theme.MindfulnessColor
 import tech.mmarca.openvitals.ui.theme.NutritionColor
+import tech.mmarca.openvitals.ui.theme.WeightColor
 import tech.mmarca.openvitals.ui.theme.WorkoutColor
 
 internal const val ManualEntryGridColumns = 3
@@ -261,6 +263,7 @@ internal fun manualEntryWidgetSpecs(
     onOpenNutritionEntry: () -> Unit,
     onOpenActivityEntry: () -> Unit,
     onOpenMindfulnessEntry: () -> Unit,
+    onOpenBodyCompositionEntry: () -> Unit,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
     onOpenCycleEntry: () -> Unit,
@@ -316,21 +319,17 @@ internal fun manualEntryWidgetSpecs(
             isEditingWidgets = isEditingWidgets,
             onOpen = onOpenMindfulnessEntry,
         ),
-        bodyMeasurementWidgetSpec(
-            id = ManualEntryWidgetId.WEIGHT,
-            type = BodyMeasurementType.WEIGHT,
+        metricTileWidgetSpec(
+            id = ManualEntryWidgetId.BODY_COMPOSITION,
+            titleRes = R.string.screen_body_composition_entry,
+            icon = Icons.Outlined.MonitorWeight,
+            accentColor = WeightColor,
             isEditingWidgets = isEditingWidgets,
-            onOpenBodyMeasurementEntry = onOpenBodyMeasurementEntry,
+            onOpen = onOpenBodyCompositionEntry,
         ),
         bodyMeasurementWidgetSpec(
             id = ManualEntryWidgetId.HEIGHT,
             type = BodyMeasurementType.HEIGHT,
-            isEditingWidgets = isEditingWidgets,
-            onOpenBodyMeasurementEntry = onOpenBodyMeasurementEntry,
-        ),
-        bodyMeasurementWidgetSpec(
-            id = ManualEntryWidgetId.BODY_FAT,
-            type = BodyMeasurementType.BODY_FAT,
             isEditingWidgets = isEditingWidgets,
             onOpenBodyMeasurementEntry = onOpenBodyMeasurementEntry,
         ),
@@ -361,6 +360,18 @@ internal fun manualEntryWidgetSpecs(
         vitalsMeasurementWidgetSpec(
             id = ManualEntryWidgetId.HRV,
             type = VitalsMeasurementType.HRV,
+            isEditingWidgets = isEditingWidgets,
+            onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
+        ),
+        vitalsMeasurementWidgetSpec(
+            id = ManualEntryWidgetId.BLOOD_GLUCOSE,
+            type = VitalsMeasurementType.BLOOD_GLUCOSE,
+            isEditingWidgets = isEditingWidgets,
+            onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
+        ),
+        vitalsMeasurementWidgetSpec(
+            id = ManualEntryWidgetId.VO2_MAX,
+            type = VitalsMeasurementType.VO2_MAX,
             isEditingWidgets = isEditingWidgets,
             onOpenVitalsMeasurementEntry = onOpenVitalsMeasurementEntry,
         ),

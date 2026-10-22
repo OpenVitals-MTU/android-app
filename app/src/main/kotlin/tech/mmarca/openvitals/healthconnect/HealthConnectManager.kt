@@ -491,6 +491,9 @@ class HealthConnectManager @Inject constructor(
     suspend fun writeBodyMeasurementEntry(request: BodyMeasurementWriteRequest): String =
         withSyncEnabled { bodyReader.writeBodyMeasurementEntry(request) }
 
+    suspend fun writeBodyMeasurementEntries(requests: List<BodyMeasurementWriteRequest>): List<String> =
+        withSyncEnabled { bodyReader.writeBodyMeasurementEntries(requests) }
+
     suspend fun readBodyMeasurementEntry(type: BodyMeasurementType, id: String): BodyMeasurementEntry? =
         bodyReader.readBodyMeasurementEntry(type, id)
 

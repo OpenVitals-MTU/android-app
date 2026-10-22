@@ -77,6 +77,20 @@ class MeasurementInputTest {
     }
 
     @Test
+    fun `blood glucose in mg per dL converts to mmol per L`() {
+        assertEquals(
+            5.5,
+            canonicalVitalsValue("5,5", VitalsMeasurementType.BLOOD_GLUCOSE, UnitSystem.METRIC)!!,
+            0.0,
+        )
+        assertEquals(
+            5.5,
+            canonicalVitalsValue("99", VitalsMeasurementType.BLOOD_GLUCOSE, UnitSystem.IMPERIAL)!!,
+            1e-9,
+        )
+    }
+
+    @Test
     fun `temperature Fahrenheit converts to Celsius`() {
         assertEquals(
             37.0,

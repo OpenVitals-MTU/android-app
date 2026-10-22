@@ -88,9 +88,8 @@ class OpenVitalsVisualRegressionTest {
             ManualEntryWidgetId.NUTRITION,
             ManualEntryWidgetId.ACTIVITY,
             ManualEntryWidgetId.MINDFULNESS,
-            ManualEntryWidgetId.WEIGHT,
+            ManualEntryWidgetId.BODY_COMPOSITION,
             ManualEntryWidgetId.HEIGHT,
-            ManualEntryWidgetId.BODY_FAT,
             ManualEntryWidgetId.BLOOD_PRESSURE,
         )
 
@@ -102,6 +101,7 @@ class OpenVitalsVisualRegressionTest {
                     onOpenNutritionEntry = {},
                     onOpenActivityEntry = {},
                     onOpenMindfulnessEntry = {},
+                    onOpenBodyCompositionEntry = {},
                     onOpenBodyMeasurementEntry = {},
                     onOpenVitalsMeasurementEntry = {},
                 onOpenCycleEntry = {},
