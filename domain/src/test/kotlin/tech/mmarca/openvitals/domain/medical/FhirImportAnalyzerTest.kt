@@ -36,8 +36,8 @@ class FhirImportAnalyzerTest {
         )
         assertThat(group.rejected).isEmpty()
         assertThat(group.skippedTypes).containsExactly("Composition", 1)
-        // The weight has no category: Health Connect classifies it by its LOINC code.
-        assertThat(group.likelyCategories[null]).isEqualTo(1)
+        // The weight has no category: Health Connect files it under vital signs by its LOINC code.
+        assertThat(group.likelyCategories[MedicalCategory.VITAL_SIGNS]).isEqualTo(1)
         assertThat(group.notes.filterIsInstance<FhirIdNote.ContainedDropped>()).hasSize(1)
     }
 

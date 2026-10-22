@@ -12,17 +12,24 @@ object FhirResourceTypes {
         "Patient", "Practitioner", "PractitionerRole",
     )
 
-    /** The three Observation category codes Health Connect names. */
-    private val observationCategories = mapOf(
-        "laboratory" to MedicalCategory.LAB_RESULTS,
-        "vital-signs" to MedicalCategory.VITAL_SIGNS,
-        "social-history" to MedicalCategory.SOCIAL_HISTORY,
-    )
-
     /**
-     * The category Health Connect will most likely assign. Null for an Observation it
-     * can only classify by LOINC code: the platform's LOINC lists are not published.
+     * Health Connect's own Observation rules, from `MedicalResourceValidator` in the platform
+     * (AOSP packages/modules/HealthFitness). Checked in this order: pregnancy by LOINC code
+     * alone, social history and vital signs by LOINC code or category, lab results by category
+     * alone. An Observation matching none is refused.
      */
+    val PregnancyLoincCodes: Set<String> = setOf(
+        "82810-3", "11636-8", "11637-6", "11638-4", "11639-2", "11640-0", "11612-9",
+        "11613-7", "11614-5", "33065-4", "11778-8", "11779-6", "11780-4",
+    )
+    val SocialHistoryLoincCodes: Set<String> = setOf("74013-4", "72166-2")
+    val VitalSignsLoincCodes: Set<String> = setOf(
+        "85353-1", "9279-1", "8867-4", "2708-6", "8310-5", "8302-2", "9843-4",
+        "29463-7", "39156-5", "85354-9", "8480-6", "8462-4",
+    )
+    const val ObservationCategorySystem = "http://terminology.hl7.org/CodeSystem/observation-category"
+
+    /** The category Health Connect will assign. Null for a resource it would refuse to file. */
     fun likelyCategory(resource: JsonObject): MedicalCategory? = when (resource.resourceType) {
         "Immunization" -> MedicalCategory.VACCINES
         "AllergyIntolerance" -> MedicalCategory.ALLERGIES
@@ -32,14 +39,26 @@ object FhirResourceTypes {
         "Encounter", "Location", "Organization" -> MedicalCategory.VISITS
         "Patient" -> MedicalCategory.PERSONAL_DETAILS
         "Practitioner", "PractitionerRole" -> MedicalCategory.PRACTITIONER_DETAILS
-        "Observation" -> observationCategoryCodes(resource).firstNotNullOfOrNull { observationCategories[it] }
+        "Observation" -> observationCategory(resource)
         else -> null
     }
+
+    private fun observationCategory(observation: JsonObject): MedicalCategory? {
+        val loinc = observation.obj("code")?.codesOf(FhirPreflight.LoincSystem).orEmpty()
+        val categories = observation.objects("category").flatMap { it.codesOf(ObservationCategorySystem) }
+        return when {
+            loinc.any { it in PregnancyLoincCodes } -> MedicalCategory.PREGNANCY
+            loinc.any { it in SocialHistoryLoincCodes } || "social-history" in categories -> MedicalCategory.SOCIAL_HISTORY
+            loinc.any { it in VitalSignsLoincCodes } || "vital-signs" in categories -> MedicalCategory.VITAL_SIGNS
+            "laboratory" in categories -> MedicalCategory.LAB_RESULTS
+            else -> null
+        }
+    }
+
+    private fun JsonObject.codesOf(system: String): List<String> =
+        objects("coding").filter { it.string("system") == system }.mapNotNull { it.string("code") }
 
     /** The category a resource type lands in. Null for Observation, which depends on its content. */
     fun categoryOfType(type: String): MedicalCategory? =
         likelyCategory(JsonObject(mapOf("resourceType" to JsonPrimitive(type))))
-
-    internal fun observationCategoryCodes(resource: JsonObject): List<String> =
-        resource.objects("category").flatMap { it.objects("coding") }.mapNotNull { it.string("code") }
 }
