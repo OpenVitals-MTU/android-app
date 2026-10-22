@@ -1,6 +1,8 @@
 package tech.mmarca.openvitals.features.medical
 
 import android.text.format.Formatter
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -77,6 +79,7 @@ fun MedicalRecordsHomeScreen(
     }
     if (choosingKind) {
         AddRecordChooser(
+            kinds = ManualRecordKind.entries.filter { it.canAdd },
             onChoose = { kind ->
                 choosingKind = false
                 onAddRecord(kind)
@@ -133,15 +136,15 @@ internal class MedicalHomeActions(
     val onOpenSettings: () -> Unit = {},
 )
 
-/** The four kinds a person can type in. Each opens its own form. */
+/** The [kinds] a person can type in here. Each opens its own form. */
 @Composable
-private fun AddRecordChooser(onChoose: (ManualRecordKind) -> Unit, onDismiss: () -> Unit) {
+internal fun AddRecordChooser(kinds: List<ManualRecordKind>, onChoose: (ManualRecordKind) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.medical_entry_add_action)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                ManualRecordKind.entries.forEach { kind ->
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.verticalScroll(rememberScrollState())) {
+                kinds.forEach { kind ->
                     OpenVitalsListRow(
                         title = stringResource(entryTitleRes(kind, edit = false)),
                         icon = kind.category.icon,

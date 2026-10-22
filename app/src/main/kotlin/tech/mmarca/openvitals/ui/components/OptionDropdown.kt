@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import tech.mmarca.openvitals.R
 
-/** A compact optional-choice dropdown. "Not specified" is listed first so a choice can be cleared. */
+/** A compact choice dropdown. "Not specified" is listed first so an optional choice can be cleared. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T : Any> OptionDropdown(
@@ -29,6 +29,8 @@ fun <T : Any> OptionDropdown(
     enabled: Boolean,
     onSelect: (T?) -> Unit,
     modifier: Modifier = Modifier,
+    /** False for a choice that must be made: "Not specified" is then not offered. */
+    allowNone: Boolean = true,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -55,14 +57,16 @@ fun <T : Any> OptionDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.option_not_specified)) },
-                onClick = {
-                    onSelect(null)
-                    expanded = false
-                },
-                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
-            )
+            if (allowNone) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.option_not_specified)) },
+                    onClick = {
+                        onSelect(null)
+                        expanded = false
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                )
+            }
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(optionText(option)) },
