@@ -111,14 +111,32 @@ The zip from terviseportaal.ee holds each document twice: as XML and as a PDF. T
 
 ## Adding a record by hand
 
-The **+** button on the records home adds a vaccine, an allergy, a medication or a condition. The vaccines, allergies, medications and conditions lists have their own **+** for that kind.
+Every kind of record Health Connect holds can be typed in. The **+** button on the records home offers them all. The **+** on a category's list adds that category's kind, or offers a choice where a category holds more than one: a visit, a clinic or a place under visits; a medication or a prescription under medications; a doctor or a doctor's role under practitioner details.
 
 - **Vaccine:** the name, completed or not done, the date given, and a lot number.
 - **Allergy:** the substance, active, inactive or resolved, when it began, the reaction, and how serious it is.
-- **Medication:** the name, active, completed, stopped or on hold, since when, and the dosage.
-- **Condition:** the name, active, in remission, resolved or inactive, and when it began.
+- **Medication:** the name, active, completed, intended, stopped, on hold or not taken, since when, and the dosage. It is a FHIR MedicationStatement: what the person takes.
+- **Prescription:** the medication, active, on hold, completed, stopped, cancelled or draft, the day it was prescribed, how to take it, and who prescribed it. It is a FHIR MedicationRequest with the intent `order`.
+- **Condition:** the name, active, recurrence, relapse, in remission, resolved or inactive, and when it began.
+- **Visit:** what it was, its status (finished, planned, arrived, triaged, in progress, on leave or cancelled), the setting (outpatient, emergency, inpatient, acute or non-acute inpatient, observation stay, short stay, pre-admission, home visit, virtual or in the field), the date, the reason, the doctor, the clinic or hospital, and the place. It is a FHIR Encounter.
+- **Procedure:** the name, completed, in preparation, in progress, on hold, stopped or not done, the date, the reason, who performed it, the clinic or hospital, and the place.
+- **Lab result:** the test, final, registered, preliminary, amended, corrected or cancelled, the date the sample was taken, the result and its unit, whether the report flags it high, low, normal or abnormal, the reference range, and the laboratory. A number, also one with a bound such as `<0.5`, is saved as a quantity; anything else, such as "Negative", as text. The record carries the `laboratory` category, which is how Health Connect files it under lab results.
+- **Vital sign:** blood pressure (systolic and diastolic, as one panel), heart rate, breathing rate, oxygen saturation, body temperature, weight, height, body mass index, or head circumference, with the day it was measured. Temperature, weight, height and head circumference take either unit, °C or °F, kg or lb, cm or in, and keep the one typed. These are medical records, apart from the vitals OpenVitals reads from Health Connect's own data types.
+- **Social history:** smoking status (daily, occasional, former, never, or unknown), alcoholic drinks per day, or anything else as a topic and free text.
+- **Pregnancy:** pregnancy status, the estimated due date (by examination, from the last period, or from ovulation), and the counts of births (total, live, full-term, preterm), living children, miscarriages and abortions, and ectopic pregnancies. A due date may lie ahead.
+- **Doctor:** a name, a qualification, and a phone number or email address. It is a FHIR Practitioner, under practitioner details.
+- **Doctor's role:** what the doctor is, such as a cardiologist, a specialty, the doctor, the clinic, the place, and a phone number or email address. It is a FHIR PractitionerRole.
+- **Clinic or organization:** a name, an address, and a phone number or email address. It is a FHIR Organization, which Health Connect files under visits; the visits list shows it inside the visits that name it.
+- **Place:** a name, an address, and a phone number or email address. It is a FHIR Location, also under visits.
+- **Personal details:** the owner's own record, written with the first entry, is edited from its detail screen: given and family name, birth date, gender, address, a phone number or email address, and the family doctor.
 
-Every kind also takes a note and, for a user who has one, a code with its code system, such as a CVX code printed on a vaccine card. Names are free text. Nothing is looked up and no code list ships with the app.
+A vital sign, social history or pregnancy record carries the LOINC code of what it measures, which is how Health Connect files it: the platform recognizes pregnancy, social history and vital signs by their codes. Free social history has no code and is filed by its `social-history` category. A coded answer, such as a smoking status, carries its SNOMED CT code and the words the user picked.
+
+A vaccine, a visit, a procedure, a lab result, a vital sign, a social history and a pregnancy record need their date. Only something still ahead can be dated after today: a planned visit, a procedure in preparation, or a medication the person intends to take.
+
+A doctor, clinic, lab or place is a record of its own, and the records that name it point at it. The form offers the ones already entered as the name is typed; a new name is written as a new record in the same save. The reference also carries the name, so it shows where the record cannot be read.
+
+Every kind but a visit, a doctor, a doctor's role, a clinic, a place and the personal details also takes a note: FHIR gives those no note, and Health Connect refuses a field the type does not have. The clinical kinds take, for a user who has one, a code with its code system, such as a CVX code printed on a vaccine card. Names are free text. Nothing is looked up and no code list ships with the app.
 
 Records typed in go to one source, "Entered in OpenVitals". Each one points at the owner's own Patient record, which the first entry writes. Its name and birth date come from a Patient record OpenVitals can read. When there is none, the first entry asks for a name once, and a birth date if the user wants.
 

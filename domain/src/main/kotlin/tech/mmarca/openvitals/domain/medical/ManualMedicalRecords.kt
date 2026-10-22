@@ -1,34 +1,89 @@
 package tech.mmarca.openvitals.domain.medical
 
-import java.time.Instant
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import tech.mmarca.openvitals.domain.model.MedicalCategory
 
-/** The four kinds of record a person can reasonably type. */
+/** The kinds of record a person can reasonably type. */
 enum class ManualRecordKind(
     val resourceType: String,
     val category: MedicalCategory,
-    /** The FHIR status codes offered, the default first. */
+    /** The FHIR status codes offered, the default first. Entered-in-error and unknown are left out. */
     val statuses: List<String>,
     /** Code systems a user may have a code from. Nothing is bundled: the user types the code. */
     val codeSystems: List<String>,
+    /** The statuses of something still ahead. Only these may carry a date in the future. */
+    val futureStatuses: Set<String> = emptySet(),
 ) {
     VACCINE("Immunization", MedicalCategory.VACCINES, listOf("completed", "not-done"), listOf(Cvx, Snomed, Atc)),
     ALLERGY("AllergyIntolerance", MedicalCategory.ALLERGIES, listOf("active", "inactive", "resolved"), listOf(Snomed)),
-    MEDICATION("MedicationStatement", MedicalCategory.MEDICATIONS, listOf("active", "completed", "stopped", "on-hold"), listOf(Atc, RxNorm, Snomed)),
-    CONDITION("Condition", MedicalCategory.CONDITIONS, listOf("active", "remission", "resolved", "inactive"), listOf(Snomed, Icd10)),
+    MEDICATION(
+        "MedicationStatement",
+        MedicalCategory.MEDICATIONS,
+        listOf("active", "completed", "intended", "stopped", "on-hold", "not-taken"),
+        listOf(Atc, RxNorm, Snomed),
+        futureStatuses = setOf("intended"),
+    ),
+    PRESCRIPTION(
+        "MedicationRequest",
+        MedicalCategory.MEDICATIONS,
+        listOf("active", "on-hold", "completed", "stopped", "cancelled", "draft"),
+        listOf(Atc, RxNorm, Snomed),
+    ),
+    CONDITION(
+        "Condition",
+        MedicalCategory.CONDITIONS,
+        listOf("active", "recurrence", "relapse", "remission", "resolved", "inactive"),
+        listOf(Snomed, Icd10),
+    ),
+    VISIT(
+        "Encounter",
+        MedicalCategory.VISITS,
+        listOf("finished", "planned", "arrived", "triaged", "in-progress", "onleave", "cancelled"),
+        listOf(Snomed),
+        futureStatuses = setOf("planned"),
+    ),
+    PROCEDURE(
+        "Procedure",
+        MedicalCategory.PROCEDURES,
+        listOf("completed", "preparation", "in-progress", "on-hold", "stopped", "not-done"),
+        listOf(Snomed, Cpt),
+        futureStatuses = setOf("preparation"),
+    ),
+    LAB_RESULT("Observation", MedicalCategory.LAB_RESULTS, ObservationStatuses, listOf(Loinc, Snomed)),
+    VITAL_SIGN("Observation", MedicalCategory.VITAL_SIGNS, ObservationStatuses, emptyList()),
+    SOCIAL_HISTORY("Observation", MedicalCategory.SOCIAL_HISTORY, ObservationStatuses, emptyList()),
+    PREGNANCY("Observation", MedicalCategory.PREGNANCY, ObservationStatuses, emptyList()),
+    PRACTITIONER("Practitioner", MedicalCategory.PRACTITIONER_DETAILS, emptyList(), emptyList()),
+    PRACTITIONER_ROLE("PractitionerRole", MedicalCategory.PRACTITIONER_DETAILS, emptyList(), emptyList()),
+    ORGANIZATION("Organization", MedicalCategory.VISITS, emptyList(), emptyList()),
+    LOCATION("Location", MedicalCategory.VISITS, emptyList(), emptyList()),
+    PATIENT("Patient", MedicalCategory.PERSONAL_DETAILS, emptyList(), emptyList()),
     ;
 
+    /** A record of something that happened on a day: without the day it says little. */
+    val needsDate: Boolean
+        get() = this == VACCINE || this == VISIT || this == PROCEDURE || this == LAB_RESULT || isMeasured
+
+    /** An Observation that says one [ObservationMeasure]: a vital sign, social history, or pregnancy. */
+    val isMeasured: Boolean
+        get() = this == VITAL_SIGN || this == SOCIAL_HISTORY || this == PREGNANCY
+
+    /** A doctor, a role, a clinic, a place, or the owner: a record the others point at, not one about the owner's care. */
+    val isDirectory: Boolean
+        get() = this == PRACTITIONER || this == PRACTITIONER_ROLE || this == ORGANIZATION || this == LOCATION || this == PATIENT
+
+    /** FHIR R4 gives these no `note`, and Health Connect refuses a field the type does not have. */
+    val hasNote: Boolean
+        get() = this != VISIT && !isDirectory
+
+    /** The owner's Patient record is written with the first entry and edited, never added. */
+    val canAdd: Boolean
+        get() = this != PATIENT
+
     companion object {
-        fun ofResourceType(type: String): ManualRecordKind? = entries.firstOrNull { it.resourceType == type }
+        /** The kind that writes [type] records into [category]: an Observation's kind depends on where it is filed. */
+        fun of(type: String, category: MedicalCategory?): ManualRecordKind? =
+            entries.firstOrNull { it.resourceType == type && it.category == category } ?: entries.firstOrNull { it.resourceType == type }
 
         fun ofCategory(category: MedicalCategory): ManualRecordKind? = entries.firstOrNull { it.category == category }
     }
@@ -38,189 +93,129 @@ enum class ManualRecordKind(
 data class ManualCode(val system: String?, val code: String)
 
 /**
- * What a manual entry form holds. [date] is when a vaccine was given (required), when a
- * medication was started, or when an allergy or condition began. [detail] is a vaccine's lot
- * number, an allergy's reaction, or a medication's dosage. [criticality] is an allergy's only.
+ * A doctor or a clinic a record points at. [type] is `Practitioner` or `Organization`. [id] is
+ * that record's id in the manual source, or null for a name typed as new: the save writes the
+ * record first. [display] travels in the reference too, so the name shows even where the record
+ * cannot be read.
+ */
+data class ManualReference(val type: String, val display: String, val id: String? = null) {
+    companion object {
+        const val Practitioner = "Practitioner"
+        const val Organization = "Organization"
+        const val Location = "Location"
+    }
+}
+
+/** The doctors and clinics already in the manual source, offered by the form before a new name is typed. */
+data class ManualDirectory(
+    val practitioners: List<ManualReference> = emptyList(),
+    val organizations: List<ManualReference> = emptyList(),
+    val locations: List<ManualReference> = emptyList(),
+) {
+    /** [reference] pointed at the record of the same name when one exists, so typing a known name makes no twin. */
+    fun resolve(reference: ManualReference?): ManualReference? {
+        if (reference == null || reference.id != null) return reference
+        val name = reference.display.trim().takeIf { it.isNotEmpty() } ?: return null
+        val known = when (reference.type) {
+            ManualReference.Practitioner -> practitioners
+            ManualReference.Location -> locations
+            else -> organizations
+        }
+        return known.firstOrNull { it.display.equals(name, ignoreCase = true) } ?: reference.copy(display = name)
+    }
+}
+
+/**
+ * What a manual entry form holds. [date] is when a vaccine was given, a visit or procedure took
+ * place or a lab sample was taken (all required), when a medication was started, or when an
+ * allergy or condition began. [detail] is a vaccine's lot number, an allergy's reaction, a
+ * medication's dosage, the reason for a visit or procedure, a doctor's qualification, or a
+ * clinic's address. [criticality] is an allergy's only. [doctor] and [organization] are who saw
+ * the person, did the procedure or ran the test. [setting] is a visit's FHIR encounter class
+ * code. [result], [unit], [interpretation] and [referenceRange] are a lab result's. [contact] is a
+ * doctor's, clinic's, place's or the owner's phone number or email address. [place] is where a
+ * visit or procedure took place, or where a doctor works. For the owner's own record, [name] is
+ * the given name, [familyName] the family name, [date] the birth date, [gender] FHIR's code, and
+ * [doctor] the family doctor. A vital sign, social history or pregnancy
+ * record says one [measure]: its value is [result] (with [secondResult], the diastolic, for a blood
+ * pressure, and [unit] the UCUM code typed in), [answer] for a coded one, whose words are in
+ * [result], or [valueDate].
  */
 data class ManualRecordDraft(
     val kind: ManualRecordKind,
     val name: String = "",
-    val status: String = kind.statuses.first(),
+    val status: String = kind.statuses.firstOrNull().orEmpty(),
     val date: LocalDate? = null,
     val detail: String = "",
     val criticality: String? = null,
     val code: ManualCode? = null,
     val note: String = "",
+    val doctor: ManualReference? = null,
+    val organization: ManualReference? = null,
+    val setting: String = VisitSettings.first(),
+    val result: String = "",
+    val unit: String = "",
+    val interpretation: String? = null,
+    val referenceRange: String = "",
+    val contact: String = "",
+    val measure: ObservationMeasure? = ObservationMeasure.of(kind).firstOrNull(),
+    val secondResult: String = "",
+    val answer: String? = null,
+    val valueDate: LocalDate? = null,
+    val place: ManualReference? = null,
+    val familyName: String = "",
+    val gender: String? = null,
 ) {
-    /** A name is always needed, and a vaccine needs its date. A date in the future is refused. */
-    fun isComplete(today: LocalDate): Boolean =
-        name.isNotBlank() && (kind != ManualRecordKind.VACCINE || date != null) && (date == null || !date.isAfter(today))
-}
-
-/**
- * Writes manual entries as FHIR. Every record references the owner's Patient, [PatientId],
- * in the manual source, and fills what FHIR requires: a vaccine's status and date, an allergy's
- * and a condition's clinical status, a medication's status. Empty fields are left out, since
- * Health Connect refuses an empty value.
- */
-object ManualFhirWriter {
-    const val SourceBaseUri = "openvitals://manual"
-    const val PatientId = "self"
+    /** True when the date lies after [today] for a status that is not still ahead. */
+    fun hasFutureDate(today: LocalDate): Boolean = date != null && date.isAfter(today) && status !in kind.futureStatuses
 
     /**
-     * The record for [draft] with [id]. When [base] is the stored record, the fields a form
-     * controls are replaced and every other field is kept, so an edit loses nothing.
-     * [savedAt] becomes `meta.lastUpdated`, so phone-to-phone sync can tell the newer edit.
+     * A name is needed, except where a measure names the record; a dated kind needs its date, a lab
+     * result its result, and a measured kind a value its measure can take. Only what is still
+     * ahead may be dated ahead.
      */
-    fun resource(
-        draft: ManualRecordDraft,
-        id: String,
-        today: LocalDate,
-        base: JsonObject? = null,
-        savedAt: Instant? = null,
-    ): JsonObject {
-        val start = (base ?: JsonObject(emptyMap())).without(*managedFields(draft.kind))
-        val fields = LinkedHashMap<String, JsonElement>()
-        fields["resourceType"] = JsonPrimitive(draft.kind.resourceType)
-        fields["id"] = JsonPrimitive(id)
-        val meta = (start.obj("meta") ?: JsonObject(emptyMap())).with("source", JsonPrimitive(SourceBaseUri))
-        fields["meta"] = savedAt?.let { meta.with("lastUpdated", JsonPrimitive(it.truncatedTo(ChronoUnit.SECONDS).toString())) } ?: meta
-        start.forEach { (key, value) -> if (key !in fields) fields[key] = value }
-        kindFields(draft, today, start).forEach { (key, value) -> fields[key] = value }
-        draft.note.trim().takeIf { it.isNotEmpty() }?.let { fields["note"] = buildJsonArray { add(buildJsonObject { put("text", it) }) } }
-        return JsonObject(fields)
+    fun isComplete(today: LocalDate): Boolean =
+        (name.isNotBlank() || (kind.isMeasured && measure != null && measure.value != MeasureValue.TEXT) ||
+            (kind == ManualRecordKind.PATIENT && familyName.isNotBlank())) &&
+            (kind != ManualRecordKind.PRACTITIONER_ROLE || doctor != null) &&
+            (!kind.needsDate || date != null) &&
+            (kind != ManualRecordKind.LAB_RESULT || result.isNotBlank()) &&
+            (!kind.isMeasured || hasMeasuredValue()) &&
+            !hasFutureDate(today)
+
+    private fun hasMeasuredValue(): Boolean = when (measure?.value) {
+        null -> false
+        MeasureValue.QUANTITY -> result.toDecimalOrNull() != null
+        MeasureValue.BLOOD_PRESSURE -> result.toDecimalOrNull() != null && secondResult.toDecimalOrNull() != null
+        MeasureValue.INTEGER -> result.trim().toIntOrNull()?.let { it >= 0 } == true
+        MeasureValue.DATE -> valueDate != null
+        MeasureValue.CODED -> answer != null
+        MeasureValue.TEXT -> result.isNotBlank()
     }
-
-    /** The owner's Patient record. Parts that are unknown are left out. */
-    fun patient(identity: PatientIdentity): JsonObject = buildJsonObject {
-        put("resourceType", "Patient")
-        put("id", PatientId)
-        put("meta", buildJsonObject { put("source", SourceBaseUri) })
-        val name = buildJsonObject {
-            put("use", "usual")
-            identity.givenNames.filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }?.let { given ->
-                put("given", JsonArray(given.map { JsonPrimitive(it.trim()) }))
-            }
-            identity.familyNames.firstOrNull { it.isNotBlank() }?.let { put("family", it.trim()) }
-        }
-        if (name.size > 1) put("name", buildJsonArray { add(name) })
-        identity.birthDate?.takeIf { it.isNotBlank() }?.let { put("birthDate", it) }
-    }
-
-    /** A stored record read back into a form. Fields the form does not show stay in the record. */
-    fun draftOf(kind: ManualRecordKind, json: JsonObject): ManualRecordDraft {
-        val concept = when (kind) {
-            ManualRecordKind.VACCINE -> json.obj("vaccineCode")
-            ManualRecordKind.MEDICATION -> json.obj("medicationCodeableConcept")
-            ManualRecordKind.ALLERGY, ManualRecordKind.CONDITION -> json.obj("code")
-        }
-        val coding = concept?.objects("coding")?.firstOrNull()
-        val status = when (kind) {
-            ManualRecordKind.VACCINE, ManualRecordKind.MEDICATION -> json.string("status")
-            ManualRecordKind.ALLERGY, ManualRecordKind.CONDITION -> json.obj("clinicalStatus")?.objects("coding")?.firstOrNull()?.string("code")
-        }
-        val dateText = when (kind) {
-            ManualRecordKind.VACCINE -> json.string("occurrenceDateTime")
-            ManualRecordKind.MEDICATION -> json.obj("effectivePeriod")?.string("start") ?: json.string("effectiveDateTime")
-            ManualRecordKind.ALLERGY, ManualRecordKind.CONDITION -> json.string("onsetDateTime")
-        }
-        val detail = when (kind) {
-            ManualRecordKind.VACCINE -> json.string("lotNumber")
-            ManualRecordKind.ALLERGY -> json.objects("reaction").firstOrNull()?.objects("manifestation")?.firstOrNull()?.codeableLabel()
-            ManualRecordKind.MEDICATION -> json.objects("dosage").firstOrNull()?.string("text")
-            ManualRecordKind.CONDITION -> null
-        }
-        return ManualRecordDraft(
-            kind = kind,
-            name = concept?.codeableLabel().orEmpty(),
-            status = status?.takeIf { it in kind.statuses } ?: kind.statuses.first(),
-            date = dateText?.take(10)?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
-            detail = detail.orEmpty(),
-            criticality = json.string("criticality").takeIf { kind == ManualRecordKind.ALLERGY },
-            code = coding?.string("code")?.let { ManualCode(coding.string("system"), it) },
-            note = json.objects("note").firstOrNull()?.string("text").orEmpty(),
-        )
-    }
-
-    private fun managedFields(kind: ManualRecordKind): Array<String> = when (kind) {
-        ManualRecordKind.VACCINE -> arrayOf("status", "vaccineCode", "patient", "occurrenceDateTime", "occurrenceString", "lotNumber", "note")
-        ManualRecordKind.ALLERGY -> arrayOf("clinicalStatus", "code", "patient", "criticality", "onsetDateTime", "reaction", "note")
-        ManualRecordKind.MEDICATION -> arrayOf("status", "medicationCodeableConcept", "subject", "effectivePeriod", "effectiveDateTime", "dosage", "note")
-        ManualRecordKind.CONDITION -> arrayOf("clinicalStatus", "code", "subject", "onsetDateTime", "note")
-    }
-
-    private fun kindFields(draft: ManualRecordDraft, today: LocalDate, start: JsonObject): Map<String, JsonElement> {
-        val detail = draft.detail.trim().takeIf { it.isNotEmpty() }
-        val date = draft.date?.toString()
-        return buildMap {
-            when (draft.kind) {
-                ManualRecordKind.VACCINE -> {
-                    put("status", JsonPrimitive(draft.status))
-                    put("vaccineCode", concept(draft))
-                    put("patient", PatientReference)
-                    put("occurrenceDateTime", JsonPrimitive(date ?: today.toString()))
-                    detail?.let { put("lotNumber", JsonPrimitive(it)) }
-                }
-                ManualRecordKind.ALLERGY -> {
-                    put("clinicalStatus", clinicalStatus(AllergyClinicalSystem, draft.status))
-                    put("code", concept(draft))
-                    put("patient", PatientReference)
-                    draft.criticality?.let { put("criticality", JsonPrimitive(it)) }
-                    date?.let { put("onsetDateTime", JsonPrimitive(it)) }
-                    if (start.string("recordedDate") == null) put("recordedDate", JsonPrimitive(today.toString()))
-                    detail?.let { reaction ->
-                        put("reaction", buildJsonArray { add(buildJsonObject { put("manifestation", buildJsonArray { add(text(reaction)) }) }) })
-                    }
-                }
-                ManualRecordKind.MEDICATION -> {
-                    put("status", JsonPrimitive(draft.status))
-                    put("medicationCodeableConcept", concept(draft))
-                    put("subject", PatientReference)
-                    date?.let { put("effectivePeriod", buildJsonObject { put("start", it) }) }
-                    detail?.let { put("dosage", buildJsonArray { add(buildJsonObject { put("text", it) }) }) }
-                }
-                ManualRecordKind.CONDITION -> {
-                    put("clinicalStatus", clinicalStatus(ConditionClinicalSystem, draft.status))
-                    put("code", concept(draft))
-                    put("subject", PatientReference)
-                    date?.let { put("onsetDateTime", JsonPrimitive(it)) }
-                    if (start.string("recordedDate") == null) put("recordedDate", JsonPrimitive(today.toString()))
-                }
-            }
-        }
-    }
-
-    /** The name as text, and the user's code as a coding when there is one. */
-    private fun concept(draft: ManualRecordDraft): JsonObject = buildJsonObject {
-        draft.code?.takeIf { it.code.isNotBlank() }?.let { code ->
-            put(
-                "coding",
-                buildJsonArray {
-                    add(
-                        buildJsonObject {
-                            code.system?.let { put("system", it) }
-                            put("code", code.code.trim())
-                        },
-                    )
-                },
-            )
-        }
-        put("text", draft.name.trim())
-    }
-
-    private fun text(value: String) = buildJsonObject { put("text", value) }
-
-    private fun clinicalStatus(system: String, code: String) = buildJsonObject {
-        put("coding", buildJsonArray { add(buildJsonObject { put("system", system); put("code", code) }) })
-    }
-
-    private val PatientReference = buildJsonObject { put("reference", "Patient/$PatientId") }
-    private const val AllergyClinicalSystem = "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical"
-    private const val ConditionClinicalSystem = "http://terminology.hl7.org/CodeSystem/condition-clinical"
 }
 
-private const val Snomed = "http://snomed.info/sct"
-private const val Cvx = "http://hl7.org/fhir/sid/cvx"
-private const val Atc = "http://www.whocc.no/atc"
-private const val RxNorm = "http://www.nlm.nih.gov/research/umls/rxnorm"
-private const val Icd10 = "http://hl7.org/fhir/sid/icd-10"
+/** A decimal as typed, with a comma or a point. */
+internal fun String.toDecimalOrNull(): java.math.BigDecimal? = trim().replace(',', '.').toBigDecimalOrNull()
+
+private val ObservationStatuses = listOf("final", "registered", "preliminary", "amended", "corrected", "cancelled")
+
+/**
+ * FHIR's encounter classes (HL7 v3 ActEncounterCode), the default first: outpatient,
+ * emergency, inpatient, acute and non-acute inpatient, observation, short stay, pre-admission,
+ * home, virtual and field.
+ */
+val VisitSettings: List<String> = listOf("AMB", "EMER", "IMP", "ACUTE", "NONAC", "OBSENC", "SS", "PRENC", "HH", "VR", "FLD")
+
+/** FHIR's administrative genders. */
+val Genders: List<String> = listOf("female", "male", "other", "unknown")
+
+/** FHIR's interpretation codes a lab report prints beside a result. */
+val LabInterpretations: List<String> = listOf("H", "L", "N", "A")
+
+internal const val Snomed = "http://snomed.info/sct"
+internal const val Cvx = "http://hl7.org/fhir/sid/cvx"
+internal const val Atc = "http://www.whocc.no/atc"
+internal const val RxNorm = "http://www.nlm.nih.gov/research/umls/rxnorm"
+internal const val Icd10 = "http://hl7.org/fhir/sid/icd-10"
+internal const val Cpt = "http://www.ama-assn.org/go/cpt"
+internal const val Loinc = "http://loinc.org"
