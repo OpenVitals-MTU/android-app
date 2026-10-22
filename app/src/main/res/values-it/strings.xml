@@ -3770,6 +3770,10 @@
     <string name="settings_watch_wearos_sync_now">Sincronizza orologio</string>
     <string name="settings_watch_wearos_syncing">Sincronizzazione dell’orologio…</string>
     <string name="settings_watch_wearos_synced_none">Niente di nuovo sull’orologio</string>
+    <string name="settings_watch_wearos_needs_weight">Calorie della camminata non stimate: aggiungi il tuo peso in Profilo corporeo o registralo in Health Connect.</string>
+    <string name="settings_watch_wearos_needs_weight_read">Calorie della camminata non stimate: aggiungi il tuo peso in Profilo corporeo o consenti a OpenVitals di leggere il tuo peso in Health Connect.</string>
+    <string name="settings_watch_wearos_needs_steps_write">Passi non scritti: consenti a OpenVitals di scrivere i passi in Health Connect, poi sincronizza di nuovo.</string>
+    <string name="settings_watch_wearos_needs_calories_write">Calorie della camminata non scritte: consenti a OpenVitals di scrivere le calorie attive e leggere gli allenamenti in Health Connect per stimarle dalla prossima sincronizzazione.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d campione di frequenza cardiaca sincronizzato</item>
         <item quantity="other">%1$d campioni di frequenza cardiaca sincronizzati</item>
