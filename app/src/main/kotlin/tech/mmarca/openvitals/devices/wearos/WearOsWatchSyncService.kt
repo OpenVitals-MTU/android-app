@@ -4,14 +4,18 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.Record
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.reflect.KClass
 import kotlin.time.Duration
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -31,6 +35,7 @@ import tech.mmarca.openvitals.devices.core.sync.UnwrittenSeries
 import tech.mmarca.openvitals.data.repository.RecordWrite
 import tech.mmarca.openvitals.data.repository.insertWithOutcomes
 import tech.mmarca.openvitals.devices.core.sync.sleepNightWindow
+import tech.mmarca.openvitals.domain.insights.WearSleepEstimator
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.WearSleepMinute
 import tech.mmarca.openvitals.data.repository.isDuplicateClientRecordFailure
@@ -59,7 +64,15 @@ import tech.mmarca.openvitals.healthconnect.withStrictHealthConnectReads
  * in, every night those minutes touch estimated whole and written as one
  * session per night, replacing the earlier estimate. A night that already
  * holds a session from anywhere else, the vendor's app or the user's own
- * entry, is left alone. The sleep cursor moves once the nights are written.
+ * entry, is left alone. Each finished night with sleep also gives a nocturnal
+ * resting heart rate ([WearOsRestingHeartRateImport]). The app averages the
+ * values of a calendar day, so a day that holds one from elsewhere gets none
+ * from here, and one that turns up later removes ours. Without the grants to
+ * read and write it, or the right to read other apps' data, none is written.
+ * The sleep cursor moves once the nights are written.
+ *
+ * If the user withheld the write permission for an estimate, it is skipped
+ * and the sync goes on.
  *
  * [DeviceSyncResult.Succeeded.fileCount] carries the number of heart rate
  * samples, [DeviceSyncResult.Succeeded.stepMinuteCount] the minutes of
@@ -357,12 +370,12 @@ class WearOsWatchSyncService(
         val newest = minutes.maxOfOrNull { it.time } ?: return true
 
         var nights = 0
+        val restingHeartRate = RestingHeartRateAccess(
+            withheld = RESTING_HEART_RATE_PERMISSIONS - healthConnect.grantedPermissions(),
+            seesOtherApps = healthConnect.readsOtherAppsDataNow(),
+        )
         for ((night, offset) in WearOsSleepImport.touchedNights(minutes, cursor)) {
             val (from, to) = sleepNightWindow(night, offset)
-            if (hasForeignSession(from, to)) {
-                WearOsLog.log("$night: Health Connect already holds a session from elsewhere, skipping")
-                continue
-            }
             val estimated = WearOsSleepImport.night(minutes, night, offset)
             if (estimated == null) {
                 WearOsLog.log("$night: no night in the minutes")
@@ -372,6 +385,12 @@ class WearOsWatchSyncService(
             val record = WearOsSleepImport.record(estimated, night, offset, version = clock().toEpochMilli())
             if (record == null) {
                 WearOsLog.log("$night: nothing counted as sleep")
+                continue
+            }
+            // Before the session check: a vendor that owns the session may not own the resting heart rate.
+            writeRestingHeartRate(minutes, estimated, night, offset, restingHeartRate, progress)
+            if (hasForeignRecord(SleepSessionRecord::class, from, to, WearOsSleepImport::isOwnRecordId)) {
+                WearOsLog.log("$night: Health Connect already holds a session from elsewhere, skipping")
                 continue
             }
             writeReplacing(record)
@@ -396,19 +415,78 @@ class WearOsWatchSyncService(
         pull()
     }
 
-    /** Whether the window holds a sleep session that is not this import's. A read failure counts as no. */
-    private suspend fun hasForeignSession(from: Instant, to: Instant): Boolean {
-        var found = false
+    /**
+     * Writes the night's resting heart rate unless its calendar day already holds one from
+     * elsewhere; then it removes ours. A read that fails counts as "held": a second value next to
+     * the vendor's would be averaged with it. Optional, so no failure here fails the sync.
+     */
+    private suspend fun writeRestingHeartRate(
+        minutes: List<WearSleepMinute>,
+        estimated: WearSleepEstimator.Night,
+        night: LocalDate,
+        offset: ZoneOffset,
+        access: RestingHeartRateAccess,
+        progress: Progress,
+    ) {
+        val record = WearOsRestingHeartRateImport.record(minutes, estimated, night, offset, version = clock().toEpochMilli())
+        if (record == null) {
+            WearOsLog.log("$night: no resting heart rate, the night runs on or has too few readings")
+            return
+        }
+        if (access.withheld.isNotEmpty()) {
+            progress.withheldPermissions += access.withheld
+            progress.unwritten += UnwrittenSeries.RESTING_HEART_RATE
+            WearOsLog.log("$night: resting heart rate not written, Health Connect permission missing")
+            return
+        }
+        if (!access.seesOtherApps) {
+            WearOsLog.log("$night: resting heart rate not written, other apps' values are not readable in the background")
+            return
+        }
         try {
-            healthConnect.forEachSyncRecordPage(SleepSessionRecord::class, from, to) { page ->
-                if (page.any { !WearOsSleepImport.isOwnRecordId(it.metadata.clientRecordId) }) found = true
+            val (from, to) = WearOsRestingHeartRateImport.dayWindow(estimated.session.end, zone())
+            val held = holdings(RestingHeartRateRecord::class, from, to, WearOsRestingHeartRateImport::isOwnRecordId)
+            if (held.foreign) {
+                WearOsLog.log("$night: Health Connect already holds a resting heart rate from elsewhere, skipping")
+                if (held.own) {
+                    healthConnect.deleteImportedRecordsByClientIds(RestingHeartRateRecord::class, listOf(record.metadata.clientRecordId!!))
+                }
+                return
             }
+            WearOsLog.log("$night: resting heart rate ${record.beatsPerMinute} bpm")
+            writeReplacing(record)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            WearOsLog.log("Could not read existing sleep sessions: $error")
+            WearOsLog.log("$night: resting heart rate not written: $error")
         }
-        return found
+    }
+
+    /** Whether the window has a record of [type] from another app. A read failure counts as no. */
+    private suspend fun hasForeignRecord(
+        type: KClass<out Record>,
+        from: Instant,
+        to: Instant,
+        isOwn: (String?) -> Boolean,
+    ): Boolean = try {
+        holdings(type, from, to, isOwn).foreign
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        WearOsLog.log("Could not read existing ${type.simpleName}: $error")
+        false
+    }
+
+    /** Who wrote the records of [type] in the window. A failed read throws. */
+    private suspend fun holdings(type: KClass<out Record>, from: Instant, to: Instant, isOwn: (String?) -> Boolean): Holdings {
+        var foreign = false
+        var own = false
+        healthConnect.forEachSyncRecordPage(type, from, to) { page ->
+            for (record in page) {
+                if (isOwn(record.metadata.clientRecordId)) own = true else foreign = true
+            }
+        }
+        return Holdings(foreign, own)
     }
 
     /** Time ranges of exercise sessions overlapping the step minutes range; null when they could not be read. */
@@ -432,7 +510,7 @@ class WearOsWatchSyncService(
     }
 
     /** A higher version replaces the earlier estimate. If Health Connect still objects, delete and retry once. */
-    private suspend fun writeReplacing(record: SleepSessionRecord) {
+    private suspend fun writeReplacing(record: Record) {
         try {
             importRepository.insertImportedRecords(listOf(record))
         } catch (error: CancellationException) {
@@ -440,7 +518,7 @@ class WearOsWatchSyncService(
         } catch (error: Exception) {
             if (!error.isDuplicateClientRecordFailure()) throw error
             val id = requireNotNull(record.metadata.clientRecordId)
-            healthConnect.deleteImportedRecordsByClientIds(SleepSessionRecord::class, listOf(id))
+            healthConnect.deleteImportedRecordsByClientIds(record::class, listOf(id))
             importRepository.insertImportedRecords(listOf(record))
         }
     }
@@ -457,6 +535,11 @@ class WearOsWatchSyncService(
         } else {
             ScreenError.Text(R.string.settings_watch_wearos_fail_health_connect)
         }
+
+    private class Holdings(val foreign: Boolean, val own: Boolean)
+
+    /** What the sync may do with resting heart rates: [withheld] are the grants missing. */
+    private class RestingHeartRateAccess(val withheld: Set<String>, val seesOtherApps: Boolean)
 
     /** Counts the pages pulled, for the progress ticks, and what was written. */
     private class Progress(private val onProgress: ((DeviceSyncProgress) -> Unit)?) {
@@ -501,6 +584,12 @@ class WearOsWatchSyncService(
         private val ACTIVE_CALORIES_WRITE_PERMISSION = HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class)
         private val EXERCISE_READ_PERMISSION = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
         private val WEIGHT_READ_PERMISSION = HealthPermission.getReadPermission(WeightRecord::class)
+
+        /** Reading tells whether the vendor holds a value for the day; writing is the estimate itself. */
+        private val RESTING_HEART_RATE_PERMISSIONS = setOf(
+            HealthPermission.getReadPermission(RestingHeartRateRecord::class),
+            HealthPermission.getWritePermission(RestingHeartRateRecord::class),
+        )
 
         private val WALKING_ENERGY_PERMISSIONS = setOf(ACTIVE_CALORIES_WRITE_PERMISSION, EXERCISE_READ_PERMISSION)
 
