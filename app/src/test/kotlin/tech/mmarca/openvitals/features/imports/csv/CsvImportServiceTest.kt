@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.imports.csv
 
+import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.WeightRecord
@@ -128,6 +129,37 @@ class CsvImportServiceTest {
         assertEquals(120, result.progress.written)
         assertEquals(0, result.progress.rejected)
         assertEquals(120, harness.inserted.size)
+    }
+
+    @Test
+    fun `a blood pressure file writes a reading a row, and a lost reading is one rejection`() = runTest {
+        val content = "timestamp,systolic,diastolic,position\n" +
+            "2026-10-03 08:00,123,88,Sitting\n" +
+            "2026-10-03 12:58,1200,abc,Sitting\n" +
+            "2026-10-03 22:11,124,84,\n"
+        val mapping = CsvImportMapping(
+            columns = listOf(
+                CsvColumnMapping(columnIndex = 0, role = CsvColumnRole.TIMESTAMP),
+                CsvColumnMapping(1, CsvColumnRole.BLOOD_PRESSURE, bloodPressurePart = CsvBloodPressurePart.SYSTOLIC),
+                CsvColumnMapping(2, CsvColumnRole.BLOOD_PRESSURE, bloodPressurePart = CsvBloodPressurePart.DIASTOLIC),
+                CsvColumnMapping(3, CsvColumnRole.BLOOD_PRESSURE, bloodPressurePart = CsvBloodPressurePart.BODY_POSITION),
+            ),
+            dateTime = CsvDateTimeSettings(format = CsvDateTimeFormat.YEAR_FIRST, zone = CsvTimeZoneMode.UTC),
+        )
+        val harness = RepositoryHarness()
+
+        val result = service(harness).run(
+            source = sourceOf(content),
+            totalBytes = content.length.toLong(),
+            dialect = Dialect,
+            plan = CsvImportPlan.Columns(mapping),
+        )
+
+        assertEquals(listOf(123.0, 124.0), harness.inserted.map { (it as BloodPressureRecord).systolic.inMillimetersOfMercury })
+        assertEquals(2, result.progress.rowsImported)
+        assertEquals(1, result.progress.rowsRejected)
+        assertEquals(1, result.progress.rejected)
+        assertEquals(mapOf(CsvImportDiagnosticReason.OUT_OF_RANGE to 1), result.diagnosticCounts)
     }
 
     @Test

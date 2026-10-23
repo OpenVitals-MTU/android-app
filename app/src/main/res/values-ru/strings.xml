@@ -2471,6 +2471,11 @@
     <string name="settings_csv_import_interpretation_mass_share">Масса в %1$s как доля значения в столбце веса</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect хранит процент жира в организме в виде процентного значения, поэтому он рассчитывается на основе веса, измеренного в той же строке.</string>
     <string name="settings_csv_import_nutrient_hint">Все столбцы питательных веществ одной строки становятся одной записью еды.</string>
+    <string name="settings_csv_import_bp_pressure_hint">В мм рт. ст. Систолическое и диастолическое давление из одной строки образуют одно измерение давления; строка только с одним из них отклоняется.</string>
+    <string name="settings_csv_import_bp_label_hint">Распознаются: %1$s. Регистр и пробелы не важны. Любое другое значение или пустая ячейка получает значение по умолчанию ниже.</string>
+    <string name="settings_csv_import_bp_label_unrecognised">Не распознано, используется значение по умолчанию: %1$s</string>
+    <string name="settings_csv_import_bp_defaults_title">Значения давления по умолчанию</string>
+    <string name="settings_csv_import_bp_defaults_body">Для измерений, у которых файл не указывает положение тела или расположение манжеты либо указывает их нераспознанным словом. Сохраняются для следующего импорта.</string>
     <string name="settings_csv_import_date_time_title">Дата и время</string>
     <string name="settings_csv_import_date_format_label">Формат</string>
     <string name="settings_csv_import_date_format_auto">Определять автоматически</string>
@@ -2498,6 +2503,7 @@
     <string name="settings_csv_import_issue_timestamp_unparsed">Ни одна из проверенных строк не соответствует этому формату даты.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Только один столбец может содержать дату и время окончания.</string>
     <string name="settings_csv_import_issue_multiple_food_names">Только один столбец может содержать название продукта.</string>
+    <string name="settings_csv_import_issue_bp_needs_both">Для артериального давления нужны столбцы и систолического, и диастолического давления.</string>
     <string name="settings_csv_import_confirm_title">Готово к импорту</string>
     <string name="settings_csv_import_confirm_summary">%1$s · измерений в строке: %2$d</string>
     <string name="settings_csv_import_confirm_range">%1$s: с %2$s по %3$s</string>
@@ -2556,6 +2562,8 @@
     <string name="settings_csv_import_reason_excluded_in_source">Исключено в исходном приложении</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Не удалось распознать дату окончания</string>
     <string name="settings_csv_import_reason_end_not_after_start">Дата окончания не позже даты начала</string>
+    <string name="settings_csv_import_reason_missing_blood_pressure_value">Нет систолического или диастолического давления</string>
+    <string name="settings_csv_import_reason_systolic_not_above_diastolic">Систолическое не выше диастолического</string>
     <string name="settings_csv_import_save_report">Сохранить отчёт</string>
     <string name="settings_csv_import_report_saved">Отчёт сохранён.</string>
     <string name="settings_csv_import_report_save_failed">Не удалось сохранить отчёт.</string>

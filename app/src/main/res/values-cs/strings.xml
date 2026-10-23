@@ -2175,6 +2175,11 @@
     <string name="settings_csv_import_interpretation_mass_share">Hmotnost v %1$s, jako podíl ze sloupce s hmotností</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect ukládá tělesný tuk v procentech, takže se dopočítá z hmotnosti naměřené ve stejném řádku.</string>
     <string name="settings_csv_import_nutrient_hint">Všechny sloupce živin z jednoho řádku tvoří jeden záznam jídla.</string>
+    <string name="settings_csv_import_bp_pressure_hint">V mmHg. Systolický a diastolický tlak z jednoho řádku tvoří jedno měření krevního tlaku; řádek jen s jedním z nich se odmítne.</string>
+    <string name="settings_csv_import_bp_label_hint">Rozpoznáno: %1$s. Na velikosti písmen a mezerách nezáleží. Jiná hodnota nebo prázdná buňka použije výchozí hodnotu níže.</string>
+    <string name="settings_csv_import_bp_label_unrecognised">Nerozpoznáno, použije se výchozí hodnota: %1$s</string>
+    <string name="settings_csv_import_bp_defaults_title">Výchozí hodnoty krevního tlaku</string>
+    <string name="settings_csv_import_bp_defaults_body">Pro měření, u kterých soubor polohu těla nebo umístění manžety neuvádí, nebo je uvádí nerozpoznaným slovem. Zůstanou uložené pro další import.</string>
     <string name="settings_csv_import_date_time_title">Datum a čas</string>
     <string name="settings_csv_import_date_format_label">Formát</string>
     <string name="settings_csv_import_date_format_auto">Rozpoznat automaticky</string>
@@ -2202,6 +2207,7 @@
     <string name="settings_csv_import_issue_timestamp_unparsed">Tomuto formátu data neodpovídá ani jeden z prohlédnutých řádků.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Datum a čas konce může obsahovat jen jeden sloupec.</string>
     <string name="settings_csv_import_issue_multiple_food_names">Název jídla může obsahovat jen jeden sloupec.</string>
+    <string name="settings_csv_import_issue_bp_needs_both">Krevní tlak potřebuje sloupec se systolickým i diastolickým tlakem.</string>
     <string name="settings_csv_import_confirm_title">Připraveno k importu</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d měření na řádek</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s až %3$s</string>
@@ -2260,6 +2266,8 @@
     <string name="settings_csv_import_reason_excluded_in_source">Vyloučeno ve zdrojové aplikaci</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Datum konce nebylo rozpoznáno</string>
     <string name="settings_csv_import_reason_end_not_after_start">Konec není po začátku</string>
+    <string name="settings_csv_import_reason_missing_blood_pressure_value">Chybí systolický nebo diastolický tlak</string>
+    <string name="settings_csv_import_reason_systolic_not_above_diastolic">Systolický tlak není vyšší než diastolický</string>
     <string name="settings_csv_import_save_report">Uložit zprávu</string>
     <string name="settings_csv_import_report_saved">Zpráva uložena.</string>
     <string name="settings_csv_import_report_save_failed">Zprávu se nepodařilo uložit.</string>

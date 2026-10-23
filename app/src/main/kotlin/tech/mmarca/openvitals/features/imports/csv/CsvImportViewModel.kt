@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import tech.mmarca.openvitals.data.repository.contract.CsvImportPreferences
 import tech.mmarca.openvitals.data.repository.contract.HealthRepository
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
@@ -75,6 +76,8 @@ class CsvImportViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val importService: CsvImportService,
     private val healthRepository: HealthRepository,
+    private val preferences: CsvImportPreferences,
+    private val bloodPressureLabels: CsvBloodPressureLabelSource,
     healthConnectManager: HealthConnectManager,
 ) : ViewModel() {
 
@@ -127,7 +130,7 @@ class CsvImportViewModel @Inject constructor(
                 // A drip export needs no mapping: its columns are known by name.
                 val drip = detectDripExport(sample.headerRow)
                 val mapping = if (drip == null) {
-                    initialCsvMapping(headerRow = sample.headerRow, sample = sample.dataRows)
+                    initialMapping(sample)
                 } else {
                     null
                 }
@@ -161,7 +164,7 @@ class CsvImportViewModel @Inject constructor(
                 val sample = withContext(Dispatchers.IO) {
                     reader.sample(sourceFor(uri), dialect = dialect, hasHeaderRow = header)
                 }
-                val mapping = initialCsvMapping(headerRow = sample.headerRow, sample = sample.dataRows)
+                val mapping = initialMapping(sample)
                 _uiState.update {
                     it.copy(
                         isLoadingFile = false,
@@ -221,6 +224,34 @@ class CsvImportViewModel @Inject constructor(
                 ),
             ),
         )
+    }
+
+    /** Points column [columnIndex] at one part of the row's blood pressure reading. */
+    fun setColumnBloodPressurePart(columnIndex: Int, part: CsvBloodPressurePart) {
+        val mapping = _uiState.value.mapping ?: return
+        applyMapping(
+            mapping.withColumn(
+                CsvColumnMapping(
+                    columnIndex = columnIndex,
+                    role = CsvColumnRole.BLOOD_PRESSURE,
+                    bloodPressurePart = part,
+                ),
+            ),
+        )
+    }
+
+    /** The body position a reading takes when its file does not say. Remembered for the next import. */
+    fun setDefaultBodyPosition(position: Int) {
+        val mapping = _uiState.value.mapping ?: return
+        preferences.defaultBodyPosition = position
+        applyMapping(mapping.copy(bloodPressure = mapping.bloodPressure.copy(defaultBodyPosition = position)))
+    }
+
+    /** The cuff location a reading takes when its file does not say. Remembered for the next import. */
+    fun setDefaultCuffLocation(location: Int) {
+        val mapping = _uiState.value.mapping ?: return
+        preferences.defaultCuffLocation = location
+        applyMapping(mapping.copy(bloodPressure = mapping.bloodPressure.copy(defaultCuffLocation = location)))
     }
 
     /** Changes how one already-mapped column's number is read. */
@@ -329,6 +360,16 @@ class CsvImportViewModel @Inject constructor(
             )
         }
     }
+
+    /** The first guess at a mapping, with the blood pressure words in the app language and the saved defaults. */
+    private fun initialMapping(sample: CsvSample): CsvImportMapping =
+        initialCsvMapping(headerRow = sample.headerRow, sample = sample.dataRows).copy(
+            bloodPressure = CsvBloodPressureSettings(
+                labels = bloodPressureLabels.labels(),
+                defaultBodyPosition = preferences.defaultBodyPosition,
+                defaultCuffLocation = preferences.defaultCuffLocation,
+            ),
+        )
 
     private fun headerUnit(columnIndex: Int): CsvUnit? {
         val header = _uiState.value.sample?.headerRow ?: return null

@@ -2525,6 +2525,11 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_csv_import_interpretation_mass_share">Unha masa en %1$s, como proporción da columna de peso</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect garda a graxa corporal como porcentaxe, así que calcúlase a partir do peso medido na mesma fila.</string>
     <string name="settings_csv_import_nutrient_hint">Todas as columnas de nutrientes dunha fila forman unha soa entrada de comida.</string>
+    <string name="settings_csv_import_bp_pressure_hint">En mmHg. A sistólica e a diastólica dunha fila forman unha medición de presión arterial; unha fila con só unha delas rexéitase.</string>
+    <string name="settings_csv_import_bp_label_hint">Recoñécese: %1$s. Non importan as maiúsculas nin os espazos. Calquera outro valor, ou unha cela baleira, toma o valor predeterminado de abaixo.</string>
+    <string name="settings_csv_import_bp_label_unrecognised">Non recoñecido, úsase o valor predeterminado: %1$s</string>
+    <string name="settings_csv_import_bp_defaults_title">Valores predeterminados da presión arterial</string>
+    <string name="settings_csv_import_bp_defaults_body">Para medicións nas que o ficheiro omite a posición do corpo ou o lugar do manguito, ou os indica cunha palabra non recoñecida. Gárdanse para a próxima importación.</string>
     <string name="settings_csv_import_date_time_title">Data e hora</string>
     <string name="settings_csv_import_date_format_label">Formato</string>
     <string name="settings_csv_import_date_format_auto">Detectar automaticamente</string>
@@ -2552,6 +2557,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_csv_import_issue_timestamp_unparsed">Ningunha das filas de mostra coincide con este formato de data.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Só unha columna pode conter a data e a hora de fin.</string>
     <string name="settings_csv_import_issue_multiple_food_names">Só unha columna pode conter o nome do alimento.</string>
+    <string name="settings_csv_import_issue_bp_needs_both">A presión arterial necesita unha columna sistólica e outra diastólica.</string>
     <string name="settings_csv_import_confirm_title">Listo para importar</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d medidas por fila</string>
     <string name="settings_csv_import_confirm_range">%1$s: de %2$s a %3$s</string>
@@ -2610,6 +2616,8 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_csv_import_reason_excluded_in_source">Excluído na app de orixe</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Data de fin non recoñecida</string>
     <string name="settings_csv_import_reason_end_not_after_start">O final non é posterior ao inicio</string>
+    <string name="settings_csv_import_reason_missing_blood_pressure_value">Falta a sistólica ou a diastólica</string>
+    <string name="settings_csv_import_reason_systolic_not_above_diastolic">A sistólica non é maior ca diastólica</string>
     <string name="settings_csv_import_save_report">Gardar informe</string>
     <string name="settings_csv_import_report_saved">Informe gardado.</string>
     <string name="settings_csv_import_report_save_failed">Non se puido gardar o informe.</string>

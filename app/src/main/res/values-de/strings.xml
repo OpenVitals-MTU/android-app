@@ -2532,6 +2532,11 @@
     <string name="settings_csv_import_interpretation_mass_share">Eine Masse in %1$s, als Anteil der Gewichtsspalte</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect speichert Körperfett als Prozentsatz, daher wird dies aus dem in derselben Zeile gemessenen Gewicht berechnet.</string>
     <string name="settings_csv_import_nutrient_hint">Alle Nährstoffspalten einer Zeile werden zu einem Lebensmitteleintrag.</string>
+    <string name="settings_csv_import_bp_pressure_hint">In mmHg. Systolischer und diastolischer Wert einer Zeile ergeben eine Blutdruckmessung; eine Zeile mit nur einem davon wird abgelehnt.</string>
+    <string name="settings_csv_import_bp_label_hint">Erkannt: %1$s. Groß- und Kleinschreibung sowie Leerzeichen spielen keine Rolle. Jeder andere Wert oder eine leere Zelle übernimmt die Vorgabe unten.</string>
+    <string name="settings_csv_import_bp_label_unrecognised">Nicht erkannt, daher gilt die Vorgabe: %1$s</string>
+    <string name="settings_csv_import_bp_defaults_title">Blutdruck-Vorgaben</string>
+    <string name="settings_csv_import_bp_defaults_body">Für Messungen, bei denen die Datei Körperhaltung oder Manschettenposition auslässt oder mit einem nicht erkannten Wort angibt. Bleibt für den nächsten Import gespeichert.</string>
     <string name="settings_csv_import_date_time_title">Datum und Uhrzeit</string>
     <string name="settings_csv_import_date_format_label">Format</string>
     <string name="settings_csv_import_date_format_auto">Automatisch erkennen</string>
@@ -2559,6 +2564,7 @@
     <string name="settings_csv_import_issue_timestamp_unparsed">Keine der geprüften Zeilen passt zu diesem Datumsformat.</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">Nur eine Spalte kann Enddatum und -uhrzeit enthalten.</string>
     <string name="settings_csv_import_issue_multiple_food_names">Nur eine Spalte kann den Lebensmittelnamen enthalten.</string>
+    <string name="settings_csv_import_issue_bp_needs_both">Blutdruck braucht sowohl eine systolische als auch eine diastolische Spalte.</string>
     <string name="settings_csv_import_confirm_title">Bereit zum Import</string>
     <string name="settings_csv_import_confirm_summary">%1$s · %2$d Messwerte pro Zeile</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s bis %3$s</string>
@@ -2617,6 +2623,8 @@
     <string name="settings_csv_import_reason_excluded_in_source">In der Quell-App ausgeschlossen</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">Enddatum nicht verstanden</string>
     <string name="settings_csv_import_reason_end_not_after_start">Ende liegt nicht nach dem Start</string>
+    <string name="settings_csv_import_reason_missing_blood_pressure_value">Systolischer oder diastolischer Wert fehlt</string>
+    <string name="settings_csv_import_reason_systolic_not_above_diastolic">Systolisch nicht über diastolisch</string>
     <string name="settings_csv_import_save_report">Bericht speichern</string>
     <string name="settings_csv_import_report_saved">Bericht gespeichert.</string>
     <string name="settings_csv_import_report_save_failed">Der Bericht konnte nicht gespeichert werden.</string>

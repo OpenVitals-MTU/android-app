@@ -2522,6 +2522,11 @@
     <string name="settings_csv_import_interpretation_mass_share">%1$s の質量（体重列に対する割合）</string>
     <string name="settings_csv_import_mass_share_hint">Health Connect は体脂肪をパーセントで保存するため、同じ行で測定した体重から算出します。</string>
     <string name="settings_csv_import_nutrient_hint">1 行の栄養素の列はすべて 1 つの食事の記録になります。</string>
+    <string name="settings_csv_import_bp_pressure_hint">単位は mmHg。1 行の収縮期と拡張期で 1 回の血圧測定になります。片方しかない行は拒否されます。</string>
+    <string name="settings_csv_import_bp_label_hint">認識される語: %1$s。大文字と小文字、空白は区別しません。それ以外の値や空のセルには下の既定値が使われます。</string>
+    <string name="settings_csv_import_bp_label_unrecognised">認識できないため既定値を使用: %1$s</string>
+    <string name="settings_csv_import_bp_defaults_title">血圧の既定値</string>
+    <string name="settings_csv_import_bp_defaults_body">ファイルに体位やカフの位置がない、または認識できない語で書かれている測定に使います。次回のインポートにも引き継がれます。</string>
     <string name="settings_csv_import_date_time_title">日時</string>
     <string name="settings_csv_import_date_format_label">形式</string>
     <string name="settings_csv_import_date_format_auto">自動検出</string>
@@ -2549,6 +2554,7 @@
     <string name="settings_csv_import_issue_timestamp_unparsed">サンプルした行のどれもこの日付形式に一致しません。</string>
     <string name="settings_csv_import_issue_multiple_end_timestamps">終了日時を含められる列は 1 つだけです。</string>
     <string name="settings_csv_import_issue_multiple_food_names">食品名を含められる列は 1 つだけです。</string>
+    <string name="settings_csv_import_issue_bp_needs_both">血圧には収縮期と拡張期の両方の列が必要です。</string>
     <string name="settings_csv_import_confirm_title">インポートの準備完了</string>
     <string name="settings_csv_import_confirm_summary">%1$s · 1 行あたり %2$d 項目</string>
     <string name="settings_csv_import_confirm_range">%1$s: %2$s 〜 %3$s</string>
@@ -2607,6 +2613,8 @@
     <string name="settings_csv_import_reason_excluded_in_source">元のアプリで除外</string>
     <string name="settings_csv_import_reason_unparsable_end_timestamp">終了日を解釈できない</string>
     <string name="settings_csv_import_reason_end_not_after_start">終了が開始より後でない</string>
+    <string name="settings_csv_import_reason_missing_blood_pressure_value">収縮期または拡張期がない</string>
+    <string name="settings_csv_import_reason_systolic_not_above_diastolic">収縮期が拡張期より高くない</string>
     <string name="settings_csv_import_save_report">レポートを保存</string>
     <string name="settings_csv_import_report_saved">レポートを保存しました。</string>
     <string name="settings_csv_import_report_save_failed">レポートを保存できませんでした。</string>
