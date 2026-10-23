@@ -109,6 +109,12 @@ class WearOsWatchSyncServiceTest {
             ascentPullsSince += since
             return ascentPages.removeFirstOrNull() ?: WearOsAscentPage(emptyList(), hasMore = false)
         }
+
+        override suspend fun liveHeartRate(
+            targetAddress: String?,
+            targetName: String?,
+            onSample: (WearOsHeartRateSample) -> Unit,
+        ): Boolean = false
     }
 
     /**

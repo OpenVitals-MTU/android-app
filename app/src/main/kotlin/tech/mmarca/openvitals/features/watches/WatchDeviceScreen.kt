@@ -179,6 +179,7 @@ fun WatchDeviceScreen(
         )
 
         if (device.isWearosWatch) {
+            val liveHeartRateBpm by viewModel.wearOsLiveHeartRateBpm.collectAsStateWithLifecycle()
             SectionHeader(stringResource(R.string.settings_watch_wearos_status_section))
             WearOsStatusCard(
                 status = state.wearOsStatus,
@@ -188,6 +189,7 @@ fun WatchDeviceScreen(
                 onGrantBluetooth = {
                     bluetoothPermission.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
                 },
+                liveHeartRateBpm = liveHeartRateBpm,
             )
             SectionHeader(stringResource(R.string.settings_watch_wearos_sync_section))
             WearOsSyncCard(device, state.sync, onSync = viewModel::syncNow, onAllowGrants = syncGrantLauncher.launch)

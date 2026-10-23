@@ -22,7 +22,7 @@ data class WearOsOnboardOutcome(
 /**
  * Turns a scanned WearOS watch into a registered `(WATCH, WEAROS)` device.
  * Associate (optional), then register with no capabilities, off the Garmin
- * sync path. Live heart rate comes over GATT, recorded data via Health Connect.
+ * sync path. Recorded and live data come over the RFCOMM link (`BluetoothWearOsNodePort`).
  */
 @Singleton
 class OnboardWearOsWatchUseCase @Inject constructor(
