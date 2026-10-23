@@ -35,11 +35,11 @@ object CycleJournalSyncTypes {
 
 /**
  * The cycle journal's [SyncRecordStore]: one item per day log, one per
- * excluded cycle, one for the declared contexts and age band, one for the
+ * excluded cycle, one for the declared contexts, age band and hormonal method, one for the
  * pill scheme and one per day the pill was taken. Keys are content
  * fingerprints, so an unchanged day is "already present". A day or a pill
  * scheme edited on both phones keeps the later edit; taken days merge as a
- * union. The contexts and age band move only to a phone that has declared
+ * union. The contexts, age band and hormonal method move only to a phone that has declared
  * none. Reminder settings stay local: they are alarms on one phone.
  */
 class CycleJournalSyncStore(
@@ -94,7 +94,9 @@ class CycleJournalSyncStore(
             inWindow(entry.date) && localUpdatedAt[entry.date]?.let { entry.updatedAt.isAfter(it) } ?: true
         } ?: true
         CycleJournalSyncTypes.EXCLUSION -> decodeExclusion(item.payload)?.let { inWindow(it.first) } ?: true
-        CycleJournalSyncTypes.PROFILE -> preferences.cycleTrackingProfile().let { it.contexts.isEmpty() && it.ageBand == null }
+        CycleJournalSyncTypes.PROFILE -> decodeProfile(item.payload)?.let { incoming ->
+            preferences.cycleTrackingProfile().let { it.filledFrom(incoming) != it }
+        } ?: true
         CycleJournalSyncTypes.PILL_PLAN -> decodePillPlan(item.payload)?.let { it.updatedAt.isAfter(preferences.pillPlan().updatedAt) } ?: true
         CycleJournalSyncTypes.PILL_INTAKE -> decodePillIntake(item.payload)?.let { inWindow(it) } ?: true
         else -> false
@@ -116,7 +118,8 @@ class CycleJournalSyncStore(
                         true
                     } ?: false
                     CycleJournalSyncTypes.PROFILE -> decodeProfile(item.payload)?.let { profile ->
-                        preferences.setCycleTrackingProfile(profile)
+                        // Per part: what this phone declared stays, the rest is filled in.
+                        preferences.setCycleTrackingProfile(preferences.cycleTrackingProfile().filledFrom(profile))
                         true
                     } ?: false
                     CycleJournalSyncTypes.PILL_PLAN -> decodePillPlan(item.payload)?.let { incoming ->
@@ -183,7 +186,7 @@ internal fun exclusionItem(start: LocalDate, reason: CycleExclusionReason?): Syn
 
 /** Nothing declared is nothing to send. */
 internal fun profileItem(profile: CycleTrackingProfile): SyncItem? {
-    if (profile.contexts.isEmpty() && profile.ageBand == null) return null
+    if (profile.isEmpty) return null
     return SyncItem(key = profileKey(profile), recordType = CycleJournalSyncTypes.PROFILE, payload = encodeProfile(profile))
 }
 
@@ -201,7 +204,12 @@ internal fun exclusionKey(start: LocalDate, reason: CycleExclusionReason?): Stri
     fingerprintOf(listOf("exclusion", start, reason?.name))
 
 internal fun profileKey(profile: CycleTrackingProfile): String =
-    fingerprintOf(listOf("profile", profile.contexts.map { it.id }.sorted(), profile.ageBand?.id))
+    fingerprintOf(
+        listOf("profile", profile.contexts.map { it.id }.sorted(), profile.ageBand?.id) +
+            // Appended only when declared, so a profile without it keeps the key older builds compute.
+            profile.hormonalContraception.takeIf { it.isDeclared }
+                ?.let { listOf(it.kind.id, it.stoppedOn) }.orEmpty(),
+    )
 
 /** A scheme the user never touched is nothing to send. */
 internal fun pillPlanItem(plan: PillPlan): SyncItem? {
