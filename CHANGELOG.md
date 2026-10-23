@@ -1,5 +1,37 @@
 # Changelog
 
+## 2.15.1 - 2026-10-23
+
+### English
+
+- **A zip of FHIR files can be imported.** The medical records import now reads a zip of FHIR JSON files, as CommonHealth exports, whatever its folders. A file in it that is not FHIR is left out and named in the report, and the rest are imported.
+- **A report when a file cannot be imported.** The import screen offers a report to copy or save: what stopped the import, and what the file holds, each file with its size, its kind, and for JSON its shape and record types. It holds none of the records' content. When nothing in a file can be added, the review offers the report of what was held back.
+
+### Espanol
+
+- **Se puede importar un zip de archivos FHIR.** La importacion del historial medico lee ahora un zip de archivos FHIR JSON, como los que exporta CommonHealth, sean cuales sean sus carpetas. Un archivo que no es FHIR se omite y el informe lo nombra; el resto se importa.
+- **Un informe cuando un archivo no se puede importar.** La pantalla de importacion ofrece un informe para copiar o guardar: que detuvo la importacion y que contiene el archivo, cada archivo con su tamano, su tipo y, si es JSON, su forma y tipos de registro. No incluye nada del contenido de los registros. Cuando no se puede anadir nada de un archivo, la revision ofrece el informe de lo retenido.
+
+### Deutsch
+
+- **Ein Zip mit FHIR-Dateien laesst sich importieren.** Der Import medizinischer Unterlagen liest jetzt ein Zip mit FHIR-JSON-Dateien, wie CommonHealth es exportiert, egal in welchen Ordnern. Eine Datei darin, die kein FHIR ist, wird ausgelassen und im Bericht genannt; der Rest wird importiert.
+- **Ein Bericht, wenn eine Datei nicht importiert werden kann.** Der Import-Bildschirm bietet einen Bericht zum Kopieren oder Speichern: was den Import angehalten hat und was die Datei enthaelt, jede Datei mit Groesse, Art und bei JSON mit Aufbau und Datensatztypen. Vom Inhalt der Unterlagen steht nichts darin. Wenn sich aus einer Datei nichts hinzufuegen laesst, bietet die Pruefung den Bericht ueber das Zurueckgehaltene.
+
+### Italiano
+
+- **Si puo importare uno zip di file FHIR.** L'importazione della cartella clinica legge ora uno zip di file FHIR JSON, come quelli che esporta CommonHealth, qualunque siano le cartelle. Un file che non e FHIR viene escluso e il report lo nomina; il resto viene importato.
+- **Un report quando un file non si puo importare.** La schermata di importazione offre un report da copiare o salvare: cosa ha fermato l'importazione e cosa contiene il file, ogni file con dimensione, tipo e, se e JSON, struttura e tipi di record. Non contiene nulla del contenuto dei record. Quando da un file non si puo aggiungere nulla, la revisione offre il report di cio che e stato trattenuto.
+
+### Eesti
+
+- **FHIR-failide zip-faili saab importida.** Meditsiiniliste andmete import loeb nuud FHIR JSON failide zip-faili, nagu CommonHealth ekspordib, olenemata kaustadest. Fail, mis pole FHIR, jaetakse valja ja aruanne nimetab selle; ulejaanu imporditakse.
+- **Aruanne, kui faili ei saa importida.** Impordi ekraan pakub aruannet kopeerimiseks voi salvestamiseks: mis importi peatas ja mida fail sisaldab, iga fail koos suuruse, liigi ning JSON puhul ulesehituse ja kirjetuupidega. Kirjete sisust pole selles midagi. Kui failist ei saa midagi lisada, pakub ulevaade aruannet korvale jaetu kohta.
+
+### Portugues
+
+- **Ja se pode importar um zip de ficheiros FHIR.** A importacao de registos medicos le agora um zip de ficheiros FHIR JSON, como os que o CommonHealth exporta, sejam quais forem as pastas. Um ficheiro que nao e FHIR fica de fora e o relatorio nomeia-o; o resto e importado.
+- **Um relatorio quando um ficheiro nao pode ser importado.** O ecra de importacao oferece um relatorio para copiar ou guardar: o que parou a importacao e o que o ficheiro contem, cada ficheiro com o tamanho, o tipo e, se for JSON, a estrutura e os tipos de registo. Nao inclui nada do conteudo dos registos. Quando nada de um ficheiro pode ser adicionado, a revisao oferece o relatorio do que ficou retido.
+
 ## 2.15.0 - 2026-10-23
 
 ### English
