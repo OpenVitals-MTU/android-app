@@ -113,6 +113,23 @@ class BluetoothWearOsNodePort @Inject constructor(
         }
     }
 
+    override suspend fun pullAscent(
+        targetAddress: String?,
+        targetName: String?,
+        since: Instant,
+    ): WearOsAscentPage? = withContext(Dispatchers.IO) {
+        val match = bondedWatchOrNull(targetAddress, targetName) ?: return@withContext null
+        withSession(match, targetAddress, PULL_TIMEOUT_MS) { session ->
+            // A watch app from before ascent would answer the request with an error.
+            if (WearLinkProtocol.CAP_ASCENT !in session.peer.capabilities) return@withSession WearOsAscentPage(emptyList(), false)
+            val page = unwrap(session.pullAscent(since.toEpochMilli(), WearLinkProtocol.MAX_ASCENT_MINUTES_PER_REQUEST))
+            WearOsAscentPage(
+                minutes = page.items.map { WearOsAscentMinute(Instant.ofEpochMilli(it.epochMillis), it.decimetres / 10.0) },
+                hasMore = page.more,
+            )
+        }
+    }
+
     /** The name the watch gave in its last `OK`, for the status card. */
     @Volatile
     private var lastWatchName: String? = null

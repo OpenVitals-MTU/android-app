@@ -3882,6 +3882,7 @@
     <string name="settings_watch_wearos_needs_weight_read">Kävelykaloreita ei arvioitu: lisää painosi Kehoprofiiliin tai salli OpenVitalsin lukea painosi Health Connectista.</string>
     <string name="settings_watch_wearos_needs_steps_write">Askeleita ei kirjoitettu: salli OpenVitalsin kirjoittaa askeleet Health Connectiin ja synkronoi uudelleen.</string>
     <string name="settings_watch_wearos_needs_calories_write">Kävelykaloreita ei kirjoitettu: salli OpenVitalsin kirjoittaa aktiiviset kalorit ja lukea harjoitukset Health Connectissa, niin ne arvioidaan seuraavasta synkronoinnista alkaen.</string>
+    <string name="settings_watch_wearos_needs_resting_heart_rate">Leposykettä ei kirjoitettu: salli OpenVitalsin lukea ja kirjoittaa leposyke Health Connectissa, niin se arvioidaan seuraavasta synkronoinnista alkaen.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d sykenäyte synkronoitu</item>
         <item quantity="other">%1$d sykenäytettä synkronoitu</item>
