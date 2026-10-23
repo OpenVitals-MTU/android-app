@@ -1924,7 +1924,14 @@
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%. %2$s. %3$d/%4$d selecionados, %5$d importados.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. %3$d/%4$d examinados, %5$d importados.</string>
     <string name="settings_apple_health_import_result">Importados %1$d. Duplicados %2$d. Não selecionados %3$d. Não suportados %4$d. Ignorados %5$d. Falhados %6$d.</string>
-    <string name="settings_apple_health_import_routes_incomplete">Os registos de saúde foram importados, mas algumas rotas de treino ficaram indisponíveis porque o ZIP terminou inesperadamente. O relatório de importação lista as atividades afetadas para recuperação manual.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Os registos de saúde foram importados, mas algumas rotas de treino ficaram indisponíveis porque o ficheiro ZIP terminou inesperadamente. Os treinos afetados estão listados abaixo.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d treino chegou sem a sua rota</item>
+        <item quantity="many">%d treinos chegaram sem a sua rota</item>
+        <item quantity="other">%d treinos chegaram sem a sua rota</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Os ficheiros das rotas não estão na exportação. Importe export.zip em vez de export.xml, ou importe cada rota com o importador GPX/KML/KMZ.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Mostrar tudo</string>
     <string name="settings_apple_health_import_analysis_result">%1$d itens examinados. Encontrados %2$d registos compatíveis. Não suportados %3$d. Falhados %4$d.</string>
     <string name="settings_apple_health_import_choose_categories">Escolha o que escrever no Health Connect.</string>
     <string name="settings_apple_health_import_category_count">%1$d registos</string>

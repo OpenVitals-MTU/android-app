@@ -2162,7 +2162,14 @@
     <string name="body_energy_calculation_inputs_body">La frecuencia cardíaca, la frecuencia cardíaca en reposo, las zonas personales, el sueño, los entrenamientos, la variabilidad de la frecuencia cardíaca (VFC) y la frecuencia respiratoria pueden mejorar la estimación. Si faltan datos, la estimación será más conservadora y el nivel de confianza será menor.</string>
     <string name="body_energy_calculation_limits_body">Se trata de una estimación del bienestar realizada por el propio dispositivo, no de una medición directa ni de un consejo médico. Los datos introducidos y las razones que se muestran tienen como objetivo permitir revisar y mejorar el método.</string>
     <string name="metric_body_energy">Energía corporal</string>
-    <string name="settings_apple_health_import_routes_incomplete">Se han importado los registros de salud, pero algunas rutas no estaban disponibles porque el código postal no era correcto. El informe de importación enumera las actividades afectadas para que se puedan recuperar manualmente.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Se han importado los registros de salud, pero algunas rutas de entrenamiento no estaban disponibles porque el archivo ZIP terminó de forma inesperada. Los entrenamientos afectados aparecen abajo.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d entrenamiento llegó sin su ruta</item>
+        <item quantity="many">%d entrenamientos llegaron sin su ruta</item>
+        <item quantity="other">%d entrenamientos llegaron sin su ruta</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Sus archivos de ruta no están en la exportación. Importa export.zip en lugar de export.xml o importa cada ruta con el importador de GPX/KML/KMZ/TCX.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Mostrar todo</string>
     <string name="body_energy_reason_strong_calibration">La intensidad por frecuencia cardiaca tiene una calibración sólida.</string>
     <string name="body_energy_reason_observed_or_age">La intensidad por frecuencia cardiaca usa calibración observada o por edad.</string>
     <string name="body_energy_reason_incomplete_calibration">La calibración está incompleta, así que las estimaciones automáticas son conservadoras.</string>

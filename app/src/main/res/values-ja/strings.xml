@@ -2393,7 +2393,13 @@
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%。%2$s。%3$d/%4$d 件を選択、%5$d 件をインポート。</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%。%2$s。%3$d/%4$d 件をスキャン、%5$d 件をインポート。</string>
     <string name="settings_apple_health_import_result">インポート %1$d。重複 %2$d。未選択 %3$d。非対応 %4$d。スキップ %5$d。失敗 %6$d。</string>
-    <string name="settings_apple_health_import_routes_incomplete">健康記録はインポートされましたが、ZIP が予期せず終了したため一部のワークアウトルートを取得できませんでした。インポートレポートに手動で復旧するための対象アクティビティが記載されています。</string>
+    <string name="settings_apple_health_import_routes_incomplete">健康記録はインポートされましたが、ZIP ファイルが予期せず終了したため、一部のワークアウトのルートを読み込めませんでした。該当するワークアウトを下に表示します。</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">ルートなしで取り込まれたワークアウト: %d 件</item>
+        <item quantity="other">ルートなしで取り込まれたワークアウト: %d 件</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">ルートファイルがエクスポートに含まれていません。export.xml ではなく export.zip をインポートするか、GPX/KML/KMZ/TCX インポーターで各ルートをインポートしてください。</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">すべて表示</string>
     <string name="settings_apple_health_import_analysis_result">%1$d 件をスキャン。互換性のある記録 %2$d 件。非対応 %3$d。失敗 %4$d。</string>
     <string name="settings_apple_health_import_choose_categories">Health Connect に書き込むものを選択してください。</string>
     <string name="settings_apple_health_import_category_count">%1$d 件</string>

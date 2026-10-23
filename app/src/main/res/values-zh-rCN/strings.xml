@@ -2042,7 +2042,13 @@
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%。%2$s。已选 %3$d/%4$d，导入 %5$d。</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%。%2$s。已扫描 %3$d/%4$d，导入 %5$d。</string>
     <string name="settings_apple_health_import_result">已导入 %1$d。重复 %2$d。未选 %3$d。不支持 %4$d。已跳过 %5$d。失败 %6$d。</string>
-    <string name="settings_apple_health_import_routes_incomplete">健康记录已导入，但部分锻炼路线因 ZIP 意外结束而不可用。导入报告列出了受影响的活动以便手动恢复。</string>
+    <string name="settings_apple_health_import_routes_incomplete">健康记录已导入，但由于 ZIP 文件意外结束，部分锻炼路线不可用。受影响的锻炼列在下方。</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d 次锻炼导入时缺少路线</item>
+        <item quantity="other">%d 次锻炼导入时缺少路线</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">导出中没有它们的路线文件。请导入 export.zip 而非 export.xml，或通过 GPX/KML/KMZ/TCX 导入器逐条导入路线。</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">显示全部</string>
     <string name="settings_apple_health_import_analysis_result">已扫描 %1$d 项。发现 %2$d 条兼容记录。不支持 %3$d。失败 %4$d。</string>
     <string name="settings_apple_health_import_choose_categories">选择要写入 Health Connect 的内容。</string>
     <string name="settings_apple_health_import_category_count">%1$d 条记录</string>

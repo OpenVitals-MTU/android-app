@@ -2342,7 +2342,15 @@
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%. %2$s. Выбрано: %3$d/%4$d, импортировано: %5$d.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. Просмотрено: %3$d/%4$d, импортировано: %5$d.</string>
     <string name="settings_apple_health_import_result">Импортировано: %1$d. Дубликатов: %2$d. Не выбрано: %3$d. Неподдерживаемых: %4$d. Пропущено: %5$d. Ошибок: %6$d.</string>
-    <string name="settings_apple_health_import_routes_incomplete">Записи о здоровье импортированы, но некоторые маршруты тренировок недоступны, поскольку ZIP-архив неожиданно закончился. В отчёте об импорте перечислены затронутые активности для восстановления вручную.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Записи о здоровье импортированы, но некоторые маршруты тренировок недоступны, потому что ZIP-файл неожиданно оборвался. Затронутые тренировки перечислены ниже.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d тренировка пришла без маршрута</item>
+        <item quantity="few">%d тренировки пришли без маршрута</item>
+        <item quantity="many">%d тренировок пришли без маршрута</item>
+        <item quantity="other">%d тренировки пришли без маршрута</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Файлов их маршрутов нет в экспорте. Импортируйте export.zip вместо export.xml или импортируйте каждый маршрут через импортёр GPX/KML/KMZ/TCX.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Показать все</string>
     <string name="settings_apple_health_import_analysis_result">Просмотрено элементов: %1$d. Найдено совместимых записей: %2$d. Неподдерживаемых: %3$d. Ошибок: %4$d.</string>
     <string name="settings_apple_health_import_choose_categories">Выберите, какие данные записать в Health Connect.</string>
     <string name="settings_apple_health_import_category_count">%1$d записей</string>

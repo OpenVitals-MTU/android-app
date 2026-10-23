@@ -2381,7 +2381,15 @@
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%. %2$s. Wybrano %3$d/%4$d, zaimportowano %5$d.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. Przeskanowano %3$d/%4$d, zaimportowano %5$d.</string>
     <string name="settings_apple_health_import_result">Zaimportowano %1$d. Duplikaty %2$d. Niewybrane %3$d. Nieobsługiwane %4$d. Pominięte %5$d. Nieudane %6$d.</string>
-    <string name="settings_apple_health_import_routes_incomplete">Rekordy zdrowotne zaimportowano, ale niektóre trasy treningów były niedostępne, bo plik ZIP zakończył się nieoczekiwanie. Raport importu wymienia dotknięte aktywności do ręcznego odzyskania.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Rekordy zdrowotne zaimportowano, ale niektóre trasy treningów były niedostępne, bo plik ZIP nieoczekiwanie się skończył. Treningi, których to dotyczy, są wymienione poniżej.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d trening dotarł bez trasy</item>
+        <item quantity="few">%d treningi dotarły bez trasy</item>
+        <item quantity="many">%d treningów dotarło bez trasy</item>
+        <item quantity="other">%d treningu dotarło bez trasy</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Ich plików tras nie ma w eksporcie. Zaimportuj export.zip zamiast export.xml albo zaimportuj każdą trasę w imporcie GPX/KML/KMZ/TCX.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Pokaż wszystko</string>
     <string name="settings_apple_health_import_analysis_result">Przeskanowano %1$d elementów. Znaleziono %2$d zgodnych rekordów. Nieobsługiwane %3$d. Nieudane %4$d.</string>
     <string name="settings_apple_health_import_choose_categories">Wybierz, co zapisać w Health Connect.</string>
     <string name="settings_apple_health_import_category_count">%1$d rekordów</string>

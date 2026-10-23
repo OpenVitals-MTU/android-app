@@ -2046,7 +2046,14 @@
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%. %2$s. %3$d/%4$d sélectionnés, %5$d importés.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. %3$d/%4$d analysés, %5$d importés.</string>
     <string name="settings_apple_health_import_result">%1$d importés. %2$d doublons. %3$d non sélectionnés. %4$d non pris en charge. %5$d ignorés. %6$d échecs.</string>
-    <string name="settings_apple_health_import_routes_incomplete">Les données de santé ont été importées, mais certains itinéraires d\'entraînement étaient indisponibles car le ZIP s\'est terminé de façon inattendue. Le rapport d\'importation liste les activités concernées pour une récupération manuelle.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Les données de santé ont été importées, mais certains itinéraires d\'entraînement étaient indisponibles car le fichier ZIP s\'est terminé de manière inattendue. Les entraînements concernés sont listés ci-dessous.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d entraînement est arrivé sans son itinéraire</item>
+        <item quantity="many">%d entraînements sont arrivés sans leur itinéraire</item>
+        <item quantity="other">%d entraînements sont arrivés sans leur itinéraire</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Leurs fichiers d\'itinéraire ne sont pas dans l\'export. Importez export.zip plutôt qu\'export.xml, ou importez chaque itinéraire avec l\'importateur GPX/KML/KMZ/TCX.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Tout afficher</string>
     <string name="settings_apple_health_import_analysis_result">%1$d éléments analysés. %2$d enregistrements compatibles trouvés. %3$d non pris en charge. %4$d échecs.</string>
     <string name="settings_apple_health_import_choose_categories">Choisissez ce qui sera écrit dans Santé Connect.</string>
     <string name="settings_apple_health_import_category_count">%1$d enregistrements</string>

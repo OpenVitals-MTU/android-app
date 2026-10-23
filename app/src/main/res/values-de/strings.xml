@@ -2166,7 +2166,13 @@
     <string name="body_energy_calculation_inputs_body">Herzfrequenz, Ruheherzfrequenz, persönliche Zonen, Schlaf, Trainings, HRV und Atemfrequenz können die Schätzung verbessern. Fehlende Eingaben machen die Schätzung konservativer und senken das Vertrauen.</string>
     <string name="body_energy_calculation_limits_body">Dies ist eine Wellness-Schätzung auf dem Gerät, keine direkte Messung und kein medizinischer Rat. Die angezeigten Eingaben und Gründe werden offengelegt, damit die Methode geprüft und verbessert werden kann.</string>
     <string name="metric_body_energy">Körperenergie</string>
-    <string name="settings_apple_health_import_routes_incomplete">Die Gesundheitsdaten wurden importiert, jedoch waren einige Trainingsrouten nicht verfügbar, da die Postleitzahl unerwartet endete. Im Importbericht sind die betroffenen Aktivitäten zur manuellen Wiederherstellung aufgeführt.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Die Gesundheitsdaten wurden importiert, aber einige Trainingsrouten waren nicht verfügbar, weil die ZIP-Datei unerwartet endete. Die betroffenen Trainings stehen unten.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d Training kam ohne seine Route</item>
+        <item quantity="other">%d Trainings kamen ohne ihre Route</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Ihre Routendateien fehlen im Export. Importiere export.zip statt export.xml oder importiere jede Route mit dem GPX/KML/KMZ-Importer.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Alle anzeigen</string>
     <string name="body_energy_reason_strong_calibration">Die Herzfrequenz-Intensität hat eine solide Kalibrierung.</string>
     <string name="body_energy_reason_observed_or_age">Die Herzfrequenz-Intensität nutzt beobachtete oder altersbasierte Kalibrierung.</string>
     <string name="body_energy_reason_incomplete_calibration">Die Kalibrierung ist unvollständig, automatische Schätzungen sind daher konservativ.</string>

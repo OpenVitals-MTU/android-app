@@ -2189,7 +2189,14 @@
     <string name="body_energy_calculation_inputs_body">Frequenza cardiaca, frequenza a riposo, zone personali, sonno, allenamenti, HRV e frequenza respiratoria possono migliorare la stima. Gli input mancanti rendono la stima più conservativa e riducono l\'attendibilità.</string>
     <string name="body_energy_calculation_limits_body">Questa è una stima di benessere sul dispositivo, non una misurazione diretta o un consiglio medico. Gli input e i motivi mostrati sono esposti per poter rivedere e migliorare il metodo.</string>
     <string name="metric_body_energy">Energia corporea</string>
-    <string name="settings_apple_health_import_routes_incomplete">Le cartelle cliniche sono state importate, ma alcuni percorsi di allenamento non erano disponibili perché il codice postale terminava in modo imprevisto. Il report di importazione elenca le attività interessate, che possono essere recuperate manualmente.</string>
+    <string name="settings_apple_health_import_routes_incomplete">I dati sanitari sono stati importati, ma alcuni percorsi di allenamento non erano disponibili perché il file ZIP si è interrotto in modo imprevisto. Gli allenamenti interessati sono elencati sotto.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d allenamento è arrivato senza il suo percorso</item>
+        <item quantity="many">%d allenamenti sono arrivati senza il loro percorso</item>
+        <item quantity="other">%d allenamenti sono arrivati senza il loro percorso</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">I loro file di percorso non sono nell\'esportazione. Importa export.zip invece di export.xml, oppure importa ogni percorso con l\'importatore GPX/KML/KMZ.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Mostra tutto</string>
     <string name="body_energy_reason_strong_calibration">L\'intensità da frequenza cardiaca ha una calibrazione solida.</string>
     <string name="body_energy_reason_observed_or_age">L\'intensità da frequenza cardiaca usa una calibrazione osservata o basata sull\'età.</string>
     <string name="body_energy_reason_incomplete_calibration">La calibrazione è incompleta, quindi le stime automatiche sono prudenti.</string>

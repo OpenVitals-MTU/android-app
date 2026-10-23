@@ -47,8 +47,7 @@ class AppleHealthImportService
         ): AppleHealthImportAnalysisResult =
             withContext(Dispatchers.IO) {
                 analyzeAppleHealthExportSource(
-                    uri = uri,
-                    exportLabel = uri.toString(),
+                    exportLabel = "picked document",
                     openInput = { context.contentResolver.openInputStream(uri) },
                     progress = progress,
                 )
@@ -73,8 +72,7 @@ class AppleHealthImportService
                             "bytes=${stagedExport.bytes} reused=${stagedExport.reused}",
                     )
                     analyzeAppleHealthExportSource(
-                        uri = uri,
-                        exportLabel = stagedExport.file.absolutePath,
+                        exportLabel = "staged copy",
                         openInput = stagedExport.file::inputStream,
                         progress = progress,
                         importLogs = importLogs,
@@ -86,7 +84,6 @@ class AppleHealthImportService
             }
 
         private suspend fun analyzeAppleHealthExportSource(
-            uri: Uri,
             exportLabel: String,
             openInput: () -> InputStream?,
             progress: suspend (AppleHealthImportProgress) -> Unit,
@@ -95,7 +92,7 @@ class AppleHealthImportService
             fun log(message: String) {
                 importLogs.addImportInfo(message)
             }
-            log("Apple Health analysis requested uri=$uri")
+            log("Apple Health analysis requested")
             val analysisState = StreamingAppleHealthScanAnalysisState(
                 mindfulnessAvailable = importRepository.isMindfulnessAvailable(),
                 onProgress = progress,
@@ -134,7 +131,7 @@ class AppleHealthImportService
                     "diagnosticGroups=${diagnosticSummaries.size} typeSummaries=${summaries.size}",
             )
             log("Stage finished: Building report")
-            val reportText = buildReportText(
+            val reportText = buildAppleHealthReportText(
                 parsed = parsed,
                 imported = 0,
                 selectedCategories = null,
@@ -199,8 +196,7 @@ class AppleHealthImportService
                     importLogs.addImportInfo(message)
                 }
                 log(
-                    "Apple Health import requested uri=$uri " +
-                        "stagedFile=${stagedFile?.absolutePath.orEmpty()} " +
+                    "Apple Health import requested staged=${stagedFile != null} " +
                         "selectedCategories=${selectedCategories.joinToString { it.name }}",
                 )
                 if (resumeCheckpoint != null && resumeCheckpoint.committedSelectedRecords > 0) {
@@ -253,7 +249,7 @@ class AppleHealthImportService
                     }
                     try {
                         val parsedExport = parseExport(
-                            exportLabel = stagedFile?.absolutePath ?: uri.toString(),
+                            exportLabel = if (stagedFile != null) "staged copy" else "picked document",
                             openInput = { stagedFile?.inputStream() ?: context.contentResolver.openInputStream(uri) },
                             state = importState,
                             importLogs = importLogs,
@@ -309,7 +305,7 @@ class AppleHealthImportService
                         "diagnosticGroups=${diagnosticSummaries.size} typeSummaries=${summaries.size}",
                 )
                 log("Stage finished: Building report")
-                val reportText = buildReportText(
+                val reportText = buildAppleHealthReportText(
                     parsed = parsed,
                     imported = importState.importedRecords,
                     selectedCategories = selectedCategories,
@@ -332,6 +328,7 @@ class AppleHealthImportService
                     skippedRecords = totals.skipped,
                     failedRecords = totals.failed,
                     workoutRoutesIncomplete = parsed.workoutRouteArchiveFailure != null,
+                    workoutsWithoutRoute = converter.workoutsWithoutRouteSnapshot(),
                     typeSummaries = summaries,
                     diagnostics = diagnostics,
                     shareableReportText = reportText,
@@ -495,9 +492,7 @@ class AppleHealthImportService
                     appleType = appleType,
                     targetType = null,
                     reasonCode = "unsupported",
-                    timeRange = null,
                     unit = null,
-                    value = null,
                     detail = detail,
                 )
                 diagnosticSummaries.add(diagnostic)
@@ -987,7 +982,7 @@ class AppleHealthImportService
                             }.getOrElse { error ->
                                 importLogs.addImportError(
                                     "Existing clientRecordId lookup failed " +
-                                        "recordType=${recordType.qualifiedName} wanted=${wantedIds.size} range=$start..$end",
+                                        "recordType=${recordType.qualifiedName} wanted=${wantedIds.size}",
                                     error,
                                 )
                                 emptySet()
@@ -1047,14 +1042,14 @@ class AppleHealthImportService
                             } else {
                                 stats.failed += 1
                                 importLogs.addImportError(
-                                    "Record insert failed appleType=${converted.appleType} " +
-                                        "target=${converted.targetType} timeRange=${converted.sourceTimeRange}",
+                                    "Record insert failed appleType=${converted.appleType} target=${converted.targetType}",
                                     error,
                                 )
+                                // One line per kind of failure, so the summary groups them.
                                 addDiagnostic(
                                     converted.diagnostic(
                                         reasonCode = "insert_failed",
-                                        detail = AppleHealthImportErrorFormatter.details(error),
+                                        detail = AppleHealthImportErrorFormatter.summary(error),
                                     ),
                                 )
                                 result.copy(failed = result.failed + 1)
@@ -1100,7 +1095,7 @@ private fun Map<AppleHealthImportCategory, MutableAppleHealthImportCategorySumma
         .mapNotNull { category -> this[category]?.toSummary() }
         .filter { it.convertedRecords > 0 }
 
-private data class AppleTypeSummaryTotals(
+internal data class AppleTypeSummaryTotals(
     val converted: Int = 0,
     val duplicateSkipped: Int = 0,
     val notSelected: Int = 0,
@@ -1109,7 +1104,7 @@ private data class AppleTypeSummaryTotals(
     val failed: Int = 0,
 )
 
-private fun List<AppleHealthImportTypeSummary>.totals(): AppleTypeSummaryTotals {
+internal fun List<AppleHealthImportTypeSummary>.totals(): AppleTypeSummaryTotals {
     var converted = 0
     var duplicateSkipped = 0
     var notSelected = 0
@@ -1191,9 +1186,7 @@ private fun List<AppleHealthImportDiagnosticSummary>.mergeDiagnosticSummaries():
             appleType = summary.appleType,
             targetType = summary.targetType,
             reasonCode = summary.reasonCode,
-            timeRange = summary.exampleTimeRange,
             unit = summary.exampleUnit,
-            value = summary.exampleValue,
             detail = summary.detail,
         )
         val key = AppleHealthDiagnosticSummaryKey(
@@ -1220,9 +1213,7 @@ private fun AppleHealthImportDiagnostic.toSingleSummary(): AppleHealthImportDiag
         reasonCode = reasonCode,
         detail = detail,
         count = 1,
-        exampleTimeRange = timeRange,
         exampleUnit = unit,
-        exampleValue = value,
     )
 
 private fun AppleWorkoutRouteArchiveFailure.toDiagnostic(): AppleHealthImportDiagnostic =
@@ -1230,9 +1221,7 @@ private fun AppleWorkoutRouteArchiveFailure.toDiagnostic(): AppleHealthImportDia
         appleType = "WorkoutRoute",
         targetType = "ExerciseRoute",
         reasonCode = "route_archive_truncated",
-        timeRange = null,
         unit = null,
-        value = null,
         detail = detail,
     )
 
@@ -1241,9 +1230,7 @@ private fun ConvertedAppleRecord.diagnostic(reasonCode: String, detail: String):
         appleType = appleType,
         targetType = targetType,
         reasonCode = reasonCode,
-        timeRange = sourceTimeRange.toString(),
         unit = unit,
-        value = value,
         detail = detail,
     )
 
@@ -1268,134 +1255,9 @@ private fun Map<String, MutableAppleImportTypeStats>.toTypeSummaries(): List<App
             )
         }
 
-private fun buildReportText(
-    parsed: AppleParsedExport,
-    imported: Int,
-    selectedCategories: Set<AppleHealthImportCategory>?,
-    summaries: List<AppleHealthImportTypeSummary>,
-    categorySummaries: List<AppleHealthImportCategorySummary>,
-    diagnostics: List<AppleHealthImportDiagnostic>,
-    diagnosticSummaries: List<AppleHealthImportDiagnosticSummary>,
-    importLogs: List<String>,
-): String = buildString {
-    appendAppleHealthReportHeader()
-    appendLine()
-    appendLine("Summary")
-    appendLine("Parsed records: ${parsed.parsedRecords}")
-    appendLine("Parsed workouts: ${parsed.parsedWorkouts}")
-    appendLine("Parsed correlations: ${parsed.parsedCorrelations}")
-    appendLine("Parsed activity summaries: ${parsed.parsedActivitySummaries}")
-    val totals = summaries.totals()
-    appendLine("Converted Health Connect records: ${totals.converted}")
-    appendLine("Imported Health Connect records: $imported")
-    appendLine("Duplicate skipped: ${totals.duplicateSkipped}")
-    appendLine("Not selected: ${totals.notSelected}")
-    appendLine("Unsupported: ${totals.unsupported}")
-    appendLine("Skipped: ${totals.skipped}")
-    appendLine("Failed: ${totals.failed}")
-    appendLine("Workout routes incomplete: ${parsed.workoutRouteArchiveFailure != null}")
-    if (selectedCategories != null) {
-        appendLine("Selected categories: ${selectedCategories.joinToString { it.reportName }}")
-    }
-    val workoutsMissingRoutes = diagnosticSummaries
-        .filter { it.reasonCode == "workout_route_unavailable" }
-        .sortedWith(compareBy({ it.exampleTimeRange.orEmpty() }, { it.appleType }))
-    if (workoutsMissingRoutes.isNotEmpty()) {
-        appendLine()
-        appendLine("Activities Requiring Manual Route Import")
-        appendLine(
-            "These activities referenced unavailable route geometry. Depending on the selected categories, " +
-                "their workout sessions may have imported without routes:",
-        )
-        workoutsMissingRoutes.forEach { diagnostic ->
-            appendLine(
-                "- activity=${diagnostic.appleType}; timeRange=${diagnostic.exampleTimeRange ?: "unknown"}; " +
-                    "occurrences=${diagnostic.count}; ${diagnostic.detail}",
-            )
-        }
-    }
-    appendLine()
-    appendLine("Logs")
-    if (importLogs.isEmpty()) {
-        appendLine("No import log entries were recorded.")
-    } else {
-        importLogs.forEach { entry -> appendLine(entry) }
-    }
-    appendLine()
-    appendLine("By Import Category")
-    if (categorySummaries.isEmpty()) {
-        appendLine("No Health Connect-compatible categories were detected.")
-    } else {
-        categorySummaries.forEach { summary ->
-            val routeText = if (summary.routeSessions > 0) ", routeSessions=${summary.routeSessions}" else ""
-            appendLine("- ${summary.category.reportName}: converted=${summary.convertedRecords}$routeText")
-        }
-    }
-    appendLine()
-    appendLine("By Apple Type")
-    summaries.forEach { summary ->
-        appendLine(
-            "- ${summary.appleType}: parsed=${summary.parsed}, converted=${summary.converted}, " +
-                "imported=${summary.imported}, duplicate=${summary.duplicateSkipped}, " +
-                "notSelected=${summary.notSelected}, unsupported=${summary.unsupported}, " +
-                "skipped=${summary.skipped}, failed=${summary.failed}",
-        )
-    }
-    appendLine()
-    appendLine("Diagnostic Summary")
-    if (diagnosticSummaries.isEmpty()) {
-        appendLine("No failures, skips, duplicates, or unsupported entries were recorded.")
-    } else {
-        val reasonSummaries = diagnosticSummaries.groupBy { it.reasonCode }
-            .mapValues { (_, grouped) -> grouped.sumOf { it.count } }
-            .toSortedMap()
-        appendLine(
-            "Grouped diagnostic types: ${diagnosticSummaries.size}; " +
-                reasonSummaries.entries.joinToString(", ") { (reason, count) -> "$reason=$count" },
-        )
-        diagnosticSummaries
-            .sortedWith(
-                compareByDescending<AppleHealthImportDiagnosticSummary> { it.count }
-                    .thenBy { it.reasonCode }
-                    .thenBy { it.appleType },
-            )
-            .forEachIndexed { index, diagnostic ->
-                val exampleParts = listOfNotNull(
-                    diagnostic.exampleTimeRange?.let { "exampleTime=$it" },
-                    diagnostic.exampleUnit?.let { "unit=$it" },
-                    diagnostic.exampleValue?.let { "value=$it" },
-                )
-                val exampleText = if (exampleParts.isEmpty()) "" else exampleParts.joinToString(prefix = "; ", separator = "; ")
-                appendLine(
-                    "${index + 1}. count=${diagnostic.count}; reason=${diagnostic.reasonCode}; appleType=${diagnostic.appleType}; " +
-                        "target=${diagnostic.targetType ?: "none"}; detail=${diagnostic.detail}$exampleText",
-                )
-            }
-    }
-    appendLine()
-    appendLine("Raw Diagnostic Log")
-    if (diagnostics.isEmpty()) {
-        appendLine("No raw diagnostics were recorded.")
-    } else {
-        if (diagnostics.size >= MaxRawDiagnostics) {
-            appendLine(
-                "Raw diagnostics were capped at $MaxRawDiagnostics per source; " +
-                    "see Diagnostic Summary above for complete counts.",
-            )
-        }
-        diagnostics.forEachIndexed { index, diagnostic ->
-            appendLine(
-                "${index + 1}. reason=${diagnostic.reasonCode}; appleType=${diagnostic.appleType}; " +
-                    "target=${diagnostic.targetType ?: "none"}; timeRange=${diagnostic.timeRange ?: "none"}; " +
-                    "unit=${diagnostic.unit ?: "none"}; value=${diagnostic.value ?: "none"}; detail=${diagnostic.detail}",
-            )
-        }
-    }
-}
-
 private const val ConvertedBatchSize = 300
 private const val BufferedRecordBatchSize = 2_000
-private const val MaxRawDiagnostics = 1_000
+internal const val MaxRawDiagnostics = 1_000
 private const val BatchChannelCapacity = 2
 private const val MaxConcurrentDuplicateCheckQueries = 4
 private const val BufferedGroupHeartbeatInterval = 10_000

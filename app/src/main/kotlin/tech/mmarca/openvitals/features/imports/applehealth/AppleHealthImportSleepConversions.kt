@@ -33,7 +33,7 @@ internal fun AppleHealthImportConverter.convertSleep(
             val sessionStart = session.minOf { it.start.instant }
             val sessionEnd = session.maxOf { it.end.instant }
             if (!sessionEnd.isAfter(sessionStart)) {
-                invalid(AppleSleepAnalysis, "Sleep session has no positive duration.", "$sessionStart..$sessionEnd")
+                invalid(AppleSleepAnalysis, "Sleep session has no positive duration.")
                 return@mapNotNull null
             }
             val detailedStages = session.filterNot { it.inBedOnly }.takeIf { it.isNotEmpty() } ?: session
@@ -52,7 +52,7 @@ internal fun AppleHealthImportConverter.convertSleep(
                     acc
                 }
             if (stages.isEmpty()) {
-                invalid(AppleSleepAnalysis, "Sleep session did not contain any valid non-overlapping stages.", "$sessionStart..$sessionEnd")
+                invalid(AppleSleepAnalysis, "Sleep session did not contain any valid non-overlapping stages.")
                 return@mapNotNull null
             }
             val first = session.first().record
@@ -78,7 +78,6 @@ internal fun AppleHealthImportConverter.convertSleep(
                 ),
                 sourceTimeRange = AppleImportTimeRange(sessionStart, sessionEnd),
                 unit = null,
-                value = "stages=${stages.size}",
             )
         }
     }

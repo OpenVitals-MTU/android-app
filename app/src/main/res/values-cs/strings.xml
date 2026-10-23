@@ -2046,7 +2046,15 @@
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%. %2$s. Vybráno %3$d/%4$d, naimportováno %5$d.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. Prohledáno %3$d/%4$d, naimportováno %5$d.</string>
     <string name="settings_apple_health_import_result">Naimportováno %1$d. Duplicit %2$d. Nevybráno %3$d. Nepodporováno %4$d. Přeskočeno %5$d. Selhalo %6$d.</string>
-    <string name="settings_apple_health_import_routes_incomplete">Zdravotní záznamy se naimportovaly, ale některé trasy tréninků nebyly k dispozici, protože soubor ZIP nečekaně skončil. Zpráva o importu uvádí dotčené aktivity pro ruční obnovu.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Zdravotní záznamy se naimportovaly, ale některé trasy tréninků nebyly k dispozici, protože soubor ZIP neočekávaně skončil. Dotčené tréninky jsou uvedeny níže.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d trénink přišel bez trasy</item>
+        <item quantity="few">%d tréninky přišly bez trasy</item>
+        <item quantity="many">%d tréninku přišlo bez trasy</item>
+        <item quantity="other">%d tréninků přišlo bez trasy</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Soubory s jejich trasami v exportu nejsou. Importujte export.zip místo export.xml, nebo každou trasu naimportujte přes Import GPX/KML/KMZ/TCX.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Zobrazit vše</string>
     <string name="settings_apple_health_import_analysis_result">Prohledáno %1$d položek. Nalezeno %2$d kompatibilních záznamů. Nepodporováno %3$d. Selhalo %4$d.</string>
     <string name="settings_apple_health_import_choose_categories">Vyberte, co se má zapsat do Health Connect.</string>
     <string name="settings_apple_health_import_category_count">%1$d záznamů</string>

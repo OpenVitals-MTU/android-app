@@ -15,7 +15,6 @@ internal fun AppleHealthImportConverter.convertBloodPressureCorrelations(
                 invalid(
                     appleType = correlation.type,
                     detail = "Blood pressure correlation is missing systolic or diastolic child record.",
-                    timeRange = correlation.timeRangeOrNull()?.toString(),
                 )
                 return@mapNotNull null
             }
@@ -27,7 +26,6 @@ internal fun AppleHealthImportConverter.convertBloodPressureCorrelations(
                 sourceEnd = correlation.endDate ?: systolic.endDate ?: diastolic.endDate,
                 sourceName = correlation.sourceName ?: systolic.sourceName ?: diastolic.sourceName,
                 unit = systolic.unit ?: diastolic.unit,
-                value = "${systolic.rawValue}/${diastolic.rawValue}",
                 systolic = systolic.numericValue,
                 diastolic = diastolic.numericValue,
                 stableParts = listOf("bp_correlation", correlation.stableParts(), systolic.stableParts(), diastolic.stableParts()),
@@ -61,7 +59,6 @@ internal fun AppleHealthImportConverter.convertStandaloneBloodPressure(records: 
             sourceEnd = systolic.endDate ?: diastolic.endDate,
             sourceName = systolic.sourceName ?: diastolic.sourceName,
             unit = systolic.unit ?: diastolic.unit,
-            value = "${systolic.rawValue}/${diastolic.rawValue}",
             systolic = systolic.numericValue,
             diastolic = diastolic.numericValue,
             stableParts = listOf("bp_pair", systolic.stableParts(), diastolic.stableParts()),
@@ -75,7 +72,6 @@ private fun AppleHealthImportConverter.buildBloodPressureRecord(
     sourceEnd: AppleDateTime?,
     sourceName: String?,
     unit: String?,
-    value: String?,
     systolic: Double?,
     diastolic: Double?,
     stableParts: List<String>,
@@ -83,17 +79,14 @@ private fun AppleHealthImportConverter.buildBloodPressureRecord(
     val time = start ?: return invalid(
         appleType = appleType,
         detail = "Blood pressure is missing measurement time.",
-        timeRange = null,
     )
     val sys = systolic?.takeIf { it in 20.0..200.0 } ?: return invalid(
         appleType = appleType,
         detail = "Systolic value is missing or outside supported range.",
-        timeRange = time.instant.toString(),
     )
     val dia = diastolic?.takeIf { it in 10.0..180.0 } ?: return invalid(
         appleType = appleType,
         detail = "Diastolic value is missing or outside supported range.",
-        timeRange = time.instant.toString(),
     )
     val fingerprint = buildStableClientRecordId("blood_pressure", stableParts + sourceName.orEmpty())
     markConverted(appleType)
@@ -111,6 +104,5 @@ private fun AppleHealthImportConverter.buildBloodPressureRecord(
         ),
         sourceTimeRange = AppleImportTimeRange(time.instant, sourceEnd?.instant ?: time.instant),
         unit = unit,
-        value = value,
     )
 }

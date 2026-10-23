@@ -2393,7 +2393,13 @@
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%. %2$s. Valittu %3$d/%4$d, tuotu %5$d.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. Luettu %3$d/%4$d, tuotu %5$d.</string>
     <string name="settings_apple_health_import_result">Tuotu %1$d. Kaksoiskappaleita %2$d. Ei valittu %3$d. Ei tuettu %4$d. Ohitettu %5$d. Epäonnistui %6$d.</string>
-    <string name="settings_apple_health_import_routes_incomplete">Terveystietueet tuotiin, mutta joitakin treenireittejä ei ollut saatavilla, koska ZIP päättyi odottamatta. Tuontiraportti luettelee aktiviteetit, joihin tämä vaikutti, käsin palauttamista varten.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Terveystietueet tuotiin, mutta joitakin treenireittejä ei ollut saatavilla, koska ZIP-tiedosto päättyi odottamatta. Treenit, joita tämä koskee, luetellaan alla.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d treeni tuli ilman reittiään</item>
+        <item quantity="other">%d treeniä tuli ilman reittiään</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Niiden reittitiedostot puuttuvat viennistä. Tuo export.zip export.xml:n sijaan tai tuo jokainen reitti GPX/KML/KMZ/TCX-tuonnilla.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Näytä kaikki</string>
     <string name="settings_apple_health_import_analysis_result">Luettu %1$d kohdetta. Löydetty %2$d yhteensopivaa tietuetta. Ei tuettu %3$d. Epäonnistui %4$d.</string>
     <string name="settings_apple_health_import_choose_categories">Valitse, mitä kirjoitetaan Health Connectiin.</string>
     <string name="settings_apple_health_import_category_count">%1$d tietuetta</string>

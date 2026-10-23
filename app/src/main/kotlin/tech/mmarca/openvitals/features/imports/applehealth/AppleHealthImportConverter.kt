@@ -4,6 +4,7 @@ internal data class AppleHealthConversionResult(
     val converted: List<ConvertedAppleRecord>,
     val diagnostics: List<AppleHealthImportDiagnostic>,
     val typeStats: MutableMap<String, MutableAppleImportTypeStats>,
+    val workoutsWithoutRoute: List<AppleWorkoutWithoutRoute> = emptyList(),
 )
 
 internal data class MutableAppleImportTypeStats(
@@ -24,6 +25,7 @@ internal class AppleHealthImportConverter(
 ) {
     private val diagnostics = mutableListOf<AppleHealthImportDiagnostic>()
     private val diagnosticSummaries = linkedMapOf<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImportDiagnosticSummary>()
+    private val workoutsWithoutRoute = mutableListOf<AppleWorkoutWithoutRoute>()
     internal val typeStats = linkedMapOf<String, MutableAppleImportTypeStats>()
 
     // Volatile counters, so the writer coroutine can read progress without iterating typeStats.
@@ -69,14 +71,12 @@ internal class AppleHealthImportConverter(
                     unsupported(
                         appleType = correlation.type,
                         detail = "Correlation type has no direct Health Connect import mapping.",
-                        timeRange = correlation.timeRangeOrNull()?.toString(),
                     )
                 }
             if (export.parsedActivitySummaries > 0) {
                 unsupported(
                     appleType = "ActivitySummary",
                     detail = "Apple activity rings and stand hours have no direct writable Health Connect record.",
-                    timeRange = null,
                 )
             }
         }
@@ -85,6 +85,7 @@ internal class AppleHealthImportConverter(
             converted = converted,
             diagnostics = diagnostics.toList(),
             typeStats = typeStats,
+            workoutsWithoutRoute = workoutsWithoutRoute.toList(),
         )
     }
 
@@ -159,14 +160,12 @@ internal class AppleHealthImportConverter(
                 unsupported(
                     appleType = correlation.type,
                     detail = "Correlation type has no direct Health Connect import mapping.",
-                    timeRange = correlation.timeRangeOrNull()?.toString(),
                 )
             }
         if (parsedActivitySummaries > 0) {
             unsupported(
                 appleType = "ActivitySummary",
                 detail = "Apple activity rings and stand hours have no direct writable Health Connect record.",
-                timeRange = null,
             )
         }
     }
@@ -221,16 +220,14 @@ internal class AppleHealthImportConverter(
     }
 
     internal fun invalid(record: AppleRecord, detail: String): Nothing? =
-        invalid(record.type, detail, record.timeRangeOrNull()?.toString(), record.unit, record.valueForReport)
+        invalid(record.type, detail, record.unit)
 
     internal fun invalid(
         appleType: String,
         detail: String,
-        timeRange: String?,
         unit: String? = null,
-        value: String? = null,
     ): Nothing? {
-        addDiagnostic(AppleHealthImportDiagnostic(appleType, null, "invalid", timeRange, unit, value, detail))
+        addDiagnostic(AppleHealthImportDiagnostic(appleType, null, "invalid", unit, detail))
         typeStats.getOrPut(appleType) { MutableAppleImportTypeStats() }.failed += 1
         invalidCount += 1
         return null
@@ -249,16 +246,14 @@ internal class AppleHealthImportConverter(
         }
 
     internal fun unsupportedNull(record: AppleRecord, detail: String): Nothing? =
-        unsupported(record.type, detail, record.timeRangeOrNull()?.toString(), record.unit, record.valueForReport)
+        unsupported(record.type, detail, record.unit)
 
     private fun unsupported(
         appleType: String,
         detail: String,
-        timeRange: String?,
         unit: String? = null,
-        value: String? = null,
     ): Nothing? {
-        addDiagnostic(AppleHealthImportDiagnostic(appleType, null, "unsupported", timeRange, unit, value, detail))
+        addDiagnostic(AppleHealthImportDiagnostic(appleType, null, "unsupported", unit, detail))
         typeStats.getOrPut(appleType) { MutableAppleImportTypeStats() }.unsupported += 1
         unsupportedCount += 1
         return null
@@ -269,9 +264,7 @@ internal class AppleHealthImportConverter(
             appleType = record.type,
             reasonCode = reasonCode,
             detail = detail,
-            timeRange = record.timeRangeOrNull()?.toString(),
             unit = record.unit,
-            value = record.valueForReport,
         )
         return null
     }
@@ -280,14 +273,19 @@ internal class AppleHealthImportConverter(
         appleType: String,
         reasonCode: String,
         detail: String,
-        timeRange: String?,
         unit: String? = null,
-        value: String? = null,
     ) {
-        addDiagnostic(AppleHealthImportDiagnostic(appleType, null, reasonCode, timeRange, unit, value, detail))
+        addDiagnostic(AppleHealthImportDiagnostic(appleType, null, reasonCode, unit, detail))
         typeStats.getOrPut(appleType) { MutableAppleImportTypeStats() }.skipped += 1
         skippedCount += 1
     }
+
+    /** Kept for the import card's list; a long history of route-less workouts is cut. */
+    internal fun recordWorkoutWithoutRoute(workout: AppleWorkoutWithoutRoute) {
+        if (workoutsWithoutRoute.size < MaxWorkoutsWithoutRoute) workoutsWithoutRoute += workout
+    }
+
+    fun workoutsWithoutRouteSnapshot(): List<AppleWorkoutWithoutRoute> = workoutsWithoutRoute.toList()
 
     internal fun markConverted(appleType: String) {
         typeStats.getOrPut(appleType) { MutableAppleImportTypeStats() }.converted += 1
@@ -300,3 +298,5 @@ internal class AppleHealthImportConverter(
         }
     }
 }
+
+private const val MaxWorkoutsWithoutRoute = 200

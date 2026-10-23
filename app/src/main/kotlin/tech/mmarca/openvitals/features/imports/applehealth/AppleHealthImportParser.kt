@@ -589,12 +589,12 @@ internal fun String.toAppleDateTime(): AppleDateTime? {
 private fun Attributes.appleDate(name: String, parseDetails: Boolean): AppleDateTime? =
     if (parseDetails) value(name)?.toAppleDateTime() else null
 
-private fun String.isAppleHealthExportXml(): Boolean {
+internal fun String.isAppleHealthExportXml(): Boolean {
     val normalized = replace('\\', '/').substringAfterLast('/').lowercase(Locale.US)
     return normalized == "export.xml"
 }
 
-private fun String.isAppleWorkoutRouteFile(): Boolean =
+internal fun String.isAppleWorkoutRouteFile(): Boolean =
     normalizedAppleWorkoutRoutePath().let { path ->
         path.startsWith("workout-routes/") && path.endsWith(".gpx")
     }

@@ -44,7 +44,6 @@ internal fun AppleHealthImportConverter.convertWeight(
         WeightRecord(start.instant, start.offset, kg.kilograms, metadata),
         AppleImportTimeRange(start.instant, start.instant),
         record.unit,
-        record.valueForReport,
     )
 }
 
@@ -64,7 +63,6 @@ internal fun AppleHealthImportConverter.convertHeight(
         HeightRecord(start.instant, start.offset, meters.meters, metadata),
         AppleImportTimeRange(start.instant, start.instant),
         record.unit,
-        record.valueForReport,
     )
 }
 
@@ -84,7 +82,6 @@ internal fun AppleHealthImportConverter.convertBodyFat(
         BodyFatRecord(start.instant, start.offset, percent.percent, metadata),
         AppleImportTimeRange(start.instant, start.instant),
         record.unit,
-        record.valueForReport,
     )
 }
 
@@ -104,7 +101,6 @@ internal fun AppleHealthImportConverter.convertLeanMass(
         LeanBodyMassRecord(start.instant, start.offset, kg.kilograms, metadata),
         AppleImportTimeRange(start.instant, start.instant),
         record.unit,
-        record.valueForReport,
     )
 }
 
@@ -124,7 +120,6 @@ internal fun AppleHealthImportConverter.convertBoneMass(
         BoneMassRecord(start.instant, start.offset, kg.kilograms, metadata),
         AppleImportTimeRange(start.instant, start.instant),
         record.unit,
-        record.valueForReport,
     )
 }
 
@@ -144,7 +139,6 @@ internal fun AppleHealthImportConverter.convertBodyWaterMass(
         BodyWaterMassRecord(start.instant, start.offset, kg.kilograms, metadata),
         AppleImportTimeRange(start.instant, start.instant),
         record.unit,
-        record.valueForReport,
     )
 }
 
@@ -171,7 +165,6 @@ internal fun AppleHealthImportConverter.convertHydration(
         ),
         AppleImportTimeRange(interval.start.instant, interval.end.instant),
         record.unit,
-        record.valueForReport,
     )
 }
 
@@ -191,7 +184,6 @@ internal fun AppleHealthImportConverter.convertOxygenSaturation(
         OxygenSaturationRecord(start.instant, start.offset, percent.percent, metadata),
         AppleImportTimeRange(start.instant, start.instant),
         record.unit,
-        record.valueForReport,
     )
 }
 
@@ -211,7 +203,6 @@ internal fun AppleHealthImportConverter.convertRespiratoryRate(
         RespiratoryRateRecord(start.instant, start.offset, rate, metadata),
         AppleImportTimeRange(start.instant, start.instant),
         record.unit,
-        record.valueForReport,
     )
 }
 
@@ -236,7 +227,6 @@ internal fun AppleHealthImportConverter.convertBodyTemperature(
         ),
         AppleImportTimeRange(start.instant, start.instant),
         record.unit,
-        record.valueForReport,
     )
 }
 
@@ -264,7 +254,6 @@ internal fun AppleHealthImportConverter.convertBloodGlucose(
         ),
         AppleImportTimeRange(start.instant, start.instant),
         record.unit,
-        record.valueForReport,
     )
 }
 
@@ -290,7 +279,6 @@ internal fun AppleHealthImportConverter.convertVo2Max(
         ),
         AppleImportTimeRange(start.instant, start.instant),
         record.unit,
-        record.valueForReport,
     )
 }
 
@@ -315,7 +303,6 @@ internal fun AppleHealthImportConverter.convertBasalBodyTemperature(
         ),
         AppleImportTimeRange(start.instant, start.instant),
         record.unit,
-        record.valueForReport,
     )
 }
 
@@ -344,7 +331,6 @@ internal fun AppleHealthImportConverter.convertMindfulness(
         ),
         AppleImportTimeRange(interval.start.instant, interval.end.instant),
         record.unit,
-        record.valueForReport,
     )
 }
 
@@ -397,6 +383,5 @@ internal fun AppleHealthImportConverter.convertCycleCategory(
         convertedRecord,
         AppleImportTimeRange(start.instant, start.instant),
         record.unit,
-        record.valueForReport,
     )
 }

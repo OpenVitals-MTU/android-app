@@ -1908,6 +1908,9 @@ internal fun AppleHealthImportCard(
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
+                if (importResult.workoutsWithoutRoute.isNotEmpty()) {
+                    AppleHealthWorkoutsWithoutRoute(importResult.workoutsWithoutRoute)
+                }
 
                 Row(
                     modifier = Modifier
