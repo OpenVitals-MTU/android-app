@@ -3690,12 +3690,13 @@
     <string name="cycle_skin_intro">時計やリングは夜間の皮膚温を測定します。排卵後はやや高くなる傾向があり、小規模なリング研究では約0.3 °Cでした。研究ではこれを周期全体から後から読み取るもので、事前に予測するものではありません。</string>
     <string name="cycle_skin_accuracy" formatted="false">大規模なApple Watch研究では、0.2 °C以上の上昇があった周期の81 %で排卵日が推定され、その推定の89 %はLH検査で特定した日から2日以内でした。リング研究では平均誤差が1.3日で、カレンダー計算の3.4日を下回りました。これらは各研究独自の方法による結果であり、すべての時計やすべての方法に当てはまるわけではありません。</string>
     <string name="cycle_skin_limits" formatted="false">• 上昇が見つからなくても排卵がなかったとは限りません：437周期の研究では、持続的な上昇が見られたのは82 %でした。\n• 排卵がなくても上昇が現れることがあります：小規模な手首の研究では、排卵のない周期でも上昇が見つかりました。\n• 発熱や病気でも皮膚温は上がります。\n• 皮膚温は深部体温ではありません：ある研究では口腔温との相関は中程度にとどまりました（r = 0.56）。</string>
-    <string name="cycle_skin_note_pill">ピルを記録しています。手首の温度に関する大規模研究では、ホルモン避妊を使用している人と中止後2か月までの人が除外されているため、その結果はあなたの体温についてほとんど何も語りません。</string>
+    <string name="cycle_skin_note_hormonal">ホルモン避妊法が設定されているか、過去2か月以内に中止しています。ホルモン法は、このカードが扱う体温リズムに作用し、その多くは排卵（卵子の放出）を抑えます。体温の上昇は排卵に続いて起こるものです。そのため、あなた自身の体温には、前後のはっきりしたパターンが現れないことがあります。大規模な手首温度の研究は、ホルモン法を使っている人と、中止後2か月以内の人を除外しているため、その結果はあなたについてはほとんど何も語りません。これは情報であり、助言ではありません。</string>
     <string name="cycle_skin_note_pcos">PCOSを設定しています。PCOSで温度による排卵検出を調べた研究は見つかりませんでした。体温パターンは特に慎重に読んでください。</string>
     <string name="cycle_skin_not_a_method">OpenVitalsは推定に皮膚温を使用していません。これは背景情報であり、避妊法や妊よう性の予測ではなく、医療上の助言でもありません。</string>
     <string name="cycle_skin_show_details">数値と出典を表示</string>
     <string name="cycle_skin_hide_details">詳細を隠す</string>
     <string name="cycle_thermal_day_label">D%1$d</string>
+    <string name="cycle_skin_hormonal_details">ホルモン法についての研究結果です。ピル使用者27人では、手首の皮膚温の日内リズムは、偽黄体期と偽卵胞期（実薬の週と休薬の週）の間で差がなく、自然な周期の14人では差がありました。ピル使用者18人では、朝の口腔温が、実薬の週（36.4 °C）の方が休薬の週（36.1 °C）より高く、その上昇はプロゲスチンの用量と並んでいました。ある総説は、エストロゲンは一般に体温を下げ、プロゲスチンは一般に体温を上げると述べています。ホルモン法の作用機序に関する総説は、配合ピルとプロゲスチン単独の方法の主な作用として、排卵抑制と頸管粘液の変化を挙げています。ここで挙げた他の研究もホルモン使用者を除いています。リング研究（Thigpen）はホルモン使用のある6周期を除外し、指リング研究（Maijala）はその副研究でホルモン避妊の使用者を除外し、2021年の手首研究（Zhu）はホルモン療法を受けていない人だけを対象にしました。ピル以外の方法についての皮膚温の研究は見つかりませんでした。</string>
     <string name="cycle_patterns_subtitle">各症状が各期に記録された回数です。数えるだけで、診断や予測はしません。</string>
     <string name="cycle_patterns_empty_title">まだ症状がありません</string>
     <string name="cycle_patterns_empty_body">周期の中で症状を記録していくと、ここにパターンが表示されます。</string>
@@ -4034,4 +4035,16 @@
     <string name="settings_scales_delete_body">体重、心拍数、体組成が Health Connect から削除されます。</string>
     <string name="settings_scales_remove">体重計を削除</string>
     <string name="settings_scales_remove_body">OpenVitals は受信を停止し、キーを消去します。保存済みの測定は残ります。</string>
+    <string name="cycle_hormonal_title">ホルモン避妊</string>
+    <string name="cycle_hormonal_body">ホルモン系の方法は、周期や体温のパターンを変えることがあります。ここにはホルモンを使う方法だけを挙げています。銅付加IUD、コンドーム、ペッサリーはホルモンを使わないため、ここには載せていません。周期表示のための背景情報であり、それ以上のものではありません。</string>
+    <string name="cycle_hormonal_set_by_pill">ピルのスケジュールにより「%1$s」に設定されています。別の方法を選ぶにはスケジュールをオフにしてください。</string>
+    <string name="cycle_hormonal_stopped_on">中止した日（任意。未来の日付は使用中として扱われます）</string>
+    <string name="cycle_hormonal_stopped_clear">中止日を消去</string>
+    <string name="cycle_hormonal_kind_none">なし</string>
+    <string name="cycle_hormonal_kind_pill">ピル</string>
+    <string name="cycle_hormonal_kind_hormonal_iud">ホルモン放出IUD</string>
+    <string name="cycle_hormonal_kind_implant">インプラント</string>
+    <string name="cycle_hormonal_kind_ring_or_patch">リングまたはパッチ</string>
+    <string name="cycle_hormonal_kind_injection">注射</string>
+    <string name="cycle_hormonal_kind_other">その他のホルモン系の方法</string>
 </resources>

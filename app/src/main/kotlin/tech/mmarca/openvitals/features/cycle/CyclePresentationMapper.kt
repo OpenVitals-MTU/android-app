@@ -129,6 +129,7 @@ object CyclePresentationMapper {
             totalCycles = statistics?.cycles?.size ?: 0,
             hasProfile = profile.contexts.isNotEmpty() || profile.ageBand != null,
             pcosDeclared = TrackingContext.PCOS in profile.contexts,
+            hormonalInfluencing = profile.hormonalContraception.isInfluencing(today),
             pill = pill,
         )
     }

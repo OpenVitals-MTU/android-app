@@ -25,6 +25,8 @@ import tech.mmarca.openvitals.domain.cycle.AgeBand
 import tech.mmarca.openvitals.domain.cycle.CycleExclusionReason
 import tech.mmarca.openvitals.domain.cycle.CycleSymptom
 import tech.mmarca.openvitals.domain.cycle.CycleTrackingProfile
+import tech.mmarca.openvitals.domain.cycle.HormonalContraception
+import tech.mmarca.openvitals.domain.cycle.HormonalContraceptionKind
 import tech.mmarca.openvitals.domain.cycle.TrackingContext
 import tech.mmarca.openvitals.domain.model.BbtDisturbance
 import tech.mmarca.openvitals.domain.model.CycleJournalEntry
@@ -142,8 +144,95 @@ class CycleJournalSyncStoreTest {
         assertEquals(setOf(item.key), blankStore.writeItems(listOf(item)))
         assertEquals(declared, blank.cycleTrackingProfile())
 
-        val own = FakePreferences().also { it.setCycleTrackingProfile(CycleTrackingProfile(ageBand = AgeBand.AGE_25_29)) }
+        val own = FakePreferences().also { it.setCycleTrackingProfile(CycleTrackingProfile(contexts = setOf(TrackingContext.PMS), ageBand = AgeBand.AGE_25_29)) }
         assertFalse(store(FakeCycleJournalRepository(), own).accepts(item))
+    }
+
+    private val ringProfile = CycleTrackingProfile(
+        hormonalContraception = HormonalContraception(HormonalContraceptionKind.RING_OR_PATCH, LocalDate.of(2026, 9, 1)),
+    )
+
+    @Test
+    fun `a hormonal method alone is an item and its payload keeps the stop date`() {
+        val item = profileItem(ringProfile)!!
+
+        assertEquals(ringProfile, decodeProfile(item.payload))
+    }
+
+    @Test
+    fun `the stop date is part of the profile key`() {
+        val withoutStop = ringProfile.copy(hormonalContraception = HormonalContraception(HormonalContraceptionKind.RING_OR_PATCH))
+
+        assertTrue(profileKey(ringProfile) != profileKey(withoutStop))
+    }
+
+    @Test
+    fun `a profile without a hormonal method keeps the key older builds compute`() {
+        val profile = CycleTrackingProfile(contexts = setOf(TrackingContext.PCOS), ageBand = AgeBand.AGE_30_34)
+
+        assertEquals(legacyProfileKey(profile), profileKey(profile))
+    }
+
+    @Test
+    fun `a blank phone takes a hormonal method`() = runTest {
+        val item = profileItem(ringProfile)!!
+        val blank = FakePreferences()
+
+        assertTrue(store(FakeCycleJournalRepository(), blank).accepts(item))
+        assertEquals(setOf(item.key), store(FakeCycleJournalRepository(), blank).writeItems(listOf(item)))
+        assertEquals(ringProfile, blank.cycleTrackingProfile())
+    }
+
+    @Test
+    fun `a phone that declared a method refuses an incoming profile that adds nothing`() {
+        val own = FakePreferences().also {
+            it.setCycleTrackingProfile(CycleTrackingProfile(hormonalContraception = HormonalContraception(HormonalContraceptionKind.PILL)))
+        }
+
+        assertFalse(store(FakeCycleJournalRepository(), own).accepts(profileItem(ringProfile)!!))
+    }
+
+    @Test
+    fun `contexts and age band still arrive after the pill scheme set the pill`() = runTest {
+        val phone = FakePreferences()
+        val plan = PillPlan(enabled = true, packStart = day, updatedAt = Instant.parse("2026-07-10T20:00:00Z"))
+        val declared = CycleTrackingProfile(
+            contexts = setOf(TrackingContext.PCOS),
+            ageBand = AgeBand.AGE_30_34,
+            hormonalContraception = HormonalContraception(HormonalContraceptionKind.IMPLANT),
+        )
+        val item = profileItem(declared)!!
+        val store = store(FakeCycleJournalRepository(), phone)
+
+        store.writeItems(listOf(pillPlanItem(plan)!!))
+        assertTrue(store.accepts(item))
+        store.writeItems(listOf(item))
+
+        val landed = phone.cycleTrackingProfile()
+        assertEquals(setOf(TrackingContext.PCOS), landed.contexts)
+        assertEquals(AgeBand.AGE_30_34, landed.ageBand)
+        // The phone's own pill scheme wins over the other phone's method.
+        assertEquals(HormonalContraceptionKind.PILL, landed.hormonalContraception.kind)
+    }
+
+    @Test
+    fun `a phone that declared contexts keeps them and still takes the method`() = runTest {
+        val own = FakePreferences().also { it.setCycleTrackingProfile(CycleTrackingProfile(contexts = setOf(TrackingContext.PMS))) }
+
+        store(FakeCycleJournalRepository(), own).writeItems(listOf(profileItem(ringProfile.copy(contexts = setOf(TrackingContext.PCOS)))!!))
+
+        assertEquals(setOf(TrackingContext.PMS), own.cycleTrackingProfile().contexts)
+        assertEquals(ringProfile.hormonalContraception, own.cycleTrackingProfile().hormonalContraception)
+    }
+
+    @Test
+    fun `a pill scheme that lands on a phone sets the pill there`() = runTest {
+        val plan = PillPlan(enabled = true, packStart = day, updatedAt = Instant.parse("2026-07-10T20:00:00Z"))
+        val phone = FakePreferences()
+
+        store(FakeCycleJournalRepository(), phone).writeItems(listOf(pillPlanItem(plan)!!))
+
+        assertEquals(HormonalContraception(HormonalContraceptionKind.PILL), phone.cycleTrackingProfile().hormonalContraception)
     }
 
     @Test
@@ -208,4 +297,11 @@ class CycleJournalSyncStoreTest {
         preferences: FakePreferences = FakePreferences(),
         pillIntakes: FakePillIntakeRepository = FakePillIntakeRepository(),
     ) = CycleJournalSyncStore(journal, preferences, pillIntakes, windowStart, windowEnd, zone)
+}
+
+/** The key as builds before the hormonal method computed it, to hold the fingerprint stable. */
+private fun legacyProfileKey(profile: CycleTrackingProfile): String {
+    val joined = listOf("profile", profile.contexts.map { it.id }.sorted(), profile.ageBand?.id).joinToString("|") { it?.toString() ?: "" }
+    val digest = java.security.MessageDigest.getInstance("SHA-256").digest(joined.toByteArray(Charsets.UTF_8))
+    return SYNC_CLIENT_RECORD_ID_PREFIX + digest.take(16).joinToString("") { "%02x".format(it) }
 }
