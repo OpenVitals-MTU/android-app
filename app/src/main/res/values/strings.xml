@@ -1961,6 +1961,7 @@
     <string name="medical_import_report_saved">Report saved</string>
     <string name="medical_import_report_save_failed">Couldn\'t save the report</string>
     <string name="medical_import_report_warning">The report includes your medical records. Review it before you share it.</string>
+    <string name="medical_import_failure_report_note">The report names the files OpenVitals looked at and what it found in each, but none of their content. Check the file names before you share it.</string>
     <string name="medical_import_done">Done</string>
     <string name="medical_import_another">Import another file</string>
     <string name="medical_import_reason_unsupported">Type Health Connect doesn\'t store</string>

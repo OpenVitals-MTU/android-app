@@ -53,13 +53,17 @@ A record OpenVitals added can be deleted, after a confirmation. A record another
 
 ## Importing
 
-The import wizard is reached from Settings, Import & export, and from the records home. It reads a FHIR file: one resource, a Bundle, or NDJSON with one resource per line. It also reads a CDA document (XML), an Apple Health export zip, taking the clinical records from it, the zip the Estonian health portal hands out, and SMART Health Cards. Files over 8 MB are refused, except card photos and PDFs, up to 32 MB.
+The import wizard is reached from Settings, Import & export, and from the records home. It reads a FHIR file: one resource, a Bundle, or NDJSON with one resource per line. It also reads a CDA document (XML), an Apple Health export zip, taking the clinical records from it, the zip the Estonian health portal hands out, a zip of FHIR files, as CommonHealth exports, and SMART Health Cards. Files over 8 MB are refused, except card photos and PDFs, up to 32 MB; in a zip, the FHIR files together.
+
+In a zip of FHIR files, each JSON, NDJSON or text file is read as one picked file is, whatever the folders. A file that is not FHIR is left out and named in the report with what it holds instead, such as a JSON array or a field list, and the rest still import. The `__MACOSX` folder and the dot files macOS adds to a zip are passed over. A Bundle that names DSTU2 in its profile converts its own records, not the other files'.
 
 1. **Pick.** Write access is asked for first, because matching the sources already in Health Connect needs it.
 2. **Review.** Records are grouped by where they came from. Each group shows its counts per category, the types Health Connect does not store, and records that would be refused. Nothing is written yet. An Observation is counted where Health Connect files it, by the platform's own rules: pregnancy by its LOINC code, then social history and vital signs by LOINC code or category, then lab results by the `laboratory` category. One that matches none would be refused, and is held back.
 3. **Confirm.** Each group goes to one Health Connect source. A group from a source OpenVitals made before adds to it, so importing the same file again updates the same records. A new source can be renamed. A switch keeps a copy of the file on the phone; it is off on every import. See [Saved documents](#saved-documents).
 4. **Import.** Records are written in batches. A refused record is reported with Health Connect's reason, and the rest are written.
 5. **Result.** Counts of added, updated, skipped and refused records, and a report that can be copied or saved. The report includes record content, so the screen says to review it before sharing.
+
+A file that cannot be imported offers a report too, on the Pick step: what stopped it, and what the file holds, each file of a zip on a line of its own with its size and its kind. For JSON that is its shape and record types, such as "a JSON array of 12: 12 records: Observation 12", or where the parser stopped; for XML, its root element. No value from the file is in it, only names, sizes and structure, so it can be shared to get the problem looked into without sharing the records; the screen says to check the file names first. An error names only its class: its message can quote the file. A file whose every record is held back stops at the Review step, which offers the report of what was held back and why; that one includes the records' content, as the result's does.
 
 Before the review, the wizard compares the person named in the file with the personal details already in Health Connect. A file about someone else stops until the user confirms the records are theirs.
 

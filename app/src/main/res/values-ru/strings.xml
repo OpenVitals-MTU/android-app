@@ -1897,6 +1897,7 @@
     <string name="medical_import_report_saved">Отчёт сохранён</string>
     <string name="medical_import_report_save_failed">Не удалось сохранить отчёт</string>
     <string name="medical_import_report_warning">Отчёт содержит ваши медицинские записи. Проверьте его перед отправкой.</string>
+    <string name="medical_import_failure_report_note">В отчёте перечислены файлы, которые просмотрел OpenVitals, и что он нашёл в каждом, но не их содержимое. Проверьте имена файлов перед отправкой.</string>
     <string name="medical_import_done">Готово</string>
     <string name="medical_import_another">Импортировать другой файл</string>
     <string name="medical_import_reason_unsupported">Тип, который Health Connect не хранит</string>

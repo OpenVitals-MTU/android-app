@@ -9,6 +9,8 @@ import tech.mmarca.openvitals.domain.medical.MedicalSourceSkipReason
 import tech.mmarca.openvitals.domain.medical.cda.CcdaFixtures
 import tech.mmarca.openvitals.domain.medical.shc.SmartHealthCardFixtures
 import tech.mmarca.openvitals.domain.medical.shc.SmartHealthCardImportSource
+import tech.mmarca.openvitals.domain.medical.string
+import tech.mmarca.openvitals.domain.medical.zipOf
 import tech.mmarca.openvitals.features.imports.medical.AppleExportZips.clinicalRecord
 import tech.mmarca.openvitals.features.imports.medical.AppleExportZips.exportXml
 import tech.mmarca.openvitals.features.imports.medical.AppleExportZips.immunization
@@ -117,14 +119,16 @@ class AppleClinicalRecordsImportSourceTest {
     }
 
     @Test
-    fun `a picked zip is read as an Apple export, XML as a CDA document, a card as a card, and anything else as a FHIR file`() {
+    fun `a picked zip is read as an Apple export or a zip of FHIR files, XML as a CDA document, a card as a card, and anything else as a FHIR file`() {
         val picked = PickedFileImportSource(SmartHealthCardImportSource(SmartHealthCardFixtures.FixedRasterizer()))
         val apple = picked.read { export.inputStream() }
+        val fhirZip = picked.read { zipOf(mapOf("fhir/Immunization.json" to immunization("z").toByteArray())).inputStream() }
         val fhir = picked.read { immunization("x").byteInputStream() }
         val card = picked.read { SmartHealthCardFixtures.numeric(SmartHealthCardFixtures.jws()).byteInputStream() }
         val cda = picked.read { CcdaFixtures.summary.byteInputStream() }
 
         assertThat((apple as MedicalImportSourceResult.Entries).file.entries).hasSize(4)
+        assertThat((fhirZip as MedicalImportSourceResult.Entries).file.entries.single().resource.string("id")).isEqualTo("z")
         assertThat((fhir as MedicalImportSourceResult.Entries).file.entries.single().origin).isNull()
         assertThat((card as MedicalImportSourceResult.Entries).file.entries.first().origin?.baseUri).isEqualTo(SmartHealthCardFixtures.Issuer)
         assertThat((cda as MedicalImportSourceResult.Entries).file.entries.first().origin?.displayName).isEqualTo("Sample Health Clinic")

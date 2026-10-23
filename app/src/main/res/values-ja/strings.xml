@@ -1962,6 +1962,7 @@
     <string name="medical_import_report_saved">レポートを保存しました</string>
     <string name="medical_import_report_save_failed">レポートを保存できませんでした</string>
     <string name="medical_import_report_warning">レポートにはあなたの医療記録が含まれます。共有する前に確認してください。</string>
+    <string name="medical_import_failure_report_note">レポートには、OpenVitals が調べたファイルと、それぞれで見つかったものが記載されますが、ファイルの中身は含まれません。共有する前にファイル名を確認してください。</string>
     <string name="medical_import_done">完了</string>
     <string name="medical_import_another">別のファイルをインポート</string>
     <string name="medical_import_reason_unsupported">Health Connect が保存しない種類</string>

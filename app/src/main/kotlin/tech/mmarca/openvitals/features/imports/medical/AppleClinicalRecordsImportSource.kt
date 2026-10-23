@@ -1,12 +1,9 @@
 package tech.mmarca.openvitals.features.imports.medical
 
 import java.io.BufferedInputStream
-import java.io.ByteArrayOutputStream
 import java.io.FilterInputStream
 import java.io.InputStream
-import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
-import java.util.zip.ZipOutputStream
 import tech.mmarca.openvitals.domain.medical.Dstu2ToR4
 import tech.mmarca.openvitals.domain.medical.FhirEntry
 import tech.mmarca.openvitals.domain.medical.FhirFile
@@ -16,6 +13,7 @@ import tech.mmarca.openvitals.domain.medical.FhirOrigin
 import tech.mmarca.openvitals.domain.medical.FhirParseResult
 import tech.mmarca.openvitals.domain.medical.FhirSourceGrouper
 import tech.mmarca.openvitals.domain.medical.FhirVersionDetector
+import tech.mmarca.openvitals.domain.medical.FhirZipImportSource
 import tech.mmarca.openvitals.domain.medical.MedicalImportSource
 import tech.mmarca.openvitals.domain.medical.MedicalImportSourceResult
 import tech.mmarca.openvitals.domain.medical.MedicalSourceDocument
@@ -25,6 +23,7 @@ import tech.mmarca.openvitals.domain.medical.cda.CdaImportSource
 import tech.mmarca.openvitals.domain.medical.decodeFhirText
 import tech.mmarca.openvitals.domain.medical.readUpTo
 import tech.mmarca.openvitals.domain.medical.shc.CardFileType
+import tech.mmarca.openvitals.domain.medical.zipOf
 import tech.mmarca.openvitals.features.imports.applehealth.AppleClinicalRecordIndexEntry
 import tech.mmarca.openvitals.features.imports.applehealth.AppleCorrelation
 import tech.mmarca.openvitals.features.imports.applehealth.AppleHealthImportParser
@@ -117,17 +116,8 @@ internal object AppleClinicalRecordsImportSource : MedicalImportSource {
     }
 
     /** Only the clinical records files, packed as one zip: the rest of the export is not kept. */
-    private fun clinicalZip(files: Map<String, String>): MedicalSourceDocument {
-        val output = ByteArrayOutputStream()
-        ZipOutputStream(output).use { zip ->
-            files.forEach { (path, text) ->
-                zip.putNextEntry(ZipEntry(path))
-                zip.write(text.toByteArray())
-                zip.closeEntry()
-            }
-        }
-        return MedicalSourceDocument(output.toByteArray(), "application/zip", "zip", nameSuffix = "-clinical-records")
-    }
+    private fun clinicalZip(files: Map<String, String>): MedicalSourceDocument =
+        MedicalSourceDocument(zipOf(files.mapValues { it.value.toByteArray() }), "application/zip", "zip", nameSuffix = "-clinical-records")
 
     /** The provider as Apple names it. A provider with no URL gets one from its name. */
     private fun origin(record: AppleClinicalRecordIndexEntry, version: String): FhirOrigin {
@@ -167,18 +157,18 @@ internal object AppleClinicalRecordsImportSource : MedicalImportSource {
 }
 
 /**
- * Sends a picked file to the source that reads it. A zip is an Apple Health export or a set of
- * CDA documents, as the Estonian health portal hands out. XML is a CDA document. An image or a
- * PDF can only hold a SMART Health Card. Other text is a card when it looks like one, and a
- * FHIR file otherwise.
+ * Sends a picked file to the source that reads it. A zip is an Apple Health export, a set of
+ * CDA documents, as the Estonian health portal hands out, or a set of FHIR files, as
+ * CommonHealth exports. XML is a CDA document. An image or a PDF can only hold a SMART Health
+ * Card. Other text is a card when it looks like one, and a FHIR file otherwise.
  */
 internal class PickedFileImportSource(private val cards: MedicalImportSource) : MedicalImportSource {
     override fun read(open: () -> InputStream): MedicalImportSourceResult {
         val header = open().use { it.readHeader(HeaderBytes) }
         val isZip = header.size >= 2 && header[0] == 'P'.code.toByte() && header[1] == 'K'.code.toByte()
         return when {
-            isZip -> AppleClinicalRecordsImportSource.read(open).takeUnless { it == MedicalImportSourceResult.NotSupported }
-                ?: CdaImportSource.read(open)
+            isZip -> ZipSources.firstNotNullOfOrNull { zip -> zip.read(open).takeUnless { it == MedicalImportSourceResult.NotSupported } }
+                ?: MedicalImportSourceResult.NotSupported
             CardFileType.isPictureOrPdf(header) -> cards.read(open)
             header.decodeToString().removePrefix("\uFEFF").trimStart().startsWith("<") -> CdaImportSource.read(open)
             else -> cards.read(open).takeUnless { it == MedicalImportSourceResult.NotSupported } ?: FhirFileImportSource.read(open)
@@ -200,5 +190,8 @@ internal class PickedFileImportSource(private val cards: MedicalImportSource) : 
     private companion object {
         /** Enough for every file signature the sources look for. */
         const val HeaderBytes = 16
+
+        /** In order: an Apple export and a CDA zip each say what they are, a zip of FHIR files does not. */
+        val ZipSources = listOf(AppleClinicalRecordsImportSource, CdaImportSource, FhirZipImportSource)
     }
 }

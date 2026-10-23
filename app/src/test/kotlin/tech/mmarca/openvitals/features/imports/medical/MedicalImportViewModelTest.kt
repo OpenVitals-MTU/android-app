@@ -18,6 +18,7 @@ import tech.mmarca.openvitals.domain.medical.cda.EstonianCdaFixtures
 import tech.mmarca.openvitals.domain.medical.cda.CdaImportSource
 import tech.mmarca.openvitals.domain.medical.shc.SmartHealthCardFixtures
 import tech.mmarca.openvitals.domain.medical.shc.SmartHealthCardImportSource
+import tech.mmarca.openvitals.domain.medical.zipOf
 import tech.mmarca.openvitals.domain.usecase.ImportMedicalRecordsUseCase
 import tech.mmarca.openvitals.util.MainDispatcherRule
 
@@ -75,6 +76,30 @@ class MedicalImportViewModelTest {
         vm.analyze("report.json") { """{"resourceType":"DiagnosticReport","id":"r1","status":"final","code":{"text":"x"},"result":[{"reference":"Observation/o1"}]}""".byteInputStream() }
         assertThat(vm.uiState.value.pickError).isEqualTo(MedicalImportPickError.REPORTS_ONLY)
         assertThat(vm.uiState.value.step).isEqualTo(MedicalImportStep.PICK)
+    }
+
+    @Test
+    fun `a file that cannot be imported gives a report of what it holds, and one with nothing to write a report of what was held back`() = runTest {
+        val picked = MedicalImportViewModel(
+            repository, preferences, ImportMedicalRecordsUseCase(repository), mainDispatcherRule.dispatcherProvider,
+            PickedFileImportSource(SmartHealthCardImportSource(SmartHealthCardFixtures.FixedRasterizer())), { LocalDate.of(2026, 9, 29) },
+        )
+        val zip = zipOf(mapOf("export/Observation.json" to """[{"resourceType":"Observation","valueString":"Jane Doe"}]""".toByteArray()))
+
+        picked.analyze("commonhealth.zip") { zip.inputStream() }
+
+        assertThat(picked.uiState.value.pickError).isEqualTo(MedicalImportPickError.NOT_SUPPORTED)
+        val unread = picked.reportText()!!
+        assertThat(unread).contains("Not imported: NOT_SUPPORTED")
+        assertThat(unread).contains("export/Observation.json: 57 bytes, a JSON array of 1: 1 record: Observation 1")
+        assertThat(unread).doesNotContain("Jane")
+
+        val vm = viewModel()
+        vm.analyze("lab.json") { """{"resourceType":"Observation","id":"o1","status":"final","code":{"text":"Something"}}""".byteInputStream() }
+
+        assertThat(vm.uiState.value.step).isEqualTo(MedicalImportStep.REVIEW)
+        assertThat(vm.uiState.value.canReportFailure).isTrue()
+        assertThat(vm.reportText()).contains("Held back: Observation/o1: UNCLASSIFIABLE_OBSERVATION")
     }
 
     @Test
