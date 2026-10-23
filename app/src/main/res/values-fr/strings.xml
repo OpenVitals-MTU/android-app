@@ -1607,8 +1607,8 @@
     <string name="medical_import_report_copied">Rapport copié</string>
     <string name="medical_import_report_saved">Rapport enregistré</string>
     <string name="medical_import_report_save_failed">Impossible d\'enregistrer le rapport</string>
-    <string name="medical_import_report_warning">Le rapport contient vos dossiers médicaux. Relisez-le avant de le partager.</string>
-    <string name="medical_import_failure_report_note">Le rapport indique les fichiers qu\'OpenVitals a examinés et ce qu\'il a trouvé dans chacun, mais rien de leur contenu. Vérifiez les noms des fichiers avant de le partager.</string>
+    <string name="medical_import_report_warning">Le rapport compte ce qui a été écrit, retenu ou refusé, par type d\'enregistrement et par motif. Il ne contient rien du contenu de vos dossiers ni aucun nom.</string>
+    <string name="medical_import_failure_report_note">Le rapport indique ce qui a arrêté l\'import et décrit le fichier par sa taille, son type et ses types d\'enregistrements. Il ne contient rien de son contenu ni aucun nom de fichier.</string>
     <string name="medical_import_done">Terminé</string>
     <string name="medical_import_another">Importer un autre fichier</string>
     <string name="medical_import_reason_unsupported">Type non enregistré par Health Connect</string>

@@ -1610,8 +1610,8 @@
     <string name="medical_import_report_copied">报告已复制</string>
     <string name="medical_import_report_saved">报告已保存</string>
     <string name="medical_import_report_save_failed">无法保存报告</string>
-    <string name="medical_import_report_warning">报告包含你的医疗记录。分享前请先查看。</string>
-    <string name="medical_import_failure_report_note">报告列出 OpenVitals 查看过的文件以及在每个文件中发现的内容，但不包含文件的内容。分享前请检查文件名。</string>
+    <string name="medical_import_report_warning">报告按记录类型和原因统计已写入、暂缓或被拒绝的记录。其中不包含你的记录内容，也不包含任何姓名。</string>
+    <string name="medical_import_failure_report_note">报告说明导入因何停止，并按大小、类型和记录类型描述文件。其中不包含文件内容，也不包含文件名。</string>
     <string name="medical_import_done">完成</string>
     <string name="medical_import_another">导入其他文件</string>
     <string name="medical_import_reason_unsupported">Health Connect 不存储的类型</string>

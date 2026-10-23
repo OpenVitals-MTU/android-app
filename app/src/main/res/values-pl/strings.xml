@@ -1939,8 +1939,8 @@
     <string name="medical_import_report_copied">Raport skopiowany</string>
     <string name="medical_import_report_saved">Raport zapisany</string>
     <string name="medical_import_report_save_failed">Nie udało się zapisać raportu</string>
-    <string name="medical_import_report_warning">Raport zawiera Twoją dokumentację medyczną. Sprawdź go przed udostępnieniem.</string>
-    <string name="medical_import_failure_report_note">Raport wymienia pliki, które OpenVitals sprawdził, i to, co znalazł w każdym z nich, ale bez ich treści. Sprawdź nazwy plików przed udostępnieniem.</string>
+    <string name="medical_import_report_warning">Raport liczy, co zostało zapisane, wstrzymane lub odrzucone, według typu rekordu i powodu. Nie zawiera treści Twojej dokumentacji ani żadnych nazwisk.</string>
+    <string name="medical_import_failure_report_note">Raport podaje, co zatrzymało import, i opisuje plik według rozmiaru, rodzaju i typów rekordów. Nie zawiera jego treści ani nazw plików.</string>
     <string name="medical_import_done">Gotowe</string>
     <string name="medical_import_another">Importuj kolejny plik</string>
     <string name="medical_import_reason_unsupported">Typ, którego Health Connect nie zapisuje</string>

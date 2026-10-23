@@ -1348,8 +1348,8 @@
     <string name="medical_import_report_copied">Bericht kopiert</string>
     <string name="medical_import_report_saved">Bericht gespeichert</string>
     <string name="medical_import_report_save_failed">Bericht konnte nicht gespeichert werden</string>
-    <string name="medical_import_report_warning">Der Bericht enthält deine medizinischen Unterlagen. Prüfe ihn, bevor du ihn teilst.</string>
-    <string name="medical_import_failure_report_note">Der Bericht nennt die Dateien, die OpenVitals angesehen hat, und was es in jeder gefunden hat, aber nichts von ihrem Inhalt. Prüfe die Dateinamen, bevor du ihn teilst.</string>
+    <string name="medical_import_report_warning">Der Bericht zählt, was geschrieben, zurückgehalten oder abgelehnt wurde, nach Datensatztyp und Grund. Er enthält nichts vom Inhalt deiner Unterlagen und keine Namen.</string>
+    <string name="medical_import_failure_report_note">Der Bericht nennt, was den Import gestoppt hat, und beschreibt die Datei nach Größe, Art und Datensatztypen. Er enthält nichts von ihrem Inhalt und keine Dateinamen.</string>
     <string name="medical_import_done">Fertig</string>
     <string name="medical_import_another">Weitere Datei importieren</string>
     <string name="medical_import_reason_unsupported">Typ, den Health Connect nicht speichert</string>

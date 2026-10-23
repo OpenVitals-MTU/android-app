@@ -36,8 +36,8 @@ class MedicalFileInspectorTest {
 
         assertThat(MedicalFileInspector.inspect { zip.inputStream() }).containsExactly(
             "A zip of 2 files",
-            "  records/Patient.json: 26 bytes, a FHIR Patient",
-            "  records/labs.json: 6 bytes, UTF-16 text, which the import does not read: it reads UTF-8",
+            "  file 1 (.json): 26 bytes, a FHIR Patient",
+            "  file 2 (.json): 6 bytes, UTF-16 text, which the import does not read: it reads UTF-8",
         ).inOrder()
     }
 }

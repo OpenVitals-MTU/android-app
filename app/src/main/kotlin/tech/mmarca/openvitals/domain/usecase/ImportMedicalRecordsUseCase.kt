@@ -103,7 +103,7 @@ class ImportMedicalRecordsUseCase @Inject constructor(
                 repository.upsert(source.id, fhirVersion, listOf(json))
                 counts.count(listOf(ref), existing)
             } catch (refused: IllegalArgumentException) {
-                counts.rejected += MedicalWriteRejection(resource.type, resource.id, refused.platformReason(), json)
+                counts.rejected += MedicalWriteRejection(resource.type, resource.id, refused.platformReason())
             }
         }
     }

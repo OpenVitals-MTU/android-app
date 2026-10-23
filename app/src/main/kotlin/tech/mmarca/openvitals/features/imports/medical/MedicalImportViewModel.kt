@@ -352,10 +352,9 @@ class MedicalImportViewModel(
     /** The import's report once it ran; before that, the report of what stopped it. Null when nothing went wrong. */
     fun reportText(): String? {
         val state = _uiState.value
-        state.result?.let { return MedicalImportReport.text(state.fileName, it, Instant.now()) }
+        state.result?.let { return MedicalImportReport.text(it, Instant.now()) }
         if (!state.canReportFailure) return null
         return MedicalImportReport.failureText(
-            fileName = state.fileName,
             problem = state.pickError?.name ?: if (state.error != null) "ANALYSIS_FAILED" else "NOTHING_TO_WRITE",
             readAt = Instant.now(),
             contents = inspection,

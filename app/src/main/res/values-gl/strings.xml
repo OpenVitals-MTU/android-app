@@ -1964,8 +1964,8 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="medical_import_report_copied">Informe copiado</string>
     <string name="medical_import_report_saved">Informe gardado</string>
     <string name="medical_import_report_save_failed">Non se puido gardar o informe</string>
-    <string name="medical_import_report_warning">O informe inclúe os teus rexistros médicos. Revísao antes de compartilo.</string>
-    <string name="medical_import_failure_report_note">O informe nomea os ficheiros que OpenVitals revisou e o que atopou en cada un, pero nada do seu contido. Revisa os nomes dos ficheiros antes de compartilo.</string>
+    <string name="medical_import_report_warning">O informe conta o que se escribiu, se retivo ou se rexeitou, por tipo de rexistro e motivo. Non contén nada do contido dos teus rexistros nin nomes.</string>
+    <string name="medical_import_failure_report_note">O informe indica que detivo a importación e describe o ficheiro polo seu tamaño, tipo e tipos de rexistro. Non contén nada do seu contido nin nomes de ficheiro.</string>
     <string name="medical_import_done">Feito</string>
     <string name="medical_import_another">Importar outro ficheiro</string>
     <string name="medical_import_reason_unsupported">Tipo que Health Connect non garda</string>

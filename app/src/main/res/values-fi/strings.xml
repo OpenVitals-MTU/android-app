@@ -1965,8 +1965,8 @@
     <string name="medical_import_report_copied">Raportti kopioitu</string>
     <string name="medical_import_report_saved">Raportti tallennettu</string>
     <string name="medical_import_report_save_failed">Raporttia ei voitu tallentaa</string>
-    <string name="medical_import_report_warning">Raportti sisältää terveystietojasi. Tarkista se ennen jakamista.</string>
-    <string name="medical_import_failure_report_note">Raportti nimeää tiedostot, jotka OpenVitals kävi läpi, ja mitä se löysi kustakin, mutta ei niiden sisältöä. Tarkista tiedostonimet ennen jakamista.</string>
+    <string name="medical_import_report_warning">Raportti laskee, mitä kirjoitettiin, pidätettiin tai hylättiin, tietuetyypin ja syyn mukaan. Se ei sisällä tietueidesi sisältöä eikä nimiä.</string>
+    <string name="medical_import_failure_report_note">Raportti kertoo, mikä pysäytti tuonnin, ja kuvaa tiedoston koon, lajin ja tietuetyyppien mukaan. Se ei sisällä tiedoston sisältöä eikä tiedostonimiä.</string>
     <string name="medical_import_done">Valmis</string>
     <string name="medical_import_another">Tuo toinen tiedosto</string>
     <string name="medical_import_reason_unsupported">Tyyppi, jota Health Connect ei tallenna</string>

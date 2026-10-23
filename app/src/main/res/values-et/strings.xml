@@ -1348,8 +1348,8 @@
     <string name="medical_import_report_copied">Aruanne kopeeritud</string>
     <string name="medical_import_report_saved">Aruanne salvestatud</string>
     <string name="medical_import_report_save_failed">Aruannet ei saanud salvestada</string>
-    <string name="medical_import_report_warning">Aruanne sisaldab sinu meditsiinilisi andmeid. Vaata see enne jagamist üle.</string>
-    <string name="medical_import_failure_report_note">Aruanne nimetab failid, mille OpenVitals läbi vaatas, ja mida see igaühest leidis, kuid mitte nende sisu. Vaata failinimed enne jagamist üle.</string>
+    <string name="medical_import_report_warning">Aruanne loendab, mis kirjutati, mis jäeti kõrvale või lükati tagasi, kirje tüübi ja põhjuse järgi. See ei sisalda sinu kirjete sisu ega nimesid.</string>
+    <string name="medical_import_failure_report_note">Aruanne ütleb, mis importimise peatas, ja kirjeldab faili suuruse, liigi ja kirjetüüpide järgi. See ei sisalda faili sisu ega failinimesid.</string>
     <string name="medical_import_done">Valmis</string>
     <string name="medical_import_another">Impordi teine fail</string>
     <string name="medical_import_reason_unsupported">Tüüp, mida Health Connect ei salvesta</string>

@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
 import tech.mmarca.openvitals.domain.medical.cda.Hl7Namespace
 import tech.mmarca.openvitals.domain.medical.cda.isClinicalDocument
 import tech.mmarca.openvitals.domain.medical.cda.parseCda
@@ -18,7 +19,8 @@ import tech.mmarca.openvitals.domain.medical.shc.CardFileType
  * What a file holds, for the report of an import that did not go through: its kind, and for
  * JSON its shape and record types. Never a value from it: the report is meant to be shared,
  * and a medical file is made of names, dates and results. Field names and resource types are
- * the file's structure, not its content. A zip lists each of its files the same way.
+ * the file's structure, not its content. A zip lists each of its files the same way, by its
+ * place in the zip and its extension: a file's name can be a patient's.
  */
 object MedicalFileInspector {
 
@@ -40,7 +42,7 @@ object MedicalFileInspector {
                     val entry = zip.nextEntry ?: break
                     if (!entry.isDirectory) {
                         files++
-                        if (files <= MaxListedFiles) lines += "  ${entry.name}: ${sample(zip).description()}"
+                        if (files <= MaxListedFiles) lines += "  file $files${extensionOf(entry.name)}: ${sample(zip).description()}"
                     }
                     zip.closeEntry()
                 }
@@ -164,8 +166,17 @@ object MedicalFileInspector {
 
     private fun count(n: Int, one: String, many: String = "${one}s"): String = "$n ${if (n == 1) one else many}"
 
+    // A key is usually a field name, but a map can key by a date or an id.
     private fun fields(obj: JsonObject): String =
-        obj.keys.take(MaxListedFields).joinToString() + if (obj.size > MaxListedFields) ", and ${obj.size - MaxListedFields} more" else ""
+        obj.keys.take(MaxListedFields).joinToString { PrivacyRedactor.maskMessage(it).orEmpty() } +
+            if (obj.size > MaxListedFields) ", and ${obj.size - MaxListedFields} more" else ""
+
+    /** " (.json)" for a short, plain extension; nothing for one that could say more. */
+    private fun extensionOf(name: String): String =
+        name.substringAfterLast('/').substringAfterLast('.', missingDelimiterValue = "")
+            .takeIf { it.length in 1..5 && it.all(Char::isLetterOrDigit) }
+            ?.let { " (.${it.lowercase()})" }
+            .orEmpty()
 
     private fun ByteArray.startsWith(vararg signature: Int): Boolean =
         size >= signature.size && signature.indices.all { (this[it].toInt() and 0xFF) == signature[it] }
