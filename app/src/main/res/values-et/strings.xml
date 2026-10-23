@@ -1348,8 +1348,8 @@
     <string name="medical_import_report_copied">Aruanne kopeeritud</string>
     <string name="medical_import_report_saved">Aruanne salvestatud</string>
     <string name="medical_import_report_save_failed">Aruannet ei saanud salvestada</string>
-    <string name="medical_import_report_warning">Aruanne sisaldab sinu meditsiinilisi andmeid. Vaata see enne jagamist üle.</string>
-    <string name="medical_import_failure_report_note">Aruanne nimetab failid, mille OpenVitals läbi vaatas, ja mida see igaühest leidis, kuid mitte nende sisu. Vaata failinimed enne jagamist üle.</string>
+    <string name="medical_import_report_warning">Aruanne loendab, mis kirjutati, mis jäeti kõrvale või lükati tagasi, kirje tüübi ja põhjuse järgi. See ei sisalda sinu kirjete sisu ega nimesid.</string>
+    <string name="medical_import_failure_report_note">Aruanne ütleb, mis importimise peatas, ja kirjeldab faili suuruse, liigi ja kirjetüüpide järgi. See ei sisalda faili sisu ega failinimesid.</string>
     <string name="medical_import_done">Valmis</string>
     <string name="medical_import_another">Impordi teine fail</string>
     <string name="medical_import_reason_unsupported">Tüüp, mida Health Connect ei salvesta</string>
@@ -1596,7 +1596,7 @@
     <string name="privacy_reconsent_action">Vaata poliitika üle</string>
     <string name="dashboard_summary_today">Täna</string>
     <string name="settings_debug_logs_title">Anonümiseeritud diagnostikalogid</string>
-    <string name="settings_debug_logs_body">Jaga või salvesta OpenVitalsi diagnostikalogi kirjed tekstifailina. Eksport eemaldab või varjab identifikaatorid, asukohad, kuupäevad, URI-d, toored anduriandmed ja mitteseotud rakenduslogid enne kirjutamist.</string>
+    <string name="settings_debug_logs_body">Jaga või salvesta OpenVitalsi logid tekstifailina. Iga rida jääb alles, et Health Connecti ja sünkroonimise probleeme saaks jälgida; seadmete aadressid, identifikaatorid, failide asukohad, kuupäevad ja vigade üksikasjad on varjatud. Loe see enne jagamist läbi.</string>
     <string name="settings_debug_logs_share">Jaga logisid</string>
     <string name="settings_debug_logs_share_chooser_title">Jaga diagnostikalogisid</string>
     <string name="settings_debug_logs_share_failed">Diagnostikalogide jagamine ebaõnnestus</string>
@@ -2177,7 +2177,13 @@
     <string name="privacy_policy_body_2">See rakendus ei laadi sinu terviseandmeid pilveteenusesse, ei sisalda reklaame ega jaga andmeid kolmandate osapooltega.</string>
     <string name="privacy_policy_body_medical">Kus Health Connect pakub meditsiinilisi andmeid, näitab, impordib ja ekspordib OpenVitals neid sinu seadmes. See loeb kategooriat ainult sinu loal, kirjutab ainult importimisel ja näitab kirjeid sellisena, nagu need saabusid, neid tõlgendamata.</string>
     <string name="privacy_policy_body_3">OpenVitals ei ole meditsiiniseade ega diagnoosi, ravi, tervenda ega enneta ühtegi haigust ega terviseseisundit. See ei asenda kvalifitseeritud tervishoiutöötaja meditsiinilist nõuannet, diagnoosi ega ravi.</string>
-    <string name="settings_apple_health_import_routes_incomplete">Tervisandmed imporditi, kuid mõned treeningmarsruudid jäid kättesaamatuks, kuna ZIP-fail lõppes ootamatult. Impordiaruandes on loetletud asjaomased tegevused, mida saab käsitsi taastada.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Tervisandmed imporditi, kuid mõned treeningmarsruudid jäid kättesaamatuks, kuna ZIP-fail lõppes ootamatult. Mõjutatud treeningud on loetletud allpool.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d treening tuli ilma marsruudita</item>
+        <item quantity="other">%d treeningut tuli ilma marsruudita</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Nende marsruudifaile ekspordis pole. Impordi export.xml asemel export.zip või impordi iga marsruut GPX/KML/KMZ-importijaga.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Näita kõiki</string>
     <string name="body_energy_reason_strong_calibration">Pulsipõhisel intensiivsusel on tugev kalibreering.</string>
     <string name="body_energy_reason_observed_or_age">Pulsipõhine intensiivsus kasutab mõõdetud või vanusepõhist kalibreeringut.</string>
     <string name="body_energy_reason_incomplete_calibration">Kalibreering on poolik, seega on automaatsed hinnangud konservatiivsed.</string>

@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.imports.csv
 
+import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BasalBodyTemperatureRecord
 import androidx.health.connect.client.records.CervicalMucusRecord
@@ -128,7 +129,7 @@ fun convertDripRow(row: CsvRow, plan: DripImportPlan): CsvRowConversion {
                     rowNumber = row.rowNumber,
                     reason = CsvImportDiagnosticReason.UNPARSABLE_TIMESTAMP,
                     columnIndex = dateColumn,
-                    detail = dateText,
+                    detail = PrivacyRedactor.shapeOf(dateText),
                 ),
             ),
         )
@@ -243,13 +244,14 @@ private class DripCells(private val row: CsvRow, private val columns: Map<String
      * an exclude flag over empty cells excludes nothing.
      */
     fun excludedDiagnostic(rowNumber: Int, flagColumn: String, vararg valueColumns: String): CsvImportDiagnostic? {
-        val values = valueColumns.mapNotNull { name -> text(name)?.let { "$name=$it" } }
-        if (values.isEmpty()) return null
+        // The columns that held something, never what they held.
+        val filled = valueColumns.filter { name -> text(name) != null }
+        if (filled.isEmpty()) return null
         return CsvImportDiagnostic(
             rowNumber = rowNumber,
             reason = CsvImportDiagnosticReason.EXCLUDED_IN_SOURCE,
             columnIndex = columnIndex(flagColumn),
-            detail = values.joinToString(", "),
+            detail = filled.joinToString(", "),
         )
     }
 }
@@ -268,7 +270,7 @@ private fun dripBleedingRecord(
             rowNumber = rowNumber,
             reason = CsvImportDiagnosticReason.UNPARSABLE_NUMBER,
             columnIndex = cells.columnIndex("bleeding.value"),
-            detail = text,
+            detail = PrivacyRedactor.shapeOf(text),
         )
         return null
     }
@@ -311,7 +313,7 @@ private fun dripTemperatureRecord(
             rowNumber = rowNumber,
             reason = CsvImportDiagnosticReason.UNPARSABLE_NUMBER,
             columnIndex = columnIndex,
-            detail = text,
+            detail = PrivacyRedactor.shapeOf(text),
         )
         return null
     }
@@ -320,7 +322,6 @@ private fun dripTemperatureRecord(
             rowNumber = rowNumber,
             reason = CsvImportDiagnosticReason.OUT_OF_RANGE,
             columnIndex = columnIndex,
-            detail = String.format(Locale.US, "%.2f", celsius),
         )
         return null
     }

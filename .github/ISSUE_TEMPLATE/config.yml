@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions and discussion
+    url: https://openvitals.zulipchat.com/
+    about: Ask how something works, or talk an idea through, on Zulip.
+  - name: Support and privacy
+    url: https://docs.openvitals.health/app/support
+    about: What to include in a report, and how to send one privately by email from the app.

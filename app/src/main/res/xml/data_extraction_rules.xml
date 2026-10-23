@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    allowBackup="false" keeps the app out of cloud backup, but from Android 12 on it
+    does not stop a transfer to a new phone. The health data moves with the phone, as
+    the user expects. The diagnostic files do not: the last crash report, the import
+    reports and the last sync report stay behind.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="crash_reports/" />
+        <exclude domain="file" path="import_reports/" />
+        <exclude domain="file" path="device_sync/" />
+    </device-transfer>
+</data-extraction-rules>

@@ -1965,8 +1965,8 @@
     <string name="medical_import_report_copied">Raportti kopioitu</string>
     <string name="medical_import_report_saved">Raportti tallennettu</string>
     <string name="medical_import_report_save_failed">Raporttia ei voitu tallentaa</string>
-    <string name="medical_import_report_warning">Raportti sisältää terveystietojasi. Tarkista se ennen jakamista.</string>
-    <string name="medical_import_failure_report_note">Raportti nimeää tiedostot, jotka OpenVitals kävi läpi, ja mitä se löysi kustakin, mutta ei niiden sisältöä. Tarkista tiedostonimet ennen jakamista.</string>
+    <string name="medical_import_report_warning">Raportti laskee, mitä kirjoitettiin, pidätettiin tai hylättiin, tietuetyypin ja syyn mukaan. Se ei sisällä tietueidesi sisältöä eikä nimiä.</string>
+    <string name="medical_import_failure_report_note">Raportti kertoo, mikä pysäytti tuonnin, ja kuvaa tiedoston koon, lajin ja tietuetyyppien mukaan. Se ei sisällä tiedoston sisältöä eikä tiedostonimiä.</string>
     <string name="medical_import_done">Valmis</string>
     <string name="medical_import_another">Tuo toinen tiedosto</string>
     <string name="medical_import_reason_unsupported">Tyyppi, jota Health Connect ei tallenna</string>
@@ -2213,7 +2213,7 @@
     <string name="privacy_reconsent_action">Tarkista käytäntö</string>
     <string name="privacy_reconsent_no_browser">Mikään tämän puhelimen sovellus ei voi avata linkkiä. Käytäntö on osoitteessa %1$s</string>
     <string name="settings_debug_logs_title">Diagnostiikkalokit</string>
-    <string name="settings_debug_logs_body">Jaa tai tallenna OpenVitalsin prosessilokit tekstitiedostona. Vienti on raakaa (ei peittoa), jotta Health Connect- ja synkronointiongelmat voidaan selvittää koko lokista.</string>
+    <string name="settings_debug_logs_body">Jaa tai tallenna OpenVitalsin lokit tekstitiedostona. Jokainen rivi säilyy, jotta Health Connect- ja synkronointiongelmat voidaan jäljittää; laitteiden osoitteet, tunnisteet, tiedostojen sijainnit, päivämäärät ja virheiden yksityiskohdat peitetään. Lue se ennen kuin jaat sen.</string>
     <string name="settings_debug_logs_share">Jaa lokit</string>
     <string name="settings_debug_logs_share_chooser_title">Jaa diagnostiikkalokit</string>
     <string name="settings_debug_logs_share_failed">Diagnostiikkalokeja ei voitu jakaa</string>
@@ -2393,7 +2393,13 @@
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%. %2$s. Valittu %3$d/%4$d, tuotu %5$d.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. Luettu %3$d/%4$d, tuotu %5$d.</string>
     <string name="settings_apple_health_import_result">Tuotu %1$d. Kaksoiskappaleita %2$d. Ei valittu %3$d. Ei tuettu %4$d. Ohitettu %5$d. Epäonnistui %6$d.</string>
-    <string name="settings_apple_health_import_routes_incomplete">Terveystietueet tuotiin, mutta joitakin treenireittejä ei ollut saatavilla, koska ZIP päättyi odottamatta. Tuontiraportti luettelee aktiviteetit, joihin tämä vaikutti, käsin palauttamista varten.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Terveystietueet tuotiin, mutta joitakin treenireittejä ei ollut saatavilla, koska ZIP-tiedosto päättyi odottamatta. Treenit, joita tämä koskee, luetellaan alla.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d treeni tuli ilman reittiään</item>
+        <item quantity="other">%d treeniä tuli ilman reittiään</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Niiden reittitiedostot puuttuvat viennistä. Tuo export.zip export.xml:n sijaan tai tuo jokainen reitti GPX/KML/KMZ/TCX-tuonnilla.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Näytä kaikki</string>
     <string name="settings_apple_health_import_analysis_result">Luettu %1$d kohdetta. Löydetty %2$d yhteensopivaa tietuetta. Ei tuettu %3$d. Epäonnistui %4$d.</string>
     <string name="settings_apple_health_import_choose_categories">Valitse, mitä kirjoitetaan Health Connectiin.</string>
     <string name="settings_apple_health_import_category_count">%1$d tietuetta</string>

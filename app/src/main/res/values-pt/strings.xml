@@ -1488,8 +1488,8 @@
     <string name="medical_import_report_copied">Relatório copiado</string>
     <string name="medical_import_report_saved">Relatório guardado</string>
     <string name="medical_import_report_save_failed">Não foi possível guardar o relatório</string>
-    <string name="medical_import_report_warning">O relatório inclui os teus registos médicos. Revê-o antes de o partilhares.</string>
-    <string name="medical_import_failure_report_note">O relatório indica os ficheiros que o OpenVitals analisou e o que encontrou em cada um, mas nada do seu conteúdo. Revê os nomes dos ficheiros antes de o partilhares.</string>
+    <string name="medical_import_report_warning">O relatório conta o que foi escrito, retido ou recusado, por tipo de registo e motivo. Não contém nada do conteúdo dos teus registos nem nomes.</string>
+    <string name="medical_import_failure_report_note">O relatório indica o que parou a importação e descreve o ficheiro pelo tamanho, tipo e tipos de registo. Não contém nada do seu conteúdo nem nomes de ficheiros.</string>
     <string name="medical_import_done">Concluído</string>
     <string name="medical_import_another">Importar outro ficheiro</string>
     <string name="medical_import_reason_unsupported">Tipo que o Health Connect não guarda</string>
@@ -1740,7 +1740,7 @@
     <string name="privacy_reconsent_action">Rever política</string>
     <string name="dashboard_summary_today">Hoje</string>
     <string name="settings_debug_logs_title">Registos de diagnóstico anonimizados</string>
-    <string name="settings_debug_logs_body">Partilhe ou guarde entradas do registo de diagnóstico do OpenVitals como ficheiro de texto. Antes de escrever, a exportação remove ou oculta identificadores, localizações, datas, URIs, dados brutos de sensores e registos de outras aplicações.</string>
+    <string name="settings_debug_logs_body">Partilhe ou guarde os registos do OpenVitals como ficheiro de texto. Todas as linhas são mantidas para que os problemas do Health Connect e da sincronização possam ser seguidos; endereços de dispositivos, identificadores, localizações de ficheiros, datas e detalhes de erros são ocultados. Leia-o antes de o partilhar.</string>
     <string name="settings_debug_logs_share">Partilhar registos</string>
     <string name="settings_debug_logs_share_chooser_title">Partilhar registos de diagnóstico</string>
     <string name="settings_debug_logs_share_failed">Não foi possível partilhar os registos de diagnóstico</string>
@@ -1924,7 +1924,14 @@
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%. %2$s. %3$d/%4$d selecionados, %5$d importados.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. %3$d/%4$d examinados, %5$d importados.</string>
     <string name="settings_apple_health_import_result">Importados %1$d. Duplicados %2$d. Não selecionados %3$d. Não suportados %4$d. Ignorados %5$d. Falhados %6$d.</string>
-    <string name="settings_apple_health_import_routes_incomplete">Os registos de saúde foram importados, mas algumas rotas de treino ficaram indisponíveis porque o ZIP terminou inesperadamente. O relatório de importação lista as atividades afetadas para recuperação manual.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Os registos de saúde foram importados, mas algumas rotas de treino ficaram indisponíveis porque o ficheiro ZIP terminou inesperadamente. Os treinos afetados estão listados abaixo.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d treino chegou sem a sua rota</item>
+        <item quantity="many">%d treinos chegaram sem a sua rota</item>
+        <item quantity="other">%d treinos chegaram sem a sua rota</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Os ficheiros das rotas não estão na exportação. Importe export.zip em vez de export.xml, ou importe cada rota com o importador GPX/KML/KMZ.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Mostrar tudo</string>
     <string name="settings_apple_health_import_analysis_result">%1$d itens examinados. Encontrados %2$d registos compatíveis. Não suportados %3$d. Falhados %4$d.</string>
     <string name="settings_apple_health_import_choose_categories">Escolha o que escrever no Health Connect.</string>
     <string name="settings_apple_health_import_category_count">%1$d registos</string>

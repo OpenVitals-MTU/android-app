@@ -1600,8 +1600,8 @@
     <string name="medical_import_report_copied">Zpráva zkopírována</string>
     <string name="medical_import_report_saved">Zpráva uložena</string>
     <string name="medical_import_report_save_failed">Zprávu nelze uložit</string>
-    <string name="medical_import_report_warning">Zpráva obsahuje vaše zdravotní záznamy. Před sdílením ji zkontrolujte.</string>
-    <string name="medical_import_failure_report_note">Zpráva uvádí soubory, které OpenVitals prošel, a co v každém našel, ale nic z jejich obsahu. Před sdílením zkontrolujte názvy souborů.</string>
+    <string name="medical_import_report_warning">Zpráva počítá, co se zapsalo, co bylo zadrženo nebo odmítnuto, podle typu záznamu a důvodu. Neobsahuje nic z obsahu vašich záznamů ani žádná jména.</string>
+    <string name="medical_import_failure_report_note">Zpráva uvádí, co import zastavilo, a popisuje soubor podle velikosti, druhu a typů záznamů. Neobsahuje nic z obsahu souboru ani názvy souborů.</string>
     <string name="medical_import_done">Hotovo</string>
     <string name="medical_import_another">Importovat další soubor</string>
     <string name="medical_import_reason_unsupported">Typ, který Health Connect neukládá</string>
@@ -1862,7 +1862,7 @@
     <string name="privacy_reconsent_action">Zobrazit zásady</string>
     <string name="dashboard_summary_today">Dnes</string>
     <string name="settings_debug_logs_title">Diagnostické protokoly</string>
-    <string name="settings_debug_logs_body">Sdílejte nebo uložte protokoly procesů OpenVitals jako textový soubor. Export je surový (bez začernění), aby šlo potíže s Health Connect a synchronizací diagnostikovat z úplného záznamu.</string>
+    <string name="settings_debug_logs_body">Sdílejte nebo uložte protokoly OpenVitals jako textový soubor. Zůstává každý řádek, aby šlo dohledat potíže s Health Connect a synchronizací; adresy zařízení, identifikátory, umístění souborů, data a podrobnosti chyb jsou skryté. Před sdílením si ho přečtěte.</string>
     <string name="settings_debug_logs_share">Sdílet protokoly</string>
     <string name="settings_debug_logs_share_chooser_title">Sdílet diagnostické protokoly</string>
     <string name="settings_debug_logs_share_failed">Diagnostické protokoly se nepodařilo sdílet</string>
@@ -2046,7 +2046,15 @@
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%. %2$s. Vybráno %3$d/%4$d, naimportováno %5$d.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. Prohledáno %3$d/%4$d, naimportováno %5$d.</string>
     <string name="settings_apple_health_import_result">Naimportováno %1$d. Duplicit %2$d. Nevybráno %3$d. Nepodporováno %4$d. Přeskočeno %5$d. Selhalo %6$d.</string>
-    <string name="settings_apple_health_import_routes_incomplete">Zdravotní záznamy se naimportovaly, ale některé trasy tréninků nebyly k dispozici, protože soubor ZIP nečekaně skončil. Zpráva o importu uvádí dotčené aktivity pro ruční obnovu.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Zdravotní záznamy se naimportovaly, ale některé trasy tréninků nebyly k dispozici, protože soubor ZIP neočekávaně skončil. Dotčené tréninky jsou uvedeny níže.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d trénink přišel bez trasy</item>
+        <item quantity="few">%d tréninky přišly bez trasy</item>
+        <item quantity="many">%d tréninku přišlo bez trasy</item>
+        <item quantity="other">%d tréninků přišlo bez trasy</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Soubory s jejich trasami v exportu nejsou. Importujte export.zip místo export.xml, nebo každou trasu naimportujte přes Import GPX/KML/KMZ/TCX.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Zobrazit vše</string>
     <string name="settings_apple_health_import_analysis_result">Prohledáno %1$d položek. Nalezeno %2$d kompatibilních záznamů. Nepodporováno %3$d. Selhalo %4$d.</string>
     <string name="settings_apple_health_import_choose_categories">Vyberte, co se má zapsat do Health Connect.</string>
     <string name="settings_apple_health_import_category_count">%1$d záznamů</string>

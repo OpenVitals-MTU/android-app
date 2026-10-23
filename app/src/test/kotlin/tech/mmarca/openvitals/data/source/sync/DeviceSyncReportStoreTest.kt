@@ -10,6 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import tech.mmarca.openvitals.core.privacy.PrivacySentinels
 import org.junit.rules.TemporaryFolder
 import tech.mmarca.openvitals.data.repository.TestDispatcherProvider
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncReport
@@ -74,6 +75,27 @@ class DeviceSyncReportStoreTest {
         assertTrue(text.contains("Status: aborted"))
         assertTrue(text.contains("Reason: the codes did not match"))
         assertTrue(text.contains("(none)"))
+    }
+
+    @Test
+    fun `an abort reason carrying data is masked in the report`() {
+        val report = SyncReport(
+            completed = false,
+            peerDeviceName = "Pixel 8 ${PrivacySentinels.Mac}",
+            negotiatedTypes = emptyList(),
+            itemsSent = 0,
+            itemsReceived = 0,
+            imported = 0,
+            duplicateSkipped = 0,
+            typeSummaries = emptyList(),
+            abortReason = "unexpected error: ${PrivacySentinels.Sentence}",
+        )
+
+        val text = buildSyncReportText(report, generatedAt = at)
+
+        PrivacySentinels.assertNoneIn(text, except = setOf(PrivacySentinels.Name))
+        assertTrue(text.contains("Reason: unexpected error: value # on [redacted]"))
+        assertTrue(text.contains("Peer: Pixel 8 [redacted]"))
     }
 
     @Test

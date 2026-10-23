@@ -56,7 +56,7 @@ class AppleHealthImportWorker(
         val expectedSelectedRecords = expectedSelectedRecordsFromData(inputData)
         val expectedParsedElements = expectedParsedElementsFromData(inputData)
         log(
-            "Worker started uri=$uri expectedSelectedRecords=$expectedSelectedRecords " +
+            "Worker started expectedSelectedRecords=$expectedSelectedRecords " +
                 "expectedParsedElements=$expectedParsedElements",
         )
         setForeground(
@@ -178,11 +178,11 @@ class AppleHealthImportWorker(
             log("Stage started: Building downloadable report")
             log("Stage finished: Building downloadable report")
             log("Stage started: Writing downloadable report file")
-            // The store path is deterministic, so the log can name it before the report is written.
             val reportPath = AppleHealthImportReportStore.reportPath(appContext)
-            log("Stage finished: Writing downloadable report file path=$reportPath")
+            log("Stage finished: Writing downloadable report file")
             val finalReportText = result.shareableReportText.withWorkerLogs(workerLogs)
             AppleHealthImportReportStore.write(appContext, finalReportText)
+            AppleHealthImportReportStore.writeWorkoutsWithoutRoute(appContext, result.workoutsWithoutRoute)
             val finalResult = result.copy(shareableReportText = finalReportText)
             val completeProgress = finalResult.toProgress(
                 AppleHealthImportPhase.COMPLETE,
@@ -511,7 +511,7 @@ private fun String.withWorkerLogs(workerLogs: List<String>): String =
         }
     }
 
-private fun buildFailureReportText(error: Throwable, workerLogs: List<String>): String =
+internal fun buildFailureReportText(error: Throwable, workerLogs: List<String>): String =
     buildString {
         appendAppleHealthReportHeader()
         appendLine()

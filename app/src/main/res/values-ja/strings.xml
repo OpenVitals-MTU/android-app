@@ -1961,8 +1961,8 @@
     <string name="medical_import_report_copied">レポートをコピーしました</string>
     <string name="medical_import_report_saved">レポートを保存しました</string>
     <string name="medical_import_report_save_failed">レポートを保存できませんでした</string>
-    <string name="medical_import_report_warning">レポートにはあなたの医療記録が含まれます。共有する前に確認してください。</string>
-    <string name="medical_import_failure_report_note">レポートには、OpenVitals が調べたファイルと、それぞれで見つかったものが記載されますが、ファイルの中身は含まれません。共有する前にファイル名を確認してください。</string>
+    <string name="medical_import_report_warning">レポートには、書き込まれた記録、保留された記録、拒否された記録の数が、記録の種類と理由ごとに記載されます。記録の中身や名前は含まれません。</string>
+    <string name="medical_import_failure_report_note">レポートには、インポートが止まった理由と、ファイルのサイズ・種類・記録の種類が記載されます。ファイルの中身やファイル名は含まれません。</string>
     <string name="medical_import_done">完了</string>
     <string name="medical_import_another">別のファイルをインポート</string>
     <string name="medical_import_reason_unsupported">Health Connect が保存しない種類</string>
@@ -2209,7 +2209,7 @@
     <string name="privacy_reconsent_action">ポリシーを確認</string>
     <string name="dashboard_summary_today">今日</string>
     <string name="settings_debug_logs_title">診断ログ</string>
-    <string name="settings_debug_logs_body">OpenVitals のプロセスログをテキストファイルとして共有または保存します。エクスポートは生のまま（マスキングなし）なので、Health Connect や同期の問題を完全な記録から診断できます。</string>
+    <string name="settings_debug_logs_body">OpenVitals のログをテキストファイルとして共有または保存します。Health Connect や同期の問題を追えるようすべての行を残し、デバイスのアドレス、識別子、ファイルの場所、日付、エラーの詳細はマスクします。共有する前に内容を確認してください。</string>
     <string name="settings_debug_logs_share">ログを共有</string>
     <string name="settings_debug_logs_share_chooser_title">診断ログを共有</string>
     <string name="settings_debug_logs_share_failed">診断ログを共有できませんでした</string>
@@ -2393,7 +2393,13 @@
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%。%2$s。%3$d/%4$d 件を選択、%5$d 件をインポート。</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%。%2$s。%3$d/%4$d 件をスキャン、%5$d 件をインポート。</string>
     <string name="settings_apple_health_import_result">インポート %1$d。重複 %2$d。未選択 %3$d。非対応 %4$d。スキップ %5$d。失敗 %6$d。</string>
-    <string name="settings_apple_health_import_routes_incomplete">健康記録はインポートされましたが、ZIP が予期せず終了したため一部のワークアウトルートを取得できませんでした。インポートレポートに手動で復旧するための対象アクティビティが記載されています。</string>
+    <string name="settings_apple_health_import_routes_incomplete">健康記録はインポートされましたが、ZIP ファイルが予期せず終了したため、一部のワークアウトのルートを読み込めませんでした。該当するワークアウトを下に表示します。</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">ルートなしで取り込まれたワークアウト: %d 件</item>
+        <item quantity="other">ルートなしで取り込まれたワークアウト: %d 件</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">ルートファイルがエクスポートに含まれていません。export.xml ではなく export.zip をインポートするか、GPX/KML/KMZ/TCX インポーターで各ルートをインポートしてください。</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">すべて表示</string>
     <string name="settings_apple_health_import_analysis_result">%1$d 件をスキャン。互換性のある記録 %2$d 件。非対応 %3$d。失敗 %4$d。</string>
     <string name="settings_apple_health_import_choose_categories">Health Connect に書き込むものを選択してください。</string>
     <string name="settings_apple_health_import_category_count">%1$d 件</string>

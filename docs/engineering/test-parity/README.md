@@ -79,20 +79,20 @@ is where an earlier hand-tally drifted). One row is an exception: the
 | Section | Cases | PORTED | DIVERGED | MISSING | N/A-WIDGET | N/A-FRAMEWORK | N/A-BEHAVIOR | BLOCKED |
 |---|---|---|---|---|---|---|---|---|
 | [Manual entry / hydration / mindfulness / caffeine](manual-entry.md) | 537 | 453 | 39 | 0 | 19 | 9 | 17 | 0 |
-| [Other features (settings, activity, sleep, heart, imports/csv+route, bodyenergy, readiness, widgets, onboarding, achievements)](features.md) | 872 | 624 | 69 | 26 | 23 | 123 | 7 | 0 |
+| [Other features (settings, activity, sleep, heart, imports/csv+route, bodyenergy, readiness, widgets, onboarding, achievements)](features.md) | 871 | 619 | 73 | 26 | 23 | 123 | 7 | 0 |
 | [Dashboard + device sync](dashboard-devicesync.md) | 89 | 70 | 9 | 0 | 4 | 6 | 0 | 0 |
-| [Apple Health import](apple-health-import.md) | 98 | 72 | 3 | 0 | 0 | 23 | 0 | 0 |
+| [Apple Health import](apple-health-import.md) | 97 | 70 | 4 | 0 | 0 | 23 | 0 | 0 |
 | [Body / cycle / recovery](body-cycle-recovery.md) | 48 | 44 | 2 | 0 | 0 | 2 | 0 | 0 |
-| [Domain / data / core](domain-data-core.md) | 1,053 | 728 | 83 | 10 | 5 | 222 | 5 | 0 |
+| [Domain / data / core](domain-data-core.md) | 1,055 | 729 | 85 | 9 | 5 | 222 | 5 | 0 |
 | [Devices (GFDI, notifications, sync) / UI / goldens](devices-ui.md) | 744 | 646 | 65 | 9 | 6 | 10 | 0 | 8 |
-| **Total** | **3,441** | **2,637** | **270** | **45** | **57** | **395** | **29** | **8** |
+| **Total** | **3,441** | **2,631** | **277** | **44** | **57** | **395** | **29** | **8** |
 
-Of the 2,952 portable cases (PORTED + DIVERGED + MISSING), **2,637 are ported
+Of the 2,952 portable cases (PORTED + DIVERGED + MISSING), **2,631 are ported
 1:1** — up from 1,365 when the matrix was first built. Each section ends with a
 `### Portable gaps` list of what it still has outstanding and a "blocked on a
-behavior decision" section for rows no test can fix. The 45 remaining MISSING
+behavior decision" section for rows no test can fix. The 44 remaining MISSING
 are 26 features rows (Body Energy diagnostics, never ported, and the
-features/readiness cases whose seams are still private to their screens), 10
+features/readiness cases whose seams are still private to their screens), 9
 domain/data rows, and 9 devices/UI rows.
 
 The Kotlin suite is at 3,126 unit tests, up from 2,103 before this work, plus

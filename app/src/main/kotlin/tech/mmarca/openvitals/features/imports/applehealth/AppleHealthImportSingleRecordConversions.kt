@@ -40,7 +40,6 @@ private fun AppleHealthImportConverter.buildSingleRecord(record: AppleRecord): C
             record = healthRecord,
             sourceTimeRange = AppleImportTimeRange(interval.start.instant, interval.end.instant),
             unit = record.unit,
-            value = record.valueForReport,
         )
 
     return when (record.type) {

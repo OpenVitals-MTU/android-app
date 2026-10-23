@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.imports.csv
 
+import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.units.Pressure
@@ -130,21 +131,16 @@ internal fun convertCsvBloodPressureRow(
     // Systolic first, so the one fault reported is the first in the row.
     fun pressure(column: CsvColumnMapping, text: String?, range: ClosedFloatingPointRange<Double>): Double? {
         if (text == null) return reject(CsvImportDiagnosticReason.MISSING_BLOOD_PRESSURE_VALUE, column, null)
-        val value = parseCsvNumber(text) ?: return reject(CsvImportDiagnosticReason.UNPARSABLE_NUMBER, column, text)
-        if (value !in range) {
-            return reject(CsvImportDiagnosticReason.OUT_OF_RANGE, column, String.format(Locale.US, "%.2f", value))
-        }
+        val value = parseCsvNumber(text)
+            ?: return reject(CsvImportDiagnosticReason.UNPARSABLE_NUMBER, column, PrivacyRedactor.shapeOf(text))
+        if (value !in range) return reject(CsvImportDiagnosticReason.OUT_OF_RANGE, column, null)
         return value
     }
 
     val systolic = pressure(systolicColumn, systolicText, MinSystolicMmHg..MaxSystolicMmHg) ?: return null
     val diastolic = pressure(diastolicColumn, diastolicText, MinDiastolicMmHg..MaxDiastolicMmHg) ?: return null
     if (systolic <= diastolic) {
-        return reject(
-            CsvImportDiagnosticReason.SYSTOLIC_NOT_ABOVE_DIASTOLIC,
-            systolicColumn,
-            String.format(Locale.US, "%.0f/%.0f", systolic, diastolic),
-        )
+        return reject(CsvImportDiagnosticReason.SYSTOLIC_NOT_ABOVE_DIASTOLIC, systolicColumn, null)
     }
 
     val settings = mapping.bloodPressure

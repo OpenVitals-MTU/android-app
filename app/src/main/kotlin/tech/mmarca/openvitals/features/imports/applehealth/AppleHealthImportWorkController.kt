@@ -32,8 +32,9 @@ class AppleHealthImportWorkController @Inject constructor(
     private val housekeepingScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
-     * For app start, fire-and-forget: removes a staged export nobody came back for.
-     * Skipped while an import is queued or running, because the import reads that copy.
+     * For app start, fire-and-forget: removes a staged export nobody came back for,
+     * and reports kept from before they were structure only. The staged export is
+     * left while an import is queued or running, because the import reads that copy.
      */
     fun clearAbandonedStagedExport() {
         housekeepingScope.launch {
@@ -45,6 +46,7 @@ class AppleHealthImportWorkController @Inject constructor(
                 if (!importPending) {
                     AppleHealthImportStagingStore.clearIfOlderThan(context, StagedExportMaxAge, Instant.now())
                 }
+                AppleHealthImportReportStore.deleteLegacyReports(context)
             }
         }
     }
@@ -84,6 +86,7 @@ class AppleHealthImportWorkController @Inject constructor(
             AppleHealthImportWorker.reportPathFromData(workInfo.outputData),
         )
         return AppleHealthImportWorker.resultFromData(workInfo.outputData, reportText)
+            ?.copy(workoutsWithoutRoute = AppleHealthImportReportStore.readWorkoutsWithoutRoute(context))
     }
 
     /** The full failure report when one was written. A file read, so it runs on IO. */

@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.imports.csv
 
+import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
 import androidx.health.connect.client.records.BasalBodyTemperatureRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
@@ -122,7 +123,7 @@ fun convertCsvRow(
                     rowNumber = row.rowNumber,
                     reason = CsvImportDiagnosticReason.UNPARSABLE_TIMESTAMP,
                     columnIndex = timestampColumn.columnIndex,
-                    detail = timestampText,
+                    detail = PrivacyRedactor.shapeOf(timestampText),
                 ),
             ),
         )
@@ -159,7 +160,7 @@ fun convertCsvRow(
                 rowNumber = row.rowNumber,
                 reason = CsvImportDiagnosticReason.UNPARSABLE_NUMBER,
                 columnIndex = column.columnIndex,
-                detail = text,
+                detail = PrivacyRedactor.shapeOf(text),
             )
             continue
         }
@@ -185,7 +186,6 @@ fun convertCsvRow(
                 rowNumber = row.rowNumber,
                 reason = CsvImportDiagnosticReason.OUT_OF_RANGE,
                 columnIndex = column.columnIndex,
-                detail = String.format(Locale.US, "%.2f", canonical),
             )
             continue
         }
@@ -228,7 +228,8 @@ internal fun csvIntervalEnd(
         rowNumber = row.rowNumber,
         reason = reason,
         columnIndex = columnIndex,
-        detail = endText,
+        // An end that is a date, only later than it should be, says nothing a shape would add.
+        detail = if (reason == CsvImportDiagnosticReason.UNPARSABLE_END_TIMESTAMP) PrivacyRedactor.shapeOf(endText) else null,
     )
     return null
 }

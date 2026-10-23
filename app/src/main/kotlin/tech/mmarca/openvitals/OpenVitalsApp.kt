@@ -10,6 +10,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.HiltAndroidApp
 import tech.mmarca.openvitals.core.diagnostics.CrashReportHandler
+import tech.mmarca.openvitals.core.diagnostics.CrashReportStore
 import tech.mmarca.openvitals.core.performance.AppForegroundGate
 import tech.mmarca.openvitals.data.migration.FlutterDataMigrator
 import tech.mmarca.openvitals.data.migration.FlutterMigrationEntryPoint
@@ -55,6 +56,7 @@ class OpenVitalsApp : Application() {
         AppCompatDelegate.setApplicationLocales(preferencesRepository.appLanguage.toLocaleListCompat())
         appForegroundGate.registerProcessLifecycle(ProcessLifecycleOwner.get())
         thread(name = "app-startup") {
+            CrashReportStore.pruneStale(this)
             startupActors.get().start { observer ->
                 // A late observer is brought up to the current state, so no start is missed.
                 mainHandler.post { ProcessLifecycleOwner.get().lifecycle.addObserver(observer) }

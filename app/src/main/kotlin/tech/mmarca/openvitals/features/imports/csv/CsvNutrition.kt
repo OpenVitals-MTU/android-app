@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.imports.csv
 
+import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.NutritionRecord
 import java.time.Instant
@@ -122,7 +123,7 @@ internal fun convertCsvNutritionRow(
                 rowNumber = row.rowNumber,
                 reason = CsvImportDiagnosticReason.UNPARSABLE_NUMBER,
                 columnIndex = column.columnIndex,
-                detail = text,
+                detail = PrivacyRedactor.shapeOf(text),
             )
             continue
         }
@@ -134,7 +135,6 @@ internal fun convertCsvNutritionRow(
                 rowNumber = row.rowNumber,
                 reason = CsvImportDiagnosticReason.OUT_OF_RANGE,
                 columnIndex = column.columnIndex,
-                detail = String.format(Locale.US, "%.2f", stored),
             )
             continue
         }

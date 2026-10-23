@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.imports.medical
 
-import android.content.ClipData
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,11 +27,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.setSensitiveText
 import tech.mmarca.openvitals.core.performance.offMainIo
 import tech.mmarca.openvitals.domain.medical.FhirRejection
 import tech.mmarca.openvitals.domain.medical.MedicalImportGroupPlan
@@ -359,7 +358,7 @@ internal fun MedicalImportReportActions(note: String, report: () -> String?, mod
                 onClick = {
                     val text = report() ?: return@OpenVitalsOutlinedButton
                     scope.launch {
-                        clipboard.setClipEntry(ClipData.newPlainText("OpenVitals", text).toClipEntry())
+                        clipboard.setSensitiveText("OpenVitals", text)
                         Toast.makeText(context, copied, Toast.LENGTH_SHORT).show()
                     }
                 },

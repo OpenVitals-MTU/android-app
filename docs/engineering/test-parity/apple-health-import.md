@@ -82,7 +82,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/imports/
 | AppleHealthImportParser + converter > imports sleep category values as sleep stages | PORTED | AppleHealthImportServiceTest.kt: `parser and converter import sleep category values as sleep stages` | |
 | ... > handles an apple export DOCTYPE without loading DTD grammar | PORTED | AppleHealthImportServiceTest.kt: `parser handles apple export doctype without loading dtd grammar` | |
 | ... > repairs raw control characters and unescaped ampersands | PORTED | AppleHealthImportServiceTest.kt: `parser repairs raw control characters and unescaped ampersands in attribute values` | |
-| ... > wraps a genuine well-formedness failure with surrounding text | PORTED | AppleHealthImportServiceTest.kt: `parser wraps a genuine well-formedness failure with the surrounding text` | OR-clause gone; cause AND message both asserted |
+| ... > wraps a genuine well-formedness failure with surrounding text | DIVERGED | AppleHealthImportServiceTest.kt: `parser wraps a genuine well-formedness failure with its position and none of the text` | the text before the error is no longer kept: it is the user's records. Position, cause and its absence asserted |
 | ... > preserves timezone offsets on apple date strings | PORTED | AppleHealthImportServiceTest.kt: `parser preserves timezone offsets on apple date strings` | |
 | ... > imports walking speed as speed samples (km/hr → m/s) | PORTED | AppleHealthImportServiceTest.kt: `parser and converter import walking speed as speed samples` | |
 | ... > prefers blood pressure correlations | PORTED | AppleHealthImportServiceTest.kt: `parser and converter prefer blood pressure correlations` | |
@@ -127,7 +127,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/imports/
 | ... > skips duplicates that appear in a later batch of the same export | PORTED | AppleHealthImportServiceTest.kt: `service skips duplicates that appear in a later batch of the same export` | |
 | ... > unions parallel duplicate check chunks across types and time spans | PORTED | AppleHealthImportServiceTest.kt: `service unions parallel duplicate check chunks across types and time spans` | |
 | ... > analysis streams zip when route files precede export xml | PORTED | AppleHealthImportServiceTest.kt: `service analysis streams zip when route files precede export xml` | |
-| ... > a ZIP truncated inside a workout-route entry still imports the health records and flags workoutRoutesIncomplete | PORTED | AppleHealthImportServiceTest.kt: `service imports intact health records when zip ends during workout route` | Kotlin asserts more (diagnostic detail, warn log) |
+| ... > a ZIP truncated inside a workout-route entry still imports the health records and flags workoutRoutesIncomplete | PORTED | AppleHealthImportServiceTest.kt: `service imports intact health records when zip ends during workout route` | Kotlin asserts more (the route-less workout list, the warn log, and that the report holds neither the workout's date nor its file) |
 | ... > a ZIP truncated before export.xml is read still hard-fails | PORTED | AppleHealthImportServiceTest.kt: `parser reports truncated zip exports with actionable apple health context` + `parser does not recover a truncated route before export xml` | Parser-level in Kotlin; no-insert assertion implicit |
 | ... > an unreadable route is not reported when workouts are deselected | PORTED | AppleHealthImportServiceTest.kt: `service skips damaged workout routes when workouts are not selected` | |
 | ... > saves a checkpoint after every batch and resumes without rewriting committed records | PORTED | AppleHealthImportServiceTest.kt: `service saves a checkpoint after every batch on a clean run` + `service resumes from selected record checkpoint and writes remaining batches` | clean-run cadence now asserted |
@@ -167,10 +167,10 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/imports/
 | escapes a bare & at the very end of the stream | PORTED | AppleHealthImportXmlSupportTest.kt: `escapes a bare ampersand at the very end of the stream` | End-of-stream pending-`&` flush untested |
 | numeric and hex character references split across chunks stay intact | PORTED | AppleHealthImportXmlSupportTest.kt: `numeric and hex character references stay intact` | `&#65;` / `&#x41;` preservation untested |
 | strips a disallowed control character mid-text | PORTED | AppleHealthImportXmlSupportTest.kt: `strips a disallowed control character mid-text` | direct Reader test |
-| recentContext reports the trailing emitted text | PORTED | AppleHealthImportXmlSupportTest.kt: `recentContext reports the trailing emitted text` | direct Reader test |
+| recentContext reports the trailing emitted text | REMOVED | AppleHealthImportXmlSupportTest.kt: `the position follows the text without keeping any of it` | the reader keeps the position only; the text is the user's records |
 
 ### Counts
-PORTED: 72, DIVERGED: 3, MISSING: 0, N/A-WIDGET: 0, N/A-FRAMEWORK: 23
+PORTED: 70, DIVERGED: 4, MISSING: 0, N/A-WIDGET: 0, N/A-FRAMEWORK: 23
 
 ### Missing list
 

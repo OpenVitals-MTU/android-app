@@ -136,6 +136,7 @@ class HealthConnectSyncStoreTest {
         mockkStatic(Log::class)
         every { Log.i(any(), any<String>()) } returns 0
         every { Log.w(any(), any<String>()) } returns 0
+        every { Log.w(any(), any<String>(), any()) } returns 0
         hc = FakeHealthConnect()
         store = storeOver(hc)
     }

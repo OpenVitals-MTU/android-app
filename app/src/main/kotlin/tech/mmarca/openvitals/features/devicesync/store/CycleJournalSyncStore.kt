@@ -143,7 +143,7 @@ class CycleJournalSyncStore(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "write failed for ${item.recordType}: ${e.message}")
+                Log.w(TAG, "write failed for ${item.recordType}: ${e::class.java.simpleName}")
             }
         }
         return written

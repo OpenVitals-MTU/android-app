@@ -1,6 +1,6 @@
 # OpenVitals Privacy Policy
 
-Last updated: October 6, 2026
+Last updated: October 23, 2026
 
 OpenVitals is a local-first Android app for viewing health and fitness data from Health Connect.
 
@@ -75,7 +75,7 @@ On Android 14 and newer, where Health Connect offers medical records, OpenVitals
 
 - **Viewing.** Records are shown as Health Connect holds them. OpenVitals does not interpret them. It flags a lab value as high or low only when the lab did.
 - **Importing.** You pick a file: a FHIR file, a CDA document, an Apple Health or Estonian health portal export, or a SMART Health Card. The file is read on the device, and its records are written to Health Connect. Records in an older format are converted on the device first. A health card's signature is not checked, because that needs the internet, and its records say so.
-- **Scanning a health card.** You can scan a card's QR code with the camera. OpenVitals asks for the camera only when you tap Scan. Each picture is read on the device and then dropped. None is saved or sent. Before it writes, OpenVitals compares the person named in the file with the records already on the phone, and asks you to confirm when they differ. The import report includes record content, so review it before you share it.
+- **Scanning a health card.** You can scan a card's QR code with the camera. OpenVitals asks for the camera only when you tap Scan. Each picture is read on the device and then dropped. None is saved or sent. Before it writes, OpenVitals compares the person named in the file with the records already on the phone, and asks you to confirm when they differ. The import report counts what was written, held back or refused, by record type and reason. It holds none of your records' content, no names and no file names.
 - **Entering.** Vaccines, allergies, medications and conditions you type in are written to Health Connect.
 - **Exporting.** An export is a FHIR file created on the device. It leaves the phone only if you save or share it.
 - **Saved documents.** When you import a file, you can choose to keep a copy of it. The choice starts off every time. A kept copy stays in the app's private storage and is not backed up. It can hold more than the records taken from it, such as names, identifiers and notes. Opening it hands it to a viewer app on your phone. Deleting a document does not delete its records, and deleting records does not delete the document.
@@ -129,13 +129,13 @@ If you set up a Xiaomi Body Composition Scale S400, OpenVitals listens for the B
 
 ## Phone-To-Phone Sync
 
-Sync copies Health Connect records from one phone to another over a paired Bluetooth link. Before any record moves, both phones show the same six-digit code, and you confirm on both that they match. That tells you no other device sits in between. The records are then encrypted between the two phones with a key made for that one sync, on top of Bluetooth's own encryption. You choose how far back to sync and which categories to send. Medical records always sync in full. No server or account is involved. Each phone keeps a plain-text report of its last sync in the app's private storage.
+Sync copies Health Connect records from one phone to another over a paired Bluetooth link. Before any record moves, both phones show the same six-digit code, and you confirm on both that they match. That tells you no other device sits in between. The records are then encrypted between the two phones with a key made for that one sync, on top of Bluetooth's own encryption. You choose how far back to sync and which categories to send. Medical records always sync in full. No server or account is involved. Each phone keeps a plain-text report of its last sync in the app's private storage. If a sync stops, the reason in it is masked like any error text.
 
 ## Imports, Exports And Reports
 
 An Apple Health export you pick is copied into the app's private storage and analysed there before you choose what to import. The copy is removed after a successful import, when the analysis fails, or when you pick another export. A copy you never came back to is removed when the app next starts, once it is a day old.
 
-Exports (routes, workouts, reports, CSV files) and import reports are created on the device and leave it only if you save or share them. An import report includes the importer's full log, so review it before you share it.
+Exports (routes, workouts, reports, CSV files) and import reports are created on the device and leave it only if you save or share them. An import report holds counts, record types, units and reasons, and the importer's log with its error text masked. It holds no record's value or time, no names, no file names and no file locations. The workouts an Apple Health import brought in without their route are listed on the import card and kept in the app's private storage, never in the report.
 
 ## Data Sharing
 
@@ -149,15 +149,15 @@ Health Connect remains the source of truth for the health data it has a record t
 
 - App preferences, such as units, language, theme, widget order, goals, reminder settings, timer settings, your body profile, paired device settings, acknowledged permission prompts, and the cycle tracking contexts and age band you declare.
 - A local database with your drink catalog, cached daily summaries that make the charts fast (up to two years), the Body Energy timeline, the watch-only wellness series described above, up to 45 days of per-minute watch data used to estimate sleep stages, the readings of each bathroom scale weigh-in, and the cycle journal: the pain, mood, energy, symptoms, notes, pregnancy-test results, temperature disturbances and cervical sensation you log per day, and the cycles you exclude from estimates. Health Connect has no record type for these. It also holds the list of medical documents you chose to keep. The journal stays until you delete a day's entry, delete the journal in Settings, or clear the app's data. It moves to another phone only through Sync with another phone, when the cycle category is selected on both phones.
-- Files: downloaded watch files, a recording in progress or not yet saved, a staged Apple Health export, offline map packs and elevation tiles you imported, medical documents you chose to keep, and the last sync report.
+- Files: downloaded watch files, a recording in progress or not yet saved, a staged Apple Health export, offline map packs and elevation tiles you imported, medical documents you chose to keep, the last sync report, the last Apple Health import report, and the last crash report.
 
 If reminders are enabled, Android may restore the local reminder schedule after a device restart. OpenVitals uses the notification permission for reminders, active recording notifications, sync notifications, the notification shown while a scale's weigh-in is read, and the find-my-phone alert a watch can start.
 
-OpenVitals opts out of Android's cloud backup. The shipping app manifest removes inherited Android network permissions, including `INTERNET`.
+OpenVitals opts out of Android's cloud backup. When you move to a new phone, Android can copy the app's data across; the crash report and the import and sync reports stay behind. The shipping app manifest removes inherited Android network permissions, including `INTERNET`.
 
 ## Diagnostics
 
-OpenVitals sends no crash reports by itself. After a crash it can open an email draft with the device model, the app version and the error trace. Nothing is sent unless you press send. Debug and nightly builds can also export the app's log, unfiltered, when you ask for it. Release builds cannot.
+OpenVitals sends no crash reports by itself. After a crash it keeps one report on the phone: the device model, the app version and the error trace, with numbers, dates, addresses and identifiers in the error text masked. It holds no log. Report an issue puts it into an email draft, and nothing is sent unless you press send. Once the report has gone into an email, a copy or a file it is deleted, and it is not kept past seven days either way. Debug and nightly builds can also export the app's log when you ask for it, with device addresses, identifiers, file locations, dates and error details masked. Release builds cannot. Reports the app copies are marked sensitive, so Android keeps them out of the copy preview.
 
 ## Data Retention And Deletion
 
