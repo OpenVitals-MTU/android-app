@@ -405,7 +405,6 @@ class SyncSession(
                             ack?.complete(SyncBatchAck.decode(payload).seq)
                         }
                         SyncFrameType.SEND_DONE -> incomingBatches.close()
-                        else -> Unit
                     }
                 }
                 SyncFrameType.ABORT -> handleAbort(SyncAbort.decode(frame.payload).reason)

@@ -21,8 +21,8 @@ import java.util.Locale
  * sensor (`com.samsung.sensor.hr_raw`, 25 Hz, sixteen undocumented floats,
  * gated by the heart rate permission the app already holds) to a CSV under
  * the app's files, so the channel layout and any beat markers can be read
- * off the watch with `tool/ppg_raw/inspect.py`. Nothing in the app depends
- * on it. Started and stopped by hand from the status screen; stops itself
+ * off the watch (the inspection script was dropped in 2026-10). Nothing in
+ * the app depends on it. Started and stopped by hand from the status screen; stops itself
  * after a night or when the file reaches its cap.
  *
  * The sensor is found by its string type, never a numeric constant, so a

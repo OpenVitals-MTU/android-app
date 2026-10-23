@@ -17,7 +17,7 @@ class FunctionLengthRatchetTest {
     private data class LongFunction(val file: String, val name: String, val lines: Int)
 
     private val functions: List<LongFunction> by lazy {
-        (File(SourceRoot).walkTopDown() + File(SharedRoot).walkTopDown())
+        (File(SourceRoot).walkTopDown() + File(SharedRoot).walkTopDown() + File(DomainRoot).walkTopDown())
             .filter { it.isFile && it.extension == "kt" }
             .flatMap { file -> functionsIn(file) }
             .toList()
@@ -68,14 +68,19 @@ class FunctionLengthRatchetTest {
         /** The shared link module is held to the same limit. */
         const val SharedRoot = "../wearlink/src/main/kotlin/tech/mmarca/openvitals"
 
-        fun File.rootRelativePath(): String =
-            if (invariantSeparatorsPath.contains("/wearlink/")) "wearlink/" + relativeTo(File(SharedRoot)).invariantSeparatorsPath
-            else relativeTo(File(SourceRoot)).invariantSeparatorsPath
+        /** The domain module keeps the app's package names, so its paths are reported as the app's. */
+        const val DomainRoot = "../domain/src/main/kotlin/tech/mmarca/openvitals"
+
+        fun File.rootRelativePath(): String = when {
+            invariantSeparatorsPath.contains("/wearlink/") -> "wearlink/" + relativeTo(File(SharedRoot)).invariantSeparatorsPath
+            invariantSeparatorsPath.contains("/domain/src/") -> relativeTo(File(DomainRoot)).invariantSeparatorsPath
+            else -> relativeTo(File(SourceRoot)).invariantSeparatorsPath
+        }
         const val MaxLines = 150
         const val GiantLines = 450
 
-        /** The count on 2026-09-27, after the cycle day log replaced the old entry card. */
-        const val MaxLongFunctions = 54
+        /** The count on 2026-10-18, after the FIT workout export was split per message. */
+        const val MaxLongFunctions = 53
 
         /** Each ceiling is the length on 2026-09-21 plus about 20 lines. */
         val GiantCeilings = mapOf(

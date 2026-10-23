@@ -180,6 +180,8 @@ internal fun HeartMetricScreen(
                     unitFormatter,
                     dateTimeFormatterProvider,
                     sectionContext,
+                    onEditVitalsMeasurement,
+                    viewModel::deleteVitalsMeasurementEntry,
                 )
                 HeartMetric.RESPIRATORY_RATE -> respiratoryRateContent(
                     state,
@@ -207,6 +209,8 @@ internal fun HeartMetricScreen(
                     dateTimeFormatterProvider = dateTimeFormatterProvider,
                     chartDaySelection = chartDaySelection,
                     sectionContext = sectionContext,
+                    onEditVitalsMeasurement = onEditVitalsMeasurement,
+                    onDeleteVitalsMeasurement = viewModel::deleteVitalsMeasurementEntry,
                 )
                 HeartMetric.SKIN_TEMPERATURE -> skinTemperatureContent(
                     state = state,

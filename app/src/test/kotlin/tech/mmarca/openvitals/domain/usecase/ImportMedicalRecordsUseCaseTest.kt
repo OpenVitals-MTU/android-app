@@ -77,15 +77,16 @@ class ImportMedicalRecordsUseCaseTest {
 
     @Test
     fun `one refused record fails its batch, which is retried one by one`() = runTest(dispatcher) {
-        // Pre-flight lets a LOINC-coded Observation through. This fake, like a real phone for an unknown code, refuses it.
+        // Pre-flight does not check required fields. This fake, like a real phone, refuses an Observation without a status.
         val file = FhirFile(
             listOf(
-                FhirTestFiles.entry("""{"resourceType":"Condition","id":"c1","code":{"text":"Asthma"}}"""),
+                FhirTestFiles.entry("""{"resourceType":"Condition","id":"c1","subject":{"reference":"Patient/p"},"code":{"text":"Asthma"}}"""),
                 FhirTestFiles.entry(
-                    """{"resourceType":"Observation","id":"o1","status":"final",""" +
-                        """"code":{"coding":[{"system":"http://loinc.org","code":"0000-0"}]}}""",
+                    """{"resourceType":"Observation","id":"o1",""" +
+                        """"code":{"coding":[{"system":"http://loinc.org","code":"0000-0"}]},""" +
+                        """"category":[{"coding":[{"system":"http://terminology.hl7.org/CodeSystem/observation-category","code":"laboratory"}]}]}""",
                 ),
-                FhirTestFiles.entry("""{"resourceType":"Condition","id":"c2","code":{"text":"Hay fever"}}"""),
+                FhirTestFiles.entry("""{"resourceType":"Condition","id":"c2","subject":{"reference":"Patient/p"},"code":{"text":"Hay fever"}}"""),
             ),
         )
 
@@ -94,7 +95,7 @@ class ImportMedicalRecordsUseCaseTest {
         assertThat(result.written).isEqualTo(2)
         val refused = result.groups.single().rejected.single()
         assertThat(refused.type to refused.id).isEqualTo("Observation" to "o1")
-        assertThat(refused.reason).contains("Cannot classify")
+        assertThat(refused.reason).contains("Missing required field status")
         assertThat(refused.json).contains("0000-0")
     }
 

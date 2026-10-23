@@ -110,7 +110,13 @@ internal fun ActivityDetailScreen(
             ActivityRouteExportFormat.KMZ -> saveKmzRoute.launch(fileName)
         }
     }
-    val latestHeartRateSamples by rememberUpdatedState(state.heartRateSamples)
+    val latestSeries by rememberUpdatedState(
+        ActivityWorkoutSeries(
+            heartRate = state.heartRateSamples,
+            speed = state.speedSamples,
+            cadence = state.cadenceSamples,
+        ),
+    )
     fun showWorkoutExportFailure() {
         Toast.makeText(
             context,
@@ -121,11 +127,11 @@ internal fun ActivityDetailScreen(
     fun saveWorkoutExport(format: ActivityWorkoutExportFormat, destination: Uri?) {
         val currentWorkout = latestWorkout ?: return
         if (destination == null) return
-        val heartRateSamples = latestHeartRateSamples
+        val series = latestSeries
         exportScope.launch {
             context.saveActivityWorkoutExport(
                 workout = currentWorkout,
-                heartRateSamples = heartRateSamples,
+                series = series,
                 format = format,
                 destination = destination,
             )
@@ -148,6 +154,9 @@ internal fun ActivityDetailScreen(
     val saveFitWorkout = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(ActivityWorkoutExportFormat.FIT.mimeType),
     ) { uri -> saveWorkoutExport(ActivityWorkoutExportFormat.FIT, uri) }
+    val saveFitWithRouteWorkout = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(ActivityWorkoutExportFormat.FIT_WITH_ROUTE.mimeType),
+    ) { uri -> saveWorkoutExport(ActivityWorkoutExportFormat.FIT_WITH_ROUTE, uri) }
     fun launchWorkoutExport(format: ActivityWorkoutExportFormat) {
         val currentWorkout = latestWorkout ?: return
         val fileName = currentWorkout.workoutExportFileName(format)
@@ -155,15 +164,16 @@ internal fun ActivityDetailScreen(
             ActivityWorkoutExportFormat.TCX -> saveTcxWorkout.launch(fileName)
             ActivityWorkoutExportFormat.CSV -> saveCsvWorkout.launch(fileName)
             ActivityWorkoutExportFormat.FIT -> saveFitWorkout.launch(fileName)
+            ActivityWorkoutExportFormat.FIT_WITH_ROUTE -> saveFitWithRouteWorkout.launch(fileName)
         }
     }
     fun shareWorkout(format: ActivityWorkoutExportFormat) {
         val currentWorkout = latestWorkout ?: return
-        val heartRateSamples = latestHeartRateSamples
+        val series = latestSeries
         exportScope.launch {
             context.shareActivityWorkout(
                 workout = currentWorkout,
-                heartRateSamples = heartRateSamples,
+                series = series,
                 format = format,
             )
                 .onFailure {
@@ -235,6 +245,8 @@ internal fun ActivityDetailScreen(
             onShareWorkoutAsTcx = { shareWorkout(ActivityWorkoutExportFormat.TCX) },
             onShareWorkoutAsCsv = { shareWorkout(ActivityWorkoutExportFormat.CSV) },
             onShareWorkoutAsFit = { shareWorkout(ActivityWorkoutExportFormat.FIT) },
+            onSaveWorkoutAsFitWithRoute = { launchWorkoutExport(ActivityWorkoutExportFormat.FIT_WITH_ROUTE) },
+            onShareWorkoutAsFitWithRoute = { shareWorkout(ActivityWorkoutExportFormat.FIT_WITH_ROUTE) },
         )
     }
 }
@@ -272,6 +284,8 @@ internal fun ActivityDetailContent(
     onShareWorkoutAsTcx: () -> Unit = {},
     onShareWorkoutAsCsv: () -> Unit = {},
     onShareWorkoutAsFit: () -> Unit = {},
+    onSaveWorkoutAsFitWithRoute: () -> Unit = {},
+    onShareWorkoutAsFitWithRoute: () -> Unit = {},
 ) {
     val context = LocalContext.current
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
@@ -459,6 +473,8 @@ internal fun ActivityDetailContent(
                 onSaveRouteAsKmz = onSaveRouteAsKmz.takeIf { hasExportableRoute },
                 onShareRouteAsGpx = onShareRouteAsGpx.takeIf { hasExportableRoute },
                 onShareRouteAsKmz = onShareRouteAsKmz.takeIf { hasExportableRoute },
+                onSaveRouteAsFit = onSaveWorkoutAsFitWithRoute.takeIf { hasExportableRoute },
+                onShareRouteAsFit = onShareWorkoutAsFitWithRoute.takeIf { hasExportableRoute },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = Spacing.lg, vertical = Spacing.xs),

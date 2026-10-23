@@ -18,7 +18,12 @@ fi
 
 if [ ! -d "$sdk_root/platforms/$android_platform_dir" ] ||
     [ ! -d "$sdk_root/build-tools/$android_build_tools_dir" ]; then
-    yes | sdkmanager "$android_platform_package" "$android_build_tools_package"
+    # The GitHub runner image keeps sdkmanager under the SDK, not on PATH.
+    sdkmanager="$(command -v sdkmanager || true)"
+    if [ -z "$sdkmanager" ]; then
+        sdkmanager="$sdk_root/cmdline-tools/latest/bin/sdkmanager"
+    fi
+    yes | "$sdkmanager" "$android_platform_package" "$android_build_tools_package"
 else
     echo "Android SDK $android_platform_dir and build-tools $android_build_tools_dir are already available."
 fi

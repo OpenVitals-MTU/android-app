@@ -164,12 +164,14 @@ fun LeanMassScreen(
     viewModel: BodyViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.LEAN_MASS,
+        onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
 
@@ -178,12 +180,14 @@ fun BmrScreen(
     viewModel: BodyViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.BMR,
+        onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
 
@@ -192,12 +196,14 @@ fun BoneMassScreen(
     viewModel: BodyViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.BONE_MASS,
+        onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }
 
@@ -206,11 +212,13 @@ fun BodyWaterMassScreen(
     viewModel: BodyViewModel,
     unitFormatter: UnitFormatter,
     dateTimeFormatterProvider: DateTimeFormatterProvider,
+    onEditBodyMeasurement: (BodyMeasurementType, String) -> Unit = { _, _ -> },
 ) {
     BodyMetricScreen(
         viewModel = viewModel,
         unitFormatter = unitFormatter,
         dateTimeFormatterProvider = dateTimeFormatterProvider,
         metric = BodyMetric.BODY_WATER_MASS,
+        onEditBodyMeasurement = onEditBodyMeasurement,
     )
 }

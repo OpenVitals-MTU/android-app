@@ -19,6 +19,7 @@ internal object FitTestFiles {
         totalDistanceMeters: Double? = null,
         totalCaloriesKcal: Int? = null,
         totalAscentMeters: Int? = null,
+        subSport: Int? = null,
     ): ByteArray {
         val data = ByteArrayOutputStream()
         data.writeFitFileId(fileType = 4)
@@ -30,6 +31,7 @@ internal object FitTestFiles {
                 FitTestFieldDefinition(number = 253, size = 4, baseType = 134),
                 FitTestFieldDefinition(number = 2, size = 4, baseType = 134),
                 FitTestFieldDefinition(number = 5, size = 1, baseType = 0),
+                FitTestFieldDefinition(number = 6, size = 1, baseType = 0),
                 FitTestFieldDefinition(number = 7, size = 4, baseType = 134),
                 FitTestFieldDefinition(number = 8, size = 4, baseType = 134),
                 FitTestFieldDefinition(number = 9, size = 4, baseType = 134),
@@ -41,6 +43,8 @@ internal object FitTestFiles {
         data.writeUInt32(sessionTime.plusSeconds(elapsedSeconds).fitTimestamp())
         data.writeUInt32(sessionTime.fitTimestamp())
         data.write(sport)
+        // `sub_sport` enum, invalid 0xFF when the file does not say.
+        data.write(subSport ?: 0xFF)
         data.writeUInt32(elapsedSeconds * 1000L)
         data.writeUInt32(elapsedSeconds * 1000L)
         data.writeNullableUInt32(totalDistanceMeters?.let { Math.round(it * 100.0) })

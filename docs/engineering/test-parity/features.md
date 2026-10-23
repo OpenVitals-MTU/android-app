@@ -311,7 +311,7 @@ Kotlin counterpart: app/src/test/kotlin/.../maps/OfflineRouteGeoJsonTest.kt (seg
 | routeTotalDistanceMeters > sums haversine distance between consecutive points | PORTED | OfflineRouteGeoJsonTest.kt: `route distance sums haversine distance between consecutive points` | exact haversine sum to 1e-6 |
 | routeTotalDistanceMeters > does not bridge across a route break | PORTED | OfflineRouteGeoJsonTest.kt: `route distance does not bridge across a route break` | exact per-segment sum |
 | routeTotalDistanceMeters > is zero for a single point | PORTED | OfflineRouteGeoJsonTest.kt: `route distance is zero for a single point` | Trivial JVM assert on `routeDistanceMeters`/`activityRecordingRouteDistanceMeters`, uncovered |
-| simplifyRoutePoints > a route below the display cap is returned unchanged, and identical | N/A-FRAMEWORK | — | Display-time decimation exists only for flutter_map; Kotlin renders full track via MapLibre/mapsforge (import-time cap separately covered by RouteFileParserTest `parse simplifies very large route files`) |
+| simplifyRoutePoints > a route below the display cap is returned unchanged, and identical | N/A-FRAMEWORK | — | Display-time decimation exists only for flutter_map; Kotlin renders full track via MapLibre/mapsforge (and no import-time cap either: RouteFileParserTest `parse keeps every point of a very large route file`; Health Connect's record size limit is met at write time by `OversizedRouteShrinker`) |
 | simplifyRoutePoints > a route longer than the display cap keeps its first and last point | N/A-FRAMEWORK | — | Same — no display decimation in Kotlin |
 | simplifyRoutePoints > decimating for the map never changes the distance the screen reports | N/A-FRAMEWORK | — | Same |
 | buildRouteMapGeometry > segments are split at breaks and projected for drawing | PORTED | OfflineRouteGeoJsonTest.kt: `segments are split at breaks and keep their own coordinates` | coordinate values now checked; projection stays MapLibre-side |
@@ -741,6 +741,9 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/imports/
 | buildCsvImportReport > a clean run has no rejection sections at all | PORTED | CsvImportReportTest.kt: `a clean run has no rejection sections at all` |  |
 | buildCsvImportReport > a failed run carries its error text | PORTED | CsvImportReportTest.kt: `a failed run carries its error text` |  |
 | buildCsvImportReport > a rate-limited run says so rather than reading as a plain stop | PORTED | CsvImportReportTest.kt: `a rate-limited run says so rather than reading as a plain stop` |  |
+| the totals partition the rows, qualify the records, and account for every drip day | PORTED | CsvImportReportTest.kt: `the totals partition the rows, qualify the records, and account for every drip day` | Kotlin-only |
+| a presence lookup that fails leaves the records written and counted as unchecked | PORTED | CsvImportServiceTest.kt: `a presence lookup that fails leaves the records written and counted as unchecked` | Kotlin-only; a missing read permission must not read as "not present" |
+| a malformed row is counted as a rejected row, not as nothing to import | PORTED | CsvImportServiceTest.kt: `a malformed row is counted as a rejected row, not as nothing to import` | Kotlin-only |
 
 ## test/features/imports/csv/csv_import_screen_test.dart
 Kotlin counterpart: none (compose screen app/src/main/kotlin/.../csv/CsvImportScreen.kt has no androidTest)
@@ -775,7 +778,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/imports/
 | a rate-limited batch is written again after a pause and the run completes | PORTED | CsvImportServiceTest.kt: `a rate-limited batch is written again after a pause and the run completes` | Kotlin-only: pauses 15 s then 30 s, counted down per second, tallied into the progress |
 | a rate-limited run stops and reports how far it got | PORTED | CsvImportServiceTest.kt: `a rate-limited run stops and reports how far it got` | Gives up only once the 30-minute pause budget is spent |
 | cancelling during a quota pause ends the run as cancelled within a second | PORTED | CsvImportServiceTest.kt: `cancelling during a quota pause ends the run as cancelled within a second` | Kotlin-only |
-| a drip export writes its records to Health Connect and its journal days to Room | PORTED | CsvImportServiceTest.kt: `a drip export writes its records to Health Connect and its journal days to Room` | Kotlin-only; a second run changes no journal day |
+| a drip export writes its records to Health Connect and its journal days to Room | PORTED | CsvImportServiceTest.kt: `a drip export writes its records to Health Connect and its journal days to Room` | Kotlin-only; a second run still counts its journal days but updates none; an empty row is counted, so rows = journal days + empty rows |
 | drip export: header detection, bleeding, temperature, mucus, sex, journal, cervix and desire, disabled options, bad dates, stable ids, journal merge, sample summary | PORTED | DripImportTest.kt (12 tests) | Kotlin-only; drip had no Flutter counterpart |
 | cancelling mid-run keeps what was written and stops reading | PORTED | CsvImportServiceTest.kt: `cancelling mid-run keeps what was written and stops reading` | |
 | a malformed row is skipped with a diagnostic and the rest imports | PORTED | CsvImportServiceTest.kt: `a malformed row is skipped with a diagnostic and the rest imports` | |

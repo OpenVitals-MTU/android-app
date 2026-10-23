@@ -11,9 +11,11 @@ import kotlinx.serialization.json.jsonObject
 import tech.mmarca.openvitals.data.repository.contract.MedicalRecordsRepository
 import tech.mmarca.openvitals.domain.medical.FhirSourceGrouper
 import tech.mmarca.openvitals.domain.medical.FhirVersionDetector
+import tech.mmarca.openvitals.domain.medical.ManualDirectory
 import tech.mmarca.openvitals.domain.medical.ManualFhirWriter
 import tech.mmarca.openvitals.domain.medical.ManualRecordDraft
 import tech.mmarca.openvitals.domain.medical.ManualRecordKind
+import tech.mmarca.openvitals.domain.medical.ManualReference
 import tech.mmarca.openvitals.domain.medical.MedicalImportPlanner
 import tech.mmarca.openvitals.domain.medical.PatientIdentity
 import tech.mmarca.openvitals.domain.model.MedicalCategory
@@ -39,6 +41,28 @@ class SaveManualMedicalRecordUseCase @Inject constructor(
     suspend fun needsIdentity(): Boolean {
         val source = manualSource()
         return (source == null || !hasPatient(source)) && readablePatient() == null
+    }
+
+    /**
+     * The doctors, clinics and places already in the manual source, for the form to offer. Empty
+     * when there is no source yet, or no read access to practitioner details or visits.
+     */
+    suspend fun directory(): ManualDirectory {
+        val source = manualSource() ?: return ManualDirectory()
+        suspend fun read(category: MedicalCategory, kind: ManualRecordKind): List<ManualReference> =
+            runCatching { repository.readCategory(category, setOf(source.id)) }
+                .getOrElse { if (it is CancellationException) throw it else emptyList() }
+                .filter { it.ref.resourceType == kind.resourceType }
+                .mapNotNull { record ->
+                    val name = ManualFhirWriter.draftOf(kind, Json.parseToJsonElement(record.json).jsonObject).name
+                    name.takeIf { it.isNotBlank() }?.let { ManualReference(kind.resourceType, it, record.ref.resourceId) }
+                }
+                .sortedBy { it.display.lowercase() }
+        return ManualDirectory(
+            practitioners = read(MedicalCategory.PRACTITIONER_DETAILS, ManualRecordKind.PRACTITIONER),
+            organizations = read(MedicalCategory.VISITS, ManualRecordKind.ORGANIZATION),
+            locations = read(MedicalCategory.VISITS, ManualRecordKind.LOCATION),
+        )
     }
 
     /** The stored record for an edit, or null when it is gone. */
@@ -70,9 +94,10 @@ class SaveManualMedicalRecordUseCase @Inject constructor(
         )
         val id = editId ?: UUID.randomUUID().toString()
         val base = editId?.let { stored(draft.kind, it) }
-        val record = ManualFhirWriter.resource(draft, id, today, base, savedAt = now)
-        // One transaction: the owner's record and the entry are written together, or neither is.
-        val jsons = listOfNotNull(owner?.let(ManualFhirWriter::patient), record).map { it.toString() }
+        val (linked, newReferences) = ManualFhirWriter.linkNewReferences(draft, today, { UUID.randomUUID().toString() }, savedAt = now)
+        val record = ManualFhirWriter.resource(linked, id, today, base, savedAt = now)
+        // One transaction: the owner's record, any new doctor or clinic and the entry are written together, or none is.
+        val jsons = (listOfNotNull(owner?.let(ManualFhirWriter::patient)) + newReferences + record).map { it.toString() }
         repository.upsert(source.id, source.fhirVersion, jsons)
         return ManualSaveResult.Saved(MedicalRecordRef(source.id, draft.kind.resourceType, id))
     }

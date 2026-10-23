@@ -34,6 +34,7 @@ data class ManualEntryUiState(
     val pendingNutritionEntryNavigation: Boolean = false,
     val pendingFoodEntryNavigation: Boolean = false,
     val pendingActivityEntryNavigation: Boolean = false,
+    val pendingBodyCompositionEntryNavigation: Boolean = false,
     val pendingBodyEntryNavigation: BodyMeasurementType? = null,
     val pendingVitalsEntryNavigation: VitalsMeasurementType? = null,
     val pendingMindfulnessEntryNavigation: Boolean = false,
@@ -84,6 +85,14 @@ class ManualEntryViewModel @Inject constructor(
 
     fun onActivityEntryNavigationHandled() {
         _uiState.value = _uiState.value.copy(pendingActivityEntryNavigation = false)
+    }
+
+    fun onBodyCompositionWidgetTapped() {
+        _uiState.value = _uiState.value.copy(pendingBodyCompositionEntryNavigation = true)
+    }
+
+    fun onBodyCompositionEntryNavigationHandled() {
+        _uiState.value = _uiState.value.copy(pendingBodyCompositionEntryNavigation = false)
     }
 
     fun onBodyMeasurementWidgetTapped(type: BodyMeasurementType) {

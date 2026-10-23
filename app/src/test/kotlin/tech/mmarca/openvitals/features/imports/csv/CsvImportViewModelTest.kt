@@ -333,7 +333,7 @@ class CsvImportViewModelTest {
 
         assertNotNull(report)
         assertTrue(report!!.contains("File: withings.csv"))
-        assertTrue(report.contains("Records written: 3"))
+        assertTrue(report.contains("Records written:     3, of which"))
         assertTrue(report.contains("[1] Weight (kg) -> weight (kilograms)"))
     }
 

@@ -268,6 +268,12 @@ class HeartViewModel @Inject constructor(
             VitalsMeasurementType.HRV -> _uiState.value.dayHrvSamples
                 .firstOrNull { it.id == entryId }
                 ?.isOpenVitalsEntry
+            VitalsMeasurementType.BLOOD_GLUCOSE -> _uiState.value.bloodGlucose
+                .firstOrNull { it.id == entryId }
+                ?.isOpenVitalsEntry
+            VitalsMeasurementType.VO2_MAX -> _uiState.value.vo2Max
+                .firstOrNull { it.id == entryId }
+                ?.isOpenVitalsEntry
         } ?: return
         if (!entryIsOpenVitals) return
 
@@ -439,6 +445,14 @@ private fun HeartUiState.withDeletedVitalsMeasurementEntry(
         )
         VitalsMeasurementType.BODY_TEMPERATURE -> copy(
             bodyTemperature = bodyTemperature.filterNot { it.id == entryId },
+            error = null,
+        )
+        VitalsMeasurementType.BLOOD_GLUCOSE -> copy(
+            bloodGlucose = bloodGlucose.filterNot { it.id == entryId },
+            error = null,
+        )
+        VitalsMeasurementType.VO2_MAX -> copy(
+            vo2Max = vo2Max.filterNot { it.id == entryId },
             error = null,
         )
     }

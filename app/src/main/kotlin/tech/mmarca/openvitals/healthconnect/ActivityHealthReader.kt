@@ -1229,7 +1229,7 @@ internal class ActivityHealthReader(
                 "Exercise segments must be inside the activity time range."
             }
             require(segment.repetitions >= 0) { "Segment repetitions must not be negative." }
-            require(segment.setIndex == null || segment.setIndex >= 0) { "Segment set index must not be negative." }
+            require((segment.setIndex ?: 0) >= 0) { "Segment set index must not be negative." }
         }
         sortedSegments.zipWithNext { previous, next ->
             require(!previous.endTime.isAfter(next.startTime)) { "Exercise segments must not overlap." }

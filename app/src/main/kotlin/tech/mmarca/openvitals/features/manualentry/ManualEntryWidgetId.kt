@@ -17,14 +17,15 @@ enum class ManualEntryWidgetId {
     NUTRITION,
     ACTIVITY,
     MINDFULNESS,
-    WEIGHT,
+    BODY_COMPOSITION,
     HEIGHT,
-    BODY_FAT,
     BLOOD_PRESSURE,
     SPO2,
     RESPIRATORY_RATE,
     BODY_TEMPERATURE,
     HRV,
+    BLOOD_GLUCOSE,
+    VO2_MAX,
     CYCLE,
     WORKOUT_PLANS,
 }
@@ -36,23 +37,29 @@ val DefaultManualEntryWidgetIds: List<ManualEntryWidgetId> = listOf(
     ManualEntryWidgetId.ACTIVITY,
     ManualEntryWidgetId.WORKOUT_PLANS,
     ManualEntryWidgetId.MINDFULNESS,
-    ManualEntryWidgetId.WEIGHT,
+    ManualEntryWidgetId.BODY_COMPOSITION,
     ManualEntryWidgetId.HEIGHT,
-    ManualEntryWidgetId.BODY_FAT,
     ManualEntryWidgetId.BLOOD_PRESSURE,
     ManualEntryWidgetId.SPO2,
     ManualEntryWidgetId.RESPIRATORY_RATE,
     ManualEntryWidgetId.BODY_TEMPERATURE,
     ManualEntryWidgetId.HRV,
+    ManualEntryWidgetId.BLOOD_GLUCOSE,
+    ManualEntryWidgetId.VO2_MAX,
     ManualEntryWidgetId.CYCLE,
 )
 
 fun customizableManualEntryWidgetIds(widgetIds: List<ManualEntryWidgetId>): List<ManualEntryWidgetId> =
     widgetIds.distinct()
 
-/** Tiles that were renamed, so a saved order keeps them. The carbs tile became one for every nutrient. */
+/**
+ * Tiles that were renamed, so a saved order keeps them. The carbs tile became one for every
+ * nutrient, and the weight and body fat tiles one for everything a body analysis scale shows.
+ */
 private val storedWidgetIdRenames: Map<String, String> = mapOf(
     "CARBS" to ManualEntryWidgetId.NUTRITION.name,
+    "WEIGHT" to ManualEntryWidgetId.BODY_COMPOSITION.name,
+    "BODY_FAT" to ManualEntryWidgetId.BODY_COMPOSITION.name,
 )
 
 fun manualEntryWidgetIdsFromStored(storedIds: List<String>?): List<ManualEntryWidgetId> {

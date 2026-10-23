@@ -28,6 +28,7 @@ fun ManualEntryScreen(
     onOpenNutritionEntry: () -> Unit,
     onOpenActivityEntry: () -> Unit,
     onOpenMindfulnessEntry: () -> Unit,
+    onOpenBodyCompositionEntry: () -> Unit,
     onOpenBodyMeasurementEntry: (BodyMeasurementType) -> Unit,
     onOpenVitalsMeasurementEntry: (VitalsMeasurementType) -> Unit,
     onOpenCycleEntry: () -> Unit,
@@ -43,6 +44,7 @@ fun ManualEntryScreen(
         onOpenFoodEntry = viewModel::onFoodWidgetTapped,
         onOpenActivityEntry = viewModel::onActivityWidgetTapped,
         onOpenMindfulnessEntry = viewModel::onMindfulnessWidgetTapped,
+        onOpenBodyCompositionEntry = viewModel::onBodyCompositionWidgetTapped,
         onOpenBodyMeasurementEntry = viewModel::onBodyMeasurementWidgetTapped,
         onOpenVitalsMeasurementEntry = viewModel::onVitalsMeasurementWidgetTapped,
         onOpenCycleEntry = viewModel::onCycleWidgetTapped,
@@ -106,6 +108,12 @@ fun ManualEntryScreen(
         if (state.pendingCycleEntryNavigation) {
             viewModel.onCycleEntryNavigationHandled()
             onOpenCycleEntry()
+        }
+    }
+    LaunchedEffect(state.pendingBodyCompositionEntryNavigation) {
+        if (state.pendingBodyCompositionEntryNavigation) {
+            viewModel.onBodyCompositionEntryNavigationHandled()
+            onOpenBodyCompositionEntry()
         }
     }
     LaunchedEffect(state.pendingBodyEntryNavigation) {

@@ -1,0 +1,32 @@
+# Codeberg Translate (Weblate) can only push a branch to GitHub; it cannot open
+# pull requests here. This opens one whenever Weblate pushes, and leaves an
+# already-open PR alone so it keeps updating with the branch.
+#
+# Needs the WEBLATE_PR_TOKEN secret: a fine-grained personal access token for
+# this repository with "Contents: read" and "Pull requests: write". The default
+# GITHUB_TOKEN would open the PR too, but PRs it creates do not trigger the
+# pull_request CI workflows.
+name: Weblate pull request
+on:
+  push:
+    branches: [weblate-translations]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  open-pr:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Open the PR if none is open for this branch
+        env:
+          GH_TOKEN: ${{ secrets.WEBLATE_PR_TOKEN }}
+        run: |
+          open=$(gh pr list --head weblate-translations --base main --state open --json number --jq 'length')
+          if [ "$open" = "0" ]; then
+            gh pr create --base main --head weblate-translations \
+              --title "Translations update from Codeberg Translate" \
+              --body "Automated translation update pushed by Weblate from https://translate.codeberg.org/projects/openvitals/mobile-app/. Merge with a merge commit, do not squash."
+          else
+            echo "A PR for weblate-translations is already open; it updates with the branch."
+          fi

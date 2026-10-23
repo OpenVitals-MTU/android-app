@@ -172,7 +172,6 @@ internal object GpxRouteParser {
             description = metadata.description,
             type = metadata.type,
             bleSamples = samples.buffer,
-            originalPointCount = 0,
         )
     }
 }

@@ -66,10 +66,10 @@ git ls-remote --refs origin 'refs/version-code/*' | sed 's#.*/##' | sort -n | ta
 ```
 
 **Race caveat:** a nightly can mint a code between your preview and the release
-run. Only the release workflow's schedule (00:00 UTC, often started some
-minutes late by GitHub) and manual runs of `.github/workflows/release.yml`
-build nightlies; a push to main runs tests only. Near midnight UTC, or while a
-manual run is going, check the runs first
+run. Only the release workflow's schedule (00:00 UTC, often started some minutes late
+by GitHub) and manual runs of `.github/workflows/release.yml` with target
+`nightly` build nightlies; a push to main runs tests only. Near midnight UTC,
+or while a manual run is going, check the runs first
 (`https://github.com/OpenVitals-MTU/android-app/actions/workflows/release.yml`). Either way,
 compute the code and name the fastlane files immediately before running the
 release script, and afterwards verify the script's printed `versionCode`
@@ -153,14 +153,19 @@ amend before anyone pulls:
 for f in fastlane/metadata/android/*/changelogs/OLD.txt; do git mv "$f" "${f%OLD.txt}NEW.txt"; done
 ```
 
-CI (GitHub Actions) takes it from the tag: signed APK, signed debug APK, and
-AAB on the GitHub release. Play production upload comes from a manual run of
-the release workflow with target `production`, started from the tag and
-approved through the `production` environment; it also posts the full notes to
-the Zulip `releases` channel (`scripts/announce-zulip.sh`).
+CI (GitHub Actions) takes it from the tag: the tag's release run builds the
+signed APK, signed debug APK and AAB once, publishes them to the GitHub
+prerelease, uploads the AAB to Play open testing, and waits for the
+`production` environment's approval. Approving that run (Actions > the run >
+Review deployments) promotes the version from open testing to production (an
+upload instead if open testing never had it, as while Play was paused), marks
+the release stable and posts the full notes to the Zulip `releases` channel
+(`scripts/announce-zulip.sh`). A tag whose run is gone is shipped by a manual
+run of the release workflow with target `production`, started from the tag: it takes
+the AAB from the prerelease, no build.
 
-The Mastodon toot is disabled since 2.9.1: the `announce-mastodon` step is
-commented out in `.github/workflows/release.yml`. If it comes back, the toot's body
+The Mastodon toot is disabled since 2.9.1: the release workflow has no `announce-mastodon`
+job. If it comes back, the toot's body
 is the narrative paragraph of `docs/releases/X.Y.Z.md` - the paragraph right
 after `Released YYYY-MM-DD.` - cut to fit 500 characters with the GitHub release and
 Play links. Write that paragraph to read well on its own and front-load it

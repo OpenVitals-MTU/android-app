@@ -103,6 +103,8 @@ fun HealthDatePickerDialog(
     selectedDate: LocalDate,
     onDismiss: () -> Unit,
     onConfirm: (LocalDate) -> Unit,
+    /** The latest day a pick may land on. Null for none, such as a visit still to come. */
+    latestDate: LocalDate? = LocalDate.now(),
 ) {
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = selectedDate.toUtcDateMillis(),
@@ -115,7 +117,7 @@ fun HealthDatePickerDialog(
                 onClick = {
                     val chosenDate = datePickerState.selectedDateMillis
                         ?.let(::utcDateMillisToLocalDate)
-                        ?.coerceAtMost(LocalDate.now())
+                        ?.let { date -> latestDate?.let(date::coerceAtMost) ?: date }
                     if (chosenDate != null) {
                         onConfirm(chosenDate)
                     } else {

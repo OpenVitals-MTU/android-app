@@ -18,13 +18,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.ui.components.OpenVitalsCard
 import tech.mmarca.openvitals.ui.components.PermissionCallout
 import tech.mmarca.openvitals.ui.components.StepBar
+import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
  * The two steps a drip export takes in place of the column mapping: what to
@@ -42,11 +42,11 @@ internal fun DripOptionsStep(
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(Spacing.lg),
         ) {
             item {
                 OpenVitalsCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(Spacing.lg)) {
                         Text(
                             text = stringResource(R.string.settings_csv_import_drip_title),
                             style = MaterialTheme.typography.titleMedium,
@@ -55,15 +55,15 @@ internal fun DripOptionsStep(
                             text = stringResource(R.string.settings_csv_import_drip_body, state.fileName.orEmpty()),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 8.dp),
+                            modifier = Modifier.padding(top = Spacing.sm),
                         )
                     }
                 }
             }
-            item { Spacer(Modifier.height(12.dp)) }
+            item { Spacer(Modifier.height(Spacing.md)) }
             item {
                 OpenVitalsCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)) {
                         DripImportOption.entries.forEach { option ->
                             DripOptionRow(
                                 option = option,
@@ -97,7 +97,7 @@ private fun DripOptionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -133,11 +133,11 @@ internal fun DripConfirmStep(
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(Spacing.lg),
         ) {
             item {
                 OpenVitalsCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(Spacing.lg)) {
                         Text(
                             text = stringResource(R.string.settings_csv_import_confirm_title),
                             style = MaterialTheme.typography.titleMedium,
@@ -150,10 +150,10 @@ internal fun DripConfirmStep(
                                 sample.dataRows.size,
                             ),
                             style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(top = 8.dp),
+                            modifier = Modifier.padding(top = Spacing.sm),
                         )
                         if (range != null) {
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(Spacing.md))
                             Text(
                                 text = stringResource(
                                     R.string.settings_csv_import_confirm_dates,
@@ -164,18 +164,18 @@ internal fun DripConfirmStep(
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(Spacing.sm))
                         DripImportOption.entries.filter { it in drip.enabled }.forEach { option ->
                             Text(
                                 text = dripOptionLabel(option),
                                 style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(bottom = 4.dp),
+                                modifier = Modifier.padding(bottom = Spacing.xs),
                             )
                         }
                     }
                 }
                 if (missing.isNotEmpty()) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(Spacing.md))
                     PermissionCallout(
                         title = stringResource(R.string.settings_csv_import_permission_title),
                         body = stringResource(R.string.settings_csv_import_permission_body),

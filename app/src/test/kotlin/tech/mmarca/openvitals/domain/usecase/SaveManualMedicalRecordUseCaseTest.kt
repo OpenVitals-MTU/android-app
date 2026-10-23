@@ -8,6 +8,7 @@ import tech.mmarca.openvitals.data.repository.contract.FakeMedicalRecordsReposit
 import tech.mmarca.openvitals.domain.medical.ManualFhirWriter
 import tech.mmarca.openvitals.domain.medical.ManualRecordDraft
 import tech.mmarca.openvitals.domain.medical.ManualRecordKind
+import tech.mmarca.openvitals.domain.medical.ManualReference
 import tech.mmarca.openvitals.domain.medical.PatientIdentity
 
 /** Manual entries share one source, and its owner's Patient is written once, with the first entry. */
@@ -43,6 +44,29 @@ class SaveManualMedicalRecordUseCaseTest {
 
         assertThat(repository.sources).hasSize(1)
         assertThat(typesIn(repository.sources.single().id)).containsExactly("Patient", "Immunization", "AllergyIntolerance")
+    }
+
+    @Test
+    fun `a visit with a new doctor writes the doctor with it, and the next visit can pick that doctor`() = runTest {
+        val visit = ManualRecordDraft(
+            ManualRecordKind.VISIT,
+            name = "Check-up",
+            date = today,
+            doctor = ManualReference(ManualReference.Practitioner, "Dr Lee"),
+        )
+
+        save(visit, today, "Entered in OpenVitals", identity = robin)
+
+        val source = repository.sources.single()
+        assertThat(typesIn(source.id)).containsExactly("Patient", "Practitioner", "Encounter")
+        val doctor = save.directory().practitioners.single()
+        assertThat(doctor.display).isEqualTo("Dr Lee")
+        val encounter = repository.records.single { it.ref.resourceType == "Encounter" }
+        assertThat(encounter.json).contains("\"reference\":\"Practitioner/${doctor.id}\"")
+
+        save(visit.copy(name = "Follow-up", doctor = doctor), today, "Entered in OpenVitals")
+
+        assertThat(typesIn(source.id).count { it == "Practitioner" }).isEqualTo(1)
     }
 
     @Test

@@ -1,6 +1,8 @@
 package tech.mmarca.openvitals.features.medical
 
 import android.text.format.Formatter
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -53,8 +55,8 @@ import tech.mmarca.openvitals.ui.theme.LayoutMetrics
 import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
- * The records home. The first time it opens, it asks for all thirteen medical
- * permissions in one request, and never again by itself. After that, its callout is
+ * The records home. The first time it opens, it shows the beta notice, then asks for all
+ * thirteen medical permissions in one request, and never again by itself. After that, its callout is
  * the one way to ask for what is still missing, or to reach Health Connect's settings.
  */
 @Composable
@@ -70,6 +72,9 @@ fun MedicalRecordsHomeScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var choosingKind by rememberSaveable { mutableStateOf(false) }
     MedicalExportDialog(exportViewModel)
+    if (!state.betaNoticeSeen) {
+        MedicalBetaNotice(onDismiss = viewModel::onBetaNoticeDismissed)
+    }
     if (state.available) {
         DeclareAppBar(
             remember { ScreenAppBar(actions = listOf(AppBarAction(Icons.Outlined.Add, R.string.medical_entry_add_action) { choosingKind = true })) },
@@ -77,6 +82,7 @@ fun MedicalRecordsHomeScreen(
     }
     if (choosingKind) {
         AddRecordChooser(
+            kinds = ManualRecordKind.entries.filter { it.canAdd },
             onChoose = { kind ->
                 choosingKind = false
                 onAddRecord(kind)
@@ -90,8 +96,9 @@ fun MedicalRecordsHomeScreen(
         val grantAccess = LocalHealthConnectGrantAccess.current
         val context = LocalContext.current
         val access = rememberMedicalAccessAction(hcUx.missingReadPermissions, state.firstRequestDone)
-        LaunchedEffect(hcUx.isLoading, hcUx.grantedPermissions) {
-            if (hcUx.isLoading) return@LaunchedEffect
+        LaunchedEffect(hcUx.isLoading, hcUx.grantedPermissions, state.betaNoticeSeen) {
+            // The beta notice is read first; the permission request follows its dismissal.
+            if (hcUx.isLoading || !state.betaNoticeSeen) return@LaunchedEffect
             val firstVisit = !state.firstRequestDone && hcUx.availability == HealthConnectAvailability.AVAILABLE
             if (firstVisit && hcUx.missingReadPermissions.isNotEmpty() && grantAccess != null) {
                 viewModel.onFirstRequestLaunched()
@@ -133,15 +140,15 @@ internal class MedicalHomeActions(
     val onOpenSettings: () -> Unit = {},
 )
 
-/** The four kinds a person can type in. Each opens its own form. */
+/** The [kinds] a person can type in here. Each opens its own form. */
 @Composable
-private fun AddRecordChooser(onChoose: (ManualRecordKind) -> Unit, onDismiss: () -> Unit) {
+internal fun AddRecordChooser(kinds: List<ManualRecordKind>, onChoose: (ManualRecordKind) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.medical_entry_add_action)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                ManualRecordKind.entries.forEach { kind ->
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.verticalScroll(rememberScrollState())) {
+                kinds.forEach { kind ->
                     OpenVitalsListRow(
                         title = stringResource(entryTitleRes(kind, edit = false)),
                         icon = kind.category.icon,

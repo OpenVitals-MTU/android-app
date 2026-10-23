@@ -1,5 +1,187 @@
 # Changelog
 
+## 2.15.0 - 2026-10-23
+
+### English
+
+- **One form for a body analysis scale.** The Weight and Body fat tiles in Add entry are now one Body composition tile: weight, body fat, lean mass, body water, bone mass and BMR, saved together with the same time. Body water can be typed as a percentage of the weight on the same form. Each value can still be edited or deleted alone from the Body screens.
+- **Blood glucose and VO2 max entry.** New Add entry tiles. Blood glucose is typed in mmol/L or mg/dL with its relation to a meal and the sample; VO2 max with how it was measured. Both can be edited and deleted from their detail screens. If you rearranged your tiles, add them from the grid's edit mode.
+- **Every kind of medical record can be typed in:** visits, procedures, lab results, prescriptions, vital signs, social history, pregnancy, doctors and their roles, clinics, places and your personal details, beside vaccines, allergies, medications and conditions. Doctors, clinics, labs and places already entered are offered as you type.
+- **Medical records are a beta.** A one-time notice on the first open says the area is still under development, and asks you to use it with care and review the data you import.
+- **Cadence and walking calories from a Wear OS watch.** Each synced minute of steps is also written as a cadence and, once your weight is known, as an estimate of walking calories. Minutes inside a recorded workout get none. Contributed by Ludwig Ettner.
+- **Fixes:** the medical records import counts each observation where Health Connect files it, a body weight under vital signs, and holds back one Health Connect would refuse; the sleep home-screen widget shows the time asleep, as the dashboard card does; a lab flag sent as a bare H, L, N or A reads as a word.
+
+### Espanol
+
+- **Un formulario para una bascula de composicion corporal.** Los mosaicos Peso y Grasa corporal de Anadir entrada son ahora uno solo, Composicion corporal: peso, grasa corporal, masa magra, agua corporal, masa osea y TMB, guardados juntos con la misma hora. El agua corporal se puede escribir como porcentaje del peso del mismo formulario. Cada valor se puede seguir editando o borrando por separado desde las pantallas de Cuerpo.
+- **Registro de glucosa en sangre y VO2 max.** Nuevos mosaicos en Anadir entrada. La glucosa se escribe en mmol/L o mg/dL con su relacion con la comida y la muestra; el VO2 max, con como se midio. Ambos se pueden editar y borrar desde sus pantallas de detalle. Si reordenaste tus mosaicos, anadelos desde el modo de edicion de la cuadricula.
+- **Todo tipo de registro medico se puede escribir a mano:** visitas, procedimientos, resultados de laboratorio, recetas, constantes vitales, historia social, embarazo, medicos y sus funciones, clinicas, lugares y tus datos personales, ademas de vacunas, alergias, medicamentos y afecciones. Los medicos, clinicas, laboratorios y lugares ya introducidos se ofrecen al escribir.
+- **El historial medico esta en beta.** Un aviso, solo la primera vez, dice que la seccion sigue en desarrollo y pide usarla con cuidado y revisar los datos importados.
+- **Cadencia y calorias al caminar desde un reloj Wear OS.** Cada minuto de pasos sincronizado se escribe tambien como cadencia y, cuando se conoce tu peso, como estimacion de las calorias al caminar. Los minutos dentro de un entrenamiento registrado no reciben ninguna. Contribucion de Ludwig Ettner.
+- **Correcciones:** la importacion de registros medicos cuenta cada observacion donde la archiva Health Connect, un peso corporal en constantes vitales, y retiene la que Health Connect rechazaria; el widget de sueno de la pantalla de inicio muestra el tiempo dormido, como la tarjeta del panel; un indicador de laboratorio enviado como H, L, N o A se lee como palabra.
+
+### Deutsch
+
+- **Ein Formular fuer eine Koerperanalysewaage.** Die Kacheln Gewicht und Koerperfett unter Eintrag hinzufuegen sind jetzt eine Kachel Koerperzusammensetzung: Gewicht, Koerperfett, Magermasse, Koerperwasser, Knochenmasse und Grundumsatz, zusammen mit derselben Uhrzeit gespeichert. Koerperwasser laesst sich als Prozent des Gewichts im selben Formular eingeben. Jeder Wert laesst sich weiterhin einzeln in den Koerper-Bildschirmen bearbeiten oder loeschen.
+- **Blutzucker und VO2max eintragen.** Neue Kacheln unter Eintrag hinzufuegen. Blutzucker wird in mmol/L oder mg/dL mit dem Bezug zur Mahlzeit und der Probe eingetragen, VO2max mit der Messmethode. Beide lassen sich in ihren Detailansichten bearbeiten und loeschen. Wer seine Kacheln umsortiert hat, fuegt sie im Bearbeitungsmodus des Rasters hinzu.
+- **Jede Art medizinischer Unterlagen laesst sich eintippen:** Besuche, Eingriffe, Laborwerte, Verschreibungen, Vitalwerte, Sozialanamnese, Schwangerschaft, Aerzte und ihre Rollen, Kliniken, Orte und deine persoenlichen Angaben, neben Impfungen, Allergien, Medikamenten und Erkrankungen. Bereits eingetragene Aerzte, Kliniken, Labore und Orte werden beim Tippen angeboten.
+- **Medizinische Unterlagen sind eine Beta.** Ein einmaliger Hinweis beim ersten Oeffnen sagt, dass der Bereich noch in Entwicklung ist, und bittet, ihn mit Bedacht zu nutzen und importierte Daten zu pruefen.
+- **Kadenz und Gehkalorien von einer Wear-OS-Uhr.** Jede synchronisierte Schrittminute wird auch als Kadenz geschrieben und, sobald dein Gewicht bekannt ist, als Schaetzung der Gehkalorien. Minuten in einem aufgezeichneten Training bekommen keine. Beigetragen von Ludwig Ettner.
+- **Korrekturen:** der Import medizinischer Unterlagen zaehlt jede Beobachtung dort, wo Health Connect sie ablegt, ein Koerpergewicht unter Vitalwerten, und haelt eine zurueck, die Health Connect ablehnen wuerde; das Schlaf-Widget auf dem Startbildschirm zeigt die Schlafzeit wie die Dashboard-Karte; ein Laborkennzeichen, das als blosses H, L, N oder A kommt, erscheint als Wort.
+
+### Italiano
+
+- **Un modulo per una bilancia impedenziometrica.** I riquadri Peso e Grasso corporeo di Aggiungi voce sono ora un solo riquadro Composizione corporea: peso, grasso corporeo, massa magra, acqua corporea, massa ossea e metabolismo basale, salvati insieme con lo stesso orario. L'acqua corporea si puo inserire come percentuale del peso dello stesso modulo. Ogni valore si puo ancora modificare o eliminare da solo dalle schermate Corpo.
+- **Glucosio nel sangue e VO2 max.** Nuovi riquadri in Aggiungi voce. Il glucosio nel sangue si inserisce in mmol/L o mg/dL con il rapporto col pasto e il campione; il VO2 max con il metodo di misura. Entrambi si possono modificare ed eliminare dalle loro schermate di dettaglio. Se hai riordinato i riquadri, aggiungili dalla modalita di modifica della griglia.
+- **Ogni tipo di cartella clinica si puo inserire a mano:** visite, procedure, esami di laboratorio, prescrizioni, parametri vitali, anamnesi sociale, gravidanza, medici e i loro ruoli, cliniche, luoghi e i tuoi dati personali, accanto a vaccini, allergie, farmaci e patologie. Medici, cliniche, laboratori e luoghi gia inseriti vengono proposti mentre scrivi.
+- **La cartella clinica e in beta.** Un avviso, solo alla prima apertura, dice che la sezione e ancora in sviluppo e chiede di usarla con attenzione e di controllare i dati importati.
+- **Cadenza e calorie della camminata da un orologio Wear OS.** Ogni minuto di passi sincronizzato viene scritto anche come cadenza e, quando il tuo peso e noto, come stima delle calorie della camminata. I minuti dentro un allenamento registrato non ne ricevono. Contributo di Ludwig Ettner.
+- **Correzioni:** l'importazione della cartella clinica conta ogni osservazione dove la archivia Health Connect, un peso corporeo nei parametri vitali, e trattiene quella che Health Connect rifiuterebbe; il widget del sonno nella schermata Home mostra il tempo di sonno, come la scheda della dashboard; un indicatore di laboratorio inviato come H, L, N o A si legge come parola.
+
+### Eesti
+
+- **Uks vorm kehakoostise kaalule.** Lisa kirje ruudud Kaal ja Keharasv on nuud uks ruut Keha koostis: kaal, keharasv, rasvavaba mass, kehavesi, luumass ja baasainevahetus, salvestatud koos sama ajaga. Kehavee saab sisestada protsendina samal vormil olevast kaalust. Iga vaartust saab endiselt eraldi muuta voi kustutada Keha ekraanidelt.
+- **Veresuhkru ja VO2 max sisestamine.** Lisa kirje all on uued ruudud. Veresuhkur sisestatakse mmol/L voi mg/dL uhikutes koos seosega toidukorraga ja proovi liigiga, VO2 max koos mootmisviisiga. Molemaid saab muuta ja kustutada nende detailvaatest. Kui oled ruute umber jarjestanud, lisa need ruudustiku muutmisreziimis.
+- **Iga liiki meditsiinilisi andmeid saab kasitsi sisestada:** visiidid, protseduurid, laboritulemused, retseptid, elulised naitajad, sotsiaalne anamnees, rasedus, arstid ja nende rollid, kliinikud, kohad ja sinu isikuandmed, lisaks vaktsiinidele, allergiatele, ravimitele ja haigusseisunditele. Juba sisestatud arste, kliinikuid, laboreid ja kohti pakutakse kirjutamise ajal.
+- **Meditsiinilised andmed on beetaversioonis.** Uhekordne teade esimesel avamisel utleb, et osa on alles arendamisel, ning palub seda ettevaatlikult kasutada ja imporditud andmeid kontrollida.
+- **Kadents ja konnikalorid Wear OS kellast.** Iga sunkroonitud sammuminut kirjutatakse ka kadentsina ja, kui sinu kaal on teada, konnikalorite hinnanguna. Salvestatud treeningu sees olevad minutid hinnangut ei saa. Panustas Ludwig Ettner.
+- **Parandused:** meditsiiniliste andmete import loeb iga vaatluse sinna, kuhu Health Connect selle paigutab, kehakaalu eluliste naitajate alla, ja jatab korvale selle, mille Health Connect tagasi lukkaks; avakuva une vidin naitab magatud aega nagu toolaua kaart; laborimarge, mis tuleb lihtsalt H, L, N voi A kujul, kuvatakse sonana.
+
+### Portugues
+
+- **Um formulario para uma balanca de composicao corporal.** Os mosaicos Peso e Gordura corporal em Adicionar registo sao agora um so, Composicao corporal: peso, gordura corporal, massa magra, agua corporal, massa ossea e TMB, guardados juntos com a mesma hora. A agua corporal pode ser introduzida como percentagem do peso do mesmo formulario. Cada valor pode continuar a ser editado ou apagado sozinho nos ecras do Corpo.
+- **Registo de glicemia e VO2 max.** Novos mosaicos em Adicionar registo. A glicemia e introduzida em mmol/L ou mg/dL com a relacao com a refeicao e a amostra; o VO2 max, com o modo como foi medido. Ambos podem ser editados e apagados nos seus ecras de detalhe. Se reordenou os mosaicos, adicione-os no modo de edicao da grelha.
+- **Todo o tipo de registo medico pode ser introduzido a mao:** consultas, procedimentos, resultados de analises, receitas, sinais vitais, historia social, gravidez, medicos e as suas funcoes, clinicas, locais e os seus dados pessoais, alem de vacinas, alergias, medicamentos e condicoes. Medicos, clinicas, laboratorios e locais ja introduzidos sao sugeridos enquanto escreve.
+- **Os registos medicos estao em beta.** Um aviso, so na primeira abertura, diz que a area ainda esta em desenvolvimento e pede que a use com cuidado e reveja os dados importados.
+- **Cadencia e calorias da caminhada de um relogio Wear OS.** Cada minuto de passos sincronizado e tambem escrito como cadencia e, quando o seu peso e conhecido, como estimativa das calorias da caminhada. Os minutos dentro de um treino registado nao recebem nenhuma. Contribuicao de Ludwig Ettner.
+- **Correcoes:** a importacao de registos medicos conta cada observacao onde o Health Connect a arquiva, um peso corporal nos sinais vitais, e retem a que o Health Connect recusaria; o widget de sono do ecra inicial mostra o tempo a dormir, como o cartao do painel; um indicador de analises enviado como H, L, N ou A le-se como palavra.
+
+## 2.14.5 - 2026-10-18
+
+### English
+
+- **An Apple Health import that stopped on one value.** A single sample Health Connect cannot store, such as a day's basal metabolic rate logged by an app as a one-hour sample (more than 35,000 kcal a day), stopped the whole import with an error. Such a sample is now counted as failed, with the reason in the import report, and the import carries on. The same goes for any other measurement or logged meal outside what Health Connect accepts, and for a systolic blood pressure above 200 mmHg. Importing the same file again with the same categories picks up where the import stopped.
+
+### Espanol
+
+- **Una importacion de Apple Health que se detenia por un solo valor.** Una sola muestra que Health Connect no puede guardar, como la tasa metabolica basal de un dia entero registrada por una app como una muestra de una hora (mas de 35.000 kcal al dia), detenia toda la importacion con un error. Esa muestra cuenta ahora como fallida, con el motivo en el informe de importacion, y la importacion continua. Lo mismo vale para cualquier otra medicion o comida registrada fuera de lo que acepta Health Connect, y para una presion sistolica por encima de 200 mmHg. Importar de nuevo el mismo archivo con las mismas categorias sigue donde se detuvo la importacion.
+
+### Deutsch
+
+- **Ein Apple-Health-Import, der an einem einzigen Wert abbrach.** Ein einziger Messwert, den Health Connect nicht speichern kann, etwa die basalmetabole Rate eines ganzen Tages, von einer App als einstuendiger Messwert eingetragen (ueber 35.000 kcal pro Tag), brach den ganzen Import mit einem Fehler ab. Ein solcher Messwert zaehlt jetzt als fehlgeschlagen, mit dem Grund im Importbericht, und der Import laeuft weiter. Das gilt auch fuer jede andere Messung oder eingetragene Mahlzeit ausserhalb dessen, was Health Connect annimmt, und fuer einen systolischen Blutdruck ueber 200 mmHg. Wird dieselbe Datei mit denselben Kategorien erneut importiert, setzt der Import dort fort, wo er stehen blieb.
+
+### Italiano
+
+- **Un'importazione da Apple Health che si fermava per un solo valore.** Un solo campione che Health Connect non puo salvare, come il metabolismo basale di un giorno intero registrato da un'app come un campione di un'ora (oltre 35.000 kcal al giorno), fermava l'intera importazione con un errore. Ora quel campione conta come non riuscito, con il motivo nel report di importazione, e l'importazione prosegue. Lo stesso vale per ogni altra misurazione o pasto registrato fuori da quanto accetta Health Connect, e per una pressione sistolica sopra 200 mmHg. Importare di nuovo lo stesso file con le stesse categorie riprende da dove l'importazione si era fermata.
+
+### Eesti
+
+- **Apple Healthi import, mis peatus uhe vaartuse tottu.** Uks naidis, mida Health Connect salvestada ei saa, naiteks terve paeva baasainevahetuse kiirus, mille moni rakendus on kirja pannud uhe tunni naidisena (ule 35 000 kcal paevas), peatas kogu impordi veaga. Selline naidis loetakse nuud ebaonnestunuks, pohjusega impordiaruandes, ja import jatkub. Sama kehtib iga muu mootmise voi kirja pandud toidukorra kohta, mida Health Connect ei aktsepteeri, ning sustoolse vererohu kohta ule 200 mmHg. Sama faili uuesti importimine samade kategooriatega jatkab sealt, kus import peatus.
+
+### Portugues
+
+- **Uma importacao do Apple Health que parava por um so valor.** Uma unica amostra que o Health Connect nao consegue guardar, como a taxa metabolica basal de um dia inteiro registada por uma app como uma amostra de uma hora (mais de 35 000 kcal por dia), parava toda a importacao com um erro. Essa amostra conta agora como falhada, com o motivo no relatorio de importacao, e a importacao continua. O mesmo vale para qualquer outra medicao ou refeicao registada fora do que o Health Connect aceita, e para uma pressao sistolica acima de 200 mmHg. Importar de novo o mesmo ficheiro com as mesmas categorias retoma onde a importacao parou.
+
+## 2.14.4 - 2026-10-18
+
+### English
+
+- **A FIT file with the GPS route.** A workout with a route can be saved or shared as a FIT that carries the route, the altitude and the distance covered beside heart rate, speed and cadence. The Export workout card groups its formats under "With the GPS route" (GPX, KMZ, FIT) and "Without the GPS route" (TCX, CSV, FIT).
+- **Speed and cadence in the FIT and TCX exports.** The workout export held heart rate and the session totals only, so a ride opened in a FIT viewer showed a heart-rate line and nothing else. FIT and TCX now carry the speed and cadence the workout screen shows, and every FIT marks where the timer starts and stops and the local time of the workout.
+- **Imported routes keep every point.** Route files and Garmin watch activities with more than 2,000 GPS points were cut to 2,000; the map, splits and route analysis now use every point. A route too large for one Health Connect record is still thinned until it fits.
+
+### Espanol
+
+- **Un FIT con la ruta GPS.** Un entrenamiento con ruta se puede guardar o compartir como un FIT que lleva la ruta, la altitud y la distancia recorrida junto con la frecuencia cardiaca, la velocidad y la cadencia. La tarjeta Exportar entrenamiento agrupa sus formatos en "Con la ruta GPS" (GPX, KMZ, FIT) y "Sin la ruta GPS" (TCX, CSV, FIT).
+- **Velocidad y cadencia en las exportaciones FIT y TCX.** La exportacion del entrenamiento solo llevaba la frecuencia cardiaca y los totales de la sesion, asi que una salida en bici abierta en un visor FIT mostraba una linea de pulso y nada mas. FIT y TCX llevan ahora la velocidad y la cadencia que muestra la pantalla del entrenamiento, y cada FIT marca el inicio y el final del cronometro y la hora local del entrenamiento.
+- **Las rutas importadas conservan todos los puntos.** Los archivos de ruta y las actividades de relojes Garmin con mas de 2.000 puntos GPS se recortaban a 2.000; el mapa, los tramos y el analisis de ruta usan ahora todos los puntos. Una ruta demasiado grande para un registro de Health Connect se sigue reduciendo hasta que cabe.
+
+### Deutsch
+
+- **Eine FIT-Datei mit der GPS-Route.** Ein Workout mit Route laesst sich als FIT speichern oder teilen, die Route, Hoehe und zurueckgelegte Strecke neben Herzfrequenz, Geschwindigkeit und Kadenz enthaelt. Die Karte Workout exportieren gruppiert ihre Formate unter "Mit GPS-Route" (GPX, KMZ, FIT) und "Ohne GPS-Route" (TCX, CSV, FIT).
+- **Geschwindigkeit und Kadenz im FIT- und TCX-Export.** Der Workout-Export enthielt nur die Herzfrequenz und die Summen der Einheit, daher zeigte eine Fahrt in einem FIT-Betrachter nur eine Pulskurve. FIT und TCX enthalten jetzt die Geschwindigkeit und Kadenz, die der Workout-Bildschirm zeigt, und jede FIT-Datei markiert Start und Stopp des Timers und die Ortszeit des Workouts.
+- **Importierte Routen behalten jeden Punkt.** Routendateien und Garmin-Uhr-Aktivitaeten mit mehr als 2.000 GPS-Punkten wurden auf 2.000 gekuerzt; Karte, Abschnitte und Routenanalyse nutzen jetzt jeden Punkt. Eine Route, die fuer einen Health-Connect-Eintrag zu gross ist, wird weiterhin ausgeduennt, bis sie passt.
+
+### Italiano
+
+- **Un file FIT con il percorso GPS.** Un allenamento con percorso si puo salvare o condividere come FIT che contiene il percorso, l'altitudine e la distanza percorsa accanto a frequenza cardiaca, velocita e cadenza. La scheda Esporta allenamento raggruppa i formati sotto "Con il percorso GPS" (GPX, KMZ, FIT) e "Senza il percorso GPS" (TCX, CSV, FIT).
+- **Velocita e cadenza nelle esportazioni FIT e TCX.** L'esportazione dell'allenamento conteneva solo la frequenza cardiaca e i totali della sessione, quindi un giro aperto in un visualizzatore FIT mostrava solo una linea del battito. FIT e TCX contengono ora la velocita e la cadenza mostrate dalla schermata dell'allenamento, e ogni FIT segna l'avvio e l'arresto del timer e l'ora locale dell'allenamento.
+- **I percorsi importati conservano ogni punto.** I file di percorso e le attivita degli orologi Garmin con piu di 2.000 punti GPS venivano ridotti a 2.000; mappa, suddivisioni e analisi percorso usano ora ogni punto. Un percorso troppo grande per un record di Health Connect viene ancora sfoltito finche ci sta.
+
+### Eesti
+
+- **FIT-fail koos GPS-marsruudiga.** Marsruudiga treeningu saab salvestada voi jagada FIT-failina, milles on marsruut, korgus ja labitud vahemaa koos pulsi, kiiruse ja kadentsiga. Kaart Ekspordi treening ruhmitab vormingud pealkirjade "GPS-marsruudiga" (GPX, KMZ, FIT) ja "Ilma GPS-marsruudita" (TCX, CSV, FIT) alla.
+- **Kiirus ja kadents FIT- ja TCX-ekspordis.** Treeningu eksport sisaldas ainult pulssi ja seansi kokkuvotteid, nii et FIT-vaaturis avatud soit naitas vaid pulsijoont. FIT ja TCX sisaldavad nuud kiirust ja kadentsi, mida treeningu ekraan naitab, ning iga FIT margib taimeri alguse ja lopu ning treeningu kohaliku aja.
+- **Imporditud marsruudid sailitavad iga punkti.** Marsruudifailid ja Garmini kella tegevused, milles oli ule 2000 GPS-punkti, loigati 2000 punktini; kaart, loigud ja marsruudi analuus kasutavad nuud iga punkti. Liiga suurt marsruuti, mis uhte Health Connecti kirjesse ei mahu, harvendatakse endiselt, kuni see mahub.
+
+### Portugues
+
+- **Um FIT com a rota GPS.** Um treino com rota pode ser guardado ou partilhado como um FIT que leva a rota, a altitude e a distancia percorrida junto com a frequencia cardiaca, a velocidade e a cadencia. O cartao Exportar treino agrupa os formatos em "Com a rota GPS" (GPX, KMZ, FIT) e "Sem a rota GPS" (TCX, CSV, FIT).
+- **Velocidade e cadencia nas exportacoes FIT e TCX.** A exportacao do treino so levava a frequencia cardiaca e os totais da sessao, por isso um passeio aberto num visualizador FIT mostrava apenas uma linha de pulsacao. FIT e TCX levam agora a velocidade e a cadencia que o ecra do treino mostra, e cada FIT marca o inicio e a paragem do cronometro e a hora local do treino.
+- **As rotas importadas mantem todos os pontos.** Os ficheiros de rota e as atividades de relogios Garmin com mais de 2000 pontos GPS eram cortados para 2000; o mapa, os parciais e a analise da rota usam agora todos os pontos. Uma rota demasiado grande para um registo do Health Connect continua a ser reduzida ate caber.
+
+## 2.14.3 - 2026-10-17
+
+### English
+
+- **Lab results in the older FHIR format.** LabCorp still serves FHIR DSTU2, and CommonHealth passes it on unchanged, so the records of a plain FHIR file went to Health Connect as R4 and were refused. The importer now recognises a DSTU2 record by its shape and converts it, encounters, locations and the family names in every name included.
+- **Results inside a diagnostic report.** Health Connect stores a report's results, not the report, and a report used to be left out with the results it contained. Every contained result is now imported as a record of its own, taking the report's patient, visit, time, performer and laboratory category where it has none. A file of reports whose results are elsewhere says to import the Observation files instead.
+- **Every exercise type on the activity form.** The form lists every Health Connect session type instead of 22, each with the fields that fit it: GPS and distance, a distance without a route, or time with an optional heart rate strap. A FIT file's yoga, pilates, swimming, racket and ball sports, climbing, dancing and more import as themselves instead of "Other workout".
+- **The whole cycle history.** The cycle screen stopped at about nineteen cycles, the last eighteen months. It now reads the whole recorded history; the history card shows the newest twelve cycles and Load 10 more reveals older ones.
+- **CSV import results as three tallies.** The result card keeps the rows of the file (read, imported, rejected, nothing to import), the Health Connect records written and replaced, and a drip export's journal days apart, instead of one sentence that never added up. A drip observation marked excluded is listed as "Excluded in the source app", and every row is accounted for.
+- **Where the maximum heart rate comes from.** The cardio load explanation gives Banister's weighting for men and women and the source of the maximum heart rate, with Tanaka's and Gulati's papers linked there and from Body Energy. With an age on the profile and no measured maximum high enough to count, the estimate is now the age formula alone. Contributed by Ludwig Ettner.
+- **Fixes:** a drip note with quotes in it reads as typed; the last English words in the German, French, Italian and Polish translations are translated.
+
+### Espanol
+
+- **Resultados de laboratorio en el formato FHIR antiguo.** LabCorp sigue sirviendo FHIR DSTU2, y CommonHealth lo pasa sin cambios, asi que los registros de un archivo FHIR simple llegaban a Health Connect como R4 y eran rechazados. El importador reconoce ahora un registro DSTU2 por su forma y lo convierte, con encuentros, ubicaciones y los apellidos de cada nombre.
+- **Resultados dentro de un informe diagnostico.** Health Connect guarda los resultados de un informe, no el informe, y un informe se quedaba fuera junto con los resultados que contenia. Cada resultado contenido se importa ahora como registro propio, y toma del informe el paciente, la visita, la hora, el responsable y la categoria de laboratorio cuando no los tiene. Un archivo de informes cuyos resultados estan en otra parte indica que hay que importar los archivos Observation.
+- **Todos los tipos de ejercicio en el formulario de actividad.** El formulario ofrece todos los tipos de sesion de Health Connect en lugar de 22, cada uno con los campos que le corresponden: GPS y distancia, distancia sin ruta, o tiempo con una banda de frecuencia cardiaca opcional. Yoga, pilates, natacion, deportes de raqueta y de pelota, escalada, baile y mas, en un archivo FIT, se importan como tales en lugar de "Otra actividad".
+- **Todo el historial del ciclo.** La pantalla del ciclo se detenia en unos diecinueve ciclos, los ultimos dieciocho meses. Ahora lee todo el historial registrado; la tarjeta del historial muestra los doce ciclos mas recientes y Cargar 10 mas muestra los anteriores.
+- **Resultados de la importacion CSV en tres recuentos.** La tarjeta de resultado separa las filas del archivo (leidas, importadas, rechazadas, nada que importar), los registros de Health Connect escritos y sustituidos, y los dias del diario de una exportacion de drip, en lugar de una frase que nunca cuadraba. Una observacion marcada como excluida en drip aparece como "Excluido en la app de origen", y cada fila queda contabilizada.
+- **De donde sale la frecuencia cardiaca maxima.** La explicacion de la carga cardiovascular da la ponderacion de Banister para hombres y mujeres y el origen de la frecuencia cardiaca maxima, con los articulos de Tanaka y Gulati enlazados ahi y desde Energia corporal. Con una edad en el perfil y sin un maximo medido lo bastante alto, la estimacion es ahora solo la formula por edad. Contribucion de Ludwig Ettner.
+- **Correcciones:** una nota de drip con comillas se lee tal como se escribio; las ultimas palabras en ingles de las traducciones alemana, francesa, italiana y polaca estan traducidas.
+
+### Deutsch
+
+- **Laborwerte im aelteren FHIR-Format.** LabCorp liefert noch FHIR DSTU2, und CommonHealth reicht es unveraendert weiter, daher gingen die Eintraege einer einfachen FHIR-Datei als R4 an Health Connect und wurden abgelehnt. Der Import erkennt einen DSTU2-Eintrag jetzt an seiner Form und wandelt ihn um, samt Begegnungen, Orten und den Familiennamen in jedem Namen.
+- **Ergebnisse in einem Befundbericht.** Health Connect speichert die Ergebnisse eines Berichts, nicht den Bericht, und ein Bericht blieb samt den enthaltenen Ergebnissen aussen vor. Jedes enthaltene Ergebnis wird jetzt als eigener Eintrag importiert und uebernimmt Patient, Besuch, Zeit, Ausfuehrende und Laborkategorie des Berichts, wo es keine hat. Eine Datei mit Berichten, deren Ergebnisse woanders liegen, sagt, dass die Observation-Dateien zu importieren sind.
+- **Jede Trainingsart im Aktivitaetsformular.** Das Formular bietet jede Health-Connect-Sitzungsart statt 22, jede mit den passenden Feldern: GPS und Strecke, eine Strecke ohne Route, oder Zeit mit optionalem Herzfrequenzgurt. Yoga, Pilates, Schwimmen, Schlaeger- und Ballsportarten, Klettern, Tanzen und mehr aus einer FIT-Datei werden als solche importiert statt als "Anderes Training".
+- **Die ganze Zyklusgeschichte.** Der Zyklusbildschirm endete bei etwa neunzehn Zyklen, den letzten achtzehn Monaten. Er liest jetzt die ganze aufgezeichnete Geschichte; die Verlaufskarte zeigt die neuesten zwoelf Zyklen, und 10 weitere laden zeigt aeltere.
+- **CSV-Importergebnis in drei Zaehlungen.** Die Ergebniskarte haelt die Zeilen der Datei (gelesen, importiert, abgelehnt, nichts zu importieren), die geschriebenen und ersetzten Health-Connect-Datensaetze und die Journaltage eines drip-Exports auseinander, statt eines Satzes, der nie aufging. Eine in drip ausgeschlossene Beobachtung steht als "In der Quell-App ausgeschlossen" da, und jede Zeile ist erfasst.
+- **Woher die maximale Herzfrequenz kommt.** Die Erklaerung der Cardio-Belastung nennt Banisters Gewichtung fuer Maenner und Frauen und die Quelle der maximalen Herzfrequenz, mit Tanakas und Gulatis Studien dort und bei Koerperenergie verlinkt. Mit einem Alter im Profil und ohne ausreichend hohes gemessenes Maximum ist die Schaetzung jetzt allein die Altersformel. Beigetragen von Ludwig Ettner.
+- **Korrekturen:** eine drip-Notiz mit Anfuehrungszeichen liest sich wie getippt; die letzten englischen Woerter in der deutschen, franzoesischen, italienischen und polnischen Uebersetzung sind uebersetzt.
+
+### Italiano
+
+- **Esami di laboratorio nel vecchio formato FHIR.** LabCorp fornisce ancora FHIR DSTU2, e CommonHealth lo passa invariato, quindi i record di un semplice file FHIR arrivavano a Health Connect come R4 e venivano rifiutati. L'importatore ora riconosce un record DSTU2 dalla sua forma e lo converte, con incontri, luoghi e i cognomi di ogni nome.
+- **Risultati dentro un referto diagnostico.** Health Connect conserva i risultati di un referto, non il referto, e un referto restava fuori insieme ai risultati che conteneva. Ogni risultato contenuto viene ora importato come record a se, e prende dal referto paziente, visita, ora, esecutore e categoria di laboratorio quando non li ha. Un file di referti i cui risultati stanno altrove dice di importare invece i file Observation.
+- **Ogni tipo di esercizio nel modulo attivita.** Il modulo elenca ogni tipo di sessione di Health Connect invece di 22, ognuno con i campi adatti: GPS e distanza, una distanza senza percorso, o il tempo con una fascia cardio facoltativa. Yoga, pilates, nuoto, sport con racchetta e con la palla, arrampicata, danza e altro, da un file FIT, si importano come tali invece che come "Altro allenamento".
+- **Tutta la cronologia del ciclo.** La schermata del ciclo si fermava a circa diciannove cicli, gli ultimi diciotto mesi. Ora legge tutta la cronologia registrata; la scheda della cronologia mostra i dodici cicli piu recenti e Carica altri 10 mostra quelli precedenti.
+- **Risultati dell'importazione CSV in tre conteggi.** La scheda del risultato tiene separate le righe del file (lette, importate, rifiutate, niente da importare), i record di Health Connect scritti e sostituiti, e i giorni del diario di un'esportazione drip, invece di una frase che non tornava mai. Un'osservazione esclusa in drip compare come "Escluso nell'app di origine", e ogni riga e conteggiata.
+- **Da dove viene la frequenza cardiaca massima.** La spiegazione del carico cardio riporta la ponderazione di Banister per uomini e donne e l'origine della frequenza cardiaca massima, con gli studi di Tanaka e Gulati collegati li e da Energia corporea. Con un'eta nel profilo e senza un massimo misurato abbastanza alto, la stima e ora la sola formula per eta. Contributo di Ludwig Ettner.
+- **Correzioni:** una nota di drip con virgolette si legge come scritta; le ultime parole in inglese nelle traduzioni tedesca, francese, italiana e polacca sono tradotte.
+
+### Eesti
+
+- **Laboritulemused vanemas FHIR-vormingus.** LabCorp pakub endiselt FHIR DSTU2 vormingut ja CommonHealth annab selle muutmata edasi, seega laksid lihtsa FHIR-faili kirjed Health Connecti R4-na ja lukati tagasi. Importija tunneb DSTU2 kirje nuud kuju jargi ara ja teisendab selle, koos kohtumiste, asukohtade ja iga nime perekonnanimedega.
+- **Diagnostilise aruande tulemused.** Health Connect salvestab aruande tulemused, mitte aruannet, ja aruanne jai varem valja koos tulemustega, mida see sisaldas. Iga sisalduv tulemus imporditakse nuud eraldi kirjena ning see votab aruandelt patsiendi, visiidi, aja, teostaja ja labori kategooria, kui tal neid pole. Fail aruannetega, mille tulemused on mujal, utleb, et importida tuleb Observation-failid.
+- **Iga treeningutuup treeningu vormil.** Vorm pakub 22 asemel koiki Health Connecti seansituupe, igauhel sobivad valjad: GPS ja vahemaa, vahemaa ilma marsruudita voi aeg valikulise pulsivooga. FIT-faili jooga, pilates, ujumine, reketi- ja pallispordialad, ronimine, tants ja muu imporditakse oma nimega, mitte kui "Muu treening".
+- **Kogu tsukli ajalugu.** Tsukli ekraan peatus umbes uheksateistkumne tsukli juures, viimased kaheksateist kuud. Nuud loeb see kogu salvestatud ajaloo; ajaloo kaart naitab uusimat kaheteistkummet tsuklit ja Laadi 10 lisaks naitab vanemaid.
+- **CSV-impordi tulemus kolme loendusena.** Tulemuse kaart hoiab lahus faili read (loetud, imporditud, tagasi lukatud, midagi importida pole), kirjutatud ja asendatud Health Connecti kirjed ning drip-ekspordi paeviku paevad, mitte uhte lauset, mis kunagi kokku ei klappinud. Drip-is valja jaetud vaatlus on loetletud kui "Lahteapis valja jaetud" ja iga rida on arvesse voetud.
+- **Kust tuleb maksimaalne pulss.** Kardiokoormuse selgitus annab Banisteri kaalud meestele ja naistele ning maksimaalse pulsi allika, Tanaka ja Gulati uuringud on lingitud seal ja Kehaenergia juures. Kui profiilis on vanus ja moodetud maksimum pole piisavalt korge, on hinnang nuud ainult vanusevalem. Panustas Ludwig Ettner.
+- **Parandused:** jutumarkidega drip-markus loeb nagu kirjutatud; saksa, prantsuse, itaalia ja poola tolke viimased ingliskeelsed sonad on tolgitud.
+
+### Portugues
+
+- **Resultados de laboratorio no formato FHIR antigo.** A LabCorp ainda serve FHIR DSTU2, e o CommonHealth passa-o sem alteracoes, por isso os registos de um ficheiro FHIR simples chegavam ao Health Connect como R4 e eram recusados. O importador reconhece agora um registo DSTU2 pela sua forma e converte-o, com encontros, locais e os apelidos de cada nome.
+- **Resultados dentro de um relatorio de diagnostico.** O Health Connect guarda os resultados de um relatorio, nao o relatorio, e um relatorio ficava de fora com os resultados que continha. Cada resultado contido e agora importado como registo proprio, e toma do relatorio o doente, a visita, a hora, o executante e a categoria de laboratorio quando nao os tem. Um ficheiro de relatorios cujos resultados estao noutro lado diz para importar os ficheiros Observation.
+- **Todos os tipos de exercicio no formulario de atividade.** O formulario lista todos os tipos de sessao do Health Connect em vez de 22, cada um com os campos que lhe servem: GPS e distancia, uma distancia sem percurso, ou tempo com uma cinta cardiaca opcional. Ioga, pilates, natacao, desportos de raquete e de bola, escalada, danca e mais, num ficheiro FIT, sao importados como tal em vez de "Outro treino".
+- **Todo o historico do ciclo.** O ecra do ciclo parava em cerca de dezanove ciclos, os ultimos dezoito meses. Agora le todo o historico registado; o cartao do historico mostra os doze ciclos mais recentes e Carregar mais 10 mostra os anteriores.
+- **Resultados da importacao CSV em tres contagens.** O cartao do resultado separa as linhas do ficheiro (lidas, importadas, recusadas, nada a importar), os registos do Health Connect escritos e substituidos, e os dias do diario de uma exportacao do drip, em vez de uma frase que nunca batia certo. Uma observacao marcada como excluida no drip aparece como "Excluido na app de origem", e cada linha fica contada.
+- **De onde vem a frequencia cardiaca maxima.** A explicacao da carga cardio indica a ponderacao de Banister para homens e mulheres e a origem da frequencia cardiaca maxima, com os estudos de Tanaka e Gulati ligados ai e a partir da Energia corporal. Com uma idade no perfil e sem um maximo medido suficientemente alto, a estimativa e agora apenas a formula por idade. Contribuicao de Ludwig Ettner.
+- **Correcoes:** uma nota do drip com aspas le-se como foi escrita; as ultimas palavras em ingles nas traducoes alema, francesa, italiana e polaca estao traduzidas.
+
 ## 2.14.2 - 2026-10-14
 
 ### English

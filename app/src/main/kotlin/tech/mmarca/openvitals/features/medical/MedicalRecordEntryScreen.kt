@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.LocalDate
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.domain.medical.ManualRecordKind
 import tech.mmarca.openvitals.core.presentation.ScreenError
 import tech.mmarca.openvitals.core.presentation.resolve
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
@@ -32,7 +33,7 @@ import tech.mmarca.openvitals.ui.theme.LayoutMetrics
 import tech.mmarca.openvitals.ui.theme.Spacing
 
 /**
- * Adds or edits a vaccine, an allergy, a medication or a condition. Write access is asked for
+ * Adds or edits a record a person can type, of any [ManualRecordKind]. Write access is asked for
  * here, as the import wizard asks: all thirteen before the area's first request, then write
  * alone, or Health Connect's settings once it no longer asks.
  */
@@ -81,7 +82,7 @@ fun MedicalRecordEntryScreen(viewModel: MedicalRecordEntryViewModel, onDone: () 
                     if (state.needsIdentity) {
                         item { MedicalOwnerCard(state.owner, viewModel::updateOwner) }
                     }
-                    item { MedicalRecordEntryFields(draft, viewModel::update) }
+                    item { MedicalRecordEntryFields(draft, state.directory, LocalDate.now(), viewModel::update) }
                     state.error?.let { error ->
                         item { Text(text = error.resolve().orEmpty(), color = MaterialTheme.colorScheme.error) }
                     }

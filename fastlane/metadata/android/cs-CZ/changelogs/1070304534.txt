@@ -1,0 +1,1 @@
+Trénink s trasou GPS lze nyní uložit jako FIT, který obsahuje trasu, nadmořskou výšku a vzdálenost spolu se srdečním tepem, rychlostí a kadencí. Exporty FIT a TCX bez trasy nyní obsahují i rychlost a kadenci, nejen srdeční tep. Trasy importované ze souboru nebo synchronizované z hodinek Garmin si ponechají všechny body, místo aby se zkrátily na 2 000.

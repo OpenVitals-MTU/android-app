@@ -1,0 +1,128 @@
+# The gate. A pull request and a push to main run it; the release workflow
+# (release.yml) looks its result up instead of running it again.
+#
+# Three jobs. app-test on every pull request and push; lint on pushes to main
+# only (lint alone is half of the gate's task time, and a finding is rarely
+# what a review turns on; main catches it before a nightly ships); wear-test
+# when the watch app or the build plumbing it shares with the phone changed.
+# Locally the whole gate is one invocation, verifyCi.
+#
+# Every workflow pins ubuntu-26.04, the image ubuntu-latest moves to between
+# 2026-10-19 and 2026-11-19, so no job changes image halfway through that move.
+# Its default Java is 25; scripts/ci-gradle.sh takes the image's JDK 17.
+# setup-gradle stays on v5: v6 moves its caching into a proprietary component
+# under Gradle's terms of use.
+name: verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A pull request's newer push cancels the older run.
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # Which parts of the tree the change touched. The watch gate runs for the
+  # watch app and the build plumbing it shares with the phone; the phone gate
+  # for anything outside wear/. A change to this file runs both.
+  context:
+    runs-on: ubuntu-26.04
+    outputs:
+      run_tests: ${{ steps.plan.outputs.run_tests }}
+      run_lint: ${{ steps.plan.outputs.run_lint }}
+      run_wear: ${{ steps.plan.outputs.run_wear }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: changes
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          phone=true; wear=true
+          if [ -n "$BASE" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            git diff --name-only "$BASE" "$GITHUB_SHA" > changed.txt
+            phone=false; wear=false
+            while IFS= read -r f; do
+              case "$f" in
+                wear/*) wear=true ;;
+                wearlink/*|build.gradle.kts|settings.gradle.kts|settings-gradle.lockfile|gradle/*|gradlew|scripts/ci-*|.github/workflows/verify.yml) wear=true; phone=true ;;
+                *) phone=true ;;
+              esac
+            done < changed.txt
+            echo "$(wc -l < changed.txt) changed paths: phone=$phone wear=$wear"
+          else
+            echo "no base to diff against; running every gate"
+          fi
+          echo "phone=$phone" >> "$GITHUB_OUTPUT"
+          echo "wear=$wear" >> "$GITHUB_OUTPUT"
+      - id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          PHONE: ${{ steps.changes.outputs.phone }}
+          WEAR: ${{ steps.changes.outputs.wear }}
+        run: |
+          run_lint=false
+          if [ "$EVENT" = "push" ]; then run_lint=$PHONE; fi
+          {
+            echo "run_tests=$PHONE"; echo "run_lint=$run_lint"; echo "run_wear=$WEAR"
+          } >> "$GITHUB_OUTPUT"
+          echo "plan: tests=$PHONE lint=$run_lint wear=$WEAR"
+
+  # The stock runner ships JDK 17 and the Android SDK; scripts/ci-android-setup.sh
+  # installs the platform and build-tools when the image lacks them. Each job
+  # gives setup-gradle a Gradle user home of its own: the action leaves caching
+  # off when the runner already has one with caches in it. A step, since a
+  # job-level env cannot read the runner context.
+
+  # verifyCiUnitTest (:wearlink:test, :domain:testCiUnitTest, :app:testCiUnitTest)
+  # and verifyCiPreflight (verifyTranslations, :app:checkCiDuplicateClasses,
+  # :app:compileCiAndroidTestKotlin). No lint here, so every core gets a test
+  # fork (app/build.gradle.kts reads openvitals.testForks).
+  app-test:
+    needs: context
+    if: needs.context.outputs.run_tests == 'true'
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: echo "GRADLE_USER_HOME=$RUNNER_TEMP/gradle-user-home" >> "$GITHUB_ENV"
+      - uses: gradle/actions/setup-gradle@v5
+      - run: scripts/ci-android-gradle.sh -Popenvitals.testForks=4 verifyCiUnitTest verifyCiPreflight
+      - run: git diff --check
+
+  # verifyCiLint (:app:lintCi, :domain:lintCi).
+  lint:
+    needs: context
+    if: needs.context.outputs.run_lint == 'true'
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: echo "GRADLE_USER_HOME=$RUNNER_TEMP/gradle-user-home" >> "$GITHUB_ENV"
+      - uses: gradle/actions/setup-gradle@v5
+      - run: scripts/ci-android-gradle.sh verifyCiLint
+      - run: git diff --check
+
+  # verifyWearCi (:wearlink:test, :wear:testDebugUnitTest, :wear:lintDebug,
+  # :wear:assembleDebug, :wear:compileDebugAndroidTestKotlin). One invocation:
+  # the watch module is small enough that splitting it would cost more in setup
+  # than it saves.
+  wear-test:
+    needs: context
+    if: needs.context.outputs.run_wear == 'true'
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: echo "GRADLE_USER_HOME=$RUNNER_TEMP/gradle-user-home" >> "$GITHUB_ENV"
+      - uses: gradle/actions/setup-gradle@v5
+      - run: scripts/ci-android-gradle.sh verifyWearCi
+      - run: git diff --check

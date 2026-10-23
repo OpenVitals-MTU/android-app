@@ -47,10 +47,9 @@ internal fun buildRouteImport(
     require(sortedPoints.size >= MinRoutePoints) {
         "Route must contain at least $MinRoutePoints unique location points."
     }
-    val simplifiedPoints = simplifyRoutePoints(sortedPoints)
     return RouteFileImport(
         fileName = fileName,
-        points = simplifiedPoints,
+        points = sortedPoints,
         distanceMeters = routeDistanceMeters(sortedPoints),
         elevationGainedMeters = routeElevationGainMeters(sortedPoints),
         startTime = sortedPoints.first().time,
@@ -60,7 +59,6 @@ internal fun buildRouteImport(
         type = metadata.type,
         hasRecordedTimestamps = hasRecordedTimestamps,
         hasImportedTimeRange = hasImportedTimeRange,
-        originalPointCount = sortedPoints.size,
     )
 }
 
@@ -176,16 +174,7 @@ internal fun routeDistanceMeters(points: List<ExerciseRoutePoint>): Double =
 internal fun routeElevationGainMeters(points: List<ExerciseRoutePoint>): Double =
     RouteElevation.routeElevationGain(points)
 
-private fun simplifyRoutePoints(points: List<ExerciseRoutePoint>): List<ExerciseRoutePoint> {
-    if (points.size <= MaxImportedRoutePoints) return points
-    val step = points.lastIndex.toDouble() / (MaxImportedRoutePoints - 1).toDouble()
-    return List(MaxImportedRoutePoints) { index ->
-        points[(index * step).toInt().coerceIn(points.indices)]
-    }.distinctBy { it.time }
-}
-
 internal const val MinRoutePoints = 2
-private const val MaxImportedRoutePoints = 2_000
 internal const val MaxRouteFileBytes = 15 * 1024 * 1024
 internal const val MaxKmzRouteEntryBytes = 15 * 1024 * 1024
 internal const val MinLatitude = -90.0
