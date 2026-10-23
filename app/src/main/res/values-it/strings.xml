@@ -3641,12 +3641,13 @@
     <string name="cycle_skin_intro">Orologi e anelli misurano di notte la temperatura della tua pelle. Dopo l’ovulazione tende a essere un po’ più alta, di circa 0,3 °C in un piccolo studio con anello. Gli studi la leggono a posteriori, sull’intero ciclo, mai in anticipo.</string>
     <string name="cycle_skin_accuracy" formatted="false">In un grande studio con Apple Watch è stato stimato un giorno di ovulazione per l’81 % dei cicli con un aumento di almeno 0,2 °C, e l’89 % di queste stime era entro 2 giorni dal giorno trovato con i test LH. Uno studio con anello ha rilevato un errore medio di 1,3 giorni, contro 3,4 giorni contando dal calendario. Sono i risultati del metodo proprio di ogni studio; non valgono per ogni orologio né per ogni metodo.</string>
     <string name="cycle_skin_limits" formatted="false">• Non vedere un aumento non significa che non ci sia stata ovulazione: in uno studio su 437 cicli un aumento sostenuto è comparso nell’82 %.\n• Un aumento può comparire anche senza ovulazione: un piccolo studio al polso ha trovato aumenti anche in cicli senza ovulazione.\n• Anche febbre o malattia aumentano la temperatura cutanea.\n• La temperatura cutanea non è la temperatura corporea centrale: in uno studio era correlata solo moderatamente con la temperatura orale (r = 0,56).</string>
-    <string name="cycle_skin_note_pill">Registri la pillola. Il grande studio sulla temperatura al polso ha escluso le persone con contraccezione ormonale e fino a due mesi dopo la sospensione, quindi i suoi risultati dicono poco sulla tua temperatura.</string>
+    <string name="cycle_skin_note_hormonal">Hai indicato un metodo ormonale o ne hai sospeso uno negli ultimi due mesi. I metodi ormonali agiscono sullo stesso ritmo della temperatura corporea di cui parla questa scheda, e molti di essi fermano l’ovulazione (il rilascio di un ovocita), a cui segue l’aumento della temperatura. La tua temperatura può quindi non mostrare un andamento chiaro prima e dopo. Il grande studio sulla temperatura del polso ha escluso le persone con metodi ormonali e fino a due mesi dopo la sospensione, quindi i suoi risultati dicono poco su di te. È un’informazione, non un consiglio.</string>
     <string name="cycle_skin_note_pcos">Hai indicato la PCOS. Non abbiamo trovato studi sul rilevamento dell’ovulazione tramite temperatura nella PCOS; leggi quindi ogni andamento della temperatura con particolare cautela.</string>
     <string name="cycle_skin_not_a_method">OpenVitals non usa la temperatura cutanea per le sue stime. Sono informazioni di contesto, non un metodo contraccettivo né una previsione della fertilità, e non un parere medico.</string>
     <string name="cycle_skin_show_details">Mostra numeri e fonti</string>
     <string name="cycle_skin_hide_details">Nascondi i dettagli</string>
     <string name="cycle_thermal_day_label">G%1$d</string>
+    <string name="cycle_skin_hormonal_details">Cosa hanno trovato gli studi sui metodi ormonali. In 27 utilizzatrici della pillola, il ritmo giornaliero della temperatura cutanea del polso non differiva tra la fase pseudoluteale e quella pseudofollicolare (settimane di pillola e settimana senza pillola), mentre differiva in 14 persone con ciclo naturale. In 18 utilizzatrici della pillola, la temperatura orale del mattino era più alta nelle settimane con pillole attive (36,4 °C) che nella settimana senza pillola (36,1 °C), e l’aumento andava di pari passo con la dose di progestinico. Una revisione descrive gli estrogeni come generalmente in grado di abbassare e i progestinici di aumentare la temperatura corporea. Una revisione sul meccanismo d’azione dei metodi ormonali cita l’inibizione dell’ovulazione e le modifiche del muco cervicale tra i meccanismi principali delle pillole combinate e dei metodi con solo progestinico. Anche gli altri studi qui citati hanno escluso chi usava ormoni: uno studio con anello (Thigpen) ha rimosso 6 cicli con uso di ormoni, uno studio con anello al dito (Maijala) ha escluso nel suo sottostudio le utilizzatrici di contraccezione ormonale e lo studio sul polso del 2021 (Zhu) ha arruolato solo persone senza terapia ormonale. Non abbiamo trovato studi sulla temperatura cutanea per metodi diversi dalla pillola.</string>
     <string name="cycle_patterns_subtitle">Quante volte ogni sintomo è stato registrato in ogni fase. Solo conteggi; niente viene diagnosticato o previsto.</string>
     <string name="cycle_patterns_empty_title">Ancora nessun sintomo</string>
     <string name="cycle_patterns_empty_body">Gli schemi compaiono qui man mano che registri sintomi nei tuoi cicli.</string>
@@ -3991,4 +3992,16 @@
     <string name="settings_scales_delete_body">Peso, frequenza cardiaca e composizione corporea vengono rimossi da Health Connect.</string>
     <string name="settings_scales_remove">Rimuovi bilancia</string>
     <string name="settings_scales_remove_body">OpenVitals smette di ascoltare e dimentica la chiave. Le pesate già salvate restano.</string>
+    <string name="cycle_hormonal_title">Contraccezione ormonale</string>
+    <string name="cycle_hormonal_body">I metodi ormonali possono modificare il ciclo e l’andamento della temperatura. Sono elencati solo i metodi che usano ormoni: la spirale al rame, il preservativo e il diaframma non usano ormoni, quindi non compaiono qui. È solo contesto per la vista del ciclo, nulla di più.</string>
+    <string name="cycle_hormonal_set_by_pill">Impostato su %1$s dal tuo schema della pillola. Disattiva lo schema per scegliere un altro metodo.</string>
+    <string name="cycle_hormonal_stopped_on">Interrotta il (facoltativo; una data futura conta come ancora in uso)</string>
+    <string name="cycle_hormonal_stopped_clear">Cancella la data di interruzione</string>
+    <string name="cycle_hormonal_kind_none">Nessuno</string>
+    <string name="cycle_hormonal_kind_pill">Pillola</string>
+    <string name="cycle_hormonal_kind_hormonal_iud">Spirale ormonale</string>
+    <string name="cycle_hormonal_kind_implant">Impianto</string>
+    <string name="cycle_hormonal_kind_ring_or_patch">Anello o cerotto</string>
+    <string name="cycle_hormonal_kind_injection">Iniezione</string>
+    <string name="cycle_hormonal_kind_other">Altro metodo ormonale</string>
 </resources>

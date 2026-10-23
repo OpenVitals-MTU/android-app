@@ -60,6 +60,12 @@ object CycleSources {
     val MAIJALA_RING = CycleSource("Maijala et al., BMC Women's Health, 2019", "https://doi.org/10.1186/s12905-019-0844-9")
     val SHILAIH_WRIST = CycleSource("Shilaih et al., Bioscience Reports, 2018", "https://doi.org/10.1042/bsr20171279")
     val ZHU_WRIST = CycleSource("Zhu et al., J Med Internet Res, 2021", "https://doi.org/10.2196/20710")
+
+    /** Hormonal methods and temperature. Each DOI was resolved on Crossref; the numbers the card quotes were read in the abstract. */
+    val DITTMAR_OC_WRIST = CycleSource("Dittmar et al., Chronobiology International, 2024", "https://doi.org/10.1080/07420528.2024.2342945")
+    val SALKELD_OC_TEMPERATURE = CycleSource("Salkeld et al., Neuroimmunomodulation, 2001", "https://doi.org/10.1159/000059389")
+    val CHARKOUDIAN_THERMOREGULATION = CycleSource("Charkoudian & Stachenfeld, Comprehensive Physiology, 2014", "https://doi.org/10.1002/cphy.c130029")
+    val RIVERA_HORMONAL_MECHANISM = CycleSource("Rivera et al., Am J Obstet Gynecol, 1999", "https://doi.org/10.1016/s0002-9378(99)70120-1")
 }
 
 /** Scatters consecutive days across a list so the pick is stable per day but does not walk in order. */

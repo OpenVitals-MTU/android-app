@@ -34,17 +34,22 @@ private val SkinTemperatureSources: List<CycleSource> = listOf(
     CycleSources.MAIJALA_RING,
     CycleSources.SHILAIH_WRIST,
     CycleSources.ZHU_WRIST,
+    CycleSources.DITTMAR_OC_WRIST,
+    CycleSources.SALKELD_OC_TEMPERATURE,
+    CycleSources.CHARKOUDIAN_THERMOREGULATION,
+    CycleSources.RIVERA_HORMONAL_MECHANISM,
 )
 
 /**
  * What night-time skin temperature from a watch or ring can and cannot say about
- * the cycle. The estimates do not use it yet, and the card says so. A tracked pill
- * or a declared PCOS context adds the note that matters for that reader, always visible;
+ * the cycle. The estimates do not use it yet, and the card says so. A hormonal method
+ * (any kind, also in the 60 days after it was stopped) or a declared PCOS context adds the note
+ * that matters for that reader, always visible;
  * the numbers and the papers sit behind a toggle.
  */
 @Composable
 internal fun CycleSkinTemperatureInfoCard(
-    pillTracked: Boolean,
+    hormonalInfluencing: Boolean,
     pcosDeclared: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -60,14 +65,14 @@ internal fun CycleSkinTemperatureInfoCard(
                 )
             }
             Text(text = stringResource(R.string.cycle_skin_intro), style = MaterialTheme.typography.bodyMedium)
-            if (pillTracked) {
-                SkinNote(R.string.cycle_skin_note_pill)
+            if (hormonalInfluencing) {
+                SkinNote(R.string.cycle_skin_note_hormonal)
             }
             if (pcosDeclared) {
                 SkinNote(R.string.cycle_skin_note_pcos)
             }
             if (expanded) {
-                SkinDetails()
+                SkinDetails(hormonalInfluencing = hormonalInfluencing)
             }
             Text(
                 text = stringResource(R.string.cycle_skin_not_a_method),
@@ -87,10 +92,13 @@ private fun SkinNote(textRes: Int) {
 }
 
 @Composable
-private fun SkinDetails() {
+private fun SkinDetails(hormonalInfluencing: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Text(text = stringResource(R.string.cycle_skin_accuracy), style = MaterialTheme.typography.bodyMedium)
         Text(text = stringResource(R.string.cycle_skin_limits), style = MaterialTheme.typography.bodyMedium)
+        if (hormonalInfluencing) {
+            Text(text = stringResource(R.string.cycle_skin_hormonal_details), style = MaterialTheme.typography.bodyMedium)
+        }
         SkinTemperatureSources.forEach { source ->
             ReferenceLinkButton(title = source.label, url = source.url)
         }

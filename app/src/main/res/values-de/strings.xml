@@ -3618,12 +3618,13 @@
     <string name="cycle_skin_intro">Uhren und Ringe messen nachts deine Hauttemperatur. Nach dem Eisprung liegt sie tendenziell etwas höher, in einer kleinen Ringstudie um etwa 0,3 °C. Studien lesen das im Nachhinein aus dem ganzen Zyklus, nie im Voraus.</string>
     <string name="cycle_skin_accuracy" formatted="false">In einer großen Apple-Watch-Studie wurde für 81 % der Zyklen mit einem Anstieg von mindestens 0,2 °C ein Eisprungtag geschätzt, und 89 % dieser Schätzungen lagen höchstens 2 Tage neben dem mit LH-Tests ermittelten Tag. Eine Ringstudie fand einen mittleren Fehler von 1,3 Tagen, gegenüber 3,4 Tagen beim Zählen nach dem Kalender. Das sind Ergebnisse der jeweils eigenen Methode der Studie; sie lassen sich nicht auf jede Uhr und jede Methode übertragen.</string>
     <string name="cycle_skin_limits" formatted="false">• Kein erkannter Anstieg heißt nicht, dass kein Eisprung stattfand: In einer Studie mit 437 Zyklen zeigte sich in 82 % ein anhaltender Anstieg.\n• Ein Anstieg kann auch ohne Eisprung auftreten: Eine kleine Handgelenkstudie fand Anstiege auch in Zyklen ohne Eisprung.\n• Auch Fieber oder Krankheit erhöhen die Hauttemperatur.\n• Die Hauttemperatur ist nicht die Körperkerntemperatur: In einer Studie korrelierte sie nur mäßig mit der oralen Temperatur (r = 0,56).</string>
-    <string name="cycle_skin_note_pill">Du erfasst die Pille. Die große Handgelenkstudie schloss Menschen mit hormoneller Verhütung und bis zwei Monate nach dem Absetzen aus; ihre Ergebnisse sagen daher wenig über deine Temperatur.</string>
+    <string name="cycle_skin_note_hormonal">Du hast eine hormonelle Methode angegeben oder eine in den letzten zwei Monaten abgesetzt. Hormonelle Methoden wirken auf denselben Temperaturrhythmus, um den es in dieser Karte geht, und viele von ihnen unterdrücken den Eisprung (die Freisetzung einer Eizelle), dem der Temperaturanstieg folgt. Deine eigene Temperatur zeigt deshalb möglicherweise kein klares Vorher-Nachher-Muster. Die große Handgelenk-Temperaturstudie hat Menschen mit hormonellen Methoden und bis zu zwei Monate nach dem Absetzen ausgeschlossen; ihre Ergebnisse sagen daher wenig über dich aus. Das ist eine Information, kein Rat.</string>
     <string name="cycle_skin_note_pcos">Du hast PCOS angegeben. Wir haben keine Studie zur temperaturbasierten Eisprungerkennung bei PCOS gefunden; lies jedes Temperaturmuster daher mit besonderer Vorsicht.</string>
     <string name="cycle_skin_not_a_method">OpenVitals nutzt die Hauttemperatur nicht für seine Schätzungen. Das ist Hintergrundwissen, keine Verhütungsmethode, keine Fruchtbarkeitsvorhersage und keine medizinische Beratung.</string>
     <string name="cycle_skin_show_details">Zahlen und Quellen anzeigen</string>
     <string name="cycle_skin_hide_details">Details ausblenden</string>
     <string name="cycle_thermal_day_label">T%1$d</string>
+    <string name="cycle_skin_hormonal_details">Was die Studien zu hormonellen Methoden fanden. Bei 27 Pillen-Nutzerinnen unterschied sich der Tagesrhythmus der Handgelenk-Hauttemperatur nicht zwischen der pseudo-lutealen und der pseudo-follikulären Phase (Pillenwochen und pillenfreie Woche), bei 14 Personen mit natürlichem Zyklus dagegen schon. Bei 18 Pillen-Nutzerinnen lag die orale Morgentemperatur in den Wochen mit Wirkstoffpillen (36,4 °C) höher als in der pillenfreien Woche (36,1 °C), und der Anstieg ging mit der Gestagendosis einher. Ein Übersichtsartikel beschreibt Östrogene als in der Regel temperatursenkend und Gestagene als in der Regel temperatursteigernd für die Körpertemperatur. Ein Übersichtsartikel zur Wirkweise hormoneller Methoden nennt Eisprunghemmung und Veränderungen des Gebärmutterhalsschleims unter den Hauptmechanismen der kombinierten Pillen und der reinen Gestagenmethoden. Auch die anderen Studien hier schlossen Hormonnutzerinnen aus: Eine Ringstudie (Thigpen) entfernte 6 Zyklen mit Hormonanwendung, eine Fingerring-Studie (Maijala) schloss in ihrer Teilstudie Nutzerinnen hormoneller Verhütung aus, und die Handgelenkstudie von 2021 (Zhu) nahm nur Personen ohne Hormontherapie auf. Für andere Methoden als die Pille haben wir keine Studie zur Hauttemperatur gefunden.</string>
     <string name="cycle_patterns_subtitle">Wie oft jedes Symptom in jeder Phase erfasst wurde. Nur Zählungen; nichts wird diagnostiziert oder vorhergesagt.</string>
     <string name="cycle_patterns_empty_title">Noch keine Symptome</string>
     <string name="cycle_patterns_empty_body">Muster erscheinen hier, sobald du Symptome über deine Zyklen hinweg erfasst.</string>
@@ -3961,4 +3962,16 @@
     <string name="settings_scales_delete_body">Gewicht, Herzfrequenz und Körperzusammensetzung werden aus Health Connect entfernt.</string>
     <string name="settings_scales_remove">Waage entfernen</string>
     <string name="settings_scales_remove_body">OpenVitals lauscht nicht mehr und vergisst den Schlüssel. Bereits gespeicherte Messungen bleiben.</string>
+    <string name="cycle_hormonal_title">Hormonelle Verhütung</string>
+    <string name="cycle_hormonal_body">Hormonelle Methoden können den Zyklus und den Temperaturverlauf verändern. Aufgeführt sind nur Methoden mit Hormonen: Kupferspirale, Kondom und Diaphragma enthalten keine Hormone und stehen deshalb nicht hier. Das ist nur Kontext für die Zyklusansicht, nichts weiter.</string>
+    <string name="cycle_hormonal_set_by_pill">Durch dein Pillenschema auf %1$s gesetzt. Schalte das Schema aus, um eine andere Methode zu wählen.</string>
+    <string name="cycle_hormonal_stopped_on">Beendet am (optional; ein Datum in der Zukunft gilt als weiter angewendet)</string>
+    <string name="cycle_hormonal_stopped_clear">Enddatum löschen</string>
+    <string name="cycle_hormonal_kind_none">Keine</string>
+    <string name="cycle_hormonal_kind_pill">Pille</string>
+    <string name="cycle_hormonal_kind_hormonal_iud">Hormonspirale</string>
+    <string name="cycle_hormonal_kind_implant">Implantat</string>
+    <string name="cycle_hormonal_kind_ring_or_patch">Ring oder Pflaster</string>
+    <string name="cycle_hormonal_kind_injection">Spritze</string>
+    <string name="cycle_hormonal_kind_other">Andere hormonelle Methode</string>
 </resources>

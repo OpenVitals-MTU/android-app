@@ -162,7 +162,7 @@ internal fun LazyListScope.cyclePeriodContent(
             SectionHeader(stringResource(R.string.section_cycle_thermal))
             CycleThermalCard(thermal = display.thermal, unitFormatter = unitFormatter, modifier = sectionModifier)
             CycleSkinTemperatureInfoCard(
-                pillTracked = today.pill != null,
+                hormonalInfluencing = today.hormonalInfluencing,
                 pcosDeclared = today.pcosDeclared,
                 modifier = sectionModifier,
             )
