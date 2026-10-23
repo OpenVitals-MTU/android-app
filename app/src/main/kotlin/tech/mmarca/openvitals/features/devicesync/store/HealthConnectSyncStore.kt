@@ -130,7 +130,7 @@ class HealthConnectSyncStore(
                 throw e
             } catch (e: Exception) {
                 // One malformed item must not stall the receive loop. Skipped, so not written.
-                Log.w(TAG, "skipping undecodable ${item.recordType}: ${e.message}")
+                Log.w(TAG, "skipping undecodable ${item.recordType}: ${e::class.java.simpleName}")
                 continue
             }
             // Keyed on the recomputed fingerprint, not the peer-claimed key.
@@ -146,7 +146,7 @@ class HealthConnectSyncStore(
             val keys = keysByType.getValue(type)
             try {
                 val outcomes = importRepository.insertWithOutcomes(records) { _, e ->
-                    Log.w(TAG, "single write failed for $type: ${e.message}")
+                    Log.w(TAG, "single write failed for $type: ${e::class.java.simpleName}")
                 }
                 // A record already present has converged, so it counts as written.
                 outcomes.forEachIndexed { index, outcome -> if (outcome != RecordWrite.FAILED) written += keys[index] }
@@ -155,7 +155,7 @@ class HealthConnectSyncStore(
                 throw e
             } catch (e: Exception) {
                 // Rejected: its keys are not reported as written.
-                Log.w(TAG, "WRITE FAILED for ${records.size} $type: ${e.message}")
+                Log.w(TAG, "WRITE FAILED for ${records.size} $type", e)
             }
         }
         // Remember each landed record's original source app, for display.
@@ -167,7 +167,7 @@ class HealthConnectSyncStore(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "failed to persist ${landedOrigins.size} record origins: ${e.message}")
+                Log.w(TAG, "failed to persist ${landedOrigins.size} record origins", e)
             }
         }
         return written

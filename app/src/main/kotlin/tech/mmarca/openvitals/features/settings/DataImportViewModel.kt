@@ -381,10 +381,8 @@ class DataImportViewModel @Inject constructor(
                     WorkInfo.State.FAILED -> {
                         val error = appleHealthImportWorkController.errorFor(workInfo)
                             ?: "Apple Health import failed."
-                        Log.e(
-                            AppleHealthImportWorker.LogTag,
-                            "Apple Health import failed workId=${workInfo.id}\n$error",
-                        )
+                        // The report stays in the app; the log only says that it failed.
+                        Log.e(AppleHealthImportWorker.LogTag, "Apple Health import failed")
 	                        _uiState.value = _uiState.value.copy(
 	                            isImportingAppleHealth = false,
 	                            isAnalyzingAppleHealth = false,
