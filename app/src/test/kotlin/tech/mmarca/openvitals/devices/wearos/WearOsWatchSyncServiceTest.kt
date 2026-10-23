@@ -32,6 +32,7 @@ import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRe
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingStatus
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.domain.model.WearSleepMinute
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.metadata.Metadata
@@ -115,7 +116,7 @@ class WearOsWatchSyncServiceTest {
     private var weight: Double? = 70.0
 
     init {
-        coEvery { healthConnect.grantedPermissions() } returns setOf(STEPS_WRITE, CALORIES_WRITE, EXERCISE_READ, WEIGHT_READ)
+        coEvery { healthConnect.grantedPermissions() } returns setOf(STEPS_WRITE, CALORIES_WRITE, EXERCISE_READ, WEIGHT_READ, RESTING_HR_READ, RESTING_HR_WRITE)
         coEvery { healthConnect.readsOtherAppsDataNow() } returns true
         coEvery { importRepository.insertImportedRecords(any()) } answers {
             val records = firstArg<List<androidx.health.connect.client.records.Record>>()
@@ -442,7 +443,7 @@ class WearOsWatchSyncServiceTest {
 
     @Test
     fun `without the grant to write steps, the steps stay on the watch and sleep still syncs`() = runTest {
-        coEvery { healthConnect.grantedPermissions() } returns emptySet()
+        coEvery { healthConnect.grantedPermissions() } returns setOf(RESTING_HR_READ, RESTING_HR_WRITE)
         pages += WearOsHeartRatePage(emptyList(), hasMore = false)
         watchSteps += WearOsStepMinute(t0, 40)
         sleepPages += WearOsSleepMinutePage(nightMinutes(), hasMore = false)
@@ -521,8 +522,131 @@ class WearOsWatchSyncServiceTest {
         val result = service().sync(WATCH, Duration.ZERO, null)
 
         assertEquals(DeviceSyncResult.Succeeded(0), result)
-        coVerify(exactly = 0) { importRepository.insertImportedRecords(any()) }
+        assertTrue(insertedOf<SleepSessionRecord>().isEmpty())
+        // The vendor's session says nothing about the resting heart rate.
+        assertEquals(1, insertedOf<RestingHeartRateRecord>().size)
         assertEquals(nightMinutes().last().time, cursors.sleepCursor(WATCH.id))
+    }
+
+    @Test
+    fun `an estimated night also gives its nocturnal resting heart rate`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        sleepPages += WearOsSleepMinutePage(nightMinutes(), hasMore = false)
+        service().sync(WATCH, Duration.ZERO, null)
+
+        val resting = insertedOf<RestingHeartRateRecord>().single()
+        assertEquals("wearos_rhr_est_2026-10-08", resting.metadata.clientRecordId)
+        // The asleep minutes run 50.0 to 53.9 bpm in a 40-minute cycle; the lowest half hour averages about 51.
+        assertTrue(resting.beatsPerMinute in 50L..52L)
+    }
+
+    /** The resting heart rates Health Connect holds for any day read, by `clientRecordId`. */
+    private fun holdRestingHeartRates(vararg clientIds: String) {
+        val held = clientIds.map { id ->
+            mockk<RestingHeartRateRecord> { every { metadata } returns Metadata.manualEntry(clientRecordId = id) }
+        }
+        coEvery { healthConnect.forEachSyncRecordPage(RestingHeartRateRecord::class, any(), any(), any()) } coAnswers {
+            arg<suspend (List<androidx.health.connect.client.records.Record>) -> Unit>(3).invoke(held)
+        }
+    }
+
+    private suspend fun syncNight(minutes: List<WearSleepMinute> = nightMinutes()): DeviceSyncResult {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        sleepPages += WearOsSleepMinutePage(minutes, hasMore = false)
+        return service().sync(WATCH, Duration.ZERO, null)
+    }
+
+    @Test
+    fun `a resting heart rate from elsewhere wins over the estimate`() = runTest {
+        holdRestingHeartRates("samsung_rhr_1")
+
+        syncNight()
+
+        assertTrue(insertedOf<RestingHeartRateRecord>().isEmpty())
+        assertEquals(1, insertedOf<SleepSessionRecord>().size)
+    }
+
+    @Test
+    fun `the resting heart rate looks at the calendar day of the night's end`() = runTest {
+        syncNight()
+
+        // The night ends 08:00 local on 2026-10-08, in +02:00.
+        coVerify {
+            healthConnect.forEachSyncRecordPage(
+                RestingHeartRateRecord::class,
+                Instant.parse("2026-10-07T22:00:00Z"),
+                Instant.parse("2026-10-08T22:00:00Z"),
+                any(),
+            )
+        }
+    }
+
+    @Test
+    fun `a vendor value that arrives after ours removes ours`() = runTest {
+        holdRestingHeartRates("samsung_rhr_1", "wearos_rhr_est_2026-10-08")
+
+        syncNight()
+
+        assertTrue(insertedOf<RestingHeartRateRecord>().isEmpty())
+        coVerify { healthConnect.deleteImportedRecordsByClientIds(RestingHeartRateRecord::class, listOf("wearos_rhr_est_2026-10-08")) }
+    }
+
+    @Test
+    fun `a failed read of the resting heart rates writes none`() = runTest {
+        coEvery { healthConnect.forEachSyncRecordPage(RestingHeartRateRecord::class, any(), any(), any()) } throws SecurityException("no read grant")
+
+        val result = syncNight()
+
+        assertTrue(insertedOf<RestingHeartRateRecord>().isEmpty())
+        assertEquals(DeviceSyncResult.Succeeded(0, nightCount = 1), result)
+    }
+
+    @Test
+    fun `without the grants for resting heart rate none is written and the card is told`() = runTest {
+        coEvery { healthConnect.grantedPermissions() } returns setOf(STEPS_WRITE, CALORIES_WRITE, EXERCISE_READ, WEIGHT_READ, RESTING_HR_WRITE)
+
+        val result = syncNight()
+
+        assertTrue(insertedOf<RestingHeartRateRecord>().isEmpty())
+        assertEquals(
+            DeviceSyncResult.Succeeded(
+                0, nightCount = 1, unwritten = setOf(UnwrittenSeries.RESTING_HEART_RATE), withheldPermissions = setOf(RESTING_HR_READ),
+            ),
+            result,
+        )
+    }
+
+    @Test
+    fun `in the background, when other apps' values are unreadable, no resting heart rate is written`() = runTest {
+        coEvery { healthConnect.readsOtherAppsDataNow() } returns false
+
+        syncNight()
+
+        assertTrue(insertedOf<RestingHeartRateRecord>().isEmpty())
+        assertEquals(1, insertedOf<SleepSessionRecord>().size)
+    }
+
+    @Test
+    fun `a night that is still running gets no resting heart rate yet`() = runTest {
+        // Ten minutes after waking: the estimator still expects more sleep.
+        val running = nightMinutes().filter { it.time < Instant.parse("2026-10-08T04:10:00Z") }
+
+        syncNight(running)
+
+        assertTrue(insertedOf<RestingHeartRateRecord>().isEmpty())
+    }
+
+    @Test
+    fun `a resting heart rate Health Connect holds at a higher version is replaced`() = runTest {
+        healthConnectVersions["wearos_rhr_est_2026-10-08"] = Long.MAX_VALUE
+        coEvery { healthConnect.deleteImportedRecordsByClientIds(any(), any()) } answers {
+            secondArg<List<String>>().forEach { healthConnectVersions.remove(it) }
+        }
+
+        syncNight()
+
+        coVerify { healthConnect.deleteImportedRecordsByClientIds(RestingHeartRateRecord::class, listOf("wearos_rhr_est_2026-10-08")) }
+        assertEquals(t0.toEpochMilli(), healthConnectVersions["wearos_rhr_est_2026-10-08"])
     }
 
     @Test
@@ -701,6 +825,8 @@ class WearOsWatchSyncServiceTest {
     private companion object {
         const val STEP_PAGE = 2
 
+        val RESTING_HR_READ = HealthPermission.getReadPermission(RestingHeartRateRecord::class)
+        val RESTING_HR_WRITE = HealthPermission.getWritePermission(RestingHeartRateRecord::class)
         val STEPS_WRITE = HealthPermission.getWritePermission(StepsRecord::class)
         val CALORIES_WRITE = HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class)
         val EXERCISE_READ = HealthPermission.getReadPermission(ExerciseSessionRecord::class)

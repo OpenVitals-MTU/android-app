@@ -15,7 +15,7 @@ data class DeviceSyncProgress(
 )
 
 /** A series a sync left out for want of a Health Connect grant, so the screen can say which. */
-enum class UnwrittenSeries { STEPS, WALKING_ENERGY }
+enum class UnwrittenSeries { STEPS, WALKING_ENERGY, RESTING_HEART_RATE }
 
 /** The outcome of a whole sync-and-persist run. */
 sealed class DeviceSyncResult {

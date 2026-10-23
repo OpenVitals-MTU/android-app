@@ -3954,6 +3954,7 @@
     <string name="settings_watch_wearos_needs_weight_read">Kalorie z chůze nebyly odhadnuty: zadejte svou hmotnost v Tělesném profilu nebo povolte OpenVitals číst vaši hmotnost v Health Connect.</string>
     <string name="settings_watch_wearos_needs_steps_write">Kroky nebyly zapsány: povolte OpenVitals zapisovat kroky do Health Connect a synchronizujte znovu.</string>
     <string name="settings_watch_wearos_needs_calories_write">Kalorie z chůze nebyly zapsány: povolte OpenVitals zapisovat aktivní kalorie a číst tréninky v Health Connect, aby se od příští synchronizace odhadovaly.</string>
+    <string name="settings_watch_wearos_needs_resting_heart_rate">Klidový srdeční tep nebyl zapsán: povolte OpenVitals číst a zapisovat klidový srdeční tep v Health Connect, aby se od příští synchronizace odhadoval.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d vzorek tepu synchronizován</item>
         <item quantity="few">%1$d vzorky tepu synchronizovány</item>
