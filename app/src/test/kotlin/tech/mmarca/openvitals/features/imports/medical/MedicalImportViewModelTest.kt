@@ -91,15 +91,21 @@ class MedicalImportViewModelTest {
         assertThat(picked.uiState.value.pickError).isEqualTo(MedicalImportPickError.NOT_SUPPORTED)
         val unread = picked.reportText()!!
         assertThat(unread).contains("Not imported: NOT_SUPPORTED")
-        assertThat(unread).contains("export/Observation.json: 57 bytes, a JSON array of 1: 1 record: Observation 1")
+        assertThat(unread).contains("file 1 (.json): 57 bytes, a JSON array of 1: 1 record: Observation 1")
         assertThat(unread).doesNotContain("Jane")
+        assertThat(unread).doesNotContain("commonhealth.zip")
+        assertThat(unread).doesNotContain("export/Observation.json")
 
         val vm = viewModel()
         vm.analyze("lab.json") { """{"resourceType":"Observation","id":"o1","status":"final","code":{"text":"Something"}}""".byteInputStream() }
 
         assertThat(vm.uiState.value.step).isEqualTo(MedicalImportStep.REVIEW)
         assertThat(vm.uiState.value.canReportFailure).isTrue()
-        assertThat(vm.reportText()).contains("Held back: Observation/o1: UNCLASSIFIABLE_OBSERVATION")
+        val heldBack = vm.reportText()!!
+        assertThat(heldBack).contains("Held back: Observation x1: UNCLASSIFIABLE_OBSERVATION")
+        // The record itself never: not its id, not its content.
+        assertThat(heldBack).doesNotContain("o1")
+        assertThat(heldBack).doesNotContain("Something")
     }
 
     @Test
@@ -155,7 +161,10 @@ class MedicalImportViewModelTest {
         assertThat(vm.uiState.value.step).isEqualTo(MedicalImportStep.DONE)
         assertThat(result.written).isEqualTo(12)
         assertThat(repository.sources.single().displayName).isEqualTo("City Clinic")
-        assertThat(vm.reportText()).contains("sample.json")
+        val report = vm.reportText()!!
+        assertThat(report).contains("Source 1: a new source")
+        assertThat(report).doesNotContain("sample.json")
+        assertThat(report).doesNotContain("City Clinic")
 
         vm.reset()
         vm.analyze("sample.json") { sample.byteInputStream() }

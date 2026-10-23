@@ -24,6 +24,23 @@ internal object AppleHealthImportReportStore {
         return writeFile(context, ErrorFileName, reportText)
     }
 
+    /** The workouts the card lists. Kept beside the report, never in it. */
+    fun writeWorkoutsWithoutRoute(context: Context, workouts: List<AppleWorkoutWithoutRoute>) {
+        writeFile(context, WorkoutsWithoutRouteFileName, encodeWorkoutsWithoutRoute(workouts))
+    }
+
+    fun readWorkoutsWithoutRoute(context: Context): List<AppleWorkoutWithoutRoute> =
+        decodeWorkoutsWithoutRoute(read(File(File(context.filesDir, ReportDirectory), WorkoutsWithoutRouteFileName).path))
+
+    /**
+     * Reports written before they were structure only carry values, times and file
+     * locations. Their names are retired, so a finished import's path finds nothing.
+     */
+    fun deleteLegacyReports(context: Context) {
+        val directory = File(context.filesDir, ReportDirectory)
+        LegacyFileNames.forEach { name -> runCatching { File(directory, name).delete() } }
+    }
+
     private fun writeFile(context: Context, fileName: String, reportText: String): String {
         val directory = File(context.filesDir, ReportDirectory).apply { mkdirs() }
         val report = File(directory, fileName)
@@ -40,6 +57,21 @@ internal object AppleHealthImportReportStore {
             .orEmpty()
 
     private const val ReportDirectory = "import_reports"
-    private const val ReportFileName = "apple-health-import-report.txt"
-    private const val ErrorFileName = "apple-health-import-error.txt"
+    private const val ReportFileName = "apple-health-report.txt"
+    private const val ErrorFileName = "apple-health-error.txt"
+    private const val WorkoutsWithoutRouteFileName = "apple-health-workouts-without-route.tsv"
+    private val LegacyFileNames = listOf("apple-health-import-report.txt", "apple-health-import-error.txt")
 }
+
+/** One workout per line: type, start and end in epoch milliseconds, tab-separated. */
+internal fun encodeWorkoutsWithoutRoute(workouts: List<AppleWorkoutWithoutRoute>): String =
+    workouts.joinToString(separator = "\n") { "${it.appleType}\t${it.start.toEpochMilli()}\t${it.end.toEpochMilli()}" }
+
+internal fun decodeWorkoutsWithoutRoute(text: String): List<AppleWorkoutWithoutRoute> =
+    text.lineSequence().mapNotNull { line ->
+        val fields = line.split('\t')
+        if (fields.size != 3) return@mapNotNull null
+        val start = fields[1].toLongOrNull() ?: return@mapNotNull null
+        val end = fields[2].toLongOrNull() ?: return@mapNotNull null
+        AppleWorkoutWithoutRoute(fields[0], Instant.ofEpochMilli(start), Instant.ofEpochMilli(end))
+    }.toList()

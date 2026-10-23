@@ -5,20 +5,20 @@ import tech.mmarca.openvitals.domain.model.BpRecordValues
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 
 /**
- * The text report of a finished CSV import. Pure. Not sanitised, like the
- * Apple Health report: it names the file, columns and rejected values.
+ * The text report of a finished CSV import, to copy, save or send. Pure.
+ * Structure only: counts, roles, units, reasons, row and column numbers, and
+ * the shape of a cell that could not be read. Never a cell's text, a value,
+ * the file's name or its header names.
  */
 
 /** The suggested file name for a saved CSV import report. */
 const val CSV_IMPORT_REPORT_FILE_NAME = "openvitals-csv-import-report.txt"
 
-/** Renders [result] as text. File name and dialect come from the run, not a fresh sniff. */
+/** Renders [result] as text. The dialect comes from the run, not a fresh sniff. */
 fun buildCsvImportReport(
-    fileName: String?,
     /** The column mapping, or null for a drip export read through [drip]. */
     mapping: CsvImportMapping?,
     result: CsvImportResult,
-    headerRow: List<String>,
     fieldDelimiter: String? = null,
     hasHeaderRow: Boolean? = null,
     drip: DripImportPlan? = null,
@@ -26,7 +26,6 @@ fun buildCsvImportReport(
     appendLine("OpenVitals CSV import report")
     appendLine("===========================")
     appendLine()
-    appendLine("File: ${fileName ?: "(unnamed)"}")
     appendLine("Outcome: ${outcomeLabel(result.outcome)}")
     result.error?.let { appendLine("Error: $it") }
 
@@ -88,8 +87,7 @@ fun buildCsvImportReport(
         appendLine("Column mapping")
         appendLine("--------------")
         for (column in mapping.columns) {
-            val header = headerRow.getOrNull(column.columnIndex) ?: "Column ${column.columnIndex + 1}"
-            appendLine("[${column.columnIndex}] $header -> ${roleLabel(column)}")
+            appendLine("[${column.columnIndex}] -> ${roleLabel(column)}")
         }
     }
 

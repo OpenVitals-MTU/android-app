@@ -1964,8 +1964,8 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="medical_import_report_copied">Informe copiado</string>
     <string name="medical_import_report_saved">Informe gardado</string>
     <string name="medical_import_report_save_failed">Non se puido gardar o informe</string>
-    <string name="medical_import_report_warning">O informe inclúe os teus rexistros médicos. Revísao antes de compartilo.</string>
-    <string name="medical_import_failure_report_note">O informe nomea os ficheiros que OpenVitals revisou e o que atopou en cada un, pero nada do seu contido. Revisa os nomes dos ficheiros antes de compartilo.</string>
+    <string name="medical_import_report_warning">O informe conta o que se escribiu, se retivo ou se rexeitou, por tipo de rexistro e motivo. Non contén nada do contido dos teus rexistros nin nomes.</string>
+    <string name="medical_import_failure_report_note">O informe indica que detivo a importación e describe o ficheiro polo seu tamaño, tipo e tipos de rexistro. Non contén nada do seu contido nin nomes de ficheiro.</string>
     <string name="medical_import_done">Feito</string>
     <string name="medical_import_another">Importar outro ficheiro</string>
     <string name="medical_import_reason_unsupported">Tipo que Health Connect non garda</string>
@@ -2212,7 +2212,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="privacy_reconsent_action">Revisar a política</string>
     <string name="dashboard_summary_today">Hoxe</string>
     <string name="settings_debug_logs_title">Rexistros de diagnóstico</string>
-    <string name="settings_debug_logs_body">Comparte ou garda os rexistros do proceso de OpenVitals como ficheiro de texto. A exportación é en bruto (sen censurar) para poder diagnosticar problemas de Health Connect e sincronización a partir do rastro completo.</string>
+    <string name="settings_debug_logs_body">Comparte ou garda os rexistros de OpenVitals como ficheiro de texto. Consérvanse todas as liñas para poder seguir os problemas de Health Connect e de sincronización; os enderezos de dispositivos, identificadores, localizacións de ficheiros, datas e detalles de erros ocúltanse. Revísao antes de compartilo.</string>
     <string name="settings_debug_logs_share">Compartir rexistros</string>
     <string name="settings_debug_logs_share_chooser_title">Compartir rexistros de diagnóstico</string>
     <string name="settings_debug_logs_share_failed">Non se puideron compartir os rexistros de diagnóstico</string>
@@ -2396,7 +2396,13 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%. %2$s. Seleccionados %3$d/%4$d, importados %5$d.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. Examinados %3$d/%4$d, importados %5$d.</string>
     <string name="settings_apple_health_import_result">Importados %1$d. Duplicados %2$d. Non seleccionados %3$d. Non compatibles %4$d. Omitidos %5$d. Fallidos %6$d.</string>
-    <string name="settings_apple_health_import_routes_incomplete">Importáronse os rexistros de saúde, pero algunhas rutas de adestramento non estaban dispoñibles porque o ZIP rematou de forma inesperada. O informe de importación enumera as actividades afectadas para recuperalas manualmente.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Importáronse os rexistros de saúde, pero algunhas rutas de adestramento non estaban dispoñibles porque o ficheiro ZIP rematou de forma inesperada. Os adestramentos afectados aparecen abaixo.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d adestramento chegou sen a súa ruta</item>
+        <item quantity="other">%d adestramentos chegaron sen a súa ruta</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Os seus ficheiros de ruta non están na exportación. Importa export.zip en vez de export.xml ou importa cada ruta co importador GPX/KML/KMZ/TCX.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Mostrar todo</string>
     <string name="settings_apple_health_import_analysis_result">Examinados %1$d elementos. Atopados %2$d rexistros compatibles. Non compatibles %3$d. Fallidos %4$d.</string>
     <string name="settings_apple_health_import_choose_categories">Escolle que escribir en Health Connect.</string>
     <string name="settings_apple_health_import_category_count">%1$d rexistros</string>

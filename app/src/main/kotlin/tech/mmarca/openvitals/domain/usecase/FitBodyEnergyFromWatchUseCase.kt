@@ -145,7 +145,7 @@ class FitBodyEnergyFromWatchUseCase(
             throw error
         } catch (error: Exception) {
             // No timeline for that day; treated like an empty one.
-            Log.w(TAG, "No Body Energy timeline for $date", error)
+            Log.w(TAG, "No Body Energy timeline for the day", error)
             return emptyList()
         }
         val timeline = result.days.firstOrNull { day -> day.date == date }

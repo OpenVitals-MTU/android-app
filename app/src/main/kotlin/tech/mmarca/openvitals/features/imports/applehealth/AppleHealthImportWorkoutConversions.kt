@@ -17,22 +17,22 @@ internal fun AppleHealthImportConverter.convertWorkouts(
 ): List<ConvertedAppleRecord> =
     workouts.flatMap { workout ->
         val start = workout.startDate ?: return@flatMap emptyList<ConvertedAppleRecord>().also {
-            invalid(workout.workoutActivityType, "Workout is missing startDate.", null)
+            invalid(workout.workoutActivityType, "Workout is missing startDate.")
         }
         val end = workout.endDate ?: return@flatMap emptyList<ConvertedAppleRecord>().also {
-            invalid(workout.workoutActivityType, "Workout is missing endDate.", start.instant.toString())
+            invalid(workout.workoutActivityType, "Workout is missing endDate.")
         }
         val interval = interval(start, end)
         if (reportUnavailableWorkoutRoutes && workout.unavailableRoutePaths.isNotEmpty()) {
+            // The route file names carry the date and the source a person's name, so the report says neither.
             skipped(
                 appleType = workout.workoutActivityType,
                 reasonCode = "workout_route_unavailable",
-                detail =
-                    "Workout route file(s) unavailable: " +
-                        workout.unavailableRoutePaths.joinToString() +
-                        ". Source: ${workout.sourceName ?: "unknown"}. " +
-                        "Import or recreate this activity manually if route geometry is needed.",
-                timeRange = AppleImportTimeRange(interval.start.instant, interval.end.instant).toString(),
+                detail = "The workout refers to a route file that is not in the export. " +
+                    "Import its route separately if route geometry is needed.",
+            )
+            recordWorkoutWithoutRoute(
+                AppleWorkoutWithoutRoute(workout.workoutActivityType, interval.start.instant, interval.end.instant),
             )
         }
         val fingerprint = buildStableClientRecordId("workout", workout.stableParts())
@@ -42,7 +42,6 @@ internal fun AppleHealthImportConverter.convertWorkouts(
                 appleType = workout.workoutActivityType,
                 reasonCode = "route_skipped",
                 detail = "Workout route file did not contain enough valid geometry points.",
-                timeRange = AppleImportTimeRange(interval.start.instant, interval.end.instant).toString(),
             )
         }
         val session = ExerciseSessionRecord(
@@ -63,7 +62,6 @@ internal fun AppleHealthImportConverter.convertWorkouts(
             record = session,
             sourceTimeRange = AppleImportTimeRange(interval.start.instant, interval.end.instant),
             unit = workout.durationUnit,
-            value = workout.duration?.toString(),
         )
         buildList {
             add(convertedSession)
@@ -89,7 +87,6 @@ internal fun AppleHealthImportConverter.convertWorkouts(
                             ),
                             sourceTimeRange = AppleImportTimeRange(interval.start.instant, interval.end.instant),
                             unit = workout.totalDistanceUnit,
-                            value = workout.totalDistance.toString(),
                         )
                         add(distanceRecord)
                         markConverted(workout.workoutActivityType)
@@ -116,7 +113,6 @@ internal fun AppleHealthImportConverter.convertWorkouts(
                             ),
                             sourceTimeRange = AppleImportTimeRange(interval.start.instant, interval.end.instant),
                             unit = workout.totalEnergyBurnedUnit,
-                            value = workout.totalEnergyBurned.toString(),
                         )
                         add(energyRecord)
                         markConverted(workout.workoutActivityType)

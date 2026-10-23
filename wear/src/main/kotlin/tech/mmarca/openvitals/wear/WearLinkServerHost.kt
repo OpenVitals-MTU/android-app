@@ -94,14 +94,14 @@ class WearLinkServerHost(
             val connection = try {
                 WearLinkConnection(socket.inputStream, socket.outputStream, address) { socket.close() }
             } catch (e: IOException) {
-                Log.w(TAG, "No streams for $address: ${e.message}")
+                Log.w(TAG, "No streams for the phone link: ${e::class.java.simpleName}")
                 runCatching { socket.close() }
                 return@Thread
             }
             state.update { it.copy(activeClients = server.activeClients + 1) }
             val outcome = server.serve(connection)
             state.update { it.copy(activeClients = server.activeClients) }
-            Log.i(TAG, "Served $address: $outcome")
+            Log.i(TAG, "Served the phone link: $outcome")
         }, "WearLinkServerHost-client").start()
     }
 

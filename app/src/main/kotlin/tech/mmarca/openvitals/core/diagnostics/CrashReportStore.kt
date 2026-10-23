@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.core.diagnostics
 
-import android.app.ApplicationErrorReport
 import android.content.Context
 import android.os.Build
 import java.io.File
@@ -9,7 +8,7 @@ import tech.mmarca.openvitals.BuildConfig
 
 internal object CrashReportStore {
     private const val ReportDirectory = "crash_reports"
-    private const val LastCrashFileName = "last-crash-report.txt"
+    private const val DiagnosticsExportMaxAgeMillis = 24 * 60 * 60 * 1000L
 
     fun writeLastCrashReport(
         context: Context,
@@ -17,34 +16,30 @@ internal object CrashReportStore {
         throwable: Throwable,
     ) {
         val appContext = context.applicationContext
-        val details = detailsFromThrowable(throwable)
         val reportText = CrashReportEmail.buildStoredCrashReport(
             appInfo = appInfo(appContext),
-            reportDetails = details,
+            reportDetails = crashReportDetails(throwable, source = "OpenVitals uncaught exception handler"),
             threadName = thread.name,
-            diagnosticsLog = captureDiagnosticsLog(appContext),
             capturedAt = Instant.now().toString(),
         )
-        lastCrashFile(appContext).apply {
-            parentFile?.mkdirs()
-            writeText(reportText)
-        }
+        crashFile(appContext).write(reportText)
     }
 
-    fun readLastCrashReport(context: Context): String =
-        runCatching {
-            lastCrashFile(context.applicationContext)
-                .takeIf { it.isFile }
-                ?.readText()
-                .orEmpty()
-        }.getOrDefault("")
+    fun readFreshCrashReport(context: Context): String =
+        runCatching { crashFile(context).readFresh() }.getOrDefault("")
 
-    fun detailsFromApplicationErrorReport(report: ApplicationErrorReport?): CrashReportDetails? {
-        val crashInfo = report?.crashInfo ?: return null
-        return detailsFromCrashInfo(
-            crashInfo = crashInfo,
-            source = "Android crash dialog",
-        )
+    /** Once the report has gone into an email, a copy or a file, the phone keeps none. */
+    fun discardCrashReport(context: Context) {
+        runCatching { crashFile(context).discard() }
+    }
+
+    /** At app start: a crash report past its age, and a diagnostics log export left over from a share. */
+    fun pruneStale(context: Context) {
+        runCatching { crashFile(context).pruneStale() }
+        val cutoffMillis = System.currentTimeMillis() - DiagnosticsExportMaxAgeMillis
+        File(context.cacheDir, DiagnosticsExportCacheDirectory).listFiles()
+            ?.filter { it.isFile && it.lastModified() < cutoffMillis }
+            ?.forEach { runCatching { it.delete() } }
     }
 
     fun appInfo(context: Context): CrashReportAppInfo =
@@ -61,38 +56,6 @@ internal object CrashReportStore {
                 .ifBlank { "unknown" },
         )
 
-    fun captureDiagnosticsLog(context: Context): String {
-        if (!BuildConfig.OPENVITALS_DIAGNOSTICS) {
-            return "Diagnostics log unavailable in this build."
-        }
-        return runCatching {
-            PrivacySafeDebugLogExporter.currentProcessLogcatTextBlocking(context)
-        }.getOrElse { throwable ->
-            "Diagnostics log unavailable: ${throwable::class.java.simpleName}"
-        }
-    }
-
-    private fun detailsFromThrowable(throwable: Throwable): CrashReportDetails =
-        detailsFromCrashInfo(
-            crashInfo = ApplicationErrorReport.CrashInfo(throwable),
-            source = "OpenVitals uncaught exception handler",
-        )
-
-    private fun detailsFromCrashInfo(
-        crashInfo: ApplicationErrorReport.CrashInfo,
-        source: String,
-    ): CrashReportDetails =
-        CrashReportDetails(
-            source = source,
-            exceptionClassName = crashInfo.exceptionClassName,
-            exceptionMessage = crashInfo.exceptionMessage,
-            throwClassName = crashInfo.throwClassName,
-            throwFileName = crashInfo.throwFileName,
-            throwMethodName = crashInfo.throwMethodName,
-            throwLineNumber = crashInfo.throwLineNumber,
-            stackTrace = crashInfo.stackTrace,
-        )
-
-    private fun lastCrashFile(context: Context): File =
-        File(File(context.filesDir, ReportDirectory), LastCrashFileName)
+    private fun crashFile(context: Context): CrashReportFile =
+        CrashReportFile(File(context.applicationContext.filesDir, ReportDirectory))
 }

@@ -1,7 +1,7 @@
 // App-local code with no dependency on the rest of the phone app: the pure
 // models, insight calculations, preference enums and medical-document parsing
-// under `domain`, and the period, FIT, geo, stats and export primitives under
-// `core`. Packages keep their names; :app depends on this module.
+// under `domain`, and the period, FIT, geo, stats, export and privacy
+// primitives under `core`. Packages keep their names; :app depends on this module.
 //
 // An Android library rather than plain Kotlin: a handful of files use Health
 // Connect record constants and the platform's locale data, and Android lint
@@ -40,8 +40,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // The FHIR, C-CDA and SMART Health Card fixtures, used by this module's
-    // tests and by the app's import tests.
+    // The FHIR, C-CDA and SMART Health Card fixtures and the privacy sentinels,
+    // used by this module's tests and by the app's import and report tests.
     testFixtures {
         enable = true
     }

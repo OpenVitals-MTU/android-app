@@ -124,7 +124,7 @@ internal class BleGattConnection(
                 callbackHandler,
             )
         } catch (error: SecurityException) {
-            Log.w(TAG, "No Bluetooth grant for $displayName", error)
+            Log.w(TAG, "No Bluetooth grant to connect the sensor", error)
             updateStatus(BleConnectionStatus.DISCONNECTED)
             null
         }

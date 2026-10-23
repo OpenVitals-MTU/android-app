@@ -1,6 +1,6 @@
 package tech.mmarca.openvitals.features.devicesync
 
-import android.content.ClipData
+import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
 import android.content.Intent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,12 +33,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.setSensitiveText
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncPhase
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncReport
 import tech.mmarca.openvitals.features.devicesync.store.MedicalHeldBack
@@ -255,7 +255,7 @@ internal fun DeviceSyncReportStep(state: DeviceSyncState, onDone: () -> Unit) {
                         textAlign = TextAlign.Center,
                     )
                     // The abort reason is the one line that tells a bug report apart from a shrug.
-                    report?.abortReason?.let { reason ->
+                    report?.abortReason?.let(PrivacyRedactor::maskMessage)?.let { reason ->
                         Spacer(modifier = Modifier.height(Spacing.sm))
                         Text(
                             text = stringResource(R.string.device_sync_abort_reason, reason),
@@ -398,9 +398,7 @@ internal fun DeviceSyncReportActions(reportText: String) {
         OpenVitalsOutlinedButton(
             onClick = {
                 scope.launch {
-                    clipboard.setClipEntry(
-                        ClipData.newPlainText("OpenVitals", reportText).toClipEntry(),
-                    )
+                    clipboard.setSensitiveText("OpenVitals", reportText)
                 }
             },
             modifier = Modifier.weight(1f),

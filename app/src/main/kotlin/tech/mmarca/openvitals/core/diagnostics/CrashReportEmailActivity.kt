@@ -1,14 +1,11 @@
 package tech.mmarca.openvitals.core.diagnostics
 
 import android.app.Activity
-import android.app.ApplicationErrorReport
 import android.content.ActivityNotFoundException
-import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,7 +15,9 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.concurrent.thread
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.setSensitiveText
 
 class CrashReportEmailActivity : AppCompatActivity() {
     private var fallbackDraft: CrashReportEmailDraft? = null
@@ -38,12 +37,13 @@ class CrashReportEmailActivity : AppCompatActivity() {
         }.fold(
             onSuccess = {
                 Toast.makeText(this, R.string.crash_report_fallback_saved, Toast.LENGTH_SHORT).show()
+                discardReportAndFinish()
             },
             onFailure = {
                 Toast.makeText(this, R.string.crash_report_fallback_save_failed, Toast.LENGTH_SHORT).show()
+                finish()
             },
         )
-        finish()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,16 +53,12 @@ class CrashReportEmailActivity : AppCompatActivity() {
                 val appContext = applicationContext
                 CrashReportEmail.buildDraft(
                     appInfo = CrashReportStore.appInfo(appContext),
-                    reportDetails = CrashReportStore.detailsFromApplicationErrorReport(
-                        intent.applicationErrorReport()
-                    ),
-                    savedCrashReport = CrashReportStore.readLastCrashReport(appContext),
-                    diagnosticsLog = CrashReportStore.captureDiagnosticsLog(appContext),
+                    savedCrashReport = CrashReportStore.readFreshCrashReport(appContext),
                     anrReports = AnrExitInfo.recent(appContext),
                 )
             }
             if (openEmailDraft(draft)) {
-                finish()
+                discardReportAndFinish()
             }
         }
     }
@@ -105,7 +101,7 @@ class CrashReportEmailActivity : AppCompatActivity() {
             .setMessage(getString(R.string.crash_report_fallback_body, CrashReportEmailRecipient))
             .setNegativeButton(R.string.crash_report_fallback_copy) { _, _ ->
                 copyReportToClipboard(draft)
-                finish()
+                discardReportAndFinish()
             }
             .setPositiveButton(R.string.crash_report_fallback_save) { _, _ ->
                 saveReport(draft)
@@ -121,12 +117,7 @@ class CrashReportEmailActivity : AppCompatActivity() {
 
     private fun copyReportToClipboard(draft: CrashReportEmailDraft) {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(
-            ClipData.newPlainText(
-                getString(R.string.crash_report_clipboard_label),
-                CrashReportEmail.buildShareText(draft),
-            )
-        )
+        clipboard.setSensitiveText(getString(R.string.crash_report_clipboard_label), CrashReportEmail.buildShareText(draft))
         Toast.makeText(this, R.string.crash_report_fallback_copied, Toast.LENGTH_SHORT).show()
     }
 
@@ -142,21 +133,19 @@ class CrashReportEmailActivity : AppCompatActivity() {
                     R.string.crash_report_fallback_save_unavailable,
                     Toast.LENGTH_SHORT,
                 ).show()
-                finish()
+                discardReportAndFinish()
             } else {
                 throw throwable
             }
         }
     }
 
-    private fun Intent.applicationErrorReport(): ApplicationErrorReport? {
-        if (action != Intent.ACTION_APP_ERROR) return null
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            getParcelableExtra(Intent.EXTRA_BUG_REPORT, ApplicationErrorReport::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            getParcelableExtra(Intent.EXTRA_BUG_REPORT) as? ApplicationErrorReport
-        }
+    // The report went out with the email, the copy or the file; a cancel keeps it for next time.
+    // Off the main thread, and not tied to this activity, which finishes at once.
+    private fun discardReportAndFinish() {
+        val appContext = applicationContext
+        thread(name = "crash-report-discard") { CrashReportStore.discardCrashReport(appContext) }
+        finish()
     }
 
     companion object {

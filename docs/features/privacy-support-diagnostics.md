@@ -37,16 +37,16 @@ Notification text is used only to display the notification on the paired watch. 
 
 ## Diagnostics
 
-Diagnostics surfaces help users and maintainers understand local issues without sending health data automatically. They can include app version information, debug build separation, import reports, logs, and crash-report email drafts.
+Diagnostics surfaces help users and maintainers understand local issues without sending health data automatically. They can include app version information, debug build separation, import reports, logs, and crash-report email drafts. Each holds structure, not data: counts, types, reasons and masked error text. See [Text that leaves the app is structure, not data](../engineering/architecture.md#6-text-that-leaves-the-app-is-structure-not-data).
 
 Diagnostics builds add two cards that are useful when data appears to be missing:
 
 - A reminder test, which posts the hydration reminder notification immediately and exactly as a scheduled one would.
 - Health Connect sources, which lists the apps that contributed heart-rate and sleep records over the last seven days. It is the quickest way to tell whether a paired watch's data is actually landing in Health Connect.
 
-Apple Health import reports are explicit user downloads and intentionally include the full importer summary, logs, grouped diagnostics, worker logs, and full exception stacks on failure; the raw per-record diagnostic log is capped per source (see [Apple Health import](apple-health-import.md#reports-and-diagnostics)) so a large repeated import cannot make the report unbounded, but grouped diagnostic counts stay complete. They are not the same as the diagnostics log export and should be shared only when the user is comfortable sharing the included export-derived details.
+Apple Health import reports are explicit user downloads with the importer summary, logs, grouped diagnostics, worker logs, and on failure the masked exception stack; the per-record diagnostic log is capped per source (see [Apple Health import](apple-health-import.md#reports-and-diagnostics)) so a large repeated import cannot make the report unbounded, but grouped diagnostic counts stay complete. They hold no record's value or time, no source's name and no file location.
 
-Diagnostics builds export raw process logcat (no tag filtering or redaction) from Settings → Debug diagnostics so Health Connect and sync issues can be diagnosed from the full trail.
+Diagnostics builds export the process logcat from Settings → Debug diagnostics. Every line and tag is kept, so Health Connect and sync issues can be traced, and each line is masked: addresses, identifiers, file locations and dates, and an exception's message whole. The crash and Report an issue drafts carry no log in any build: the saved crash report holds the masked crash, is attached for seven days at most, and is deleted once it has gone into an email, a copy or a file. Copied reports are marked sensitive.
 
 ## Support Links
 

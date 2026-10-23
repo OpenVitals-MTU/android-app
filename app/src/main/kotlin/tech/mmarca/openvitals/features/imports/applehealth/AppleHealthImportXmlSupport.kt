@@ -4,6 +4,7 @@ import java.io.FilterInputStream
 import java.io.InputStream
 import java.io.PushbackReader
 import java.io.Reader
+import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
 import javax.xml.parsers.SAXParserFactory
 import org.xml.sax.Attributes
 import org.xml.sax.SAXParseException
@@ -58,8 +59,9 @@ internal class AppleHealthZipReadException(
     buildString {
         append("Apple Health export.zip ended unexpectedly")
         if (!entryName.isNullOrBlank()) {
+            // By kind, not by name: a route file's name carries the workout's date.
             append(" while reading ")
-            append(entryName)
+            append(describeZipEntry(entryName))
         }
         if (decompressedBytesRead != null) {
             append(" after ")
@@ -72,17 +74,24 @@ internal class AppleHealthZipReadException(
     cause,
 )
 
+/** What a ZIP entry is, for error text that must not carry its name. */
+internal fun describeZipEntry(entryName: String): String = when {
+    entryName.isAppleHealthExportXml() -> "export.xml"
+    entryName.isAppleWorkoutRouteFile() -> "a workout route file"
+    "clinical-records/" in entryName -> "a clinical record file"
+    else -> "a ZIP entry"
+}
+
 /**
  * Repairs the two common well-formedness breaks in free-text fields: raw
- * control characters and bare `&`. Keeps trailing context to explain the rest.
+ * control characters and bare `&`. Tracks the position to explain the rest;
+ * never the text, which is the user's records.
  */
 internal class XmlCharacterSanitizingReader(
     source: Reader,
-    private val maxContextChars: Int = 200,
 ) : Reader() {
     private val source = PushbackReader(source, MaxEntityLookahead)
     private val pending = ArrayDeque<Char>()
-    private val context = ArrayDeque<Char>()
     private var line = 1
     private var column = 0
 
@@ -101,9 +110,6 @@ internal class XmlCharacterSanitizingReader(
         }
         return if (n == 0) -1 else n
     }
-
-    /** Approximate text the parser last consumed before failing; useful when a `SAXParseException`'s own position is imprecise. */
-    fun recentContext(): String = context.joinToString(separator = "") { it.toDisplayable() }
 
     fun currentPosition(): String = "line $line, column $column"
 
@@ -134,8 +140,6 @@ internal class XmlCharacterSanitizingReader(
         } else {
             column++
         }
-        context.addLast(c)
-        if (context.size > maxContextChars) context.removeFirst()
         return c
     }
 
@@ -186,17 +190,14 @@ private fun String.isValidXmlEntityBody(): Boolean {
 
 private val NamedXmlEntities = setOf("amp", "lt", "gt", "quot", "apos")
 
-private fun Char.toDisplayable(): String =
-    if (code in 0x20..0x7E || this == '\n' || this == '\t') toString() else "\\u%04x".format(code)
-
-/** Thrown when export.xml still fails after sanitization, carrying the text the parser saw. */
+/** Thrown when export.xml still fails after sanitization: where it failed and the parser's reason, masked. */
 internal class AppleHealthXmlParseException(
     cause: SAXParseException,
     sanitizer: XmlCharacterSanitizingReader,
 ) : Exception(
     "Apple Health export.xml is not well-formed at ${cause.lineNumber.takeIf { it >= 0 }?.let { "line $it" } ?: sanitizer.currentPosition()}" +
         (cause.columnNumber.takeIf { it >= 0 }?.let { ", column $it" } ?: "") +
-        ": ${cause.message}. Text leading up to the error: \"${sanitizer.recentContext()}\"" +
+        ": ${PrivacyRedactor.maskMessage(cause.message) ?: "no reason given"}" +
         (
             if (sanitizer.strippedControlChars > 0 || sanitizer.escapedAmpersands > 0) {
                 " (already auto-repaired ${sanitizer.strippedControlChars} control character(s) and " +

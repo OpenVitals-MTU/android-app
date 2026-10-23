@@ -1939,8 +1939,8 @@
     <string name="medical_import_report_copied">Raport skopiowany</string>
     <string name="medical_import_report_saved">Raport zapisany</string>
     <string name="medical_import_report_save_failed">Nie udało się zapisać raportu</string>
-    <string name="medical_import_report_warning">Raport zawiera Twoją dokumentację medyczną. Sprawdź go przed udostępnieniem.</string>
-    <string name="medical_import_failure_report_note">Raport wymienia pliki, które OpenVitals sprawdził, i to, co znalazł w każdym z nich, ale bez ich treści. Sprawdź nazwy plików przed udostępnieniem.</string>
+    <string name="medical_import_report_warning">Raport liczy, co zostało zapisane, wstrzymane lub odrzucone, według typu rekordu i powodu. Nie zawiera treści Twojej dokumentacji ani żadnych nazwisk.</string>
+    <string name="medical_import_failure_report_note">Raport podaje, co zatrzymało import, i opisuje plik według rozmiaru, rodzaju i typów rekordów. Nie zawiera jego treści ani nazw plików.</string>
     <string name="medical_import_done">Gotowe</string>
     <string name="medical_import_another">Importuj kolejny plik</string>
     <string name="medical_import_reason_unsupported">Typ, którego Health Connect nie zapisuje</string>
@@ -2201,7 +2201,7 @@
     <string name="privacy_reconsent_action">Przejrzyj politykę</string>
     <string name="privacy_reconsent_no_browser">Żadna aplikacja na tym telefonie nie może otworzyć linku. Polityka znajduje się pod adresem %1$s</string>
     <string name="settings_debug_logs_title">Logi diagnostyczne</string>
-    <string name="settings_debug_logs_body">Udostępnij lub zapisz logi procesu OpenVitals jako plik tekstowy. Eksport jest surowy (bez redakcji), aby problemy z Health Connect i synchronizacją można było zdiagnozować z pełnego zapisu.</string>
+    <string name="settings_debug_logs_body">Udostępnij lub zapisz logi OpenVitals jako plik tekstowy. Każdy wiersz zostaje zachowany, aby można było prześledzić problemy z Health Connect i synchronizacją; adresy urządzeń, identyfikatory, lokalizacje plików, daty i szczegóły błędów są maskowane. Przeczytaj go przed udostępnieniem.</string>
     <string name="settings_debug_logs_share">Udostępnij logi</string>
     <string name="settings_debug_logs_share_chooser_title">Udostępnij logi diagnostyczne</string>
     <string name="settings_debug_logs_share_failed">Nie udało się udostępnić logów diagnostycznych</string>
@@ -2381,7 +2381,15 @@
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%. %2$s. Wybrano %3$d/%4$d, zaimportowano %5$d.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. Przeskanowano %3$d/%4$d, zaimportowano %5$d.</string>
     <string name="settings_apple_health_import_result">Zaimportowano %1$d. Duplikaty %2$d. Niewybrane %3$d. Nieobsługiwane %4$d. Pominięte %5$d. Nieudane %6$d.</string>
-    <string name="settings_apple_health_import_routes_incomplete">Rekordy zdrowotne zaimportowano, ale niektóre trasy treningów były niedostępne, bo plik ZIP zakończył się nieoczekiwanie. Raport importu wymienia dotknięte aktywności do ręcznego odzyskania.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Rekordy zdrowotne zaimportowano, ale niektóre trasy treningów były niedostępne, bo plik ZIP nieoczekiwanie się skończył. Treningi, których to dotyczy, są wymienione poniżej.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d trening dotarł bez trasy</item>
+        <item quantity="few">%d treningi dotarły bez trasy</item>
+        <item quantity="many">%d treningów dotarło bez trasy</item>
+        <item quantity="other">%d treningu dotarło bez trasy</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Ich plików tras nie ma w eksporcie. Zaimportuj export.zip zamiast export.xml albo zaimportuj każdą trasę w imporcie GPX/KML/KMZ/TCX.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Pokaż wszystko</string>
     <string name="settings_apple_health_import_analysis_result">Przeskanowano %1$d elementów. Znaleziono %2$d zgodnych rekordów. Nieobsługiwane %3$d. Nieudane %4$d.</string>
     <string name="settings_apple_health_import_choose_categories">Wybierz, co zapisać w Health Connect.</string>
     <string name="settings_apple_health_import_category_count">%1$d rekordów</string>

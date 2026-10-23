@@ -126,12 +126,8 @@ class DataImportViewModelTest {
 
         assertEquals("current failure", vm.uiState.value.appleHealthImportError)
         coVerify(exactly = 0) { importController.errorFor(staleFailure) }
-        verify {
-            Log.e(
-                AppleHealthImportWorker.LogTag,
-                match { message -> message.contains("current failure") && message.contains(currentWorkId.toString()) },
-            )
-        }
+        // Logged once, for the current work, and without the report: that stays in the app.
+        verify(exactly = 1) { Log.e(AppleHealthImportWorker.LogTag, "Apple Health import failed") }
     }
 
     @Test fun `re-selecting the same file reuses the previous analysis`() = runTest {

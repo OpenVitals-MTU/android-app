@@ -21,6 +21,7 @@ data class AppleHealthImportResult(
     val skippedRecords: Int,
     val failedRecords: Int,
     val workoutRoutesIncomplete: Boolean = false,
+    val workoutsWithoutRoute: List<AppleWorkoutWithoutRoute> = emptyList(),
     val typeSummaries: List<AppleHealthImportTypeSummary>,
     val diagnostics: List<AppleHealthImportDiagnostic>,
     val shareableReportText: String,
@@ -195,14 +196,23 @@ enum class AppleHealthImportCategory(
     ),
 }
 
+/**
+ * Why a record was left out, for the shareable report: its types, the reason and
+ * the unit. Never its time or value, so the report can be posted without the data.
+ */
 data class AppleHealthImportDiagnostic(
     val appleType: String,
     val targetType: String?,
     val reasonCode: String,
-    val timeRange: String?,
     val unit: String?,
-    val value: String?,
     val detail: String,
+)
+
+/** A workout whose route file is not in the export, for the user to bring in by hand. Shown, never in the report. */
+data class AppleWorkoutWithoutRoute(
+    val appleType: String,
+    val start: Instant,
+    val end: Instant,
 )
 
 internal data class AppleHealthImportDiagnosticSummary(
@@ -211,9 +221,7 @@ internal data class AppleHealthImportDiagnosticSummary(
     val reasonCode: String,
     val detail: String,
     val count: Int,
-    val exampleTimeRange: String?,
     val exampleUnit: String?,
-    val exampleValue: String?,
 )
 
 internal data class AppleHealthDiagnosticSummaryKey(
@@ -229,9 +237,7 @@ internal data class MutableAppleHealthImportDiagnosticSummary(
     val reasonCode: String,
     val detail: String,
     var count: Int,
-    val exampleTimeRange: String?,
     val exampleUnit: String?,
-    val exampleValue: String?,
 ) {
     fun toSummary(): AppleHealthImportDiagnosticSummary =
         AppleHealthImportDiagnosticSummary(
@@ -240,9 +246,7 @@ internal data class MutableAppleHealthImportDiagnosticSummary(
             reasonCode = reasonCode,
             detail = detail,
             count = count,
-            exampleTimeRange = exampleTimeRange,
             exampleUnit = exampleUnit,
-            exampleValue = exampleValue,
         )
 }
 
@@ -265,9 +269,7 @@ internal fun MutableMap<AppleHealthDiagnosticSummaryKey, MutableAppleHealthImpor
             reasonCode = diagnostic.reasonCode,
             detail = diagnostic.detail,
             count = 1,
-            exampleTimeRange = diagnostic.timeRange,
             exampleUnit = diagnostic.unit,
-            exampleValue = diagnostic.value,
         )
     }
 }
@@ -304,8 +306,7 @@ internal data class AppleWorkoutRouteArchiveFailure(
 ) {
     val detail: String
         get() = buildString {
-            append("The ZIP ended unexpectedly while reading ")
-            append(entryName)
+            append("The ZIP ended unexpectedly while reading a workout route file")
             if (decompressedBytesRead != null) {
                 append(" after ")
                 append(decompressedBytesRead)
@@ -328,10 +329,7 @@ internal data class AppleRecord(
     val numericValue: Double?,
     val metadata: Map<String, String>,
     val correlationType: String? = null,
-) {
-    val valueForReport: String?
-        get() = rawValue?.take(80)
-}
+)
 
 internal data class AppleWorkout(
     val workoutActivityType: String,
@@ -407,7 +405,6 @@ internal data class ConvertedAppleRecord(
     val record: Record,
     val sourceTimeRange: AppleImportTimeRange,
     val unit: String?,
-    val value: String?,
 )
 
 internal data class AppleImportTimeRange(

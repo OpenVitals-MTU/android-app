@@ -102,7 +102,6 @@ internal fun AppleHealthImportConverter.convertNutrition(
             record = nutrition,
             sourceTimeRange = AppleImportTimeRange(interval.start.instant, interval.end.instant),
             unit = null,
-            value = "nutrients=${group.size}",
         )
     }
 }

@@ -274,7 +274,7 @@ class CycleRepositoryImpl @Inject constructor(
     private suspend fun reconcileAfterFlowMutation(kind: CycleEntryKind, days: Set<LocalDate>) {
         if (kind != CycleEntryKind.MENSTRUATION_FLOW || days.isEmpty()) return
         runCatching { hc.reconcileMenstruationPeriods(days) }
-            .onFailure { Log.w(TAG, "Deferred period reconcile for $days", it) }
+            .onFailure { Log.w(TAG, "Deferred period reconcile for ${days.size} day(s)", it) }
     }
 
     private fun java.time.Instant.toLocalDay(): LocalDate = atZone(ZoneId.systemDefault()).toLocalDate()

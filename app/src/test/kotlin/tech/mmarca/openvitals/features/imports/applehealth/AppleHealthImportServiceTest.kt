@@ -112,16 +112,17 @@ class AppleHealthImportServiceTest {
     }
 
     @Test
-    fun `parser wraps a genuine well-formedness failure with the surrounding text`() {
+    fun `parser wraps a genuine well-formedness failure with its position and none of the text`() {
         val xml = "<HealthData><Record type=\"HKQuantityTypeIdentifierStepCount\" " +
             "startDate=\"2026-01-01 00:00:00 +0000\" endDate=\"2026-01-01 00:01:00 +0000\">" +
             "</MismatchedClosingTag></HealthData>"
 
         val error = assertThrows(AppleHealthXmlParseException::class.java) { parseXml(xml) }
 
-        assertTrue(error.message.orEmpty().contains("not well-formed"))
+        assertTrue(error.message.orEmpty().contains("not well-formed at line 1, column"))
         assertTrue(error.cause is org.xml.sax.SAXParseException)
-        assertTrue(error.message.orEmpty().contains("Text leading up to the error"))
+        assertFalse(error.message.orEmpty().contains("StepCount"))
+        assertFalse(error.message.orEmpty().contains("2026-01-01"))
     }
 
     @Test
@@ -476,7 +477,8 @@ class AppleHealthImportServiceTest {
             )
         }
 
-        assertTrue(error.message.orEmpty().contains("apple_health_export/export.xml"))
+        assertTrue(error.message.orEmpty().contains("while reading export.xml"))
+        assertFalse(error.message.orEmpty().contains("apple_health_export/"))
         assertTrue(error.message.orEmpty().contains("incomplete, corrupt, not fully downloaded"))
         assertTrue(error.message.orEmpty().contains("extract export.xml and import that file directly"))
     }
@@ -513,16 +515,21 @@ class AppleHealthImportServiceTest {
         assertTrue(result.diagnostics.any { it.reasonCode == "route_archive_truncated" })
         val affectedWorkout = result.diagnostics.single { it.reasonCode == "workout_route_unavailable" }
         assertEquals("HKWorkoutActivityTypeRunning", affectedWorkout.appleType)
-        assertTrue(affectedWorkout.timeRange.orEmpty().contains("2022-06-09T16:13:00Z"))
-        assertTrue(affectedWorkout.detail.contains("route_2022-06-09_4.13pm.gpx"))
-        assertTrue(affectedWorkout.detail.contains("Import or recreate this activity manually"))
+        assertFalse(affectedWorkout.detail.contains("route_2022-06-09_4.13pm.gpx"))
+        assertFalse(affectedWorkout.detail.contains("Apple Watch"))
+        // The card lists the workout; the report only counts it.
+        assertEquals(
+            listOf(AppleWorkoutWithoutRoute("HKWorkoutActivityTypeRunning", Instant.parse("2022-06-09T16:13:00Z"), Instant.parse("2022-06-09T16:43:00Z"))),
+            result.workoutsWithoutRoute,
+        )
         assertTrue(result.shareableReportText.contains("Workout routes incomplete: true"))
         assertTrue(result.shareableReportText.contains("[WARN] Workout route archive recovery"))
-        assertTrue(result.shareableReportText.contains(routePath))
         assertTrue(result.shareableReportText.contains("workout_route_unavailable"))
-        assertTrue(result.shareableReportText.contains("HKWorkoutActivityTypeRunning"))
-        assertTrue(result.shareableReportText.contains("Activities Requiring Manual Route Import"))
-        assertTrue(result.shareableReportText.contains("timeRange=2022-06-09T16:13:00Z"))
+        assertTrue(result.shareableReportText.contains("Workouts imported without their route"))
+        assertTrue(result.shareableReportText.contains("- HKWorkoutActivityTypeRunning: 1"))
+        assertFalse(result.shareableReportText.contains("route_2022-06-09"))
+        assertFalse(result.shareableReportText.contains("2022-06-09"))
+        assertFalse(result.shareableReportText.contains("timeRange="))
         assertEquals(1, export.insertedBatches.size)
     }
 

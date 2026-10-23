@@ -64,9 +64,9 @@ class AppleHealthImportXmlSupportTest {
     }
 
     @Test
-    fun `recentContext reports the trailing emitted text`() {
-        val (_, sanitizer) = sanitize("<a>hello world</a>")
+    fun `the position follows the text without keeping any of it`() {
+        val (_, sanitizer) = sanitize("<a>hello\nworld</a>")
 
-        assertTrue(sanitizer.recentContext().endsWith("world</a>"))
+        assertEquals("line 2, column 9", sanitizer.currentPosition())
     }
 }

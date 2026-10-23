@@ -79,8 +79,8 @@ class FunctionLengthRatchetTest {
         const val MaxLines = 150
         const val GiantLines = 450
 
-        /** The count on 2026-10-18, after the FIT workout export was split per message. */
-        const val MaxLongFunctions = 53
+        /** The count on 2026-10-23, after the Apple Health report builder left the import service. */
+        const val MaxLongFunctions = 52
 
         /** Each ceiling is the length on 2026-09-21 plus about 20 lines. */
         val GiantCeilings = mapOf(

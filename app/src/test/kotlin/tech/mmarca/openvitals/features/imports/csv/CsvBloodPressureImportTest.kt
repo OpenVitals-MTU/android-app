@@ -172,10 +172,11 @@ class CsvBloodPressureImportTest {
     fun `a reading Health Connect would refuse is rejected for its first fault only`() {
         val cases = listOf(
             // Two faults, one lost reading: one rejection.
-            listOf("1200", "not a number") to CsvImportDiagnostic(2, CsvImportDiagnosticReason.OUT_OF_RANGE, 1, "1200.00"),
-            listOf("abc", "80") to CsvImportDiagnostic(2, CsvImportDiagnosticReason.UNPARSABLE_NUMBER, 1, "abc"),
-            listOf("120", "9") to CsvImportDiagnostic(2, CsvImportDiagnosticReason.OUT_OF_RANGE, 2, "9.00"),
-            listOf("80", "120") to CsvImportDiagnostic(2, CsvImportDiagnosticReason.SYSTOLIC_NOT_ABOVE_DIASTOLIC, 1, "80/120"),
+            // A cell that is not a number is reported by its shape; a value never appears.
+            listOf("1200", "not a number") to CsvImportDiagnostic(2, CsvImportDiagnosticReason.OUT_OF_RANGE, 1, null),
+            listOf("abc", "80") to CsvImportDiagnostic(2, CsvImportDiagnosticReason.UNPARSABLE_NUMBER, 1, "aaa"),
+            listOf("120", "9") to CsvImportDiagnostic(2, CsvImportDiagnosticReason.OUT_OF_RANGE, 2, null),
+            listOf("80", "120") to CsvImportDiagnostic(2, CsvImportDiagnosticReason.SYSTOLIC_NOT_ABOVE_DIASTOLIC, 1, null),
         )
 
         for ((pressures, expected) in cases) {

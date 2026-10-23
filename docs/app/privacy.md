@@ -27,7 +27,7 @@ Every device feature is built around keeping that true:
 - Phone-to-phone sync uses Bluetooth Classic (RFCOMM), not Wi-Fi. A Wi-Fi or TCP transfer would require `INTERNET`; Bluetooth keeps it a direct link between the two phones.
 - Watch sync and notification forwarding talk to the watch over Bluetooth only.
 - Offline maps are imported as local map packs; nothing is downloaded.
-- Diagnostics and import reports are generated on device and shared only if the user chooses to.
+- Diagnostics and import reports are generated on device and shared only if the user chooses to. They hold structure, not data: counts, record types, reasons and masked error text. See [Text that leaves the app is structure, not data](../engineering/architecture.md#6-text-that-leaves-the-app-is-structure-not-data).
 
 ## Paired Devices
 
@@ -79,7 +79,7 @@ Health Connect is the source of truth. OpenVitals reads Health Connect records t
 
 Manual entries are saved back to Health Connect only when the user chooses to save them. Supported Apple Health export records are written to Health Connect only when the user imports an export file from Settings. OpenVitals-created records can be edited later; records created by other apps remain read-only.
 
-Apple Health exports are copied into app-private local storage and analyzed there before the user chooses which categories to import. The staged compressed copy is reused for the pending background import, cleared after a successful import or analysis failure, replaced by a newly selected export, and removed with the app's private data. A copy from an analysis the user never finished is removed at the next app start once it is a day old, unless an import is queued or running. Import reports are generated locally when the user runs an import and chooses to copy or download the report. These troubleshooting reports intentionally include full importer logs, selected categories, diagnostics, and exception details, so users should review them before sharing outside their device.
+Apple Health exports are copied into app-private local storage and analyzed there before the user chooses which categories to import. The staged compressed copy is reused for the pending background import, cleared after a successful import or analysis failure, replaced by a newly selected export, and removed with the app's private data. A copy from an analysis the user never finished is removed at the next app start once it is a day old, unless an import is queued or running. Import reports are generated locally when the user runs an import and chooses to copy or download the report. They hold the importer's counts, selected categories, reasons and log, with error text masked, and none of the records' values, times or sources, no file locations and no file names. The workouts imported without their route are listed on the import card and kept in a private file beside the report, never in it. Reports written before this was so are deleted at app start.
 
 ## Medical Records
 
@@ -87,7 +87,7 @@ Health Connect stores medical records as FHIR resources, on Android 14 and newer
 
 - The 13 medical permissions are asked for in one request, only inside the medical records area, never with fitness permissions. They join `managedPermissions` so a grant is seen, and stay out of every set that onboarding or Settings asks for.
 - Records are shown as Health Connect holds them. Nothing is computed from them, and a value is flagged only when the source flagged it.
-- Imports and exports are file based. Nothing is fetched from a server. The import report includes record content, and the result step says to review it before sharing.
+- Imports and exports are file based. Nothing is fetched from a server. The import report counts what was written, held back or refused by record type and reason, and holds no record's content or id, no file, source or app name and no address.
 - A SMART Health Card can also be scanned with the camera. `CAMERA` is asked for only when Scan is tapped; frames are analysed in memory and never stored. A card's signature is not checked, since that needs the issuer's keys from the network, and its records are tagged as not verified.
 - OpenVitals keeps no copy of records. The one exception is a saved document: an imported file the user chose to keep, in app-private storage with a Room index, not backed up.
 - Phone-to-phone sync carries medical records in full when the category is selected on both phones. Saved documents stay on the phone.

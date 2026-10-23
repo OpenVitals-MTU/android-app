@@ -1354,8 +1354,8 @@
     <string name="medical_import_report_copied">Informe copiado</string>
     <string name="medical_import_report_saved">Informe guardado</string>
     <string name="medical_import_report_save_failed">No se pudo guardar el informe</string>
-    <string name="medical_import_report_warning">El informe incluye tus registros médicos. Revísalo antes de compartirlo.</string>
-    <string name="medical_import_failure_report_note">El informe nombra los archivos que OpenVitals revisó y lo que encontró en cada uno, pero nada de su contenido. Revisa los nombres de los archivos antes de compartirlo.</string>
+    <string name="medical_import_report_warning">El informe cuenta lo que se escribió, se retuvo o se rechazó, por tipo de registro y motivo. No contiene nada del contenido de tus registros ni nombres.</string>
+    <string name="medical_import_failure_report_note">El informe indica qué detuvo la importación y describe el archivo por su tamaño, tipo y tipos de registro. No contiene nada de su contenido ni nombres de archivo.</string>
     <string name="medical_import_done">Hecho</string>
     <string name="medical_import_another">Importar otro archivo</string>
     <string name="medical_import_reason_unsupported">Tipo que Health Connect no guarda</string>
@@ -1796,7 +1796,7 @@
     <string name="settings_privacy_on_device">Los datos permanecen en tu dispositivo</string>
     <string name="settings_privacy_read_only">Solo lectura salvo las entradas que registres explícitamente</string>
     <string name="settings_debug_logs_title">Registros de diagnóstico saneados</string>
-    <string name="settings_debug_logs_body">Comparte o guarda los registros de diagnóstico de OpenVitals como archivo de texto. La exportación elimina u oculta identificadores, ubicaciones, fechas, URI, datos brutos de sensores y registros de otras apps antes de escribir.</string>
+    <string name="settings_debug_logs_body">Comparte o guarda los registros de OpenVitals como archivo de texto. Se conservan todas las líneas para poder rastrear problemas de Health Connect y de sincronización; las direcciones de dispositivos, identificadores, ubicaciones de archivos, fechas y detalles de errores se ocultan. Revísalo antes de compartirlo.</string>
     <string name="settings_debug_logs_share">Compartir registros</string>
     <string name="settings_debug_logs_share_chooser_title">Compartir registros de diagnóstico</string>
     <string name="settings_debug_logs_share_failed">Error al compartir los registros de diagnóstico</string>
@@ -2162,7 +2162,14 @@
     <string name="body_energy_calculation_inputs_body">La frecuencia cardíaca, la frecuencia cardíaca en reposo, las zonas personales, el sueño, los entrenamientos, la variabilidad de la frecuencia cardíaca (VFC) y la frecuencia respiratoria pueden mejorar la estimación. Si faltan datos, la estimación será más conservadora y el nivel de confianza será menor.</string>
     <string name="body_energy_calculation_limits_body">Se trata de una estimación del bienestar realizada por el propio dispositivo, no de una medición directa ni de un consejo médico. Los datos introducidos y las razones que se muestran tienen como objetivo permitir revisar y mejorar el método.</string>
     <string name="metric_body_energy">Energía corporal</string>
-    <string name="settings_apple_health_import_routes_incomplete">Se han importado los registros de salud, pero algunas rutas no estaban disponibles porque el código postal no era correcto. El informe de importación enumera las actividades afectadas para que se puedan recuperar manualmente.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Se han importado los registros de salud, pero algunas rutas de entrenamiento no estaban disponibles porque el archivo ZIP terminó de forma inesperada. Los entrenamientos afectados aparecen abajo.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d entrenamiento llegó sin su ruta</item>
+        <item quantity="many">%d entrenamientos llegaron sin su ruta</item>
+        <item quantity="other">%d entrenamientos llegaron sin su ruta</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Sus archivos de ruta no están en la exportación. Importa export.zip en lugar de export.xml o importa cada ruta con el importador de GPX/KML/KMZ/TCX.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Mostrar todo</string>
     <string name="body_energy_reason_strong_calibration">La intensidad por frecuencia cardiaca tiene una calibración sólida.</string>
     <string name="body_energy_reason_observed_or_age">La intensidad por frecuencia cardiaca usa calibración observada o por edad.</string>
     <string name="body_energy_reason_incomplete_calibration">La calibración está incompleta, así que las estimaciones automáticas son conservadoras.</string>

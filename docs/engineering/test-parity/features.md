@@ -496,9 +496,9 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/core/diagnostics/
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
 | renders the title, body and the share + save actions | PORTED | SettingsSmallCardsTest: `debugDiagnosticsCard_rendersTheTitleBodyAndBothActions` | Compose instrumentation; runs on a device, not in CI |
-| save flow sanitizes the logcat and reports success | DIVERGED | PrivacySafeDebugLogExporterTest.kt: `sanitize excludes unrelated tags` (+ `sanitize keeps OpenVitals operational lines`) | tag filtering covered; package=/version= header and file name unasserted |
+| save flow sanitizes the logcat and reports success | DIVERGED | PrivacySafeDebugLogExporterTest.kt: `export masks identifiers, addresses and dates and keeps the tag and the numbers` (+ `an exception's message is masked whole and its frames stay`) | masking covered, every tag kept; package=/version= header and file name unasserted |
 | degrades gracefully when the native channel is unavailable | N/A-FRAMEWORK | — | Flutter platform-channel absence; Kotlin reads logcat natively |
-| share flow sanitizes the logcat and reaches the share seam | DIVERGED | PrivacySafeDebugLogExporterTest.kt: `sanitize excludes unrelated tags` | sanitize covered; Android chooser seam untested |
+| share flow sanitizes the logcat and reaches the share seam | DIVERGED | PrivacySafeDebugLogExporterTest.kt: `export masks identifiers, addresses and dates and keeps the tag and the numbers` | masking covered; Android chooser seam untested |
 | share failure surfaces the failure snackbar | N/A-WIDGET | — | |
 | share degrades gracefully when the native channel is missing | N/A-FRAMEWORK | — | |
 
@@ -727,16 +727,16 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/imports/
 
 | Flutter case | Status | Kotlin test | Note |
 |---|---|---|---|
-| buildCsvImportReport > the report names the file and the outcome | PORTED | CsvImportReportTest.kt: `the report names the file and the outcome` |  |
-| buildCsvImportReport > an unnamed file is reported rather than left blank | PORTED | CsvImportReportTest.kt: `an unnamed file is reported rather than left blank` |  |
+| buildCsvImportReport > the report names the file and the outcome | DIVERGED | CsvImportReportTest.kt: `the report gives the outcome and never the file's name` | the outcome is kept; a file's name can be a person's, so the report leaves it out |
+| buildCsvImportReport > an unnamed file is reported rather than left blank | REMOVED | — | no file name is reported at all |
 | buildCsvImportReport > every tally from the run appears | PORTED | CsvImportReportTest.kt: `every tally from the run appears` |  |
 | buildCsvImportReport > the parsing settings that produced the run are recorded | PORTED | CsvImportReportTest.kt: `the parsing settings that produced the run are recorded` |  |
 | buildCsvImportReport > a fixed offset is written out in full | PORTED | CsvImportReportTest.kt: `a fixed offset is written out in full` |  |
 | buildCsvImportReport > a custom date pattern is recorded so a bad one can be spotted | PORTED | CsvImportReportTest.kt: `a custom date pattern is recorded so a bad one can be spotted` |  |
-| buildCsvImportReport > every column is listed with the role it was given | PORTED | CsvImportReportTest.kt: `every column is listed with the role it was given` |  |
+| buildCsvImportReport > every column is listed with the role it was given | DIVERGED | CsvImportReportTest.kt: `every column is listed with the role it was given, not its header` | the column's index and role, not the file's header text |
 | buildCsvImportReport > a derived body fat says what it was derived from, not just its unit | PORTED | CsvImportReportTest.kt: `a derived body fat says what it was derived from, not just its unit` |  |
 | buildCsvImportReport > rejection counts are grouped by reason | PORTED | CsvImportReportTest.kt: `rejection counts are grouped by reason` |  |
-| buildCsvImportReport > individual rejected rows name the row, column and value | PORTED | CsvImportReportTest.kt: `individual rejected rows name the row, column and value` |  |
+| buildCsvImportReport > individual rejected rows name the row, column and value | DIVERGED | CsvImportReportTest.kt: `individual rejected rows name the row, column and the cell's shape` | the cell's shape (`99/99/9999`), never its text or value |
 | buildCsvImportReport > a capped per-row log says how many were dropped and that the counts are not | PORTED | CsvImportReportTest.kt: `a capped per-row log says how many were dropped and that the counts are not` |  |
 | buildCsvImportReport > a clean run has no rejection sections at all | PORTED | CsvImportReportTest.kt: `a clean run has no rejection sections at all` |  |
 | buildCsvImportReport > a failed run carries its error text | PORTED | CsvImportReportTest.kt: `a failed run carries its error text` |  |
@@ -807,7 +807,7 @@ Kotlin counterpart: app/src/test/kotlin/tech/mmarca/openvitals/features/imports/
 | an already-granted permission is not reported missing | PORTED | CsvImportViewModelTest.kt: `an already-granted permission is not reported missing` |  |
 | a completed import writes one record per mapped metric per row | PORTED | CsvImportViewModelTest.kt: `a completed import writes one record per mapped metric per row` | VM step DONE transition now asserted |
 | the Withings fat-mass derivation writes body-fat percentages | PORTED | CsvImportViewModelTest.kt: `the Withings fat-mass derivation writes body-fat percentages` | now asserted via VM import |
-| saveReport > the report describes the run that just finished | PORTED | CsvImportViewModelTest.kt: `the report describes the run that just finished` | Kotlin reportText() is portable, untested |
+| saveReport > the report describes the run that just finished | DIVERGED | CsvImportViewModelTest.kt: `the report describes the run that just finished` | asserts the run's totals and mapping, and that the file and header names stay out |
 | saveReport > there is nothing to report before an import has run | PORTED | CsvImportViewModelTest.kt: `there is nothing to report before an import has run` | reportText() null-guard untested |
 | saveReport > a saved report ends the command in success carrying true | N/A-FRAMEWORK | — | no CommandState in Kotlin; save is a SAF launcher in the screen |
 | saveReport > a cancelled save succeeds carrying false, not a failure | N/A-FRAMEWORK | — | |
@@ -1448,13 +1448,13 @@ Counts are per Flutter test case. The csv_row_converter_test.dart row is collaps
 
 | Status | Count |
 |---|---|
-| PORTED | 502 |
-| DIVERGED | 70 |
+| PORTED | 497 |
+| DIVERGED | 74 |
 | MISSING | 27 |
 | N/A-WIDGET | 134 |
 | N/A-FRAMEWORK | 132 |
 | N/A-BEHAVIOR | 7 |
-| Total cases | 872 |
+| Total cases | 871 |
 
 ### Portable gaps
 

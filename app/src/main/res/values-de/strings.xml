@@ -1348,8 +1348,8 @@
     <string name="medical_import_report_copied">Bericht kopiert</string>
     <string name="medical_import_report_saved">Bericht gespeichert</string>
     <string name="medical_import_report_save_failed">Bericht konnte nicht gespeichert werden</string>
-    <string name="medical_import_report_warning">Der Bericht enthält deine medizinischen Unterlagen. Prüfe ihn, bevor du ihn teilst.</string>
-    <string name="medical_import_failure_report_note">Der Bericht nennt die Dateien, die OpenVitals angesehen hat, und was es in jeder gefunden hat, aber nichts von ihrem Inhalt. Prüfe die Dateinamen, bevor du ihn teilst.</string>
+    <string name="medical_import_report_warning">Der Bericht zählt, was geschrieben, zurückgehalten oder abgelehnt wurde, nach Datensatztyp und Grund. Er enthält nichts vom Inhalt deiner Unterlagen und keine Namen.</string>
+    <string name="medical_import_failure_report_note">Der Bericht nennt, was den Import gestoppt hat, und beschreibt die Datei nach Größe, Art und Datensatztypen. Er enthält nichts von ihrem Inhalt und keine Dateinamen.</string>
     <string name="medical_import_done">Fertig</string>
     <string name="medical_import_another">Weitere Datei importieren</string>
     <string name="medical_import_reason_unsupported">Typ, den Health Connect nicht speichert</string>
@@ -1798,7 +1798,7 @@
     <string name="settings_privacy_on_device">Daten bleiben auf deinem Gerät</string>
     <string name="settings_privacy_read_only">Schreibgeschützt, außer bei Einträgen, die du ausdrücklich protokollierst</string>
     <string name="settings_debug_logs_title">Bereinigte Diagnoseprotokolle</string>
-    <string name="settings_debug_logs_body">Teile oder speichere OpenVitals-Diagnoseprotokolle als Textdatei. Der Export entfernt oder maskiert Kennungen, Orte, Daten, URIs, rohe Sensordaten und fremde App-Protokolle vor dem Schreiben.</string>
+    <string name="settings_debug_logs_body">Teile oder speichere OpenVitals-Protokolle als Textdatei. Jede Zeile bleibt erhalten, damit sich Probleme mit Health Connect und der Synchronisierung nachvollziehen lassen; Geräteadressen, Kennungen, Dateipfade, Datumsangaben und Fehlerdetails werden maskiert. Lies sie, bevor du sie teilst.</string>
     <string name="settings_debug_logs_share">Protokolle teilen</string>
     <string name="settings_debug_logs_share_chooser_title">Diagnoseprotokolle teilen</string>
     <string name="settings_debug_logs_share_failed">Diagnoseprotokolle konnten nicht geteilt werden</string>
@@ -2166,7 +2166,13 @@
     <string name="body_energy_calculation_inputs_body">Herzfrequenz, Ruheherzfrequenz, persönliche Zonen, Schlaf, Trainings, HRV und Atemfrequenz können die Schätzung verbessern. Fehlende Eingaben machen die Schätzung konservativer und senken das Vertrauen.</string>
     <string name="body_energy_calculation_limits_body">Dies ist eine Wellness-Schätzung auf dem Gerät, keine direkte Messung und kein medizinischer Rat. Die angezeigten Eingaben und Gründe werden offengelegt, damit die Methode geprüft und verbessert werden kann.</string>
     <string name="metric_body_energy">Körperenergie</string>
-    <string name="settings_apple_health_import_routes_incomplete">Die Gesundheitsdaten wurden importiert, jedoch waren einige Trainingsrouten nicht verfügbar, da die Postleitzahl unerwartet endete. Im Importbericht sind die betroffenen Aktivitäten zur manuellen Wiederherstellung aufgeführt.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Die Gesundheitsdaten wurden importiert, aber einige Trainingsrouten waren nicht verfügbar, weil die ZIP-Datei unerwartet endete. Die betroffenen Trainings stehen unten.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d Training kam ohne seine Route</item>
+        <item quantity="other">%d Trainings kamen ohne ihre Route</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Ihre Routendateien fehlen im Export. Importiere export.zip statt export.xml oder importiere jede Route mit dem GPX/KML/KMZ-Importer.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Alle anzeigen</string>
     <string name="body_energy_reason_strong_calibration">Die Herzfrequenz-Intensität hat eine solide Kalibrierung.</string>
     <string name="body_energy_reason_observed_or_age">Die Herzfrequenz-Intensität nutzt beobachtete oder altersbasierte Kalibrierung.</string>
     <string name="body_energy_reason_incomplete_calibration">Die Kalibrierung ist unvollständig, automatische Schätzungen sind daher konservativ.</string>

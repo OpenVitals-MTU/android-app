@@ -136,7 +136,7 @@ class MedicalRecordsSyncStore(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "medical records write failed: ${e.message}")
+            Log.w(TAG, "medical records write failed", e)
             emptySet()
         }
     }

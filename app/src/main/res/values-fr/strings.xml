@@ -1607,8 +1607,8 @@
     <string name="medical_import_report_copied">Rapport copié</string>
     <string name="medical_import_report_saved">Rapport enregistré</string>
     <string name="medical_import_report_save_failed">Impossible d\'enregistrer le rapport</string>
-    <string name="medical_import_report_warning">Le rapport contient vos dossiers médicaux. Relisez-le avant de le partager.</string>
-    <string name="medical_import_failure_report_note">Le rapport indique les fichiers qu\'OpenVitals a examinés et ce qu\'il a trouvé dans chacun, mais rien de leur contenu. Vérifiez les noms des fichiers avant de le partager.</string>
+    <string name="medical_import_report_warning">Le rapport compte ce qui a été écrit, retenu ou refusé, par type d\'enregistrement et par motif. Il ne contient rien du contenu de vos dossiers ni aucun nom.</string>
+    <string name="medical_import_failure_report_note">Le rapport indique ce qui a arrêté l\'import et décrit le fichier par sa taille, son type et ses types d\'enregistrements. Il ne contient rien de son contenu ni aucun nom de fichier.</string>
     <string name="medical_import_done">Terminé</string>
     <string name="medical_import_another">Importer un autre fichier</string>
     <string name="medical_import_reason_unsupported">Type non enregistré par Health Connect</string>
@@ -1862,7 +1862,7 @@
     <string name="privacy_reconsent_action">Consulter la politique</string>
     <string name="dashboard_summary_today">Aujourd\'hui</string>
     <string name="settings_debug_logs_title">Journaux de diagnostic</string>
-    <string name="settings_debug_logs_body">Partagez ou enregistrez les journaux du processus OpenVitals sous forme de fichier texte. L\'export est brut (sans anonymisation) afin que les problèmes de Santé Connect et de synchronisation puissent être diagnostiqués à partir de la trace complète.</string>
+    <string name="settings_debug_logs_body">Partagez ou enregistrez les journaux d\'OpenVitals sous forme de fichier texte. Chaque ligne est conservée pour pouvoir suivre les problèmes de Santé Connect et de synchronisation ; les adresses d\'appareils, identifiants, emplacements de fichiers, dates et détails d\'erreurs sont masqués. Relisez-le avant de le partager.</string>
     <string name="settings_debug_logs_share">Partager les journaux</string>
     <string name="settings_debug_logs_share_chooser_title">Partager les journaux de diagnostic</string>
     <string name="settings_debug_logs_share_failed">Impossible de partager les journaux de diagnostic</string>
@@ -2046,7 +2046,14 @@
     <string name="settings_apple_health_import_notification_text_with_percent">%1$d%%. %2$s. %3$d/%4$d sélectionnés, %5$d importés.</string>
     <string name="settings_apple_health_import_notification_text_with_scan_percent">%1$d%%. %2$s. %3$d/%4$d analysés, %5$d importés.</string>
     <string name="settings_apple_health_import_result">%1$d importés. %2$d doublons. %3$d non sélectionnés. %4$d non pris en charge. %5$d ignorés. %6$d échecs.</string>
-    <string name="settings_apple_health_import_routes_incomplete">Les données de santé ont été importées, mais certains itinéraires d\'entraînement étaient indisponibles car le ZIP s\'est terminé de façon inattendue. Le rapport d\'importation liste les activités concernées pour une récupération manuelle.</string>
+    <string name="settings_apple_health_import_routes_incomplete">Les données de santé ont été importées, mais certains itinéraires d\'entraînement étaient indisponibles car le fichier ZIP s\'est terminé de manière inattendue. Les entraînements concernés sont listés ci-dessous.</string>
+    <plurals name="settings_apple_health_workouts_without_route_title">
+        <item quantity="one">%d entraînement est arrivé sans son itinéraire</item>
+        <item quantity="many">%d entraînements sont arrivés sans leur itinéraire</item>
+        <item quantity="other">%d entraînements sont arrivés sans leur itinéraire</item>
+    </plurals>
+    <string name="settings_apple_health_workouts_without_route_body">Leurs fichiers d\'itinéraire ne sont pas dans l\'export. Importez export.zip plutôt qu\'export.xml, ou importez chaque itinéraire avec l\'importateur GPX/KML/KMZ/TCX.</string>
+    <string name="settings_apple_health_workouts_without_route_show_all">Tout afficher</string>
     <string name="settings_apple_health_import_analysis_result">%1$d éléments analysés. %2$d enregistrements compatibles trouvés. %3$d non pris en charge. %4$d échecs.</string>
     <string name="settings_apple_health_import_choose_categories">Choisissez ce qui sera écrit dans Santé Connect.</string>
     <string name="settings_apple_health_import_category_count">%1$d enregistrements</string>

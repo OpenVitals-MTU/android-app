@@ -31,7 +31,7 @@ Most importantly, body and entry/session browsing now live in metric-owned detai
 | Package | Owns |
 |---|---|
 | `comaps/` | the CoMaps navigation provider: the `ContentResolver` source and the guidance feed |
-| `core/` | app-wide primitives: `presentation`, `performance`, `diagnostics`, `permissions` (OS runtime permissions) in `:app`; `period`, `stats`, `geo`, `fit`, `export` (share staging) in `:domain` |
+| `core/` | app-wide primitives: `presentation`, `performance`, `diagnostics`, `permissions` (OS runtime permissions) in `:app`; `period`, `stats`, `geo`, `fit`, `export` (share staging), `privacy` (masking text that leaves the app) in `:domain` |
 | `data/` | `local` (Room), `repository` (feature-facing repositories + `contract` interfaces), `sync` (history/backfill services), `migration` (one-time Flutter import) |
 | `devices/` | device integration: `core` (ports, radio lease, pairing), `garmin` (GFDI stack), `wearos`, `notifications` (notification listener), `media` (the phone's players, for music controls), `weather` (the weather a watch asks for), `xiaomi` (the S400 scale: broadcast decoding, the background listener and the weigh-in import) |
 | `di/` | `AppModule`, `RepositoryModule`, `PreferencesModule`, `RemindersModule`, `DevicesModule` |
@@ -453,11 +453,11 @@ Live BLE sensor streaming during activity recording still lives in `sensors/ble`
 
 ## Module `:domain`
 
-The app-local code that nothing in the rest of the phone app sits below, in `domain/`: the packages `domain/model`, `domain/insights`, `domain/preferences`, `domain/cycle`, `domain/dashboard`, `domain/report` and `domain/medical`, and the primitives `core/period`, `core/fit`, `core/geo`, `core/stats` and `core/export`. Package names are unchanged, so an import does not say which module a class is in. `:app` depends on it; `:wear` does not.
+The app-local code that nothing in the rest of the phone app sits below, in `domain/`: the packages `domain/model`, `domain/insights`, `domain/preferences`, `domain/cycle`, `domain/dashboard`, `domain/report` and `domain/medical`, and the primitives `core/period`, `core/fit`, `core/geo`, `core/stats`, `core/export` and `core/privacy`. Package names are unchanged, so an import does not say which module a class is in. `:app` depends on it; `:wear` does not.
 
 It is an Android library, not plain Kotlin: a few files use Health Connect record constants (`ExerciseTypeTraits`, `PlannedExerciseSteps`, the activity splits) and the platform's locale data (`SystemUnitSystemProvider`, `AppLanguage`), and Android lint then still checks it. It has the app's build types (`ci`, `nightly`), so the app's `ci` variant takes the module's `ci` variant and the module's tests and lint run on that one compile. Nothing in it is injected: it holds no Hilt module, and its classes are constructed by the app's repositories and the app's `di/` modules.
 
-Its test fixtures (`testFixtures`) hold the FHIR, C-CDA, SMART Health Card and wear sleep fixtures that both its own tests and the app's import tests use, with the FHIR sample files under `domain/src/testFixtures/resources/fhir/`. Its tests and lint are part of the phone gate (`verifyCiUnitTest` depends on `:domain:testCiUnitTest`, `verifyCiLint` on `:domain:lintCi`), its lockfile is `domain/gradle.lockfile`, and the ratchet tests and the `runBlocking` allow-list cover its files under the same package-relative paths as the app's.
+Its test fixtures (`testFixtures`) hold the FHIR, C-CDA, SMART Health Card and wear sleep fixtures that both its own tests and the app's import tests use, and the privacy sentinels (`PrivacySentinels`) that tests of crash drafts, logs and reports seed and look for, with the FHIR sample files under `domain/src/testFixtures/resources/fhir/`. Its tests and lint are part of the phone gate (`verifyCiUnitTest` depends on `:domain:testCiUnitTest`, `verifyCiLint` on `:domain:lintCi`), its lockfile is `domain/gradle.lockfile`, and the ratchet tests and the `runBlocking` allow-list cover its files under the same package-relative paths as the app's.
 
 The module exists for the build: the app's lint and tests no longer cover these lines, and a change elsewhere leaves this module's compile, lint and test results in the build cache. What does not belong here: anything with an inbound dependency from `data/`, `healthconnect/` or `features/` (`domain/query` and `domain/usecase` stay in `:app` for that reason), resources, and Hilt wiring.
 
@@ -593,7 +593,7 @@ Metric detail screens pass `syncPaused` from the shell state into `MetricDetailS
 
 ## Cross-Cutting Rules
 
-These five rules hold app-wide. Breaking one is not a local decision.
+These six rules hold app-wide. Breaking one is not a local decision.
 
 ### 1. Exactly one foreground service at a time
 
@@ -657,7 +657,20 @@ A blocked main thread is an "app isn't responding" dialog. A broadcast receiver 
 - **A scale broadcast is stored first.** `ScaleWeighInIngest` folds the frame into Room, then writes to Health Connect on its own scope. The receiver waits at most eight seconds for that. A write that takes longer finishes after the broadcast, and one that fails is retried later.
 - **Composables `remember` any pass over samples.** A day of 1 Hz heart rate is about 86,000 samples. Sort, min, max and average belong in `remember(samples)` or in the mapper.
 
-When the dialog does appear, Android keeps the trace. `AnrExitInfo` reads it into the report email and the debug log export. On a device: `adb shell dumpsys activity exit-info tech.mmarca.openvitals`.
+When the dialog does appear, Android keeps the trace. `AnrExitInfo` reads it into the report email and the debug log export, with the system's reason masked. On a device: `adb shell dumpsys activity exit-info tech.mmarca.openvitals`.
+
+### 6. Text that leaves the app is structure, not data
+
+Anything the user can copy, save, share or email holds structure only: counts, record types, units, reasons, row and column numbers, class names and stack frames. Never a record's value or time, a name, a file name or location, an address or an identifier. A report the user posts on a public issue must be safe to post.
+
+- **Reports print structure from the start.** The Apple Health, CSV and medical import reports and the sync report never hand a value to a cleaner: a refused record is its type and reason, a cell that could not be read is its shape (`PrivacyRedactor.shapeOf`), a zip's files are their place and extension. A pattern cannot recognise a name, so nothing relies on one to remove it.
+- **Error text goes through one redactor.** `core/privacy/PrivacyRedactor` (in `:domain`) masks an exception message: addresses, identifiers, file locations, dates and every number but a position ("line 3", "row 7"). `maskThrowable` rebuilds a stack trace from the throwable, so a message's later lines never appear. Use `describe`/`maskThrowable` wherever an exception's text reaches a report, the screen's copy button or a draft.
+- **A crash draft carries no log.** The saved crash report holds the masked crash, is attached for seven days at most, and is deleted once it has gone into an email, a copy or a file. The diagnostics log export (debug and nightly builds) keeps every line and tag and masks each through `maskLogcat`.
+- **A log line never splices in a value.** Log a count, a class name, or pass the throwable as the last argument; the export masks a throwable's message whole. `LogMessageInterpolationRatchetTest` holds the log calls that splice in an exception message, and its count may only fall.
+- **A copy is marked sensitive.** Every clipboard write of a report goes through `sensitiveTextClip` (`core/presentation/SensitiveClipboard.kt`), so Android 13 and later keep it out of the copy preview.
+- **The diagnostic files stay on the phone.** `res/xml/data_extraction_rules.xml` leaves `crash_reports/`, `import_reports/` and `device_sync/` out of a transfer to a new phone; `LocalAppManifestPolicyTest` checks it.
+
+Each report and the crash draft have a test that seeds `PrivacySentinels` (the `:domain` test fixtures) and asserts none comes out.
 
 ## Canonical Detail Feature Pattern
 

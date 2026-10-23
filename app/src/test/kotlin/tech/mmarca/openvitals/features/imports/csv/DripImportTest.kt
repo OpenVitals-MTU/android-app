@@ -86,7 +86,8 @@ class DripImportTest {
         assertTrue(excluded.records.isEmpty())
         // Left out on purpose, and said so: the day is accounted for in the report.
         assertEquals(CsvImportDiagnosticReason.EXCLUDED_IN_SOURCE, excluded.diagnostics.single().reason)
-        assertEquals("temperature.value=37.9", excluded.diagnostics.single().detail)
+        // Which column held something, never what it held.
+        assertEquals("temperature.value", excluded.diagnostics.single().detail)
 
         // An exclude flag over an empty cell excludes nothing and says nothing.
         val flagOnly = convertDripRow(row("date" to "2016-01-05", "temperature.exclude" to "true"), plan())

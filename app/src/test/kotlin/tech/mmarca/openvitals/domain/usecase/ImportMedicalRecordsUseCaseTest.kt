@@ -96,7 +96,6 @@ class ImportMedicalRecordsUseCaseTest {
         val refused = result.groups.single().rejected.single()
         assertThat(refused.type to refused.id).isEqualTo("Observation" to "o1")
         assertThat(refused.reason).contains("Missing required field status")
-        assertThat(refused.json).contains("0000-0")
     }
 
     @Test
