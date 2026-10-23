@@ -22,7 +22,7 @@ class WearLinkLoopbackTest {
 
         val session = (WearLinkClient.hello(link.clientConnection, hello()) as WearLinkOutcome.Ok).value
         assertEquals("Galaxy Watch8 (89FZ)", session.peer.name)
-        assertEquals(setOf("hr", "sm", "st"), session.peer.capabilities)
+        assertEquals(setOf("as", "hr", "sm", "st"), session.peer.capabilities)
         assertEquals(WearLinkOutcome.Ok(Unit), session.ping())
         assertFalse(link.serverReturned())
         session.close()
@@ -86,6 +86,7 @@ class WearLinkLoopbackTest {
         }
         loopback.handler.heartRate = List(10) { WearLinkProtocol.HeartRateSample(1_700_000_000_000L + it * 10_000L, 60 + it) }
         loopback.handler.steps = List(3) { WearLinkProtocol.StepMinute(1_700_000_040_000L + it * 60_000L, 90 + it) }
+        loopback.handler.ascent = listOf(WearLinkProtocol.AscentMinute(1_700_000_040_000L, 2))
         val link = loopback.connect()
         val session = (WearLinkClient.hello(link.clientConnection, hello()) as WearLinkOutcome.Ok).value
 
@@ -99,7 +100,28 @@ class WearLinkLoopbackTest {
         assertEquals(10, heart.items.size)
         val steps = (session.pullSteps(0, 2000) as WearLinkOutcome.Ok).value
         assertEquals(loopback.handler.steps, steps.items)
+        val ascent = (session.pullAscent(0, 2000) as WearLinkOutcome.Ok).value
+        assertEquals(loopback.handler.ascent, ascent.items)
         assertFalse(link.serverReturned())
+        session.close()
+        assertEquals(WearLinkServer.Outcome.SERVED, link.serverOutcome())
+    }
+
+    @Test
+    fun `live windows hand out each reading and can repeat on one connection`() {
+        val loopback = trusted()
+        val readings = List(3) { WearLinkProtocol.HeartRateSample(1_700_000_000_000L + it * 1000L, 70 + it) }
+        loopback.handler.live = readings
+        val link = loopback.connect()
+        val session = (WearLinkClient.hello(link.clientConnection, hello()) as WearLinkOutcome.Ok).value
+
+        val seen = ArrayList<WearLinkProtocol.HeartRateSample>()
+        assertEquals(3, (session.liveHeartRate(5) { seen += it } as WearLinkOutcome.Ok).value)
+        assertEquals(readings, seen)
+        // Off the wrist: the window ends at once, empty, and the connection stays usable.
+        loopback.handler.live = emptyList()
+        assertEquals(0, (session.liveHeartRate(5) { seen += it } as WearLinkOutcome.Ok).value)
+        assertEquals(3, seen.size)
         session.close()
         assertEquals(WearLinkServer.Outcome.SERVED, link.serverOutcome())
     }

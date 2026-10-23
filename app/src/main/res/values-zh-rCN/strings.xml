@@ -3888,6 +3888,7 @@
     <string name="settings_watch_wearos_needs_weight_read">未估算步行卡路里：请在身体档案中添加体重，或允许 OpenVitals 读取 Health Connect 中的体重。</string>
     <string name="settings_watch_wearos_needs_steps_write">未写入步数：请允许 OpenVitals 向 Health Connect 写入步数，然后重新同步。</string>
     <string name="settings_watch_wearos_needs_calories_write">未写入步行卡路里：请允许 OpenVitals 在 Health Connect 中写入活动卡路里并读取锻炼记录，从下次同步起即可估算。</string>
+    <string name="settings_watch_wearos_needs_resting_heart_rate">未写入静息心率：请允许 OpenVitals 在 Health Connect 中读取并写入静息心率，从下次同步起即可估算。</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">已同步 %1$d 个心率样本</item>
         <item quantity="other">已同步 %1$d 个心率样本</item>

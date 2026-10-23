@@ -14,12 +14,15 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 
 /**
- * The watch's end of the phone link, and the host of the heart rate, step
- * and sleep minute recorders.
+ * The watch's end of the phone link, and the host of the heart rate, step,
+ * ascent and sleep minute recorders. The heart rate rests while the watch
+ * is off the wrist ([WornMonitor]).
  *
  * The link itself is [WearLinkServerHost] over `:wearlink`; this service
  * keeps it, the recorders and the trust store alive as a foreground
@@ -38,10 +41,16 @@ class WearAppService : Service() {
     private lateinit var store: MetricStore
     private lateinit var recorder: HeartRateRecorder
     private lateinit var stepRecorder: StepRecorder
+    private lateinit var ascentRecorder: AscentRecorder
     private lateinit var minuteRecorder: SleepMinuteRecorder
+    private lateinit var wornMonitor: WornMonitor
     private lateinit var ppgLogger: PpgRawLogger
     private lateinit var trust: WearTrustStore
     private lateinit var link: WearLinkServerHost
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    /** False while [WornMonitor] says the watch is off the wrist. Main thread only. */
+    private var heartRateWanted = true
 
     private val bluetoothReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -77,12 +86,19 @@ class WearAppService : Service() {
             onSample = minuteRecorder::noteHeartRate,
             onContact = minuteRecorder::noteHeartRateContact,
         )
+        wornMonitor = WornMonitor(
+            this,
+            onWorn = minuteRecorder::noteWorn,
+            onHeartRateWanted = { wanted -> mainHandler.post { setHeartRateWanted(wanted) } },
+        )
         stepRecorder = StepRecorder(this, store)
+        ascentRecorder = AscentRecorder(this, store)
         trust = WearTrustStore(this).also { it.onPending = { pending -> WearPhoneRequests.notify(this, pending) } }
         link = WearLinkServerHost(
             adapter = { getSystemService(BluetoothManager::class.java)?.adapter },
             trust = trust,
             store = store,
+            live = LiveHeartRate(this, isRecording = { recorder.isRunning }),
             localName = ::localName,
         )
         isForeground = startInForeground()
@@ -103,8 +119,10 @@ class WearAppService : Service() {
         link.start()
         refreshBondLost()
         startRecordingIfPermitted()
-        // Needs no grant: the accelerometer is open to every app.
+        // Need no grant: the accelerometer and the barometer are open to every app.
         minuteRecorder.start()
+        ascentRecorder.start()
+        wornMonitor.start()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -116,7 +134,7 @@ class WearAppService : Service() {
         }
         link.start()
         // A grant made after the start: the type set grows to include health.
-        val newHeartRate = !recorder.isRunning && WearPermissions.hasHeartRate(this)
+        val newHeartRate = !recorder.isRunning && heartRateWanted && WearPermissions.hasHeartRate(this)
         val newSteps = !stepRecorder.isRunning && stepRecorder.hasSensor && WearPermissions.hasActivityRecognition(this)
         if (newHeartRate || newSteps) {
             startInForeground()
@@ -158,7 +176,11 @@ class WearAppService : Service() {
 
     /** Starts each recorder whose grant is in and whose sensor the watch has; the rest wait for a later call. */
     private fun startRecordingIfPermitted() {
-        if (WearPermissions.hasHeartRate(this)) recorder.start() else Log.i(TAG, "Heart rate not granted")
+        when {
+            !WearPermissions.hasHeartRate(this) -> Log.i(TAG, "Heart rate not granted")
+            heartRateWanted -> recorder.start()
+            else -> Log.i(TAG, "Heart rate resting: not worn")
+        }
         // Without the heart rate's wake-ups the step counter must wake the watch itself.
         stepRecorder.setHeartRateRunning(recorder.isRunning)
         when {
@@ -166,6 +188,13 @@ class WearAppService : Service() {
             WearPermissions.hasActivityRecognition(this) -> stepRecorder.start()
             else -> Log.i(TAG, "Steps not granted")
         }
+    }
+
+    private fun setHeartRateWanted(wanted: Boolean) {
+        if (!isForeground || wanted == heartRateWanted) return
+        heartRateWanted = wanted
+        if (!wanted) recorder.stop() else if (WearPermissions.hasHeartRate(this)) recorder.start()
+        stepRecorder.setHeartRateRunning(recorder.isRunning)
     }
 
     /** The watch's Bluetooth name, as the phone will show it. */
@@ -191,8 +220,11 @@ class WearAppService : Service() {
     override fun onDestroy() {
         if (isForeground) {
             unregisterReceiver(bluetoothReceiver)
+            wornMonitor.stop()
+            mainHandler.removeCallbacksAndMessages(null)
             recorder.stop()
             stepRecorder.stop()
+            ascentRecorder.stop()
             minuteRecorder.stop()
             ppgLogger.stop()
             WearLinkState.update { it.copy(ppgLogging = false) }

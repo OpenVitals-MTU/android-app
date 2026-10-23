@@ -3918,6 +3918,7 @@
     <string name="settings_watch_wearos_needs_weight_read">Calorías al caminar sin estimar: añade tu peso en Perfil corporal o permite que OpenVitals lea tu peso en Health Connect.</string>
     <string name="settings_watch_wearos_needs_steps_write">Pasos no escritos: permite que OpenVitals escriba pasos en Health Connect y vuelve a sincronizar.</string>
     <string name="settings_watch_wearos_needs_calories_write">Calorías al caminar no escritas: permite que OpenVitals escriba calorías activas y lea entrenamientos en Health Connect para estimarlas desde la próxima sincronización.</string>
+    <string name="settings_watch_wearos_needs_resting_heart_rate">Frecuencia en reposo no escrita: permite que OpenVitals lea y escriba la frecuencia en reposo en Health Connect para estimarla desde la próxima sincronización.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d muestra de frecuencia cardiaca sincronizada</item>
         <item quantity="many">%1$d muestras de frecuencia cardiaca sincronizadas</item>
