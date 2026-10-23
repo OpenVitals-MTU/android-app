@@ -58,6 +58,22 @@ class LocalAppManifestPolicyTest {
         assertFalse(Regex("""android:scheme\s*=\s*"file"""").containsMatchIn(manifest))
     }
 
+    @Test
+    fun `the diagnostic files stay behind when the phone is transferred`() {
+        // allowBackup="false" does not cover a device-to-device transfer from Android 12 on.
+        val manifest = File("src/main/AndroidManifest.xml").readText()
+        val rules = File("src/main/res/xml/data_extraction_rules.xml").readText()
+        val transfer = rules.substringAfter("<device-transfer>").substringBefore("</device-transfer>")
+
+        assertTrue(manifest.contains("""android:dataExtractionRules="@xml/data_extraction_rules""""))
+        listOf("crash_reports/", "import_reports/", "device_sync/").forEach { directory ->
+            assertTrue(
+                "$directory must be excluded from device transfer.",
+                transfer.contains("""<exclude domain="file" path="$directory" />"""),
+            )
+        }
+    }
+
     private fun manifestTags(manifest: String, tagName: String): List<String> =
         Regex("""<$tagName\b[^>]*>""").findAll(manifest).map { it.value }.toList()
 
