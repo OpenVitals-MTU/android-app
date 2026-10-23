@@ -162,7 +162,7 @@ The health report builder in Settings has a **Medical records** option. The sect
 
 ## Saved documents
 
-When the switch on the Confirm step is on, OpenVitals keeps the imported file once the import has written records. The step shows the file's size and the space saved documents already use. For an Apple Health export, only the clinical records files are kept, packed as one zip. A file that gave no records is not kept, except the declarations and authorisations in an Estonian portal export.
+When the switch on the Confirm step is on, OpenVitals keeps the imported file once the import has written records. The step shows the file's size and the space saved documents already use. For an Apple Health export, only the clinical records files are kept, packed as one zip. For a zip of FHIR files, the FHIR files it read are kept, packed as one zip. A file that gave no records is not kept, except the declarations and authorisations in an Estonian portal export.
 
 Kept files stay in the app's private storage. They are not backed up, and they are deleted when the app is uninstalled. The same file kept twice is one copy. A file can hold more than the records taken from it, such as names, identifiers and notes.
 
