@@ -79,6 +79,41 @@ object MedicalImportReport {
         }
     }
 
+    /**
+     * The report of an import that never started: what stopped it, what the file holds, every
+     * record the source left out, and what each group held back. [contents] comes from
+     * [MedicalFileInspector] and holds none of the records' content; a held-back record carries
+     * its own, as in [text]. [cause] gives its class only: its message can quote the file, and a
+     * release build's stack names no class.
+     */
+    fun failureText(
+        fileName: String?,
+        problem: String,
+        readAt: Instant,
+        contents: List<String> = emptyList(),
+        cause: Throwable? = null,
+        plans: List<MedicalImportGroupPlan> = emptyList(),
+        sourceSkips: List<MedicalSourceSkip> = emptyList(),
+    ): String = buildString {
+        appendLine("OpenVitals medical records import")
+        appendLine("File: ${fileName ?: "unknown"}")
+        appendLine("Read: $readAt")
+        appendLine("Not imported: $problem")
+        cause?.let { appendLine("Error: ${it::class.qualifiedName}") }
+        sourceSkips.forEach { appendLine("Left out before import: ${it.reason}: ${it.detail}") }
+        if (contents.isNotEmpty()) {
+            appendLine()
+            appendLine("What the file holds (names, sizes and shapes, none of the records' content):")
+            contents.forEach(::appendLine)
+        }
+        plans.forEach { plan ->
+            appendLine()
+            appendLine("Source: ${plan.targetName} (${plan.target.baseUri()}), FHIR ${plan.fhirVersion}")
+            appendLine("  Ready ${plan.group.ready.size}, held back ${plan.group.rejected.size}")
+            appendGroupDetail(plan)
+        }
+    }
+
     private fun StringBuilder.appendGroupDetail(plan: MedicalImportGroupPlan) {
         plan.group.skippedTypes.forEach { (type, count) -> appendLine("  Skipped, not stored by Health Connect: $type x$count") }
         plan.group.rejected.forEach {

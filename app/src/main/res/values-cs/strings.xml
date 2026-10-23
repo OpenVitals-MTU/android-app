@@ -1601,6 +1601,7 @@
     <string name="medical_import_report_saved">Zpráva uložena</string>
     <string name="medical_import_report_save_failed">Zprávu nelze uložit</string>
     <string name="medical_import_report_warning">Zpráva obsahuje vaše zdravotní záznamy. Před sdílením ji zkontrolujte.</string>
+    <string name="medical_import_failure_report_note">Zpráva uvádí soubory, které OpenVitals prošel, a co v každém našel, ale nic z jejich obsahu. Před sdílením zkontrolujte názvy souborů.</string>
     <string name="medical_import_done">Hotovo</string>
     <string name="medical_import_another">Importovat další soubor</string>
     <string name="medical_import_reason_unsupported">Typ, který Health Connect neukládá</string>

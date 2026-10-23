@@ -1489,6 +1489,7 @@
     <string name="medical_import_report_saved">Relatório guardado</string>
     <string name="medical_import_report_save_failed">Não foi possível guardar o relatório</string>
     <string name="medical_import_report_warning">O relatório inclui os teus registos médicos. Revê-o antes de o partilhares.</string>
+    <string name="medical_import_failure_report_note">O relatório indica os ficheiros que o OpenVitals analisou e o que encontrou em cada um, mas nada do seu conteúdo. Revê os nomes dos ficheiros antes de o partilhares.</string>
     <string name="medical_import_done">Concluído</string>
     <string name="medical_import_another">Importar outro ficheiro</string>
     <string name="medical_import_reason_unsupported">Tipo que o Health Connect não guarda</string>

@@ -134,6 +134,7 @@ fun MedicalImportScreen(
                 accessBlocked = accessBlocked,
                 onPick = { if (state.canWrite) picker.launch(MedicalImportMimeTypes) else requestAccess() },
                 onScan = { cameraLauncher.launch(Manifest.permission.CAMERA) }.takeIf { hasCamera && state.canWrite },
+                report = viewModel::reportText,
             )
             MedicalImportStep.REVIEW -> MedicalImportReviewStep(state = state, viewModel = viewModel)
             MedicalImportStep.CONFIRM -> MedicalImportConfirmStep(
@@ -148,9 +149,18 @@ fun MedicalImportScreen(
     }
 }
 
-/** [onScan] is null on a phone with no camera, and until write access is there. */
+/**
+ * [onScan] is null on a phone with no camera, and until write access is there. A file that
+ * failed offers a report of what it holds, so the problem can be looked into without the file.
+ */
 @Composable
-private fun MedicalImportPickStep(state: MedicalImportUiState, accessBlocked: Boolean, onPick: () -> Unit, onScan: (() -> Unit)?) {
+private fun MedicalImportPickStep(
+    state: MedicalImportUiState,
+    accessBlocked: Boolean,
+    onPick: () -> Unit,
+    onScan: (() -> Unit)?,
+    report: () -> String?,
+) {
     LazyColumn(contentPadding = PaddingValues(LayoutMetrics.screenGutter)) {
         item {
             OpenVitalsCard(modifier = Modifier.fillMaxWidth()) {
@@ -190,6 +200,15 @@ private fun MedicalImportPickStep(state: MedicalImportUiState, accessBlocked: Bo
             }
         }
         state.error?.let { error -> item { ScreenErrorContent(error) } }
+        if (state.canReportFailure) {
+            item {
+                MedicalImportReportActions(
+                    note = stringResource(R.string.medical_import_failure_report_note),
+                    report = report,
+                    modifier = Modifier.padding(top = Spacing.md),
+                )
+            }
+        }
     }
 }
 

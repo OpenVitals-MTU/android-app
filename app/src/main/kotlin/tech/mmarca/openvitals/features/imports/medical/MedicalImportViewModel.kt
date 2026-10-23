@@ -25,6 +25,7 @@ import tech.mmarca.openvitals.data.repository.contract.MedicalDocumentsRepositor
 import tech.mmarca.openvitals.data.repository.contract.MedicalRecordsPreferences
 import tech.mmarca.openvitals.data.repository.contract.MedicalRecordsRepository
 import tech.mmarca.openvitals.domain.medical.FhirImportAnalyzer
+import tech.mmarca.openvitals.domain.medical.MedicalFileInspector
 import tech.mmarca.openvitals.domain.medical.MedicalImportGroupPlan
 import tech.mmarca.openvitals.domain.medical.MedicalImportPlanner
 import tech.mmarca.openvitals.domain.medical.MedicalImportProgress
@@ -101,6 +102,14 @@ data class MedicalImportUiState(
     val recordsToWrite: Int get() = plans.filter { it.include }.sumOf { it.group.ready.size }
 
     val canContinue: Boolean get() = patientCleared && recordsToWrite > 0
+
+    /** The read or the analysis failed, or nothing in the file can be written: a report can say why. */
+    val canReportFailure: Boolean get() = when {
+        result != null -> false
+        pickError != null -> pickError != MedicalImportPickError.CAMERA_DENIED
+        error != null -> true
+        else -> step == MedicalImportStep.REVIEW && plans.sumOf { it.group.ready.size } == 0
+    }
 }
 
 /**
@@ -140,6 +149,12 @@ class MedicalImportViewModel(
     /** The files the user may keep, held until the import ends. */
     private var sourceDocuments: List<MedicalSourceDocument> = emptyList()
 
+    /** What a file that failed holds, for the report: its parts and their shape, none of its content. */
+    private var inspection: List<String> = emptyList()
+
+    /** What the read or the analysis threw, for the report. */
+    private var failureCause: Throwable? = null
+
     init {
         refresh()
     }
@@ -178,6 +193,8 @@ class MedicalImportViewModel(
      * Writes nothing. [open] opens the picked file; a source may open it more than once.
      */
     fun analyze(fileName: String?, open: () -> InputStream) {
+        inspection = emptyList()
+        failureCause = null
         _uiState.update { it.copy(isReading = true, pickError = null, error = null, fileName = fileName) }
         viewModelScope.launch {
             val read = try {
@@ -185,19 +202,19 @@ class MedicalImportViewModel(
             } catch (failure: CancellationException) {
                 throw failure
             } catch (failure: Exception) {
-                return@launch onPickFailed(MedicalImportPickError.UNREADABLE)
+                return@launch failed(MedicalImportPickError.UNREADABLE, open, failure)
             }
             val entries = when (read) {
                 is MedicalImportSourceResult.Entries -> read
-                MedicalImportSourceResult.NotSupported -> return@launch onPickFailed(MedicalImportPickError.NOT_SUPPORTED)
-                MedicalImportSourceResult.TooLarge -> return@launch onPickFailed(MedicalImportPickError.TOO_LARGE)
-                MedicalImportSourceResult.Empty -> return@launch onPickFailed(MedicalImportPickError.NO_RECORDS)
+                MedicalImportSourceResult.NotSupported -> return@launch failed(MedicalImportPickError.NOT_SUPPORTED, open)
+                MedicalImportSourceResult.TooLarge -> return@launch failed(MedicalImportPickError.TOO_LARGE, open)
+                MedicalImportSourceResult.Empty -> return@launch failed(MedicalImportPickError.NO_RECORDS, open)
             }
             try {
                 val analysis = withContext(dispatchers.default) { FhirImportAnalyzer.analyze(entries.file, fileName ?: DefaultFileName) }
                 if (analysis.groups.none { it.ready.isNotEmpty() || it.rejected.isNotEmpty() } && entries.skipped.isEmpty()) {
                     val reports = analysis.groups.any { DiagnosticReportResults.ReportType in it.skippedTypes }
-                    return@launch onPickFailed(if (reports) MedicalImportPickError.REPORTS_ONLY else MedicalImportPickError.NO_RECORDS)
+                    return@launch failed(if (reports) MedicalImportPickError.REPORTS_ONLY else MedicalImportPickError.NO_RECORDS, open)
                 }
                 ownSources = repository.ownSources()
                 val ownIds = ownSources.map { it.id }.toSet()
@@ -226,8 +243,26 @@ class MedicalImportViewModel(
             } catch (failure: CancellationException) {
                 throw failure
             } catch (failure: Exception) {
+                inspect(open, failure)
                 _uiState.update { it.copy(isReading = false, error = failure.toScreenError(logTag = TAG)) }
             }
+        }
+    }
+
+    /** The file cannot be imported: what it holds is noted for the report, then the screen says why. */
+    private suspend fun failed(error: MedicalImportPickError, open: () -> InputStream, cause: Throwable? = null) {
+        inspect(open, cause)
+        onPickFailed(error)
+    }
+
+    private suspend fun inspect(open: () -> InputStream, cause: Throwable?) {
+        failureCause = cause
+        inspection = try {
+            withContext(dispatchers.io) { MedicalFileInspector.inspect(open) }
+        } catch (failure: CancellationException) {
+            throw failure
+        } catch (failure: Exception) {
+            listOf("The file could not be looked into: ${failure::class.qualifiedName}")
         }
     }
 
@@ -307,14 +342,27 @@ class MedicalImportViewModel(
     fun reset() {
         ownSources = emptyList()
         sourceDocuments = emptyList()
+        inspection = emptyList()
+        failureCause = null
         _uiState.update {
             MedicalImportUiState(available = it.available, canWrite = it.canWrite, firstRequestDone = it.firstRequestDone)
         }
     }
 
+    /** The import's report once it ran; before that, the report of what stopped it. Null when nothing went wrong. */
     fun reportText(): String? {
         val state = _uiState.value
-        return state.result?.let { MedicalImportReport.text(state.fileName, it, Instant.now()) }
+        state.result?.let { return MedicalImportReport.text(state.fileName, it, Instant.now()) }
+        if (!state.canReportFailure) return null
+        return MedicalImportReport.failureText(
+            fileName = state.fileName,
+            problem = state.pickError?.name ?: if (state.error != null) "ANALYSIS_FAILED" else "NOTHING_TO_WRITE",
+            readAt = Instant.now(),
+            contents = inspection,
+            cause = failureCause,
+            plans = state.plans,
+            sourceSkips = state.sourceSkips,
+        )
     }
 
     /** The owner's Patient records, or null when personal details cannot be read, so the check asks instead. */
