@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.imports.csv
 
+import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
 import androidx.health.connect.client.records.Record
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -102,13 +103,14 @@ class CsvImportService internal constructor(
             is CsvImportPlan.Drip -> { row -> convertDripRow(row, plan.plan) }
         }
 
+        // The error goes into the report the user shares, so it is masked once, here.
         fun finish(outcome: CsvImportOutcome, error: String? = null): CsvImportResult =
             CsvImportResult(
                 outcome = outcome,
                 progress = progress,
                 diagnostics = diagnostics.toList(),
                 diagnosticCounts = counts.toMap(),
-                error = error,
+                error = PrivacyRedactor.maskMessage(error),
             )
 
         val pauses = QuotaPauses(
@@ -254,7 +256,7 @@ class CsvImportService internal constructor(
                         CsvImportDiagnostic(
                             rowNumber = 0,
                             reason = CsvImportDiagnosticReason.WRITE_FAILED,
-                            detail = "${single.targetType}: $singleError",
+                            detail = "${single.targetType}: ${PrivacyRedactor.describe(singleError)}",
                         ),
                     )
                 }

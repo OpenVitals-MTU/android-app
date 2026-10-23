@@ -3,10 +3,10 @@ package tech.mmarca.openvitals.features.imports.csv
 import com.google.common.truth.Truth.assertThat
 import java.time.ZoneOffset
 import org.junit.Test
+import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
+import tech.mmarca.openvitals.core.privacy.PrivacySentinels
 import tech.mmarca.openvitals.domain.model.BpRecordValues
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
-
-private val HeaderRow = listOf("Date", "Weight (kg)", "Fat mass (kg)", "Comments")
 
 private fun reportMapping(
     bodyFat: CsvValueInterpretation = CsvMassShareOfWeight(CsvUnit.KILOGRAMS),
@@ -56,14 +56,11 @@ private fun runResult(
 private fun report(
     mapping: CsvImportMapping = reportMapping(),
     result: CsvImportResult = runResult(),
-    fileName: String? = "withings.csv",
     delimiter: String? = ",",
     hasHeader: Boolean? = true,
 ): String = buildCsvImportReport(
-    fileName = fileName,
     mapping = mapping,
     result = result,
-    headerRow = HeaderRow,
     fieldDelimiter = delimiter,
     hasHeaderRow = hasHeader,
 )
@@ -71,16 +68,11 @@ private fun report(
 class CsvImportReportTest {
 
     @Test
-    fun `the report names the file and the outcome`() {
+    fun `the report gives the outcome and never the file's name`() {
         val report = report()
 
-        assertThat(report).contains("File: withings.csv")
         assertThat(report).contains("Outcome: completed")
-    }
-
-    @Test
-    fun `an unnamed file is reported rather than left blank`() {
-        assertThat(report(fileName = null)).contains("File: (unnamed)")
+        assertThat(report).doesNotContain("File:")
     }
 
     @Test
@@ -132,12 +124,12 @@ class CsvImportReportTest {
     }
 
     @Test
-    fun `every column is listed with the role it was given`() {
+    fun `every column is listed with the role it was given, not its header`() {
         val report = report()
 
-        assertThat(report).contains("[0] Date -> date and time")
-        assertThat(report).contains("[1] Weight (kg) -> weight (kilograms)")
-        assertThat(report).contains("[3] Comments -> not imported")
+        assertThat(report).contains("[0] -> date and time")
+        assertThat(report).contains("[1] -> weight (kilograms)")
+        assertThat(report).contains("[3] -> not imported")
     }
 
     @Test
@@ -155,14 +147,12 @@ class CsvImportReportTest {
         )
 
         val report = buildCsvImportReport(
-            fileName = "meals.csv",
             mapping = mapping,
             result = runResult(),
-            headerRow = listOf("Date", "Food", "B12"),
         )
 
-        assertThat(report).contains("[1] Food -> food name")
-        assertThat(report).contains("[2] B12 -> nutrient vitaminB12 (micrograms)")
+        assertThat(report).contains("[1] -> food name")
+        assertThat(report).contains("[2] -> nutrient vitaminB12 (micrograms)")
     }
 
     @Test
@@ -180,14 +170,12 @@ class CsvImportReportTest {
         )
 
         val report = buildCsvImportReport(
-            fileName = "monitor.csv",
             mapping = mapping,
             result = runResult(counts = mapOf(CsvImportDiagnosticReason.SYSTOLIC_NOT_ABOVE_DIASTOLIC to 1)),
-            headerRow = listOf("Date", "SYS", "DIA", "Cuff"),
         )
 
-        assertThat(report).contains("[1] SYS -> blood pressure systolic (millimetersOfMercury)")
-        assertThat(report).contains("[3] Cuff -> blood pressure cuff location")
+        assertThat(report).contains("[1] -> blood pressure systolic (millimetersOfMercury)")
+        assertThat(report).contains("[3] -> blood pressure cuff location")
         assertThat(report).contains("Default body position: sitting down")
         assertThat(report).contains("Default cuff location: not specified")
         assertThat(report).contains("systolic not above diastolic: 1")
@@ -197,7 +185,7 @@ class CsvImportReportTest {
     fun `a derived body fat says what it was derived from, not just its unit`() {
         // "kilograms" alone on a body-fat column would misdescribe what was written.
         assertThat(report()).contains(
-            "[2] Fat mass (kg) -> bodyFat (kilograms as a share of the weight column)",
+            "[2] -> bodyFat (kilograms as a share of the weight column)",
         )
     }
 
@@ -217,7 +205,7 @@ class CsvImportReportTest {
     }
 
     @Test
-    fun `individual rejected rows name the row, column and value`() {
+    fun `individual rejected rows name the row, column and the cell's shape`() {
         val report = report(
             result = runResult(
                 diagnostics = listOf(
@@ -225,14 +213,14 @@ class CsvImportReportTest {
                         rowNumber = 7,
                         reason = CsvImportDiagnosticReason.UNPARSABLE_NUMBER,
                         columnIndex = 2,
-                        detail = "n/a",
+                        detail = PrivacyRedactor.shapeOf("n/a"),
                     ),
                 ),
                 counts = mapOf(CsvImportDiagnosticReason.UNPARSABLE_NUMBER to 1),
             ),
         )
 
-        assertThat(report).contains("Row 7 column 2: value not a number (n/a)")
+        assertThat(report).contains("Row 7 column 2: value not a number (a/a)")
     }
 
     @Test
@@ -317,5 +305,28 @@ class CsvImportReportTest {
 
         assertThat(report(result = result)).contains("Quota pauses:        3 (waited 1 min 45 s)")
         assertThat(report()).doesNotContain("Quota pauses")
+    }
+    @Test
+    fun `cells and errors carrying health data come out as shapes, reasons and masked text`() {
+        val cell = "${PrivacySentinels.Value} kg ${PrivacySentinels.Date}"
+        val rows = listOf(
+            CsvRow(rowNumber = 2, fields = listOf(PrivacySentinels.Instant, cell, "", PrivacySentinels.Name)),
+            CsvRow(rowNumber = 3, fields = listOf("not a date ${PrivacySentinels.Name}", "70", "", "")),
+            CsvRow(rowNumber = 4, fields = listOf(PrivacySentinels.Instant, "9999", "", "")),
+        )
+        val diagnostics = rows.flatMap { convertCsvRow(it, reportMapping(bodyFat = CsvDirectValue(CsvUnit.PERCENT))).diagnostics }
+
+        val report = report(
+            result = runResult(
+                diagnostics = diagnostics,
+                counts = diagnostics.groupingBy { it.reason }.eachCount(),
+                outcome = CsvImportOutcome.FAILED,
+                error = PrivacySentinels.Sentence,
+            ).let { it.copy(error = PrivacyRedactor.maskMessage(it.error)) },
+        )
+
+        assertThat(diagnostics).isNotEmpty()
+        PrivacySentinels.assertNoneIn(report, except = setOf(PrivacySentinels.Name))
+        assertThat(report.substringAfter("Rejected rows")).doesNotContain(PrivacySentinels.Name)
     }
 }

@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.imports.csv
 
+import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -148,7 +149,7 @@ class CsvImportViewModel @Inject constructor(
                     )
                 }
             } catch (error: Exception) {
-                _uiState.update { it.copy(isLoadingFile = false, error = error.message ?: error.toString()) }
+                _uiState.update { it.copy(isLoadingFile = false, error = PrivacyRedactor.maskMessage(error.message) ?: error.toString()) }
             }
         }
     }
@@ -174,7 +175,7 @@ class CsvImportViewModel @Inject constructor(
                     )
                 }
             } catch (error: Exception) {
-                _uiState.update { it.copy(isLoadingFile = false, error = error.message ?: error.toString()) }
+                _uiState.update { it.copy(isLoadingFile = false, error = PrivacyRedactor.maskMessage(error.message) ?: error.toString()) }
             }
         }
     }
@@ -332,10 +333,8 @@ class CsvImportViewModel @Inject constructor(
         val result = state.result ?: return null
         if (state.mapping == null && state.drip == null) return null
         return buildCsvImportReport(
-            fileName = state.fileName,
             mapping = state.mapping,
             result = result,
-            headerRow = state.sample?.headerRow ?: emptyList(),
             fieldDelimiter = state.sample?.dialect?.fieldDelimiter,
             hasHeaderRow = state.sample?.hasHeaderRow,
             drip = state.drip,
