@@ -54,9 +54,11 @@ For additive metrics where double-counting is common, such as steps, active calo
 
 ## Reports And Diagnostics
 
-After an import finishes, Settings can download a full text report. The report starts with a short summary, then includes selected categories, importer logs, per-category counts, per-type counts, grouped diagnostics, raw diagnostics, and worker logs. A recovered truncated workout-route section is shown as a partial-route warning and `route_archive_truncated` diagnostic rather than failing the health-record import. If the import fails before completion, the failure report includes the summary, worker logs, and full exception stack trace.
+After an import finishes, Settings can download a text report. The report starts with a short summary, then includes selected categories, importer logs, per-category counts, per-type counts, grouped diagnostics, raw diagnostics, and worker logs. A recovered truncated workout-route section is shown as a partial-route warning and `route_archive_truncated` diagnostic rather than failing the health-record import. If the import fails before completion, the failure report includes the summary, worker logs, and the masked exception stack trace.
 
-These import reports are intentionally not sanitized beyond Android WorkManager output limits for inline status. They are explicit user exports for troubleshooting and may include file names, timestamps, record values, failure details, and stack traces. Grouped diagnostic counts (for example, how many records were skipped for a given reason) are always complete; the raw per-record diagnostic log underneath is capped at 1,000 entries per source so that re-importing an already-imported export cannot grow the report to an unbounded size.
+Workouts that referred to a route file the export does not hold are listed on the import card, by activity and local date, so each route can be brought in with the route importer. The list is kept in a private file beside the report; the report itself only counts them by type.
+
+The reports are meant to be shared, so they hold structure, not data: record types, units, reasons and counts, the import log without URIs, file locations or time ranges, a parse error's line and column without the text around it, and error text masked by `PrivacyRedactor`. They hold no record's time or value, no source's name and no file name. Grouped diagnostic counts (for example, how many records were skipped for a given reason) are always complete; the raw per-record diagnostic log underneath is capped at 1,000 entries per source so that re-importing an already-imported export cannot grow the report to an unbounded size.
 
 ## Local Smoke Test
 

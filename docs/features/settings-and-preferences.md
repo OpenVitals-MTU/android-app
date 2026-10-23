@@ -100,7 +100,7 @@ The section also holds a Health Connect sync switch and a mindfulness integratio
 
 ## Data Importers And Sensors
 
-Settings provide Data Importers for Apple Health export import, single or bulk GPX/KML/KMZ/TCX route import, FIT activity/course/workout import, and CSV import of body measurements and vitals, plus entry points for offline map pack import and Bluetooth LE sensor management. Apple Health exports are analyzed first so the user can choose detected categories before anything is written to Health Connect. Route bulk import writes selected files directly after route import permissions are granted. CSV import runs its own mapping wizard; see [CSV import](csv-import.md). Import results can be copied or downloaded as a full text report with summary, selected categories, logs, diagnostics, and failure details.
+Settings provide Data Importers for Apple Health export import, single or bulk GPX/KML/KMZ/TCX route import, FIT activity/course/workout import, and CSV import of body measurements and vitals, plus entry points for offline map pack import and Bluetooth LE sensor management. Apple Health exports are analyzed first so the user can choose detected categories before anything is written to Health Connect. Route bulk import writes selected files directly after route import permissions are granted. CSV import runs its own mapping wizard; see [CSV import](csv-import.md). Import results can be copied or downloaded as a text report with summary, selected categories, logs, diagnostics, and failure details, holding counts, types and reasons and no record's value, time or source.
 
 ## App Lock
 
@@ -116,4 +116,4 @@ App lock asks for the device's own unlock (PIN, pattern, password or biometrics)
 
 The settings area includes app version information, diagnostics/support surfaces, and privacy notes.
 
-In diagnostics builds, the Debug diagnostics section can save or share raw process logs, post the hydration reminder notification on demand so its layout and actions can be checked, and list the apps that contributed heart-rate and sleep records to Health Connect over the last seven days.
+In diagnostics builds, the Debug diagnostics section can save or share the app's logs, masked, post the hydration reminder notification on demand so its layout and actions can be checked, and list the apps that contributed heart-rate and sleep records to Health Connect over the last seven days.

@@ -403,7 +403,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Choose how a timestamp without an offset is interpreted: this phone's time zone, UTC, or a fixed offset. A timestamp that states its own offset is used as written.
 - Reject a row for an unusable timestamp or too few columns, and reject a single value for an unusable number or an implausible value, keeping the rest of the row.
 - Read the result as written, already present, and rejected counts, with rejections grouped by reason.
-- Copy or save the full import report, including the parsing settings and the column mapping actually used.
+- Copy or save the import report: the parsing settings and the column mapping actually used, and each rejected row's number, column and reason, with the shape of a cell that could not be read and never its text.
 - Interval records such as sleep and workouts are deliberately not supported.
 - Re-importing writes no duplicates; a corrected value replaces the record at the same instant.
 - No rollback/delete flow is provided for a CSV import after records are written.
@@ -467,7 +467,7 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - Stop until the user confirms when the file names someone other than the person already in Health Connect.
 - Repair files without ids, with contained records, or with links between entries, and list each repair in the report.
 - Re-importing the same file updates the same records; sources another app holds start left out.
-- Copy or save the import report, which includes record content.
+- Copy or save the import report: counts, record types and reasons, none of the records' content.
 - Export everything, one category, or one record as one FHIR Bundle that keeps each record's source, then share or save it.
 - Add a vaccine, an allergy, a medication or a condition by hand, from the records home or the matching category, with free-text names and an optional code.
 - Write the owner's Patient record once, with the first entry: from a Patient record the app can read, or from a name typed once.
@@ -614,4 +614,4 @@ For the route, widget, package, and documentation mapping, see [`docs/features/f
 - View the read-only dashboard/privacy positioning and health disclaimer.
 - View app version information.
 - The app declares no internet permission. Live BLE sensors, watch sync, notification forwarding, and phone-to-phone sync run over Bluetooth.
-- In diagnostics builds, save or share raw process logs, post a test hydration reminder, and list the apps that contributed heart-rate and sleep records over the last seven days.
+- In diagnostics builds, save or share the app's logs, with addresses, identifiers, file locations, dates and error details masked, post a test hydration reminder, and list the apps that contributed heart-rate and sleep records over the last seven days.

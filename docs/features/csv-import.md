@@ -164,9 +164,9 @@ If Health Connect refuses a batch because the app's write quota is spent, the im
 
 ## Reports
 
-The result step can copy the report or save it as a text file. The report contains the file name and outcome, the totals, the parsing settings actually used, including the blood pressure defaults when a blood pressure column was mapped, the full column mapping including the unit each column was given, rejection counts by reason, and a per-row rejection log. The per-row log is capped so that re-importing a large file cannot make the report unbounded; the grouped counts above it stay complete.
+The result step can copy the report or save it as a text file. The report contains the outcome, the totals, the parsing settings actually used, including the blood pressure defaults when a blood pressure column was mapped, the column mapping by column index, including the unit each column was given, rejection counts by reason, and a per-row rejection log: the row, the column, the reason, and for a cell that could not be read its shape (`99/99/9999`), never its text. The per-row log is capped so that re-importing a large file cannot make the report unbounded; the grouped counts above it stay complete.
 
-Like the Apple Health import report, this report is an explicit user export and is not sanitized. It names the file, its columns, and the values that were rejected. It contains no health data the user's own CSV did not already contain.
+Like the Apple Health import report, this report is meant to be shared and holds structure, not data: no file name, no header names and no values. A drip day left out in drip names the columns that held something, not what they held. The run's error and a refused write are masked like any exception message.
 
 ## Running Alongside Other Work
 

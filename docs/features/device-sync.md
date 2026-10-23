@@ -19,7 +19,7 @@ It is reached from Settings, Sync with another phone, which opens its own wizard
 5. **Start.** Each phone presses Start sync when its user is ready. The first one waits up to ten minutes for the other, and says so. If the other phone leaves the wizard, the wait ends at once.
 6. **Compare the codes.** Each phone then shows six digits. The user checks that they are the same and says so on both phones. No record moves before that.
 7. **Sync.** Progress shows the current phase and live sent, received, and written counts.
-8. **Read the report.** The report shows how many records were merged, how many were already present, and a per-record-type breakdown of what arrived. Medical records get one line of their own. It can be copied or shared as text.
+8. **Read the report.** The report shows how many records were merged, how many were already present, and a per-record-type breakdown of what arrived. Medical records get one line of their own. It can be copied or shared as text. If the sync stopped, its reason is masked like any error text, on the screen and in the report.
 
 Both phones choose their own range and their own categories. The exchange uses the record types both phones support.
 
