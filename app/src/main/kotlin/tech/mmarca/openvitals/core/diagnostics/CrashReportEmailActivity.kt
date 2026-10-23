@@ -3,7 +3,6 @@ package tech.mmarca.openvitals.core.diagnostics
 import android.app.Activity
 import android.app.ApplicationErrorReport
 import android.content.ActivityNotFoundException
-import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
@@ -19,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.setSensitiveText
 
 class CrashReportEmailActivity : AppCompatActivity() {
     private var fallbackDraft: CrashReportEmailDraft? = null
@@ -121,12 +121,7 @@ class CrashReportEmailActivity : AppCompatActivity() {
 
     private fun copyReportToClipboard(draft: CrashReportEmailDraft) {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(
-            ClipData.newPlainText(
-                getString(R.string.crash_report_clipboard_label),
-                CrashReportEmail.buildShareText(draft),
-            )
-        )
+        clipboard.setSensitiveText(getString(R.string.crash_report_clipboard_label), CrashReportEmail.buildShareText(draft))
         Toast.makeText(this, R.string.crash_report_fallback_copied, Toast.LENGTH_SHORT).show()
     }
 

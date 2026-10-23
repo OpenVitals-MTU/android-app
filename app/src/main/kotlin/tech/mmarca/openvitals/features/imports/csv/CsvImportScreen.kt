@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.imports.csv
 
-import android.content.ClipData
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -26,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
-import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -38,6 +36,7 @@ import java.util.Locale
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.core.performance.offMainIo
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.setSensitiveText
 import tech.mmarca.openvitals.domain.model.NutritionNutrient
 import tech.mmarca.openvitals.features.nutrition.titleRes
 import tech.mmarca.openvitals.healthconnect.HealthConnectFeature
@@ -516,7 +515,7 @@ private fun CsvDoneStep(
         onCopyReport = {
             val text = viewModel.reportText() ?: return@CsvImportResultView
             scope.launch {
-                clipboard.setClipEntry(ClipData.newPlainText("OpenVitals", text).toClipEntry())
+                clipboard.setSensitiveText("OpenVitals", text)
                 Toast.makeText(context, reportCopied, Toast.LENGTH_SHORT).show()
             }
         },

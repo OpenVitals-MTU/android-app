@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.settings
 
-import android.content.ClipData
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,7 +15,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
@@ -24,6 +22,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.setSensitiveText
 import tech.mmarca.openvitals.features.imports.medical.AppleClinicalRecordsCard
 import tech.mmarca.openvitals.features.imports.medical.MedicalImportCard
 import tech.mmarca.openvitals.core.performance.offMainIo
@@ -65,7 +64,7 @@ fun DataImportScreen(
 
     fun copyImportText(text: String, message: String) {
         coroutineScope.launch {
-            clipboard.setClipEntry(ClipData.newPlainText("OpenVitals", text).toClipEntry())
+            clipboard.setSensitiveText("OpenVitals", text)
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }

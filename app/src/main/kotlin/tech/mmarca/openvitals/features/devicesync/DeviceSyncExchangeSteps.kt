@@ -1,6 +1,5 @@
 package tech.mmarca.openvitals.features.devicesync
 
-import android.content.ClipData
 import android.content.Intent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,12 +32,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import tech.mmarca.openvitals.R
+import tech.mmarca.openvitals.core.presentation.setSensitiveText
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncPhase
 import tech.mmarca.openvitals.features.devicesync.protocol.SyncReport
 import tech.mmarca.openvitals.features.devicesync.store.MedicalHeldBack
@@ -398,9 +397,7 @@ internal fun DeviceSyncReportActions(reportText: String) {
         OpenVitalsOutlinedButton(
             onClick = {
                 scope.launch {
-                    clipboard.setClipEntry(
-                        ClipData.newPlainText("OpenVitals", reportText).toClipEntry(),
-                    )
+                    clipboard.setSensitiveText("OpenVitals", reportText)
                 }
             },
             modifier = Modifier.weight(1f),
