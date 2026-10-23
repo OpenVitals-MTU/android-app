@@ -160,6 +160,7 @@ private fun ActivityMetricScreen(
             weekPeriodMode = state.weekPeriodMode,
             syncPaused = hcUx.syncPaused,
             sectionListState = sectionContext.listState,
+            showLoadingBar = true,
         ) { period ->
             when (metric) {
                 ActivityMetric.STEPS -> stepsContent(

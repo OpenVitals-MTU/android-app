@@ -13,6 +13,8 @@ import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.core.performance.ScreenSnapshotKey
+import tech.mmarca.openvitals.core.performance.ScreenSnapshotStore
 import tech.mmarca.openvitals.core.period.TimeRange
 import tech.mmarca.openvitals.core.period.displayPeriodFor
 import tech.mmarca.openvitals.domain.preferences.ActivityWeekMode
@@ -101,6 +103,7 @@ class ActivityOverviewViewModel @Inject constructor(
     private val bodyProfilePreferences: BodyProfilePreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     savedStateHandle: androidx.lifecycle.SavedStateHandle,
+    private val snapshots: ScreenSnapshotStore = ScreenSnapshotStore(),
 ) : ViewModel() {
 
     private val initialDay: java.time.LocalDate? = savedStateHandle.selectedDayOrNull()
@@ -145,15 +148,31 @@ class ActivityOverviewViewModel @Inject constructor(
                 selectedDate = today,
                 error = null,
             )
+            val profile = bodyProfilePreferences.bodyProfile().normalized(end)
+            val fingerprint = snapshots.fingerprint()
+            val snapshotKey = ScreenSnapshotKey<List<ActivityOverviewDay>>(
+                screen = ActivityOverviewSnapshotScreen,
+                query = ActivityOverviewSnapshotQuery(
+                    start = start,
+                    end = end,
+                    profile = profile,
+                    calculatedCalories = calorieDisplayPreferences.showOpenVitalsCalculatedCalories,
+                ),
+            )
+            // Drawn at once from the last load of these days; the read below replaces it.
+            snapshots.get(snapshotKey, fingerprint)?.let { snapshot ->
+                if (!isCurrent) return@load
+                _uiState.value = _uiState.value.copy(days = snapshot)
+            }
             runCatching {
                 loadActivityOverview(start, end)
             }.onSuccess { result ->
                 if (!isCurrent) return@load
-                val profile = bodyProfilePreferences.bodyProfile().normalized(end)
                 val days = withContext(dispatchers.default) {
                     result.toDays(start, end, profile)
                 }
                 if (!isCurrent) return@load
+                snapshots.put(snapshotKey, fingerprint, days)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     selectedDate = today,
@@ -248,6 +267,16 @@ class ActivityOverviewViewModel @Inject constructor(
         }.toList()
     }
 }
+
+private const val ActivityOverviewSnapshotScreen = "activityOverview"
+
+/** Everything the overview's days depend on besides the Health Connect fingerprint. */
+private data class ActivityOverviewSnapshotQuery(
+    val start: LocalDate,
+    val end: LocalDate,
+    val profile: BodyProfile,
+    val calculatedCalories: Boolean,
+)
 
 private fun List<Long>.medianOrNull(): Long? {
     if (isEmpty()) return null

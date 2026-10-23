@@ -72,9 +72,7 @@ fun DashboardScreen(
         },
     )
 
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.resumeCurrentDay()
-    }
+    DashboardLoadLifecycle(viewModel)
     androidx.compose.runtime.LaunchedEffect(refreshRequest) {
         if (refreshRequest > 0) {
             viewModel.refresh()
@@ -184,5 +182,16 @@ fun DashboardScreen(
                 viewModel.selectDate(date)
             },
         )
+    }
+}
+
+/** Reloads today on every return; a section opened on top gets the reads to itself. */
+@Composable
+private fun DashboardLoadLifecycle(viewModel: DashboardViewModel) {
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.resumeCurrentDay()
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        viewModel.stopLoading()
     }
 }

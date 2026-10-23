@@ -11,6 +11,7 @@ import javax.inject.Singleton
 import tech.mmarca.openvitals.R
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
+import tech.mmarca.openvitals.core.performance.ScreenSnapshotStore
 import tech.mmarca.openvitals.core.presentation.CurrentLocaleStrings
 import tech.mmarca.openvitals.core.presentation.DateTimeFormatterProvider
 import tech.mmarca.openvitals.core.presentation.UnitFormatter
@@ -29,6 +30,9 @@ import tech.mmarca.openvitals.data.local.syncorigin.SyncedRecordOriginDao
 import tech.mmarca.openvitals.data.local.vitalscache.VitalsDailyCacheDao
 import tech.mmarca.openvitals.data.repository.PreferencesRepository
 import tech.mmarca.openvitals.domain.preferences.SystemUnitSystemProvider
+import tech.mmarca.openvitals.healthconnect.HealthConnectManager
+import tech.mmarca.openvitals.healthconnect.HealthConnectSyncGate
+import tech.mmarca.openvitals.healthconnect.readFingerprint
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -37,6 +41,16 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDispatcherProvider(): DispatcherProvider = DefaultDispatcherProvider
+
+    @Provides
+    @Singleton
+    fun provideScreenSnapshotStore(
+        @ApplicationContext context: Context,
+        healthConnect: HealthConnectManager,
+        syncGate: HealthConnectSyncGate,
+    ): ScreenSnapshotStore =
+        ScreenSnapshotStore(fingerprint = { healthConnect.readFingerprint(syncGate.isEnabled) })
+            .also(context::registerComponentCallbacks)
 
     @Provides
     @Singleton

@@ -6,6 +6,7 @@ import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseCompletionGoal
+import tech.mmarca.openvitals.core.performance.runCatchingCancellable
 import tech.mmarca.openvitals.domain.model.PlannedExercisePerformanceTarget
 import androidx.health.connect.client.units.Mass
 import androidx.health.connect.client.units.Length
@@ -406,7 +407,8 @@ internal class ActivityHealthReader(
             val aggregate = if (metrics.isEmpty()) {
                 null
             } else {
-                runCatching {
+                // Cancellation must stop the loop: each call is queued in Health Connect.
+                runCatchingCancellable {
                     support.client().aggregate(
                         AggregateRequest(
                             metrics = metrics,
@@ -520,7 +522,9 @@ internal class ActivityHealthReader(
         val aggregate = if (metrics.isEmpty()) {
             null
         } else {
-            runCatching {
+            // Rethrows cancellation. A swallowed one let a closed screen queue an
+            // aggregate per remaining workout ahead of the next screen's reads.
+            runCatchingCancellable {
                 support.client().aggregate(
                     AggregateRequest(
                         metrics = metrics,

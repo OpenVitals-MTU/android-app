@@ -24,7 +24,7 @@ internal data class TimedSample<out T>(val time: Instant, val value: T)
  * exceed the longest record any writer produces; this app wrote a 17.5-hour
  * one. Fixed, so it cannot grow with the range.
  */
-private val SeriesRecordLookaround: Duration = Duration.ofHours(30)
+internal val SeriesRecordLookaround: Duration = Duration.ofHours(30)
 
 /** The samples of [recordType] inside `[start, end)`, in time order, however they were grouped. */
 internal suspend fun <R : Record, T> HealthConnectClient.readSeriesSamples(

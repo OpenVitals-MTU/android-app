@@ -21,7 +21,6 @@ import androidx.health.connect.client.units.Energy
 import androidx.health.connect.client.units.Length
 import androidx.health.connect.client.units.Volume
 import tech.mmarca.openvitals.domain.model.HeartRateInsightBucketDuration
-import tech.mmarca.openvitals.domain.model.MaxInsightAggregateBuckets
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
@@ -600,24 +599,34 @@ class HealthConnectAggregateReadTest {
     }
 
     @Test
-    fun `readHeartRateSamplesForInsights splits every day into budgeted requests`() = runTest(testDispatcher) {
+    fun `readHeartRateSamplesForInsights folds each day's records into five-minute means`() = runTest(testDispatcher) {
         val zone = ZoneId.systemDefault()
         val firstDay = date.minusDays(1)
-        val client = seeded(heartRate(firstDay, 9, 61L), heartRate(date, 15, 88L))
+        val rangeStart = firstDay.atStartOfDay(zone).toInstant()
+        val midnight = date.atStartOfDay(zone).toInstant()
+        val client = seeded(
+            // Starts before the range: only its sample inside the range counts.
+            heartRateSeries(rangeStart.minusSeconds(600), rangeStart.minusSeconds(300) to 50L, rangeStart.plusSeconds(60) to 65L),
+            heartRate(firstDay, 9, 61L),
+            // Starts on the first day and carries two samples into the second day's first bucket.
+            heartRateSeries(midnight.minusSeconds(60), midnight.minusSeconds(60) to 70L, midnight.plusSeconds(30) to 81L, midnight.plusSeconds(90) to 84L),
+            heartRate(date, 15, 88L),
+            platformTimeRange = true,
+        )
 
         val samples = HeartHealthReader(support(client), APP_PACKAGE)
-            .readHeartRateSamplesForInsights(
-                firstDay.atStartOfDay(zone).toInstant(),
-                date.plusDays(1).atStartOfDay(zone).toInstant(),
-            )
+            .readHeartRateSamplesForInsights(rangeStart, date.plusDays(1).atStartOfDay(zone).toInstant())
 
-        // A whole day of one-minute buckets in one request hit TransactionTooLargeException
-        // and degraded to empty, so cardio load fell back to step estimates.
-        val budget = HeartRateInsightBucketDuration.multipliedBy(MaxInsightAggregateBuckets)
-        assertThat(widestRequest(client)).isAtMost(budget)
-        // Two days, more than one request each.
-        assertThat(client.groupByDurationRequestRanges.size).isGreaterThan(2)
-        assertThat(samples.map { it.beatsPerMinute }).containsExactly(61L, 88L).inOrder()
+        assertThat(samples.map { it.time to it.beatsPerMinute }).containsExactly(
+            rangeStart to 65L,
+            rangeStart.plusSeconds(9 * 3_600) to 61L,
+            midnight.minus(HeartRateInsightBucketDuration) to 70L,
+            // Truncated like BPM_AVG: (81 + 84) / 2 is 82.5.
+            midnight to 82L,
+            midnight.plusSeconds(15 * 3_600) to 88L,
+        ).inOrder()
+        // A heart-rate aggregate costs 0.7 s on a device whatever its size, and they run one at a time.
+        assertThat(client.groupByDurationRequestRanges).isEmpty()
     }
 
     // Harness.
@@ -671,6 +680,16 @@ class HealthConnectAggregateReadTest {
         )
     }
 
+    /** One record from [start] to a minute past its last sample. */
+    private fun heartRateSeries(start: Instant, vararg samples: Pair<Instant, Long>) = HeartRateRecord(
+        startTime = start,
+        startZoneOffset = null,
+        endTime = samples.last().first.plusSeconds(60),
+        endZoneOffset = null,
+        samples = samples.map { (time, bpm) -> HeartRateRecord.Sample(time = time, beatsPerMinute = bpm) },
+        metadata = Metadata.autoRecorded(watch),
+    )
+
     /**
      * On [date]: one sample a minute at 60 bpm from 00:00 to 10:00, except for a 23-minute
      * workout from 08:00 at 1 Hz and 130 bpm, 1,380 samples in one hour.
@@ -720,11 +739,14 @@ class HealthConnectAggregateReadTest {
         includeElevation = false,
     )
 
-    private suspend fun seeded(vararg records: Record): AggregatingFakeHealthConnectClient {
+    private suspend fun seeded(
+        vararg records: Record,
+        platformTimeRange: Boolean = false,
+    ): AggregatingFakeHealthConnectClient {
         val client = FakeHealthConnectClient()
         client.setPackageName(APP_PACKAGE)
         if (records.isNotEmpty()) client.insertRecords(records.toList())
-        return AggregatingFakeHealthConnectClient(client)
+        return AggregatingFakeHealthConnectClient(client, platformTimeRange)
     }
 
     private fun support(client: HealthConnectClient): HealthConnectReaderSupport {

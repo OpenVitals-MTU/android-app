@@ -390,6 +390,64 @@ class DashboardViewModelTest {
         assertNull(data?.elevationGainedMeters)
     }
 
+    // A section opened on top stops the dashboard's reads; the return runs them again.
+
+    @Test fun `a load stopped for a section runs again on return`() = runTest {
+        val loader = mockDashboardDataLoader()
+        var stepsReads = 0
+        val firstRead = CompletableDeferred<DashboardData>()
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            val steps = firstArg<DashboardQuery>().visibleMetrics == setOf(DashboardMetric.STEPS)
+            if (steps && ++stepsReads == 1) firstRead.await() else DashboardData(date = today)
+        }
+
+        val vm = dashboardViewModel(loader, prefs())
+        advanceUntilIdle()
+        vm.stopLoading()
+        advanceUntilIdle()
+        // The stopped load still marked today in flight, so this resume was swallowed.
+        vm.resumeCurrentDay()
+        advanceUntilIdle()
+
+        assertEquals(2, stepsReads)
+        assertTrue(vm.uiState.value.loadingWidgets.isEmpty())
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test fun `a pinned day reloads on return only when its load was stopped`() = runTest {
+        val loader = mockDashboardDataLoader()
+        val stepsQuery = { query: DashboardQuery -> query.visibleMetrics == setOf(DashboardMetric.STEPS) }
+        var stepsReads = 0
+        var gate: CompletableDeferred<Unit>? = null
+        coEvery { loader.loadDashboard(any<DashboardQuery>()) } coAnswers {
+            if (stepsQuery(firstArg())) {
+                stepsReads++
+                gate?.await()
+            }
+            DashboardData(date = yesterday)
+        }
+        val vm = dashboardViewModel(loader, prefs())
+        vm.selectDate(yesterday)
+        advanceUntilIdle()
+        vm.stopLoading()
+        vm.resumeCurrentDay()
+        advanceUntilIdle()
+        // Settled before it left view: the pinned day adds no read.
+        assertEquals(2, stepsReads)
+
+        gate = CompletableDeferred()
+        vm.refresh()
+        advanceUntilIdle()
+        vm.stopLoading()
+        gate = null
+        vm.resumeCurrentDay()
+        advanceUntilIdle()
+
+        assertEquals(yesterday, vm.uiState.value.selectedDate)
+        assertEquals(4, stepsReads)
+        assertTrue(vm.uiState.value.loadingWidgets.isEmpty())
+    }
+
     // Streaming.
 
     @Test fun `the dashboard renders before any metric has answered`() = runTest {

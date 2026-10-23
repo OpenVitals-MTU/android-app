@@ -34,6 +34,7 @@ import tech.mmarca.openvitals.domain.query.ActivityPeriodData
 import tech.mmarca.openvitals.domain.model.SpeedSample
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.TimeRange
+import tech.mmarca.openvitals.core.performance.ScreenSnapshotStore
 import tech.mmarca.openvitals.data.repository.contract.ActivityRepository
 import tech.mmarca.openvitals.data.repository.contract.CoMapsNavigationRepository
 import tech.mmarca.openvitals.data.repository.contract.SessionDistancePreferences
@@ -55,6 +56,7 @@ class ActivityRepositoryImpl @Inject constructor(
     private val markerRepository: ActivityMarkerRepository? = null,
     private val coMapsNavigationRepository: CoMapsNavigationRepository? = null,
     private val sessionDistancePreferences: SessionDistancePreferences? = null,
+    private val screenSnapshots: ScreenSnapshotStore? = null,
 ) : ActivityRepository {
 
     companion object {
@@ -439,7 +441,7 @@ class ActivityRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping writePlannedWorkout missingCount=1")
             throw SecurityException("Missing Health Connect planned exercise write permission.")
         }
-        return hc.writePlannedExerciseSession(request)
+        return hc.writePlannedExerciseSession(request).also { dropScreenSnapshots() }
     }
 
     override suspend fun loadPlannedWorkout(id: String): PlannedExerciseData? {
@@ -458,6 +460,7 @@ class ActivityRepositoryImpl @Inject constructor(
             throw SecurityException("Missing Health Connect planned exercise write permission.")
         }
         hc.deletePlannedExerciseSession(id)
+        dropScreenSnapshots()
     }
 
     private suspend fun loadPlannedWorkouts(
@@ -495,6 +498,11 @@ class ActivityRepositoryImpl @Inject constructor(
             includeHydration = false,
             includeEstimatedCalories = canEstimateTotalCalories(granted),
         )
+    }
+
+    /** A screen reopened after this app's own write must not draw the period as it was. */
+    private fun dropScreenSnapshots() {
+        screenSnapshots?.clear()
     }
 
     private fun canEstimateTotalCalories(granted: Set<String>): Boolean =
@@ -588,7 +596,7 @@ class ActivityRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping writeActivityEntry missingCount=${missingPermissions.size}")
             throw SecurityException("Missing Health Connect activity write permission.")
         }
-        return hc.writeActivityEntry(request)
+        return hc.writeActivityEntry(request).also { dropScreenSnapshots() }
     }
 
     override suspend fun writeActivityEntries(requests: List<ActivityWriteRequest>): List<String> {
@@ -600,7 +608,7 @@ class ActivityRepositoryImpl @Inject constructor(
             Log.w(TAG, "Skipping writeActivityEntries missingCount=${missingPermissions.size}")
             throw SecurityException("Missing Health Connect activity write permission.")
         }
-        return hc.writeActivityEntries(requests)
+        return hc.writeActivityEntries(requests).also { dropScreenSnapshots() }
     }
 
     override suspend fun updateActivityEntry(id: String, request: ActivityWriteRequest) {
@@ -610,6 +618,7 @@ class ActivityRepositoryImpl @Inject constructor(
             throw SecurityException("Missing Health Connect activity write permission.")
         }
         hc.updateActivityEntry(id, request)
+        dropScreenSnapshots()
     }
 
     override suspend fun deleteActivityEntry(id: String) {
@@ -619,6 +628,7 @@ class ActivityRepositoryImpl @Inject constructor(
             throw SecurityException("Missing Health Connect activity write permission.")
         }
         hc.deleteActivityEntry(id)
+        dropScreenSnapshots()
         markerRepository?.deleteMarkersForActivity(id)
         coMapsNavigationRepository?.deleteSamples(id)
     }

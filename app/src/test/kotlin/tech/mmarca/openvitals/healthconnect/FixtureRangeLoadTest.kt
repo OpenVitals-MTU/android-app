@@ -206,7 +206,8 @@ class FixtureRangeLoadTest {
     private fun support(client: FakeHealthConnectClient): HealthConnectReaderSupport {
         val diagnostics = mockk<HealthConnectDiagnostics>()
         every { diagnostics.summary() } returns "test"
-        val aggregating = AggregatingFakeHealthConnectClient(client)
+        // Which records a range returns is what this table checks, so match the platform: by start time.
+        val aggregating = AggregatingFakeHealthConnectClient(client, platformTimeRange = true)
         return HealthConnectReaderSupport(
             clientProvider = { aggregating },
             diagnostics = diagnostics,

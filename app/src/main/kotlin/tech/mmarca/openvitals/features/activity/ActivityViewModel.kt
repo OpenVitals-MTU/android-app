@@ -11,6 +11,8 @@ import tech.mmarca.openvitals.core.presentation.toScreenError
 import tech.mmarca.openvitals.core.performance.DefaultDispatcherProvider
 import tech.mmarca.openvitals.core.performance.DispatcherProvider
 import tech.mmarca.openvitals.core.performance.LoadCoordinator
+import tech.mmarca.openvitals.core.performance.ScreenSnapshotKey
+import tech.mmarca.openvitals.core.performance.ScreenSnapshotStore
 import tech.mmarca.openvitals.core.period.PeriodLoadQuery
 import tech.mmarca.openvitals.core.period.PeriodRangePreferenceKey
 import tech.mmarca.openvitals.core.period.PeriodSelection
@@ -26,6 +28,7 @@ import tech.mmarca.openvitals.data.repository.contract.DailyGoalPreferences
 import tech.mmarca.openvitals.data.repository.contract.PeriodPreferences
 import tech.mmarca.openvitals.navigation.METRIC_ID_ARG
 import java.time.LocalDate
+import tech.mmarca.openvitals.domain.query.ActivityPeriodData
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -60,6 +63,7 @@ class ActivityViewModel @Inject constructor(
     private val calorieDisplayPreferences: CalorieDisplayPreferences,
     private val dispatchers: DispatcherProvider = DefaultDispatcherProvider,
     savedStateHandle: SavedStateHandle,
+    private val snapshots: ScreenSnapshotStore = ScreenSnapshotStore(),
 ) : ViewModel() {
 
     /** The metric the route named; steps when it named none. */
@@ -177,6 +181,21 @@ class ActivityViewModel @Inject constructor(
             )
             val date = query.selectedDate
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            val fingerprint = snapshots.fingerprint()
+            val snapshotKey = ScreenSnapshotKey<ActivityPeriodData>(
+                screen = ActivitySnapshotScreen,
+                query = ActivitySnapshotQuery(
+                    metric = selectedMetric,
+                    query = query,
+                    calculatedCalories = calorieDisplayPreferences.showOpenVitalsCalculatedCalories,
+                ),
+            )
+            // Drawn at once from the last load of this period; the read below replaces it.
+            snapshots.get(snapshotKey, fingerprint)?.let { snapshot ->
+                val display = buildDisplay(query, snapshot)
+                if (!isCurrent) return@load
+                _uiState.value = _uiState.value.withPeriodData(date, snapshot, display)
+            }
             runCatching {
                 repository.loadActivityPeriod(
                     query = query,
@@ -186,33 +205,10 @@ class ActivityViewModel @Inject constructor(
                 )
             }.onSuccess { result ->
                 if (!isCurrent) return@load
-                val display = withContext(dispatchers.default) {
-                    ActivityPresentationMapper.build(
-                        query = query,
-                        metric = selectedMetric,
-                        dailyGoal = _uiState.value.dailyGoal,
-                        dailySteps = result.dailySteps,
-                        previousDailySteps = result.previousDailySteps,
-                        baselineDailySteps = result.baselineDailySteps,
-                        nutrition = result.nutrition,
-                        previousNutrition = result.previousNutrition,
-                        baselineNutrition = result.baselineNutrition,
-                        activityProgress = result.activityProgress,
-                    )
-                }
+                snapshots.put(snapshotKey, fingerprint, result)
+                val display = buildDisplay(query, result)
                 if (!isCurrent) return@load
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    selectedDate = date,
-                    dailySteps = result.dailySteps,
-                    previousDailySteps = result.previousDailySteps,
-                    baselineDailySteps = result.baselineDailySteps,
-                    nutrition = result.nutrition,
-                    previousNutrition = result.previousNutrition,
-                    baselineNutrition = result.baselineNutrition,
-                    activityProgress = result.activityProgress,
-                    display = display,
-                )
+                _uiState.value = _uiState.value.withPeriodData(date, result, display).copy(isLoading = false)
             }.onFailure {
                 if (!isCurrent) return@load
                 _uiState.value = _uiState.value.copy(
@@ -223,6 +219,38 @@ class ActivityViewModel @Inject constructor(
             }
         }
     }
+
+    private suspend fun buildDisplay(query: PeriodLoadQuery, result: ActivityPeriodData): ActivityDisplayState =
+        withContext(dispatchers.default) {
+            ActivityPresentationMapper.build(
+                query = query,
+                metric = selectedMetric,
+                dailyGoal = _uiState.value.dailyGoal,
+                dailySteps = result.dailySteps,
+                previousDailySteps = result.previousDailySteps,
+                baselineDailySteps = result.baselineDailySteps,
+                nutrition = result.nutrition,
+                previousNutrition = result.previousNutrition,
+                baselineNutrition = result.baselineNutrition,
+                activityProgress = result.activityProgress,
+            )
+        }
+
+    private fun ActivityUiState.withPeriodData(
+        date: LocalDate,
+        result: ActivityPeriodData,
+        display: ActivityDisplayState,
+    ): ActivityUiState = copy(
+        selectedDate = date,
+        dailySteps = result.dailySteps,
+        previousDailySteps = result.previousDailySteps,
+        baselineDailySteps = result.baselineDailySteps,
+        nutrition = result.nutrition,
+        previousNutrition = result.previousNutrition,
+        baselineNutrition = result.baselineNutrition,
+        activityProgress = result.activityProgress,
+        display = display,
+    )
 
     private fun applyPeriodSelection(selection: PeriodSelection) {
         _uiState.value = _uiState.value.copy(
@@ -281,3 +309,12 @@ internal fun activityMetricFromRoute(metricId: String?): ActivityMetric =
         "WHEELCHAIR_PUSHES" -> ActivityMetric.WHEELCHAIR_PUSHES
         else -> ActivityMetric.STEPS
     }
+
+private const val ActivitySnapshotScreen = "activity"
+
+/** Everything an [ActivityPeriodData] depends on besides the Health Connect fingerprint. */
+private data class ActivitySnapshotQuery(
+    val metric: ActivityMetric,
+    val query: PeriodLoadQuery,
+    val calculatedCalories: Boolean,
+)
