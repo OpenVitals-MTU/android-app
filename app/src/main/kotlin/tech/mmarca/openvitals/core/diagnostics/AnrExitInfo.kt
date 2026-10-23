@@ -7,11 +7,12 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import java.io.Reader
 import java.time.Instant
+import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
 
 /**
  * The "not responding" records Android keeps for this app. A frozen process
- * cannot log its own freeze; the system's record survives it. The trace
- * holds thread names and stack frames only, no health values.
+ * cannot log its own freeze; the system's record survives it. The trace is
+ * kept to thread names and stack frames, and the system's reason is masked.
  */
 internal object AnrExitInfo {
     private const val MaxRecords = 2
@@ -66,7 +67,7 @@ internal fun formatAnrRecord(
 ): String = buildString {
     appendLine("- At: $at")
     appendLine("- Process: ${processName.orEmpty().ifBlank { "missing" }}")
-    appendLine("- Reason: ${description.orEmpty().ifBlank { "missing" }}")
+    appendLine("- Reason: ${PrivacyRedactor.maskMessage(description) ?: "missing"}")
     appendLine("- Importance: $importance")
     appendLine(trace?.let(::trimAnrTrace)?.ifBlank { null } ?: "No trace was kept.")
 }

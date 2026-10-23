@@ -2,6 +2,7 @@ package tech.mmarca.openvitals.core.diagnostics
 
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
+import tech.mmarca.openvitals.core.privacy.PrivacySentinels
 
 class AnrExitInfoTest {
     private val trace = """
@@ -54,5 +55,19 @@ class AnrExitInfoTest {
 
         assertThat(record).contains("APPWIDGET_UPDATE")
         assertThat(record).contains("No trace was kept.")
+    }
+
+    @Test
+    fun `the reason is masked like an exception message`() {
+        val record = formatAnrRecord(
+            at = "2026-09-18T19:51:02Z",
+            processName = "tech.mmarca.openvitals",
+            description = "Input dispatching timed out (${PrivacySentinels.Sentence})",
+            importance = 100,
+            trace = null,
+        )
+
+        PrivacySentinels.assertNoneIn(record.substringAfter("- Reason:"), except = setOf(PrivacySentinels.Name))
+        assertThat(record).contains("- Reason: Input dispatching timed out")
     }
 }

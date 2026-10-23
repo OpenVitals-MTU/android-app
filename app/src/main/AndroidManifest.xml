@@ -429,17 +429,15 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Opened by Settings > Report an issue only. Android sends APP_ERROR to the
+             installing store, never to the app that crashed, so nothing outside the
+             app needs to reach it. -->
         <activity
             android:name=".core.diagnostics.CrashReportEmailActivity"
             android:excludeFromRecents="true"
-            android:exported="true"
+            android:exported="false"
             android:noHistory="true"
-            android:theme="@style/Theme.OpenVitals">
-            <intent-filter>
-                <action android:name="android.intent.action.APP_ERROR" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
+            android:theme="@style/Theme.OpenVitals" />
 
         <activity
             android:name=".PermissionsRationaleActivity"
