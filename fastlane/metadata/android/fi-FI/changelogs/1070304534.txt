@@ -1,0 +1,1 @@
+GPS-reitillisen treenin voi nyt tallentaa FIT-tiedostona, jossa on reitti, korkeus ja matka sykkeen, nopeuden ja kadenssin rinnalla. Reitittömät FIT- ja TCX-viennit sisältävät nyt myös nopeuden ja kadenssin, eivät vain sykettä. Tiedostosta tuodut tai Garmin-kellosta synkronoidut reitit säilyttävät jokaisen pisteen sen sijaan, että ne karsittaisiin 2 000 pisteeseen.

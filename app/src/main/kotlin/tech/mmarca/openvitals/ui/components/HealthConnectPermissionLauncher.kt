@@ -20,6 +20,8 @@ class HealthConnectPermissionLauncherState internal constructor(
 fun rememberHealthConnectPermissionLauncher(
     coordinator: HealthConnectScreenUxCoordinator = rememberHealthConnectScreenUxCoordinator(),
     onResult: () -> Unit = {},
+    /** After [onResult], only when the user granted at least one permission. */
+    onGranted: () -> Unit = {},
 ): HealthConnectPermissionLauncherState {
     val launcher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract(),
@@ -30,6 +32,7 @@ fun rememberHealthConnectPermissionLauncher(
             coordinator.recordPermissionRequestCancelled()
         }
         onResult()
+        if (granted.isNotEmpty()) onGranted()
     }
     return HealthConnectPermissionLauncherState(
         launch = { permissions ->

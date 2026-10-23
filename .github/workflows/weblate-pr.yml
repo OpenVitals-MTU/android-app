@@ -15,9 +15,9 @@ permissions:
   pull-requests: write
 jobs:
   open-pr:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Open the PR if none is open for this branch
         env:
           GH_TOKEN: ${{ secrets.WEBLATE_PR_TOKEN }}

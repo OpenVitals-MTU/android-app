@@ -33,7 +33,7 @@ interface CycleRepository {
     suspend fun deleteCycleEntry(kind: CycleEntryKind, id: String)
 
     /**
-     * Statistics over the last eighteen months of bleeding, with the user's
+     * Statistics over the whole recorded bleeding history, with the user's
      * exclusions, contexts and age band applied. Null without the read permission.
      */
     suspend fun loadCycleStatistics(today: LocalDate = LocalDate.now()): CycleStatistics?

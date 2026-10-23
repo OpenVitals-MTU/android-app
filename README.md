@@ -29,10 +29,10 @@ No OpenVitals account is required, and the app has no `INTERNET` permission. Ope
 ## What you can do with OpenVitals
 
 - Review most metrics by day, week, month or year, with charts, history, source information and period statistics. Charts also expose summaries and navigation to screen readers.
-- Log by hand: drinks and hydration, food and nutrition, activities, mindfulness, cycle records, weight, height, body fat, blood pressure with the pulse the monitor shows, SpO2, respiratory rate and body temperature. Records with a matching Health Connect type are written there; some cycle-journal data stays local because Health Connect has no record type for it.
+- Log by hand: drinks and hydration, food and nutrition, activities of every Health Connect exercise type, mindfulness, cycle records, weight, height, body fat, blood pressure with the pulse the monitor shows, SpO2, respiratory rate and body temperature. Records with a matching Health Connect type are written there; some cycle-journal data stays local because Health Connect has no record type for it.
 - Record activities with GPS, offline maps and Bluetooth sensors. Routes and workouts can also be imported, and guided workout plans can be run from the phone.
 - Read recovery views derived on the phone: Daily Readiness, Body Energy and Training Readiness, together with HRV status, physiological stress, adaptive goals and explanation screens based on the data available.
-- Bring in Apple Health exports, CSV files of measurements or meals, a cycle history exported by drip, route and workout files, and supported medical records.
+- Bring in Apple Health exports, CSV files of measurements or meals, a cycle history exported by drip, route and workout files, and medical records as FHIR files, the older DSTU2 format included.
 - Generate PDF health reports fully on-device, with charts, statistics and sections for supported health data.
 - Track your cycle with a local day journal, estimates, reminders, pill tracking, backup and a home-screen widget alongside the records kept in Health Connect.
 - Put widgets on the home screen for readiness, Body Energy, vitals, selected metrics and quick beverage logging.
@@ -52,8 +52,6 @@ For the detailed feature inventory, see the [feature guide](https://docs.openvit
     <img width="23%" alt="Activity recording" src="docs/images/activityRecording.png">
     <img width="23%" alt="Beverage entry" src="docs/images/beverageEntry.png">
 </div>
-
-More screenshots are on the [docs site](https://docs.openvitals.health/screenshots).
 
 ## Devices and integrations
 

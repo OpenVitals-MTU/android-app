@@ -305,7 +305,9 @@
     <string name="activity_route_share_failed">Non se puido compartir o ficheiro da ruta.</string>
     <string name="activity_workout_export_title">Exportar adestramento</string>
     <string name="activity_workout_export_description">Garda as métricas deste adestramento nun ficheiro. A ruta GPS non se inclúe.</string>
-    <string name="activity_workout_export_description_with_route">Garda este adestramento nun ficheiro. GPX e KMZ inclúen a ruta GPS; TCX, CSV e FIT non.</string>
+    <string name="activity_workout_export_description_route_choice">Garda este adestramento nun ficheiro, coa ruta GPS ou sen ela.</string>
+    <string name="activity_workout_export_with_route">Coa ruta GPS</string>
+    <string name="activity_workout_export_without_route">Sen a ruta GPS</string>
     <string name="activity_workout_export_tcx">Gardar TCX</string>
     <string name="activity_workout_export_csv">Gardar CSV</string>
     <string name="activity_workout_export_fit">Gardar FIT</string>
@@ -985,8 +987,10 @@
     <string name="cardio_load_day_numbers_title">Valores de hoxe</string>
     <string name="cardio_load_references_title">Ligazóns de apoio</string>
     <string name="cardio_load_calculation_summary">OpenVitals usa o TRIMP baseado na FC cando hai datos de frecuencia cardíaca, e recorre ao movemento só cando a FC non é utilizable.</string>
-    <string name="cardio_load_formula">TRIMP = minutos x HRR x 0.64 x e^(1.92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = minutos x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR é a reserva de frecuencia cardíaca: (frecuencia cardíaca - FC en repouso) / (FC máxima - FC en repouso). OpenVitals súmaa nos intervalos de frecuencia cardíaca dispoñibles do día.</string>
+    <string name="cardio_load_formula_weighting">a = 0.64 e b = 1.92 para homes, a = 0.86 e b = 1.67 para mulleres (Banister). Se o teu perfil corporal non indica o sexo, úsanse os valores para homes.</string>
+    <string name="cardio_load_max_hr_body">A túa frecuencia cardíaca máxima vén do teu perfil corporal. Se non hai ningunha, OpenVitals usa a frecuencia cardíaca máis alta medida, se é dabondo alta. Se non, estima o máximo a partir da túa idade: 206 - 0.88 x idade para mulleres (Gulati), 208 - 0.7 x idade para o resto (Tanaka).</string>
     <string name="cardio_load_mapping_body">Cando hai actividades gravadas, as mostras de frecuencia cardíaca asígnanse por marca de tempo á ventá de inicio e fin de cada actividade. Sen ventás de actividade, só se contan os intervalos de frecuencia cardíaca elevada. Se a FC non é utilizable, móstranse o movemento e as calorías activas como alternativa de baixa confianza.</string>
     <string name="cardio_load_method">Método</string>
     <string name="cardio_load_trimp_score">Puntuación TRIMP</string>
@@ -1010,6 +1014,8 @@
     <string name="cardio_load_calibration_estimated_max">FC máx estimada</string>
     <string name="cardio_load_reference_banister">Ecuación TRIMP de Banister</string>
     <string name="cardio_load_reference_training_load">Revisión sobre monitorización da carga de adestramento</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: frecuencia cardíaca máxima segundo a idade</string>
+    <string name="cardio_load_reference_gulati">Gulati: frecuencia cardíaca máxima en mulleres</string>
     <string name="cardio_load_reference_health_connect">Asignación de FC de adestramentos en Health Connect</string>
     <string name="section_sleep_sessions">Sesións de sono</string>
     <string name="section_weight">Peso</string>
@@ -1897,6 +1903,7 @@ Se Acceder a rutas de exercicio non aparece no diálogo de acceso, abre os axust
     <string name="medical_import_error_too_large">Este ficheiro ocupa máis de 8 MB.</string>
     <string name="medical_import_error_unreadable">Non se puido ler este ficheiro.</string>
     <string name="medical_import_error_no_records">Este ficheiro non contén nada que Health Connect garde.</string>
+    <string name="medical_import_error_reports_only">Este ficheiro só contén informes diagnósticos. Health Connect garda os resultados dun informe, non o informe, e este ficheiro non os contén. Son rexistros Observation, normalmente en ficheiros propios: importa eses no seu lugar.</string>
     <string name="medical_import_new_source">Orixe nova</string>
     <string name="medical_import_existing_source">Engádese a unha orixe que xa importaches</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>
@@ -3810,6 +3817,9 @@ Podes desactivalo cando queiras e revogar o acceso ás notificacións desde os a
     <string name="settings_watch_wearos_syncing">Sincronizando reloxo…</string>
     <string name="settings_watch_wearos_synced_none">Non hai nada novo no reloxo</string>
     <string name="settings_watch_wearos_needs_weight">Calorías ao camiñar sen estimar: engade o teu peso en Perfil corporal ou rexístrao en Health Connect.</string>
+    <string name="settings_watch_wearos_needs_weight_read">Calorías ao camiñar sen estimar: engade o teu peso en Perfil corporal ou permite que OpenVitals lea o teu peso en Health Connect.</string>
+    <string name="settings_watch_wearos_needs_steps_write">Pasos sen escribir: permite que OpenVitals escriba pasos en Health Connect e volve sincronizar.</string>
+    <string name="settings_watch_wearos_needs_calories_write">Calorías ao camiñar sen escribir: permite que OpenVitals escriba calorías activas e lea adestramentos en Health Connect para estimalas desde a próxima sincronización.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d mostra de frecuencia cardíaca sincronizada</item>
         <item quantity="other">%1$d mostras de frecuencia cardíaca sincronizadas</item>

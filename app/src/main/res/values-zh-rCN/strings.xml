@@ -246,7 +246,9 @@
     <string name="activity_route_share_failed">无法分享路线文件。</string>
     <string name="activity_workout_export_title">导出锻炼</string>
     <string name="activity_workout_export_description">将此锻炼的指标保存为文件。不包含 GPS 路线。</string>
-    <string name="activity_workout_export_description_with_route">将此锻炼保存为文件。GPX 和 KMZ 包含 GPS 路线；TCX、CSV 和 FIT 不包含。</string>
+    <string name="activity_workout_export_description_route_choice">将此锻炼保存为文件，可包含或不包含 GPS 路线。</string>
+    <string name="activity_workout_export_with_route">包含 GPS 路线</string>
+    <string name="activity_workout_export_without_route">不含 GPS 路线</string>
     <string name="activity_workout_export_tcx">保存 TCX</string>
     <string name="activity_workout_export_csv">保存 CSV</string>
     <string name="activity_workout_export_fit">保存 FIT</string>
@@ -697,8 +699,10 @@
     <string name="cardio_load_day_numbers_title">今日数值</string>
     <string name="cardio_load_references_title">参考链接</string>
     <string name="cardio_load_calculation_summary">有心率数据时 OpenVitals 使用基于心率的 TRIMP，心率不可用时回退到仅运动量。</string>
-    <string name="cardio_load_formula">TRIMP = 分钟 × HRR × 0.64 × e^(1.92 × HRR)</string>
+    <string name="cardio_load_formula">TRIMP = 分钟 × HRR × a × e^(b × HRR)</string>
     <string name="cardio_load_formula_body">HRR 是心率储备：(心率 - 静息心率) / (最大心率 - 静息心率)。OpenVitals 对当日可用的心率区间求和。</string>
+    <string name="cardio_load_formula_weighting">男性 a = 0.64，b = 1.92；女性 a = 0.86，b = 1.67（Banister）。如果身体资料未填写性别，则使用男性的数值。</string>
+    <string name="cardio_load_max_hr_body">最大心率来自你的身体资料。如果未设置，OpenVitals 会使用测得的最高心率（前提是足够高）。否则按年龄估算：女性为 206 - 0.88 × 年龄（Gulati），其他人为 208 - 0.7 × 年龄（Tanaka）。</string>
     <string name="cardio_load_mapping_body">有记录活动时，心率样本按时间戳映射到每个活动的开始和结束窗口。没有活动窗口时，仅计算升高的心率区间。心率不可用时，运动量和活动卡路里作为低可信度回退显示。</string>
     <string name="cardio_load_method">方法</string>
     <string name="cardio_load_trimp_score">TRIMP 得分</string>
@@ -722,6 +726,8 @@
     <string name="cardio_load_calibration_estimated_max">最大心率（估算）</string>
     <string name="cardio_load_reference_banister">Banister TRIMP 公式</string>
     <string name="cardio_load_reference_training_load">训练负荷监测综述</string>
+    <string name="cardio_load_reference_tanaka">Tanaka：按年龄估算最大心率</string>
+    <string name="cardio_load_reference_gulati">Gulati：女性最大心率</string>
     <string name="cardio_load_reference_health_connect">Health Connect 锻炼心率映射</string>
     <string name="section_sleep_sessions">睡眠会话</string>
     <string name="section_weight">体重</string>
@@ -1543,6 +1549,7 @@
     <string name="medical_import_error_too_large">此文件超过 8 MB。</string>
     <string name="medical_import_error_unreadable">无法读取此文件。</string>
     <string name="medical_import_error_no_records">此文件中没有 Health Connect 存储的内容。</string>
+    <string name="medical_import_error_reports_only">此文件仅包含诊断报告。Health Connect 保存的是报告的结果，而不是报告本身，而此文件中没有这些结果。结果是 Observation 记录，通常位于单独的文件中，请改为导入那些文件。</string>
     <string name="medical_import_new_source">新来源</string>
     <string name="medical_import_existing_source">添加到你之前导入的来源</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>
@@ -3741,6 +3748,9 @@
     <string name="settings_watch_wearos_syncing">正在同步手表…</string>
     <string name="settings_watch_wearos_synced_none">手表上没有新数据</string>
     <string name="settings_watch_wearos_needs_weight">未估算步行卡路里：请在身体档案中添加体重，或在 Health Connect 中记录体重。</string>
+    <string name="settings_watch_wearos_needs_weight_read">未估算步行卡路里：请在身体档案中添加体重，或允许 OpenVitals 读取 Health Connect 中的体重。</string>
+    <string name="settings_watch_wearos_needs_steps_write">未写入步数：请允许 OpenVitals 向 Health Connect 写入步数，然后重新同步。</string>
+    <string name="settings_watch_wearos_needs_calories_write">未写入步行卡路里：请允许 OpenVitals 在 Health Connect 中写入活动卡路里并读取锻炼记录，从下次同步起即可估算。</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">已同步 %1$d 个心率样本</item>
         <item quantity="other">已同步 %1$d 个心率样本</item>

@@ -1202,7 +1202,6 @@ class ActivityEntryViewModel(
                 endTime = snapshot.endTime,
                 hasRecordedTimestamps = true,
                 hasImportedTimeRange = true,
-                originalPointCount = snapshot.points.size,
             )
             // Same DEM rule as an imported file: the phone's sensors drift too.
             applyRouteImport(elevationCorrector?.correct(recordedRoute) ?: recordedRoute, units)

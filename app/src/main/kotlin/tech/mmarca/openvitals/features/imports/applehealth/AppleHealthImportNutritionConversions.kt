@@ -28,10 +28,12 @@ internal fun AppleHealthImportConverter.convertNutrition(
         }
         val interval = interval(start, end ?: start)
         val nutrients = NutritionValues()
+        val appliedRecords = mutableListOf<AppleRecord>()
         group.forEach { record ->
             val value = record.numericValue
             val applied = value != null && nutrients.apply(record.type, value, record.unit)
             if (applied) {
+                appliedRecords += record
                 if (trackConsumedRecords) {
                     consumedRecordFingerprints += record.sourceFingerprint
                 }
@@ -41,13 +43,8 @@ internal fun AppleHealthImportConverter.convertNutrition(
         }
         if (!nutrients.hasAny) return@mapNotNull null
         val fingerprint = buildStableClientRecordId("nutrition", group.map { it.stableParts() })
-        markConverted(AppleNutritionSyntheticType)
-        ConvertedAppleRecord(
-            appleType = AppleNutritionSyntheticType,
-            targetType = "NutritionRecord",
-            fingerprint = fingerprint,
-            recordType = NutritionRecord::class,
-            record = NutritionRecord(
+        val nutrition = acceptedByHealthConnect(appliedRecords) {
+            NutritionRecord(
                 startTime = interval.start.instant,
                 startZoneOffset = interval.start.offset,
                 endTime = interval.end.instant,
@@ -94,7 +91,15 @@ internal fun AppleHealthImportConverter.convertNutrition(
                 zinc = nutrients.zinc,
                 name = group.firstNotNullOfOrNull { it.metadata["HKMetadataKeyFoodType"] },
                 mealType = MealType.MEAL_TYPE_UNKNOWN,
-            ),
+            )
+        } ?: return@mapNotNull null
+        markConverted(AppleNutritionSyntheticType)
+        ConvertedAppleRecord(
+            appleType = AppleNutritionSyntheticType,
+            targetType = "NutritionRecord",
+            fingerprint = fingerprint,
+            recordType = NutritionRecord::class,
+            record = nutrition,
             sourceTimeRange = AppleImportTimeRange(interval.start.instant, interval.end.instant),
             unit = null,
             value = "nutrients=${group.size}",

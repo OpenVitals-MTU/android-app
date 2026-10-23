@@ -75,8 +75,8 @@ val localAppleHealthExportPath = providers.gradleProperty("appleHealthExport")
 // F-Droid rejects the build. This value continues that number line — old base
 // x10, last digit free for a per-ABI split if one is ever needed again. The
 // first nightly on this floor ships versionCode 1070304441.
-val baseVersionCode = 1070304528
-val baseVersionName = "2.14.2"
+val baseVersionCode = 1070304535
+val baseVersionName = "2.14.5"
 val translationCoverageResDir = layout.buildDirectory.dir("generated/res/translationCoverage").get().asFile
 val generateTranslationCoverage by tasks.registering(Exec::class) {
     inputs.files(

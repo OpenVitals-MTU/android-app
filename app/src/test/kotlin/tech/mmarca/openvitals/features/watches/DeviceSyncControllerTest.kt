@@ -104,6 +104,8 @@ class DeviceSyncControllerTest {
         assertFalse(controller.state.value.isSyncing)
         assertEquals(DeviceSyncPhase.COMPLETE, controller.state.value.phase)
         assertEquals(3, controller.state.value.lastFileCount)
+        // Scoped, so another watch's card does not show this outcome.
+        assertEquals(watch.id, controller.state.value.lastDeviceId)
         assertNull(controller.state.value.error)
     }
 

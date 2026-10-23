@@ -620,8 +620,10 @@
     <string name="cardio_load_day_numbers_title">Heutige Werte</string>
     <string name="cardio_load_references_title">Belegte Links</string>
     <string name="cardio_load_calculation_summary">OpenVitals verwendet herzfrequenzbasiertes TRIMP, wenn Herzfrequenzdaten verfügbar sind, und nutzt Bewegung nur als Ersatz, wenn HF nicht verwendbar ist.</string>
-    <string name="cardio_load_formula">TRIMP = Minuten x HRR x 0.64 x e^(1.92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = Minuten x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR ist die Herzfrequenzreserve: (Herzfrequenz - Ruheherzfrequenz) / (maximale Herzfrequenz - Ruheherzfrequenz). OpenVitals summiert dies über verfügbare Herzfrequenzintervalle des Tages.</string>
+    <string name="cardio_load_formula_weighting">a = 0.64 und b = 1.92 für Männer, a = 0.86 und b = 1.67 für Frauen (Banister). Ist im Körperprofil kein Geschlecht angegeben, gelten die Werte für Männer.</string>
+    <string name="cardio_load_max_hr_body">Deine maximale Herzfrequenz stammt aus deinem Körperprofil. Ist dort keine angegeben, nutzt OpenVitals die höchste gemessene Herzfrequenz, wenn sie hoch genug ist. Sonst schätzt OpenVitals das Maximum aus deinem Alter: 206 - 0.88 x Alter für Frauen (Gulati), 208 - 0.7 x Alter für alle anderen (Tanaka).</string>
     <string name="cardio_load_mapping_body">Wenn aufgezeichnete Aktivitäten vorhanden sind, werden Herzfrequenzproben per Zeitstempel dem Start- und Endfenster jeder Aktivität zugeordnet. Ohne Aktivitätsfenster zählen nur Intervalle mit erhöhter Herzfrequenz. Wenn HF nicht nutzbar ist, werden Bewegung und aktive Kalorien als niedrig vertrauenswürdiger Ersatz angezeigt.</string>
     <string name="cardio_load_method">Methode</string>
     <string name="cardio_load_trimp_score">TRIMP-Wert</string>
@@ -645,6 +647,8 @@
     <string name="cardio_load_calibration_estimated_max">Max. HF geschätzt</string>
     <string name="cardio_load_reference_banister">Banister-TRIMP-Gleichung</string>
     <string name="cardio_load_reference_training_load">Review zur Trainingsbelastung</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: maximale Herzfrequenz nach Alter</string>
+    <string name="cardio_load_reference_gulati">Gulati: maximale Herzfrequenz für Frauen</string>
     <string name="cardio_load_reference_health_connect">Health-Connect-HF-Zuordnung für Trainings</string>
     <string name="section_sleep_sessions">Schlafsitzungen</string>
     <string name="section_weight">Gewicht</string>
@@ -1283,6 +1287,7 @@
     <string name="medical_import_error_too_large">Diese Datei ist größer als 8 MB.</string>
     <string name="medical_import_error_unreadable">Diese Datei konnte nicht gelesen werden.</string>
     <string name="medical_import_error_no_records">Diese Datei enthält nichts, was Health Connect speichert.</string>
+    <string name="medical_import_error_reports_only">Diese Datei enthält nur Befundberichte. Health Connect speichert die Ergebnisse eines Berichts, nicht den Bericht selbst, und diese Datei enthält sie nicht. Es sind Observation-Einträge, meist in eigenen Dateien: Importiere stattdessen diese.</string>
     <string name="medical_import_new_source">Neue Quelle</string>
     <string name="medical_import_existing_source">Ergänzt eine Quelle, die du schon importiert hast</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>
@@ -3161,7 +3166,9 @@
     <string name="settings_derived_metrics_reset_done">Metriken zurücksetzen. Neubrechung im Hintergrund aus Health Connect.</string>
     <string name="settings_derived_metrics_reset_failed">Metriken konnten nicht zurückgesetzt werden</string>
     <string name="activity_workout_export_description">Workout Metriken als Datei speichern. Die GPS Route ist nicht eingeschlossen.</string>
-    <string name="activity_workout_export_description_with_route">Speichere dieses Workout als Datei. GPX und KMZ enthalten die GPS-Route; TCX, CSV und FIT nicht.</string>
+    <string name="activity_workout_export_description_route_choice">Speichere dieses Workout als Datei, mit oder ohne GPS-Route.</string>
+    <string name="activity_workout_export_with_route">Mit GPS-Route</string>
+    <string name="activity_workout_export_without_route">Ohne GPS-Route</string>
     <string name="activity_workout_export_saved">Workout gespeichert.</string>
     <string name="settings_fit_import_folder_action">Order mit FIT-Dateien importieren</string>
     <string name="settings_fit_import_folder_scanning">Suche FIT-Dateien …</string>
@@ -3735,6 +3742,9 @@
     <string name="settings_watch_wearos_syncing">Uhr wird synchronisiert…</string>
     <string name="settings_watch_wearos_synced_none">Nichts Neues auf der Uhr</string>
     <string name="settings_watch_wearos_needs_weight">Gehkalorien nicht geschätzt: Trage dein Gewicht im Körperprofil ein oder erfasse es in Health Connect.</string>
+    <string name="settings_watch_wearos_needs_weight_read">Gehkalorien nicht geschätzt: Trage dein Gewicht im Körperprofil ein oder erlaube OpenVitals, dein Gewicht in Health Connect zu lesen.</string>
+    <string name="settings_watch_wearos_needs_steps_write">Schritte nicht geschrieben: Erlaube OpenVitals, Schritte in Health Connect zu schreiben, und synchronisiere erneut.</string>
+    <string name="settings_watch_wearos_needs_calories_write">Gehkalorien nicht geschrieben: Erlaube OpenVitals, in Health Connect aktive Kalorien zu schreiben und Trainings zu lesen, damit sie ab dem nächsten Sync geschätzt werden.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d Herzfrequenz-Messwert synchronisiert</item>
         <item quantity="other">%1$d Herzfrequenz-Messwerte synchronisiert</item>

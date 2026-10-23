@@ -317,7 +317,9 @@
     <string name="activity_route_share_failed">Не удалось поделиться файлом маршрута.</string>
     <string name="activity_workout_export_title">Экспортировать тренировку</string>
     <string name="activity_workout_export_description">Сохранить показатели этой тренировки в файл. GPS-маршрут не включается.</string>
-    <string name="activity_workout_export_description_with_route">Сохранить эту тренировку в файл. GPX и KMZ включают GPS-маршрут; TCX, CSV и FIT — нет.</string>
+    <string name="activity_workout_export_description_route_choice">Сохранить эту тренировку в файл, с GPS-маршрутом или без него.</string>
+    <string name="activity_workout_export_with_route">С GPS-маршрутом</string>
+    <string name="activity_workout_export_without_route">Без GPS-маршрута</string>
     <string name="activity_workout_export_tcx">Сохранить TCX</string>
     <string name="activity_workout_export_csv">Сохранить CSV</string>
     <string name="activity_workout_export_fit">Сохранить FIT</string>
@@ -980,8 +982,10 @@
     <string name="cardio_load_day_numbers_title">Значения за сегодня</string>
     <string name="cardio_load_references_title">Ссылки на источники</string>
     <string name="cardio_load_calculation_summary">OpenVitals использует TRIMP на основе частоты сердечных сокращений, если доступны данные о пульсе, а затем переходит к расчёту только по движению, если данные о пульсе непригодны для использования.</string>
-    <string name="cardio_load_formula">TRIMP = минуты × HRR × 0,64 × e^(1,92 × HRR)</string>
+    <string name="cardio_load_formula">TRIMP = минуты × HRR × a × e^(b × HRR)</string>
     <string name="cardio_load_formula_body">HRR — это резерв частоты сердечных сокращений: (частота сердечных сокращений − пульс в покое) / (максимальный пульс − пульс в покое). OpenVitals суммирует этот показатель по доступным интервалам измерения пульса за день.</string>
+    <string name="cardio_load_formula_weighting">a = 0,64 и b = 1,92 для мужчин, a = 0,86 и b = 1,67 для женщин (Banister). Если в профиле тела не указан пол, используются значения для мужчин.</string>
+    <string name="cardio_load_max_hr_body">Максимальный пульс берётся из профиля тела. Если он не указан, OpenVitals использует самый высокий измеренный пульс, если он достаточно высок. Иначе максимум оценивается по возрасту: 206 - 0,88 × возраст для женщин (Gulati), 208 - 0,7 × возраст для остальных (Tanaka).</string>
     <string name="cardio_load_mapping_body">Если записанные активности существуют, измерения пульса сопоставляются по временным меткам с периодом от начала до окончания каждой активности. При отсутствии временных интервалов активности учитываются только интервалы повышенного пульса. Если данные о пульсе непригодны для использования, движение и активные калории отображаются как приблизительная оценка с низкой достоверностью.</string>
     <string name="cardio_load_method">Метод</string>
     <string name="cardio_load_trimp_score">Оценка TRIMP</string>
@@ -1005,6 +1009,8 @@
     <string name="cardio_load_calibration_estimated_max">Максимальный пульс — расчётный</string>
     <string name="cardio_load_reference_banister">Уравнение TRIMP Банистера</string>
     <string name="cardio_load_reference_training_load">Обзор мониторинга тренировочной нагрузки</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: максимальный пульс по возрасту</string>
+    <string name="cardio_load_reference_gulati">Gulati: максимальный пульс у женщин</string>
     <string name="cardio_load_reference_health_connect">Сопоставление пульса с тренировками в Health Connect</string>
     <string name="section_sleep_sessions">Сеансы сна</string>
     <string name="section_weight">Вес</string>
@@ -1829,6 +1835,7 @@
     <string name="medical_import_error_too_large">Файл больше 8 МБ.</string>
     <string name="medical_import_error_unreadable">Не удалось прочитать файл.</string>
     <string name="medical_import_error_no_records">В этом файле нет данных, которые хранит Health Connect.</string>
+    <string name="medical_import_error_reports_only">Этот файл содержит только диагностические отчёты. Health Connect хранит результаты отчёта, а не сам отчёт, а в этом файле их нет. Это записи Observation, обычно в отдельных файлах: импортируйте их.</string>
     <string name="medical_import_new_source">Новый источник</string>
     <string name="medical_import_existing_source">Добавится к источнику, импортированному ранее</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>
@@ -3806,6 +3813,9 @@
     <string name="settings_watch_wearos_syncing">Синхронизация часов…</string>
     <string name="settings_watch_wearos_synced_none">На часах нет ничего нового</string>
     <string name="settings_watch_wearos_needs_weight">Калории при ходьбе не оценены: укажите вес в профиле тела или запишите его в Health Connect.</string>
+    <string name="settings_watch_wearos_needs_weight_read">Калории при ходьбе не оценены: укажите вес в профиле тела или разрешите OpenVitals читать ваш вес в Health Connect.</string>
+    <string name="settings_watch_wearos_needs_steps_write">Шаги не записаны: разрешите OpenVitals записывать шаги в Health Connect, затем синхронизируйте снова.</string>
+    <string name="settings_watch_wearos_needs_calories_write">Калории при ходьбе не записаны: разрешите OpenVitals записывать активные калории и читать тренировки в Health Connect, чтобы они оценивались со следующей синхронизации.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">Синхронизировано %1$d значение пульса</item>
         <item quantity="few">Синхронизировано %1$d значения пульса</item>

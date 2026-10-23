@@ -16,7 +16,9 @@ package tech.mmarca.openvitals.domain.insights
  * doi:10.1152/japplphysiol.00023.2004), so this slightly understates.
  *
  * Limits from the paper: level walking only, no hills, stairs or running, a
- * whole minute of steady walking. Below about 36 steps a minute the result
+ * whole minute of steady walking. Nothing here tells a run from a walk: the
+ * caller leaves out minutes inside a recorded exercise session, and an
+ * unrecorded run is extrapolated past the fitted range. Below about 36 steps a minute the result
  * is under one MET and the minute adds nothing.
  */
 object WalkingEnergy {
@@ -27,11 +29,15 @@ object WalkingEnergy {
         return 1.811 + 0.02014 * cadence + 7.427e-4 * cadence * cadence
     }
 
-    /** Active kilocalories for one minute at [stepsPerMinute], never below zero. */
+    /** Whether a minute at [stepsPerMinute] costs more than rest, whatever the weight. */
+    fun isAboveRest(stepsPerMinute: Int): Boolean =
+        stepsPerMinute > 0 && oxygenUptake(stepsPerMinute) > ML_O2_PER_KG_MIN_PER_MET
+
+    /** Active kilocalories for one minute at [stepsPerMinute]; 0 at or below rest, the same test as [isAboveRest]. */
     fun activeKcalPerMinute(stepsPerMinute: Int, weightKg: Double): Double {
         if (stepsPerMinute <= 0 || weightKg <= 0.0) return 0.0
         val netMets = oxygenUptake(stepsPerMinute) / ML_O2_PER_KG_MIN_PER_MET - 1.0
-        return (netMets * weightKg / MINUTES_PER_HOUR).coerceAtLeast(0.0)
+        return if (netMets > 0.0) netMets * weightKg / MINUTES_PER_HOUR else 0.0
     }
 
     private const val ML_O2_PER_KG_MIN_PER_MET = 3.5

@@ -22,20 +22,25 @@ import tech.mmarca.openvitals.data.repository.BleDeviceRepository
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncPhase
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncProgress
 import tech.mmarca.openvitals.devices.core.sync.DeviceSyncResult
+import tech.mmarca.openvitals.devices.core.sync.UnwrittenSeries
 import tech.mmarca.openvitals.domain.model.BleDeviceKind
 import tech.mmarca.openvitals.domain.model.BleSensorDevice
 import tech.mmarca.openvitals.domain.model.DeviceIntegration
+import tech.mmarca.openvitals.domain.model.ExerciseData
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingController
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingState
 import tech.mmarca.openvitals.features.manualentry.activity.recording.ActivityRecordingStatus
 import tech.mmarca.openvitals.healthconnect.HealthConnectManager
 import tech.mmarca.openvitals.domain.model.WearSleepMinute
 import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import io.mockk.slot
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.StepsCadenceRecord
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 
 /**
  * What a Wear OS sync does around the link. The watch is a fake here: the
@@ -111,7 +116,8 @@ class WearOsWatchSyncServiceTest {
     private var weight: Double? = 70.0
 
     init {
-        coEvery { healthConnect.grantedPermissions() } returns setOf(HealthPermission.getWritePermission(StepsRecord::class))
+        coEvery { healthConnect.grantedPermissions() } returns setOf(STEPS_WRITE, CALORIES_WRITE, EXERCISE_READ, WEIGHT_READ)
+        coEvery { healthConnect.readsOtherAppsDataNow() } returns true
         coEvery { importRepository.insertImportedRecords(any()) } answers {
             val records = firstArg<List<androidx.health.connect.client.records.Record>>()
             if (records.any(refused)) throw SecurityException("Caller doesn't have the write permission")
@@ -231,10 +237,38 @@ class WearOsWatchSyncServiceTest {
         insertCalls.clear()
         val result = service().sync(WATCH, Duration.ZERO, null)
 
-        // The cursor minute is written alone and refused as present; no record is tried twice.
+        // The cursor minute is written alone and refused as present; its cadence and energy are not tried
+        // again, and no record is tried twice.
         assertEquals(listOf(t0), insertCalls.first().map { (it as StepsRecord).startTime })
-        assertEquals(3, insertedOf<StepsRecord>().size)
+        val tried = insertCalls.flatten()
+        assertEquals(listOf(t0), tried.filter { it.metadata.clientRecordId!!.endsWith("_${t0.toEpochMilli()}") }.map { (it as StepsRecord).startTime })
+        assertEquals(tried.size, tried.map { it.metadata.clientRecordId }.distinct().size)
         assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 2), result)
+    }
+
+    @Test
+    fun `a sync that stopped after the steps writes their cadence the next time`() = runTest {
+        // The steps went out, then the process died before the cadence and the cursor.
+        healthConnectVersions[WearOsStepsImport.clientRecordId(t0)] = 12L
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 12)
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(listOf(t0), insertedOf<StepsCadenceRecord>().map { it.startTime })
+    }
+
+    @Test
+    fun `a failing estimate write neither fails the sync nor keeps sleep from syncing`() = runTest {
+        refused = { it is StepsCadenceRecord || it is ActiveCaloriesBurnedRecord }
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 110)
+        sleepPages += WearOsSleepMinutePage(nightMinutes(), hasMore = false)
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(DeviceSyncResult.Succeeded(0, nightCount = 1, stepMinuteCount = 1), result)
+        assertEquals(t0, cursors.stepsCursor(WATCH.id))
     }
 
     @Test
@@ -245,13 +279,12 @@ class WearOsWatchSyncServiceTest {
         service().sync(WATCH, Duration.ZERO, null)
 
         // 40 steps a minute costs a little more than rest; 12 does not.
-        assertEquals(1, insertedOf<androidx.health.connect.client.records.ActiveCaloriesBurnedRecord>().size)
+        assertEquals(1, insertedOf<ActiveCaloriesBurnedRecord>().size)
     }
 
     @Test
-    fun `no body weight writes no walking energy, and a withheld permission for an estimate does not fail the sync`() = runTest {
+    fun `no body weight writes no walking energy`() = runTest {
         weight = null
-        refused = { it is androidx.health.connect.client.records.StepsCadenceRecord }
         pages += WearOsHeartRatePage(emptyList(), hasMore = false)
         watchSteps += WearOsStepMinute(t0, 110)
 
@@ -259,7 +292,153 @@ class WearOsWatchSyncServiceTest {
 
         assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 1, missingBodyWeight = true), result)
         assertEquals(1, insertedOf<StepsRecord>().size)
-        assertTrue(insertedOf<androidx.health.connect.client.records.ActiveCaloriesBurnedRecord>().isEmpty())
+        assertTrue(insertedOf<ActiveCaloriesBurnedRecord>().isEmpty())
+    }
+
+    @Test
+    fun `no weight and no grant to read one asks for the grant`() = runTest {
+        weight = null
+        coEvery { healthConnect.grantedPermissions() } returns setOf(STEPS_WRITE, CALORIES_WRITE, EXERCISE_READ)
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 110)
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(
+            DeviceSyncResult.Succeeded(
+                0, stepMinuteCount = 1, missingBodyWeight = true, weightReadWithheld = true,
+                withheldPermissions = setOf(WEIGHT_READ),
+            ),
+            result,
+        )
+    }
+
+    @Test
+    fun `no minute above rest neither reads the weight nor asks for one`() = runTest {
+        var weightReads = 0
+        val counting = WearOsWatchSyncService(
+            nodePort = nodePort,
+            cursors = cursors,
+            importRepository = importRepository,
+            bleDeviceRepository = deviceRepository,
+            recordingController = recordingController,
+            healthConnect = healthConnect,
+            linkStore = linkStore,
+            weightKg = { weightReads++; null },
+            clock = { t0 },
+            zone = { ZoneId.of("+02:00") },
+        )
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 12)
+
+        val result = counting.sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 1), result)
+        assertEquals(0, weightReads)
+    }
+
+    @Test
+    fun `a withheld walking energy grant is not tried, and the result names it so the card can ask`() = runTest {
+        coEvery { healthConnect.grantedPermissions() } returns setOf(STEPS_WRITE, EXERCISE_READ)
+        refused = { it is ActiveCaloriesBurnedRecord }
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 110)
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 1, unwritten = setOf(UnwrittenSeries.WALKING_ENERGY), withheldPermissions = setOf(CALORIES_WRITE)), result)
+        assertEquals(1, insertedOf<StepsCadenceRecord>().size)
+    }
+
+    @Test
+    fun `every sync that still has no weight for its walking minutes says so`() = runTest {
+        weight = null
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 110)
+        service().sync(WATCH, Duration.ZERO, null)
+
+        watchSteps += WearOsStepMinute(t0.plusSeconds(60), 110)
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertTrue((result as DeviceSyncResult.Succeeded).missingBodyWeight)
+    }
+
+    @Test
+    fun `a background sync that cannot see other apps' sessions writes no walking energy`() = runTest {
+        coEvery { healthConnect.readsOtherAppsDataNow() } returns false
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 110)
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        // Steps go out; no energy, and no claim that the weight is missing.
+        assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 1), result)
+        assertTrue(insertedOf<ActiveCaloriesBurnedRecord>().isEmpty())
+    }
+
+    @Test
+    fun `without the exercise read grant no walking energy is written`() = runTest {
+        coEvery { healthConnect.grantedPermissions() } returns setOf(STEPS_WRITE, CALORIES_WRITE)
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 110)
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 1, unwritten = setOf(UnwrittenSeries.WALKING_ENERGY), withheldPermissions = setOf(EXERCISE_READ)), result)
+        assertTrue(insertedOf<ActiveCaloriesBurnedRecord>().isEmpty())
+        assertEquals(t0.minusMillis(1), stepPullsSince.last())
+    }
+
+    @Test
+    fun `a sync that moves to the background before its session read writes no walking energy`() = runTest {
+        // In the foreground when the steps phase starts, gone by the time the sessions are read.
+        coEvery { healthConnect.readsOtherAppsDataNow() } returnsMany listOf(true, false)
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 110)
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertTrue(insertedOf<ActiveCaloriesBurnedRecord>().isEmpty())
+    }
+
+    @Test
+    fun `exercise sessions that cannot be read write no walking energy`() = runTest {
+        coEvery { healthConnect.readExerciseSessions(any(), any()) } throws IllegalStateException("busy")
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 110)
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertTrue(insertedOf<ActiveCaloriesBurnedRecord>().isEmpty())
+    }
+
+    @Test
+    fun `the cursor minute and the new ones share one read of the exercise sessions`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 110)
+        service().sync(WATCH, Duration.ZERO, null)
+
+        watchSteps[0] = WearOsStepMinute(t0, 120)
+        watchSteps += WearOsStepMinute(t0.plusSeconds(60), 110)
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        service().sync(WATCH, Duration.ZERO, null)
+
+        // One read per sync, though the second writes the cursor minute and the new one apart.
+        coVerify(exactly = 2) { healthConnect.readExerciseSessions(any(), any()) }
+    }
+
+    @Test
+    fun `a withheld energy grant is not asked for when no minute would have used it`() = runTest {
+        coEvery { healthConnect.grantedPermissions() } returns setOf(STEPS_WRITE)
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 12)
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 1), result)
     }
 
     @Test
@@ -271,7 +450,10 @@ class WearOsWatchSyncServiceTest {
 
         val result = service().sync(WATCH, Duration.ZERO, null)
 
-        assertEquals(DeviceSyncResult.Succeeded(0, nightCount = 1), result)
+        assertEquals(
+            DeviceSyncResult.Succeeded(0, nightCount = 1, unwritten = setOf(UnwrittenSeries.STEPS), withheldPermissions = setOf(STEPS_WRITE)),
+            result,
+        )
         assertEquals(emptyList<Instant>(), stepPullsSince)
         assertEquals(Instant.EPOCH, cursors.stepsCursor(WATCH.id))
     }
@@ -370,6 +552,75 @@ class WearOsWatchSyncServiceTest {
 
         assertTrue(insertedOf<RestingHeartRateRecord>().isEmpty())
         assertEquals(1, insertedOf<SleepSessionRecord>().size)
+    }
+
+    @Test
+    fun `a failing weight lookup falls back to no walking energy instead of aborting the sync`() = runTest {
+        val failingService = WearOsWatchSyncService(
+            nodePort = nodePort,
+            cursors = cursors,
+            importRepository = importRepository,
+            bleDeviceRepository = deviceRepository,
+            recordingController = recordingController,
+            healthConnect = healthConnect,
+            linkStore = linkStore,
+            weightKg = { throw RuntimeException("Health Connect transient error") },
+            clock = { t0 },
+            zone = { ZoneId.of("+02:00") },
+        )
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 110)
+
+        val result = failingService.sync(WATCH, Duration.ZERO, null)
+
+        // Not "add your weight": one may well be there.
+        assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 1), result)
+        assertEquals(1, insertedOf<StepsRecord>().size)
+        assertTrue(insertedOf<ActiveCaloriesBurnedRecord>().isEmpty())
+    }
+
+    @Test
+    fun `walking energy skips minutes overlapping an exercise session in Health Connect`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += listOf(WearOsStepMinute(t0, 100), WearOsStepMinute(t0.plusSeconds(60), 100))
+        val session = ExerciseData(
+            id = "run", title = null, exerciseType = 0, startTime = t0, endTime = t0.plusSeconds(60),
+            durationMs = 60_000, source = "other.app",
+        )
+        coEvery { healthConnect.readExerciseSessions(any(), any()) } returns listOf(session)
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(listOf(t0.plusSeconds(60)), insertedOf<ActiveCaloriesBurnedRecord>().map { it.startTime })
+    }
+
+    @Test
+    fun `walking minutes all inside a recorded workout ask for no weight`() = runTest {
+        weight = null
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 150)
+        val run = ExerciseData(
+            id = "run", title = null, exerciseType = 0, startTime = t0, endTime = t0.plusSeconds(60),
+            durationMs = 60_000, source = "other.app",
+        )
+        coEvery { healthConnect.readExerciseSessions(any(), any()) } returns listOf(run)
+
+        val result = service().sync(WATCH, Duration.ZERO, null)
+
+        assertEquals(DeviceSyncResult.Succeeded(0, stepMinuteCount = 1), result)
+    }
+
+    @Test
+    fun `the session read reaches back to a workout begun before the first minute`() = runTest {
+        pages += WearOsHeartRatePage(emptyList(), hasMore = false)
+        watchSteps += WearOsStepMinute(t0, 100)
+        val from = slot<Instant>()
+        coEvery { healthConnect.readExerciseSessions(capture(from), any()) } returns emptyList()
+
+        service().sync(WATCH, Duration.ZERO, null)
+
+        // A two-hour run that began well before the minute is inside the window.
+        assertTrue(from.captured.isBefore(t0.minusSeconds(2 * 3600)))
     }
 
     @Test
@@ -478,6 +729,11 @@ class WearOsWatchSyncServiceTest {
 
     private companion object {
         const val STEP_PAGE = 2
+
+        val STEPS_WRITE = HealthPermission.getWritePermission(StepsRecord::class)
+        val CALORIES_WRITE = HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class)
+        val EXERCISE_READ = HealthPermission.getReadPermission(ExerciseSessionRecord::class)
+        val WEIGHT_READ = HealthPermission.getReadPermission(androidx.health.connect.client.records.WeightRecord::class)
 
         val WATCH = BleSensorDevice(
             id = "watch-1",

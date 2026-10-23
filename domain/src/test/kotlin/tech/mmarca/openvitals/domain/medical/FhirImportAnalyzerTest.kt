@@ -96,4 +96,43 @@ class FhirImportAnalyzerTest {
         assertThat(FhirImportAnalyzer.analyze(r4b, "x.json").groups.single().fhirVersion).isEqualTo(FhirVersionDetector.R4B)
         assertThat(FhirImportAnalyzer.analyze(origin, "x.json").groups.single().fhirVersion).isEqualTo("4.3.0")
     }
+
+    @Test
+    fun `a DSTU2 patient's list of family names reaches Health Connect as one string, and the patient check still reads it`() {
+        // LabCorp's patient record as CommonHealth exports it.
+        val patient = entry("""{"resourceType":"Patient","id":"p1","name":[{"use":"official","family":["SMITH"],"given":["JOHN","Q"]}],"gender":"male","birthDate":"1970-01-01"}""")
+
+        val group = FhirImportAnalyzer.analyze(FhirFile(listOf(patient)), "patient.json").groups.single()
+        val ready = group.ready.single().json
+
+        assertThat(group.rejected).isEmpty()
+        assertThat(Dstu2ToR4.isConverted(ready)).isTrue()
+        assertThat(ready.objects("name").single().string("family")).isEqualTo("SMITH")
+        assertThat(PatientIdentity.of(ready).familyNames).containsExactly("SMITH")
+    }
+
+    @Test
+    fun `a DSTU2 record in a plain file is converted to R4 before pre-flight, and an R4 record beside it is left alone`() {
+        // A LabCorp result as CommonHealth exports it: one category object, which Health Connect refuses as R4.
+        val labResult = entry(
+            """{"resourceType":"Observation","id":"o1","status":"final","category":{"coding":[{"system":"http://hl7.org/fhir/observation-category","code":"laboratory"}]},
+               "code":{"coding":[{"system":"http://labcorp.com/ers/testCodes","code":"XXXXXX","display":"Please Note:"}]},"valueString":"See report"}""",
+        )
+        val condition = entry("""{"resourceType":"Condition","id":"c1","clinicalStatus":{"coding":[{"code":"active"}]},"code":{"text":"Asthma"}}""")
+        val bundled = FhirFile(
+            listOf(entry("""{"resourceType":"Condition","id":"c2","code":{"text":"Hay fever"}}""")),
+            bundleProfiles = listOf("http://hl7.org/fhir/DSTU2/StructureDefinition/Bundle"),
+        )
+
+        val group = FhirImportAnalyzer.analyze(FhirFile(listOf(labResult, condition)), "labcorp.json").groups.single()
+        val observation = group.ready.single { it.type == "Observation" }.json
+
+        assertThat(group.rejected).isEmpty()
+        assertThat(group.fhirVersion).isEqualTo(FhirVersionDetector.R4)
+        assertThat(observation.getValue("category")).isInstanceOf(kotlinx.serialization.json.JsonArray::class.java)
+        assertThat(group.likelyCategories[MedicalCategory.LAB_RESULTS]).isEqualTo(1)
+        assertThat(Dstu2ToR4.isConverted(observation)).isTrue()
+        assertThat(Dstu2ToR4.isConverted(group.ready.single { it.type == "Condition" }.json)).isFalse()
+        assertThat(Dstu2ToR4.isConverted(FhirImportAnalyzer.analyze(bundled, "x.json").groups.single().ready.single().json)).isTrue()
+    }
 }

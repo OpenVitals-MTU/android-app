@@ -621,8 +621,10 @@
     <string name="cardio_load_day_numbers_title">Tänased väärtused</string>
     <string name="cardio_load_references_title">Kasutatud allikad</string>
     <string name="cardio_load_calculation_summary">OpenVitals kasutab pulsipõhist TRIMP-i, kui pulsiandmed on saadaval, ja langeb tagasi ainult liikumisele, kui pulss ei ole kasutatav.</string>
-    <string name="cardio_load_formula">TRIMP = minutid x HRR x 0,64 x e^(1,92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = minutid x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR on pulsivaru: (pulss - puhkeoleku pulss) / (maksimaalne pulss - puhkeoleku pulss). OpenVitals liidab selle kokku kättesaadavate pulsi-intervallide kohta terve päeva jooksul.</string>
+    <string name="cardio_load_formula_weighting">a = 0,64 ja b = 1,92 meestele, a = 0,86 ja b = 1,67 naistele (Banister). Kui kehaprofiilis pole sugu märgitud, kasutatakse meeste väärtusi.</string>
+    <string name="cardio_load_max_hr_body">Sinu maksimaalne pulss tuleb kehaprofiilist. Kui seda pole määratud, kasutab OpenVitals kõrgeimat mõõdetud pulssi, kui see on piisavalt kõrge. Muidu hindab see maksimumi vanuse järgi: 206 - 0,88 x vanus naistele (Gulati), 208 - 0,7 x vanus kõigile teistele (Tanaka).</string>
     <string name="cardio_load_mapping_body">Kui salvestatud treeningud on olemas, seotakse pulsinäidud ajatempli järgi iga treeningu algus- ja lõpuaknaga. Ilma treeninguakendeta loetakse ainult tõusnud pulsi intervalle. Kui pulss ei ole kasutatav, näidatakse madala usaldusväärsusega tagavarana liikumist ja aktiivseid kaloreid.</string>
     <string name="cardio_load_method">Meetod</string>
     <string name="cardio_load_trimp_score">TRIMP-tulemus</string>
@@ -646,6 +648,8 @@
     <string name="cardio_load_calibration_estimated_max">Maks pulss hinnanguline</string>
     <string name="cardio_load_reference_banister">Banisteri TRIMP-valem</string>
     <string name="cardio_load_reference_training_load">Treeningkoormuse jälgimise ülevaade</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: maksimaalne pulss vanuse järgi</string>
+    <string name="cardio_load_reference_gulati">Gulati: naiste maksimaalne pulss</string>
     <string name="cardio_load_reference_health_connect">Health Connecti treeningu pulsi seostamine</string>
     <string name="section_sleep_sessions">Unesessioonid</string>
     <string name="section_weight">Kaal</string>
@@ -1283,6 +1287,7 @@
     <string name="medical_import_error_too_large">See fail on suurem kui 8 MB.</string>
     <string name="medical_import_error_unreadable">Faili ei saanud lugeda.</string>
     <string name="medical_import_error_no_records">Selles failis pole midagi, mida Health Connect salvestab.</string>
+    <string name="medical_import_error_reports_only">See fail sisaldab ainult diagnostilisi aruandeid. Health Connect salvestab aruande tulemused, mitte aruannet ennast, ja see fail neid ei sisalda. Need on Observation-kirjed, tavaliselt eraldi failides: impordi hoopis need.</string>
     <string name="medical_import_new_source">Uus allikas</string>
     <string name="medical_import_existing_source">Lisab allikale, mille oled varem importinud</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>
@@ -2142,7 +2147,9 @@
     <string name="activity_route_share_failed">Marsruudifaili ei õnnestunud jagada.</string>
     <string name="activity_workout_export_title">Ekspordi treening</string>
     <string name="activity_workout_export_description">Salvesta selle treeningu näitajad failina. GPS-marsruuti ei kaasata.</string>
-    <string name="activity_workout_export_description_with_route">Salvesta see treening failina. GPX ja KMZ sisaldavad GPS-marsruuti; TCX, CSV ja FIT mitte.</string>
+    <string name="activity_workout_export_description_route_choice">Salvesta see treening failina, GPS-marsruudiga või ilma.</string>
+    <string name="activity_workout_export_with_route">GPS-marsruudiga</string>
+    <string name="activity_workout_export_without_route">Ilma GPS-marsruudita</string>
     <string name="activity_workout_export_tcx">Salvesta TCX</string>
     <string name="activity_workout_export_csv">Salvesta CSV</string>
     <string name="activity_workout_export_fit">Salvesta FIT</string>
@@ -3735,6 +3742,9 @@
     <string name="settings_watch_wearos_syncing">Kella sünkroonimine…</string>
     <string name="settings_watch_wearos_synced_none">Kellas pole midagi uut</string>
     <string name="settings_watch_wearos_needs_weight">Kõndimise kaloreid ei hinnatud: lisa oma kaal Kehaprofiili või salvesta see Health Connecti.</string>
+    <string name="settings_watch_wearos_needs_weight_read">Kõndimise kaloreid ei hinnatud: lisa oma kaal Kehaprofiili või luba OpenVitalsil lugeda sinu kaalu Health Connectist.</string>
+    <string name="settings_watch_wearos_needs_steps_write">Samme ei kirjutatud: luba OpenVitalsil kirjutada Health Connecti samme ja sünkrooni uuesti.</string>
+    <string name="settings_watch_wearos_needs_calories_write">Kõndimise kaloreid ei kirjutatud: luba OpenVitalsil Health Connectis aktiivseid kaloreid kirjutada ja treeninguid lugeda, et neid järgmisest sünkroonimisest alates hinnata.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d pulsinäit sünkroonitud</item>
         <item quantity="other">%1$d pulsinäitu sünkroonitud</item>

@@ -1,0 +1,1 @@
+Trening z trasą GPS można teraz zapisać jako FIT, który zawiera trasę, wysokość i dystans obok tętna, prędkości i kadencji. Eksporty FIT i TCX bez trasy zawierają teraz także prędkość i kadencję, nie tylko tętno. Trasy zaimportowane z pliku lub zsynchronizowane z zegarka Garmin zachowują każdy punkt, zamiast być przycinane do 2000.

@@ -387,7 +387,9 @@
     <string name="activity_route_share_failed">Reittitiedostoa ei voitu jakaa.</string>
     <string name="activity_workout_export_title">Vie treeni</string>
     <string name="activity_workout_export_description">Tallenna tämän treenin mittarit tiedostona. GPS-reitti ei sisälly.</string>
-    <string name="activity_workout_export_description_with_route">Tallenna tämä treeni tiedostona. GPX ja KMZ sisältävät GPS-reitin; TCX, CSV ja FIT jättävät sen pois.</string>
+    <string name="activity_workout_export_description_route_choice">Tallenna tämä treeni tiedostona, GPS-reitin kanssa tai ilman.</string>
+    <string name="activity_workout_export_with_route">GPS-reitin kanssa</string>
+    <string name="activity_workout_export_without_route">Ilman GPS-reittiä</string>
     <string name="activity_workout_export_tcx">Tallenna TCX</string>
     <string name="activity_workout_export_csv">Tallenna CSV</string>
     <string name="activity_workout_export_fit">Tallenna FIT</string>
@@ -1035,8 +1037,10 @@
     <string name="cardio_load_day_numbers_title">Päivän arvot</string>
     <string name="cardio_load_references_title">Lähdelinkit</string>
     <string name="cardio_load_calculation_summary">OpenVitals käyttää sykepohjaista TRIMP-arvoa, kun syketietoja on saatavilla, ja turvautuu liikkeeseen vain, kun syke ei ole käyttökelpoinen.</string>
-    <string name="cardio_load_formula">TRIMP = minuutit x HRR x 0,64 x e^(1,92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = minuutit x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR on sykereservi: (syke - leposyke) / (maksimisyke - leposyke). OpenVitals laskee tämän yhteen päivän saatavilla olevilta sykeväleiltä.</string>
+    <string name="cardio_load_formula_weighting">a = 0,64 ja b = 1,92 miehille, a = 0,86 ja b = 1,67 naisille (Banister). Jos kehoprofiilissa ei ole sukupuolta, käytetään miesten arvoja.</string>
+    <string name="cardio_load_max_hr_body">Maksimisykkeesi tulee kehoprofiilistasi. Jos sitä ei ole asetettu, OpenVitals käyttää korkeinta mitattua sykettä, kun se on riittävän korkea. Muuten se arvioi maksimin iästäsi: 206 - 0,88 x ikä naisille (Gulati), 208 - 0,7 x ikä muille (Tanaka).</string>
     <string name="cardio_load_mapping_body">Kun tallennettuja aktiviteetteja on, sykenäytteet kohdistetaan aikaleiman mukaan kunkin aktiviteetin alku- ja loppuikkunaan. Ilman aktiviteetti-ikkunoita lasketaan vain kohonneen sykkeen jaksot. Jos syke ei ole käyttökelpoinen, liike ja aktiiviset kalorit näytetään matalan luotettavuuden varavaihtoehtona.</string>
     <string name="cardio_load_method">Menetelmä</string>
     <string name="cardio_load_trimp_score">TRIMP-pisteet</string>
@@ -1060,6 +1064,8 @@
     <string name="cardio_load_calibration_estimated_max">Maksimisyke arvioitu</string>
     <string name="cardio_load_reference_banister">Banisterin TRIMP-yhtälö</string>
     <string name="cardio_load_reference_training_load">Katsaus harjoituskuormituksen seurantaan</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: maksimisyke iän mukaan</string>
+    <string name="cardio_load_reference_gulati">Gulati: naisten maksimisyke</string>
     <string name="cardio_load_reference_health_connect">Health Connectin treenisykkeen kohdistus</string>
     <string name="section_sleep_sessions">Unijaksot</string>
     <string name="section_weight">Paino</string>
@@ -1898,6 +1904,7 @@
     <string name="medical_import_error_too_large">Tämä tiedosto on yli 8 Mt.</string>
     <string name="medical_import_error_unreadable">Tiedostoa ei voitu lukea.</string>
     <string name="medical_import_error_no_records">Tässä tiedostossa ei ole mitään, mitä Health Connect tallentaa.</string>
+    <string name="medical_import_error_reports_only">Tämä tiedosto sisältää vain diagnostisia raportteja. Health Connect tallentaa raportin tulokset, ei itse raporttia, eikä tämä tiedosto sisällä niitä. Ne ovat Observation-tietueita, yleensä omissa tiedostoissaan: tuo ne sen sijaan.</string>
     <string name="medical_import_new_source">Uusi lähde</string>
     <string name="medical_import_existing_source">Lisätään aiemmin tuotuun lähteeseen</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>
@@ -3735,6 +3742,9 @@
     <string name="settings_watch_wearos_syncing">Synkronoidaan kelloa…</string>
     <string name="settings_watch_wearos_synced_none">Kellossa ei ole mitään uutta</string>
     <string name="settings_watch_wearos_needs_weight">Kävelykaloreita ei arvioitu: lisää painosi Kehoprofiiliin tai kirjaa se Health Connectiin.</string>
+    <string name="settings_watch_wearos_needs_weight_read">Kävelykaloreita ei arvioitu: lisää painosi Kehoprofiiliin tai salli OpenVitalsin lukea painosi Health Connectista.</string>
+    <string name="settings_watch_wearos_needs_steps_write">Askeleita ei kirjoitettu: salli OpenVitalsin kirjoittaa askeleet Health Connectiin ja synkronoi uudelleen.</string>
+    <string name="settings_watch_wearos_needs_calories_write">Kävelykaloreita ei kirjoitettu: salli OpenVitalsin kirjoittaa aktiiviset kalorit ja lukea harjoitukset Health Connectissa, niin ne arvioidaan seuraavasta synkronoinnista alkaen.</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d sykenäyte synkronoitu</item>
         <item quantity="other">%1$d sykenäytettä synkronoitu</item>

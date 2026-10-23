@@ -65,9 +65,15 @@ Records from a source another app already holds start left out, so a re-import o
 
 The importer also repairs common problems in real files. It gives records without ids a stable id, lifts contained records out of their parent, and rewrites the references between them. The report lists every repair.
 
+Health Connect stores no diagnostic report, only its results, which are Observation records. A report that holds its results inside itself gives each one as a lab result of its own: it takes the report's patient, date and performer where it names none, and the laboratory category when the report comes from a lab. Most reports point at results kept as records of their own, often in files of their own. A file holding only such reports says so, and the files with the results are the ones to import.
+
+### FHIR DSTU2
+
+Health Connect stores FHIR R4 and R4B. Some providers still hand out DSTU2, the 2015 version: older iPhones exported it, and labs such as LabCorp serve it to the apps that fetch records on a patient's behalf, such as CommonHealth. A DSTU2 record is converted to R4 before it is checked: renamed fields, status codes that moved, single values that R4 holds as lists, such as a lab result's category, and the family names of a person, which DSTU2 holds as a list and R4 as one string. A plain FHIR file states no version, so a record is recognised by its shape, by the fields DSTU2 had and R4 does not; a record that reads the same in both versions needs no conversion. A converted record says so on its detail screen.
+
 ### Apple Health clinical records
 
-When an Apple Health export holds clinical records, the Apple Health card in Settings says how many and opens the same wizard on the same file. Each provider gets its own source, and a provider with records in two FHIR versions gets one source per version. Records in FHIR DSTU2, the version older iPhones used, are converted to the version Health Connect stores, and each says so on its detail screen. A record of a type that cannot be converted is left out, and the review says why.
+When an Apple Health export holds clinical records, the Apple Health card in Settings says how many and opens the same wizard on the same file. Each provider gets its own source, and a provider with records in two FHIR versions gets one source per version. The export states each record's FHIR version, so a DSTU2 record is converted as described above; one of a type that cannot be converted is left out, and the review says why.
 
 ### CDA documents
 

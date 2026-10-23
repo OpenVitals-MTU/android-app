@@ -305,7 +305,9 @@
     <string name="activity_route_share_failed">ルートファイルを共有できませんでした。</string>
     <string name="activity_workout_export_title">ワークアウトをエクスポート</string>
     <string name="activity_workout_export_description">このワークアウトの指標をファイルとして保存します。GPS ルートは含まれません。</string>
-    <string name="activity_workout_export_description_with_route">このワークアウトをファイルとして保存します。GPX と KMZ には GPS ルートが含まれ、TCX、CSV、FIT には含まれません。</string>
+    <string name="activity_workout_export_description_route_choice">このワークアウトを、GPS ルートを含めて、または含めずにファイルとして保存します。</string>
+    <string name="activity_workout_export_with_route">GPS ルートあり</string>
+    <string name="activity_workout_export_without_route">GPS ルートなし</string>
     <string name="activity_workout_export_tcx">TCX を保存</string>
     <string name="activity_workout_export_csv">CSV を保存</string>
     <string name="activity_workout_export_fit">FIT を保存</string>
@@ -982,8 +984,10 @@
     <string name="cardio_load_day_numbers_title">今日の値</string>
     <string name="cardio_load_references_title">参考リンク</string>
     <string name="cardio_load_calculation_summary">OpenVitals は心拍データがある場合は心拍ベースの TRIMP を使い、心拍が使えない場合のみ動きにフォールバックします。</string>
-    <string name="cardio_load_formula">TRIMP = 分 x HRR x 0.64 x e^(1.92 x HRR)</string>
+    <string name="cardio_load_formula">TRIMP = 分 x HRR x a x e^(b x HRR)</string>
     <string name="cardio_load_formula_body">HRR は心拍予備能: (心拍数 - 安静時心拍数) / (最大心拍数 - 安静時心拍数)。OpenVitals はその日の利用可能な心拍区間で合計します。</string>
+    <string name="cardio_load_formula_weighting">男性は a = 0.64、b = 1.92、女性は a = 0.86、b = 1.67 です (Banister)。身体プロフィールに性別がない場合は男性の値を使います。</string>
+    <string name="cardio_load_max_hr_body">最大心拍数は身体プロフィールの値を使います。設定がない場合は、十分に高ければ測定された最高心拍数を使います。それ以外は年齢から推定します: 女性は 206 - 0.88 x 年齢 (Gulati)、それ以外は 208 - 0.7 x 年齢 (Tanaka)。</string>
     <string name="cardio_load_mapping_body">記録されたアクティビティがある場合、心拍サンプルはタイムスタンプで各アクティビティの開始〜終了に割り当てられます。アクティビティがない場合は心拍が上昇した区間のみ数えます。心拍が使えない場合は、動きと活動カロリーを低信頼度の代替として表示します。</string>
     <string name="cardio_load_method">方法</string>
     <string name="cardio_load_trimp_score">TRIMP スコア</string>
@@ -1007,6 +1011,8 @@
     <string name="cardio_load_calibration_estimated_max">最大心拍 推定</string>
     <string name="cardio_load_reference_banister">Banister の TRIMP 式</string>
     <string name="cardio_load_reference_training_load">トレーニング負荷モニタリングのレビュー</string>
+    <string name="cardio_load_reference_tanaka">Tanaka: 年齢別の最大心拍数</string>
+    <string name="cardio_load_reference_gulati">Gulati: 女性の最大心拍数</string>
     <string name="cardio_load_reference_health_connect">Health Connect ワークアウト心拍の割り当て</string>
     <string name="section_sleep_sessions">睡眠セッション</string>
     <string name="section_weight">体重</string>
@@ -1894,6 +1900,7 @@
     <string name="medical_import_error_too_large">このファイルは 8 MB を超えています。</string>
     <string name="medical_import_error_unreadable">このファイルを読み込めませんでした。</string>
     <string name="medical_import_error_no_records">このファイルには Health Connect が保存するデータがありません。</string>
+    <string name="medical_import_error_reports_only">このファイルには診断レポートしか含まれていません。Health Connect はレポートそのものではなく、その結果を保存しますが、このファイルには結果が含まれていません。結果は Observation レコードで、通常は別のファイルにあります。そちらをインポートしてください。</string>
     <string name="medical_import_new_source">新しい提供元</string>
     <string name="medical_import_existing_source">以前インポートした提供元に追加</string>
     <string name="medical_import_fhir_version">FHIR %1$s</string>
@@ -3807,6 +3814,9 @@
     <string name="settings_watch_wearos_syncing">ウォッチを同期しています…</string>
     <string name="settings_watch_wearos_synced_none">ウォッチに新しいデータはありません</string>
     <string name="settings_watch_wearos_needs_weight">歩行カロリーは推定されていません。体のプロフィールに体重を追加するか、Health Connect に記録してください。</string>
+    <string name="settings_watch_wearos_needs_weight_read">歩行カロリーは推定されていません。体のプロフィールに体重を追加するか、OpenVitals に Health Connect の体重の読み取りを許可してください。</string>
+    <string name="settings_watch_wearos_needs_steps_write">歩数を書き込めませんでした。OpenVitals に Health Connect への歩数の書き込みを許可してから、もう一度同期してください。</string>
+    <string name="settings_watch_wearos_needs_calories_write">歩行カロリーを書き込めませんでした。OpenVitals に Health Connect でのアクティブカロリーの書き込みとワークアウトの読み取りを許可すると、次回の同期から推定されます。</string>
     <plurals name="settings_watch_wearos_synced_samples">
         <item quantity="one">%1$d 件の心拍数サンプルを同期しました</item>
         <item quantity="other">%1$d 件の心拍数サンプルを同期しました</item>
