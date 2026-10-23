@@ -1,0 +1,61 @@
+package tech.mmarca.openvitals.devices.wearos
+
+import androidx.health.connect.client.records.FloorsClimbedRecord
+import androidx.health.connect.client.records.Record
+import androidx.health.connect.client.records.metadata.Device
+import androidx.health.connect.client.records.metadata.Metadata
+import java.time.Instant
+import kotlin.math.roundToLong
+import tech.mmarca.openvitals.wearlink.AscentCredit
+
+/**
+ * Maps the watch's ascent minutes to `FloorsClimbedRecord`s, one per minute,
+ * keyed on the minute's start: the credited metres over [AscentCredit.METRES_PER_FLOOR],
+ * a fraction kept, so a day's partial floors add up.
+ *
+ * Height counts only with enough steps around it ([AscentCredit]), so
+ * elevator rides and weather drift drop out.
+ *
+ * The credited decimetres are the record's version, so a minute whose steps
+ * or ascent grew replaces its record.
+ *
+ * Pure, so it is testable without a device.
+ */
+object WearOsFloorsImport {
+
+    const val CLIENT_ID_PREFIX = "wearos_floors_"
+
+    /** Records for [ascent], given the [steps] pulled in the same sync. Minutes without enough steps write nothing. */
+    fun records(ascent: List<WearOsAscentMinute>, steps: List<WearOsStepMinute>): List<Record> =
+        credited(ascent, steps).map { (start, metres) ->
+            FloorsClimbedRecord(
+                startTime = start,
+                startZoneOffset = null,
+                endTime = start.plusSeconds(SECONDS_PER_MINUTE),
+                endZoneOffset = null,
+                floors = metres / AscentCredit.METRES_PER_FLOOR,
+                metadata = watchMetadata("$CLIENT_ID_PREFIX${start.toEpochMilli()}", metres),
+            )
+        }
+
+    /** Per minute start, the metres that had enough steps around them. Minutes with none are left out. */
+    private fun credited(ascent: List<WearOsAscentMinute>, steps: List<WearOsStepMinute>): List<Pair<Instant, Double>> {
+        val stepsAt = HashMap<Instant, Int>()
+        for (minute in steps) stepsAt.merge(minute.start, minute.steps, ::maxOf)
+        return ascent.groupBy { it.start }.mapNotNull { (start, same) ->
+            val climbed = same.maxOf { it.metres }
+            val walked = (stepsAt[start.minusSeconds(SECONDS_PER_MINUTE)] ?: 0) + (stepsAt[start] ?: 0)
+            val credited = AscentCredit.creditedMetres(climbed, walked)
+            if (credited > 0.0) start to credited else null
+        }
+    }
+
+    private fun watchMetadata(clientRecordId: String, metres: Double): Metadata =
+        Metadata.autoRecorded(
+            device = Device(type = Device.TYPE_WATCH),
+            clientRecordId = clientRecordId,
+            clientRecordVersion = (metres * 10).roundToLong(),
+        )
+
+    private const val SECONDS_PER_MINUTE = 60L
+}
