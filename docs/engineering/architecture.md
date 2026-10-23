@@ -31,7 +31,7 @@ Most importantly, body and entry/session browsing now live in metric-owned detai
 | Package | Owns |
 |---|---|
 | `comaps/` | the CoMaps navigation provider: the `ContentResolver` source and the guidance feed |
-| `core/` | app-wide primitives: `presentation`, `performance`, `diagnostics`, `permissions` (OS runtime permissions) in `:app`; `period`, `stats`, `geo`, `fit`, `export` (share staging) in `:domain` |
+| `core/` | app-wide primitives: `presentation`, `performance`, `diagnostics`, `permissions` (OS runtime permissions) in `:app`; `period`, `stats`, `geo`, `fit`, `export` (share staging), `privacy` (masking text that leaves the app) in `:domain` |
 | `data/` | `local` (Room), `repository` (feature-facing repositories + `contract` interfaces), `sync` (history/backfill services), `migration` (one-time Flutter import) |
 | `devices/` | device integration: `core` (ports, radio lease, pairing), `garmin` (GFDI stack), `wearos`, `notifications` (notification listener), `media` (the phone's players, for music controls), `weather` (the weather a watch asks for), `xiaomi` (the S400 scale: broadcast decoding, the background listener and the weigh-in import) |
 | `di/` | `AppModule`, `RepositoryModule`, `PreferencesModule`, `RemindersModule`, `DevicesModule` |
@@ -453,11 +453,11 @@ Live BLE sensor streaming during activity recording still lives in `sensors/ble`
 
 ## Module `:domain`
 
-The app-local code that nothing in the rest of the phone app sits below, in `domain/`: the packages `domain/model`, `domain/insights`, `domain/preferences`, `domain/cycle`, `domain/dashboard`, `domain/report` and `domain/medical`, and the primitives `core/period`, `core/fit`, `core/geo`, `core/stats` and `core/export`. Package names are unchanged, so an import does not say which module a class is in. `:app` depends on it; `:wear` does not.
+The app-local code that nothing in the rest of the phone app sits below, in `domain/`: the packages `domain/model`, `domain/insights`, `domain/preferences`, `domain/cycle`, `domain/dashboard`, `domain/report` and `domain/medical`, and the primitives `core/period`, `core/fit`, `core/geo`, `core/stats`, `core/export` and `core/privacy`. Package names are unchanged, so an import does not say which module a class is in. `:app` depends on it; `:wear` does not.
 
 It is an Android library, not plain Kotlin: a few files use Health Connect record constants (`ExerciseTypeTraits`, `PlannedExerciseSteps`, the activity splits) and the platform's locale data (`SystemUnitSystemProvider`, `AppLanguage`), and Android lint then still checks it. It has the app's build types (`ci`, `nightly`), so the app's `ci` variant takes the module's `ci` variant and the module's tests and lint run on that one compile. Nothing in it is injected: it holds no Hilt module, and its classes are constructed by the app's repositories and the app's `di/` modules.
 
-Its test fixtures (`testFixtures`) hold the FHIR, C-CDA, SMART Health Card and wear sleep fixtures that both its own tests and the app's import tests use, with the FHIR sample files under `domain/src/testFixtures/resources/fhir/`. Its tests and lint are part of the phone gate (`verifyCiUnitTest` depends on `:domain:testCiUnitTest`, `verifyCiLint` on `:domain:lintCi`), its lockfile is `domain/gradle.lockfile`, and the ratchet tests and the `runBlocking` allow-list cover its files under the same package-relative paths as the app's.
+Its test fixtures (`testFixtures`) hold the FHIR, C-CDA, SMART Health Card and wear sleep fixtures that both its own tests and the app's import tests use, and the privacy sentinels (`PrivacySentinels`) that tests of crash drafts, logs and reports seed and look for, with the FHIR sample files under `domain/src/testFixtures/resources/fhir/`. Its tests and lint are part of the phone gate (`verifyCiUnitTest` depends on `:domain:testCiUnitTest`, `verifyCiLint` on `:domain:lintCi`), its lockfile is `domain/gradle.lockfile`, and the ratchet tests and the `runBlocking` allow-list cover its files under the same package-relative paths as the app's.
 
 The module exists for the build: the app's lint and tests no longer cover these lines, and a change elsewhere leaves this module's compile, lint and test results in the build cache. What does not belong here: anything with an inbound dependency from `data/`, `healthconnect/` or `features/` (`domain/query` and `domain/usecase` stay in `:app` for that reason), resources, and Hilt wiring.
 
