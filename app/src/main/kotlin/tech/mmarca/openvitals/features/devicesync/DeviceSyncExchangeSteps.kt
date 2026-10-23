@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.devicesync
 
+import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
 import android.content.Intent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -254,7 +255,7 @@ internal fun DeviceSyncReportStep(state: DeviceSyncState, onDone: () -> Unit) {
                         textAlign = TextAlign.Center,
                     )
                     // The abort reason is the one line that tells a bug report apart from a shrug.
-                    report?.abortReason?.let { reason ->
+                    report?.abortReason?.let(PrivacyRedactor::maskMessage)?.let { reason ->
                         Spacer(modifier = Modifier.height(Spacing.sm))
                         Text(
                             text = stringResource(R.string.device_sync_abort_reason, reason),

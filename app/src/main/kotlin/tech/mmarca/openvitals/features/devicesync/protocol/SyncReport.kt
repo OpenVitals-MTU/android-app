@@ -1,5 +1,6 @@
 package tech.mmarca.openvitals.features.devicesync.protocol
 
+import tech.mmarca.openvitals.core.privacy.PrivacyRedactor
 import java.time.Instant
 
 /** Outcome and progress models for a session, mirroring the Apple Health import's counters. */
@@ -116,14 +117,18 @@ class SyncReportBuilder {
     )
 }
 
-/** Formats a [SyncReport] as shareable text. English by design: a technical artifact. */
+/**
+ * Formats a [SyncReport] as shareable text. English by design: a technical artifact.
+ * The abort reason is masked like an exception message: it carries one, or the
+ * other phone's own words.
+ */
 fun buildSyncReportText(report: SyncReport, generatedAt: Instant): String = buildString {
     appendLine("OpenVitals — Sync With Another Phone report")
     appendLine("Generated: $generatedAt")
-    appendLine("Peer: ${report.peerDeviceName}")
+    appendLine("Peer: ${PrivacyRedactor.maskIdentifiers(report.peerDeviceName)}")
     appendLine("Status: ${if (report.completed) "completed" else "aborted"}")
     if (!report.completed && report.abortReason != null) {
-        appendLine("Reason: ${report.abortReason}")
+        appendLine("Reason: ${PrivacyRedactor.maskMessage(report.abortReason)}")
     }
     appendLine()
     appendLine("Summary")
